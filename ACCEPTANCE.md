@@ -6,4 +6,6 @@
 - The owner previews a supported n8n workflow export, approves its import, reads the durable journal, and undoes an unused import.
 - The owner exports and restores workflow data into an empty installation, and erases a completed run with a fence against restoring its old data.
 
-Not needed: connector catalogue, third-party credential custody, live SaaS calls, scheduling, payments, brand redesign, domain, run site, or release tag. The included Operations inbox is a usable local receiving app. HTTP destinations must implement the documented idempotency contract.
+Not needed: connector catalogue, third-party credential custody, live SaaS calls, scheduling, payments, a hosted deployment or release tag. The included Operations inbox is a usable local receiving app. HTTP destinations must implement the documented idempotency contract.
+
+- The static run site leads from **Run Crank** to runnable commands and publishes owner guides from the repository Markdown. The installed home remains the shared Lobby.

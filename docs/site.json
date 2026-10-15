@@ -1,0 +1,21 @@
+{
+  "sections": [
+    {
+      "title": "Use Crank",
+      "pages": [
+        { "slug": "getting-started", "source": "docs/GETTING-STARTED.md", "title": "Get started with Crank", "description": "Open your workspace, prepare your first event and approve its delivery." },
+        { "slug": "flows-and-runs", "source": "docs/FLOWS-AND-RUNS.md", "title": "Flows and runs", "description": "Create flows, review exact inputs, and replay a failed delivery once." },
+        { "slug": "access", "source": "docs/ACCESS.md", "title": "People, agents and trigger keys", "description": "Invite people and connect agents or source apps with scoped credentials." },
+        { "slug": "importing", "source": "docs/IMPORTING.md", "title": "Move n8n workflows into Crank", "description": "Preview a supported n8n workflow, import drafts and review them before activation." },
+        { "slug": "backup-restore", "source": "docs/BACKUP-RESTORE.md", "title": "Backup, restore and erasure", "description": "Keep private archives, restore an empty installation and preserve erasures." }
+      ]
+    },
+    {
+      "title": "Reference",
+      "pages": [
+        { "slug": "api", "source": "docs/API.md", "title": "Crank HTTP and agent contract", "description": "HTTP routes, authorization and delivery behavior for source apps and agents." },
+        { "slug": "sources", "source": "docs/SOURCES.md", "title": "Foundation and reused source", "description": "Crank’s foundation, reused source and attribution." }
+      ]
+    }
+  ]
+}

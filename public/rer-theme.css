@@ -1,25 +1,59 @@
-/* This edition's declared theme. The installer, sign-in, confirmation, /setup
-   and development outbox read these --rer-* tokens; the app serves this file and its fonts.
-   Buttons keep the colour chosen at setup (src/branding.json primaryColor)
-   because no --rer-accent is declared here; declare --rer-accent and
-   --rer-accent-text together to fix them instead. */
-@font-face {
-  font-family: Outfit;
-  font-style: normal;
-  font-weight: 100 900;
-  font-display: swap;
-  src: url('/fonts/outfit/outfit-latin-wght-normal.woff2') format('woff2');
-}
+/* Crank's shared design tokens and primitives. Base's Lobby, sign-in and setup
+   consume the same theme as the app and the static run site. */
+@import url('/fonts/fonts.css');
 :root {
-  --rer-font-body: Outfit, Arial, sans-serif;
-  --rer-font-heading: Outfit, Arial, sans-serif;
-  --rer-page: #f4f6f5;
-  --rer-surface: #ffffff;
-  --rer-text: #1b2724;
-  --rer-muted: #4a5a55;
-  --rer-border: #6b7c76;
-  --rer-focus: #1b2724;
-  --rer-link: #1f5f52;
-  --rer-radius: 12px;
-  --rer-logo: url('/brand/mark.svg');
+  --paper:#FBFAF5; --ink:#121212; --muted:#55575A; --hairline:#D9D7D2;
+  --card:#F1EFE9; --slot:#E9E7E1;
+  --plate:linear-gradient(135deg,#D5D2CD,#C9C6C0);
+  --plate-edge:#85807B; --key:#C1D806; --key-edge:#8FA000; --key-ink:#141600;
+  --plate-shadow:0 24px 40px -24px rgba(40,36,30,.45),0 2px 0 rgba(255,255,255,.6) inset;
+  --key-shadow:0 3px 0 var(--key-edge),0 8px 14px -8px rgba(60,70,0,.6);
+  --rer-font-body:"Host Grotesk",Arial,sans-serif;
+  --rer-font-heading:var(--rer-font-body);
+  --rer-font-mono:"Fragment Mono",ui-monospace,monospace;
+  --rer-page:var(--paper); --rer-text:var(--ink); --rer-muted:var(--muted);
+  --rer-border:var(--hairline); --rer-surface:var(--card);
+  --rer-accent:var(--key); --rer-accent-text:var(--key-ink);
+  --rer-focus:var(--key-edge); --rer-link:var(--ink); --rer-radius:12px;
+  --rer-button-radius:999px; --rer-logo:url('/brand/mark.svg');
 }
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--rer-font-body);line-height:1.5}
+button,input,textarea,select{font:inherit;color:inherit}
+a{color:inherit;text-underline-offset:4px}
+:where(a,button,input,select,textarea,summary):focus-visible{outline:3px solid var(--key-edge);outline-offset:3px}
+.metal-plate{position:relative;padding:20px;border:1px solid var(--plate-edge);border-radius:18px;background:url('/brand/grain.svg'),var(--plate);box-shadow:var(--plate-shadow)}
+.metal-plate::before,.plain-card::before{content:"";position:absolute;inset:10px;background:url('/brand/screw.svg') left top/10px 10px no-repeat,url('/brand/screw.svg') right top/10px 10px no-repeat,url('/brand/screw.svg') left bottom/10px 10px no-repeat,url('/brand/screw.svg') right bottom/10px 10px no-repeat;pointer-events:none;z-index:1}
+.metal-slot{padding:24px;border:1px solid var(--plate-edge);border-radius:12px;background:linear-gradient(145deg,#F1EFE9,#E9E7E1);box-shadow:inset 0 2px 3px rgba(0,0,0,.12),0 1px 0 #fff9}
+.plain-card{position:relative;padding:24px 32px;border:1px solid var(--hairline);border-radius:12px;background:rgba(255,255,255,.7)}
+.plain-card::before{inset:9px;background-size:8px 8px}
+.crank-key,.rer-themed button{display:inline-flex;justify-content:center;align-items:center;min-height:48px;padding:12px 24px;border:1px solid var(--key-edge);border-radius:12px;background:linear-gradient(#D0E727,var(--key));color:var(--key-ink);box-shadow:var(--key-shadow),inset 0 1px 0 #fff9;font-weight:700;text-decoration:none;cursor:pointer}
+.crank-key:active,.rer-themed button:active{transform:translateY(2px);box-shadow:0 1px 0 var(--key-edge)}
+.dark-pill,.outline-pill{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:10px 24px;border:1px solid var(--ink);border-radius:999px;text-decoration:none;font-weight:600;cursor:pointer}
+.dark-pill{background:linear-gradient(#292929,#171717);color:var(--paper)}
+.outline-pill{background:transparent;color:var(--ink)}
+.status-chip{display:inline-block;border-radius:999px;padding:4px 13px;font-size:14px;line-height:1.5;background:#E6E4DF;color:#3E3F41;font-weight:400;white-space:nowrap}
+.status-chip[data-state=pending],.status-chip[data-state=approved],.status-chip[data-state=running]{background:#F6E6A6;color:#4A3B00}
+.status-chip[data-state=succeeded],.status-chip[data-state=active]{background:#D7EBCB;color:#23441A}
+.status-chip[data-state=failed]{background:#F6D3CD;color:#6B1E14}
+/* Shared Base pages keep their markup and behavior; theme their existing frame. */
+.rer-themed body:has(>main:not(.crank)){display:grid;place-items:center;padding:48px 20px}
+.rer-themed main:not(.crank){width:100%;border:1px solid var(--hairline);background:rgba(255,255,255,.7);box-shadow:0 12px 40px -30px #28241e70}
+.rer-themed .rer-brand{font-size:28px!important;letter-spacing:-.035em;font-weight:800!important}
+.rer-themed main:not(.crank) h1{font-size:36px;letter-spacing:-.035em;line-height:1.08;font-weight:800}
+.rer-themed main:not(.crank) button{border-radius:12px;box-shadow:var(--key-shadow),inset 0 1px 0 #fff9}
+@media(max-width:600px){.metal-plate{padding:16px}.metal-slot{padding:20px}.plain-card{padding:24px}.rer-themed main:not(.crank) h1{font-size:32px}.status-chip{font-size:13px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+/* A shared inset face and corner fasteners carry the picked material through
+   existing no-script auth and setup documents without forking their modules. */
+.rer-themed main:not(.crank){position:relative;max-width:640px;padding:48px;border-color:var(--plate-edge);box-shadow:inset 0 0 0 5px #e0ddd6,inset 0 0 0 6px #a7a29a,0 14px 28px -20px #28241e80}
+.rer-themed main:not(.crank)::before{content:"";position:absolute;inset:12px;background:url('/brand/screw.svg') left top/10px 10px no-repeat,url('/brand/screw.svg') right top/10px 10px no-repeat,url('/brand/screw.svg') left bottom/10px 10px no-repeat,url('/brand/screw.svg') right bottom/10px 10px no-repeat;pointer-events:none}
+.rer-themed main:not(.crank) h1{font-size:48px;margin-block:40px 28px}
+.rer-themed main:not(.crank):has(form[action="/setup"]){background:url('/brand/grain.svg'),linear-gradient(145deg,#F1EFE9,#E9E7E1)}
+.rer-themed main:not(.crank) .brand{font-size:28px;font-weight:800;letter-spacing:-.035em}
+.rer-themed main:not(.crank) dl{padding:16px 0;border-block:1px solid var(--hairline);margin-bottom:28px;gap:16px 24px;grid-template-columns:100px minmax(0,1fr)}
+.rer-themed main:not(.crank) dd{font-family:var(--rer-font-mono);font-size:14px}
+@media(max-width:600px){.rer-themed main:not(.crank){padding:32px 24px}.rer-themed main:not(.crank) h1{font-size:36px;margin-top:32px}.rer-themed main:not(.crank) dl{grid-template-columns:1fr;gap:4px}.rer-themed main:not(.crank) dd{margin-bottom:12px}}
+.rer-themed main button:not(.dark-pill):not(.outline-pill):not(.secondary),.crank-key{background:linear-gradient(135deg,#D0E727,var(--key) 45%,#B3C900);border:1px solid var(--key-edge);box-shadow:var(--key-shadow),inset 0 0 0 2px #ffffff60,inset 0 3px 0 #fff8;border-radius:12px;color:var(--key-ink);font-weight:700;font-size:18px}
+.rer-themed main button:not(.dark-pill):not(.outline-pill):not(.secondary):active,.crank-key:active{transform:translateY(2px);box-shadow:0 1px 0 var(--key-edge),inset 0 0 0 2px #ffffff60}
+.rer-themed main:not(.crank) input:not([type=checkbox]){border-color:var(--hairline);background:#ffffff55}

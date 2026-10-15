@@ -18,7 +18,7 @@
     "test:email-link": "rer queue test:email-link -- sh -c \"node tests/email-link.mjs\"",
     "onboard": "node scripts/install.mjs",
     "build:app": "rer queue build:app -- sh -c \"vite build\"",
-    "verify:app": "rer queue verify:app -- sh -c \"pnpm run build && pnpm run typecheck && pnpm run test:crank && pnpm run test:runtime && pnpm run test:email-link\"",
+    "verify:app": "rer queue verify:app -- sh -c \"pnpm run build && rer build --site && pnpm run typecheck && pnpm run test:crank && pnpm run test:site && pnpm run test:runtime && pnpm run test:email-link\"",
     "reset": "rer reset",
     "export": "rer export",
     "import": "rer import",
@@ -30,12 +30,14 @@
     "deps": "rer install",
     "rer": "rer",
     "test:crank": "node --test --test-concurrency=1 tests/crank.test.mjs",
-    "inbox": "node examples/inbox/server.mjs"
+    "inbox": "node examples/inbox/server.mjs",
+    "test:site": "node --test --test-concurrency=1 tests/site.test.mjs"
   },
   "dependencies": {
     "@tanstack/react-router": "1.170.33",
     "@tanstack/react-start": "1.168.50",
     "hono": "4.13.7",
+    "marked": "18.0.14",
     "react": "19.2.8",
     "react-dom": "19.2.8"
   },
@@ -43,7 +45,7 @@
     "@cloudflare/vite-plugin": "1.54.5",
     "@cloudflare/workers-types": "5.20260908.1",
     "@playwright/test": "1.63.0",
-    "@runeditrun/rer": "0.2.17",
+    "@runeditrun/rer": "0.2.19",
     "@types/node": "22.18.6",
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.7",
@@ -65,5 +67,9 @@
       "esbuild",
       "workerd"
     ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/just-every/run-crank"
   }
 }

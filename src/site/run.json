@@ -1,10 +1,10 @@
 {
-  "name": "crank",
+  "name": "Crank",
   "repository": "https://github.com/just-every/run-crank",
   "clone": "git clone https://github.com/just-every/run-crank.git",
   "folder": "run-crank",
   "requirements": "Needs Node 22 or later and pnpm 10.12.4, on macOS, Linux or Windows with WSL2.",
   "licence": "MIT",
-  "docs": false,
+  "docs": true,
   "hosted": []
 }

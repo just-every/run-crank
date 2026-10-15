@@ -1,0 +1,40 @@
+# Adoption note: add it only when the per-seed gate holds
+name: Run site
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: run-site
+  cancel-in-progress: false
+jobs:
+  deploy:
+    if: vars.RUN_SITE_DEPLOY == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: run-site
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .node-version
+      - run: corepack enable && pnpm install --frozen-lockfile
+        env:
+          COREPACK_ENABLE_DOWNLOAD_PROMPT: '0'
+      - run: pnpm exec rer deploy --site
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      - name: Public readback
+        run: |
+          domain=$(node -p "require('./deploy-site.json').domain")
+          for i in $(seq 1 60); do
+            [ "$(curl -s -o /dev/null -w '%{http_code}' "https://$domain/run")" = 200 ] && break
+            sleep 10
+          done
+          test "$(curl -s -o /dev/null -w '%{http_code}' "https://$domain/run")" = 200
+          test "$(curl -s -o /dev/null -w '%{http_code} %{redirect_url}' "https://www.$domain/")" = "301 https://$domain/"

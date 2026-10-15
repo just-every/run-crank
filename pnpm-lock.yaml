@@ -22,6 +22,9 @@ importers:
       hono:
         specifier: 4.13.7
         version: 4.13.7
+      marked:
+        specifier: 18.0.14
+        version: 18.0.14
       react:
         specifier: 19.2.8
         version: 19.2.8
@@ -39,8 +42,8 @@ importers:
         specifier: 1.63.0
         version: 1.63.0
       '@runeditrun/rer':
-        specifier: 0.2.17
-        version: 0.2.17
+        specifier: 0.2.19
+        version: 0.2.19
       '@types/node':
         specifier: 22.18.6
         version: 22.18.6
@@ -649,8 +652,8 @@ packages:
   '@rolldown/pluginutils@1.0.1':
     resolution: {integrity: sha512-2j9bGt5Jh8hj+vPtgzPtl72j0yRxHAyumoo6TNfAjsLB04UtpSvPbPcDcBMxz7n+9CYB0c1GxQFxYRg2jimqGw==}
 
-  '@runeditrun/rer@0.2.17':
-    resolution: {integrity: sha512-D945/8jhB3JdXwlAy8qCUBbbxXvT6faHqWTTbVNcBiXwO9R5Zo2Agd1IYQYl5x0AbojnzQTwi2nemuHpN8hi9w==}
+  '@runeditrun/rer@0.2.19':
+    resolution: {integrity: sha512-N5cDcgkOvXrlFtXx0EwVR36QVyUhvmu/T2dCoYqDY2UM2W2Ib6LRfabVbR9ZYBbzBJE1GIazBsaMzerzf8oZFA==}
     engines: {node: '>=22'}
     hasBin: true
 
@@ -1038,6 +1041,11 @@ packages:
 
   magic-string@0.30.21:
     resolution: {integrity: sha512-vd2F4YUyEXKGcLHoq+TEyCjxueSeHnFxyyjNp80yg0XV4vUhnDer/lvvlqM/arB5bXQN5K2/3oinyCRyx8T2CQ==}
+
+  marked@18.0.14:
+    resolution: {integrity: sha512-mBHK6FBHuBAlhgRe88w9F0O1AbwwXJUcQibUbC/QcdTbVGAD7aWza+xt3N6oT/jCZx3/OMeS+8rnuiHZcQ9s7A==}
+    engines: {node: '>= 20'}
+    hasBin: true
 
   miniflare@5.20260907.0-alpha:
     resolution: {integrity: sha512-56F13BeJQuDbTxcoGGN4MGxN8oNNIH3pK48VyJ1JGmjbzE9MMu6S2kxoON3nOBHlLdNjXyzg1Rz3jdHx+JpuZA==}
@@ -1768,7 +1776,7 @@ snapshots:
 
   '@rolldown/pluginutils@1.0.1': {}
 
-  '@runeditrun/rer@0.2.17': {}
+  '@runeditrun/rer@0.2.19': {}
 
   '@sindresorhus/is@7.2.0': {}
 
@@ -2181,6 +2189,8 @@ snapshots:
   magic-string@0.30.21:
     dependencies:
       '@jridgewell/sourcemap-codec': 1.6.0
+
+  marked@18.0.14: {}
 
   miniflare@5.20260907.0-alpha(@types/node@22.18.6):
     dependencies:

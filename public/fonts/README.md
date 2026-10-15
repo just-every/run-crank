@@ -1,16 +1,12 @@
-# Fonts
+# Crank fonts
 
-Outfit is self-hosted under the SIL Open Font License 1.1 in
-`outfit/LICENSE.txt`. The Latin and Latin Extended WOFF2 subsets come from
-Fontsource's Outfit distribution; upstream: https://github.com/Outfitio/Outfit-Fonts.
+Host Grotesk (variable 300–800) and Fragment Mono (regular) are self-hosted
+Latin and Latin Extended WOFF2 subsets from Google Fonts. Both use the SIL
+Open Font License 1.1; each font directory includes its `LICENSE.txt`.
 
-The root document links `/fonts/fonts.css` once, outside the temporary dev SSR
-stylesheet, and preloads only the primary Latin file. Do not import this CSS
-from a component. Every body-font stack uses `--font-body`, including the local
-`Outfit Fallback` before generic fallback fonts; controls inherit it.
+- https://github.com/google/fonts/tree/main/ofl/hostgrotesk
+- https://github.com/google/fonts/tree/main/ofl/fragmentmono
 
-Fallback scales use Outfit/Arial advance-width ratios over A-Z, a-z and 0-9
-at weights 400, 500 and 700. Ascent, descent and line gap match Outfit's
-1000, -260 and 0 per 1000 units, divided by each scale. Matching metrics reduces
-layout movement; different glyph designs cannot have identical widths in every
-piece of text. Recalculate the fallback and preload when changing the brand font.
+`fonts.css` declares the faces. The shared theme applies Host Grotesk to the
+interface and Fragment Mono to product IDs, URLs and JSON. No page requests a
+third-party font service.

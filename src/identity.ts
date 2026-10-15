@@ -9,7 +9,7 @@ export const identity: EditionIdentity = {
   product: branding.name,
   deployment: branding.name,
   purpose: '{deployment} connects incoming events to approved actions, with every run visible.',
-  tagline: 'Workflow automation with a person in control.',
+  tagline: 'Free, open source workflow automation: events from one app become actions in another, sent after a person approves the exact details.',
   signInPath: '/signin',
   // The run site `rer deploy --site` publishes (deploy-site.json).
   runSite: `https://${site.domain}`,

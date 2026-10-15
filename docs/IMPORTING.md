@@ -6,6 +6,36 @@ The import creates draft flows. Review the new Crank webhook address and activat
 each draft explicitly before sending events. Source workflow activation does not
 activate a Crank flow. Importing never executes a workflow or sends an HTTP request.
 
+## Review and move in
+
+1. Sign in as an owner and open **Move in** (`/app/import`). Select
+   **Download the documented-shape example** if you want to inspect the accepted
+   format first. The example targets the local Operations inbox; it is not a
+   customer export.
+2. Enter a stable **Source namespace** for this n8n workspace and paste your
+   export into **Workflow export JSON**. Select **Dry run import**. A dry run
+   changes no data.
+3. On **Review before importing**, check the number of drafts, workflow names
+   and destination URLs. Select **Cancel** to return without importing, or
+   **Approve import** to create the reviewed drafts.
+4. Check **Import journal** for the approving person, time and result. In
+   **Flows**, review each imported draft before selecting **Activate flow**.
+5. In **Access**, create a **Trigger — one flow only** credential for the new
+   flow. Point your source at `/api/crank/flows/FLOW_ID/trigger` on your Crank
+   origin and use the [event envelope and authentication](ACCESS.md#connect-a-source-app).
+   The old n8n webhook address is not a live Crank endpoint. Each event still
+   needs the owner's **Approve and deliver** decision.
+
+To remove an unused import, select **Undo unused import** in its journal entry.
+Undo requires the original draft values and no recorded runs. Active flows or
+changed values block undo; it does not reverse a delivery. Inspect a refused
+import's message before trying again.
+Crank does not silently skip unsupported nodes or settings.
+
+For a local receiving app, see [Get started](GETTING-STARTED.md). Read
+[Flows and runs](FLOWS-AND-RUNS.md) before switching a source, and keep a
+[backup](BACKUP-RESTORE.md) of your Crank data.
+
 Export using n8n's workflow **Download** action. Before uploading, remove
 credentials and authentication headers. n8n warns that workflow exports can carry
 credential references and headers imported from cURL; Crank refuses them instead
@@ -85,8 +115,8 @@ list shows at most the newest 100 jobs and includes approval information.
 
 Undo uses the retained Base journal after reopening the database; it does not
 need the upload again. It removes only the exact imported native values and
-revisions. Any native edit, activation, changed creation time, or recorded flow
-run blocks undo. Foreign references also remain protected by native database
+revisions. Changed native values, an active flow, a changed creation time, or a
+recorded flow run block undo. Foreign references also remain protected by native database
 constraints. Partial apply can be rolled back through the same undo action;
 Base retains restartable reversal intent. Original source and approval evidence
 remain after undo. Reversal does not erase customer data or undo an external

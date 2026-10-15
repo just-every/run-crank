@@ -9,7 +9,7 @@ Failed delivery gets one manual replay with the same idempotency key.
 ```sh
 git clone https://github.com/just-every/run-crank.git
 cd run-crank
-npx -y @runeditrun/rer@0.2.17 cli install
+npx -y @runeditrun/rer@0.2.19 cli install
 export PATH="$HOME/.local/bin:$PATH"
 rer dev
 ```
@@ -153,9 +153,10 @@ arbitrary n8n code. Destination credentials live only in deployment bindings.
 ## Development
 
 `rer verify` is the complete CI wall: build, typecheck, nine workflow HTTP tests,
-runtime smoke and real email-link sign-in, followed by Base's built-app checks.
+runtime smoke, real email-link sign-in and a static-site HTTP journey, followed by Base's built-app checks.
 Stop dev first. For a domain-only change run `pnpm run test:crank`.
 There are no tests during build or deploy. See [ACCEPTANCE.md](ACCEPTANCE.md),
 [source attribution](docs/SOURCES.md), and [the command contract](SEED-COMMAND-CONTRACT.md).
-This is a public seed candidate; release review, visual design and a release tag
-are separate work.
+Owner guides are published on the run site at `/docs` and kept in [docs/](docs/GETTING-STARTED.md). Build the static homepage, `/run` and guides with `rer build --site`.
+
+This is a public seed candidate; release review and a release tag are separate work.
