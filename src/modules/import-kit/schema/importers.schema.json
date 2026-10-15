@@ -1,0 +1,107 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://runeditrun.com/schemas/import-kit/importers-v1.schema.json",
+  "title": "Evidence-bound importer status catalogue",
+  "type": "object",
+  "required": ["$schema", "schemaVersion", "importers"],
+  "properties": {
+    "$schema": { "const": "./schema/importers.schema.json" },
+    "schemaVersion": { "const": 1 },
+    "importers": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "oneOf": [
+          { "$ref": "#/$defs/verifiedImporter" },
+          { "$ref": "#/$defs/documentedImporter" },
+          { "$ref": "#/$defs/noneImporter" }
+        ]
+      }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "artifact": {
+      "type": "object",
+      "required": ["link", "sha256", "size"],
+      "properties": {
+        "link": { "type": "string", "minLength": 1 },
+        "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "size": { "type": "integer", "minimum": 1 }
+      },
+      "additionalProperties": false
+    },
+    "verifiedImporter": {
+      "type": "object",
+      "required": ["incumbent", "product", "status", "evidence"],
+      "properties": {
+        "incumbent": { "type": "string", "minLength": 1 },
+        "product": { "type": "string", "minLength": 1 },
+        "status": { "const": "verified" },
+        "evidence": {
+          "type": "object",
+          "required": ["link", "sha256", "size", "research"],
+          "properties": {
+            "link": { "type": "string", "minLength": 1 },
+            "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+            "size": { "type": "integer", "minimum": 1 },
+            "research": { "$ref": "#/$defs/artifact" }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "documentedImporter": {
+      "type": "object",
+      "required": ["incumbent", "product", "status", "evidence"],
+      "properties": {
+        "incumbent": { "type": "string", "minLength": 1 },
+        "product": { "type": "string", "minLength": 1 },
+        "status": { "const": "documented format" },
+        "evidence": {
+          "type": "object",
+          "required": [
+            "link", "sha256", "size", "sourceRepository", "sourceRevision",
+            "sourcePath", "sourceSha256", "validation", "realExport"
+          ],
+          "properties": {
+            "link": { "type": "string", "minLength": 1 },
+            "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+            "size": { "type": "integer", "minimum": 1 },
+            "sourceRepository": { "type": "string", "minLength": 1 },
+            "sourceRevision": { "type": "string", "pattern": "^[a-f0-9]{40,64}$" },
+            "sourcePath": { "type": "string", "minLength": 1 },
+            "sourceSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+            "validation": { "const": "synthetic-only" },
+            "realExport": { "const": "not-supplied" }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "noneImporter": {
+      "type": "object",
+      "required": ["incumbent", "product", "status", "evidence"],
+      "properties": {
+        "incumbent": { "type": "string", "minLength": 1 },
+        "product": { "type": "string", "minLength": 1 },
+        "status": { "const": "none" },
+        "evidence": {
+          "type": "object",
+          "required": ["link", "sha256", "size", "reason", "checkedAt"],
+          "properties": {
+            "link": { "type": "string", "minLength": 1 },
+            "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+            "size": { "type": "integer", "minimum": 1 },
+            "reason": { "type": "string", "minLength": 1 },
+            "checkedAt": { "type": "string", "format": "date-time" }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

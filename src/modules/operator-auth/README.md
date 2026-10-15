@@ -63,7 +63,7 @@ Base's operator auth is the only staff sign-in, in three layers:
 | --- | --- | --- |
 | `identity/` | Proving who a person is: the email link (`identity/email-link/`), identity providers over OpenID Connect (`identity/oidc/`, see [its README](identity/oidc/README.md)), and the admission that turns a verified principal into a session (`identity/admission.mjs`). | Outputs a **verified principal** `{issuer, subject, provider?, email?, emailVerified?, emailVerifiedAt?, amr?}`; `identity/index.mjs`. |
 | `accounts/` | Who a person is in this app and what they may do: operators, roles, invitations, sessions, domain rules and step-up proofs in the `oa_` store (`accounts/store.mjs`, `accounts/schema/`). | The **accounts adapter interface** (`accounts/adapter.mjs`); Base's implementation over `oa_` is `accounts/oa.mjs`. |
-| `dev/` | Local-only dev sessions, personas and the badge, loaded only from a local-only Worker entry. | `dev/index.mjs`; see "Local dev identity" below. |
+| `dev/` | Local-only dev sessions, personas and mode labels, loaded only from a local-only Worker entry. | `dev/index.mjs`; see "Local dev identity" below. |
 
 The files at the root are shared by all three: HTTP and input checks, crypto,
 configuration and branding, the shared page frame (`page.mjs`), the key gate
@@ -130,6 +130,9 @@ version), domain rules in `oa_domain_rules`. `auth.accounts` exposes it and
 | `/auth/providers` | GET | the pinned provider links; owner only |
 | `/auth/providers/unlink`, `/auth/providers/relink` | POST | provider; owner only, step-up |
 | `/auth/oidc/<id>/start`, `/auth/oidc/<id>/callback` | POST / GET | each provider's own routes (see [identity/oidc](identity/oidc/README.md)) |
+| `/auth/owner-signin?token=…` | GET/HEAD | 200 owner sign-in confirmation for a live `rer signin` link, or 400 invalid/used/expired; **no writes** |
+| `/auth/owner-signin` | POST | token; consume once for the active owner it names, 303 with cookie; see "Owner sign-in without mail" |
+| `/auth/email` | POST | email; the signed-in operator's own sign-in email; fresh step-up proof; 409 `email_in_use` |
 
 Unknown `/auth/*` paths return 404. Unsupported methods return 405. Except for invalid/expired confirmation GET/HEAD documents, known public
 errors are JSON `{error:code}`: invalid input 400, unauthenticated 401, policy/host/
@@ -377,7 +380,7 @@ for other requests). It is server-rendered plain HTML with no script, so it work
 before hydration and without JavaScript, in the same hashed-style frame as the
 confirmation page (light and dark, the seed's `rer-theme.css` when declared).
 It shows "Continue with…" for each linked, reachable provider, then the email
-link, then optional seed links (the local outbox) and, while the first owner is
+link, then optional seed links and, while the first owner is
 unclaimed, the setup form. A provider that has failed discovery or JWKS for 5
 minutes, or answered 404 or a DNS failure, is hidden, and a browser that still
 posts to it comes back to this page with a notice and the email link instead of
@@ -426,6 +429,40 @@ Creating a server-declared owner dev persona also requires the signed-in owner's
 fresh local proof in addition to the checkout key. Its creation repeats the actor
 session/version fence in the database write.
 
+## Owner sign-in without mail (`rer signin`)
+
+An owner whose mail does not work yet, or whose `OWNER_EMAIL` was mistyped, gets
+in with `rer signin [--environment NAME]`. rer uses only the Cloudflare
+credentials that deployed that environment: it checks that the live Worker is
+the one its deploy record names, writes one row into `oa_owner_signins` in the
+deployment's own D1 through the D1 API, and prints the link
+`/auth/owner-signin?token=…` once to the terminal. The row holds the SHA-256 of
+the 256-bit token (`owner-signin-grant.mjs`), the claimed owner's id and
+version, and an expiry 15 minutes ahead; the token itself is never stored, and
+rer writes it to no log, receipt or deploy record.
+
+GET only shows a confirmation page (link scanners cannot use it). POST consumes
+the grant in one transaction with the session it opens, and only while the
+grant is unused, unexpired, at most 15 minutes from the Worker's own clock
+(whatever clock minted it), and names the operator that is still the active
+owner at the same version (a role or status change voids it). The same
+transaction records `owner:signin-link` in `oa_auth_audit` for that owner and
+counts as a fresh step-up proof. The route uses the confirmation rate limit,
+the exact Origin and the secure cookie of every other sign-in.
+
+Why it is safe: writing that table needs the same Cloudflare token that can
+already replace the Worker or read and write its database, so the link adds no
+authority beyond the deploy credentials. It works once, only for the recorded
+owner, within 15 minutes, and its use is logged. Production email-link sign-in
+is unchanged. Native accounts (`createNativeAuth`) do not mount this route.
+
+A wrong sign-in email is corrected in the app: `POST /auth/email {email}`
+changes the signed-in operator's own address after a fresh proof (a step-up
+link to the current address, a recent email-link sign-in, or a `rer signin`
+link). It revokes unused links sent to the old address and keeps sessions and
+provider bindings. An address another operator holds is refused with
+`email_in_use`. `STEP_UP_ACTIONS` gains `email:change`.
+
 ## Local dev identity and the key gate
 
 `dev-gate.mjs` (exported as `devGate`, production-safe) is the per-checkout key
@@ -440,8 +477,7 @@ local mode. `admits(request)` accepts the `rer_dev_gate_<port>` cookie (an HMAC 
 key, so a reset key refuses old cookies) or the key in `x-rer-dev-key` (the rer
 CLI and test harnesses). `exchange(request)` serves `GET /__dev/key` and trades
 the key from the URL fragment, through a same-origin POST, for a host-only
-`HttpOnly; SameSite=Strict; Path=/` cookie. Seeds gate their development outbox
-with it.
+`HttpOnly; SameSite=Strict; Path=/` cookie.
 
 `dev/` is the dev layer: **server-only and local-only**. Import it only from a
 local-only Worker entry (a Vite-serve or local `wrangler dev` entry), never
@@ -452,19 +488,21 @@ the seed's Worker and serves, behind the gate only:
 | Path | Result |
 | --- | --- |
 | `/auth/dev/enter?as=owner\|signed-out\|PERSONA&returnTo=` | Creates or reuses a real `oa_sessions` row of kind `dev` for the configured owner or persona and 303s to `returnTo` (default `/app`); `signed-out` revokes the current session. |
+| `POST /auth/local/cli-session` | Owner-side tooling proves possession of the session secret with `x-rer-local-cli`; exact loopback and origin checks precede issuing a native owner session and fresh local proof. This route exists only in the dev entry. |
 | `/__dev/personas` | `[{as,email,role?}]`, used by `rer dev` for `RER_SIGNED_IN`. |
 
 `personas()` returns the seed's `devPersonas()`: `[{as, role, displayName?}]`,
 real operators at `<as>@dev.localhost` created only by dev sign-in. Dev
 sessions pass the same version fences, revocation, deactivation and allow-list
-as every other session. The core admits a `dev` session, and any credential
+as every other session. An admitted local dev session also confirms sensitive
+actions directly, so dev never waits for an email step-up link. The core admits a `dev` session, and any credential
 minted while using one (`oa_dev_credentials`, today an invitation link, whose
 confirmation then yields a `dev` session), only when the dev layer's
 registered check passes for that request; a production Worker never registers
-one. HTML documents gain a dev-only badge for switching identity; the root
-document also gets the fragment exchange script. Both are added under the
-document's own CSP by hash. With `RER_DEV_IDENTITY=off` (`rer dev --login`)
-dev sign-in and personas answer 404 while the gate still opens the outbox. The
+one. HTML documents gain the Dev suffix on product labels marked with
+`data-rer-name` and document titles; a demo receives Demo instead. The dedicated
+`/__dev/key` document exchanges the RER_OPEN fragment without placing the key in
+request URLs. `RER_DEV_IDENTITY=off` disables dev sign-in and personas. The
 layer answers 503 to every request when `RER_INSTALLATION_ID` is set beside a
 non-loopback `RER_MANAGEMENT_ORIGIN`.
 
@@ -592,6 +630,12 @@ requesting email links. The reference applies them as
 `0009_domain_rules_step_up.sql`. The earlier single-issuer `oidc/` adapter
 (`createOidcClient`) is replaced by `config.providers`; its existing bindings keep
 signing in once the same issuer is configured as a provider.
+
+**Owner sign-in links.** `rer signin` needs `oa_owner_signins`: apply
+`accounts/schema/owner-signin.sql` as a new numbered migration (additive, safe
+after the fresh schema; the reference applies it as
+`migrations/core/0024_owner_signin.sql`). Only the owner-signin route reads it;
+until it exists, `rer signin` refuses before writing anything.
 
 Seeds copy this module at different revisions, and an older copy lacks the
 cancellation migration and the optional OIDC and conformance files. Check each

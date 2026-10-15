@@ -19,11 +19,11 @@ const result = await sender.send({
 
 ## Adopting
 
-A seed copies this module's runtime files byte for byte, to the same paths under its root, and records them in its source lock. Every seed copies the same one module: one SendGrid transport, and the development outbox. The same facade also supports optional signed Messaging links; unlinked sends and the local outbox keep their existing configuration.
+A seed copies this module's runtime files byte for byte, to the same paths under its root, and records them in its source lock. Every seed copies the same one module: the remote transports and an explicit development suppression path. The same facade also supports optional signed Messaging links.
 
 ### Mail
 
-Every seed copies these files. `index.mjs` loads all of them, including the outbox below, so none can be left out.
+Every seed copies these files. `index.mjs` loads all of them, including the development path below, so none can be left out.
 
 ```text
 modules/mail/LICENSE
@@ -41,6 +41,8 @@ modules/mail/src/adapters/resend/serialize.mjs
 modules/mail/src/adapters/resend/size.mjs
 modules/mail/src/adapters/sendgrid/index.mjs
 modules/mail/src/adapters/sendgrid/serialize.mjs
+modules/mail/src/adapters/rer/contract.mjs
+modules/mail/src/adapters/rer/index.mjs
 modules/mail/src/adapters/messaging/contract.mjs
 modules/mail/src/adapters/messaging/event-schema.mjs
 modules/mail/src/adapters/messaging/index.mjs
@@ -69,9 +71,9 @@ modules/mail/src/doctor/receive.mjs
 modules/mail/src/doctor/records.mjs
 ```
 
-### Local outbox
+### Development delivery
 
-Every seed copies this whole folder, every file in it. It is what lets a seed sign in locally without a real mail account. Apply `schema.sql` to the local database during local setup (see [Adopting the local outbox](#adopting-the-local-outbox)).
+Copy the development entry with the facade. Its sender validates messages and silently suppresses them. Preserve the schema and storage reader when an installation has historical development mail.
 
 ```text
 modules/mail/src/development/
@@ -93,11 +95,10 @@ Sign-in mail is the seed's own wiring around the two things above, not a copy of
 
 ```text
 default-seed/src/core/platform/auth/mail.server.mjs
-default-seed/src/core/platform/auth/outbox.server.mjs
 default-seed/migrations/core/0004_development_outbox.sql
 ```
 
-`mail.server.mjs` builds the production sender from `MAIL_PROVIDER` (`resend`, `sendgrid` or `cloudflare`) and, only under explicit local configuration, the development sender. `outbox.server.mjs` serves the loopback-only viewer. The migration is the outbox table from `schema.sql`.
+`mail.server.mjs` builds the production sender from `MAIL_PROVIDER` (`resend`, `sendgrid` or `cloudflare`). Explicit development and demo configuration suppress mail before selecting any configured remote sender. The migration preserves historical local messages.
 
 ### Former sendgrid-email API
 
@@ -116,10 +117,50 @@ These are for developing the module itself or documentation. A seed may keep any
 - `modules/mail/package.json`, `modules/mail/pnpm-lock.yaml`, `modules/mail/.gitignore`
 - `modules/mail/README.md` and every `README.md` under `modules/mail/src/`
 
-The provider is explicit: `sendgrid`, `resend`, `cloudflare`, or `development`.
+The provider is explicit: `sendgrid`, `resend`, `cloudflare`, `rer`, `messaging`, or `development`.
 `mode` is required (`production`, `development`, or `test`). Remote providers require `apiKey`; Cloudflare additionally requires a 32-hex `accountId`. A remote provider in test/development mode still makes a real provider request unless the caller explicitly supplies a test fetch. Missing credentials, validation errors, or provider failure never select another provider. Config and messages reject unknown fields so requested features cannot silently disappear.
 
-`createMailSender(config, dependencies?)` returns `{send(message)}`. Dependencies are optional standard `fetch`, an explicit asynchronous `outbox.put(message)`, `clock: () => epochMilliseconds`, and `timeoutMilliseconds` (a positive safe integer bounding each remote attempt; the default is 15,000). Production normally uses global fetch. No configurable provider endpoint, retry, or automatic replay exists. The sender snapshots configuration at construction and the message at submission.
+`createMailSender(config, dependencies?)` returns `{send(message)}`. Dependencies are optional standard `fetch`, `clock: () => epochMilliseconds`, and `timeoutMilliseconds` (a positive safe integer bounding each remote attempt; the default is 15,000). Production normally uses global fetch. Direct provider endpoints are fixed; `rer` uses its assigned relay URL. No retry or automatic replay exists. The sender snapshots configuration at construction and the message at submission.
+
+### Managed mail through RER
+
+Seeds opt into Managed mail with `mail: {providers: ["rer"]}` in their candidate
+deployment spec. The [delivery producer](../delivery-producer/README.md#managed-mail)
+can generate the matching setup fields. RER assigns public `MAIL_PROVIDER`,
+`MAIL_FROM`, `MAIL_RELAY_URL` and private `MAIL_API_KEY`; Managed owners do not
+enter them. Wire those settings into the shared sender:
+
+```js
+const sender = createMailSender({
+  provider: env.MAIL_PROVIDER, // rer
+  mode: 'production',
+  apiKey: env.MAIL_API_KEY,
+  relayUrl: env.MAIL_RELAY_URL,
+});
+await sender.send({
+  deliveryId: durableCommand.id,
+  from: env.MAIL_FROM,
+  to: ['recipient@example.net'],
+  subject: 'Your requested sign-in link',
+  text: 'Open the link you requested.',
+});
+```
+
+Pass `relayUrl` only for `rer`. It must be the assigned HTTPS URL, without URL
+credentials, query or fragment. The adapter sends one POST with Bearer
+authentication and `redirect: 'error'`. Its JSON contains one mailbox `to`,
+`subject`, `text` and optional nonempty `html`. RER owns the sender and
+installation identity; `from` and `deliveryId` are not transmitted. Subjects
+must be nonempty, without newlines and at most 200 characters. Plain text is
+required; each body is limited to 65,536 characters and the JSON to 128 KiB.
+Other recipients, attachments, reply-to, headers and unsubscribe features are
+unsupported and fail before dispatch.
+
+HTTP 202 returns `accepted` with no provider message ID. HTTP 400, 401, 402,
+403 and 413 return `rejected`; 429 returns `rate_limited`; 502 and 503 return
+`uncertain`. Network failures and refused redirects are also `uncertain`.
+The usual application delivery policy decides whether to retry or stop; the
+adapter makes no retries and never reads or logs provider error bodies.
 
 ## Message and results
 
@@ -133,7 +174,7 @@ Resend checks a conservative 40,000,000-byte total email budget before Base64 or
 JSON encoding, including UTF-8 bodies, all recipients/headers, aggregate Base64
 attachments and MIME overhead. Its final JSON request is capped at 39,000,000
 UTF-8 bytes. Oversize input throws `MailValidationError` with fixed code
-`resend_message_too_large` before any send or outbox effect. See the precise
+`resend_message_too_large` before dispatch. See the precise
 [Resend size budget](src/adapters/resend/README.md#outbound-size-budget); it is a
 local guard and may reject input below the provider's maximum.
 
@@ -149,58 +190,14 @@ Network loss, redirects, HTTP 408 and 5xx are conservatively `uncertain`; 429 is
 
 ## Development and unsubscribe
 
-Development requires all three: `provider:'development'`, `mode:'development'`, and explicit `dependencies.outbox.put`. It captures the prepared message with its raw attachment bytes and returns `development`, never remote acceptance. A storage failure throws `DevelopmentOutboxError` (`code: 'development_outbox_failed'`, `retryable: true`): the message is valid, so a queue consumer retries it. Invalid input throws `MailValidationError`, which is permanent and is dropped. Configure storage only in your development host; no route is mounted automatically and no network replay is provided. Treat captured messages and sign-in links as sensitive local data.
+Development requires `provider:'development'` and `mode:'development'`.
+It validates the prepared message and silently suppresses delivery, returning
+`development` without contacting a provider or storing the message. Production
+must never select development mode after missing credentials or a send failure.
 
-### Adopting the local outbox
-
-The typed `src/development/index.mjs` subpath exports
-`createD1DevelopmentOutbox({db,maxMessages?,maxAgeMs?,clock?})` and
-`createDevelopmentOutboxHandler({local,origin,outbox,path?,theme?})`. The root facade's
-exports remain stable. `theme` is the seed's served theme stylesheet, a
-root-relative `.css` path such as `'/rer-theme.css'` (the same grammar as
-operator-auth `branding.theme`; any other value throws when the handler is
-created). With it the page links that file, reads its `--rer-*` tokens with
-readable fallbacks and a visible 3px focus ring, and its policy allows
-same-origin styles, fonts and images (still no script). Without it the page is
-unchanged. Apply the additive [schema](src/development/schema.sql)
-to your local D1 database during local setup, for example:
-
-```sh
-pnpm exec wrangler d1 execute DB --local --file=../modules/mail/src/development/schema.sql
-```
-
-Use the actual database binding and source path for your host. The table and
-index are namespaced `rer_mail_development_outbox`; the schema is repeatable and
-does not replace application tables. Keep the local D1 persistence directory
-between restarts. No provider credentials are needed for local capture.
-
-```js
-import { createMailSender } from './modules/mail/index.mjs';
-import {
-  createD1DevelopmentOutbox, createDevelopmentOutboxHandler,
-} from './modules/mail/src/development/index.mjs';
-
-// These values come from trusted, explicit local host configuration.
-const outbox = createD1DevelopmentOutbox({ db: env.DB });
-const sender = createMailSender(
-  { provider: 'development', mode: 'development' }, { outbox },
-);
-const viewOutbox = createDevelopmentOutboxHandler({
-  local: localConfiguration.enabled === true,
-  origin: localConfiguration.origin, // e.g. 'http://localhost:8787'
-  outbox,
-});
-// In the host's request handler, before the application catch-all:
-const response = await viewOutbox(request);
-if (response) return response;
-// Continue normal application routing otherwise.
-```
-
-Wire the application's real sign-in mail call to `sender.send`; the regular
-message composition and unsubscribe assembly still run. Make this selection
-only in the explicit local configuration. Production keeps its configured
-remote sender, and does not mount the development viewer. Missing provider
-credentials or a delivery failure must never select development mode.
+`createD1DevelopmentOutbox({db,maxMessages?,maxAgeMs?,clock?})` remains available
+for reading and erasing mail retained by older local installations. There is no
+outbox viewer or development sign-in mail flow. Keep applied migrations.
 
 `put(preparedMessage)` resolves without a receipt; `list()` returns captures
 newest first, and `get(id)` returns a capture or `null`. A capture is
@@ -213,31 +210,9 @@ D1 batch as the operation; a message expires exactly at `createdAt + maxAgeMs`.
 Equal timestamps retain the most recently inserted captures first. A failing
 batch fails the operation without a process-memory fallback.
 
-The viewer lives at `/__dev/outbox` (or the explicit `path`) and accepts GET and
-HEAD. It returns `null` unless `local === true`, the configured origin is an
-exact serialized HTTP(S) loopback origin, and the request URL and Host match
-its scheme and authority. `localhost`, canonical `127.x.x.x`, and `[::1]` are
-supported. Trailing slashes, credentials, paths, queries, fragments, whitespace
-and alternate URL spellings in the configured origin are refused. Host must
-include the configured non-default port. Forwarded headers never grant access;
-a different Origin or a cross-site fetch is also refused before any D1 read.
-The host must bind its development listener to loopback; these request checks
-do not replace that listener configuration.
-
-The listing shows subject, recipient and received time. A message detail shows
-escaped text (escaped source for HTML-only messages) and a large **Open this
-link** action for the first valid HTTP(S) link. It never renders live email
-HTML or attachment content. All viewer responses, including errors, carry
-no-store, noindex, nosniff and a strict CSP with an exact static-style hash and
-scripts disabled. The layout wraps long content on a 390px viewport.
-
-First-party seeds route local setup through `rer setup` and
-declare their actual mail, auth, database and migration behavior in the RER
-adapter. Base's default seed is the reference for loopback development mail and
-the private local outbox. Follow the runnable checkout's root
-`RUN-LOCALLY.md` for current command and state requirements; the outbox module does not
-replace a seed's owner setup, database bindings, migration directory or sign-in
-policy.
+First-party seeds route local setup through `rer setup` and declare their actual
+mail, auth, database and migration behavior in the RER adapter. Follow the
+runnable checkout's root `RUN-LOCALLY.md` for its command and state requirements.
 
 `unsubscribe: {url, mailto?, oneClick?}` supplies an HTTPS unsubscribe URL and optional mailbox. One-click generates `List-Unsubscribe-Post: List-Unsubscribe=One-Click`. Insecure URLs, injection and contradictory custom unsubscribe headers fail before dispatch. `applyUnsubscribeHeaders(message)` returns a new prepared message with the `unsubscribe` request removed. Passing an already prepared message to the facade is safe. Direct adapters reject unconsumed requests before any effect; the facade performs assembly once before dispatch. Applications own unsubscribe authorization and processing. Confirm delivered headers and DKIM coverage with a real delivered message; local serialization is not one-click acceptance.
 
@@ -277,7 +252,7 @@ For a D1 application, copy `src/events/d1-schema.sql` into a **new** migration a
 use [the D1 event constructor](src/events/README.md). No migration, linking,
 provider switch or credential removal happens automatically. Self-hosted installs
 stay unlinked until the owner configures them; local development still uses the
-existing D1 outbox without a Messaging service.
+explicit development suppression without a Messaging service.
 
 ## The former sendgrid-email API
 
@@ -331,6 +306,6 @@ pnpm --dir modules/mail test:workerd
 
 The root install is also required for the bundle regression, which uses the reference app's actual Vite dependency. The facade formerly re-exported the doctor while the doctor dynamically imported the facade, causing Vite's `INEFFECTIVE_DYNAMIC_IMPORT` warning. Both now import a private sender module; the existing facade exports and send behavior remain unchanged. `tests/development/bundle.test.mjs` builds the facade and doctor with Vite and fails on that warning.
 
-The module-local lock pins the Miniflare/workerd test runtime; production source has no npm dependencies. Unit suites cover core validation, adapters, events, inbound parsing, development, unsubscribe and doctor behaviour. The Messaging HTTP/service-binding smoke and real D1 intake race/rollback/restart suite join the existing area smokes. They check core portability, remote adapters, inbound hydration, durable event intake, the development outbox and doctor/facade assembly. The storage smokes retain real transaction rollback, namespace isolation, restart and sensitive viewer refusal coverage. `tests/all.test.ts` runs the nested suites serially through `pnpm verify:modules`; each worker is disposed after its run. Former SendGrid API tests remain while seed source still imports the deprecated module.
+The module-local lock pins the Miniflare/workerd test runtime; production source has no npm dependencies. Unit suites cover core validation, adapters, events, inbound parsing, development, unsubscribe and doctor behaviour. The Messaging HTTP/service-binding smoke and real D1 intake race/rollback/restart suite join the existing area smokes. They check core portability, remote adapters, inbound hydration, durable event intake, historical development storage and doctor/facade assembly. The storage smokes retain real transaction rollback, namespace isolation, restart and suppression coverage. `tests/all.test.ts` runs the nested suites serially through `pnpm verify:modules`; each worker is disposed after its run. Former SendGrid API tests remain while seed source still imports the deprecated module.
 
 Local conformance does not establish provider configuration, DNS propagation, deployed webhook reachability, DKIM coverage or mailbox delivery. Live acceptance remains **PENDING** until an exact-SHA hosted run sends and receives on the owner's approved test domain with independently correlated mailbox evidence. Resend is the default test sender; SendGrid is selected where Inbound Parse is required. No live request is authorized by running local tests.

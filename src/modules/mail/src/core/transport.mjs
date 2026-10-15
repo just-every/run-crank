@@ -8,7 +8,7 @@ export async function requestProvider(url, init, dependencies = {}) {
     const deadline = new Promise(resolve => { timer = setTimeout(() => resolve(null), timeout); });
     return await Promise.race([
       Promise.resolve().then(() => (dependencies.fetch ?? globalThis.fetch)(url, {
-        ...init, redirect: 'manual', signal: AbortSignal.timeout(timeout),
+        ...init, redirect: init.redirect === 'error' ? 'error' : 'manual', signal: AbortSignal.timeout(timeout),
       })).then(response => response instanceof Response ? response : null, () => null),
       deadline,
     ]);

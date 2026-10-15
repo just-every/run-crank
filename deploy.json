@@ -33,5 +33,9 @@
       "binding": "MAIL_API_KEY",
       "environment": "MAIL_API_KEY"
     }
+  ],
+  "platforms": [
+    "workers",
+    "container"
   ]
 }

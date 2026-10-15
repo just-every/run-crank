@@ -1,7 +1,8 @@
 import { fail } from './errors.mjs';
 import { validateMessagingConfig, validateMessagingResult, identity, rfc3339 } from '../adapters/messaging/contract.mjs';
+import { validateRerConfig, validateRerMessage } from '../adapters/rer/contract.mjs';
 
-const providers = ['sendgrid', 'resend', 'cloudflare', 'development', 'messaging'];
+const providers = ['sendgrid', 'resend', 'cloudflare', 'rer', 'development', 'messaging'];
 const controls = /[\x00-\x1f\x7f]/;
 const fields = new Set(['deliveryId', 'from', 'to', 'subject', 'text', 'html', 'cc', 'bcc', 'replyTo', 'headers', 'attachments', 'unsubscribe', 'customArgs', 'asmGroupId', 'subscriptionTracking', 'kind', 'expiresAt']);
 const reservedHeaders = new Set(['x-sg-id', 'x-sg-eid', 'received', 'dkim-signature', 'content-type', 'content-transfer-encoding', 'mime-version', 'to', 'from', 'subject', 'reply-to', 'cc', 'bcc', 'return-path', 'sender']);
@@ -20,7 +21,7 @@ function bounded(value, limit, code, empty = false) {
 }
 
 export function validateConfig(config, dependencies = {}) {
-  keys(config, new Set(['provider', 'mode', 'apiKey', 'accountId', 'serviceOrigin', 'installId', 'kid', 'signingKey']), 'invalid_config');
+  keys(config, new Set(['provider', 'mode', 'apiKey', 'accountId', 'relayUrl', 'serviceOrigin', 'installId', 'kid', 'signingKey']), 'invalid_config');
   record(dependencies, 'invalid_dependencies');
   if (!providers.includes(config.provider)) fail('invalid_provider');
   if (!['production', 'development', 'test'].includes(config.mode)) fail('invalid_mode');
@@ -28,12 +29,13 @@ export function validateConfig(config, dependencies = {}) {
   if (dependencies.clock !== undefined && typeof dependencies.clock !== 'function') fail('invalid_clock');
   if (dependencies.timeoutMilliseconds !== undefined &&
       (!Number.isSafeInteger(dependencies.timeoutMilliseconds) || dependencies.timeoutMilliseconds <= 0)) fail('invalid_timeout');
+  if (config.provider === 'rer') validateRerConfig(config);
+  else if (config.relayUrl !== undefined) fail('unsupported_provider_setting');
   if (config.provider === 'messaging') return validateMessagingConfig(config, dependencies) ?? config;
   if (['serviceOrigin', 'installId', 'kid', 'signingKey'].some(field => config[field] !== undefined) || dependencies.serviceBinding !== undefined) fail('unsupported_provider_setting');
   if (config.provider === 'development') {
     if (config.mode !== 'development') fail('development_mode_required');
     if (config.apiKey !== undefined || config.accountId !== undefined) fail('unsupported_development_config');
-    if (!dependencies.outbox || typeof dependencies.outbox.put !== 'function') fail('development_outbox_required');
   } else {
     if (typeof config.apiKey !== 'string' || !config.apiKey.trim()) fail('api_key_required');
     bounded(config.apiKey, 4096, 'invalid_api_key');
@@ -132,6 +134,7 @@ export function validateMessage(message, provider) {
     for (const attachment of message.attachments) validateAttachment(attachment);
   }
   if (message.unsubscribe !== undefined) validateUnsubscribe(message.unsubscribe);
+  if (provider === 'rer') validateRerMessage(message);
   const settings = ['customArgs', 'asmGroupId', 'subscriptionTracking'];
   if (provider && !['sendgrid', 'development'].includes(provider) && settings.some(key => message[key] !== undefined)) fail('unsupported_provider_setting');
   if (message.asmGroupId !== undefined && (!Number.isSafeInteger(message.asmGroupId) || message.asmGroupId <= 0)) fail('invalid_asm_group');

@@ -1,3 +1,4 @@
+import { demoEffect } from '../modules/demo/index.mjs'
 import { authority, guardedBatch, requireOwner } from './access'
 import { targetUrl } from './flows'
 import { digest, id, now, requireValue, stmt, type Actor, type CrankEnv, type Run } from './model'
@@ -57,7 +58,10 @@ async function send(env: CrankEnv, run: Run): Promise<Outcome> {
   try {
     const headers: Record<string, string> = { 'content-type': 'application/json', 'idempotency-key': run.id }
     if (env.CRANK_TARGET_TOKEN) headers.authorization = 'Bearer ' + env.CRANK_TARGET_TOKEN
-    response = await fetch(run.target_url, { method: 'POST', headers, body: run.input_json, redirect: 'manual', signal: controller.signal })
+    response = await demoEffect(
+      () => fetch(run.target_url, { method: 'POST', headers, body: run.input_json, redirect: 'manual', signal: controller.signal }),
+      () => Response.json({ id: `demo-delivery-${run.id}`, idempotencyKey: run.id }),
+    )
     if (response.status >= 300 && response.status < 400) return { status: 'failed', code: 'redirect_refused', uncertain: true, http_status: response.status }
     if (!response.ok) return { status: 'failed', code: 'destination_rejected', uncertain: true, http_status: response.status }
     if (response.headers.get('content-type')?.split(';')[0].trim() !== 'application/json') return { status: 'failed', code: 'invalid_destination_contract', uncertain: true, http_status: response.status }

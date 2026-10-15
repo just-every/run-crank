@@ -1,5 +1,5 @@
-import { readFileSource } from '../modules/import-kit/readers/file.ts'
-import type { Json, SourceBundle } from '../modules/import-kit/types.ts'
+import { readFileSource } from '../modules/import-kit/src/readers/file.ts'
+import type { Json, SourceBundle } from '../modules/import-kit/src/types.ts'
 import { validateImportTargetUrl, type ImportTargetEnv } from './import-target.ts'
 
 export const N8N_MAPPING_VERSION = 'crank-n8n-body-forward-v1'

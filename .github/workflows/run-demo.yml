@@ -1,0 +1,83 @@
+name: Run demo
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      test_only:
+        description: 'The separate test host demo.test.<domain> (environment demo-test), with Turnstile test keys that always pass'
+        type: boolean
+        default: false
+      remove:
+        description: 'Remove that demo (rer deploy --demo --remove --yes) instead of deploying it'
+        type: boolean
+        default: false
+permissions:
+  contents: read
+concurrency:
+  group: run-demo-${{ inputs.test_only && 'test' || 'production' }}
+  cancel-in-progress: false
+jobs:
+  deploy:
+    if: github.event_name == 'workflow_dispatch' || vars.RUN_DEMO_DEPLOY == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: run-demo
+    env:
+      DEMO_ENVIRONMENT: ${{ inputs.test_only && 'demo-test' || 'production' }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .node-version
+      - run: corepack enable && pnpm install --frozen-lockfile
+        env:
+          COREPACK_ENABLE_DOWNLOAD_PROMPT: '0'
+      - name: Scope the test host
+        if: inputs.test_only
+        run: node --input-type=module -e "import fs from 'node:fs'; const d=JSON.parse(fs.readFileSync('deploy-demo.json','utf8')); d.domain='test.'+d.domain; fs.writeFileSync('deploy-demo.json',JSON.stringify(d));"
+      # Wrangler builds the container image with the runner's Docker and pushes it to the account.
+      - if: ${{ !inputs.remove }}
+        run: pnpm exec rer deploy --demo --environment "$DEMO_ENVIRONMENT"
+        env:
+          CLOUDFLARE_ACCOUNT_ID: b20c0ca9cab0c2b70e13d7cf724b89bd
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          TURNSTILE_SITE_KEY: ${{ inputs.test_only && '1x00000000000000000000AA' || vars.TURNSTILE_SITE_KEY }}
+          TURNSTILE_SECRET_KEY: ${{ inputs.test_only && '1x0000000000000000000000000000000AA' || secrets.TURNSTILE_SECRET_KEY }}
+          RER_DEMO_OPERATOR_TOKEN: ${{ secrets.RER_DEMO_OPERATOR_TOKEN }}
+      # Deletes only what the demo's deploy recorded; a second run finds nothing and changes nothing.
+      - if: inputs.remove
+        run: pnpm exec rer deploy --demo --remove --yes --environment "$DEMO_ENVIRONMENT"
+        env:
+          CLOUDFLARE_ACCOUNT_ID: b20c0ca9cab0c2b70e13d7cf724b89bd
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      # A first deploy's hostname is new: wait until public DNS answers for it, then
+      # read the start page back through that resolver, so the runner's own resolver
+      # cannot keep an earlier "no such host".
+      - name: Public readback
+        if: ${{ !inputs.remove }}
+        run: |
+          domain=demo.$(node -p "require('./deploy-demo.json').domain")
+          doh=https://cloudflare-dns.com/dns-query
+          deadline=$((SECONDS + 600))
+          until curl --silent --fail --max-time 10 -H 'accept: application/dns-json' "$doh?name=$domain&type=A" | grep -q '"Answer"'; do
+            if [ "$SECONDS" -ge "$deadline" ]; then
+              echo "::error::$domain is not in public DNS 10 minutes after the deploy. The demo is deployed; its new hostname has not resolved yet. Run this workflow again to deploy and read it back once it does."
+              exit 1
+            fi
+            echo "Waiting for $domain to resolve in public DNS"
+            sleep 15
+          done
+          # A new Custom Domain can need a few minutes for its certificate too.
+          deadline=$((SECONDS + 300))
+          until code=$(curl --silent --doh-url "$doh" --max-time 20 -o /dev/null -w '%{http_code}' "https://$domain/"); [ "$code" = 200 ]; do
+            if [ "$SECONDS" -ge "$deadline" ]; then
+              echo "::error::https://$domain/ resolves but did not answer 200 within 5 minutes (last answer: HTTP $code)."
+              exit 1
+            fi
+            echo "Waiting for https://$domain/ to answer 200 (HTTP $code)"
+            sleep 15
+          done
+          ! curl --silent --show-error --doh-url "$doh" -D - -o /dev/null "https://$domain/" | grep -qi '^set-cookie:'

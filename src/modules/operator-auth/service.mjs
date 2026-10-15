@@ -16,6 +16,8 @@ import { emailAllowed, isActiveOperator, defaultRolePolicy } from './accounts/ro
 import { oaSessions, createOaAccounts } from './accounts/oa.mjs';
 import { createAdmission, legacyAdmission } from './identity/admission.mjs';
 import { createOidcProviders } from './identity/oidc/index.mjs';
+import { ownerSignIn } from './accounts/owner-signin.mjs';
+import { emailChange } from './accounts/email-change.mjs';
 import { isLocalCli } from './local-cli.mjs';
 import { devAdmitted } from './dev-admission.mjs';
 
@@ -74,6 +76,8 @@ export function createOperatorAuth(options) {
     ...admin,
     ...providerControl({ store, accounts, authenticate, config, clock }),
     ...fencedCredentials({store,authenticate,requireFreshProof,config,clock,hash}),
+    ...ownerSignIn({ config, store, clock, sessions, limit }),
+    ...emailChange({ config, store, clock, authenticate, requireFreshProof }),
     presentation: config.branding,
     emailSignInAvailable: Boolean(mailSender),
     /** Identity providers (null when none is configured): routes, the sign-in page's list and owner actions. */

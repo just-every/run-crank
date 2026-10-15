@@ -1,5 +1,4 @@
-// Inline additions to a document's Content-Security-Policy: the dev badge and
-// the demo bar each add one hashed style without loosening anything else.
+// Inline product labels add exact CSP hashes without broadening other sources.
 
 /** The CSP source token for an exact inline text. */
 export async function sha256(text) {

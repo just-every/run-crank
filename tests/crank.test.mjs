@@ -22,11 +22,9 @@ test('native owner sign-in, admin preparation and member read-only roles apply a
  await h.get('state','',401);
  for(const role of ['admin','member']) {
   const email=role+'@example.test'; const invited=await h.send('/auth/invite',{email,displayName:role,role},h.owner);assert.equal(invited.status,202,invited.text);
-  const out=await h.send('/__dev/outbox',undefined,'',{'x-rer-dev-key':'test-dev-gate-0123456789012345678901234567890123'});
-  const ids=[...out.text.matchAll(/href="(\/__dev\/outbox\?message=[^"]+)"/g)].map(x=>x[1].replaceAll('&amp;','&'));
-  let token;
-  for(const id of ids){const detail=await h.send(id,undefined,'',{'x-rer-dev-key':'test-dev-gate-0123456789012345678901234567890123'});if(detail.text.includes(email)){const link=detail.text.match(/href="([^"]*\/auth\/confirm\?token=[^"]+)"/);if(link){token=new URL(link[1].replaceAll('&amp;','&'),h.origin).searchParams.get('token');break;}}}
-  assert.ok(token,'invitation delivered to development outbox');const joined=await h.send('/auth/confirm',{token});assert.equal(joined.status,303,joined.text);const cookie=joined.cookie;
+  const message=h.mail.findLast(message=>message.to.includes(email));
+  const token=new URL(message.html.match(/href="([^"]*\/auth\/confirm\?token=[^"]+)"/)[1].replaceAll('&amp;','&'),h.origin).searchParams.get('token');
+  assert.ok(token,'invitation delivered to mail provider');const joined=await h.send('/auth/confirm',{token});assert.equal(joined.status,303,joined.text);const cookie=joined.cookie;
   assert.equal((await h.get('state',cookie)).actor.role,role);
   const f=await h.flow('Role boundary '+role),r=await h.run(f);
   for(const path of [`flows/${f.id}/activate`,`flows/${f.id}/pause`,`runs/${r.id}/approve`,`runs/${r.id}/reject`,`runs/${r.id}/replay`,'tokens','imports/plan','imports/apply','data/export','data/restore','data/erase']) await h.post(path,{},cookie,403);

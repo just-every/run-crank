@@ -7,13 +7,15 @@ import { AuthStore } from '../accounts/store.mjs';
 import { createOperatorAuth } from '../service.mjs';
 import { AuthError } from '../errors.mjs';
 import { hashToken, opaqueToken } from '../crypto.mjs';
-import { readCookie, sessionCookie, isLoopbackHost } from '../http.mjs';
+import { readCookie, sessionCookie, isLoopbackHost, escapeHtml } from '../http.mjs';
 import { safeReturnTo } from '../policy.mjs';
 import { isActiveOperator, defaultRolePolicy } from '../accounts/roles.mjs';
 import { devGate, devNotFound } from '../dev-gate.mjs';
 import { registerDevAdmission } from '../dev-admission.mjs';
 import { definePersonas } from './personas.mjs';
-import { decorate } from './badge.mjs';
+import { cliSession } from './cli-session.mjs';
+import { decorateLabel } from '../../demo/label.mjs';
+import { pageResponse } from '../page.mjs';
 
 export const DEV_LAYER_MARKER = 'rer-dev-layer:local-only-never-deploy';
 const headers = { 'cache-control': 'no-store', 'referrer-policy': 'no-referrer', 'x-content-type-options': 'nosniff', 'x-robots-tag': 'noindex, nofollow', 'x-rer-dev-layer': DEV_LAYER_MARKER };
@@ -28,7 +30,7 @@ export function managedInstallation(env) {
 
 /**
  * Wraps a seed's Worker with dev sign-in (`/auth/dev/enter?as=…`), the persona
- * list (`/__dev/personas`) and the dev-only badge. Every surface needs the key
+ * list (`/__dev/personas`). Every identity surface needs the key
  * gate and answers 404 without it. `config(env)` is the seed's own AuthConfig
  * and `personas()` its devPersonas() declaration.
  */
@@ -42,16 +44,24 @@ export function withDevIdentity(worker, { bindings = env => env, config: authCon
         // Never admit a dev credential here; with dev identity on, serve nothing.
         registerDevAdmission(null);
         if (env.RER_DEV_IDENTITY !== 'off') return rejectedResponse(request, text(503, 'Dev identity refuses to run beside RER_INSTALLATION_ID with a non-loopback RER_MANAGEMENT_ORIGIN. Remove those bindings from local settings or use rer dev --login.'));
-        return new URL(request.url).pathname === '/auth/dev/enter' || new URL(request.url).pathname === '/__dev/personas' ? rejectedResponse(request, devNotFound()) : worker.fetch(request, original, execution);
+        return new URL(request.url).pathname === '/auth/dev/enter' || new URL(request.url).pathname === '/__dev/personas' || new URL(request.url).pathname === '/auth/local/cli-session' ? rejectedResponse(request, devNotFound()) : worker.fetch(request, original, execution);
       }
       const gate = devGate({ key: env.RER_DEV_KEY, origin: env.AUTH_ORIGIN, local: env.AUTH_LOCAL === 'true' });
       registerDevAdmission(gate ? r => gate.admits(r) : null);
       const path = new URL(request.url).pathname;
-      if (path === '/auth/dev/enter' || path === '/__dev/personas') {
-        if (!gate || env.RER_DEV_IDENTITY === 'off' || !await gate.admits(request)) return rejectedResponse(request, devNotFound());
+      if (path === '/__dev/key') return gate ? gate.exchange(request) : devNotFound();
+      if (path === '/signin' && gate && env.RER_DEV_IDENTITY !== 'off' && request.method === 'GET') {
+        if (!await gate.admits(request)) return new Response(null, { status: 303, headers: { ...headers, location: '/__dev/key' } });
+        const { config } = identity(env, authConfig, declared);
+        const returnTo = safeReturnTo(new URL(request.url).searchParams.get('returnTo'));
+        const href = `/auth/dev/enter?as=owner&returnTo=${encodeURIComponent(returnTo)}`;
+        return decorateLabel(await pageResponse({ branding: config.branding, heading: 'Open your local app', content: `<a class="action" href="${escapeHtml(href)}">Continue as owner</a>` }), env.RER_DEMO === '1' ? 'Demo' : 'Dev');
+      }
+      if (path === '/auth/dev/enter' || path === '/__dev/personas' || path === '/auth/local/cli-session') {
+        if (!gate || env.RER_DEV_IDENTITY === 'off' || (path !== '/auth/local/cli-session' && !await gate.admits(request))) return rejectedResponse(request, devNotFound());
         const context = identity(env, authConfig, declared);
         try {
-          const response = path === '/__dev/personas' ? Response.json(await context.list(), { headers }) : await enter(request, gate, context);
+          const response = path === '/auth/local/cli-session' ? await cliSession(request, context, headers) : path === '/__dev/personas' ? Response.json(await context.list(), { headers }) : await enter(request, gate, context);
           return rejectedResponse(request, response);
         } catch (error) {
           if (error instanceof AuthError) return rejectedResponse(request, Response.json({ error: error.code }, { status: error.status, headers }));
@@ -60,9 +70,7 @@ export function withDevIdentity(worker, { bindings = env => env, config: authCon
       }
       const response = await worker.fetch(request, original, execution);
       if (!gate || request.method !== 'GET' || path.startsWith('/__dev/')) return response;
-      const admitted = await gate.admits(request);
-      const badge = admitted && env.RER_DEV_IDENTITY !== 'off' ? await identity(env, authConfig, declared).badge(request) : null;
-      return decorate(response, { exchange: path === '/', badge });
+      return decorateLabel(response, env.RER_DEMO === '1' ? 'Demo' : 'Dev');
     },
   };
 }
@@ -97,7 +105,6 @@ function identity(env, authConfig, declared) {
       return { ...actor, hash: await hash(readCookie(request, config)) };
     },
     list: async () => [...(await everyone()).map(({ as, email, role }) => ({ as, email, ...(role ? { role } : {}) })), { as: 'signed-out' }],
-    async badge(request) { return { session: await current(request), choices: (await everyone()).filter(persona => persona.email) }; },
   };
 }
 

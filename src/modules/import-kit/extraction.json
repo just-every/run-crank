@@ -1,0 +1,126 @@
+{
+  "version": 1,
+  "sources": [
+    {
+      "repository": "urn:git:commit:fa1846b6c2e4776be4310ef22f20b89c1846af85",
+      "commit": "fa1846b6c2e4776be4310ef22f20b89c1846af85",
+      "path": "src/core/features/intercom-import/staging.ts",
+      "sha256": "a7df8c74563b814aa9954c81c2f1434c469e203856107868e601f77b735b8623",
+      "mechanism": [
+        "acquireAttempt",
+        "heartbeat",
+        "preserveFailedAttempt",
+        "stageIntercomImport"
+      ],
+      "destinationPaths": [
+        "src/journal/jobs.ts",
+        "src/engine/apply.ts"
+      ],
+      "retainedInvariants": [
+        "Attempt owner must acquire a lease before staging originals.",
+        "A stale holder may not clean recovered originals.",
+        "Original attachment digest is checked before publication.",
+        "Already imported source identity cannot produce duplicate native rows."
+      ],
+      "intentionalAdaptations": [
+        "The coupled attempt is now an actor/destination-bound generic job.",
+        "Monotonic integer fence supplements random lease token.",
+        "Original attachment bytes stage in the same durable SQLite database, replacing external R2 staging.",
+        "Bounded source batches replace one archive-sized publication."
+      ]
+    },
+    {
+      "repository": "urn:git:commit:fa1846b6c2e4776be4310ef22f20b89c1846af85",
+      "commit": "fa1846b6c2e4776be4310ef22f20b89c1846af85",
+      "path": "src/core/features/intercom-import/repository.ts",
+      "sha256": "4d5bd8a9d8b301ef6cb58b51b6a159280f60adc4f314a4bce81fcd3e0764e956",
+      "mechanism": [
+        "claimImportAttemptLease",
+        "heartbeatImportAttemptLease",
+        "importArtifactStatement",
+        "completeImportAttemptStatement",
+        "commitImport"
+      ],
+      "destinationPaths": [
+        "src/journal/jobs.ts",
+        "src/engine/apply.ts",
+        "src/storage/schema.ts"
+      ],
+      "retainedInvariants": [
+        "Lease is claimed only after the prior holder expires or releases.",
+        "Current authorization and current lease gate all publication.",
+        "Artifact/provenance and target rows commit together."
+      ],
+      "intentionalAdaptations": [
+        "Drizzle/D1 statement composition is expressed as SQLite BEGIN IMMEDIATE with guarded synchronous domain adapters.",
+        "Publication additionally commits a durable checkpoint and batch journal.",
+        "Conditional guards throw within the transaction so failures roll back all writes."
+      ]
+    },
+    {
+      "repository": "urn:git:commit:e60825ea55a6595cc45f725b0256de5f68e26826",
+      "commit": "e60825ea55a6595cc45f725b0256de5f68e26826",
+      "path": "src/core/features/imports/jobs.ts",
+      "sha256": "df29c63b9cae508121920b7001c0dc645d4a3783e2a39add4293b5d8a2816c5b",
+      "mechanism": [
+        "readImport",
+        "startImport",
+        "runImport",
+        "recoverImports"
+      ],
+      "destinationPaths": [
+        "src/journal/jobs.ts",
+        "src/engine/index.ts",
+        "src/engine/apply.ts",
+        "src/storage/originals.ts"
+      ],
+      "retainedInvariants": [
+        "Durable jobs are scoped to actor and workspace.",
+        "Operation key replay is allowed only for identical request hash.",
+        "Original input survives a failed or interrupted job.",
+        "Publication uses a claim guard and atomic statement transaction."
+      ],
+      "intentionalAdaptations": [
+        "The reviewed plan and exact supplied file/page and attachment originals are retained in SQLite; digest-validated BLOB custody replaces a format-specific archive key. Legacy metadata-only artifacts explicitly remain unavailable.",
+        "Reclaim uses lease expiry rather than a fixed Worker-lifetime cutoff.",
+        "Real target reversal is new; Slate deleteImportArchive is not represented as target-row undo."
+      ]
+    },
+    {
+      "repository": "urn:git:commit:e60825ea55a6595cc45f725b0256de5f68e26826",
+      "commit": "e60825ea55a6595cc45f725b0256de5f68e26826",
+      "path": "src/core/features/imports/persist.ts",
+      "sha256": "c5b943d522b3557b9b73267f7b0371c81bf1bd55fb47c50f1730c92b30bedef3",
+      "mechanism": [
+        "prepareImportPlan",
+        "idFor",
+        "stagedKeys cleanup",
+        "federation_import_mappings writes"
+      ],
+      "destinationPaths": [
+        "src/plan/index.ts",
+        "src/engine/apply.ts",
+        "src/provenance/identity.ts"
+      ],
+      "retainedInvariants": [
+        "One source can generate many native rows, each with a recorded mapping.",
+        "Destination revision is verified before replacing native data.",
+        "Staged attachments are cleaned on failed publication.",
+        "Imported historical principals do not activate source accounts."
+      ],
+      "intentionalAdaptations": [
+        "Generic deterministic identities include destination, namespace, kind and source ID.",
+        "Each target gets provenance, value hash and a full before-image; rollback compares native revisions and hashes.",
+        "Historical grant/job activation is refused by the core effect validator."
+      ]
+    }
+  ],
+  "newMechanisms": [
+    "Resumable per-batch journal and checkpoint",
+    "Before-image target undo and rollback with native edit conflicts",
+    "Independent per-identity value/attachment reconciliation",
+    "Atomic per-job exact-byte original custody and verified readback after reversal",
+    "Physical SQL provenance crosschecks against immutable owning job plans and active source claims"
+  ],
+  "reproduction": "The private edition-authoring Base copy record binds the copied metadata to its Base origin path, full revision and file hashes. Verify the full source commit and path against sha256; source repository identifiers here are content-addressed Git commit URNs."
+}

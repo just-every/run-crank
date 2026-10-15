@@ -9,7 +9,7 @@ Failed delivery gets one manual replay with the same idempotency key.
 ```sh
 git clone https://github.com/just-every/run-crank.git
 cd run-crank
-npx -y @runeditrun/rer@0.2.19 cli install
+npx -y @runeditrun/rer@0.2.21 cli install
 export PATH="$HOME/.local/bin:$PATH"
 rer dev
 ```

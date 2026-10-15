@@ -7,7 +7,7 @@ import { isActiveOperator } from '../../accounts/roles.mjs';
 import { isLocalCli } from '../../local-cli.mjs';
 import { linkMessage } from './message.mjs';
 import { completionHook } from '../after-confirm.mjs';
-export const STEP_UP_ACTIONS = Object.freeze(['providers:unlink', 'providers:relink', 'domains:change', 'owner:transfer', 'export', 'delete', 'credentials:mint']);
+export const STEP_UP_ACTIONS = Object.freeze(['providers:unlink', 'providers:relink', 'domains:change', 'owner:transfer', 'export', 'delete', 'credentials:mint', 'email:change']);
 export const STEP_UP_SECONDS = 600;
 
 // Persistence owns the atomic authority check, proof consumption and session
@@ -55,6 +55,9 @@ export function createEmailLinkLifecycle({ config: input, clock = Date.now, mail
   }
 
   async function requireFreshProof(actor) {
+    // Authentication already required the local key gate for this session.
+    // Dev confirms actions directly rather than sending an unusable mail link.
+    if (config.local && actor.kind === 'dev') return;
     if (!await store.steppedUp(actor, clock() - STEP_UP_SECONDS * 1000, clock())) deny('step_up_required', 403);
   }
   const authenticate = request => store.authenticate(request);

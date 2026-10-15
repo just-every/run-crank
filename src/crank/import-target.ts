@@ -1,5 +1,5 @@
-import type { D1Sql, D1TargetAdapter } from '../modules/import-kit/d1/types.ts'
-import type { Json, TargetRow } from '../modules/import-kit/types.ts'
+import type { D1Sql, D1TargetAdapter } from '../modules/import-kit/src/d1/types.ts'
+import type { Json, TargetRow } from '../modules/import-kit/src/types.ts'
 
 export interface ImportTargetEnv { AUTH_LOCAL?: string; CRANK_TARGET_ORIGIN?: string }
 export const IMPORT_DESTINATION = 'crank-flows'
