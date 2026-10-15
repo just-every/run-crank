@@ -23,7 +23,7 @@ export function SiteFooter({ sourceHref = repository }: SiteLinksProps) {
 }
 
 function RunActions() {
-  return <div className="landing-actions"><a className="dark-pill landing-run-link" href="/run">Run Crank <span aria-hidden="true">→</span></a><a className="landing-docs-link" href="/docs">Read the docs</a></div>
+  return <div className="landing-actions"><a className="dark-pill landing-run-link" href="/run">Run Crank <span aria-hidden="true">→</span></a><a className="dark-pill landing-run-link" href="https://demo.run-crank.com/">Try the demo <span aria-hidden="true">→</span></a><a className="landing-docs-link" href="/docs">Read the docs</a></div>
 }
 
 const included: { label: string; icon: LineIconName }[] = [
