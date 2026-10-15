@@ -43,7 +43,7 @@
     "@cloudflare/vite-plugin": "1.54.5",
     "@cloudflare/workers-types": "5.20260908.1",
     "@playwright/test": "1.63.0",
-    "@runeditrun/rer": "0.2.14",
+    "@runeditrun/rer": "0.2.17",
     "@types/node": "22.18.6",
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.7",
@@ -64,9 +64,6 @@
     "onlyBuiltDependencies": [
       "esbuild",
       "workerd"
-    ],
-    "patchedDependencies": {
-      "@runeditrun/rer@0.2.14": "patches/@runeditrun__rer@0.2.14.patch"
-    }
+    ]
   }
 }

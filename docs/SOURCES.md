@@ -4,7 +4,7 @@ Crank began with the committed Base foundation at
 `fc0e1041efa55771142bbb57c4ab4743147e264d`. `composition.lock.json` records
 the generated application runtime and auth copies. `base-copies.json` records
 the unchanged import-kit source. The command tooling comes from the exact
-published package `@runeditrun/rer@0.2.14`.
+published package `@runeditrun/rer@0.2.17`.
 
 Package-mode operation was informed by the public Coaster, Beam and Pier seeds.
 No sibling repository was edited. Crank's domain code adapts these MIT patterns:
@@ -38,11 +38,6 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-## Local process inspection patch
+## Shared process inspection
 
-`patches/@runeditrun__rer@0.2.14.patch` raises the bounded process-inspection
-timeout from 3 to 15 seconds. A heavily shared macOS host can take over six
-seconds even for PID-scoped `lsof`; the old deadline incorrectly reported that
-the app did not own its port. The same ownership evidence is still required.
-Upstream default: bound `lsof` separately at 15 seconds and distinguish timeout
-from an observed foreign listener. No auth or runtime fallback is introduced.
+The exact published RER 0.2.17 package supplies bounded, nonblocking macOS listener ownership inspection. No local RER patches are applied.
