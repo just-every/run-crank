@@ -7,7 +7,7 @@ export async function effectSuccess(request) {
   if (host === 'api.resend.com') return json({ id });
   if (host === 'api.twilio.com') return json({ sid: `SM${crypto.randomUUID().replaceAll('-', '')}`, status: 'queued', error_code: null, error_message: null }, 201);
   if (host === 'api.postmarkapp.com') return json({ ErrorCode: 0, Message: 'OK', MessageID: id, SubmittedAt: new Date().toISOString() });
-  if (host.endsWith('mailgun.net')) return json({ id: `<${id}@demo.invalid>`, message: 'Queued. Thank you.' });
+  if (host === 'mailgun.net' || host.endsWith('.mailgun.net')) return json({ id: `<${id}@demo.invalid>`, message: 'Queued. Thank you.' });
   if (host === 'slack.com') return json({ ok: true, channel: 'demo', ts: `${Math.floor(Date.now() / 1000)}.000001`, message: { type: 'message', text: 'Message sent' } });
   if (host === 'hooks.slack.com' || host.endsWith('.webhook.office.com') || host.endsWith('.logic.azure.com')) return new Response(host === 'hooks.slack.com' ? 'ok' : '1');
   if (host === 'api.stripe.com') {

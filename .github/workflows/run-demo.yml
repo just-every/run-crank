@@ -8,6 +8,10 @@ on:
         description: 'The separate test host demo.test.<domain> (environment demo-test), with Turnstile test keys that always pass'
         type: boolean
         default: false
+      observe:
+        description: 'Test host only: capture 15 quiet minutes and a 10-minute visitor window as lifecycle artifacts'
+        type: boolean
+        default: false
       remove:
         description: 'Remove that demo (rer deploy --demo --remove --yes) instead of deploying it'
         type: boolean
@@ -21,7 +25,7 @@ jobs:
   deploy:
     if: github.event_name == 'workflow_dispatch' || vars.RUN_DEMO_DEPLOY == 'true'
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 45
     environment: run-demo
     env:
       DEMO_ENVIRONMENT: ${{ inputs.test_only && 'demo-test' || 'production' }}
@@ -81,3 +85,38 @@ jobs:
             sleep 15
           done
           ! curl --silent --show-error --doh-url "$doh" -D - -o /dev/null "https://$domain/" | grep -qi '^set-cookie:'
+      - name: Observe test host admissions
+        if: inputs.test_only && inputs.observe && !inputs.remove
+        env:
+          CLOUDFLARE_ACCOUNT_ID: b20c0ca9cab0c2b70e13d7cf724b89bd
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          mkdir -p .rer/demo-observation
+          node scripts/demo-tail.mjs crank-demo-test--demo .rer/demo-observation/lifecycle.jsonl > .rer/demo-observation/tail.log 2>&1 &
+          echo $! > .rer/demo-observation/pid
+          for i in $(seq 1 30); do
+            test -f .rer/demo-observation/lifecycle.jsonl.ready && break
+            sleep 1
+          done
+          test -f .rer/demo-observation/lifecycle.jsonl.ready
+          sleep 900
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: inputs.test_only && inputs.observe && !inputs.remove
+        with:
+          name: demo-quiet-window
+          path: .rer/demo-observation/
+      - name: Hosted visitor observation window
+        if: inputs.test_only && inputs.observe && !inputs.remove
+        run: sleep 600
+      - name: Stop test host observation
+        if: always() && inputs.test_only && inputs.observe && !inputs.remove
+        run: |
+          if test -f .rer/demo-observation/pid; then
+            kill -TERM "$(cat .rer/demo-observation/pid)" 2>/dev/null || true
+            sleep 3
+          fi
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always() && inputs.test_only && inputs.observe && !inputs.remove
+        with:
+          name: demo-lifecycle
+          path: .rer/demo-observation/

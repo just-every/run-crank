@@ -4,8 +4,9 @@
   "name": "Crank",
   "instanceType": "basic",
   "settings": {
-    "MAIL_FROM": "Crank <hello@demo.invalid>",
+    "MAIL_FROM": "Crank <hello@harbour.example>",
     "CRANK_TARGET_ORIGIN": "https://operations.example.com",
     "MAIL_PROVIDER": "resend"
-  }
+  },
+  "ownerEmail": "maya@harbour.example"
 }

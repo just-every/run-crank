@@ -59,6 +59,11 @@ export function createEmailLinkLifecycle({ config: input, clock = Date.now, mail
     // Authentication already required the local key gate for this session.
     // Dev confirms actions directly rather than sending an unusable mail link.
     if (config.local && actor.kind === 'dev') return;
+    // The demo's mail is mocked. Its configured owner can confirm directly,
+    // after authentication against this visitor's isolated session store.
+    // Another demo's cookie cannot authenticate here; ordinary runtimes never
+    // install the demo guard, even if a caller supplies demo request headers.
+    if (demoEffectsEnabled() && actor.operator.role === 'owner' && actor.operator.email === config.OWNER_EMAIL) return;
     if (!await store.steppedUp(actor, clock() - STEP_UP_SECONDS * 1000, clock())) deny('step_up_required', 403);
   }
   const authenticate = request => store.authenticate(request);

@@ -12,7 +12,7 @@ import { nativePublication } from './native-staging-publication.ts';
 import { stagingStatements } from './staging-statements.ts';
 import { guardPredicate } from './guards.ts';
 import { erasureIndexColumns, erasureValueColumns, privacyRows, valueRows } from './erasure-values.ts';
-import { completedErasure, erasureRequestContext, operationIdentity, pendingErasure, progressChange, progressGuard, progressInsert, readErasureProgress, type D1ErasureComplete, type D1ErasureStep, type D1ErasureStepOptions, type ErasureProgress } from './erasure-progress.ts';
+import { completedErasure, erasureRequestContext, operationIdentity, pendingErasure, progressChange, progressGuard, progressInsert, readErasureProgress, type D1ErasureStep, type D1ErasureStepOptions, type ErasureProgress } from './erasure-progress.ts';
 
 /** Advanced product-owned custody rewrites use the same runner as retirement.
  * Fragments must describe authenticated normalized custody, in deterministic

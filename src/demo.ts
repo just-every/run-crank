@@ -1,14 +1,15 @@
 import type { CrankEnv } from './crank/model'
-import { canonical, digest } from './crank/model'
+import { canonical, digest, type Actor } from './crank/model'
+import { mintToken } from './crank/tokens'
 
 /** Real workspace records. Fixed IDs preserve visitor edits if startup repeats. */
 export async function seedDemo(env: CrankEnv, { ownerEmail, now }: { ownerEmail: string; now: Date }) {
-  const owner = await env.DB.prepare('SELECT id FROM oa_operators WHERE email=? AND role=\'owner\'').bind(ownerEmail).first<{ id: string }>()
+  const owner = await env.DB.prepare('SELECT id,version FROM oa_operators WHERE email=? AND role=\'owner\'').bind(ownerEmail).first<{ id: string; version: number }>()
   if (!owner) throw new Error('Demo owner is not ready')
   const at = (hours: number) => new Date(now.getTime() - hours * 3600000).toISOString()
   const origin = env.CRANK_TARGET_ORIGIN
   if (!origin) throw new Error('Demo destination is not configured')
-  const statements = [env.DB.prepare('INSERT INTO oa_first_run(singleton,completed_by,completed_at) VALUES(1,?,?) ON CONFLICT DO NOTHING').bind(owner.id, now.getTime())]
+  const statements = [env.DB.prepare("UPDATE oa_operators SET display_name='Maya Chen' WHERE id=?").bind(owner.id), env.DB.prepare('INSERT INTO oa_first_run(singleton,completed_by,completed_at) VALUES(1,?,?) ON CONFLICT DO NOTHING').bind(owner.id, now.getTime())]
   const people = [ ['maya', 'Maya Chen', 'admin'], ['oliver', 'Oliver Hughes', 'member'], ['amelia', 'Amelia Grant', 'admin'] ]
   for (const [key, name, role] of people) statements.push(env.DB.prepare("INSERT INTO oa_operators(id,email,display_name,role,status,version,created_at) VALUES(?,?,?,?,'active',1,?) ON CONFLICT DO NOTHING").bind(`demo-${key}`, `${key}@harbour.example`, name, role, now.getTime() - 7 * 86400000))
   const flows = [
@@ -39,4 +40,15 @@ export async function seedDemo(env: CrankEnv, { ownerEmail, now }: { ownerEmail:
     }
   }
   await env.DB.batch(statements)
+  // Use the same credential issuance rules as the Access page. Raw secrets are
+  // discarded; a visitor creates a new credential to connect their own agent.
+  const session = await env.DB.prepare("SELECT id,kind FROM oa_sessions WHERE operator_id=? AND kind IN ('native','dev') AND revoked_at IS NULL AND expires_at>? ORDER BY created_at DESC LIMIT 1").bind(owner.id, now.getTime()).first<{ id: string; kind: 'native' | 'dev' }>()
+  if (!session) throw new Error('Demo owner session is not ready')
+  const actor: Actor = { id: owner.id, name: 'Maya Chen', role: 'owner', kind: session.kind, version: owner.version, sessionId: session.id, local: env.AUTH_LOCAL === 'true' }
+  for (const credential of [
+    { label: 'Operations assistant', scope: 'agent' },
+    { label: 'Support desk events', scope: 'trigger', flow_id: 'demo-flow-support' },
+  ]) {
+    if (!await env.DB.prepare('SELECT 1 FROM crank_tokens WHERE label=? AND created_by=?').bind(credential.label, owner.id).first()) await mintToken(env, actor, credential)
+  }
 }

@@ -18,6 +18,10 @@ Production build/deploy refuses that setting; ordinary builds keep real effects.
   provider response should supply its own exact success shape this way.
 - Mail in local dev and demo is silently suppressed. There is no outbox or
   blocked-send UI. Logs contain only the mocked request's method and host.
+- The configured owner's authenticated session supplies step-up proof inside
+  its own demo, including owner invitations and role changes. The demo guard
+  must be active; ordinary hosted instances still require real proof. Each
+  visitor's separate session secret and store reject other visitors' cookies.
 - `seed(env, { ownerEmail, now })` runs once after the owner exists and must
   be idempotent. Its only table is the demo's throwaway `rer_demo` marker.
 - Base adds ` Demo` to the document title, including client-side navigation.

@@ -425,6 +425,11 @@ owner invitation cancellation, and owner activation or deactivation. Unchanged
 roles/statuses and non-owner status changes retain their usual authorization.
 The existing version fences and last-active-owner protection still apply after
 the proof succeeds.
+With the `RER_DEMO=1` demo guard active, the configured owner's authenticated
+session supplies this proof inside its own visitor container because mail is
+mocked. Authentication still checks the container's own session secret and
+store; another visitor's session is refused. Ordinary hosted instances keep
+requiring the real proof described above.
 Creating a server-declared owner dev persona also requires the signed-in owner's
 fresh local proof in addition to the checkout key. Its creation repeats the actor
 session/version fence in the database write.

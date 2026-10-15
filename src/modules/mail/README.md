@@ -148,17 +148,26 @@ await sender.send({
 
 Pass `relayUrl` only for `rer`. It must be the assigned HTTPS URL, without URL
 credentials, query or fragment. The adapter sends one POST with Bearer
-authentication and `redirect: 'error'`. Its JSON contains one mailbox `to`,
+authentication and `redirect: 'manual'` (Cloudflare Workers reject
+`redirect: 'error'`); a 3xx is never followed. Its JSON contains one mailbox `to`,
 `subject`, `text` and optional nonempty `html`. RER owns the sender and
 installation identity; `from` and `deliveryId` are not transmitted. Subjects
 must be nonempty, without newlines and at most 200 characters. Plain text is
 required; each body is limited to 65,536 characters and the JSON to 128 KiB.
-Other recipients, attachments, reply-to, headers and unsubscribe features are
-unsupported and fail before dispatch.
+
+The relay sets `Auto-Submitted: auto-generated` on every message, so the
+adapter accepts that header and does not transmit it; other `Auto-Submitted`
+values are refused. `List-Unsubscribe` (one or two `<https:…>`/`<mailto:…>`
+entries, at most 2,000 characters) travels as `listUnsubscribe`, and
+`List-Unsubscribe-Post: List-Unsubscribe=One-Click` as `listUnsubscribePost:
+true`, which requires an HTTPS entry. The structured `unsubscribe` request
+assembles the same headers. Other recipients, attachments, reply-to and every
+other header are unsupported and fail before dispatch.
 
 HTTP 202 returns `accepted` with no provider message ID. HTTP 400, 401, 402,
-403 and 413 return `rejected`; 429 returns `rate_limited`; 502 and 503 return
-`uncertain`. Network failures and refused redirects are also `uncertain`.
+403 and 413 return `rejected`, and so does any 3xx (`provider_redirected`);
+429 returns `rate_limited`; 502 and 503 return `uncertain`. Network failures
+are also `uncertain`.
 The usual application delivery policy decides whether to retry or stop; the
 adapter makes no retries and never reads or logs provider error bodies.
 

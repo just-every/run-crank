@@ -26,7 +26,7 @@ export function knowsKey(jwks, kid) {
 
 export async function verifyIdToken(parsed, jwks, link, provider, settings, transaction, tokens, now) {
   check(!Object.hasOwn(parsed.claims, 'events'), 'oidc_invalid_id_token');
-  const { header, claims } = parsed;
+  const { claims } = parsed;
   await verifySignature(parsed, jwks);
   // The token's issuer is the pinned issuer, and its audience is this client.
   check(claims.iss === link.issuer && typeof claims.sub === 'string' && claims.sub.length > 0 && claims.sub.length <= 255, 'oidc_issuer_mismatch');

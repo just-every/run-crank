@@ -11,7 +11,6 @@ import { sha256 } from '../provenance/identity.ts';
 import { stagingChunks } from './staging-transport.ts';
 import { NATIVE_STAGE_ROWS_BYTES,nativeRowStatements } from './native-staging-rows.ts';
 import { stagingStatements } from './staging-statements.ts';
-import { batchBytes } from './transport.ts';
 import { rpcSize, rpcSizeBytes, wireSql, type RpcSize } from '../../../d1-transport/index.mjs';
 import type { NativeStageCheckpoint } from './native-staging-rows.ts';
 

@@ -3,7 +3,7 @@ import { canonicalJson, requireText } from '../provenance/identity.ts';
 import { fieldRedactions } from './field-redaction.ts';
 import { reserveReturn } from './budget.ts';
 import { guardPredicate, copyStatement } from './guards.ts';
-import { guard, sql } from './database.ts';
+import { sql } from './database.ts';
 import { prepareErasureSelection } from './erasure-selection.ts';
 import { stageD1ImportErasure } from './erasure-stage.ts';
 import { erasureRequestContext, erasureStatementBinding, type D1ErasurePending, type D1ErasureStepOptions } from './erasure-progress.ts';
