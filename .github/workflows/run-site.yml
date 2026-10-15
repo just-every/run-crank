@@ -1,4 +1,3 @@
-# Adoption note: add it only when the per-seed gate holds
 name: Run site
 on:
   push:
@@ -16,10 +15,10 @@ jobs:
     timeout-minutes: 20
     environment: run-site
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1; action runtime Node 24
         with:
           persist-credentials: false
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0; action runtime Node 24
         with:
           node-version-file: .node-version
       - run: corepack enable && pnpm install --frozen-lockfile
