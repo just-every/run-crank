@@ -36,8 +36,8 @@ export function createDependencies({db,origin,name,provider,interfaces=[{interfa
   insist(await store.first(`SELECT 1 WHERE ${initialApproval.sql}`,...initialApproval.args),'local_owner_proof_required',403);
   const metadata=await providerMetadata(expected,fetcher,contract),installation=await store.installation(contract);
   const codeDigest=await digest(expected+'\0'+data.code);
-  const consumed=await store.run('INSERT INTO rer_dependency_codes(digest,created_at) VALUES(?,?) ON CONFLICT DO NOTHING',codeDigest,clock());
-  insist(consumed.meta.changes===1,'link_code_used',409);
+  const consumed=await store.first('INSERT INTO rer_dependency_codes(digest,created_at) VALUES(?,?) ON CONFLICT DO NOTHING RETURNING digest',codeDigest,clock());
+  insist(consumed?.digest===codeDigest,'link_code_used',409);
   const now=Math.floor(clock()/1000), proof=await assertion(installation.key,{iss:origin,sub:origin,aud:metadata.link.redeem,iat:now,exp:now+60,jti:crypto.randomUUID(),code:data.code,interface:contract,sector_id:installation.sector_id,callback:origin+CALLBACK});
   const result=await readJson(fetcher,metadata.link.redeem,NETWORK,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:data.code,interface:contract,origin,callback:origin+CALLBACK,client_assertion_type:'urn:ietf:params:oauth:client-assertion-type:jwt-bearer',client_assertion:proof})});
   insist(result.issuer===expected && result.interface===contract && result.sector_id===installation.sector_id && result.origin===origin && result.callback===origin+CALLBACK && typeof result.client_id==='string' && result.client_id.length>0 && result.client_id.length<=512,'invalid_link_grant',403);

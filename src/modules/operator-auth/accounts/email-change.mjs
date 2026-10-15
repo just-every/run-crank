@@ -21,12 +21,12 @@ export function emailChange({ config, store, clock, authenticate, requireFreshPr
         let changed;
         try {
           [changed] = await store.batch([
-            [`UPDATE oa_operators SET email=? WHERE id=? AND version=? AND ${fence.sql}`, [email, actor.operator.id, actor.operator.version, ...fence.args]],
+            [`UPDATE oa_operators SET email=? WHERE id=? AND version=? AND ${fence.sql} RETURNING id`, [email, actor.operator.id, actor.operator.version, ...fence.args]],
             ['UPDATE oa_tokens SET revoked_at=? WHERE operator_id=? AND consumed_at IS NULL AND revoked_at IS NULL AND EXISTS(SELECT 1 FROM oa_operators WHERE id=? AND email=?)',
               [now, actor.operator.id, actor.operator.id, email]],
           ]);
         } catch (error) { if (/UNIQUE/.test(String(error))) deny('email_in_use', 409); throw error; }
-        if (changed.meta.changes !== 1) deny('authority_changed', 409);
+        if (!changed.results.some(row => row.id === actor.operator.id)) deny('authority_changed', 409);
       }
       return store.operator(actor.operator.id);
     },

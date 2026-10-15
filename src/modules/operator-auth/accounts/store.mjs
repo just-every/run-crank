@@ -1,6 +1,7 @@
 import { providerPinFence, recordProviderPin } from './provider-pin.mjs';
 // D1 batches are transactions. All decisions that grant a session or mutate
 // operator authority are repeated inside the same database transaction.
+// RETURNING keys witness each write; D1 meta.changes also counts trigger writes.
 export const operatorColumns = 'id, email, display_name AS displayName, role, status, version, created_at AS createdAt';
 export class AuthStore {
   constructor(db) { this.db = db; }
@@ -50,10 +51,10 @@ export class AuthStore {
   async token(input, actor) {
     let fence = { sql: '1', args: [] };
     if (actor) fence = this.actorFence(actor, input.now);
-    const result = await this.run(`INSERT INTO oa_tokens(id,token_hash,kind,operator_id,operator_version,return_to,created_at,expires_at)
-      SELECT ?,?,?,id,version,?,?,? FROM oa_operators WHERE id=? AND status='active' AND ${fence.sql}`,
+    const result = await this.first(`INSERT INTO oa_tokens(id,token_hash,kind,operator_id,operator_version,return_to,created_at,expires_at)
+      SELECT ?,?,?,id,version,?,?,? FROM oa_operators WHERE id=? AND status='active' AND ${fence.sql} RETURNING id`,
     [input.id, input.hash, input.kind, input.returnTo, input.now, input.expiresAt, input.operatorId, ...fence.args]);
-    return result.meta.changes === 1;
+    return result?.id === input.id;
   }
   async invite({ operatorId, expectedVersion, reinviting = false, email, displayName, role, token, now }, actor) {
     const fence = this.actorFence(actor, now);
@@ -69,7 +70,7 @@ export class AuthStore {
       prepare,
       [`INSERT INTO oa_tokens(id,token_hash,kind,operator_id,operator_version,issuer_id,issuer_version,return_to,created_at,expires_at)
         SELECT ?,?,'invite',id,version,?,?,?,?,? FROM oa_operators WHERE id=? AND status='invited' AND role=? AND version=?
-        ${reinviting ? 'AND changes()=1' : ''} AND ${fence.sql}`,
+        ${reinviting ? 'AND changes()=1' : ''} AND ${fence.sql} RETURNING id`,
       [token.id, token.hash, actor.operator.id, actor.operator.version, token.returnTo, now, token.expiresAt, operatorId, role, expectedVersion + (reinviting ? 1 : 0), ...fence.args]],
       // Bind revocation to this transaction's successful issuance, so a stale
       // reissue cannot invalidate the winner's link or send another credential.
@@ -79,7 +80,7 @@ export class AuthStore {
       ...(actor.kind === 'dev' ? [[`INSERT INTO oa_dev_credentials(credential,id,created_at)
         SELECT 'oa_tokens',id,? FROM oa_tokens WHERE id=?`, [now, token.id]]] : []),
     ]);
-    return results[1].meta.changes === 1;
+    return results[1].results.some(row => row.id === token.id);
   }
   async preview(hash, now) {
     return this.first(`SELECT t.kind,t.expires_at AS expiresAt,t.return_to AS returnTo,o.email,o.role,t.issuer_id AS issuerId,t.issuer_version AS issuerVersion,
@@ -219,9 +220,9 @@ export class AuthStore {
   liftDomainRules(providerId) { return this.run('DELETE FROM oa_domain_rules WHERE provider_id=?', [providerId]); }
   async stepUpChallenge({ id, hash, action, returnTo, now, expiresAt }, actor) {
     const fence = this.actorFence(actor, now);
-    const result = await this.run(`INSERT INTO oa_step_up_challenges(id,token_hash,session_id,operator_id,operator_version,action,return_to,created_at,expires_at)
-      SELECT ?,?,?,?,?,?,?,?,? WHERE ${fence.sql}`, [id, hash, actor.id, actor.operator.id, actor.operator.version, action, returnTo, now, expiresAt, ...fence.args]);
-    return result.meta.changes === 1;
+    const result = await this.first(`INSERT INTO oa_step_up_challenges(id,token_hash,session_id,operator_id,operator_version,action,return_to,created_at,expires_at)
+      SELECT ?,?,?,?,?,?,?,?,? WHERE ${fence.sql} RETURNING id`, [id, hash, actor.id, actor.operator.id, actor.operator.version, action, returnTo, now, expiresAt, ...fence.args]);
+    return result?.id === id;
   }
   stepUpPreview(hash, now) {
     return this.first(`SELECT c.session_id AS sessionId,c.action,c.expires_at AS expiresAt FROM oa_step_up_challenges c JOIN oa_operators o ON o.id=c.operator_id

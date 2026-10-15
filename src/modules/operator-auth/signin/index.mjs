@@ -3,7 +3,7 @@
 // with…" for each linked, reachable provider and offers a configured email link;
 // a hidden provider's button is simply absent.
 import { escapeHtml } from '../http.mjs';
-import { safeReturnTo } from '../policy.mjs';
+import { normalizeEmail, safeReturnTo } from '../policy.mjs';
 import { pageResponse } from '../page.mjs';
 
 const NOTICES = {
@@ -28,12 +28,19 @@ function noticeFor(code, emailAvailable) {
   if (['oidc_provider_unavailable', 'oidc_relink_required', 'oidc_provider_unlinked', 'oidc_unavailable', 'oidc_provider_version_unsupported'].includes(code)) return emailAvailable ? UNAVAILABLE : ['alert', 'That sign-in provider is not available right now. Try again later.'];
   return code.startsWith('oidc_') ? (emailAvailable ? UNFINISHED : ['alert', 'Signing in with that provider did not finish. Try again.']) : null;
 }
+// `login_hint` prefills the email field, as in OpenID Connect. Anything that is
+// not a complete email address is ignored; the form is never submitted for the visitor.
+function emailHint(value) {
+  if (value === null) return '';
+  try { return normalizeEmail(value); } catch { return ''; }
+}
 const hidden = returnTo => `<input type="hidden" name="returnTo" value="${escapeHtml(returnTo)}">`;
 
 /**
  * Handles GET and HEAD of the configured sign-in path; null for anything else.
  * setup(request) may return { instructions } while the first owner is unclaimed;
  * links(request) may return [{ href, label }] shown under the form (same-origin paths only).
+ * `?login_hint=<email>` prefills the email field of the email-link form.
  */
 export function createSignInHandler(auth, { setup, links, defaultReturnTo = '/app' } = {}) {
   const path = new URL(auth.presentation.signInPath, 'https://signin.invalid').pathname;
@@ -42,6 +49,7 @@ export function createSignInHandler(auth, { setup, links, defaultReturnTo = '/ap
     if (url.pathname !== path || !['GET', 'HEAD'].includes(request.method)) return null;
     const branding = auth.presentation;
     const returnTo = safeReturnTo(url.searchParams.get('returnTo'), defaultReturnTo);
+    const hint = emailHint(url.searchParams.get('login_hint'));
     const providers = auth.providers ? (await auth.providers.list()).filter(p => p.visible) : [];
     const parts = [];
     const emailAvailable = auth.emailSignInAvailable;
@@ -56,7 +64,7 @@ export function createSignInHandler(auth, { setup, links, defaultReturnTo = '/ap
       parts.push(`<div class="stack">${providers.map(p => `<form method="post" action="${escapeHtml(p.startPath)}">${hidden(returnTo)}<button class="secondary" type="submit">Continue with ${escapeHtml(p.label)}</button></form>`).join('')}</div>`);
       if (emailAvailable) parts.push('<p class="divider">or</p>');
     }
-    if (emailAvailable) parts.push(`<form method="post" action="/auth/magic-link">${hidden(returnTo)}<label for="signin-email">Email</label><input id="signin-email" name="email" type="email" autocomplete="email" required maxlength="254"><button type="submit">Email a sign-in link</button></form>`);
+    if (emailAvailable) parts.push(`<form method="post" action="/auth/magic-link">${hidden(returnTo)}<label for="signin-email">Email</label><input id="signin-email" name="email" type="email" autocomplete="email" required maxlength="254"${hint ? ` value="${escapeHtml(hint)}"` : ''}><button type="submit">Email a sign-in link</button></form>`);
     for (const link of (await links?.(request)) ?? []) {
       if (typeof link?.href === 'string' && /^\/(?!\/)[^\s\\]*$/.test(link.href) && typeof link.label === 'string') parts.push(`<p class="secondary-link"><a href="${escapeHtml(link.href)}">${escapeHtml(link.label)}</a></p>`);
     }

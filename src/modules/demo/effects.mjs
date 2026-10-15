@@ -4,6 +4,10 @@ import { effectSuccess } from './responses.mjs';
 const readRequests = new WeakSet();
 let installed = false;
 
+// Shared runtime consumers may honour suppressed results only while the demo
+// guard is installed. This keeps Node-side authoring imports free of Workers APIs.
+export function demoEffectsEnabled() { return installed; }
+
 // Read intent stays in memory, never in a header the remote server could use.
 export function fetchDemoRead(input, init) {
   const request = new Request(input, init);

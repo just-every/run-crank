@@ -7,6 +7,7 @@ import { isActiveOperator } from '../../accounts/roles.mjs';
 import { isLocalCli } from '../../local-cli.mjs';
 import { linkMessage } from './message.mjs';
 import { completionHook } from '../after-confirm.mjs';
+import { demoEffectsEnabled } from '../../../demo/effects.mjs';
 export const STEP_UP_ACTIONS = Object.freeze(['providers:unlink', 'providers:relink', 'domains:change', 'owner:transfer', 'export', 'delete', 'credentials:mint', 'email:change']);
 export const STEP_UP_SECONDS = 600;
 
@@ -48,7 +49,7 @@ export function createEmailLinkLifecycle({ config: input, clock = Date.now, mail
         ...linkMessage(config, token, url.href),
         headers: { 'Auto-Submitted': 'auto-generated' } });
     } catch { await revoke(); deny('mail_unavailable', 503); }
-    if (result?.status !== 'accepted' && !(result?.status === 'development' && config.local)) {
+    if (result?.status !== 'accepted' && !(result?.status === 'development' && (config.local || demoEffectsEnabled()))) {
       // Even ambiguous delivery cannot leave a valid, unreported auth link.
       await revoke(); deny('mail_unavailable', 503);
     }

@@ -27,8 +27,10 @@ async function cookieValue(key) {
 
 // Reads `#rer-dev=KEY` (with optional `as` or `next`), removes it from the
 // address bar first, then trades it through a same-origin POST. The fragment
-// never reaches a server; the key never appears in a query string.
-export const EXCHANGE_SCRIPT = "(()=>{const h=new URLSearchParams(location.hash.slice(1)),k=h.get('rer-dev');if(!k)return;history.replaceState(null,'',location.pathname+location.search);const a=h.get('as'),n=h.get('next')||(a?'/auth/dev/enter?as='+encodeURIComponent(a):location.pathname+location.search),to=n.startsWith('/')&&!n.startsWith('//')&&!n.includes('\\\\')?n:'/';fetch('" + DEV_KEY_PATH + "',{method:'POST',credentials:'same-origin',headers:{'content-type':'application/json'},body:JSON.stringify({key:k})}).then(r=>{if(r.ok)location.replace(to);else document.body.insertAdjacentHTML('beforeend','<p role=\"alert\">This link no longer opens the app. Run rer dev again for a fresh one.</p>')})})()";
+// never reaches a server; the key never appears in a query string. Listen for
+// fragment navigation too: an open gate page stays loaded when RER_OPEN points
+// to the same path with a fresh key fragment.
+export const EXCHANGE_SCRIPT = "(()=>{const exchange=()=>{const h=new URLSearchParams(location.hash.slice(1)),k=h.get('rer-dev');if(!k)return;history.replaceState(null,'',location.pathname+location.search);const a=h.get('as'),n=h.get('next')||(a?'/auth/dev/enter?as='+encodeURIComponent(a):location.pathname+location.search),to=n.startsWith('/')&&!n.startsWith('//')&&!n.includes('\\\\')?n:'/';fetch('" + DEV_KEY_PATH + "',{method:'POST',credentials:'same-origin',headers:{'content-type':'application/json'},body:JSON.stringify({key:k})}).then(r=>{if(r.ok)location.replace(to);else document.body.insertAdjacentHTML('beforeend','<p role=\"alert\">This link no longer opens the app. Run rer dev again for a fresh one.</p>')})};addEventListener('hashchange',exchange);exchange()})()";
 const PAGE_STYLE = 'body{margin:0;font:16px/1.5 system-ui,sans-serif;color:#17212e;background:#f5f7fa}main{max-width:36rem;margin:0 auto;padding:32px 16px}';
 let hashes;
 export async function exchangeHashes() {

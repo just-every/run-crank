@@ -11,9 +11,9 @@ export function fencedCredentials({store,authenticate,requireFreshProof,config,c
    await requireFreshProof(actor);
    if(!Number.isSafeInteger(expiresInSeconds)||expiresInSeconds<1||expiresInSeconds>365*86400)deny('invalid_input');
    const token=opaqueToken(),id=crypto.randomUUID(),fence=store.actorFence(actor,clock());
-   const inserted=await store.run(`INSERT INTO oa_credentials(id,token_hash,operator_id,operator_version,kind,expires_at) SELECT ?,?,?,?,?,? WHERE ${fence.sql}`,
+   const inserted=await store.first(`INSERT INTO oa_credentials(id,token_hash,operator_id,operator_version,kind,expires_at) SELECT ?,?,?,?,?,? WHERE ${fence.sql} RETURNING id`,
     [id,await hash('credential',token),actor.operator.id,actor.operator.version,actor.kind,clock()+expiresInSeconds*1000,...fence.args]);
-   if(inserted.meta.changes!==1)deny('authority_changed',409);
+   if(inserted?.id!==id)deny('authority_changed',409);
    return {id,token,expiresAt:clock()+expiresInSeconds*1000};
   },
   async authenticateCredential(request) {

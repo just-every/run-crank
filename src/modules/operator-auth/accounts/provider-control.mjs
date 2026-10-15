@@ -19,13 +19,13 @@ export function providerControl({ store, accounts, authenticate, config, clock }
       const currentOwner = `?=(SELECT o.id FROM oa_operators o LEFT JOIN oa_bootstrap b ON b.claim_id=o.id WHERE o.role='owner' AND o.status='active' ORDER BY b.claim_id IS NULL,o.created_at,o.id LIMIT 1)`;
       const auditId=crypto.randomUUID();
       const results = await store.batch([
-        [`INSERT INTO oa_auth_settings(singleton,idp_sign_in,generation,first_setup) SELECT 1,0,0,0 WHERE ${fence.sql} AND ${currentOwner} ON CONFLICT(singleton) DO UPDATE SET first_setup=0`, [...fence.args, actor.operator.id]],
+        [`INSERT INTO oa_auth_settings(singleton,idp_sign_in,generation,first_setup) SELECT 1,0,0,0 WHERE ${fence.sql} AND ${currentOwner} ON CONFLICT(singleton) DO UPDATE SET first_setup=0 RETURNING singleton`, [...fence.args, actor.operator.id]],
         [`INSERT INTO oa_auth_settings(singleton,idp_sign_in,generation) SELECT 1,?,1 WHERE ${fence.sql} AND ${currentOwner} AND NOT EXISTS(SELECT 1 FROM oa_auth_settings WHERE singleton=1 AND idp_sign_in=?)
-          ON CONFLICT(singleton) DO UPDATE SET idp_sign_in=excluded.idp_sign_in,generation=oa_auth_settings.generation+1,first_setup=0`, [idpSignIn ? 1 : 0, ...fence.args, actor.operator.id, idpSignIn ? 1 : 0]],
+          ON CONFLICT(singleton) DO UPDATE SET idp_sign_in=excluded.idp_sign_in,generation=oa_auth_settings.generation+1,first_setup=0 RETURNING singleton`, [idpSignIn ? 1 : 0, ...fence.args, actor.operator.id, idpSignIn ? 1 : 0]],
         [`INSERT INTO oa_auth_audit(id,actor_id,action,value,created_at) SELECT ?,?,'idpSignIn',?,? WHERE changes()=1`, [auditId, actor.operator.id, String(idpSignIn), clock()]],
         [`UPDATE oa_sessions SET revoked_at=COALESCE(revoked_at,?) WHERE kind='oidc' AND EXISTS(SELECT 1 FROM oa_auth_audit WHERE id=? AND value='false')`, [clock(), auditId]],
       ]);
-      if (results[0].meta.changes !== 1 && results[1].meta.changes !== 1) deny('authority_changed', 409);
+      if (!results[0].results.some(row => row.singleton === 1) && !results[1].results.some(row => row.singleton === 1)) deny('authority_changed', 409);
       return { idpSignIn };
     },
     async requireEditorOwner(request) {

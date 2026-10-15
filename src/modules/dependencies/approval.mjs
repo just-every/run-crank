@@ -17,8 +17,9 @@ export async function approveSetup({db,auth,request,input,contract,callbacks,clo
 }
 export async function approveOwner({store,actor,input,contract,callbacks,clock,native}) {
  const fence=native?await native.ownerFence(actor,clock()):ownerFence(actor,clock());
- const approval=await store.run(`INSERT INTO rer_dependency_pending(interface,issuer,approved_by,expires_at,approved_session,approved_version,callbacks,attempt_id) SELECT ?,?,?,?,?,?,?,? WHERE ${fence.sql} ON CONFLICT(interface) DO UPDATE SET issuer=excluded.issuer,approved_by=excluded.approved_by,expires_at=excluded.expires_at,approved_session=excluded.approved_session,approved_version=excluded.approved_version,callbacks=excluded.callbacks,attempt_id=excluded.attempt_id`,contract,input.issuer,actor.operator.id,clock()+600000,actor.id,actor.operator.version,callbacks,crypto.randomUUID(),...fence.args);
- insist(approval.meta.changes===1,'authority_changed',409);
+ const attempt=crypto.randomUUID();
+ const approval=await store.first(`INSERT INTO rer_dependency_pending(interface,issuer,approved_by,expires_at,approved_session,approved_version,callbacks,attempt_id) SELECT ?,?,?,?,?,?,?,? WHERE ${fence.sql} ON CONFLICT(interface) DO UPDATE SET issuer=excluded.issuer,approved_by=excluded.approved_by,expires_at=excluded.expires_at,approved_session=excluded.approved_session,approved_version=excluded.approved_version,callbacks=excluded.callbacks,attempt_id=excluded.attempt_id RETURNING interface,attempt_id`,contract,input.issuer,actor.operator.id,clock()+600000,actor.id,actor.operator.version,callbacks,attempt,...fence.args);
+ insist(approval?.interface===contract && approval.attempt_id===attempt,'authority_changed',409);
 }
 // Snapshot the attempt before network I/O. Every authority and exact attempt
 // predicate is executed again in the transaction that installs the link.

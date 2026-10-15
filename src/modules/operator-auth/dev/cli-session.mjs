@@ -23,10 +23,11 @@ export async function cliSession(request, { config, store, hash, everyone }, hea
   if (!record || record.operator.role !== 'owner') throw new AuthError('authority_changed', 409);
   // A local owner proof uses the existing durable, version-fenced proof ledger.
   // It can authorize setup linking without manufacturing an email credential.
-  const inserted = await store.run(`INSERT INTO oa_step_up_challenges(id,token_hash,session_id,operator_id,operator_version,action,return_to,created_at,expires_at,consumed_at)
+  const proofId = crypto.randomUUID();
+  const inserted = await store.first(`INSERT INTO oa_step_up_challenges(id,token_hash,session_id,operator_id,operator_version,action,return_to,created_at,expires_at,consumed_at)
     SELECT ?,?,?,?,?,?,?,?,?,? WHERE EXISTS(SELECT 1 FROM oa_sessions s JOIN oa_operators o ON o.id=s.operator_id
-      WHERE s.id=? AND s.revoked_at IS NULL AND o.role='owner' AND o.status='active' AND o.version=?)`,
-    [crypto.randomUUID(), await hash(opaqueToken()), record.id, operator.id, operator.version, 'local-cli', '/', now, session.expiresAt, now, record.id, operator.version]);
-  if (inserted.meta.changes !== 1) throw new AuthError('authority_changed', 409);
+      WHERE s.id=? AND s.revoked_at IS NULL AND o.role='owner' AND o.status='active' AND o.version=?) RETURNING id`,
+    [proofId, await hash(opaqueToken()), record.id, operator.id, operator.version, 'local-cli', '/', now, session.expiresAt, now, record.id, operator.version]);
+  if (inserted?.id !== proofId) throw new AuthError('authority_changed', 409);
   return new Response(null, { status: 303, headers: { ...headers, location: safeReturnTo(input.returnTo), 'set-cookie': sessionCookie(token, config) } });
 }

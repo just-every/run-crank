@@ -129,12 +129,12 @@ async function enter(request, gate, { config, store, hash, current, everyone, ow
   // Personas are real operators, created only here, in local dev.
   if (!operator && persona.role) {
     if (persona.role === 'owner') {
-      const actor = await ownerProof(request), now = Date.now();
+      const actor = await ownerProof(request), now = Date.now(), id = crypto.randomUUID();
       const fence = store.actorFence(actor, now);
-      const result = await store.run(`INSERT INTO oa_operators(id,email,display_name,role,status,created_at)
-        SELECT ?,?,?,'owner','active',? WHERE ${fence.sql} ON CONFLICT(email) DO NOTHING`,
-        [crypto.randomUUID(), persona.email, persona.displayName, now, ...fence.args]);
-      if (result.meta.changes !== 1) throw new AuthError('authority_changed', 409);
+      const result = await store.first(`INSERT INTO oa_operators(id,email,display_name,role,status,created_at)
+        SELECT ?,?,?,'owner','active',? WHERE ${fence.sql} ON CONFLICT(email) DO NOTHING RETURNING id`,
+        [id, persona.email, persona.displayName, now, ...fence.args]);
+      if (result?.id !== id) throw new AuthError('authority_changed', 409);
     } else {
       await store.run(`INSERT INTO oa_operators(id,email,display_name,role,status,created_at) VALUES(?,?,?,?,'active',?) ON CONFLICT(email) DO NOTHING`,
         [crypto.randomUUID(), persona.email, persona.displayName, persona.role, Date.now()]);

@@ -566,6 +566,10 @@ file that differs from the pinned revision (`SC-05.auth-copy.*`); the runtime im
 server-only, reconcile the seed's route integration, and run that seed's real auth
 and browser checks.
 
+The sign-in page fills in its email field from `?login_hint=<email>` (a complete
+address; anything else is ignored; never submitted for the visitor), so a link
+from the platform's Open app or a seed's own page can pass the claimed owner.
+
 Wire `config.branding` with the seed's `productName`, `accentColor` and
 `signInPath`; the defaults are `your workspace`, `#334155` and `/signin`. Keep
 `MAIL_FROM` in auth config and provide a real `mailSender` that implements
