@@ -1,0 +1,6 @@
+{
+  "name": "@runeditrun/base-ai",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./index.mjs", "./dev": "./dev/index.mjs", "./fake": "./fake/index.mjs" }
+}

@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "project": "automation/crank",
+  "compatibilityDate": "2026-09-08",
+  "compatibilityFlags": [
+    "nodejs_compat"
+  ],
+  "d1": [
+    {
+      "binding": "DB"
+    }
+  ],
+  "originVar": "AUTH_ORIGIN",
+  "vars": {
+    "AUTH_LOCAL": "false",
+    "MAIL_PROVIDER": "resend",
+    "MAIL_FROM": "auth@example.invalid"
+  },
+  "secrets": [
+    {
+      "binding": "OWNER_EMAIL",
+      "environment": "OWNER_EMAIL"
+    },
+    {
+      "binding": "SESSION_SECRET",
+      "environment": "SESSION_SECRET"
+    },
+    {
+      "binding": "SETUP_TOKEN",
+      "environment": "SETUP_TOKEN"
+    },
+    {
+      "binding": "MAIL_API_KEY",
+      "environment": "MAIL_API_KEY"
+    }
+  ]
+}

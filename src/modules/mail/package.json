@@ -1,0 +1,20 @@
+{
+  "name": "@runeditrun/base-mail",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/all.test.ts",
+    "test:core": "node --test tests/core/*.test.mjs",
+    "test:workerd": "node --test --test-concurrency=1 tests/runtime/*workerd.test.mjs tests/events/*workerd.test.mjs tests/messaging/*workerd.test.mjs tests/inbound/workerd.test.mjs tests/assembly/workerd.test.mjs"
+  },
+  "devDependencies": {
+    "miniflare": "5.20260907.0-alpha"
+  },
+  "pnpm": {
+    "overrides": {
+      "sharp": "0.35.5",
+      "undici": "7.29.1",
+      "source-map-js": "1.2.2"
+    }
+  }
+}

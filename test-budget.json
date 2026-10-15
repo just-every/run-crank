@@ -1,0 +1,5 @@
+{
+  "maximum": 200,
+  "current": 11,
+  "notes": "9 HTTP business tests plus runtime and ordinary email-link sign-in scripts; Base verify also checks build assets and hydration."
+}

@@ -1,0 +1,93 @@
+{
+  "schema": 1,
+  "title": "Crank",
+  "groups": [
+    {
+      "id": "application",
+      "label": "Your application"
+    },
+    {
+      "id": "owner",
+      "label": "First owner"
+    }
+  ],
+  "fields": [
+    {
+      "name": "APP_NAME",
+      "label": "Application name",
+      "help": "The name shown in your new application.",
+      "kind": "text",
+      "required": true,
+      "default": "Crank",
+      "group": "application"
+    },
+    {
+      "name": "PRIMARY_COLOR",
+      "label": "Brand colour",
+      "kind": "colour",
+      "required": true,
+      "default": "#356c60",
+      "group": "application"
+    },
+    {
+      "name": "OWNER_EMAIL",
+      "label": "Owner email",
+      "help": "Sign-in links for this address appear in the local development outbox; no email is sent.",
+      "kind": "email",
+      "required": true,
+      "prefill": "account-email",
+      "group": "owner"
+    },
+    {
+      "name": "SESSION_SECRET",
+      "label": "Session secret",
+      "kind": "secret",
+      "required": true,
+      "ownerVisible": false,
+      "input": "managed",
+      "generate": "hex",
+      "group": "owner"
+    },
+    {
+      "name": "SETUP_TOKEN",
+      "label": "Setup token",
+      "kind": "secret",
+      "required": true,
+      "ownerVisible": true,
+      "generate": "hex",
+      "group": "owner"
+    },
+    {
+      "name": "IDENTITY_PROVIDER",
+      "label": "Identity provider",
+      "kind": "url",
+      "required": false,
+      "help": "Optional Auth install. Leave empty to use email links.",
+      "default": ""
+    }
+  ],
+  "steps": [
+    {
+      "type": "extension",
+      "id": "branding"
+    },
+    {
+      "type": "owner-claim",
+      "mode": "setup-token",
+      "emailField": "OWNER_EMAIL",
+      "tokenField": "SETUP_TOKEN"
+    }
+  ],
+  "dependencies": [
+    {
+      "interface": "oidc-provider@1",
+      "optional": true,
+      "cardinality": 1,
+      "address": "IDENTITY_PROVIDER",
+      "paths": [
+        "/auth/oidc/auth/callback",
+        "/auth/oidc/auth/logout"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+/* This edition's declared theme. The installer, sign-in, confirmation, /setup
+   and development outbox read these --rer-* tokens; the app serves this file and its fonts.
+   Buttons keep the colour chosen at setup (src/branding.json primaryColor)
+   because no --rer-accent is declared here; declare --rer-accent and
+   --rer-accent-text together to fix them instead. */
+@font-face {
+  font-family: Outfit;
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/fonts/outfit/outfit-latin-wght-normal.woff2') format('woff2');
+}
+:root {
+  --rer-font-body: Outfit, Arial, sans-serif;
+  --rer-font-heading: Outfit, Arial, sans-serif;
+  --rer-page: #f4f6f5;
+  --rer-surface: #ffffff;
+  --rer-text: #1b2724;
+  --rer-muted: #4a5a55;
+  --rer-border: #6b7c76;
+  --rer-focus: #1b2724;
+  --rer-link: #1f5f52;
+  --rer-radius: 12px;
+  --rer-logo: url('/brand/mark.svg');
+}
