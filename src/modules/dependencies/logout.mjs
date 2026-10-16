@@ -23,8 +23,9 @@ export async function backchannelLogout({db,config,request,clock=Date.now,fetch:
   const events=Object.keys(c.events);insist(events.length>0 && events.every(k=>[LOGOUT_EVENT,FENCE_EVENT].includes(k) && c.events[k] && typeof c.events[k]==='object' && !Array.isArray(c.events[k]) && Object.keys(c.events[k]).length===0));
   for(const key of ['sub','sid']) if(Object.hasOwn(c,key)) insist(typeof c[key]==='string' && c[key].length>0 && c[key].length<=255);
   insist(c.sub || c.sid);
+  const fence=Object.hasOwn(c.events,FENCE_EVENT);
   if(native) {
-   const consumed=await native.consumeLogout({claims:c,link,now:clock(),fence:events.includes(FENCE_EVENT)});
+   const consumed=await native.consumeLogout({claims:c,link,now:clock(),fence});
    insist(consumed,'logout_already_used',409);
    return new Response(null,{status:204});
   }
@@ -33,7 +34,7 @@ export async function backchannelLogout({db,config,request,clock=Date.now,fetch:
   const subject=c.sub??(rows.length===1?rows[0].subject:null);insist(subject);
   const person=await db.prepare('SELECT operator_id FROM oa_external_identities WHERE issuer=? AND subject=?').bind(c.iss,subject).first();insist(person);
   const statements=[db.prepare(`INSERT INTO oa_logout_events(issuer,jti,consumed_at) VALUES(?,?,CASE WHEN EXISTS(SELECT 1 FROM rer_dependency_link WHERE interface='oidc-provider@1' AND issuer=? AND client_id=? AND metadata=? AND needs_relink=0 AND linked_at=?) AND EXISTS(SELECT 1 FROM oa_external_identities WHERE issuer=? AND subject=? AND operator_id=?) THEN ? ELSE -1 END)`).bind(c.iss,c.jti,link.issuer,link.client_id,JSON.stringify(link.metadata),link.linked_at,c.iss,subject,person.operator_id,clock())];
-  if(events.includes(FENCE_EVENT)) statements.push(db.prepare('UPDATE oa_operators SET version=version+1 WHERE id=?').bind(person.operator_id));
+  if(fence) statements.push(db.prepare('UPDATE oa_operators SET version=version+1 WHERE id=?').bind(person.operator_id));
   statements.push(db.prepare(`UPDATE oa_sessions SET revoked_at=COALESCE(revoked_at,?) WHERE id IN
    (SELECT session_id FROM oa_provider_sessions WHERE issuer=? AND subject=? AND (? IS NULL OR sid=?))`).bind(clock(),c.iss,subject,c.sid??null,c.sid??null));
   try { await db.batch(statements); } catch { insist(false,'logout_already_used',409); }
