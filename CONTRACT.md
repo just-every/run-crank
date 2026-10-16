@@ -691,94 +691,97 @@ The first buyer is a US operations lead at a 5–100 person business replacing Z
 Crank does not replace its connected apps’ systems of record, provider licenses, network reach or agreements. It does provide the connectors, managed authorization, execution, human controls and follow-up needed to automate them. Private/heavy work runs on enrolled executors; provider quotas and permission failures are explicit operational states. A confirmed provider request proves its recorded effect only to the extent of the provider’s contract; general business completion requires independent readback. Offline copies and effects in another app require that app’s retention or compensating process. These boundaries do not reduce the category job or absorb unowned payroll, horizontal project management, business telephony, password management or general observability categories.
 
 Scope authority is the owner-approved Crank entry in the 16 October category list, supplemented by the category inventory and code audit. Product documentation used as capability/migration context: [Zapier app directory](https://zapier.com/apps), [Make webhook processing](https://help.make.com/webhooks), [Make error handling](https://help.make.com/error-handling), [Workato recipes](https://docs.workato.com/recipes.html), [n8n flow logic](https://docs.n8n.io/flow-logic/), [n8n export/import](https://docs.n8n.io/workflows/export-import/), [Gumloop agents](https://docs.gumloop.com/core-concepts/agents), and [Pipedream project export](https://pipedream.com/docs/workflows/export-workflows), [Workato RLCM packages](https://docs.workato.com/en/recipe-development-lifecycle), [Zapier JSON exports](https://help.zapier.com/hc/en-us/articles/8496308481933-Import-and-export-Zap-workflows-in-your-Team-or-Enterprise-account), [Make blueprints](https://help.make.com/blueprints), and Zapier’s own documentation for the day-one parity bar: [Webhooks by Zapier](https://zapier.com/apps/webhook/integrations), [API request actions](https://help.zapier.com/hc/en-us/articles/12899607716493-Set-up-an-API-request-action-Beta), [polling intervals](https://help.zapier.com/hc/en-us/articles/8495924437005), [flood protection](https://help.zapier.com/hc/en-us/articles/14230420160269-Choose-your-Zaps-flood-protection-limit), [Human in the Loop](https://help.zapier.com/hc/en-us/articles/38733184458765), [Email by Zapier](https://help.zapier.com/hc/en-us/articles/8496293328141), [Zapier MCP](https://docs.zapier.com/mcp/get-started/your-first-mcp-workflow), [Microsoft Excel](https://zapier.com/apps/excel/integrations), [SharePoint](https://zapier.com/apps/sharepoint/integrations), [RSS by Zapier](https://zapier.com/apps/rss/integrations), [polling webhooks (Retrieve Poll)](https://help.zapier.com/hc/en-us/articles/8496274719757), [Digest by Zapier](https://zapier.com/apps/digest/integrations), [line items in Zaps](https://help.zapier.com/hc/en-us/articles/8496277737997), [Zapier search steps](https://zapier.com/blog/zapier-search-step-guide/), [Formatter by Zapier](https://zapier.com/apps/formatter/integrations), [lookup tables](https://help.zapier.com/hc/en-us/articles/8496305146765), [Delay by Zapier](https://zapier.com/apps/delay/integrations), [filter and path rules](https://help.zapier.com/hc/en-us/articles/8496180919949), [AND/OR logic](https://help.zapier.com/hc/en-us/articles/8495925071757), [Paths](https://help.zapier.com/hc/en-us/articles/8496288555917), [dynamic dropdowns](https://docs.zapier.com/platform/build/dynamic-dropdowns), [custom values in Zap fields](https://help.zapier.com/hc/en-us/articles/8495924713997), [search-powered fields](https://docs.zapier.com/platform/build/search-powered-fields), [Gmail triggers](https://zapier.com/apps/gmail/integrations), [Google Sheets trigger columns](https://help.zapier.com/hc/en-us/articles/21613239711117-Google-Sheets-triggers-unexpectedly-or-too-soon), [HubSpot property-change and deal-stage triggers](https://zapier.com/apps/hubspot/integrations), [testing Zap steps](https://help.zapier.com/hc/en-us/articles/8496310366093), [QuickBooks Online](https://zapier.com/apps/quickbooks/integrations), [Xero](https://zapier.com/apps/xero/integrations), [Slack](https://zapier.com/apps/slack/integrations), [Microsoft Teams](https://zapier.com/apps/microsoft-teams/integrations), [Shopify](https://zapier.com/apps/shopify/integrations), [Stripe](https://zapier.com/apps/stripe/integrations), [Zendesk](https://zapier.com/apps/zendesk/integrations), [Jira Software Cloud](https://zapier.com/apps/jira-software-cloud/integrations), [Zapier Tables](https://zapier.com/apps/zapier-tables/integrations), [Storage by Zapier](https://zapier.com/apps/storage/integrations), [ChatGPT (OpenAI)](https://zapier.com/apps/chatgpt/integrations), [AI by Zapier](https://zapier.com/apps/ai/integrations) and [Anthropic (Claude)](https://zapier.com/apps/anthropic-claude/integrations). These are design inputs, not assertions that every vendor supports every target clause or export path. Source access and migration restrictions must be checked for the buyer’s edition; unavailable exports require itemized reconstruction, not silent scope reduction.
+## Status
 
-## Status by clause
+Judged from the code and tests at commit `24da2756bbcd9dae931c54ff08b0fc5156f5f347` (17 October 2026).
 
-Evidence paths are relative to this repository at the audited base above. They identify current implementations/tests; each partial row states its remaining gap.
+| Clauses | Done | Partial | Missing | Total |
+| --- | ---: | ---: | ---: | ---: |
+| Published | 3 | 9 | 0 | 12 |
+| Target and push further | 0 | 16 | 54 | 70 |
+| All | 3 | 25 | 54 | 82 |
 
-| Clause | Status | Evidence path and current limit |
-| --- | --- | --- |
-| WORK-001 | partial | `src/crank/ui/flows.ts`; `src/crank/flows.ts`; `tests/crank.test.mjs` — The current form creates one webhook-to-HTTP flow; no visual graph, folders, editing or multi-step engine exists. |
-| WORK-002 | missing | — |
-| WORK-003 | missing | — |
-| WORK-004 | missing | — |
-| WORK-005 | missing | — |
-| WORK-006 | missing | — |
-| WORK-007 | missing | — |
-| WORK-008 | partial | `src/crank/runs.ts`; `src/crank/flows.ts`; `tests/crank.test.mjs` — Runs freeze a flow revision and exact action; editable versions, test environments and rollback are absent. |
-| WORK-009 | missing | — |
-| WORK-010 | missing | — |
-| WORK-011 | missing | — |
-| WORK-012 | missing | — |
-| WORK-013 | missing | — |
-| WORK-014 | missing | — |
-| CONN-001 | missing | — |
-| CONN-002 | partial | `src/crank/flows.ts`; `src/crank/delivery.ts`; `src/crank/tokens.ts`; `tests/crank.test.mjs` — A deployment-selected origin/server token and hashed preparation/trigger tokens exist; managed OAuth and reusable third-party accounts do not. |
-| CONN-003 | missing | — |
-| CONN-004 | missing | — |
-| CONN-005 | missing | — |
-| CONN-006 | missing | — |
-| CONN-007 | missing | — |
-| CONN-008 | missing | — |
-| CONN-009 | missing | — |
-| CONN-010 | missing | — |
-| CONN-011 | missing | — |
-| CONN-012 | missing | — |
-| CONN-013 | missing | — |
-| CONN-014 | missing | — |
-| CONN-015 | missing | — |
-| CONN-016 | missing | — |
-| CONN-017 | missing | — |
-| CONN-018 | missing | — |
-| CONN-019 | missing | — |
-| HTTP-001 | done | `src/crank/flows.ts`; `src/crank/runs.ts`; `src/crank/delivery.ts`; `tests/crank.test.mjs` |
-| HTTP-002 | missing | — |
-| TRIG-001 | partial | `src/crank/api.ts`; `src/crank/runs.ts`; `src/crank/tokens.ts`; `tests/crank.test.mjs` — Scoped bearer trigger credentials, the `{event_id,input}` envelope with equal-payload dedup, changed-payload conflict, erased-event fence and server-side revocation ship; secret URLs, signature verification, non-JSON bodies, raw headers/query, builder-chosen dedup keys/digest windows and configurable responses do not. |
-| TRIG-002 | partial | `src/crank/ui/flows.ts`; `src/crank/runs.ts` — On-demand preparation works; there is no schedule engine or historical run. |
-| TRIG-003 | missing | — |
-| TRIG-004 | missing | — |
-| TRIG-005 | missing | — |
-| TRIG-006 | missing | — |
-| TRIG-007 | missing | — |
-| TRIG-008 | missing | — |
-| EXEC-001 | partial | `src/crank/runs.ts`; `src/crank/delivery.ts`; `src/crank/ui/flows.ts`; `tests/crank.test.mjs` — Pending runs, conditional delivery claims and interrupted-attempt state exist; background queue processing and multi-step checkpoints do not. |
-| EXEC-002 | missing | — |
-| EXEC-003 | partial | `src/crank/delivery.ts`; `src/crank/ui/run.ts` — Failures are recorded and displayed; custom error workflows, notifications and escalation are missing. |
-| EXEC-004 | partial | `src/crank/delivery.ts`; `tests/crank.test.mjs` — Only one manual replay of the single HTTP action exists. |
-| EXEC-005 | partial | `src/crank/api.ts`; `src/crank/runs.ts`; `src/crank/delivery.ts`; `src/crank/ui/run.ts`; `tests/crank.test.mjs` — Exact single-action history and incomplete attempts persist; the state route returns the latest 200 runs without general search, pagination or step history. |
-| EXEC-006 | partial | `src/crank/delivery.ts`; `tests/crank.test.mjs` — The compliant HTTP receiver returns an effect ID/key and one replay is safe under that receiver contract; general provider readback and compensation are absent. |
-| EXEC-007 | missing | — |
-| OPS-001 | missing | — |
-| OPS-002 | missing | — |
-| TEAM-001 | partial | `src/crank/access.ts`; `src/crank/ui/settings.ts`; `tests/crank.test.mjs` — Owner/admin/member roles and deactivation exist; workspace sharing scopes, approver/operator roles and team connection ownership do not. |
-| TEAM-002 | partial | `src/crank/delivery.ts`; `src/crank/access.ts`; `tests/crank.test.mjs` — Exact owner approval/rejection ships; optional approval nodes and standing grants are absent. |
-| TEAM-003 | done | `src/crank/tokens.ts`; `src/crank/access.ts`; `src/crank/api.ts`; `tests/crank.test.mjs` |
-| TEAM-004 | missing | — |
-| TEAM-005 | partial | `src/crank/delivery.ts`; `tests/crank.test.mjs` — Exact owner approval or rejection of the immutable proposed action ships, and rejection records the decision and stops the run with no delivery; reviewer edits, editable-field caps, rejection branches and reviewer notifications do not. |
-| SEC-001 | partial | `src/crank/access.ts`; `src/crank/api.ts`; `tests/crank.test.mjs`; `tests/email-link.mjs`; `SEED-COMMAND-CONTRACT.md` — HTTP role/origin boundaries are tested; commit-time session revocation and every private door/dev-layer exclusion are not all established by the cited product tests. |
-| SEC-002 | partial | `src/crank/flows.ts`; `src/crank/delivery.ts`; `src/crank/model.ts`; `src/crank/ui/document.ts`; `tests/crank.test.mjs` — Exact-origin checks, escaping, bounded JSON/receiver responses and redirect refusal exist; general DNS/egress, file and agent-injection protections are not established. |
-| SEC-003 | partial | `src/crank/delivery.ts`; `src/crank/imports.ts`; `src/crank/data.ts`; `tests/crank.test.mjs` — Immutable decisions, delivery attempts, import approvals and erasure records exist; no complete product-wide action audit is proven. |
-| DATA-001 | partial | `src/crank/data.ts`; `src/crank/archive-policy.mjs`; `tests/crank.test.mjs`; `docs/BACKUP-RESTORE.md` — Current flow/run/decision/attempt/import archives and inactive restore are tested; the expanded product records, whole inventory and interrupted multi-step restore are unimplemented. |
-| DATA-002 | partial | `src/crank/data.ts`; `src/crank/runs.ts`; `tests/crank.test.mjs`; `docs/BACKUP-RESTORE.md` — Terminal run/approval/attempt erasure, event fence and later-journal refusal ship; subject/operator traversal and future file/index/agent data are not proven. |
-| DATA-003 | missing | — |
-| MIG-001 | partial | `src/crank/n8n.ts`; `src/crank/imports.ts`; `src/crank/import-api.ts`; `src/crank/import-target.ts`; `tests/crank.test.mjs`; `docs/IMPORTING.md` — Only POST Webhook → whole-body HTTP Request is supported and tested with constructed documented-format data; no live customer export or broad graph compatibility is established. |
-| MIG-002 | missing | — |
-| MIG-003 | missing | — |
-| MIG-004 | missing | — |
-| MIG-005 | missing | — |
-| AI-001 | missing | — |
-| AI-002 | missing | — |
-| AI-003 | missing | — |
-| AGENT-001 | partial | `src/crank/delivery.ts`; `src/crank/ui/run.ts`; `tests/crank.test.mjs` — Receiver effect ID/key binding exists and the UI disclaims later business completion; cross-app obligations and independent readback do not. |
-| AGENT-002 | missing | — |
-| AGENT-003 | missing | — |
-| AGENT-004 | partial | `src/crank/runs.ts`; `src/crank/delivery.ts`; `tests/crank.test.mjs` — Pending human decisions persist; due obligations, reminders, routing and calendar-aware follow-up are absent. |
-| UX-001 | partial | `src/crank/ui/document.ts`; `src/crank/ui/flows.ts`; `src/crank/ui/run.ts`; `public/crank.css` — Responsive HTML forms and state text exist; mobile apps/push, offline decision reconciliation and accessibility conformance are unproven. |
-| PLATFORM-001 | partial | `src/crank/api.ts`; `scripts/crank.mjs`; `docs/API.md`; `tests/crank.test.mjs` — Native scoped HTTP preparation/trigger/read API and CLI exist; SDK, MCP, outgoing events and execution grants are missing. |
-| PLATFORM-002 | missing | — |
-| BASE-001 | partial | `AGENTS.md`; `SEED-COMMAND-CONTRACT.md`; `src/crank/archive-policy.mjs`; `src/crank/delivery.ts`; `tests/crank.test.mjs` — Native owned workflow/archives exist; complete egress independence and expanded provider/data-lifecycle guarantees are not established. |
-| BASE-002 | done | `src/site/pages.tsx`; `src/site/docs/build/site.ts`; `tests/site.test.mjs`; `tests/runtime.mjs` |
-| BASE-003 | partial | `src/base/deployment-health.ts`; `src/crank/delivery.ts`; `src/crank/api.ts`; `tests/runtime.mjs`; `tests/crank.test.mjs` — Basic runtime health and read-triggered delivery-lease expiry exist; the complete future execution classes and operational guarantees are not proven. |
-| BOUND-001 | missing | — |
-
-**82 clauses: 3 done, 25 partial, 54 missing.**
+| Clause | Title | Kind | Status | Evidence | Gap |
+| --- | --- | --- | --- | --- | --- |
+| `WORK-001` | Visual multi-step workspace | published | partial | `src/crank/ui/flows.ts`; `src/crank/flows.ts`; `tests/crank.test.mjs` | The current form creates one webhook-to-HTTP flow; no visual graph, folders, editing or multi-step engine exists. |
+| `WORK-002` | Mapping, formatting and conditional routes | target | missing |  | No delivered product workflow. |
+| `WORK-003` | Loops, joins and batch processing | target | missing |  | No delivered product workflow. |
+| `WORK-004` | Durable delay and event waits | target | missing |  | No delivered product workflow. |
+| `WORK-005` | Isolated code steps and external executors | target | missing |  | No delivered product workflow. |
+| `WORK-006` | Reusable subflows and recipes | target | missing |  | No delivered product workflow. |
+| `WORK-007` | Workflow tables and intake forms | target | missing |  | No delivered product workflow. |
+| `WORK-008` | Versions, testing and controlled deployment | target | partial | `src/crank/runs.ts`; `src/crank/flows.ts`; `tests/crank.test.mjs` | Runs freeze a flow revision and exact action; editable versions, test environments and rollback are absent. |
+| `WORK-009` | Collect-data human steps | target | missing |  | No delivered product workflow. |
+| `WORK-010` | Digest steps that collect across runs | target | missing |  | No delivered product workflow. |
+| `WORK-011` | Search steps: found, not found, several found, and find or create | target | missing |  | No delivered product workflow. |
+| `WORK-012` | Built-in no-code transforms | target | missing |  | No delivered product workflow. |
+| `WORK-013` | Filter and path condition language | target | missing |  | No delivered product workflow. |
+| `WORK-014` | Step tests on real samples | target | missing |  | No delivered product workflow. |
+| `CONN-001` | Discoverable connector library | target | missing |  | No delivered product workflow. |
+| `CONN-002` | Managed OAuth, keys and connection lifecycle | target | partial | `src/crank/flows.ts`; `src/crank/delivery.ts`; `src/crank/tokens.ts`; `tests/crank.test.mjs` | A deployment-selected origin/server token and hashed preparation/trigger tokens exist; managed OAuth and reusable third-party accounts do not. |
+| `CONN-003` | Gmail and Microsoft Outlook | target | missing |  | No delivered product workflow. |
+| `CONN-004` | Slack, Nook and Microsoft Teams | target | missing |  | No delivered product workflow. |
+| `CONN-005` | Sheets, Airtable, Google Drive and Microsoft 365 files | target | missing |  | No delivered product workflow. |
+| `CONN-006` | HubSpot, Orbit and Salesforce | target | missing |  | No delivered product workflow. |
+| `CONN-007` | QuickBooks Online, Xero and NetSuite | target | missing |  | No delivered product workflow. |
+| `CONN-008` | Stripe and Shopify commerce workflows | target | missing |  | No delivered product workflow. |
+| `CONN-009` | Jira Software Cloud and Zendesk | target | missing |  | No delivered product workflow. |
+| `CONN-010` | Every Run Edit Run product connects | target | missing |  | No delivered product workflow. |
+| `CONN-011` | Custom, enterprise and private app connections | target | missing |  | No delivered product workflow. |
+| `CONN-012` | Lead capture and form apps | target | missing |  | No delivered product workflow. |
+| `CONN-013` | Calendars, scheduling and meetings | target | missing |  | No delivered product workflow. |
+| `CONN-014` | Work management and documents | target | missing |  | No delivered product workflow. |
+| `CONN-015` | Marketing and sales pipelines | target | missing |  | No delivered product workflow. |
+| `CONN-016` | File storage and e-signature | target | missing |  | No delivered product workflow. |
+| `CONN-017` | Twilio SMS | target | missing |  | No delivered product workflow. |
+| `CONN-018` | Square, PayPal and WooCommerce | target | missing |  | No delivered product workflow. |
+| `CONN-019` | Live account pickers, dependent inputs and field refresh | target | missing |  | No delivered product workflow. |
+| `HTTP-001` | Authorized HTTP dispatch | published | done | `src/crank/flows.ts`; `src/crank/runs.ts`; `src/crank/delivery.ts`; `tests/crank.test.mjs` |  |
+| `HTTP-002` | General HTTP and connector API request steps | target | missing |  | No delivered product workflow. |
+| `TRIG-001` | Scoped, deduplicated webhook admission | target | partial | `src/crank/api.ts`; `src/crank/runs.ts`; `src/crank/tokens.ts`; `tests/crank.test.mjs` | Scoped bearer trigger credentials, the `{event_id,input}` envelope with equal-payload dedup, changed-payload conflict, erased-event fence and server-side revocation ship; secret URLs, signature verification, non-JSON bodies, raw headers/query, builder-chosen dedup keys/digest windows and configurable responses do not. |
+| `TRIG-002` | Schedules and on-demand runs | target | partial | `src/crank/ui/flows.ts`; `src/crank/runs.ts` | On-demand preparation works; there is no schedule engine or historical run. |
+| `TRIG-003` | App, polling and email triggers | target | missing |  | No delivered product workflow. |
+| `TRIG-004` | Polling frequency and trigger latency | target | missing |  | No delivered product workflow. |
+| `TRIG-005` | Flood protection for bursts of trigger events | target | missing |  | No delivered product workflow. |
+| `TRIG-006` | Hosted inbound email addresses | target | missing |  | No delivered product workflow. |
+| `TRIG-007` | Feed and URL polling triggers | target | missing |  | No delivered product workflow. |
+| `TRIG-008` | Updated-record triggers on watched fields | target | missing |  | No delivered product workflow. |
+| `EXEC-001` | Durable queues and execution checkpoints | target | partial | `src/crank/runs.ts`; `src/crank/delivery.ts`; `src/crank/ui/flows.ts`; `tests/crank.test.mjs` | Pending runs, conditional delivery claims and interrupted-attempt state exist; background queue processing and multi-step checkpoints do not. |
+| `EXEC-002` | Rate limits, backoff and exhaustion | target | missing |  | No delivered product workflow. |
+| `EXEC-003` | Error routes, alerts and escalation | target | partial | `src/crank/delivery.ts`; `src/crank/ui/run.ts` | Failures are recorded and displayed; custom error workflows, notifications and escalation are missing. |
+| `EXEC-004` | Replay any eligible step safely | published | partial | `src/crank/delivery.ts`; `tests/crank.test.mjs` | Only one manual replay of the single HTTP action exists. |
+| `EXEC-005` | Searchable run history and debugging | published | partial | `src/crank/api.ts`; `src/crank/runs.ts`; `src/crank/delivery.ts`; `src/crank/ui/run.ts`; `tests/crank.test.mjs` | Exact single-action history and incomplete attempts persist; the state route returns the latest 200 runs without general search, pagination or step history. |
+| `EXEC-006` | Effect reconciliation and compensation | published | partial | `src/crank/delivery.ts`; `tests/crank.test.mjs` | The compliant HTTP receiver returns an effect ID/key and one replay is safe under that receiver contract; general provider readback and compensation are absent. |
+| `EXEC-007` | Built-in email and SMS steps | target | missing |  | No delivered product workflow. |
+| `OPS-001` | Operations reporting and external logs | target | missing |  | No delivered product workflow. |
+| `OPS-002` | USD usage, forecasts and spending controls | target | missing |  | No delivered product workflow. |
+| `TEAM-001` | Team workspaces and permissions | target | partial | `src/crank/access.ts`; `src/crank/ui/settings.ts`; `tests/crank.test.mjs` | Owner/admin/member roles and deactivation exist; workspace sharing scopes, approver/operator roles and team connection ownership do not. |
+| `TEAM-002` | Optional approvals and standing grants | published | partial | `src/crank/delivery.ts`; `src/crank/access.ts`; `tests/crank.test.mjs` | Exact owner approval/rejection ships; optional approval nodes and standing grants are absent. |
+| `TEAM-003` | Scoped preparation and trigger credentials | published | done | `src/crank/tokens.ts`; `src/crank/access.ts`; `src/crank/api.ts`; `tests/crank.test.mjs` |  |
+| `TEAM-004` | Publishing authorizes a workflow’s declared steps | target | missing |  | No delivered product workflow. |
+| `TEAM-005` | Approve with edits, rejection routes and reviewer notices | published | partial | `src/crank/delivery.ts`; `tests/crank.test.mjs` | Exact owner approval or rejection of the immutable proposed action ships, and rejection records the decision and stops the run with no delivery; reviewer edits, editable-field caps, rejection branches and reviewer notifications do not. |
+| `SEC-001` | Native authentication and origin-bound writes | target | partial | `src/crank/access.ts`; `src/crank/api.ts`; `tests/crank.test.mjs`; `tests/email-link.mjs`; `SEED-COMMAND-CONTRACT.md` | HTTP role/origin boundaries are tested; commit-time session revocation and every private door/dev-layer exclusion are not all established by the cited product tests. |
+| `SEC-002` | Bounded network and untrusted content | target | partial | `src/crank/flows.ts`; `src/crank/delivery.ts`; `src/crank/model.ts`; `src/crank/ui/document.ts`; `tests/crank.test.mjs` | Exact-origin checks, escaping, bounded JSON/receiver responses and redirect refusal exist; general DNS/egress, file and agent-injection protections are not established. |
+| `SEC-003` | Permanent attributable audit | target | partial | `src/crank/delivery.ts`; `src/crank/imports.ts`; `src/crank/data.ts`; `tests/crank.test.mjs` | Immutable decisions, delivery attempts, import approvals and erasure records exist; no complete product-wide action audit is proven. |
+| `DATA-001` | Complete portable archives and inactive restore | published | partial | `src/crank/data.ts`; `src/crank/archive-policy.mjs`; `tests/crank.test.mjs`; `docs/BACKUP-RESTORE.md` | Current flow/run/decision/attempt/import archives and inactive restore are tested; the expanded product records, whole inventory and interrupted multi-step restore are unimplemented. |
+| `DATA-002` | Erasure, receipts and restoration fences | published | partial | `src/crank/data.ts`; `src/crank/runs.ts`; `tests/crank.test.mjs`; `docs/BACKUP-RESTORE.md` | Terminal run/approval/attempt erasure, event fence and later-journal refusal ship; subject/operator traversal and future file/index/agent data are not proven. |
+| `DATA-003` | Explicit retention and sensitive-data policy | target | missing |  | No delivered product workflow. |
+| `MIG-001` | n8n migration with preview and undo | published | partial | `src/crank/n8n.ts`; `src/crank/imports.ts`; `src/crank/import-api.ts`; `src/crank/import-target.ts`; `tests/crank.test.mjs`; `docs/IMPORTING.md` | Only POST Webhook → whole-body HTTP Request is supported and tested with constructed documented-format data; no live customer export or broad graph compatibility is established. |
+| `MIG-002` | Zapier migration and cutover | target | missing |  | No delivered product workflow. |
+| `MIG-003` | Make blueprint migration | target | missing |  | No delivered product workflow. |
+| `MIG-004` | Workato recipe and project migration | target | missing |  | No delivered product workflow. |
+| `MIG-005` | Gumloop and Pipedream move-in | target | missing |  | No delivered product workflow. |
+| `AI-001` | Inspectable AI and agent nodes | target | missing |  | No delivered product workflow. |
+| `AI-002` | Natural-language workflow creation | target | missing |  | No delivered product workflow. |
+| `AI-003` | Reusable agent skills and recurring tasks | target | missing |  | No delivered product workflow. |
+| `AGENT-001` | Own and verify the business outcome | push-further | partial | `src/crank/delivery.ts`; `src/crank/ui/run.ts`; `tests/crank.test.mjs` | Receiver effect ID/key binding exists and the UI disclaims later business completion; cross-app obligations and independent readback do not. |
+| `AGENT-002` | Detect, repair and test API drift | push-further | missing |  | No delivered product workflow. |
+| `AGENT-003` | Turn recurring exceptions into tested capabilities | push-further | missing |  | No delivered product workflow. |
+| `AGENT-004` | Follow up across days and ask for real decisions | push-further | partial | `src/crank/runs.ts`; `src/crank/delivery.ts`; `tests/crank.test.mjs` | Pending human decisions persist; due obligations, reminders, routing and calendar-aware follow-up are absent. |
+| `UX-001` | Accessible mobile operation | target | partial | `src/crank/ui/document.ts`; `src/crank/ui/flows.ts`; `src/crank/ui/run.ts`; `public/crank.css` | Responsive HTML forms and state text exist; mobile apps/push, offline decision reconciliation and accessibility conformance are unproven. |
+| `PLATFORM-001` | Public API, webhooks, SDK and MCP | target | partial | `src/crank/api.ts`; `scripts/crank.mjs`; `docs/API.md`; `tests/crank.test.mjs` | Native scoped HTTP preparation/trigger/read API and CLI exist; SDK, MCP, outgoing events and execution grants are missing. |
+| `PLATFORM-002` | Connector actions as MCP tools for the buyer’s AI clients | target | missing |  | No delivered product workflow. |
+| `BASE-001` | Owned operation and explicit Base replacements | target | partial | `AGENTS.md`; `SEED-COMMAND-CONTRACT.md`; `src/crank/archive-policy.mjs`; `src/crank/delivery.ts`; `tests/crank.test.mjs` | Native owned workflow/archives exist; complete egress independence and expanded provider/data-lifecycle guarantees are not established. |
+| `BASE-002` | Runnable site and unchanged installed home | published | done | `src/site/pages.tsx`; `src/site/docs/build/site.ts`; `tests/site.test.mjs`; `tests/runtime.mjs` |  |
+| `BASE-003` | Observable operation and recovery | target | partial | `src/base/deployment-health.ts`; `src/crank/delivery.ts`; `src/crank/api.ts`; `tests/runtime.mjs`; `tests/crank.test.mjs` | Basic runtime health and read-triggered delivery-lease expiry exist; the complete future execution classes and operational guarantees are not proven. |
+| `BOUND-001` | US-first product and provider responsibilities | target | missing |  | No delivered product workflow. |
