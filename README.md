@@ -7,14 +7,10 @@ Failed delivery gets one manual replay with the same idempotency key.
 ## Run it
 
 ```sh
-git clone https://github.com/just-every/run-crank.git
-cd run-crank
-npx -y @runeditrun/rer@0.2.30 cli install
-export PATH="$HOME/.local/bin:$PATH"
-rer dev
+npx -y @runeditrun/rer dev just-every/run-crank
 ```
 
-Keep this terminal open. RER installs the pinned dependencies, selects Node
+That one line clones Crank, installs `rer` if you do not have it and starts the app. To start it again later, run `cd run-crank && rer dev`. Keep this terminal open. RER installs the pinned dependencies, selects Node
 22.20.0, migrates local D1, and creates a local owner. Initial setup can take
 several minutes. Open the **RER_OPEN** link it prints, confirm the owner on
 **Finish setup**, and open **Flows**. That link is a credential; keep it private.
