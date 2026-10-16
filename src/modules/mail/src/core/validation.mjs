@@ -1,10 +1,11 @@
 import { fail } from './errors.mjs';
 import { validateMessagingConfig, validateMessagingResult, identity, rfc3339 } from '../adapters/messaging/contract.mjs';
-import { validateRerConfig, validateRerMessage } from '../adapters/rer/contract.mjs';
+import { validateRerConfig, validateRerMessage, validateRerMessageKey } from '../adapters/rer/contract.mjs';
+import { rerListHeaderField } from '../adapters/rer/list-headers.mjs';
 
 const providers = ['sendgrid', 'resend', 'cloudflare', 'rer', 'development', 'messaging'];
 const controls = /[\x00-\x1f\x7f]/;
-const fields = new Set(['deliveryId', 'from', 'to', 'subject', 'text', 'html', 'cc', 'bcc', 'replyTo', 'headers', 'attachments', 'unsubscribe', 'customArgs', 'asmGroupId', 'subscriptionTracking', 'kind', 'expiresAt']);
+const fields = new Set(['deliveryId', 'from', 'to', 'subject', 'text', 'html', 'cc', 'bcc', 'replyTo', 'headers', 'attachments', 'unsubscribe', 'customArgs', 'asmGroupId', 'subscriptionTracking', 'kind', 'expiresAt', 'messageKey']);
 const reservedHeaders = new Set(['x-sg-id', 'x-sg-eid', 'received', 'dkim-signature', 'content-type', 'content-transfer-encoding', 'mime-version', 'to', 'from', 'subject', 'reply-to', 'cc', 'bcc', 'return-path', 'sender']);
 const reservedArgs = new Set(['rer_delivery_id', 'email', 'event', 'timestamp', 'sg_event_id', 'sg_message_id']);
 
@@ -62,7 +63,7 @@ export function parseAddress(value) {
   return name ? { email, name } : { email };
 }
 
-export function validateHeaders(headers = {}) {
+export function validateHeaders(headers = {}, provider) {
   record(headers, 'invalid_headers');
   const names = new Set();
   for (const name of Reflect.ownKeys(headers)) {
@@ -70,6 +71,8 @@ export function validateHeaders(headers = {}) {
     const lower = name.toLowerCase();
     if (reservedHeaders.has(lower) || names.has(lower)) fail('reserved_or_duplicate_header');
     names.add(lower);
+    // These relay grammars allow separator tabs and report field-specific errors.
+    if (provider === 'rer' && rerListHeaderField(lower, headers[name])) continue;
     bounded(headers[name], 8192, 'invalid_header_value', true);
   }
   return headers;
@@ -128,12 +131,17 @@ export function validateMessage(message, provider) {
   bounded(message.subject, 998, 'invalid_subject', true);
   for (const field of ['text', 'html']) if (message[field] !== undefined && typeof message[field] !== 'string') fail('invalid_body');
   if (!message.text?.trim() && !message.html?.trim()) fail('body_required');
-  if (message.headers !== undefined) validateHeaders(message.headers);
+  if (message.headers !== undefined) validateHeaders(message.headers, provider);
   if (message.attachments !== undefined) {
     if (!Array.isArray(message.attachments)) fail('invalid_attachments');
     for (const attachment of message.attachments) validateAttachment(attachment);
   }
   if (message.unsubscribe !== undefined) validateUnsubscribe(message.unsubscribe);
+  if (message.messageKey !== undefined) {
+    // Only the rer relay assigns Message-IDs from keys; development accepts what rer accepts.
+    if (provider !== undefined && !['rer', 'development'].includes(provider)) fail('unsupported_provider_setting');
+    validateRerMessageKey(message.messageKey);
+  }
   if (provider === 'rer') validateRerMessage(message);
   const settings = ['customArgs', 'asmGroupId', 'subscriptionTracking'];
   if (provider && !['sendgrid', 'development'].includes(provider) && settings.some(key => message[key] !== undefined)) fail('unsupported_provider_setting');

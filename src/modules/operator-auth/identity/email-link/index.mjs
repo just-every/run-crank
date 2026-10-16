@@ -36,7 +36,8 @@ export function createEmailLinkLifecycle({ config: input, clock = Date.now, mail
   }
   async function newToken(kind, returnTo) {
     const token = opaqueToken();
-    return { id: crypto.randomUUID(), token, hash: await hash('link', token), kind, returnTo, expiresAt: clock() + config.linkSeconds * 1000 };
+    const lifetime = kind === 'invite' ? config.invitationSeconds : config.linkSeconds;
+    return { id: crypto.randomUUID(), token, hash: await hash('link', token), kind, returnTo, expiresAt: clock() + lifetime * 1000 };
   }
   // The email link: the app's own proof that a person holds an address.
   async function sendLink(email, token, revoke = () => store.revokeLink(token.id, clock())) {

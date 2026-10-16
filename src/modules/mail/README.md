@@ -161,10 +161,39 @@ values are refused. `List-Unsubscribe` (one or two `<https:…>`/`<mailto:…>`
 entries, at most 2,000 characters) travels as `listUnsubscribe`, and
 `List-Unsubscribe-Post: List-Unsubscribe=One-Click` as `listUnsubscribePost:
 true`, which requires an HTTPS entry. The structured `unsubscribe` request
-assembles the same headers. Other recipients, attachments, reply-to and every
-other header are unsupported and fail before dispatch.
+assembles the same headers.
 
-HTTP 202 returns `accepted` with no provider message ID. HTTP 400, 401, 402,
+`List-Id`, `List-Archive`, `List-Help`, `In-Reply-To` and `References` travel as
+`listId`, `listArchive`, `listHelp`, `inReplyTo` and `references`, respectively.
+They match platform's relay validation at `098ba40` (`src/managed-mail/headers.ts`):
+each is a string of at most 2,000 characters, without newlines or controls.
+`List-Id` accepts an optional ASCII phrase or quoted display name followed by an
+angle-bracketed ASCII dot-atom identifier containing a dot (at most 255
+characters). `List-Archive` and `List-Help` accept one or two angle-bracketed
+HTTPS or mailto URLs, using the relay's URL and mailbox checks. These three
+headers allow separator tabs. `In-Reply-To` accepts exactly one `<local@domain>`
+message ID with ASCII dot-atoms or a bracketed domain literal. `References`
+accepts 1–20 such IDs separated by ASCII spaces, without leading/trailing
+spaces, tabs or commas. Invalid values fail locally with `invalid_list_id`,
+`invalid_list_archive`, `invalid_list_help`, `invalid_in_reply_to` or
+`invalid_references`. Values are preserved; raw headers are never forwarded.
+Other recipients, attachments, reply-to and every other header, including
+`Message-ID`, are unsupported and fail before dispatch.
+
+An optional `messageKey` asks the relay to assign the Message-ID: 1–200 ASCII
+characters from `A-Z a-z 0-9 . _ : -`, matching platform's relay validation at
+`c1e3ade` (`src/managed-mail/headers.ts:22`); anything else fails locally with
+`invalid_message_key`. The relay derives the same ID for the same installation
+and key, so use one key per message (for example `incident:7:opened`, then
+`incident:7:update-1`). Keys assign identity, not duplicate suppression. To
+thread updates, keep the first notice's returned `providerMessageId` and send
+each later update with its own key and `In-Reply-To`/`References` set to it.
+Only `rer` (and `development`, which accepts what `rer` accepts) takes
+`messageKey`; other providers refuse it with `unsupported_provider_setting`.
+
+HTTP 202 returns `accepted` with the relay's assigned Message-ID (for example
+`<ABCD…@mail.example.com>`) as `providerMessageId`, or null when the relay's
+body carries no valid one. HTTP 400, 401, 402,
 403 and 413 return `rejected`, and so does any 3xx (`provider_redirected`);
 429 returns `rate_limited`; 502 and 503 return `uncertain`. Network failures
 are also `uncertain`.
@@ -175,7 +204,7 @@ adapter makes no retries and never reads or logs provider error bodies.
 
 Required fields: `deliveryId` (nonempty, at most 512 characters), `from`, nonempty `to: string[]`, `subject: string` (SendGrid requires nonempty; other providers allow empty), and at least one nonempty `text` or `html`. Addresses accept a mailbox or `Display Name <mailbox>`; the conservative mailbox grammar rejects controls, multiple addresses inside one string and malformed domains. Use arrays for recipients.
 
-Optional `cc`, `bcc`, `replyTo`, and string-valued `headers` preserve envelope and threading. `In-Reply-To` and ordered `References` can be supplied as headers. SendGrid and Resend also accept `Message-ID`; Cloudflare generates it and rejects a caller-supplied value. CR/LF/control characters, duplicate header names ignoring case, reserved envelope/MIME/security headers and invalid header names fail before a request. Provider-specific header restrictions are also enforced.
+Optional `cc`, `bcc`, `replyTo`, and string-valued `headers` preserve envelope and threading. `In-Reply-To` and ordered `References` can be supplied as headers. SendGrid and Resend also accept `Message-ID`; Cloudflare generates it and rejects a caller-supplied value; `rer` rejects it and assigns one from an optional `messageKey`. CR/LF/control characters, duplicate header names ignoring case, reserved envelope/MIME/security headers and invalid header names fail before a request. Provider-specific header restrictions are also enforced.
 
 Attachments use `{filename, contentType, content: Uint8Array, disposition?: 'attachment'|'inline', contentId?}`. Content is raw bytes, never a base64 string at the public boundary. Inline attachments require a content ID. Unsupported attachment features fail explicitly. Provider size and count limits still apply.
 

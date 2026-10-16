@@ -4,6 +4,13 @@
 as the saved owner with realistic data. Its title and marked nav label read
 `<Seed> Demo`; local dev reads `<Seed> Dev`. There is no injected bar or outbox.
 
+Invite another person through the app, then choose **Sign in as <name>** in
+operator access or at `/signin`. Owners and invited people use the same one-click
+path to `/app`, with their assigned roles. Local demos require the checkout's
+key cookie (open `RER_OPEN` in each browser profile); hosted demos use only that
+visitor's isolated accounts. Mail is silently suppressed. Cancelled or expired
+invitations and inactive people cannot sign in this way.
+
 ```sh
 rer demo            # prints RER_READY, RER_OPEN and RER_DEMO_ENDS_ON_STOP
 rer demo --stop
@@ -74,129 +81,70 @@ real public fetch and a send: both flows complete, and only the fetch leaves.
 
 ## Hosting the demo
 
-`rer deploy --demo` puts the demo on the web at `demo.<domain>` (the run site's
-apex), so a visitor gets their own throwaway copy: the start page runs a
-Turnstile check and starts it, and they land signed in as the owner, with the
-seed's demo data and its Demo name. Each visitor gets their own Cloudflare
-Container running this seed's image (`rer build --platform container`, workerd
-engine) with `RER_DEMO=1` and public internet access, behind one front Worker
-(`<project>-<environment>--demo`). The guard mocks account effects; egress
-retains a small direct mail/SMS transport denylist. Only the visitor's random `rer_demo`
-cookie (HttpOnly, Secure, SameSite=Lax, one hour) reaches their container. A
-demo ends after 60 minutes, or 15 minutes with no requests; its container is
-destroyed and its state deleted, and the visitor sees "This demo has ended".
-Until then the container stays up however quiet the visitor is, and one that
-stops early anyway also ends its demo and frees its place.
-The demo image carries its databases already migrated. Each visitor copies that
-prepared state, then gets a fresh owner, session and owner-dependent sample data.
-The start page polls progress on the same copy; a slow start does not leave a
-request waiting for minutes. Admission answers within 12 seconds, each progress
-poll within two seconds, and a copy that cannot start within 45 seconds is ended.
-A retry while it is starting resumes that copy without taking a second place.
+`rer deploy --demo` publishes the seed at `demo.<domain>`. Turnstile admits a
+visitor into their own native Worker Loader isolate and SQLite Durable Object
+storage. The ordinary production Worker bundle is built once, with static files
+served directly at the edge. The visitor lands signed in as the demo owner with
+sample data and `RER_DEMO=1`; account effects remain simulated by the demo guard.
+Each copy ends after 60 minutes or 15 idle minutes, when its storage is erased.
 
-Cloudflare prepares container capacity as demand grows. A temporary lack of
-available instances can occur below `maxInstances`; it is not an account cap.
-The host keeps the same visitor and reservation while requesting placement
-within the existing startup budget. It repeats placement only when Cloudflare
-explicitly reports that no instance is available, never after an application
-boot or health failure. If placement remains unavailable, the visitor gets
-"Every demo is in use right now" and the reservation is released.
+1. Adopt local demo mode above and the owner-claim endpoint. The hosted app must
+   export its Worker entry and declare all resources in its Wrangler config.
+2. Add `deploy-demo.json`: `{"version":1,"domain":"run-example.com","name":"Example"}`.
+   Optional `maxInstances` limits concurrent visitors (default 10), `ownerEmail`
+   sets the demo owner (default owner@demo.invalid), and `settings` contains plain
+   demo settings. Secrets and front-owned settings cannot be supplied there.
+3. Copy `run-demo.yml` to `.github/workflows/run-demo.yml`. It installs the seed's
+   locked dependencies and invokes `rer deploy --demo`; Docker is unnecessary.
+   Set `RUN_DEMO_DEPLOY=true` to deploy on pushes to main. The manual `test_only`
+   input targets `demo.test.<domain>` in the separate `demo-test` environment,
+   using Turnstile's always-passing test keys. Test starts require the private
+   measurement token, passed as `rer_demo_measure` cookie or
+   `x-rer-demo-measurement` header. Do not commit that token.
+4. In the `run-demo` GitHub environment, set `CLOUDFLARE_ACCOUNT_ID`,
+   `TURNSTILE_SITE_KEY`, `CLOUDFLARE_API_TOKEN`, `TURNSTILE_SECRET_KEY`, and
+   optionally `RER_DEMO_OPERATOR_TOKEN` and `RER_DEMO_MEASUREMENT_TOKEN`.
+   Workers Paid and Worker Loader/Facets access are required; no Workers for
+   Platforms subscription is needed. The deploy token needs Workers Scripts:
+   Edit, Zone: Read and Workers Routes: Edit for the run site zone. New native
+   hosts need no Containers permission.
 
-At most `maxInstances` demos (10 unless set) run at once, and one IP starts at
-most 3 a minute.
-Mail is suppressed silently; all other effects follow the real/mocked policy above.
+`rer deploy --demo --dry-run` builds `.rer/demo-host/` with no provider requests.
+The bundle excludes private local settings. Deploy waits for the custom-domain
+certificate; the workflow also waits for DNS and the public start page.
 
-The seed needs, beyond the adoption above:
+### Upgrading an existing hosted demo
 
-1. **`deploy-demo.json`** beside `deploy-site.json`:
-
-   ```json
-   { "version": 1, "domain": "run-lamp.com", "name": "Lamp" }
-   ```
-
-   Optional: `"maxInstances"`; `"instanceType"`, the Cloudflare Containers
-   instance type every visitor's container runs on (`lite`, `basic`,
-   `standard-1`, `standard-2`, `standard-3` or `standard-4`; `basic` unless
-   set); and `"settings"`, plain demo settings for the
-   container (never secrets, never `RER_*`, the origin, `OWNER_EMAIL`,
-   `SESSION_SECRET` or `SETUP_TOKEN`, which the front sets). `deploy.json`
-   must list `"container"` in `platforms`.
-
-   A larger type starts a demo sooner and costs more for every minute a demo
-   runs: Cloudflare bills a container's memory and disk as provisioned and
-   its CPU as used. `standard-1` (1/2 vCPU, 4 GiB) costs about 4x `basic`
-   (1/4 vCPU, 1 GiB) for memory, 2x for disk, and can use 2x its CPU;
-   `standard-2` (1 vCPU, 6 GiB) costs about 6x for memory and can use 4x the
-   CPU. `rer deploy --demo --dry-run` prints the type it plans. Rates are on
-   Cloudflare's Containers pricing page.
-2. **The signed owner claim.** The front signs the owner in with a
-   five-minute claim to `/auth/owner-claim`, signed by a key pair made for
-   that one container. The seed serves `modules/owner-claim`'s
-   `createOwnerClaimHandler` there when `RER_OWNER_CLAIM_PUBLIC_KEYS` is set,
-   with `RER_OWNER_CLAIM_ISSUER`, `RER_OWNER_CLAIM_INSTALLATION_ID`, its
-   origin and `OWNER_EMAIL` (Base's default seed:
-   `src/core/platform/auth/dependencies.server.ts`).
-3. **The workflow.** Copy Base's `export/run-demo.yml` to
-   `.github/workflows/run-demo.yml`. It deploys on each push to `main` only
-   when the repository variable `RUN_DEMO_DEPLOY` is `true`, and whenever it
-   is run by hand. Run by hand with `test_only`, it deploys a separate test
-   host instead: environment `demo-test` at `demo.test.<domain>`, with
-   Cloudflare's Turnstile test keys, which let every visitor start a demo
-   (the 10-demo cap and the rate limit still apply). After a deploy it waits
-   for the new hostname to resolve in public DNS (10 minutes at most) and for
-   the start page to answer 200 (5 minutes more), then checks it sets no
-   cookie; either wait ends with an error naming what did not happen.
-
-`rer deploy --demo --dry-run` builds everything into `.rer/demo-host/` (add it
-to `.gitignore`) with no provider request. The build first loads the seed's
-Vite configuration, including any preparation it performs (for example,
-generating `wrangler.toml` from `deploy/wrangler.template.toml`). It then checks
-the configured Worker entry before compiling, and checks the emitted Worker
-again before packaging. To try it locally with Docker, add
-Cloudflare's always-passing Turnstile test secret to `.rer/demo-host/.dev.vars`
-(`TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA`) and run, in that
-folder, `wrangler dev --local-protocol https --var TURNSTILE_SITE_KEY:1x00000000000000000000AA`.
-Wrangler serves the Worker as it is routed, so the Worker sees
-`https://demo.<domain>`: point that name at `127.0.0.1` (for example in
-`/etc/hosts`) and open `https://demo.<domain>:8787/`.
+Pin the new rer and run the same workflow. The Worker id and custom hostname
+stay the same. The deploy verifies the previous version's ownership record,
+removes its Container application by exact id, detaches the retired binding
+with the ownership annotation preserved, then emits a Durable Object
+migration deleting `DemoContainer` and creating `NativeDemo`, retaining the
+existing `DemoCapacity` namespace. Old visitor copies end during this upgrade;
+new starts use native isolates. Interrupted deploys can be rerun. The token used
+for this one transition must retain its existing Containers: Edit permission.
+Retired sizing and mode keys in old declarations are consumed with a migration
+notice; remove them from the declaration when next editing it.
 
 ### Removing a hosted demo
 
 ```sh
-rer deploy --demo --remove --yes                          # demo.<domain>
-rer deploy --demo --remove --yes --environment demo-test  # with deploy-demo.json's domain set to test.<domain>
+rer deploy --demo --remove --yes
+rer deploy --demo --remove --yes --environment demo-test
 ```
 
-or run the workflow by hand with `remove` (and `test_only` for the test
-host). It needs only `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN`, the
-deploy's token. It deletes what the demo's deploy made, each by its exact
-provider id: the Custom Domain `demo.<domain>` (Cloudflare removes the DNS
-record it added with it), the Container application `wrangler deploy` created
-for the demo Worker's Durable Object namespace, and the front Worker, whose
-Durable Objects go with it. The demo makes no D1, KV, R2 or queue. Then it
-reads back that each is gone.
+For the test command, set the declaration's domain to `test.<domain>`, as the
+workflow does. Removal needs only the Cloudflare account id and deploy token.
+It empties and removes the demo-owned R2 bucket, and deletes the exact Custom Domains and Worker covered by the deployment's
+ownership record; the Worker's namespaces and visitor storage go with it. It
+reads back their absence and a repeat is a no-op. An existing legacy Container
+application is also removed when its namespace proves ownership. Unrelated
+resources and host attachments are refused before any deletion.
 
-The deploy leaves its record on the provider, as the message of the Worker
-version it uploads (`rer-demo:<hash>` of the Worker, hostname and container
-names), so a fresh checkout or CI runner can remove it. Removal refuses before
-any delete when the Worker of that name serves no such version, the hostname
-routes to another Worker, a Container application of that name belongs to
-another namespace, or another hostname is attached to the demo Worker; it
-touches nothing else in the account. The Worker goes last, so a run that stops
-part way leaves the record for the next run. Once the demo is gone, another
-run finds nothing and changes nothing. A demo deployed by rer before 0.2.12
-carries no record: deploy it once with this rer, then remove it.
+### Seed bindings
 
-### Owner steps
-
-1. **Workers Paid** on the Cloudflare account that holds the run site
-   (Containers are included; a visitor-hour on `basic` costs about one cent).
-2. **A Turnstile widget** for `demo.<domain>` (managed mode). In the seed
-   repository's `run-demo` GitHub environment, set the variable
-   `TURNSTILE_SITE_KEY` and the secret `TURNSTILE_SECRET_KEY` from it, plus
-   the variable `CLOUDFLARE_ACCOUNT_ID` and the secret `CLOUDFLARE_API_TOKEN`.
-3. **The deploy token**: the run site's token (Workers Scripts: Edit; Zone:
-   Read and Workers Routes: Edit on the run site zone) plus **Containers:
-   Edit** on the account.
-4. **`RUN_DEMO_DEPLOY=true`** as a repository variable when the demo should go
-   live. Until then nothing deploys.
+The seed's Wrangler configuration supplies all D1s, R2 buckets, queues and local
+DO classes. D1s and seed DOs get separate SQLite facets; R2 keys are prefixed by
+visitor and binding. Alarms deliver UTC crons and durable queue batches with
+ack/retry, delays and dead letters. Expiry deletes facets, queued work, multipart
+uploads and R2 prefixes. Unsupported bindings are refused by name at demo build.

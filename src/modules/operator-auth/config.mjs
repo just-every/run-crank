@@ -28,6 +28,7 @@ export function configure(input) {
     allowList: input.allowList === undefined ? undefined : input.allowList.map(normalizeEmail),
     sessionSeconds: seconds(input.sessionSeconds, 7 * 86400, 30 * 86400),
     linkSeconds: seconds(input.linkSeconds, 900, 3600),
+    invitationSeconds: seconds(input.invitationSeconds, 7 * 86400, 7 * 86400),
     reviewSeconds: seconds(input.reviewSeconds, 3600, 3600),
     limitWindowSeconds: seconds(input.limitWindowSeconds, 900, 86400),
     ipLimit: seconds(input.ipLimit, 30, 10000), emailLimit: seconds(input.emailLimit, 5, 1000),

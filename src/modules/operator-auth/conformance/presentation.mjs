@@ -35,7 +35,7 @@ export async function checkConfirmation(response, { kind, productName, minutes =
   expect(html.includes(escape(productName)), 'escaped product name');
   if (valid) {
     expect(html.includes(`<h1>${kind === 'invite' ? 'Accept your invitation to' : 'Confirm sign-in to'} ${escape(productName)}</h1>`), 'plain confirmation heading');
-    expect(html.includes(`This link works once and expires in ${minutes} minutes.`), 'preview lifetime');
+    expect(html.includes(`This link works once and expires in ${kind === 'invite' ? '7 days' : `${minutes} minutes`}.`), 'preview lifetime');
     expect(html.includes('<button type="submit">Confirm</button>'), 'explicit confirmation control');
     expect(html.includes(`<input type="hidden" name="token" value="${token}">`) && html.split(token).length === 2, 'token appears only in hidden field');
   } else {
@@ -47,7 +47,7 @@ export function checkMail(message, { kind, productName, token }) {
   expect(message.subject === (kind === 'invite' ? `You're invited to ${productName}` : `Your sign-in link for ${productName}`), 'plain mail subject');
   expect(!message.subject.includes(token), 'subject contains no credential');
   for (const part of [message.text, message.html]) {
-    expect(typeof part === 'string' && part.includes('This link works once and expires in 15 minutes.'), 'multipart expiry');
+    expect(typeof part === 'string' && part.includes(`This link works once and expires in ${kind === 'invite' ? '7 days' : '15 minutes'}.`), 'multipart expiry');
     expect(part.split(token).length === 2 && (part.match(/https?:\/\//g) ?? []).length === 1, 'one confirmation URL per part');
   }
   expect((message.html.match(/<a /g) ?? []).length === 1 && message.html.includes('>Confirm</a>'), 'one confirmation mail button');

@@ -88,7 +88,7 @@ export class AuthStore {
       WHERE t.token_hash=? AND t.consumed_at IS NULL AND t.revoked_at IS NULL AND t.expires_at>? AND t.operator_version=o.version
       AND (o.status='active' OR (o.status='invited' AND t.kind='invite'))`, [hash, now]);
   }
-  async consume(hash, now, session, allowedEmails, issuer) {
+  async consume(hash, now, session, allowedEmails, issuer, kind = null) {
     const allow = allowedEmails === undefined ? { sql: '1', args: [] } : { sql: `o.email IN (${allowedEmails.map(() => '?').join(',') || 'NULL'})`, args: allowedEmails };
     // JS evaluated the configured policy on this issuer snapshot. Bind that
     // approval to the invitation and repeat its authority check in the session
@@ -99,12 +99,12 @@ export class AuthStore {
     await this.batch([
       [`INSERT INTO oa_sessions(id,token_hash,operator_id,operator_version,kind,source_token_id,created_at,expires_at)
         SELECT ?,?,o.id,o.version+CASE WHEN o.status='invited' THEN 1 ELSE 0 END,
-        CASE WHEN EXISTS(SELECT 1 FROM oa_dev_credentials d WHERE d.credential='oa_tokens' AND d.id=t.id) THEN 'dev' ELSE 'native' END,t.id,?,?
+        CASE WHEN ?='dev' OR EXISTS(SELECT 1 FROM oa_dev_credentials d WHERE d.credential='oa_tokens' AND d.id=t.id) THEN 'dev' ELSE 'native' END,t.id,?,?
         FROM oa_tokens t JOIN oa_operators o ON o.id=t.operator_id
         WHERE t.token_hash=? AND t.consumed_at IS NULL AND t.revoked_at IS NULL AND t.expires_at>? AND t.operator_version=o.version
         AND (o.status='active' OR (o.status='invited' AND t.kind='invite')) AND ${allow.sql}
         AND (t.kind='magic' OR (${authority.sql}))`,
-      [session.id, session.hash, now, session.expiresAt, hash, now, ...allow.args, ...authority.args]],
+      [session.id, session.hash, kind, now, session.expiresAt, hash, now, ...allow.args, ...authority.args]],
       // Only the session just admitted by the full token/issuer/allow-list
       // predicate witnesses acceptance. Removing its cancellation guard and
       // activating the operator are atomic with that admission; failures roll

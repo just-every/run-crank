@@ -4,7 +4,7 @@ import { allow, sha256 } from '../operator-auth/csp.mjs';
 // client-side route changes, whose head manager writes a fresh title. The script
 // is one constant text (so one constant CSP hash); the suffix reaches it as data
 // on the label's style element, never as code.
-const SCRIPT = "(()=>{const suffix=document.querySelector('style[data-rer-label]').dataset.rerLabel,update=()=>{const title=document.title.replace(/ (?:Demo|Dev)$/,'')+' '+suffix;if(document.title!==title)document.title=title};update();new MutationObserver(update).observe(document.head,{childList:true,subtree:true,characterData:true})})()";
+const SCRIPT = "(()=>{const suffix=document.querySelector('style[data-rer-label]').dataset.rerLabel,update=()=>{const base=document.title.replace(/\\s*(?:Demo|Dev)$/,''),title=(base?base+' ':'')+suffix;if(document.title!==title)document.title=title};update();new MutationObserver(update).observe(document.head,{childList:true,subtree:true,characterData:true})})()";
 
 export async function decorateLabel(response, mode) {
   if (!response.body || !response.headers.get('content-type')?.toLowerCase().startsWith('text/html')) return response;
@@ -21,7 +21,10 @@ export async function decorateLabel(response, mode) {
   headers.delete('content-length');
   headers.delete('etag');
   const addition = `<style data-rer-label="${suffix}">${style}</style><script>${SCRIPT}</script>`;
-  const titled = html.replace(/(<title\b[^>]*>)([\s\S]*?)(<\/title>)/i, (_, open, title, close) => `${open}${title.replace(/ (?:Demo|Dev)$/, '')} ${suffix}${close}`);
+  const titled = html.replace(/(<title\b[^>]*>)([\s\S]*?)(<\/title>)/i, (_, open, title, close) => {
+    const base = title.replace(/\s*(?:Demo|Dev)$/, '');
+    return `${open}${base ? `${base} ` : ''}${suffix}${close}`;
+  });
   const body = /<\/head\s*>/i.test(titled) ? titled.replace(/<\/head\s*>/i, `${addition}</head>`) : addition + titled;
   return new Response(body, { status: response.status, statusText: response.statusText, headers });
 }
