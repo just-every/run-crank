@@ -7,7 +7,7 @@ import { AuthStore } from '../accounts/store.mjs';
 import { createOperatorAuth } from '../service.mjs';
 import { AuthError } from '../errors.mjs';
 import { hashToken, opaqueToken } from '../crypto.mjs';
-import { readCookie, sessionCookie, isLoopbackHost, escapeHtml } from '../http.mjs';
+import { readCookie, sessionCookie, isLoopbackHost } from '../http.mjs';
 import { safeReturnTo } from '../policy.mjs';
 import { isActiveOperator, defaultRolePolicy } from '../accounts/roles.mjs';
 import { devGate, devNotFound } from '../dev-gate.mjs';
@@ -15,7 +15,7 @@ import { registerDevAdmission } from '../dev-admission.mjs';
 import { definePersonas } from './personas.mjs';
 import { cliSession } from './cli-session.mjs';
 import { decorateLabel } from '../../demo/label.mjs';
-import { pageResponse } from '../page.mjs';
+import { oneClickPage } from '../signin/one-click.mjs';
 
 export const DEV_LAYER_MARKER = 'rer-dev-layer:local-only-never-deploy';
 const headers = { 'cache-control': 'no-store', 'referrer-policy': 'no-referrer', 'x-content-type-options': 'nosniff', 'x-robots-tag': 'noindex, nofollow', 'x-rer-dev-layer': DEV_LAYER_MARKER };
@@ -47,21 +47,24 @@ export function withDevIdentity(worker, { bindings = env => env, config: authCon
         return new URL(request.url).pathname === '/auth/dev/enter' || new URL(request.url).pathname === '/__dev/personas' || new URL(request.url).pathname === '/auth/local/cli-session' ? rejectedResponse(request, devNotFound()) : worker.fetch(request, original, execution);
       }
       const gate = devGate({ key: env.RER_DEV_KEY, origin: env.AUTH_ORIGIN, local: env.AUTH_LOCAL === 'true' });
-      registerDevAdmission(gate ? r => gate.admits(r) : null);
+      registerDevAdmission(gate && env.RER_DEV_IDENTITY !== 'off' ? r => gate.admits(r) : null);
       const path = new URL(request.url).pathname;
       if (path === '/__dev/key') return gate ? gate.exchange(request) : devNotFound();
-      if (path === '/signin' && gate && env.RER_DEV_IDENTITY !== 'off' && request.method === 'GET') {
+      if (path === '/signin' && gate && env.RER_DEV_IDENTITY !== 'off' && ['GET', 'HEAD'].includes(request.method)) {
         if (!await gate.admits(request)) return new Response(null, { status: 303, headers: { ...headers, location: '/__dev/key' } });
-        const { config } = identity(env, authConfig, declared);
+        const context = identity(env, authConfig, declared);
         const returnTo = safeReturnTo(new URL(request.url).searchParams.get('returnTo'));
-        const href = `/auth/dev/enter?as=owner&returnTo=${encodeURIComponent(returnTo)}`;
-        return decorateLabel(await pageResponse({ branding: config.branding, heading: 'Open your local app', content: `<a class="action" href="${escapeHtml(href)}">Continue as owner</a>` }), env.RER_DEMO === '1' ? 'Demo' : 'Dev');
+        const people = await Promise.all((await context.list(request)).filter(person => person.email).map(async person => ({
+          ...person, displayName: (await context.store.byEmail(person.email))?.displayName ?? declared.find(p => p.as === person.as)?.displayName ?? person.email,
+          href: `/auth/dev/enter?as=${encodeURIComponent(person.as)}&returnTo=${encodeURIComponent(returnTo)}`,
+        })));
+        return decorateLabel(await oneClickPage({ branding: context.config.branding, people, method: request.method }), env.RER_DEMO === '1' ? 'Demo' : 'Dev');
       }
       if (path === '/auth/dev/enter' || path === '/__dev/personas' || path === '/auth/local/cli-session') {
         if (!gate || env.RER_DEV_IDENTITY === 'off' || (path !== '/auth/local/cli-session' && !await gate.admits(request))) return rejectedResponse(request, devNotFound());
         const context = identity(env, authConfig, declared);
         try {
-          const response = path === '/auth/local/cli-session' ? await cliSession(request, context, headers) : path === '/__dev/personas' ? Response.json(await context.list(), { headers }) : await enter(request, gate, context);
+          const response = path === '/auth/local/cli-session' ? await cliSession(request, context, headers) : path === '/__dev/personas' ? Response.json(await context.list(request), { headers }) : await enter(request, gate, context);
           return rejectedResponse(request, response);
         } catch (error) {
           if (error instanceof AuthError) return rejectedResponse(request, Response.json({ error: error.code }, { status: error.status, headers }));
@@ -78,6 +81,7 @@ export function withDevIdentity(worker, { bindings = env => env, config: authCon
 function identity(env, authConfig, declared) {
   const config = configure(authConfig(env)), store = new AuthStore(env.DB);
   const hash = token => hashToken(config.SESSION_SECRET, 'session', token);
+  const auth = createOperatorAuth({ db: env.DB, config: authConfig(env), clientIp: () => null });
   // The `owner` persona is the owner rer setup claimed while that owner is
   // active; after that owner has left, the earliest-created active owner; with
   // no active owner left, nobody (email null), so rer names who it signs in as.
@@ -95,20 +99,24 @@ function identity(env, authConfig, declared) {
     return session && isActiveOperator(session.operator, config.allowList) ? session : null;
   }
   return {
-    config, store, hash, current, everyone,
+    config, store, hash, current, everyone, auth,
     async ownerProof(request) {
       // Reuse the same persisted app-local proof guard as the administration
       // routes. This read-only guard never needs a mail sender or an IP budget.
-      const auth = createOperatorAuth({ db: env.DB, config: authConfig(env), clientIp: () => null });
       const actor = await auth.requireStepUp(request, 'owner:transfer');
       if (!defaultRolePolicy({ actor: actor.operator, action: 'operators:invite', role: 'owner' })) throw new AuthError('forbidden', 403);
       return { ...actor, hash: await hash(readCookie(request, config)) };
     },
-    list: async () => [...(await everyone()).map(({ as, email, role }) => ({ as, email, ...(role ? { role } : {}) })), { as: 'signed-out' }],
+    async list(request) {
+      const personas = (await everyone()).map(({ as, email, role }) => ({ as, email, ...(role ? { role } : {}) }));
+      const people = await auth.oneClick.people(request);
+      return [...personas, ...(people ?? []).filter(person => !personas.some(p => p.email === person.email))
+        .map(person => ({ as: person.email, email: person.email, role: person.role })), { as: 'signed-out' }];
+    },
   };
 }
 
-async function enter(request, gate, { config, store, hash, current, everyone, ownerProof }) {
+async function enter(request, gate, { config, store, hash, current, everyone, ownerProof, auth }) {
   if (request.method !== 'GET') return text(405, 'Method not allowed');
   const url = new URL(request.url), as = url.searchParams.get('as') ?? 'owner';
   const reply = new Headers(headers);
@@ -123,7 +131,12 @@ async function enter(request, gate, { config, store, hash, current, everyone, ow
     return new Response(null, { status: 303, headers: reply });
   }
   const persona = (await everyone()).find(p => p.as === as);
-  if (!persona) return devNotFound();
+  if (!persona) {
+    const value = await auth.oneClick.enter(request, { as, returnTo: url.searchParams.get('returnTo') ?? '/app' });
+    reply.append('set-cookie', value.cookie);
+    reply.set('location', value.returnTo);
+    return new Response(null, { status: 303, headers: reply });
+  }
   if (!persona.email) return text(409, 'No active owner remains in this app. Sign in another way, or run rer reset --yes and rer setup for a new owner.');
   let operator = await store.byEmail(persona.email);
   // Personas are real operators, created only here, in local dev.

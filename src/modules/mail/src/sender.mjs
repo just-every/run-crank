@@ -26,7 +26,7 @@ export function createMailSender(config, dependencies = {}) {
       validateMessage(message, configured.provider);
       let snapshot;
       try { snapshot = structuredClone(message); } catch { fail('invalid_message'); }
-      const prepared = applyUnsubscribeHeaders(snapshot);
+      const prepared = applyUnsubscribeHeaders(snapshot, configured.provider);
       validateMessage(prepared, configured.provider);
       return validateSendResult(await transport(configured, prepared, host), configured.provider);
     },

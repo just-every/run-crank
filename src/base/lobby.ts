@@ -5,8 +5,8 @@ import { rejectedResponse } from './rejected-response'
 // is Finish setup. It reveals nothing but that state, is the same for every
 // visitor and works without JavaScript. Visual authority: the 12ui Lobby.
 // This file is copied unchanged to src/base by both maintained exporters.
-import { checkIdentity, deploymentLine, type EditionIdentity } from './identity'
-import { admitted, baseFirstRun, setupState, type ClaimRead, type SetupState } from './setup-state'
+import { checkIdentity, type EditionIdentity } from './identity'
+import { admitted, baseOwnerClaim, setupState, type ClaimRead, type SetupState } from './setup-state'
 import { ink } from './theme-frame'
 
 interface LobbyBindings { DB: D1Database; AUTH_ORIGIN: string }
@@ -38,12 +38,17 @@ const digest = async (text: string) => btoa(String.fromCharCode(...new Uint8Arra
 
 const accentStyle = (identity: EditionIdentity) => identity.accentColor ? `:root{--rer-brand-accent:${identity.accentColor};--rer-brand-accent-text:${ink(identity.accentColor)}}` : ''
 
-/** The Lobby document for one state. Only identity and state shape it. */
-export function lobbyHtml(identity: EditionIdentity, state: SetupState): string {
+/**
+ * The Lobby document for one state. Identity and state shape it; `loginHint`,
+ * the claimed owner's email on a local instance only, rides on the Sign in link
+ * as ?login_hint= so the sign-in form opens with it filled in.
+ */
+export function lobbyHtml(identity: EditionIdentity, state: SetupState, loginHint?: string): string {
   checkIdentity(identity)
   const claimed = state === 'claimed', product = escape(identity.product)
-  const line = claimed ? escape(deploymentLine(identity)) : `This ${product} is waiting for its owner.`
-  const action = claimed ? `<a class="btn" href="${escape(identity.signInPath)}">Sign in${ARROW}</a>` : `<a class="btn" href="/setup">Finish setup${ARROW}</a>`
+  const line = claimed ? 'The owner is set up. Sign in to continue.' : `This ${product} is waiting for its owner.`
+  const action = claimed ? `<a class="btn" href="${escape(identity.signInPath)}${loginHint ? `?login_hint=${encodeURIComponent(loginHint)}` : ''}">Sign in${ARROW}</a>` : `<a class="btn" href="/setup">Finish setup${ARROW}</a>`
+  const ownerHelp = claimed ? '<p class="credit">Owners can also run <code>rer signin</code> from the project folder.</p>' : ''
   const credit = claimed
     ? `<p class="credit">Powered by <a href="${escape(identity.runSite)}">${product}</a>, free and open source</p>`
     : identity.manualSetupTokenClaim ? '<p class="credit">You’ll need the setup token from your install.</p>' : ''
@@ -51,8 +56,24 @@ export function lobbyHtml(identity: EditionIdentity, state: SetupState): string 
   const art = identity.band ? `<div class="door-art" aria-hidden="true"><img src="${escape(identity.band)}" alt=""></div>` : ''
   return `<!doctype html><html lang="en" data-state="${state}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title>`
     + `<link rel="icon" href="${escape(identity.mark)}">${identity.fonts ? `<link rel="stylesheet" href="${escape(identity.fonts)}">` : ''}<link rel="stylesheet" href="${escape(identity.theme)}"><style>${accentStyle(identity)}${STYLE}</style></head>`
-    + `<body><main class="door">${art}<section class="door-card"><h1><a class="lockup" href="/"><img class="mark" src="${escape(identity.mark)}" alt=""><span class="word">${product}</span></a></h1>`
-    + `<p class="line">${line}</p>${action}${credit}</section></main></body></html>`
+    + `<body><main class="door">${art}<section class="door-card"><h1><a class="lockup" href="/"><img class="mark" src="${escape(identity.mark)}" alt=""><span class="word" data-rer-name>${product}</span></a></h1>`
+    + `<p class="line">${line}</p>${action}${ownerHelp}${credit}</section></main></body></html>`
+}
+
+const loopbackHost = /^(?:localhost|127\.0\.0\.1|\[::1\]|(?:[a-z0-9-]+\.)+localhost)$/
+
+/**
+ * The claimed owner's email when exactly one active owner exists and the
+ * instance is served on this computer. The Lobby is the same page for every
+ * visitor of a hosted instance and never names its owner; locally the visitor
+ * is the person at this computer, who just claimed it.
+ */
+async function localOwnerEmail(db: D1Database, origin: string): Promise<string | undefined> {
+  try {
+    if (!loopbackHost.test(new URL(origin).hostname)) return undefined
+    const { results } = await db.prepare("SELECT email FROM oa_operators WHERE role = 'owner' AND status = 'active' LIMIT 2").all<{ email: string }>()
+    return results.length === 1 ? results[0].email : undefined
+  } catch { return undefined }
 }
 
 /**
@@ -61,7 +82,7 @@ export function lobbyHtml(identity: EditionIdentity, state: SetupState): string 
  * Returns null for every other path and when the edition keeps its own page
  * at / (installedHome: 'page').
  */
-export async function lobbyResponse(request: Request, bindings: LobbyBindings, identity: EditionIdentity, claimed: ClaimRead = baseFirstRun): Promise<Response | null> {
+export async function lobbyResponse(request: Request, bindings: LobbyBindings, identity: EditionIdentity, claimed: ClaimRead = baseOwnerClaim): Promise<Response | null> {
   if (new URL(request.url).pathname !== '/' || identity.installedHome !== 'lobby') return null
   const base = { 'cache-control': 'no-store', 'referrer-policy': 'no-referrer', 'x-content-type-options': 'nosniff', 'x-rer-document': 'lobby' }
   // Another origin or Host gets the app's ordinary document 404.
@@ -72,5 +93,5 @@ export async function lobbyResponse(request: Request, bindings: LobbyBindings, i
   const style = accentStyle(identity) + STYLE
   if (!hashes.has(style)) hashes.set(style, digest(style))
   const policy = `default-src 'none'; style-src 'self' 'sha256-${await hashes.get(style)}'; font-src 'self'; img-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'`
-  return new Response(request.method === 'HEAD' ? null : lobbyHtml(identity, state), { headers: { ...base, 'content-type': 'text/html; charset=utf-8', 'content-security-policy': policy } })
+  return new Response(request.method === 'HEAD' ? null : lobbyHtml(identity, state, state === 'claimed' ? await localOwnerEmail(bindings.DB, bindings.AUTH_ORIGIN) : undefined), { headers: { ...base, 'content-type': 'text/html; charset=utf-8', 'content-security-policy': policy } })
 }

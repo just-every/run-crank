@@ -1,12 +1,13 @@
 import { accentInk } from '../../branding.mjs';
 import { escapeHtml } from '../../http.mjs';
+import { linkExpiry } from './expiry.mjs';
 
 export function linkMessage(config, token, url) {
   const { productName, accentColor } = config.branding;
   const invitation = token.kind === 'invite', stepUp = token.kind === 'step_up';
   const action = invitation ? 'accept your invitation to' : stepUp ? 'confirm a sensitive change in' : 'sign in to';
-  const minutes = config.linkSeconds / 60;
-  const expiry = `This link works once and expires in ${minutes} ${minutes === 1 ? 'minute' : 'minutes'}.`;
+  const minutes = (invitation ? config.invitationSeconds : config.linkSeconds) / 60;
+  const expiry = `This link works once and expires in ${linkExpiry(minutes)}.`;
   const heading = invitation ? `Accept your invitation to ${productName}` : stepUp ? `Confirm it's you in ${productName}` : `Confirm sign-in to ${productName}`;
   return {
     subject: invitation ? `You're invited to ${productName}` : stepUp ? `Confirm it's you in ${productName}` : `Your sign-in link for ${productName}`,
