@@ -45,7 +45,7 @@ test('the run site leads to runnable commands and repository guides with working
     }
     assert.ok(documents.has('/run'),'the homepage has a path to running the app')
     assert.ok(documents.has('/docs'),'the homepage has a path to documentation')
-    const run=documents.get('/run');assert.match(run,/git clone/);assert.match(run,/rer dev/)
+    const run=documents.get('/run');assert.match(run,/@runeditrun\/rer dev just-every\/run-crank/);assert.match(run,/rer dev/)
     assert.ok([...documents.keys()].filter(path=>path.startsWith('/docs/')).length>1,'readable guides are emitted')
     for(const [path,html] of documents) {
       for(const match of html.matchAll(/href="([^"]+)"/g)) {

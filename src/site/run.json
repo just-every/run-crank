@@ -1,7 +1,7 @@
 {
   "name": "Crank",
   "repository": "https://github.com/just-every/run-crank",
-  "clone": "git clone https://github.com/just-every/run-crank.git",
+  "clone": "npx -y @runeditrun/rer dev just-every/run-crank",
   "folder": "run-crank",
   "requirements": "Needs Node 22 or later and pnpm 10.12.4, on macOS, Linux or Windows with WSL2.",
   "licence": "MIT",
