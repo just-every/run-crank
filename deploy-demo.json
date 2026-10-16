@@ -2,7 +2,6 @@
   "version": 1,
   "domain": "run-crank.com",
   "name": "Crank",
-  "instanceType": "basic",
   "settings": {
     "MAIL_FROM": "Crank <hello@harbour.example>",
     "CRANK_TARGET_ORIGIN": "https://operations.example.com",

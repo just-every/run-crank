@@ -39,7 +39,7 @@ export async function themeFrame(theme?: FrameTheme): Promise<Frame> {
   return {
     htmlClass: ' class="rer-themed"',
     head: `<link rel="stylesheet" href="${theme.href}"><style>${style}</style>`,
-    brand: theme.productName ? `<p class="rer-brand">${escape(theme.productName)}</p>` : '',
+    brand: theme.productName ? `<p class="rer-brand"><span data-rer-name>${escape(theme.productName)}</span></p>` : '',
     policy: `style-src 'self' 'sha256-${await hashes.get(style)}'; font-src 'self'; img-src 'self'`,
   }
 }

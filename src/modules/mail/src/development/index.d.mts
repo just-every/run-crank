@@ -13,6 +13,7 @@ export interface DevelopmentMessage {
   customArgs?: Record<string, string>;
   asmGroupId?: number;
   subscriptionTracking?: boolean;
+  messageKey?: string;
 }
 export interface DevelopmentCapture { id: string; createdAt: number; message: DevelopmentMessage }
 export type DevelopmentOutboxListMessage = Omit<DevelopmentMessage, 'attachments'>;

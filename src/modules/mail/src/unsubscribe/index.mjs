@@ -104,8 +104,8 @@ function addOrCheckHeader(headers, name, expected) {
   headers[name] = expected;
 }
 
-function assemble(message) {
-  validateMessage(message);
+function assemble(message, provider) {
+  validateMessage(message, provider);
 
   const headers = { ...(message.headers ?? {}) };
   validateExistingListHeaders(headers);
@@ -127,14 +127,14 @@ function assemble(message) {
 
   const prepared = { ...message, headers };
   delete prepared.unsubscribe;
-  validateMessage(prepared);
+  validateMessage(prepared, provider);
   return prepared;
 }
 
 /** Return a copy with validated unsubscribe headers assembled and the request consumed. */
-export function applyUnsubscribeHeaders(message) {
+export function applyUnsubscribeHeaders(message, provider) {
   try {
-    return assemble(message);
+    return assemble(message, provider);
   } catch (error) {
     if (error instanceof MailValidationError) throw error;
     fail('invalid_message');

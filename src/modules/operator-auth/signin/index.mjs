@@ -5,6 +5,7 @@
 import { escapeHtml } from '../http.mjs';
 import { normalizeEmail, safeReturnTo } from '../policy.mjs';
 import { pageResponse } from '../page.mjs';
+import { oneClickPage } from './one-click.mjs';
 
 const NOTICES = {
   sent: ['status', 'If this address can sign in here, a sign-in link is on its way. Open it on this device and press Confirm.'],
@@ -50,6 +51,12 @@ export function createSignInHandler(auth, { setup, links, defaultReturnTo = '/ap
     const branding = auth.presentation;
     const returnTo = safeReturnTo(url.searchParams.get('returnTo'), defaultReturnTo);
     const hint = emailHint(url.searchParams.get('login_hint'));
+    const people = await auth.oneClick?.people(request);
+    if (people?.length) return oneClickPage({ branding, method: request.method, people: people.map(person => {
+      const href = new URL(person.href, url.origin);
+      href.searchParams.set('returnTo', returnTo);
+      return { ...person, href: href.pathname + href.search };
+    }) });
     const providers = auth.providers ? (await auth.providers.list()).filter(p => p.visible) : [];
     const parts = [];
     const emailAvailable = auth.emailSignInAvailable;
