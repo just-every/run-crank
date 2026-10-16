@@ -6,7 +6,7 @@ Each item below is one clause’s acceptance evidence. The named journey must be
 
 ## Build the automation
 
-- **WORK-001 — Visual multi-step workspace. Status: partial.** From the builder, connect a new lead trigger to a filter, CRM lookup, invoice draft and notification; inspect sample data at every edge, correct a missing required field, save and reopen the same graph, then publish it deliberately.
+- **WORK-001 — Visual multi-step workspace. Status: partial.** From the builder, connect a new lead trigger to a filter, CRM lookup, invoice draft and notification; inspect sample data at every edge, correct a missing required field, save and reopen the same graph, then publish it deliberately and observe its next triggered run complete with no further authorization step.
   Current evidence: `src/crank/ui/flows.ts`; `src/crank/flows.ts`; `tests/crank.test.mjs`. Remaining: The current form creates one webhook-to-HTTP flow; no visual graph, folders, editing or multi-step engine exists.
 
 - **WORK-002 — Mapping, formatting and conditional routes. Status: missing.** Use the builder with a US lead containing nested addresses, a missing optional field and a USD amount; test both qualifying and filtered branches, a null value and invalid currency input, then inspect the exact mapped destination payload.
@@ -24,15 +24,18 @@ Each item below is one clause’s acceptance evidence. The named journey must be
 - **WORK-006 — Reusable subflows and recipes. Status: missing.** Install a lead-to-invoice recipe, bind the buyer’s own accounts, call a shared address-normalization subflow from two flows, upgrade one caller and roll back; verify the other caller and production permissions stay unchanged.
   Current evidence: none; this is build work.
 
-- **WORK-007 — Workflow tables and intake forms. Status: missing.** Publish an authenticated intake form, submit the same business key twice, use its stored lookup in a workflow, reject an unauthorized record read and export then erase the collected record.
+- **WORK-007 — Workflow tables and intake forms. Status: missing.** Publish an authenticated intake form, submit the same business key twice, use its stored lookup in a workflow, reject an unauthorized record read and export then erase the collected record. Publish a public link-only quote-request form and embed it on a test page: one anonymous submission that passes the challenge starts exactly one run; a scripted burst of 200 submissions from one source is challenged or throttled, its accepted-but-spam-scored items route to the spam branch, and no CRM record, email or other business effect results from the burst; an embed from a non-allowed origin is refused.
   Current evidence: none; this is build work.
 
 - **WORK-008 — Versions, testing and controlled deployment. Status: partial.** Start a production run, edit and test its mapping in a draft, promote the draft and roll back; verify the in-flight run uses its original graph, tests use test accounts and all three deployments remain attributable.
   Current evidence: `src/crank/runs.ts`; `src/crank/flows.ts`; `tests/crank.test.mjs`. Remaining: Runs freeze a flow revision and exact action; editable versions, test environments and rollback are absent.
 
+- **WORK-009 — Collect-data human steps. Status: missing.** Publish a workflow with a collect-data step requesting a PO number and a USD amount from a sales role; trigger it late on a Friday, restart the service over the weekend and observe the Monday reminder and then the escalation to the configured manager; answer through the emailed link, verify the run resumes the exact step and the provider readback shows the answered values; submit the same link again and verify one continuation; let a second request pass its deadline and verify the timeout branch runs.
+  Current evidence: none; this is build work.
+
 ## Connections and triggers
 
-- **CONN-001 — Discoverable connector library. Status: missing.** Find a CRM connector by a business action, connect a test account, discover custom fields, test a paginated lookup and inspect the exact action scope and unsupported-operation message before publishing.
+- **CONN-001 — Discoverable connector library. Status: missing.** Find a CRM connector by a business action, connect a test account, discover custom fields, test a paginated lookup and inspect the exact action scope and unsupported-operation message before publishing. Feed the coverage report a 60-Zap SMB inventory built only from Zapier’s 22 popular apps and their commonly used triggers/actions: every app and operation reports native. Add three long-tail apps (one with a public OpenAPI description, one with documented REST but no OpenAPI, one with a partner-only API) and verify agent-buildable, agent-buildable and blocked-with-reason respectively.
   Current evidence: none; this is build work.
 
 - **CONN-002 — Managed OAuth, keys and connection lifecycle. Status: partial.** Connect two accounts, select one per step, expire and refresh OAuth, rotate an API key, revoke the connection during a run and reconnect with a narrower grant; verify dependent workflows pause visibly and no secret appears in API state, exports or agent context.
@@ -44,7 +47,7 @@ Each item below is one clause’s acceptance evidence. The named journey must be
 - **CONN-004 — Slack, Nook and Microsoft Teams. Status: missing.** For each service, connect a workspace, start a workflow from an authorized thread, post its result back to that thread, handle a human decision and revoke access; verify no delivery to a different workspace and no repeated ping after completion.
   Current evidence: none; this is build work.
 
-- **CONN-005 — Sheets, Airtable and Google Drive. Status: missing.** Run a changed spreadsheet row into an Airtable upsert, attach a permitted Drive document and archive a generated file; repeat the event and deny access to a private file, verifying one record and a visible file-permission error.
+- **CONN-005 — Sheets, Airtable, Google Drive and Microsoft 365 files. Status: missing.** Run a changed spreadsheet row into an Airtable upsert, attach a permitted Drive document and archive a generated file; repeat the event and deny access to a private file, verifying one record and a visible file-permission error. In a Microsoft 365 test tenant, run the same journey with an Excel table row on OneDrive upserted by business key, a SharePoint list item created from it and a generated file saved to a SharePoint document library: verify each by provider readback, repeat the triggering event with no duplicate row, item or file, and deny a file in a library the connection cannot read with a visible permission error.
   Current evidence: none; this is build work.
 
 - **CONN-006 — HubSpot, Orbit and Salesforce. Status: missing.** For each CRM, ingest a changed lead, match an existing company, update a custom deal field and create a task; send the reflected event back and a conflicting edit, verifying no infinite loop or silent overwrite.
@@ -62,19 +65,52 @@ Each item below is one clause’s acceptance evidence. The named journey must be
 - **CONN-010 — Every Run Edit Run product connects. Status: missing.** For each listed sibling, connect an authorized installation, receive a real domain event, read the originating record, perform an allowed domain action and observe its outcome in that sibling; duplicate events, revoked grants and foreign-tenant IDs must fail safely. Demonstrate a CRM-to-accounting-to-chat business journey across sibling connectors.
   Current evidence: none; this is build work.
 
-- **CONN-011 — Custom, enterprise and private app connections. Status: missing.** Install a custom connector, call a private test database through an enrolled gateway, checkpoint and resume a paginated file pipeline, then revoke the gateway and attempt a cross-environment secret read; inspect the failed run and SSO access decisions.
+- **CONN-011 — Custom, enterprise and private app connections. Status: missing.** Install a custom connector, call a private test database through an enrolled gateway, checkpoint and resume a paginated file pipeline, then revoke the gateway and attempt a cross-environment secret read; inspect the failed run and SSO access decisions. Ask the agent for a connector to an app with a public OpenAPI description and no native connector: review its proposed operations and scopes, refuse one scope and verify the connector omits the dependent operation, then pass its sandbox readback, duplicate-event and revoked-scope tests and use it in a published workflow.
+  Current evidence: none; this is build work.
+
+- **CONN-012 — Lead capture and form apps. Status: missing.** For each provider’s test account, connect, pick a form, submit a response with a hidden UTM field and a file, and verify one run whose mapped fields match the response by provider readback; resend the same provider delivery and verify no second run; add a form field and verify drift is reported before the next run maps it; disconnect and verify the connector removed its provider webhook.
+  Current evidence: none; this is build work.
+
+- **CONN-013 — Calendars, scheduling and meetings. Status: missing.** Book a Calendly test event with answered questions and verify one run that creates a Google Calendar event with a Zoom meeting for the invitee, each read back from its provider; reschedule the booking and verify the same calendar event and meeting are updated rather than duplicated; cancel it and verify both are cancelled; deliver the Calendly webhook twice with no duplicate effect.
+  Current evidence: none; this is build work.
+
+- **CONN-014 — Work management and documents. Status: missing.** For each provider’s test workspace, trigger on a new item, update a custom field, move it to a done status and comment, reading each change back; create a Google Doc from a template with mapped USD and date fields and verify its text by readback; repeat the triggering event and verify no duplicate item, comment or document.
+  Current evidence: none; this is build work.
+
+- **CONN-015 — Marketing and sales pipelines. Status: missing.** For each provider’s test account, route a new lead into a contact/subscriber with a tag and a deal/opportunity in a chosen stage, read each back, move the stage and observe the change trigger; attempt to resubscribe an unsubscribed Mailchimp member and verify the status stays unsubscribed with a named refusal; repeat the lead and verify one contact and one deal.
+  Current evidence: none; this is build work.
+
+- **CONN-016 — File storage and e-signature. Status: missing.** In sandbox accounts, generate a PandaDoc document and a DocuSign envelope from templates with mapped recipient and USD fields, complete each as the test signer, verify the completed trigger fires once, and file the signed PDF and certificate into Box and Dropbox folders verified by readback; decline a second envelope and verify the declined branch; deliver the completion event twice with one filed copy.
+  Current evidence: none; this is build work.
+
+- **CONN-017 — Twilio SMS. Status: missing.** With a Twilio test number, send an SMS from a workflow and see its delivered status in the run; reply from a handset and verify one inbound-triggered run; send STOP and verify the next send to that number is refused with a named opt-out reason and no Twilio charge; verify an unregistered sender shows its registration requirement before publish.
+  Current evidence: none; this is build work.
+
+- **CONN-018 — Square, PayPal and WooCommerce. Status: missing.** In Square sandbox, PayPal sandbox and a WooCommerce test store, process a paid order into a QuickBooks Online draft invoice and a Slack notice, verify the order and payment by provider readback, replay the provider event with no duplicate invoice, and request a refund above the configured USD limit to verify it pauses for approval, then reconcile a lost refund response before any second attempt.
   Current evidence: none; this is build work.
 
 - **HTTP-001 — Authorized HTTP dispatch. Status: done.** Create and activate a flow through the HTTP API, prepare an event without sending, concurrently approve twice, lose the receiver acknowledgment, replay once and inspect one receiver effect; reject another run and refuse a foreign or credential-bearing destination.
   Current evidence: `src/crank/flows.ts`; `src/crank/runs.ts`; `src/crank/delivery.ts`; `tests/crank.test.mjs`.
 
-- **TRIG-001 — Scoped, deduplicated webhook admission. Status: done.** Call the public trigger endpoint with an active flow key, resend the same event, change its payload, send to another flow and revoke the key; verify a single pending run, conflicts/refusals and no unauthorized reads.
-  Current evidence: `src/crank/api.ts`; `src/crank/runs.ts`; `src/crank/tokens.ts`; `tests/crank.test.mjs`.
+- **HTTP-002 — General HTTP and connector API request steps. Status: missing.** Against a sandbox vendor API that returns a plain 200 with JSON and no Crank effect ID, PATCH a record with a bearer connection and a custom header, map a response field into the next step and verify the change by a GET readback; send a form-encoded POST and a multipart upload; define 409 as a business failure and route it to the error branch; lose one PATCH response and verify readback before any retry; through a HubSpot connection’s raw API request action call a supported endpoint with the managed OAuth token, then attempt a domain outside that connection and a private-network address and verify both are refused with no request sent and no secret in run history.
+  Current evidence: none; this is build work.
+
+- **TRIG-001 — Scoped, deduplicated webhook admission. Status: partial.** Call the public trigger endpoint with an active flow key, resend the same event, change its payload, send to another flow and revoke the key; verify a single pending run, conflicts/refusals and no unauthorized reads. Send a form-encoded POST with no auth header and no event ID to a flow’s secret URL and verify exactly one run with the fields mapped; resend it inside the dedup window and verify no run; send it after the window and verify a new run; send a Stripe-signed event with a valid and then a tampered signature and verify one run and one refusal; send a GET with query parameters and a multipart POST with a file in raw mode and inspect headers, query and file as mapped data; configure a synchronous JSON response and verify the sender receives it; rotate the URL and verify the old URL stops after the overlap.
+  Current evidence: `src/crank/api.ts`; `src/crank/runs.ts`; `src/crank/tokens.ts`; `tests/crank.test.mjs`. Remaining: Scoped bearer trigger credentials, the `{event_id,input}` envelope with equal-payload dedup, changed-payload conflict, erased-event fence and server-side revocation ship; secret URLs, signature verification, non-JSON bodies, raw headers/query, builder-chosen dedup keys/digest windows and configurable responses do not.
 
 - **TRIG-002 — Schedules and on-demand runs. Status: partial.** Configure weekday 9 a.m. America/New_York execution, an interval and an on-demand run; cross both DST changes and restart during a due occurrence, then inspect the planned and actual times and exactly one admitted run per due occurrence.
   Current evidence: `src/crank/ui/flows.ts`; `src/crank/runs.ts`. Remaining: On-demand preparation works; there is no schedule engine.
 
 - **TRIG-003 — App, polling and email triggers. Status: missing.** Activate an email and CRM polling workflow, return overlapping pages and out-of-order webhook events, expire a subscription and restart polling after an outage; verify no lost admitted records, duplicate business actions or silent subscription failure.
+  Current evidence: none; this is build work.
+
+- **TRIG-004 — Polling frequency and trigger latency. Status: missing.** Publish a “new HubSpot deal → Slack” workflow at a 1-minute interval and an instant Typeform workflow; create 30 deals and 30 submissions spread over an hour; verify every deal run starts no later than 1 minute 30 seconds after the deal’s creation, every form run starts within 10 seconds of receipt at p95, and each run’s history shows its measured latency; throttle the HubSpot test edge with 429s and verify the late polls are flagged with “provider rate limit” in OPS-001; choose an interval faster than a provider allows and verify the pre-publish warning.
+  Current evidence: none; this is build work.
+
+- **TRIG-005 — Flood protection for bursts of trigger events. Status: missing.** With a threshold of 100, return 500 new contacts from one poll of a CRM test edge to a welcome-email workflow; verify zero emails and zero downstream writes, one held batch with 500 deduplicated items and an owner notice; release 20 selected items and verify exactly 20 runs and emails; return the same 500 records on the next poll and verify no new hold or duplicate items; discard the remainder and verify they never run; send 150 instant webhooks in one minute and verify the same hold.
+  Current evidence: none; this is build work.
+
+- **TRIG-006 — Hosted inbound email addresses. Status: missing.** Forward a vendor email with a PDF attachment to a workflow’s alias; extract the PO number from the body with a mapping or AI-001 node, attach the PDF to a HubSpot test record and verify one run and the record by readback; resend the same message and verify no second run; send from a non-allowlisted domain and an oversized message and verify both are refused and visible; revoke the alias and verify mail to it bounces.
   Current evidence: none; this is build work.
 
 ## Operate recurring work
@@ -97,6 +133,9 @@ Each item below is one clause’s acceptance evidence. The named journey must be
 - **EXEC-006 — Effect reconciliation and compensation. Status: partial.** Lose the response after an invoice/refund is created, restart and reconcile it by provider readback; simulate zero, one and multiple matches, then fail a downstream step and inspect an authorized compensation without duplicating the initial write.
   Current evidence: `src/crank/delivery.ts`; `tests/crank.test.mjs`. Remaining: The compliant HTTP receiver returns an effect ID/key and one replay is safe under that receiver contract; general provider readback and compensation are absent.
 
+- **EXEC-007 — Built-in email and SMS steps. Status: missing.** Verify a test sending domain’s SPF, DKIM and DMARC records in setup, then send a mapped email with a PDF attachment from a published workflow with no mail connection and verify receipt, a passing DKIM signature and the delivered event on the run; send to a hard-bouncing address and verify the bounce is recorded and the next send is suppressed; attempt a production send before the records verify and see a named setup requirement; send an SMS step through a Twilio test number and see its delivery status.
+  Current evidence: none; this is build work.
+
 - **OPS-001 — Operations reporting and external logs. Status: missing.** Generate passing, failed, waiting and uncertain runs; filter an operations report, export it and stream events to an unavailable then restored sink; reconcile counts to run history and show incomplete business outcomes separately.
   Current evidence: none; this is build work.
 
@@ -108,11 +147,17 @@ Each item below is one clause’s acceptance evidence. The named journey must be
 - **TEAM-001 — Team workspaces and permissions. Status: partial.** Invite each role, share a restricted workflow and connection, attempt direct cross-scope reads/writes, transfer a departing builder’s flows and deactivate them during an active session; verify continuity without retained personal access.
   Current evidence: `src/crank/access.ts`; `src/crank/ui/settings.ts`; `tests/crank.test.mjs`. Remaining: Owner/admin/member roles and deactivation exist; workspace sharing scopes, approver/operator roles and team connection ownership do not.
 
-- **TEAM-002 — Optional approvals and standing grants. Status: partial.** Publish a routine lead workflow under a limited grant and observe unattended completion; exceed a USD refund limit, inspect and reject one proposed action, approve another, then alter its body and revoke the grant mid-run, verifying reapproval/refusal and recorded in-flight uncertainty.
+- **TEAM-002 — Optional approvals and standing grants. Status: partial.** Publish a routine lead workflow with no grant and observe unattended completion; give an agent task a limited grant and observe it complete within the grant; exceed a USD refund limit, inspect and reject one proposed action, approve another, then alter its body and revoke the grant mid-run, verifying reapproval/refusal and recorded in-flight uncertainty.
   Current evidence: `src/crank/delivery.ts`; `src/crank/access.ts`; `tests/crank.test.mjs`. Remaining: Exact owner approval/rejection ships; optional approval nodes and standing grants are absent.
 
 - **TEAM-003 — Scoped preparation and trigger credentials. Status: done.** Issue both credential kinds through Access, prepare/read with an agent, submit with a trigger, try every owner-only route and another flow, then revoke; inspect state and archive for absence of bearer values.
   Current evidence: `src/crank/tokens.ts`; `src/crank/access.ts`; `src/crank/api.ts`; `tests/crank.test.mjs`.
+
+- **TEAM-004 — Publishing authorizes a workflow’s declared steps. Status: missing.** Build or import 10 ordinary workflows (lead to CRM, Slack notice, Sheets row, draft invoice and similar), publish each, and observe their triggered runs complete unattended with no grant authoring, approval or other step beyond publish; verify each run’s audit names the publishing member and version. Add a workspace USD refund cap of $200 and trigger refunds of $150 and $350: verify only the $350 action pauses for approval while the $150 one completes. Add a step to a draft and verify the published version cannot run it until republished; revoke a bound connection and verify new runs pause with a reconnect notice.
+  Current evidence: none; this is build work.
+
+- **TEAM-005 — Approve with edits, rejection routes and reviewer notices. Status: partial.** Publish a refund workflow with an approval step whose amount is editable and capped at $500; change a $120 proposed refund to $95 and approve, then verify the Stripe test-mode readback shows $95, the run history shows both values, the reviewer and the reason; try to approve an edited amount of $600 and verify refusal; reject a second refund on a workflow whose rejection branch emails the customer and verify the branch runs with no refund; reject a third on a stop-on-rejection workflow and verify nothing further runs; verify each reviewer received the Slack notice and the mobile push with a working authenticated link.
+  Current evidence: `src/crank/delivery.ts`; `tests/crank.test.mjs`. Remaining: Exact owner approval or rejection of the immutable proposed action ships, and rejection records the decision and stops the run with no delivery; reviewer edits, editable-field caps, rejection branches and reviewer notifications do not.
 
 - **SEC-001 — Native authentication and origin-bound writes. Status: partial.** Sign in through the ordinary email-link journey, call private HTTP doors signed out and with each lower role, send a foreign-Origin mutation and revoke a session/credential before a guarded write; verify denial without product effects and the build’s dev-identity exclusion.
   Current evidence: `src/crank/access.ts`; `src/crank/api.ts`; `tests/crank.test.mjs`; `tests/email-link.mjs`; `SEED-COMMAND-CONTRACT.md`. Remaining: HTTP role/origin boundaries are tested; commit-time session revocation and every private door/dev-layer exclusion are not all established by the cited product tests.
@@ -137,7 +182,7 @@ Each item below is one clause’s acceptance evidence. The named journey must be
 - **MIG-001 — n8n migration with preview and undo. Status: partial.** Preview a multi-step n8n export with a subflow and unsupported/custom node, resolve each named gap, apply the exact reviewed plan twice, reopen the journal after restart, bind fresh accounts and compare runs before cutover; undo an unused import and refuse undo after drift or use.
   Current evidence: `src/crank/n8n.ts`; `src/crank/imports.ts`; `src/crank/import-api.ts`; `src/crank/import-target.ts`; `tests/crank.test.mjs`; `docs/IMPORTING.md`. Remaining: Only POST Webhook → whole-body HTTP Request is supported and tested with constructed documented-format data; no live customer export or broad graph compatibility is established.
 
-- **MIG-002 — Zapier migration and cutover. Status: missing.** Migrate an authorized multi-path Zap with formatter and delayed action, account for every source setting and unavailable export, compare mapped results on authorized samples, stop the source at a watermark and switch triggers; roll back without two active writers or duplicate effects.
+- **MIG-002 — Zapier migration and cutover. Status: missing.** Migrate an authorized multi-path Zap with formatter and delayed action from a Team-plan JSON export, account for every source setting, compare mapped results on authorized samples, stop the source at a watermark and switch triggers; roll back without two active writers or duplicate effects. Migrate a Zapier Professional account with no export file from its Zap list, editor details and Zap history captures: verify every Zap receives a disposition and a passing or explicitly failing parity test. Cut over a Typeform → Catch Hook → HubSpot Zap while test leads are submitted continuously before, during and after the switch: verify the repoint checklist, Crank’s first-event verification, and that HubSpot holds exactly one contact per submitted lead with zero lost or duplicate leads.
   Current evidence: none; this is build work.
 
 - **MIG-003 — Make blueprint migration. Status: missing.** Import a Make blueprint with a router, iterator and error handler, inspect the complete mapping/exception report, rebind accounts and test both branches, then perform a watermark cutover and demonstrate unused-import undo.
@@ -180,6 +225,9 @@ Each item below is one clause’s acceptance evidence. The named journey must be
 - **PLATFORM-001 — Public API, webhooks, SDK and MCP. Status: partial.** Use an SDK and MCP client to create a draft, start granted work, inspect progress and subscribe to signed completion events; duplicate writes, rotate a webhook secret and attempt an out-of-grant action, verifying stable IDs, delivery history and denial.
   Current evidence: `src/crank/api.ts`; `scripts/crank.mjs`; `docs/API.md`; `tests/crank.test.mjs`. Remaining: Native scoped HTTP preparation/trigger/read API and CLI exist; SDK, MCP, outgoing events and execution grants are missing.
 
+- **PLATFORM-002 — Connector actions as MCP tools for the buyer’s AI clients. Status: missing.** Create an MCP server with Slack “send channel message” and Google Calendar “create event” enabled; from an MCP client (Claude Desktop or the MCP Inspector) create a calendar event and post to a Slack channel, verifying both by provider readback and as audited calls in run history; call a HubSpot action that is not enabled and a Slack post to a channel outside the grant, verifying both are refused, audited and produce no provider effect; revoke the client and verify its next call fails.
+  Current evidence: none; this is build work.
+
 - **BASE-001 — Owned operation and explicit Base replacements. Status: partial.** With optional providers disconnected, run native sign-in, local HTTP automation, history and export without author traffic; inspect every enabled external destination/data category, then restore elsewhere with fresh authority and verify a removed provider cannot receive data.
   Current evidence: `AGENTS.md`; `SEED-COMMAND-CONTRACT.md`; `src/crank/archive-policy.mjs`; `src/crank/delivery.ts`; `tests/crank.test.mjs`. Remaining: Native owned workflow/archives exist; complete egress independence and expanded provider/data-lifecycle guarantees are not established.
 
@@ -192,4 +240,4 @@ Each item below is one clause’s acceptance evidence. The named journey must be
 - **BOUND-001 — US-first product and provider responsibilities. Status: missing.** Configure a US business workflow with USD sales-tax lines and an ACH/1099 handoff, inspect provider responsibilities and consent, and attempt a regulated operation without the required agreement/scope; verify a named setup requirement and retained obligation, then complete it through an authorized sandbox/provider connection.
   Current evidence: none; this is build work.
 
-**58 clauses: 4 done, 23 partial, 31 missing.** Status details and product behavior are in the contract’s final table. Completion requires the whole journey, including negative cases and observable end states; a cited partial implementation alone cannot promote an item.
+**74 clauses: 3 done, 25 partial, 46 missing.** Status details and product behavior are in the contract’s final table. Completion requires the whole journey, including negative cases and observable end states; a cited partial implementation alone cannot promote an item.
