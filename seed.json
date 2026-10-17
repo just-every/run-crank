@@ -8,7 +8,7 @@
     "id": "workflow",
     "record": "An immutable event-to-action run"
   },
-  "description": "Human-approved workflow automation with an idempotent HTTP connector.",
+  "description": "Workflow automation: published workflows run unattended from triggers, with managed connections, a connector catalogue (Slack and generic HTTP today) and optional approval steps.",
   "capabilities": [
     {
       "id": "http-dispatch",
@@ -18,9 +18,7 @@
     }
   ],
   "nonGoals": [
-    "Third-party credential brokering",
-    "Unapproved agent actions",
-    "Connector catalogue"
+    "Unapproved agent actions"
   ],
   "externals": [
     {
