@@ -1,0 +1,176 @@
+import { authorizeRequest } from '../connections/auth'
+import { fromBase64 } from './files'
+import { evaluate, validateGroups, type Groups } from '../engine/conditions'
+import { boundedFetch, checkEgress, utf8, type BoundedResponse } from '../engine/egress'
+import { StepError } from '../engine/errors'
+import { resolve } from '../engine/mapping'
+import type { StepContext, StepType } from '../engine/types'
+import { isObject, lookup, textOf } from '../engine/values'
+import { canonical, stmt } from '../model'
+import { parseXml, toJson } from '../triggers/xml'
+
+const METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD']
+const SECRET_HEADER = /authorization|cookie|api[-_]?key|token|secret|password|signature/i
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+
+function statusMatches(status: number, rules: unknown): boolean {
+  const list = Array.isArray(rules) && rules.length ? rules : ['200-299']
+  return list.some(rule => {
+    if (typeof rule === 'number') return status === rule
+    const m = /^(\d{3})-(\d{3})$/.exec(String(rule))
+    return m ? status >= Number(m[1]) && status <= Number(m[2]) : Number(rule) === status
+  })
+}
+export function parseBody(response: BoundedResponse): unknown {
+  const type = response.headers.get('content-type')?.split(';')[0].trim().toLowerCase() ?? ''
+  const text = utf8(response.bytes)
+  if (!text) return null
+  if (type.includes('json')) { try { return JSON.parse(text) } catch { throw new StepError('provider', 'The response is not valid JSON', { status: response.status }) } }
+  if (type.includes('xml')) { const root = parseXml(text); const element = root.children.find(c => c.type === 'element'); return element ? { [(element as any).name]: toJson(element as any) } : null }
+  if (type === 'application/x-www-form-urlencoded') return Object.fromEntries(new URLSearchParams(text))
+  return text
+}
+const outputHeaders = (headers: Headers) => Object.fromEntries([...headers.entries()].filter(([name]) => name !== 'set-cookie'))
+
+/** The request body in one of the declared encodings; files are stored file references. */
+async function encode(ctx: StepContext, kind: string, value: unknown, contentType?: string): Promise<{ body: Uint8Array<ArrayBuffer> | null; type: string | null }> {
+  if (value === undefined || value === null) return { body: null, type: null }
+  if (kind === 'json') return { body: new TextEncoder().encode(JSON.stringify(value)), type: 'application/json' }
+  if (kind === 'form') {
+    if (!isObject(value)) throw new StepError('validation', 'A form body must be an object of fields')
+    return { body: new TextEncoder().encode(new URLSearchParams(Object.entries(value).map(([k, v]) => [k, textOf(v) ?? JSON.stringify(v)])).toString()), type: 'application/x-www-form-urlencoded' }
+  }
+  if (kind === 'multipart') {
+    if (!isObject(value)) throw new StepError('validation', 'A multipart body must be an object of fields')
+    const form = new FormData()
+    for (const [name, field] of Object.entries(value)) {
+      if (isObject(field) && typeof field.file_id === 'string') {
+        const file = await stmt(ctx.env, 'SELECT name,type,content_base64 FROM crank_files WHERE id=? AND workflow_id=?', field.file_id, ctx.run.workflow_id).first<{ name: string; type: string; content_base64: string }>()
+        if (!file) throw new StepError('validation', `File ${field.file_id} is not available to this workflow`)
+        form.append(name, new File([fromBase64(file.content_base64)], file.name, { type: file.type }))
+      } else form.append(name, textOf(field) ?? JSON.stringify(field))
+    }
+    const encoded = new Response(form)
+    return { body: new Uint8Array(await encoded.arrayBuffer()), type: encoded.headers.get('content-type') }
+  }
+  if (kind === 'xml' || kind === 'raw') {
+    const text = textOf(value)
+    if (text === null) throw new StepError('validation', `A ${kind} body must be text`)
+    return { body: new TextEncoder().encode(text), type: contentType ?? (kind === 'xml' ? 'application/xml' : 'text/plain') }
+  }
+  throw new StepError('validation', `Unknown body kind ${kind}`)
+}
+
+interface Prepared { url: URL; method: string; headers: Headers; body: Uint8Array<ArrayBuffer> | null; timeout: number }
+async function send(ctx: StepContext, step: Record<string, unknown>, prepared: Prepared, connectionId: string | undefined) {
+  const headers = new Headers(prepared.headers), url = new URL(prepared.url)
+  if (connectionId) await authorizeRequest(ctx.env, connectionId, url, headers, prepared.body)
+  return boundedFetch(url.href, { method: prepared.method, headers, body: prepared.body, timeoutMs: prepared.timeout, maxBytes: 2 * 1024 * 1024, follow: prepared.method === 'GET' || prepared.method === 'HEAD' ? 3 : 0 })
+}
+
+/** Reads back by a declared business key before any retry of a write with a lost response. */
+async function readback(ctx: StepContext, step: Record<string, unknown>, connectionId: string | undefined, timeout: number) {
+  const spec = step.readback as Record<string, unknown>
+  const resolved = resolve({ url: spec.url, equals: spec.equals }, ctx.scope) as { url: string; equals: unknown }
+  const response = await send(ctx, step, { url: checkEgress(String(resolved.url)), method: 'GET', headers: new Headers({ accept: 'application/json' }), body: null, timeout }, connectionId)
+  if (response.status < 200 || response.status > 299) return null
+  const body = parseBody(response), found = lookup(body, String(spec.path ?? 'id'))
+  return found.found && canonical(found.value) === canonical(resolved.equals) ? { response, body } : null
+}
+
+/** HTTP-002: any API call, with credentials from a stored connection only. */
+export const httpRequest: StepType = {
+  mutating: true,
+  connection: 'optional',
+  validate(step) {
+    const input = isObject(step.input) ? step.input : {}
+    if (input.method !== undefined && !METHODS.includes(String(input.method).toUpperCase())) throw new StepError('validation', `HTTP ${step.id}: method must be one of ${METHODS.join(', ')}`)
+    if (isObject(input.headers)) for (const name of Object.keys(input.headers)) if (SECRET_HEADER.test(name)) throw new StepError('validation', `HTTP ${step.id}: put credentials in a connection, not header ${name}`)
+    if (step.body_kind !== undefined && !['json', 'form', 'multipart', 'xml', 'raw'].includes(step.body_kind as string)) throw new StepError('validation', `HTTP ${step.id}: body_kind must be json, form, multipart, xml or raw`)
+    if (isObject(step.success) && step.success.when !== undefined) validateGroups(step.success.when, `HTTP ${step.id} success`)
+    if (step.timeout_ms !== undefined && (!Number.isInteger(step.timeout_ms) || (step.timeout_ms as number) < 100 || (step.timeout_ms as number) > 30000)) throw new StepError('validation', `HTTP ${step.id}: timeout_ms must be 100 to 30000`)
+    if (step.readback !== undefined && (!isObject(step.readback) || step.readback.url === undefined)) throw new StepError('validation', `HTTP ${step.id}: readback needs a url, path and equals`)
+  },
+  async execute(step, ctx) {
+    const input = ctx.input, method = String(input.method ?? 'GET').toUpperCase(), mutating = !['GET', 'HEAD'].includes(method)
+    if (typeof input.url !== 'string') throw new StepError('mapping', `HTTP ${step.id}: url is required`, { field: 'url' })
+    const url = checkEgress(input.url)
+    if (isObject(input.query)) for (const [key, value] of Object.entries(input.query)) if (value !== undefined && value !== null) url.searchParams.set(key, textOf(value) ?? JSON.stringify(value))
+    const headers = new Headers({ accept: 'application/json, application/xml;q=0.9, text/plain;q=0.8, */*;q=0.5' })
+    if (isObject(input.headers)) for (const [name, value] of Object.entries(input.headers)) {
+      if (SECRET_HEADER.test(name)) throw new StepError('validation', `Put credentials in a connection, not header ${name}`)
+      if (value !== undefined && value !== null) headers.set(name, textOf(value) ?? JSON.stringify(value))
+    }
+    const encoded = await encode(ctx, String(step.body_kind ?? 'json'), method === 'GET' || method === 'HEAD' ? undefined : input.body, typeof step.content_type === 'string' ? step.content_type : undefined)
+    if (encoded.type) headers.set('content-type', encoded.type)
+    if (mutating && typeof step.idempotency_header === 'string') headers.set(step.idempotency_header, ctx.operationKey)
+    const timeout = Number(step.timeout_ms ?? 15000), connectionId = typeof step.connection_id === 'string' ? step.connection_id : undefined
+    const prepared: Prepared = { url, method, headers, body: encoded.body, timeout }
+
+    let response: BoundedResponse | undefined, reconciled = false, attempts = 0
+    for (;;) {
+      attempts++
+      try { response = await send(ctx, step, prepared, connectionId) }
+      catch (error) {
+        if (!(error instanceof StepError) || error.category !== 'network') throw error
+        if (!mutating && attempts < 3) { await sleep(250 * 2 ** attempts); continue }
+        if (mutating && typeof step.idempotency_header === 'string' && attempts < 2) continue
+        if (mutating && isObject(step.readback)) {
+          const found = await readback(ctx, step, connectionId, timeout)
+          if (found) { response = found.response; reconciled = true; break }
+          throw new StepError('uncertain', `HTTP ${step.id}: the response was lost and readback found no record; not retried`, { uncertain: true })
+        }
+        throw new StepError('uncertain', `HTTP ${step.id}: the response was lost; not retried automatically`, { uncertain: true })
+      }
+      if (!mutating && [429, 502, 503, 504].includes(response.status) && attempts < 3) {
+        const after = Number(response.headers.get('retry-after'))
+        await sleep(Number.isFinite(after) && after >= 0 ? Math.min(after, 5) * 1000 : 250 * 2 ** attempts + Math.random() * 100)
+        continue
+      }
+      break
+    }
+    const body = parseBody(response!)
+    const result = { status: response!.status, headers: outputHeaders(response!.headers), body, reconciled, attempts }
+    const ok = statusMatches(response!.status, isObject(step.success) ? step.success.status : undefined)
+      && (!isObject(step.success) || step.success.when === undefined || evaluate(step.success.when as Groups, { ...ctx.scope, response: result } as any, ctx.zone, ctx.now).pass)
+    if (!ok) {
+      const business = Array.isArray(step.business_failures) && statusMatches(response!.status, step.business_failures)
+      const category = business ? 'business' : response!.status === 401 || response!.status === 403 ? 'auth' : response!.status === 429 ? 'rate_limit' : 'provider'
+      throw new StepError(category, `HTTP ${step.id}: ${business ? 'business failure' : 'request failed'} with status ${response!.status}`, { status: response!.status, body })
+    }
+    if (!mutating && isObject(step.pagination)) return { status: 'succeeded', output: { ...result, ...await paginate(ctx, step, prepared, connectionId, body, response!) } }
+    return { status: 'succeeded', output: result }
+  },
+}
+
+async function paginate(ctx: StepContext, step: Record<string, unknown>, first: Prepared, connectionId: string | undefined, body: unknown, response: BoundedResponse) {
+  const spec = step.pagination as Record<string, unknown>, itemsPath = typeof spec.items_path === 'string' ? spec.items_path : ''
+  const maxPages = Math.min(Number(spec.max_pages ?? 10), 50)
+  const itemsOf = (value: unknown) => { const found = itemsPath ? lookup(value, itemsPath) : { found: true, value }; return Array.isArray(found.value) ? found.value : [] }
+  const items = [...itemsOf(body)]
+  let pages = 1, current = body, currentResponse = response, page = Number(spec.start ?? 1)
+  while (pages < maxPages) {
+    const url = new URL(first.url)
+    if (spec.kind === 'cursor') {
+      const cursor = lookup(current, String(spec.cursor_path)).value
+      if (cursor === undefined || cursor === null || cursor === '') break
+      url.searchParams.set(String(spec.param ?? 'cursor'), String(cursor))
+    } else if (spec.kind === 'page') {
+      if (!itemsOf(current).length) break
+      page++; url.searchParams.set(String(spec.param ?? 'page'), String(page))
+    } else if (spec.kind === 'link') {
+      const next = /<([^>]+)>\s*;\s*rel="?next"?/i.exec(currentResponse.headers.get('link') ?? '')
+      if (!next) break
+      const target = new URL(next[1], first.url)
+      if (target.origin !== first.url.origin) throw new StepError('egress', 'A pagination link left the API origin')
+      url.href = target.href
+    } else throw new StepError('validation', 'pagination.kind must be cursor, page or link')
+    currentResponse = await send(ctx, step, { ...first, url }, connectionId)
+    if (currentResponse.status < 200 || currentResponse.status > 299) throw new StepError('provider', `Pagination request failed with status ${currentResponse.status}`, { status: currentResponse.status })
+    current = parseBody(currentResponse); pages++
+    const more = itemsOf(current)
+    if (spec.kind === 'page' && !more.length) break
+    items.push(...more)
+  }
+  return { items, pages }
+}

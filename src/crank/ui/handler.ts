@@ -1,4 +1,5 @@
 import { crankApi } from '../api'
+import { workflowApi } from '../workflows/api'
 import { importApi } from '../import-api'
 import { dataApi } from '../data'
 import { authorize, requireOwner, requireWriteOrigin } from '../access'
@@ -11,7 +12,7 @@ import { accessView, importView, previewView, dataView } from './settings'
 
 const redirect = (location:string) => new Response(null,{status:303,headers:{location,'cache-control':'no-store'}})
 export async function productApi(request:Request,env:CrankEnv):Promise<Response|null> {
-  return await importApi(request,env) ?? await dataApi(request,env) ?? await crankApi(request,env)
+  return await importApi(request,env) ?? await dataApi(request,env) ?? await workflowApi(request,env) ?? await crankApi(request,env)
 }
 async function formValues(request:Request) {
   if (!request.headers.get('content-type')?.startsWith('application/x-www-form-urlencoded')) throw new Error('Use a form submission.')

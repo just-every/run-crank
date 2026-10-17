@@ -1,0 +1,187 @@
+import { before, after, test } from 'node:test';
+import assert from 'node:assert/strict';
+import { createHmac } from 'node:crypto';
+import { harness } from './harness.mjs';
+import { connection, deliver, fakeEdge, fakeSecret, hookUrl, jsonResponse, publish, runs, settled, stepOf, until } from './kit.mjs';
+
+// Feeds, vendor APIs and mail are faked only at the network edge.
+const fake = fakeEdge();
+let h;
+before(async () => { h = await harness('http://127.0.0.1:9', { edge: fake.edge }) });
+after(async () => { await h?.close() });
+const MINUTE = 60000;
+const form = (body, headers = {}) => ({ method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded', ...headers }, body });
+
+test('TRIG-001: a secret URL admits form posts once per dedup window, verifies Stripe signatures and rotates', async () => {
+  const w = await publish(h, 'Quote requests', { trigger: { type: 'webhook', dedup: { window_minutes: 5 } }, steps: [{ id: 'lead', type: 'map', input: { customer: '{{trigger.body.customer}}', amount: '{{trigger.body.amount}}' } }] });
+  assert.match(w.published.warnings.join(' '), /webhook URL/);
+  const url = await hookUrl(h, w);
+  const first = await deliver(h, url, form('customer=Harbour+Workshop&amount=120.50'));
+  assert.equal(first.status, 200, first.text); assert.equal(first.value.accepted, true);
+  const run = await settled(h, first.value.run_id);
+  assert.equal(run.status, 'succeeded'); assert.deepEqual(stepOf(run, 'lead').output, { customer: 'Harbour Workshop', amount: '120.50' });
+  const again = await deliver(h, url, form('customer=Harbour+Workshop&amount=120.50'));
+  assert.equal(again.value.duplicate, true); assert.equal((await runs(h, w)).length, 1);
+  // Past the window, the same body is a new event.
+  await h.db.prepare('UPDATE crank_trigger_events SET received_at=? WHERE workflow_id=?').bind(new Date(Date.now() - 6 * MINUTE).toISOString(), w.id).run();
+  assert.equal((await deliver(h, url, form('customer=Harbour+Workshop&amount=120.50'))).value.accepted, true);
+  await until(async () => (await runs(h, w)).length === 2, 'second run');
+
+  const secret = fakeSecret('whsec');
+  const signing = await connection(h, { app: 'webhook', label: 'Stripe signing secret', auth_kind: 'signing_secret', secret: { secret } });
+  assert.ok(!JSON.stringify(signing).includes(secret));
+  const stripe = await publish(h, 'Stripe invoices', { trigger: { type: 'webhook', signature: { preset: 'stripe' }, signing_connection_id: signing.id, dedup: { key: 'body.id' } }, steps: [{ id: 'event', type: 'map', input: { id: '{{trigger.body.id}}' } }] });
+  const stripeUrl = await hookUrl(h, stripe), payload = JSON.stringify({ id: 'evt_1', type: 'invoice.paid' }), t = Math.floor(Date.now() / 1000);
+  const signature = `t=${t},v1=${createHmac('sha256', secret).update(`${t}.${payload}`).digest('hex')}`;
+  const signed = await deliver(h, stripeUrl, { method: 'POST', headers: { 'content-type': 'application/json', 'stripe-signature': signature }, body: payload });
+  assert.equal(signed.status, 200, signed.text);
+  const tampered = await deliver(h, stripeUrl, { method: 'POST', headers: { 'content-type': 'application/json', 'stripe-signature': signature }, body: payload.replace('evt_1', 'evt_2') });
+  assert.equal(tampered.status, 401);
+  await until(async () => (await runs(h, stripe)).length === 1, 'one signed run');
+
+  const rotated = await h.post(`workflows/${w.id}/hooks`, { rotate: (await h.get('workflows/' + w.id)).hooks[0].id, overlap_minutes: 0 }, h.owner, 201);
+  assert.equal((await deliver(h, url, form('customer=Old'))).status, 404);
+  assert.equal((await deliver(h, rotated.url, form('customer=New'))).status, 200);
+  await h.post(`hooks/${rotated.id}/revoke`);
+  assert.equal((await deliver(h, rotated.url, form('customer=Revoked'))).status, 404);
+});
+
+test('TRIG-001: raw GET and multipart files are mappable, and a synchronous response comes from the workflow', async () => {
+  const raw = await publish(h, 'Vendor callbacks', { trigger: { type: 'webhook', raw: true, methods: ['GET', 'POST'] }, steps: [{ id: 'seen', type: 'map', input: { ref: '{{trigger.query.ref}}', vendor: '{{trigger.headers.x-vendor}}', file: '{{trigger.files.doc}}', raw: '{{trigger.raw}}' } }] });
+  const url = await hookUrl(h, raw);
+  const got = await deliver(h, url + '?ref=A1', { headers: { 'x-vendor': 'Northline' } });
+  const getRun = await settled(h, got.value.run_id);
+  assert.equal(stepOf(getRun, 'seen').output.ref, 'A1'); assert.equal(stepOf(getRun, 'seen').output.vendor, 'Northline');
+  const body = new FormData(); body.append('note', 'Quote attached'); body.append('doc', new File(['%PDF-1.4 quote'], 'quote.pdf', { type: 'application/pdf' }));
+  const posted = await deliver(h, url, { method: 'POST', body });
+  const file = stepOf(await settled(h, posted.value.run_id), 'seen').output.file;
+  assert.equal(file.name, 'quote.pdf'); assert.equal(file.type, 'application/pdf'); assert.equal(file.size, 14); assert.match(file.sha256, /^[0-9a-f]{64}$/);
+
+  const sync = await publish(h, 'Lookup endpoint', { trigger: { type: 'webhook', response: { mode: 'sync', timeout_ms: 5000 } }, steps: [
+    { id: 'upper', type: 'transform', fn: 'text.case', input: { value: '{{trigger.body.name}}', to: 'upper' } },
+    { id: 'reply', type: 'respond', input: { status: 201, body: { greeting: '{{steps.upper}}' } } }] });
+  const answer = await deliver(h, await hookUrl(h, sync), { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: 'Ada' }) });
+  assert.equal(answer.status, 201); assert.deepEqual(answer.value, { greeting: 'ADA' });
+});
+
+const rss = items => `<?xml version="1.0"?><rss version="2.0"><channel><title>Harbour news</title>${items.map(i => `<item><guid>${i.guid}</guid><title>${i.title}</title><link>https://news.example/${i.guid}</link><pubDate>Fri, 16 Oct 2026 12:00:00 GMT</pubDate></item>`).join('')}</channel></rss>`;
+test('TRIG-007/TRIG-004: feeds start one run per new item, name their source and report poll latency', async () => {
+  let items = [{ guid: 'a', title: 'Opening hours' }, { guid: 'b', title: 'New range' }];
+  fake.routes.set('news.example', ({ url }) => url.pathname === '/rss.xml' ? new Response(rss(items), { headers: { 'content-type': 'application/rss+xml' } })
+    : url.pathname === '/atom.xml' ? new Response('<feed xmlns="http://www.w3.org/2005/Atom"><title>Atom news</title><entry><id>urn:1</id><title>Atom item</title><link href="https://news.example/atom/1"/><updated>2026-10-16T12:00:00Z</updated></entry></feed>', { headers: { 'content-type': 'application/atom+xml' } })
+    : jsonResponse({ version: 'https://jsonfeed.org/version/1.1', title: 'JSON news', items: [{ id: 'j1', title: 'JSON item', url: 'https://news.example/j1' }] }, 200, { 'content-type': 'application/feed+json' }));
+  const graph = { trigger: { type: 'feed', urls: ['https://news.example/rss.xml'], interval_minutes: 1, backfill: 'from_now' }, steps: [{ id: 'item', type: 'map', input: { title: '{{trigger.title}}', feed: '{{trigger.feed.url}}' } }] };
+  const w = await publish(h, 'News to Slack', graph);
+  let time = Date.now();
+  await h.tick(time);
+  assert.equal((await runs(h, w)).length, 0, 'start from now seeds existing items without runs');
+  items = [...items, { guid: 'c', title: 'Holiday hours' }, { guid: 'd', title: 'Hiring' }];
+  await h.tick(time += MINUTE);
+  assert.equal((await runs(h, w, '&status=succeeded')).length, 2);
+  items = items.map(i => i.guid === 'c' ? { ...i, title: 'Holiday hours (edited)' } : i);
+  await h.tick(time += MINUTE);
+  assert.equal((await runs(h, w)).length, 2, 'a re-published item with the same GUID starts nothing');
+  await h.post(`workflows/${w.id}/draft`, { graph: { ...graph, trigger: { ...graph.trigger, urls: ['https://news.example/rss.xml', 'https://news.example/atom.xml', 'https://news.example/feed.json'] } } });
+  await h.post(`workflows/${w.id}/publish`, {}, h.owner, 201);
+  await h.tick(time += MINUTE);
+  const feeds = (await Promise.all((await runs(h, w)).map(r => h.get('workflow-runs/' + r.id)))).map(r => stepOf(r, 'item').output.feed);
+  assert.ok(feeds.includes('https://news.example/atom.xml') && feeds.includes('https://news.example/feed.json'));
+  const report = (await h.get('reports/latency?workflow=' + w.id)).workflows[0];
+  assert.equal(report.poll.interval_minutes, 1); assert.ok(report.poll.lag.count >= 4); assert.ok(report.trigger_to_start.p95_ms !== null);
+});
+
+test('TRIG-007: URL polls follow cursor pages with a bearer connection, dedup on a chosen key, read XPath, and surface refusals', async () => {
+  const token = fakeSecret('vendor');
+  let mode = 'ok';
+  fake.routes.set('api.vendor.example', ({ url, headers }) => {
+    if (headers.authorization !== 'Bearer ' + token) return jsonResponse({ error: 'unauthorized' }, 401);
+    if (mode === 'limited') return jsonResponse({ error: 'slow down' }, 429);
+    if (mode === 'malformed') return new Response('{"data": [', { headers: { 'content-type': 'application/json' } });
+    if (url.pathname === '/moved') return new Response(null, { status: 302, headers: { location: 'http://169.254.169.254/latest/meta-data' } });
+    if (url.pathname === '/catalog.xml') return new Response('<catalog><product sku="A1"><name>Oak desk</name></product><product sku="B2"><name>Lamp</name></product></catalog>', { headers: { 'content-type': 'application/xml' } });
+    return url.searchParams.get('cursor') === 'p2' ? jsonResponse({ data: { items: [{ data: { ref: 'r3' }, name: 'Third' }] }, next: null })
+      : jsonResponse({ data: { items: [{ data: { ref: 'r1' }, name: 'First' }, { data: { ref: 'r2' }, name: 'Second' }] }, next: 'p2' });
+  });
+  const vendor = await connection(h, { app: 'http', label: 'Vendor API', auth_kind: 'bearer', domains: ['api.vendor.example'], secret: { token } });
+  const poll = { type: 'url_poll', url: 'https://api.vendor.example/records', items_path: 'data.items', dedup: 'data.ref', pagination: { kind: 'cursor', cursor_path: 'next', param: 'cursor' }, connection_id: vendor.id, interval_minutes: 1, backfill: 'existing' };
+  const w = await publish(h, 'Vendor records', { trigger: poll, steps: [{ id: 'record', type: 'map', input: { ref: '{{trigger.data.ref}}' } }] });
+  let time = Date.now() + 10 * MINUTE;
+  await h.tick(time);
+  assert.deepEqual((await Promise.all((await runs(h, w)).map(r => h.get('workflow-runs/' + r.id)))).map(r => stepOf(r, 'record').output.ref).sort(), ['r1', 'r2', 'r3']);
+  await h.tick(time += MINUTE);
+  assert.equal((await runs(h, w)).length, 3, 'an unchanged poll starts nothing');
+
+  const xml = await publish(h, 'Catalog', { trigger: { type: 'url_poll', url: 'https://api.vendor.example/catalog.xml', xpath: '//product', dedup: '@sku', connection_id: vendor.id, interval_minutes: 1, backfill: 'existing' }, steps: [] });
+  await h.tick(time += MINUTE);
+  assert.equal((await runs(h, xml)).length, 2);
+
+  const refused = await h.send('/api/crank/workflows', { name: 'Private', graph: { trigger: { type: 'url_poll', url: 'http://10.0.0.5/records', items_path: '', interval_minutes: 1 }, steps: [] } }, h.owner);
+  assert.equal(refused.status, 422); assert.match(refused.text, /Private|refused/);
+  const before = h.mail.length;
+  const moved = await publish(h, 'Moved source', { trigger: { ...poll, url: 'https://api.vendor.example/moved' }, steps: [] });
+  await h.tick(time += MINUTE);
+  const state = await h.get(`workflows/${moved.id}/trigger`);
+  assert.equal(state.poll.last_status, 'error'); assert.equal(state.poll.last_cause, 'refused address');
+  assert.ok(!fake.requests.some(r => r.url.hostname === '169.254.169.254'), 'no request past the refusal');
+  assert.ok(h.mail.slice(before).some(m => /trigger poll failed/.test(m.subject)), 'owner notice');
+  mode = 'malformed';
+  await h.tick(time += MINUTE);
+  assert.match((await h.get(`workflows/${w.id}/trigger`)).poll.last_error, /JSON|parsed/);
+  mode = 'limited';
+  await h.tick(time += MINUTE);
+  const late = (await h.get('reports/latency?workflow=' + w.id)).workflows[0].poll.late;
+  assert.ok(late.some(p => p.cause === 'provider rate limit'));
+  mode = 'ok';
+});
+
+test('TRIG-005: a burst becomes one held batch with no effects; selected releases run once and the rest can be discarded', async () => {
+  let contacts = ['c1', 'c2', 'c3'];
+  fake.routes.set('crm.example', () => jsonResponse({ results: contacts.map(id => ({ id, email: `${id}@example.com` })) }));
+  fake.routes.set('mail.example', () => jsonResponse({ queued: true }));
+  const w = await publish(h, 'Welcome email', { settings: { burst_threshold: 5 }, trigger: { type: 'url_poll', url: 'https://crm.example/contacts', items_path: 'results', interval_minutes: 1 },
+    steps: [{ id: 'send', type: 'http', input: { method: 'POST', url: 'https://mail.example/send', body: { to: '{{trigger.email}}' } } }] });
+  let time = Date.now() + 30 * MINUTE;
+  await h.tick(time);
+  contacts = [...contacts, ...Array.from({ length: 8 }, (_, i) => 'n' + i)];
+  const mailBefore = h.mail.length;
+  await h.tick(time += MINUTE);
+  assert.equal((await runs(h, w)).length, 0); assert.equal(fake.to('mail.example').length, 0);
+  const [holdRow] = await h.get(`workflows/${w.id}/holds`);
+  let held = await h.get('holds/' + holdRow.id);
+  assert.equal(held.counts.held, 8); assert.ok(h.mail.slice(mailBefore).some(m => /held for review/.test(m.subject)));
+  const released = await h.post(`holds/${holdRow.id}/release`, { items: ['key:n0', 'key:n1'] });
+  assert.equal(released.runs.length, 2);
+  await until(async () => fake.to('mail.example').length === 2, 'two sends');
+  await h.tick(time += MINUTE);
+  held = await h.get('holds/' + holdRow.id);
+  assert.equal(held.counts.held, 6); assert.equal((await h.get(`workflows/${w.id}/holds`)).length, 1, 'the same records start no new hold');
+  await h.post(`holds/${holdRow.id}/discard`, { all: true });
+  assert.equal((await h.get('holds/' + holdRow.id)).status, 'closed');
+  await h.tick(time += MINUTE);
+  assert.equal(fake.to('mail.example').length, 2);
+
+  const burst = await publish(h, 'Instant burst', { settings: { burst_threshold: 3 }, trigger: { type: 'webhook', dedup: { key: 'body.id' } }, steps: [] });
+  const url = await hookUrl(h, burst);
+  const results = [];
+  for (let i = 0; i < 5; i++) results.push(await deliver(h, url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id: 'e' + i }) }));
+  assert.deepEqual(results.map(r => r.value.held === true), [false, false, false, true, true]);
+  assert.equal((await h.get('holds/' + (await h.get(`workflows/${burst.id}/holds`))[0].id)).counts.held, 2);
+});
+
+test('TRIG-002: weekday schedules keep 9 a.m. local across DST, admit each occurrence once and apply catch-up', async () => {
+  const daily = await publish(h, 'Morning report', { trigger: { type: 'schedule', at: '09:00', days: ['mon', 'tue', 'wed', 'thu', 'fri'], timezone: 'America/New_York', missed: 'skip' }, steps: [] });
+  const planned = (await h.get(`workflows/${daily.id}/trigger?from=2026-10-29T00:00:00Z&count=4`)).planned.map(p => p.at);
+  assert.deepEqual(planned, ['2026-10-29T13:00:00.000Z', '2026-10-30T13:00:00.000Z', '2026-11-02T14:00:00.000Z', '2026-11-03T14:00:00.000Z']);
+  const spring = await publish(h, 'Early job', { trigger: { type: 'schedule', at: '02:30', timezone: 'America/New_York' }, steps: [] });
+  assert.equal((await h.get(`workflows/${spring.id}/trigger?from=2027-03-13T12:00:00Z&count=1`)).planned[0].at, '2027-03-14T07:30:00.000Z', 'a skipped local time runs at the shifted instant');
+
+  const interval = await publish(h, 'Quarter-hourly sync', { trigger: { type: 'schedule', every_minutes: 15, timezone: 'America/Chicago', missed: 'catch_up' }, steps: [] });
+  const due = Date.parse((await h.get(`workflows/${interval.id}/trigger`)).schedule.next_due_at);
+  await h.tick(due + 45 * MINUTE + 1000);
+  await h.tick(due + 45 * MINUTE + 1000);
+  const occurrences = (await h.get(`workflows/${interval.id}/trigger`)).occurrences;
+  assert.equal(occurrences.length, 4); assert.equal((await runs(h, interval)).length, 4, 'one admitted run per due occurrence, even when the pass repeats');
+  const dailyDue = Date.parse((await h.get(`workflows/${daily.id}/trigger`)).schedule.next_due_at);
+  await h.tick(dailyDue + 10 * MINUTE);
+  assert.equal((await h.get(`workflows/${daily.id}/trigger`)).occurrences[0].outcome, 'skipped', 'a run missed by more than the grace period is skipped under the skip policy');
+});

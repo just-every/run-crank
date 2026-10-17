@@ -11,6 +11,8 @@ import { setupStateResponse } from './base/setup-state'
 import { authResponse, runtimeBindings, type Bindings } from './auth.server'
 import { identity } from './identity'
 import { appResponse, productApi } from './crank/ui/handler'
+import { publicHooks } from './crank/triggers/public'
+import { schedulerPass } from './crank/ops/scheduler'
 
 const api = new Hono<{ Bindings: Bindings }>()
 api.get('/health', (context) => context.json({ status: 'ok', ...deploymentHealth(context.env) }))
@@ -30,6 +32,9 @@ export default withDemo({
     if (asset) return asset
     const auth = await authResponse(request, env)
     if (auth) return auth
+    // Inbound webhook, callback and Slack event doors admit events only; runs continue after the response.
+    const hook = await publicHooks(request, runtimeBindings(env), work => execution.waitUntil(work))
+    if (hook) return hook
     const product = await productApi(request, runtimeBindings(env)) ?? await appResponse(request, runtimeBindings(env))
     if (product) return product
     // The installed variant: the Lobby at / and the public claim state it reads.
@@ -39,5 +44,9 @@ export default withDemo({
     const lobby = await lobbyResponse(request, runtimeBindings(env), identity)
     if (lobby) return lobby
     return rejectedResponse(request, await dispatch(request, () => api.fetch(request, env, execution), async () => noTransform(await start.fetch(request))))
+  },
+  // The per-minute executor pass: delays, queues, polls, schedules, holds and queued runs.
+  async scheduled(controller, env, execution) {
+    execution.waitUntil(schedulerPass(runtimeBindings(env), controller.scheduledTime))
   },
 } satisfies ExportedHandler<Bindings>, { seed: seedDemo })

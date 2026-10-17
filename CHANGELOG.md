@@ -1,5 +1,17 @@
 # Changes
 
+## 2026-10-17
+
+- Add published multi-step workflows beside the HTTP flows: secret webhook URLs
+  with provider signatures, dedup windows and synchronous responses; feed, URL
+  poll and schedule triggers on a per-minute Cron pass; flood holds; filters and
+  exclusive or parallel paths; built-in transforms, line items and file fetches;
+  general HTTP requests; delays, callback waits and delay queues; approval steps
+  with editable capped fields; publish authority with opt-in USD caps; auto-pause.
+- Add encrypted connections (API keys, bearer, basic, HMAC, OAuth 2.0 with
+  refresh) and a Slack connector, a catalog and a coverage report.
+- Pin `@runeditrun/rer` 0.2.38.
+
 ## 2026-10-16
 
 - Run the hosted demo on rer 0.2.30's native Worker Loader host: each visitor

@@ -1,0 +1,130 @@
+import { guardedBatch, requireOwner, requirePrepare } from '../access'
+import { getConnection } from '../connections/store'
+import { StepError } from '../engine/errors'
+import { validateGraph, type Graph } from '../engine/graph'
+import { isObject } from '../engine/values'
+import { CrankError, digest, canonical, id, now, requireValue, stmt, text, type Actor, type CrankEnv } from '../model'
+import { auditStatement } from '../ops/audit'
+import type { WorkflowRow } from '../triggers/admission'
+import { listHooks } from '../triggers/webhook'
+import { nextBoundary } from '../triggers/poll'
+import { nextOccurrence } from '../triggers/schedule'
+
+export interface VersionRow { id: string; workflow_id: string; number: number; graph_json: string; graph_digest: string; declared_json: string; published_by: string; published_at: string; retired_at: string | null }
+
+function checked(graph: unknown) {
+  try { return validateGraph(graph) } catch (error) {
+    if (error instanceof StepError) throw new CrankError(422, error.message)
+    throw error
+  }
+}
+const folder = (value: unknown) => value === undefined || value === '' ? '' : text(value, 'folder', 100)
+const description = (value: unknown) => value === undefined ? '' : (requireValue(typeof value === 'string' && value.length <= 2000, 'description is at most 2000 characters'), value as string)
+
+export async function getWorkflow(env: CrankEnv, workflowId: string): Promise<WorkflowRow> {
+  const row = await stmt(env, 'SELECT * FROM crank_workflows WHERE id=?', workflowId).first<WorkflowRow>()
+  requireValue(row, 'Workflow not found', 404)
+  return row
+}
+export async function presentWorkflow(env: CrankEnv, row: WorkflowRow) {
+  const versions = await stmt(env, 'SELECT id,number,graph_digest,declared_json,published_by,published_at,retired_at FROM crank_workflow_versions WHERE workflow_id=? ORDER BY number DESC', row.id).all<Omit<VersionRow, 'graph_json' | 'workflow_id'>>()
+  const owner = await stmt(env, 'SELECT display_name FROM oa_operators WHERE id=?', row.owner_id).first<{ display_name: string }>()
+  return {
+    id: row.id, name: row.name, description: row.description, folder: row.folder, owner: { id: row.owner_id, name: owner?.display_name ?? null }, status: row.status,
+    enabled: row.status === 'published', draft: JSON.parse(row.draft_json), draft_updated_at: row.draft_updated_at, published_version_id: row.published_version_id,
+    created_by: row.created_by, created_at: row.created_at,
+    versions: versions.results.map(v => ({ id: v.id, number: v.number, graph_digest: v.graph_digest, authority: JSON.parse(v.declared_json), published_by: v.published_by, published_at: v.published_at, retired_at: v.retired_at })),
+    hooks: await listHooks(env, row.id),
+  }
+}
+export async function listWorkflows(env: CrankEnv, params: URLSearchParams) {
+  const q = params.get('q'), folderName = params.get('folder')
+  const rows = await stmt(env, `SELECT * FROM crank_workflows WHERE (? IS NULL OR name LIKE ? OR description LIKE ?) AND (? IS NULL OR folder=?) ORDER BY folder,name,id LIMIT 500`,
+    q, `%${q}%`, `%${q}%`, folderName, folderName).all<WorkflowRow>()
+  return rows.results.map(row => ({ id: row.id, name: row.name, folder: row.folder, description: row.description, status: row.status, owner_id: row.owner_id, published_version_id: row.published_version_id, trigger: JSON.parse(row.draft_json).trigger?.type ?? null }))
+}
+
+/** Drafts are validated on save; they authorize nothing until an owner publishes them. */
+export async function createWorkflow(env: CrankEnv, actor: Actor, input: Record<string, unknown>) {
+  requirePrepare(actor)
+  const { graph, warnings } = checked(input.graph)
+  const row = { id: id(), at: now() }
+  await guardedBatch(env, actor, 'prepare', [
+    stmt(env, `INSERT INTO crank_workflows(id,name,description,folder,owner_id,draft_json,draft_updated_at,status,settings_json,created_by,created_at) VALUES(?,?,?,?,?,?,?,'draft',?,?,?)`,
+      row.id, text(input.name, 'name'), description(input.description), folder(input.folder), actor.id, JSON.stringify(graph), row.at, JSON.stringify(isObject(input.settings) ? input.settings : {}), actor.id, row.at),
+    auditStatement(env, actor.id, 'workflow.create', 'workflow', row.id),
+  ])
+  return { ...await presentWorkflow(env, await getWorkflow(env, row.id)), warnings }
+}
+export async function updateDraft(env: CrankEnv, actor: Actor, workflowId: string, input: Record<string, unknown>) {
+  requirePrepare(actor)
+  const current = await getWorkflow(env, workflowId)
+  const graph = input.graph === undefined ? JSON.parse(current.draft_json) : checked(input.graph).graph
+  const warnings = checked(graph).warnings
+  await guardedBatch(env, actor, 'prepare', [
+    stmt(env, 'UPDATE crank_workflows SET name=?,description=?,folder=?,draft_json=?,draft_updated_at=?,settings_json=? WHERE id=?',
+      input.name === undefined ? current.name : text(input.name, 'name'), input.description === undefined ? current.description : description(input.description),
+      input.folder === undefined ? current.folder : folder(input.folder), JSON.stringify(graph), now(), isObject(input.settings) ? JSON.stringify(input.settings) : current.settings_json, workflowId),
+    auditStatement(env, actor.id, 'workflow.draft', 'workflow', workflowId),
+  ])
+  return { ...await presentWorkflow(env, await getWorkflow(env, workflowId)), warnings }
+}
+export async function duplicateWorkflow(env: CrankEnv, actor: Actor, workflowId: string) {
+  const current = await getWorkflow(env, workflowId)
+  return createWorkflow(env, actor, { name: `${current.name} (copy)`.slice(0, 200), description: current.description, folder: current.folder, graph: JSON.parse(current.draft_json), settings: JSON.parse(current.settings_json) })
+}
+
+/** TEAM-004: publishing freezes the draft as an immutable version whose recorded authority is
+ * exactly its declared steps on its bound connections, for every triggered run. */
+export async function publishWorkflow(env: CrankEnv, actor: Actor, workflowId: string) {
+  requireOwner(actor)
+  const current = await getWorkflow(env, workflowId)
+  const { graph, declared, warnings } = checked(JSON.parse(current.draft_json))
+  for (const connectionId of declared.connections) {
+    const connection = await getConnection(env, connectionId).catch(() => null)
+    requireValue(connection, `Connection ${connectionId} does not exist`, 422)
+    requireValue(connection.status === 'active', `Connection "${connection.label}" is ${connection.status}; reconnect it before publishing`, 422)
+  }
+  const previous = await stmt(env, 'SELECT MAX(number) AS n FROM crank_workflow_versions WHERE workflow_id=?', workflowId).first<{ n: number | null }>()
+  const versionId = id(), at = now(), number = (previous?.n ?? 0) + 1, graphJson = canonical(graph)
+  const authority = { publisher: actor.id, published_at: at, steps: declared.steps, connections: declared.connections, trigger: graph.trigger.type }
+  const statements = [
+    stmt(env, 'UPDATE crank_workflow_versions SET retired_at=? WHERE workflow_id=? AND retired_at IS NULL', at, workflowId),
+    stmt(env, 'INSERT INTO crank_workflow_versions(id,workflow_id,number,graph_json,graph_digest,declared_json,published_by,published_at) VALUES(?,?,?,?,?,?,?,?)', versionId, workflowId, number, graphJson, await digest(graphJson), JSON.stringify(authority), actor.id, at),
+    stmt(env, "UPDATE crank_workflows SET status='published',published_version_id=? WHERE id=?", versionId, workflowId),
+    stmt(env, 'DELETE FROM crank_polls WHERE workflow_id=?', workflowId),
+    stmt(env, 'DELETE FROM crank_schedules WHERE workflow_id=?', workflowId),
+    auditStatement(env, actor.id, 'workflow.publish', 'workflow', workflowId, authority, versionId),
+  ]
+  statements.push(...await triggerSetup(env, workflowId, versionId, graph))
+  await guardedBatch(env, actor, 'owner', statements)
+  const hooks = await listHooks(env, workflowId)
+  if (graph.trigger.type === 'webhook' && !hooks.some(hook => hook.active)) warnings.push('Create a webhook URL for this workflow (POST /api/crank/workflows/:id/hooks) and give it to the sender')
+  return { workflow: await presentWorkflow(env, await getWorkflow(env, workflowId)), version: { id: versionId, number, authority }, warnings }
+}
+async function triggerSetup(env: CrankEnv, workflowId: string, versionId: string, graph: Graph) {
+  const trigger = graph.trigger as Record<string, any>, time = Date.now()
+  if (trigger.type === 'feed' || trigger.type === 'url_poll') {
+    const seen = await stmt(env, 'SELECT 1 FROM crank_seen_items WHERE workflow_id=? LIMIT 1', workflowId).first()
+    const interval = trigger.interval_minutes ?? 15
+    // The first poll runs on the next pass; later polls sit on interval boundaries.
+    return [stmt(env, 'INSERT INTO crank_polls(workflow_id,version_id,interval_minutes,next_due_at,seeded) VALUES(?,?,?,?,?)', workflowId, versionId, interval, new Date(Math.min(time, nextBoundary(time, interval))).toISOString(), seen ? 1 : 0)]
+  }
+  if (trigger.type === 'schedule') {
+    const next = nextOccurrence(trigger, time)
+    return [stmt(env, 'INSERT INTO crank_schedules(workflow_id,version_id,next_due_at) VALUES(?,?,?)', workflowId, versionId, next ? new Date(next.at).toISOString() : '9999-12-31T00:00:00.000Z')]
+  }
+  return []
+}
+
+/** Pausing stops dispatch; new trigger events are held as a reviewable batch. */
+export async function setWorkflowState(env: CrankEnv, actor: Actor, workflowId: string, state: 'paused' | 'published') {
+  requireOwner(actor)
+  const current = await getWorkflow(env, workflowId)
+  requireValue(current.published_version_id, 'Publish the workflow first', 409)
+  await guardedBatch(env, actor, 'owner', [
+    stmt(env, 'UPDATE crank_workflows SET status=? WHERE id=?', state, workflowId),
+    auditStatement(env, actor.id, state === 'paused' ? 'workflow.pause' : 'workflow.resume', 'workflow', workflowId, {}, current.published_version_id),
+  ])
+  return presentWorkflow(env, await getWorkflow(env, workflowId))
+}
