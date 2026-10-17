@@ -4,7 +4,7 @@ import { AppTile, Check, Dot, Painting } from '../parts'
 export function Interlude() {
   return <section className="interlude" aria-label="Brass gears turning beside the lake: the invoice was created in QuickBooks at 9:15 AM; 1,284 runs today, 0 failed.">
     <div className="interlude-stage">
-    <Painting className="interlude-art" name="interlude" widths={[768, 1152, 1536]} sizes="100vw" />
+    <Painting className="interlude-art" name="interlude" widths={[768, 1152, 1536]} sizes="(max-width: 760px) 200vw, (max-width: 1180px) 150vw, 100vw" />
     <div className="interlude-cards" aria-hidden="true">
       <div className="card interlude-invoice">
         <p className="interlude-invoice-head"><AppTile app="quickbooks" /><strong>Create invoice in QuickBooks</strong></p>

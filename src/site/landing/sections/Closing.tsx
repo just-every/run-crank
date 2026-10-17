@@ -13,7 +13,7 @@ export function Closing() {
         <p className="closing-licence">Free and open source, MIT licensed.</p>
       </div>
       <div className="closing-stage">
-        <Painting className="closing-art" name="closing" widths={[768, 1152, 1536]} sizes="100vw" />
+        <Painting className="closing-art" name="closing" widths={[768, 1152, 1536]} sizes="(max-width: 760px) 220vw, (max-width: 1180px) 1536px, 100vw" />
         <p className="boat-sign">All 58 workflows ran <span className="boat-check" aria-hidden="true">✓</span></p>
       </div>
     </section>

@@ -335,8 +335,10 @@ code { font-family: var(--font-mono); }
   .detail-icon .icon { width: 26px; height: 26px; }
   .detail-card h3 { margin: 2px 0 0; font-size: 20px; }
   .detail-card p { margin: 0; font-size: 15.5px; }
+}
 
-  /* The hero: readable cards above the plate; on the plate, each step keeps only its app tile. */
+/* Phones and tablets: the hero's cards above the plate; on the plate, each step keeps only its app tile. */
+@media (max-width: 1180px) {
   .hero-phone-steps { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .hero-phone-cards .hero-card { font-size: 13px; }
   .hero-phone-cards .step-card { padding: 11px 11px 8px; }
@@ -363,4 +365,32 @@ code { font-family: var(--font-mono); }
   .hero-machine .hero-counter span:first-child { display: none; }
   .hero-machine .hero-counter strong { font-size: 11px; border: 0; margin: 0; padding: 0; }
   .hero-machine .hero-counter span { font-size: 8.5px; gap: 3px; }
+}
+@media (max-width: 1180px) and (min-width: 761px) {
+  .hero-phone-cards .repaired-card { justify-self: center; }
+  .hero-machine .step-card { height: 40px; }
+  .hero-machine .step-card-head .app { width: 28px; height: 28px; font-size: 14px; border-radius: 7px; }
+  .hero-machine .step-card .app-quickbooks { font-size: 11px; }
+  .hero-machine .repaired-card { padding: 6px 12px; gap: 8px; }
+  .hero-machine .repair-icon { width: 22px; height: 22px; border-width: 2px; }
+  .hero-machine .repair-icon .icon { width: 12px; height: 12px; }
+  .hero-machine .repaired-detail { font-size: 13px; }
+  .hero-machine .hero-counter strong { font-size: 16px; }
+  .hero-machine .hero-counter span { font-size: 11px; gap: 4px; }
+}
+@media (min-width: 900px) and (max-width: 1180px) {
+  .hero-phone-steps { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+/* Tablets too narrow for the builder's two cards side by side, or the AI steps in a row. */
+@media (min-width: 761px) and (max-width: 990px) {
+  .builder-art { flex-direction: column; align-items: flex-start; gap: 16px; }
+  .flow-dots { display: none; }
+  .ai-steps { flex-direction: column; align-items: stretch; gap: 6px; }
+  .ai-steps .arrow-right { transform: rotate(90deg); margin: 0 auto; }
+  .ai-step { padding: 14px 16px; }
+}
+@media (min-width: 761px) and (max-width: 1180px) {
+  .connections-card, .trigger-card, .run-card, .approval-card, .ai-card, .repair-card, .import-card { max-width: 100%; }
+  .boat-check { font-size: 1em; }
+  .terminal pre { font-size: 17px; white-space: pre-wrap; overflow-wrap: anywhere; }
 }

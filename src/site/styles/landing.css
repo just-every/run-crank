@@ -56,7 +56,9 @@
 #approvals h2 { font-size: 76px; }
 #ai-steps { padding: 26px 0 80px; }
 #ai-steps .feature-row { gap: 56px; }
-#ai-steps h2 { white-space: nowrap; font-size: 72px; }
+/* One line, as the desk set it; below 1440 it shrinks with its column (6.89 ems wide at 1440). */
+#ai-steps .feature-copy { container-type: inline-size; }
+#ai-steps h2 { white-space: nowrap; font-size: min(72px, 100cqi / 6.89); }
 /* Desk page 6 */
 #self-repair { padding: 66px 0 44px; }
 #move-in { padding: 34px 0 52px; }
@@ -95,11 +97,56 @@
 .closing .site-link { font-size: calc(var(--u) * 21); font-weight: 700; }
 .closing-licence { margin-top: calc(var(--u) * 26); font-size: calc(var(--u) * 19); color: #12234a; }
 
+/* Below 1440 the builder's two cards (836 px) no longer fit beside its copy: they go below it. */
+@media (max-width: 1439px) and (min-width: 1181px) {
+  #builder .feature-row { grid-template-columns: minmax(0, 1fr); gap: 40px; }
+  #builder .builder-art { justify-content: flex-start; }
+}
+
+/* Tablets: one column, copy first, every drawing within the page; the paintings are cropped
+   around their subject so their cards keep a size that reads. */
 @media (max-width: 1180px) and (min-width: 761px) {
-  .feature-row, .feature.flip .feature-row, #builder .feature-row, #reliable-runs .feature-row, .ownership-row { grid-template-columns: 1fr; }
+  .feature-row, .feature.flip .feature-row, #builder .feature-row, #reliable-runs .feature-row, .ownership-row { grid-template-columns: minmax(0, 1fr); }
   .feature.flip .feature-copy { order: 0; }
   .feature-art { justify-self: start; max-width: 100%; }
   #builder h2 { white-space: normal; }
+
+  /* The hero: the copy in the sky, the run's cards below it, then the machine with each step's app tile. */
+  .hero { background: linear-gradient(180deg, #5fbafd 0, #7fc6fc 30%, #a9d8fd 62%, #b1dcfd 100%); }
+  .hero-copy { position: static; padding: 132px var(--gutter) 0; }
+  .hero-copy h1 { font-size: clamp(52px, 6.4vw, 72px); }
+  .hero-sub { max-width: 660px; margin-top: 18px; font-size: 21px; }
+  .hero-alt { margin-top: 16px; font-size: 17px; }
+  .hero-copy .site-actions { margin-top: 28px; gap: 16px 48px; }
+  .hero-copy .site-pill { min-height: 54px; padding: 0 40px; font-size: 19px; gap: 9px; }
+  .hero-copy .site-pill svg { width: 19px; height: 19px; }
+  .hero-copy .site-link { font-size: 19px; }
+  .hero-phone-cards { display: grid; gap: 12px; margin-top: 40px; }
+  .hero-stage { aspect-ratio: 1536 / 594; margin-top: 24px; }
+  .hero-stage .on-machine { --oy: 430; --H: 594; }
+  .hero-art::before { content: ''; position: absolute; z-index: 1; inset: 0 0 auto; height: 22%; background: linear-gradient(#b1dcfd, rgba(177, 220, 253, 0)); }
+  .hero-art { display: block; position: absolute; inset: 0; }
+  .hero-art img { object-position: 50% 100%; }
+
+  /* The gears at one and a half times the page's width, centred on the two cards. */
+  .interlude { padding-block: 72px 88px; overflow: hidden; }
+  .interlude-stage { width: 150vw; margin-left: calc(50vw - .57 * 150vw); }
+  .interlude > * { --u: calc(150vw / 1536); }
+
+  .details .site-wrap { padding-left: var(--gutter); }
+  .detail-grid { margin-left: 0; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+  /* The closing at the desk's 1536 scale, centred on the boat (canvas x 507), the copy in its sky. */
+  .closing { aspect-ratio: auto; height: 936px; }
+  .closing > * { --u: 1px; }
+  .closing-stage { right: auto; width: 1536px; left: min(0px, calc(50% - 507px)); }
+  .closing h2 { font-size: 72px; }
+  .closing-sub { margin-top: 14px; font-size: 23px; }
+  .closing .site-actions { margin-top: 26px; gap: 16px 36px; }
+  .closing .site-pill { min-height: 54px; padding: 0 40px; font-size: 19px; }
+  .closing .site-pill svg { width: 19px; height: 19px; }
+  .closing .site-link { font-size: 19px; }
+  .closing-licence { margin-top: 22px; font-size: 16px; }
 }
 
 /* Phones: one column, copy first; the painted plates are cropped around their subject. */
