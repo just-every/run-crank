@@ -114,6 +114,11 @@ test('WORK-004: business-day delays, callback waits and a shared delay queue res
   await h.tick(due + MINUTE); await h.tick(due + 2 * MINUTE);
   assert.equal((await h.get('workflow-runs/' + started.id)).status, 'succeeded');
   assert.equal(fake.to('crm.example').length, writes + 1, 'one continuation');
+  const cancelling = await publish(h, 'Cancellable follow-up', { settings: { waiting_runs: 'cancel_on_pause' }, trigger: { type: 'manual' }, steps: [{ id: 'wait', type: 'delay', mode: 'for', input: { amount: 1, unit: 'days' } }, { id: 'chase', type: 'map', input: {} }] });
+  const parked = await startRun(h, cancelling, {});
+  await h.post(`workflows/${cancelling.id}/pause`);
+  const cancelled = await h.get('workflow-runs/' + parked.id);
+  assert.equal(cancelled.status, 'cancelled'); assert.equal(cancelled.waits[0].resolution.cancelled, true, 'the owner-chosen cancellation policy applies to waiting runs');
 
   const callback = await publish(h, 'Wait for supplier', { trigger: { type: 'manual' }, steps: [
     { id: 'ask', type: 'http', input: { method: 'POST', url: 'https://crm.example/asks', body: { reply_to: '{{run.resume_urls.reply}}' } } },

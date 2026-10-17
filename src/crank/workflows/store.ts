@@ -97,6 +97,7 @@ export async function publishWorkflow(env: CrankEnv, actor: Actor, workflowId: s
     auditStatement(env, actor.id, 'workflow.publish', 'workflow', workflowId, authority, versionId),
   ]
   statements.push(...await triggerSetup(env, workflowId, versionId, graph))
+  if (current.published_version_id && await waitingPolicy(env, current.published_version_id) === 'cancel_on_new_version') statements.push(...await cancellations(env, actor, workflowId, current.published_version_id, 'A new version was published'))
   await guardedBatch(env, actor, 'owner', statements)
   const hooks = await listHooks(env, workflowId)
   if (graph.trigger.type === 'webhook' && !hooks.some(hook => hook.active)) warnings.push('Create a webhook URL for this workflow (POST /api/crank/workflows/:id/hooks) and give it to the sender')
@@ -117,14 +118,34 @@ async function triggerSetup(env: CrankEnv, workflowId: string, versionId: string
   return []
 }
 
+/** WORK-004 cancellation policy, set per version in `settings.waiting_runs`: waiting runs
+ * `continue` (default), or are cancelled when the workflow is paused (`cancel_on_pause`)
+ * or when a new version is published (`cancel_on_new_version`). */
+async function cancellations(env: CrankEnv, actor: Actor, workflowId: string, versionId: string, reason: string) {
+  const at = now(), runs = await stmt(env, "SELECT id FROM crank_wf_runs WHERE workflow_id=? AND version_id=? AND status IN ('waiting','awaiting_approval','paused')", workflowId, versionId).all<{ id: string }>()
+  return runs.results.flatMap(run => [
+    stmt(env, "UPDATE crank_wf_runs SET status='cancelled',finished_at=?,error_json=? WHERE id=? AND status IN ('waiting','awaiting_approval','paused')", at, JSON.stringify({ category: 'cancelled', message: reason }), run.id),
+    stmt(env, `UPDATE crank_waits SET resolved_at=?,resolution_json='{"cancelled":true}',decided_by=? WHERE run_id=? AND resolved_at IS NULL`, at, actor.id, run.id),
+    stmt(env, 'DELETE FROM crank_queue_items WHERE run_id=? AND released_at IS NULL', run.id),
+    auditStatement(env, actor.id, 'run.cancel', 'run', run.id, { reason }, versionId),
+  ])
+}
+async function waitingPolicy(env: CrankEnv, versionId: string | null) {
+  if (!versionId) return 'continue'
+  const row = await stmt(env, 'SELECT graph_json FROM crank_workflow_versions WHERE id=?', versionId).first<{ graph_json: string }>()
+  return row ? String(JSON.parse(row.graph_json).settings?.waiting_runs ?? 'continue') : 'continue'
+}
+
 /** Pausing stops dispatch; new trigger events are held as a reviewable batch. */
 export async function setWorkflowState(env: CrankEnv, actor: Actor, workflowId: string, state: 'paused' | 'published') {
   requireOwner(actor)
   const current = await getWorkflow(env, workflowId)
   requireValue(current.published_version_id, 'Publish the workflow first', 409)
+  const cancel = state === 'paused' && await waitingPolicy(env, current.published_version_id) === 'cancel_on_pause'
   await guardedBatch(env, actor, 'owner', [
     stmt(env, 'UPDATE crank_workflows SET status=? WHERE id=?', state, workflowId),
     auditStatement(env, actor.id, state === 'paused' ? 'workflow.pause' : 'workflow.resume', 'workflow', workflowId, {}, current.published_version_id),
+    ...(cancel ? await cancellations(env, actor, workflowId, current.published_version_id, 'The workflow was paused') : []),
   ])
   return presentWorkflow(env, await getWorkflow(env, workflowId))
 }

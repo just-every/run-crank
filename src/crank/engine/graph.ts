@@ -20,6 +20,7 @@ export function validateGraph(value: unknown): Validation {
   if (!Array.isArray(value.steps)) throw new StepError('validation', 'graph.steps must be a list')
   const settings = isObject(value.settings) ? value.settings : {}
   if (settings.timezone !== undefined) requireZone(settings.timezone)
+  if (settings.waiting_runs !== undefined && !['continue', 'cancel_on_pause', 'cancel_on_new_version'].includes(settings.waiting_runs as string)) throw new StepError('validation', 'settings.waiting_runs must be continue, cancel_on_pause or cancel_on_new_version')
   const warnings: string[] = [], declared: Declared = { steps: [], connections: [] }, ids = new Set<string>()
   validateTrigger(value.trigger)
   if (typeof value.trigger.connection_id === 'string') declared.connections.push(value.trigger.connection_id)

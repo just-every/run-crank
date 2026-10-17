@@ -45,6 +45,8 @@ declared steps on its bound connections, recorded on the version (publisher,
 time, steps, connections). Approval steps and USD caps are opt-in. Drafts run
 nothing. The per-minute Cron pass releases delays and queues, polls feeds and
 URLs, admits schedules and runs queued work, so restarts resume from durable state.
+A graph's `settings` set its `timezone`, `burst_threshold` (1 to 10,000, default
+100) and `waiting_runs` policy: `continue`, `cancel_on_pause` or `cancel_on_new_version`.
 
 | Method and path | Role | Meaning |
 | --- | --- | --- |
