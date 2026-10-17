@@ -37,7 +37,8 @@
 .docs-prose ul { padding-left: 22px; list-style: disc; }
 .docs-prose ul li + li { margin-top: 6px; }
 .docs-prose ul li::marker { color: var(--blue); }
-.docs-prose ol { counter-reset: step; display: grid; gap: 14px; }
+/* One column no wider than the page: a long command scrolls inside its code card, never the page. */
+.docs-prose ol { counter-reset: step; display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
 .docs-prose ol > li { counter-increment: step; position: relative; padding-left: 50px; min-height: 32px; }
 .docs-prose ol > li::before { content: counter(step); position: absolute; left: 0; top: -1px; display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: var(--navy); color: #fff; font: 700 15px/1 var(--font-body); }
 .docs-prose code { font-family: var(--font-mono); font-size: .86em; padding: 2px 6px; border-radius: 6px; background: #e8eef8; color: var(--ink); }
