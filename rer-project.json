@@ -1,0 +1,7 @@
+{
+  "schema": 1,
+  "projectId": "just-every/run-crank",
+  "name": "Crank",
+  "sourceRepository": "https://github.com/just-every/run-crank",
+  "license": "MIT"
+}
