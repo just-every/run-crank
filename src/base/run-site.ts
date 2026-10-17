@@ -1,6 +1,7 @@
 // The run site's shared pages: the Run page (Direction A: centred headline, two
 // stacked step cards, the facts under them), a small composed homepage for
 // seeds without an approved one (Base's references), and the not-found page.
+// /contract is in contract-page.ts, built from the same document and header.
 // They are static HTML strings for `rer build --site`; the seed's site entry
 // renders them with its own RunData and edition identity, and a seed with an
 // approved homepage renders that page instead of siteHomeHtml.
@@ -8,6 +9,7 @@
 // This file is copied unchanged to src/base by both maintained exporters.
 import { checkIdentity, type EditionIdentity } from './identity'
 import { ink } from './theme-frame'
+import type { SeedContract } from './seed-contract.mjs'
 
 /** Every Run page string and command for one seed. */
 export interface RunData {
@@ -41,7 +43,7 @@ const npxStart = 'npx -y @runeditrun/rer '
 /** Step 2: the clone line run by the rer the installer put in ~/.local/bin, not by npx. */
 const rerStart = (run: RunData) => `rer ${run.clone.slice(npxStart.length)}`
 
-const escape = (value: string) => value.replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character]!))
+export const escape = (value: string) => value.replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character]!))
 
 export function checkRunData(run: RunData): RunData {
   for (const key of ['name', 'clone', 'folder', 'requirements', 'licence'] as const) if (typeof run[key] !== 'string' || !run[key].trim()) throw new Error(`Run data needs ${key}.`)
@@ -99,24 +101,28 @@ const RUN = 'body{--art:max(20vh,150px)}main{max-width:1360px;margin:0 auto;padd
 const COPY_SCRIPT = "document.addEventListener('click',async event=>{const button=event.target.closest('.copy');if(!button)return;try{await navigator.clipboard.writeText(button.dataset.copy);const label=button.querySelector('span');label.textContent='Copied';setTimeout(()=>{label.textContent='Copy'},1600)}catch{}})"
 const ARROW = '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10h12M11 5l5 5-5 5"/></svg>'
 
-function document(identity: EditionIdentity, title: string, description: string, style: string, body: string, script = ''): string {
+export function document(identity: EditionIdentity, title: string, description: string, style: string, body: string, script = ''): string {
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escape(title)}</title><meta name="description" content="${escape(description)}">`
     + `<link rel="icon" href="${escape(identity.mark)}">${identity.fonts ? `<link rel="stylesheet" href="${escape(identity.fonts)}">` : ''}<link rel="stylesheet" href="${escape(identity.theme)}"><style>${identity.accentColor ? `:root{--rer-brand-accent:${identity.accentColor};--rer-brand-accent-text:${ink(identity.accentColor)}}` : ''}${BASE}${style}</style></head>`
     + `<body>${identity.band ? `<div class="art" aria-hidden="true"><img src="${escape(identity.band)}" alt=""></div>` : ''}${body}${script ? `<script>${script}</script>` : ''}</body></html>`
 }
-function header(identity: EditionIdentity, run: RunData): string {
+/** Docs, Contract and Source: Docs when the site has /docs, Contract when the seed has a CONTRACT.md. */
+export function siteLinks(run: RunData, contract: SeedContract | undefined, current?: 'contract'): string {
+  return `${run.docs ? '<a href="/docs">Docs</a>' : ''}${contract ? `<a href="/contract"${current === 'contract' ? ' aria-current="page"' : ''}>Contract</a>` : ''}<a href="${escape(run.repository)}">Source</a>`
+}
+export function header(identity: EditionIdentity, run: RunData, contract?: SeedContract, current?: 'contract'): string {
   return `<header class="bar"><a class="brand" href="/"><img src="${escape(identity.mark)}" alt="" width="40" height="40"><span>${escape(identity.product)}</span></a>`
-    + `<nav aria-label="Site">${run.docs ? '<a href="/docs">Docs</a>' : ''}<a href="${escape(run.repository)}">Source</a></nav></header>`
+    + `<nav aria-label="Site">${siteLinks(run, contract, current)}</nav></header>`
 }
 const codeBlock = (lines: string[], label: string) => `<div class="code"><pre aria-label="${escape(label)}"><code>${lines.map(escape).join('\n')}</code></pre>`
   + `<button class="copy" type="button" data-copy="${escape(lines.join('\n'))}"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="5" y="5" width="8.5" height="8.5" rx="2"/><path d="M3 10.5V4a1.5 1.5 0 0 1 1.5-1.5H10"/></svg><span>Copy</span></button></div>`
 
-/** The Run page at /run. */
-export function runPageHtml(identity: EditionIdentity, run: RunData): string {
+/** The Run page at /run. `contract`, the seed's parsed CONTRACT.md, links /contract from the header. */
+export function runPageHtml(identity: EditionIdentity, run: RunData, contract?: SeedContract): string {
   checkIdentity(identity); checkRunData(run)
   const name = escape(run.name), source = escape(run.repository.replace(/^https:\/\//, ''))
   const hosted = run.hosted.map(option => `<li class="step option"><div class="body"><h2>${escape(option.title)}</h2><p>${escape(option.body)}</p><p class="go"><a href="${escape(option.href)}">${escape(option.action)}</a></p></div></li>`).join('')
-  const body = `${header(identity, run)}<main><div class="intro"><h1>Run ${name} on your computer.</h1><p class="sub">100% free and open source. Two lines, and ${name} opens in your browser.</p></div>`
+  const body = `${header(identity, run, contract)}<main><div class="intro"><h1>Run ${name} on your computer.</h1><p class="sub">100% free and open source. Two lines, and ${name} opens in your browser.</p></div>`
     + `<ol class="steps"><li class="step"><span class="num" aria-hidden="true">1</span><div class="body"><h2>Install rer</h2>${codeBlock([installRer], 'Install rer')}`
     + `<p class="note">It installs rer for you alone, with its own Node if you have no Node 22 or later. It changes no shell settings: if it prints an <code>export PATH=…</code> line, run that line before step 2.</p></div></li>`
     + `<li class="step"><span class="num" aria-hidden="true">2</span><div class="body"><h2>Start ${name}</h2>${codeBlock([rerStart(run)], `Start ${run.name}`)}`
@@ -127,17 +133,17 @@ export function runPageHtml(identity: EditionIdentity, run: RunData): string {
 }
 
 /** Base's composed homepage for a seed without an approved one: its primary action is Run <Seed>. */
-export function siteHomeHtml(identity: EditionIdentity, run: RunData): string {
+export function siteHomeHtml(identity: EditionIdentity, run: RunData, contract?: SeedContract): string {
   checkIdentity(identity); checkRunData(run)
-  const body = `${header(identity, run)}<main><div class="hero"><h1>${escape(identity.tagline)}</h1><p class="sub">100% free and open source.</p>`
+  const body = `${header(identity, run, contract)}<main><div class="hero"><h1>${escape(identity.tagline)}</h1><p class="sub">100% free and open source.</p>`
     + `<div class="actions"><a class="btn" href="/run">Run ${escape(identity.product)}${ARROW}</a>${run.docs ? '<a class="link" href="/docs">Read the docs</a>' : ''}</div></div></main>`
   return document(identity, identity.product, identity.tagline, HOME, body)
 }
 
 /** 404.html: the static host serves it for every path the site does not have. */
-export function siteNotFoundHtml(identity: EditionIdentity, run: RunData): string {
+export function siteNotFoundHtml(identity: EditionIdentity, run: RunData, contract?: SeedContract): string {
   checkIdentity(identity); checkRunData(run)
-  const body = `${header(identity, run)}<main><div class="hero"><h1>Page not found</h1><p class="sub">This page is not part of the ${escape(identity.product)} site.</p><div class="actions"><a class="link" href="/">Go to the homepage</a></div></div></main>`
+  const body = `${header(identity, run, contract)}<main><div class="hero"><h1>Page not found</h1><p class="sub">This page is not part of the ${escape(identity.product)} site.</p><div class="actions"><a class="link" href="/">Go to the homepage</a></div></div></main>`
   return document(identity, `Not found · ${identity.product}`, identity.tagline, HOME, body)
 }
 
@@ -149,6 +155,9 @@ export interface SiteBuild { pages: { path: string; html: string }[]; assets: st
  * stylesheets the entry's CSS imports compiled to (empty when it imports none).
  * A page whose components import CSS links them in its head. `clients` maps
  * each declared island name to its bundled module URL; `styles` also includes
- * the client entries' compiled stylesheets.
+ * the client entries' compiled stylesheets. `contract` is the seed's
+ * CONTRACT.md as parseContract reads it, absent when the seed has none; rer
+ * stops the build, naming the line, when it does not parse. The entry renders
+ * it at /contract with contractPageHtml and passes it to the other pages.
  */
-export interface SiteContext { styles: string[]; clients: Record<string, string> }
+export interface SiteContext { styles: string[]; clients: Record<string, string>; contract?: SeedContract }
