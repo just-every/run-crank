@@ -107,6 +107,7 @@ main.crank { min-width: 0; padding: 28px 30px 24px; background: var(--app-sheet)
 .menu > summary::-webkit-details-marker { display: none; }
 .menu-body { position: absolute; z-index: 5; top: calc(100% + 6px); left: 0; display: grid; gap: 8px; width: 240px; padding: 12px; background: var(--surface); border: 1px solid var(--app-card-edge); border-radius: 12px; box-shadow: var(--shadow-lift); }
 .menu-body p { font-size: 13px; color: var(--body); }
+.run-menu .menu-body { width: 300px; }
 
 /* Lists of rows. */
 .list > li + li { border-top: 1px solid var(--line); }
