@@ -28,7 +28,10 @@ export function resolve(value: unknown, scope: Scope, depth = 0): unknown {
   if (isObject(value)) {
     if ('$literal' in value) return value.$literal
     if (typeof value.$ref === 'string') return read(scope, value.$ref).value
-    if (typeof value.$fn === 'string') return runTransform(value.$fn, resolve(value.args ?? {}, scope, depth + 1) as Record<string, unknown>)
+    if (typeof value.$fn === 'string') {
+      const args = resolve(value.args ?? {}, scope, depth + 1) as Record<string, unknown>
+      try { return runTransform(value.$fn, args) } catch (error) { throw missingField(value.args, scope, error) ?? error }
+    }
     const out: Record<string, unknown> = {}
     for (const [key, item] of Object.entries(value)) {
       const resolved = resolve(item, scope, depth + 1)
@@ -37,6 +40,32 @@ export function resolve(value: unknown, scope: Scope, depth = 0): unknown {
     return out
   }
   return value
+}
+
+const words = (key: string) => key.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase().split(/[_\-\s]+/).filter(Boolean)
+
+/** A transform that failed on an input its mapping could not read reports that field instead: the
+ * path, and the keys beside it that share a word with it (`amount` → `amount_total`). Only an input
+ * the transform's own error names counts ("a is not a number"), so other failures keep their message. */
+export function missingField(args: unknown, scope: Scope, error: unknown): StepError | null {
+  if (!(error instanceof StepError) || !isObject(args)) return null
+  const refs = (value: unknown, out: string[] = []): string[] => {
+    if (typeof value === 'string') { const whole = /^\{\{\s*([A-Za-z_][\w.\-[\]]*)\s*\}\}$/.exec(value); if (whole) out.push(whole[1]) }
+    else if (Array.isArray(value)) value.forEach(item => refs(item, out))
+    else if (isObject(value)) { if (typeof value.$ref === 'string') out.push(value.$ref); else if (!('$literal' in value) && typeof value.$fn !== 'string') Object.values(value).forEach(item => refs(item, out)) }
+    return out
+  }
+  const named = Object.entries(args).filter(([key]) => new RegExp(`(^|[^\\w])${key.replace(/[^\w]/g, '')}([^\\w]|$)`).test(error.message))
+  const path = named.flatMap(([, value]) => refs(value)).find(ref => !read(scope, ref).found)
+  if (!path) return null
+  const parts = path.split('.'), name = parts.at(-1)!
+  let parent = parts.length - 1
+  while (parent > 0 && !read(scope, parts.slice(0, parent).join('.')).found) parent--
+  const at = parts.slice(0, parent).join('.'), holder = parent ? read(scope, at).value : null
+  const wanted = words(name.replace(/\[\d+\]$/, ''))
+  const similar = parent === parts.length - 1 && isObject(holder) ? Object.keys(holder).filter(key => key !== name && words(key).some(w => wanted.includes(w))).slice(0, 3) : []
+  const missing = parent === parts.length - 1 ? name : parts.slice(parent).join('.')
+  return new StepError('mapping', `Field ${missing} not found${at ? ` in ${at}` : ''}${similar.length ? `; it has ${similar.join(', ')}` : ''}`, { field: path, ...(similar.length ? { similar } : {}) })
 }
 
 /** Names the first required field that resolved missing, null or empty. */

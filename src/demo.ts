@@ -11,7 +11,7 @@ export async function seedDemo(env: CrankEnv, { ownerEmail, now }: { ownerEmail:
   const origin = env.CRANK_TARGET_ORIGIN
   if (!origin) throw new Error('Demo destination is not configured')
   const statements = [env.DB.prepare("UPDATE oa_operators SET display_name='Maya Chen' WHERE id=?").bind(owner.id), env.DB.prepare('INSERT INTO oa_first_run(singleton,completed_by,completed_at) VALUES(1,?,?) ON CONFLICT DO NOTHING').bind(owner.id, now.getTime())]
-  const people = [ ['maya', 'Maya Chen', 'admin'], ['oliver', 'Oliver Hughes', 'member'], ['amelia', 'Amelia Grant', 'admin'] ]
+  const people = [ ['dana', 'Dana Reyes', 'admin'], ['oliver', 'Oliver Hughes', 'member'], ['amelia', 'Amelia Grant', 'admin'] ]
   for (const [key, name, role] of people) statements.push(env.DB.prepare("INSERT INTO oa_operators(id,email,display_name,role,status,version,created_at) VALUES(?,?,?,?,'active',1,?) ON CONFLICT DO NOTHING").bind(`demo-${key}`, `${key}@bluelake.example`, name, role, now.getTime() - 7 * 86400000))
   const flows = [
     ['support', 'Customer follow-up', 'Support desk', 'Operations inbox', 'active'],
@@ -28,7 +28,7 @@ export async function seedDemo(env: CrankEnv, { ownerEmail, now }: { ownerEmail:
     statements.push(env.DB.prepare('INSERT INTO crank_flows(id,name,source_app,destination_app,target_url,revision,created_by,created_at,status) VALUES(?,?,?,?,?,1,?,?,?) ON CONFLICT DO NOTHING').bind(flowId, name, source, destination, target, owner.id, at(168 + index), status))
     // Completed/rejected history remains useful when a flow is paused for revision.
     for (let n = 0; n < 4; n++) {
-      const runId = `demo-run-${key}-${n + 1}`, eventId = `${key}-${1042 + n}`
+      const runId = `demo-run-${key}-${n + 1}`, eventId = `${key}-${1045 - n}`
       const input = { customer: customers[(index + n) % customers.length], contact: ['Sophie Martin', 'Liam Wilson', 'Grace Taylor', 'Noah Campbell'][n], task: tasks[index], reference: `HW-${2300 + index * 10 + n}`, ...(key === 'expenses' ? { amount: 86 + n * 47, currency: 'USD' } : {}) }
       const inputJson = canonical(input), inputDigest = await digest(inputJson)
       const actionJson = canonical({ method: 'POST', target_url: target, flow_revision: 1, source_app: source, destination_app: destination, event_id: eventId, input })

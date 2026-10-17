@@ -10,7 +10,7 @@ export function navigation(title: string, owner: boolean, approvals: number, sec
   const links: [string, string, string][] = [
     ['Flows', '/app', 'flows'], ['Runs', '/app/runs', 'runs'], ['Connections', '/app/connections', 'connections'], ['Approvals', '/app/approvals', 'approvals'],
     ...(owner ? [['Move in', '/app/import', 'movein'], ['Access', '/app/access', 'access'], ['Data', '/app/data', 'data']] as [string, string, string][] : []),
-    ['Account', '/auth/settings/identity', 'account'],
+    ['Account', '/app/account', 'account'],
   ]
   return `<aside class="rail"><nav aria-label="Workspace">${links.map(([name, href, glyph]) => `<a href="${href}"${current === name ? ' aria-current="page"' : ''}>${icon(glyph)}<span>${esc(name)}</span>${name === 'Approvals' && approvals ? `<span class="count" aria-label="${approvals} waiting">${approvals > 99 ? '99+' : approvals}</span>` : ''}</a>`).join('')}</nav></aside>`
 }

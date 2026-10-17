@@ -2,6 +2,9 @@
 // statement per table) and the last eight told one by one, including the run that
 // failed when Stripe renamed `amount` to `amount_total`, the read-back that kept a
 // lost QuickBooks write from duplicating an invoice, and one approval still waiting.
+import { StepError } from '../crank/engine/errors'
+import { resolve } from '../crank/engine/mapping'
+import type { Step } from '../crank/engine/types'
 import { canonical, digest } from '../crank/model'
 import type { CrankEnv } from '../crank/model'
 
@@ -49,8 +52,14 @@ function invoiceBody(s: Story, at: number) {
     CustomerRef: { value: String(200 + (s.invoice ?? 0) % 97), name: s.customer }, BillAddr: { City: s.city, CountrySubDivisionCode: s.state }, SalesTermRef: { name: 'Net 30' }, PrivateNote: 'cs_live_' + slug(s.id) }
 }
 
-/** Statements for the eight told runs, their steps and their approval waits. */
-export async function storyStatements(env: CrankEnv, ids: { workflow: string; v1: string; v2: string; owner: string }, now: number) {
+/** The failure the executor records when a step's mapping cannot be resolved against this payload. */
+function mappingFailure(step: Step, trigger: unknown, runId: string) {
+  try { resolve(step.input ?? {}, { trigger, steps: {}, run: { id: runId } }); return null } catch (error) { return error instanceof StepError ? error.toJSON() : null }
+}
+
+/** Statements for the eight told runs, their steps and their approval waits. `graphs` are the published
+ * versions' graphs: a failed run's error is the one the engine raises for its version's mapping. */
+export async function storyStatements(env: CrankEnv, ids: { workflow: string; v1: string; v2: string; owner: string }, now: number, graphs: { 1: { steps: Step[] }; 2: { steps: Step[] } }) {
   const out: D1PreparedStatement[] = []
   for (const s of STORIES) {
     const at = now - s.ago * 60000, trigger = payload(s, at), large = s.cents > 100000
@@ -58,7 +67,9 @@ export async function storyStatements(env: CrankEnv, ids: { workflow: string; v1
     const step = (path: string, type: string, input: unknown, output: unknown, error: unknown, secs: number) => steps.push([path, path.split('/').at(-1)!, type, input, output, error, secs])
     step('paid_usd', 'filter', {}, { passed: true }, null, 0.4)
     const row = 1 + STORIES.length - STORIES.indexOf(s) + 1276
-    if (s.outcome === 'failed') step('add_row', 'http', {}, null, { category: 'validation', message: 'a is not a number: undefined' }, 0.6)
+    const failure = s.outcome === 'failed' ? mappingFailure(graphs[s.version].steps.find(x => x.id === 'add_row')!, trigger, s.id) : null
+    if (s.outcome === 'failed' && !failure) throw new Error(`Demo run ${s.id} is told as failed, but its version maps it`)
+    if (failure) step('add_row', 'http', {}, null, failure, 0.6)
     else step('add_row', 'http', { method: 'POST', url: `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/Sales%202026!A1:append?valueInputOption=USER_ENTERED`, body: { values: [[s.customer, dollars(s.cents), 'cs_live_' + slug(s.id)]] } },
       { status: 200, headers: { 'content-type': 'application/json; charset=UTF-8' }, body: { spreadsheetId: SHEET_ID, tableRange: `'Sales 2026'!A1:C${row - 1}`, updates: { spreadsheetId: SHEET_ID, updatedRange: `'Sales 2026'!A${row}:C${row}`, updatedRows: 1, updatedColumns: 3, updatedCells: 3 } }, reconciled: false, attempts: 1 }, null, 1.6)
     if (s.outcome !== 'failed') {
@@ -84,7 +95,7 @@ export async function storyStatements(env: CrankEnv, ids: { workflow: string; v1
     }
     const last = Math.max(...steps.map(x => x[6]))
     const finished = s.outcome === 'awaiting_approval' ? null : iso(at + last * 1000 + 200)
-    const error = s.outcome === 'failed' ? JSON.stringify({ category: 'validation', message: 'a is not a number: undefined', step: 'add_row' }) : null
+    const error = failure ? JSON.stringify({ ...failure, step: 'add_row' }) : null
     out.push(env.DB.prepare(`INSERT INTO crank_wf_runs(id,workflow_id,version_id,trigger_kind,source_id,trigger_json,status,source_time,received_at,started_at,finished_at,error_json,created_by,business_key) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT DO NOTHING`)
       .bind(s.id, ids.workflow, s.version === 1 ? ids.v1 : ids.v2, 'webhook', `key:${trigger.body.id}`, JSON.stringify(trigger), s.outcome, iso(at), iso(at), iso(at + 150), finished, error, ids.owner, `key:${trigger.body.id}`))
     let previous = at + 150

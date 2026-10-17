@@ -35,10 +35,13 @@ export async function seedWorkflowDemo(env: CrankEnv, actor: Actor, now: Date) {
   const c = await connections(env, actor), time = now.getTime(), at = (minutes: number) => new Date(time - minutes * 60000).toISOString()
   const v1 = demoGraph(c, 'amount'), v2 = demoGraph(c, 'amount_total'), ids = { workflow: WORKFLOW, v1: `${WORKFLOW}-v1`, v2: `${WORKFLOW}-v2`, owner: actor.id }
   const v1At = new Date(time - 9 * 86400000).toISOString(), v2At = at(V2_PUBLISHED_AGO)
+  // The connections were made when the workflow was built, the day before version 1 went live.
+  const connected = new Date(time - 10 * 86400000).toISOString()
   // The day's earlier payments, from the start of today in the workflow's timezone until shortly before the told runs.
   const end = time - (STORIES.at(-1)!.ago + 4) * 60000, dayStart = startOfDay(time, v2.settings.timezone)
   const start = end - dayStart > 3600000 ? dayStart + Math.min(6 * 3600000, (end - dayStart) / 3) : end - 12 * 3600000
   await env.DB.batch([
+    env.DB.prepare(`UPDATE crank_connections SET created_at=?1,consented_at=?1 WHERE id IN (?2,?3,?4,?5)`).bind(connected, c.stripe, c.google, c.slack, c.quickbooks),
     env.DB.prepare(`INSERT INTO crank_workflows(id,name,description,folder,owner_id,draft_json,draft_updated_at,status,published_version_id,settings_json,created_by,created_at) VALUES(?,?,?,?,?,?,?,'published',?,'{}',?,?) ON CONFLICT DO NOTHING`)
       .bind(WORKFLOW, 'Stripe paid to books', 'When a Stripe payment succeeds, log it, notify the team, and create a QuickBooks invoice.', 'Finance', actor.id, JSON.stringify(v2), v2At, ids.v2, actor.id, v1At),
     await version(env, ids.v1, 1, v1, actor.id, v1At, v2At),
@@ -46,7 +49,7 @@ export async function seedWorkflowDemo(env: CrankEnv, actor: Actor, now: Date) {
     env.DB.prepare("INSERT INTO crank_audit(id,at,actor_id,action,subject_kind,subject_id,version_id,detail_json) VALUES(?,?,?,'workflow.publish','workflow',?,?,'{}'),(?,?,?,'workflow.publish','workflow',?,?,'{}') ON CONFLICT DO NOTHING")
       .bind(`${WORKFLOW}-audit-v1`, v1At, actor.id, WORKFLOW, ids.v1, `${WORKFLOW}-audit-v2`, v2At, actor.id, WORKFLOW, ids.v2),
     ...earlierStatements(env, ids, RUNS_TODAY - STORIES.length, start, end),
-    ...await storyStatements(env, ids, time),
+    ...await storyStatements(env, ids, time, { 1: v1, 2: v2 }),
   ])
   if (!(await listHooks(env, WORKFLOW)).length) await createHook(env, actor, WORKFLOW)
 }

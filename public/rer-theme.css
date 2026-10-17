@@ -95,7 +95,9 @@
 /* Base's shared pages (sign-in, /setup) keep their markup and wear the app's shell:
    the sky bar with the lake haze, a white sheet with hairline edges, thin fields. */
 .rer-themed body:has(>main:not(.crank)) { display: grid; place-items: start center; min-height: 100vh; padding: 140px 16px 48px; background: var(--app-ground); }
-.rer-themed body:has(>main:not(.crank))::before { content: ""; position: absolute; inset: 0 0 auto; height: 76px; background: url('/brand/haze-top.webp') right center / auto 100% no-repeat, var(--app-sky); border-bottom: 1px solid var(--app-edge); }
+.rer-themed body:has(>main:not(.crank))::before { content: ""; position: absolute; inset: 0 0 auto; height: 76px; background: var(--app-sky); border-bottom: 1px solid var(--app-edge); }
+/* The haze fades in from the sky over its left part, as in the app's top bar. */
+.rer-themed body:has(>main:not(.crank))::after { content: ""; position: absolute; top: 0; right: 0; height: 76px; aspect-ratio: 1340 / 166; max-width: 100%; background: url('/brand/haze-top.webp') right center / auto 100% no-repeat; -webkit-mask-image: linear-gradient(90deg, transparent, #000 45%); mask-image: linear-gradient(90deg, transparent, #000 45%); pointer-events: none; }
 .rer-themed main:not(.crank) { position: relative; width: 100%; max-width: 520px; padding: 36px 40px; border: 1px solid var(--app-card-edge); border-radius: 16px; background: var(--surface); box-shadow: var(--app-card-shadow), 0 24px 48px -32px rgba(22, 64, 140, .35); }
 .rer-themed main:not(.crank) h1 { font-size: 32px; line-height: 1.1; letter-spacing: -.035em; font-weight: 800; color: var(--ink); margin-block: 22px 14px; }
 .rer-themed .rer-brand, .rer-themed main:not(.crank) .brand { gap: 8px; font-size: 26px !important; font-weight: 800 !important; letter-spacing: -.04em; color: var(--ink); }
@@ -106,7 +108,7 @@
 .rer-themed main:not(.crank) button { min-height: 44px; border-radius: 11px; background: var(--navy); color: #fff; font-weight: 600; box-shadow: 0 10px 20px -14px rgba(1, 22, 70, .8); }
 .rer-themed main:not(.crank) dl { padding: 14px 0; border-block: 1px solid var(--line); margin-bottom: 22px; gap: 10px 24px; grid-template-columns: 100px minmax(0, 1fr); }
 .rer-themed main:not(.crank) dd { font-family: var(--font-mono); font-size: 13.5px; }
-@media (max-width: 600px) { .rer-themed body:has(>main:not(.crank)) { padding-top: 100px; } .rer-themed body:has(>main:not(.crank))::before { height: 60px; } .rer-themed main:not(.crank) { padding: 26px 20px; } .rer-themed main:not(.crank) h1 { font-size: 27px; } .rer-themed main:not(.crank) dl { grid-template-columns: 1fr; gap: 4px; } .rer-themed main:not(.crank) dd { margin-bottom: 10px; } }
+@media (max-width: 600px) { .rer-themed body:has(>main:not(.crank)) { padding-top: 100px; } .rer-themed body:has(>main:not(.crank))::before, .rer-themed body:has(>main:not(.crank))::after { height: 60px; } .rer-themed main:not(.crank) { padding: 26px 20px; } .rer-themed main:not(.crank) h1 { font-size: 27px; } .rer-themed main:not(.crank) dl { grid-template-columns: 1fr; gap: 4px; } .rer-themed main:not(.crank) dd { margin-bottom: 10px; } }
 
 /* Base's Run and not-found pages (src/base/run-site.ts) in the site's look: the heavy
    headline, the bold lockup and the navy numerals. Their inline style keeps the layout. */

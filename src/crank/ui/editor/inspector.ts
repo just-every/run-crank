@@ -1,9 +1,14 @@
 import { chip, esc, hidden, json, timestamp } from '../document'
 import { icon } from '../icons'
 import { STEP_STATE, tile } from './canvas'
-import { appOf, fieldLabel, lastRecord, mappingRows, mappingText, shortPaths, summaryOf, type Connection, type Node, type RunDetail } from './model'
+import type { Graph } from '../../engine/graph'
+import { causeHtml, renameOf } from '../failure'
+import { appOf, findNode, lastRecord, mappingRows, mappingText, rowLabel, shortPaths, summaryOf, type Connection, type Node, type RunDetail } from './model'
+import { summaryHtml, summaryOfResult } from './results'
 
-export interface InspectorContext { workflowId: string; node: Node; tab: string; connections: Connection[]; runs: RunDetail[]; hooks: { active: boolean }[]; canPrepare: boolean; preview: any; sample: string; now: number }
+export interface InspectorContext { workflowId: string; graph: Graph; live: { graph: Graph; number: number } | null; node: Node; tab: string; connections: Connection[]; runs: RunDetail[]; hooks: { active: boolean }[]; canPrepare: boolean; preview: any; sample: string; now: number; people: { id: string; name: string }[] }
+
+const STATE_ICON: Record<string, string> = { failed: 'warning', uncertain: 'warning', waiting: 'clock', running: 'clock', stopped: 'stop', skipped: 'stop' }
 
 const field = (label: string, value: string, mono = true) => `<div class="field"><span class="field-label">${esc(label)}</span><span class="field-value${mono ? ' mono' : ''}">${value}</span></div>`
 const ago = (at: string, now: number) => {
@@ -34,7 +39,8 @@ function retryPolicy(node: Node) {
 function request(input: { method?: string; url: string }) {
   let host = input.url, rest = ''
   try { const url = new URL(input.url.replace(/\{\{[^}]*\}\}/g, 'x')); host = url.host; rest = decodeURIComponent(input.url.slice(input.url.indexOf(url.host) + url.host.length)) } catch { /* a mapped URL shows whole */ }
-  return `${field('Method', esc(String(input.method ?? 'GET').toUpperCase()))}${field('Host', esc(host))}${rest ? field('Path', `<span title="${esc(rest)}">${esc(rest.length > 60 ? rest.slice(0, 57) + '…' : rest)}</span>`) : ''}`
+  const [path, query] = rest.split(/\?(.*)/s), short = (text: string) => `<span title="${esc(text)}">${esc(text.length > 60 ? text.slice(0, 57) + '…' : text)}</span>`
+  return `${field('Method', esc(String(input.method ?? 'GET').toUpperCase()))}${field('Host', esc(host))}${path ? field('Path', short(path)) : ''}${query ? field('Query', short(query)) : ''}`
 }
 
 function setup(ctx: InspectorContext) {
@@ -51,7 +57,7 @@ function setup(ctx: InspectorContext) {
     step!.type === 'paths' ? `<section class="inspector-block"><h3>Paths</h3>${field('Mode', esc(step!.mode), false)}${(node.branches ?? []).map(b => `<p class="rule-branch">${esc(b.name)}</p>${b.kind === 'rule' ? rules((step!.branches as any[]).find(x => x.id === b.id)?.when) : field('Runs', b.kind === 'always' ? 'After the matched path, every time' : 'When no path matches', false)}`).join('')}</section>` : '',
     step!.type === 'approval' && typeof step!.instructions === 'string' ? `<section class="inspector-block"><h3>Instructions</h3><p class="inspector-note">${esc(step!.instructions)}</p>${Array.isArray(step!.editable) ? field('Editable', esc((step!.editable as string[]).join(', ')), false) : ''}</section>` : '',
     step!.type === 'http' && typeof (step!.input as any)?.url === 'string' ? `<section class="inspector-block"><h3>Request</h3>${request(step!.input as any)}</section>` : '',
-    mapping.length ? `<section class="inspector-block"><h3>Field mapping</h3>${mapping.map(([key, value]) => field(fieldLabel(key), mapped(value))).join('')}</section>` : '',
+    mapping.length ? `<section class="inspector-block"><h3>Field mapping</h3>${mapping.map(([key, value]) => field(rowLabel(key), mapped(value))).join('')}</section>` : '',
     retryPolicy(node),
   ]
   return parts.join('')
@@ -62,12 +68,11 @@ function lastResult(ctx: InspectorContext) {
   const head = `<div class="result-head"><h3>Last result</h3>${ctx.canPrepare ? `<a class="btn btn-secondary btn-small" href="?step=${encodeURIComponent(ctx.node.path)}&amp;tab=test">Test step</a>` : ''}</div>`
   if (!found) return `<section class="inspector-block last-result">${head}<p class="muted">No run has reached this step yet.</p></section>`
   const status = found.record?.status ?? 'succeeded', at = found.record?.finished_at ?? found.record?.started_at ?? found.run.received_at
-  const output = found.record?.output as any, body = output?.body
-  const leaves = body && typeof body === 'object' ? mappingRows(body).filter(([, v]) => v !== null && typeof v !== 'object').slice(0, 4) : []
-  const summary = found.record?.error ? `<p class="result-error">${esc(found.record.error.message)}</p>`
-    : output?.status ? `<div class="result-card"><span class="tile tile-result" aria-hidden="true">${icon('check')}</span><div><strong>HTTP ${esc(output.status)}${output.reconciled ? ' · read back, not repeated' : ''}</strong>${leaves.map(([k, v]) => `<span><span class="muted">${esc(k)}</span> ${esc(v)}</span>`).join('')}</div></div>`
+  const result = found.record ? summaryOfResult(ctx.node, found.record, ctx.people) : null
+  const summary = found.record?.error ? `<p class="result-error">${causeHtml(found.record.error, renameOf(found.record.error, ctx.node.path, ctx.live))}</p>`
+    : result ? `<div class="result-card" data-state="${esc(status)}"><span class="tile tile-result" aria-hidden="true">${icon(STATE_ICON[status] ?? 'check')}</span><div>${summaryHtml(result)}</div></div>`
     : found.record?.status === 'waiting' ? '<p class="muted">Waiting for an owner’s decision in Approvals.</p>' : ''
-  return `<section class="inspector-block last-result">${head}<p class="result-status" data-state="${esc(status)}">${icon(status === 'failed' ? 'warning' : status === 'waiting' ? 'clock' : 'check', 'icon state-mark')}<strong>${esc(STEP_STATE[status] ?? status)}</strong> <span class="muted">${ago(at, ctx.now)}</span></p>${summary}<a class="result-link" href="/app/workflow-runs/${esc(found.run.id)}">Open run ${esc(found.run.id.slice(0, 8))} ${icon('chevron')}</a></section>`
+  return `<section class="inspector-block last-result">${head}<p class="result-status" data-state="${esc(status)}">${icon(STATE_ICON[status] ?? 'check', 'icon state-mark')}<strong>${esc(STEP_STATE[status] ?? status)}</strong> <span class="muted">${ago(at, ctx.now)}</span></p>${summary}<a class="result-link" href="/app/workflow-runs/${esc(found.run.id)}">Open run ${esc(found.run.id.slice(0, 8))} ${icon('chevron')}</a></section>`
 }
 
 function data(ctx: InspectorContext) {
@@ -78,7 +83,8 @@ function data(ctx: InspectorContext) {
 }
 
 function test(ctx: InspectorContext) {
-  const results = ctx.preview ? `<section class="inspector-block"><h3>Preview result</h3><p class="inspector-note">On a ${esc(ctx.preview.sample_source)}; nothing was sent.</p><ol class="preview-list">${(ctx.preview.steps as any[]).map(s => `<li data-outcome="${esc(s.outcome ?? (s.output !== undefined ? 'mapped' : ''))}"><code>${esc(s.path)}</code><span>${esc(s.outcome ?? 'mapped')}${s.matched ? ` · ${esc(s.matched.join(', '))}` : ''}</span>${s.error ? `<small>${esc(s.error.message)}</small>` : ''}</li>`).join('')}</ol></section>` : ''
+  const results = ctx.preview ? `<section class="inspector-block"><h3>Preview result</h3><p class="inspector-note">On a ${esc(ctx.preview.sample_source)}; nothing was sent.</p><ol class="preview-list">${(ctx.preview.steps as any[]).map(s => { const at = findNode(ctx.graph, s.path), outcome = String(s.outcome ?? 'mapped'), matched = (s.matched as string[] | undefined)?.map(id => at?.branches?.find(b => b.id === id)?.name ?? id)
+    return `<li data-outcome="${esc(outcome)}"><strong>${esc(at ? `${appOf(at, ctx.connections).title} · ${summaryOf(at)}` : s.path)}</strong><span>${esc(outcome.charAt(0).toUpperCase() + outcome.slice(1))}${matched?.length ? ` · ${esc(matched.join(', '))}` : ''}</span>${s.error ? `<small>${causeHtml(s.error, null)}</small>` : ''}</li>` }).join('')}</ol></section>` : ''
   if (!ctx.canPrepare) return '<section class="inspector-block"><p class="muted">Owners and admins can preview a flow on a sample.</p></section>'
   return `${results}<section class="inspector-block"><h3>Test on a sample</h3><p class="inspector-note">Filters, paths and formatters run on the sample. The preview stops before the first step that would call an app.</p><form method="post" action="/app/workflows/${esc(ctx.workflowId)}/preview">${hidden('step', ctx.node.path)}<label>Sample trigger (JSON)<textarea name="sample" rows="8" spellcheck="false" required>${esc(ctx.sample)}</textarea></label><button class="btn btn-primary">Run preview</button></form></section>`
 }

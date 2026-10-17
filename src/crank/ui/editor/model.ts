@@ -49,6 +49,14 @@ export function appOf(node: Node, connections: Connection[]): { title: string; t
   return { title: STEPS[step.type] ?? titleCase(step.type), tile: 'tool', glyph }
 }
 
+/** How a run started, in words: "Stripe webhook", "Run now", "Schedule". */
+export function triggerWords(kind: string, graph: Graph | undefined, connections: Connection[]) {
+  const words: Record<string, string> = { webhook: 'Webhook', manual: 'Run now', schedule: 'Schedule', feed: 'New feed item', url_poll: 'URL poll', slack_event: 'Slack event' }
+  const app = graph ? appOf({ path: 'trigger', step: null, trigger: graph.trigger }, connections).title : ''
+  if (kind === 'webhook' && app && app !== TRIGGERS.webhook) return `${app} webhook`
+  return words[kind] ?? titleCase(kind.replace(/_/g, ' '))
+}
+
 /** The card's second line: the step's own name, or what its type does. */
 export function summaryOf(node: Node): string {
   if (node.trigger) return String((node.trigger as any).name ?? ({ webhook: 'Catch hook', schedule: 'On a schedule', feed: 'New feed item', url_poll: 'New record', slack_event: 'New Slack event', manual: 'Started by hand' } as Record<string, string>)[String(node.trigger.type)] ?? '')
@@ -79,8 +87,8 @@ export function mappingRows(value: unknown, prefix = ''): [string, unknown][] {
   if (!Array.isArray(value) && ('$fn' in value || '$ref' in value || '$literal' in value)) return [[prefix, value]]
   return Object.entries(value).flatMap(([key, item]) => mappingRows(item, prefix ? `${prefix}${Array.isArray(value) ? `[${key}]` : `.${key}`}` : key))
 }
-/** Long `{{a.b.c.d}}` paths shortened to their last two parts, for narrow columns. */
-export const shortPaths = (text: string) => text.replace(/\{\{\s*([\w.\-[\]]+)\s*\}\}/g, (whole, path: string) => { const parts = path.split('.'); return parts.length > 3 ? `{{…${parts.slice(-2).join('.')}}}` : whole })
+/** Long `{{a.b.c.d}}` paths shortened to their last two parts, for narrow columns (a word joiner keeps `…` on the path's line). */
+export const shortPaths = (text: string) => text.replace(/\{\{\s*([\w.\-[\]]+)\s*\}\}/g, (whole, path: string) => { const parts = path.split('.'); return parts.length > 3 ? `{{…\u2060${parts.slice(-2).join('.')}}}` : whole })
 /** A mapped field's key as a label: its last meaningful part, words split ("CustomerRef.name" → "Customer ref"). */
 export function fieldLabel(key: string) {
   const parts = key.replace(/^(body|input|query|headers)\./, '').split('.')
@@ -90,6 +98,12 @@ export function fieldLabel(key: string) {
   const words = base.replace(/([a-z0-9])([A-Z])/g, '$1 $2').replace(/_/g, ' ').toLowerCase()
   const text = words.charAt(0).toUpperCase() + words.slice(1)
   return index === undefined || /^Line$/.test(text) ? text : `${text} ${index + 1}`
+}
+/** A mapped row's label: Sheets' `values` cells by their column letter, a condition's parts by rule
+ * number ("Rule 1 field"), any other key in words. */
+export const rowLabel = (key: string) => {
+  const cell = /(?:^|\.)values\[\d+\]\[(\d+)\]$/.exec(key), rule = /^when(?:\[\d+\])+\[(\d+)\]\.(\w+)$/.exec(key)
+  return cell ? `Column ${String.fromCharCode(65 + Number(cell[1]) % 26)}` : rule ? `Rule ${Number(rule[1]) + 1} ${rule[2]}` : fieldLabel(key)
 }
 /** A mapped value as one line: `{{path}}` text, or `fn(arg: …)` for built-in transforms. */
 export function mappingText(value: unknown): string {

@@ -1,5 +1,6 @@
 import { evaluate, validateGroups, type Groups } from '../conditions'
 import { StepError } from '../errors'
+import { missingField } from '../mapping'
 import { TRANSFORMS, runTransform } from '../transforms'
 import type { StepType } from '../types'
 import { isObject } from '../values'
@@ -19,7 +20,9 @@ export const transform: StepType = {
   validate(step) {
     if (typeof step.fn !== 'string' || !TRANSFORMS[step.fn]) throw new StepError('validation', `Transform ${step.id}: unknown function ${String(step.fn)}`)
   },
-  async execute(step, ctx) { return { status: 'succeeded', output: runTransform(step.fn as string, ctx.input) } },
+  async execute(step, ctx) {
+    try { return { status: 'succeeded', output: runTransform(step.fn as string, ctx.input) } } catch (error) { throw missingField(step.input, ctx.scope, error) ?? error }
+  },
 }
 
 /** Named mapped values in one step, for example a payload assembled for later steps. */

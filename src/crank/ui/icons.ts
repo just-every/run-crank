@@ -35,6 +35,7 @@ const PATHS: Record<string, string> = {
   spark: '<path d="M12 3c.6 4.6 2.9 7.4 8 9-5.1 1.6-7.4 4.4-8 9-.6-4.6-2.9-7.4-8-9 5.1-1.6 7.4-4.4 8-9Z"/>',
   play: '<path d="m8 5.5 11 6.5-11 6.5Z"/>',
   pause: '<path d="M8.5 5v14M15.5 5v14"/>',
+  stop: '<path d="M7 12h10"/>',
   clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 2"/>',
   warning: '<path d="M12 4 2.8 19.5h18.4Z"/><path d="M12 10v4.5M12 17.2v.3"/>',
 }

@@ -9,14 +9,16 @@ async function state(env: CrankEnv, actor: Actor): Promise<Response> {
   requireValue(actor.kind !== 'trigger', 'Trigger tokens only admit events to their scoped flow', 403)
   await recoverExpiredRuns(env, actor)
   const canManage = actor.role === 'owner' && (actor.kind === 'native' || actor.kind === 'dev')
-  const [flows, runs, approvals, attempts, tokens] = await Promise.all([
+  const [flows, runs, approvals, attempts, tokens, people] = await Promise.all([
     stmt(env, 'SELECT * FROM crank_flows ORDER BY created_at DESC,id').all<Flow>(),
     stmt(env, 'SELECT * FROM crank_runs ORDER BY created_at DESC,id LIMIT 200').all<Run>(),
     stmt(env, 'SELECT * FROM crank_approvals WHERE run_id IN (SELECT id FROM crank_runs ORDER BY created_at DESC,id LIMIT 200) ORDER BY created_at DESC,id').all(),
     stmt(env, 'SELECT * FROM crank_attempts WHERE run_id IN (SELECT id FROM crank_runs ORDER BY created_at DESC,id LIMIT 200) ORDER BY started_at DESC,id').all(),
     canManage ? stmt(env, `SELECT ${tokenColumns} FROM crank_tokens ORDER BY created_at DESC,id`).all() : Promise.resolve({ results: [] }),
+    // Names only, so decisions and versions read "Maya Chen" rather than an operator ID.
+    stmt(env, 'SELECT id,display_name AS name FROM oa_operators ORDER BY created_at,id').all<{ id: string; name: string }>(),
   ])
-  return json({ actor: publicActor(actor), flows: flows.results, runs: runs.results.map(presentRun), approvals: approvals.results, attempts: attempts.results, tokens: tokens.results })
+  return json({ actor: publicActor(actor), flows: flows.results, runs: runs.results.map(presentRun), approvals: approvals.results, attempts: attempts.results, tokens: tokens.results, people: people.results })
 }
 
 export async function crankApi(request: Request, env: CrankEnv): Promise<Response | null> {

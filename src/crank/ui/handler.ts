@@ -8,7 +8,7 @@ import { authResponse } from '../../auth.server'
 import { document, esc } from './document'
 import { flowsView, runsView } from './flows'
 import { runView } from './run'
-import { accessView, importView, previewView, dataView } from './settings'
+import { accessView, accountView, importView, previewView, dataView } from './settings'
 import { connectionsView } from './connections'
 import { approvalsView, workflowRunView } from './workflow-run'
 import { editorView } from './editor'
@@ -45,11 +45,16 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
     }
     const editorPage = async (id:string,params:URLSearchParams,preview?:unknown) => {
       const [data,state,waiting] = await Promise.all([workflowData(read,id,params,actor),read('/api/crank/state'),read('/api/crank/workflow-runs?status=awaiting_approval&limit=100')])
-      const view = editorView({...data,preview,tokens:state.tokens ?? [],approvals:state.runs.filter((r:any)=>r.state==='pending').length+waiting.runs.length})
+      const view = editorView({...data,preview,tokens:state.tokens ?? [],people:state.people ?? [],approvals:state.runs.filter((r:any)=>r.state==='pending').length+waiting.runs.length})
       return document(data.workflow.name,view.content,actor,200,view.page)
     }
     if (request.method === 'POST') {
       requireWriteOrigin(request,env,actor)
+      if (url.pathname === '/app/signout') {
+        const response = await call('/auth/signout',{}), cookie = response.headers.get('set-cookie')
+        if(!response.ok) return page('Sign out refused','<p class="notice">Sign out could not be confirmed. Close this browser window to end the session.</p><a href="/app/account">Return to account</a>',{},response.status)
+        return new Response(null,{status:303,headers:{location:'/signin','cache-control':'no-store',...(cookie?{'set-cookie':cookie}:{})}})
+      }
       const form = await formValues(request)
       if (url.pathname === '/app/import/preview') {
         requireOwner(actor)
@@ -107,14 +112,16 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
     const runPath = /^\/app\/workflow-runs\/([^/]+)$/.exec(url.pathname)
     if(runPath) {
       const run = await read('/api/crank/workflow-runs/'+runPath[1]), workflow = await read('/api/crank/workflows/'+encodeURIComponent(run.workflow_id))
-      const graph = run.version ? (await read(`/api/crank/workflows/${encodeURIComponent(run.workflow_id)}/versions/${run.version.number}`)).graph : undefined
-      return page('Workflow run',workflowRunView(run,workflow,graph,await read('/api/crank/connections'),actor),{state,crumbs:[['Runs','/app/runs']]})
+      const versions = `/api/crank/workflows/${encodeURIComponent(run.workflow_id)}/versions/`, liveNumber = workflow.versions?.find((v:any)=>v.id===workflow.published_version_id)?.number
+      const [graph,live] = await Promise.all([run.version ? read(versions+run.version.number).then((v:any)=>v.graph) : undefined, liveNumber ? read(versions+liveNumber).then((v:any)=>({graph:v.graph,number:liveNumber})) : null])
+      return page('Workflow run',workflowRunView(run,workflow,graph,live,await read('/api/crank/connections'),actor,state.people ?? []),{state,crumbs:[['Runs','/app/runs']]})
     }
     if(url.pathname==='/app/approvals') {
       const waiting = await read('/api/crank/workflow-runs?status=awaiting_approval&limit=100')
       const details = await Promise.all(waiting.runs.map(async (r:any)=>({run:await read('/api/crank/workflow-runs/'+r.id),workflow:await read('/api/crank/workflows/'+encodeURIComponent(r.workflow_id))})))
       return page('Approvals',approvalsView(state,details),{state,intro:'Decisions that only a person can make. Everything else runs on its own.'})
     }
+    if(url.pathname==='/app/account') { const session = await read('/auth/session'); return page('Account',accountView(session,owner),{state,intro:'Who is signed in on this browser, and what that role may do.'}) }
     if(url.pathname==='/app/connections') return page('Connections',connectionsView(await read('/api/crank/connections'),owner),{state,intro:'The apps your workflows act on, each with one stored credential.'})
     requireOwner(actor)
     if(url.pathname==='/app/access') {const people=await call('/auth/operators'); return page('Access',accessView({...state,people:people.ok?await people.json():[]}),{state,intro:'Credentials for agents and sending apps, and the people who can sign in.'})}

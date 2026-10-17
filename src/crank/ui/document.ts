@@ -6,19 +6,27 @@ export const hidden = (name:string,value:unknown) => `<input type="hidden" name=
 /** Button kinds: primary (navy), secondary (quiet outline), danger (outline in red). */
 export type ButtonKind = 'primary'|'secondary'|'danger'
 export const action = (path:string,label:string,fields:Record<string,unknown>={},kind:ButtonKind='primary',className='') => `<form method="post" action="/app/action" class="inline">${hidden('path',path)}${Object.entries(fields).map(([k,v])=>hidden(k,v)).join('')}<button class="btn btn-${kind}${className?' '+className:''}">${esc(label)}</button></form>`
-export const chip = (state:unknown,label:unknown=state) => `<span class="chip" data-state="${esc(state)}">${esc(label)}</span>`
+// Stored states as the words people read ("pending" → "Waiting").
+const STATE_WORDS:Record<string,string> = { pending:'Waiting', running:'Running', succeeded:'Success', failed:'Failed', rejected:'Rejected', active:'Active', inactive:'Inactive', draft:'Draft', paused:'Paused', revoked:'Revoked' }
+export const stateWords = (state:unknown) => { const text = String(state ?? ''); return STATE_WORDS[text] ?? (text.charAt(0).toUpperCase() + text.slice(1)).replace(/_/g,' ') }
+export const chip = (state:unknown,label:unknown=stateWords(state)) => `<span class="chip" data-state="${esc(state)}">${esc(label)}</span>`
 // US style ("Oct 14, 2026, 9:12 AM UTC"); public/crank.js redraws it in the viewer's zone.
 const utcTime = new Intl.DateTimeFormat('en-US', { timeZone:'UTC', month:'short', day:'numeric', year:'numeric', hour:'numeric', minute:'2-digit' })
 export const timestamp = (value:unknown) => {
   const date = new Date(String(value));
   return Number.isNaN(date.getTime()) ? esc(value) : `<time datetime="${esc(value)}" title="UTC">${utcTime.format(date)} UTC</time>`
 }
-// Clock time only ("9:14 AM"), redrawn in the viewer's zone by public/crank.js.
+// Clock time ("9:14 AM") for today, the date as well for any other day ("Oct 8, 2026, 9:14 AM"),
+// so times from different days still read in order; public/crank.js redraws it in the viewer's zone.
 const utcClock = new Intl.DateTimeFormat('en-US', { timeZone:'UTC', hour:'numeric', minute:'2-digit' })
-export const clock = (value:unknown) => {
+export const clock = (value:unknown, now = Date.now()) => {
   const date = new Date(String(value));
-  return Number.isNaN(date.getTime()) ? '' : `<time datetime="${esc(value)}" data-format="clock" title="UTC">${utcClock.format(date)}</time>`
+  if (Number.isNaN(date.getTime())) return ''
+  const today = date.toISOString().slice(0,10) === new Date(now).toISOString().slice(0,10)
+  return `<time datetime="${esc(value)}" data-format="clock" title="UTC">${today ? utcClock.format(date) : `${utcTime.format(date)} UTC`}</time>`
 }
+/** A person's name from the workspace's people (state.people), or "a former person" when it is gone. */
+export const personName = (people:{id:string;name:string}[]|undefined, id:unknown) => people?.find(p=>p.id===id)?.name || 'A person no longer in this workspace'
 export const parse = (value:unknown) => { try { return typeof value === 'string' ? JSON.parse(value) : value } catch { return value } }
 export const plural = (count:number, one:string, many=one+'s') => `${count.toLocaleString('en-US')} ${count===1?one:many}`
 export async function document(title:string,content:string,actor?:any,status=200,page:Page={}) {

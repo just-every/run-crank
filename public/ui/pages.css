@@ -33,9 +33,10 @@
 .title-row h2 { font: 800 26px/1.15 var(--font-head); letter-spacing: -.03em; }
 .detail-primary h3 { margin: 18px 0 8px; font-size: 15px; }
 .detail-primary pre + p { margin-top: 10px; font-size: 14px; }
-.facts { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 8px 14px; padding: 4px 0; font-size: 14px; }
+.facts { display: grid; grid-template-columns: 100px minmax(0, 1fr); gap: 8px 14px; padding: 4px 0; font-size: 14px; }
 .facts dt { color: var(--body); }
 .facts dd { min-width: 0; overflow-wrap: anywhere; }
+.facts dd code { font-size: 12px; }
 .history-item + .history-item { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
 .history-item h3 { display: flex; align-items: center; gap: 8px; font-size: 15px; margin-bottom: 4px; }
 .history-item p { font-size: 13.5px; color: var(--body); overflow-wrap: anywhere; }

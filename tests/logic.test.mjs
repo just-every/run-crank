@@ -85,6 +85,10 @@ test('WORK-012/WORK-002: no-code transforms, exact USD math, business days and l
   const count = fake.to('crm.example').length, bad = await startRun(h, w, { ...sample, close: 'next Thursday-ish' });
   assert.equal(bad.status, 'failed'); assert.equal(bad.error.category, 'validation'); assert.match(bad.error.message, /could not be parsed/);
   assert.equal(fake.to('crm.example').length, count, 'an unparseable date writes nothing');
+  const renamed = await publish(h, 'Renamed amount', { trigger: { type: 'manual' }, steps: [{ id: 'dollars', type: 'transform', fn: 'number.divide', input: { a: '{{trigger.input.order.amount}}', b: 100 } }] });
+  const missing = await startRun(h, renamed, { order: { amount_total: 32000 } });
+  assert.equal(missing.status, 'failed'); assert.equal(missing.error.category, 'mapping');
+  assert.equal(missing.error.field, 'trigger.input.order.amount'); assert.deepEqual(missing.error.similar, ['amount_total'], 'a missing input names its field and the renamed one beside it');
 
   const invoice = await publish(h, 'Sheet to invoice', { trigger: { type: 'manual' }, steps: [
     { id: 'lines', type: 'transform', fn: 'utility.line_itemizer', input: { fields: { description: '{{trigger.input.items}}', quantity: '{{trigger.input.qty}}', unit_price: '{{trigger.input.prices}}' } } },
