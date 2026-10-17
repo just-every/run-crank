@@ -1,4 +1,4 @@
-import { AppTile, Check, Dot, glued, Icon, SectionHead } from '../parts'
+import { AppTile, Check, Dot, Icon, SectionHead, segmented } from '../parts'
 import { log, today, type LogTone } from '../week'
 
 const Status = ({ tone, text }: { tone: LogTone; text: string }) => <span className={`chip chip-${tone}`}>
@@ -14,7 +14,7 @@ export function AllDay() {
         <div aria-hidden="true">
           <p className="log-head"><strong>Today · {today.runs} runs</strong><span className="log-lost"><Dot />{today.lost} lost</span></p>
           <ul className="log-list">{log.map(row => <li key={row.time + row.text} className={`log-row tone-${row.tone}`}>
-            <time>{row.time}</time><AppTile app={row.app} /><span className="log-text">{glued(row.text)}</span><Status tone={row.tone} text={row.status} />
+            <time>{row.time}</time><AppTile app={row.app} /><span className="log-text">{segmented(row.text)}</span><Status tone={row.tone} text={row.status} />
           </li>)}</ul>
           <p className="log-foot">Showing 8 of {today.runs}</p>
         </div>

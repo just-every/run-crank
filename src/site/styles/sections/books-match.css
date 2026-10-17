@@ -1,5 +1,7 @@
 /* 07 Friday, October 30: the ledger on the left, the copy on the right, the limits note below. */
 .books-row { display: grid; grid-template-columns: minmax(0, 812fr) minmax(0, 440fr); align-items: center; gap: 72px; }
+/* Beside the ledger the subhead sets in even lines, as page-07 does. */
+@media (min-width: 1280px) { .books-match .sec-body { text-wrap: balance; } }
 /* The heading breaks after "The books" only beside the ledger (desktop); stacked, it is one line (phone-07). */
 @media (max-width: 1180px) { .books-match .sec-head h2 br { display: none; } }
 /* The ledger lays itself out by its own width: one line per fix when it fits (page-07), else phone-07's stack. */

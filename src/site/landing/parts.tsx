@@ -30,6 +30,10 @@ export const Mark = ({ className = 'mark' }: { className?: string }) => <span cl
  *  separator never starts or ends a wrapped line and an arrow never starts one. */
 export const glued = (text: string) => text.replaceAll(' · ', '\u00a0·\u00a0').replaceAll(' → ', '\u00a0→ ')
 
+/** A run-log line that wraps only after a " · " or " → ": each part between them stays whole (a name is never
+ *  split), and the separator stays at the end of the line it closes. */
+export const segmented = (text: string) => text.split(/ ([·→]) /).map((part, i) => i % 2 ? `\u00a0${part} ` : <span key={i} className="seg">{part}</span>)
+
 export const Check = ({ className = 'check' }: { className?: string }) => <svg className={className} viewBox="0 0 24 24"><circle cx="12" cy="12" r="12" /><path d="m7.2 12.4 3.2 3.2 6.4-6.8" /></svg>
 export const Cross = () => <svg className="cross" viewBox="0 0 24 24"><circle cx="12" cy="12" r="12" /><path d="m8.2 8.2 7.6 7.6M15.8 8.2l-7.6 7.6" /></svg>
 export const Dot = ({ tone = 'green' }: { tone?: 'green' | 'red' | 'amber' }) => <span className={`dot dot-${tone}`} />

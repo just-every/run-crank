@@ -1,6 +1,8 @@
 /* 05 Tuesday, 2:31 PM: the retry card and #ops overlapping on the left, the copy on the right. */
 .outage-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 56px; }
 .outage .sec-head { max-width: 575px; }
+/* From 1280 up the subhead sets in even lines, as page-05 does. */
+@media (min-width: 1280px) { .outage .sec-body { text-wrap: balance; } }
 .outage-cards { display: grid; }
 .retry-card { z-index: 1; padding: 22px 26px 26px; }
 .retry-title { display: flex; align-items: center; font: 400 25px/1.2 var(--font-head); color: var(--ink); }

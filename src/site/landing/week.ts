@@ -49,7 +49,7 @@ export const log: LogRow[] = [
   { time: '9:04 AM', app: 'gmail', text: 'Same invoice, sent twice', status: 'Duplicate skipped', tone: 'skipped' },
   { time: '9:14 AM', app: 'stripe', text: 'Harbor Supply Co. · $480.00 → QuickBooks', status: 'Completed', tone: 'done' },
   { time: '10:37 AM', app: 'shopify', text: 'Refund $1,250 · Order #4729 → QuickBooks credit memo', status: 'Completed', tone: 'done' },
-  { time: '11:20 AM', app: 'typeform', text: 'Priya Shah · Fieldstone Dental · AI\u00a0score\u00a09', status: 'Posted to #sales', tone: 'done' },
+  { time: '11:20 AM', app: 'typeform', text: 'Priya Shah · Fieldstone Dental · AI score 9', status: 'Posted to #sales', tone: 'done' },
   { time: '1:05 PM', app: 'webhook', text: 'Carrier tracking update · 3 orders', status: 'Completed', tone: 'done' },
   { time: '2:31 PM', app: 'shopify', text: 'Order sync', status: 'Failing · retrying', tone: 'failing' },
 ]
