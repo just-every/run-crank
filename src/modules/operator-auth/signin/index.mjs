@@ -15,10 +15,10 @@ const NOTICES = {
   mail_unavailable: ['alert', 'Sign-in email is not available right now. Ask the person who runs this app to check its mail settings.'],
   invalid_email: ['alert', 'Enter a complete email address.'],
   invalid_input: ['alert', 'Enter a complete email address.'],
-  provider_required: ['alert', 'Your organisation requires its own sign-in provider for this address.'],
-  oidc_provider_required: ['alert', 'Your organisation requires its own sign-in provider for this address.'],
+  provider_required: ['alert', 'Your organization requires its own sign-in provider for this address.'],
+  oidc_provider_required: ['alert', 'Your organization requires its own sign-in provider for this address.'],
   oidc_admission_denied: ['alert', 'That account cannot sign in here. Use the email link, or ask an owner of this app for an invitation.'],
-  oidc_provider_denied: ['alert', 'Sign-in was cancelled at the provider.'],
+  oidc_provider_denied: ['alert', 'Sign-in was canceled at the provider.'],
 };
 const UNAVAILABLE = ['alert', 'That sign-in provider is not available right now. Use the email link instead.'];
 const UNFINISHED = ['alert', 'Signing in with that provider did not finish. Try again, or use the email link.'];

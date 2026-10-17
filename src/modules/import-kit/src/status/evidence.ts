@@ -172,7 +172,7 @@ function verifyReceipt(
 
   const payload = receipt.payload;
   if (payload.incumbent !== importer.incumbent || payload.product !== importer.product) {
-    issues.push({ code: 'RECEIPT_PAIR_MISMATCH', path: `${path}.receipt.payload`, message: 'Receipt incumbent and product do not match the catalogue row.' });
+    issues.push({ code: 'RECEIPT_PAIR_MISMATCH', path: `${path}.receipt.payload`, message: 'Receipt incumbent and product do not match the catalog row.' });
   }
   if (payload.synthetic !== false || payload.source.classification !== 'authorized-real-export') {
     issues.push({ code: 'RECEIPT_NOT_REAL_EXPORT', path: `${path}.receipt.payload.source`, message: 'A verified row requires a signed authorized real-export receipt.' });

@@ -8,9 +8,10 @@ function integer(value, defaultValue, min, max) {
   const v = value ?? defaultValue;
   check(Number.isSafeInteger(v) && v >= min && v <= max, 'oidc_invalid_configuration', 503); return v;
 }
-function httpsUrl(value) {
+// https always; with `allowLoopbackHttp` (an RER provider under `rer dev`) also http to a loopback host.
+function httpsUrl(value, allowLoopbackHttp = false) {
   const u = new URL(value);
-  check(typeof value === 'string' && u.protocol === 'https:' && !u.username && !u.password && !u.search && !u.hash && !/[\s\\]/.test(value));
+  check(typeof value === 'string' && (u.protocol === 'https:' || allowLoopbackHttp && u.protocol === 'http:' && isLoopbackHost(u.hostname)) && !u.username && !u.password && !u.search && !u.hash && !/[\s\\]/.test(value));
   return u;
 }
 // A private JWK for private_key_jwt. Its public half is what the provider holds.
@@ -20,7 +21,7 @@ function privateKey(jwk, algorithm) {
   return Object.freeze({ ...jwk });
 }
 
-function provider(input, origin) {
+function provider(input, origin, local) {
   check(input && typeof input === 'object' && typeof input.id === 'string' && /^[a-z][a-z0-9-]{0,31}$/.test(input.id));
   const preset = PRESETS[input.preset];
   check(preset && Object.hasOwn(PRESETS, input.preset));
@@ -31,7 +32,8 @@ function provider(input, origin) {
     issuer = preset.tenantIssuer(input.tenant);
   }
   check(input.issuer === undefined || input.issuer === issuer);
-  const issuerUrl = httpsUrl(issuer);
+  const loopbackHttp = local && !!preset.interface;
+  const issuerUrl = httpsUrl(issuer, loopbackHttp);
   check(typeof input.clientId === 'string' && input.clientId.length > 0 && input.clientId.length <= 512 && !/[\x00-\x1f\x7f]/.test(input.clientId));
   const tokenAuthMethod = input.tokenAuthMethod ?? preset.methods[0];
   check(preset.methods.includes(tokenAuthMethod));
@@ -42,7 +44,7 @@ function provider(input, origin) {
   const additionalAudiences = input.additionalAudiences ?? [];
   check(Array.isArray(additionalAudiences) && additionalAudiences.length <= 10 && additionalAudiences.every(a => typeof a === 'string' && a.length > 0 && a.length <= 512));
   const endpointOrigins = input.endpointOrigins ?? preset.endpointOrigins ?? [issuerUrl.origin];
-  check(Array.isArray(endpointOrigins) && endpointOrigins.length > 0 && endpointOrigins.every(o => { const u = new URL(o); return u.origin === o && u.protocol === 'https:'; }));
+  check(Array.isArray(endpointOrigins) && endpointOrigins.length > 0 && endpointOrigins.every(o => { const u = new URL(o); return u.origin === o && (u.protocol === 'https:' || loopbackHttp && u.protocol === 'http:' && isLoopbackHost(u.hostname)); }));
   const subjectEmails = Object.fromEntries(Object.entries(input.subjectEmails ?? {}).map(([subject, email]) => {
     check(subject.length > 0 && subject.length <= 255); return [subject, normalizeEmail(email)];
   }));
@@ -69,7 +71,7 @@ function provider(input, origin) {
     algorithms: Object.freeze([...preset.algorithms]), email: preset.email, scope: preset.scope, interface: preset.interface, minimumVersion,
     additionalAudiences: Object.freeze([...new Set(additionalAudiences)]), endpointOrigins: Object.freeze([...new Set(endpointOrigins)]), subjectEmails: Object.freeze(subjectEmails),
     // Each provider has its own redirect URI; its state is bound to it.
-    endpointPins, startPath: `/auth/oidc/${input.id}/start`, redirectUri });
+    endpointPins, local: loopbackHttp, startPath: `/auth/oidc/${input.id}/start`, redirectUri });
 }
 
 export function configure(input) {
@@ -81,7 +83,7 @@ export function configure(input) {
     check(local ? isLoopbackHost(origin.hostname) && ['http:', 'https:'].includes(origin.protocol) : origin.protocol === 'https:');
     check(typeof input.transactionSecret === 'string' && input.transactionSecret.length >= 32 && input.transactionSecret.length <= 1024);
     check(Array.isArray(input.providers) && input.providers.length <= 8);
-    const providers = input.providers.map(entry => provider(entry, input.origin));
+    const providers = input.providers.map(entry => provider(entry, input.origin, local));
     check(new Set(providers.map(p => p.id)).size === providers.length);
     const callbacks = providers.map(p => new URL(p.redirectUri).pathname);
     check(new Set(callbacks).size === providers.length);
@@ -99,6 +101,6 @@ export function configure(input) {
 }
 
 export function endpoint(value, provider) {
-  try { const u = new URL(value); check(typeof value === 'string' && u.href === value && u.protocol === 'https:' && !u.username && !u.password && !u.hash && !u.search && provider.endpointOrigins.includes(u.origin)); return u.href; }
+  try { const u = new URL(value); check(typeof value === 'string' && u.href === value && (u.protocol === 'https:' || provider.local === true && u.protocol === 'http:' && isLoopbackHost(u.hostname)) && !u.username && !u.password && !u.hash && !u.search && provider.endpointOrigins.includes(u.origin)); return u.href; }
   catch { check(false, 'oidc_untrusted_endpoint', 503); }
 }

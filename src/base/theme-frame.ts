@@ -33,7 +33,7 @@ const digest = async (text: string) => btoa(String.fromCharCode(...new Uint8Arra
 export async function themeFrame(theme?: FrameTheme): Promise<Frame> {
   if (!theme) return { htmlClass: '', head: '', brand: '', policy: "style-src 'self'; font-src 'self'" }
   if (!/^\/(?!\/)[A-Za-z0-9._~/-]{1,200}\.css$/.test(theme.href) || theme.href.includes('/.')) throw new Error('Declare the seed theme as a same-origin path to its served .css file.')
-  if (theme.accentColor !== undefined && !/^#[0-9a-f]{6}$/i.test(theme.accentColor)) throw new Error('A frame accent colour is #rrggbb.')
+  if (theme.accentColor !== undefined && !/^#[0-9a-f]{6}$/i.test(theme.accentColor)) throw new Error('A frame accent color is #rrggbb.')
   const style = (theme.accentColor ? `.rer-themed{--rer-brand-accent:${theme.accentColor};--rer-brand-accent-text:${ink(theme.accentColor)}}` : '') + FRAME_STYLE
   if (!hashes.has(style)) hashes.set(style, digest(style))
   return {

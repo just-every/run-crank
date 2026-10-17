@@ -22,8 +22,11 @@ The unqualified JWKS URL selects the identity interface. The application retains
 its private key in the server database. Sector/install identity survives re-link,
 provider moves and export/import. Keys are isolated per interface.
 
-Provider origins and metadata endpoints require HTTPS. The application's local
-runtime explicitly permits loopback HTTP; deployed registration requires HTTPS.
+Provider origins and metadata endpoints require HTTPS. Under `rer dev` (the
+`local` option, which needs a loopback app origin) a provider may instead be
+another locally running seed at `http://127.0.0.1`, `http://[::1]` or
+`http://localhost` on any port, so two local seeds can link; every other `http`
+address and every hosted deploy still requires HTTPS.
 Every provider serves `/.well-known/rer-dependencies` with the same graph fields,
 including its `provides` list and selected dependency provider origins. The CLI
 traverses these documents before setup effects, including selected optional
