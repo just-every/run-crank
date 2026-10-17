@@ -1,31 +1,31 @@
 /* The Flow editor: the canvas of step cards on brass connectors, the runs strip and
    the right-hand inspector with the agents card. */
-.is-editor main.crank { padding: 24px 18px 20px 26px; }
-.editor { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; align-items: start; }
+.is-editor main.crank { padding: 16px 9px 24px 12px; }
+.editor { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 14px; align-items: start; }
 .editor-main, .editor-side { min-width: 0; }
 .editor-side { display: grid; gap: 14px; }
 .editor-side .panel { margin: 0; }
 .editor-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 16px; align-items: center; }
 .editor-title { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; min-width: 0; }
-.editor-head .crank-app h1, .editor-title h1 { font-size: 33px; }
+.editor-head .crank-app h1, .editor-title h1 { font-size: 32px; }
 .editor-head .page-intro { grid-column: 1 / -1; margin-top: 0; }
 .btn-undo::before { content: ""; width: 16px; height: 16px; background: url('/app/undo.svg') center / contain no-repeat; }
 
 /* Canvas: the spine left to right; a path group's branches stack to its right. */
-.canvas { padding: 26px 0 24px; }
+.canvas { padding: 26px 0 16px; overflow-x: auto; }
 .chain { display: flex; align-items: center; }
-.link { display: flex; align-items: center; min-width: 0; }
+.link { display: flex; flex: none; align-items: center; min-width: 0; }
 .link + .link::before, .branch::before, .branches::before { content: ""; flex: none; background: url('/app/joint.svg') center / 20px 20px no-repeat, linear-gradient(var(--brass-light), var(--brass-dark)) center / 100% 4px no-repeat; }
 .link + .link::before { width: 24px; height: 22px; }
-.step-card { position: relative; display: flex; flex-direction: column; gap: 10px; width: 150px; min-height: 104px; padding: 11px 11px 10px; background: linear-gradient(120deg, #fff, #fbfcff); border: 1px solid var(--app-card-edge); border-radius: 13px; box-shadow: var(--app-card-shadow); color: var(--ink); text-decoration: none; }
+.step-card { position: relative; display: flex; flex-direction: column; gap: 7px; flex: none; width: 162px; min-height: 112px; padding: 11px 11px 10px; background: linear-gradient(120deg, #fff, #fbfcff); border: 1px solid var(--app-card-edge); border-radius: 13px; box-shadow: var(--app-card-shadow); color: var(--ink); text-decoration: none; }
 .step-card:hover { border-color: #a9c6ea; }
 .step-card.is-selected { border: 2px solid var(--blue); padding: 10px 10px 9px; box-shadow: 0 4px 14px rgba(22, 103, 224, .16); }
 .step-head { display: flex; align-items: flex-start; gap: 9px; min-width: 0; }
-.step-head .tile { width: 34px; height: 34px; border-radius: 8px; font-size: 18px; }
+.step-head .tile { width: 40px; height: 40px; border-radius: 8px; font-size: 22px; }
 .step-head .tile-quickbooks { border-radius: 50%; font-size: 15px; }
 .step-text { display: grid; gap: 2px; min-width: 0; line-height: 1.3; }
 .step-text strong { font-size: 14px; font-weight: 700; letter-spacing: -.01em; overflow-wrap: anywhere; }
-.step-text span { font-size: 12.5px; color: #304576; overflow-wrap: anywhere; }
+.step-text span { font-size: 13px; color: #304576; overflow-wrap: anywhere; }
 .step-foot { display: flex; align-items: center; justify-content: space-between; gap: 4px; margin-top: auto; font-size: 11.5px; color: var(--body); white-space: nowrap; }
 .state { display: inline-flex; align-items: center; gap: 5px; font-weight: 600; color: var(--soft); }
 .state-mark { width: 14px; height: 14px; padding: 2px; border-radius: 50%; stroke-width: 3; color: #fff; background: var(--faint); }
@@ -34,22 +34,32 @@
 .state[data-state=waiting] { color: var(--amber-ink); } .state[data-state=waiting] .state-mark { background: none; color: var(--amber); stroke-width: 2; padding: 0; }
 .changed-badge { display: inline-flex; align-items: center; gap: 4px; align-self: flex-start; padding: 1px 8px 1px 6px; border-radius: 999px; background: var(--amber-tint); border: 1px solid var(--amber-line); color: var(--amber-ink); font-size: 11.5px; font-weight: 650; white-space: nowrap; }
 .changed-badge .icon { width: 12px; height: 12px; stroke-width: 2.2; }
-.has-branches > .step-card { min-height: 92px; }
-.branches { position: relative; display: grid; gap: 14px; padding-left: 46px; }
+.has-branches > .step-card { width: 140px; min-height: 92px; }
+.branches { position: relative; display: grid; gap: 20px; padding-left: 72px; }
 .branches::before { position: absolute; left: 0; top: 50%; width: 24px; height: 22px; margin-top: -11px; }
 .branch { position: relative; display: grid; gap: 6px; justify-items: start; }
 /* Each branch: a vertical rail segment on the left and a stub into its first card. */
-.branch::after { content: ""; position: absolute; left: -24px; top: 0; bottom: 0; width: 4px; margin-left: -2px; background: linear-gradient(90deg, var(--brass-light), var(--brass-dark)); }
-.branch:first-child::after { top: 66px; }
-.branch:last-child::after { bottom: auto; height: 66px; }
+.branch::after { content: ""; position: absolute; left: -50px; top: 0; bottom: -20px; width: 4px; margin-left: -2px; background: linear-gradient(90deg, var(--brass-light), var(--brass-dark)); }
+.branch:first-child::after { top: 44px; border-top-left-radius: 14px; }
+.branch:last-child::after { bottom: auto; height: 44px; border-bottom-left-radius: 14px; }
 .branch:only-child::after { display: none; }
-.branch::before { position: absolute; left: -24px; top: 55px; width: 24px; height: 22px; }
-.branch-label { margin-left: 4px; padding: 2px 11px; border-radius: 999px; background: var(--app-selected); color: #18406f; font-size: 12px; font-weight: 650; }
+.branch::before { position: absolute; left: -50px; top: 33px; width: 50px; height: 22px; }
+.branch-label { position: absolute; z-index: 1; left: -60px; top: -20px; margin-left: 4px; padding: 2px 11px; border-radius: 999px; background: var(--app-selected); color: #18406f; font-size: 12px; font-weight: 650; }
 .branch .chain { flex-direction: column; align-items: flex-start; }
 .branch .link { flex-direction: column; align-items: flex-start; }
-.branch .link + .link::before { width: 22px; height: 18px; margin-left: 20px; background: url('/app/joint.svg') center / 16px 16px no-repeat, linear-gradient(90deg, var(--brass-light), var(--brass-dark)) center / 4px 100% no-repeat; }
-.branch .step-card { width: 188px; min-height: 88px; }
+.branch .link + .link::before { width: 22px; height: 14px; margin-left: 20px; background: url('/app/joint.svg') center / 16px 16px no-repeat, linear-gradient(90deg, var(--brass-light), var(--brass-dark)) center / 4px 100% no-repeat; }
+.branch .step-card { width: 200px; min-height: 88px; gap: 4px; padding: 8px 11px; }
+.branch .step-card.is-selected { padding: 7px 10px; }
+.branch .step-head .tile { width: 36px; height: 36px; }
 .branch-empty { color: var(--body); font-size: 13px; }
+
+.editor-head { min-height: 78px; }
+.runs-strip .runs-table td { padding-top: 8px; padding-bottom: 8px; }
+.runs-strip .dots { gap: 3px; }
+.runs-strip .dots i { width: 12px; height: 12px; }
+.runs-strip .dots i .icon { width: 9px; height: 9px; }
+.runs-strip .run-filters { gap: 6px; }
+.runs-strip .run-filters select { max-width: 125px; }
 
 /* Version changes. */
 .changes h2 { display: flex; align-items: center; gap: 8px; }
@@ -62,8 +72,8 @@
 .diff-new { color: var(--green-ink); background: var(--green-tint); padding: 2px 6px; border-radius: 5px; justify-self: start; }
 
 /* Runs strip. */
-.runs-strip { margin: 0; padding: 16px 18px 12px 20px; }
-.runs-head { display: flex; align-items: center; gap: 14px 18px; flex-wrap: wrap; margin-bottom: 8px; }
+.runs-strip { margin: 0; padding: 14px 14px 12px 22px; }
+.runs-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
 .runs-head h2 { font: 800 24px/1.1 var(--font-head); letter-spacing: -.03em; }
 .counter { display: inline-flex; align-items: center; gap: 4px 14px; flex-wrap: wrap; padding: 6px 14px; border: 1px solid var(--app-card-edge); border-radius: 12px; background: var(--surface); }
 .counter strong { font: 800 24px/1.1 var(--font-head); letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
@@ -88,14 +98,14 @@
 .tabs { display: flex; gap: 6px; padding: 0 12px; border-bottom: 1px solid var(--line); }
 .tabs a { padding: 10px 10px 9px; color: #536b98; font-size: 14px; font-weight: 600; text-decoration: none; border-bottom: 2px solid transparent; }
 .tabs a[aria-current] { color: var(--blue); border-bottom-color: var(--blue); }
-.inspector-block { padding: 14px 18px; }
+.inspector-block { padding: 10px 18px; }
 .inspector-block + .inspector-block { border-top: 1px solid var(--line); }
 .inspector-block h3 { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; font-size: 14.5px; font-weight: 700; }
 .inline-info { width: 15px; height: 15px; color: var(--soft); }
 .inspector-note { color: var(--body); font-size: 13px; margin-bottom: 8px; }
-.field { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 10px; align-items: center; margin: 6px 0; font-size: 13px; color: #3d527d; }
+.field { display: grid; grid-template-columns: 88px minmax(0, 1fr); gap: 10px; align-items: center; margin: 4px 0; font-size: 13px; color: #3d527d; }
 .field-label { overflow-wrap: anywhere; }
-.field-value { min-width: 0; min-height: 31px; padding: 5px 9px; border: 1px solid var(--app-field-edge); border-radius: 7px; background: #fcfdff; color: var(--ink); overflow-wrap: anywhere; line-height: 1.45; }
+.field-value { min-width: 0; min-height: 31px; padding: 4px 9px; border: 1px solid var(--app-field-edge); border-radius: 7px; background: #fcfdff; color: var(--ink); overflow-wrap: anywhere; line-height: 1.45; }
 .field-value.mono { font-size: 12px; }
 .field-value code { font-size: 12px; }
 .field-value .chip { vertical-align: middle; }
@@ -131,6 +141,16 @@
 .agent-link { display: inline-flex; align-items: center; gap: 4px; margin-top: 10px; color: var(--blue); font-size: 13px; font-weight: 600; text-decoration: none; }
 .agent-link .icon { width: 14px; height: 14px; }
 
+/* Laptop widths: the same canvas, a size smaller, so the branches stay beside the spine. */
+@media (min-width: 1321px) and (max-width: 1520px) {
+  .step-card { width: 140px; }
+  .has-branches > .step-card { width: 124px; }
+  .branches { padding-left: 54px; }
+  .branch::after { left: -34px; }
+  .branch::before { left: -34px; width: 34px; }
+  .branch-label { left: -44px; }
+  .branch .step-card { width: 184px; }
+}
 @media (max-width: 1320px) {
   .editor { grid-template-columns: minmax(0, 1fr); }
   .editor-side { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
@@ -139,11 +159,11 @@
 @media (max-width: 1000px) {
   .chain, .link, .has-branches { flex-direction: column; align-items: stretch; }
   .link + .link::before { width: 22px; height: 22px; margin-left: 18px; background: url('/app/joint.svg') center / 18px 18px no-repeat, linear-gradient(90deg, var(--brass-light), var(--brass-dark)) center / 4px 100% no-repeat; }
-  .step-card, .branch .step-card { width: 100%; min-height: 0; }
+  .step-card, .has-branches > .step-card, .branch .step-card { width: 100%; min-height: 0; }
   .branches { padding: 14px 0 0 36px; }
   .branches::before { left: 18px; top: 0; width: 22px; height: 14px; margin: 0; background: linear-gradient(90deg, var(--brass-light), var(--brass-dark)) center / 4px 100% no-repeat; }
   .branch { justify-items: stretch; }
-  .branch-label { justify-self: start; }
+  .branch-label { position: static; justify-self: start; }
   .branch .chain, .branch .link { align-items: stretch; }
   .branch::after { left: -18px; top: 0; bottom: 0; height: auto; }
   .branch:first-child::after { top: 0; }

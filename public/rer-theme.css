@@ -75,10 +75,10 @@
   --brass-light: #ffd987;
   --brass-dark: #b5813c;
   /* App surfaces (public/app): sky ground and bar, white sheets, hairline edges */
-  --app-ground: #edf6fd;
+  --app-ground: #eaf6ff;
   --app-sky: linear-gradient(110deg, #d9eeff, #e6f4ff 58%, #eaf6ff);
   --app-rail: #f2f9ff;
-  --app-sheet: linear-gradient(180deg, rgba(255, 255, 255, .72), rgba(255, 255, 255, .45));
+  --app-sheet: linear-gradient(180deg, rgba(255, 255, 255, .18), rgba(255, 255, 255, .32));
   --app-edge: #d4e6f6;
   --app-selected: #d8eaff;
   --app-card-edge: #d3deec;

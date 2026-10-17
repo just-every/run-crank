@@ -14,9 +14,9 @@ body.crank-app { margin: 0; min-height: 100vh; overflow-x: clip; background: var
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
 /* Top bar: the lockup, the breadcrumb, the screen's controls and the person, over the lake haze. */
-.top-bar { position: relative; z-index: 2; display: flex; align-items: center; gap: 22px; min-height: 76px; padding: 12px 28px 12px 30px; background: url('/app/haze-top.webp') right center / auto 100% no-repeat, var(--app-sky); border-bottom: 1px solid var(--app-edge); }
-.lockup { display: inline-flex; align-items: center; gap: 8px; margin-right: 26px; text-decoration: none; font: 800 33px/1 var(--font-head); letter-spacing: -.04em; color: var(--ink); white-space: nowrap; }
-.lockup img { width: 44px; height: 44px; }
+.top-bar { position: relative; z-index: 2; display: flex; align-items: center; gap: 22px; min-height: 82px; padding: 12px 28px 12px 40px; background: url('/app/haze-top.webp') right center / auto 100% no-repeat, var(--app-sky); border-bottom: 1px solid var(--app-edge); }
+.lockup { display: inline-flex; align-items: center; gap: 8px; margin-right: 32px; text-decoration: none; font: 800 36px/1 var(--font-head); letter-spacing: -.04em; color: var(--ink); white-space: nowrap; }
+.lockup img { width: 54px; height: 54px; }
 .crumbs { display: flex; align-items: center; gap: 12px; min-width: 0; font-size: 16px; color: #2b406b; }
 .crumbs a { text-decoration: none; }
 .crumbs a:hover { text-decoration: underline; }
@@ -31,10 +31,10 @@ body.crank-app { margin: 0; min-height: 100vh; overflow-x: clip; background: var
 .person-name small { font-size: 11.5px; font-weight: 500; color: var(--body); }
 
 /* The rail and the working area. */
-.app-frame { display: grid; grid-template-columns: 172px minmax(0, 1fr); min-height: calc(100vh - 76px); }
+.app-frame { display: grid; grid-template-columns: 166px minmax(0, 1fr); min-height: calc(100vh - 82px); }
 .rail { padding: 20px 12px 260px; background: url('/app/haze-rail.webp') left bottom / 100% auto no-repeat, var(--app-rail); border-right: 1px solid var(--app-edge); }
 .rail nav { display: grid; gap: 4px; position: sticky; top: 16px; }
-.rail a { position: relative; display: flex; align-items: center; gap: 13px; min-height: 46px; padding: 10px 12px; border-radius: 11px; color: #22365f; font-size: 15px; font-weight: 500; text-decoration: none; }
+.rail a { position: relative; display: flex; align-items: center; gap: 13px; min-height: 52px; padding: 10px 12px; border-radius: 11px; color: #22365f; font-size: 15px; font-weight: 500; text-decoration: none; }
 .rail a .icon { width: 22px; height: 22px; color: #2c4f8c; }
 .rail a:hover { background: rgba(255, 255, 255, .7); }
 .rail a[aria-current] { background: var(--app-selected); color: var(--navy); font-weight: 650; }

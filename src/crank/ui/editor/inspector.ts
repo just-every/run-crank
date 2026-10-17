@@ -87,5 +87,5 @@ export function inspector(ctx: InspectorContext) {
   const app = appOf(ctx.node, ctx.connections), tabs = [['setup', 'Setup'], ['data', 'Data'], ['test', 'Test']]
   const link = (tab: string) => `?step=${encodeURIComponent(ctx.node.path)}&amp;tab=${tab}`
   const body = ctx.tab === 'data' ? data(ctx) : ctx.tab === 'test' ? test(ctx) : setup(ctx) + lastResult(ctx)
-  return `<section class="panel inspector" aria-label="Selected step"><div class="inspector-head">${tile(app)}<div><h2>${esc(app.title)}</h2><p>${esc(summaryOf(ctx.node))}</p></div></div><nav class="tabs" aria-label="Step details">${tabs.map(([id, name]) => `<a href="${link(id)}"${ctx.tab === id ? ' aria-current="page"' : ''}>${name}</a>`).join('')}</nav>${body}</section>`
+  return `<section class="panel inspector" aria-label="Selected step"><div class="inspector-head">${tile(app)}<div><h2>${esc(app.title)}</h2><p>${esc(summaryOf(ctx.node))}</p></div></div><nav class="tabs" aria-label="Step details">${tabs.map(([id, name]) => `<a href="${link(id)}"${ctx.tab === id ? ' aria-current="page"' : ''}>${name}</a>`).join('')}</nav><div class="inspector-body">${body}</div></section>`
 }
