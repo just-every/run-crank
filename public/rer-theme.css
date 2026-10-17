@@ -95,7 +95,7 @@
 /* Base's shared pages (sign-in, /setup) keep their markup and wear the app's shell:
    the sky bar with the lake haze, a white sheet with hairline edges, thin fields. */
 .rer-themed body:has(>main:not(.crank)) { display: grid; place-items: start center; min-height: 100vh; padding: 140px 16px 48px; background: var(--app-ground); }
-.rer-themed body:has(>main:not(.crank))::before { content: ""; position: absolute; inset: 0 0 auto; height: 76px; background: url('/ui/haze-top.webp') right center / auto 100% no-repeat, var(--app-sky); border-bottom: 1px solid var(--app-edge); }
+.rer-themed body:has(>main:not(.crank))::before { content: ""; position: absolute; inset: 0 0 auto; height: 76px; background: url('/brand/haze-top.webp') right center / auto 100% no-repeat, var(--app-sky); border-bottom: 1px solid var(--app-edge); }
 .rer-themed main:not(.crank) { position: relative; width: 100%; max-width: 520px; padding: 36px 40px; border: 1px solid var(--app-card-edge); border-radius: 16px; background: var(--surface); box-shadow: var(--app-card-shadow), 0 24px 48px -32px rgba(22, 64, 140, .35); }
 .rer-themed main:not(.crank) h1 { font-size: 32px; line-height: 1.1; letter-spacing: -.035em; font-weight: 800; color: var(--ink); margin-block: 22px 14px; }
 .rer-themed .rer-brand, .rer-themed main:not(.crank) .brand { gap: 8px; font-size: 26px !important; font-weight: 800 !important; letter-spacing: -.04em; color: var(--ink); }

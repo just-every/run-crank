@@ -14,7 +14,7 @@ body.crank-app { margin: 0; min-height: 100vh; overflow-x: clip; background: var
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
 /* Top bar: the lockup, the breadcrumb, the screen's controls and the person, over the lake haze. */
-.top-bar { position: relative; z-index: 2; display: flex; align-items: center; gap: 22px; min-height: 82px; padding: 12px 28px 12px 40px; background: url('/ui/haze-top.webp') right center / auto 100% no-repeat, var(--app-sky); border-bottom: 1px solid var(--app-edge); }
+.top-bar { position: relative; z-index: 2; display: flex; align-items: center; gap: 22px; min-height: 82px; padding: 12px 28px 12px 40px; background: url('/brand/haze-top.webp') right center / auto 100% no-repeat, var(--app-sky); border-bottom: 1px solid var(--app-edge); }
 .lockup { display: inline-flex; align-items: center; gap: 8px; margin-right: 32px; text-decoration: none; font: 800 36px/1 var(--font-head); letter-spacing: -.04em; color: var(--ink); white-space: nowrap; }
 .lockup img { width: 54px; height: 54px; }
 .crumbs { display: flex; align-items: center; gap: 12px; min-width: 0; font-size: 16px; color: #2b406b; }
