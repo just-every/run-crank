@@ -26,7 +26,7 @@ export const CATALOG = [
     triggers: [op('new_message', 'New message posted to a channel', { trigger: 'slack_event', event: 'message' }), op('new_mention', 'New mention of a chosen user', { trigger: 'slack_event', event: 'mention' }), op('app_mention', 'New mention of the connection', { trigger: 'slack_event', event: 'app_mention' }), op('new_reaction', 'New reaction added', { trigger: 'slack_event', event: 'reaction_added' })],
     actions: ['send_channel_message', 'send_direct_message', 'reply_in_thread', 'update_message', 'delete_message', 'add_reaction'].map(name => op(name, name.replace(/_/g, ' '), { step: 'slack.' + name })),
     searches: ['find_user_by_email', 'find_user_by_name', 'find_channel_by_name', 'find_message'].map(name => op(name, name.replace(/_/g, ' '), { step: 'slack.' + name, ...SEARCH_OUTCOMES, create_if_not_found: name === 'find_channel_by_name' })),
-    pagination: 'cursor', limits: 'Slack tier rate limits; Retry-After honoured', restrictions: ['Messages from bots never start Slack triggers', 'Custom name and icon need chat:write.customize'], needs_account: true },
+    pagination: 'cursor', limits: 'Slack tier rate limits; Retry-After honored', restrictions: ['Messages from bots never start Slack triggers', 'Custom name and icon need chat:write.customize'], needs_account: true },
 ]
 
 /** Apps on Zapier’s popular-apps list (16 Oct 2026) and the named SMB apps, with the clause that commits them. */

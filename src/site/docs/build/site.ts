@@ -24,12 +24,11 @@ export function buildDocs(root: string): { pages: DocsPageData[]; files: string[
       if (!ids.get(anchor.source)!.has(anchor.id)) throw new Error(`${source}: missing heading ${anchor.source}#${anchor.id}`)
     }
   }
+  // The page head (section, title, summary) is drawn by DocsArticle, so the Markdown's own title is left out of the body.
   const pages = meta.map(({ slug, title, description, section, source }) => {
     const page = rendered.get(source)!
     if (page.title !== title) throw new Error(`${source}: docs/site.json title must match its Markdown title`)
-    return { slug, title, description, section, html: page.html, toc: page.toc }
+    return { slug, title, description, section, html: page.html.replace(/^<h1 [^>]*>.*?<\/h1>\n/, ''), toc: page.toc }
   })
-  const home = pages.find(page => page.slug === 'getting-started')
-  if (!home) throw new Error('docs/site.json needs the getting-started page for /docs')
-  return { pages: [{ ...home, slug: '' }, ...pages], files: [...files] }
+  return { pages, files: [...files] }
 }

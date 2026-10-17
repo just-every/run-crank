@@ -9,7 +9,7 @@ export const identity: EditionIdentity = {
   product: branding.name,
   deployment: branding.name,
   purpose: '{deployment} connects incoming events to approved actions, with every run visible.',
-  tagline: 'Free, open source workflow automation: events from one app become actions in another, sent after a person approves the exact details.',
+  tagline: 'The busywork runs itself. Crank connects your apps and runs every step on schedule: a 100% free, open source alternative to Zapier, Make and Workato.',
   signInPath: '/signin',
   // The run site `rer deploy --site` publishes (deploy-site.json).
   runSite: `https://${site.domain}`,
@@ -17,7 +17,6 @@ export const identity: EditionIdentity = {
   installedHome: 'lobby',
   theme: '/rer-theme.css',
   mark: '/brand/mark.svg',
-  band: '/brand/band.svg',
   fonts: '/fonts/fonts.css',
   accentColor: branding.primaryColor,
 }

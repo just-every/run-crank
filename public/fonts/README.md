@@ -1,12 +1,14 @@
 # Crank fonts
 
-Host Grotesk (variable 300–800) and Fragment Mono (regular) are self-hosted
-Latin and Latin Extended WOFF2 subsets from Google Fonts. Both use the SIL
-Open Font License 1.1; each font directory includes its `LICENSE.txt`.
+| Family | Used for | Files | Licence | Source |
+| --- | --- | --- | --- | --- |
+| Figtree | headings, the Crank wordmark and body text (run site, docs, Lobby, sign-in and the app) | `figtree/` (Latin, Latin Extended; weights 300–900) | `figtree/LICENSE.txt` (SIL Open Font License 1.1) | https://github.com/erikdkennedy/figtree |
+| JetBrains Mono | code, field paths, the terminal and IDs | `jetbrains-mono/` (Latin, Latin Extended; weights 100–800) | `jetbrains-mono/LICENSE.txt` (SIL Open Font License 1.1) | https://github.com/JetBrains/JetBrainsMono |
 
-- https://github.com/google/fonts/tree/main/ofl/hostgrotesk
-- https://github.com/google/fonts/tree/main/ofl/fragmentmono
+The variable WOFF2 subsets come from Fontsource's distributions
+(`@fontsource-variable/figtree` and `@fontsource-variable/jetbrains-mono` 5.3.0).
 
-`fonts.css` declares the faces. The shared theme applies Host Grotesk to the
-interface and Fragment Mono to product IDs, URLs and JSON. No page requests a
-third-party font service.
+`fonts.css` declares the faces and a metric-matched `Figtree Fallback` on
+Arial, so text does not jump when the web font arrives. Every page links
+`/fonts/fonts.css` once and preloads only the Latin Figtree file. No page
+requests a third-party font service.

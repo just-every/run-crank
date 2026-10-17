@@ -1,3 +1,5 @@
+<img src="public/brand/mark.svg" alt="" width="72" height="72">
+
 # Crank
 
 Human-approved workflow automation. An incoming event becomes a visible run;
@@ -6,11 +8,19 @@ Failed delivery gets one manual replay with the same idempotency key.
 
 ## Run it
 
+The same two lines as [run-crank.com/run](https://run-crank.com/run):
+
 ```sh
-npx -y @runeditrun/rer dev just-every/run-crank
+curl -fsSL https://runeditrun.com/install.sh | sh
+rer dev just-every/run-crank
 ```
 
-That one line clones Crank, installs `rer` if you do not have it and starts the app. Without Node, `curl -fsSL https://runeditrun.com/install.sh | sh -s -- dev just-every/run-crank` does the same. To start it again later, run `cd run-crank && rer dev`. Keep this terminal open. RER installs the pinned dependencies, selects Node
+The first line installs `rer` for you alone, with its own Node if you have no
+Node 22 or later; it changes no shell settings, so if it prints an
+`export PATH=…` line, run that line before the second. The second gets Crank,
+installs everything, makes you the owner and prints a link that opens Crank
+signed in. Already have Node 22 or later? `npx -y @runeditrun/rer dev just-every/run-crank`
+does both in one line. To start it again later, run `cd run-crank && rer dev`. Keep this terminal open. RER installs the pinned dependencies, selects Node
 22.20.0, migrates local D1, and creates a local owner. Initial setup can take
 several minutes. Open the **RER_OPEN** link it prints, confirm the owner on
 **Finish setup**, and open **Flows**. That link is a credential; keep it private.
@@ -38,7 +48,7 @@ replacement for your business apps.
 1. In Crank, create **Support follow-up**, source **Support desk**, destination
    **Operations inbox**, URL `http://127.0.0.1:9051/events`. Select **Activate flow**.
 2. Expand **Prepare a run**. Use event ID `ticket-1042` and input
-   `{"customer":"Harbour Workshop","task":"Book a callback"}`. This manual
+   `{"customer":"Harbor Workshop","task":"Book a callback"}`. This manual
    preparation represents an event from your source; the authenticated webhook
    and agent commands below provide the automated source connection.
 3. Inspect the input and destination, then **Approve and deliver**. The run
@@ -76,7 +86,7 @@ node scripts/crank.mjs trigger FLOW_ID event.json
 
 Use an agent token for `state` and preparation; a trigger token can only use
 `trigger` for its one flow. `event.json` is
-`{"event_id":"ticket-1044","input":{"customer":"Harbour Workshop"}}`.
+`{"event_id":"ticket-1044","input":{"customer":"Harbor Workshop"}}`.
 `flow.json` has `name`, `source_app`, `destination_app`, and `target_url`.
 The person then opens **Runs** to approve. [API contract](docs/API.md).
 
