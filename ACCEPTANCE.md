@@ -250,7 +250,7 @@ Each item below is one clause’s acceptance evidence. The named journey must be
 ### Product delivery and boundaries
 
 - **UX-001 — Accessible mobile operation. Status: partial.** At 1440px and 390px with realistic long names/payloads, create and inspect work, approve/reject, pause and resolve a failure using keyboard and touch; interrupt connectivity during approval and verify one decision and clear stale/error state. Exercise the same notification-to-resolution journey on iOS and Android.
-  Current evidence: `src/crank/ui/document.ts`; `src/crank/ui/flows.ts`; `src/crank/ui/run.ts`; `public/crank.css`. Remaining: Responsive HTML forms and state text exist; mobile apps/push, offline decision reconciliation and accessibility conformance are unproven.
+  Current evidence: `src/crank/ui/document.ts`; `src/crank/ui/flows.ts`; `src/crank/ui/run.ts`; `public/app/shell.css`. Remaining: Responsive HTML forms and state text exist; mobile apps/push, offline decision reconciliation and accessibility conformance are unproven.
 
 - **PLATFORM-001 — Public API, webhooks, SDK and MCP. Status: partial.** Use an SDK and MCP client to create a draft, start granted work, inspect progress and subscribe to signed completion events; duplicate writes, rotate a webhook secret and attempt an out-of-grant action, verifying stable IDs, delivery history and denial.
   Current evidence: `src/crank/api.ts`; `scripts/crank.mjs`; `docs/API.md`; `tests/crank.test.mjs`. Remaining: Native scoped HTTP preparation/trigger/read API and CLI exist; SDK, MCP, outgoing events and execution grants are missing.
