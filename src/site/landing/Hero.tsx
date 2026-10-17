@@ -26,6 +26,8 @@ const Repaired = () => <div className="hero-card repaired-card">
 </div>
 
 const Counter = () => <div className="hero-counter"><span>Runs today</span><strong>1,284</strong><span><Dot />0 failed</span></div>
+// On phones the counter is a chip under the stacked cards (STRUCTURE.md, hero at 390).
+const CounterChip = () => <p className="hero-chip"><Dot />Runs today <strong>1,284</strong> · 0 failed</p>
 
 /** The painted lakeside machine, the promise and the actions, with today's run riding the machine as real cards. */
 export function Hero() {
@@ -39,15 +41,22 @@ export function Hero() {
     <div className="hero-phone-cards site-wrap" aria-hidden="true">
       <div className="hero-phone-steps">{STEPS.map(step => <StepCard key={step.app} step={step} />)}</div>
       <Repaired />
+      <CounterChip />
     </div>
     <div className="hero-stage">
-      <Painting className="hero-art" name="hero" widths={[768, 1152, 1536]} sizes="100vw" eager phone={{ name: 'hero-phone', widths: [780, 1170], media: '(max-width: 760px)' }} />
+      <Painting className="hero-art" name="hero" widths={[768, 1152, 1536, 2304, 3072]} sizes="100vw" eager phone={{ name: 'hero-phone', widths: [780, 1170], media: '(max-width: 760px)' }} />
       <div className="hero-machine" role="img" aria-label="A Crank run: a new Stripe payment of $480.00 at 9:14 AM adds a row to Google Sheets, posts in #sales on Slack and creates an invoice in QuickBooks at 9:15 AM; a renamed field was repaired and re-tested; 1,284 runs today, 0 failed.">
         <div aria-hidden="true">
           {STEPS.map(step => <div key={step.app} className="on-machine" style={at(step.box)}><StepCard step={step} /></div>)}
           <div className="on-machine repaired-at" style={at([552, 763, 386])}><Repaired /></div>
           <div className="on-machine counter-at" style={at([1326, 667, 134])}><Counter /></div>
         </div>
+      </div>
+      {/* Phones: the machine cropped to its crank handle (the clean plate's blank cards keep their app tiles) and the repair on it. */}
+      <div className="hero-phone-machine" aria-hidden="true">
+        <span className="phone-tile tile-1"><AppTile app="stripe" /></span>
+        <span className="phone-tile tile-2"><AppTile app="sheets" /></span>
+        <div className="phone-repaired"><Repaired /></div>
       </div>
     </div>
   </section>

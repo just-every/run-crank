@@ -1,0 +1,95 @@
+/* 02 Monday morning: copy and terminal on the left, the import card on the right. */
+.move-in-row { display: grid; grid-template-columns: minmax(0, 520fr) minmax(0, 720fr); align-items: center; gap: 64px; }
+.move-in-copy .sec-body { max-width: 500px; }
+
+.terminal { position: relative; max-width: 506px; margin-top: 76px; border-radius: 14px; background: #1d2536; color: #e6ebf5; box-shadow: 0 2px 4px rgba(6, 25, 67, .12), 0 26px 46px -22px rgba(6, 25, 67, .55); }
+.terminal-bar { display: flex; gap: 8px; padding: 14px 18px 12px; border-bottom: 1px solid rgba(255, 255, 255, .06); }
+.terminal-bar span { width: 12px; height: 12px; border-radius: 50%; background: #ff5f57; }
+.terminal-bar span:nth-child(2) { background: #febc2e; }
+.terminal-bar span:nth-child(3) { background: #28c840; }
+.terminal pre { padding: 12px 18px 18px; font: 12.5px/2 var(--font-mono); white-space: pre-wrap; }
+.t-url { white-space: nowrap; }
+.t-line { display: block; }
+.prompt { color: #f2b829; }
+.t-ok { color: #5ee08f; }
+.vignette { position: absolute; z-index: 1; right: -8px; top: -70px; width: 96px; height: 88px; }
+
+.import-card { padding: 26px 28px 20px; }
+.import-title { display: flex; align-items: center; gap: 16px; padding-bottom: 20px; font: 700 27px/1.15 var(--font-head); letter-spacing: -.02em; color: var(--ink); }
+.import-mark { width: 64px; height: 64px; }
+.imp-cols, .imp-list li { display: grid; grid-template-columns: 112px minmax(0, 1fr) 56px 140px 146px; align-items: center; column-gap: 8px; }
+.imp-cols { padding: 13px 0 12px; border-block: 1px solid #edf1f6; font-size: 15px; color: #6b7690; }
+.imp-col-flow { grid-column: span 2; }
+.imp-cols span:nth-child(2), .imp-cols span:nth-child(3) { text-align: center; }
+.imp-list li { padding: 14px 0; border-bottom: 1px solid #edf1f6; font-size: 16px; }
+.imp-list li.asks { border-bottom: 0; padding-bottom: 0; }
+.pair { display: flex; align-items: center; gap: 8px; }
+.pair .app { width: 34px; height: 34px; border-radius: 9px; font-size: 17px; }
+.pair .app-slack { font-size: 20px; }
+.pair .app-quickbooks { border-radius: 50%; font-size: 13px; }
+.pair-arrow { color: #8794ad; }
+.imp-name { line-height: 1.35; color: var(--ink); }
+.imp-meta { display: contents; }
+.imp-steps { text-align: center; color: #33425f; }
+.imp-steps-unit { display: none; }
+.imp-rebuilt { display: grid; justify-items: center; gap: 4px; }
+.imp-rebuilt .soft-check { width: 32px; height: 32px; }
+.imp-rebuilt small { font-size: 13px; color: #6b7690; white-space: nowrap; }
+.imp-match { color: #33425f; }
+.imp-none { color: #8a96ad; }
+.imp-question { grid-column: 1 / -1; display: flex; align-items: center; gap: 12px; margin-top: 14px; padding: 13px 18px; border-radius: 10px; background: #fff3e6; color: #b8520f; font-size: 15.5px; line-height: 1.4; }
+.imp-question .icon { width: 24px; height: 24px; color: #fff; fill: #ec6a2c; stroke: #fff; stroke-width: 2.2; }
+.imp-foot { display: flex; flex-wrap: wrap; margin-top: 18px; padding-top: 16px; border-top: 1px solid #edf1f6; font-size: 14.5px; color: #6b7690; }
+/* Bullets sit in a strip the list clips, so a bullet that would start a wrapped line is never seen. */
+.imp-foot { margin-left: -1.2em; clip-path: inset(0 0 0 1.2em); }
+.imp-foot span { position: relative; margin-left: 1.2em; }
+.imp-foot span::before { content: '•'; position: absolute; left: -.8em; color: #a3adbf; }
+
+/* Narrower desktops: the copy column gives way first so the workflow names keep two lines. */
+@media (max-width: 1439px) and (min-width: 1181px) {
+  .move-in-row { grid-template-columns: minmax(0, 440px) minmax(0, 1fr); gap: 48px; }
+  .imp-cols, .imp-list li { grid-template-columns: 100px minmax(0, 1fr) 46px 118px 124px; }
+  .import-card { padding-inline: 24px; }
+}
+@media (max-width: 1279px) and (min-width: 1181px) {
+  .move-in-row { grid-template-columns: minmax(0, 380px) minmax(0, 1fr); gap: 40px; }
+  .imp-cols, .imp-list li { grid-template-columns: 88px minmax(0, 1fr) 40px 114px 112px; }
+  .imp-list li, .imp-match { font-size: 15px; }
+  .imp-rebuilt .chip { padding: 0 10px; gap: 6px; font-size: 14px; }
+  .import-card { padding-inline: 22px; }
+}
+
+/* Tablets: copy and terminal, then the card at full width. */
+@media (max-width: 1180px) and (min-width: 761px) {
+  .move-in-row { grid-template-columns: minmax(0, 1fr); gap: 56px; }
+  .terminal { max-width: 560px; }
+}
+
+/* Phones (phone-02): copy, terminal, then each workflow as its own box with its checks on one line. */
+@media (max-width: 760px) {
+  .move-in-row { grid-template-columns: minmax(0, 1fr); gap: 28px; }
+  .terminal { margin-top: 56px; margin-right: 10px; }
+  .terminal pre { font-size: 13px; padding: 10px 14px 14px; }
+  .vignette { width: 74px; height: 68px; top: -54px; right: -10px; }
+  .import-card { padding: 18px 16px 14px; }
+  .import-title { gap: 12px; padding-bottom: 14px; font-size: 20px; }
+  .import-mark { width: 42px; height: 42px; }
+  .imp-cols { display: none; }
+  .imp-list { display: grid; gap: 8px; }
+  .imp-list li, .imp-list li.asks { grid-template-columns: 70px minmax(0, 1fr); grid-template-areas: 'pair name' 'pair meta' 'pair ask'; align-items: start; column-gap: 10px; padding: 12px; border: 1px solid #edf1f6; border-radius: 12px; }
+  .pair { grid-area: pair; align-self: center; gap: 3px; }
+  .pair .app { width: 28px; height: 28px; font-size: 14px; border-radius: 8px; }
+  .pair .app-quickbooks { font-size: 11.5px; }
+  .imp-name { grid-area: name; font-size: 15.5px; font-weight: 600; }
+  .imp-name br { display: none; }
+  .imp-meta { grid-area: meta; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin-top: 6px; font-size: 14px; }
+  .imp-steps-unit { display: inline; }
+  .imp-rebuilt { display: flex; align-items: center; gap: 8px; }
+  .imp-rebuilt .soft-check { width: 22px; height: 22px; }
+  .imp-rebuilt .chip { min-height: 30px; font-size: 14px; padding: 0 12px; }
+  .imp-rebuilt small { font-size: 13px; }
+  .imp-none { display: none; }
+  .imp-question { grid-area: ask; margin-top: 10px; padding: 10px 12px; font-size: 14px; }
+  .imp-question .icon { display: none; }
+  .imp-foot { margin-top: 12px; padding-top: 12px; font-size: 13px; row-gap: 2px; }
+}

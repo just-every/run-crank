@@ -47,7 +47,8 @@ test('the run site leads to runnable commands and repository guides with working
     }
     assert.ok(documents.has('/run'),'the homepage has a path to running the app')
     assert.ok(documents.has('/docs'),'the homepage has a path to documentation')
-    const home=documents.get('/');assert.match(home,/@runeditrun\/rer dev just-every\/run-crank/,'the homepage shows the one-line start')
+    const home=documents.get('/'),homeText=home.replace(/<[^>]+>/g,'').replaceAll('&amp;','&')
+    assert.match(homeText,/git clone https:\/\/github\.com\/just-every\/run-crank\.git crank\s*\$?\s*cd crank && rer dev/,'the homepage shows the commands that start Crank')
     assert.doesNotMatch(home,/localhost|127\.0\.0\.1|\bRER_[A-Z]/,'the homepage shows no local addresses or rer output')
     const run=documents.get('/run');assert.match(run,/@runeditrun\/rer dev just-every\/run-crank/);assert.match(run,/rer dev/)
     assert.ok([...documents.keys()].filter(path=>path.startsWith('/docs/')).length>1,'readable guides are emitted')

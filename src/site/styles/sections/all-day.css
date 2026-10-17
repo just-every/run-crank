@@ -1,0 +1,40 @@
+/* 04 Tuesday, all day: copy on the left, the day's run log on the right. */
+.all-day-row { display: grid; grid-template-columns: minmax(0, 560fr) minmax(0, 712fr); align-items: center; gap: 48px; }
+.all-day .sec-head .sec-body { max-width: 520px; }
+.log-card { padding: 26px 34px 22px; }
+.log-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-bottom: 18px; border-bottom: 1px solid #edf1f6; }
+.log-head strong { font: 700 25px/1.2 var(--font-head); letter-spacing: -.015em; color: var(--ink); }
+.log-lost { display: inline-flex; align-items: center; gap: 10px; font-size: 18px; color: #6b7690; }
+.log-lost .dot { width: 15px; height: 15px; background: #1f9d4c; }
+.log-row { display: grid; grid-template-columns: 84px 36px minmax(0, 1fr) auto; align-items: center; column-gap: 14px; min-height: 62px; padding: 9px 0; border-bottom: 1px solid #edf1f6; }
+.log-row time { font-size: 15.5px; color: #6b7690; white-space: nowrap; }
+.log-row .app { width: 34px; height: 34px; border-radius: 9px; font-size: 17px; }
+.log-text { font-size: 16px; line-height: 1.4; color: #1c2a4a; }
+.log-row .chip { justify-self: end; }
+.log-row .chip .check, .log-row .chip .icon { display: none; }
+.log-foot { padding-top: 18px; font-size: 15px; color: #6b7690; }
+
+@media (max-width: 1279px) and (min-width: 1181px) {
+  .all-day-row { gap: 36px; }
+  .log-card { padding-inline: 24px; }
+  .log-row { grid-template-columns: 78px 34px minmax(0, 1fr) auto; column-gap: 10px; }
+}
+@media (max-width: 1180px) and (min-width: 761px) {
+  .all-day-row { grid-template-columns: minmax(0, 1fr); gap: 44px; }
+}
+
+/* Phones (phone-04): one card; each row puts its time and status above the run. Its header has no avatar. */
+@media (max-width: 760px) {
+  .all-day-row { grid-template-columns: minmax(0, 1fr); gap: 28px; }
+  .log-card { padding: 18px 16px 14px; }
+  .log-head { flex-direction: column; align-items: flex-start; gap: 6px; padding-bottom: 12px; }
+  .log-head strong { font-size: 21px; }
+  .log-lost { font-size: 15px; }
+  .log-row { grid-template-columns: 72px minmax(0, 1fr) auto; grid-template-areas: 'time app status' 'time text text'; align-items: center; row-gap: 6px; column-gap: 8px; padding: 12px 0; }
+  .log-row time { grid-area: time; align-self: start; padding-top: 6px; font-size: 14px; }
+  .log-row .app { grid-area: app; width: 28px; height: 28px; font-size: 14px; border-radius: 7px; }
+  .log-text { grid-area: text; font-size: 15px; }
+  .log-row .chip { grid-area: status; min-height: 30px; padding: 0 12px; font-size: 13.5px; }
+  .log-row .chip .check, .log-row .chip .icon { display: block; width: 17px; height: 17px; }
+  .log-foot { padding-top: 12px; font-size: 13.5px; }
+}

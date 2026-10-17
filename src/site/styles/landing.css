@@ -1,13 +1,12 @@
-/* The homepage's layout: the painted hero with its cards, the section pairs, the interlude,
-   ownership, the quiet details and the closing. Drawings inside the sections are in cards.css.
-   Sizes are the desk's at 1440 wide (the 1536 desk canvas x 0.9375); the hero, interlude and
-   closing scale with the page through --u, one desk pixel. */
+/* The homepage's frame: the painted hero with its cards, the section rhythm and type, and the
+   closing. Each middle section's drawing is in styles/sections/. Sizes are the desk's at 1440 wide
+   (the 1536 desk canvas x 0.9375); the hero and closing scale with the page through --u, one desk pixel. */
 
 /* Hero: the painting is the stage; the copy sits in its sky and the run rides the machine. */
 .hero { position: relative; container-type: inline-size; background: #5fbafd; }
-.hero > *, .interlude > *, .closing > * { --u: calc(100cqw / 1536); }
+.hero > *, .closing > * { --u: calc(100cqw / 1536); }
 .hero-stage { position: relative; aspect-ratio: 1536 / 1024; }
-.hero-art img, .interlude-art img, .closing-art img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+.hero-art img, .closing-art img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
 .hero-copy { position: absolute; z-index: 2; inset: calc(var(--u) * 152) 0 auto; text-align: center; }
 /* Tight tracking narrows the space too; word-spacing gives the words back the desk's gap. */
 .hero-copy h1 { font: 700 calc(var(--u) * 71) / 1.05 var(--font-head); letter-spacing: -.03em; word-spacing: .03em; color: var(--ink); }
@@ -22,68 +21,17 @@
 .on-machine { position: absolute; --oy: 0; --H: 1024; left: calc(var(--x) / 1536 * 100%); top: calc((var(--y) - var(--oy)) / var(--H) * 100%); width: calc(var(--w) / 1536 * 100%); font-size: calc(var(--u) * 16); }
 .hero-phone-cards { display: none; }
 
-/* Section pairs: copy beside its drawing, two to a desk page. */
-.pairs { position: relative; background: radial-gradient(60% 40% at 92% 12%, rgba(215, 233, 252, .7), transparent 70%), radial-gradient(50% 35% at 6% 70%, rgba(222, 237, 253, .7), transparent 70%), linear-gradient(180deg, #f6fbff, #eef5fd 50%, #f4f9fe); }
-.feature { padding: 56px 0; }
-.feature-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 56px; }
-.feature.flip .feature-copy { order: 2; }
-.feature.flip .feature-row { grid-template-columns: auto minmax(0, 1fr); }
-.feature-copy { min-width: 0; }
-.eyebrow { font: 600 17px/1 var(--font-body); letter-spacing: .27em; text-transform: uppercase; color: var(--blue); }
-.feature h2, .ownership h2, .details h2 { margin-top: 22px; font: 800 77px/1.01 var(--font-head); letter-spacing: -.05em; word-spacing: .03em; color: var(--ink); text-wrap: balance; }
-.feature-body { margin-top: 24px; max-width: 610px; font-size: 25px; line-height: 1.45; color: var(--body); text-wrap: pretty; }
-.feature-body a { color: var(--ink); text-decoration: underline; text-underline-offset: 5px; text-decoration-thickness: 1.5px; }
-.feature-drawing { position: relative; }
-
-/* Desk page 2 */
-#connectors { padding: 40px 0 34px; }
-#connectors .feature-copy { padding-bottom: 84px; }
-#triggers { padding: 34px 0 44px; border-top: 1px solid #e3ebf4; }
-#triggers .feature-copy { padding-top: 46px; }
-/* Desk page 3 */
-#builder { padding: 96px 0 48px; }
-#builder .feature-row { grid-template-columns: 500px minmax(0, 1fr); gap: 26px; align-items: start; }
-#builder .feature-copy { padding-top: 14px; }
-#builder h2 { font-size: 59px; letter-spacing: -.055em; white-space: nowrap; }
-#builder .feature-body { font-size: 23.5px; }
-#reliable-runs { padding: 12px 0 46px; }
-#reliable-runs .feature-row { grid-template-columns: 698px minmax(0, 1fr); gap: 72px; }
-#reliable-runs .feature-copy { padding-top: 60px; }
-#reliable-runs h2 { font-size: 72px; }
-#reliable-runs .feature-body { font-size: 24px; }
-/* Desk page 5 */
-#approvals { padding: 64px 0 52px; }
-#approvals h2 { font-size: 76px; }
-#ai-steps { padding: 26px 0 80px; }
-#ai-steps .feature-row { gap: 56px; }
-/* One line, as the desk set it; below 1440 it shrinks with its column (6.89 ems wide at 1440). */
-#ai-steps .feature-copy { container-type: inline-size; }
-#ai-steps h2 { white-space: nowrap; font-size: min(72px, 100cqi / 6.89); }
-/* Desk page 6 */
-#self-repair { padding: 66px 0 44px; }
-#move-in { padding: 34px 0 52px; }
-#move-in h2 { text-wrap: wrap; }
-
-/* Interlude: the gears close up between two fades of paper. */
-.interlude { position: relative; container-type: inline-size; padding: 132px 0 160px; background: #eff6fd; }
-.interlude-stage { position: relative; aspect-ratio: 1536 / 710; }
-.interlude-stage::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, #eff6fd 0, rgba(239, 246, 253, 0) 20%, rgba(239, 246, 253, 0) 82%, #eff6fd 100%); pointer-events: none; }
-.interlude-cards { position: absolute; inset: 0; z-index: 1; font-size: calc(var(--u) * 16); }
-
-/* Ownership: the one line that starts Crank. */
-.ownership { padding: 236px 0 250px; background: radial-gradient(40% 30% at 92% 92%, rgba(205, 228, 252, .7), transparent 70%), radial-gradient(30% 25% at 4% 6%, rgba(220, 235, 252, .8), transparent 70%); }
-.ownership-row { display: grid; grid-template-columns: minmax(0, 1fr) 665px; align-items: center; gap: 56px; padding-left: calc(var(--gutter) + 39px); }
-.ownership h2 { font-size: 74px; }
-.ownership .feature-body { font-size: 23.5px; margin-top: 18px; max-width: 470px; }
-.owned { margin-top: 30px; display: grid; gap: 22px; }
-.owned li { display: flex; align-items: center; gap: 30px; font-size: 23px; color: #3d4a66; }
-.owned .icon { width: 36px; height: 36px; stroke: var(--blue); }
-
-/* The quiet details: six cards. */
-.details { padding: 120px 0 112px; }
-.details .site-wrap { padding-left: calc(var(--gutter) + 30px); }
-.details h2 { margin-top: 18px; font-size: 80px; letter-spacing: -.04em; }
-.detail-grid { margin-top: 48px; margin-left: -18px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 30px 28px; }
+/* The middle sections: one buyer's week on the page's pale sky white, Uptime's rhythm (about 104 px
+   above and below each section at 1440). Every heading takes the hero headline's face and weight
+   (Figtree 700) with -2.4% tracking and its word-spacing; body copy takes the subhead's face. */
+:root { --sky-white: #f5f8fc; --kicker: #c65617; --warm-glow: 0 34px 110px -26px rgba(236, 150, 44, .34); }
+.sec { padding: clamp(72px, 7.2vw, 120px) 0; background: var(--sky-white); }
+.kicker { font: 600 15px/1.2 var(--font-body); letter-spacing: .26em; text-transform: uppercase; color: var(--kicker); }
+.sec-head h2, .night-copy h2 { margin-top: 18px; font: 700 60px/1.04 var(--font-head); letter-spacing: -.024em; word-spacing: .03em; color: var(--ink); text-wrap: balance; }
+.sec-body { margin-top: 22px; max-width: 560px; font-size: 23px; line-height: 1.5; color: var(--body); text-wrap: pretty; }
+.sec-head.centered { text-align: center; }
+.sec-head.centered .sec-body { max-width: none; margin-top: 14px; font-size: 25px; color: #3a4865; }
+.wide-wrap { max-width: calc(1370px + 2 * var(--gutter)); }
 
 /* Closing: the sailboat on the lake, then the footer. */
 .closing { position: relative; container-type: inline-size; aspect-ratio: 1536 / 936; overflow: hidden; background: #61bcfe; }
@@ -97,20 +45,16 @@
 .closing .site-link { font-size: calc(var(--u) * 21); font-weight: 700; }
 .closing-licence { margin-top: calc(var(--u) * 26); font-size: calc(var(--u) * 19); color: #12234a; }
 
-/* Below 1440 the builder's two cards (836 px) no longer fit beside its copy: they go below it. */
-@media (max-width: 1439px) and (min-width: 1181px) {
-  #builder .feature-row { grid-template-columns: minmax(0, 1fr); gap: 40px; }
-  #builder .builder-art { justify-content: flex-start; }
-}
-
 /* Tablets: one column, copy first, every drawing within the page; the paintings are cropped
    around their subject so their cards keep a size that reads. */
-@media (max-width: 1180px) and (min-width: 761px) {
-  .feature-row, .feature.flip .feature-row, #builder .feature-row, #reliable-runs .feature-row, .ownership-row { grid-template-columns: minmax(0, 1fr); }
-  .feature.flip .feature-copy { order: 0; }
-  .feature-art { justify-self: start; max-width: 100%; }
-  #builder h2 { white-space: normal; }
+@media (max-width: 1279px) and (min-width: 1181px) {
+  .sec-head h2, .night-copy h2 { font-size: 54px; }
+}
 
+@media (max-width: 1180px) and (min-width: 761px) {
+  .sec-head h2, .night-copy h2 { font-size: 52px; }
+  .sec-body { max-width: 640px; font-size: 21px; }
+  .sec-head.centered .sec-body { font-size: 21px; }
   /* The hero: the copy in the sky, the run's cards below it, then the machine with each step's app tile. */
   .hero { background: linear-gradient(180deg, #5fbafd 0, #7fc6fc 30%, #a9d8fd 62%, #b1dcfd 100%); }
   .hero-copy { position: static; padding: 132px var(--gutter) 0; }
@@ -128,14 +72,6 @@
   .hero-art { display: block; position: absolute; inset: 0; }
   .hero-art img { object-position: 50% 100%; }
 
-  /* The gears at one and a half times the page's width, centred on the two cards. */
-  .interlude { padding-block: 72px 88px; overflow: hidden; }
-  .interlude-stage { width: 150vw; margin-left: calc(50vw - .57 * 150vw); }
-  .interlude > * { --u: calc(150vw / 1536); }
-
-  .details .site-wrap { padding-left: var(--gutter); }
-  .detail-grid { margin-left: 0; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-
   /* The closing at the desk's 1536 scale, centred on the boat (canvas x 507), the copy in its sky. */
   .closing { aspect-ratio: auto; height: 936px; }
   .closing > * { --u: 1px; }
@@ -151,6 +87,9 @@
 
 /* Phones: one column, copy first; the painted plates are cropped around their subject. */
 @media (max-width: 760px) {
+  .kicker { font-size: 13px; letter-spacing: .22em; }
+  .sec-head h2, .night-copy h2 { margin-top: 14px; font-size: min(41px, 10.3vw); line-height: 1.06; }
+  .sec-body, .sec-head.centered .sec-body { margin-top: 14px; font-size: 17.5px; line-height: 1.5; }
   .hero { background: linear-gradient(180deg, #5fbafd 0, #7fc6fc 30%, #a9d8fd 62%, #b1dcfd 100%); }
   .hero-copy { position: static; padding: 104px var(--gutter) 0; }
   .hero-copy h1 { font-size: 44px; line-height: 1.06; letter-spacing: -.035em; text-wrap: balance; }
@@ -161,36 +100,13 @@
   .hero-copy .site-pill svg { width: 19px; height: 19px; }
   .hero-copy .site-link { font-size: 17px; }
   .hero-phone-cards { display: grid; gap: 10px; margin-top: 28px; }
-  .hero-stage { aspect-ratio: 1536 / 594; margin-top: 18px; }
-  .hero-stage .on-machine { --oy: 430; --H: 594; }
-  .hero-art::before { content: ''; position: absolute; z-index: 1; inset: 0 0 auto; height: 22%; background: linear-gradient(#b1dcfd, rgba(177, 220, 253, 0)); }
+  .hero-stage { aspect-ratio: 1520 / 1040; margin-top: 18px; }
+  .hero-art::before { content: ''; position: absolute; z-index: 1; inset: 0 0 auto; height: 14%; background: linear-gradient(#b1dcfd, rgba(177, 220, 253, 0)); }
   .hero-art { display: block; position: absolute; inset: 0; }
-
-  .feature, #connectors, #triggers, #builder, #reliable-runs, #approvals, #ai-steps, #self-repair, #move-in { padding: 44px 0; }
-  .feature-row, .feature.flip .feature-row, #builder .feature-row, #reliable-runs .feature-row, #ai-steps .feature-row { grid-template-columns: minmax(0, 1fr); gap: 26px; }
-  .feature.flip .feature-copy { order: 0; }
-  #connectors .feature-copy, #triggers .feature-copy, #builder .feature-copy, #reliable-runs .feature-copy { padding: 0; }
-  .eyebrow { font-size: 13px; letter-spacing: .24em; }
-  .feature h2, #builder h2, #reliable-runs h2, #approvals h2, #ai-steps h2, .ownership h2 { margin-top: 14px; font-size: 41px; line-height: 1.04; letter-spacing: -.045em; white-space: normal; }
-  .feature-body, #builder .feature-body, #reliable-runs .feature-body, .ownership .feature-body { margin-top: 14px; font-size: 17px; line-height: 1.5; }
-
-  .interlude { padding-block: 34px 40px; overflow: hidden; }
-  .interlude-stage { width: 200vw; margin-left: calc(50vw - 0.413 * 200vw); }
-  .interlude > * { --u: calc(200vw / 1536); }
-
-  .ownership { padding: 64px 0 70px; }
-  .ownership-row { grid-template-columns: minmax(0, 1fr); gap: 28px; padding-left: var(--gutter); }
-  .owned { margin-top: 22px; gap: 14px; }
-  .owned li { gap: 16px; font-size: 17px; }
-  .owned .icon { width: 26px; height: 26px; }
-
-  .details { padding: 56px 0 60px; }
-  .details .site-wrap { padding-left: var(--gutter); }
-  .details h2 { margin-top: 14px; font-size: 41px; }
-  .detail-grid { margin: 26px 0 0; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .hero-copy .site-actions { flex-direction: column; }
 
   .closing { aspect-ratio: auto; display: flex; flex-direction: column; background: linear-gradient(180deg, #5bb3f8, #61bcfe); }
-  .closing > * { --u: calc(220vw / 1536); }
+  .closing > * { --u: calc(240vw / 1536); }
   .closing-copy { position: static; order: 0; padding: 56px var(--gutter) 26px; }
   .closing h2 { font-size: 46px; }
   .closing-sub { margin-top: 12px; font-size: 18px; text-wrap: balance; }
@@ -199,5 +115,7 @@
   .closing .site-pill svg { width: 19px; height: 19px; }
   .closing .site-link { font-size: 17px; }
   .closing-licence { margin-top: 18px; font-size: 14.5px; }
-  .closing-stage { position: relative; flex: none; width: 220vw; aspect-ratio: 1536 / 936; margin: 0 0 0 calc(50vw - 0.33 * 220vw); }
+  /* STRUCTURE.md, closing at 390: the painting cropped to the boat (canvas x 180-820), centred under the copy. */
+  .closing-stage { position: relative; flex: none; width: 240vw; aspect-ratio: 1536 / 936; margin: 0 0 0 calc(50vw - 0.3255 * 240vw); }
+  .closing .boat-sign { left: calc(574 / 1536 * 100%); }
 }

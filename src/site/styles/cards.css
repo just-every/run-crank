@@ -1,18 +1,24 @@
-/* The drawings: product cards in HTML and CSS at the desk's density (1440 wide). */
-.card { position: relative; background: var(--surface); border: 1px solid #e7edf5; border-radius: var(--radius-card); box-shadow: var(--shadow-card); }
-.card-title { font: 700 28px/1.15 var(--font-head); letter-spacing: -.02em; color: var(--ink); }
-.card-subtitle { font: 700 21px/1.2 var(--font-head); letter-spacing: -.01em; color: var(--ink); }
+/* The drawings' shared pieces: cards, icons, app tiles and chips at the desk's density (1440 wide),
+   the hero's cards on the machine and the sign on the closing's boat. */
+.card { position: relative; background: var(--surface); border: 1px solid #e9eef5; border-radius: var(--radius-card); box-shadow: var(--shadow-card); text-wrap: pretty; }
+.card.glow { box-shadow: var(--shadow-card), var(--warm-glow); }
 .icon { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; flex: none; }
-.check { width: 22px; height: 22px; flex: none; }
+.check, .cross { width: 22px; height: 22px; flex: none; }
 .check circle { fill: var(--green); }
-.check path { fill: none; stroke: #fff; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.cross circle { fill: #ea4d5f; }
+.check path, .cross path { fill: none; stroke: #fff; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.soft-check circle { fill: var(--green-tint); }
+.soft-check path { stroke: var(--green); }
 .dot { display: inline-block; flex: none; width: .72em; height: .72em; border-radius: 50%; background: var(--green); }
+.dot-red { background: #ea4d5f; }
+.dot-amber { background: #f2b829; }
 .tick-text { color: var(--green); font-weight: 700; }
-.arrow-right { width: 22px; height: 14px; fill: none; stroke: #8794ad; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; flex: none; }
-.arrow-down { display: block; width: 12px; height: 30px; margin: 0 auto; fill: none; stroke: #8794ad; stroke-width: 1.3; stroke-linecap: round; stroke-linejoin: round; }
+.sep { padding: 0 .45em; color: #8a96ad; }
 code { font-family: var(--font-mono); }
+.mark { display: inline-grid; place-items: center; flex: none; }
+.mark img { display: block; width: 100%; height: 100%; }
 
-/* Third-party apps as plain tinted tiles (never their trademarks); Crank's own steps in its colours. */
+/* Third-party apps as plain tinted tiles (never their trademarks). */
 .app { display: inline-grid; place-items: center; flex: none; width: 44px; height: 44px; border-radius: 11px; color: #fff; font: 800 22px/1 var(--font-head); letter-spacing: -.03em; }
 .app .icon { width: 58%; height: 58%; stroke-width: 2; }
 .app-stripe { background: var(--tile-stripe); }
@@ -20,23 +26,25 @@ code { font-family: var(--font-mono); }
 .app-slack { background: var(--tile-slack); font-size: 26px; font-weight: 700; }
 .app-sheets { background: var(--tile-sheets); }
 .app-quickbooks { background: var(--tile-quickbooks); border-radius: 50%; font-size: 17px; letter-spacing: -.02em; }
-.app-salesforce { background: #0d9dda; font-size: 17px; }
+.app-shopify { background: #5e8e3e; }
 .app-hubspot { background: var(--tile-hubspot); }
 .app-typeform { background: #191919; }
-.app-zapier { background: #ff4f00; }
-.app-n8n { background: #ea4b71; font-size: 13px; letter-spacing: 0; }
-.app-ai { background: var(--blue-tint); color: var(--blue); }
-.app-ai .icon { fill: var(--blue); stroke: none; width: 54%; height: 54%; }
-.app-code { background: #eef1f6; color: #33425f; }
+.app-zendesk { background: #03363d; }
+.app-webhook { background: #fff1e6; color: #e2621b; }
+.app-schedule { background: #fff4dc; color: #d98a0b; }
+.app-ai { background: #fff1d9; color: #ec6a2c; }
+.app-ai .icon { fill: #ec6a2c; stroke: none; width: 54%; height: 54%; }
 
-/* Chips */
-.chip { display: inline-flex; align-items: center; gap: 9px; flex: none; min-height: 38px; padding: 0 17px 0 12px; border-radius: var(--radius-chip); font-size: 16px; font-weight: 500; white-space: nowrap; }
-.chip .check { width: 21px; height: 21px; }
-.chip .icon { width: 22px; height: 22px; }
-.chip-green { background: var(--green-tint); color: var(--green-ink); }
-.chip-grey { background: #f0f2f6; color: #4e5a73; }
-.chip-grey .icon { color: #fff; fill: #6b7690; stroke: #fff; stroke-width: 2.2; }
-.chip-lg { min-height: 40px; font-size: 17px; padding-right: 19px; }
+/* Chips: green for success, soft red for failures, peach-amber for what needs a person or waits. */
+.chip { display: inline-flex; align-items: center; gap: 8px; flex: none; min-height: 34px; padding: 0 15px; border-radius: var(--radius-chip); font-size: 15px; font-weight: 500; white-space: nowrap; }
+.chip .check, .chip .icon { width: 19px; height: 19px; }
+.chip-done { background: var(--green-tint); color: var(--green-ink); }
+.chip-skipped { background: #eef1f5; color: #4e5a73; }
+.chip-skipped .icon { color: #fff; fill: #7d879c; stroke: #fff; stroke-width: 2.2; }
+.chip-failing { background: #fde8ea; color: #b4233a; }
+.chip-failing .icon { color: #fff; fill: #e5484d; stroke: #fff; stroke-width: 2.2; }
+.chip-warm { background: #fff0dc; color: #b8520f; }
+.chip-warm .icon { color: #fff; fill: #ec6a2c; stroke: #fff; stroke-width: 2.2; }
 
 /* Hero cards on the machine (sized in em: one em is 16 desk pixels). */
 .hero-card { background: #fffcf6; border-radius: .72em; box-shadow: 0 .1em .2em rgba(54, 38, 10, .18), 0 .7em 1.4em -.6em rgba(54, 38, 10, .45); color: var(--ink); }
@@ -49,7 +57,7 @@ code { font-family: var(--font-mono); }
 .step-card-head p { display: grid; font-size: 1.02em; line-height: 1.32; white-space: nowrap; }
 .step-title { font-weight: 500; letter-spacing: -.01em; white-space: pre-line; }
 .step-detail { color: #3a4865; }
-.step-card-foot { display: flex; align-items: center; gap: .5em; margin-top: .62em; padding-top: .58em; border-top: 1px solid #ece6d9; font-size: .84em; color: #3a4865; }
+.step-card-foot { display: flex; align-items: center; gap: .5em; margin-top: .62em; padding-top: .58em; border-top: 1px solid #ece6d9; font-size: max(.84em, 11px); color: #3a4865; }
 .step-card-foot .check { width: 1.1em; height: 1.1em; }
 .step-card-foot .dot { width: .95em; height: .95em; }
 .step-card-foot time { margin-left: auto; }
@@ -64,280 +72,13 @@ code { font-family: var(--font-mono); }
 .hero-counter strong { font-size: 2.3em; line-height: 1.12; font-weight: 600; letter-spacing: -.01em; padding-bottom: .16em; border-bottom: 1px solid rgba(255, 255, 255, .28); margin-bottom: .2em; }
 .hero-counter .dot { width: .85em; height: .85em; background: #22c55e; }
 
-/* Connectors */
-.connections-card { width: 573px; padding: 26px 28px 18px; }
-.connection-list { margin-top: 12px; }
-.connection-list li { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; align-items: center; gap: 30px; padding: 12px 0 13px; border-top: 1px solid #e9eef5; }
-.connection-list li:last-child { border-bottom: 1px solid #e9eef5; }
-.connection-list p { display: grid; line-height: 1.38; }
-.connection-list strong { font-size: 18px; font-weight: 600; }
-.connection-list p span { font-size: 16px; color: #4e5a73; }
-.renewed { display: flex; align-items: center; gap: 12px; margin: 14px 0 0 75px; padding: 7px 18px; border-radius: 999px; background: #ecf8ef; color: var(--green-ink); font-size: 14.5px; }
-.renewed .check { width: 19px; height: 19px; }
-
-/* Triggers */
-.trigger-card { width: 624px; padding: 26px 28px 20px; }
-.trigger-title { display: flex; align-items: center; gap: 24px; font-size: 23.5px; padding-bottom: 20px; border-bottom: 1px solid #e9eef5; }
-.trigger-title .app { width: 40px; height: 40px; }
-.trigger-list li { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 13px 0; border-bottom: 1px solid #e9eef5; }
-.trigger-list p { display: grid; justify-items: start; font-size: 19px; line-height: 1.38; color: #22345c; }
-.trigger-list strong { font-weight: 500; color: var(--ink); }
-.trigger-list time { font-size: 16px; color: #4e5a73; }
-.trigger-schedule { display: flex; align-items: center; gap: 16px; padding-top: 16px; font-size: 16px; color: #4e5a73; }
-.trigger-schedule .icon { width: 26px; height: 26px; color: #4e5a73; }
-
-/* Builder */
-.builder-art { display: flex; align-items: center; justify-content: flex-end; gap: 22px; }
-.flow-card { width: 388px; padding: 18px 14px 20px; }
-.flow-node { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border: 1px solid #e3e9f2; border-radius: 10px; background: #fff; box-shadow: 0 6px 14px -10px rgba(22, 64, 140, .35); font-size: 15px; }
-.flow-node .app { width: 36px; height: 36px; border-radius: 9px; font-size: 19px; }
-.flow-node span { display: grid; line-height: 1.3; }
-.flow-node small { font-size: 13px; color: #4e5a73; }
-.flow-trigger { width: 240px; margin: 0 auto; padding-block: 12px; }
-.flow-trigger > span:last-child { display: inline; white-space: nowrap; }
-.flow-branch { position: relative; display: flex; align-items: center; justify-content: center; gap: 12px; margin-left: 40px; }
-.flow-diamond { display: grid; place-items: center; width: 40px; height: 40px; transform: rotate(45deg); border: 1.5px solid #e2a50c; border-radius: 6px; background: #fff6dc; color: #b26f00; }
-.flow-diamond .icon { transform: rotate(-45deg); width: 22px; height: 22px; stroke-width: 2.2; }
-.flow-question { font-size: 13.5px; color: #33425f; }
-.flow-paths { position: relative; height: 82px; margin-top: -2px; }
-.flow-lines { position: absolute; inset: 0; width: 100%; height: 100%; fill: none; stroke: #9aa6bd; stroke-width: 1.3; stroke-linecap: round; stroke-linejoin: round; }
-.flow-yes, .flow-no { position: absolute; top: 24px; padding: 3px 13px; border-radius: 999px; font-size: 15px; font-weight: 500; }
-.flow-yes { left: 21%; background: #def6e8; color: #1a7f45; }
-.flow-no { left: 66%; background: #fbe3e8; color: #c2405a; }
-.flow-ends { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.flow-ends .flow-node { padding: 10px 9px; gap: 9px; }
-.flow-ends .flow-node span { white-space: nowrap; }
-.flow-ends .flow-node strong { font-size: 14.5px; }
-.flow-ends .flow-node small { font-size: 12.5px; }
-.flow-dots { width: 22px; border-top: 2px dotted #4d8ae8; flex: none; margin-top: -10px; }
-.map-card { width: 382px; padding: 28px 18px 26px 24px; }
-.map-list { margin-top: 20px; display: grid; gap: 10px; }
-.map-list li { display: grid; grid-template-columns: 148px 14px minmax(0, 1fr); align-items: center; gap: 9px; }
-.map-list code, .map-to, .map-warn { display: flex; align-items: center; min-height: 44px; padding: 0 13px; border-radius: 6px; background: #f2f5fa; font-size: 14px; white-space: nowrap; }
-.map-list code { color: #33425f; font-size: 13.5px; }
-.map-to { background: #eef3fb; font-size: 14.5px; color: var(--ink); }
-.map-arrow { color: #8794ad; text-align: center; }
-.map-missing .map-warn { gap: 8px; background: var(--amber-tint); border: 1px solid var(--amber-line); color: var(--amber-ink); font-size: 14px; padding: 0 10px; }
-.map-missing .map-warn .icon { width: 20px; height: 20px; color: #b4690a; stroke-width: 2; }
-.map-missing .map-to { background: #fffbea; border: 1px solid var(--amber-line); }
-
-/* Reliable runs */
-.run-card { width: 698px; padding: 30px 32px 22px; }
-.run-head { display: flex; align-items: baseline; gap: 13px; font: 400 18px/1.2 var(--font-body); color: #4e5a73; }
-.run-head strong { font: 800 27px/1 var(--font-head); letter-spacing: -.03em; color: var(--ink); margin-right: 2px; }
-.run-steps { position: relative; margin-top: 16px; border-top: 1px solid #e9eef5; }
-.run-steps::before { content: ''; position: absolute; left: 13px; top: 30px; bottom: 50px; border-left: 1.5px dashed #c8d1df; }
-.run-steps li { position: relative; display: grid; grid-template-columns: 30px 42px minmax(0, 1fr) auto; align-items: center; gap: 0 20px; margin: 0 -16px; padding: 13px 16px; border-bottom: 1px solid #e9eef5; }
-.run-steps .check { position: relative; width: 26px; height: 26px; }
-.run-steps .app { width: 38px; height: 38px; border-radius: 9px; font-size: 21px; }
-.run-steps .app-quickbooks { width: 44px; height: 44px; font-size: 16px; }
-.run-steps p { display: grid; font-size: 19px; line-height: 1.4; color: var(--ink); }
-.run-steps i { font-style: normal; color: #8794ad; }
-.run-steps small { font-size: 18px; color: var(--amber); }
-.run-steps time { font-size: 18px; color: #4e5a73; align-self: start; padding-top: 6px; }
-.run-steps li:not(.retried) time { align-self: center; padding: 0; }
-.run-steps .retried { background: #fef5e5; border-radius: 12px; border-bottom-color: transparent; padding-block: 16px; }
-.outline-button { display: inline-flex; align-items: center; gap: 12px; margin-top: 18px; padding: 11px 22px; border: 1.5px solid var(--navy); border-radius: 10px; font-size: 18px; font-weight: 600; color: var(--ink); }
-.outline-button .icon { width: 24px; height: 24px; stroke-width: 2; }
-
-/* Approvals */
-.approval-card { width: 611px; padding: 26px 28px 28px; }
-.approval-head { display: grid; grid-template-columns: 76px minmax(0, 1fr) auto; align-items: center; gap: 20px; padding-bottom: 26px; border-bottom: 1px solid #e3e9f2; }
-.avatar { display: grid; place-items: center; width: 74px; height: 74px; border-radius: 50%; background: #e8eefb; color: var(--ink); font-size: 22px; font-weight: 700; }
-.approval-head p { display: grid; line-height: 1.35; }
-.approval-head strong { font-size: 22px; font-weight: 600; }
-.approval-head p span { font-size: 19px; color: #4e5a73; }
-.approval-state { display: grid; justify-items: end; gap: 8px; align-self: start; font-size: 16px; color: #4e5a73; }
-.approval-card .card-subtitle { margin-top: 26px; }
-.rule-list { margin-top: 16px; display: grid; gap: 18px; }
-.rule-list li { display: grid; grid-template-columns: 60px minmax(0, 1fr) auto; align-items: center; gap: 0 32px; }
-.toggle { position: relative; width: 60px; height: 34px; border-radius: 999px; background: var(--toggle); }
-.toggle::after { content: ''; position: absolute; right: 5px; top: 5px; width: 24px; height: 24px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0, 0, 0, .25); }
-.rule-list p { display: grid; line-height: 1.4; }
-.rule-list strong { font-size: 19px; font-weight: 500; }
-.rule-list p span { font-size: 17.5px; color: #4e5a73; }
-.rule-count { font-size: 18px; color: #4e5a73; align-self: start; padding-top: 4px; }
-
-/* AI steps */
-.ai-card { width: 738px; padding: 26px 26px 22px; }
-.ai-prompt { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 18px 20px 18px 24px; border: 1px solid #dfe6f0; border-radius: 12px; background: #f8fafd; }
-.ai-prompt p { font-size: 17.5px; line-height: 1.55; color: #22345c; max-width: 480px; }
-.build-button { flex: none; padding: 12px 30px; border-radius: 8px; background: var(--navy); color: #fff; font-size: 17px; font-weight: 600; }
-.ai-steps { display: flex; align-items: center; gap: 12px; margin-top: 18px; padding-bottom: 24px; border-bottom: 1px solid #e3e9f2; }
-.ai-step { flex: 1 1 0; min-width: 0; display: flex; align-items: center; gap: 13px; padding: 22px 12px 22px 16px; border: 1px solid #e3e9f2; border-radius: 12px; }
-.ai-step .app { width: 42px; height: 42px; }
-.ai-step p { display: grid; line-height: 1.4; }
-.ai-step strong { font-size: 17px; font-weight: 600; }
-.ai-step p span { font-size: 15px; color: #4e5a73; white-space: nowrap; }
-.ai-result { display: flex; align-items: center; margin-top: 20px; font-size: 18px; color: #4e5a73; }
-.ai-result .check { width: 38px; height: 38px; margin: 0 26px 0 6px; }
-.ai-result strong { font-weight: 600; color: var(--ink); font-size: 19px; }
-.ai-result strong, .ai-result span { padding: 0 20px; border-left: 1px solid #dfe6f0; }
-.ai-result strong { border-left: 0; padding-left: 0; }
-
-/* Self-repair */
-.repair-card { width: 555px; padding: 26px 28px 22px; }
-.repair-head { display: flex; align-items: center; gap: 26px; font: 400 20px/1.2 var(--font-body); color: #22345c; }
-.repair-head strong { font-weight: 600; color: var(--ink); }
-.repair-head .app { width: 40px; height: 40px; }
-.diff { margin-top: 18px; border-radius: 6px; overflow: hidden; }
-.diff p { display: flex; align-items: center; gap: 22px; padding: 9px 26px; font-size: 18px; }
-.diff p span { font-weight: 700; width: 12px; }
-.diff-old { background: #fde9e8; }
-.diff-old span { color: #e5322b; }
-.diff-new { background: #e4f6e8; }
-.diff-new span { color: #13a538; }
-.repair-list { margin-top: 18px; padding-top: 14px; border-top: 1px solid #e3e9f2; display: grid; gap: 14px; }
-.repair-list li { display: flex; align-items: center; gap: 24px; font-size: 18.5px; color: #22345c; }
-.repair-list .check { width: 30px; height: 30px; }
-.repair-note { display: flex; align-items: center; gap: 24px; margin-top: 18px; padding-top: 16px; border-top: 1px solid #e3e9f2; font-size: 18.5px; color: var(--blue); }
-.repair-note .icon { width: 32px; height: 32px; stroke-width: 1.6; }
-
-/* Move in */
-.import-card { width: 555px; padding: 24px 30px 22px; }
-.import-head { display: flex; align-items: center; gap: 12px; font: 700 20.5px/1.2 var(--font-head); letter-spacing: -.01em; }
-.import-head .app { width: 38px; height: 38px; }
-.import-head span:last-child { margin-left: 22px; }
-.progress { display: flex; align-items: center; gap: 22px; margin-top: 18px; font-size: 18px; color: var(--ink); }
-.progress-bar { flex: 1; height: 20px; border-radius: 999px; background: #e8eef6; overflow: hidden; }
-.progress-bar span { display: block; height: 100%; width: 100%; border-radius: 999px; background: linear-gradient(90deg, #1453b0, #1667e0); }
-.import-list { margin-top: 16px; padding-top: 6px; border-top: 1px solid #e3e9f2; }
-.import-list li { display: flex; align-items: center; gap: 24px; padding: 8px 0; font-size: 19px; color: #22345c; }
-.import-list .check { width: 28px; height: 28px; }
-.import-count { margin-left: auto; color: #4e5a73; }
-.import-note { display: flex; align-items: center; gap: 28px; margin-top: 10px; padding-top: 16px; border-top: 1px solid #e3e9f2; font-size: 18px; color: var(--amber); }
-.import-note .icon { width: 32px; height: 32px; stroke-width: 1.6; }
-
-/* Interlude cards (em: one desk pixel x 16). */
-.interlude-invoice { position: absolute; left: calc(415 / 1536 * 100%); top: calc(170 / 710 * 100%); width: 27.4em; padding: 1.25em 1.5em 1em; border-radius: 1.05em; transform: rotate(23.8deg); transform-origin: center; box-shadow: 0 .4em 1.2em -.4em rgba(40, 30, 0, .35); }
-.interlude-invoice-head { display: flex; align-items: center; gap: 1.15em; font-size: 1.36em; }
-.interlude-invoice-head .app { width: 2.5em; height: 2.5em; font-size: .82em; }
-.interlude-invoice-head strong { font-weight: 700; letter-spacing: -.01em; }
-.interlude-invoice-foot { display: flex; align-items: center; gap: .7em; margin: .7em 0 0 4.1em; padding-top: .55em; border-top: 1px solid #e3e6ea; font-size: 1.3em; color: #6b7690; }
-.interlude-invoice-foot .check { width: 1.15em; height: 1.15em; }
-.interlude-invoice-foot time { margin-left: auto; }
-.interlude-count { position: absolute; left: calc(1126 / 1536 * 100%); top: calc(242 / 710 * 100%); width: 15.8em; padding: 1.05em 1.4em 1.1em; border-radius: .85em; }
-.interlude-count p { display: flex; align-items: center; gap: .7em; font-size: 1.36em; color: #6b7690; }
-.interlude-count .dot { width: .8em; height: .8em; }
-.interlude-count strong { display: block; margin: .3em 0 0 1.55em; font-size: 1.48em; font-weight: 700; color: var(--ink); }
-
-/* Ownership: the terminal */
-.terminal { border-radius: 16px; overflow: hidden; background: var(--terminal); box-shadow: 0 30px 60px -30px rgba(17, 25, 44, .7), 0 2px 4px rgba(17, 25, 44, .2); }
-.terminal-bar { display: flex; gap: 11px; padding: 18px 22px; background: var(--terminal-bar); }
-.terminal-bar span { width: 16px; height: 16px; border-radius: 50%; background: #ff5f57; }
-.terminal-bar span:nth-child(2) { background: #febc2e; }
-.terminal-bar span:nth-child(3) { background: #28c840; }
-.terminal pre { padding: 44px 30px 54px; overflow-x: auto; font: 450 19.5px/2.1 var(--font-mono); color: #f1f4fa; white-space: pre; }
-.terminal .prompt { color: var(--brass); }
-.terminal .comment { color: #8c97b0; }
-
-/* The quiet details */
-.detail-card { min-height: 261px; padding: 30px 32px 28px; border-radius: 16px; }
-.detail-icon { display: grid; place-items: center; width: 76px; height: 76px; border-radius: 50%; }
-.detail-icon .icon { width: 36px; height: 36px; stroke-width: 1.8; }
-.tone-blue { background: #e6f0fe; color: #1667e0; }
-.tone-amber { background: #fdf1df; color: #a8630f; }
-.tone-green { background: #e2f4ea; color: #1b7f4a; }
-.detail-card h3 { margin-top: 18px; font: 800 30px/1.15 var(--font-head); letter-spacing: -.025em; }
-.detail-card p { margin-top: 12px; font-size: 21.5px; line-height: 1.5; color: #4e5a73; }
 
 /* The sign on the boat */
-.boat-sign { position: absolute; z-index: 2; left: calc(614 / 1536 * 100%); top: calc(710 / 936 * 100%); width: calc(var(--u) * 138); height: calc(var(--u) * 38); display: flex; align-items: center; justify-content: space-between; padding: 0 calc(var(--u) * 7) 0 calc(var(--u) * 9); border-radius: calc(var(--u) * 3); background: #fbfaf5; color: #1b2440; font-size: calc(var(--u) * 11.5); font-weight: 600; white-space: nowrap; transform: rotate(-3.2deg); box-shadow: 0 1px 2px rgba(60, 40, 10, .35); }
-.boat-check { display: grid; place-items: center; width: 2em; height: 2em; border-radius: 50%; background: #1fa64a; color: #fff; font-size: .95em; }
+.boat-sign { position: absolute; z-index: 2; left: calc(614 / 1536 * 100%); top: calc(710 / 936 * 100%); min-width: calc(var(--u) * 138); height: max(calc(var(--u) * 38), 26px); display: flex; align-items: center; justify-content: space-between; gap: .5em; padding: 0 calc(var(--u) * 7) 0 calc(var(--u) * 9); border-radius: calc(var(--u) * 3); background: #fbfaf5; color: #1b2440; font-size: max(calc(var(--u) * 11.5), 11px); font-weight: 600; white-space: nowrap; transform: rotate(-3.2deg); box-shadow: 0 1px 2px rgba(60, 40, 10, .35); }
+.boat-check { display: grid; place-items: center; width: 2em; height: 2em; border-radius: 50%; background: #1fa64a; color: #fff; font-size: 1em; }
 
-@media (max-width: 760px) {
-  .card-title { font-size: 22px; }
-  .app { width: 36px; height: 36px; font-size: 18px; border-radius: 9px; }
-  .connections-card, .trigger-card, .approval-card, .ai-card, .repair-card, .import-card { width: 100%; padding: 18px 16px 14px; }
-  .connection-list li { grid-template-columns: 36px minmax(0, 1fr) auto; gap: 12px; padding: 10px 0; }
-  .connection-list strong { font-size: 16px; }
-  .connection-list p span { font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .chip, .chip-lg { min-height: 30px; padding: 0 11px 0 8px; font-size: 13px; gap: 6px; }
-  .chip .check, .chip .icon { width: 17px; height: 17px; }
-  .renewed { margin: 12px 0 0; font-size: 12.5px; padding: 7px 12px; gap: 8px; }
-  .trigger-title { font-size: 17px; gap: 12px; padding-bottom: 14px; }
-  .trigger-title .app { width: 32px; height: 32px; }
-  .trigger-list p { font-size: 15px; }
-  .trigger-list time { font-size: 13px; }
-  .trigger-schedule { font-size: 13.5px; gap: 10px; }
-
-  .builder-art { flex-direction: column; align-items: stretch; gap: 14px; }
-  .flow-card, .map-card { width: 100%; }
-  .flow-ends .flow-node span { white-space: normal; }
-  .flow-ends .flow-node .app { width: 30px; height: 30px; font-size: 15px; }
-  .flow-dots { display: none; }
-  .map-card { padding: 20px 16px; }
-  .map-list li { grid-template-columns: minmax(0, 1.1fr) 14px minmax(0, 1fr); gap: 8px; }
-  .map-list code, .map-to, .map-warn { min-height: 40px; padding: 0 10px; font-size: 12.5px; }
-  .map-to { font-size: 13.5px; }
-
-  .run-card { width: 100%; padding: 20px 16px 16px; }
-  .run-head { flex-wrap: wrap; gap: 4px 8px; font-size: 14px; }
-  .run-head strong { font-size: 21px; width: 100%; }
-  .run-head span:nth-of-type(1) { display: none; }
-  .run-steps li { grid-template-columns: 24px 32px minmax(0, 1fr) auto; gap: 0 10px; margin: 0 -8px; padding: 11px 8px; }
-  .run-steps::before { left: 11px; }
-  .run-steps .check { width: 22px; height: 22px; }
-  .run-steps .app, .run-steps .app-quickbooks { width: 32px; height: 32px; font-size: 15px; border-radius: 8px; }
-  .run-steps .app-quickbooks { border-radius: 50%; font-size: 12px; }
-  .run-steps p { font-size: 15px; }
-  .run-steps small { font-size: 13.5px; }
-  .run-steps time { font-size: 14px; }
-  .outline-button { font-size: 15px; padding: 9px 16px; }
-
-  .approval-head { grid-template-columns: 52px minmax(0, 1fr); gap: 12px; padding-bottom: 18px; }
-  .avatar { width: 52px; height: 52px; font-size: 17px; }
-  .approval-head strong { font-size: 17px; }
-  .approval-head p span { font-size: 14.5px; }
-  .approval-state { grid-column: 1 / -1; grid-auto-flow: column; justify-content: start; align-items: center; gap: 12px; }
-  .rule-list li { grid-template-columns: 46px minmax(0, 1fr) auto; gap: 0 14px; }
-  .toggle { width: 46px; height: 26px; }
-  .toggle::after { width: 18px; height: 18px; top: 4px; right: 4px; }
-  .rule-list strong { font-size: 15.5px; }
-  .rule-list p span, .rule-count { font-size: 13.5px; }
-  .approval-card .card-subtitle { font-size: 17px; margin-top: 18px; }
-
-  .ai-prompt { flex-direction: column; align-items: flex-start; gap: 12px; padding: 14px 16px; }
-  .ai-prompt p { font-size: 15px; }
-  .build-button { padding: 9px 22px; font-size: 15px; }
-  .ai-steps { flex-direction: column; align-items: stretch; gap: 6px; }
-  .ai-steps .arrow-right { transform: rotate(90deg); margin: 0 auto; }
-  .ai-step { padding: 12px 14px; }
-  .ai-step .app { width: 34px; height: 34px; }
-  .ai-result { flex-wrap: wrap; font-size: 14px; row-gap: 6px; }
-  .ai-result .check { width: 28px; height: 28px; margin: 0 12px 0 0; }
-  .ai-result strong { font-size: 15px; }
-  .ai-result strong, .ai-result span { padding: 0 10px; }
-
-  .repair-head { font-size: 15px; gap: 12px; align-items: flex-start; }
-  .repair-head .app { width: 32px; height: 32px; }
-  .diff p { font-size: 14px; padding: 8px 14px; gap: 14px; }
-  .repair-list li, .repair-note { font-size: 14.5px; gap: 12px; }
-  .repair-list .check, .repair-note .icon { width: 24px; height: 24px; }
-  .import-head { font-size: 16px; }
-  .import-head .app { width: 32px; height: 32px; }
-  .import-head span:last-child { margin-left: 6px; }
-  .progress { font-size: 15px; gap: 12px; }
-  .progress-bar { height: 14px; }
-  .import-list li { font-size: 15px; gap: 12px; }
-  .import-list .check, .import-note .icon { width: 22px; height: 22px; }
-  .import-note { font-size: 14px; gap: 12px; }
-
-  .interlude-count { display: none; }
-
-  .terminal { border-radius: 12px; }
-  .terminal-bar { padding: 13px 16px; gap: 8px; }
-  .terminal-bar span { width: 12px; height: 12px; }
-  .terminal pre { padding: 20px 16px 24px; font-size: 13.5px; line-height: 1.9; white-space: pre-wrap; overflow-wrap: anywhere; }
-
-  .detail-card { min-height: 0; display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 2px 16px; padding: 18px 16px; }
-  .detail-icon { grid-row: span 2; width: 52px; height: 52px; }
-  .detail-icon .icon { width: 26px; height: 26px; }
-  .detail-card h3 { margin: 2px 0 0; font-size: 20px; }
-  .detail-card p { margin: 0; font-size: 15.5px; }
-}
-
-/* Phones and tablets: the hero's cards above the plate; on the plate, each step keeps only its app tile. */
+/* Phones and tablets: the hero's cards above the plate. */
+.hero-chip, .hero-phone-machine { display: none; }
 @media (max-width: 1180px) {
   .hero-phone-steps { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .hero-phone-cards .hero-card { font-size: 13px; }
@@ -351,46 +92,52 @@ code { font-family: var(--font-mono); }
   .hero-phone-cards .repaired-title { white-space: normal; font-size: 13.5px; }
   .hero-phone-cards .repaired-detail { font-size: 12.5px; }
   .hero-phone-cards .repair-icon { width: 30px; height: 30px; }
-  .hero-machine .step-card { display: grid; place-items: center; padding: 0; height: 32px; }
-  .hero-machine .step-card-head { min-height: 0; }
-  .hero-machine .step-card-head p, .hero-machine .step-card-foot { display: none; }
-  .hero-machine .step-card-head .app { width: 22px; height: 22px; font-size: 11px; border-radius: 6px; }
-  .hero-machine .step-card .app-quickbooks { font-size: 8.5px; }
-  .hero-machine .repaired-card { padding: 4px 8px; gap: 6px; justify-content: center; }
-  .hero-machine .repair-icon { width: 16px; height: 16px; border-width: 1.5px; }
-  .hero-machine .repair-icon .icon { width: 9px; height: 9px; }
-  .hero-machine .repaired-title { display: none; }
-  .hero-machine .repaired-detail { font-size: 10px; font-weight: 600; color: var(--ink); white-space: nowrap; }
-  .hero-machine .hero-counter { padding-top: 0; }
-  .hero-machine .hero-counter span:first-child { display: none; }
-  .hero-machine .hero-counter strong { font-size: 11px; border: 0; margin: 0; padding: 0; }
-  .hero-machine .hero-counter span { font-size: 8.5px; gap: 3px; }
 }
+/* Tablets: on the plate, each step keeps only its app tile. */
 @media (max-width: 1180px) and (min-width: 761px) {
   .hero-phone-cards .repaired-card { justify-self: center; }
-  .hero-machine .step-card { height: 40px; }
+  .hero-machine .step-card { display: grid; place-items: center; padding: 0; height: 40px; }
+  .hero-machine .step-card-head { min-height: 0; }
+  .hero-machine .step-card-head p, .hero-machine .step-card-foot { display: none; }
   .hero-machine .step-card-head .app { width: 28px; height: 28px; font-size: 14px; border-radius: 7px; }
   .hero-machine .step-card .app-quickbooks { font-size: 11px; }
-  .hero-machine .repaired-card { padding: 6px 12px; gap: 8px; }
+  .hero-machine .repaired-card { padding: 6px 12px; gap: 8px; justify-content: center; }
   .hero-machine .repair-icon { width: 22px; height: 22px; border-width: 2px; }
   .hero-machine .repair-icon .icon { width: 12px; height: 12px; }
-  .hero-machine .repaired-detail { font-size: 13px; }
-  .hero-machine .hero-counter strong { font-size: 16px; }
+  .hero-machine .repaired-title { display: none; }
+  .hero-machine .repaired-detail { font-size: 13px; font-weight: 600; color: var(--ink); white-space: nowrap; }
+  .hero-machine .hero-counter { padding-top: 0; }
+  .hero-machine .hero-counter span:first-child { display: none; }
+  .hero-machine .hero-counter strong { font-size: 16px; border: 0; margin: 0; padding: 0; }
   .hero-machine .hero-counter span { font-size: 11px; gap: 4px; }
+}
+/* Phones (STRUCTURE.md, hero at 390): the four steps in one column on a thin brass rail, the counter as a chip,
+   then the machine cropped to its crank handle with the repaired card on it. */
+@media (max-width: 760px) {
+  .hero-phone-steps { position: relative; grid-template-columns: minmax(0, 1fr); gap: 10px; padding-left: 24px; }
+  .hero-phone-steps::before { content: ''; position: absolute; left: 6px; top: 26px; bottom: 26px; width: 2px; border-radius: 2px; background: linear-gradient(#c98c1e, #f2b829, #c98c1e); }
+  .hero-phone-cards .step-card { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 10px 12px; }
+  .hero-phone-cards .step-card::before { content: ''; position: absolute; left: -24px; top: 50%; width: 14px; height: 14px; margin-top: -7px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #ffe08a, #e2a42a 60%, #9a6410); box-shadow: 0 1px 2px rgba(60, 40, 10, .4); }
+  .hero-phone-cards .step-card-head { align-items: center; }
+  .hero-phone-cards .step-card-head p { white-space: normal; }
+  .hero-phone-cards .step-title { white-space: normal; }
+  .hero-phone-cards .step-card-foot { display: grid; grid-template-columns: auto auto; align-items: center; justify-content: end; gap: 4px 6px; margin: 0; padding: 0; border: 0; }
+  .hero-phone-cards .step-card-foot time { grid-column: 1 / -1; justify-self: end; margin: 0; }
+  .hero-phone-cards > .repaired-card, .hero-machine { display: none; }
+  .hero-chip { display: flex; align-items: center; gap: 8px; justify-self: center; padding: 7px 14px; border-radius: 999px; background: rgba(4, 20, 58, .78); color: #f5f7fb; font-size: 13px; }
+  .hero-chip strong { font-weight: 700; }
+  .hero-chip .dot { background: #22c55e; }
+  .hero-phone-machine { display: block; position: absolute; inset: 0; z-index: 1; }
+  .phone-tile { position: absolute; transform: translate(-50%, -50%); }
+  .phone-tile .app { width: 26px; height: 26px; border-radius: 7px; font-size: 14px; box-shadow: 0 1px 2px rgba(54, 38, 10, .25); }
+  .tile-1 { left: 59%; top: 23.6%; }
+  .tile-2 { left: 89%; top: 24.5%; }
+  .phone-repaired { position: absolute; right: 0; top: 55%; width: 82%; }
+  .phone-repaired .repaired-card { padding: 9px 12px; gap: 10px; border-radius: 10px 0 0 10px; font-size: 13px; }
+  .phone-repaired .repaired-title { white-space: normal; font-size: 13px; }
+  .phone-repaired .repaired-detail { font-size: 12px; }
+  .phone-repaired .repair-icon { width: 28px; height: 28px; }
 }
 @media (min-width: 900px) and (max-width: 1180px) {
   .hero-phone-steps { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-}
-/* Tablets too narrow for the builder's two cards side by side, or the AI steps in a row. */
-@media (min-width: 761px) and (max-width: 990px) {
-  .builder-art { flex-direction: column; align-items: flex-start; gap: 16px; }
-  .flow-dots { display: none; }
-  .ai-steps { flex-direction: column; align-items: stretch; gap: 6px; }
-  .ai-steps .arrow-right { transform: rotate(90deg); margin: 0 auto; }
-  .ai-step { padding: 14px 16px; }
-}
-@media (min-width: 761px) and (max-width: 1180px) {
-  .connections-card, .trigger-card, .run-card, .approval-card, .ai-card, .repair-card, .import-card { max-width: 100%; }
-  .boat-check { font-size: 1em; }
-  .terminal pre { font-size: 17px; white-space: pre-wrap; overflow-wrap: anywhere; }
 }

@@ -735,63 +735,50 @@ Crank does not replace its connected apps’ systems of record, provider license
 Scope authority is the owner-approved Crank entry in the 16 October category list, supplemented by the category inventory and code audit. Product documentation used as capability/migration context: [Zapier app directory](https://zapier.com/apps), [Make webhook processing](https://help.make.com/webhooks), [Make error handling](https://help.make.com/error-handling), [Workato recipes](https://docs.workato.com/recipes.html), [n8n flow logic](https://docs.n8n.io/flow-logic/), [n8n export/import](https://docs.n8n.io/workflows/export-import/), [Gumloop agents](https://docs.gumloop.com/core-concepts/agents), and [Pipedream project export](https://pipedream.com/docs/workflows/export-workflows), [Workato RLCM packages](https://docs.workato.com/en/recipe-development-lifecycle), [Zapier JSON exports](https://help.zapier.com/hc/en-us/articles/8496308481933-Import-and-export-Zap-workflows-in-your-Team-or-Enterprise-account), [Make blueprints](https://help.make.com/blueprints), and Zapier’s own documentation for the day-one parity bar: [Webhooks by Zapier](https://zapier.com/apps/webhook/integrations), [API request actions](https://help.zapier.com/hc/en-us/articles/12899607716493-Set-up-an-API-request-action-Beta), [polling intervals](https://help.zapier.com/hc/en-us/articles/8495924437005), [flood protection](https://help.zapier.com/hc/en-us/articles/14230420160269-Choose-your-Zaps-flood-protection-limit), [Human in the Loop](https://help.zapier.com/hc/en-us/articles/38733184458765), [Email by Zapier](https://help.zapier.com/hc/en-us/articles/8496293328141), [Zapier MCP](https://docs.zapier.com/mcp/get-started/your-first-mcp-workflow), [Microsoft Excel](https://zapier.com/apps/excel/integrations), [SharePoint](https://zapier.com/apps/sharepoint/integrations), [RSS by Zapier](https://zapier.com/apps/rss/integrations), [polling webhooks (Retrieve Poll)](https://help.zapier.com/hc/en-us/articles/8496274719757), [Digest by Zapier](https://zapier.com/apps/digest/integrations), [line items in Zaps](https://help.zapier.com/hc/en-us/articles/8496277737997), [Zapier search steps](https://zapier.com/blog/zapier-search-step-guide/), [Formatter by Zapier](https://zapier.com/apps/formatter/integrations), [lookup tables](https://help.zapier.com/hc/en-us/articles/8496305146765), [Delay by Zapier](https://zapier.com/apps/delay/integrations), [filter and path rules](https://help.zapier.com/hc/en-us/articles/8496180919949), [AND/OR logic](https://help.zapier.com/hc/en-us/articles/8495925071757), [Paths](https://help.zapier.com/hc/en-us/articles/8496288555917), [dynamic dropdowns](https://docs.zapier.com/platform/build/dynamic-dropdowns), [custom values in Zap fields](https://help.zapier.com/hc/en-us/articles/8495924713997), [search-powered fields](https://docs.zapier.com/platform/build/search-powered-fields), [Gmail triggers](https://zapier.com/apps/gmail/integrations), [Google Sheets trigger columns](https://help.zapier.com/hc/en-us/articles/21613239711117-Google-Sheets-triggers-unexpectedly-or-too-soon), [HubSpot property-change and deal-stage triggers](https://zapier.com/apps/hubspot/integrations), [testing Zap steps](https://help.zapier.com/hc/en-us/articles/8496310366093), [QuickBooks Online](https://zapier.com/apps/quickbooks/integrations), [Xero](https://zapier.com/apps/xero/integrations), [Slack](https://zapier.com/apps/slack/integrations), [Microsoft Teams](https://zapier.com/apps/microsoft-teams/integrations), [Shopify](https://zapier.com/apps/shopify/integrations), [Stripe](https://zapier.com/apps/stripe/integrations), [Zendesk](https://zapier.com/apps/zendesk/integrations), [Jira Software Cloud](https://zapier.com/apps/jira-software-cloud/integrations), [Zapier Tables](https://zapier.com/apps/zapier-tables/integrations), [Storage by Zapier](https://zapier.com/apps/storage/integrations), [ChatGPT (OpenAI)](https://zapier.com/apps/chatgpt/integrations), [AI by Zapier](https://zapier.com/apps/ai/integrations) and [Anthropic (Claude)](https://zapier.com/apps/anthropic-claude/integrations). These are design inputs, not assertions that every vendor supports every target clause or export path. Source access and migration restrictions must be checked for the buyer’s edition; unavailable exports require itemized reconstruction, not silent scope reduction.
 ## Homepage claims
 
-Every capability the approved homepage states (owner-accepted 17 October 2026, hero C), in page order, as listed in the run-site gate table (`CLAIMS.md`, branch `br/style`, 17 October 2026), with the clauses that promise it. A claim's status comes from its clauses: done when all are done, missing when all are missing, otherwise partial. A claim with no clause is added here as a clause, never taken off the page.
+Every capability the homepage states, in page order, for the owner-approved structure s1 (17 October 2026: one buyer's week with Crank), with the clauses that promise it. A claim's status comes from its clauses: done when all are done, missing when all are missing, otherwise partial. Backing names the code path for done, "partly" with the paths that exist for partial, and "contract, not yet in code" for missing. Every claim not yet in code is a build priority. A claim with no clause is added here as a clause, never taken off the page.
 
-| # | Claim | Clause(s) | Status |
-| --- | --- | --- | --- |
-| 1 | Hero: "Crank connects your apps" | `CONN-001`, `CONN-002` | partial |
-| 2 | Hero: "runs every step on schedule" | `TRIG-002` | partial |
-| 3 | Hero: "retries what fails" | `EXEC-002` | partial |
-| 4 | Hero: "fixes the mapping when an app changes" | `AGENT-002` | missing |
-| 5 | Hero: "100% free, open source" | `BASE-004` | partial |
-| 6 | Hero: "alternative to Zapier, Make and Workato" | `MIG-002`, `MIG-003`, `MIG-004`, `CONN-001` | partial |
-| 7 | Hero cards: Stripe payment → Google Sheets → Slack #sales → QuickBooks invoice, with times | `CONN-008`, `CONN-005`, `CONN-004`, `CONN-007` | partial |
-| 8 | Hero cards: "Field renamed: amount → amount_total · Repaired, re-tested" | `AGENT-002` | missing |
-| 9 | Hero cards: "Runs today 1,284 · 0 failed" | `OPS-001` | partial |
-| 10 | Connectors: "Every app you already use": Gmail, Slack, Google Sheets, HubSpot, Salesforce, QuickBooks, Stripe and Shopify | `CONN-001`, `CONN-003`, `CONN-004`, `CONN-005`, `CONN-006`, `CONN-007`, `CONN-008` | partial |
-| 11 | Connectors: "Sign in once and Crank keeps every connection fresh" | `CONN-002` | partial |
-| 12 | Connectors card: "Sign-in expired 6:12 AM · renewed automatically" | `CONN-002` | partial |
-| 13 | Triggers: "Run on a schedule" | `TRIG-002` | partial |
-| 14 | Triggers: "a new email" | `CONN-003`, `TRIG-003`, `TRIG-006` | partial |
-| 15 | Triggers: "a form" | `WORK-007`, `CONN-012`, `TRIG-001` | partial |
-| 16 | Triggers: "a webhook" | `TRIG-001` | done |
-| 17 | Triggers: "or any app event" | `TRIG-003`, `TRIG-008` | partial |
-| 18 | Triggers: "Duplicates are caught before they run twice" | `TRIG-001`, `TRIG-003` | partial |
-| 19 | Triggers card: Gmail label trigger; "Also every weekday at 9:00 AM ET" | `CONN-003`, `TRIG-002` | partial |
-| 20 | Builder: "Map fields" | `WORK-002` | partial |
-| 21 | Builder: "filter, branch" | `WORK-013` | partial |
-| 22 | Builder: "loop" | `WORK-003` | missing |
-| 23 | Builder: "and wait" | `WORK-004` | done |
-| 24 | Builder: "or drop in a code step" | `WORK-005` | missing |
-| 25 | Builder: "Save any piece as a subflow and use it again" | `WORK-006` | missing |
-| 26 | Builder card: Branch "Amount over $1,000?", Salesforce/Google Sheets ends, field map with "company missing → Individual" | `WORK-001`, `WORK-013`, `WORK-012`, `CONN-006`, `CONN-005` | partial |
-| 27 | Reliable runs: "Every run is queued and saved" | `EXEC-001`, `EXEC-005` | partial |
-| 28 | Reliable runs: "Failed steps retry with backoff" | `EXEC-002` | partial |
-| 29 | Reliable runs: "rate limits are respected" | `EXEC-002` | partial |
-| 30 | Reliable runs: "any step can be replayed" | `EXEC-004` | partial |
-| 31 | Interlude: "Create invoice in QuickBooks · Completed 9:15 AM", "Runs today 1,284 · 0 failed" | `CONN-007`, `OPS-001` | partial |
-| 32 | Approvals: "Add an approval step for refunds or large orders" | `TEAM-002`, `TEAM-004`, `TEAM-005` | partial |
-| 33 | Approvals: "let routine actions run on standing rules" | `TEAM-002`, `TEAM-004` | partial |
-| 34 | Approvals: "Roles decide who approves what" | `TEAM-001`, `TEAM-002` | partial |
-| 35 | AI steps: "Add a model step to read, sort or draft" | `AI-001` | missing |
-| 36 | AI steps: "or an agent that uses your tools over MCP" | `AI-001` | missing |
-| 37 | AI steps: "Describe a workflow in plain words and Crank builds it" | `AI-002` | missing |
-| 38 | Self-repair: "Crank's agent repairs the mapping, tests it on recent runs and puts the workflow back" | `AGENT-002` | missing |
-| 39 | Self-repair card: "2 unsure updates checked in HubSpot · both landed" | `EXEC-006`, `CONN-006` | partial |
-| 40 | Move in: "Import from Zapier, Make or n8n" | `MIG-002`, `MIG-003`, `MIG-001` | partial |
-| 41 | Move in: "Crank rebuilds each workflow, reconnects your apps" | `MIG-001`, `MIG-002`, `MIG-003`, `CONN-002` | partial |
-| 42 | Move in: "runs it beside the old one until the results match" | `MIG-006` | missing |
-| 43 | Ownership: "Run Crank on your own computer or server" (the one-line start) | `BASE-005` | partial |
-| 44 | Ownership: "keep every workflow, connection and run log" / "Your keys stay with you" | `BASE-001`, `CONN-002`, `DATA-001` | partial |
-| 45 | Ownership: "Export everything, any time" | `DATA-001` | partial |
-| 46 | Quiet details: Error alerts: "Slack or email the moment a run needs you" | `EXEC-003` | partial |
-| 47 | Quiet details: Rate limits: "Each app's limits respected automatically" | `EXEC-002` | partial |
-| 48 | Quiet details: Version history: "Every edit saved, rolled back in one click" | `WORK-008` | partial |
-| 49 | Quiet details: Team roles: "Builders, approvers and viewers" | `TEAM-001` | partial |
-| 50 | Quiet details: Secrets vault: "Keys encrypted and never shown in logs" | `CONN-002` | partial |
-| 51 | Quiet details: Activity log: "Every run, edit and approval, recorded" | `SEC-003` | partial |
-| 52 | Closing: "Open source workflow automation for every team" / "Free and open source, MIT licensed" | `BASE-004` | partial |
-| 53 | Closing art: "All 58 workflows ran" | `OPS-001` | partial |
+| # | Claim | Clause(s) | Status | Backing |
+| --- | --- | --- | --- | --- |
+| 1 | Hero: "Crank connects your apps" | `CONN-001`, `CONN-002` | partial | partly: `src/crank/connections/catalog.ts`, `src/crank/connections/oauth.ts` |
+| 2 | Hero: "runs every step on schedule" | `TRIG-002` | partial | partly: `src/crank/triggers/schedule.ts` |
+| 3 | Hero: "retries what fails" | `EXEC-002` | partial | partly: `src/crank/connectors/http-step.ts` |
+| 4 | Hero: "fixes the mapping when an app changes" | `AGENT-002` | missing | contract, not yet in code |
+| 5 | Hero: "100% free, open source" | `BASE-004` | partial | partly: `LICENSE`, `src/site/run.json` |
+| 6 | Hero: "alternative to Zapier, Make and Workato" | `MIG-002`, `MIG-003`, `MIG-004`, `CONN-001` | partial | partly: `src/crank/connections/catalog.ts`; the three migrations are contract, not yet in code |
+| 7 | Hero cards: Stripe payment → Google Sheets → Slack #sales → QuickBooks invoice, with times | `CONN-008`, `CONN-005`, `CONN-004`, `CONN-007` | partial | partly: `src/crank/connectors/slack.ts`; Stripe, Sheets and QuickBooks are contract, not yet in code |
+| 8 | Hero cards: "Field renamed: amount → amount_total · Repaired, re-tested" | `AGENT-002` | missing | contract, not yet in code |
+| 9 | Hero cards: "Runs today 1,284 · 0 failed" | `OPS-001` | partial | partly: `src/crank/ops/report.ts` |
+| 10 | Move in: "Give Crank your Zapier, Make or Workato export. It rebuilds each workflow" | `MIG-002`, `MIG-003`, `MIG-004` | missing | contract, not yet in code |
+| 11 | Move in: "runs it beside the old one until the results match"; import card "Past runs checked · 212 of 212 match", "37 running side by side" | `MIG-006`, `MIG-002` | missing | contract, not yet in code |
+| 12 | Move in terminal: `git clone` the repository, then `cd crank && rer dev` starts Crank | `BASE-005` | partial | partly: `RUN-LOCALLY.md`, `src/site/run.json` |
+| 13 | Move in import card: "Formatter → code step" | `MIG-002`, `WORK-005` | missing | contract, not yet in code |
+| 14 | Move in import card: "Needs you · Paths step has no default. Send other refunds to Finance or Support?" | `MIG-002`, `WORK-013` | partial | partly: `src/crank/engine/conditions.ts` (paths); the import question is contract, not yet in code |
+| 15 | Move in import card: Stripe, QuickBooks, Shopify, Slack, Gmail, Google Sheets, Typeform, HubSpot and Zendesk workflows | `CONN-008`, `CONN-007`, `CONN-004`, `CONN-003`, `CONN-005`, `CONN-012`, `CONN-006`, `CONN-009` | partial | partly: `src/crank/connectors/slack.ts`; the other apps are contract, not yet in code |
+| 16 | One run: a run traced step by step with its payload values and times ("Run #1,412 · 5 steps") | `EXEC-005` | partial | partly: `src/crank/workflows/runs.ts`, `src/crank/runs.ts` |
+| 17 | One run: "AI step · Summarize" | `AI-001` | missing | contract, not yet in code |
+| 18 | One run: "Rate limited · retried after 90s" | `EXEC-002` | partial | partly: `src/crank/connectors/http-step.ts` |
+| 19 | One run: field mapping `amount ÷ 100 → Amount (USD)`, `customer.name → Customer`, blank `metadata.po → "none"` | `WORK-002`, `WORK-012` | partial | partly: `src/crank/engine/mapping.ts`, `src/crank/engine/transforms/index.ts` |
+| 20 | All day: "Schedules … start every run" | `TRIG-002` | partial | partly: `src/crank/triggers/schedule.ts` |
+| 21 | All day: "new emails" | `CONN-003`, `TRIG-003`, `TRIG-006` | partial | partly: `src/crank/triggers/poll.ts`; email triggers are contract, not yet in code |
+| 22 | All day: "webhooks" | `TRIG-001` | done | code: `src/crank/triggers/webhook.ts` |
+| 23 | All day: "and app events" | `TRIG-003`, `TRIG-008` | partial | partly: `src/crank/triggers/slack-events.ts`, `src/crank/triggers/poll.ts` |
+| 24 | All day: "Duplicates are caught before they run twice" ("Duplicate skipped") | `TRIG-001`, `TRIG-003` | partial | partly: `src/crank/triggers/webhook.ts`, `src/crank/triggers/admission.ts` |
+| 25 | All day log: "Today · 1,284 runs · 0 lost", eight runs by trigger | `OPS-001`, `EXEC-005` | partial | partly: `src/crank/ops/report.ts`, `src/crank/workflows/runs.ts` |
+| 26 | All day log: "Priya Shah · Fieldstone Dental · AI score 9 · Posted to #sales" | `AI-001`, `CONN-012`, `CONN-004` | partial | partly: `src/crank/connectors/slack.ts`; the AI step and Typeform are contract, not yet in code |
+| 27 | All day log: "Refund $1,250 · Order #4729 → QuickBooks credit memo" | `CONN-008`, `CONN-007` | missing | contract, not yet in code |
+| 28 | Outage: "Failed steps retry with backoff" (503s at 1, 2, 4, 8 and 16 minutes) | `EXEC-002` | partial | partly: `src/crank/connectors/http-step.ts` |
+| 29 | Outage: "When an app stays down, runs wait in the queue and resume on their own, in order" | `EXEC-001`, `EXEC-002` | partial | partly: `src/crank/runs.ts`, `src/crank/delivery.ts` |
+| 30 | Outage: Crank posts the outage and the recovery in Slack #ops | `EXEC-003`, `CONN-004` | partial | partly: `src/crank/ops/notices.ts` (email), `src/crank/connectors/slack.ts`; Slack notices are contract, not yet in code |
+| 31 | Overnight: "Its agent repairs the mapping, tests it"; agent log: changelog read, mapping updated, "Tested on the last 20 runs · 20 passed" | `AGENT-002` | missing | contract, not yet in code |
+| 32 | Overnight: "asks a person only for a business choice" ("Asked Dana Reyes … On settlement.") | `AGENT-004` | partial | partly: `src/crank/runs.ts`, `src/crank/delivery.ts` |
+| 33 | Overnight: "Checked 2 uncertain writes in QuickBooks · 1 landed, 1 missing, sent once" | `EXEC-006`, `AGENT-001`, `CONN-007` | partial | partly: `src/crank/delivery.ts`, `src/crank/engine/search.ts`; QuickBooks is contract, not yet in code |
+| 34 | Overnight: "Workflow resumed · 3 held runs replayed" | `EXEC-004`, `AGENT-002` | partial | partly: `src/crank/delivery.ts` |
+| 35 | Books match: "Crank checks every Stripe payment against its QuickBooks invoice, and fixes what is missing"; ledger "1,912 payments · $148,920.40 · Matched" | `AGENT-001`, `CONN-008`, `CONN-007` | partial | partly: `src/crank/delivery.ts`; Stripe and QuickBooks are contract, not yet in code |
+| 36 | Books match ledger: "Created INV-4410", "Applied to INV-4398", "Credit memo CM-212" | `CONN-007` | missing | contract, not yet in code |
+| 37 | Limits: "No desktop or screen-scraping robots" | none needed: a boundary, true of the code | done | code: `src/crank/engine/steps/index.ts` (no desktop or screen step type exists) |
+| 38 | Limits: "Apps outside the library connect over HTTP or a code step" | `HTTP-002`, `WORK-005` | partial | partly: `src/crank/connectors/http-step.ts`; code steps are contract, not yet in code |
+| 39 | Closing: "Open source workflow automation for every team" / "Free and open source, MIT licensed" | `BASE-004` | partial | partly: `LICENSE`, `src/site/shell/SiteFooter.tsx` |
+| 40 | Closing art: "All 38 workflows ran" | `OPS-001` | partial | partly: `src/crank/ops/report.ts` |
 
 ## Status
 

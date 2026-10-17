@@ -1,0 +1,74 @@
+/* 03 Tuesday, 9:14 AM: the run's five steps joined by brass couplings, then the field mapping strip. */
+/* The run card spans the desk's width (x 35-1404 at 1440), wider than the other sections. */
+@media (min-width: 1181px) { .one-run .wide-wrap { --gutter: 35px; } }
+.run-art { margin-top: 56px; }
+.run-card { padding: 22px 22px 22px; background: #fffdf9; }
+.run-head { display: flex; flex-wrap: wrap; align-items: baseline; font: 600 18px/1.3 var(--font-head); color: #3a4865; }
+.run-head strong { font-weight: 700; color: var(--ink); }
+.run-steps { display: grid; grid-template-columns: minmax(0, .94fr) minmax(0, .96fr) minmax(0, 1fr) minmax(0, 1.08fr) minmax(0, 1.06fr); column-gap: 30px; margin-top: 18px; }
+.run-step { position: relative; display: flex; flex-direction: column; min-width: 0; padding: 16px 14px 14px; border: 1px solid #e9eef5; border-radius: 13px; background: #fff; box-shadow: 0 1px 2px rgba(6, 25, 67, .04), 0 10px 22px -16px rgba(22, 64, 140, .3); }
+.run-step:not(:last-child)::after { content: ''; position: absolute; top: 50%; right: -31px; width: 30px; height: 14px; margin-top: -7px; background: radial-gradient(circle at 50% 50%, #ffd34d 0 4.5px, #8a5a07 5px 6.2px, transparent 6.6px), linear-gradient(#0b1a3d, #0b1a3d) center / 100% 2px no-repeat; }
+.run-step .app { width: 44px; height: 44px; }
+.run-step .app-quickbooks { font-size: 16px; }
+.run-step h3 { margin-top: 14px; font: 700 17.5px/1.25 var(--font-head); letter-spacing: -.01em; color: var(--ink); }
+.run-lines { display: grid; margin-top: 10px; font: 12px/1.75 var(--font-mono); color: #4e5a73; }
+.run-note { display: block; align-self: flex-start; min-height: 0; margin-top: 8px; padding: 4px 9px; border-radius: 9px; font-size: 12.5px; line-height: 1.35; white-space: normal; }
+.run-foot { display: flex; align-items: center; justify-content: space-between; margin-top: auto; padding-top: 16px; font: 13px/1 var(--font-mono); color: #4e5a73; }
+
+.map-strip { display: flex; align-items: center; gap: 40px; margin-top: 22px; padding: 22px 28px; }
+.map-strip h3 { flex: none; font: 700 19px/1.2 var(--font-head); color: var(--ink); }
+.map-strip ul { display: flex; flex: 1; justify-content: space-around; }
+.map-strip li { display: flex; align-items: center; gap: 10px; padding: 0 24px; font: 15px/1.4 var(--font-mono); color: #33425f; white-space: nowrap; }
+.map-strip li + li { border-left: 1px solid #dfe5ee; }
+.map-strip code { font-family: inherit; }
+.map-arrow { color: #33425f; }
+
+@media (max-width: 1365px) and (min-width: 1181px) {
+  .run-steps { column-gap: 26px; }
+  .run-step { padding: 14px 12px 12px; }
+  .run-step:not(:last-child)::after { right: -27px; width: 26px; }
+  .run-lines { font-size: 12px; }
+  .map-strip { gap: 20px; }
+  .map-strip li { padding: 0 14px; font-size: 14px; }
+}
+
+/* Tablets and phones (phone-03): the steps stack on a vertical rail with brass rivets, the mapping under them. */
+@media (max-width: 1180px) {
+  .run-art { margin-top: 32px; }
+  .run-card, .run-card.glow { padding: 0; border: 0; background: none; box-shadow: none; }
+  .run-head { justify-content: center; font-size: 17px; font-weight: 500; }
+  .run-head strong { font-weight: 500; color: #3a4865; }
+  .run-flow, .run-flow + .sep { display: none; }
+  .run-steps { position: relative; grid-template-columns: minmax(0, 1fr); row-gap: 14px; margin-top: 18px; padding-left: 30px; }
+  .run-steps::before { content: ''; position: absolute; left: 10px; top: 36px; bottom: 50px; width: 2px; background: #0b1a3d; }
+  .run-step { display: grid; grid-template-columns: 52px minmax(0, 1fr) auto; grid-template-rows: auto auto auto; column-gap: 14px; padding: 16px 16px 16px 14px; background: #fffdf9; }
+  .run-step:not(:last-child)::after { display: none; }
+  .run-step::before { content: ''; position: absolute; left: -27px; top: 28px; width: 14px; height: 14px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #ffe08a, #e2a42a 60%, #9a6410); box-shadow: 0 0 0 1.5px #8a5a07; }
+  .run-step .app { grid-row: 1 / 4; align-self: start; width: 48px; height: 48px; }
+  .run-step h3 { grid-column: 2; margin: 0; font-size: 18px; }
+  .run-lines { margin-top: 6px; font-size: 13px; }
+  .run-lines, .run-note { grid-column: 2 / 4; }
+  .run-note { justify-self: start; width: fit-content; }
+  .run-foot { grid-column: 3; grid-row: 1; align-self: start; gap: 12px; margin: 0; padding: 0; }
+  .map-strip { display: block; margin-top: 18px; padding: 18px 20px; }
+  .map-strip ul { display: grid; grid-template-columns: auto 28px auto; justify-content: start; margin-top: 12px; gap: 6px 8px; }
+  .map-strip li { display: contents; white-space: normal; }
+  .map-strip li + li { border: 0; }
+}
+@media (max-width: 760px) {
+  .run-head { font-size: 15.5px; }
+  .run-steps { padding-left: 26px; row-gap: 12px; }
+  .run-steps::before { left: 8px; }
+  .run-step { grid-template-columns: 40px minmax(0, 1fr) auto; column-gap: 12px; padding: 13px 12px 13px 12px; }
+  .run-step::before { left: -25px; top: 24px; }
+  .run-step .app { width: 40px; height: 40px; font-size: 19px; }
+  .run-step .app-quickbooks { font-size: 14px; }
+  .run-step h3 { font-size: 16.5px; }
+  .run-lines { font-size: 12px; line-height: 1.65; }
+  .run-foot { gap: 8px; font-size: 12px; }
+  .run-foot .check { width: 20px; height: 20px; }
+  .map-strip { padding: 16px; }
+  .map-strip h3 { font-size: 17px; }
+  .map-strip ul { grid-template-columns: minmax(0, auto) 20px minmax(0, auto); }
+  .map-strip li { font-size: 12.5px; }
+}
