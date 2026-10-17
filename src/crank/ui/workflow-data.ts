@@ -25,3 +25,18 @@ export async function workflowData(read: Read, id: string, params: URLSearchPara
   await Promise.all([...new Set(runs.map(r => r.version_id))].map(async versionId => { const n = numberOf.get(versionId); if (n) graphs.set(versionId, (await version(n)).graph) }))
   return { workflow, current, previous, graphs, runs, connections, today, actor, params }
 }
+
+/** The frozen graph of each listed run's version and each workflow's live version, so a run list can
+ * show the columns a run's own version declares (`settings.run_columns`). */
+export async function runGraphs(read: Read, runs: { workflow_id: string; version_id: string }[]) {
+  const graphs = new Map<string, Graph>(), live = new Map<string, { graph: Graph; number: number }>()
+  await Promise.all([...new Set(runs.map(r => r.workflow_id))].map(async id => {
+    const workflow = await read(`/api/crank/workflows/${encodeURIComponent(id)}`), used = new Set(runs.filter(r => r.workflow_id === id).map(r => r.version_id))
+    await Promise.all(workflow.versions.filter((v: any) => used.has(v.id) || v.id === workflow.published_version_id).map(async (v: any) => {
+      const { graph } = await read(`/api/crank/workflows/${encodeURIComponent(id)}/versions/${v.number}`)
+      if (used.has(v.id)) graphs.set(v.id, graph)
+      if (v.id === workflow.published_version_id) live.set(id, { graph, number: v.number })
+    }))
+  }))
+  return { graphs, live }
+}

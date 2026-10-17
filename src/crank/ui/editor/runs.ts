@@ -45,6 +45,14 @@ function columnValues(run: RunDetail, graph: Graph | undefined, live: { graph: G
   })
 }
 
+/** A run's lead column (its version's first that is not a number, such as Customer) and its amount
+ * (the first that is), with their labels, for lists that mix workflows. */
+export function leadAndAmount(run: RunDetail, graph: Graph | undefined, live: { graph: Graph; number: number } | null) {
+  const labels = (((live?.graph ?? graph)?.settings?.run_columns ?? []) as { label: string }[]).map(c => c.label)
+  const values = columnValues(run, graph, live, labels).map((v, i) => ({ ...v, label: labels[i] })).filter(v => v.text)
+  return { lead: values.find(v => !NUMERIC.test(v.text)), amount: values.find(v => NUMERIC.test(v.text)) }
+}
+
 function note(run: RunDetail, graph: Graph | undefined, live: { graph: Graph; number: number } | null, changes: string) {
   if (run.status === 'failed' && run.error) {
     const failed = run.steps.find(s => s.status === 'failed' || s.status === 'uncertain'), rename = renameOf(failed?.error ?? run.error, failed?.path, live)

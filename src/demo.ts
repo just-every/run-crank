@@ -13,22 +13,23 @@ export async function seedDemo(env: CrankEnv, { ownerEmail, now }: { ownerEmail:
   const statements = [env.DB.prepare("UPDATE oa_operators SET display_name='Maya Chen' WHERE id=?").bind(owner.id), env.DB.prepare('INSERT INTO oa_first_run(singleton,completed_by,completed_at) VALUES(1,?,?) ON CONFLICT DO NOTHING').bind(owner.id, now.getTime())]
   const people = [ ['dana', 'Dana Reyes', 'admin'], ['oliver', 'Oliver Hughes', 'member'], ['amelia', 'Amelia Grant', 'admin'] ]
   for (const [key, name, role] of people) statements.push(env.DB.prepare("INSERT INTO oa_operators(id,email,display_name,role,status,version,created_at) VALUES(?,?,?,?,'active',1,?) ON CONFLICT DO NOTHING").bind(`demo-${key}`, `${key}@bluelake.example`, name, role, now.getTime() - 7 * 86400000))
+  // Each source numbers its own events, so each flow's newest event has its own number.
   const flows = [
-    ['support', 'Customer follow-up', 'Support desk', 'Operations inbox', 'active'],
-    ['orders', 'Order handoff', 'Online store', 'Fulfillment desk', 'active'],
-    ['suppliers', 'Supplier onboarding', 'Purchasing desk', 'Supplier register', 'active'],
-    ['expenses', 'Expense review', 'Team expenses', 'Finance inbox', 'active'],
-    ['returns', 'Return authorization', 'Customer care', 'Warehouse inbox', 'draft'],
-    ['projects', 'Project kickoff', 'Sales pipeline', 'Project desk', 'draft'],
-  ]
+    ['support', 'Customer follow-up', 'Support desk', 'Operations inbox', 'active', 1045],
+    ['orders', 'Order handoff', 'Online store', 'Fulfillment desk', 'active', 20871],
+    ['suppliers', 'Supplier onboarding', 'Purchasing desk', 'Supplier register', 'active', 318],
+    ['expenses', 'Expense review', 'Team expenses', 'Finance inbox', 'active', 4126],
+    ['returns', 'Return authorization', 'Customer care', 'Warehouse inbox', 'draft', 772],
+    ['projects', 'Project kickoff', 'Sales pipeline', 'Project desk', 'draft', 59],
+  ] as const
   const customers = ['Harbor Workshop', 'Aspen Studio', 'Northline Supply', 'Cedar House', 'Riverbend Books', 'Coastal Design']
   const tasks = ['Arrange an installation callback', 'Confirm packing and shipping', 'Review insurance and payment details', 'Reimburse the site visit', 'Schedule a return pickup', 'Schedule the project handover']
-  for (const [index, [key, name, source, destination, status]] of flows.entries()) {
+  for (const [index, [key, name, source, destination, status, newest]] of flows.entries()) {
     const flowId = `demo-flow-${key}`, target = `${origin}/${key}/events`
     statements.push(env.DB.prepare('INSERT INTO crank_flows(id,name,source_app,destination_app,target_url,revision,created_by,created_at,status) VALUES(?,?,?,?,?,1,?,?,?) ON CONFLICT DO NOTHING').bind(flowId, name, source, destination, target, owner.id, at(168 + index), status))
     // Completed/rejected history remains useful when a flow is paused for revision.
     for (let n = 0; n < 4; n++) {
-      const runId = `demo-run-${key}-${n + 1}`, eventId = `${key}-${1045 - n}`
+      const eventId = `${key}-${newest - n}`, runId = `run-${eventId}`
       const input = { customer: customers[(index + n) % customers.length], contact: ['Sophie Martin', 'Liam Wilson', 'Grace Taylor', 'Noah Campbell'][n], task: tasks[index], reference: `HW-${2300 + index * 10 + n}`, ...(key === 'expenses' ? { amount: 86 + n * 47, currency: 'USD' } : {}) }
       const inputJson = canonical(input), inputDigest = await digest(inputJson)
       const actionJson = canonical({ method: 'POST', target_url: target, flow_revision: 1, source_app: source, destination_app: destination, event_id: eventId, input })

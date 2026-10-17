@@ -27,6 +27,7 @@ test('the flow editor shows the steps and runs; an approval decided from its for
 
   const editor = await page(`/app/workflows/${workflow.id}`);
   for (const text of ['Paid orders to the team', 'Paid orders only', 'Ask an owner', 'Order summary', 'Runs today', 'Harbor Workshop', 'Waiting for approval']) assert.ok(editor.includes(text), `editor shows ${text}`);
+  assert.ok((await page('/app/runs')).includes('Harbor Workshop'), 'the Runs page leads with the run’s own Customer column');
   const selected = await page(`/app/workflows/${workflow.id}?step=check`);
   assert.ok(selected.includes('Large orders wait for an owner.'), 'the inspector shows the selected step');
 

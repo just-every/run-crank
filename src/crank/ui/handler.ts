@@ -12,7 +12,7 @@ import { accessView, accountView, importView, previewView, dataView } from './se
 import { connectionsView } from './connections'
 import { approvalsView, workflowRunView } from './workflow-run'
 import { editorView } from './editor'
-import { workflowData } from './workflow-data'
+import { runGraphs, workflowData } from './workflow-data'
 
 const redirect = (location:string) => new Response(null,{status:303,headers:{location,'cache-control':'no-store'}})
 // A form may name where to return after its action: a path inside the app, nothing else.
@@ -106,7 +106,8 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
       const q = url.searchParams.get('q') ?? '', status = url.searchParams.get('status') ?? '', workflow = url.searchParams.get('workflow') ?? ''
       const search = new URLSearchParams({limit:'50'}); if(q) search.set('q',q); if(status) search.set('status',status); if(workflow) search.set('workflow',workflow); const before = url.searchParams.get('before'); if(before) search.set('before',before)
       const [runs,workflows] = await Promise.all([read('/api/crank/workflow-runs?'+search),read('/api/crank/workflows')])
-      return page('Runs',runsView(state,url.searchParams.get('flow'),{runs:runs.runs,next:runs.next,workflows,q,status,workflow}),{state,intro:'Every run keeps its own record: workflow runs step by step, approval flow runs with their decision and delivery.'})
+      const {graphs,live} = await runGraphs(read,runs.runs)
+      return page('Runs',runsView(state,url.searchParams.get('flow'),{runs:runs.runs,next:runs.next,workflows,q,status,workflow,graphs,live}),{state,intro:'Every run keeps its own record: workflow runs step by step, approval flow runs with their decision and delivery.'})
     }
     if(/^\/app\/runs\/[^/]+$/.test(url.pathname)) return page('Run details',runView(state,url.pathname.split('/')[3]),{state,crumbs:[['Runs','/app/runs']]})
     const runPath = /^\/app\/workflow-runs\/([^/]+)$/.exec(url.pathname)

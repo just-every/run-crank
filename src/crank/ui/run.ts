@@ -7,7 +7,7 @@ export function runView(state:any,id:string) {
   const expired = r.state==='running' && Date.parse(r.lease_expires_at)<Date.now()
   return `<p class="back-link"><a href="/app/runs">← All runs</a></p><div class="detail-layout"><section class="panel detail-primary">
     <div class="title-row"><h2>${esc(r.event_id)}</h2>${chip(r.state)}</div>
-    <dl class="facts"><dt>Source</dt><dd>${esc(r.source_app)}</dd><dt>Destination</dt><dd>${esc(r.destination_app)}<br><code>${esc(r.target_url)}</code></dd><dt>Flow revision</dt><dd>${esc(r.flow_revision)}</dd><dt>Delivery key</dt><dd><code>${esc(r.id)}</code></dd></dl>
+    <dl class="facts"><dt>Source</dt><dd>${esc(r.source_app)}</dd><dt>Destination</dt><dd>${esc(r.destination_app)}<br><code>${esc(r.target_url)}</code></dd><dt>Received</dt><dd>${timestamp(r.created_at)}</dd><dt>Flow revision</dt><dd>${esc(r.flow_revision)}</dd><dt>Delivery key</dt><dd><code>${esc(r.id)}</code></dd></dl>
     <h3>Exact input sent on approval</h3><pre>${json(parse(r.input_json))}</pre><p class="muted">The same body and delivery key are used for a replay. A destination acknowledgement confirms receipt; it does not certify any later business action.</p>
     ${owner&&r.state==='pending'?`<div class="actions">${action(`/api/crank/runs/${id}/approve`,'Approve and deliver')}${action(`/api/crank/runs/${id}/reject`,'Reject',{},'secondary')}</div>`:''}
     ${owner&&((r.state==='failed')||expired)&&r.replay_count===0?`<p class="notice">Check the destination before replaying. Crank will make one more attempt using this approved input.</p><div class="actions">${action(`/api/crank/runs/${id}/replay`,'Replay once')}</div>`:''}

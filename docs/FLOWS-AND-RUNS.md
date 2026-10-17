@@ -30,8 +30,12 @@ Open **Runs** (`/app/runs`), or select **View runs** on a flow. The list shows
 the newest 200 runs across the workspace; **View runs** filters that list.
 Select the event ID to open **Run details**.
 
-Check the source, destination URL, flow revision, delivery key and
-**Exact input sent on approval**. For a `pending` run, an owner can select:
+Workflow runs on the same page lead with the columns their workflow version
+declares in `settings.run_columns` (such as Customer and Amount); a run whose
+version declares none leads with its workflow's name.
+
+Check when it was received, the source, destination URL, flow revision, delivery
+key and **Exact input sent on approval**. For a `pending` run, an owner can select:
 
 - **Approve and deliver**: record the decision and make the first HTTP delivery attempt.
 - **Reject**: record the decision without sending anything.

@@ -102,6 +102,17 @@
 .inspector-block + .inspector-block { border-top: 1px solid var(--line); }
 .inspector-block h3 { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; font-size: 14.5px; font-weight: 700; }
 .inline-info { width: 15px; height: 15px; color: var(--soft); }
+.connection-line { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+.connection-line h3 { margin-bottom: 0; }
+.connection-line .muted { min-width: 0; font-size: 13px; overflow-wrap: break-word; }
+.folded summary { display: flex; align-items: baseline; gap: 10px; cursor: pointer; list-style: none; }
+.folded summary::-webkit-details-marker { display: none; }
+.folded summary h3 { flex: none; margin-bottom: 0; }
+.folded-gist { flex: 1; min-width: 0; color: var(--body); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.folded-mark { align-self: center; width: 16px; height: 16px; color: var(--soft); transition: transform .15s; }
+.folded[open] summary { margin-bottom: 8px; }
+.folded[open] .folded-gist { visibility: hidden; }
+.folded[open] .folded-mark { transform: rotate(180deg); }
 .inspector-note { color: var(--body); font-size: 13px; margin-bottom: 8px; }
 .field { display: grid; grid-template-columns: 88px minmax(0, 1fr); gap: 10px; align-items: baseline; font-size: 13px; color: #3d527d; }
 .field-label { overflow-wrap: anywhere; }
@@ -166,6 +177,15 @@
   .canvas > .chain > .link + .link::before { width: 22px; }
   .canvas > .chain > .link > .branches { flex: none; }
 }
+/* Two columns: both end together, the shorter one's last card growing to the other's end. */
+@media (min-width: 1400px) {
+  .editor { align-items: stretch; }
+  .editor-main, .editor-side { display: flex; flex-direction: column; }
+  .editor-main > :last-child, .editor-side > :last-child { flex: 1 0 auto; }
+  .runs-strip { display: flex; flex-direction: column; }
+  .runs-strip .strip-more { margin-top: auto; padding-top: 10px; align-self: flex-start; }
+  .inspector-body pre { max-height: 260px; overflow: auto; }
+}
 @media (min-width: 1400px) and (max-width: 1520px) {
   .editor { grid-template-columns: minmax(0, 1fr) 336px; }
   .branches { padding-left: 50px; }
@@ -195,6 +215,10 @@
   .branch:only-child::after { display: block; }
   .branch::before { left: -18px; top: 39px; width: 18px; }
   .editor-side { grid-template-columns: minmax(0, 1fr); }
+}
+/* Tablet: the runs strip drops its Trigger column (the same on every row), so Status stays in view. */
+@media (min-width: 761px) and (max-width: 1000px) {
+  .runs-strip .runs-table :is(th, td):nth-child(2) { display: none; }
 }
 @media (max-width: 760px) {
   .is-editor main.crank { padding: 18px 16px; }
