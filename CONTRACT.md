@@ -20,15 +20,93 @@ Crank is the owned workflow-automation product a US small or mid-size business b
 | Incumbents a buyer switches from | Zapier, Make, Workato, n8n, Gumloop, Pipedream |
 | First buyer | A US operations lead at a 5–100 person business replacing Zapier, Make or Workato, whose recurring work runs through QuickBooks Online, HubSpot, Slack, Shopify and Stripe; costs in USD, US business calendars and timezones, the buyer's own Cloudflare account |
 
-## Build the automation
+## Published clauses
 
-### WORK-001 — Visual multi-step workspace.
+### Workspace and HTTP delivery
+
+#### WORK-001 — Visual multi-step workspace.
 
 An operations lead creates, names, folders, searches, duplicates and connects workflows in a visual node-and-edge editor without code: steps are filled by picking account resources and fields by name (CONN-019) and routes are built with WORK-013 conditions, never by typing IDs or writing expressions. Each workflow has an owner, description, trigger, typed steps and enabled state; its graph shows branches, data lineage and validation errors. Every edge shows real sample data from WORK-014 step tests (recent records loaded from the connected account, the next real delivery, an earlier run, an action’s real response, or an explicitly labelled manual sample), with that sample’s source, so a builder sees what a field actually contains before mapping it. Draft edits and sample tests cannot send production actions unless explicitly authorized: a live action test needs its own WORK-014 confirmation naming the effect and account. Publishing a version is itself the authorization for that version’s declared steps on its bound connections (TEAM-004); limits and approval steps are opt-in.
 
 **Acceptance evidence:** From the builder, connect a new lead trigger to a filter, CRM lookup, invoice draft and notification; test the trigger to load recent real leads from the connected test account and pick one, test each step and inspect the sample data and its named source at every edge, correct a missing required field, save and reopen the same graph, then publish it deliberately and observe its next triggered run complete with no further authorization step.
 
-### WORK-002 — Mapping, formatting and conditional routes.
+#### HTTP-001 — Authorized HTTP dispatch.
+
+The existing custom HTTP connector delivers the immutable approved JSON body to the deployment-authorized exact origin, adds the run’s stable idempotency key, refuses redirects and binds success to the receiver’s returned effect ID and matching key. Failure or lost acknowledgment remains visible. One owner-controlled replay uses the same bytes/key; a compliant receiver records one effect. This connector’s manual mode remains available beside future standing-grant and app steps.
+
+**Acceptance evidence:** Create and activate a flow through the HTTP API, prepare an event without sending, concurrently approve twice, lose the receiver acknowledgment, replay once and inspect one receiver effect; reject another run and refuse a foreign or credential-bearing destination.
+
+### Run history and recovery
+
+#### EXEC-004 — Replay any eligible step safely.
+
+Operators retry/resume any eligible failed or incomplete step or selected batch items using retained versioned input and scoped authority. Preview shows what would run, prior effects and idempotency/reconciliation status. A corrected payload creates an attributable new revision; successful side effects are not silently repeated. Bulk replay has selection preview and limits.
+
+**Acceptance evidence:** Fail the fourth step after three committed effects, restart, preview and resume that step, then replay selected failed items with corrected data; verify the first three effects persist once and the original and corrected inputs remain distinguishable.
+
+#### EXEC-005 — Searchable run history and debugging.
+
+Run history retains workflow/version, trigger provenance, original inputs, each step’s mapped inputs/outputs, timings, decisions, grants, attempts and remote object IDs under redaction and retention rules. Builders search/filter by workflow, business key, date, status and error, paginate beyond the latest page and compare prior runs. Incomplete executions remain available; UI distinguishes queued, rejected, failed, uncertain, `stopped by search`, `stopped by filter` and business-complete, and shows each filter and path group’s rule results.
+
+**Acceptance evidence:** Find an older failed invoice by customer key, inspect its exact mapping and decisions, compare a passing run and follow the remote record link; deny a reader access to a restricted payload while retaining safe status/timing.
+
+#### EXEC-006 — Effect reconciliation and compensation.
+
+Every mutating step records intent, stable operation identity and known/unknown remote effects. Crank uses provider idempotency when supported, otherwise reads back by business key before retrying. Ambiguous matches stop for an accountable decision. WORK-011 find-or-create steps are mutating steps under this clause: a lost create is read back by its search key before any retry. Partial workflows can run explicitly authorized compensating actions; compensation has its own audit/outcome and never promises distributed exactly-once effects or reversal of an irreversible action.
+
+**Acceptance evidence:** Lose the response after an invoice/refund is created, restart and reconcile it by provider readback; simulate zero, one and multiple matches, then fail a downstream step and inspect an authorized compensation without duplicating the initial write.
+
+### Approvals and data custody
+
+#### TEAM-002 — Optional approvals and standing grants.
+
+Approval is a configurable step or policy boundary, not a requirement for every run. A published workflow needs no grant to run: publishing authorizes exactly its declared steps on its bound connections (TEAM-004). Standing grants are opt-in limits layered on top, and they are the authority for agents, MCP clients and other work that is not a fixed published graph; they name workflow/version, app/account, tools/actions, fields, recipients, amount/rate limits and expiry. Routine actions proceed unattended within the publish authority and any grant. High-impact or out-of-policy actions show the exact proposed effect to an authorized human; rejection sends nothing, a change to the proposed action made by anyone but the reviewer invalidates the decision, and timeout/escalation/delegation are durable. Reviewers may correct a proposal before approving and choose where rejection leads under TEAM-005. Revocation stops new authority immediately.
+
+**Acceptance evidence:** Publish a routine lead workflow with no grant and observe unattended completion; give an agent task a limited grant and observe it complete within the grant; exceed a USD refund limit, inspect and reject one proposed action, approve another, then alter its body and revoke the grant mid-run, verifying reapproval/refusal and recorded in-flight uncertainty.
+
+#### TEAM-003 — Scoped preparation and trigger credentials.
+
+Owners issue one-time agent preparation/read credentials and one-flow trigger credentials stored only as hashes. Preparation authority cannot activate, approve, replay, manage data or escalate its own permissions. Revocation and owner identity/version changes invalidate credentials at the HTTP and transaction boundaries. Future execution tools receive separate explicit grants under TEAM-002.
+
+**Acceptance evidence:** Issue both credential kinds through Access, prepare/read with an agent, submit with a trigger, try every owner-only route and another flow, then revoke; inspect state and archive for absence of bearer values.
+
+#### TEAM-005 — Approve with edits, rejection routes and reviewer notices.
+
+An approval step can mark fields the reviewer may edit (for example refund amount or email body). The reviewer sees the exact proposed action, edits allowed fields and approves the edited version; the edit is recorded as an attributable revision beside the original, re-validated against the mapping schema and any TEAM-004/TEAM-002 caps, and only the approved revision is sent. Builders choose whether rejection stops the run or continues down a named rejection branch carrying the reviewer’s reason. Reviewers are notified by email, Slack, Microsoft Teams or Nook and mobile push, each with an authenticated link; reminders and timeout routes follow the business calendar.
+
+**Acceptance evidence:** Publish a refund workflow with an approval step whose amount is editable and capped at $500; change a $120 proposed refund to $95 and approve, then verify the Stripe test-mode readback shows $95, the run history shows both values, the reviewer and the reason; try to approve an edited amount of $600 and verify refusal; reject a second refund on a workflow whose rejection branch emails the customer and verify the branch runs with no refund; reject a third on a stop-on-rejection workflow and verify nothing further runs; verify each reviewer received the Slack notice and the mobile push with a working authenticated link.
+
+#### DATA-001 — Complete portable archives and inactive restore.
+
+Owners export all portable workflow versions/graphs, recipes, tables/forms, run/step histories, decisions, obligations, import provenance, usage, audit and erasure journals in documented versioned data. Integrity/schema/semantic checks precede atomic restore into empty product data. Flows restore paused with interrupted work visible and no dispatch; account bindings, credential secrets, sessions and grants remain installation-local and must be reauthorized. Unknown data is refused rather than silently omitted.
+
+**Acceptance evidence:** Export a populated installation, restore to an empty installation, compare all portable records and verify paused workflows, no network effects and no receiving authority; refuse corruption and a nonempty destination, then export the restored history again.
+
+#### DATA-002 — Erasure, receipts and restoration fences.
+
+Owners erase completed run data and related sensitive inputs, decisions, outputs, files, indexes and agent memory after stopping affected execution. Durable value-free receipts and event digests prevent local restoration/readmission; a later source journal fences older archives on another installation. Subject/operator erasure traverses owned records and anonymizes the separate audit. External effects and previously downloaded offline copies are disclosed and handled in the buyer’s provider/copy policy.
+
+**Acceptance evidence:** Pause work and erase a terminal run/subject through Data; inspect histories, files, search and agent memory, attempt duplicate source readmission and restore its old archive with the later journal, then verify only value-free receipts/audit survive.
+
+### Migration and runnable site
+
+#### MIG-001 — n8n migration with preview and undo.
+
+Import n8n workflow exports including graph/layout, triggers, mappings, branches, loops, subflows, delays, code and credential references into paused Crank drafts; search/lookup settings (Always Output Data, Return All, limits) map to WORK-011, built-in transformation nodes to WORK-012, IF, Filter and Switch conditions to WORK-013, and resource locators keep their chosen resources under CONN-019; trigger update options (such as the Google Sheets Trigger’s columns to watch) map to TRIG-008 watched fields, and captured executions load as WORK-014 samples. n8n OpenAI and Anthropic nodes and AI Agent nodes with their chat-model, memory and tool sub-nodes map to their CONN-001-mapped AI-001 operations and agent nodes, keeping prompt, model or a named substitution, output parser schema, binary file inputs and declared tools, with keys re-entered under CONN-002. A preview maps every node/setting or names a blocking/manual conversion; it never silently drops work, imports authority or executes source expressions during parsing. Reviewed fingerprints, source identities, originals and a restartable journal support idempotent apply and safe undo of unused, unchanged imports.
+
+**Acceptance evidence:** Preview a multi-step n8n export with a subflow and unsupported/custom node, resolve each named gap, apply the exact reviewed plan twice, reopen the journal after restart, bind fresh accounts and compare runs before cutover; undo an unused import and refuse undo after drift or use. Import an n8n workflow whose OpenAI node analyzes an image from a binary input and whose Anthropic node writes a reply: verify both map to AI-001 operations with prompt, model and output schema kept, and pass on captured executions.
+
+#### BASE-002 — Runnable site and unchanged installed home.
+
+The static run site leads from Run Crank to runnable commands and publishes repository owner guides at /docs. The installed home stays the shared Lobby. Target clauses describe future product behavior; current guides/API documentation remain implementation-specific until their corresponding capabilities ship.
+
+**Acceptance evidence:** Build the static site and follow homepage → /run and /docs without JavaScript; traverse local guide links and anchors through HTTP, and verify the installed homepage through its emitted Worker.
+
+## Target clauses
+
+### Build the automation
+
+#### WORK-002 — Mapping, formatting and conditional routes.
 
 Builders map nested fields and files between steps, validate against connector schemas, format US dates, timezones, USD amounts and decimals, transform text, numbers, dates and JSON with the WORK-012 built-in transforms, and choose filters and exclusive or parallel paths with the WORK-013 condition language. Missing, null and empty values stay distinct; invalid mappings name the field and prevent an unintended write. A public file URL mapped into a file input (for example a Typeform upload link) is fetched into a file reference with name, type and size under SEC-002 egress rules and the CONN-005 size and type bounds; a refused address, redirect into a private network, timeout, oversize or non-2xx response fails with the named error `file fetch failed` and no write.
 
@@ -36,55 +114,55 @@ Builders map nested fields and files between steps, validate against connector s
 
 **Acceptance evidence:** Use the builder with a US lead containing nested addresses, a missing optional field and a USD amount; test both qualifying and filtered branches, a null value and invalid currency input, then inspect the exact mapped destination payload. Map a HubSpot deal with 3 line items (one discounted, one non-taxable) and a Square order with 4 lines into QuickBooks Online sandbox draft invoices: readback shows 3 and 4 lines with matching quantities, amounts and tax codes, and each invoice total equals its source total to the cent; build a 2-line invoice with a line-itemizer step from comma-separated sheet values; zip parallel lists of unequal length and verify a named error; send a zero-line source and verify a named validation failure and no invoice created. Map a Typeform file-upload URL into a Google Drive upload and verify the file by readback with its name, type and size; map a URL that redirects to a private-network address and verify `file fetch failed` with no request past the refusal and no write.
 
-### WORK-003 — Loops, joins and batch processing.
+#### WORK-003 — Loops, joins and batch processing.
 
 Workflows paginate source datasets, iterate records with bounded concurrency, aggregate results and merge streams by explicit keys and join policy. Per-item success and failure remain inspectable; resumption preserves completed items and does not repeat their effects. Ordering and empty-input behavior are declared.
 
 **Acceptance evidence:** Run a paginated order batch through a loop and two branches, join by order ID, interrupt after some invoices are created and resume; inspect unmatched records and confirm each completed order retains one invoice.
 
-### WORK-004 — Durable delay and event waits.
+#### WORK-004 — Durable delay and event waits.
 
 Delay-until, interval waits and callback/event waits persist across restarts and deployments without holding a browser open. The owner sets timezone, expiry, business calendar and cancellation policy; late or duplicate callbacks do not resume a step twice. A **delay queue** step serializes runs through a named queue that any workflow in the workspace can share: each run waits until the queue’s previous item has been released plus a declared spacing, items release once each in arrival order, the queue survives restarts and deployments, and its depth, oldest item and next release time are visible.
 
 **Acceptance evidence:** Publish a two-business-day follow-up, stop the executor while waiting, resume after a timezone/DST boundary and deliver the same callback twice; observe one continuation, or the configured timeout branch if the deadline passes. Send 5 runs from two workflows into one named delay queue with 1-minute spacing and restart the service mid-queue; verify each releases once, in arrival order, at least 60 seconds after the previous.
 
-### WORK-005 — Isolated code steps and external executors.
+#### WORK-005 — Isolated code steps and external executors.
 
 Technical builders run JavaScript/TypeScript and Python transformations with declared inputs, outputs, dependency versions, time/memory limits and allowed egress. Heavy ETL, browser and long-lived jobs use authenticated owner-deployed executors with durable task identity, cancellation and results. Code cannot read unrelated connections, host secrets or another run.
 
 **Acceptance evidence:** From a published workflow run a code transformation and a remote Python job; exceed a limit, attempt unauthorized egress and cancel a long job; inspect explicit failures and verify a restart reconciles the remote task without launching a duplicate.
 
-### WORK-006 — Reusable subflows and recipes.
+#### WORK-006 — Reusable subflows and recipes.
 
 Teams create versioned subflows with typed inputs/outputs and reusable API/data-pipeline recipes, install reviewed community templates, and choose explicit update versions. Templates include connector requirements and sample tests but no credentials or production authority. Parent runs link to child histories and cancellation.
 
 **Acceptance evidence:** Install a lead-to-invoice recipe, bind the buyer’s own accounts, call a shared address-normalization subflow from two flows, upgrade one caller and roll back; verify the other caller and production permissions stay unchanged.
 
-### WORK-007 — Workflow tables and intake forms.
+#### WORK-007 — Workflow tables and intake forms.
 
 Builders store workflow lookup/state tables with keyed upserts, table lookups that are WORK-011 searches with the same create-if-not-found, no-match and multi-match settings, and forms for intake or human tasks. Each form has an access mode: authenticated (workspace members or named people, with submitter authority checked), or public, either link-only or embedded on the buyer’s website through a copyable iframe/script snippet with an allowed-origins list. Public forms carry a bot challenge (Cloudflare Turnstile by default, hCaptcha selectable), a hidden honeypot field, per-source (IP, origin and form) submission rate limits, and a stored spam score with its signals that filters and branches can route on. Challenged, throttled or spam-routed submissions are retained as inspectable records and cause no business effects unless a builder explicitly routes them. Forms validate fields, file type/size and access; records have retention and export controls. A table can **start workflows**: on a new record, on an updated record (only when chosen watched fields change, or any field by explicit choice, with TRIG-008 changed-to values, previous values and dedup identity), and from a record button that a member clicks on one record, each starting exactly one run per event. Tables and workspace key-value storage also offer **atomic operations** that are safe under concurrent runs: increment or decrement a number by N (returning the new value), append to a list, and pop the first or last value from a list (returning it, or a `list empty` outcome). These are workflow components; the separate Cradle product owns the general relational workspace.
 
 **Acceptance evidence:** Publish an authenticated intake form, submit the same business key twice, use its stored lookup in a workflow, reject an unauthorized record read and export then erase the collected record. Publish a public link-only quote-request form and embed it on a test page: one anonymous submission that passes the challenge starts exactly one run; a scripted burst of 200 submissions from one source is challenged or throttled, its accepted-but-spam-scored items route to the spam branch, and no CRM record, email or other business effect results from the burst; an embed from a non-allowed origin is refused. Add a record to a table with a new-record trigger, edit a watched field and an unwatched field, and click a record button twice: verify one run for the new record, one for the watched edit, none for the unwatched edit and one per click. Increment a counter from 10 concurrent runs and verify it rises by exactly 10; pop from a 3-item list 4 times and verify 3 distinct values and one `list empty` outcome.
 
-### WORK-008 — Versions, testing and controlled deployment.
+#### WORK-008 — Versions, testing and controlled deployment.
 
 Draft, test and production versions have immutable graphs, connector schema versions, parameters and grants. Builders compare changes, run selected authorized samples against test accounts, promote with a change record and roll back. Draft step tests follow WORK-014 and are never production runs: a draft bound to declared test accounts tests without confirmation, while a live test against a production connection needs its own confirmation naming the effect and account, is recorded as a test run and grants no production authority; publishing a version (TEAM-004) remains the only production authorization. In-flight runs retain their original version; environment promotion requires explicit connection binding and cannot inherit broader authority.
 
 **Acceptance evidence:** Start a production run, edit and test its mapping in a draft, promote the draft and roll back; verify the in-flight run uses its original graph, tests use test accounts and all three deployments remain attributable. Test a draft action live against a production connection: verify the named confirmation, a test-labelled history and audit entry, no production run or usage counted, and that the next production run still uses the published version. Save five draft edits and verify each is listed in the workflow’s version history with its author, time and change; roll back with one action from the history to an earlier published version and verify the rollback is in the audit and the next run uses that version’s graph.
 
-### WORK-009 — Collect-data human steps.
+#### WORK-009 — Collect-data human steps.
 
 A collect-data step pauses a run to ask a person for typed fields (text, number, USD amount, date, choice, checkbox, file) before later steps continue. The builder sets the form, assignees (workspace members, a role, or an external recipient by email link that grants access to that one request only), a due time on a business calendar, reminders and an escalation target. Assignees are notified by email, Slack, Microsoft Teams or Nook and mobile push, each with an authenticated link. Answers are validated, recorded with the answering person and time, and map into later steps by field; the run resumes the exact paused step once. Unanswered requests remind, then escalate, then follow the configured timeout branch; late or duplicate answers after resolution are recorded and ignored.
 
 **Acceptance evidence:** Publish a workflow with a collect-data step requesting a PO number and a USD amount from a sales role; trigger it late on a Friday, restart the service over the weekend and observe the Monday reminder and then the escalation to the configured manager; answer through the emailed link, verify the run resumes the exact step and the provider readback shows the answered values; submit the same link again and verify one continuation; let a second request pass its deadline and verify the timeout branch runs.
 
-### WORK-010 — Digest steps that collect across runs.
+#### WORK-010 — Digest steps that collect across runs.
 
 A digest step accumulates entries across many runs and releases them together. Each digest has a name, an entry template (text, or structured fields kept as a list) and a release rule: daily, weekly or monthly at a chosen time and day in an IANA timezone, when a count threshold is reached, or manual only. Steps can **append entry**, **find digest** (read the current entries and count without releasing) and **release now**; release either clears the digest or keeps its entries. Each release is one durable run with a stable occurrence identity, so a restart, redeploy or DST change neither drops nor double-releases a digest, and an entry appended during a release lands in exactly one release. The released text or list maps into later steps (a Slack post, an EXEC-007 email, a sheet row); entries keep their source run links, an empty digest follows a builder-chosen skip or send-empty policy, and digests have retention and erasure under DATA-002/DATA-003.
 
 **Acceptance evidence:** Publish a “new lead → append to Today’s leads” workflow with a daily 5 p.m. America/Chicago release to Slack; append 7 lead entries through the day, restart the service before 5 p.m. and verify one Slack message lists all 7 and a find-digest step then shows it empty; append during a release and verify the entry appears in exactly one release; cross a DST change with a daily digest and verify one release per day; release a manual-only digest on demand and verify a keep-entries release leaves its entries; migrate a Zap whose Digest by Zapier step uses a weekly schedule and verify the coverage report calls it native and its parity test passes.
 
-### WORK-011 — Search steps: found, not found, several found, and find or create.
+#### WORK-011 — Search steps: found, not found, several found, and find or create.
 
 Every search operation, in every native connector, every CONN-011 custom connector and every WORK-007 workflow table, has three declared settings that a builder sets without code and that run history records on each run:
 
@@ -96,7 +174,7 @@ Search keys are typed. Exact or case-insensitive matching is declared per field,
 
 **Acceptance evidence:** Using a HubSpot sandbox, publish a workflow with a “Find or create contact by email” step: a new email creates the contact, run history shows `created` and readback shows one contact; the same email in a second run reports `found` and creates nothing; two concurrent runs for a third new email produce exactly one contact, one reporting `created` and one `found`; lose the create response on a fourth email and verify readback by email before any retry and one contact. Set a no-match search to halt and verify the run ends as `stopped by search` with no EXEC-003 failure notice; set the same search to continue and verify it routes to a “not found” path. Search for a company name matching 3 companies: it returns the first by the declared sort when set to first, stops with the named `multiple matches` outcome when set to stop, and drives a 3-iteration WORK-003 loop when set to all. Make the provider return 500 during a search and verify a failure, not `not found`; map an empty email as the key and verify a named validation error and no search. Repeat the halt and continue settings on a WORK-007 table lookup and a CONN-011 custom connector search with the same outcomes. Migrate a Zap whose HubSpot search uses “create if it doesn’t exist” and verify the coverage report calls it native and its parity test passes.
 
-### WORK-012 — Built-in no-code transforms.
+#### WORK-012 — Built-in no-code transforms.
 
 Transform steps, and the same functions inline in any field mapping, provide without code at least the operations of Zapier Formatter’s four families:
 
@@ -109,7 +187,7 @@ Every transform is typed: its inputs and output have declared types, the builder
 
 **Acceptance evidence:** Build one workflow from a web form sample with no WORK-005 code step and no AI step that splits “Mary Ann O’Neil” into first name “Mary Ann” and last name “O’Neil” by the last-word rule; extracts the email and phone from a free-text message, the phone normalized to E.164; maps “TX” to its sales rep through a lookup table and an unknown state to the default rep; computes a due date of close date + 30 days (20 November 2026 → 20 December 2026) and close + 10 business days on a US federal holiday calendar across Thanksgiving (→ 7 December 2026) in America/Chicago; computes 3 × $19.99 × 1.0825 = $64.92 exactly; and strips HTML from an email body. Preview each step on the sample before saving, run the published workflow and verify each output by readback of the destination record. Send an unparseable date and verify a named validation failure and no write. Migrate a Zap using Formatter split, lookup table, add/subtract time and perform math and verify the coverage report calls each step native and its parity test passes. Map a missing company to “Individual” with default value when empty and verify a lead without a company writes “Individual” while a lead with one keeps its company.
 
-### WORK-013 — Filter and path condition language.
+#### WORK-013 — Filter and path condition language.
 
 Every filter step, every path rule, and every routing condition on a WORK-011 search outcome, a WORK-007 table lookup or an EXEC-003 error branch uses one condition language that a builder sets without code. Each rule names a mapped field, an operator and an operand (typed, picked or mapped from an earlier step), and the operator set is:
 
@@ -134,7 +212,7 @@ Every filter step, every path rule, and every routing condition on a WORK-011 se
 
 **Acceptance evidence:** Build a lead workflow with no WORK-005 code step and no AI step, in America/Chicago: path A is “state is in TX, OK, LA” AND “amount greater than 5000”; path B is “close date after today” OR “email ends with .gov”; a fallback branch catches the rest. In parallel mode send 6 sample leads (TX $6,000 closing yesterday; CA $100 closing tomorrow; OK $7,500 closing tomorrow; NY $200 closed last week at an agency.gov address; FL $300 closed last week; LA amount “5000” closed last week) and verify by readback that they took A; B; A and B; B; fallback; and fallback respectively. Switch the group to exclusive and verify the OK lead runs only A. Send “100” against “greater than 99” and verify a numeric pass; send “abc” against a number rule and verify the named `type mismatch` outcome and no write. Verify “email contains ACME.com” matches a lower-case address at the domain acme.com by default and not once the rule is case-sensitive; verify a missing field, a null field and an empty string give distinct exists and is-empty results. Add an always-run branch to a second group and verify it runs alongside the matching branch, and verify the editor refuses a group with both a fallback and an always-run branch. Verify a filtered-out run appears in run history as `stopped by filter` with the stopping rule and its resolved operands, sends no EXEC-003 notice, and that 20 such runs do not auto-pause the workflow. Migrate a Zap with an AND/OR filter and a Paths group with a fallback branch, a Make scenario whose router has a fallback route and a numeric filter, and an n8n workflow with an IF node and a Switch node with a fallback output: verify the coverage report calls each native and each parity test passes.
 
-### WORK-014 — Step tests on real samples.
+#### WORK-014 — Step tests on real samples.
 
 Every step in the builder has a **test** that produces the sample later steps map from, and the editor always shows where each sample came from (connected account, live delivery, earlier run, action response, connector schema or manual). Samples are real data from the buyer’s own accounts wherever the step can produce one:
 
@@ -148,9 +226,9 @@ Every step in the builder has a **test** that produces the sample later steps ma
 
 **Acceptance evidence:** On a draft Typeform → HubSpot → Slack workflow, test the Typeform trigger and verify it loads the last 3 real responses from the test account, newest first, with their response IDs and times, and that loading them started no run; pick the second response and verify its hidden UTM value appears in a downstream WORK-012 preview labelled with that response’s ID. Submit a new response, use find new records and verify it appears at the top. Test a webhook trigger and verify the editor waits for and captures a real form-encoded POST to the draft URL as the sample with no production run; type a sample by hand and verify it is labelled manual sample in the editor and in a downstream preview. Load a 3-day-old run from history as the trigger sample, then verify a reader without payload access cannot load it. Test the HubSpot “create contact” step: verify the confirmation names the HubSpot account, exactly one contact is created and verified by readback, a test-labelled audit entry and test run are recorded, and the returned contact ID is mappable in the Slack step; rebind the step to a declared test account and verify the test runs with no confirmation and the contact exists only in the test account. Test a WORK-011 search step and verify no write and no confirmation. Verify none of these tests appear as production runs in OPS-001, count toward OPS-002 usage limits or raise an EXEC-003 alert. Add a question to the Typeform, refresh fields and verify the earlier sample is flagged stale naming the new question until a new record is loaded. Skip the Slack step’s test and verify the publish check lists it as relying on a schema sample.
 
-## Connections and triggers
+### Connections and triggers
 
-### CONN-001 — Discoverable connector library.
+#### CONN-001 — Discoverable connector library.
 
 The catalog describes each app’s supported triggers/actions, searchable objects and custom fields, authentication, scopes, pagination, attachments, API version, limits and known restrictions. Builders select reusable personal or team connections and test access before activation. Every input that names an account resource is a CONN-019 live picker, and discovered custom fields load as mappable step inputs through CONN-019. Unsupported actions are explicit and have a custom-connector path; a generic HTTP form is not a native app connector. Every search operation in the catalog follows WORK-011: it offers create-if-not-found where the app has a matching create action, and declares its no-match and multi-match outcomes.
 
@@ -167,19 +245,19 @@ A coverage report reads a buyer’s automation inventory (a Zapier JSON export, 
 
 **Acceptance evidence:** Find a CRM connector by a business action, connect a test account, discover custom fields and see them load as mappable step inputs through a CONN-019 picker, test a paginated lookup and inspect the exact action scope and unsupported-operation message before publishing. Feed the coverage report a 60-Zap SMB inventory built only from Zapier’s 22 popular apps, using a fixed operation list committed with the test: for each app, every trigger, search and action used by that app’s ten most-used Zapier templates as captured on 16 October 2026, plus the built-in tools mapped above (including RSS, Retrieve Poll, Digest, Line-itemizer, every Formatter transform those templates use, every filter and path rule operator and fallback they use, every chosen account resource, and every search with “create if it doesn’t exist” or a no-match or multiple-result setting): every app, operation and setting reports native. Add three long-tail apps (one with a public OpenAPI description, one with documented REST but no OpenAPI, one with a partner-only API) and verify agent-buildable, agent-buildable and blocked-with-reason respectively. Feed a second inventory of accounting Zaps using every QuickBooks Online and Xero trigger, search and action CONN-007 names, plus one QuickBooks operation it does not name: verify the named operations report native and the unnamed one reports agent-buildable. Feed a third inventory of commerce and support Zaps using every Shopify and Stripe trigger, search and action CONN-008 names and every Zendesk and Jira Software Cloud trigger, search and action CONN-009 names, plus one Shopify and one Zendesk operation those clauses do not name: verify every named operation reports native and the two unnamed ones report agent-buildable. Feed a fourth inventory of AI Zaps using every ChatGPT (OpenAI), Anthropic (Claude) and AI by Zapier action and search mapped above, with text, PDF, image, audio and URL inputs: verify every step reports native with its AI-001 operation named, and that an OpenAI action this clause does not map reports agent-buildable.
 
-### CONN-002 — Managed OAuth, keys and connection lifecycle.
+#### CONN-002 — Managed OAuth, keys and connection lifecycle.
 
 Owners authorize multiple accounts through provider OAuth or scoped API keys; Crank encrypts credentials under installation-controlled custody, refreshes tokens, rotates keys, tracks consent and permits team ownership transfer. Revocation stops new work, records in-flight uncertainty and tells affected workflow owners how to reconnect. Secrets never appear in graphs, logs, prompts, exports or browser reads; new scopes need fresh consent.
 
 **Acceptance evidence:** Connect two accounts, select one per step, expire and refresh OAuth, rotate an API key, revoke the connection during a run and reconnect with a narrower grant; verify dependent workflows pause visibly and no secret appears in API state, exports or agent context. Let a connected OAuth account’s access token expire overnight with no one signed in: verify the next scheduled run refreshes it before its provider call and succeeds with no owner action, and that the connection’s history shows the expiry time and the automatic renewal. Search run history, step logs, the audit and an export for the stored secret and the refreshed token and find neither.
 
-### CONN-003 — Gmail and Microsoft Outlook.
+#### CONN-003 — Gmail and Microsoft Outlook.
 
 Gmail and Microsoft Outlook/Microsoft 365 connections trigger on new or changed mail and calendar events, on new mail matching a saved search (Gmail search operators such as `from:`, `has:attachment` and `label:`; Outlook search and folder filters), on mail newly given a chosen label or moved to a chosen folder, and on each new attachment (delivered as a file reference with name, type and size), search threads/events and draft or send messages, replies and calendar updates with attachments. Labels/folders, mailbox selection and stable thread/event IDs survive mapping; sending and reading scopes are separately visible.
 
 **Acceptance evidence:** In each provider’s authorized test account, trigger from an incoming message, find its thread, draft and authorize a reply with an attachment, create a calendar follow-up and verify both by provider readback; duplicate notifications create no duplicate reply. Trigger on the search `from:billing has:attachment`, on a newly applied label and on new attachments: verify only matching messages start runs, each attachment arrives as one file reference, and relabeling a message does not start a second run.
 
-### CONN-004 — Slack, Nook and Microsoft Teams.
+#### CONN-004 — Slack, Nook and Microsoft Teams.
 
 Slack, Nook and Microsoft Teams connectors receive authorized channel/message events and post, reply, update and route messages in the correct thread. They deliver actionable failure/approval notices with authenticated links and record provider acknowledgments separately from a person’s response. Each operation below is a named catalog operation:
 
@@ -191,19 +269,19 @@ Messages to users resolve the recipient through the find-user search, so a step 
 
 **Acceptance evidence:** For each service, connect a workspace, start a workflow from an authorized thread, post its result back to that thread, handle a human decision and revoke access; verify no delivery to a different workspace and no repeated ping after completion. For each service, send a direct or chat message to a user found by email from a HubSpot lifecycle-stage change and verify by readback that only that user received it; search a user email that matches no one and verify the WORK-011 not-found route. In Slack, start one run from a new :white_check_mark: reaction and one from a new mention of a chosen user, verify an unrelated reaction starts nothing, and post as the bot with a custom name and icon, verified by readback. In Teams, start one run from a new channel message and one from a chat message, and send a channel message that mentions a user.
 
-### CONN-005 — Sheets, Airtable, Google Drive and Microsoft 365 files.
+#### CONN-005 — Sheets, Airtable, Google Drive and Microsoft 365 files.
 
 Google Sheets, Airtable and Microsoft Excel (workbooks on OneDrive or SharePoint) connectors watch new rows and rows updated in chosen watched columns with optional changed-to values and settle delay (Excel worksheet rows and Excel tables; TRIG-008), read/query rows, **add a row** and **add rows** (a batch of rows appended in order, for a sheet, Excel table or Airtable table with no natural key), and upsert rows by business key, preserve typed values and paginate. Google Drive, OneDrive and SharePoint watch, find, read, create, move and transfer authorized files and folders with size/type bounds and access checks; SharePoint also triggers on new list items and on changes to chosen watched columns (TRIG-008) and creates/updates list items in a chosen site. Microsoft 365 connections use Microsoft Entra ID consent with the delegated or application scopes shown before connection. Binary/file references carry provenance and expiry rather than leaking bearer URLs.
 
 **Acceptance evidence:** Run a changed spreadsheet row into an Airtable upsert, attach a permitted Drive document and archive a generated file; repeat the event and deny access to a private file, verifying one record and a visible file-permission error. In a Microsoft 365 test tenant, run the same journey with an Excel table row on OneDrive upserted by business key, a SharePoint list item created from it and a generated file saved to a SharePoint document library: verify each by provider readback, repeat the triggering event with no duplicate row, item or file, and deny a file in a library the connection cannot read with a visible permission error. Add one row and then a batch of 3 rows to an Excel table and a Google Sheets worksheet with no key column: verify 4 appended rows in order by readback, and on a retried batch with a lost response, still 4 rows (EXEC-006). With Status as the watched column, edit another cell of a Google Sheets row and of an Excel table row and verify no run, then change each Status and verify one run per row carrying the previous and new Status (TRIG-008).
 
-### CONN-006 — HubSpot, Orbit and Salesforce.
+#### CONN-006 — HubSpot, Orbit and Salesforce.
 
 HubSpot, Orbit and Salesforce connections trigger on new leads, contacts, companies and deals and on changes to chosen watched properties or a deal’s stage, with optional changed-to values (TRIG-008, covering HubSpot Deal, Contact and Company Property Change and Updated Deal Stage), search associations and custom fields with WORK-011 find-or-create and match outcomes, read and write deal/opportunity line items and products as WORK-002 line-item arrays, create/update records and tasks, and prevent synchronization loops. Buyers choose the authoritative system and conflict policy per mapped field; ambiguous merges enter an exception queue.
 
 **Acceptance evidence:** For each CRM, ingest a changed lead, match an existing company, update a custom deal field, read a deal’s three line items with their products, quantities and discounts as one line-item array, and create a task; run a WORK-011 “find or create contact by email” step twice for one new email and verify `created`, then `found`, and one contact by readback; send the reflected event back and a conflicting edit, verifying no infinite loop or silent overwrite. With a trigger watching deal stage changed to Closed Won, move a deal to Closed Won and verify one run carrying the previous and new stage, then edit its amount and verify no run.
 
-### CONN-007 — QuickBooks Online, Xero and NetSuite.
+#### CONN-007 — QuickBooks Online, Xero and NetSuite.
 
 Accounting/ERP connectors run the invoicing, collection and payment-recording work the business does in its books. QuickBooks Online, Xero and NetSuite remain the books of record; Crank creates, sends and records transactions in them through the buyer’s authorized connection, handles pagination, tax codes and tax rates, USD precision to the cent, multi-line items and provider accounting periods (QuickBooks closing date, Xero lock dates, NetSuite closed periods), and retains every source and provider object ID. An unsent invoice (a Xero Draft, or a QuickBooks Online invoice saved without sending) is what other clauses call a draft invoice; creating an invoice can equally produce a final invoice (QuickBooks saved, Xero Authorised) ready to send.
 
@@ -228,7 +306,7 @@ Accounting/ERP connectors run the invoicing, collection and payment-recording wo
 
 Repeat steps 1 to 5 in a Xero demo company with Send Sales Invoice by Email, Create Payment and the Overdue Sales Invoice trigger, and steps 1 to 3 and 6 in a NetSuite sandbox account. Migrate a Zap running “New Paid Invoice in QuickBooks → update HubSpot deal” and one running “Find or Create Customer → Create Invoice → Send Invoice”: verify each reports native in the coverage report and passes its parity test. Report a Zap using a QuickBooks operation this clause does not name and verify it reports agent-buildable, not native.
 
-### CONN-008 — Stripe and Shopify commerce workflows.
+#### CONN-008 — Stripe and Shopify commerce workflows.
 
 Stripe and Shopify connectors run the store’s order, customer, catalog, inventory and payment work through the merchant’s authorized connection. They preserve provider event and object IDs, verify webhook signatures (Stripe signing secret, Shopify HMAC), reconcile delayed and out-of-order events, map order lines as WORK-002 line items with discounts, shipping and tax to the cent, and leave funds, card data, tax calculation and merchant liability with the provider. Every trigger loads samples under WORK-014, every account resource (location, product, variant, price, sales channel) is a CONN-019 picker, and every search follows WORK-011.
 
@@ -258,7 +336,7 @@ Stripe and Shopify connectors run the store’s order, customer, catalog, invent
 
 In Stripe test mode, **Find or Create Customer** twice for one new email (`created`, then `found`), create an invoice item and an invoice, finalize and send it, and verify **Invoice Paid** fires once when the test payment succeeds; an **Updated Subscription** trigger watching status starts no run for a metadata edit and one run for a cancellation. Publish a Stripe → Google Sheets → Slack → QuickBooks Online workflow: one Stripe test-mode successful payment starts exactly one run that appends one sheet row (CONN-005), posts one message to the Slack #sales channel (CONN-004) and creates one QuickBooks Online sandbox invoice for the same USD amount (CONN-007), each verified by provider readback, and run history shows each step’s completion time.
 
-### CONN-009 — Jira Software Cloud and Zendesk.
+#### CONN-009 — Jira Software Cloud and Zendesk.
 
 Zendesk Support and Jira Software Cloud connectors run the buyer’s support and engineering workflows: tickets in, routed out, and status carried back. They preserve external IDs and conversation links, map custom fields, ticket forms, groups, brands, projects, issue types, sprints and users through CONN-019 pickers, carry attachments as WORK-002 file references, and route access and rate-limit failures to their owner. Every trigger loads samples under WORK-014 and every search follows WORK-011. **Loop prevention:** Crank records the provider change it made for each write; on a workflow that writes back to a record type it triggers on, a trigger ignores changes made by that workflow’s own writes by default, so a write-back never starts the workflow again.
 
@@ -283,61 +361,61 @@ Zendesk Support and Jira Software Cloud connectors run the buyer’s support and
 8. Migrate the Zaps “New Ticket in View → Slack” and “Issue Status Changed → Add Comment to Ticket”: verify each reports native in the coverage report and passes its parity test. Report a Zendesk operation this clause does not name and verify it reports agent-buildable, not native.
 9. Create an exception ticket and issue from a failed Crank workflow, update each from the run’s resolution and observe a reply/status event without duplicate issues or a synchronization loop.
 
-### CONN-010 — Every Run Edit Run product connects.
+#### CONN-010 — Every Run Edit Run product connects.
 
 Every sibling seed has a named connector using its public events/API and app-specific authority, with useful domain triggers (update triggers with TRIG-008 watched fields), lookups and actions rather than a placeholder webhook. Current coverage includes [Vector](https://github.com/just-every/run-vector), [Spool](https://github.com/just-every/run-spool), [Uptime](https://github.com/just-every/run-uptime), [Lamp](https://github.com/just-every/run-lamp), [Oncall](https://github.com/just-every/run-oncall), [Linen](https://github.com/just-every/run-linen), [Auth](https://github.com/just-every/run-auth), [Vane](https://github.com/just-every/run-vane), [Slate](https://github.com/just-every/run-slate), [Nook](https://github.com/just-every/run-nook), [Chest](https://github.com/just-every/run-chest), [Pencil](https://github.com/just-every/run-pencil), [Penny](https://github.com/just-every/run-penny), [Cradle](https://github.com/just-every/run-cradle), [Evidence](https://github.com/just-every/run-evidence), [Pane](https://github.com/just-every/run-pane), [Orbit](https://github.com/just-every/run-orbit), [Buoy](https://github.com/just-every/run-buoy), [HappyToHelp](https://github.com/just-every/run-happytohelp), [Mango](https://github.com/just-every/run-mango), [Dial](https://github.com/just-every/run-dial), [Stall](https://github.com/just-every/run-stall), [Platter](https://github.com/just-every/run-platter), [Nectar](https://github.com/just-every/run-nectar), [Pantry](https://github.com/just-every/run-pantry), [Easel](https://github.com/just-every/run-easel), [Coaster](https://github.com/just-every/run-coaster), [Purse](https://github.com/just-every/run-purse), [Inkwell](https://github.com/just-every/run-inkwell), [Locket](https://github.com/just-every/run-locket), [Blotter](https://github.com/just-every/run-blotter), [Coffer](https://github.com/just-every/run-coffer), [Willow](https://github.com/just-every/run-willow), [Lodge](https://github.com/just-every/run-lodge), [Lanyard](https://github.com/just-every/run-lanyard), [Beam](https://github.com/just-every/run-beam), [Gauge](https://github.com/just-every/run-gauge), [Satchel](https://github.com/just-every/run-satchel), [Balm](https://github.com/just-every/run-balm), [Pier](https://github.com/just-every/run-pier), [Larder](https://github.com/just-every/run-larder), [Barrow](https://github.com/just-every/run-barrow), [Gasket](https://github.com/just-every/run-gasket), [Glove](https://github.com/just-every/run-glove), [Mallet](https://github.com/just-every/run-mallet), [Plinth](https://github.com/just-every/run-plinth), [Terrace](https://github.com/just-every/run-terrace), [Cabin](https://github.com/just-every/run-cabin), [Placemat](https://github.com/just-every/run-placemat), [Strap](https://github.com/just-every/run-strap). Crank’s own workflow/run API supports automation of Crank. The catalog expands as seeds are added. Each sibling retains its product: Orbit CRM, HappyToHelp support, Vector issues, Penny feedback, Nook chat, Cradle records, Chest files, Coaster expenses and Pier stock are linked, not rebuilt or folded into Crank.
 
 **Acceptance evidence:** For each listed sibling, connect an authorized installation, receive a real domain event, read the originating record, perform an allowed domain action and observe its outcome in that sibling; duplicate events, revoked grants and foreign-tenant IDs must fail safely. Demonstrate a CRM-to-accounting-to-chat business journey across sibling connectors.
 
-### CONN-011 — Custom, enterprise and private app connections.
+#### CONN-011 — Custom, enterprise and private app connections.
 
 Technical teams build versioned custom connectors from documented APIs/OpenAPI with typed inputs, pagination, OAuth/key declarations, webhook verification and reusable tests. When a buyer needs an app with no native connector, an agent builds one on request from the provider’s public API documentation or OpenAPI description: it proposes the triggers (update triggers with TRIG-008 watched fields and detection), searches (each with WORK-011 create-if-not-found, no-match and multi-match settings) and actions the buyer’s workflows use, their auth and scopes, and test cases; a person reviews scopes before first consent; the connector passes the same sandbox acceptance as a native connector (readback, duplicate event, revoked scope) before any production run, and is versioned and repairable under AGENT-002. PostgreSQL, MySQL, SQL Server, SFTP and S3-compatible data-pipeline recipes, plus enterprise applications such as ServiceNow and SAP, use typed connectors or reviewed custom connectors, authenticated customer-controlled private gateways and incremental checkpoints; large files stream with explicit bounds. Workato-class deployment includes SSO through Auth or the buyer’s IdP, environment separation and scoped service accounts.
 
 **Acceptance evidence:** Install a custom connector, call a private test database through an enrolled gateway, checkpoint and resume a paginated file pipeline, then revoke the gateway and attempt a cross-environment secret read; inspect the failed run and SSO access decisions. Ask the agent for a connector to an app with a public OpenAPI description and no native connector: review its proposed operations and scopes, refuse one scope and verify the connector omits the dependent operation, then pass its sandbox readback, duplicate-event and revoked-scope tests and use it in a published workflow.
 
-### CONN-012 — Lead capture and form apps.
+#### CONN-012 — Lead capture and form apps.
 
 Facebook Lead Ads, Google Forms, Typeform, Jotform and Gravity Forms (WordPress) connectors trigger on new submissions/leads: Facebook Lead Ads instantly through Meta’s lead webhooks for a chosen Page and form, Typeform, Jotform and Gravity Forms through provider webhooks registered by the connector, and Google Forms through response polling. Each exposes the form’s current fields (including hidden fields, UTM parameters and file uploads) as typed mappable data, finds forms and responses, and keeps the provider’s response/lead ID as the deduplication key. Connectors register, verify and remove their own webhooks so the buyer never pastes a URL, and a field added or renamed in the form is detected as schema drift (AGENT-002).
 
 **Acceptance evidence:** For each provider’s test account, connect, pick a form, submit a response with a hidden UTM field and a file, and verify one run whose mapped fields match the response by provider readback; resend the same provider delivery and verify no second run; add a form field and verify drift is reported before the next run maps it; disconnect and verify the connector removed its provider webhook.
 
-### CONN-013 — Calendars, scheduling and meetings.
+#### CONN-013 — Calendars, scheduling and meetings.
 
 Google Calendar is its own connector: triggers on new, updated, cancelled and starting-soon events on chosen calendars, searches events and free/busy, and creates, updates and cancels events with attendees, conferencing and reminders. Calendly triggers on invitee created and invitee cancelled (with rescheduling linked), exposes event type, questions/answers, UTM and payment fields, and looks up scheduled events and invitees. Zoom triggers on meeting/webinar registration, meeting ended and recording completed, and creates meetings, registrants and recording links. Time zones stay explicit IANA zones end to end.
 
 **Acceptance evidence:** Book a Calendly test event with answered questions and verify one run that creates a Google Calendar event with a Zoom meeting for the invitee, each read back from its provider; reschedule the booking and verify the same calendar event and meeting are updated rather than duplicated; cancel it and verify both are cancelled; deliver the Calendly webhook twice with no duplicate effect.
 
-### CONN-014 — Work management and documents.
+#### CONN-014 — Work management and documents.
 
 Notion (databases and pages), Trello (boards, lists, cards), monday.com (boards, items, subitems, updates), Asana (projects, tasks, sections), ClickUp (spaces, lists, tasks) and Google Docs (documents, templates) connectors trigger on new items and on changes to chosen watched fields such as status, assignee or a custom field (TRIG-008), find items by field, and create, update, move, comment on and complete them with custom fields, assignees, due dates and attachments. Google Docs creates documents from a template with mapped placeholders and appends text. Item IDs and URLs remain stable mapped outputs, and each sibling project/issue product stays separate (Vector issues are reached through CONN-010).
 
 **Acceptance evidence:** For each provider’s test workspace, trigger on a new item, update a custom field, move it to a done status and comment, reading each change back; create a Google Doc from a template with mapped USD and date fields and verify its text by readback; repeat the triggering event and verify no duplicate item, comment or document. With a trigger watching status, edit an item’s description and verify no run, then move it to done and verify one run carrying the previous and new status.
 
-### CONN-015 — Marketing and sales pipelines.
+#### CONN-015 — Marketing and sales pipelines.
 
 Mailchimp (audiences, tags, campaigns), LeadConnector/HighLevel (contacts, opportunities, pipelines, appointments, workflows) and Pipedrive (persons, organizations, deals, activities, pipelines) connectors trigger on new subscribers, contacts, opportunities and deals and on changes to chosen watched fields, pipelines or stages with optional changed-to values (TRIG-008), search them with custom fields and WORK-011 find-or-create and match outcomes, and add/update subscribers and tags, create/update contacts, deals and opportunities, move pipeline stages and create activities. Mailchimp subscription consent status and unsubscribes are preserved, never overwritten to subscribed, in line with CAN-SPAM norms. Facebook Pages, Instagram for Business and LinkedIn company-page connectors post text, links and images (including an AI-001 generated image) to a chosen Page, Instagram business account or LinkedIn organization, and trigger on new posts and comments there; the Meta app review and LinkedIn Community Management API access these require are BOUND-001 engineering deliverables, and until each is granted, the coverage report names the connector and the pending review as its reason, never a bare blocked.
 
 **Acceptance evidence:** For each provider’s test account, route a new lead into a contact/subscriber with a tag and a deal/opportunity in a chosen stage, read each back, move the stage and observe exactly one change-trigger run carrying the previous and new stage, then edit the deal’s value and notes and verify no run; attempt to resubscribe an unsubscribed Mailchimp member and verify the status stays unsubscribed with a named refusal; repeat the lead through WORK-011 find-or-create steps on the contact/subscriber and the deal/opportunity and verify run history reports `found` for both and readback shows one contact and one deal. Post a new RSS item (TRIG-007) with an image to a Facebook test Page, an Instagram test business account and a LinkedIn test organization, and verify each post by readback and one run per item.
 
-### CONN-016 — File storage and e-signature.
+#### CONN-016 — File storage and e-signature.
 
 Dropbox and Box connectors watch folders for new/changed files and find, upload, copy, move and share files with size/type bounds; Box metadata templates and Dropbox shared links are mappable. DocuSign and PandaDoc connectors create envelopes/documents from templates with mapped recipients and fields, send them for signature, trigger on sent, viewed, completed and declined, and download the completed document and certificate into a chosen storage connector. Signature legal validity stays with the e-signature provider.
 
 **Acceptance evidence:** In sandbox accounts, generate a PandaDoc document and a DocuSign envelope from templates with mapped recipient and USD fields, complete each as the test signer, verify the completed trigger fires once, and file the signed PDF and certificate into Box and Dropbox folders verified by readback; decline a second envelope and verify the declined branch; deliver the completion event twice with one filed copy.
 
-### CONN-017 — Twilio SMS.
+#### CONN-017 — Twilio SMS.
 
 A Twilio connection, using the buyer’s own account SID and API key under CONN-002 custody, triggers on inbound SMS/MMS to a chosen number, and sends SMS/MMS from a chosen number or Messaging Service with delivery-status callbacks mapped to the run. US norms apply: STOP/HELP opt-outs recorded by Twilio are honored and shown, A2P 10DLC or toll-free verification status is displayed before production sends, and quiet hours in the recipient’s timezone can be enforced by policy.
 
 **Acceptance evidence:** With a Twilio test number, send an SMS from a workflow and see its delivered status in the run; reply from a handset and verify one inbound-triggered run; send STOP and verify the next send to that number is refused with a named opt-out reason and no Twilio charge; verify an unregistered sender shows its registration requirement before publish.
 
-### CONN-018 — Square, PayPal and WooCommerce.
+#### CONN-018 — Square, PayPal and WooCommerce.
 
 Square (payments, orders, customers, invoices, catalog), PayPal (captured payments, refunds, invoices, disputes) and WooCommerce (orders, customers, products, coupons, through the store’s REST API and signed webhooks) connectors trigger on new orders, payments and disputes and on changes to chosen watched fields such as order, payment or dispute status (TRIG-008), search with WORK-011 outcomes (find customer by email or phone in Square and WooCommerce, with find-or-create; find order by number or ID; find product or catalog item by SKU in Square and WooCommerce, with find-or-create; find a PayPal invoice or captured payment by ID or reference), and create customers, invoices and order notes, update order status, and set or adjust product stock (WooCommerce product and variation stock quantity, Square inventory count at a chosen location); refunds obey TEAM-002 limits and EXEC-006 reconciliation. Provider event IDs deduplicate, and funds, card data and tax calculation stay with the provider.
 
 **Acceptance evidence:** In Square sandbox, PayPal sandbox and a WooCommerce test store, process a paid order with four lines into one QuickBooks Online draft invoice with four lines (readback quantities, amounts and total matching the order to the cent) and a Slack notice, verify the order and payment by provider readback, replay the provider event with no duplicate invoice, and request a refund above the configured USD limit to verify it pauses for approval, then reconcile a lost refund response before any second attempt. With a trigger watching order status changed to completed, add an order note and verify no run, then complete the order and verify one run. Run **find or create customer** by email twice for one new email in Square and in WooCommerce and verify `created`, then `found`, and one customer each; set a WooCommerce product’s stock quantity and a Square item’s inventory count from a Google Sheets row and verify both by readback.
 
-### CONN-019 — Live account pickers, dependent inputs and field refresh.
+#### CONN-019 — Live account pickers, dependent inputs and field refresh.
 
 Every connector input that names a resource in the connected account (spreadsheet, worksheet, table, base, channel, user, team, pipeline, stage, owner, form, event type, calendar, mailbox folder or label, folder, file, site, list, project, board, customer, vendor, item, product, account and similar) is a **live picker** in the builder, in every native connector (CONN-003 to CONN-018), every CONN-010 Run Edit Run product and every CONN-011 custom connector. Non-technical builders fill steps by choosing names, never by pasting IDs:
 
@@ -351,61 +429,55 @@ Every connector input that names a resource in the connected account (spreadshee
 
 **Acceptance evidence:** In Google Sheets, Slack and HubSpot sandboxes, build steps with no typed IDs. Pick a spreadsheet by name, then a worksheet, and verify the worksheet picker is disabled before a spreadsheet is chosen and the sheet’s columns load as mappable fields. Add a column in the sheet, use refresh fields and verify the new column appears; delete a mapped column and verify a named pre-publish error; delete another mapped column after publish and verify the run fails with `field no longer exists` and no write. Pick a Slack channel by name in a workspace with more than 1,000 channels by searching, and pick a HubSpot pipeline then a stage; switch pipelines and verify the stages reload and the old stage is cleared and named. Switch the stage to a custom value mapped from an earlier step and run once with a valid stage ID and once with an invalid one, verifying the named `resource not found` error and no write on the second. Paste a Google Sheets URL as a custom value and verify it resolves to that spreadsheet. Back the HubSpot owner input with an inline search by owner email and verify the deal is assigned to the right owner. Connect a second Slack account without access to a private channel and verify that channel is not listed. Migrate a Zap with a chosen spreadsheet, worksheet and Slack channel and verify the draft shows the same resources by name under the new connection, and that a resource the new connection cannot see is named in the coverage report.
 
-### HTTP-001 — Authorized HTTP dispatch.
-
-The existing custom HTTP connector delivers the immutable approved JSON body to the deployment-authorized exact origin, adds the run’s stable idempotency key, refuses redirects and binds success to the receiver’s returned effect ID and matching key. Failure or lost acknowledgment remains visible. One owner-controlled replay uses the same bytes/key; a compliant receiver records one effect. This connector’s manual mode remains available beside future standing-grant and app steps.
-
-**Acceptance evidence:** Create and activate a flow through the HTTP API, prepare an event without sending, concurrently approve twice, lose the receiver acknowledgment, replay once and inspect one receiver effect; reject another run and refuse a foreign or credential-bearing destination.
-
-### HTTP-002 — General HTTP and connector API request steps.
+#### HTTP-002 — General HTTP and connector API request steps.
 
 A general HTTP request step calls any API that does not follow Crank’s receiver contract: methods GET, POST, PUT, PATCH, DELETE and HEAD; mapped headers and query parameters; JSON, form-encoded, multipart, XML or raw bodies; a bounded timeout; and authentication from a stored connection (basic, bearer, API key in header or query, OAuth 2.0 authorization code or client credentials, or HMAC request signing), never from inline secrets in the graph. Response status, headers and parsed body (JSON, XML, form or text) are mappable into later steps; builders define success and failure by status ranges and body conditions, and can follow cursor, page or link-header pagination. Every native connector also offers a raw API request action that reuses that connection’s managed auth and is limited to the connection’s declared API domains. Mutating requests follow EXEC-006 (provider idempotency header when the API supports one, otherwise readback by a declared business key, otherwise no automatic retry after an uncertain response) and SEC-002 egress rules. HTTP-001 remains available as the receiver-contract mode.
 
 **Acceptance evidence:** Against a sandbox vendor API that returns a plain 200 with JSON and no Crank effect ID, PATCH a record with a bearer connection and a custom header, map a response field into the next step and verify the change by a GET readback; send a form-encoded POST and a multipart upload; define 409 as a business failure and route it to the error branch; lose one PATCH response and verify readback before any retry; through a HubSpot connection’s raw API request action call a supported endpoint with the managed OAuth token, then attempt a domain outside that connection and a private-network address and verify both are refused with no request sent and no secret in run history.
 
-### TRIG-001 — Scoped, deduplicated webhook admission.
+#### TRIG-001 — Scoped, deduplicated webhook admission.
 
 Every workflow can receive webhooks from senders that cannot add custom headers or wrap their payload. Each flow has one or more inbound URLs with an embedded random secret that the owner can revoke and rotate (old and new URLs overlap for a chosen window), plus optional header credentials (the existing scoped bearer trigger credential). Builders can require provider signature verification: HMAC-SHA256/SHA1 over the raw body or a signed timestamped payload with replay tolerance, with presets for Stripe, Shopify, Calendly, GitHub, Typeform and Twilio. The URL accepts POST, PUT and GET with JSON, form-encoded, multipart (with files) or raw bodies; a raw mode exposes the body text, headers and query string to mapping alongside the parsed fields. Deduplication uses a builder-chosen key path (for example `data.id` or a header) or, when the payload has no ID, a SHA-256 digest of the normalized body within a stated window (default 24 hours, configurable from 1 minute to 30 days). The response is configurable: an immediate status/body/headers, or a synchronous response produced by the workflow within a bounded timeout. Crank’s `{event_id,input}` envelope remains one supported mode: stable source event identity deduplicates equal payloads, rejects changed payloads under the same ID and respects an erased-event fence. No inbound credential can read workspace data, approve or activate work, and revocation takes effect at the server.
 
 **Acceptance evidence:** Call the public trigger endpoint with an active flow key, resend the same event, change its payload, send to another flow and revoke the key; verify a single pending run, conflicts/refusals and no unauthorized reads. Send a form-encoded POST with no auth header and no event ID to a flow’s secret URL and verify exactly one run with the fields mapped; resend it inside the dedup window and verify no run; send it after the window and verify a new run; send a Stripe-signed event with a valid and then a tampered signature and verify one run and one refusal; send a GET with query parameters and a multipart POST with a file in raw mode and inspect headers, query and file as mapped data; configure a synchronous JSON response and verify the sender receives it; rotate the URL and verify the old URL stops after the overlap.
 
-### TRIG-002 — Schedules and on-demand runs.
+#### TRIG-002 — Schedules and on-demand runs.
 
 Owners start a run on demand or schedule intervals, daily/weekly business times and calendar-aware recurrence in an IANA timezone. A historical run applies a published workflow to existing source records the owner selects by filter or date range (for example last quarter’s closed deals), with a preview of the count, sample records and estimated USD cost before any effect (as in TRIG-005), runs selected or all items once each by source ID, and reports per-item outcomes. DST behavior, missed-run catch-up/skip policy and concurrent-run policy are inspectable. Due occurrences have stable identities, continue unattended and do not duplicate after restart or clock movement.
 
 **Acceptance evidence:** Configure weekday 9 a.m. America/New_York execution, an interval and an on-demand run; cross both DST changes and restart during a due occurrence, then inspect the planned and actual times and exactly one admitted run per due occurrence. Start a historical run over last quarter’s 40 closed test deals: verify the preview shows 40 items and an estimated USD cost with no effects, run 10 selected items and then the rest, and verify exactly 40 runs, one per deal, with per-item outcomes.
 
-### TRIG-003 — App, polling and email triggers.
+#### TRIG-003 — App, polling and email triggers.
 
 Native event subscriptions and polling discover new/changed app records and incoming email automatically. Verified signatures, renewable subscriptions, paginated cursors, overlap windows, source IDs and deduplication handle delayed/out-of-order deliveries and outages. The owner chooses initial backfill and can see the last successful poll and next due action. Every updated-record trigger follows TRIG-008: watched fields or an explicit any-field choice, optional changed-to values, previous and current values in the run, provider change events or per-record snapshots, and a declared dedup identity. Polling frequency and trigger latency are committed in TRIG-004, burst holds in TRIG-005, mailbox-free email triggers in TRIG-006, and feed and arbitrary-URL polling in TRIG-007.
 
 **Acceptance evidence:** Activate an email and CRM polling workflow, return overlapping pages and out-of-order webhook events, expire a subscription and restart polling after an outage; verify no lost admitted records, duplicate business actions or silent subscription failure. Edit an unwatched property of a CRM record whose trigger watches its stage and verify no run (TRIG-008).
 
-### TRIG-004 — Polling frequency and trigger latency.
+#### TRIG-004 — Polling frequency and trigger latency.
 
 Each polling workflow has its own interval, chosen from 1, 2, 5, 15, 30 and 60 minutes or a longer schedule; the 1-minute floor is available on every installation with no plan gate, and a provider whose rate limit cannot sustain the chosen interval shows the slowest safe interval before publish. With a healthy executor each poll starts within 30 seconds of its due time. Instant triggers (webhooks, app subscriptions, form submissions and inbound email) admit an event and start its run within 10 seconds of receipt at the 95th percentile. Every run records its trigger-to-start latency (source event time where the provider supplies one, receipt time and run start), and OPS-001 reports latency percentiles per workflow against the configured interval, flagging late polls with their cause (provider rate limit, executor backlog, outage).
 
 **Acceptance evidence:** Publish a “new HubSpot deal → Slack” workflow at a 1-minute interval and an instant Typeform workflow; create 30 deals and 30 submissions spread over an hour; verify every deal run starts no later than 1 minute 30 seconds after the deal’s creation, every form run starts within 10 seconds of receipt at p95, and each run’s history shows its measured latency; throttle the HubSpot test edge with 429s and verify the late polls are flagged with “provider rate limit” in OPS-001; choose an interval faster than a provider allows and verify the pre-publish warning.
 
-### TRIG-005 — Flood protection for bursts of trigger events.
+#### TRIG-005 — Flood protection for bursts of trigger events.
 
 Each workflow has a burst threshold (default 100 new records in one poll, or 100 instant events in one minute; configurable from 1 to 10,000). When a poll or burst exceeds it, Crank creates no business effects for the excess: it holds the whole burst as one reviewable batch, notifies the workflow owner (EXEC-003 channels), and shows the count, source, sample records and estimated USD cost. The owner can run all, run selected items, or discard; held events stay deduplicated by source ID and retained until decided, with reminders and an optional owner-chosen expiry. Releases are attributable and partial releases leave the rest held. Activation backfill (TRIG-003) remains a separate explicit choice.
 
 **Acceptance evidence:** With a threshold of 100, return 500 new contacts from one poll of a CRM test edge to a welcome-email workflow; verify zero emails and zero downstream writes, one held batch with 500 deduplicated items and an owner notice; release 20 selected items and verify exactly 20 runs and emails; return the same 500 records on the next poll and verify no new hold or duplicate items; discard the remainder and verify they never run; send 150 instant webhooks in one minute and verify the same hold.
 
-### TRIG-006 — Hosted inbound email addresses.
+#### TRIG-006 — Hosted inbound email addresses.
 
 Each workflow can have its own inbound email address on the installation’s inbound domain (Cloudflare Email Routing to the Worker, or MX records the buyer points at Crank on a subdomain), so staff can forward or CC messages and vendors that can only email can start a run without mailbox OAuth. Addresses use a revocable, rotatable alias; an optional sender allowlist (addresses or domains) and SPF/DKIM/DMARC results gate admission; messages over the stated size limit (25 MB including attachments) are refused with a bounce. The parsed sender, recipients, subject, plain and HTML body, headers, forwarded-original fields and attachments (as file references under CONN-005 rules) are mappable. The Message-ID deduplicates within the TRIG-001 window, and each received message is visible in run history with its admission decision.
 
 **Acceptance evidence:** Forward a vendor email with a PDF attachment to a workflow’s alias; extract the PO number from the body with a mapping or AI-001 node, attach the PDF to a HubSpot test record and verify one run and the record by readback; resend the same message and verify no second run; send from a non-allowlisted domain and an oversized message and verify both are refused and visible; revoke the alias and verify mail to it bounces.
 
-### TRIG-007 — Feed and URL polling triggers.
+#### TRIG-007 — Feed and URL polling triggers.
 
 Two built-in triggers start runs when something new appears at a URL with no app connector. The **feed trigger** watches one or several RSS 2.0, Atom or JSON Feed URLs and starts one run per new item, deduplicated by GUID/id, falling back to the link, then to a digest of title and date; a re-published or edited item with the same identity starts no run, and an item’s title, link, summary, content, author, categories, dates and enclosures are mappable, with the source feed named when several feeds share a trigger. The **URL poll trigger** sends a GET (with mapped headers and query parameters, and authentication from a stored connection under HTTP-002 rules) to any endpoint and reads a JSON array at a chosen path, or XML/HTML items selected by XPath; the builder chooses the dedup key path (`id` by default, or any path such as `data.ref`, or a digest of the whole item), and cursor, page or link-header pagination is followed. Both triggers use TRIG-004 intervals (1-minute floor) and latency reporting, TRIG-003 activation backfill (start from now, or process existing items) and TRIG-005 flood holds; requests obey SEC-002 egress rules, so private-network, link-local and metadata addresses and redirects into them are refused, response size and parse time are bounded, and fetch, parse and auth failures are visible on the trigger with EXEC-003 notices rather than silent skips.
 
 **Acceptance evidence:** Publish a feed trigger on an RSS fixture at a 1-minute interval: verify the first activation follows the chosen TRIG-003 backfill option, two new items start exactly two runs, and a re-published item with the same GUID starts none; add an Atom and a JSON Feed URL to the same trigger and verify each new item names its source feed. Publish a URL poll trigger on a JSON endpoint whose records have no `id` field, deduplicated on `data.ref`, with a bearer connection and two pages: verify one run per new record across both pages and none on the next unchanged poll; poll an XML endpoint selected by XPath and verify one run per new item; point the trigger at a private-network address and at a URL that redirects to one and verify both are refused with no request sent past the refusal; return malformed JSON and verify a visible trigger error and owner notice.
 
-### TRIG-008 — Updated-record triggers on watched fields.
+#### TRIG-008 — Updated-record triggers on watched fields.
 
 Every “updated” or “changed” trigger defines what counts as an update: in every native connector (CONN-003 to CONN-018, including CONN-005 Sheets, Excel and Airtable rows and SharePoint list items, CONN-006 leads, contacts, companies and deals, CONN-007 invoices (status, balance, due date) and customers or contacts, CONN-008 Shopify orders, customers, products and inventory levels and Stripe subscriptions and customers, CONN-009 Zendesk tickets and Jira issues, CONN-014 work items, CONN-015 subscribers, contacts, opportunities and deals, and CONN-018 orders, payments and disputes), every CONN-010 Run Edit Run product trigger, every CONN-011 custom connector trigger and WORK-007 table triggers.
 
@@ -419,139 +491,85 @@ Every “updated” or “changed” trigger defines what counts as an update: i
 
 **Acceptance evidence:** In a Google Sheets sandbox, publish “Status changes to Approved → QuickBooks Online draft invoice” with Status as the watched column and changed to Approved. Set a row’s Status to Approved and verify one draft invoice by readback; edit that row’s notes and phone cells and verify no run and no invoice; change Status to Pending and verify no run; change it back to Approved and verify exactly one more run under the default identity, and none when the trigger uses first time this value is seen. Type a new row cell by cell with a 2-minute settle delay and verify one run carrying every cell filled. Activate the trigger with “start from now” on a sheet holding 50 rows already Approved and verify no run. Verify an update trigger with no watched-field or any-field choice cannot publish. In HubSpot and Pipedrive sandboxes, move a deal to Closed Won and verify one run carrying the previous and new stage and the change time; edit that deal’s amount and description and verify no run. Publish a HubSpot Contact Property Change trigger on lifecycle stage: edit the contact’s phone and verify no run, then set lifecycle stage to SQL and verify one run. Migrate a Zap using a Google Sheets trigger column and one using HubSpot Updated Deal Stage: verify each reports native, keeps its watched column or stage by name and passes its parity test. In a Shopify development store, add a note to an order and verify no run on a trigger watching fulfillment status, then fulfil it and verify one run; in a Zendesk sandbox, add an internal note and verify no run on a trigger watching priority, then change the priority and verify one run carrying the previous and new value.
 
-## Operate recurring work
+### Operate recurring work
 
-### EXEC-001 — Durable queues and execution checkpoints.
+#### EXEC-001 — Durable queues and execution checkpoints.
 
 Activated workflows execute without a person per run under their grants. Durable queues show queued/running/waiting/dead-letter states, depth, oldest age, priority and owner. Atomic claims, per-step checkpoints, concurrency limits and cancellation survive executor loss and deployment; lease expiry records uncertainty before recovery. Pausing states whether it stops intake, dispatch or both, and cancellation identifies already-started effects.
 
 **Acceptance evidence:** Queue a multi-step batch, stop the executor before and after a remote write, restart and inspect its checkpoints and oldest pending work; verify safe continuation, cancellation and no duplicate completed effect.
 
-### EXEC-002 — Rate limits, backoff and exhaustion.
+#### EXEC-002 — Rate limits, backoff and exhaustion.
 
 Connector-specific retry policy distinguishes proven-not-sent/transient failures from uncertain effects and permanent errors. Retries honor Retry-After, exponential backoff with jitter, provider/account rate limits, concurrency and attempt/time budgets. Exhausted work stays durable with its next owner action; throttling one account does not starve another.
 
 **Acceptance evidence:** Run two accounts while one returns 429, then transient 503 and a permanent auth error; inspect spaced retry times, bounded attempts and a dead-letter outcome. Lose a mutating response and verify no blind retry before reconciliation. With a connector whose catalog declares 100 requests per 10 seconds per account and no builder rate setting, queue 300 steps on one account: verify no 10-second window holds more than 100 provider requests and the provider returns no 429; fail one step transiently and verify its retries wait growing, jittered gaps shown in the run’s attempts.
 
-### EXEC-003 — Error routes, alerts and escalation.
+#### EXEC-003 — Error routes, alerts and escalation.
 
 Builders choose per-step stop, continue, fallback business branch, compensate or resume behavior without hiding the original error. Error workflows deliver deduplicated email, Slack, Nook or Teams notices containing a safe run link, failure category, accountable owner and due action. Unresolved failures escalate on a business calendar; restored work resolves the alert and stops reminders. An **auto-pause policy**, on by default with owner-set thresholds, pauses a workflow whose failure rate passes a threshold over a window (default: at least 20 runs and 95 % failed within 24 hours); runs ended by a WORK-011 `stopped by search` halt or a WORK-013 `stopped by filter` end do not count as failures. The pause stops dispatch, holds new trigger events as a TRIG-005 batch, notifies the workflow owner once with the failure categories, and on re-enable lets the owner run or discard the held events.
 
 **Acceptance evidence:** Cause validation, credential and provider failures in a published workflow, exercise stop/continue/error branches, fail the alert provider and restore it, then resolve the business exception; inspect the durable error, alert delivery history and end of escalation. Fail 20 consecutive runs of one workflow and verify it auto-pauses, the owner is notified once, new trigger events are held with no effect, and re-enabling runs the selected held events once; verify 20 `stopped by search` halts do not pause a workflow. Verify a failure notice and a waiting-approval notice each reach the owner by email and in Slack within 60 seconds of the run needing them, each with a working safe run link.
 
-### EXEC-004 — Replay any eligible step safely.
-
-Operators retry/resume any eligible failed or incomplete step or selected batch items using retained versioned input and scoped authority. Preview shows what would run, prior effects and idempotency/reconciliation status. A corrected payload creates an attributable new revision; successful side effects are not silently repeated. Bulk replay has selection preview and limits.
-
-**Acceptance evidence:** Fail the fourth step after three committed effects, restart, preview and resume that step, then replay selected failed items with corrected data; verify the first three effects persist once and the original and corrected inputs remain distinguishable.
-
-### EXEC-005 — Searchable run history and debugging.
-
-Run history retains workflow/version, trigger provenance, original inputs, each step’s mapped inputs/outputs, timings, decisions, grants, attempts and remote object IDs under redaction and retention rules. Builders search/filter by workflow, business key, date, status and error, paginate beyond the latest page and compare prior runs. Incomplete executions remain available; UI distinguishes queued, rejected, failed, uncertain, `stopped by search`, `stopped by filter` and business-complete, and shows each filter and path group’s rule results.
-
-**Acceptance evidence:** Find an older failed invoice by customer key, inspect its exact mapping and decisions, compare a passing run and follow the remote record link; deny a reader access to a restricted payload while retaining safe status/timing.
-
-### EXEC-006 — Effect reconciliation and compensation.
-
-Every mutating step records intent, stable operation identity and known/unknown remote effects. Crank uses provider idempotency when supported, otherwise reads back by business key before retrying. Ambiguous matches stop for an accountable decision. WORK-011 find-or-create steps are mutating steps under this clause: a lost create is read back by its search key before any retry. Partial workflows can run explicitly authorized compensating actions; compensation has its own audit/outcome and never promises distributed exactly-once effects or reversal of an irreversible action.
-
-**Acceptance evidence:** Lose the response after an invoice/refund is created, restart and reconcile it by provider readback; simulate zero, one and multiple matches, then fail a downstream step and inspect an authorized compensation without duplicating the initial write.
-
-### EXEC-007 — Built-in email and SMS steps.
+#### EXEC-007 — Built-in email and SMS steps.
 
 A send-email step works without connecting a mail provider: it sends from the installation’s own sending identity on a domain the owner verifies, through the installation’s configured transactional mail transport. Setup shows the exact SPF include, DKIM selector/key and DMARC records to publish and checks them before the first production send. The step supports mapped To/CC/BCC (bounded recipient count), reply-to, subject, plain and HTML body, and attachments by file reference; delivery, bounce and complaint events are recorded on the run, and hard-bounced or complained addresses are suppressed for later sends. A send-SMS step sends through the buyer’s Twilio connection (CONN-017) with its opt-out and registration rules; internal alerts to the workflow owner or team need no SMS account, through EXEC-007 email, Slack/Teams/Nook (CONN-004) or UX-001 mobile push. Both steps feed EXEC-003 notices and obey TEAM-004/TEAM-002 recipient and rate limits.
 
 **Acceptance evidence:** Verify a test sending domain’s SPF, DKIM and DMARC records in setup, then send a mapped email with a PDF attachment from a published workflow with no mail connection and verify receipt, a passing DKIM signature and the delivered event on the run; send to a hard-bouncing address and verify the bounce is recorded and the next send is suppressed; attempt a production send before the records verify and see a named setup requirement; send an SMS step through a Twilio test number and see its delivery status; route a failure alert to the workflow owner with no Twilio connection and verify it arrives by email and mobile push.
 
-### OPS-001 — Operations reporting and external logs.
+#### OPS-001 — Operations reporting and external logs.
 
 Owners see workflow throughput, queue age, latency, success/failure/uncertainty, outstanding business obligations and connector health by workflow/team/time. Reports export CSV and stream redacted operational/audit events to buyer-selected Datadog, Splunk, S3-compatible storage or authorized HTTP sinks with delivery lag and failure visibility. A successful HTTP response cannot inflate the business-completion metric.
 
 **Acceptance evidence:** Generate passing, failed, waiting and uncertain runs; filter an operations report, export it and stream events to an unavailable then restored sink; reconcile counts to run history and show incomplete business outcomes separately. On the operations home, verify that today’s run count and failed count, for the business day in the workspace timezone, equal that day’s runs and failures in run history, and that it shows how many active workflows ran today out of all active workflows and names any scheduled workflow whose due run did not happen.
 
-### OPS-002 — USD usage, forecasts and spending controls.
+#### OPS-002 — USD usage, forecasts and spending controls.
 
 Before activation the buyer sees estimated per-run/workflow USD costs and assumptions for orchestration, connectors, models and external executors; actual usage remains labeled measured or estimated by source. Account/team/workflow budgets, task/credit exhaustion notices and authorized overage policies pause or resume predictably, retaining due work and preventing runaway loops or agent spending.
 
 **Acceptance evidence:** Estimate a batch, run it against metered provider test edges, approach and exhaust a budget and replenish it; verify timely notices, no unauthorized overage, preserved backlog and a report separating estimates, observed usage and provider charges.
 
-## People, authority and data
+### People, authority and data
 
-### TEAM-001 — Team workspaces and permissions.
+#### TEAM-001 — Team workspaces and permissions.
 
 Owners invite/deactivate members and assign owner, administrator/builder, operator, approver and viewer roles, with workflow/folder/environment and connection-use scopes. Team-owned flows survive employee departure. Enterprise group/SCIM provisioning through Auth or the buyer’s IdP applies the same environment/project policy and revokes sessions and service access when membership ends. Server-side access limits sensitive payloads and production writes; audit readers and billing administrators need not receive credentials or customer data.
 
 **Acceptance evidence:** Invite each role, share a restricted workflow and connection, attempt direct cross-scope reads/writes, transfer a departing builder’s flows and deactivate them during an active session; verify continuity without retained personal access. Name one approver for a workflow’s approval step: verify that approver can decide it while another approver and a builder cannot, a builder can edit and publish but not approve, and a viewer can read runs but cannot edit, publish or approve, each refusal enforced at the server.
 
-### TEAM-002 — Optional approvals and standing grants.
-
-Approval is a configurable step or policy boundary, not a requirement for every run. A published workflow needs no grant to run: publishing authorizes exactly its declared steps on its bound connections (TEAM-004). Standing grants are opt-in limits layered on top, and they are the authority for agents, MCP clients and other work that is not a fixed published graph; they name workflow/version, app/account, tools/actions, fields, recipients, amount/rate limits and expiry. Routine actions proceed unattended within the publish authority and any grant. High-impact or out-of-policy actions show the exact proposed effect to an authorized human; rejection sends nothing, a change to the proposed action made by anyone but the reviewer invalidates the decision, and timeout/escalation/delegation are durable. Reviewers may correct a proposal before approving and choose where rejection leads under TEAM-005. Revocation stops new authority immediately.
-
-**Acceptance evidence:** Publish a routine lead workflow with no grant and observe unattended completion; give an agent task a limited grant and observe it complete within the grant; exceed a USD refund limit, inspect and reject one proposed action, approve another, then alter its body and revoke the grant mid-run, verifying reapproval/refusal and recorded in-flight uncertainty.
-
-### TEAM-003 — Scoped preparation and trigger credentials.
-
-Owners issue one-time agent preparation/read credentials and one-flow trigger credentials stored only as hashes. Preparation authority cannot activate, approve, replay, manage data or escalate its own permissions. Revocation and owner identity/version changes invalidate credentials at the HTTP and transaction boundaries. Future execution tools receive separate explicit grants under TEAM-002.
-
-**Acceptance evidence:** Issue both credential kinds through Access, prepare/read with an agent, submit with a trigger, try every owner-only route and another flow, then revoke; inspect state and archive for absence of bearer values.
-
-### TEAM-004 — Publishing authorizes a workflow’s declared steps.
+#### TEAM-004 — Publishing authorizes a workflow’s declared steps.
 
 When a member with publish rights publishes a workflow version, that version is authorized to run exactly its declared steps, with their mapped fields, on the connections bound to it, for every triggered run, with no expiry, no per-run approval and no separate grant to author. The authority is recorded on the version (publisher, time, steps, connections) and ends when the version is unpublished, replaced, or a bound connection is revoked. It does not extend to steps added later, other connections, or anything an AI/agent node decides beyond its declared tools (AI-001). Limits are opt-in: builders add approval steps (TEAM-005) or per-step caps, and owners may set optional workspace default caps (for example a USD refund ceiling or a maximum recipients per email) that pause only actions outside the cap for approval while in-cap actions continue unattended.
 
 **Acceptance evidence:** Build or import 10 ordinary workflows (lead to CRM, Slack notice, Sheets row, draft invoice and similar), publish each, and observe their triggered runs complete unattended with no grant authoring, approval or other step beyond publish; verify each run’s audit names the publishing member and version. Add a workspace USD refund cap of $200 and trigger refunds of $150 and $350: verify only the $350 action pauses for approval while the $150 one completes. Add a step to a draft and verify the published version cannot run it until republished; revoke a bound connection and verify new runs pause with a reconnect notice.
 
-### TEAM-005 — Approve with edits, rejection routes and reviewer notices.
-
-An approval step can mark fields the reviewer may edit (for example refund amount or email body). The reviewer sees the exact proposed action, edits allowed fields and approves the edited version; the edit is recorded as an attributable revision beside the original, re-validated against the mapping schema and any TEAM-004/TEAM-002 caps, and only the approved revision is sent. Builders choose whether rejection stops the run or continues down a named rejection branch carrying the reviewer’s reason. Reviewers are notified by email, Slack, Microsoft Teams or Nook and mobile push, each with an authenticated link; reminders and timeout routes follow the business calendar.
-
-**Acceptance evidence:** Publish a refund workflow with an approval step whose amount is editable and capped at $500; change a $120 proposed refund to $95 and approve, then verify the Stripe test-mode readback shows $95, the run history shows both values, the reviewer and the reason; try to approve an edited amount of $600 and verify refusal; reject a second refund on a workflow whose rejection branch emails the customer and verify the branch runs with no refund; reject a third on a stop-on-rejection workflow and verify nothing further runs; verify each reviewer received the Slack notice and the mobile push with a working authenticated link.
-
-### SEC-001 — Native authentication and origin-bound writes.
+#### SEC-001 — Native authentication and origin-bound writes.
 
 Private product routes require a current native operator session or a specifically scoped machine credential. Authorization is enforced in handlers and durable write predicates; browser mutations require the configured exact Origin. Owner-only data/access/import decisions cannot be obtained by an admin, member, trigger or preparation agent. Local development identity remains local and is excluded from deployed assets.
 
 **Acceptance evidence:** Sign in through the ordinary email-link journey, call private HTTP doors signed out and with each lower role, send a foreign-Origin mutation and revoke a session/credential before a guarded write; verify denial without product effects and the build’s dev-identity exclusion.
 
-### SEC-002 — Bounded network and untrusted content.
+#### SEC-002 — Bounded network and untrusted content.
 
 HTTP/custom connectors, callbacks, code, files and agent tools validate authorized egress destinations on every redirect/resolution, refuse private/metadata targets unless an explicit private gateway grant applies, bound bytes/time and keep secrets server-side. Input text, imported graphs and tool results cannot execute HTML/scripts or override agent policy. File types and access are checked before forwarding.
 
 **Acceptance evidence:** Through workflow and import doors submit hostile HTML, credential-bearing URLs, redirect and DNS-rebinding targets, oversized payloads and prompt-injection text; verify literal display or named refusal, no unintended network requests and no secret in stored output.
 
-### SEC-003 — Permanent attributable audit.
+#### SEC-003 — Permanent attributable audit.
 
 An exportable, append-only audit records connection consent/rotation, grant changes, deployments, approvals, executions, replays, imports, exports, erasures and administrative actions with actor, time, version and value-free subject identity. Agents and automated work identify the policy authorizing them. Erasure anonymizes actors and removes sensitive payload copies without rewriting action history; external log delivery is observable.
 
 **Acceptance evidence:** Change a grant, publish, execute, approve, replay and erase a run; read/export the audit as an authorized auditor, deny a builder’s audit mutation and verify anonymized records retain chronology without erased payloads or secrets. Verify the audit lists a draft edit, a run and an approval of the same workflow, each with actor, time and version.
 
-### DATA-001 — Complete portable archives and inactive restore.
-
-Owners export all portable workflow versions/graphs, recipes, tables/forms, run/step histories, decisions, obligations, import provenance, usage, audit and erasure journals in documented versioned data. Integrity/schema/semantic checks precede atomic restore into empty product data. Flows restore paused with interrupted work visible and no dispatch; account bindings, credential secrets, sessions and grants remain installation-local and must be reauthorized. Unknown data is refused rather than silently omitted.
-
-**Acceptance evidence:** Export a populated installation, restore to an empty installation, compare all portable records and verify paused workflows, no network effects and no receiving authority; refuse corruption and a nonempty destination, then export the restored history again.
-
-### DATA-002 — Erasure, receipts and restoration fences.
-
-Owners erase completed run data and related sensitive inputs, decisions, outputs, files, indexes and agent memory after stopping affected execution. Durable value-free receipts and event digests prevent local restoration/readmission; a later source journal fences older archives on another installation. Subject/operator erasure traverses owned records and anonymizes the separate audit. External effects and previously downloaded offline copies are disclosed and handled in the buyer’s provider/copy policy.
-
-**Acceptance evidence:** Pause work and erase a terminal run/subject through Data; inspect histories, files, search and agent memory, attempt duplicate source readmission and restore its old archive with the later journal, then verify only value-free receipts/audit survive.
-
-### DATA-003 — Explicit retention and sensitive-data policy.
+#### DATA-003 — Explicit retention and sensitive-data policy.
 
 Owners choose payload, attachment, model-context and history retention with dry-run deletion scope and legal holds. Defaults and automatic cleanup are disclosed; limits on displayed pages never masquerade as deletion policy. Durable outcomes, audit and value-free receipts outlive expiring payloads, and incomplete obligations are not silently erased. Health/financial/customer data use scoped encryption, regional/provider controls and required agreements before production processing.
 
 **Acceptance evidence:** Configure short payload retention and a held subject, run the maintenance job across its boundary and restart; verify only eligible sensitive data expires, held records remain, unfinished work is visible and pre-erasure snapshots respect fences.
 
-## Move existing automations
+### Move existing automations
 
-### MIG-001 — n8n migration with preview and undo.
-
-Import n8n workflow exports including graph/layout, triggers, mappings, branches, loops, subflows, delays, code and credential references into paused Crank drafts; search/lookup settings (Always Output Data, Return All, limits) map to WORK-011, built-in transformation nodes to WORK-012, IF, Filter and Switch conditions to WORK-013, and resource locators keep their chosen resources under CONN-019; trigger update options (such as the Google Sheets Trigger’s columns to watch) map to TRIG-008 watched fields, and captured executions load as WORK-014 samples. n8n OpenAI and Anthropic nodes and AI Agent nodes with their chat-model, memory and tool sub-nodes map to their CONN-001-mapped AI-001 operations and agent nodes, keeping prompt, model or a named substitution, output parser schema, binary file inputs and declared tools, with keys re-entered under CONN-002. A preview maps every node/setting or names a blocking/manual conversion; it never silently drops work, imports authority or executes source expressions during parsing. Reviewed fingerprints, source identities, originals and a restartable journal support idempotent apply and safe undo of unused, unchanged imports.
-
-**Acceptance evidence:** Preview a multi-step n8n export with a subflow and unsupported/custom node, resolve each named gap, apply the exact reviewed plan twice, reopen the journal after restart, bind fresh accounts and compare runs before cutover; undo an unused import and refuse undo after drift or use. Import an n8n workflow whose OpenAI node analyzes an image from a binary input and whose Anthropic node writes a reply: verify both map to AI-001 operations with prompt, model and output schema kept, and pass on captured executions.
-
-### MIG-002 — Zapier migration and cutover.
+#### MIG-002 — Zapier migration and cutover.
 
 Buyers migrate Zaps, folders, schedules, paths and filters with every rule operator, AND/OR group, fallback and always-run branch (WORK-013), each step’s chosen account resources (spreadsheet, worksheet, channel, pipeline, stage and similar) matched by ID and shown by name under the new connection (CONN-019), each update trigger’s trigger column, Property Change property and Updated Deal Stage pipeline and stage as TRIG-008 watched fields and changed-to values, every Formatter transform and option to its WORK-012 equivalent or a named manual conversion (including Line-itemizer), search steps with their “create if it doesn’t exist” fields, success-when-nothing-found and multiple-result settings (WORK-011), line-item mappings, loops, sub-Zaps, tables/forms, RSS and Webhooks Retrieve Poll triggers (TRIG-007), Digest steps with their name, frequency, release time, template and release-and-clear setting (WORK-010), every QuickBooks Online and Xero trigger, search (including find-or-create) and action CONN-007 names, with its customer, item and account choices (CONN-007), every Shopify and Stripe trigger, search (including find-or-create) and action CONN-008 names, with its location, product and sales-channel choices, every Zendesk and Jira Software Cloud trigger, search (including find-or-create) and action CONN-009 names, with its view, group, project, issue type and sprint choices, every ChatGPT (OpenAI), Anthropic (Claude) and AI by Zapier step as its CONN-001-mapped AI-001 operation, and agent tool declarations. Each AI step keeps its prompt and system instructions, its model choice (or a named substitution when that model is unavailable, shown in the preview), its output field schema, its conversation key and its file and URL input mappings. The buyer’s OpenAI or Anthropic key is entered under CONN-002 with fresh consent and is never read from the source; with no key, the step runs on the installation’s default model where it supports the operation, shown as a substitution. Crank accepts documented Zap JSON exports (available on Zapier Team and Enterprise, where non-admins export only their own Zaps; these prerequisites are explained) and uses a guided, itemized reconstruction for assets a source plan cannot export.
 
@@ -561,33 +579,33 @@ Buyers migrate Zaps, folders, schedules, paths and filters with every rule opera
 
 **Acceptance evidence:** Migrate an authorized multi-path Zap with formatter and delayed action from a Team-plan JSON export, account for every source setting, compare mapped results on authorized samples, stop the source at a watermark and switch triggers; roll back without two active writers or duplicate effects. Migrate a Zapier Professional account with no export file from its Zap list, editor details and Zap history captures: verify every Zap receives a disposition and a passing or explicitly failing parity test. Migrate an RSS → Slack Zap, a Retrieve Poll Zap deduplicated on a custom key, a weekly Digest Zap, a HubSpot deal → QuickBooks invoice Zap with a Line-itemizer step, a lead Zap whose HubSpot “Find contact” uses “create if it doesn’t exist” with a no-match path, and a Formatter Zap using split, lookup table, add/subtract time and perform math: verify each reports native with a passing parity test, including the digest’s name, schedule, release time and template and the invoice’s full line count. Migrate a lead Zap with an AND/OR filter and a Paths group with a fallback branch, and a Zap with a chosen spreadsheet, worksheet and Slack channel: verify each reports native with a passing parity test, the fallback catches a lead matching no territory, and the draft shows the same resources by name. Cut over a Typeform → Catch Hook → HubSpot Zap while test leads are submitted continuously before, during and after the switch: verify the repoint checklist, Crank’s first-event verification, and that HubSpot holds exactly one contact per submitted lead with zero lost or duplicate leads. Migrate a Zap using a Google Sheets trigger column and one using HubSpot Updated Deal Stage: verify each reports native, keeps its watched column or stage by name and passes parity. Cut over an Email by Zapier address that a vendor sends to: verify the vendor appears in its checklist and that each vendor email sent during the switch starts exactly one run. Migrate a Zap running “New Paid Invoice in QuickBooks → update HubSpot deal”, one running “Find or Create Customer → Create Invoice → Send Invoice” and one running Xero “Overdue Sales Invoice → email and Slack reminder”: verify each reports native, keeps its customer and account choices by name and passes its parity test. Migrate the Shopify Zaps “New Paid Order → QuickBooks sales receipt” and “Find or Create Customer → Create Draft Order”, and the Zaps “New Ticket in View → Slack” and “Issue Status Changed → Add Comment to Ticket”: verify each reports native, keeps its location, view and project choices by name and passes its parity test. Migrate the Zaps “Gmail New Attachment → ChatGPT Extract Structured Data → QuickBooks Create Bill”, “Zoom New Recording → ChatGPT Create Transcription → ChatGPT Send Prompt → Gmail” and “HubSpot New Company → AI by Zapier Extract Content From URL → Analyze and Return Data → HubSpot Update Company”, and a Zap with an Anthropic (Claude) Send Message step: verify each AI step reports native, keeps its prompt, model (or named substitution), output fields and file mapping, its key is requested under fresh CONN-002 consent, and each Zap passes its parity test on captured samples.
 
-### MIG-003 — Make blueprint migration.
+#### MIG-003 — Make blueprint migration.
 
 Make scenarios/blueprints migrate modules, routers with their fallback routes, filters with every Make operator (WORK-013), module resource selections (CONN-019), watch modules’ field and “changed” options (TRIG-008), mappings, search modules with their limits and empty-result handling (WORK-011), built-in functions (WORK-012), OpenAI (ChatGPT, Whisper, DALL-E) and Anthropic Claude modules as their CONN-001-mapped AI-001 operations (keeping prompt, model or named substitution, output structure and file mappings, with keys re-entered under CONN-002), iterators/aggregators, scheduling, error routes and dependencies into reviewed paused drafts with explicit unsupported dispositions. Connections/webhook URLs are rebound and data stores transferred under consent. Source operations/credits are not misrepresented as Crank cost; source history remains labeled historical.
 
 **Acceptance evidence:** Import a Make blueprint with a router, iterator and error handler, inspect the complete mapping/exception report, rebind accounts and test both branches, then perform a watermark cutover and demonstrate unused-import undo. Import a Make scenario that sends an email attachment to an OpenAI module for structured extraction and one that transcribes a file with OpenAI: verify each AI module maps to its AI-001 operation with prompt, model and output structure kept, and passes on captured samples after the key is re-entered.
 
-### MIG-004 — Workato recipe and project migration.
+#### MIG-004 — Workato recipe and project migration.
 
 Authorized Workato RLCM ZIP packages and accessible API definitions migrate recipes, recipe functions/callable recipes, custom connectors, lookup/data tables, shared schemas, message templates, API endpoints/collections, event topics, skills/genies/MCP declarations, properties, test cases, schedules, environments and error handling with source IDs/provenance and a complete dependency report. Dependency coverage includes workflow-app configuration where present; unavailable package assets receive explicit reconstruction tasks. Enterprise connection, on-prem gateway and role policies are deliberately rebound. Items unavailable to export receive a guided reconstruction and acceptance case, never a false compatibility claim.
 
 **Acceptance evidence:** Preview an authorized Workato package with callable recipes and environment properties, account for dependencies and unsupported actions, compare sandbox outcomes, approve production account/gateway binding and cut over with a documented rollback checkpoint.
 
-### MIG-005 — Gumloop and Pipedream move-in.
+#### MIG-005 — Gumloop and Pipedream move-in.
 
 Crank accepts Pipedream project ZIP exports, including manifest dispositions, workflow/source/code definitions, configured properties, component versions and control-flow branches. It reports skipped/truncated workflows and explicitly requests excluded environment values, stores/files and private component source through secure setup. Gumloop flows/agents migrate through verified authorized exports/APIs where available and guided reconstruction otherwise; no portable Gumloop format is assumed. Model prompts, tool grants, branches, code dependencies, schedules and persisted source cursors receive explicit dispositions and tests. Imported prompts/tools cannot authorize themselves; no source secrets are copied into graphs or run history.
 
 **Acceptance evidence:** For each product, inventory an authorized workflow containing an AI or code step, rebuild/import its complete graph, reauthorize tools, test both a safe and prohibited action and cut over its source cursor without losing or duplicating business events.
 
-### MIG-006 — Side-by-side runs until results match.
+#### MIG-006 — Side-by-side runs until results match.
 
 Every migration path (MIG-001 to MIG-005) can run an imported workflow beside its source before cutover. In side-by-side mode each live source event also runs the reviewed Crank draft in test mode with no business writes: searches read, and each action records the exact request it would have sent. Crank pairs each side-by-side run with the source’s own run for the same event by source event ID, reading the source’s result from its execution data where the source exposes it (n8n executions, Make scenario logs, Workato job history, buyer-captured Zap history) and otherwise from readback of the destination record the source wrote, and compares mapped outputs and intended writes field by field. A side-by-side report per workflow shows matched, mismatched (with each differing field and both values) and unpaired events. Cutover is offered only after a builder-set number of consecutive matching events (default 20) with no unresolved mismatch; a mismatch blocks cutover until it is fixed or accepted with a recorded reason. Cutover then follows the source’s watermark procedure (MIG-002 hook cutover), so no event is written twice and none is lost.
 
 **Acceptance evidence:** Import a Zapier lead Zap and an n8n workflow and run each beside its source for 25 live test events, with one deliberate mapping difference in the Zapier draft: verify destination readback shows only the source’s records during side-by-side mode, the report lists the mismatched event with its differing field and both values, and cutover is refused; fix the mapping, verify 20 consecutive matching events enable cutover, cut over at a watermark and verify each later event is written exactly once by Crank and the source writes nothing further.
 
-## AI steps and push further
+### AI steps
 
-### AI-001 — Inspectable AI and agent nodes.
+#### AI-001 — Inspectable AI and agent nodes.
 
 Builders add LLM classification/extraction/generation and tool-using agent nodes using buyer-selected OpenAI, Anthropic, Google Gemini or authorized model endpoints, or with no model key at all through the installation’s default model (Cloudflare Workers AI on the installation’s own account, which the owner can replace with any configured endpoint), whose usage is metered in USD under OPS-002. Each node declares typed outputs, model/version, allowed data, tools, MCP servers, iteration/time/USD budgets and failure policy. Prompts, files and external documents are untrusted data; agents cannot acquire new scopes, change grants, send out-of-policy messages or hide tool calls. Invalid structured output is a visible step failure.
 
@@ -622,17 +640,69 @@ Every operation records model, version, input types, tokens or media seconds, an
 5. **Unreadable file.** Map an audio file into a node whose model has no audio support: publishing is blocked with a named error. Send audio to the same node through an untyped file input at run time: the step fails with `model input unsupported` and makes no write.
 6. **Default model.** Run steps 1 and 3 on the installation’s default model with no model key configured, and see each run’s USD usage in OPS-002.
 
-### AI-002 — Natural-language workflow creation.
+#### AI-002 — Natural-language workflow creation.
 
 A builder describes a business result; an agent inspects only authorized app schemas/sample data and proposes an editable workflow, mappings, triggers, grants, test cases, costs and unresolved business questions. It validates the proposal against real connector schemas and test accounts. Human promotion or a previously approved bounded deployment policy controls activation; natural language alone does not silently grant production access.
 
 **Acceptance evidence:** Ask for a US lead-to-invoice workflow, inspect and edit the generated graph and samples, refuse a requested new scope and then approve a tested version; verify no production sends occur during authoring and unresolved choices remain explicit.
 
-### AI-003 — Reusable agent skills and recurring tasks.
+#### AI-003 — Reusable agent skills and recurring tasks.
 
 Teams version reusable agent instructions, tools and evaluation cases as skills and schedule recurring tasks against scoped business data. Skill updates cannot broaden grants. Runs expose progress, remaining obligations, cost and human takeover/cancellation; recurring tasks stop when their objective is satisfied, authority expires or the owner pauses them.
 
 **Acceptance evidence:** Publish a recurring overdue-invoice follow-up skill, run it across several due dates, update its version and revoke one tool; verify bounded contact cadence, visible stopped/blocked work, prior run provenance and human takeover.
+
+### Product delivery and boundaries
+
+#### UX-001 — Accessible mobile operation.
+
+Builders and operators use responsive web interfaces and iOS/Android mobile access for run search, notifications, approvals, pause, safe replay and takeover; full workflow editing remains usable on desktop and accessible on small screens. Keyboard/screen-reader labels, textual states, focus and action errors meet the WCAG 2.2 AA target. Notifications never expose secrets; poor connectivity shows stale state and reconciles a decision before permitting another.
+
+**Acceptance evidence:** At 1440px and 390px with realistic long names/payloads, create and inspect work, approve/reject, pause and resolve a failure using keyboard and touch; interrupt connectivity during approval and verify one decision and clear stale/error state. Exercise the same notification-to-resolution journey on iOS and Android.
+
+#### PLATFORM-001 — Public API, webhooks, SDK and MCP.
+
+The product exposes documented, versioned APIs, paginated reads, outgoing signed run/outcome webhooks, SDKs and an MCP server for authorized workflow/run/connection operations. Idempotent writes, scoped service accounts, event retries, subscription rotation and public error contracts support app and agent integrations. Remote clients have the same grants and audit trail as UI operators and cannot bypass approval. Connected-app actions exposed to the buyer’s own AI clients are covered by PLATFORM-002.
+
+**Acceptance evidence:** Use an SDK and MCP client to create a draft, start granted work, inspect progress and subscribe to signed completion events; duplicate writes, rotate a webhook secret and attempt an out-of-grant action, verifying stable IDs, delivery history and denial.
+
+#### PLATFORM-002 — Connector actions as MCP tools for the buyer’s AI clients.
+
+Owners create per-client MCP servers (for example one for a person’s Claude, ChatGPT, Cursor or VS Code) that expose selected connector actions and searches as typed tools, such as “Send Slack channel message”, “Create Google Calendar event” or “Find HubSpot contact”, on the same managed connections that workflows use. Each server has its own URL and authentication (OAuth 2.1 with the person’s Crank sign-in, or a revocable per-client secret), a chosen set of enabled tools, optional fixed or limited parameters, and a TEAM-002 grant setting recipients, amounts, rate limits and expiry. Every tool call appears in run history and the audit with the client, person, tool, inputs, outputs and remote object IDs; calls outside the enabled tools or the grant are refused and audited, and approval-required actions pause under TEAM-005 rather than executing.
+
+**Acceptance evidence:** Create an MCP server with Slack “send channel message” and Google Calendar “create event” enabled; from an MCP client (Claude Desktop or the MCP Inspector) create a calendar event and post to a Slack channel, verifying both by provider readback and as audited calls in run history; call a HubSpot action that is not enabled and a Slack post to a channel outside the grant, verifying both are refused, audited and produce no provider effect; revoke the client and verify its next call fails.
+
+#### BASE-001 — Owned operation and explicit Base replacements.
+
+Crank remains a standalone owned product with native sign-in, local data and editable source; core operation needs no author telemetry, license check or kill switch. The RER command contract remains in force. DATA-001 explicitly excludes installation authority and credentials from archives instead of claiming full BASE-DATA-001 equivalence. Structured JSON/graph inputs and literal text replace arbitrary owner HTML under BASE-INPUT-002; future attachments must satisfy explicit type/size/access/erasure rules rather than inheriting a no-upload exception. Authorized provider/LLM/executor data flows disclose recipient, purpose, fields, region, retention and required credentials; no blanket zero-egress or completed compliance claim is made.
+
+**Acceptance evidence:** With optional providers disconnected, run native sign-in, local HTTP automation, history and export without author traffic; inspect every enabled external destination/data category, then restore elsewhere with fresh authority and verify a removed provider cannot receive data.
+
+#### BASE-003 — Observable operation and recovery.
+
+Configuration errors identify the binding name without its secret. Health reflects required storage/executor dependencies; unavailable state is labeled unavailable, never success. Jobs, connector subscriptions, maintenance, archive transfer and agent tasks have durable terminal outcomes and crash reconciliation. The owner can inspect capacity, backups, queue lag and provider outages; scale and availability claims require measurements, not plan limits.
+
+**Acceptance evidence:** Run the emitted service, remove a required dependency, crash each active execution class and restart; observe bounded health failure, durable interrupted/uncertain outcomes, safe recovery and no silent loss or fabricated completed work.
+
+#### BASE-004 — Free, MIT-licensed source with no paid tier.
+
+Crank’s complete source, including every connector, the workflow engine, the run site and the migration modules, is published under the MIT License in `LICENSE`, and the package metadata, run site and README state that license. Every capability works on every installation with no plan, seat, task, usage or license-key gate, no paid edition, no author account and no call to the author; the only costs an owner pays are their own infrastructure, provider and model usage (OPS-002). Making any component proprietary or paid-only would be a contract change, not a setting.
+
+**Acceptance evidence:** A test reads `LICENSE` and verifies the MIT text, verifies `package.json` declares `"license": "MIT"`, and verifies the built run site states “MIT licensed” with a link to `LICENSE`; a source scan finds no route, step or screen that checks a plan, payment, seat count or license key; after setup, with outbound traffic to the author’s domains blocked, the installation publishes and runs a workflow that uses every shipped step type.
+
+#### BASE-005 — Run on your own computer, server or Cloudflare account.
+
+One line starts Crank on the owner’s own computer (`npx -y @runeditrun/rer dev just-every/run-crank`, on macOS, Linux or Windows with WSL2), and the same checkout runs in production in either of two owned places: the owner’s own Cloudflare account (`rer deploy`), or a Linux server the owner controls, where a supported command installs the built Worker under workerd as a supervised service that starts on boot, keeps its D1-compatible data, scheduled Cron and queues on that server’s disk, serves the owner’s own HTTPS origin and reports health. On every path the workflows, connections and run history live only in that owner’s storage, and `rer export` and `rer import` move an installation between them under DATA-001.
+
+**Acceptance evidence:** On a clean macOS computer run the one-line start and reach the signed-in app; on a clean Linux VM install Crank as a server service, publish a 5-minute schedule workflow, reboot the host and verify the service returns healthy on its own HTTPS origin, the schedule resumes with exactly one run per due occurrence and all data persists; deploy the same checkout to a Cloudflare test account with `rer deploy` and verify its health; export the server installation, import it into an empty Cloudflare deployment and verify its workflows restore paused under DATA-001.
+
+#### BOUND-001 — US-first product and provider responsibilities.
+
+The first buyer is a US operations lead at a 5–100 person business replacing Zapier, Make or Workato. USD estimates, cents, US sales-tax fields, ACH/payment references, 1099/W-2 data handoffs and US business calendars/timezones are preserved. Crank orchestrates approved business operations; it does not itself become a bank, card network, payroll/tax filer, phone/911 carrier, clinical system or general logs/APM platform. Payments, sales receipts and credit memos Crank records through CONN-007 are authorized transactions in the buyer’s own QuickBooks Online, Xero or NetSuite books, not a Crank ledger. Buyers use Stripe/ACH banking partners, QuickBooks/Xero/NetSuite, Gusto/ADP, their licensed communications/health providers and the appropriate separate sibling products. Needed provider app reviews, native clients, payment permissions, health-data agreements and secure executors are engineering deliverables, never exclusions from automation scope.
+
+**Acceptance evidence:** Configure a US business workflow with USD sales-tax lines and an ACH/1099 handoff, inspect provider responsibilities and consent, and attempt a regulated operation without the required agreement/scope; verify a named setup requirement and retained obligation, then complete it through an authorized sandbox/provider connection.
+
+## Push further: agents that own the outcome
 
 ### AGENT-001 — Own and verify the business outcome.
 
@@ -657,62 +727,6 @@ An agent clusters recurring errors and manual corrections using only retained, a
 An agent maintains due obligations, next actions, business calendars, accountable employees and evidence while work spans days. It asks the right person only for missing facts or unresolved business choices, chases stalled approvals under agreed cadence and escalates when authority or deadlines require it. It resumes the exact durable step after the answer, stops contact on completion/revocation and exposes takeover, cancellation and an audit of every communication.
 
 **Acceptance evidence:** Leave a customer tax fact unresolved over a weekend, restart the service, answer from the authorized employee and finish the obligation; test unanswered escalation, a late duplicate answer and revoked contact authority, verifying one continuation and no further reminders after completion.
-
-## Product delivery and boundaries
-
-### UX-001 — Accessible mobile operation.
-
-Builders and operators use responsive web interfaces and iOS/Android mobile access for run search, notifications, approvals, pause, safe replay and takeover; full workflow editing remains usable on desktop and accessible on small screens. Keyboard/screen-reader labels, textual states, focus and action errors meet the WCAG 2.2 AA target. Notifications never expose secrets; poor connectivity shows stale state and reconciles a decision before permitting another.
-
-**Acceptance evidence:** At 1440px and 390px with realistic long names/payloads, create and inspect work, approve/reject, pause and resolve a failure using keyboard and touch; interrupt connectivity during approval and verify one decision and clear stale/error state. Exercise the same notification-to-resolution journey on iOS and Android.
-
-### PLATFORM-001 — Public API, webhooks, SDK and MCP.
-
-The product exposes documented, versioned APIs, paginated reads, outgoing signed run/outcome webhooks, SDKs and an MCP server for authorized workflow/run/connection operations. Idempotent writes, scoped service accounts, event retries, subscription rotation and public error contracts support app and agent integrations. Remote clients have the same grants and audit trail as UI operators and cannot bypass approval. Connected-app actions exposed to the buyer’s own AI clients are covered by PLATFORM-002.
-
-**Acceptance evidence:** Use an SDK and MCP client to create a draft, start granted work, inspect progress and subscribe to signed completion events; duplicate writes, rotate a webhook secret and attempt an out-of-grant action, verifying stable IDs, delivery history and denial.
-
-### PLATFORM-002 — Connector actions as MCP tools for the buyer’s AI clients.
-
-Owners create per-client MCP servers (for example one for a person’s Claude, ChatGPT, Cursor or VS Code) that expose selected connector actions and searches as typed tools, such as “Send Slack channel message”, “Create Google Calendar event” or “Find HubSpot contact”, on the same managed connections that workflows use. Each server has its own URL and authentication (OAuth 2.1 with the person’s Crank sign-in, or a revocable per-client secret), a chosen set of enabled tools, optional fixed or limited parameters, and a TEAM-002 grant setting recipients, amounts, rate limits and expiry. Every tool call appears in run history and the audit with the client, person, tool, inputs, outputs and remote object IDs; calls outside the enabled tools or the grant are refused and audited, and approval-required actions pause under TEAM-005 rather than executing.
-
-**Acceptance evidence:** Create an MCP server with Slack “send channel message” and Google Calendar “create event” enabled; from an MCP client (Claude Desktop or the MCP Inspector) create a calendar event and post to a Slack channel, verifying both by provider readback and as audited calls in run history; call a HubSpot action that is not enabled and a Slack post to a channel outside the grant, verifying both are refused, audited and produce no provider effect; revoke the client and verify its next call fails.
-
-### BASE-001 — Owned operation and explicit Base replacements.
-
-Crank remains a standalone owned product with native sign-in, local data and editable source; core operation needs no author telemetry, license check or kill switch. The RER command contract remains in force. DATA-001 explicitly excludes installation authority and credentials from archives instead of claiming full BASE-DATA-001 equivalence. Structured JSON/graph inputs and literal text replace arbitrary owner HTML under BASE-INPUT-002; future attachments must satisfy explicit type/size/access/erasure rules rather than inheriting a no-upload exception. Authorized provider/LLM/executor data flows disclose recipient, purpose, fields, region, retention and required credentials; no blanket zero-egress or completed compliance claim is made.
-
-**Acceptance evidence:** With optional providers disconnected, run native sign-in, local HTTP automation, history and export without author traffic; inspect every enabled external destination/data category, then restore elsewhere with fresh authority and verify a removed provider cannot receive data.
-
-### BASE-002 — Runnable site and unchanged installed home.
-
-The static run site leads from Run Crank to runnable commands and publishes repository owner guides at /docs. The installed home stays the shared Lobby. Target clauses describe future product behavior; current guides/API documentation remain implementation-specific until their corresponding capabilities ship.
-
-**Acceptance evidence:** Build the static site and follow homepage → /run and /docs without JavaScript; traverse local guide links and anchors through HTTP, and verify the installed homepage through its emitted Worker.
-
-### BASE-003 — Observable operation and recovery.
-
-Configuration errors identify the binding name without its secret. Health reflects required storage/executor dependencies; unavailable state is labeled unavailable, never success. Jobs, connector subscriptions, maintenance, archive transfer and agent tasks have durable terminal outcomes and crash reconciliation. The owner can inspect capacity, backups, queue lag and provider outages; scale and availability claims require measurements, not plan limits.
-
-**Acceptance evidence:** Run the emitted service, remove a required dependency, crash each active execution class and restart; observe bounded health failure, durable interrupted/uncertain outcomes, safe recovery and no silent loss or fabricated completed work.
-
-### BASE-004 — Free, MIT-licensed source with no paid tier.
-
-Crank’s complete source, including every connector, the workflow engine, the run site and the migration modules, is published under the MIT License in `LICENSE`, and the package metadata, run site and README state that license. Every capability works on every installation with no plan, seat, task, usage or license-key gate, no paid edition, no author account and no call to the author; the only costs an owner pays are their own infrastructure, provider and model usage (OPS-002). Making any component proprietary or paid-only would be a contract change, not a setting.
-
-**Acceptance evidence:** A test reads `LICENSE` and verifies the MIT text, verifies `package.json` declares `"license": "MIT"`, and verifies the built run site states “MIT licensed” with a link to `LICENSE`; a source scan finds no route, step or screen that checks a plan, payment, seat count or license key; after setup, with outbound traffic to the author’s domains blocked, the installation publishes and runs a workflow that uses every shipped step type.
-
-### BASE-005 — Run on your own computer, server or Cloudflare account.
-
-One line starts Crank on the owner’s own computer (`npx -y @runeditrun/rer dev just-every/run-crank`, on macOS, Linux or Windows with WSL2), and the same checkout runs in production in either of two owned places: the owner’s own Cloudflare account (`rer deploy`), or a Linux server the owner controls, where a supported command installs the built Worker under workerd as a supervised service that starts on boot, keeps its D1-compatible data, scheduled Cron and queues on that server’s disk, serves the owner’s own HTTPS origin and reports health. On every path the workflows, connections and run history live only in that owner’s storage, and `rer export` and `rer import` move an installation between them under DATA-001.
-
-**Acceptance evidence:** On a clean macOS computer run the one-line start and reach the signed-in app; on a clean Linux VM install Crank as a server service, publish a 5-minute schedule workflow, reboot the host and verify the service returns healthy on its own HTTPS origin, the schedule resumes with exactly one run per due occurrence and all data persists; deploy the same checkout to a Cloudflare test account with `rer deploy` and verify its health; export the server installation, import it into an empty Cloudflare deployment and verify its workflows restore paused under DATA-001.
-
-### BOUND-001 — US-first product and provider responsibilities.
-
-The first buyer is a US operations lead at a 5–100 person business replacing Zapier, Make or Workato. USD estimates, cents, US sales-tax fields, ACH/payment references, 1099/W-2 data handoffs and US business calendars/timezones are preserved. Crank orchestrates approved business operations; it does not itself become a bank, card network, payroll/tax filer, phone/911 carrier, clinical system or general logs/APM platform. Payments, sales receipts and credit memos Crank records through CONN-007 are authorized transactions in the buyer’s own QuickBooks Online, Xero or NetSuite books, not a Crank ledger. Buyers use Stripe/ACH banking partners, QuickBooks/Xero/NetSuite, Gusto/ADP, their licensed communications/health providers and the appropriate separate sibling products. Needed provider app reviews, native clients, payment permissions, health-data agreements and secure executors are engineering deliverables, never exclusions from automation scope.
-
-**Acceptance evidence:** Configure a US business workflow with USD sales-tax lines and an ACH/1099 handoff, inspect provider responsibilities and consent, and attempt a regulated operation without the required agreement/scope; verify a named setup requirement and retained obligation, then complete it through an authorized sandbox/provider connection.
 
 ## Honest boundaries and sources
 
