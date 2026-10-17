@@ -1,6 +1,8 @@
 # Foundation setup adapter
 
-First-party setup runs through `rer setup` (set up from nothing with `npx -y @runeditrun/rer setup just-every/run-crank`, or without Node with `curl -fsSL https://runeditrun.com/install.sh | sh -s -- setup just-every/run-crank`). The public
+First-party setup runs through `rer setup` (install `rer` once with
+`npx -y @runeditrun/rer cli install`, or the installer script on the RER site:
+`curl -fsSL https://runeditrun.com/install.sh | sh`). The public
 command's flags, effects, state handling and exits are defined in
 `SEED-COMMAND-CONTRACT.md`; use `RUN-LOCALLY.md` for the owner workflow. The
 onboarding package supplies the shared lifecycle used by the command adapter.
