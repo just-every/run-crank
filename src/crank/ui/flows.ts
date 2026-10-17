@@ -13,7 +13,7 @@ export function flowsView(state:any, target:string) {
       <div class="actions flow-actions">${owner?action(`/api/crank/flows/${f.id}/${f.status==='active'?'pause':'activate'}`,f.status==='active'?'Pause flow':'Activate flow'):''}<a href="/app/runs?flow=${esc(f.id)}">View runs</a></div>
       ${f.status==='active'&&prepare?`<details><summary>Prepare a run</summary><form method="post" action="/app/action">${hidden('path',`/api/crank/flows/${f.id}/runs`)}
         <label>Event ID<input name="event_id" required maxlength="128" placeholder="ticket-1042"></label>
-        <label>Event input (JSON object)<textarea name="input" required rows="5" placeholder='{"customer":"Harbour Workshop","task":"Book a callback"}'></textarea></label>
+        <label>Event input (JSON object)<textarea name="input" required rows="5" placeholder='{"customer":"Harbor Workshop","task":"Book a callback"}'></textarea></label>
         <button class="dark-pill">Prepare for approval</button></form></details>`:''}
     </div></article>`).join(''):`<article class="plain-card empty-state"><h3>No flows yet</h3><p>Create your first flow below. Start the Operations inbox from the README for a local destination.</p></article>`}
   </section>

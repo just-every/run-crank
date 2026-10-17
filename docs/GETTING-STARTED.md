@@ -43,7 +43,7 @@ Open `http://127.0.0.1:9051`. Messages are stored locally in
    `ticket-1042` as the **Event ID**. For **Event input (JSON object)**, enter:
 
    ```json
-   {"customer":"Harbour Workshop","task":"Book a callback"}
+   {"customer":"Harbor Workshop","task":"Book a callback"}
    ```
 
 3. Select **Prepare for approval**. On **Run details**, check the source,

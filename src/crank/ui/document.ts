@@ -6,9 +6,11 @@ export const json = (value:unknown) => esc(JSON.stringify(value,null,2))
 export const hidden = (name:string,value:unknown) => `<input type="hidden" name="${esc(name)}" value="${esc(value)}">`
 export const action = (path:string,label:string,fields:Record<string,unknown>={},kind='dark-pill') => `<form method="post" action="/app/action" class="inline">${hidden('path',path)}${Object.entries(fields).map(([k,v])=>hidden(k,v)).join('')}<button class="${kind==='secondary'?'outline-pill':kind==='danger'?'outline-pill danger':kind}">${esc(label)}</button></form>`
 export const chip = (state:unknown,label:unknown=state) => `<span class="status-chip" data-state="${esc(state)}">${esc(label)}</span>`
+// US style ("Oct 14, 2026, 9:12 AM UTC"); public/crank.js redraws it in the viewer's zone.
+const utcTime = new Intl.DateTimeFormat('en-US', { timeZone:'UTC', month:'short', day:'numeric', year:'numeric', hour:'numeric', minute:'2-digit' })
 export const timestamp = (value:unknown) => {
   const date = new Date(String(value));
-  return Number.isNaN(date.getTime()) ? esc(value) : `<time datetime="${esc(value)}" title="UTC">${date.toISOString().slice(0,16).replace('T',' ')}</time>`
+  return Number.isNaN(date.getTime()) ? esc(value) : `<time datetime="${esc(value)}" title="UTC">${utcTime.format(date)} UTC</time>`
 }
 export const parse = (value:unknown) => { try { return typeof value === 'string' ? JSON.parse(value) : value } catch { return value } }
 export async function document(title:string,content:string,actor?:any,status=200) {

@@ -50,7 +50,7 @@ Activate the flow as an owner. Configure the source to `POST` to
 Use its flow-scoped trigger credential and this envelope:
 
 ```json
-{"event_id":"ticket-1044","input":{"customer":"Harbour Workshop"}}
+{"event_id":"ticket-1044","input":{"customer":"Harbor Workshop"}}
 ```
 
 Keep the source's stable event ID for duplicate submissions. Incoming events

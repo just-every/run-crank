@@ -38,13 +38,17 @@ test('the run site leads to runnable commands and repository guides with working
       }
       if(!response.headers.get('content-type').startsWith('text/html'))continue
       const html=await response.text();documents.set(path,html)
-      for(const match of html.matchAll(/(?:href|src)="([^"]+)"/g)) {
-        const url=new URL(match[1].replaceAll('&amp;','&'),origin+path)
+      const refs=[...html.matchAll(/(?:href|src)="([^"]+)"/g)].map(match=>match[1])
+      for(const match of html.matchAll(/srcSet="([^"]+)"|srcset="([^"]+)"/gi)) refs.push(...(match[1]??match[2]).split(',').map(entry=>entry.trim().split(/\s+/)[0]))
+      for(const ref of refs) {
+        const url=new URL(ref.replaceAll('&amp;','&'),origin+path)
         if(url.origin===origin&&!seen.has(url.pathname)) queue.push(url.pathname)
       }
     }
     assert.ok(documents.has('/run'),'the homepage has a path to running the app')
     assert.ok(documents.has('/docs'),'the homepage has a path to documentation')
+    const home=documents.get('/');assert.match(home,/@runeditrun\/rer dev just-every\/run-crank/,'the homepage shows the one-line start')
+    assert.doesNotMatch(home,/localhost|127\.0\.0\.1|\bRER_[A-Z]/,'the homepage shows no local addresses or rer output')
     const run=documents.get('/run');assert.match(run,/@runeditrun\/rer dev just-every\/run-crank/);assert.match(run,/rer dev/)
     assert.ok([...documents.keys()].filter(path=>path.startsWith('/docs/')).length>1,'readable guides are emitted')
     for(const [path,html] of documents) {

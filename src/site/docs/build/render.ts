@@ -20,7 +20,7 @@ export function renderMarkdown(markdown: string, context: Omit<LinkContext, 'anc
     code({ text, lang }) {
       const language = (lang ?? '').trim().split(/\s+/)[0]
       const label = /^(sh|bash|shell|zsh)$/.test(language) ? 'Shell' : language.toUpperCase() || 'Code'
-      return `<div class="docs-code"><div class="docs-code-label">${escapeHtml(label)}</div><pre tabindex="0" aria-label="${escapeHtml(label)} code"><code>${escapeHtml(text)}</code></pre></div>\n`
+      return `<div class="docs-code"><div class="docs-code-label">${escapeHtml(label)}<button class="docs-copy" type="button" hidden>Copy</button></div><pre tabindex="0" aria-label="${escapeHtml(label)} code"><code>${escapeHtml(text)}</code></pre></div>\n`
     },
     html({ text }) { return escapeHtml(text) },
     link({ href, title: label, tokens }) {
