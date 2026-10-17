@@ -118,7 +118,7 @@ a{color:inherit;text-underline-offset:4px}
 /* Base's Run and not-found pages (src/base/run-site.ts) in the site's look: the heavy
    headline, the bold lockup and the navy numerals. Their inline style keeps the layout. */
 body > .bar .brand { font-weight: 700; font-size: 32px; gap: 9px; }
-body > main .intro h1, body > main .hero h1 { font-weight: 800; letter-spacing: -.045em; }
+body > main .intro h1, body > main .hero h1 { font-weight: 800; letter-spacing: -.045em; word-spacing: .03em; }
 body > main .step h2 { font-weight: 700; }
 body > main .num { background: var(--navy); font-weight: 700; }
 @media (max-width: 760px) { body > .bar .brand { font-size: 25px; } }
