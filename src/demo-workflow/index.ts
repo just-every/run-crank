@@ -13,10 +13,10 @@ const RUNS_TODAY = 1284
 /** The connections the workflow uses, created through the same door as the Connections API (secrets sealed, never shown). */
 async function connections(env: CrankEnv, actor: Actor): Promise<DemoConnections> {
   const wanted = [
-    ['stripe', { app: 'webhook', label: 'Stripe signing secret', auth_kind: 'signing_secret', secret: { secret: 'whsec_demo_only_not_a_stripe_secret' } }],
-    ['google', { app: 'google', label: 'Google Sheets', auth_kind: 'oauth2', account_name: 'maya@bluelake.example', scopes: ['https://www.googleapis.com/auth/spreadsheets'], secret: { access_token: 'demo-only-not-a-google-token' } }],
-    ['slack', { app: 'slack', label: 'Slack', auth_kind: 'bearer', account_name: 'Blue Lake Supply', secret: { token: 'demo-only-not-a-slack-token' } }],
-    ['quickbooks', { app: 'http', label: 'QuickBooks Online', auth_kind: 'bearer', account_name: 'Blue Lake Supply', domains: ['quickbooks.api.intuit.com'], secret: { token: 'demo-only-not-a-quickbooks-token' } }],
+    ['stripe', { app: 'webhook', label: 'Stripe signing secret', auth_kind: 'signing_secret', secret: { secret: 'example-stripe-signing-secret' } }],
+    ['google', { app: 'google', label: 'Google Sheets', auth_kind: 'oauth2', account_name: 'maya@bluelake.example', scopes: ['https://www.googleapis.com/auth/spreadsheets'], secret: { access_token: 'example-google-access-token' } }],
+    ['slack', { app: 'slack', label: 'Slack', auth_kind: 'bearer', account_name: 'Blue Lake Supply', secret: { token: 'example-slack-bot-token' } }],
+    ['quickbooks', { app: 'http', label: 'QuickBooks Online', auth_kind: 'bearer', account_name: 'Blue Lake Supply', domains: ['quickbooks.api.intuit.com'], secret: { token: 'example-quickbooks-token' } }],
   ] as const
   const existing = await listConnections(env), out: Record<string, string> = {}
   for (const [key, input] of wanted) out[key] = existing.find(c => c.label === input.label)?.id ?? (await createConnection(env, actor, { ...input } as Record<string, unknown>)).id
