@@ -9,8 +9,14 @@ import { document, esc } from './document'
 import { flowsView, runsView } from './flows'
 import { runView } from './run'
 import { accessView, importView, previewView, dataView } from './settings'
+import { connectionsView } from './connections'
+import { approvalsView, workflowRunView } from './workflow-run'
+import { editorView } from './editor'
+import { workflowData } from './workflow-data'
 
 const redirect = (location:string) => new Response(null,{status:303,headers:{location,'cache-control':'no-store'}})
+// A form may name where to return after its action: a path inside the app, nothing else.
+const safeReturn = (value:unknown) => typeof value==='string' && /^\/app(\/[A-Za-z0-9/_.-]*)?(\?[A-Za-z0-9=&%_.-]*)?$/.test(value) ? value : null
 export async function productApi(request:Request,env:CrankEnv):Promise<Response|null> {
   return await importApi(request,env) ?? await dataApi(request,env) ?? await workflowApi(request,env) ?? await crankApi(request,env)
 }
@@ -32,43 +38,89 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
       const forwarded = new Request(url.origin+path,{method:input===undefined?'GET':'POST',headers,...(input===undefined?{}:{body:JSON.stringify(input)})})
       return (path.startsWith('/auth/') ? await authResponse(forwarded,env) : await productApi(forwarded,env))!
     }
+    const read = async (path:string) => { const response = await call(path), value:any = await response.json(); if(!response.ok) throw Object.assign(new Error(value.error ?? 'Unavailable'),{status:response.status}); return value }
+    const page = async (title:string,content:string,options:any={},status=200) => {
+      const state = options.state ?? await read('/api/crank/state'), waiting = await read('/api/crank/workflow-runs?status=awaiting_approval&limit=100')
+      return document(title,content,actor,status,{...options,state:undefined,approvals:state.runs.filter((r:any)=>r.state==='pending').length+waiting.runs.length})
+    }
+    const editorPage = async (id:string,params:URLSearchParams,preview?:unknown) => {
+      const [data,state,waiting] = await Promise.all([workflowData(read,id,params,actor),read('/api/crank/state'),read('/api/crank/workflow-runs?status=awaiting_approval&limit=100')])
+      const view = editorView({...data,preview,tokens:state.tokens ?? [],approvals:state.runs.filter((r:any)=>r.state==='pending').length+waiting.runs.length})
+      return document(data.workflow.name,view.content,actor,200,view.page)
+    }
     if (request.method === 'POST') {
       requireWriteOrigin(request,env,actor)
       const form = await formValues(request)
       if (url.pathname === '/app/import/preview') {
         requireOwner(actor)
         const response = await call('/api/crank/imports/plan',form), plan:any = await response.json()
-        if(!response.ok) return document('Import refused',`<p class="notice">${esc(plan.error)}</p><a href="/app/import">Back to move in</a>`,actor,response.status)
-        return document('Import preview',previewView(plan,form.source,form.namespace),actor)
+        if(!response.ok) return page('Import refused',`<p class="notice">${esc(plan.error)}</p><a href="/app/import">Back to move in</a>`,{},response.status)
+        return page('Import preview',previewView(plan,form.source,form.namespace))
       }
-      if (url.pathname !== '/app/action' || (!/^\/api\/crank\/[A-Za-z0-9/_-]+$/.test(form.path ?? '') && !['/auth/invite','/auth/operator/status','/auth/operator/role'].includes(form.path))) return document('Not found','<a href="/app">Return to flows</a>',actor,404)
-      const path = form.path; delete form.path
+      const preview = /^\/app\/workflows\/([^/]+)\/preview$/.exec(url.pathname)
+      if (preview) {
+        let sample:unknown
+        const id = decodeURIComponent(preview[1])
+        try { sample = JSON.parse(form.sample ?? '') } catch { return page('Invalid sample',`<p class="notice">The sample must be JSON.</p><a href="/app/workflows/${esc(id)}">Back to the flow</a>`,{},400) }
+        const response = await call(`/api/crank/workflows/${encodeURIComponent(id)}/preview`,{sample}), result:any = await response.json()
+        if(!response.ok) return page('Preview refused',`<p class="notice">${esc(result.error)}</p><a href="/app/workflows/${esc(id)}">Back to the flow</a>`,{},response.status)
+        return editorPage(id,new URLSearchParams({step:form.step ?? '',tab:'test'}),result)
+      }
+      if (url.pathname !== '/app/action' || (!/^\/api\/crank\/[A-Za-z0-9/_-]+$/.test(form.path ?? '') && !['/auth/invite','/auth/operator/status','/auth/operator/role'].includes(form.path))) return page('Not found','<a href="/app">Return to flows</a>',{},404)
+      const path = form.path, back = safeReturn(form.return_to); delete form.path; delete form.return_to
       const input:Record<string,unknown> = {...form}
-      if(form.input) { try {input.input=JSON.parse(form.input)} catch {return document('Invalid event','<p>Event input must be a JSON object.</p><a href="/app">Return to flows</a>',actor,400)} }
+      if(form.input) { try {input.input=JSON.parse(form.input)} catch {return page('Invalid event','<p>Event input must be a JSON object.</p><a href="/app">Return to flows</a>',{},400)} }
+      if(form.graph) { try {input.graph=JSON.parse(form.graph)} catch {return page('Invalid workflow','<p class="notice">The workflow graph must be JSON.</p><a href="/app">Return to flows</a>',{},400)} }
+      if(form.step_path!==undefined) { input.path=form.step_path; delete input.step_path }
+      if(input.reason==='') delete input.reason
       if(input.flow_id==='') delete input.flow_id
       const response = await call(path,input)
       if(path==='/api/crank/data/export' && response.ok) return response
       const result:any = await response.json()
-      if(!response.ok) return document('Action refused',`<p class="notice">${esc(result.error)}</p><p>No success was reported. Review the latest state before retrying.</p><a href="${path.includes('/imports')?'/app/import':'/app'}">Return to workspace</a>`,actor,response.status)
-      if(result.token) return document('Credential created',`<section><p>Shown once. Save this in a private file for your agent. Crank stores only its hash.</p><label>Credential<input type="password" value="${esc(result.token)}" readonly aria-label="Credential"></label><p>You can select and copy the hidden value. Do not share it in chat or commit it. Local dev credentials additionally need the local gate described in the README.</p><a href="/app/access">Return to access</a></section>`,actor)
+      if(!response.ok) return page('Action refused',`<p class="notice">${esc(result.error)}</p><p>No success was reported. Review the latest state before retrying.</p><a href="${back ?? (path.includes('/imports')?'/app/import':'/app')}">Return to workspace</a>`,{},response.status)
+      if(result.token) return page('Credential created',`<section class="panel"><p>Shown once. Save this in a private file for your agent. Crank stores only its hash.</p><label>Credential<input type="password" value="${esc(result.token)}" readonly aria-label="Credential"></label><p class="muted">You can select and copy the hidden value. Do not share it in chat or commit it. Local dev credentials additionally need the local gate described in the README.</p><a class="btn btn-secondary" href="/app/access">Return to access</a></section>`)
+      if(back) return redirect(back)
       if(path.startsWith('/api/crank/imports')) return redirect('/app/import')
       if(path.startsWith('/api/crank/tokens')) return redirect('/app/access')
       if(path.startsWith('/auth/')) return redirect('/app/access')
-      if(path.startsWith('/api/crank/data')) return document('Data operation complete',`<p class="notice">${path.endsWith('/erase')?'The run and its dependent data have been erased. Existing destination effects remain there.':'Your archive has been restored. Review the draft flows before activating them.'}</p><a href="/app">Return to flows</a>`,actor)
+      if(path.startsWith('/api/crank/data')) return page('Data operation complete',`<p class="notice">${path.endsWith('/erase')?'The run and its dependent data have been erased. Existing destination effects remain there.':'Your archive has been restored. Review the draft flows before activating them.'}</p><a href="/app">Return to flows</a>`)
+      if(path.startsWith('/api/crank/workflow-runs/') || /^\/api\/crank\/workflows\/[^/]+\/run$/.test(path)) return redirect('/app/workflow-runs/'+encodeURIComponent(result.id))
+      if(path==='/api/crank/workflows') return redirect('/app/workflows/'+encodeURIComponent(result.id))
       if(result.flow_id) return redirect('/app/runs/'+result.id)
       return redirect('/app')
     }
-    if(request.method !== 'GET') return document('Method not allowed','<a href="/app">Return to flows</a>',actor,405)
-    const response = await call('/api/crank/state'), state:any = await response.json()
-    if(!response.ok) return document('Workspace unavailable',`<p>${esc(state.error)}</p>`,actor,response.status)
-    if(url.pathname==='/app') return document('Flows',flowsView(state,env.CRANK_TARGET_ORIGIN ?? (env.AUTH_LOCAL==='true'?'http://127.0.0.1:9051':'https://inbox.example.com')),actor)
-    if(url.pathname==='/app/runs') return document('Runs',runsView(state,url.searchParams.get('flow')),actor)
-    if(/^\/app\/runs\/[^/]+$/.test(url.pathname)) return document('Run details',runView(state,url.pathname.split('/')[3]),actor)
+    if(request.method !== 'GET') return page('Method not allowed','<a href="/app">Return to flows</a>',{},405)
+    const state = await read('/api/crank/state'), owner = actor.role==='owner'
+    if(url.pathname==='/app') {
+      const [workflows,connections] = await Promise.all([read('/api/crank/workflows'),read('/api/crank/connections')])
+      return page('Flows',flowsView(state,env.CRANK_TARGET_ORIGIN ?? (env.AUTH_LOCAL==='true'?'http://127.0.0.1:9051':'https://inbox.example.com'),workflows,connections),{state,intro:'Workflows run unattended once published; approval steps and approval flows wait for an owner.'})
+    }
+    const workflowPath = /^\/app\/workflows\/([^/]+)$/.exec(url.pathname)
+    if(workflowPath) return editorPage(decodeURIComponent(workflowPath[1]),url.searchParams)
+    if(url.pathname==='/app/runs') {
+      const q = url.searchParams.get('q') ?? '', status = url.searchParams.get('status') ?? '', workflow = url.searchParams.get('workflow') ?? ''
+      const search = new URLSearchParams({limit:'50'}); if(q) search.set('q',q); if(status) search.set('status',status); if(workflow) search.set('workflow',workflow); const before = url.searchParams.get('before'); if(before) search.set('before',before)
+      const [runs,workflows] = await Promise.all([read('/api/crank/workflow-runs?'+search),read('/api/crank/workflows')])
+      return page('Runs',runsView(state,url.searchParams.get('flow'),{runs:runs.runs,next:runs.next,workflows,q,status,workflow}),{state,intro:'Every run keeps its own record: workflow runs step by step, approval flow runs with their decision and delivery.'})
+    }
+    if(/^\/app\/runs\/[^/]+$/.test(url.pathname)) return page('Run details',runView(state,url.pathname.split('/')[3]),{state,crumbs:[['Runs','/app/runs']]})
+    const runPath = /^\/app\/workflow-runs\/([^/]+)$/.exec(url.pathname)
+    if(runPath) {
+      const run = await read('/api/crank/workflow-runs/'+runPath[1]), workflow = await read('/api/crank/workflows/'+encodeURIComponent(run.workflow_id))
+      const graph = run.version ? (await read(`/api/crank/workflows/${encodeURIComponent(run.workflow_id)}/versions/${run.version.number}`)).graph : undefined
+      return page('Workflow run',workflowRunView(run,workflow,graph,await read('/api/crank/connections'),actor),{state,crumbs:[['Runs','/app/runs']]})
+    }
+    if(url.pathname==='/app/approvals') {
+      const waiting = await read('/api/crank/workflow-runs?status=awaiting_approval&limit=100')
+      const details = await Promise.all(waiting.runs.map(async (r:any)=>({run:await read('/api/crank/workflow-runs/'+r.id),workflow:await read('/api/crank/workflows/'+encodeURIComponent(r.workflow_id))})))
+      return page('Approvals',approvalsView(state,details),{state,intro:'Decisions that only a person can make. Everything else runs on its own.'})
+    }
+    if(url.pathname==='/app/connections') return page('Connections',connectionsView(await read('/api/crank/connections'),owner),{state,intro:'The apps your workflows act on, each with one stored credential.'})
     requireOwner(actor)
-    if(url.pathname==='/app/access') {const people=await call('/auth/operators'); return document('Access',accessView({...state,people:people.ok?await people.json():[]}),actor)}
-    if(url.pathname==='/app/data') return document('Data',dataView(),actor)
-    if(url.pathname==='/app/import') { const jobs=await call('/api/crank/imports'); if(!jobs.ok) throw new Error('Import journal unavailable'); return document('Move in',importView(await jobs.json() as any[]),actor) }
-    return document('Not found','<a href="/app">Return to flows</a>',actor,404)
+    if(url.pathname==='/app/access') {const people=await call('/auth/operators'); return page('Access',accessView({...state,people:people.ok?await people.json():[]}),{state,intro:'Credentials for agents and sending apps, and the people who can sign in.'})}
+    if(url.pathname==='/app/data') return page('Data',dataView(),{state,intro:'Export, restore and erase. Your data stays on this installation.'})
+    if(url.pathname==='/app/import') { const jobs=await call('/api/crank/imports'); if(!jobs.ok) throw new Error('Import journal unavailable'); return page('Move in',importView(await jobs.json() as any[]),{state,intro:'Bring workflows from another tool as drafts you review first.'}) }
+    return page('Not found','<a href="/app">Return to flows</a>',{state},404)
   } catch(error:any) {
     if(error.status===401) return redirect('/signin?returnTo='+encodeURIComponent(url.pathname))
     return document('Unable to continue',`<p class="notice">${esc(error.status?error.message:'This operation could not be confirmed. Return to the workspace and inspect its current state.')}</p><a href="/app">Return to flows</a>`,actor,error.status || 400)

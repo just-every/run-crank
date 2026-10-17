@@ -1,0 +1,43 @@
+import type { Graph } from '../engine/graph'
+import { action, chip, clock, esc, hidden, json, timestamp } from './document'
+import { tile } from './editor/canvas'
+import { appOf, flatten, nodes, summaryOf, type Connection, type RunDetail } from './editor/model'
+import { duration, RUN_STATE } from './editor/runs'
+import { STEP_STATE } from './editor/canvas'
+import { icon } from './icons'
+
+const tone = (status: string) => status === 'succeeded' ? 'good' : status === 'failed' || status === 'rejected' || status === 'uncertain' ? 'bad' : ['awaiting_approval', 'waiting', 'paused', 'queued', 'running'].includes(status) ? 'wait' : 'quiet'
+
+/** An approval decision on a waiting step: the exact proposal and its digest. */
+export function approvalForm(runId: string, wait: any, returnTo: string) {
+  return `<form method="post" action="/app/action" class="decision">${hidden('step_path', wait.path)}${hidden('digest', wait.proposal_digest)}${hidden('return_to', returnTo)}<label>Note (optional)<input name="reason" maxlength="1000" placeholder="Why you approve or reject"></label><div class="actions"><button class="btn btn-primary" name="path" value="/api/crank/workflow-runs/${esc(runId)}/approve">Approve</button><button class="btn btn-secondary" name="path" value="/api/crank/workflow-runs/${esc(runId)}/reject">Reject</button></div></form>`
+}
+
+export function workflowRunView(run: RunDetail, workflow: any, graph: Graph | undefined, connections: Connection[], actor: any) {
+  const owner = actor.role === 'owner', back = `/app/workflow-runs/${run.id}`
+  const ordered = graph ? flatten(nodes(graph)).filter(n => !n.trigger) : []
+  const extra = run.steps.filter(s => !ordered.some(n => n.path === s.path))
+  const steps = [...ordered.map(n => ({ node: n, record: run.steps.find(s => s.path === n.path) })), ...extra.map(record => ({ node: null, record }))]
+  const waits = run.waits.filter((w: any) => w.kind === 'approval')
+  const item = ({ node, record }: { node: any; record: any }) => {
+    const app = node ? appOf(node, connections) : { title: record.step_id, tile: 'tool', glyph: 'http' }
+    const state = record?.status ?? 'none', reconciled = record?.output?.reconciled === true
+    return `<li class="timeline-item" data-state="${esc(state)}">${tile(app)}<div class="timeline-body"><div class="timeline-head"><strong>${esc(app.title)}</strong><span class="muted">${esc(node ? summaryOf(node) : record.path)}</span><span class="status" data-tone="${record ? tone(state) : 'quiet'}">${esc(record ? (reconciled ? 'Read back, not repeated' : STEP_STATE[state] ?? state) : 'Not reached')}</span>${record?.started_at ? `<span class="muted">${clock(record.started_at)} · ${duration(record.started_at, record.finished_at)}</span>` : ''}</div>${record?.error ? `<p class="result-error">${esc(record.error.message)}</p>` : ''}${record && (record.input !== undefined || record.output) ? `<details class="inline-disclosure"><summary>Input and output</summary>${record.input !== undefined ? `<h4>Input</h4><pre>${json(record.input)}</pre>` : ''}${record.output ? `<h4>Output</h4><pre>${json(record.output)}</pre>` : ''}</details>` : ''}</div></li>`
+  }
+  const decisions = waits.map((w: any) => `<article class="history-item"><h3>${icon('approval')} Approval at <code>${esc(w.path)}</code></h3><p class="muted">${esc(w.reason ?? '')}</p>${w.proposal !== 'restricted' ? `<pre>${json(w.proposal)}</pre>` : '<p class="muted">Proposal restricted for your role.</p>'}${w.resolved_at ? `<p>${w.resolution?.cancelled ? 'Cancelled' : w.resolution?.approved ? 'Approved' : 'Rejected'} · ${timestamp(w.resolved_at)}${w.decided_by ? ` · Person ${esc(w.decided_by)}` : ''}</p>` : owner ? approvalForm(run.id, w, back) : '<p class="muted">Waiting for an owner’s decision.</p>'}</article>`).join('')
+  const controls = `${owner && run.status === 'paused' ? action(`/api/crank/workflow-runs/${run.id}/resume`, 'Resume run', { return_to: back }) : ''}${owner && ['queued', 'waiting', 'awaiting_approval', 'paused'].includes(run.status) ? action(`/api/crank/workflow-runs/${run.id}/cancel`, 'Cancel run', { return_to: back }, 'danger') : ''}`
+  return `<p class="back-link"><a href="/app/workflows/${esc(run.workflow_id)}">← ${esc(workflow?.name ?? 'Workflow')}</a></p><div class="detail-layout"><section class="panel detail-primary"><div class="title-row"><h2 class="mono">${esc(run.id.slice(0, 8))}</h2><span class="status" data-tone="${tone(run.status)}">${esc(RUN_STATE[run.status] ?? run.status)}</span></div>
+    ${run.error ? `<p class="notice" data-tone="${run.status === 'paused' ? 'wait' : 'bad'}">${esc(run.error.message)}</p>` : ''}
+    <h3>Steps</h3><ol class="timeline">${steps.map(item).join('')}</ol>${controls ? `<div class="actions">${controls}</div>` : ''}</section>
+    <div class="detail-side"><section class="panel"><h2>Run</h2><dl class="facts"><dt>Workflow</dt><dd><a href="/app/workflows/${esc(run.workflow_id)}">${esc(workflow?.name ?? run.workflow_id)}</a></dd><dt>Version</dt><dd>${esc(run.version?.number ?? '—')}</dd><dt>Trigger</dt><dd>${esc(run.trigger_kind)}</dd><dt>Business key</dt><dd class="mono">${esc(run.business_key ?? '—')}</dd><dt>Received</dt><dd>${timestamp(run.received_at)}</dd><dt>Duration</dt><dd>${duration(run.received_at, run.finished_at)}</dd><dt>Run ID</dt><dd><code>${esc(run.id)}</code></dd></dl></section>
+    ${decisions ? `<section class="panel">${decisions}</section>` : ''}
+    <section class="panel"><h2>Trigger payload</h2>${run.trigger !== undefined ? `<pre>${json(run.trigger)}</pre>` : '<p class="muted">Restricted for your role.</p>'}</section></div></div>`
+}
+
+export function approvalsView(state: any, waiting: { run: RunDetail; workflow: any }[]) {
+  const owner = state.actor.role === 'owner', pending = state.runs.filter((r: any) => r.state === 'pending')
+  const workflowItems = waiting.flatMap(({ run, workflow }) => run.waits.filter((w: any) => w.kind === 'approval' && !w.resolved_at).map((w: any) => `<li class="approval-item"><div class="approval-head">${tile({ tile: 'tool', glyph: 'approval' })}<span class="row-main"><strong><a href="/app/workflow-runs/${esc(run.id)}">${esc(workflow?.name ?? 'Workflow')} · run ${esc(run.id.slice(0, 8))}</a></strong><span class="muted">${esc(w.reason ?? '')} · waiting since ${timestamp(w.created_at)}</span></span>${chip('pending', 'Waiting')}</div>${w.proposal !== 'restricted' ? `<pre>${json(w.proposal)}</pre>` : ''}${owner ? approvalForm(run.id, w, '/app/approvals') : '<p class="muted">An owner decides.</p>'}</li>`))
+  const legacyItems = pending.map((r: any) => `<li><a class="list-row" href="/app/runs/${esc(r.id)}">${tile({ tile: 'tool', glyph: 'clock' })}<span class="row-main"><strong>${esc(r.event_id)}</strong><span class="muted">${esc(r.source_app)} → ${esc(r.destination_app)}</span></span><span class="row-meta">${timestamp(r.created_at)}</span>${chip(r.state)}${icon('chevron', 'icon row-chevron')}</a></li>`)
+  if (!workflowItems.length && !legacyItems.length) return `<div class="empty-state">${icon('approvals', 'icon empty-icon')}<h3>Nothing needs you</h3><p>Approval steps and approval flows wait here for an owner’s decision. Crank asks only where a workflow says the action warrants it.</p></div>`
+  return `${workflowItems.length ? `<section class="panel"><div class="panel-head"><h2>Workflow approvals</h2><span class="muted">Each decision covers exactly the proposal shown.</span></div><ul class="list">${workflowItems.join('')}</ul></section>` : ''}${legacyItems.length ? `<section class="panel"><div class="panel-head"><h2>Approval flow runs</h2><span class="muted">Open a run to read its exact input, then approve and deliver.</span></div><ul class="list">${legacyItems.join('')}</ul></section>` : ''}`
+}

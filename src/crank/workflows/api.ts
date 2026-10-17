@@ -16,8 +16,8 @@ import { updateSettings, workspaceSettings } from '../ops/settings'
 import { decideHold, getHold } from '../triggers/admission'
 import { plannedTimes } from '../triggers/schedule'
 import { createHook, listHooks, revokeHook } from '../triggers/webhook'
-import { cancelRun, decideApproval, previewWorkflow, resumeRun, runDetail, searchRuns, startRun } from './runs'
-import { createWorkflow, duplicateWorkflow, getWorkflow, listWorkflows, presentWorkflow, publishWorkflow, setWorkflowState, updateDraft } from './store'
+import { cancelRun, decideApproval, previewWorkflow, resumeRun, runDetail, runsToday, searchRuns, startRun } from './runs'
+import { createWorkflow, duplicateWorkflow, getWorkflow, listWorkflows, presentWorkflow, publishWorkflow, setWorkflowState, updateDraft, versionGraph } from './store'
 
 const PREFIXES = ['/api/crank/workflows', '/api/crank/workflow-runs', '/api/crank/connections', '/api/crank/oauth', '/api/crank/hooks', '/api/crank/holds', '/api/crank/queues', '/api/crank/catalog', '/api/crank/coverage', '/api/crank/settings', '/api/crank/audit', '/api/crank/notices', '/api/crank/reports']
 const match = (path: string, pattern: RegExp) => pattern.exec(path)?.slice(1).map(decodeURIComponent) ?? null
@@ -70,6 +70,8 @@ export async function workflowApi(request: Request, env: CrankEnv): Promise<Resp
       if (path === '/api/crank/workflows') return json(await listWorkflows(env, url.searchParams))
       if ((m = match(path, /^\/api\/crank\/workflows\/([^/]+)$/))) return json(await presentWorkflow(env, await getWorkflow(env, m[0])))
       if ((m = match(path, /^\/api\/crank\/workflows\/([^/]+)\/trigger$/))) return json(await triggerState(env, m[0], url.searchParams))
+      if ((m = match(path, /^\/api\/crank\/workflows\/([^/]+)\/versions\/(\d+)$/))) return json(await versionGraph(env, m[0], Number(m[1])))
+      if ((m = match(path, /^\/api\/crank\/workflows\/([^/]+)\/today$/))) return json(await runsToday(env, m[0]))
       if ((m = match(path, /^\/api\/crank\/workflows\/([^/]+)\/holds$/))) return json((await stmt(env, 'SELECT * FROM crank_holds WHERE workflow_id=? ORDER BY created_at DESC', m[0]).all()).results)
       if (path === '/api/crank/workflow-runs') return json(await searchRuns(env, actor, url.searchParams))
       if ((m = match(path, /^\/api\/crank\/workflow-runs\/([^/]+)$/))) return json(await runDetail(env, actor, m[0]))

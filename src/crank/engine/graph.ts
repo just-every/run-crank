@@ -13,6 +13,7 @@ export interface Graph { trigger: Record<string, unknown> & { type: string }; st
 export interface Declared { steps: { path: string; id: string; type: string; connection_id?: string }[]; connections: string[] }
 export interface Validation { graph: Graph; declared: Declared; warnings: string[] }
 
+const named = (value: unknown) => typeof value === 'string' && value.length > 0 && value.length <= 80
 /** Checks a whole graph before it is saved or published; errors name the step. */
 export function validateGraph(value: unknown): Validation {
   if (!isObject(value)) throw new StepError('validation', 'graph must be an object with trigger and steps')
@@ -21,6 +22,8 @@ export function validateGraph(value: unknown): Validation {
   const settings = isObject(value.settings) ? value.settings : {}
   if (settings.timezone !== undefined) requireZone(settings.timezone)
   if (settings.waiting_runs !== undefined && !['continue', 'cancel_on_pause', 'cancel_on_new_version'].includes(settings.waiting_runs as string)) throw new StepError('validation', 'settings.waiting_runs must be continue, cancel_on_pause or cancel_on_new_version')
+  if (settings.run_columns !== undefined && (!Array.isArray(settings.run_columns) || settings.run_columns.length > 4 || settings.run_columns.some(c => !isObject(c) || typeof c.label !== 'string' || !c.label || c.label.length > 40 || c.value === undefined))) throw new StepError('validation', 'settings.run_columns lists up to 4 {label, value} columns shown beside each run')
+  if (value.trigger.name !== undefined && !named(value.trigger.name)) throw new StepError('validation', 'trigger.name is text of at most 80 characters')
   const warnings: string[] = [], declared: Declared = { steps: [], connections: [] }, ids = new Set<string>()
   validateTrigger(value.trigger)
   if (typeof value.trigger.connection_id === 'string') declared.connections.push(value.trigger.connection_id)
@@ -34,6 +37,7 @@ export function validateGraph(value: unknown): Validation {
       if (ids.has(step.id)) throw new StepError('validation', `Step id ${step.id} is used twice`)
       if (step.id === 'trigger') throw new StepError('validation', 'trigger is reserved')
       ids.add(step.id)
+      if (step.name !== undefined && !named(step.name)) throw new StepError('validation', `Step ${step.id}: name is text of at most 80 characters`)
       if (ids.size > MAX_STEPS) throw new StepError('validation', `A workflow has at most ${MAX_STEPS} steps`)
       if (step.on_error !== undefined && !['stop', 'continue'].includes(step.on_error as string)) throw new StepError('validation', `Step ${step.id}: on_error must be stop or continue`)
       const path = prefix + step.id

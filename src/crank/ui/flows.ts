@@ -1,31 +1,47 @@
-import { action, chip, esc, hidden, timestamp } from './document'
-export function flowsView(state:any, target:string) {
-  const owner = state.actor.role === 'owner', prepare = ['owner','admin'].includes(state.actor.role)
-  const flows = [...state.flows].sort((a:any,b:any)=>Number(b.status==='active')-Number(a.status==='active'))
-  const primary = flows.findIndex((flow:any)=>flow.status==='active')
-  return `<p class="page-intro">Connect an incoming event to one HTTP destination. Every event waits for an owner’s decision.</p>
-  <section class="flow-list" aria-label="Your flows"><h2>Your flows</h2>${flows.length?flows.map((f:any,index:number)=>`
-    <article class="flow-card ${index===primary?'metal-plate':'plain-card'}"><div class="flow-content ${index===primary?'metal-slot':''}">
-      <div class="title-row"><h3>${esc(f.name)}</h3>${chip(f.status)}</div>
-      <p>${esc(f.source_app)} → Human approval → ${esc(f.destination_app)}</p>
-      <p class="mono flow-url">${esc(f.target_url)}</p>
-      <p class="flow-id">Flow ID <code>${esc(f.id)}</code></p>
-      <div class="actions flow-actions">${owner?action(`/api/crank/flows/${f.id}/${f.status==='active'?'pause':'activate'}`,f.status==='active'?'Pause flow':'Activate flow'):''}<a href="/app/runs?flow=${esc(f.id)}">View runs</a></div>
-      ${f.status==='active'&&prepare?`<details><summary>Prepare a run</summary><form method="post" action="/app/action">${hidden('path',`/api/crank/flows/${f.id}/runs`)}
-        <label>Event ID<input name="event_id" required maxlength="128" placeholder="ticket-1042"></label>
-        <label>Event input (JSON object)<textarea name="input" required rows="5" placeholder='{"customer":"Harbor Workshop","task":"Book a callback"}'></textarea></label>
-        <button class="dark-pill">Prepare for approval</button></form></details>`:''}
-    </div></article>`).join(''):`<article class="plain-card empty-state"><h3>No flows yet</h3><p>Create your first flow below. Start the Operations inbox from the README for a local destination.</p></article>`}
-  </section>
-  ${prepare?`<section class="plain-card create-flow"><h2>Create a flow</h2><form method="post" action="/app/action">${hidden('path','/api/crank/flows')}
-    <div class="grid"><label>Flow name<input name="name" required maxlength="100" placeholder="Support follow-up"></label><label>Source app<input name="source_app" required maxlength="100" placeholder="Support desk"></label><label>Destination app<input name="destination_app" required maxlength="100" placeholder="Operations inbox"></label><label>Destination URL<input name="target_url" type="url" required value="${esc(target)}/events"></label></div>
-    <p class="form-help">Activation requires an owner. The destination must preserve Idempotency-Key and acknowledge it in its response.</p><button class="crank-key">Create draft flow</button>
-  </form></section>`:''}`
+import { action, chip, clock, esc, hidden, plural, timestamp } from './document'
+import { tile } from './editor/canvas'
+import { appOf, type Connection } from './editor/model'
+import { RUN_STATE, duration } from './editor/runs'
+import { icon } from './icons'
+
+const STATUS: Record<string, string> = { published: 'Live', paused: 'Paused', draft: 'Draft' }
+const EXAMPLE = JSON.stringify({ trigger: { type: 'manual', name: 'Started by hand' }, steps: [{ id: 'only_paid', type: 'filter', name: 'Paid orders only', when: [[{ field: 'trigger.input.status', op: 'text.equals', value: 'paid' }]] }] }, null, 2)
+
+function workflowRow(w: any, connections: Connection[]) {
+  const trigger = appOf({ path: 'trigger', step: null, trigger: { type: w.trigger ?? 'manual' } }, connections)
+  return `<li><a class="list-row" href="/app/workflows/${esc(w.id)}">${tile(trigger)}<span class="row-main"><strong>${esc(w.name)}</strong><span class="muted">${esc(w.description || `${trigger.title} trigger`)}</span></span>${w.folder ? `<span class="row-meta">${esc(w.folder)}</span>` : ''}<span class="pill" data-state="${w.status === 'published' ? 'live' : w.status}"><span class="pill-dot"></span>${STATUS[w.status] ?? w.status}</span>${icon('chevron', 'icon row-chevron')}</a></li>`
 }
-export function runsView(state:any, flow:string|null) {
-  const rows = state.runs.filter((r:any)=>!flow || r.flow_id===flow).sort((a:any,b:any)=>Number(b.state==='pending')-Number(a.state==='pending'))
-  return `<p class="page-intro">Review inputs, approve an action, then follow its delivery. Failed delivery may be replayed once.</p>${rows.length?`<div class="run-list">${rows.map((r:any)=>`
-    <article class="plain-card"><div class="title-row"><h2><a href="/app/runs/${esc(r.id)}">${esc(r.event_id)}</a></h2>${chip(r.state)}</div>
-      <p>${esc(r.source_app)} → ${esc(r.destination_app)}</p><p class="run-note">${timestamp(r.created_at)} · ${r.replay_count?'Replay used':r.state==='failed'?'One replay available':r.state==='pending'||r.state==='running'?'Awaiting outcome':'Delivery closed'}</p>
-    </article>`).join('')}</div>`:`<section class="plain-card empty-state"><h2>No runs yet</h2><p>Activate a flow, then prepare its first event from the Flows page.</p><a href="/app">Open flows</a></section>`}`
+
+export function flowsView(state: any, target: string, workflows: any[], connections: Connection[]) {
+  const owner = state.actor.role === 'owner', prepare = ['owner', 'admin'].includes(state.actor.role)
+  const flows = [...state.flows].sort((a: any, b: any) => Number(b.status === 'active') - Number(a.status === 'active'))
+  const workflowList = workflows.length
+    ? `<ul class="list">${workflows.map(w => workflowRow(w, connections)).join('')}</ul>`
+    : `<div class="empty-state">${icon('flows', 'icon empty-icon')}<h3>No workflows yet</h3><p>Workflows chain a trigger, filters, paths, app steps and optional approvals. Create one below from its graph, or let an agent draft one with an Access credential.</p></div>`
+  return `<section class="panel" aria-labelledby="workflows-title"><div class="panel-head"><h2 id="workflows-title">Workflows</h2><span class="muted">${plural(workflows.length, 'workflow')}</span></div>${workflowList}</section>
+  ${prepare ? `<details class="panel disclosure"${workflows.length ? '' : ' open'}><summary><h2>Create a workflow</h2><span class="muted">From its graph (JSON): a trigger and steps</span></summary><form method="post" action="/app/action">${hidden('path', '/api/crank/workflows')}
+    <div class="grid"><label>Workflow name<input name="name" required maxlength="200" placeholder="Paid orders to the team"></label><label>Description<input name="description" maxlength="2000" placeholder="What this workflow does, in one line"></label></div>
+    <label>Workflow graph (JSON)<textarea name="graph" required rows="10" spellcheck="false">${esc(EXAMPLE)}</textarea></label>
+    <p class="form-help">Drafts are validated on save and authorize nothing until an owner publishes them. Step types and limits are in the API reference.</p><button class="btn btn-primary">Create draft workflow</button></form></details>` : ''}
+  <section class="panel" aria-labelledby="flows-title"><div class="panel-head"><h2 id="flows-title">Approval flows</h2><span class="muted">Connect an incoming event to one HTTP destination. Every event waits for an owner’s decision.</span></div>${flows.length ? `<ul class="list">${flows.map((f: any) => `<li class="flow-row">
+      <div class="list-row static">${tile({ tile: 'tool', glyph: 'approval' })}<span class="row-main"><strong>${esc(f.name)}</strong><span class="muted">${esc(f.source_app)} → Human approval → ${esc(f.destination_app)}</span><span class="mono flow-url">${esc(f.target_url)}</span><span class="flow-id">Flow ID <code>${esc(f.id)}</code></span></span>${chip(f.status)}<span class="row-actions">${owner ? action(`/api/crank/flows/${f.id}/${f.status === 'active' ? 'pause' : 'activate'}`, f.status === 'active' ? 'Pause flow' : 'Activate flow', {}, 'secondary', 'btn-small') : ''}<a class="btn btn-secondary btn-small" href="/app/runs?flow=${esc(f.id)}">View runs</a></span></div>
+      ${f.status === 'active' && prepare ? `<details class="inline-disclosure"><summary>Prepare a run</summary><form method="post" action="/app/action">${hidden('path', `/api/crank/flows/${f.id}/runs`)}
+        <div class="grid"><label>Event ID<input name="event_id" required maxlength="128" placeholder="ticket-1042"></label><label>Event input (JSON object)<textarea name="input" required rows="3" placeholder='{"customer":"Harbor Workshop","task":"Book a callback"}'></textarea></label></div>
+        <button class="btn btn-primary">Prepare for approval</button></form></details>` : ''}
+    </li>`).join('')}</ul>` : `<div class="empty-state">${icon('approval', 'icon empty-icon')}<h3>No flows yet</h3><p>Create your first flow below. Start the Operations inbox from the README for a local destination.</p></div>`}</section>
+  ${prepare ? `<details class="panel disclosure"${flows.length ? '' : ' open'}><summary><h2>Create a flow</h2><span class="muted">One event, one HTTP destination, an owner’s approval</span></summary><form method="post" action="/app/action">${hidden('path', '/api/crank/flows')}
+    <div class="grid"><label>Flow name<input name="name" required maxlength="100" placeholder="Support follow-up"></label><label>Source app<input name="source_app" required maxlength="100" placeholder="Support desk"></label><label>Destination app<input name="destination_app" required maxlength="100" placeholder="Operations inbox"></label><label>Destination URL<input name="target_url" type="url" required value="${esc(target)}/events"></label></div>
+    <p class="form-help">Activation requires an owner. The destination must preserve Idempotency-Key and acknowledge it in its response.</p><button class="btn btn-primary">Create draft flow</button>
+  </form></details>` : ''}`
+}
+
+export function runsView(state: any, flow: string | null, wf: { runs: any[]; next: string | null; workflows: any[]; q: string; status: string; workflow: string }) {
+  const rows = state.runs.filter((r: any) => !flow || r.flow_id === flow).sort((a: any, b: any) => Number(b.state === 'pending') - Number(a.state === 'pending'))
+  const names = new Map(wf.workflows.map(w => [w.id, w.name]))
+  const statuses = ['', 'succeeded', 'failed', 'awaiting_approval', 'waiting', 'paused', 'stopped_by_filter', 'cancelled', 'rejected']
+  const search = `<form class="run-filters" id="run-search" method="get" action="/app/runs" role="search"><label class="search-field">${icon('search')}<span class="sr-only">Search runs</span><input type="search" name="q" value="${esc(wf.q)}" placeholder="Search runs, customers or errors"></label><label><span class="sr-only">Workflow</span><select name="workflow"><option value="">All workflows</option>${wf.workflows.map(w => `<option value="${esc(w.id)}"${wf.workflow === w.id ? ' selected' : ''}>${esc(w.name)}</option>`).join('')}</select></label><label><span class="sr-only">Status</span><select name="status">${statuses.map(s => `<option value="${s}"${wf.status === s ? ' selected' : ''}>${s ? esc(RUN_STATE[s]) : 'All statuses'}</option>`).join('')}</select></label><button class="btn btn-secondary">Search</button></form>`
+  const workflowRuns = wf.runs.length ? `<div class="table-scroll"><table class="runs-table"><thead><tr><th>Run</th><th>Workflow</th><th>Business key</th><th>Duration</th><th>Received</th><th>Status</th></tr></thead><tbody>${wf.runs.map(r => `<tr><td data-label="Run"><a class="mono" href="/app/workflow-runs/${esc(r.id)}">${esc(r.id.slice(0, 8))}</a></td><td data-label="Workflow">${esc(names.get(r.workflow_id) ?? r.workflow_id)}</td><td class="mono" data-label="Business key">${esc(r.business_key ?? '—')}</td><td data-label="Duration">${duration(r.received_at, r.finished_at)}</td><td data-label="Received">${timestamp(r.received_at)}</td><td class="run-status" data-label="Status"><span class="status" data-tone="${r.status === 'succeeded' ? 'good' : r.status === 'failed' || r.status === 'rejected' ? 'bad' : ['awaiting_approval', 'waiting', 'paused', 'queued', 'running'].includes(r.status) ? 'wait' : 'quiet'}">${esc(RUN_STATE[r.status] ?? r.status)}</span>${r.error?.message ? `<small>${esc(r.error.message)}</small>` : ''}</td></tr>`).join('')}</tbody></table></div>${wf.next ? `<a class="strip-more" href="/app/runs?${esc(new URLSearchParams({ ...(wf.q ? { q: wf.q } : {}), ...(wf.status ? { status: wf.status } : {}), ...(wf.workflow ? { workflow: wf.workflow } : {}), before: wf.next }).toString())}">Older runs</a>` : ''}`
+    : `<div class="empty-state compact"><h3>${wf.q || wf.status || wf.workflow ? 'No runs match this search' : 'No workflow runs yet'}</h3><p>${wf.q || wf.status || wf.workflow ? 'Change the search or clear a filter.' : 'Publish a workflow; its runs appear here as events arrive.'}</p></div>`
+  return `<section class="panel" aria-labelledby="wf-runs-title"><div class="panel-head"><h2 id="wf-runs-title">Workflow runs</h2>${search}</div>${workflowRuns}</section>
+  <section class="panel" aria-labelledby="approval-runs-title"><div class="panel-head"><h2 id="approval-runs-title">Approval flow runs</h2><span class="muted">Review inputs, approve an action, then follow its delivery. Failed delivery may be replayed once.</span></div>${rows.length ? `<ul class="list">${rows.map((r: any) => `<li><a class="list-row" href="/app/runs/${esc(r.id)}">${tile({ tile: 'tool', glyph: r.state === 'pending' ? 'clock' : 'approval' })}<span class="row-main"><strong>${esc(r.event_id)}</strong><span class="muted">${esc(r.source_app)} → ${esc(r.destination_app)}</span></span><span class="row-meta">${timestamp(r.created_at)} · ${r.replay_count ? 'Replay used' : r.state === 'failed' ? 'One replay available' : r.state === 'pending' || r.state === 'running' ? 'Awaiting outcome' : 'Delivery closed'}</span>${chip(r.state)}${icon('chevron', 'icon row-chevron')}</a></li>`).join('')}</ul>` : `<div class="empty-state compact"><h3>No runs yet</h3><p>Activate a flow, then prepare its first event from the Flows page.</p><a class="btn btn-secondary" href="/app">Open flows</a></div>`}</section>`
 }

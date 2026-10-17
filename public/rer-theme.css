@@ -65,55 +65,48 @@
   --radius-chip: 999px;
   --shadow-card: 0 1px 2px rgba(6, 25, 67, .05), 0 18px 40px -22px rgba(22, 64, 140, .28);
   --shadow-lift: 0 2px 4px rgba(6, 25, 67, .06), 0 26px 50px -24px rgba(22, 64, 140, .4);
+  /* App tiles for third-party apps: a tint and a letter or glyph, never a trademark */
+  --tile-stripe: linear-gradient(160deg, #7a6bff, #5b45f0);
+  --tile-slack: #4a154b;
+  --tile-sheets: #188038;
+  --tile-quickbooks: #2ca01c;
+  --tile-hubspot: #ff7a59;
+  /* The machine motif: brass connectors */
+  --brass-light: #ffd987;
+  --brass-dark: #b5813c;
+  /* App surfaces (public/app): sky ground and bar, white sheets, hairline edges */
+  --app-ground: #edf6fd;
+  --app-sky: linear-gradient(110deg, #d9eeff, #e6f4ff 58%, #eaf6ff);
+  --app-rail: #f2f9ff;
+  --app-sheet: linear-gradient(180deg, rgba(255, 255, 255, .72), rgba(255, 255, 255, .45));
+  --app-edge: #d4e6f6;
+  --app-selected: #d8eaff;
+  --app-card-edge: #d3deec;
+  --app-inspector-edge: #bcd8fb;
+  --app-card-shadow: 0 5px 12px rgba(87, 113, 139, .08);
+  --app-control-edge: #c5d8ef;
+  --app-field-edge: #d3deec;
+  --app-focus-ring: rgba(22, 103, 224, .22);
   --wrap: 1290px;
   --gutter: 75px;
 }
 @media (max-width: 760px) { :root { --gutter: 16px; } }
 
-/* Base's shared pages (sign-in, /setup, the Lobby) keep their markup; theme their frame. */
-.rer-themed body:has(>main:not(.crank)) { display: grid; place-items: center; padding: 48px 20px; background: radial-gradient(120% 70% at 50% -10%, #ffffff, transparent 60%), var(--rer-page); }
-.rer-themed main:not(.crank) { width: 100%; max-width: 560px; padding: 44px; border: 1px solid var(--line); border-radius: 22px; background: var(--surface); box-shadow: var(--shadow-card); }
-.rer-themed main:not(.crank) h1 { font-size: 38px; line-height: 1.08; letter-spacing: -.035em; font-weight: 800; color: var(--ink); margin-block: 28px 18px; }
-.rer-themed .rer-brand, .rer-themed main:not(.crank) .brand { font-size: 26px !important; font-weight: 700 !important; letter-spacing: -.035em; color: var(--ink); }
-.rer-themed main:not(.crank) button { border-radius: 999px; background: var(--navy); color: #fff; font-weight: 600; box-shadow: 0 12px 24px -14px rgba(1, 22, 70, .7); }
-.rer-themed main:not(.crank) input:not([type=checkbox]) { border-color: var(--line-strong); border-radius: var(--radius-field); }
-.rer-themed main:not(.crank) dl { padding: 16px 0; border-block: 1px solid var(--line); margin-bottom: 26px; gap: 14px 24px; grid-template-columns: 100px minmax(0, 1fr); }
-.rer-themed main:not(.crank) dd { font-family: var(--font-mono); font-size: 14px; }
-@media (max-width: 600px) { .rer-themed main:not(.crank) { padding: 30px 22px; } .rer-themed main:not(.crank) h1 { font-size: 32px; } .rer-themed main:not(.crank) dl { grid-template-columns: 1fr; gap: 4px; } .rer-themed main:not(.crank) dd { margin-bottom: 12px; } }
-
-/* App screens (public/crank.css). Their own primitives stay until the app round
-   (br-app-crank) redraws them in this look; only the mark, type and frame are new. */
-.rer-themed main.crank {
-  --paper: #FBFAF5; --ink: #121212; --muted: #55575A; --hairline: #D9D7D2;
-  --card: #F1EFE9; --slot: #E9E7E1;
-  --plate: linear-gradient(135deg, #D5D2CD, #C9C6C0);
-  --plate-edge: #85807B; --key: #C1D806; --key-edge: #8FA000; --key-ink: #141600;
-  --plate-shadow: 0 24px 40px -24px rgba(40, 36, 30, .45), 0 2px 0 rgba(255, 255, 255, .6) inset;
-  --key-shadow: 0 3px 0 var(--key-edge), 0 8px 14px -8px rgba(60, 70, 0, .6);
-}
-*{box-sizing:border-box}
-body{margin:0;background:var(--rer-page);color:var(--rer-text);font-family:var(--rer-font-body);line-height:1.5}
-button,input,textarea,select{font:inherit;color:inherit}
-a{color:inherit;text-underline-offset:4px}
-:where(a,button,input,select,textarea,summary):focus-visible{outline:3px solid var(--rer-focus);outline-offset:3px}
-.metal-plate{position:relative;padding:20px;border:1px solid var(--plate-edge);border-radius:18px;background:url('/brand/grain.svg'),var(--plate);box-shadow:var(--plate-shadow)}
-.metal-plate::before,.plain-card::before{content:"";position:absolute;inset:10px;background:url('/brand/screw.svg') left top/10px 10px no-repeat,url('/brand/screw.svg') right top/10px 10px no-repeat,url('/brand/screw.svg') left bottom/10px 10px no-repeat,url('/brand/screw.svg') right bottom/10px 10px no-repeat;pointer-events:none;z-index:1}
-.metal-slot{padding:24px;border:1px solid var(--plate-edge);border-radius:12px;background:linear-gradient(145deg,#F1EFE9,#E9E7E1);box-shadow:inset 0 2px 3px rgba(0,0,0,.12),0 1px 0 #fff9}
-.plain-card{position:relative;padding:24px 32px;border:1px solid var(--hairline);border-radius:12px;background:rgba(255,255,255,.7)}
-.plain-card::before{inset:9px;background-size:8px 8px}
-.crank-key,.rer-themed main.crank button{display:inline-flex;justify-content:center;align-items:center;min-height:48px;padding:12px 24px;border:1px solid var(--key-edge);border-radius:12px;background:linear-gradient(#D0E727,var(--key));color:var(--key-ink);box-shadow:var(--key-shadow),inset 0 1px 0 #fff9;font-weight:700;text-decoration:none;cursor:pointer}
-.crank-key:active,.rer-themed main.crank button:active{transform:translateY(2px);box-shadow:0 1px 0 var(--key-edge)}
-.dark-pill,.outline-pill{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:10px 24px;border:1px solid var(--ink);border-radius:999px;text-decoration:none;font-weight:600;cursor:pointer}
-.dark-pill{background:linear-gradient(#292929,#171717);color:var(--paper)}
-.outline-pill{background:transparent;color:var(--ink)}
-.status-chip{display:inline-block;border-radius:999px;padding:4px 13px;font-size:14px;line-height:1.5;background:#E6E4DF;color:#3E3F41;font-weight:400;white-space:nowrap}
-.status-chip[data-state=pending],.status-chip[data-state=approved],.status-chip[data-state=running]{background:#F6E6A6;color:#4A3B00}
-.status-chip[data-state=succeeded],.status-chip[data-state=active]{background:#D7EBCB;color:#23441A}
-.status-chip[data-state=failed]{background:#F6D3CD;color:#6B1E14}
-.rer-themed main.crank button:not(.dark-pill):not(.outline-pill):not(.secondary),.crank-key{background:linear-gradient(135deg,#D0E727,var(--key) 45%,#B3C900);border:1px solid var(--key-edge);box-shadow:var(--key-shadow),inset 0 0 0 2px #ffffff60,inset 0 3px 0 #fff8;border-radius:12px;color:var(--key-ink);font-weight:700;font-size:18px}
-.rer-themed main.crank button:not(.dark-pill):not(.outline-pill):not(.secondary):active,.crank-key:active{transform:translateY(2px);box-shadow:0 1px 0 var(--key-edge),inset 0 0 0 2px #ffffff60}
-@media(max-width:600px){.metal-plate{padding:16px}.metal-slot{padding:20px}.plain-card{padding:24px}.status-chip{font-size:13px}}
-@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+/* Base's shared pages (sign-in, /setup) keep their markup and wear the app's shell:
+   the sky bar with the lake haze, a white sheet with hairline edges, thin fields. */
+.rer-themed body:has(>main:not(.crank)) { display: grid; place-items: start center; min-height: 100vh; padding: 140px 16px 48px; background: var(--app-ground); }
+.rer-themed body:has(>main:not(.crank))::before { content: ""; position: absolute; inset: 0 0 auto; height: 76px; background: url('/app/haze-top.webp') right center / auto 100% no-repeat, var(--app-sky); border-bottom: 1px solid var(--app-edge); }
+.rer-themed main:not(.crank) { position: relative; width: 100%; max-width: 520px; padding: 36px 40px; border: 1px solid var(--app-card-edge); border-radius: 16px; background: var(--surface); box-shadow: var(--app-card-shadow), 0 24px 48px -32px rgba(22, 64, 140, .35); }
+.rer-themed main:not(.crank) h1 { font-size: 32px; line-height: 1.1; letter-spacing: -.035em; font-weight: 800; color: var(--ink); margin-block: 22px 14px; }
+.rer-themed .rer-brand, .rer-themed main:not(.crank) .brand { gap: 8px; font-size: 26px !important; font-weight: 800 !important; letter-spacing: -.04em; color: var(--ink); }
+.rer-themed main:not(.crank) .brand .mark, .rer-themed .rer-brand::before { width: 34px; height: 34px; }
+.rer-themed main:not(.crank) label { font-size: 14px; color: #21365f; }
+.rer-themed main:not(.crank) input:not([type=checkbox]) { min-height: 42px; border: 1px solid var(--app-field-edge); border-radius: 9px; background: #fcfdff; }
+.rer-themed main:not(.crank) input:not([type=checkbox]):focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 3px var(--app-focus-ring); }
+.rer-themed main:not(.crank) button { min-height: 44px; border-radius: 11px; background: var(--navy); color: #fff; font-weight: 600; box-shadow: 0 10px 20px -14px rgba(1, 22, 70, .8); }
+.rer-themed main:not(.crank) dl { padding: 14px 0; border-block: 1px solid var(--line); margin-bottom: 22px; gap: 10px 24px; grid-template-columns: 100px minmax(0, 1fr); }
+.rer-themed main:not(.crank) dd { font-family: var(--font-mono); font-size: 13.5px; }
+@media (max-width: 600px) { .rer-themed body:has(>main:not(.crank)) { padding-top: 100px; } .rer-themed body:has(>main:not(.crank))::before { height: 60px; } .rer-themed main:not(.crank) { padding: 26px 20px; } .rer-themed main:not(.crank) h1 { font-size: 27px; } .rer-themed main:not(.crank) dl { grid-template-columns: 1fr; gap: 4px; } .rer-themed main:not(.crank) dd { margin-bottom: 10px; } }
 
 /* Base's Run and not-found pages (src/base/run-site.ts) in the site's look: the heavy
    headline, the bold lockup and the navy numerals. Their inline style keeps the layout. */

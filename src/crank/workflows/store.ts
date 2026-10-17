@@ -37,6 +37,12 @@ export async function presentWorkflow(env: CrankEnv, row: WorkflowRow) {
     hooks: await listHooks(env, row.id),
   }
 }
+/** One published version's frozen graph, for comparing versions and restoring one into the draft. */
+export async function versionGraph(env: CrankEnv, workflowId: string, number: number) {
+  const row = await stmt(env, 'SELECT number,graph_json,graph_digest,published_by,published_at,retired_at FROM crank_workflow_versions WHERE workflow_id=? AND number=?', workflowId, number).first<VersionRow>()
+  requireValue(row, 'Version not found', 404)
+  return { number: row.number, graph: JSON.parse(row.graph_json), graph_digest: row.graph_digest, published_by: row.published_by, published_at: row.published_at, retired_at: row.retired_at }
+}
 export async function listWorkflows(env: CrankEnv, params: URLSearchParams) {
   const q = params.get('q'), folderName = params.get('folder')
   const rows = await stmt(env, `SELECT * FROM crank_workflows WHERE (? IS NULL OR name LIKE ? OR description LIKE ?) AND (? IS NULL OR folder=?) ORDER BY folder,name,id LIMIT 500`,

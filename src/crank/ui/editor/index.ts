@@ -1,0 +1,56 @@
+import type { Graph } from '../../engine/graph'
+import { canonical } from '../../model'
+import { action, chip, clock, esc } from '../document'
+import { icon } from '../icons'
+import type { Page } from '../shell'
+import { canvas } from './canvas'
+import { inspector } from './inspector'
+import { changedPaths, findNode, flatten, mappingRows, mappingText, nodes, summaryOf, type Connection, type RunDetail, type Version } from './model'
+import { runsStrip } from './runs'
+
+export interface EditorData {
+  workflow: any; current: Version | null; previous: Version | null; graphs: Map<string, Graph>; runs: RunDetail[]; connections: Connection[]
+  today: { runs: number; failed: number; awaiting_approval: number }; tokens: any[]; actor: any; params: URLSearchParams; preview?: any; approvals: number
+}
+
+/** Field-level differences of each changed step between two versions. */
+function changesPanel(current: Graph, previous: Version, changed: Set<string>, number: number) {
+  const before = new Map(flatten(nodes(previous.graph)).map(n => [n.path, n]))
+  const items = flatten(nodes(current)).filter(n => changed.has(n.path)).map(node => {
+    const old = before.get(node.path), rows = (n: typeof node | undefined) => new Map(n?.step ? mappingRows({ ...n.step, id: undefined, type: undefined, name: undefined, branches: undefined, fallback: undefined, always: undefined, ...(n.step.type === 'paths' ? { when: (n.step.branches as any[]).map(b => b.when) } : {}) }).filter(([k]) => k) : [])
+    const a = rows(old), b = rows(node), keys = [...new Set([...a.keys(), ...b.keys()])].filter(k => canonical(a.get(k)) !== canonical(b.get(k)))
+    return `<li><strong>${esc(summaryOf(node))}</strong>${keys.map(k => `<div class="diff-row"><code class="field-key">${esc(k.replace(/^input\.body\./, ''))}</code>${a.has(k) ? `<code class="diff-old">− ${esc(mappingText(a.get(k)))}</code>` : ''}${b.has(k) ? `<code class="diff-new">+ ${esc(mappingText(b.get(k)))}</code>` : ''}</div>`).join('') || '<p class="muted">Changed outside its fields.</p>'}</li>`
+  })
+  return `<section class="panel changes" id="changes" aria-labelledby="changes-title"><div class="changes-head"><h2 id="changes-title">${icon('diff')}Version ${number} changes</h2><a class="btn btn-secondary btn-small" href="?">Close</a></div><p class="muted">Compared with version ${previous.number}, published ${clock(previous.published_at)}. Undo puts version ${previous.number} back in the draft; publish it to make it live.</p><ul class="diff-list">${items.join('') || '<li class="muted">No step changed.</li>'}</ul></section>`
+}
+
+function agentCard(tokens: any[], current: Version | null, previous: Version | null, changedCount: number) {
+  const agents = tokens.filter(t => t.scope === 'agent')
+  const change = current && previous ? `<p class="agent-line">${icon('diff')}<span>Version ${current.number} published ${clock(current.published_at)}: ${changedCount} step${changedCount === 1 ? '' : 's'} changed from version ${previous.number}.</span></p>` : ''
+  return `<section class="panel agent-card" aria-labelledby="agent-title"><h2 id="agent-title">${icon('spark')}Agents</h2><div class="agent-note"><p>Agents with an Access credential can draft changes to this flow and start runs. Publishing stays with an owner.</p>${change}</div><ul class="agent-list">${agents.length ? agents.map(t => `<li>${icon('key')}<span>${esc(t.label)}</span>${chip(t.revoked_at ? 'revoked' : 'active', t.revoked_at ? 'Revoked' : 'Active')}</li>`).join('') : '<li class="muted">No agent credentials yet.</li>'}</ul><a class="agent-link" href="/app/access">Manage agent credentials ${icon('chevron')}</a></section>`
+}
+
+export function editorView(d: EditorData): { content: string; page: Page } {
+  const wf = d.workflow, graph = wf.draft as Graph, owner = d.actor.role === 'owner', canPrepare = ['owner', 'admin'].includes(d.actor.role)
+  const all = flatten(nodes(graph)), requested = d.params.get('step') ?? '', fallback = all.at(-1)!.path
+  const node = findNode(graph, requested) ?? findNode(graph, fallback)!
+  const tab = ['setup', 'data', 'test'].includes(d.params.get('tab') ?? '') ? d.params.get('tab')! : d.preview ? 'test' : 'setup'
+  const changed = d.current && d.previous ? changedPaths(d.current.graph, d.previous.graph) : new Set<string>()
+  const unpublished = !d.current || canonical(d.current.graph) !== canonical(graph)
+  const q = d.params.get('q') ?? '', status = d.params.get('status') ?? ''
+  const query = `${q ? `&q=${encodeURIComponent(q)}` : ''}${status ? `&status=${encodeURIComponent(status)}` : ''}`
+  const sample = d.runs[0]?.trigger !== undefined ? JSON.stringify(d.runs[0].trigger, null, 2) : '{}'
+
+  const live = wf.status === 'published' ? ['Live', 'live'] : wf.status === 'paused' ? ['Paused', 'paused'] : ['Draft', 'draft']
+  const liveControl = owner && wf.published_version_id
+    ? `<details class="menu live-menu"><summary class="pill" data-state="${live[1]}"><span class="pill-dot"></span>${live[0]}${icon('down')}</summary><div class="menu-body">${action(`/api/crank/workflows/${wf.id}/${wf.status === 'paused' ? 'resume' : 'pause'}`, wf.status === 'paused' ? 'Resume flow' : 'Pause flow', { return_to: `/app/workflows/${wf.id}` }, 'secondary')}<p>${wf.status === 'paused' ? 'New events are held for review while paused.' : 'Pausing holds new events for review.'}</p></div></details>`
+    : `<span class="pill" data-state="${live[1]}"><span class="pill-dot"></span>${live[0]}</span>`
+  const bar = `${liveControl}${canPrepare ? `<a class="btn btn-secondary" href="?step=${encodeURIComponent(node.path)}&amp;tab=test">Test</a>` : ''}${owner && wf.status === 'published' && graph.trigger.type === 'manual' ? action(`/api/crank/workflows/${wf.id}/run`, 'Run now', { return_to: '' }, 'secondary') : ''}${owner ? (unpublished ? action(`/api/crank/workflows/${wf.id}/publish`, 'Publish', { return_to: `/app/workflows/${wf.id}` }) : '<button class="btn btn-primary" disabled title="The draft matches the live version">Published</button>') : ''}`
+
+  const tools = `${d.previous ? `<a class="btn btn-secondary" href="?changes=1#changes">View changes</a>` : ''}${d.previous && canPrepare ? action(`/api/crank/workflows/${wf.id}/draft`, 'Undo', { graph: JSON.stringify(d.previous.graph), return_to: `/app/workflows/${wf.id}` }, 'secondary', 'btn-undo') : ''}`
+  const head = `<div class="editor-head"><div class="editor-title"><h1>${esc(wf.name)}</h1>${unpublished && d.current ? chip('pending', 'Unpublished changes') : ''}${!d.current ? chip('draft', 'Draft') : ''}</div><div class="page-tools">${tools}</div>${wf.description ? `<p class="page-intro">${esc(wf.description)}</p>` : ''}</div>`
+  const changes = d.params.get('changes') && d.current && d.previous ? changesPanel(d.current.graph, d.previous, changed, d.current.number) : ''
+  const strip = runsStrip({ workflowId: wf.id, runs: d.runs, graphs: d.graphs, current: graph, connections: d.connections, today: d.today, q, status, selected: node.path })
+  const content = `<div class="editor"><div class="editor-main">${head}${changes}${canvas(graph, { workflowId: wf.id, connections: d.connections, runs: d.runs, selected: node.path, changed, changedIn: d.current?.number ?? null, query })}${strip}</div><div class="editor-side">${inspector({ workflowId: wf.id, node, tab, connections: d.connections, runs: d.runs, hooks: wf.hooks ?? [], canPrepare, preview: d.preview, sample, now: Date.now() })}${agentCard(d.tokens, d.current, d.previous, changed.size)}</div></div>`
+  return { content, page: { editor: true, crumbs: [['Flows', '/app']], bar, approvals: d.approvals, section: 'Flows' } }
+}

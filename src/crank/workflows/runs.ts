@@ -1,6 +1,6 @@
 import { requireOwner } from '../access'
 import { evaluate, type Groups } from '../engine/conditions'
-import { requireZone } from '../engine/dates'
+import { requireZone, startOfDay } from '../engine/dates'
 import { StepError } from '../engine/errors'
 import { executeRun } from '../engine/executor'
 import { branchesOf, type Graph } from '../engine/graph'
@@ -54,6 +54,14 @@ export async function runDetail(env: CrankEnv, actor: Actor, runId: string) {
       ...(payload ? { input: parse(s.input_json), output: parse(s.output_json), trace: parse(s.trace_json) } : {}), error: parse(s.error_json) })),
     waits: waits.results.map(w => ({ ...w, proposal: payload ? parse(w.proposal_json) : 'restricted', resolution: payload ? parse(w.resolution_json) : 'restricted', proposal_json: undefined, resolution_json: undefined })),
   }
+}
+
+/** Runs received since the start of today in the workflow's timezone, with failed and waiting counts. */
+export async function runsToday(env: CrankEnv, workflowId: string) {
+  const workflow = await getWorkflow(env, workflowId), graph = JSON.parse(workflow.draft_json) as Graph
+  const zone = requireZone(graph.settings?.timezone ?? (await workspaceSettings(env)).timezone), since = new Date(startOfDay(Date.now(), zone)).toISOString()
+  const row = await stmt(env, `SELECT COUNT(*) AS runs, SUM(status='failed') AS failed, SUM(status='awaiting_approval') AS awaiting_approval FROM crank_wf_runs WHERE workflow_id=? AND received_at>=?`, workflowId, since).first<{ runs: number; failed: number | null; awaiting_approval: number | null }>()
+  return { since, timezone: zone, runs: row?.runs ?? 0, failed: row?.failed ?? 0, awaiting_approval: row?.awaiting_approval ?? 0 }
 }
 
 function stepAt(graph: Graph, path: string): Step | null {
