@@ -9,13 +9,13 @@
 .editor-title { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; min-width: 0; }
 .editor-head .crank-app h1, .editor-title h1 { font-size: 32px; }
 .editor-head .page-intro { grid-column: 1 / -1; margin-top: 0; }
-.btn-undo::before { content: ""; width: 16px; height: 16px; background: url('/app/undo.svg') center / contain no-repeat; }
+.btn-undo::before { content: ""; width: 16px; height: 16px; background: url('/ui/undo.svg') center / contain no-repeat; }
 
 /* Canvas: the spine left to right; a path group's branches stack to its right. */
 .canvas { padding: 26px 0 16px; overflow-x: auto; }
 .chain { display: flex; align-items: center; }
 .link { display: flex; flex: none; align-items: center; min-width: 0; }
-.link + .link::before, .branch::before, .branches::before { content: ""; flex: none; background: url('/app/joint.svg') center / 20px 20px no-repeat, linear-gradient(var(--brass-light), var(--brass-dark)) center / 100% 4px no-repeat; }
+.link + .link::before, .branch::before, .branches::before { content: ""; flex: none; background: url('/ui/joint.svg') center / 20px 20px no-repeat, linear-gradient(var(--brass-light), var(--brass-dark)) center / 100% 4px no-repeat; }
 .link + .link::before { width: 24px; height: 22px; }
 .step-card { position: relative; display: flex; flex-direction: column; gap: 7px; flex: none; width: 162px; min-height: 112px; padding: 11px 11px 10px; background: linear-gradient(120deg, #fff, #fbfcff); border: 1px solid var(--app-card-edge); border-radius: 13px; box-shadow: var(--app-card-shadow); color: var(--ink); text-decoration: none; }
 .step-card:hover { border-color: #a9c6ea; }
@@ -47,7 +47,7 @@
 .branch-label { position: absolute; z-index: 1; left: -60px; top: -20px; margin-left: 4px; padding: 2px 11px; border-radius: 999px; background: var(--app-selected); color: #18406f; font-size: 12px; font-weight: 650; }
 .branch .chain { flex-direction: column; align-items: flex-start; }
 .branch .link { flex-direction: column; align-items: flex-start; }
-.branch .link + .link::before { width: 22px; height: 14px; margin-left: 20px; background: url('/app/joint.svg') center / 16px 16px no-repeat, linear-gradient(90deg, var(--brass-light), var(--brass-dark)) center / 4px 100% no-repeat; }
+.branch .link + .link::before { width: 22px; height: 14px; margin-left: 20px; background: url('/ui/joint.svg') center / 16px 16px no-repeat, linear-gradient(90deg, var(--brass-light), var(--brass-dark)) center / 4px 100% no-repeat; }
 .branch .step-card { width: 200px; min-height: 88px; gap: 4px; padding: 8px 11px; }
 .branch .step-card.is-selected { padding: 7px 10px; }
 .branch .step-head .tile { width: 36px; height: 36px; }
@@ -158,7 +158,7 @@
 /* Narrow: the canvas runs top to bottom, branches indented under their path group. */
 @media (max-width: 1000px) {
   .chain, .link, .has-branches { flex-direction: column; align-items: stretch; }
-  .link + .link::before { width: 22px; height: 22px; margin-left: 18px; background: url('/app/joint.svg') center / 18px 18px no-repeat, linear-gradient(90deg, var(--brass-light), var(--brass-dark)) center / 4px 100% no-repeat; }
+  .link + .link::before { width: 22px; height: 22px; margin-left: 18px; background: url('/ui/joint.svg') center / 18px 18px no-repeat, linear-gradient(90deg, var(--brass-light), var(--brass-dark)) center / 4px 100% no-repeat; }
   .step-card, .has-branches > .step-card, .branch .step-card { width: 100%; min-height: 0; }
   .branches { padding: 14px 0 0 36px; }
   .branches::before { left: 18px; top: 0; width: 22px; height: 14px; margin: 0; background: linear-gradient(90deg, var(--brass-light), var(--brass-dark)) center / 4px 100% no-repeat; }
