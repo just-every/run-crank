@@ -1,8 +1,6 @@
 # Run it locally
 
-Install the `rer` command once using the [RER installer](https://runeditrun.com).
-After the script or `npx` install, activate it in the current shell with
-`export PATH="$HOME/.local/bin:$PATH"`. First-party commands fetch and verify
+Start Crank from nothing with one line: `npx -y @runeditrun/rer dev just-every/run-crank` (set up only: `npx -y @runeditrun/rer setup just-every/run-crank`; without Node: `curl -fsSL https://runeditrun.com/install.sh | sh -s -- dev just-every/run-crank`). The commands below run inside that checkout. First-party commands fetch and verify
 the exact pnpm version declared in `package.json` when it is missing, using
 `$HOME/.rer/pnpm`; no global pnpm installation or sudo is needed.
 Package-mode seeds pin an exact `@runeditrun/rer` devDependency. The checkout's `OPERATIONS.json` argv and `package.json` aliases select the version that `rer VERB` runs.

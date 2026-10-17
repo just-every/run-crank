@@ -6,11 +6,13 @@ or importing a workflow does not send anything to its destination.
 
 ## Open your workspace
 
-From your Crank checkout, run:
+To start from nothing, run:
 
 ```sh
-rer dev
+npx -y @runeditrun/rer dev just-every/run-crank
 ```
+
+From your Crank checkout, `rer dev` alone starts it again.
 
 The first start can take several minutes. Keep the terminal open, open the
 private **RER_OPEN** link it prints, and complete **Finish setup**. Treat that

@@ -10,15 +10,14 @@ Failed delivery gets one manual replay with the same idempotency key.
 npx -y @runeditrun/rer dev just-every/run-crank
 ```
 
-That one line clones Crank, installs `rer` if you do not have it and starts the app. To start it again later, run `cd run-crank && rer dev`. Keep this terminal open. RER installs the pinned dependencies, selects Node
+That one line clones Crank, installs `rer` if you do not have it and starts the app. Without Node, `curl -fsSL https://runeditrun.com/install.sh | sh -s -- dev just-every/run-crank` does the same. To start it again later, run `cd run-crank && rer dev`. Keep this terminal open. RER installs the pinned dependencies, selects Node
 22.20.0, migrates local D1, and creates a local owner. Initial setup can take
 several minutes. Open the **RER_OPEN** link it prints, confirm the owner on
 **Finish setup**, and open **Flows**. That link is a credential; keep it private.
 Local development mail stays in the local outbox; nothing is emailed externally.
 If a command times out, repeat it to resume. Stop with `rer dev --stop`.
 
-For an installation with your own owner email, run `rer install`, then
-`rer setup --owner-email you@example.com` before `rer dev`. `rer dev --login`
+For an installation with your own owner email, run `npx -y @runeditrun/rer install just-every/run-crank`, then `rer setup --owner-email you@example.com` from the checkout before `rer dev`. `rer dev --login`
 uses an ordinary email sign-in link from the gated development outbox instead
 of dev identity. `rer dev --as admin` and `--as member` open local role personas.
 
@@ -94,7 +93,7 @@ small-archive interface:
 
 ```sh
 rer export --output exports/crank.rer
-# In a separate, empty clone, after rer install:
+# In a separate, empty clone (npx -y @runeditrun/rer install just-every/run-crank):
 rer import --input exports/crank.rer --yes
 rer setup --owner-email you@example.com
 rer dev

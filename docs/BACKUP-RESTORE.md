@@ -36,7 +36,8 @@ use the command if it refuses the size.
 For a larger archive, use a separate empty checkout with the app stopped:
 
 ```sh
-rer install
+npx -y @runeditrun/rer install just-every/run-crank
+cd run-crank
 rer import --input exports/crank.rer --yes
 rer setup --owner-email you@example.com
 rer dev
