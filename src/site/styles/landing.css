@@ -101,7 +101,8 @@
   .hero-copy .site-link { font-size: 17px; }
   .hero-phone-cards { display: grid; gap: 10px; margin-top: 28px; }
   .hero-stage { aspect-ratio: 1520 / 1040; margin-top: 18px; }
-  .hero-art::before { content: ''; position: absolute; z-index: 1; inset: 0 0 auto; height: 14%; background: linear-gradient(#b1dcfd, rgba(177, 220, 253, 0)); }
+  /* A short seam only: the crank handle sits at the crop's top edge and keeps its wood colour. */
+  .hero-art::before { content: ''; position: absolute; z-index: 1; inset: 0 0 auto; height: 14px; background: linear-gradient(#b1dcfd, rgba(177, 220, 253, 0)); }
   .hero-art { display: block; position: absolute; inset: 0; }
   .hero-copy .site-actions { flex-direction: column; }
 

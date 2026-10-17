@@ -1,6 +1,6 @@
 /* 03 Tuesday, 9:14 AM: the run's five steps joined by brass couplings, then the field mapping strip. */
 /* The run card spans the desk's width (x 35-1404 at 1440), wider than the other sections. */
-@media (min-width: 1181px) { .one-run .wide-wrap { --gutter: 35px; } }
+@media (min-width: 1280px) { .one-run .wide-wrap { --gutter: 35px; } }
 .run-art { margin-top: 56px; }
 .run-card { padding: 22px 22px 22px; background: #fffdf9; }
 .run-head { display: flex; flex-wrap: wrap; align-items: baseline; font: 600 18px/1.3 var(--font-head); color: #3a4865; }
@@ -23,17 +23,28 @@
 .map-strip code { font-family: inherit; }
 .map-arrow { color: #33425f; }
 
-@media (max-width: 1365px) and (min-width: 1181px) {
-  .run-steps { column-gap: 26px; }
-  .run-step { padding: 14px 12px 12px; }
-  .run-step:not(:last-child)::after { right: -27px; width: 26px; }
-  .run-lines { font-size: 12px; }
+/* Narrower laptops (page-03): five equal cards, each payload line still on one row. The longest line
+   ("Harbor Supply Co. paid $480.00.", 31 characters) needs 201 px at 11 px mono, so the couplings and
+   paddings tighten; below 1280 px it no longer fits and the steps take the rail. */
+@media (max-width: 1439px) and (min-width: 1280px) {
+  .one-run .wide-wrap { --gutter: 28px; }
+  .run-card { padding: 18px 16px; }
+  .run-steps { grid-template-columns: repeat(5, minmax(0, 1fr)); column-gap: 18px; }
+  .run-step { padding: 14px 10px 12px; }
+  .run-step:not(:last-child)::after { right: -19px; width: 18px; }
+  .run-step h3 { font-size: 17px; }
+  .run-lines { font-size: 11px; letter-spacing: -.01em; white-space: nowrap; }
+  .run-note { font-size: 12px; }
   .map-strip { gap: 20px; }
   .map-strip li { padding: 0 14px; font-size: 14px; }
 }
 
-/* Tablets and phones (phone-03): the steps stack on a vertical rail with brass rivets, the mapping under them. */
-@media (max-width: 1180px) {
+/* On narrow laptops the rail keeps the tablet's width (1030 px at 1180). */
+@media (max-width: 1279px) and (min-width: 1181px) { .one-run .run-art { max-width: 1030px; margin-inline: auto; } }
+
+/* Tablets, narrow laptops and phones (phone-03): the steps stack on a vertical rail with brass rivets, the
+   mapping under them. */
+@media (max-width: 1279px) {
   .run-art { margin-top: 32px; }
   .run-card, .run-card.glow { padding: 0; border: 0; background: none; box-shadow: none; }
   .run-head { justify-content: center; font-size: 17px; font-weight: 500; }

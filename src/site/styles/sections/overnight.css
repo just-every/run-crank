@@ -11,6 +11,8 @@
 .night-copy .kicker { color: #f6c544; font-size: calc(var(--night-u) * 1.06); }
 .night-copy h2 { margin-top: .3em; font-size: calc(var(--night-u) * 4.15); color: #fff; }
 .night-copy .sec-body { max-width: none; margin-top: .55em; font-size: calc(var(--night-u) * 1.6); color: #e2eaff; }
+/* On the widest screens the subhead wraps; balanced, it never leaves "choice." alone. */
+@media (min-width: 1181px) { .night-copy .sec-body { text-wrap: balance; } }
 .night-card-wrap { max-width: none; padding: 8.6vw 0 9.6vw 6vw; font-size: var(--night-u); }
 
 .agent-card { width: 54.6em; padding: 1.3em 1.6em 1.35em; background: #fff; box-shadow: 0 .2em .5em rgba(4, 16, 60, .25), 0 2em 4em -1.5em rgba(4, 16, 60, .65); color: var(--ink); text-shadow: none; }

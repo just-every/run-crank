@@ -17,8 +17,8 @@ export function BooksMatch() {
           <p className="kicker ledger-kicker">Fixed this month</p>
           <ul className="fixes">{close.fixes.map(f => <li key={f.ref}>
             <span className="fix-who">{f.who}<span className="sep">·</span>{f.amount}</span>
-            <span className="fix-cause"><span className="sep">·</span>{f.cause}</span>{' '}
-            <span className="fix-how"><span className="fix-arrow">→ </span>{f.fix} <code>{f.ref}</code></span>
+            <span className="fix-cause"><span className="sep">·</span>{f.cause}<span className="fix-arrow">{'\u00a0→'}</span></span>{' '}
+            <span className="fix-how">{f.fix}{'\u00a0'}<code>{f.ref}</code></span>
             <Check />
           </li>)}</ul>
         </div>

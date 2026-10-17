@@ -35,7 +35,8 @@
 .imp-rebuilt { display: grid; justify-items: center; gap: 4px; }
 .imp-rebuilt .soft-check { width: 32px; height: 32px; }
 .imp-rebuilt small { font-size: 13px; color: #6b7690; white-space: nowrap; }
-.imp-match { color: #33425f; }
+.imp-match { color: #33425f; white-space: nowrap; }
+.imp-cols span { white-space: nowrap; }
 .imp-none { color: #8a96ad; }
 .imp-question { grid-column: 1 / -1; display: flex; align-items: center; gap: 12px; margin-top: 14px; padding: 13px 18px; border-radius: 10px; background: #fff3e6; color: #b8520f; font-size: 15.5px; line-height: 1.4; }
 .imp-question .icon { width: 24px; height: 24px; color: #fff; fill: #ec6a2c; stroke: #fff; stroke-width: 2.2; }
@@ -47,15 +48,11 @@
 
 /* Narrower desktops: the copy column gives way first so the workflow names keep two lines. */
 @media (max-width: 1439px) and (min-width: 1181px) {
-  .move-in-row { grid-template-columns: minmax(0, 440px) minmax(0, 1fr); gap: 48px; }
-  .imp-cols, .imp-list li { grid-template-columns: 100px minmax(0, 1fr) 46px 118px 124px; }
+  .move-in-row { grid-template-columns: minmax(0, 420px) minmax(0, 1fr); gap: 48px; }
   .import-card { padding-inline: 24px; }
 }
 @media (max-width: 1279px) and (min-width: 1181px) {
   .move-in-row { grid-template-columns: minmax(0, 380px) minmax(0, 1fr); gap: 40px; }
-  .imp-cols, .imp-list li { grid-template-columns: 88px minmax(0, 1fr) 40px 114px 112px; }
-  .imp-list li, .imp-match { font-size: 15px; }
-  .imp-rebuilt .chip { padding: 0 10px; gap: 6px; font-size: 14px; }
   .import-card { padding-inline: 22px; }
 }
 
@@ -63,6 +60,22 @@
 @media (max-width: 1180px) and (min-width: 761px) {
   .move-in-row { grid-template-columns: minmax(0, 1fr); gap: 56px; }
   .terminal { max-width: 560px; }
+}
+
+/* Narrower cards: the workflow name gives way, never the tile pair, the "Needs you" chip or an "N of N match".
+   Each fixed column holds its widest content with the 8 px column gap clear (chip to "—" at least 11 px). */
+@media (max-width: 1439px) and (min-width: 761px) {
+  .imp-cols, .imp-list li { grid-template-columns: 96px minmax(0, 1fr) 44px 135px 131px; }
+  .pair { gap: 6px; }
+}
+@media (max-width: 1279px) and (min-width: 1181px), (max-width: 900px) and (min-width: 761px) {
+  .imp-cols, .imp-list li { grid-template-columns: 92px minmax(0, 1fr) 44px 122px 124px; }
+  .imp-list li, .imp-match { font-size: 15px; }
+  .pair .app { width: 32px; height: 32px; }
+  .imp-rebuilt .chip { padding: 0 10px; gap: 6px; font-size: 14px; }
+}
+@media (max-width: 900px) and (min-width: 761px) {
+  .import-card { padding-inline: 20px; }
 }
 
 /* Phones (phone-02): copy, terminal, then each workflow as its own box with its checks on one line. */
@@ -76,8 +89,9 @@
   .import-mark { width: 42px; height: 42px; }
   .imp-cols { display: none; }
   .imp-list { display: grid; gap: 8px; }
-  .imp-list li, .imp-list li.asks { grid-template-columns: 70px minmax(0, 1fr); grid-template-areas: 'pair name' 'pair meta' 'pair ask'; align-items: start; column-gap: 10px; padding: 12px; border: 1px solid #edf1f6; border-radius: 12px; }
-  .pair { grid-area: pair; align-self: center; gap: 3px; }
+  /* The tile pair keeps its own width and a 12 px gap before the name. */
+  .imp-list li, .imp-list li.asks { grid-template-columns: max-content minmax(0, 1fr); grid-template-areas: 'pair name' 'pair meta' 'pair ask'; align-items: start; column-gap: 12px; padding: 12px; border: 1px solid #edf1f6; border-radius: 12px; }
+  .pair { grid-area: pair; align-self: center; gap: 4px; }
   .pair .app { width: 28px; height: 28px; font-size: 14px; border-radius: 8px; }
   .pair .app-quickbooks { font-size: 11.5px; }
   .imp-name { grid-area: name; font-size: 15.5px; font-weight: 600; }
@@ -89,7 +103,13 @@
   .imp-rebuilt .chip { min-height: 30px; font-size: 14px; padding: 0 12px; }
   .imp-rebuilt small { font-size: 13px; }
   .imp-none { display: none; }
-  .imp-question { grid-area: ask; margin-top: 10px; padding: 10px 12px; font-size: 14px; }
+  .imp-question { grid-area: ask; margin-top: 10px; padding: 10px 12px; font-size: 14px; text-wrap: balance; }
   .imp-question .icon { display: none; }
   .imp-foot { margin-top: 12px; padding-top: 12px; font-size: 13px; row-gap: 2px; }
+}
+/* Narrow phones: a rebuild note goes after the match count, so a row's checks take two lines at most. */
+@media (max-width: 439px) {
+  .imp-meta { column-gap: 7px; }
+  .imp-rebuilt { display: contents; }
+  .imp-rebuilt small { order: 1; }
 }

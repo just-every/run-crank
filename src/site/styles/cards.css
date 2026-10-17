@@ -132,8 +132,8 @@ code { font-family: var(--font-mono); }
   .phone-tile .app { width: 26px; height: 26px; border-radius: 7px; font-size: 14px; box-shadow: 0 1px 2px rgba(54, 38, 10, .25); }
   .tile-1 { left: 59%; top: 23.6%; }
   .tile-2 { left: 89%; top: 24.5%; }
-  .phone-repaired { position: absolute; right: 0; top: 55%; width: 82%; }
-  .phone-repaired .repaired-card { padding: 9px 12px; gap: 10px; border-radius: 10px 0 0 10px; font-size: 13px; }
+  .phone-repaired { position: absolute; right: var(--gutter); top: 55%; width: min(82%, calc(100% - 2 * var(--gutter))); }
+  .phone-repaired .repaired-card { padding: 9px 12px; gap: 10px; border-radius: 10px; font-size: 13px; }
   .phone-repaired .repaired-title { white-space: normal; font-size: 13px; }
   .phone-repaired .repaired-detail { font-size: 12px; }
   .phone-repaired .repair-icon { width: 28px; height: 28px; }

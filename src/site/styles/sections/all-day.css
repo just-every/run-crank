@@ -14,10 +14,15 @@
 .log-row .chip .check, .log-row .chip .icon { display: none; }
 .log-foot { padding-top: 18px; font-size: 15px; color: #6b7690; }
 
+/* Narrower laptops: the log's own columns tighten so each run keeps one line where the card allows. */
+@media (max-width: 1439px) and (min-width: 1181px) {
+  .log-card { padding-inline: 24px; }
+  .log-row { grid-template-columns: 70px 34px minmax(0, 1fr) auto; column-gap: 10px; }
+  .log-row time { font-size: 15px; }
+  .log-text { font-size: 15px; }
+}
 @media (max-width: 1279px) and (min-width: 1181px) {
   .all-day-row { gap: 36px; }
-  .log-card { padding-inline: 24px; }
-  .log-row { grid-template-columns: 78px 34px minmax(0, 1fr) auto; column-gap: 10px; }
 }
 @media (max-width: 1180px) and (min-width: 761px) {
   .all-day-row { grid-template-columns: minmax(0, 1fr); gap: 44px; }
@@ -37,4 +42,8 @@
   .log-row .chip { grid-area: status; min-height: 30px; padding: 0 12px; font-size: 13.5px; }
   .log-row .chip .check, .log-row .chip .icon { display: block; width: 17px; height: 17px; }
   .log-foot { padding-top: 12px; font-size: 13.5px; }
+}
+@media (max-width: 380px) {
+  .log-row { grid-template-columns: 68px minmax(0, 1fr) auto; }
+  .log-text { font-size: 14.5px; }
 }

@@ -29,7 +29,7 @@ const Pair = ({ row }: { row: Imported }) => <span className="pair"><AppTile app
 function ImportRow({ row }: { row: Imported }) {
   return <li className={row.question ? 'asks' : undefined}>
     <Pair row={row} />
-    <p className="imp-name">{row.trigger} →<br /> {row.action}</p>
+    <p className="imp-name">{row.trigger}{'\u00a0→'}<br /> {row.action}</p>
     <span className="imp-meta">
       <span className="imp-steps">{row.steps}<span className="imp-steps-unit"> steps</span></span>
       <span className="imp-rebuilt">{row.question ? <span className="chip chip-warm"><Icon name="alert" />Needs you</span> : <><Check className="check soft-check" />{row.note && <small>{row.note}</small>}</>}</span>
@@ -51,7 +51,7 @@ export function MoveIn() {
           <Vignette />
           <div className="terminal-bar" aria-hidden="true"><span /><span /><span /></div>
           <pre><code>
-            <span className="t-line"><span className="prompt" aria-hidden="true">$ </span>git clone {origin}/<wbr /><span className="t-url">{pathname.slice(1)}.git</span> crank</span>
+            <span className="t-line"><span className="prompt" aria-hidden="true">$ </span>git clone {origin}/<wbr /><span className="t-url">{pathname.slice(1)}.git crank</span></span>
             <span className="t-line"><span className="prompt" aria-hidden="true">$ </span>cd crank && rer dev</span>
             <span className="t-line t-ok"><span aria-hidden="true">✓ </span>Crank is running</span>
           </code></pre>
@@ -59,7 +59,7 @@ export function MoveIn() {
       </div>
       <div className="card glow import-card" role="img" aria-label={`Import from Zapier for ${business.name}: ${imported.map(r => `${r.trigger} to ${r.action}, ${r.steps} steps, ${r.matched ? `rebuilt, ${r.matched[0]} of ${r.matched[1]} past runs match` : `needs you: ${r.question}`}`).join('; ')}. ${importTotals.zaps} Zaps, ${importTotals.running} running side by side, ${importTotals.questions} question for you.`}>
         <div aria-hidden="true">
-          <h3 className="import-title"><Mark className="mark import-mark" /><span>Import from Zapier · {business.name}</span></h3>
+          <h3 className="import-title"><Mark className="mark import-mark" /><span>Import from Zapier · {business.name.replaceAll(' ', '\u00a0')}</span></h3>
           <div className="imp-cols"><span className="imp-col-flow">Workflow</span><span>Steps</span><span>Rebuilt</span><span>Past runs checked</span></div>
           <ul className="imp-list">{imported.map(row => <ImportRow key={row.trigger} row={row} />)}</ul>
           <p className="imp-foot"><span>{importTotals.zaps} Zaps</span><span>{importTotals.running} running side by side</span><span>{importTotals.questions} question for you</span></p>

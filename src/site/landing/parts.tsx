@@ -26,8 +26,9 @@ export function Painting({ name, widths, sizes, className, phone, eager = false 
 /** Crank's approved smiling-gear mark (public/brand/mark.svg), as the avatar wherever Crank speaks. */
 export const Mark = ({ className = 'mark' }: { className?: string }) => <span className={className}><img src="/brand/mark.svg" alt="" width="40" height="40" /></span>
 
-/** Joins each " · " to its neighbours with no-break spaces, so a separator never starts or ends a wrapped line. */
-export const glued = (text: string) => text.replaceAll(' · ', '\u00a0·\u00a0')
+/** Joins each " · " to its neighbours and each " → " to the word before it with no-break spaces, so a
+ *  separator never starts or ends a wrapped line and an arrow never starts one. */
+export const glued = (text: string) => text.replaceAll(' · ', '\u00a0·\u00a0').replaceAll(' → ', '\u00a0→ ')
 
 export const Check = ({ className = 'check' }: { className?: string }) => <svg className={className} viewBox="0 0 24 24"><circle cx="12" cy="12" r="12" /><path d="m7.2 12.4 3.2 3.2 6.4-6.8" /></svg>
 export const Cross = () => <svg className="cross" viewBox="0 0 24 24"><circle cx="12" cy="12" r="12" /><path d="m8.2 8.2 7.6 7.6M15.8 8.2l-7.6 7.6" /></svg>

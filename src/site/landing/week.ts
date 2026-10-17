@@ -27,7 +27,7 @@ export const run = {
 export type RunStep = { app: App; title: string; lines: string[]; time: string; note?: string }
 export const runSteps: RunStep[] = [
   { app: 'stripe', title: 'New payment', lines: ['amount: 48000', 'customer: Harbor Supply Co.'], time: '9:14:02' },
-  { app: 'sheets', title: 'Add row', lines: ['Orders 2026 · row 2,114', '$480.00 · Harbor Supply Co.'], time: '9:14:03' },
+  { app: 'sheets', title: 'Add row', lines: ['Orders October · row 1,580', '$480.00 · Harbor Supply Co.'], time: '9:14:03' },
   { app: 'ai', title: 'AI step · Summarize', lines: ['“Third reorder this month:', '40 cases of kraft mailers.”'], time: '9:14:05' },
   { app: 'slack', title: 'Post in #sales', lines: ['Harbor Supply Co. paid $480.00.', 'Third reorder this month.'], time: '9:14:06' },
   { app: 'quickbooks', title: 'Create invoice', lines: ['INV-4161 · $480.00 · Paid'], time: '9:15:43', note: 'Rate limited · retried after 90s' },
@@ -49,7 +49,7 @@ export const log: LogRow[] = [
   { time: '9:04 AM', app: 'gmail', text: 'Same invoice, sent twice', status: 'Duplicate skipped', tone: 'skipped' },
   { time: '9:14 AM', app: 'stripe', text: 'Harbor Supply Co. · $480.00 → QuickBooks', status: 'Completed', tone: 'done' },
   { time: '10:37 AM', app: 'shopify', text: 'Refund $1,250 · Order #4729 → QuickBooks credit memo', status: 'Completed', tone: 'done' },
-  { time: '11:20 AM', app: 'typeform', text: 'Priya Shah · Fieldstone Dental · AI score 9', status: 'Posted to #sales', tone: 'done' },
+  { time: '11:20 AM', app: 'typeform', text: 'Priya Shah · Fieldstone Dental · AI\u00a0score\u00a09', status: 'Posted to #sales', tone: 'done' },
   { time: '1:05 PM', app: 'webhook', text: 'Carrier tracking update · 3 orders', status: 'Completed', tone: 'done' },
   { time: '2:31 PM', app: 'shopify', text: 'Order sync', status: 'Failing · retrying', tone: 'failing' },
 ]
