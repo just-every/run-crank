@@ -2,13 +2,14 @@ import { nativeDependencyAuthority } from './native.mjs';
 import { approveSetup, approveOwner, approvalFence, callbacksFor } from './approval.mjs';
 import { dependencyStore } from './store.mjs';
 import { publicKey, assertion, digest } from './crypto.mjs';
+import { isLoopbackHost } from '../operator-auth/loopback.mjs';
 import { CALLBACK, INTERFACE, PATHS, NETWORK, insist, originOf, providerMetadata } from './protocol.mjs';
 import { readJson } from '../operator-auth/identity/oidc/network.mjs';
 import { readInput } from '../operator-auth/input.mjs';
 import { ownerFence, pinStatement } from './authority.mjs';
 export { INTERFACE, CALLBACK, PATHS } from './protocol.mjs';
 export function createDependencies({db,origin,name,provider,interfaces=[{interface:INTERFACE,provider,paths:PATHS}],provides=[],local=false,auth,claimOwner,clock=Date.now,fetch:fetcher=globalThis.fetch}) {
- originOf(origin,local);insist(Array.isArray(provides) && new Set(provides).size===provides.length && provides.every(value=>/^[a-z][a-z0-9-]*@[1-9][0-9]*$/.test(value)));
+ originOf(origin,local);insist(!local || isLoopbackHost(new URL(origin).hostname));insist(Array.isArray(provides) && new Set(provides).size===provides.length && provides.every(value=>/^[a-z][a-z0-9-]*@[1-9][0-9]*$/.test(value)));
  insist(Array.isArray(interfaces) && new Set(interfaces.map(d=>d.interface)).size===interfaces.length && interfaces.every(d=>/^[a-z][a-z0-9-]*@[1-9][0-9]*$/.test(d.interface) && Array.isArray(d.paths) && new Set(d.paths).size===d.paths.length && d.paths.every(p=>typeof p==='string' && /^\/[A-Za-z0-9_~/-]+$/.test(p) && !p.startsWith('//'))));
  const store=dependencyStore(db);
  const native=auth?.native?nativeDependencyAuthority(auth.accounts.dependencies):null;
@@ -34,7 +35,7 @@ export function createDependencies({db,origin,name,provider,interfaces=[{interfa
   const pendingPin=native?null:await store.first('SELECT provider_id AS id,issuer,client_id AS clientId,linked_at AS linkedAt FROM oa_provider_session_pins WHERE session_id=?',pending.approved_session);
   const initialApproval=await approvalFence(pending,contract,expected,callbacks,clock(),pendingPin,native);
   insist(await store.first(`SELECT 1 WHERE ${initialApproval.sql}`,...initialApproval.args),'local_owner_proof_required',403);
-  const metadata=await providerMetadata(expected,fetcher,contract),installation=await store.installation(contract);
+  const metadata=await providerMetadata(expected,fetcher,contract,local),installation=await store.installation(contract);
   const codeDigest=await digest(expected+'\0'+data.code);
   const consumed=await store.first('INSERT INTO rer_dependency_codes(digest,created_at) VALUES(?,?) ON CONFLICT DO NOTHING RETURNING digest',codeDigest,clock());
   insist(consumed?.digest===codeDigest,'link_code_used',409);
@@ -101,7 +102,7 @@ export function createDependencies({db,origin,name,provider,interfaces=[{interfa
    insist(request.headers.get('origin')===origin,'invalid_link_origin',403);
    if(path==='/auth/dependencies/unlink')return await unlink(request);
    if(path==='/auth/dependencies/relink' || path==='/auth/dependencies/setup') {
-    const input=await readInput(request),contract=input.interface??INTERFACE;originOf(input.issuer);const declared=interfaces.find(d=>d.interface===contract);insist(declared);
+    const input=await readInput(request),contract=input.interface??INTERFACE;originOf(input.issuer,local);const declared=interfaces.find(d=>d.interface===contract);insist(declared);
     const callbacks=callbacksFor(origin,declared);
     if(path==='/auth/dependencies/setup') await approveSetup({db,auth,request,input,contract,callbacks,clock});
     else await approveOwner({store,actor:await owner(request,'providers:relink'),input,contract,callbacks,clock,native});

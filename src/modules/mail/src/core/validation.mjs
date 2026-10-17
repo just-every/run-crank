@@ -48,24 +48,25 @@ export function validateConfig(config, dependencies = {}) {
   return config;
 }
 
-// Splits `Name <addr>` or a bare `addr` without backtracking regexes.
-function splitMailbox(text) {
-  if (!text.endsWith('>')) return /^[^<>]+$/u.test(text) ? { email: text } : null;
-  const open = text.lastIndexOf('<'), email = text.slice(open + 1, -1), prefix = text.slice(0, Math.max(open, 0));
-  if (open < 0 || !email || email.includes('>') || /[\n\r\u2028\u2029]/.test(prefix)) return null;
-  return { name: prefix, email };
-}
-
 export function parseAddress(value) {
   bounded(value, 998, 'invalid_address');
-  const match = splitMailbox(value.trim());
-  const email = (match?.email ?? '').trim();
+  const text = value.trim();
+  let email = '', name;
+  if (text.endsWith('>')) {
+    // Display name, then the last '<' opens the angle address.
+    const open = text.lastIndexOf('<');
+    const inner = text.slice(open + 1, -1);
+    const display = text.slice(0, Math.max(open, 0)).trimEnd();
+    if (open >= 0 && inner && !inner.includes('>') && !/[\u2028\u2029]/.test(display)) {
+      email = inner.trim(); name = display;
+    }
+  } else if (text && !text.includes('<') && !text.includes('>')) email = text;
   // Conservative mailbox subset; never serialize multiple mailboxes as one.
   const parts = email.split('@');
   if (parts.length !== 2 || !parts[0] || parts[0].length > 64 || email.length > 254 ||
       !/^[^\s@<>(),:;"\\]+$/u.test(parts[0]) || parts[0].startsWith('.') || parts[0].endsWith('.') || parts[0].includes('..') ||
       !/^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/i.test(parts[1])) fail('invalid_address');
-  let name = match?.name?.trim();
+  name = name?.trim();
   if (name?.startsWith('"') && name.endsWith('"')) name = name.slice(1, -1);
   if (name && /[<>"\\]/.test(name)) fail('invalid_address');
   return name ? { email, name } : { email };

@@ -41,8 +41,8 @@ export function createAuthHandler(auth) {
         const preview = await auth.previewLink(request, token);
         return await confirmationResponse({ branding: auth.presentation, preview, token, method: request.method });
       }
-      // Composition without the owner link or email change (native accounts) does not own these paths.
-      if ((path === OWNER_SIGNIN_PATH && !auth.confirmOwnerSignIn) || (path === '/auth/email' && !auth.changeEmail)) return json({ error: 'not_found' }, 404);
+      // Composition without the owner link, email or name change (native accounts) does not own these paths.
+      if ((path === OWNER_SIGNIN_PATH && !auth.confirmOwnerSignIn) || (path === '/auth/email' && !auth.changeEmail) || (path === '/auth/display-name' && !auth.changeDisplayName)) return json({ error: 'not_found' }, 404);
       if (path === OWNER_SIGNIN_PATH && ['GET', 'HEAD'].includes(request.method)) {
         const token = readParameters(url.searchParams).token ?? null;
         const preview = await auth.previewOwnerSignIn(request, token);
@@ -65,7 +65,7 @@ export function createAuthHandler(auth) {
       if (path === '/auth/settings/identity' && request.method === 'GET') {const value=await auth.identitySettings(request);return /text\/html/.test(request.headers.get('accept')??'')?await identitySettingsPage(value,auth.presentation):json(value);}
       if (path === '/auth/providers' && request.method === 'GET') return json(await auth.listProviders(request));
       const posts = new Set(['/auth/bootstrap', '/auth/magic-link', '/auth/confirm', '/auth/signout', '/auth/invite', '/auth/invite/cancel', '/auth/review-session',
-        '/auth/operator/status', '/auth/operator/role', '/auth/session/revoke', '/auth/step-up', '/auth/domain-rules', '/auth/providers/unlink', '/auth/providers/relink', '/auth/settings/identity', '/auth/setup-complete', OWNER_SIGNIN_PATH, '/auth/email']);
+        '/auth/operator/status', '/auth/operator/role', '/auth/session/revoke', '/auth/step-up', '/auth/domain-rules', '/auth/providers/unlink', '/auth/providers/relink', '/auth/settings/identity', '/auth/setup-complete', OWNER_SIGNIN_PATH, '/auth/email', '/auth/display-name']);
       if (!posts.has(path)) return json({ error: 'not_found' }, 404);
       if (request.method !== 'POST') return json({ error: 'method_not_allowed' }, 405);
       const query = readParameters(url.searchParams);
@@ -93,6 +93,7 @@ export function createAuthHandler(auth) {
         case '/auth/confirm': { const value = await auth.confirmLink(request, input); return seeOther(value.returnTo, value.cookie); }
         case OWNER_SIGNIN_PATH: { const value = await auth.confirmOwnerSignIn(request, input); return seeOther(value.returnTo, value.cookie); }
         case '/auth/email': return json(await auth.changeEmail(request, input));
+        case '/auth/display-name': return json(await auth.changeDisplayName(request, input));
         case '/auth/review-session': { const value = await auth.issueReviewSession(request, input); return seeOther(value.returnTo, value.cookie); }
         case '/auth/step-up': {
           const result = await auth.requestStepUp(request, input);

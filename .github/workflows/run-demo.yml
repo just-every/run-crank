@@ -38,7 +38,19 @@ jobs:
           COREPACK_ENABLE_DOWNLOAD_PROMPT: '0'
       - name: Scope the test host
         if: inputs.test_only
-        run: node --input-type=module -e "import fs from 'node:fs'; const d=JSON.parse(fs.readFileSync('deploy-demo.json','utf8')); d.domain='test.'+d.domain; fs.writeFileSync('deploy-demo.json',JSON.stringify(d));"
+        # The domain moves under test.<domain>, and so does every setting that names the
+        # demo's own hosts (demo.<domain> or <x>.demo.<domain>), so a seed's secondary hosts follow.
+        run: |
+          node --input-type=module <<'SCOPE'
+          import fs from 'node:fs';
+          const d = JSON.parse(fs.readFileSync('deploy-demo.json', 'utf8'));
+          const own = `demo.${d.domain}`;
+          for (const [name, value] of Object.entries(d.settings ?? {})) {
+            if (value === own || (typeof value === 'string' && value.endsWith(`.${own}`))) d.settings[name] = `${value.slice(0, value.length - own.length)}demo.test.${d.domain}`;
+          }
+          d.domain = `test.${d.domain}`;
+          fs.writeFileSync('deploy-demo.json', JSON.stringify(d));
+          SCOPE
       # Wrangler deploys the native Worker bundle and edge assets.
       - if: ${{ !inputs.remove }}
         run: pnpm exec rer deploy --demo --environment "$DEMO_ENVIRONMENT"

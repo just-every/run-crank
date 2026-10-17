@@ -133,6 +133,7 @@ version), domain rules in `oa_domain_rules`. `auth.accounts` exposes it and
 | `/auth/owner-signin?token=…` | GET/HEAD | 200 owner sign-in confirmation for a live `rer signin` link, or 400 invalid/used/expired; **no writes** |
 | `/auth/owner-signin` | POST | token; consume once for the active owner it names, 303 with cookie; see "Owner sign-in without mail" |
 | `/auth/email` | POST | email; the signed-in operator's own sign-in email; fresh step-up proof; 409 `email_in_use` |
+| `/auth/display-name` | POST | displayName; the signed-in operator's own name (1-120 characters); no step-up |
 
 Unknown `/auth/*` paths return 404. Unsupported methods return 405. Except for invalid/expired confirmation GET/HEAD documents, known public
 errors are JSON `{error:code}`: invalid input 400, unauthenticated 401, policy/host/
@@ -475,6 +476,10 @@ link to the current address, a recent email-link sign-in, or a `rer signin`
 link). It revokes unused links sent to the old address and keeps sessions and
 provider bindings. An address another operator holds is refused with
 `email_in_use`. `STEP_UP_ACTIONS` gains `email:change`.
+
+A name is corrected the same way, without a step-up: `POST /auth/display-name
+{displayName}`. First-run `/setup` shows the owner's name as an editable field
+that saves through it. Native accounts do not mount this route.
 
 ## Local dev identity and the key gate
 

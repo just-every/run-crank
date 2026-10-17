@@ -84,9 +84,15 @@ real public fetch and a send: both flows complete, and only the fetch leaves.
 `rer deploy --demo` publishes the seed at `demo.<domain>`. Turnstile admits a
 visitor into their own native Worker Loader isolate and SQLite Durable Object
 storage. The ordinary production Worker bundle is built once, with static files
-served directly at the edge. The visitor lands signed in as the demo owner with
-sample data and `RER_DEMO=1`; account effects remain simulated by the demo guard.
-Each copy ends after 60 minutes or 15 idle minutes, when its storage is erased.
+served directly at the edge. While the visitor waits for the human check and
+sign-in, the start page prefetches the console's hashed JS and CSS at idle
+priority (at most 1 MiB compressed, the `deploy.operatorPath` views first), so
+each view's first visit is served from the browser's cache. The visitor lands
+signed in as the demo owner with sample data and `RER_DEMO=1`; account effects
+remain simulated by the demo guard.
+Each copy ends after 60 minutes or 15 idle minutes, or when the visitor signs
+out (`POST /auth/signout`), when its storage is erased and the visitor sees the
+ended page with "Start a new demo".
 
 1. Adopt local demo mode above and the owner-claim endpoint. The hosted app must
    export its Worker entry and declare all resources in its Wrangler config.
@@ -98,7 +104,10 @@ Each copy ends after 60 minutes or 15 idle minutes, when its storage is erased.
    locked dependencies and invokes `rer deploy --demo`; Docker is unnecessary.
    Set `RUN_DEMO_DEPLOY=true` to deploy on pushes to main. The manual `test_only`
    input targets `demo.test.<domain>` in the separate `demo-test` environment,
-   using Turnstile's always-passing test keys. Test starts require the private
+   using Turnstile's always-passing test keys. It moves the declaration's domain
+   to `test.<domain>` and every `settings` host under `demo.<domain>` (such as
+   a `container.hostVariables` host like `page.demo.<domain>`) to the same name
+   under `demo.test.<domain>`; production is unchanged. Test starts require the private
    measurement token, passed as `rer_demo_measure` cookie or
    `x-rer-demo-measurement` header. Do not commit that token.
 4. In the `run-demo` GitHub environment, set `CLOUDFLARE_ACCOUNT_ID`,
@@ -135,7 +144,7 @@ rer deploy --demo --remove --yes --environment demo-test
 
 For the test command, set the declaration's domain to `test.<domain>`, as the
 workflow does. Removal needs only the Cloudflare account id and deploy token.
-It empties and removes the demo-owned R2 bucket, and deletes the exact Custom Domains and Worker covered by the deployment's
+It deletes the exact Custom Domains and Worker covered by the deployment's
 ownership record; the Worker's namespaces and visitor storage go with it. It
 reads back their absence and a repeat is a no-op. An existing legacy Container
 application is also removed when its namespace proves ownership. Unrelated
@@ -144,7 +153,17 @@ resources and host attachments are refused before any deletion.
 ### Seed bindings
 
 The seed's Wrangler configuration supplies all D1s, R2 buckets, queues and local
-DO classes. D1s and seed DOs get separate SQLite facets; R2 keys are prefixed by
-visitor and binding. Alarms deliver UTC crons and durable queue batches with
-ack/retry, delays and dead letters. Expiry deletes facets, queued work, multipart
-uploads and R2 prefixes. Unsupported bindings are refused by name at demo build.
+DO classes. D1s and seed DOs get separate SQLite facets. R2 objects, their
+metadata and multipart uploads are kept per binding in the visitor's own
+Durable Object storage, next to the app, so file reads and writes answer from
+where the visitor is; a visitor's objects may total 256 MiB, and a write past
+that fails as R2 does for an oversized upload. Alarms deliver UTC crons and
+durable queue batches with ack/retry, delays and dead letters. Expiry deletes
+facets, queued work and R2 objects with the visitor's storage. Unsupported
+bindings are refused by name at demo build. The Worker's build modules
+(JavaScript, text, WebAssembly and data) load as a normal deploy uploads them;
+a failed demo build prints its reason and file.
+
+Hosts deployed by rer 0.2.30-0.2.33 kept every visitor's R2 objects in one
+demo-owned bucket. The next `rer deploy --demo`, or a removal, empties and
+deletes that bucket while the deployed Worker still proves it owns it.
