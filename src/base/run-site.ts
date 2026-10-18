@@ -87,16 +87,19 @@ const RUN = 'body{--art:max(20vh,150px)}main{max-width:1360px;margin:0 auto;padd
   + '.step h2{margin-top:10px;font:600 26px/1.25 var(--rer-font-heading,var(--rer-font-body,inherit));letter-spacing:-.02em;color:var(--site-ink)}.step.option h2{margin-top:0}'
   + '.body>p{color:var(--site-body);font-size:18px;margin-top:6px}.body>p.alt{margin-top:14px;font-size:16px}.body>p.note{margin-top:14px;font-size:17px}.body>p.go{margin-top:14px}.go a{font-weight:600;text-decoration:underline;text-underline-offset:4px}'
   + 'code{font-family:var(--site-mono);font-size:.92em;color:var(--site-ink)}.alt code{margin-left:.2em}.note code{margin-right:.1em}'
-  + '.code{position:relative;margin-top:16px;border-radius:12px;background:var(--rer-code-background,var(--site-ink));color:var(--rer-code-text,var(--rer-page,#f3f5f8))}'
-  + '.code pre{margin:0;padding:18px 108px 18px 22px;overflow-x:auto;font:500 16px/1.75 var(--site-mono);white-space:pre}.code pre code{color:inherit;font-size:inherit}'
+  + '.code{position:relative;container-type:inline-size;margin-top:16px;border-radius:12px;background:var(--rer-code-background,var(--site-ink));color:var(--rer-code-text,var(--rer-page,#f3f5f8))}'
+  + '.code pre{margin:0;padding:18px 108px 18px 22px;font:500 16px/1.75 var(--site-mono);white-space:pre-wrap;overflow-wrap:anywhere}.code pre code{color:inherit;font-size:inherit}'
   + '.copy{position:absolute;top:50%;right:14px;transform:translateY(-50%);display:inline-flex;align-items:center;gap:7px;min-height:36px;padding:0 14px;border:1px solid color-mix(in srgb,currentColor 35%,transparent);border-radius:999px;background:transparent;color:inherit;font:500 14px/1 var(--rer-font-body,inherit);cursor:pointer}'
   + '.copy:hover{background:color-mix(in srgb,currentColor 12%,transparent)}.copy svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.4}'
   + '.facts{margin-top:32px;color:var(--site-body);font-size:14px;display:grid;gap:6px;text-align:center}.facts a{text-decoration:underline;text-underline-offset:3px}'
   + '@media(max-width:760px){body{--art:180px}main{padding:0 16px calc(var(--art) + 40px)}.intro{padding-top:34px}.intro h1{font-size:38px}.steps{margin-top:28px}'
   + '.step,.step.option{padding:20px 18px;border-radius:18px;grid-template-columns:1fr;gap:0}.num{position:absolute;top:18px;left:18px;width:34px;height:34px;font-size:16px}'
   + '.step h2{margin:3px 0 0 46px;min-height:30px;font-size:20px}.step.option h2{margin-left:0}.body>p,.body>p.note{font-size:15.5px}.body>p.alt{font-size:14.5px}'
-  + '.code{margin-top:12px}.code pre{padding:46px 14px 14px;font-size:13px;line-height:1.7;white-space:pre-wrap;overflow-wrap:anywhere}'
-  + '.copy{top:8px;right:8px;transform:none;min-height:32px;padding:0 12px;font-size:13px}.facts{font-size:13px;margin-top:28px}}'
+  + '.code{margin-top:12px}.facts{font-size:13px;margin-top:28px}}'
+  // The command keeps its own room: beside the Copy button while the block is wide enough for both, and under it
+  // (button on a row of its own above the text) as soon as it is not, whatever the page width or command length.
+  + '@container (max-width:700px){.code pre{padding:52px 20px 18px;font-size:15px;line-height:1.7}.copy{top:10px;right:10px;transform:none;min-height:32px;padding:0 12px;font-size:13px}}'
+  + '@container (max-width:480px){.code pre{padding:46px 14px 14px;font-size:13px}.copy{top:8px;right:8px}}'
 
 const COPY_SCRIPT = "document.addEventListener('click',async event=>{const button=event.target.closest('.copy');if(!button)return;try{await navigator.clipboard.writeText(button.dataset.copy);const label=button.querySelector('span');label.textContent='Copied';setTimeout(()=>{label.textContent='Copy'},1600)}catch{}})"
 const ARROW = '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10h12M11 5l5 5-5 5"/></svg>'
@@ -124,7 +127,7 @@ export function runPageHtml(identity: EditionIdentity, run: RunData, contract?: 
   const hosted = run.hosted.map(option => `<li class="step option"><div class="body"><h2>${escape(option.title)}</h2><p>${escape(option.body)}</p><p class="go"><a href="${escape(option.href)}">${escape(option.action)}</a></p></div></li>`).join('')
   const body = `${header(identity, run, contract)}<main><div class="intro"><h1>Run ${name} on your computer.</h1><p class="sub">100% free and open source. Two lines, and ${name} opens in your browser.</p></div>`
     + `<ol class="steps"><li class="step"><span class="num" aria-hidden="true">1</span><div class="body"><h2>Install rer</h2>${codeBlock([installRer], 'Install rer')}`
-    + `<p class="note">It installs rer for you alone, with its own Node if you have no Node 22 or later. It changes no shell settings: if its last line puts rer on your PATH, run that line before step 2.</p></div></li>`
+    + `<p class="note">It installs rer for you alone, with its own Node if you have no Node 22 or later. The installer does not edit your shell files itself. If it ends with a line to run, run it before step 2: it puts rer on your PATH now and appends the same setting to your shell's startup file (for example ~/.zshrc) for new terminals.</p></div></li>`
     + `<li class="step"><span class="num" aria-hidden="true">2</span><div class="body"><h2>Start ${name}</h2>${codeBlock([rerStart(run)], `Start ${run.name}`)}`
     + `<p class="note">rer gets ${name}, installs everything, makes you the owner and prints a link that opens ${name} signed in. To start it again later: <code>${escape(`cd ${run.folder} && rer dev`)}</code></p>`
     + `<p class="alt">Already have Node 22 or later? <code>${escape(run.clone)}</code> does both steps in one line.</p></div></li>${hosted}</ol>`
