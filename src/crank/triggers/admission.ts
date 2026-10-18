@@ -17,11 +17,15 @@ export function burstThreshold(graph: { settings?: Record<string, unknown> }) {
   return Number.isInteger(value) && (value as number) >= 1 && (value as number) <= 10000 ? value as number : DEFAULT_BURST
 }
 
-export async function createRun(env: CrankEnv, workflow: WorkflowRow, kind: string, event: TriggerEvent, createdBy: string, receivedAt = now()): Promise<RunRow> {
+export async function createRun(env: CrankEnv, workflow: WorkflowRow, kind: string, event: TriggerEvent, createdBy: string, receivedAt = now(), actor?: Actor): Promise<RunRow> {
   const runId = id()
-  await stmt(env, `INSERT INTO crank_wf_runs(id,workflow_id,version_id,trigger_kind,source_id,trigger_json,status,source_time,received_at,created_by,business_key)
-    VALUES(?,?,?,?,?,?,'queued',?,?,?,?)`, runId, workflow.id, workflow.published_version_id, kind, event.key, JSON.stringify(event.payload ?? null), event.sourceTime ?? null, receivedAt, createdBy, event.businessKey ?? null).run()
-  return (await stmt(env, 'SELECT * FROM crank_wf_runs WHERE id=?', runId).first<RunRow>())!
+  const insert = stmt(env, `INSERT INTO crank_wf_runs(id,workflow_id,version_id,trigger_kind,source_id,trigger_json,status,source_time,received_at,created_by,business_key)
+    SELECT ?,?,?,?,?,?,'queued',?,?,?,? WHERE EXISTS(SELECT 1 FROM crank_workflows WHERE id=? AND status='published' AND published_version_id=?)`, runId, workflow.id, workflow.published_version_id, kind, event.key, JSON.stringify(event.payload ?? null), event.sourceTime ?? null, receivedAt, createdBy, event.businessKey ?? null, workflow.id, workflow.published_version_id)
+  if (actor) await guardedBatch(env, actor, 'prepare', [insert])
+  else await insert.run()
+  const run = await stmt(env, 'SELECT * FROM crank_wf_runs WHERE id=?', runId).first<RunRow>()
+  requireValue(run, 'Workflow authority changed before the run started', 409)
+  return run
 }
 
 /** TRIG-005: one open reviewable batch per workflow; items stay deduplicated by source ID. */

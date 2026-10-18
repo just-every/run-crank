@@ -132,10 +132,10 @@ export async function cancelRun(env: CrankEnv, actor: Actor, runId: string) {
 
 /** On-demand run of the published version. */
 export async function startRun(env: CrankEnv, actor: Actor, workflowId: string, input: Record<string, unknown>) {
-  requireValue(actor.kind === 'agent' || ['owner', 'admin'].includes(actor.role), 'Starting a run requires an administrator or agent', 403)
+  requireValue(!actor.tokenId && actor.kind !== 'review' && ['owner', 'admin'].includes(actor.role), 'Starting a run requires an administrator session; preparation credentials cannot execute workflows', 403)
   const workflow = await getWorkflow(env, workflowId)
   requireValue(workflow.status === 'published' && workflow.published_version_id, 'Publish (and resume) the workflow before starting a run', 409)
-  const run = await createRun(env, workflow, 'manual', { key: 'manual:' + crypto.randomUUID(), payload: { input: input.input ?? {} }, businessKey: typeof input.business_key === 'string' ? input.business_key.slice(0, 200) : null }, actor.id)
+  const run = await createRun(env, workflow, 'manual', { key: 'manual:' + crypto.randomUUID(), payload: { input: input.input ?? {} }, businessKey: typeof input.business_key === 'string' ? input.business_key.slice(0, 200) : null }, actor.id, now(), actor)
   await executeRun(env, run.id)
   return runDetail(env, actor, run.id)
 }

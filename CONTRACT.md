@@ -786,9 +786,9 @@ Judged from the code and tests at commit `06ace84667d83032ec41a8a210a5084cd0c854
 
 | Clauses | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
-| Published | 2 | 10 | 0 | 12 |
+| Published | 3 | 9 | 0 | 12 |
 | Target and push further | 0 | 35 | 38 | 73 |
-| All | 2 | 45 | 38 | 85 |
+| All | 3 | 44 | 38 | 85 |
 
 MIG-006, BASE-004 and BASE-005 were added on 17 October 2026 so every homepage claim has a clause, and were judged from the code and tests at `eac16196cffe508a1eec962b1c116564707c1598` (main after the run site landed); every earlier row keeps its status from the commit above.
 
@@ -848,7 +848,7 @@ MIG-006, BASE-004 and BASE-005 were added on 17 October 2026 so every homepage c
 | `OPS-002` | USD usage, forecasts and spending controls | target | missing |  | No delivered product workflow. |
 | `TEAM-001` | Team workspaces and permissions | target | partial | `src/crank/access.ts`; `src/crank/ui/settings.ts`; `tests/crank.test.mjs` | Owner/admin/member roles and deactivation exist; workspace sharing scopes, approver/operator roles and team connection ownership do not. |
 | `TEAM-002` | Optional approvals and standing grants | published | partial | `src/crank/delivery.ts`; `src/crank/access.ts`; `tests/crank.test.mjs` | Exact owner approval/rejection ships; optional approval nodes and standing grants are absent. |
-| `TEAM-003` | Scoped preparation and trigger credentials | published | partial | `src/crank/tokens.ts`; `src/crank/access.ts`; `src/crank/api.ts`; `tests/crank.test.mjs` | The newer on-demand workflow run door permits preparation agents to execute published workflows without a separate execution grant or transaction-level actor fence. |
+| `TEAM-003` | Scoped preparation and trigger credentials | published | done | `src/crank/tokens.ts`; `src/crank/access.ts`; `src/crank/workflows/runs.ts`; `src/crank/triggers/admission.ts`; `tests/crank.test.mjs` (`TEAM-003`) | |
 | `TEAM-004` | Publishing authorizes a workflow’s declared steps | target | partial | `src/crank/workflows/store.ts`; `src/crank/engine/executor.ts`; `tests/logic.test.mjs` | Queued execution does not check workflow state or version retirement before dispatch; recipient caps are absent (only USD caps ship). |
 | `TEAM-005` | Approve with edits, rejection routes and reviewer notices | published | partial | `src/crank/delivery.ts`; `tests/crank.test.mjs`; `tests/logic.test.mjs` | Slack/Teams/Nook/mobile push notices, reminders and calendar timeouts. |
 | `SEC-001` | Native authentication and origin-bound writes | target | partial | `src/crank/access.ts`; `src/crank/api.ts`; `tests/crank.test.mjs`; `tests/email-link.mjs`; `SEED-COMMAND-CONTRACT.md` | HTTP role/origin boundaries are tested; commit-time session revocation and every private door/dev-layer exclusion are not all established by the cited product tests. |

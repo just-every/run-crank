@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {createServer} from 'node:http';
 import {readFile} from 'node:fs/promises';
 import {harness,freePort} from './harness.mjs';
+import {publish} from './kit.mjs';
 
 // Fake only the external receiver/network edge. Workerd, D1, auth and imports
 // run the application's real code, through HTTP requests.
@@ -53,14 +54,33 @@ test('uncertain network delivery replays once with the same bytes/key and cannot
  await h.post(`runs/${r.id}/replay`,{},h.owner,409);assert.equal((await h.get()).attempts.filter(x=>x.run_id===r.id).length,2);
 });
 
-test('scoped trigger and agent commands prepare only, revoked credentials stop working',async()=>{
+test('TEAM-003: scoped trigger and agent commands prepare only, revoked credentials stop working',async()=>{
  const f=await h.flow('Machine input'),other=await h.flow('Other destination');const agent=await h.post('tokens',{label:'Operations assistant',scope:'agent'},h.owner,201),trigger=await h.post('tokens',{label:'Support webhook',scope:'trigger',flow_id:f.id},h.owner,201);
  const a={authorization:'Bearer '+agent.token},t={authorization:'Bearer '+trigger.token};
  const run=await h.post(`flows/${f.id}/trigger`,{event_id:'webhook-1',input:{subject:'New customer'}},'',201,t);
  await h.post(`flows/${other.id}/trigger`,{event_id:'webhook-1',input:{}},'',403,t);await h.get('state','',403,t);
  await h.post(`flows/${f.id}/runs`,{event_id:'agent-1',input:{subject:'Prepared'}},'',201,a);
  for(const path of [`runs/${run.id}/approve`,`runs/${run.id}/reject`,`runs/${run.id}/replay`,`flows/${f.id}/activate`,'tokens','imports/plan','data/export','data/erase'])await h.post(path,{},'',403,a);
+ const workflow=await publish(h,'Preparation cannot execute',{trigger:{type:'manual'},steps:[{id:'record',type:'map',input:{customer:'Harbour Workshop'}}]});
+ await h.post('workflows',{name:'Agent-prepared draft',graph:{trigger:{type:'manual'},steps:[{id:'prepare',type:'map',input:{}}]}},'',201,a);
+ await h.get('workflows/'+workflow.id,'',200,a);
+ const runCount=(await h.get('workflow-runs')).runs.length;
+ for(const path of [`workflows/${workflow.id}/run`,`workflows/${workflow.id}/publish`,`workflows/${workflow.id}/pause`,`workflows/${workflow.id}/resume`,`workflows/${workflow.id}/hooks`,'connections','settings','oauth/start',`workflow-runs/${run.id}/resume`,`workflow-runs/${run.id}/cancel`]) await h.post(path,{},'',403,a);
+ await h.post(`workflows/${workflow.id}/run`,{},'',403,t);
+ assert.equal((await h.get('workflow-runs')).runs.length,runCount,'preparation and trigger credentials cannot execute a published graph');
+ const archive=await h.send('/api/crank/data/export',{},h.owner);assert.equal(archive.status,200,archive.text);
+ assert.ok(!archive.text.includes(agent.token));assert.ok(!archive.text.includes(trigger.token));
+ const stored=await h.db.prepare('SELECT token_hash FROM crank_tokens WHERE id=?').bind(agent.id).first();
+ assert.equal(stored.token_hash,await crypto.subtle.digest('SHA-256',new TextEncoder().encode(agent.token)).then(b=>Buffer.from(b).toString('hex')));
  await h.post('tokens/'+agent.id+'/revoke');await h.get('state','',401,a);
+ await h.post('flows',{name:'Revoked draft'},'',401,a);
+ const changed=await h.post('tokens',{label:'Before owner identity change',scope:'agent'},h.owner,201);
+ const ownerId=(await h.get()).actor.id;
+ const owner=await h.db.prepare('SELECT id,version FROM oa_operators WHERE id=?').bind(ownerId).first();
+ await h.db.prepare('UPDATE oa_operators SET version=version+1 WHERE id=?').bind(owner.id).run();
+ await h.get('state','',401,{authorization:'Bearer '+changed.token});
+ // Restore the fixture owner's version so subsequent independent HTTP journeys retain their session.
+ await h.db.prepare('UPDATE oa_operators SET version=? WHERE id=?').bind(owner.version,owner.id).run();
  const state=await h.get();assert.ok(!JSON.stringify(state).includes(agent.token));assert.ok(!JSON.stringify(state).includes(trigger.token));
 });
 
