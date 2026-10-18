@@ -1,13 +1,13 @@
 import { retainedSql } from './retained-values.ts';
 import { nativeStagingScope, readStagedTarget, expectedStagedTarget, type NativeStagingScope } from './native-staging-context.ts';
 import { targetGuards } from './target-guards.ts';
-import { D1RequestLimitError, requestContext, remaining, packGuards } from './budget.ts';
+import { D1RequestLimitError, requestContext, remaining } from './budget.ts';
 import type { ImportJob, PlanEntry, ProvenanceRow, TargetRow } from '../types.ts';
 import { canonicalJson, sha256, attachmentHash } from '../provenance/identity.ts';
 import { validateEffect } from '../plan/index.ts';
 import { effectIdentity } from '../storage/provenance.ts';
 import type { D1ImportContext, D1Sql } from './types.ts';
-import { atomic, authorize, guard, limits, sql, fitsBatch } from './database.ts';
+import { atomic, atomicCount, authorize, guard, limits, sql, fitsBatch } from './database.ts';
 import { stored, boundary, storedReads } from './jobs.ts';
 import { custodyGuards, validatedProvenance, inventoryGuards, reusedSourceGuards } from './integrity.ts';
 import { supersedeTarget } from './history.ts';
@@ -26,27 +26,27 @@ export async function applyD1ImportBatches(jobOrId: ImportJob | string, context:
       await readOriginals(plan, id, context);
       if (job.state === 'completed') { await atomic(context, 'apply', [...boundary(job, plan, 'apply'), ...custodyGuards(plan, id), ...await inventoryGuards(job, plan, context)], 0, nativeStagingScope(job, plan)); return job; }
       if (!['queued', 'applying', 'failed'].includes(job.state)) throw new Error('IMPORT_ALREADY_REVERSING');
-      const statements: D1Sql[] = [...boundary(job, plan, 'apply'), ...custodyGuards(plan, id), ...await inventoryGuards(job, plan, context)], entries: PlanEntry[] = [];
-      let effects = 0, scope = nativeStagingScope(job, plan);
+      const statements: D1Sql[] = [...boundary(job, plan, 'apply'), ...custodyGuards(plan, id), ...await inventoryGuards(job, plan, context)], entries: PlanEntry[] = [], returnReads = storedReads(job);
+      let effects = 0, scope = nativeStagingScope(job, plan), planned = cost(context, publication(job, 0, statements, scope), returnReads);
       for (const entry of plan.entries.slice(job.checkpoint, job.checkpoint + batchSize)) {
         if (entries.length && effects + entry.effects.length > 1000) break;
         if (entry.effects.length > 1000) throw new Error('SOURCE_EFFECT_LIMIT');
-        // Stop gathering early for ordinary adapters. The exact packed SQL count
-        // and return reads are checked by atomic; adapter SQL is not estimated.
+        // Stop before an entry's own reads could exhaust the request. The exact
+        // request, as atomic will send it, is counted again once the entry is built.
         const reserve = 40 + entry.effects.length * 16;
-        if (remaining(context) - packGuards(statements).length < reserve) { if (!entries.length) { if (count > 0) return job; throw new D1RequestLimitError(); } break; }
+        if (remaining(context) - planned < reserve) { if (!entries.length) { if (count > 0) return job; throw new D1RequestLimitError(); } break; }
         const candidate = [...statements], nextScope = { ...scope, nativeGuards:[...scope.nativeGuards], postGuards:[...scope.postGuards], targets:[...scope.targets] };
         await publishEntry(id, entry, job.checkpoint + entries.length, context, candidate, nextScope);
-        const fits = fitsBatch(context, 'apply', [...candidate, ...progress(job, entries.length + 1)],nextScope);
+        const next = publication(job, entries.length + 1, candidate, nextScope), spent = cost(context, next, returnReads);
+        if (spent > remaining(context)) { if (entries.length) break; if (count > 0) return job; throw new D1RequestLimitError(); }
+        const fits = fitsBatch(context, 'apply', next.statements, next.scope);
         if (!fits && entries.length) break;
         statements.splice(0, statements.length, ...candidate);
-        scope = nextScope; entries.push(entry); effects += entry.effects.length;
+        scope = nextScope; entries.push(entry); effects += entry.effects.length; planned = spent;
         if (!fits) break;
       }
-      const end = job.checkpoint + entries.length, done = end === job.total;
-      statements.push(...progress(job, entries.length));
-      scope.postGuards.push(guard(sql('EXISTS(SELECT 1 FROM ik_jobs WHERE id=? AND checkpoint=? AND state=? AND fence=? AND error IS NULL)',id,end,done?'completed':'applying',job.fence+1)));
-      await atomic(context, 'apply', statements, storedReads(job), scope);
+      const request = publication(job, entries.length, statements, scope), done = job.checkpoint + entries.length === job.total;
+      await atomic(context, 'apply', request.statements, returnReads, request.scope);
       current = await stored(id, context, 'apply'); published = current.job;
       if (done || remaining(context) < 200) return published;
     }
@@ -101,6 +101,13 @@ function entryWrite(job_id:string,ordinal:number,source_identity:string,owner_jo
   return changed(sql('INSERT INTO ik_d1_entries(job_id,ordinal,source_identity,owner_job_id,effects_hash) VALUES(?,?,?,?,?)',job_id,ordinal,source_identity,owner_job_id,effects_hash),putRow('ik_d1_entries',{job_id,ordinal,source_identity,owner_job_id,effects_hash}));
 }
 
+/** The request that publishes the first `count` gathered entries: their SQL,
+ * the progress write and the guard that the progress committed. */
+function publication(job: ImportJob, count: number, statements: D1Sql[], scope: NativeStagingScope): { statements: D1Sql[]; scope: NativeStagingScope } {
+  const end = job.checkpoint + count;
+  return { statements: [...statements, ...progress(job, count)], scope: { ...scope, postGuards: [...scope.postGuards, guard(sql('EXISTS(SELECT 1 FROM ik_jobs WHERE id=? AND checkpoint=? AND state=? AND fence=? AND error IS NULL)', job.id, end, end === job.total ? 'completed' : 'applying', job.fence + 1))] } };
+}
+const cost = (context: D1ImportContext, request: { statements: D1Sql[]; scope: NativeStagingScope }, returnReads: number): number => atomicCount(context, 'apply', request.statements, returnReads, request.scope);
 function progress(job: ImportJob, count: number): D1Sql[] {
   const end = job.checkpoint + count;
   const state=end===job.total?'completed':'applying';

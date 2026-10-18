@@ -11,7 +11,7 @@ import { exactRows, jsonChunks, selectedCounts, selectKeys } from './sets.ts';
 import { canonicalJson, sha256, requireText } from '../provenance/identity.ts';
 import { erasePlanRecords, type RelatedPlanErasure } from './erased-plan.ts';
 import { fieldSelectionSnapshot, relatedSelection, type JobSelection } from './erasure-related.ts';
-import { indexedDestinationGuard, planIndex, planIndexRows, targetIdentity, unindexedJobs } from './erasure-index.ts';
+import { indexedDestinationGuard, planIndex, retainPlanIndex, targetIdentity, unindexedJobs } from './erasure-index.ts';
 import { readInventorySnapshot } from './inventory-snapshot.ts';
 import { erasureWrites, type ErasedDecision, type ErasedJob } from './erasure-writes.ts';
 import { stagedSourceIdentities, stageErasure } from './staging-erasure.ts';
@@ -23,6 +23,7 @@ import { eraseBounded } from './erasure-bounded.ts';
 import { originalVersions } from './original-storage.ts';
 import { fieldRedactions, inRange, redactPlanFields, unmatchedPath } from './field-redaction.ts';
 import { redactedCustody, redactedNativeFields } from './redacted-custody.ts';
+import { supersededEntries } from './erasure-superseded.ts';
 
 /** Erase one normalized native entity and every retained copy of its source.
  * nativeStatements execute in the same D1 batch as all kit custody changes.
@@ -52,8 +53,12 @@ export async function eraseD1ImportTarget(kind: string, id: string, nativeStatem
 
 /** Restricts one bounded step of a resumable redaction: only `selection` jobs are
  * read, and with `owned` only the native rows their active provenance owns are
- * rewritten. `matched` carries match counts from earlier steps. */
-export interface ErasureStep { selection: JobSelection; owned?: boolean; matched?: D1FieldMatch[] }
+ * rewritten. `matched` carries match counts from earlier steps. `sever`, in a
+ * step with no target, is the erased target's digest: the related source copies
+ * the step finds are severed and bound to it, and so are the target's own records
+ * whose import of it was superseded or reversed (see erasure-superseded.ts); its
+ * other own records (indexed to it) wait for the final step and its native erasure. */
+export interface ErasureStep { selection: JobSelection; owned?: boolean; matched?: D1FieldMatch[]; sever?: string }
 
 /** The unbounded erasure of one target (or, with no target, only of the related
  * fields) as guards before the native statements and writes after them. Jobs in
@@ -64,16 +69,28 @@ export async function targetErasure(target: { kind: string; id: string } | undef
   const kind = target?.kind ?? '', id = target?.id ?? '';
   if (await db.prepare(`${unindexedJobs} LIMIT 1`).bind(context.destination).first()) throw new Error('IMPORT_ERASURE_INDEX_UPGRADE_REQUIRED');
   const digest = target ? targetIdentity(context.destination, kind, id) : undefined;
-  const targetRows = digest ? await selectKeys(db, 'ik_d1_plan_index', 'target_identity', [digest]) : [];
+  const indexed = digest ? await selectKeys(db, 'ik_d1_plan_index', 'target_identity', [digest]) : [];
+  // Copies earlier steps severed are tombstones bound to this target: a step's
+  // job selection, not this index, decides which jobs it reads.
+  const targetRows = step && digest ? await liveRows(db, context.destination, indexed) : indexed;
   const scan = related ? await relatedSelection(context, related, step?.selection) : undefined;
-  const identities = new Set<string>([...targetRows.map(row => row.source_identity), ...digest ? await stagedSourceIdentities(digest, context) : [], ...scan?.identities ?? []]);
-  const severed: RelatedPlanErasure = { identities: new Set([...scan?.identities ?? []].filter(identity => !targetRows.some(row => row.source_identity === identity))), target: digest ?? '' };
+  let identities = new Set<string>([...targetRows.map(row => row.source_identity), ...digest ? await stagedSourceIdentities(digest, context) : [], ...scan?.identities ?? []]);
+  let sourceRows = await selectKeys(db, 'ik_d1_plan_index', 'source_identity', [...identities]);
+  let superseded: D1Sql[] = [];
+  if (!digest && step?.sever) {
+    const earlier = await supersededEntries(db, context.destination, step.sever, sourceRows);
+    const own = new Set(sourceRows.filter(row => row.target_identity === step.sever && !earlier.identities.has(row.source_identity)).map(row => row.source_identity));
+    identities = new Set([...identities].filter(identity => !own.has(identity)));
+    sourceRows = sourceRows.filter(row => !own.has(row.source_identity));
+    superseded = earlier.guards;
+  }
+  const bound = digest ?? step?.sever ?? '';
+  const severed: RelatedPlanErasure = { identities: new Set([...scan?.identities ?? []].filter(identity => identities.has(identity) && !targetRows.some(row => row.source_identity === identity))), target: bound };
   const privateErasure = digest ? stageErasure(context.destination, digest, [...identities]) : { before: [], after: [] };
-  const sourceRows = await selectKeys(db, 'ik_d1_plan_index', 'source_identity', [...identities]);
   const ids = [...new Set([...sourceRows.map(row => row.job_id), ...scan?.originals.keys() ?? [], ...scan?.redactedJobs ?? []])];
   const snapshot = await readInventorySnapshot(ids, db, targets.planCodec);
-  const before: D1Sql[] = [indexedDestinationGuard(context.destination), ...privateErasure.before, ...scan?.guards ?? [],
-    ...digest ? selectedCounts('ik_d1_plan_index', 'target_identity', [digest], targetRows) : [],
+  const before: D1Sql[] = [indexedDestinationGuard(context.destination), ...privateErasure.before, ...scan?.guards ?? [], ...superseded,
+    ...digest ? selectedCounts('ik_d1_plan_index', 'target_identity', [digest], indexed) : [],
     ...selectedCounts('ik_d1_plan_index', 'source_identity', [...identities], sourceRows),
     ...exactRows('ik_d1_plan_index', ['job_id','ordinal','source_identity','target_identity'], sourceRows)];
   const after: D1Sql[] = [], final: D1Sql[] = [], changedJobs: ErasedJob[] = [], decisions: ErasedDecision[] = [], redactions: ErasedDecision[] = [];
@@ -107,7 +124,8 @@ export async function targetErasure(target: { kind: string; id: string } | undef
     after.push(...erasedCustody(plan, next, job.id, snapshot), ...retained.statements);
     if (fields.length) after.push(...redactedCustody(plan, next, job.id, snapshot, fields, step?.selection.range));
     // A severed record's index row moves from its native target (or none) to the erased target.
-    if (canonicalJson(planIndex(next, job.id)) !== canonicalJson(planIndex(plan, job.id))) after.push(sql('DELETE FROM ik_d1_plan_index WHERE job_id=?', job.id), ...planIndexRows(next, job.id));
+    // Rewriting the index drops the job's indexed fingerprint (a schema trigger); retain it again.
+    if (canonicalJson(planIndex(next, job.id)) !== canonicalJson(planIndex(plan, job.id))) after.push(sql('DELETE FROM ik_d1_plan_index WHERE job_id=?', job.id), ...retainPlanIndex(next, job.id));
     after.push(guard(sql('(SELECT count(*) FROM ik_d1_creation_plans WHERE job_id=? AND released=0)=? AND (SELECT count(*) FROM ik_d1_plan_chunks WHERE job_id=?)=?', job.id, retained.encoded.chunks.length, job.id, retained.encoded.chunks.length)));
     changedJobs.push({ id: job.id, body: retained.body, fingerprint: next.fingerprint, erasedRecords: next.entries.filter(entry => entry.erased).length, policyHash: reversal.binding === null ? null : policyHash(job.id, next.fingerprint, reversal.policy) });
     // Changing the fingerprint fences stale apply/undo evidence while preserving
@@ -136,6 +154,17 @@ export async function targetErasure(target: { kind: string; id: string } | undef
     const current = await targets.read(db, context.destination, kind, id);
     before.push(...targetGuards(targets,current ?? null, context.destination, kind, id));
     after.push(...targetGuards(targets,null, context.destination, kind, id));
-  }
+  } else if (bound && identities.size) after.push(sql('INSERT OR IGNORE INTO ik_d1_erased_targets(destination,identity) VALUES(?,?)', context.destination, bound));
   return { before, after, final, decisions, jobs: ids, fieldMatches: scan?.fieldMatches ?? [] };
+}
+
+/** Index rows whose source is not an erased tombstone already. A tombstone's
+ * job is fenced like any other: by the step's selection or its clean revision. */
+async function liveRows(db: D1ImportContext['storage']['database'], destination: string, rows: any[]): Promise<any[]> {
+  const erased = new Set<string>();
+  for (const chunk of jsonChunks([...new Set(rows.map(row => row.source_identity as string))])) {
+    const { results } = await db.prepare('SELECT identity FROM ik_d1_erased_sources WHERE destination=? AND identity IN (SELECT value FROM json_each(?))').bind(destination, chunk).all<{ identity: string }>();
+    for (const row of results) erased.add(row.identity);
+  }
+  return rows.filter(row => !erased.has(row.source_identity));
 }

@@ -120,6 +120,19 @@ function areaGroup(headings, area) {
   return 'published'
 }
 
+// A clause's prose, on one line: what follows its definition on that line, then
+// the lines below it up to the next heading or definition. A bullet's body also
+// ends at the first unindented line; a bold paragraph's or heading's runs on.
+function bodyText(lines, line, form, rest) {
+  const body = [rest]
+  for (let next = line; next < lines.length; next++) {
+    const text = lines[next]
+    if (heading.test(text) || definitions.some(pattern => pattern.test(text)) || (form === 0 && text.trim() && !/^[\t ]/.test(text))) break
+    body.push(text)
+  }
+  return body.join(' ').replace(/\s+/gu, ' ').trim()
+}
+
 // Clause definitions everywhere except the Status section and retired-ID
 // sections. The area is the nearest heading above that is not a clause.
 // A clause's own "*Status:* partial." line, kept beside its text, is recorded
@@ -132,7 +145,7 @@ function readDefinitions(lines, headings, skipped, problems) {
     const marker = /^\s*(```|~~~)/.exec(text)?.[1]
     if (marker) { fence = fence === marker ? undefined : fence ?? marker; return }
     if (fence || skipped.some(([start, end]) => line >= start && line <= end)) { current = undefined; return }
-    const match = definitions.map(pattern => pattern.exec(text)).find(Boolean)
+    const form = definitions.findIndex(pattern => pattern.test(text)), match = form < 0 ? null : definitions[form].exec(text)
     if (!match) {
       if (heading.test(text)) current = undefined
       const stated = /^\*{1,2}Status:\*{1,2}\s*(done|partial|missing)\b/.exec(text)
@@ -143,7 +156,7 @@ function readDefinitions(lines, headings, skipped, problems) {
     const [, clause, title] = match
     if (defined.has(clause)) { problems.push({ line, message: `${clause} is defined twice (first at line ${defined.get(clause).line}).` }); return }
     if (!area) { problems.push({ line, message: `${clause} is defined above every section heading, so it has no area.` }); return }
-    current = { id: clause, title: cleanTitle(title), area: area.text, line }
+    current = { id: clause, title: cleanTitle(title), area: area.text, line, text: bodyText(lines, line, form, text.slice(match[0].length)) }
     defined.set(clause, current)
     const group = areaGroup(headings, area), known = areas.get(area.text)
     if (known && known.group !== group) problems.push({ line: area.line, message: `Area "${area.text}" is a ${group} area here but a ${known.group} area at line ${known.line}; give one of them its own name.` })
@@ -256,7 +269,7 @@ export function parseContract(text, { file = 'CONTRACT.md' } = {}) {
         if (state === 'done' && !evidence.length) problems.push({ line: rowLine, message: `${clause} is done, so its Evidence names the repository path that proves it, in backticks.` })
         if (state === 'partial' && !evidence.length) problems.push({ line: rowLine, message: `${clause} is partial, so its Evidence names the repository path that backs it, in backticks.` })
         if ((state === 'partial' || state === 'missing') && !gap) problems.push({ line: rowLine, message: `${clause} is ${state}, so its Gap says what is missing.` })
-        if (definition && kinds.includes(kind) && statuses.includes(state)) clauses.push({ id: clause, title, kind, status: state, evidence, gap, area: definition.area, line: definition.line, row: rowLine })
+        if (definition && kinds.includes(kind) && statuses.includes(state)) clauses.push({ id: clause, title, kind, status: state, evidence, gap, area: definition.area, text: definition.text, line: definition.line, row: rowLine })
       }
     }
     line = end

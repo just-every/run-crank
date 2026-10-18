@@ -1,13 +1,13 @@
 import { retainedSql } from './retained-values.ts';
 import { changed, updateRows } from './expected-state.ts';
 import { cancelNativeJobStaging } from './native-staging-lifecycle.ts';
-import { nativeStagingScope, readStagedTarget, expectedStagedTarget } from './native-staging-context.ts';
+import { nativeStagingScope, readStagedTarget, expectedStagedTarget, type NativeStagingScope } from './native-staging-context.ts';
 import { targetGuards } from './target-guards.ts';
-import { D1RequestLimitError, requestContext, remaining, packGuards } from './budget.ts';
+import { D1RequestLimitError, requestContext, remaining } from './budget.ts';
 import type { ImportJob } from '../types.ts';
 import { canonicalJson, sha256, attachmentHash } from '../provenance/identity.ts';
 import type { D1ImportContext, D1Sql } from './types.ts';
-import { atomic, authorize, guard, limits, sql, fitsBatch } from './database.ts';
+import { atomic, atomicCount, authorize, guard, limits, sql, fitsBatch } from './database.ts';
 import { stored, boundary, storedReads } from './jobs.ts';
 import { custodyGuards, validatedProvenance, inventoryGuards } from './integrity.ts';
 import { noSuccessors, restorePredecessor } from './history.ts';
@@ -57,9 +57,14 @@ export async function reverseD1Import(id: string, action: 'undo' | 'rollback', c
       const { results: rows } = await db.prepare('SELECT * FROM ik_provenance WHERE job_id=? AND reversed=0 ORDER BY ordinal DESC,effect_ordinal DESC LIMIT ?').bind(id, batchSize).all();
       const statements: D1Sql[] = [...boundary(job, plan, action), await noSuccessors(id, context), ...custodyGuards(plan, id), ...await inventoryGuards(job, plan, context)];
       const remainingRow = await db.prepare('SELECT COUNT(*) AS n FROM ik_provenance WHERE job_id=? AND reversed=0').bind(id).first();
-      let processed = 0, scope = nativeStagingScope(job, plan);
+      const returnReads = storedReads(job), publication = (statements: D1Sql[], scope: NativeStagingScope, done: boolean) => ({
+        statements: [...statements, ...reversalProgress(job, action, done), ...unbounded ? recordReversalFence(id, action, job.erasedRecords!, true) : []],
+        scope: { ...scope, postGuards: [...scope.postGuards, guard(sql('EXISTS(SELECT 1 FROM ik_jobs WHERE id=? AND state=? AND fence=? AND error IS NULL)', id, done ? final : state, job.fence + 1))] },
+      }), cost = (request: ReturnType<typeof publication>) => atomicCount(context, action, request.statements, returnReads, request.scope);
+      let processed = 0, scope = nativeStagingScope(job, plan), planned = cost(publication(statements, scope, remainingRow!.n === 0));
       for (const raw of rows) {
-        if (remaining(context) - packGuards(statements).length < 70) { if (!processed) { if (count > 0) return job; throw new D1RequestLimitError(); } break; }
+        // Leave room for this row's reads; the exact request is counted once built.
+        if (remaining(context) - planned < 70) { if (!processed) { if (count > 0) return job; throw new D1RequestLimitError(); } break; }
         const candidate = [...statements], nextScope = { ...scope, nativeGuards:[...scope.nativeGuards], postGuards:[...scope.postGuards], targets:[...scope.targets] };
         const p = await validatedProvenance(raw, context, candidate);
         const row = await readStagedTarget(context, nextScope, p.targetKind, p.targetId);
@@ -68,17 +73,17 @@ export async function reverseD1Import(id: string, action: 'undo' | 'rollback', c
         await restorePredecessor(p, context, candidate, restoration);
         candidate.push(guard(retainedSql(['EXISTS(SELECT 1 FROM ik_provenance WHERE id=', ' AND record_json=', ' AND reversed=0)'], [raw.id, raw.record_json], [1])), ...targetGuards(targets,row, context.destination, p.targetKind, p.targetId), ...(p.before ? targets.write(p.before) : targets.remove(context.destination, p.targetKind, p.targetId)), ...post, changed(retainedSql(['UPDATE ik_provenance SET reversed=1,record_json=', ' WHERE id=', ''], [canonicalJson({ ...p, reversed: true }), raw.id], [0]),updateRows('ik_provenance',row=>row.id===raw.id,row=>({...row,reversed:1,record_json:canonicalJson({...p,reversed:true})}))), ...restoration);
         nextScope.postGuards.push(...post);
-        const fits = fitsBatch(context, action, [...candidate, ...reversalProgress(job, action, remainingRow!.n === processed + 1)],nextScope);
+        const next = publication(candidate, nextScope, remainingRow!.n === processed + 1), spent = cost(next);
+        if (spent > remaining(context)) { if (processed) break; if (count > 0) return job; throw new D1RequestLimitError(); }
+        const fits = fitsBatch(context, action, next.statements, next.scope);
         if (!fits && processed) break;
         statements.splice(0, statements.length, ...candidate);
         expectedStagedTarget(nextScope,p.targetKind,p.targetId,!!p.before);
-        scope = nextScope; processed++;
+        scope = nextScope; processed++; planned = spent;
         if (!fits) break;
       }
-      const done = remainingRow!.n === processed;
-      statements.push(...reversalProgress(job, action, done), ...unbounded ? recordReversalFence(id, action, job.erasedRecords!, true) : []);
-      scope.postGuards.push(guard(sql('EXISTS(SELECT 1 FROM ik_jobs WHERE id=? AND state=? AND fence=? AND error IS NULL)',id,done?final:state,job.fence+1)));
-      await atomic(context, action, statements, storedReads(job), scope);
+      const done = remainingRow!.n === processed, request = publication(statements, scope, done);
+      await atomic(context, action, request.statements, returnReads, request.scope);
       if (unbounded && !done) {
         const next = await fencedReversal(id, action, context, maxBatches - count - 1, { ...job, state, fence: job.fence + 1, error: null });
         if (next) return next;

@@ -2,7 +2,7 @@ import { Buffer } from 'node:buffer';
 import { randomUUID } from 'node:crypto';
 import { sha256 } from '../provenance/identity.ts';
 import type { DoorRequest } from './types.ts';
-import { DoorError } from './grants.ts';
+import { DoorError } from './protocol.ts';
 import { assertion, sql, transact } from './store.ts';
 
 export const CHUNK_BYTES = 65_536;
@@ -20,9 +20,9 @@ export const integer = (value: unknown, min: number, max: number): number => {
 };
 export interface UploadRow {id:string;installation_id:string;namespace:string;name:string;bundle_sha256:string;total_bytes:number;total_chunks:number}
 export async function uploadRow(request: DoorRequest, id: string): Promise<UploadRow> {
-  const row = await request.options.database.prepare('SELECT * FROM ik_door_uploads WHERE id=? AND installation_id=? AND namespace=?').bind(id, request.grant.installationId, request.grant.namespace).first<UploadRow>();
+  const row = await request.options.database.prepare('SELECT * FROM ik_door_uploads WHERE id=? AND installation_id=? AND namespace=?').bind(id, request.access.installationId, request.access.namespace).first<UploadRow>();
   if (!row) throw new DoorError('upload_not_found', 404);
-  if (row.total_bytes > request.grant.maxBytes || row.total_chunks > request.grant.maxChunks) throw new DoorError('upload_exceeds_grant_quota');
+  if (row.total_bytes > request.access.maxBytes || row.total_chunks > request.access.maxChunks) throw new DoorError('upload_exceeds_grant_quota');
   return row;
 }
 async function progress(request: DoorRequest, row: UploadRow) {
@@ -37,14 +37,16 @@ export async function uploads(request: DoorRequest, input: Record<string, unknow
   if (Object.keys(input).length === 1 && input.uploadId) return progress(request, await uploadRow(request,id));
   if (Object.keys(input).some(k => !['uploadId','name','bundleSha256','totalBytes','totalChunks','index','chunkSha256','base64'].includes(k))) throw new DoorError('invalid_upload', 400);
   const name = text(input.name, 'name'), hash = digest(input.bundleSha256);
-  const totalBytes = integer(input.totalBytes, 1, request.grant.maxBytes), totalChunks = integer(input.totalChunks, 1, request.grant.maxChunks);
+  const totalBytes = integer(input.totalBytes, 1, request.access.maxBytes), totalChunks = integer(input.totalChunks, 1, request.access.maxChunks);
   if (totalChunks !== Math.ceil(totalBytes / CHUNK_BYTES)) throw new DoorError('invalid_chunk_layout', 400);
   const index = integer(input.index, 0, totalChunks - 1), chunkHash = digest(input.chunkSha256);
   if (typeof input.base64 !== 'string' || input.base64.length > Math.ceil(CHUNK_BYTES / 3) * 4) throw new DoorError('invalid_chunk', 400);
   const bytes = Buffer.from(input.base64, 'base64');
   if (bytes.toString('base64') !== input.base64 || bytes.length !== Math.min(CHUNK_BYTES, totalBytes - index * CHUNK_BYTES) || sha256(bytes) !== chunkHash) throw new DoorError('chunk_hash_or_size_mismatch', 400);
-  const g = request.grant;
+  const g = request.access;
   await transact(request.options.database, request.authority, [
+    sql('INSERT OR IGNORE INTO ik_door_scopes(installation_id,namespace,destination) VALUES(?,?,?)', g.installationId, g.namespace, request.options.destination),
+    assertion(sql('EXISTS(SELECT 1 FROM ik_door_scopes WHERE installation_id=? AND namespace=? AND destination=?)', g.installationId, g.namespace, request.options.destination)),
     sql('INSERT OR IGNORE INTO ik_door_uploads(id,installation_id,namespace,name,bundle_sha256,total_bytes,total_chunks) VALUES(?,?,?,?,?,?,?)', id, g.installationId, g.namespace, name, hash, totalBytes, totalChunks),
     assertion(sql('EXISTS(SELECT 1 FROM ik_door_uploads WHERE id=? AND installation_id=? AND namespace=? AND name=? AND bundle_sha256=? AND total_bytes=? AND total_chunks=?)', id, g.installationId, g.namespace, name, hash, totalBytes, totalChunks)),
     sql('INSERT OR IGNORE INTO ik_door_chunks(upload_id,ordinal,sha256,size,base64) VALUES(?,?,?,?,?)', id, index, chunkHash, bytes.length, input.base64),

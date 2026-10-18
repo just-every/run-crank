@@ -1,3 +1,4 @@
+import { iconHead } from './icon-head'
 // The run site's shared pages: the Run page (Direction A: centred headline, two
 // stacked step cards, the facts under them), a small composed homepage for
 // seeds without an approved one (Base's references), and the not-found page.
@@ -86,7 +87,7 @@ const RUN = 'body{--art:max(20vh,150px)}main{max-width:1360px;margin:0 auto;padd
   + '.num{display:grid;place-items:center;width:62px;height:62px;border-radius:50%;background:var(--site-accent);color:var(--site-accent-ink);font:600 28px/1 var(--rer-font-heading,var(--rer-font-body,inherit))}'
   + '.step h2{margin-top:10px;font:600 26px/1.25 var(--rer-font-heading,var(--rer-font-body,inherit));letter-spacing:-.02em;color:var(--site-ink)}.step.option h2{margin-top:0}'
   + '.body>p{color:var(--site-body);font-size:18px;margin-top:6px}.body>p.alt{margin-top:14px;font-size:16px}.body>p.note{margin-top:14px;font-size:17px}.body>p.go{margin-top:14px}.go a{font-weight:600;text-decoration:underline;text-underline-offset:4px}'
-  + 'code{font-family:var(--site-mono);font-size:.92em;color:var(--site-ink)}.alt code{margin-left:.2em}.note code{margin-right:.1em}'
+  + 'code{font-family:var(--site-mono);font-size:.92em;color:var(--site-ink)}.code-word{white-space:nowrap}.alt code{margin-left:.2em}.note code{margin-right:.1em}'
   + '.code{position:relative;container-type:inline-size;margin-top:16px;border-radius:12px;background:var(--rer-code-background,var(--site-ink));color:var(--rer-code-text,var(--rer-page,#f3f5f8))}'
   + '.code pre{margin:0;padding:18px 108px 18px 22px;font:500 16px/1.75 var(--site-mono);white-space:pre-wrap;overflow-wrap:anywhere}.code pre code{color:inherit;font-size:inherit}'
   + '.copy{position:absolute;top:50%;right:14px;transform:translateY(-50%);display:inline-flex;align-items:center;gap:7px;min-height:36px;padding:0 14px;border:1px solid color-mix(in srgb,currentColor 35%,transparent);border-radius:999px;background:transparent;color:inherit;font:500 14px/1 var(--rer-font-body,inherit);cursor:pointer}'
@@ -106,7 +107,7 @@ const ARROW = '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke
 
 export function document(identity: EditionIdentity, title: string, description: string, style: string, body: string, script = ''): string {
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escape(title)}</title><meta name="description" content="${escape(description)}">`
-    + `<link rel="icon" href="${escape(identity.mark)}">${identity.fonts ? `<link rel="stylesheet" href="${escape(identity.fonts)}">` : ''}<link rel="stylesheet" href="${escape(identity.theme)}"><style>${identity.accentColor ? `:root{--rer-brand-accent:${identity.accentColor};--rer-brand-accent-text:${ink(identity.accentColor)}}` : ''}${BASE}${style}</style></head>`
+    + `${iconHead}${identity.fonts ? `<link rel="stylesheet" href="${escape(identity.fonts)}">` : ''}<link rel="stylesheet" href="${escape(identity.theme)}"><style>${identity.accentColor ? `:root{--rer-brand-accent:${identity.accentColor};--rer-brand-accent-text:${ink(identity.accentColor)}}` : ''}${BASE}${style}</style></head>`
     + `<body>${identity.band ? `<div class="art" aria-hidden="true"><img src="${escape(identity.band)}" alt=""></div>` : ''}${body}${script ? `<script>${script}</script>` : ''}</body></html>`
 }
 /** Docs, Contract and Source: Docs when the site has /docs, Contract when the seed has a CONTRACT.md. */
@@ -117,6 +118,9 @@ export function header(identity: EditionIdentity, run: RunData, contract?: SeedC
   return `<header class="bar"><a class="brand" href="/"><img src="${escape(identity.mark)}" alt="" width="40" height="40"><span>${escape(identity.product)}</span></a>`
     + `<nav aria-label="Site">${siteLinks(run, contract, current)}</nav></header>`
 }
+// Keep each word/path whole, leaving the original whitespace between words so
+// inline commands can wrap at spaces and selection copies the same text.
+const inlineCode = (value: string) => `<code>${escape(value).replace(/\S+/g, word => `<span class="code-word">${word}</span>`)}</code>`
 const codeBlock = (lines: string[], label: string) => `<div class="code"><pre aria-label="${escape(label)}"><code>${lines.map(escape).join('\n')}</code></pre>`
   + `<button class="copy" type="button" data-copy="${escape(lines.join('\n'))}"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="5" y="5" width="8.5" height="8.5" rx="2"/><path d="M3 10.5V4a1.5 1.5 0 0 1 1.5-1.5H10"/></svg><span>Copy</span></button></div>`
 
@@ -129,8 +133,8 @@ export function runPageHtml(identity: EditionIdentity, run: RunData, contract?: 
     + `<ol class="steps"><li class="step"><span class="num" aria-hidden="true">1</span><div class="body"><h2>Install rer</h2>${codeBlock([installRer], 'Install rer')}`
     + `<p class="note">It installs rer for you alone, with its own Node if you have no Node 22 or later. The installer does not edit your shell files itself. If it ends with a line to run, run it before step 2: it puts rer on your PATH now and appends the same setting to your shell's startup file (for example ~/.zshrc) for new terminals.</p></div></li>`
     + `<li class="step"><span class="num" aria-hidden="true">2</span><div class="body"><h2>Start ${name}</h2>${codeBlock([rerStart(run)], `Start ${run.name}`)}`
-    + `<p class="note">rer gets ${name}, installs everything, makes you the owner and prints a link that opens ${name} signed in. To start it again later: <code>${escape(`cd ${run.folder} && rer dev`)}</code></p>`
-    + `<p class="alt">Already have Node 22 or later? <code>${escape(run.clone)}</code> does both steps in one line.</p></div></li>${hosted}</ol>`
+    + `<p class="note">rer gets ${name}, installs everything, makes you the owner and prints a link that opens ${name} signed in. To start it again later: ${inlineCode(`cd ${run.folder} && rer dev`)}</p>`
+    + `<p class="alt">Already have Node 22 or later? ${inlineCode(run.clone)} does both steps in one line.</p></div></li>${hosted}</ol>`
     + `<footer class="facts"><p>${escape(run.requirements)}</p><p>Source: <a href="${escape(run.repository)}">${source}</a> · ${escape(run.licence)} license</p></footer></main>`
   return document(identity, `Run ${run.name}`, `Run ${run.name} on your computer. 100% free and open source.`, RUN, body, COPY_SCRIPT)
 }

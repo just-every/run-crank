@@ -26,7 +26,7 @@ export function undoEvidence(row: TargetRow | null, context: D1ImportContext): D
   return { revision: row.revision, valueHash: sha256(canonicalJson(row.value)), attachmentHash: attachmentHash(row.attachment), ownedHash: sha256(encoded), ownedValue };
 }
 export const reportHash = (rows: any[]) => sha256(canonicalJson(rows.map(r => ({ job_id: r.job_id, effect_id: r.effect_id, position: r.position, record_json: r.record_json }))));
-export async function loadReversalState(raw: any, plan: ImportPlan, context: D1ImportContext, checkPolicy = true, snapshot?:InventorySnapshot): Promise<ReversalState> {
+export async function loadReversalState(raw: any, plan: ImportPlan, context: D1ImportContext, checkPolicy = true, snapshot?:InventorySnapshot, reports?: any[]): Promise<ReversalState> {
   const { reversal_policy: selected, reversal_policy_hash: binding, reversal_cursor: cursor, reversal_hash: hash } = raw;
   if (!['strict', 'preserve-conflicts'].includes(selected) || !Number.isSafeInteger(cursor) || cursor < 0 || typeof hash !== 'string') throw new Error('IMPORT_REVERSAL_INTEGRITY');
   if (binding === null ? selected !== 'strict' : binding !== policyHash(raw.id, raw.fingerprint, selected)) throw new Error('IMPORT_REVERSAL_INTEGRITY');
@@ -35,7 +35,7 @@ export async function loadReversalState(raw: any, plan: ImportPlan, context: D1I
     if (cursor !== 0 || hash !== EMPTY_REVERSAL_HASH || snapshot?.tables.has('ik_d1_reversal_reports') && snapshot.rows('ik_d1_reversal_reports','job_id',[raw.id]).length !== 0) throw new Error('IMPORT_REVERSAL_INTEGRITY');
     return { policy: selected, binding, cursor, hash, rows: [], dispositions: [] };
   }
-  const results=snapshot?.tables.has('ik_d1_reversal_reports')?snapshot.rows('ik_d1_reversal_reports','job_id',[raw.id]).sort((a,b)=>a.position-b.position):(await context.storage.database.prepare('SELECT r.*,p.reversed AS native_reversed FROM ik_d1_reversal_reports r LEFT JOIN ik_provenance p ON p.id=r.effect_id AND p.job_id=r.job_id WHERE r.job_id=? ORDER BY r.position').bind(raw.id).all()).results;
+  const results=reports??(snapshot?.tables.has('ik_d1_reversal_reports')?snapshot.rows('ik_d1_reversal_reports','job_id',[raw.id]).sort((a,b)=>a.position-b.position):(await context.storage.database.prepare('SELECT r.*,p.reversed AS native_reversed FROM ik_d1_reversal_reports r LEFT JOIN ik_provenance p ON p.id=r.effect_id AND p.job_id=r.job_id WHERE r.job_id=? ORDER BY r.position').bind(raw.id).all()).results);
   if (results.length !== cursor || reportHash(results) !== hash) throw new Error('IMPORT_REVERSAL_INTEGRITY');
   const expected = new Map(plan.entries.flatMap(entry => entry.effects.map((effect, index) => [effectIdentity(raw.id, entry.identity, index), { destination: plan.destination, targetKind: effect.targetKind, targetId: effect.targetId, revision: sha256(canonicalJson([raw.id, entry.identity, index, 'applied'])), value: effect.value, ...(effect.attachment ? { attachment: effect.attachment } : {}) } as TargetRow] as const)));
   const dispositions = results.map((row, index) => {

@@ -1,4 +1,5 @@
-import { targetGuards } from './target-guards.ts';
+import { captureCustody } from './custody-fence.ts';
+import { nativeSetGuards, sizeLimit } from './native-set.ts';
 import { requestContext } from './budget.ts';
 import { provenanceSet } from './provenance-set.ts';
 /** Worker entry point. Requires nodejs_compat for shared crypto and byte helpers;
@@ -35,10 +36,10 @@ export { d1RetirementSchema, d1RetirementAppendOnly } from './retirement-schema.
 export { readD1ImportOriginals } from './originals.ts';
 export { canonicalJson, sha256 } from '../provenance/identity.ts';
 export { PLAN_BYTES_LIMIT, PlanTooLargeError, planContentBytes } from '../plan/size.ts';
+export { ImportSizeLimitError } from './native-set.ts';
 import type { D1ImportContext } from './types.ts';
 import type { PersistedImport } from '../types.ts';
 import { authorize, readAtomic, guard, sql } from './database.ts';
-import type { D1Sql } from './types.ts';
 import { readD1ImportJob } from './jobs.ts';
 import { applyD1ImportBatches } from './apply.ts';
 import { undoD1Import, rollbackD1Import } from './reverse.ts';
@@ -57,20 +58,17 @@ export async function readD1PersistedImport(context: D1ImportContext): Promise<P
   await authorize(context, 'read');
   const { targets, database } = context.storage;
   if (!targets.matchesMany && !targets.matchesCount) throw new Error('IMPORT_NATIVE_SET_GUARD_REQUIRED');
+  // Captured before any custody read: the final read fences each job's revision
+  // instead of resending its plan, so catch-up chains cost one row per job.
+  const fence = await captureCustody(context);
   const rows = await targets.list(database, context.destination);
   const { results } = await context.storage.database.prepare('SELECT * FROM ik_provenance WHERE reversed=0 AND (destination=? OR job_id IN (SELECT id FROM ik_jobs WHERE destination=?))').bind(context.destination, context.destination).all();
-  const guards: D1Sql[] = [];
-  const { decoded: provenance } = await provenanceSet(results, context, guards);
-  if (targets.matchesMany) {
-    const predicates = targets.matchesMany(rows, context.destination);
-    if (!predicates.length) throw new Error('IMPORT_NATIVE_SET_GUARD_REQUIRED');
-    guards.push(...predicates.map(guard));
-  } else {
-    guards.push(guard(targets.matchesCount!(rows.length, context.destination)));
-    for (const row of rows) guards.push(...targetGuards(targets,row, row.destination, row.targetKind, row.targetId));
-  }
-  guards.push(guard(sql('(? = (SELECT COUNT(*) FROM ik_provenance WHERE reversed=0 AND (destination=? OR job_id IN (SELECT id FROM ik_jobs WHERE destination=?))))', results.length, context.destination, context.destination)));
-  await readAtomic({ ...context, maxBatchBytes: Math.min(context.maxBatchBytes ?? 2 * 1024 * 1024, 2 * 1024 * 1024) }, guards);
+  const { decoded: provenance, jobs } = await provenanceSet(results, context, undefined);
+  const native = nativeSetGuards(targets, rows, context.destination);
+  const custody = [...fence(jobs), guard(sql('(? = (SELECT COUNT(*) FROM ik_provenance WHERE reversed=0 AND (destination=? OR job_id IN (SELECT id FROM ik_jobs WHERE destination=?))))', results.length, context.destination, context.destination))];
+  const limit = Math.min(context.maxBatchBytes ?? 2 * 1024 * 1024, 2 * 1024 * 1024);
+  try { await readAtomic({ ...context, maxBatchBytes: limit }, [...custody, ...native.map(entry => entry.guard)]); }
+  catch (error) { throw sizeLimit(error, native, custody, limit); }
   return { rows, provenance };
 }
 
@@ -81,7 +79,7 @@ export type { D1CreatePreflightContext, D1CreatePreflight } from './creation.ts'
 export { d1NativeStagingSchema } from './native-staging-schema.ts';
 export { retainedSql } from './retained-values.ts';
 export { cancelD1NativeStaging, cancelD1ErasureStaging } from './native-staging-lifecycle.ts';
-export { d1CustodyStateSchema } from './custody-state-schema.ts';
+export { d1CustodyStateSchema, d1CustodyStateReplaceSchema } from './custody-state-schema.ts';
 export { d1ReversalFenceSchema } from './reversal-fence-schema.ts';
 
 export { d1StreamOriginSchema } from './stream-origin.ts';

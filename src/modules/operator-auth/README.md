@@ -493,9 +493,12 @@ the gate is the key, not the network. `devGate({key, origin, local})` returns
 null unless the key is present and the origin is an explicit loopback origin in
 local mode. `admits(request)` accepts the `rer_dev_gate_<port>` cookie (an HMAC of the
 key, so a reset key refuses old cookies) or the key in `x-rer-dev-key` (the rer
-CLI and test harnesses). `exchange(request)` serves `GET /__dev/key` and trades
+CLI and test harnesses). `exchange(request, branding)` serves `GET /__dev/key` and trades
 the key from the URL fragment, through a same-origin POST, for a host-only
-`HttpOnly; SameSite=Strict; Path=/` cookie.
+`HttpOnly; SameSite=Strict; Path=/` cookie. Given the seed's `branding`
+(`productName`, `theme`), the page between `rer dev` and the app shows the seed's own
+mark, the `--rer-logo` its theme declares, as an `<img>` with the product name as its
+alt text; a seed whose theme declares no logo shows the product name as text.
 
 `dev/` is the dev layer: **server-only and local-only**. Import it only from a
 local-only Worker entry (a Vite-serve or local `wrangler dev` entry), never

@@ -104,7 +104,23 @@ write. Settings contain `enabled` and optional `revokedKids`; revoked key ids
 remain revoked permanently, so rotation uses a new id. These controls are not
 public door routes. `readImportDoorHistory(database, installationId,
 ownerPredicate)` joins approval metadata to the real kit jobs, with the caption
-"approved via Business by <owner> at <time>, fingerprint <x>". Configure
+"approved via Business by <owner> at <time>, fingerprint <x>". Failed target
+applies end the job as `failed`, with an allowlisted reason in `job.error`:
+`import_door_apply_constraint` (409), `import_door_apply_transient` (503), or
+`import_door_apply_failed` (409). Status/history include a durable `failureCode`
+and caption the approval as "approved, then failed". The failed atomic batch
+leaves no native effects. Its approval and consumed nonce remain audit facts;
+the failed plan and its approval cannot authorise a retry. Replan the retained
+upload for a fresh fingerprint and owner approval; roll back earlier committed
+batches first. Existing adopters apply the door migrations once each, in order, each in a
+new numbered migration: `importDoorApplyFailureMigration` as one atomic batch,
+then `importDoorScopesMigration`; they never re-apply `importDoorSchema`. Fresh
+adopters use `importDoorSchema`, whose first statement refuses the older door
+schema so a wrong upgrade fails at deploy. An enabled door on an outdated schema
+(old per-bundle uniqueness, no failure table or no scope table) answers 503
+`import_door_schema_outdated`. Retryable D1 errors
+(storage resets, code updates, lost connections, overload, timeouts) and SQLite
+busy/locked classify as `import_door_apply_transient`. Configure
 `ownerPrincipalId` as the seed owner's actual principal, and use that same
 principal in its ordinary history and undo context. The door does not rebind
 existing operator jobs or weaken their authority predicates.

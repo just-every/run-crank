@@ -17,7 +17,7 @@ budget. Calls that still exceed the provider transport ceiling fail explicitly.
 
 Apply `d1Schema`, `d1ErasureSchema`, `d1StreamOriginSchema`,
 `d1LegacyStreamReceiptUpgrade`, `d1StagingSchema`,
-`d1NativeStagingSchema`, `d1CustodyStateSchema`, `d1PreparationSchema`, `d1ReversalFenceSchema` and `d1RetirementSchema` in product-owned numbered migrations, or call
+`d1NativeStagingSchema`, `d1CustodyStateSchema`, `d1PreparationSchema`, `d1ReversalFenceSchema`, `d1RetirementSchema` and `d1CustodyStateReplaceSchema` in product-owned numbered migrations, or call
 `initializeD1ImportStorage(database)` during setup. The schema includes the common
 kit tables and D1 ownership/assertion tables. Do not mix the synchronous engine
 and D1 engine for the same jobs: each engine owns its checkpoint protocol.
@@ -61,7 +61,20 @@ checks the same monotonic custody revisions, including tombstone changes;
 the original plan revision is captured before decoding. This requires the
 additive custody-state schema. Ordinary reads without a transport policy retain
 their existing atomic admission. `readD1PersistedImport` keeps one complete
-atomic native snapshot capped at 2 MiB even when its caller omits a limit.
+atomic native snapshot capped at 2 MiB even when its caller omits a limit. It
+reads each destination job's `ik_d1_custody_states` revision (the same additive
+schema) before any custody and fences those revisions instead of resending
+plans, so its read grows by one revision per job, not by a plan per catch-up.
+Under that fence it checks each owner job by its stored plan header and
+fingerprint and returns only the plan entries its live provenance references,
+parsed inside D1: from an inline plan, or from the run of whole entries a chunked
+plan's entry locator names (the `entries` member of its `d1Plan` 1 envelope,
+which every full plan load checks against the chunks). No SQL value grows past
+one run, so each owner job costs fixed statements and bytes however long a
+catch-up chain grows. A plan without a locator (compressed, staged, or stored
+before locators) and a preserved job with a reversal report still decode their
+whole plan. An oversized snapshot raises
+`ImportSizeLimitError` (its message is the size code) naming `targetKinds`.
 Reads change neither tables nor SQLite `total_changes()` and work with SQLite
 `PRAGMA query_only=ON`. Mutation batches retain inside-transaction CHECK assertions
 and rollback. Planning uses its existing `plan` authorization path. The ordinary-job SELECT fence needs no migration; the bounded stream receipt
@@ -1092,7 +1105,21 @@ There is no new default transport limit on ordinary omitted-policy APIs.
 The additive `d1CustodyStateSchema` installs `ik_d1_custody_states` and monotonic
 mutation triggers covering job fields, plan and original copies, provenance,
 claims, decisions, history, journal, reversal reports and stream membership.
-Prior jobs receive counters without changes to their public bytes. A counter is
+Prior jobs receive counters without changes to their public bytes. SQLite's
+REPLACE deletes the row it conflicts with without firing DELETE triggers, so apply
+the additive `d1CustodyStateReplaceSchema` as a new numbered migration after
+`d1CustodyStateSchema` and `d1RetirementSchema` (`initializeD1ImportStorage`
+applies it last). It ignores an insert over an existing counter, by job id or
+by rowid (the backfill's `INSERT OR IGNORE` still adds missing ones), refuses to
+change a counter's rowid with `IMPORT_CUSTODY_STATE_CHANGED`, refuses an `ik_jobs`
+id that exists or was retired with `IMPORT_JOB_ID_REUSED`, and makes an insert or
+update (`UPDATE OR REPLACE` deletes a colliding row the same way) that would
+replace a claim, provenance row (by id or live target), history row (by id or
+successor), stream page or stream advance the revision of every job owning the
+replaced row. SQLite's rowid is one more unique key of every custody table and
+tombstone, so a row replaced by rowid advances its owners too (a tombstone's
+owners are found through the plan index, as its own triggers find them).
+A counter is
 captured before each retained report is validated; old cross-effect evidence is
 never copied into private transport. The report's existing policy and content
 hashes are validated before its explicitly redacted replacement is constructed.

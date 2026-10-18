@@ -1,25 +1,39 @@
 import type { D1Database, D1Sql } from './types.ts';
 import { guard, sql } from './database.ts';
+import { doorRetirementStore } from './retirement-door.ts';
 
 // Bookkeeping that every custody change bumps, plus the erasure's own records.
 const SKIPPED = new Set(['ik_d1_assertions', 'ik_d1_custody_states', 'ik_d1_custody_revisions', 'ik_d1_publication_fences',
-  'ik_d1_erasure_tally', 'ik_d1_erasure_journal', 'ik_d1_erasure_progress', 'ik_d1_retirements', 'ik_d1_erased_sources', 'ik_d1_erased_targets', 'ik_targets']);
+  'ik_d1_erasure_tally', 'ik_d1_erasure_journal', 'ik_d1_erasure_progress', 'ik_d1_retirements', 'ik_d1_erased_sources', 'ik_d1_erased_targets', 'ik_targets',
+  'ik_door_settings', // Installation opt-in only; no uploaded record content.
+  'ik_door_revoked_keys', // Persistent key revocations must survive erasure.
+  'ik_door_grants', // Grant nonce replay protection; no uploaded record content.
+  'ik_door_plans', // Ids, hashes, fingerprint and job link of an import: its "via Business" history.
+  'ik_door_approvals', // Who approved which fingerprint and when: the owner's approval record, not imported content.
+  'ik_door_namespaces', // Head and pending plan ids per namespace: lineage pointers only.
+  'ik_door_scopes', // Namespace-to-destination binding: keeps a namespace from moving to another destination.
+  'ik_door_apply_failures', // Plan id and allowlisted reason code of a failed apply: audit fact, no record content.
+]);
+// Door record content (uploaded chunks, upload headers, snapshot bodies) is
+// scoped and withdrawn whole; see retirement-door.ts.
 const COUNTERS = new Set(['revision', 'layout_revision', 'progress_revision', 'seal']);
 
 export interface TallyScope { destination: string; jobs: string[]; streams: string[] }
-interface Store { name: string; image: string; where: string; params: (scope: TallyScope) => unknown[] }
+export interface Store { name: string; image: string; where: string; params: (scope: TallyScope) => unknown[]; withdraw?: number }
 
 /** Each custody store with the row image the journal counts and the rows an
  * erasure of these jobs and streams can touch. */
 export async function tallyStores(db: D1Database): Promise<Store[]> {
   const { results } = await db.prepare("SELECT m.name AS store, p.name AS column, p.type AS type FROM sqlite_master m JOIN pragma_table_info(m.name) p WHERE m.type='table' AND m.name LIKE 'ik\\_%' ESCAPE '\\' ORDER BY m.name, p.cid").all<{ store: string; column: string; type: string }>();
-  const columns = new Map<string, { column: string; type: string }[]>();
+  const columns = new Map<string, { column: string; type: string }[]>(), installed = new Set(results.map(row => row.store));
   for (const row of results) if (!SKIPPED.has(row.store)) columns.set(row.store, [...columns.get(row.store) ?? [], row]);
   const jobs = (scope: TallyScope) => [JSON.stringify(scope.jobs)], streams = (scope: TallyScope) => [JSON.stringify(scope.streams)];
   const destination = (scope: TallyScope) => [scope.destination];
   return [...columns].map(([name, list]) => {
     const names = list.map(item => item.column);
     const image = `json_array(${list.filter(item => !COUNTERS.has(item.column)).map(item => /BLOB/i.test(item.type) ? `hex("${item.column}")` : `"${item.column}"`).join(',')})`;
+    const door = doorRetirementStore(name, installed);
+    if (door) return { name, image, ...door };
     if (name === 'ik_jobs') return { name, image, where: 'id IN (SELECT value FROM json_each(?))', params: jobs };
     if (name === 'ik_d1_streams') return { name, image, where: 'id IN (SELECT value FROM json_each(?))', params: streams };
     if (name === 'ik_d1_stream_revisions') return { name, image, where: 'stream_id IN (SELECT value FROM json_each(?))', params: streams };
@@ -36,6 +50,13 @@ export async function tallyStores(db: D1Database): Promise<Store[]> {
 /** Images of every row in scope, taken first in the erasure batch. */
 export function tallyBefore(stores: Store[], receipt: string, scope: TallyScope): D1Sql[] {
   return stores.map(store => sql(`INSERT INTO ik_d1_erasure_tally(receipt_id,store,image) SELECT ?,?,${store.image} FROM ${store.name} WHERE ${store.where}`, receipt, store.name, ...store.params(scope)));
+}
+
+/** Opaque door content is withdrawn after all before-images are tallied and
+ * before kit job/header changes can sever its scope links, in the same batch. */
+export function tallyWithdraw(stores: Store[], scope: TallyScope): D1Sql[] {
+  return stores.filter(store => store.withdraw !== undefined).sort((a, b) => a.withdraw! - b.withdraw!)
+    .map(store => sql(`DELETE FROM ${store.name} WHERE ${store.where}`, ...store.params(scope)));
 }
 
 /** Drops the images still present unchanged; the rest were deleted or rewritten.

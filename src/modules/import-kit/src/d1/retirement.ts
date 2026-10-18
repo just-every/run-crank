@@ -1,15 +1,20 @@
 import { randomUUID } from 'node:crypto';
 import type { D1CustodyRetirement, D1ErasureJournalEntry, D1ImportContext, D1ImportPerson, D1RetirementOptions, D1RetirementProgress, D1Sql } from './types.ts';
 import { requestContext, packGuards, remaining, D1RequestLimitError } from './budget.ts';
-import { authority, authorize, finalAuthority, readonlyChecks, prepare, readAtomic, sql } from './database.ts';
+import { authority, authorize, finalAuthority, guard, readonlyChecks, prepare, readAtomic, sql } from './database.ts';
 import { requireText } from '../provenance/identity.ts';
 import { targetErasure, type ErasureStep } from './erasure.ts';
-import { destinationRevisions, readProgress, type JobRevision, type RedactionProgress } from './retirement-steps.ts';
-import { overflow, redactionSteps } from './redaction-step.ts';
+import { destinationRevisions, lineageDigest, readProgress, type JobRevision, type RedactionProgress } from './retirement-steps.ts';
+import { overflow, redactionSteps, type LineageSever } from './redaction-step.ts';
+import { targetIdentity } from './erasure-index.ts';
 import { headerAbsence, retirementScope, retirementWrites, scopeGuards } from './retirement-scope.ts';
-import { tallyBefore, tallyJournal, tallyStores } from './retirement-tally.ts';
+import { tallyBefore, tallyJournal, tallyStores, tallyWithdraw, type Store } from './retirement-tally.ts';
 import { fieldRedactions } from './field-redaction.ts';
+import { doorCustodyInScope, doorLineage, type DoorLineage } from './retirement-door.ts';
 import { retireD1ImportCustodyStep } from './retirement-bounded.ts';
+import { chainFirst } from './erasure-superseded.ts';
+import { batchBytes } from './transport.ts';
+import { RPC_LIMIT } from '../../../d1-transport/index.mjs';
 import type { D1ErasurePending, D1ErasureStepOptions } from './erasure-progress.ts';
 
 /** Erase a person from import custody and journal it, in one D1 batch with the
@@ -47,44 +52,61 @@ export async function retireD1ImportCustody(person: D1ImportPerson, nativeStatem
   await readAtomic(context, [], undefined, 'erase');
   const db = context.storage.database, destination = context.destination;
   const scope = await retirementScope(db, destination, values), retiring = new Set(scope.jobs);
-  const fenced = Boolean(person.target) || fields.length > 0 || scope.jobs.length + scope.streams.length + scope.stages.length + scope.anchors.length + scope.preparations.length > 0;
+  // Withdrawn door content is custody too: a values-only erasure that removes it is fenced.
+  let stores: Store[] | undefined;
+  const fenced = Boolean(person.target) || fields.length > 0 || scope.jobs.length + scope.streams.length + scope.stages.length + scope.anchors.length + scope.preparations.length > 0
+    || await doorCustodyInScope(db, destination, stores = await tallyStores(db));
   if (fenced && !checkpoint.length) throw new Error('IMPORT_RETIREMENT_CHECKPOINT_REQUIRED');
   const fence = fenced ? checkpoint : [];
   // Only the checkpoint fences rows the tally does not count (another import's jobs, a seed's tables): unfenced caller SQL is refused.
   if (nativeStatements.length && !fence.length) throw new Error('IMPORT_RETIREMENT_NATIVE_REQUIRES_CHECKPOINT');
-  let step: ErasureStep | undefined, progress: RedactionProgress | undefined, pending: JobRevision[] = [];
+  let step: ErasureStep | undefined, progress: RedactionProgress | undefined, pending: JobRevision[] = [], lineage: DoorLineage | undefined, sever: LineageSever | undefined;
   if (options.resumable && fields.length) {
     progress = readProgress(options.continuation, destination, fields);
+    // Revisions before the lineage's plans: every job a step may read is then a known lineage member.
     const jobs = await destinationRevisions(db, destination);
-    const clean = new Map(jobs.filter(job => job.revision !== null && progress!.clean.get(job.id) === job.revision).map(job => [job.id, job.revision!]));
+    lineage = await doorLineage(person, db, destination, context.storage.targets.planCodec);
+    // Steps sever the lineage's copies in the jobs they read, so a job stays clean
+    // only under the lineage it was read under; a source joining it voids that.
+    const severing = lineageDigest(progress.nonce, lineage.sources), stale = new Set(severing === progress.lineage ? [] : lineage.jobs);
+    const clean = new Map(jobs.filter(job => job.revision !== null && !stale.has(job.id) && progress!.clean.get(job.id) === job.revision).map(job => [job.id, job.revision!]));
     pending = jobs.filter(job => !clean.has(job.id));
-    progress = { ...progress, clean };
+    progress = { ...progress, clean, lineage: severing };
+    if (lineage.select) {
+      sever = { target: targetIdentity(destination, person.target!.kind, person.target!.id), select: lineage.select, fence: lineage.fence };
+      // Steps read the target's superseded imports oldest first, so each erases them with every older one.
+      pending = await chainFirst(db, destination, sever.target, pending);
+    }
     if (progress.page || pending.length > progress.span) {
       if (person.related?.snapshot !== undefined) throw new Error('IMPORT_REDACTION_SNAPSHOT_UNBOUNDED_ONLY');
-      return redactionSteps(fields, context, fence, progress, pending);
+      return redactionSteps(fields, context, fence, progress, pending, undefined, sever);
     }
+    // The final step reads only pending jobs; a lineage job an earlier step cleaned holds no unsevered copy.
     step = { selection: { jobs: pending.map(job => job.id), clean, complete: true }, matched: progress.matched };
   }
   const start = remaining(context);
   let erasure: Awaited<ReturnType<typeof targetErasure>>, receiptId: string, prefix: D1Sql[], suffix: D1Sql[];
   try {
-    erasure = person.target || fields.length ? await targetErasure(person.target, context, person.related, retiring, step) : { before: [], after: [], final: [], decisions: [], jobs: [], fieldMatches: [] };
+    lineage ??= await doorLineage(person, db, destination, context.storage.targets.planCodec);
+    erasure = person.target || fields.length ? await targetErasure(person.target, context, lineage.person.related, retiring, step) : { before: [], after: [], final: [], decisions: [], jobs: [], fieldMatches: [] };
     receiptId = randomUUID(); const recordedAt = new Date().toISOString();
     const touched = { destination, jobs: [...new Set([...erasure.jobs, ...scope.jobs])].sort(), streams: [] as string[] };
     touched.streams = [...new Set([...scope.anchors, ...await pageStreams(db, touched.jobs)])].sort();
-    const stores = await tallyStores(db);
+    stores ??= await tallyStores(db);
     const entry = { recordedAt, recordsErased: erasure.decisions.length, jobsRetired: scope.jobs.length, streamsRetired: scope.anchors.length };
-    prefix = packGuards([authority(context, 'erase'), ...tallyBefore(stores, receiptId, touched), ...erasure.before, ...scopeGuards(scope)]);
+    prefix = packGuards([authority(context, 'erase'), ...tallyBefore(stores, receiptId, touched), ...tallyWithdraw(stores, touched), ...erasure.before, ...scopeGuards(scope), ...lineage.fence.map(guard)]);
     suffix = [...packGuards([...erasure.after, ...retirementWrites(scope, destination, receiptId, recordedAt), ...headerAbsence(destination, values),
       ...tallyJournal(stores, receiptId, touched, entry, fenced), authority(context, 'erase'), sql('DELETE FROM ik_d1_assertions')]), ...readonlyChecks(erasure.final), finalAuthority(context, 'erase')];
     // One read after the batch returns its journal row.
     const needed = prefix.length + nativeStatements.length + fence.length + suffix.length + 1;
     if (needed > remaining(context)) throw overflow(needed);
+    // A final step too large for one D1 RPC goes on in steps too.
+    if (batchBytes([...prefix, ...nativeStatements, ...fence, ...suffix]) > RPC_LIMIT) throw new D1RequestLimitError();
   } catch (error) {
     // A redaction too large for one request goes on in steps; nothing was written.
     if (!step || !pending.length || person.related?.snapshot !== undefined || !(error instanceof D1RequestLimitError)) throw error;
     const needed = (error as { needed?: number }).needed;
-    return redactionSteps(fields, context, fence, progress!, pending, { cost: needed === undefined ? undefined : start - remaining(context) + needed });
+    return redactionSteps(fields, context, fence, progress!, pending, { cost: needed === undefined ? undefined : start - remaining(context) + needed }, sever);
   }
   const results = await db.batch([...prefix, ...nativeStatements, ...fence, ...suffix].map(statement => prepare(db, statement)));
   const [journal] = await readJournal(db, destination, receiptId);

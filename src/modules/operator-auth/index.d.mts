@@ -228,7 +228,7 @@ export interface DevGate {
   admits(request: Request): Promise<boolean>;
   setCookie(): Promise<string>;
   /** Handles GET/POST /__dev/key; null for every other path. */
-  exchange(request: Request): Promise<Response | null>;
+  exchange(request: Request, branding?: AuthBranding): Promise<Response | null>;
 }
 export const DEV_KEY_HEADER: 'x-rer-dev-key';
 export function devGate(input: DevGateInput): DevGate | null;

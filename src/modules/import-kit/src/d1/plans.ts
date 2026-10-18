@@ -10,6 +10,7 @@ import { canonicalJson, sha256 } from '../provenance/identity.ts';
 import { guard, sql } from './database.ts';
 import { canonicalChunks, canonicalHash } from '../provenance/canonical-stream.ts';
 import { jsonChunks, PACKED_JSON_BYTES, SNAPSHOT_BYTES } from './sets.ts';
+import { entryLocator } from './entry-locator.ts';
 
 export interface StoredPlan { revision?: number; body: string; chunks: { job_id: string; ordinal: number; body: string }[] }
 const snapshots = new WeakMap<ImportPlan, StoredPlan>();
@@ -24,7 +25,9 @@ export function encodePlan(plan: ImportPlan, id: string): StoredPlan {
   const chunks: StoredPlan['chunks'] = [], hash = createHash('sha256'); let size = 0;
   for (const body of canonicalChunks(plan, SNAPSHOT_BYTES)) { chunks.push({ job_id: id, ordinal: chunks.length, body }); size += Buffer.byteLength(body); hash.update(body); }
   if (chunks.length === 1) return { body: chunks[0].body, chunks: [] };
-  return { body: canonicalJson({ d1Plan: 1, chunks: chunks.length, size, sha256: hash.digest('hex') }), chunks };
+  const entries = entryLocator(plan, chunks), byte = ([chunk, offset]: number[]) => Buffer.from(chunks[chunk].body)[offset];
+  if (entries.starts.some(start => byte(start) !== 0x7b) || byte(entries.end) !== 0x5d) throw new Error('IMPORT_PLAN_LOCATOR');
+  return { body: canonicalJson({ d1Plan: 1, chunks: chunks.length, entries, size, sha256: hash.digest('hex') }), chunks };
 }
 export function retainPlan(plan: ImportPlan, id: string, codec?: D1PlanCodec): { body: string; statements: D1Sql[]; encoded: StoredPlan } {
   const encoded = codec ? storedStreamPage(compressedPlan(plan, codec), id, codec) : encodePlan(plan, id);
@@ -52,12 +55,14 @@ export async function loadPlans(rows: any[], db: D1Database, codec?: D1PlanCodec
     const parsed = JSON.parse(row.plan_json), parts = chunks.filter(c => c.job_id === row.id);
     let plan: ImportPlan;
     if (parsed?.d1Plan === 1) {
-      if (canonicalJson(parsed) !== row.plan_json || canonicalJson(Object.keys(parsed).sort()) !== '["chunks","d1Plan","sha256","size"]' || !Number.isSafeInteger(parsed.size) || parsed.size < 0 || typeof parsed.sha256 !== 'string' || !/^[a-f0-9]{64}$/.test(parsed.sha256) || !Number.isSafeInteger(parsed.chunks) || parsed.chunks < 1 || parts.length !== parsed.chunks || parts.some((c, i) => c.ordinal !== i || typeof c.body !== 'string')) throw new Error('STORED_PLAN_CHANGED');
+      if (canonicalJson(parsed) !== row.plan_json || !['["chunks","d1Plan","sha256","size"]','["chunks","d1Plan","entries","sha256","size"]'].includes(canonicalJson(Object.keys(parsed).sort())) || !Number.isSafeInteger(parsed.size) || parsed.size < 0 || typeof parsed.sha256 !== 'string' || !/^[a-f0-9]{64}$/.test(parsed.sha256) || !Number.isSafeInteger(parsed.chunks) || parsed.chunks < 1 || parts.length !== parsed.chunks || parts.some((c, i) => c.ordinal !== i || typeof c.body !== 'string')) throw new Error('STORED_PLAN_CHANGED');
       const body = parts.map(c => c.body).join('');
       if (Buffer.byteLength(body) !== parsed.size || sha256(body) !== parsed.sha256) throw new Error('STORED_PLAN_CHANGED');
       const payload = JSON.parse(body);
-      if ([2,3].includes(payload?.d1Plan)) plan = expandCompressedEnvelope(body,payload,codec);
+      if ([2,3].includes(payload?.d1Plan)) { if (parsed.entries !== undefined) throw new Error('STORED_PLAN_CHANGED'); plan = expandCompressedEnvelope(body,payload,codec); }
       else { if (canonicalHash(payload) !== parsed.sha256) throw new Error('STORED_PLAN_CHANGED'); plan = payload; }
+      // The entry locator a referenced read trusts must describe these exact chunks.
+      if (parsed.entries !== undefined && canonicalJson(entryLocator(plan, parts)) !== canonicalJson(parsed.entries)) throw new Error('STORED_PLAN_CHANGED');
     } else plan = [2,3].includes(parsed?.d1Plan) ? expandCompressedEnvelope(row.plan_json,parsed,codec) : parsed;
     snapshots.set(plan, { body: row.plan_json, chunks: parts, ...(row.custody_revision === undefined ? {} : {revision: row.custody_revision}) }); result.set(row.id, plan);
   }

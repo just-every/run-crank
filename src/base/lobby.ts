@@ -1,3 +1,4 @@
+import { iconHead } from './icon-head'
 import { rejectedResponse } from './rejected-response'
 // The Lobby: what an installed instance serves at / when its edition identity
 // says installedHome: 'lobby'. A centred lockup, one line, one button and the
@@ -55,7 +56,7 @@ export function lobbyHtml(identity: EditionIdentity, state: SetupState, loginHin
   const title = claimed ? `${escape(identity.deployment)} · ${product}` : `Finish setup · ${product}`
   const art = identity.band ? `<div class="door-art" aria-hidden="true"><img src="${escape(identity.band)}" alt=""></div>` : ''
   return `<!doctype html><html lang="en" data-state="${state}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title>`
-    + `<link rel="icon" href="${escape(identity.mark)}">${identity.fonts ? `<link rel="stylesheet" href="${escape(identity.fonts)}">` : ''}<link rel="stylesheet" href="${escape(identity.theme)}"><style>${accentStyle(identity)}${STYLE}</style></head>`
+    + `${iconHead}${identity.fonts ? `<link rel="stylesheet" href="${escape(identity.fonts)}">` : ''}<link rel="stylesheet" href="${escape(identity.theme)}"><style>${accentStyle(identity)}${STYLE}</style></head>`
     + `<body><main class="door">${art}<section class="door-card"><h1><a class="lockup" href="/"><img class="mark" src="${escape(identity.mark)}" alt=""><span class="word" data-rer-name>${product}</span></a></h1>`
     + `<p class="line">${line}</p>${action}${ownerHelp}${credit}</section></main></body></html>`
 }

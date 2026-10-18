@@ -1,3 +1,4 @@
+import { iconHead } from './icon-head.mjs';
 import { accentInk } from './branding.mjs';
 import { escapeHtml, securityHeaders } from './http.mjs';
 
@@ -23,11 +24,12 @@ export async function pageResponse({ branding, title, heading, content, status =
   const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(css)));
   const hash = btoa(String.fromCharCode(...digest));
   const product = escapeHtml(branding.productName);
-  const html = `<!doctype html><html lang="en"${branding.theme ? ' class="rer-themed"' : ''}><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${title ?? heading}</title>${branding.theme ? `<link rel="stylesheet" href="${escapeHtml(branding.theme)}">` : ''}<style>${css}</style></head><body><main><p class="brand"><span class="mark" aria-hidden="true"></span><span data-rer-name>${product}</span></p><h1>${heading}</h1>${content}</main></body></html>`;
+  const html = `<!doctype html><html lang="en"${branding.theme ? ' class="rer-themed"' : ''}><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${title ?? heading}</title>${iconHead}${branding.theme ? `<link rel="stylesheet" href="${escapeHtml(branding.theme)}">` : ''}<style>${css}</style></head><body><main><p class="brand"><span class="mark" aria-hidden="true"></span><span data-rer-name>${product}</span></p><h1>${heading}</h1>${content}</main></body></html>`;
   const headers = { ...securityHeaders(), 'Content-Type': 'text/html; charset=utf-8' };
   // A form may post to this origin only, plus any origin its own redirect must reach (a provider's authorization endpoint).
   if (formTargets.length) headers['Content-Security-Policy'] = headers['Content-Security-Policy'].replace("form-action 'self'", `form-action 'self' ${formTargets.join(' ')}`);
   headers['Content-Security-Policy'] += branding.theme ? `; style-src 'self' 'sha256-${hash}'; font-src 'self'; img-src 'self'` : `; style-src 'sha256-${hash}'`;
+  if (iconHead && !branding.theme) headers['Content-Security-Policy'] += "; img-src 'self'";
   // Native form POSTs need their Origin; never disclose the path or query.
   if (referrer) headers['Referrer-Policy'] = referrer;
   return new Response(method === 'HEAD' ? null : html, { status, headers });

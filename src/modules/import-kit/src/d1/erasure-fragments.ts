@@ -13,7 +13,7 @@ import { attachReversal,loadReversalState,snapshotReversalGuards,policyHash } fr
 import { erasePlanRecords,type RelatedPlanErasure } from './erased-plan.ts';
 import { erasureWrites,type ErasedDecision,type ErasedJob } from './erasure-writes.ts';
 import { eraseReport } from './erasure-report.ts';
-import { changed,deleteRows,ExpectedState } from './expected-state.ts';
+import { changed,deleteRows,putRow,ExpectedState } from './expected-state.ts';
 import type { ErasurePage } from './erasure-pages.ts';
 import { readErasureSnapshot } from './erasure-snapshot.ts';
 import { planIndex,erasedIndexGuards } from './erasure-index.ts';
@@ -64,7 +64,9 @@ export async function* erasureFragments(selection:ErasureSelection,context:D1Imp
         jobs.push({id,body:retained.body,fingerprint:next.fingerprint,erasedRecords:next.entries.filter(entry=>entry.erased).length,policyHash:reversal.binding===null?null:policyHash(id,next.fingerprint,reversal.policy)});
         payload.push(...erasedCustody(plan,next,id,snapshot),...retained.statements,guard(sql('(SELECT count(*) FROM ik_d1_creation_plans WHERE job_id=? AND released=0)=? AND (SELECT count(*) FROM ik_d1_plan_chunks WHERE job_id=?)=?',id,retained.encoded.chunks.length,id,retained.encoded.chunks.length)));
         if(fields.length)payload.push(...redactedCustody(plan,next,id,snapshot,fields));
-        if(canonicalJson(planIndex(next,id))!==canonicalJson(planIndex(plan,id)))payload.push(changed(sql('DELETE FROM ik_d1_plan_index WHERE job_id=?',id),deleteRows('ik_d1_plan_index',row=>row.job_id===id)),...insertJsonRows('ik_d1_plan_index',['job_id','ordinal','source_identity','target_identity'],planIndex(next,id)));
+        // Rewriting the index drops the job's indexed fingerprint (a schema trigger); retain it again.
+        if(canonicalJson(planIndex(next,id))!==canonicalJson(planIndex(plan,id)))payload.push(changed(sql('DELETE FROM ik_d1_plan_index WHERE job_id=?',id),deleteRows('ik_d1_plan_index',row=>row.job_id===id)),...insertJsonRows('ik_d1_plan_index',['job_id','ordinal','source_identity','target_identity'],planIndex(next,id)),
+          changed(sql('INSERT INTO ik_d1_indexed_jobs(job_id,fingerprint) VALUES(?,?)',id,next.fingerprint),putRow('ik_d1_indexed_jobs',{job_id:id,fingerprint:next.fingerprint})));
         post.push(...exactRows('ik_d1_plan_chunks',['job_id','ordinal','body'],retained.encoded.chunks,sql('job_id=?',id)));
       }else post.push(...planGuards(plan,id));
       if(reports.has(id)&&!retiring.has(id)){const report=await eraseReport(raw,plan,next,context,snapshot);before.push(...report.before);reportsAfter.push(...report.after);}

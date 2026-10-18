@@ -17,6 +17,8 @@ export interface ContractClause {
   gap: string
   /** The heading the clause is defined under: "Public landing", "Writing together". */
   area: string
+  /** The clause's prose as one line: the rest of its definition line and the lines below it; may be empty. */
+  text: string
   /** The 1-based CONTRACT.md line that defines the clause. */
   line: number
   /** The 1-based CONTRACT.md line of its Status row. */

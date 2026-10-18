@@ -13,16 +13,23 @@ export const STEP_JOBS = 25;
  * the last page, so a job changed in between starts again from its first entry. */
 export interface RedactionPage { job: string; from: number; count: number; revision: number | null }
 /** Where a resumable redaction stands: the jobs already read and found free of
- * the selected values (or rewritten), each at the custody revision it then had,
- * and the matches counted so far. A changed revision makes a job pending again.
- * `span` is how many jobs the next step reads, and `page` a job being redacted
- * in pages. It holds job ids, revisions, counts, sizes and a salted digest of
- * the selectors, never a selected value; it is bound to the destination and
- * selectors it began with. */
-export interface RedactionProgress { nonce: string; digest: string; clean: Map<string, number>; matched: D1FieldMatch[]; span: number; page?: RedactionPage }
+ * the selected values and of unsevered door lineage copies (or rewritten), each
+ * at the custody revision it then had, and the matches counted so far. A changed
+ * revision makes a job pending again. `span` is how many jobs the next step
+ * reads, and `page` a job being redacted in pages. `lineage` is a salted digest
+ * of the door lineage those steps severed (see lineageDigest). It holds job ids,
+ * revisions, counts, sizes and salted digests of the selectors, never a selected
+ * value; it is bound to the destination and selectors it began with. */
+export interface RedactionProgress { nonce: string; digest: string; clean: Map<string, number>; matched: D1FieldMatch[]; span: number; page?: RedactionPage; lineage?: string }
 
 const digestOf = (nonce: string, destination: string, fields: readonly D1FieldRedaction[]) =>
   sha256(canonicalJson([nonce, destination, fields.map(({ path, value, optional }) => [path, value, optional === true])]));
+
+/** The door lineage a step severs, by its source records (door namespace, kind
+ * and source id), salted by the redaction's nonce. A job marked clean stays
+ * clean only under the same lineage: a source joining it makes copies in jobs
+ * an earlier step already read, so those are read again. */
+export const lineageDigest = (nonce: string, sources: readonly string[]): string => sha256(canonicalJson([nonce, 'door-lineage', sources]));
 
 export function readProgress(continuation: string | undefined, destination: string, fields: readonly D1FieldRedaction[]): RedactionProgress {
   if (continuation === undefined) {
@@ -35,16 +42,17 @@ export function readProgress(continuation: string | undefined, destination: stri
     || !token.clean.every((item: unknown) => Array.isArray(item) && typeof item[0] === 'string' && Number.isSafeInteger(item[1]))
     || token.span !== undefined && !(Number.isSafeInteger(token.span) && token.span >= 1 && token.span <= STEP_JOBS)
     || token.page !== undefined && !(typeof token.page?.job === 'string' && [token.page.from, token.page.count].every(n => Number.isSafeInteger(n) && n >= 0) && token.page.count >= 1
-      && (token.page.revision === null || Number.isSafeInteger(token.page.revision)))) throw new Error('IMPORT_REDACTION_CONTINUATION_INVALID');
+      && (token.page.revision === null || Number.isSafeInteger(token.page.revision)))
+    || token.lineage !== undefined && typeof token.lineage !== 'string') throw new Error('IMPORT_REDACTION_CONTINUATION_INVALID');
   // A continuation from another erasure (other selectors or destination) must
   // never let this one skip a job.
   if (token.digest !== digestOf(token.nonce, destination, fields)) throw new Error('IMPORT_REDACTION_CONTINUATION_MISMATCH');
   const { job, from, count, revision } = token.page ?? {};
-  return { nonce: token.nonce, digest: token.digest, clean: new Map(token.clean), matched: token.matched, span: token.span ?? STEP_JOBS, ...token.page ? { page: { job, from, count, revision } } : {} };
+  return { nonce: token.nonce, digest: token.digest, clean: new Map(token.clean), matched: token.matched, span: token.span ?? STEP_JOBS, ...token.page ? { page: { job, from, count, revision } } : {}, ...token.lineage !== undefined ? { lineage: token.lineage } : {} };
 }
 
 export function writeProgress(progress: RedactionProgress): string {
-  return Buffer.from(JSON.stringify({ v: 1, nonce: progress.nonce, digest: progress.digest, clean: [...progress.clean], matched: progress.matched, span: progress.span, ...progress.page ? { page: progress.page } : {} }), 'utf8').toString('base64url');
+  return Buffer.from(JSON.stringify({ v: 1, nonce: progress.nonce, digest: progress.digest, clean: [...progress.clean], matched: progress.matched, span: progress.span, ...progress.page ? { page: progress.page } : {}, ...progress.lineage !== undefined ? { lineage: progress.lineage } : {} }), 'utf8').toString('base64url');
 }
 
 export function addMatches(total: D1FieldMatch[], step: readonly D1FieldMatch[]): D1FieldMatch[] {

@@ -30,6 +30,11 @@ export function reserveReturn(context: D1ImportContext, queries: number): D1Impo
   if(!Number.isSafeInteger(queries)||queries<0||queries>remaining(context))throw new D1RequestLimitError();
   return {...context,[reservedTail]:((context as ReservedContext)[reservedTail]??0)+queries} as ReservedContext;
 }
+/** One shared request budget for a caller (such as the import door) whose own
+ * statements and every kit call it makes must count against the same ceiling. */
+export function requestDatabase(database: D1Database): D1Database {
+  return requestContext({ storage: { database } } as D1ImportContext).storage.database;
+}
 /** A fresh wrapper belongs to the outer public invocation; nested resume calls
  * reuse it. It counts individual executed SQL statements, including batches. */
 export function requestContext(context: D1ImportContext): D1ImportContext {

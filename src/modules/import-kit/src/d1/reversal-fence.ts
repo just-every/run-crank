@@ -1,12 +1,12 @@
 import { retainedSql } from './retained-values.ts';
 import { changed, putRow, updateRows, deleteRows } from './expected-state.ts';
 import { targetGuards } from './target-guards.ts';
-import { D1RequestLimitError, remaining, packGuards } from './budget.ts';
+import { D1RequestLimitError, remaining } from './budget.ts';
 import type { ImportJob } from '../types.ts';
 import { canonicalJson, sha256, attachmentHash } from '../provenance/identity.ts';
 import { decodeProvenance } from '../storage/provenance.ts';
 import type { D1ImportContext, D1Sql, D1ProvenanceRow } from './types.ts';
-import { atomic, guard, limits, sql } from './database.ts';
+import { atomic, atomicCount, guard, limits, sql } from './database.ts';
 import { decode } from './jobs.ts';
 import { restorePredecessor } from './history.ts';
 import { attachReversal, EMPTY_REVERSAL_HASH, policy } from './undo-state.ts';
@@ -74,9 +74,12 @@ export async function fencedReversal(id: string, action: Action, context: D1Impo
       const { results: rows } = await db.prepare('SELECT * FROM ik_provenance WHERE job_id=? AND reversed=0 ORDER BY ordinal DESC,effect_ordinal DESC LIMIT ?').bind(id, batchSize + 1).all();
       const batch = rows.slice(0, batchSize), predecessors = new Map<string, any>();
       for (const prior of (await db.prepare('SELECT * FROM ik_d1_history WHERE successor_id IN (SELECT value FROM json_each(?))').bind(JSON.stringify(batch.map(raw => raw.id))).all()).results) predecessors.set(prior.successor_id, prior);
-      let processed = 0;
+      // The request that publishes the first `count` rows, with its one return read.
+      const publication = (statements: D1Sql[], count: number) => [...statements, ...reversalProgress(job, action, count === rows.length, [...new Set(batch.slice(0, count).map(raw => raw.source_identity))]), ...recordReversalFence(id, action, job.erasedRecords!, false)];
+      let processed = 0, planned = atomicCount(context, action, publication(statements, 0), 1);
       for (const raw of batch) {
-        if (remaining(context) - packGuards(statements).length < 70) { if (!processed) { if (published) return published; throw new D1RequestLimitError(); } break; }
+        // Leave room for this row's reads; the exact request is counted once built.
+        if (remaining(context) - planned < 70) { if (!processed) { if (published) return published; throw new D1RequestLimitError(); } break; }
         // The verified inventory covered this exact row; its revision is unchanged.
         const p = decodeProvenance(raw) as D1ProvenanceRow;
         if (p.reversed || p.jobId !== id) throw new Error('PROVENANCE_STORAGE_MISMATCH');
@@ -85,11 +88,12 @@ export async function fencedReversal(id: string, action: Action, context: D1Impo
         const candidate = [...statements], restoration: D1Sql[] = [];
         await restorePredecessor(p, context, candidate, restoration, predecessors.get(p.id) ?? null);
         candidate.push(guard(retainedSql(['EXISTS(SELECT 1 FROM ik_provenance WHERE id=', ' AND record_json=', ' AND reversed=0)'], [raw.id, raw.record_json], [1])), ...targetGuards(targets, target, context.destination, p.targetKind, p.targetId), ...(p.before ? targets.write(p.before) : targets.remove(context.destination, p.targetKind, p.targetId)), ...targetGuards(targets, p.before, context.destination, p.targetKind, p.targetId), changed(retainedSql(['UPDATE ik_provenance SET reversed=1,record_json=', ' WHERE id=', ''], [canonicalJson({ ...p, reversed: true }), raw.id], [0]),updateRows('ik_provenance',row=>row.id===raw.id,row=>({...row,reversed:1,record_json:canonicalJson({...p,reversed:true})}))), ...restoration);
-        statements.splice(0, statements.length, ...candidate); processed++;
+        const spent = atomicCount(context, action, publication(candidate, processed + 1), 1);
+        if (spent > remaining(context)) { if (processed) break; if (published) return published; throw new D1RequestLimitError(); }
+        statements.splice(0, statements.length, ...candidate); processed++; planned = spent;
       }
       const done = processed === rows.length;
-      statements.push(...reversalProgress(job, action, done, [...new Set(batch.slice(0, processed).map(raw => raw.source_identity))]), ...recordReversalFence(id, action, job.erasedRecords!, false));
-      await atomic(context, action, statements, 1);
+      await atomic(context, action, publication(statements, processed), 1);
       published = { ...job, state: done ? terminal(action) : reversing(action), fence: job.fence + 1, error: null };
       attachReversal(published, { policy: 'strict', binding: null, cursor: 0, hash: EMPTY_REVERSAL_HASH, rows: [], dispositions: [] });
       if (done || remaining(context) < 200) return published;

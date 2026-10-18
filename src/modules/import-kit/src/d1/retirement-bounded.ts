@@ -8,7 +8,8 @@ import { prepareErasureSelection } from './erasure-selection.ts';
 import { stageD1ImportErasure } from './erasure-stage.ts';
 import { erasureRequestContext, erasureStatementBinding, type D1ErasurePending, type D1ErasureStepOptions } from './erasure-progress.ts';
 import { headerAbsence, retirementScope, retirementWrites, scopeGuards } from './retirement-scope.ts';
-import { tallyBefore, tallyJournal, tallyStores } from './retirement-tally.ts';
+import { tallyBefore, tallyJournal, tallyStores, tallyWithdraw } from './retirement-tally.ts';
+import { doorCustodyInScope, doorLineage } from './retirement-door.ts';
 
 /** Retire headers and erase records over bounded requests. Only the final
  * publication changes public custody, native rows and the restore checkpoint.
@@ -29,27 +30,31 @@ export async function retireD1ImportCustodyStep(person: D1ImportPerson, nativeSt
   const result = await stageD1ImportErasure(nested, options, binding, async (id, bounded) => {
     const db = bounded.storage.database, destination = bounded.destination;
     const scope = await retirementScope(db, destination, person.values!), retiring = new Set(scope.jobs);
-    const fenced = !!person.target || !!fields.length || Object.values(scope).some(ids => ids.length > 0);
+    // The stage is transport, not erased custody. Its private before-images
+    // would inflate the tally and retain values after a completed publication.
+    const stores = (await tallyStores(db)).filter(store => !/^ik_d1_native_staging/.test(store.name));
+    // Withdrawn door content is custody too: a values-only erasure that removes it is fenced.
+    const fenced = !!person.target || !!fields.length || Object.values(scope).some(ids => ids.length > 0) || await doorCustodyInScope(db, destination, stores);
     if (fenced && !checkpoint.length) throw new Error('IMPORT_RETIREMENT_CHECKPOINT_REQUIRED');
     if (native.length && !fenced) throw new Error('IMPORT_RETIREMENT_NATIVE_REQUIRES_CHECKPOINT');
-    const selection = await prepareErasureSelection(person, native, bounded, id, retiring);
+    // The binding stays the caller's intent; each step derives the door lineage it severs,
+    // and its publication fails if a catch-up joined that lineage after this read.
+    const lineage = await doorLineage(person, db, destination, bounded.storage.targets.planCodec);
+    const selection = await prepareErasureSelection(lineage.person, native, bounded, id, retiring);
     const closure = scopeGuards(scope);
     const absence = headerAbsence(destination, person.values!);
     const retired = [sql('NOT EXISTS(SELECT 1 FROM ik_jobs WHERE id IN (SELECT value FROM json_each(?)))', JSON.stringify(scope.jobs)),
       sql('NOT EXISTS(SELECT 1 FROM ik_d1_streams WHERE id IN (SELECT value FROM json_each(?)))', JSON.stringify(scope.streams))];
-    // The stage is transport, not erased custody. Its private before-images
-    // would inflate the tally and retain values after a completed publication.
-    const stores = (await tallyStores(db)).filter(store => !/^ik_d1_native_staging/.test(store.name));
     return { ...selection, resultKeys: keys, direct: !scope.jobs.length,
       snapshotGuards: [...selection.snapshotGuards, ...closure],
       survivingJobs: compiler => [...compiler.jobs.keys()].filter(job => !retiring.has(job)),
-      final: [...selection.final, ...absence.map(row => guardPredicate(row)!), ...retired],
+      final: [...selection.final, ...absence.map(row => guardPredicate(row)!), ...retired, ...lineage.fence],
       publication: async (compiler, receipt) => {
         const jobs = [...compiler.jobs.keys()].sort();
         const streams = [...new Set([...scope.anchors, ...(await db.prepare('SELECT DISTINCT stream_id AS id FROM ik_d1_stream_pages WHERE job_id IN (SELECT value FROM json_each(?)) ORDER BY id').bind(JSON.stringify(jobs)).all<{ id: string }>()).results.map(row => row.id)])].sort();
         const touched = { destination, jobs, streams };
         return {
-          before: [...closure, ...tallyBefore(stores, receipt.id, touched)],
+          before: [...closure, ...tallyBefore(stores, receipt.id, touched), ...tallyWithdraw(stores, touched)],
           after: fenced ? checkpoint : [],
           tail: [...retirementWrites(scope, destination, receipt.id, receipt.recordedAt), ...absence,
             ...tallyJournal(stores, receipt.id, touched, { recordedAt: receipt.recordedAt, recordsErased: compiler.erased, jobsRetired: scope.jobs.length, streamsRetired: scope.anchors.length }, fenced)],
