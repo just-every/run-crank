@@ -81,6 +81,24 @@ main.crank { min-width: 0; padding: 28px 30px 24px; background: var(--app-sheet)
 .crank-app form.inline, .crank-app form.run-filters { display: flex; }
 .crank-app label { display: grid; gap: 6px; font-size: 14px; font-weight: 600; color: #21365f; }
 .crank-app input:not([type=hidden]):not([type=checkbox]), .crank-app select, .crank-app textarea { width: 100%; min-width: 0; min-height: 40px; padding: 8px 12px; border: 1px solid var(--app-field-edge); border-radius: 9px; background: #fcfdff; color: var(--ink); font: 400 14px/1.4 var(--font-body); }
+/* Base #247's theme-aware chevron applies only to single-choice controls. */
+.crank-app select:not([multiple],[size]:not([size="1"])) {
+  --rer-select-ink: var(--rer-muted);
+  -webkit-appearance: none;
+  appearance: none;
+  line-height: normal;
+  text-indent: 4px;
+  padding-inline-end: 40px;
+  text-overflow: ellipsis;
+  background-image:
+    linear-gradient(to top right, transparent calc(50% - 1.1px), var(--rer-select-ink) calc(50% - .55px), var(--rer-select-ink) calc(50% + .55px), transparent calc(50% + 1.1px)),
+    linear-gradient(to top left, transparent calc(50% - 1.1px), var(--rer-select-ink) calc(50% - .55px), var(--rer-select-ink) calc(50% + .55px), transparent calc(50% + 1.1px));
+  background-repeat: no-repeat;
+  background-position: right 20px center, right 14px center;
+  background-size: 6px 6px;
+}
+.crank-app select:not([multiple],[size]:not([size="1"])):focus-visible { --rer-select-ink: var(--rer-text); }
+.crank-app select:not([multiple],[size]:not([size="1"])):disabled { --rer-select-ink: color-mix(in srgb, var(--rer-muted) 55%, transparent); }
 .crank-app textarea { font-family: var(--font-mono); font-size: 13px; resize: vertical; }
 .crank-app input:focus, .crank-app select:focus, .crank-app textarea:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 3px var(--app-focus-ring); }
 .crank-app form > .btn { justify-self: start; }
@@ -146,6 +164,11 @@ a.list-row:hover { background: var(--row); border-radius: 10px; }
 .search-field .icon { position: absolute; left: 10px; top: 50%; width: 16px; height: 16px; margin-top: -8px; color: var(--soft); }
 .crank-app .search-field input[type=search] { width: 260px; padding-left: 32px; min-height: 36px; font-size: 13px; }
 .crank-app .run-filters select { width: auto; min-height: 36px; font-size: 13px; padding: 6px 10px; }
+/* Keep the native filters' footprint while reserving room for the chevron. */
+@media (min-width: 761px) {
+  .crank-app .run-filters select[name=workflow] { width: 174px; }
+  .crank-app .run-filters select[name=status] { width: 156px; }
+}
 .run-filters .btn { min-height: 36px; padding: 6px 12px; font-size: 13px; }
 
 .strip-more { display: inline-flex; align-items: center; gap: 4px; margin-top: 10px; color: var(--blue); font-size: 13.5px; font-weight: 600; text-decoration: none; }
