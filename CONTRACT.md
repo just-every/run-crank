@@ -782,13 +782,13 @@ Every capability the homepage states, in page order, for the owner-approved stru
 
 ## Status
 
-Judged from the code and tests at commit `5b1493e2c11bb34d16b502a6a7bd5047bde03a54` (17 October 2026).
+Judged from the code and tests at commit `06ace84667d83032ec41a8a210a5084cd0c85497` (18 October 2026).
 
 | Clauses | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
-| Published | 3 | 9 | 0 | 12 |
-| Target and push further | 4 | 30 | 39 | 73 |
-| All | 7 | 39 | 39 | 85 |
+| Published | 2 | 10 | 0 | 12 |
+| Target and push further | 0 | 35 | 38 | 73 |
+| All | 2 | 45 | 38 | 85 |
 
 MIG-006, BASE-004 and BASE-005 were added on 17 October 2026 so every homepage claim has a clause, and were judged from the code and tests at `eac16196cffe508a1eec962b1c116564707c1598` (main after the run site landed); every earlier row keeps its status from the commit above.
 
@@ -797,7 +797,7 @@ MIG-006, BASE-004 and BASE-005 were added on 17 October 2026 so every homepage c
 | `WORK-001` | Visual multi-step workspace | published | partial | `src/crank/ui/flows.ts`; `src/crank/flows.ts`; `tests/crank.test.mjs`; `src/crank/workflows/store.ts`; `src/crank/engine/graph.ts` | No visual node-and-edge editor, no sample data on edges (WORK-014), no picker-filled steps (CONN-019). |
 | `WORK-002` | Mapping, formatting and conditional routes | target | partial | `src/crank/engine/mapping.ts`; `src/crank/engine/transforms/index.ts`; `src/crank/connectors/files.ts`; `tests/logic.test.mjs`; `tests/connections.test.mjs` | Connector schema validation; HubSpot, Square and QuickBooks line-item read/write and Drive upload readback need accounts (HubSpot, Square, QuickBooks sandbox, Typeform, Google Drive). |
 | `WORK-003` | Loops, joins and batch processing | target | missing |  | No delivered product workflow. |
-| `WORK-004` | Durable delay and event waits | target | done | `src/crank/engine/steps/flow.ts`; `src/crank/ops/scheduler.ts`; `src/crank/triggers/callbacks.ts`; `tests/logic.test.mjs` |  |
+| `WORK-004` | Durable delay and event waits | target | partial | `src/crank/engine/steps/flow.ts`; `src/crank/ops/scheduler.ts`; `src/crank/triggers/callbacks.ts`; `tests/logic.test.mjs` | Queue release and wait resolution commit separately in the scheduler; a restart between them can leave a released queue item with an unresolved wait. |
 | `WORK-005` | Isolated code steps and external executors | target | missing |  | No delivered product workflow. |
 | `WORK-006` | Reusable subflows and recipes | target | missing |  | No delivered product workflow. |
 | `WORK-007` | Workflow tables and intake forms | target | missing |  | No delivered product workflow. |
@@ -829,13 +829,13 @@ MIG-006, BASE-004 and BASE-005 were added on 17 October 2026 so every homepage c
 | `CONN-019` | Live account pickers, dependent inputs and field refresh | target | missing |  | No delivered product workflow. |
 | `HTTP-001` | Authorized HTTP dispatch | published | done | `src/crank/flows.ts`; `src/crank/runs.ts`; `src/crank/delivery.ts`; `tests/crank.test.mjs` |  |
 | `HTTP-002` | General HTTP and connector API request steps | target | partial | `src/crank/connectors/http-step.ts`; `src/crank/engine/egress.ts`; `tests/connections.test.mjs` | HubSpot raw API proof needs an account; DNS-rebinding needs an enforcing Worker egress binding (Base gap). |
-| `TRIG-001` | Scoped, deduplicated webhook admission | target | done | `src/crank/triggers/webhook.ts`; `src/crank/triggers/inbound.ts`; `src/crank/triggers/signatures.ts`; `tests/triggers.test.mjs`; `tests/crank.test.mjs` |  |
+| `TRIG-001` | Scoped, deduplicated webhook admission | target | partial | `src/crank/triggers/webhook.ts`; `src/crank/triggers/inbound.ts`; `src/crank/triggers/signatures.ts`; `tests/triggers.test.mjs`; `tests/crank.test.mjs` | Secret-URL envelope admission re-admits repeated event IDs, does not reject changed payloads and has no erased-event fence; the legacy scoped-envelope path retains these protections. |
 | `TRIG-002` | Schedules and on-demand runs | target | partial | `src/crank/ui/flows.ts`; `src/crank/runs.ts`; `src/crank/triggers/schedule.ts`; `tests/triggers.test.mjs` | Historical runs over existing source records with count, sample and USD preview. |
 | `TRIG-003` | App, polling and email triggers | target | partial | `src/crank/triggers/poll.ts`; `src/crank/triggers/slack-events.ts`; `tests/triggers.test.mjs` | Email triggers, CRM/app polling, renewable subscriptions, TRIG-008. |
 | `TRIG-004` | Polling frequency and trigger latency | target | partial | `src/crank/ops/report.ts`; `tests/triggers.test.mjs` | Provider rate tables with slowest-safe-interval warnings; HubSpot/Typeform journey needs accounts. |
 | `TRIG-005` | Flood protection for bursts of trigger events | target | partial | `src/crank/triggers/admission.ts`; `tests/triggers.test.mjs`; `tests/logic.test.mjs` | Estimated USD cost of a held batch (needs OPS-002). |
 | `TRIG-006` | Hosted inbound email addresses | target | missing |  | No delivered product workflow. |
-| `TRIG-007` | Feed and URL polling triggers | target | done | `src/crank/triggers/poll.ts`; `src/crank/triggers/feeds.ts`; `src/crank/triggers/xml.ts`; `tests/triggers.test.mjs` |  |
+| `TRIG-007` | Feed and URL polling triggers | target | partial | `src/crank/triggers/poll.ts`; `src/crank/triggers/feeds.ts`; `src/crank/triggers/xml.ts`; `tests/triggers.test.mjs` | URL-poll headers and query values are copied literally rather than resolved mappings; DNS-resolved private destinations need enforcing egress and parse time has no explicit bound. |
 | `TRIG-008` | Updated-record triggers on watched fields | target | missing |  | No delivered product workflow. |
 | `EXEC-001` | Durable queues and execution checkpoints | target | partial | `src/crank/runs.ts`; `src/crank/delivery.ts`; `src/crank/ui/flows.ts`; `tests/crank.test.mjs` | Dead-letter, priorities, concurrency limits, queue dashboards. |
 | `EXEC-002` | Rate limits, backoff and exhaustion | target | partial | `src/crank/connectors/http-step.ts`; `tests/connections.test.mjs` | Per-account rate limits, attempt budgets, dead-letter. |
@@ -848,8 +848,8 @@ MIG-006, BASE-004 and BASE-005 were added on 17 October 2026 so every homepage c
 | `OPS-002` | USD usage, forecasts and spending controls | target | missing |  | No delivered product workflow. |
 | `TEAM-001` | Team workspaces and permissions | target | partial | `src/crank/access.ts`; `src/crank/ui/settings.ts`; `tests/crank.test.mjs` | Owner/admin/member roles and deactivation exist; workspace sharing scopes, approver/operator roles and team connection ownership do not. |
 | `TEAM-002` | Optional approvals and standing grants | published | partial | `src/crank/delivery.ts`; `src/crank/access.ts`; `tests/crank.test.mjs` | Exact owner approval/rejection ships; optional approval nodes and standing grants are absent. |
-| `TEAM-003` | Scoped preparation and trigger credentials | published | done | `src/crank/tokens.ts`; `src/crank/access.ts`; `src/crank/api.ts`; `tests/crank.test.mjs` |  |
-| `TEAM-004` | Publishing authorizes a workflow’s declared steps | target | done | `src/crank/workflows/store.ts`; `src/crank/engine/executor.ts`; `tests/logic.test.mjs` |  |
+| `TEAM-003` | Scoped preparation and trigger credentials | published | partial | `src/crank/tokens.ts`; `src/crank/access.ts`; `src/crank/api.ts`; `tests/crank.test.mjs` | The newer on-demand workflow run door permits preparation agents to execute published workflows without a separate execution grant or transaction-level actor fence. |
+| `TEAM-004` | Publishing authorizes a workflow’s declared steps | target | partial | `src/crank/workflows/store.ts`; `src/crank/engine/executor.ts`; `tests/logic.test.mjs` | Queued execution does not check workflow state or version retirement before dispatch; recipient caps are absent (only USD caps ship). |
 | `TEAM-005` | Approve with edits, rejection routes and reviewer notices | published | partial | `src/crank/delivery.ts`; `tests/crank.test.mjs`; `tests/logic.test.mjs` | Slack/Teams/Nook/mobile push notices, reminders and calendar timeouts. |
 | `SEC-001` | Native authentication and origin-bound writes | target | partial | `src/crank/access.ts`; `src/crank/api.ts`; `tests/crank.test.mjs`; `tests/email-link.mjs`; `SEED-COMMAND-CONTRACT.md` | HTTP role/origin boundaries are tested; commit-time session revocation and every private door/dev-layer exclusion are not all established by the cited product tests. |
 | `SEC-002` | Bounded network and untrusted content | target | partial | `src/crank/flows.ts`; `src/crank/delivery.ts`; `src/crank/model.ts`; `src/crank/ui/document.ts`; `tests/crank.test.mjs`; `src/crank/engine/egress.ts` | DNS rebinding (Base gap), prompt injection. |
@@ -878,4 +878,4 @@ MIG-006, BASE-004 and BASE-005 were added on 17 October 2026 so every homepage c
 | `BASE-003` | Observable operation and recovery | target | partial | `src/base/deployment-health.ts`; `src/crank/delivery.ts`; `src/crank/api.ts`; `tests/runtime.mjs`; `tests/crank.test.mjs` | Basic runtime health and read-triggered delivery-lease expiry exist; the complete future execution classes and operational guarantees are not proven. |
 | `BASE-004` | Free, MIT-licensed source with no paid tier | target | partial | `LICENSE`; `src/site/run.json`; `src/site/shell/SiteFooter.tsx`; `src/site/landing/sections/Closing.tsx` | `package.json` declares no license; no test asserts the MIT text, the site statement or the absence of a paid gate; the run with author traffic blocked is not tested. |
 | `BASE-005` | Run on your own computer, server or Cloudflare account | target | partial | `RUN-LOCALLY.md`; `src/site/run.json`; `deploy.json`; `tests/runtime.mjs` | No supported own-server production path (a supervised workerd service with on-disk data, Cron and HTTPS); `rer dev` stops after 12 idle hours and is not a production service; live owner-account deploy is not proven by the cited tests. |
-| `BOUND-001` | US-first product and provider responsibilities | target | missing |  | No delivered product workflow. |
+| `BOUND-001` | US-first product and provider responsibilities | target | partial | `src/crank/engine/transforms/utilities.ts`; `src/crank/engine/calendar.ts`; `tests/logic.test.mjs` | USD cents, tax-code line fields and US business calendars ship; USD forecasts, ACH/1099/W-2 provider handoffs and regulated-operation agreement/scope obligations are absent. |
