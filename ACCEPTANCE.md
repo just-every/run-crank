@@ -61,7 +61,7 @@ Each item below is one clause’s acceptance evidence. The named journey must be
   Current evidence: none; this is build work.
 
 - **WORK-004 — Durable delay and event waits. Status: done.** Publish a two-business-day follow-up, stop the executor while waiting, resume after a timezone/DST boundary and deliver the same callback twice; observe one continuation, or the configured timeout branch if the deadline passes. Send 5 runs from two workflows into one named delay queue with 1-minute spacing and restart the service mid-queue; verify each releases once, in arrival order, at least 60 seconds after the previous.
-  Current evidence: `src/crank/engine/steps/flow.ts`; `src/crank/ops/scheduler.ts`; `src/crank/triggers/callbacks.ts`; `tests/logic.test.mjs`.
+  Current evidence: `src/crank/engine/steps/flow.ts`; `src/crank/engine/records.ts`; `src/crank/ops/delay-queues.ts`; `src/crank/ops/scheduler.ts`; `src/crank/triggers/callbacks.ts`; `tests/logic.test.mjs` (`WORK-004`: storage interruption, concurrent release, five arrivals across two workflows, restart, Chicago DST, expiry, duplicate/late callbacks, version and pause cancellation, and conflicting shared spacing).
 
 - **WORK-005 — Isolated code steps and external executors. Status: missing.** From a published workflow run a code transformation and a remote Python job; exceed a limit, attempt unauthorized egress and cancel a long job; inspect explicit failures and verify a restart reconciles the remote task without launching a duplicate.
   Current evidence: none; this is build work.

@@ -20,7 +20,7 @@ export async function receiveCallback(request: Request, env: CrankEnv, token: st
   const inbound = await parseInbound(env, run.workflow_id, request, bytes, false)
   const wait = await stmt(env, "SELECT expires_at,resolved_at FROM crank_waits WHERE run_id=? AND path=? AND kind='callback'", runId, path).first<{ expires_at: string | null; resolved_at: string | null }>()
   const at = now(), live = !!wait && !wait.resolved_at && (!wait.expires_at || wait.expires_at > at)
-  const accepted = live && await resolveWait(env, runId, path, { received: true, timed_out: false, received_at: at, body: inbound.body, query: inbound.query }, null)
+  const accepted = live && await resolveWait(env, runId, path, { received: true, timed_out: false, received_at: at, body: inbound.body, query: inbound.query }, null, { at, beforeExpiry: true })
   await stmt(env, 'INSERT INTO crank_callback_events(run_id,path,received_at,accepted,body_digest) VALUES(?,?,?,?,?)', runId, path, at, accepted ? 1 : 0, await digest(inbound.normalized)).run()
   if (!accepted) return json({ accepted: false, reason: wait?.resolved_at ? 'already resumed' : 'the wait has ended' }, 200)
   const work = executeRun(env, runId)

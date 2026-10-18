@@ -1,5 +1,6 @@
 import { executeRun } from '../engine/executor'
 import { resolveWait } from '../engine/records'
+import { releaseDelayQueues } from './delay-queues'
 import { stmt, type CrankEnv } from '../model'
 import { runPoll, type PollRow } from '../triggers/poll'
 import { runSchedule } from '../triggers/schedule'
@@ -16,18 +17,7 @@ export async function schedulerPass(env: CrankEnv, time = Date.now()) {
   for (const wait of delays.results) if (await resolveWait(env, wait.run_id, wait.path, { released: true, expired: !!wait.expires_at && wait.expires_at < at }, null, { at })) summary.released++
   const callbacks = await stmt(env, "SELECT run_id,path FROM crank_waits WHERE resolved_at IS NULL AND kind='callback' AND expires_at<=? LIMIT 200", at).all<{ run_id: string; path: string }>()
   for (const wait of callbacks.results) if (await resolveWait(env, wait.run_id, wait.path, { received: false, timed_out: true }, null, { at })) summary.released++
-  // Delay queues release their head item once each, in arrival order, after the spacing.
-  const queues = await stmt(env, 'SELECT q.name,q.spacing_seconds,q.last_release_at FROM crank_delay_queues q WHERE EXISTS(SELECT 1 FROM crank_queue_items i WHERE i.queue=q.name AND i.released_at IS NULL)').all<{ name: string; spacing_seconds: number; last_release_at: string | null }>()
-  for (const queue of queues.results) {
-    if (queue.last_release_at && Date.parse(queue.last_release_at) + queue.spacing_seconds * 1000 > time) continue
-    const head = await stmt(env, 'SELECT seq,run_id,path FROM crank_queue_items WHERE queue=? AND released_at IS NULL ORDER BY seq LIMIT 1', queue.name).first<{ seq: number; run_id: string; path: string }>()
-    if (!head) continue
-    const released = await env.DB.batch([
-      stmt(env, 'UPDATE crank_delay_queues SET last_release_at=? WHERE name=? AND last_release_at IS ?', at, queue.name, queue.last_release_at),
-      stmt(env, 'UPDATE crank_queue_items SET released_at=? WHERE seq=? AND released_at IS NULL AND EXISTS(SELECT 1 FROM crank_delay_queues WHERE name=? AND last_release_at=?)', at, head.seq, queue.name, at),
-    ])
-    if (released[1].meta.changes === 1 && await resolveWait(env, head.run_id, head.path, { released_at: at, queue: queue.name }, null, { at })) summary.queued++
-  }
+  summary.queued = await releaseDelayQueues(env, time)
   const polls = await stmt(env, 'SELECT * FROM crank_polls WHERE next_due_at<=? ORDER BY next_due_at LIMIT 25', at).all<PollRow>()
   for (const poll of polls.results) { await runPoll(env, poll, time); summary.polls++ }
   const schedules = await stmt(env, 'SELECT * FROM crank_schedules WHERE next_due_at<=? ORDER BY next_due_at LIMIT 25', at).all<{ workflow_id: string; version_id: string; next_due_at: string }>()

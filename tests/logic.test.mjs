@@ -124,12 +124,18 @@ test('WORK-004: business-day delays, callback waits and a shared delay queue res
   const cancelled = await h.get('workflow-runs/' + parked.id);
   assert.equal(cancelled.status, 'cancelled'); assert.equal(cancelled.waits[0].resolution.cancelled, true, 'the owner-chosen cancellation policy applies to waiting runs');
 
+  const versioned = await publish(h, 'Cancel follow-up when replaced', {settings:{waiting_runs:'cancel_on_new_version'},trigger:{type:'manual'},steps:[{id:'wait',type:'delay',mode:'for',input:{amount:1,unit:'days'}}]});
+  const replaced = await startRun(h,versioned,{});
+  await h.post(`workflows/${versioned.id}/publish`,{},h.owner,201);
+  assert.equal((await h.get('workflow-runs/'+replaced.id)).status,'cancelled','publishing applies the version’s chosen cancellation policy');
+
   const callback = await publish(h, 'Wait for supplier', { trigger: { type: 'manual' }, steps: [
     { id: 'ask', type: 'http', input: { method: 'POST', url: 'https://crm.example/asks', body: { reply_to: '{{run.resume_urls.reply}}' } } },
     { id: 'reply', type: 'wait_for_callback', timeout: { amount: 2, unit: 'days' } },
     { id: 'record', type: 'map', input: { answer: '{{steps.reply.body.answer}}', timed_out: '{{steps.reply.timed_out}}' } }] });
   const asked = await startRun(h, callback, {});
   const resumeUrl = crmBodies().at(-1).reply_to;
+  await h.restart();
   const first = await deliver(h, resumeUrl, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ answer: 'PO-7731' }) });
   const second = await deliver(h, resumeUrl, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ answer: 'late duplicate' }) });
   assert.equal(first.status, 202); assert.equal(second.value.accepted, false);
@@ -139,18 +145,51 @@ test('WORK-004: business-day delays, callback waits and a shared delay queue res
   await h.tick(Date.now() + 2 * DAY + MINUTE);
   assert.equal(stepOf(await h.get('workflow-runs/' + silent.id), 'record').output.timed_out, true, 'the timeout route runs when the deadline passes');
 
+  const lateUrl = crmBodies().at(-1).reply_to;
+  assert.equal((await deliver(h, lateUrl, {method:'POST',body:'late supplier response'})).value.accepted, false);
+  const untilFlow = await publish(h, 'Expiring calendar deadline', { trigger: {type:'manual'}, steps: [
+    { id:'deadline', type:'delay', mode:'until', timezone:'America/New_York', input:{until:'{{trigger.input.until}}'}, expires_after:{amount:1,unit:'minutes'}, on_expired:'fail' },
+    { id:'done', type:'map', input:{} }] });
+  const deadline = Date.now()+MINUTE, expiring = await startRun(h,untilFlow,{until:new Date(deadline).toISOString()});
+  await h.restart();await h.tick(deadline+3*MINUTE);
+  assert.equal((await h.get('workflow-runs/'+expiring.id)).status,'failed','an expired until wait follows its failure policy after restart');
+
+  const dst = await publish(h, 'Two business days across daylight saving', {trigger:{type:'schedule',at:'09:00',days:['fri'],timezone:'America/Chicago',missed:'skip'},steps:[
+    {id:'wait',type:'delay',mode:'for',input:{amount:2,unit:'business_days'},timezone:'America/Chicago',calendar:'us_federal'}, {id:'done',type:'map',input:{}}]});
+  // Set the durable scheduler clock to the Friday before the 2026 fall transition.
+  await h.db.prepare('UPDATE crank_schedules SET next_due_at=? WHERE workflow_id=?').bind('2026-10-30T14:00:00.000Z',dst.id).run();
+  await h.tick(Date.parse('2026-10-30T14:00:00.000Z'));
+  const dstRun=(await runs(h,dst))[0], dstDetail=await h.get('workflow-runs/'+dstRun.id);
+  assert.equal(dstDetail.waits[0].due_at,'2026-11-03T15:00:00.000Z','two US business days retain 9 a.m. Chicago across DST');
+  await h.restart();await h.tick(Date.parse('2026-11-03T15:00:00.000Z'));
+  assert.equal((await h.get('workflow-runs/'+dstRun.id)).status,'succeeded');
+  await h.post(`workflows/${dst.id}/pause`);
+
   const queueStep = { id: 'line_up', type: 'delay', mode: 'queue', input: { queue: 'Shared desk', spacing_seconds: 60 } };
   const one = await publish(h, 'Queue A', { trigger: { type: 'manual' }, steps: [queueStep, { id: 'go', type: 'map', input: { from: 'A' } }] });
   const two = await publish(h, 'Queue B', { trigger: { type: 'manual' }, steps: [queueStep, { id: 'go', type: 'map', input: { from: 'B' } }] });
-  const order = [await startRun(h, one, {}), await startRun(h, two, {}), await startRun(h, one, {})].map(r => r.id);
-  assert.equal((await h.get('queues')).find(q => q.name === 'Shared desk').depth, 3);
-  let time = Date.now() + 3 * DAY;
-  for (const step of [0, 30, 60, 90, 120]) await h.tick(time + step * 1000);
+  const order = [await startRun(h, one, {}), await startRun(h, two, {}), await startRun(h, one, {}), await startRun(h, two, {}), await startRun(h, one, {})].map(r => r.id);
+  assert.equal((await h.get('queues')).find(q => q.name === 'Shared desk').depth, 5);
+  const time = Date.now() + 3 * DAY;
+  // A storage failure while resolving the wait must not commit a queue release.
+  await h.db.exec(`CREATE TRIGGER interrupted_release BEFORE UPDATE OF resolved_at ON crank_waits WHEN OLD.kind='queue' BEGIN SELECT RAISE(ABORT,'test interrupted queue release'); END;`);
+  await h.tick(time);
+  assert.equal((await h.get('queues')).find(q => q.name === 'Shared desk').depth, 5, 'an interrupted release leaves the whole queue retryable');
+  await h.db.exec('DROP TRIGGER interrupted_release');
+  for (const step of [0, 30, 60, 90, 120, 180, 240]) {
+    await Promise.all([h.tick(time + step * 1000), h.tick(time + step * 1000)]);
+    if (step === 60) await h.restart();
+  }
   const finished = await Promise.all(order.map(id => h.get('workflow-runs/' + id)));
   assert.ok(finished.every(r => r.status === 'succeeded'));
   const releases = finished.map(r => Date.parse(r.waits[0].resolved_at));
-  assert.ok(releases[1] - releases[0] >= 60000 && releases[2] - releases[1] >= 60000, 'released in arrival order, 60 seconds apart');
+  assert.ok(releases.slice(1).every((released,i) => released - releases[i] >= 60000), 'five arrivals across two workflows release in arrival order, 60 seconds apart after a restart');
+  assert.ok(finished.every(r => r.steps.filter(s => s.step_id === 'go').length === 1));
   assert.equal((await h.get('queues')).find(q => q.name === 'Shared desk').depth, 0);
+  const conflict = await publish(h,'Conflicting shared queue policy',{trigger:{type:'manual'},steps:[{...queueStep,input:{queue:'Shared desk',spacing_seconds:120}}]});
+  const refused=await startRun(h,conflict,{});
+  assert.equal(refused.status,'failed');assert.match(refused.error.message,/different spacing/);
+  assert.equal((await h.get('queues')).find(q=>q.name==='Shared desk').spacing_seconds,60,'another workflow cannot silently change the shared spacing');
 });
 
 test('TEAM-004: publishing authorizes declared steps unattended; caps pause only out-of-cap actions; drafts and revoked connections cannot widen authority', async () => {

@@ -1,5 +1,6 @@
 import { canonical, digest, id, now, stmt, type CrankEnv } from '../model'
 import type { RunRow, WaitRow, WaitSpec } from './types'
+import { StepError } from './errors'
 
 export interface StepRecord {
   run_id: string; path: string; step_id: string; type: string; status: 'running' | 'succeeded' | 'failed' | 'skipped' | 'waiting' | 'stopped' | 'uncertain'
@@ -38,14 +39,17 @@ export async function insertWait(env: CrankEnv, run: RunRow, path: string, spec:
     statements.push(stmt(env, 'INSERT INTO crank_delay_queues(name,spacing_seconds,created_at) VALUES(?,?,?) ON CONFLICT(name) DO UPDATE SET spacing_seconds=excluded.spacing_seconds', spec.queue.name, spec.queue.spacingSeconds, at))
     statements.push(stmt(env, 'INSERT INTO crank_queue_items(queue,run_id,path,arrived_at) VALUES(?,?,?,?) ON CONFLICT(run_id,path) DO NOTHING', spec.queue.name, run.id, path, at))
   }
-  await env.DB.batch(statements)
+  try { await env.DB.batch(statements) } catch (error) {
+    if (spec.queue && String(error).includes('queue_spacing_conflict')) throw new StepError('validation', `Delay queue "${spec.queue.name}" already uses a different spacing; choose the same spacing or a new queue name`)
+    throw error
+  }
 }
 
 /** Resolves a wait exactly once and queues its run; a second resolution changes nothing. */
-export async function resolveWait(env: CrankEnv, runId: string, path: string, resolution: unknown, decidedBy: string | null, extra: { digest?: string; at?: string } = {}) {
+export async function resolveWait(env: CrankEnv, runId: string, path: string, resolution: unknown, decidedBy: string | null, extra: { digest?: string; at?: string; beforeExpiry?: boolean } = {}) {
   const at = extra.at ?? now()
   const results = await env.DB.batch([
-    stmt(env, `UPDATE crank_waits SET resolved_at=?,resolution_json=?,decided_by=? WHERE run_id=? AND path=? AND resolved_at IS NULL${extra.digest ? ' AND proposal_digest=?' : ''}`,
+    stmt(env, `UPDATE crank_waits SET resolved_at=?,resolution_json=?,decided_by=? WHERE run_id=? AND path=? AND resolved_at IS NULL${extra.digest ? ' AND proposal_digest=?' : ''}${extra.beforeExpiry ? " AND kind='callback' AND (expires_at IS NULL OR expires_at>strftime('%Y-%m-%dT%H:%M:%fZ','now'))" : ''}`,
       at, JSON.stringify(resolution), decidedBy, runId, path, ...(extra.digest ? [extra.digest] : [])),
     stmt(env, "UPDATE crank_wf_runs SET status='queued' WHERE id=? AND status IN ('waiting','awaiting_approval') AND EXISTS(SELECT 1 FROM crank_waits WHERE run_id=? AND path=? AND resolved_at=?)", runId, runId, path, at),
   ])
