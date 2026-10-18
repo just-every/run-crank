@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { createServer } from 'node:http'
 import { readFile, stat } from 'node:fs/promises'
 import { resolve, extname } from 'node:path'
+import { verifyRunCommands } from './run-commands.mjs'
 
 // Exercise the emitted static site through HTTP, as a visitor without JavaScript.
 test('the run site leads to runnable commands and repository guides with working local links', async () => {
@@ -50,7 +51,9 @@ test('the run site leads to runnable commands and repository guides with working
     const home=documents.get('/'),homeText=home.replace(/<[^>]+>/g,'').replaceAll('&amp;','&')
     assert.match(homeText,/git clone https:\/\/github\.com\/just-every\/run-crank\.git crank\s*\$?\s*cd crank && rer dev/,'the homepage shows the commands that start Crank')
     assert.doesNotMatch(home,/localhost|127\.0\.0\.1|\bRER_[A-Z]/,'the homepage shows no local addresses or rer output')
-    const run=documents.get('/run');assert.match(run,/@runeditrun\/rer dev just-every\/run-crank/);assert.match(run,/rer dev/)
+    const run=documents.get('/run'),runText=run.replace(/<[^>]+>/g,'').replaceAll('&amp;','&')
+    assert.match(runText,/@runeditrun\/rer dev just-every\/run-crank/);assert.match(runText,/rer dev/)
+    await verifyRunCommands(origin)
     assert.ok([...documents.keys()].filter(path=>path.startsWith('/docs/')).length>1,'readable guides are emitted')
     for(const [path,html] of documents) {
       for(const match of html.matchAll(/href="([^"]+)"/g)) {
