@@ -46,6 +46,25 @@ test('OPS-001: scoped report and CSV reconcile real run outcomes, obligations an
   assert.equal(today.runs,dayHistory.runs.filter(r=>[flow.id,waiting.id].includes(r.workflow_id)).length);
   assert.equal(today.failed,dayHistory.runs.filter(r=>[flow.id,waiting.id].includes(r.workflow_id)&&r.status==='failed').length);
   assert.equal(today.active_workflows_ran,2); assert.equal(today.active_workflows,2);
+  const scheduled = await publish(h,'Scheduled settlement audit',{trigger:{type:'schedule',every_minutes:15,timezone:'Pacific/Auckland'},steps:[]});
+  await h.post('reports/settings',{assignments:[{workflow_id:scheduled.id,team:'Finance'}]});
+  const dueAt = new Date(Date.now()-60000).toISOString();
+  // Leave the durable schedule due without a Cron pass, as during an executor outage.
+  await h.db.prepare('UPDATE crank_schedules SET next_due_at=? WHERE workflow_id=?').bind(dueAt,scheduled.id).run();
+  assert.equal((await h.get('workflow-runs?workflow='+scheduled.id)).runs.length,0);
+  report = await h.get('reports/operations?team=Finance');
+  assert.deepEqual(report.today.missed_schedules,[{workflow_id:scheduled.id,due_at:dueAt,reason:'due run not admitted',name:scheduled.name}]);
+  assert.equal(report.today.active_workflows,3); assert.equal(report.today.active_workflows_ran,2);
+  const setup = await h.mf.dispatchFetch(h.origin+'/setup',{method:'POST',redirect:'manual',headers:{origin:h.origin,cookie:h.owner,'content-type':'application/x-www-form-urlencoded'},body:'confirm=yes'});
+  assert.equal(setup.status,303);
+  const operations = await h.send('/app/operations?team=Finance',undefined,h.owner);
+  assert.equal(operations.status,200,operations.text.slice(0,200));
+  assert.ok(operations.text.includes(`<strong>${report.today.runs}</strong>`),'the operations page renders the report run count');
+  assert.ok(operations.text.includes(`<strong>${report.today.active_workflows_ran} of ${report.today.active_workflows}</strong>`),'the operations page renders actual scheduled-workflow coverage');
+  const missedRow = operations.text.match(new RegExp(`<li><a href="/app/workflows/${scheduled.id}">[^]*?</li>`))?.[0];
+  assert.ok(missedRow?.includes(scheduled.name) && missedRow.includes(report.today.missed_schedules[0].reason) && missedRow.includes(`datetime="${dueAt}"`),'the operations page renders the missing schedule with its due time and reason');
+  assert.ok(operations.text.includes(obligation.description),'the operations page renders the recorded business obligation');
+  assert.ok(operations.text.includes(`${vendor.label} (${report.workflows.find(w=>w.workflow_id===flow.id).connectors[0].health})`),'the operations page renders current connector health');
   const csv=await h.send('/api/crank/reports/operations?workflow='+flow.id+'&format=csv',undefined,h.owner);
   assert.equal(csv.status,200); assert.match(csv.headers.get('content-type'),/text\/csv/);
   assert.ok(csv.text.includes('"\'=Revenue, ""daily"""'),'names are escaped for CSV and spreadsheets');
