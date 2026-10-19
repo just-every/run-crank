@@ -258,6 +258,10 @@ test('EXEC-002: two accounts progress independently through 429, backoff, perman
   const queue = (await h.get('reports/operations')).execution_queue;
   assert.equal(queue.runs.find(r => r.id === exhausted.id).state, 'dead_letter');
   assert.equal(queue.runs.find(r => r.id === deadline.id).state, 'dead_letter');
+  await h.mf.dispatchFetch(h.origin + '/setup', { method: 'POST', redirect: 'manual', headers: { origin: h.origin, cookie: h.owner, 'content-type': 'application/x-www-form-urlencoded' }, body: 'confirm=yes' });
+  const page = await h.send('/app/workflow-runs/' + exhausted.id, undefined, h.owner);
+  assert.equal(page.status, 200); assert.ok(page.text.includes(exhausted.error.next_owner_action), 'exhaustion shows the owner the next action');
+  for (const attempt of exhausted.attempts.filter(a => a.retry_at)) assert.ok(page.text.includes(`datetime="${attempt.retry_at}"`), 'attempt history shows the stored earliest retry instant');
 });
 
 test('EXEC-002: executor loss during a retry wait retains the original request budget and earliest retry time', async () => {

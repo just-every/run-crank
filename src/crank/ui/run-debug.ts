@@ -2,6 +2,9 @@ import { esc, json, timestamp } from './document'
 import type { RunDetail } from './editor/model'
 import { RUN_STATE } from './editor/runs'
 
+/** Retry gaps can be shorter than a second; keep that precision with or without JS. */
+export const attemptTime = (value: string) => `<time datetime="${esc(value)}" data-format="precise" title="UTC">${esc(value.replace('T', ' ').replace('Z', ' UTC'))}</time>`
+
 /** Only provider-returned web links are navigable; data is always rendered literally. */
 function remoteLinks(value: unknown): string {
   const links = new Set<string>()
