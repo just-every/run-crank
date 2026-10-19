@@ -18,14 +18,15 @@ const isItem = (row: Row) => row.type === 'loop' && /\/items\/\d+$/.test(row.pat
  * reconciliation (EXEC-006) and are never offered for blind replay. */
 export async function previewReplay(env: CrankEnv, actor: Actor, runId: string) {
   requireOwner(actor)
-  const run = await stmt(env, 'SELECT r.id,r.status,r.version_id,r.workflow_id,r.mode,r.repair_paths_json,w.status AS workflow_status,w.owner_id FROM crank_wf_runs r JOIN crank_workflows w ON w.id=r.workflow_id WHERE r.id=?', runId)
-    .first<{ id: string; status: string; version_id: string; workflow_id: string; workflow_status: string; mode: string; owner_id: string; repair_paths_json: string | null }>()
+  const run = await stmt(env, 'SELECT r.id,r.status,r.version_id,r.workflow_id,r.mode,r.repair_paths_json,r.repaired_paths_json,w.status AS workflow_status,w.owner_id FROM crank_wf_runs r JOIN crank_workflows w ON w.id=r.workflow_id WHERE r.id=?', runId)
+    .first<{ id: string; status: string; version_id: string; workflow_id: string; workflow_status: string; mode: string; owner_id: string; repair_paths_json: string | null; repaired_paths_json: string }>()
   requireValue(run, 'Run not found', 404)
   const rows = (await stmt(env, 'SELECT path,step_id,type,status,input_json,error_json,output_json,operation_key FROM crank_wf_steps WHERE run_id=? ORDER BY started_at,path', runId).all<Row>()).results
   const revisions = (await stmt(env, 'SELECT path,COUNT(*) AS count FROM crank_wf_step_revisions WHERE run_id=? GROUP BY path', runId).all<{ path: string; count: number }>()).results
   const count = new Map(revisions.map(r => [r.path, r.count]))
   const failedBelow = (row: Row) => rows.some(other => other.status === 'failed' && other.path.startsWith(row.path + '/'))
-  const claimed = (await stmt(env, 'SELECT chosen.value AS path FROM crank_wf_runs repair,json_each(repair.repair_paths_json) chosen WHERE repair.repair_of=?', runId).all<{ path: string }>()).results.map(row => row.path)
+  const linked = (await stmt(env, 'SELECT chosen.value AS path FROM crank_wf_runs repair,json_each(repair.repair_paths_json) chosen WHERE repair.repair_of=?', runId).all<{ path: string }>()).results
+  const claimed: string[] = [...new Set([...JSON.parse(run.repaired_paths_json), ...linked.map(row => row.path)])]
   const repairPaths: string[] | null = run.repair_paths_json ? JSON.parse(run.repair_paths_json) : null
   const withinRepair = (path: string) => !repairPaths || repairPaths.some(selected => {
     const item = selected.match(/^(.*\/items\/\d+)\//)?.[1]
@@ -35,7 +36,7 @@ export async function previewReplay(env: CrankEnv, actor: Actor, runId: string) 
     && !parse(row.error_json)?.uncertain && withinRepair(row.path) && !claimed.includes(row.path)
     && (run.status === 'failed' || /\/items\/\d+\//.test(row.path))) : []
   const preview = {
-    run_id: run.id, version_id: run.version_id, status: run.status, mode: run.status === 'succeeded' ? 'linked_repair' : 'resume', limit: REPLAY_LIMIT,
+    run_id: run.id, version_id: run.version_id, status: run.status, mode: run.status === 'succeeded' ? 'linked_repair' : 'resume', claimed_paths: claimed, limit: REPLAY_LIMIT,
     blocked_reason: !['failed', 'succeeded'].includes(run.status) ? 'Only a failed or succeeded run can replay eligible failed steps.'
       : run.workflow_status === 'paused' || run.mode !== 'test' && run.workflow_status !== 'published' || pendingRestore(run) ? 'Publish (and adopt) the workflow before replaying its runs.' : null,
     eligible: eligible.map(row => ({ path: row.path, step_id: row.step_id, type: row.type, input: parse(row.input_json), error: parse(row.error_json), operation_key: row.operation_key,

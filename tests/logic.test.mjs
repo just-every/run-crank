@@ -384,11 +384,16 @@ test('EXEC-004: preview and replay a failed step after restart, then selected fa
     assert.equal(restoredRepair.repair_of, completed.id); assert.deepEqual(restoredRepair.repair_paths, [repairPath]);
     assert.deepEqual(restoredRepair.revisions, repaired.revisions);
     assert.ok((await receiving.get(`workflow-runs/${completed.id}/replay`)).blocked_reason, 'restored repairs have no dispatch authority');
+    assert.deepEqual((await receiving.get(`workflow-runs/${completed.id}/replay`)).claimed_paths, [repairPath], 'source replay claims survive restore');
     assert.ok((await receiving.get('workflows')).every(w => ['paused', 'draft'].includes(w.status)), 'restored workflows stay inactive');
   } finally { await receiving.close(); }
   const audit = await h.get(`audit?kind=run&id=${run.id}`);
   const owner = (await h.get()).actor.id, replays = audit.filter(a => a.action === 'run.replay');
   assert.equal(replays.length, 2); assert.ok(replays.every(a => a.actor_id === owner && a.version_id === run.version_id), 'EXEC-004 replays are attributable');
+  await h.post(`workflows/${continuing.id}/pause`);
+  await h.post('data/erase', { workflow_run_id: repaired.id, confirm: 'ERASE' });
+  await h.post(`workflows/${continuing.id}/resume`);
+  assert.deepEqual((await h.get(`workflow-runs/${completed.id}/replay`)).eligible.map(s => s.path), ['orders/items/2/invoice'], 'EXEC-004 / DATA-002: erasing a repair never makes its already-repaired source item eligible again');
 });
 
 test('WORK-008: draft edits are listed with author, time and change; one-action rollback is audited and the next run uses that graph', async () => {

@@ -17,8 +17,13 @@ export async function createRepair(env: CrankEnv, actor: Actor, sourceId: string
       SELECT ?,r.workflow_id,r.version_id,'repair',r.source_id,r.trigger_json,'queued',r.source_time,?,?,r.business_key,r.id,?,r.mode,?
       FROM crank_wf_runs r JOIN crank_workflows w ON w.id=r.workflow_id
       WHERE r.id=? AND r.status='succeeded' AND ((r.mode='production' AND w.status='published' AND w.published_version_id=r.version_id) OR (r.mode='test' AND w.status!='paused' AND NOT EXISTS(SELECT 1 FROM crank_workflow_versions v WHERE v.id=r.version_id AND v.retired_at IS NOT NULL)))
-      AND NOT EXISTS(SELECT 1 FROM crank_wf_runs repair,json_each(repair.repair_paths_json) claimed,json_each(?) chosen
-        WHERE repair.repair_of=r.id AND claimed.value=chosen.value) RETURNING id`, runId, at, actor.id, encoded, actor.version, sourceId, encoded),
+      AND NOT EXISTS(SELECT 1 FROM json_each(r.repaired_paths_json) claimed,json_each(?) chosen
+        WHERE claimed.value=chosen.value)
+      AND NOT EXISTS(SELECT 1 FROM crank_wf_runs repair,json_each(repair.repair_paths_json) claimed,json_each(?) chosen WHERE repair.repair_of=r.id AND claimed.value=chosen.value) RETURNING id`, runId, at, actor.id, encoded, actor.version, sourceId, encoded, encoded),
+    // The source retains the claim even if DATA-002 later erases this repair.
+    stmt(env, `UPDATE crank_wf_runs SET repaired_paths_json=(SELECT json_group_array(value) FROM (
+      SELECT value FROM json_each(repaired_paths_json) UNION SELECT value FROM json_each(?)
+    )) WHERE id=? AND ${exists}`, encoded, sourceId, runId),
     stmt(env, `INSERT INTO crank_wf_steps(run_id,path,step_id,type,status,input_json,output_json,trace_json,error_json,started_at,finished_at,operation_key)
       SELECT ?,path,step_id,type,status,input_json,output_json,trace_json,error_json,started_at,finished_at,operation_key
       FROM crank_wf_steps WHERE run_id=? AND ${exists}`, runId, sourceId, runId),

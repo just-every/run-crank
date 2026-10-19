@@ -10,9 +10,9 @@ const eligible = `SELECT 1 FROM crank_wf_runs r JOIN crank_workflows w ON w.id=r
 /** Erase run values through Base so every deleted row receives a restore fence.
  * Event admission keeps only a digest of the event's deduplication key. */
 export async function eraseWorkflowRun(env: CrankEnv, actor: Actor, portability: PortabilityFence, runId: string) {
-  const run = await stmt(env, `SELECT r.id,r.workflow_id,r.source_id,r.trigger_kind,r.status,w.status AS workflow_status
+  const run = await stmt(env, `SELECT r.id,r.workflow_id,r.source_id,r.trigger_kind,r.status,r.repair_of,r.repair_paths_json,w.status AS workflow_status
     FROM crank_wf_runs r JOIN crank_workflows w ON w.id=r.workflow_id WHERE r.id=?`, runId)
-    .first<{ id: string; workflow_id: string; source_id: string | null; trigger_kind: string; status: string; workflow_status: string }>()
+    .first<{ id: string; workflow_id: string; source_id: string | null; trigger_kind: string; status: string; repair_of: string | null; repair_paths_json: string | null; workflow_status: string }>()
   requireValue(run, 'Run not found.', 404)
   requireValue(run.workflow_status === 'paused' && terminal.includes(run.status), 'Pause the workflow and finish or cancel this run before erasing it.', 409)
 
@@ -43,6 +43,11 @@ export async function eraseWorkflowRun(env: CrankEnv, actor: Actor, portability:
   })] })
   const prepared = await service.nativeStatements('workflow-run', { id: runId })
   await guardedBatch(env, actor, 'owner', [
+    // Older imported archives may predate source-held claims. Spend their
+    // selection before deleting the only linked repair row that records it.
+    ...(run.repair_of ? [stmt(env, `UPDATE crank_wf_runs SET repaired_paths_json=(SELECT json_group_array(value) FROM (
+      SELECT value FROM json_each(repaired_paths_json) UNION SELECT value FROM json_each(?)
+    )) WHERE id=?`, run.repair_paths_json ?? '[]', run.repair_of)] : []),
     ...prepared.statements.map(s => stmt(env, s.sql, ...s.params)),
     stmt(env, "DELETE FROM crank_authority_guards WHERE id='erase-workflow:'||?", runId),
     auditStatement(env, actor.id, 'data.erase', 'erasure', prepared.operationId, { entity: 'workflow-run' }),
