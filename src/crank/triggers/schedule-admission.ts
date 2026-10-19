@@ -1,3 +1,4 @@
+import { sealText, targetFor } from '../ops/payload-seal'
 import { id, now, stmt, type CrankEnv } from '../model'
 import type { Occurrence } from './schedule'
 
@@ -16,6 +17,7 @@ export async function admitScheduleOccurrence(env: CrankEnv, row: ScheduleRow, o
   const runId = id(), plannedAt = new Date(occurrence.at).toISOString(), admittedAt = new Date(time).toISOString()
   const late = time - occurrence.at > MISSED_GRACE_MS && trigger.missed === 'skip'
   const payload = JSON.stringify({ scheduled_for: plannedAt, local_time: occurrence.local, timezone: trigger.timezone, occurrence: occurrence.key })
+  const target = await targetFor(env, row.workflow_id)
   const results = await env.DB.batch([
     stmt(env, `INSERT INTO crank_schedule_occurrences(workflow_id,occurrence,planned_at,admitted_at,outcome,run_id)
       SELECT ?,?,?,?,outcome,CASE WHEN outcome='admitted' THEN ? ELSE NULL END
@@ -24,11 +26,11 @@ export async function admitScheduleOccurrence(env: CrankEnv, row: ScheduleRow, o
       )) THEN 'skipped' ELSE 'admitted' END AS outcome)
       WHERE ${CURRENT_SCHEDULE} ON CONFLICT(workflow_id,occurrence) DO NOTHING`,
     row.workflow_id, occurrence.key, plannedAt, admittedAt, runId, late ? 1 : 0, trigger.overlap === 'skip' ? 1 : 0, row.workflow_id, row.workflow_id, row.version_id),
-    stmt(env, `INSERT INTO crank_wf_runs(id,workflow_id,version_id,trigger_kind,source_id,trigger_json,status,source_time,received_at,created_by)
-      SELECT ?,?,?,'schedule',?,?,'queued',?,?,'trigger'
+    stmt(env, `INSERT INTO crank_wf_runs(id,workflow_id,version_id,trigger_kind,source_id,trigger_json,status,source_time,received_at,created_by,payload_key,payload_index)
+      SELECT ?,?,?,'schedule',?,?,'queued',?,?,'trigger',?,?
       WHERE EXISTS(SELECT 1 FROM crank_schedule_occurrences WHERE workflow_id=? AND occurrence=? AND outcome='admitted' AND run_id=?)
       AND ${CURRENT_SCHEDULE} RETURNING id`,
-    runId, row.workflow_id, row.version_id, 'schedule:' + occurrence.key, payload, plannedAt, now(), row.workflow_id, occurrence.key, runId, row.workflow_id, row.version_id),
+    runId, row.workflow_id, row.version_id, 'schedule:' + occurrence.key, await sealText(target, payload), plannedAt, now(), target.key?.id ?? null, target.key ? target.fieldsJson : null, row.workflow_id, occurrence.key, runId, row.workflow_id, row.version_id),
     stmt(env, 'SELECT occurrence FROM crank_schedule_occurrences WHERE workflow_id=? AND occurrence=?', row.workflow_id, occurrence.key),
   ])
   // RETURNING identifies this batch's run even when transactional outbox triggers

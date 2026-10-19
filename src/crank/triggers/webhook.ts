@@ -1,3 +1,4 @@
+import { openText } from '../ops/payload-seal'
 import { guardedBatch, requireOwner } from '../access'
 import { credential } from '../connections/store'
 import { randomToken } from '../connections/vault'
@@ -92,7 +93,7 @@ export async function receiveHook(request: Request, env: CrankEnv, secret: strin
       const timeout = Number(response.timeout_ms ?? 10000)
       const settled = await Promise.race([executeRun(env, run.id), new Promise<null>(resolve => setTimeout(() => resolve(null), timeout))])
       const current = await stmt(env, 'SELECT status,response_json FROM crank_wf_runs WHERE id=?', run.id).first<{ status: string; response_json: string | null }>()
-      if (current?.response_json) { const r = JSON.parse(current.response_json); return typeof r.body === 'string' ? new Response(r.body, { status: r.status, headers: { 'content-type': 'text/plain; charset=utf-8', ...r.headers } }) : json(r.body, r.status, r.headers) }
+      if (current?.response_json) { const r = JSON.parse((await openText(env, workflow.id, current.response_json))!); return typeof r.body === 'string' ? new Response(r.body, { status: r.status, headers: { 'content-type': 'text/plain; charset=utf-8', ...r.headers } }) : json(r.body, r.status, r.headers) }
       return json({ accepted: true, run_id: run.id, status: settled?.status ?? current?.status ?? 'running' }, 202)
     }
     const work = executeRun(env, run.id)

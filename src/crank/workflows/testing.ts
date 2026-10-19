@@ -1,3 +1,4 @@
+import { sealText, targetFor } from '../ops/payload-seal'
 import { guardedBatch, requireOwner } from '../access'
 import { getConnection } from '../connections/store'
 import { executeRun } from '../engine/executor'
@@ -48,11 +49,12 @@ export async function testWorkflow(env: CrankEnv, actor: Actor, workflowId: stri
   const at = now(), runId = id(), versionId = id(), graphJson = canonical(graph)
   const previous = await stmt(env, 'SELECT MAX(number) AS n FROM crank_workflow_versions WHERE workflow_id=?', workflowId).first<{ n: number | null }>()
   const authority = { test: true, tested_at: at, workflow_settings: JSON.parse(workflow.settings_json), steps: declared.steps, connections: declared.connections, bindings: accounts, connection_schemas: await snapshotBindings(env, declared.connections), sample_source: 'manual sample' }
+  const target = await targetFor(env, workflowId)
   await guardedBatch(env, actor, 'owner', [
     stmt(env, `INSERT INTO crank_workflow_versions(id,workflow_id,number,graph_json,graph_digest,declared_json,published_by,published_at,mode,retry_policy_json)
       VALUES(?,?,?,?,?,?,?,?,'test',?)`, versionId, workflowId, (previous?.n ?? 0) + 1, graphJson, await digest(graphJson), JSON.stringify(authority), actor.id, at, canonical(RETRY_POLICY)),
     stmt(env, `INSERT INTO crank_wf_runs(id,workflow_id,version_id,trigger_kind,source_id,trigger_json,status,received_at,created_by,mode,test_owner_version)
-      VALUES(?,?,?,'test',?,?,'queued',?,?,'test',?)`, runId, workflowId, versionId, 'test:' + runId, JSON.stringify({ input: input.input ?? {} }), at, actor.id, actor.version),
+      VALUES(?,?,?,'test',?,?,'queued',?,?,'test',?)`, runId, workflowId, versionId, 'test:' + runId, await sealText(target, JSON.stringify({ input: input.input ?? {} })), at, actor.id, actor.version),
     auditStatement(env, actor.id, 'workflow.test', 'run', runId, { mode: 'test', sample_source: 'manual sample', bindings: accounts.map(a => ({ from: a.from, to: a.to })) }, versionId),
   ])
   await executeRun(env, runId)

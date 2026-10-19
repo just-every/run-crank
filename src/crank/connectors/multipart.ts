@@ -1,3 +1,4 @@
+import { fileBase64 } from '../ops/payload-seal'
 import { StepError } from '../engine/errors'
 import type { StepContext } from '../engine/types'
 import { textOf } from '../engine/values'
@@ -17,7 +18,7 @@ export async function multipart(ctx: StepContext, value: Record<string, unknown>
       const file = await stmt(ctx.env, 'SELECT name,type,content_base64 FROM crank_files WHERE id=? AND workflow_id=?', fileId, ctx.run.workflow_id).first<{name: string; type: string; content_base64: string}>()
       if (!file) throw new StepError('validation', `File ${fileId} is not available to this workflow`)
       const type = /^[\x20-\x7e]+$/.test(file.type) ? file.type : 'application/octet-stream'
-      parts.push({ header: `Content-Disposition: form-data; name="${parameter(name)}"; filename="${parameter(file.name)}"\r\nContent-Type: ${type}\r\n\r\n`, body: fromBase64(file.content_base64) })
+      parts.push({ header: `Content-Disposition: form-data; name="${parameter(name)}"; filename="${parameter(file.name)}"\r\nContent-Type: ${type}\r\n\r\n`, body: fromBase64(await fileBase64(ctx.env, ctx.run.workflow_id, file.content_base64)) })
     } else parts.push({ header: `Content-Disposition: form-data; name="${parameter(name)}"\r\n\r\n`, body: bytes(String(textOf(field) ?? JSON.stringify(field)).replace(/\r?\n|\r/g, '\r\n')) })
   }
   const base = 'crank-' + await digest(canonical({ key: ctx.operationKey, value }))

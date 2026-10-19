@@ -1,3 +1,4 @@
+import { sealText, targetFor } from '../ops/payload-seal'
 import { mac } from '../connections/vault'
 import { credential } from '../connections/store'
 import { RetryWait } from '../connectors/retry-wait'
@@ -104,7 +105,7 @@ class Execution {
     let input: Record<string, unknown> = {}
     const ctx: StepContext = {
       env: this.env, run: this.run, scope: this.scope, path, operationKey: record?.operation_key ?? this.replays.get(path)?.operation_key ?? `${this.run.id}:${path}`, now: this.time, zone: this.zone, input, requests: { next: 0 }, retryPolicy: { ...this.retryPolicy, ...(isObject(step.retry_policy) ? step.retry_policy : {}), write_base_delay_ms: isObject(step.retry_policy) ? step.retry_policy.base_delay_ms ?? this.retryPolicy.write_base_delay_ms : this.retryPolicy.write_base_delay_ms },
-      respond: async response => { await stmt(this.env, 'UPDATE crank_wf_runs SET response_json=? WHERE id=? AND lease_id=?', JSON.stringify(response), this.run.id, this.lease).run() },
+      respond: async response => { await stmt(this.env, 'UPDATE crank_wf_runs SET response_json=? WHERE id=? AND lease_id=?', await sealText(await targetFor(this.env, this.run.workflow_id), JSON.stringify(response)), this.run.id, this.lease).run() },
     }
     try {
       const replay = record ? undefined : this.replays.get(path)
@@ -261,7 +262,7 @@ export async function executeRun(env: CrankEnv, runId: string, time = Date.now()
   await stmt(env, `UPDATE crank_wf_runs SET status=CASE WHEN ? IN ('waiting','awaiting_approval') AND EXISTS(
     SELECT 1 FROM crank_waits w JOIN crank_wf_steps s ON s.run_id=w.run_id AND s.path=w.path
     WHERE w.run_id=crank_wf_runs.id AND w.resolved_at IS NOT NULL AND s.status='waiting' AND json_extract(s.trace_json,'$.retry_attempt_id') IS NULL
-  ) THEN 'queued' ELSE ? END,finished_at=?,error_json=?,lease_id=NULL,lease_expires_at=NULL WHERE id=? AND lease_id=?`, status, status, terminal ? now() : null, error ? JSON.stringify(error) : null, runId, lease).run()
+  ) THEN 'queued' ELSE ? END,finished_at=?,error_json=?,lease_id=NULL,lease_expires_at=NULL WHERE id=? AND lease_id=?`, status, status, terminal ? now() : null, error ? await sealText(await targetFor(env, run.workflow_id), JSON.stringify(error)) : null, runId, lease).run()
   const settled = (await getWfRun(env, runId))!
   await afterSettle(env, settled)
   return settled

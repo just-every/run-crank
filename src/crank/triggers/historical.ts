@@ -1,3 +1,4 @@
+import { openText, sealText, targetFor } from '../ops/payload-seal'
 import { guardedBatch, requireOwner } from '../access'
 import { canonical, digest, id, now, requireValue, stmt, type Actor, type CrankEnv } from '../model'
 import { auditStatement } from '../ops/audit'
@@ -29,6 +30,7 @@ export async function previewHistorical(env: CrankEnv, actor: Actor, workflowId:
   const cost = historicalCost(input.cost, selected.length), batchId = id(), at = now(), guard = id()
   const current = `EXISTS(SELECT 1 FROM crank_workflows w JOIN crank_workflow_versions v ON v.id=w.published_version_id AND v.workflow_id=w.id WHERE w.id=? AND w.status='published' AND v.id=? AND v.retired_at IS NULL)`
   const fingerprint = await digest(canonical({ workflow: workflow.id, version: workflow.published_version_id, source: input.source, selection, cost, records: selected }))
+  const target = await targetFor(env, workflow.id), payloads = await Promise.all(selected.map(record => sealText(target, JSON.stringify(record.payload))))
   await guardedBatch(env, actor, 'owner', [
     stmt(env, `INSERT INTO crank_authority_guards(id,ok) SELECT ?,CASE WHEN ${current} THEN 1 ELSE 0 END`, guard, workflow.id, workflow.published_version_id),
     stmt(env, `INSERT INTO crank_historical_batches(id,workflow_id,version_id,created_by,created_at,fingerprint,source_json,selection_json,cost_json,source_count,record_count)
@@ -37,7 +39,7 @@ export async function previewHistorical(env: CrankEnv, actor: Actor, workflowId:
     // json_each keeps the complete bounded snapshot in one transaction.
     stmt(env, `INSERT INTO crank_historical_items(batch_id,source_id,ordinal,payload_json)
       SELECT ?,json_extract(value,'$.id'),CAST(key AS INTEGER),json_extract(value,'$.payload') FROM json_each(?)
-      WHERE EXISTS(SELECT 1 FROM crank_historical_batches WHERE id=?)`, batchId, JSON.stringify(selected.map(record => ({ id: record.id, payload: JSON.stringify(record.payload) }))), batchId),
+      WHERE EXISTS(SELECT 1 FROM crank_historical_batches WHERE id=?)`, batchId, JSON.stringify(selected.map((record, i) => ({ id: record.id, payload: payloads[i] }))), batchId),
     auditStatement(env, actor.id, 'historical.preview', 'historical', batchId, { count: selected.length }, workflow.published_version_id),
     stmt(env, `UPDATE crank_authority_guards SET ok=CASE WHEN ${current} THEN 1 ELSE 0 END WHERE id=?`, workflow.id, workflow.published_version_id, guard),
     stmt(env, 'DELETE FROM crank_authority_guards WHERE id=?', guard),
@@ -54,7 +56,7 @@ export async function readHistorical(env: CrankEnv, actor: Actor, batchId: strin
     FROM crank_historical_items i LEFT JOIN crank_wf_runs r ON r.id=i.run_id WHERE i.batch_id=? ORDER BY i.ordinal`, batchId).all<{ source_id: string; payload_json: string; run_id: string | null; status: string | null; error_json: string | null; finished_at: string | null }>()).results
   return { id: batch.id, workflow_id: batch.workflow_id, version_id: batch.version_id, created_by: batch.created_by, created_at: batch.created_at, fingerprint: batch.fingerprint,
     source_count: batch.source_count, count: batch.record_count, remaining: rows.filter(row => !row.run_id).length, cost: JSON.parse(batch.cost_json), selection: JSON.parse(batch.selection_json),
-    sample: rows.slice(0, 5).map(row => ({ id: row.source_id, record: JSON.parse(row.payload_json) })),
-    items: rows.map(row => ({ id: row.source_id, run_id: row.run_id, status: row.run_id ? row.status ?? 'unavailable' : 'not_started', error: row.error_json ? JSON.parse(row.error_json) : null, finished_at: row.finished_at })),
+    sample: await Promise.all(rows.slice(0, 5).map(async row => ({ id: row.source_id, record: JSON.parse((await openText(env, batch.workflow_id, row.payload_json, 'display'))!) }))),
+    items: await Promise.all(rows.map(async row => ({ id: row.source_id, run_id: row.run_id, status: row.run_id ? row.status ?? 'unavailable' : 'not_started', error: row.error_json ? JSON.parse((await openText(env, batch.workflow_id, row.error_json, 'display'))!) : null, finished_at: row.finished_at }))),
   }
 }

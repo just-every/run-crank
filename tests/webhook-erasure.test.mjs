@@ -348,3 +348,128 @@ test('DATA-003: owner retention with dry run and legal holds expires only eligib
     } finally { await empty.close() }
   } finally { await h.close() }
 });
+
+/** A fresh email-link step-up proof in the owner's own session. */
+const stepUp = async (h, action) => {
+  const asked = await h.send('/auth/step-up', { action }, h.owner);
+  assert.equal(asked.status, 202, asked.text);
+  const href = h.mail.at(-1).html.match(/href="([^"]*\/auth\/confirm\?token=[^"]+)"/)[1].replaceAll('&amp;', '&');
+  const confirmed = await h.send('/auth/confirm', { token: new URL(href).searchParams.get('token') }, h.owner);
+  assert.equal(confirmed.status, 303, confirmed.text);
+};
+
+test('DATA-003: financial payloads are sealed under a per-installation class key, migrated, rotated, restored with the key file and erased through the blind index', async () => {
+  const fake = fakeEdge(), statement = '%PDF-1.4 sealed statement 7731';
+  fake.routes.set('ledger.example', () => jsonResponse({ receipt: 'ledger-ok' }));
+  fake.routes.set('files.example', () => new Response(statement, { headers: { 'content-type': 'application/pdf' } }));
+  const h = await harness(target, { edge: fake.edge });
+  try {
+    const workflow = await publish(h, 'Invoice sync', { trigger: { type: 'manual' }, steps: [
+      { id: 'known', type: 'filter', when: [[{ field: 'trigger.input.email', op: 'text.contains', value: '@example.test' }]] },
+      { id: 'statement', type: 'file.fetch', input: { url: 'https://files.example/statement.pdf' } },
+      { id: 'ledger', type: 'http', input: { method: 'POST', url: 'https://ledger.example/entries', body: { email: '{{trigger.input.email}}', amount: '{{trigger.input.amount}}' } } },
+    ] });
+    const start = async email => { const run = await startRun(h, workflow, { email, amount: '1250.77' }); assert.equal(run.status, 'succeeded', JSON.stringify(run.error)); return run };
+    const plainBefore = await start('Pat.Kim@example.test');
+    assert.ok((await snapshot(h)).includes('Pat.Kim@example.test'), 'unclassified values are stored as they arrive');
+
+    // Classifying the workflow as financial declares which fields identify a person.
+    await h.post(`workflows/${workflow.id}/pause`);
+    await h.post('data/classes', { workflow_id: workflow.id, data_class: 'financial', identifier_fields: ['Email', 'bad field!'] }, h.owner, 400);
+    assert.deepEqual((await h.post('data/classes', { workflow_id: workflow.id, data_class: 'financial', identifier_fields: ['Email'] })).identifier_fields, ['email']);
+    await h.post('data/attestations', { data_class: 'financial', agreements: ['Cloudflare DPA'], data_location: 'Cloudflare D1, US', confirm: 'ATTEST' }, h.owner, 201);
+    await h.post(`workflows/${workflow.id}/resume`);
+    assert.match((await h.post('data/subject', { subject: 'pat.kim@example.test' })).sealed_unmatched.join(' '), /still being sealed/, 'erasure waits for the migration');
+
+    // New values are sealed on write; the owner still reads them; the Cron pass migrates the older run.
+    const sealed = await start('Ana.Ruiz@example.test');
+    assert.equal(sealed.trigger.input.email, 'Ana.Ruiz@example.test');
+    assert.equal(stepOf(sealed, 'ledger').input.body.email, 'Ana.Ruiz@example.test');
+    await h.tick();
+    let keys = (await h.get('data/retention')).sensitive;
+    const first = keys.keys.find(k => k.data_class === 'financial' && k.status === 'active');
+    assert.equal(keys.pending_runs, 0);
+    assert.equal(first.runs, 2);
+    assert.match(keys.encryption, /AES-256-GCM/);
+    assert.equal((await h.get('workflow-runs/' + plainBefore.id)).steps.find(s => s.step_id === 'ledger').input.body.email, 'Pat.Kim@example.test');
+    const archive = await snapshot(h);
+    assert.match(JSON.stringify(stepOf(await h.get('workflow-runs/' + sealed.id), 'known').trace), /Ana\.Ruiz@example\.test/, 'the filter trace keeps the compared value');
+    for (const value of ['Pat.Kim', 'Ana.Ruiz', '1250.77', Buffer.from(statement).toString('base64').slice(0, 24)]) assert.ok(!archive.includes(value), `${value} is sealed in the archive (input, output, trace and file)`);
+    assert.ok(archive.includes('crank-payload-v1') && archive.includes(stepOf(sealed, 'statement').output.file_id), 'the archive carries ciphertext that still names its files');
+    const search = await h.get('workflow-runs?q=Ana.Ruiz');
+    assert.deepEqual(search.runs, []);
+    assert.match(search.text_search, /does not reach encrypted payloads/);
+
+    // A hold placed by identifier keeps the sealed run through its blind-index digest.
+    const hold = await h.post('data/holds', { kind: 'subject', subject: 'ANA.RUIZ@example.test', reason: 'Chargeback 88' }, h.owner, 201);
+    await h.post(`workflows/${workflow.id}/pause`);
+    await h.post('data/erase', { workflow_run_id: sealed.id, confirm: 'ERASE' }, h.owner, 409);
+    const heldPreview = await h.post('data/subject', { subject: 'ana.ruiz@example.test' });
+    assert.deepEqual(heldPreview.workflow_runs.map(r => r.id), [sealed.id]);
+    assert.match(heldPreview.workflow_runs[0].blocked, /legal hold/);
+    await h.post(`data/holds/${hold.id}/release`);
+    await h.post(`workflows/${workflow.id}/resume`);
+
+    // Rotation: a new key at once, every value and digest re-sealed in batches, the old key destroyed once unreferenced.
+    await h.post('data/keys/rotate', { data_class: 'financial' }, h.owner, 400);
+    const rotated = await h.post('data/keys/rotate', { data_class: 'financial', confirm: 'ROTATE' });
+    assert.equal(rotated.replaces, first.id);
+    const later = await start('Lee.Moss@example.test');
+    await h.tick(Date.now() + 60000);
+    keys = (await h.get('data/retention')).sensitive.keys;
+    assert.equal(keys.find(k => k.id === first.id).status, 'retiring');
+    assert.equal(keys.find(k => k.id === rotated.key_id).runs, 3);
+    await h.tick(Date.now() + 16 * 60000);
+    assert.equal((await h.get('data/retention')).sensitive.keys.find(k => k.id === first.id).status, 'destroyed');
+    const actions = (await h.get('audit')).map(row => row.action);
+    for (const action of ['data.key_create', 'data.key_rotate', 'data.key_destroy']) assert.ok(actions.includes(action), action);
+    const rotatedArchive = await snapshot(h);
+    assert.ok(rotatedArchive.includes(`\\"k\\":\\"${rotated.key_id}`) && !rotatedArchive.includes(`\\"k\\":\\"${first.id}`));
+    assert.equal((await h.get('workflow-runs/' + sealed.id)).trigger.input.email, 'Ana.Ruiz@example.test', 'rotation keeps every value readable');
+    await h.mf.dispatchFetch(h.origin + '/setup', { method: 'POST', redirect: 'manual', headers: { host: new URL(h.origin).host, origin: h.origin, cookie: h.owner, 'content-type': 'application/x-www-form-urlencoded' }, body: 'confirm=yes' });
+    const screen = await h.send('/app/data', undefined, h.owner);
+    assert.equal(screen.status, 200, screen.text);
+    assert.match(screen.text, /Encryption/);
+    assert.match(screen.text, new RegExp(`key ${rotated.key_id.slice(0, 8)}`));
+
+    // DATA-002 subject erasure finds the sealed run only through the keyed blind index.
+    await h.post(`workflows/${workflow.id}/pause`);
+    const preview = await h.post('data/subject', { subject: 'ana.ruiz@example.test' });
+    assert.deepEqual(preview.workflow_runs.map(r => r.id), [sealed.id]);
+    assert.equal(preview.blocked, false);
+    assert.equal((await h.post('data/erase', { subject: 'ana.ruiz@example.test', digest: preview.digest, confirm: 'ERASE' })).workflow_runs, 1);
+    await h.get('workflow-runs/' + sealed.id, h.owner, 404);
+    assert.equal((await h.get('workflow-runs/' + later.id)).status, 'succeeded');
+
+    // Restoring elsewhere: values stay sealed and labelled until the owner's passphrase-wrapped key file is imported.
+    const passphrase = 'harbour ledger passphrase';
+    await h.post('data/keys/export', { passphrase, confirm: 'EXPORT KEYS' }, h.owner, 403);
+    await stepUp(h, 'export');
+    await h.post('data/keys/export', { passphrase: 'short', confirm: 'EXPORT KEYS' }, h.owner, 400);
+    const keyFile = await h.post('data/keys/export', { passphrase, confirm: 'EXPORT KEYS' });
+    assert.deepEqual(keyFile.keys.map(k => k.id), [rotated.key_id]);
+    const moving = await snapshot(h);
+    const other = await harness(target);
+    try {
+      const restored = await other.send('/api/crank/data/restore', { archive: moving, confirm: 'RESTORE' }, other.owner);
+      assert.equal(restored.status, 200, restored.text);
+      const there = await other.get('workflow-runs/' + plainBefore.id);
+      assert.equal(there.status, 'succeeded', 'outcomes restore without the key');
+      assert.equal(there.trigger.sealed, true, 'keys never travel in an archive');
+      assert.match(there.trigger.label, /does not hold/);
+      assert.match((await other.post('data/subject', { subject: 'pat.kim@example.test' })).sealed_unmatched.join(' '), /key file/);
+      await other.post('data/keys/import', { file: JSON.stringify(keyFile), passphrase }, other.owner, 403);
+      await stepUp(other, 'credentials:mint');
+      await other.post('data/keys/import', { file: JSON.stringify(keyFile), passphrase: 'not the passphrase' }, other.owner, 400);
+      assert.deepEqual((await other.post('data/keys/import', { file: JSON.stringify(keyFile), passphrase })).imported.map(k => k.id), [rotated.key_id]);
+      assert.equal((await other.get('workflow-runs/' + plainBefore.id)).trigger.input.email, 'Pat.Kim@example.test');
+      // That installation re-seals under its own key, then destroys the imported one.
+      await other.tick(Date.now() + 16 * 60000);
+      await other.tick(Date.now() + 17 * 60000);
+      const own = (await other.get('data/retention')).sensitive.keys;
+      assert.equal(own.find(k => k.id === rotated.key_id).status, 'destroyed');
+      assert.ok(own.some(k => k.status === 'active' && k.origin === 'created' && k.runs === 2));
+      assert.equal((await other.get('workflow-runs/' + later.id)).steps.find(s => s.step_id === 'ledger').input.body.email, 'Lee.Moss@example.test');
+    } finally { await other.close() }
+  } finally { await h.close() }
+});

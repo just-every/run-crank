@@ -1,3 +1,4 @@
+import { subjectDigests } from './payload-seal'
 import type { PortabilityFence } from '@runeditrun/rer/internal/modules/erasure/index.mjs'
 import { guardedBatch, requireOwner } from '../access'
 import { canonical, digest, id, now, requireValue, stmt, text, type Actor, type CrankEnv } from '../model'
@@ -147,6 +148,8 @@ export async function placeHold(env: CrankEnv, actor: Actor, input: Record<strin
     const value = input.subject.trim().toLowerCase(), marker = await digest(value)
     await guardedBatch(env, actor, 'owner', [
       stmt(env, "INSERT INTO crank_legal_holds(id,kind,subject,subject_encoded,subject_digest,reason,created_by,created_at) VALUES(?,'subject',?,?,?,?,?,?)", holdId, value, JSON.stringify(value).slice(1, -1), marker, reason, actor.id, now()),
+      // DATA-003: the identifier's blind-index digest under every key, so the hold keeps sealed runs too.
+      ...(await subjectDigests(env, value)).map(d => stmt(env, 'INSERT INTO crank_hold_digests(hold_id,key_id,digest) VALUES(?,?,?)', holdId, d.key_id, d.digest)),
       auditStatement(env, actor.id, 'retention.hold', 'legal_hold', holdId, { kind: 'subject', subject_digest: marker }),
     ])
   }
@@ -158,6 +161,7 @@ export async function releaseHold(env: CrankEnv, actor: Actor, holdId: string) {
   requireValue(await stmt(env, 'SELECT 1 FROM crank_legal_holds WHERE id=? AND released_at IS NULL', holdId).first(), 'No open hold with this id', 404)
   await guardedBatch(env, actor, 'owner', [
     stmt(env, 'UPDATE crank_legal_holds SET released_by=?,released_at=?,subject=NULL,subject_encoded=NULL WHERE id=? AND released_at IS NULL', actor.id, now(), holdId),
+    stmt(env, 'DELETE FROM crank_hold_digests WHERE hold_id=?', holdId),
     auditStatement(env, actor.id, 'retention.release', 'legal_hold', holdId),
   ])
   return (await listHolds(env)).find((hold: any) => hold.id === holdId)
@@ -179,7 +183,7 @@ async function expireWorkflowPayload(env: CrankEnv, portability: PortabilityFenc
   const counts = await stmt(env, `SELECT (SELECT COUNT(*) FROM crank_wf_steps WHERE run_id=?1) AS steps,(SELECT COUNT(*) FROM crank_waits WHERE run_id=?1) AS waits`, runId).first<{ steps: number; waits: number }>()
   return attempt(env, [
     await guarded(env, guard, `SELECT 1 FROM crank_wf_runs r WHERE r.id=?2 AND r.payload_expired_at IS NULL AND ${DUE.replace('?1', '?3')} AND (${KEPT_WORKFLOW_RUN}) IS NULL`, runId, before),
-    stmt(env, `UPDATE crank_wf_runs SET trigger_json='{}',response_json=NULL,payload_expired_at=?,
+    stmt(env, `UPDATE crank_wf_runs SET trigger_json='{}',response_json=NULL,payload_expired_at=?,payload_key=NULL,payload_index=NULL,
       error_json=CASE WHEN error_json IS NULL THEN NULL ELSE json_object('category',json_extract(error_json,'$.category'),'message','Details expired under the retention policy.') END WHERE id=?`, at, runId),
     stmt(env, `UPDATE crank_wf_steps SET input_json=NULL,output_json=NULL,trace_json=NULL,
       error_json=CASE WHEN error_json IS NULL THEN NULL ELSE json_object('category',json_extract(error_json,'$.category'),'message','Details expired under the retention policy.') END WHERE run_id=?`, runId),
@@ -187,6 +191,7 @@ async function expireWorkflowPayload(env: CrankEnv, portability: PortabilityFenc
     stmt(env, 'UPDATE crank_waits SET proposal_json=NULL,resolution_json=NULL,reason=NULL WHERE run_id=?', runId),
     stmt(env, "UPDATE crank_hold_items SET payload_json='{}' WHERE run_id=?", runId),
     stmt(env, "UPDATE crank_historical_items SET payload_json='{}' WHERE run_id=?", runId),
+    stmt(env, 'DELETE FROM crank_blind_index WHERE run_id=?', runId),
     stmt(env, 'DELETE FROM crank_request_checkpoint_chunks WHERE run_id=?', runId),
     stmt(env, 'DELETE FROM crank_request_checkpoints WHERE run_id=?', runId),
     ...await portability.redactionStatements!(),

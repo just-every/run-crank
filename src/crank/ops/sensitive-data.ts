@@ -1,19 +1,22 @@
 import { guardedBatch, requireOwner } from '../access'
 import { now, requireValue, stmt, text, type Actor, type CrankEnv } from '../model'
 import { auditStatement } from './audit'
+import { keyState } from './payload-keys'
 
 /** DATA-003 data classes. Financial and health need the owner's recorded attestation before
  * production processing; Crank records it as owner-attested and never verifies or certifies it. */
 export const DATA_CLASSES = ['none', 'customer', 'financial', 'health'] as const
 export const ATTESTED_CLASSES = ['financial', 'health']
 export const ATTESTATION_LABEL = 'Owner-attested. Crank has not verified or certified these agreements or this location.'
+export const ENCRYPTION_NOTE = 'Crank encrypts the payload values of customer, financial and health workflows (trigger data, step input, output and trace, approvals, held events and run files) with AES-256-GCM under a key for this installation and data class, sealed under the installation secret. Erasure and legal holds find those runs by business key or by a declared identifier field through a keyed HMAC-SHA-256 blind index; text search does not reach them. Archives carry only the encrypted values: keep the key file to restore them on another installation.'
 
 export async function sensitiveData(env: CrankEnv) {
   const [attestations, workflows] = await Promise.all([
     stmt(env, 'SELECT * FROM crank_data_attestations ORDER BY data_class').all<{ data_class: string; agreements_json: string; data_location: string; attested_by: string; attested_at: string }>(),
-    stmt(env, "SELECT id,name,status,data_class FROM crank_workflows WHERE data_class!='none' ORDER BY name,id").all(),
+    stmt(env, "SELECT id,name,status,data_class,identifier_fields_json FROM crank_workflows WHERE data_class!='none' ORDER BY name,id").all<{ identifier_fields_json: string }>(),
   ])
-  return { label: ATTESTATION_LABEL, attestations: attestations.results.map(({ agreements_json, ...a }) => ({ ...a, agreements: JSON.parse(agreements_json), basis: 'owner_attested' })), workflows: workflows.results }
+  return { label: ATTESTATION_LABEL, encryption: ENCRYPTION_NOTE, attestations: attestations.results.map(({ agreements_json, ...a }) => ({ ...a, agreements: JSON.parse(agreements_json), basis: 'owner_attested' })),
+    workflows: workflows.results.map(({ identifier_fields_json, ...w }) => ({ ...w, identifier_fields: JSON.parse(identifier_fields_json) })), ...await keyState(env) }
 }
 
 /** Refuses publishing or resuming a financial or health workflow without its class's attestation. */
@@ -25,17 +28,26 @@ export async function requireAttested(env: CrankEnv, workflowId: string) {
 export const attestedGuard = (env: CrankEnv, guard: string, workflowId: string) => stmt(env, `INSERT INTO crank_authority_guards(id,ok) SELECT ?,CASE WHEN EXISTS(SELECT 1 FROM crank_workflows w
   WHERE w.id=? AND (w.data_class NOT IN ('financial','health') OR EXISTS(SELECT 1 FROM crank_data_attestations a WHERE a.data_class=w.data_class))) THEN 1 ELSE 0 END`, guard, workflowId)
 
-export async function setDataClass(env: CrankEnv, actor: Actor, workflowId: string, value: unknown) {
+/** Declared identifier fields: property names (letters, digits, `_`, `-`, `.`; 1 to 100 characters),
+ * matched case-insensitively at any depth; at most 20. */
+export function identifierFields(input: unknown) {
+  const list = (Array.isArray(input) ? input : String(input ?? '').split(/[\n,]/)).map(f => String(f).trim().toLowerCase()).filter(Boolean)
+  requireValue(list.length <= 20 && list.every(f => /^[a-z0-9_.-]{1,100}$/.test(f)), 'Name up to 20 identifier fields (letters, digits, _, - or .)')
+  return JSON.stringify([...new Set(list)].sort())
+}
+
+export async function setDataClass(env: CrankEnv, actor: Actor, workflowId: string, value: unknown, fields?: unknown) {
   requireOwner(actor)
   requireValue(typeof value === 'string' && (DATA_CLASSES as readonly string[]).includes(value), 'Choose none, customer, financial or health')
-  const workflow = await stmt(env, 'SELECT id,status,data_class FROM crank_workflows WHERE id=?', workflowId).first<{ id: string; status: string; data_class: string }>()
+  const workflow = await stmt(env, 'SELECT id,status,data_class,identifier_fields_json FROM crank_workflows WHERE id=?', workflowId).first<{ id: string; status: string; data_class: string; identifier_fields_json: string }>()
   requireValue(workflow, 'Workflow not found', 404)
   if (workflow.status === 'published' && ATTESTED_CLASSES.includes(value)) requireValue(await stmt(env, 'SELECT 1 FROM crank_data_attestations WHERE data_class=?', value).first(), `Record your ${value} data attestation first, or pause this workflow before classifying it.`, 409)
+  const declared = fields === undefined ? workflow.identifier_fields_json : identifierFields(fields)
   await guardedBatch(env, actor, 'owner', [
-    stmt(env, 'UPDATE crank_workflows SET data_class=? WHERE id=?', value, workflowId),
-    auditStatement(env, actor.id, 'workflow.data_class', 'workflow', workflowId, { from: workflow.data_class, to: value }),
+    stmt(env, 'UPDATE crank_workflows SET data_class=?,identifier_fields_json=? WHERE id=?', value, declared, workflowId),
+    auditStatement(env, actor.id, 'workflow.data_class', 'workflow', workflowId, { from: workflow.data_class, to: value, identifier_fields: JSON.parse(declared) }),
   ])
-  return { id: workflowId, data_class: value }
+  return { id: workflowId, data_class: value, identifier_fields: JSON.parse(declared) }
 }
 
 /** Agreements are free text the owner names (for example "Cloudflare BAA, signed 2026-09-01"). */

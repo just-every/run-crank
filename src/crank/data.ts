@@ -7,6 +7,8 @@ import { eraseSubject, previewSubject } from './subject-erasure'
 import { eraseOperator } from './operator-erasure'
 import { auditStatement } from './ops/audit'
 import { attest, revokeAttestation, sensitiveData, setDataClass } from './ops/sensitive-data'
+import { exportKeyFile, importKeyFile, rotateKey } from './ops/payload-keys'
+import { operatorAuth } from '../auth.server'
 import { DISCLOSURE, listHolds, placeHold, previewRetention, releaseHold, retentionPolicy, retentionScope, setRetention } from './ops/retention'
 
 export const portability = (env: CrankEnv) => createPortability({ db:env.DB, policy })
@@ -89,7 +91,17 @@ export async function dataApi(request:Request,env:CrankEnv):Promise<Response|nul
     if (path === '/api/crank/data/holds' && request.method === 'POST') return Response.json(await placeHold(env,actor,await body(request)),{status:201,headers:{'cache-control':'no-store'}})
     const release = /^\/api\/crank\/data\/holds\/([^/]+)\/release$/.exec(path)
     if (release && request.method === 'POST') return Response.json(await releaseHold(env,actor,decodeURIComponent(release[1])),{headers:{'cache-control':'no-store'}})
-    if (path === '/api/crank/data/classes' && request.method === 'POST') { const value = await body(request); return Response.json(await setDataClass(env,actor,String(value.workflow_id ?? ''),value.data_class),{headers:{'cache-control':'no-store'}}) }
+    if (path === '/api/crank/data/classes' && request.method === 'POST') { const value = await body(request); return Response.json(await setDataClass(env,actor,String(value.workflow_id ?? ''),value.data_class,value.identifier_fields),{headers:{'cache-control':'no-store'}}) }
+    // DATA-003 key custody: rotate a class key; the key file leaves and enters only with a fresh step-up proof.
+    if (path === '/api/crank/data/keys/rotate' && request.method === 'POST') return Response.json(await rotateKey(env,actor,await body(request)),{headers:{'cache-control':'no-store'}})
+    if (path === '/api/crank/data/keys/export' && request.method === 'POST') {
+      await operatorAuth(env).requireStepUp(request,'export')
+      return Response.json(await exportKeyFile(env,actor,await body(request)),{headers:{'cache-control':'no-store','content-disposition':'attachment; filename="crank-keys.json"'}})
+    }
+    if (path === '/api/crank/data/keys/import' && request.method === 'POST') {
+      await operatorAuth(env).requireStepUp(request,'credentials:mint')
+      return Response.json(await importKeyFile(env,actor,await body(request,256*1024)),{headers:{'cache-control':'no-store'}})
+    }
     if (path === '/api/crank/data/attestations' && request.method === 'POST') return Response.json(await attest(env,actor,await body(request)),{status:201,headers:{'cache-control':'no-store'}})
     const revoke = /^\/api\/crank\/data\/attestations\/([^/]+)\/revoke$/.exec(path)
     if (revoke && request.method === 'POST') return Response.json(await revokeAttestation(env,actor,decodeURIComponent(revoke[1])),{headers:{'cache-control':'no-store'}})

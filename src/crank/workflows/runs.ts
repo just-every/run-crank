@@ -13,10 +13,13 @@ import type { RunRow, Step } from '../engine/types'
 import { isObject } from '../engine/values'
 import { canonical, CrankError, digest, now, requireValue, stmt, type Actor, type CrankEnv } from '../model'
 import { auditStatement } from '../ops/audit'
+import { openRow, openText, plain } from '../ops/payload-seal'
 import { workspaceSettings } from '../ops/settings'
 import { createRun } from '../triggers/admission'
 import { getWorkflow } from './store'
 
+/** DATA-003: free text search reads only plaintext payloads. */
+export const TEXT_SEARCH = 'Text search does not reach encrypted payloads of customer, financial or health workflows; find those runs by business key, or by a declared identifier on the Data screen.'
 /** Payloads are readable by owners, admins and agents; members see status and timing only. */
 export const canReadPayload = (actor: Actor) => actor.role === 'owner' || actor.role === 'admin' || actor.kind === 'agent'
 const BUSINESS_COMPLETE = `status='succeeded' AND EXISTS(SELECT 1 FROM crank_obligations o WHERE o.run_id=crank_wf_runs.id) AND NOT EXISTS(SELECT 1 FROM crank_obligations o WHERE o.run_id=crank_wf_runs.id AND o.verified_at IS NULL) AND NOT EXISTS(SELECT 1 FROM crank_wf_steps s WHERE s.run_id=crank_wf_runs.id AND (s.status='uncertain' OR COALESCE(json_extract(s.error_json,'$.category'),'')='uncertain'))`
@@ -36,11 +39,13 @@ export async function searchRuns(env: CrankEnv, actor: Actor, params: URLSearchP
   const q = params.get('q'), before = params.get('before')
   const rows = await stmt(env, `SELECT *, CASE WHEN (${BUSINESS_COMPLETE}) THEN 1 ELSE 0 END AS business_complete FROM crank_wf_runs WHERE (?1 IS NULL OR workflow_id=?1) AND (?2 IS NULL OR (?2='business_complete' AND (${BUSINESS_COMPLETE})) OR (?2='uncertain' AND json_extract(error_json,'$.category')='uncertain') OR (status=?2 AND (?2!='succeeded' OR NOT (${BUSINESS_COMPLETE})) AND (?2!='failed' OR COALESCE(json_extract(error_json,'$.category'),'')!='uncertain'))) AND (?3 IS NULL OR business_key=?3)
     AND (?4 IS NULL OR received_at>=?4) AND (?5 IS NULL OR received_at<=?5) AND (?6 IS NULL OR json_extract(error_json,'$.category')=?6)
-    AND (?7 IS NULL OR trigger_json LIKE ?8 OR source_id LIKE ?8 OR business_key LIKE ?8 OR error_json LIKE ?8) AND (?9 IS NULL OR received_at||'|'||id < ?9)
+    AND (?7 IS NULL OR (${plain('trigger_json')} AND trigger_json LIKE ?8) OR source_id LIKE ?8 OR business_key LIKE ?8 OR (${plain('error_json')} AND error_json LIKE ?8)) AND (?9 IS NULL OR received_at||'|'||id < ?9)
     ORDER BY received_at DESC,id DESC LIMIT ?10`,
   params.get('workflow'), params.get('status'), params.get('business_key'), params.get('from'), params.get('to')?.length === 10 ? params.get('to') + 'T23:59:59.999Z' : params.get('to'), params.get('error'), canReadPayload(actor) ? q : null, `%${q}%`, before, limit + 1).all<RunRow & {business_complete: number}>()
   const page = rows.results.slice(0, limit), last = page.at(-1)
-  return { runs: page.map(run => presentRun(run, canReadPayload(actor))), next: rows.results.length > limit && last ? `${last.received_at}|${last.id}` : null }
+  const payload = canReadPayload(actor)
+  return { runs: await Promise.all(page.map(async run => presentRun(payload ? await openRow(env, run.workflow_id, run, ['trigger_json', 'response_json', 'error_json'], 'display') : run, payload))), next: rows.results.length > limit && last ? `${last.received_at}|${last.id}` : null,
+    ...(q && payload ? { text_search: TEXT_SEARCH } : {}) }
 }
 export async function runDetail(env: CrankEnv, actor: Actor, runId: string) {
   const run = await stmt(env, `SELECT *, CASE WHEN (${BUSINESS_COMPLETE}) THEN 1 ELSE 0 END AS business_complete FROM crank_wf_runs WHERE id=?`, runId).first<RunRow & {business_complete: number}>()
@@ -54,18 +59,21 @@ export async function runDetail(env: CrankEnv, actor: Actor, runId: string) {
     stmt(env, 'SELECT * FROM crank_wf_step_revisions WHERE run_id=? ORDER BY path,revision', runId).all<any>(),
   ])
   const parse = (value: string | null) => value === null ? null : JSON.parse(value)
+  const opened = <T extends Record<string, any>>(rows: T[], columns: (keyof T)[]) => payload ? Promise.all(rows.map(row => openRow(env, run.workflow_id, row, columns, 'display'))) : Promise.resolve(rows)
+  const [openSteps, openRevisions, openWaits, openRun] = await Promise.all([opened(steps.results, ['input_json', 'output_json', 'trace_json', 'error_json']), opened(revisions.results, ['input_json', 'prior_input_json', 'prior_error_json']),
+    Promise.all(waits.results.map(row => openRow(env, run.workflow_id, row, ['proposal_json', 'resolution_json'], 'display'))), payload ? openRow(env, run.workflow_id, run, ['trigger_json', 'response_json', 'error_json'], 'display') : run])
   return {
-    ...presentRun(run, payload),
+    ...presentRun(openRun, payload),
     repair_of: run.repair_of ?? null, repair_paths: payload && run.repair_paths_json ? JSON.parse(run.repair_paths_json) : null,
     repairs: (await stmt(env, 'SELECT id,status FROM crank_wf_runs WHERE repair_of=? ORDER BY received_at,id', runId).all<{ id: string; status: string }>()).results,
     version: version ? { number: version.number, published_by: version.published_by, published_at: version.published_at, authority: version.mode === 'test' ? 'owner-authorized draft test' : 'published workflow', retry_policy: JSON.parse(version.retry_policy_json), declared: payload ? JSON.parse(version.declared_json) : undefined } : null,
-    steps: steps.results.map(s => ({ path: s.path, step_id: s.step_id, type: s.type, status: s.status, started_at: s.started_at, finished_at: s.finished_at, operation_key: s.operation_key,
+    steps: openSteps.map(s => ({ path: s.path, step_id: s.step_id, type: s.type, status: s.status, started_at: s.started_at, finished_at: s.finished_at, operation_key: s.operation_key,
       ...(payload ? { input: parse(s.input_json), output: parse(s.output_json), trace: parse(s.trace_json) } : {}), error: s.error_json ? (payload ? parse(s.error_json) : { category: parse(s.error_json).category, message: 'Details restricted for your role' }) : null })),
     // EXEC-004: each replay keeps the replaced attempt beside the input the next attempt used.
-    revisions: revisions.results.map(r => ({ path: r.path, revision: r.revision, corrected: !!r.corrected, created_by: r.created_by, created_at: r.created_at, prior_operation_key: r.prior_operation_key, operation_key: r.operation_key,
+    revisions: openRevisions.map(r => ({ path: r.path, revision: r.revision, corrected: !!r.corrected, created_by: r.created_by, created_at: r.created_at, prior_operation_key: r.prior_operation_key, operation_key: r.operation_key,
       ...(payload ? { prior_input: parse(r.prior_input_json), prior_error: parse(r.prior_error_json), input: parse(r.input_json) } : {}) })),
     attempts: attempts.results.map(a => ({ id: a.id, path: a.path, number: a.number, method: a.method, started_at: a.started_at, finished_at: a.finished_at, http_status: a.http_status, error_category: a.error_category, retry_number: a.retry_number, budget_started_at: a.budget_started_at, slice_started_at: a.slice_started_at, retry_at: a.retry_at, retry_reason: a.retry_reason, retry_parked_at: a.retry_parked_at, retry_released_at: a.retry_released_at, retry_resumed_at: a.retry_resumed_at, ...(payload ? { destination_origin: a.destination_origin } : {}) })),
-    waits: waits.results.map(w => ({ ...w, reason: payload ? w.reason : null, proposal: payload ? parse(w.proposal_json) : 'restricted', resolution: payload ? parse(w.resolution_json) : w.resolution_json ? { approved: parse(w.resolution_json).approved, cancelled: parse(w.resolution_json).cancelled } : null, proposal_json: undefined, resolution_json: undefined })),
+    waits: openWaits.map(w => ({ ...w, reason: payload ? w.reason : null, proposal: payload ? parse(w.proposal_json) : 'restricted', resolution: payload ? parse(w.resolution_json) : w.resolution_json ? { approved: parse(w.resolution_json).approved, cancelled: parse(w.resolution_json).cancelled } : null, proposal_json: undefined, resolution_json: undefined })),
   }
 }
 
@@ -104,11 +112,11 @@ export async function decideApproval(env: CrankEnv, actor: Actor, runId: string,
   requireValue(wait, 'No approval is waiting at that step', 404)
   requireValue(!wait.resolved_at, 'This approval was already decided', 409)
   requireValue(input.digest === wait.proposal_digest, 'The proposal changed; review it again', 409)
-  const run = await stmt(env, 'SELECT version_id FROM crank_wf_runs WHERE id=?', runId).first<{ version_id: string }>()
+  const run = await stmt(env, 'SELECT version_id,workflow_id FROM crank_wf_runs WHERE id=?', runId).first<{ version_id: string; workflow_id: string }>()
   const graph = JSON.parse((await stmt(env, 'SELECT graph_json FROM crank_workflow_versions WHERE id=?', run!.version_id).first<{ graph_json: string }>())!.graph_json) as Graph
   const step = stepAt(graph, path)
   requireValue(step, 'That step is not in this run’s version', 404)
-  const original = JSON.parse(wait.proposal_json) as Record<string, unknown>, reason = typeof input.reason === 'string' ? input.reason.slice(0, 1000) : null
+  const original = JSON.parse((await openText(env, run!.workflow_id, wait.proposal_json))!) as Record<string, unknown>, reason = typeof input.reason === 'string' ? input.reason.slice(0, 1000) : null
   let resolution: Record<string, unknown>
   if (decision === 'approve') {
     const edits = isObject(input.edits) ? input.edits : {}, editable: string[] = step.type === 'approval' && Array.isArray(step.editable) ? step.editable as string[] : []

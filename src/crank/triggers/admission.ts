@@ -4,6 +4,8 @@ import { id, now, requireValue, stmt, type Actor, type CrankEnv } from '../model
 import { auditStatement } from '../ops/audit'
 import { notify } from '../ops/notices'
 import { readHoldCost } from '../ops/hold-cost'
+import { indexStatement, openText, sealText, targetFor } from '../ops/payload-seal'
+import { getWfRun } from '../engine/records'
 
 export interface WorkflowRow {
   id: string; name: string; description: string; folder: string; owner_id: string; draft_json: string; draft_updated_at: string
@@ -18,12 +20,15 @@ export function burstThreshold(graph: { settings?: Record<string, unknown> }) {
 }
 
 export async function createRun(env: CrankEnv, workflow: WorkflowRow, kind: string, event: TriggerEvent, createdBy: string, receivedAt = now(), actor?: Actor): Promise<RunRow> {
-  const runId = id()
-  const insert = stmt(env, `INSERT INTO crank_wf_runs(id,workflow_id,version_id,trigger_kind,source_id,trigger_json,status,source_time,received_at,created_by,business_key)
-    SELECT ?,?,?,?,?,?,'queued',?,?,?,? WHERE EXISTS(SELECT 1 FROM crank_workflows WHERE id=? AND status='published' AND published_version_id=?)`, runId, workflow.id, workflow.published_version_id, kind, event.key, JSON.stringify(event.payload ?? null), event.sourceTime ?? null, receivedAt, createdBy, event.businessKey ?? null, workflow.id, workflow.published_version_id)
-  if (actor) await guardedBatch(env, actor, 'prepare', [insert])
-  else await insert.run()
-  const run = await stmt(env, 'SELECT * FROM crank_wf_runs WHERE id=?', runId).first<RunRow>()
+  const runId = id(), target = await targetFor(env, workflow.id), plain = JSON.stringify(event.payload ?? null)
+  const index = await indexStatement(env, target, runId, [plain], 'EXISTS(SELECT 1 FROM crank_wf_runs WHERE id=?)', [runId])
+  const insert = stmt(env, `INSERT INTO crank_wf_runs(id,workflow_id,version_id,trigger_kind,source_id,trigger_json,status,source_time,received_at,created_by,business_key,payload_key,payload_index)
+    SELECT ?,?,?,?,?,?,'queued',?,?,?,?,?,? WHERE EXISTS(SELECT 1 FROM crank_workflows WHERE id=? AND status='published' AND published_version_id=?)`, runId, workflow.id, workflow.published_version_id, kind, event.key, await sealText(target, plain), event.sourceTime ?? null, receivedAt, createdBy, event.businessKey ?? null,
+    target.key?.id ?? null, target.key ? target.fieldsJson : null, workflow.id, workflow.published_version_id)
+  const jobs = [insert, ...(index ? [index] : [])]
+  if (actor) await guardedBatch(env, actor, 'prepare', jobs)
+  else await env.DB.batch(jobs)
+  const run = await getWfRun(env, runId)
   requireValue(run, 'Workflow authority changed before the run started', 409)
   return run
 }
@@ -38,9 +43,10 @@ export async function hold(env: CrankEnv, workflow: WorkflowRow, source: 'poll' 
     await stmt(env, "INSERT INTO crank_holds(id,workflow_id,source,status,created_at,expires_at) VALUES(?,?,?,'open',?,?)", holdId, workflow.id, source, at, expiry).run()
     holdRow = { id: holdId }; created = true
   }
+  const target = await targetFor(env, workflow.id), sealed = await Promise.all(events.map(event => sealText(target, JSON.stringify(event.payload ?? null))))
   for (let i = 0; i < events.length; i += 50) {
-    await env.DB.batch(events.slice(i, i + 50).map(event => stmt(env, "INSERT INTO crank_hold_items(hold_id,item_key,payload_json,source_time,received_at,status) VALUES(?,?,?,?,?,'held') ON CONFLICT DO NOTHING",
-      holdRow!.id, event.key, JSON.stringify(event.payload ?? null), event.sourceTime ?? null, at)))
+    await env.DB.batch(events.slice(i, i + 50).map((event, j) => stmt(env, "INSERT INTO crank_hold_items(hold_id,item_key,payload_json,source_time,received_at,status) VALUES(?,?,?,?,?,'held') ON CONFLICT DO NOTHING",
+      holdRow!.id, event.key, sealed[i + j], event.sourceTime ?? null, at)))
   }
   if (created) {
     const count = await stmt(env, "SELECT COUNT(*) AS n FROM crank_hold_items WHERE hold_id=? AND status='held'", holdRow.id).first<{ n: number }>()
@@ -72,5 +78,5 @@ export async function getHold(env: CrankEnv, holdId: string) {
   const items = await stmt(env, 'SELECT item_key,payload_json,source_time,received_at,status,decided_by,decided_at,run_id FROM crank_hold_items WHERE hold_id=? ORDER BY received_at,item_key', holdId).all<{ item_key: string; payload_json: string; source_time: string | null; received_at: string; status: string; decided_by: string | null; decided_at: string | null; run_id: string | null }>()
   const counts = { held: 0, released: 0, discarded: 0 } as Record<string, number>
   for (const item of items.results) counts[item.status as string]++
-  return { ...row, counts, cost: await readHoldCost(env, holdId), items: items.results.map(item => ({ ...item, payload: JSON.parse(item.payload_json as string), payload_json: undefined })) }
+  return { ...row, counts, cost: await readHoldCost(env, holdId), items: await Promise.all(items.results.map(async item => ({ ...item, payload: JSON.parse((await openText(env, row.workflow_id, item.payload_json as string, 'display'))!), payload_json: undefined }))) }
 }

@@ -146,6 +146,27 @@ Mark a workflow as financial or health data on the Data screen. It publishes
 only after you record the provider agreements in place and where the data is
 held. Crank records this as your attestation; it does not verify it.
 
+## Encrypted customer, financial and health data
+
+Crank encrypts the payload values of customer, financial and health workflows
+(trigger data, step input, output and trace, approvals, held events and run
+files) with AES-256-GCM. Each installation has its own key per data class,
+sealed under the installation secret. When you classify a workflow, the
+maintenance pass encrypts its earlier runs, 25 a minute.
+
+- Name the workflow's identifier fields (for example `email, customer_id`) next
+  to its data class. Erasing a person and legal holds find encrypted runs by
+  business key or by an exact value of those fields. Run search text does not
+  reach encrypted values.
+- Rotate a key on the Data screen by typing ROTATE. New values use the new key
+  at once; older values are re-encrypted in the background, and the old key is
+  destroyed when nothing uses it.
+- Backups carry only the encrypted values, never the keys. Download the key
+  file on the Data screen (it asks you to confirm by email and to choose a
+  passphrase) and keep it apart from your backups. To read a backup restored on
+  another installation, import that file there with its passphrase; until then
+  its encrypted values show as sealed.
+
 ## Recover an older backup after erasure
 
 Make a new export after erasure. When restoring an older backup into a different

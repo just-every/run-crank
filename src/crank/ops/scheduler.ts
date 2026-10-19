@@ -11,13 +11,14 @@ import { notify } from './notices'
 import { flushLogStreams } from './log-stream'
 import { releaseRetryWaits } from '../connectors/retry-wait'
 import { retentionPass } from './retention'
+import { payloadPass } from './payload-pass'
 import { portability } from '../data'
 
 /** The executor pass, run by the per-minute Cron trigger. Everything it does is driven by
  * durable rows, so a restart or redeploy resumes where the last pass stopped. `time` is the
  * Cron controller's scheduled time. */
 export async function schedulerPass(env: CrankEnv, time = Date.now()) {
-  const at = new Date(time).toISOString(), summary = { recovered: 0, released: 0, queued: 0, polls: 0, schedules: 0, executed: 0, holds: 0, expired: { payload: 0, files: 0, history: 0 } }
+  const at = new Date(time).toISOString(), summary = { recovered: 0, released: 0, queued: 0, polls: 0, schedules: 0, executed: 0, holds: 0, sealed: { runs: 0, items: 0, files: 0, destroyed: 0 }, expired: { payload: 0, files: 0, history: 0 } }
   summary.recovered = await recoverExpiredExecutions(env, at)
   summary.released += await releaseRetryWaits(env, at)
   const delays = await stmt(env, "SELECT run_id,path,expires_at FROM crank_waits WHERE resolved_at IS NULL AND kind='delay' AND due_at<=? ORDER BY due_at LIMIT 200", at).all<{ run_id: string; path: string; expires_at: string | null }>()
@@ -33,6 +34,7 @@ export async function schedulerPass(env: CrankEnv, time = Date.now()) {
   const queued = await queueCandidates(env, 50)
   for (const run of queued) { await executeRun(env, run.id, time); summary.executed++ }
   await flushLogStreams(env, time)
+  summary.sealed = await payloadPass(env, time)
   summary.expired = await retentionPass(env, () => portability(env), time)
   return summary
 }

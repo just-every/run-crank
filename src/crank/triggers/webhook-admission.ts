@@ -1,5 +1,6 @@
 import { CrankError, digest, id, now, stmt, type CrankEnv } from '../model'
 import { notify } from '../ops/notices'
+import { indexStatement, sealFileBase64, sealText, targetFor } from '../ops/payload-seal'
 import type { InboundUpload } from './inbound'
 import type { WorkflowRow } from './admission'
 
@@ -16,6 +17,10 @@ export async function admitWebhook(env: CrankEnv, workflow: WorkflowRow, hookId:
     AND NOT EXISTS(SELECT 1 FROM crank_erased_webhook_events WHERE workflow_id=? AND event_digest=?)`
   const args = [hookId, workflow.id, at, workflow.published_version_id, workflow.id, eventDigest]
   const claimed = `EXISTS(SELECT 1 FROM crank_trigger_events WHERE workflow_id=? AND dedup_key=? AND admission_id=?)`
+  // DATA-003: a financial or health workflow's event, uploads and held copy are sealed before they are stored.
+  const target = await targetFor(env, workflow.id), plainTrigger = JSON.stringify(payload), sealedTrigger = await sealText(target, plainTrigger)
+  const sealedFiles = await Promise.all(files.map(file => sealFileBase64(target, file.content_base64)))
+  const index = await indexStatement(env, target, token, [plainTrigger], 'EXISTS(SELECT 1 FROM crank_wf_runs WHERE id=?)', [token])
   try {
     await env.DB.batch([
       stmt(env, `INSERT INTO crank_authority_guards(id,ok) SELECT ?,CASE WHEN ${authority} THEN 1 ELSE 0 END`, guard, ...args),
@@ -30,16 +35,17 @@ export async function admitWebhook(env: CrankEnv, workflow: WorkflowRow, hookId:
       candidateHold, workflow.id, at, expiry, workflow.id, key, token, workflow.id, workflow.id, workflow.id, new Date(Date.now() - 60000).toISOString(), threshold),
       stmt(env, `UPDATE crank_trigger_events SET hold_id=(SELECT id FROM crank_holds WHERE workflow_id=? AND status='open' AND source='webhook' ORDER BY created_at,id LIMIT 1)
         WHERE workflow_id=? AND dedup_key=? AND admission_id=?`, workflow.id, workflow.id, key, token),
-      ...files.map(file => stmt(env, `INSERT INTO crank_files(id,workflow_id,name,type,size,sha256,source,content_base64,created_at)
-        SELECT ?,?,?,?,?,?,'webhook upload',?,? WHERE ${claimed}`, file.file_id, workflow.id, file.name, file.type, file.size, file.sha256, file.content_base64, at, workflow.id, key, token)),
-      stmt(env, `INSERT INTO crank_wf_runs(id,workflow_id,version_id,trigger_kind,source_id,trigger_json,status,received_at,created_by,business_key)
-        SELECT ?,?,?,'webhook',?,?,'queued',?,'trigger',? WHERE ${claimed}
+      ...files.map((file, i) => stmt(env, `INSERT INTO crank_files(id,workflow_id,name,type,size,sha256,source,content_base64,created_at)
+        SELECT ?,?,?,?,?,?,'webhook upload',?,? WHERE ${claimed}`, file.file_id, workflow.id, file.name, file.type, file.size, file.sha256, sealedFiles[i], at, workflow.id, key, token)),
+      stmt(env, `INSERT INTO crank_wf_runs(id,workflow_id,version_id,trigger_kind,source_id,trigger_json,status,received_at,created_by,business_key,payload_key,payload_index)
+        SELECT ?,?,?,'webhook',?,?,'queued',?,'trigger',?,?,? WHERE ${claimed}
         AND NOT EXISTS(SELECT 1 FROM crank_trigger_events WHERE workflow_id=? AND dedup_key=? AND hold_id IS NOT NULL)`,
-      token, workflow.id, workflow.published_version_id, key, JSON.stringify(payload), at, key, workflow.id, key, token, workflow.id, key),
+      token, workflow.id, workflow.published_version_id, key, sealedTrigger, at, key, target.key?.id ?? null, target.key ? target.fieldsJson : null, workflow.id, key, token, workflow.id, key),
+      ...(index ? [index] : []),
       stmt(env, `UPDATE crank_trigger_events SET run_id=? WHERE workflow_id=? AND dedup_key=? AND admission_id=? AND hold_id IS NULL`, token, workflow.id, key, token),
       stmt(env, `INSERT INTO crank_hold_items(hold_id,item_key,payload_json,received_at,status)
         SELECT hold_id,?,?,?,'held' FROM crank_trigger_events WHERE workflow_id=? AND dedup_key=? AND admission_id=? AND hold_id IS NOT NULL ON CONFLICT(hold_id,item_key) DO UPDATE SET payload_json=excluded.payload_json,received_at=excluded.received_at,status='held',decided_by=NULL,decided_at=NULL,run_id=NULL WHERE crank_hold_items.status!='held'`,
-      key, JSON.stringify(payload), at, workflow.id, key, token),
+      key, sealedTrigger, at, workflow.id, key, token),
       stmt(env, `UPDATE crank_authority_guards SET ok=CASE WHEN ${authority} THEN 1 ELSE 0 END WHERE id=?`, ...args, guard),
       stmt(env, 'DELETE FROM crank_authority_guards WHERE id=?', guard),
     ])

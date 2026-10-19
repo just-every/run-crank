@@ -3,6 +3,7 @@ import { executeRun } from '../engine/executor'
 import { isObject } from '../engine/values'
 import { canonical, digest, now, requireValue, stmt, type Actor, type CrankEnv } from '../model'
 import { auditStatement } from '../ops/audit'
+import { openRow, sealText, targetFor } from '../ops/payload-seal'
 import { pendingRestore } from './restore'
 import { runDetail } from './runs'
 import { createRepair, type ReplaySelection } from './repair'
@@ -21,7 +22,8 @@ export async function previewReplay(env: CrankEnv, actor: Actor, runId: string) 
   const run = await stmt(env, 'SELECT r.id,r.status,r.payload_expired_at,r.version_id,r.workflow_id,r.mode,r.repair_paths_json,r.repaired_paths_json,w.status AS workflow_status,w.owner_id FROM crank_wf_runs r JOIN crank_workflows w ON w.id=r.workflow_id WHERE r.id=?', runId)
     .first<{ id: string; status: string; payload_expired_at: string | null; version_id: string; workflow_id: string; workflow_status: string; mode: string; owner_id: string; repair_paths_json: string | null; repaired_paths_json: string }>()
   requireValue(run, 'Run not found', 404)
-  const rows = (await stmt(env, 'SELECT path,step_id,type,status,input_json,error_json,output_json,operation_key FROM crank_wf_steps WHERE run_id=? ORDER BY started_at,path', runId).all<Row>()).results
+  const rows = await Promise.all((await stmt(env, 'SELECT path,step_id,type,status,input_json,error_json,output_json,operation_key FROM crank_wf_steps WHERE run_id=? ORDER BY started_at,path', runId).all<Row>()).results
+    .map(row => openRow(env, run.workflow_id, row, ['input_json', 'output_json', 'error_json'], 'display')))
   const revisions = (await stmt(env, 'SELECT path,COUNT(*) AS count FROM crank_wf_step_revisions WHERE run_id=? GROUP BY path', runId).all<{ path: string; count: number }>()).results
   const count = new Map(revisions.map(r => [r.path, r.count]))
   const failedBelow = (row: Row) => rows.some(other => other.status === 'failed' && other.path.startsWith(row.path + '/'))
@@ -64,6 +66,7 @@ export async function replaySteps(env: CrankEnv, actor: Actor, runId: string, in
   // Every statement repeats the run-state check, so a run that changed meanwhile is left untouched.
   const stillFailed = "EXISTS(SELECT 1 FROM crank_wf_runs WHERE id=? AND status='failed')"
   const at = now(), statements: D1PreparedStatement[] = [], parents = new Set<string>(), selected: ReplaySelection[] = []
+  const target = await targetFor(env, (await stmt(env, 'SELECT workflow_id FROM crank_wf_runs WHERE id=?', runId).first<{ workflow_id: string }>())!.workflow_id)
   for (const path of paths as string[]) {
     const step = byPath.get(path)
     requireValue(step, `${path} is not a failed step this run can replay`, 409)
@@ -74,7 +77,7 @@ export async function replaySteps(env: CrankEnv, actor: Actor, runId: string, in
     statements.push(
       stmt(env, `INSERT INTO crank_wf_step_revisions(run_id,path,revision,prior_input_json,prior_error_json,prior_operation_key,input_json,operation_key,corrected,created_by,created_at)
         SELECT run_id,path,?,input_json,error_json,operation_key,?,?,?,?,? FROM crank_wf_steps WHERE run_id=? AND path=? AND status='failed' AND ${stillFailed}`,
-        revision, next, corrected ? `${step.operation_key.split('#r')[0]}#r${revision}` : step.operation_key, corrected ? 1 : 0, actor.id, at, runId, path, runId),
+        revision, await sealText(target, next), corrected ? `${step.operation_key.split('#r')[0]}#r${revision}` : step.operation_key, corrected ? 1 : 0, actor.id, at, runId, path, runId),
       stmt(env, `DELETE FROM crank_wf_steps WHERE run_id=? AND path=? AND status='failed' AND ${stillFailed}`, runId, path, runId),
     )
     for (const row of rows) if (path.startsWith(row.path + '/') && row.status === 'failed') parents.add(row.path)

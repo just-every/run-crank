@@ -4,7 +4,7 @@ import { workflowApi } from '../workflows/api'
 import { importApi } from '../import-api'
 import { importDoor } from '../import-door'
 import { dataApi } from '../data'
-import { retentionPanels, retentionPreview, sensitivePanel } from './retention-view'
+import { encryptionPanel, retentionPanels, retentionPreview, sensitivePanel } from './retention-view'
 import { authorize, requireOwner, requireWriteOrigin } from '../access'
 import { type CrankEnv } from '../model'
 import { authResponse } from '../../auth.server'
@@ -68,6 +68,13 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
         const response = await call('/api/crank/data/subject',{subject:form.subject}), preview:any = await response.json()
         if(!response.ok) return page('Erasure refused',`<p class="notice">${esc(preview.error)}</p><a href="/app/data">Back to Data</a>`,{},response.status)
         return page('Erasure preview',subjectPreview(form.subject ?? '',preview))
+      }
+      if (url.pathname === '/app/data/keys/export') {
+        requireOwner(actor)
+        const response = await call('/api/crank/data/keys/export',{passphrase:form.passphrase,confirm:form.confirm}), value:any = await response.json()
+        if(response.status===403 && value.error==='step_up_required') return page('Confirm by email',`<p class="notice">Downloading the key file needs a fresh confirmation. Send yourself a link, open it in this browser, then download again within 10 minutes.</p><form method="post" action="/auth/step-up"><input type="hidden" name="action" value="export"><input type="hidden" name="returnTo" value="/app/data"><button class="btn btn-secondary">Email me a confirmation link</button></form><a href="/app/data">Back to Data</a>`,{},403)
+        if(!response.ok) return page('Key file refused',`<p class="notice">${esc(value.error)}</p><a href="/app/data">Back to Data</a>`,{},response.status)
+        return new Response(JSON.stringify(value),{headers:{'content-type':'application/json','content-disposition':'attachment; filename="crank-keys.json"','cache-control':'no-store'}})
       }
       if (url.pathname === '/app/data/retention') {
         requireOwner(actor)
@@ -161,7 +168,7 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
     requireOwner(actor)
     if(url.pathname==='/app/operations') return page('Operations',operationsView(await read('/api/crank/reports/operations?'+url.searchParams),await read('/api/crank/workflows'),url.searchParams),{state,intro:'Execution health, business obligations and delivery to your own logs.'})
     if(url.pathname==='/app/access') {const people=await call('/auth/operators'); return page('Access',accessView({...state,people:people.ok?await people.json():[]}),{state,intro:'Credentials for agents and sending apps, and the people who can sign in.'})}
-    if(url.pathname==='/app/data') { const [retention,workflows] = await Promise.all([read('/api/crank/data/retention'),read('/api/crank/workflows')]); return page('Data',dataView()+retentionPanels(retention,workflows)+sensitivePanel(retention.sensitive,workflows)+erasurePanels((people=>Array.isArray(people)?people:people.operators??[])(await read('/auth/operators'))),{state,intro:'Export, restore and erase. Your data stays on this installation.'}) }
+    if(url.pathname==='/app/data') { const [retention,workflows] = await Promise.all([read('/api/crank/data/retention'),read('/api/crank/workflows')]); return page('Data',dataView()+retentionPanels(retention,workflows)+sensitivePanel(retention.sensitive,workflows)+encryptionPanel(retention.sensitive)+erasurePanels((people=>Array.isArray(people)?people:people.operators??[])(await read('/auth/operators'))),{state,intro:'Export, restore and erase. Your data stays on this installation.'}) }
     if(url.pathname==='/app/import') { const jobs=await call('/api/crank/imports'); if(!jobs.ok) throw new Error('Import journal unavailable'); return page('Move in',importView(await jobs.json() as any[],await read('/api/operator/import-settings')),{state,intro:'Bring workflows from another tool as drafts you review first.'}) }
     return page('Not found','<a href="/app">Return to flows</a>',{state},404)
   } catch(error:any) {

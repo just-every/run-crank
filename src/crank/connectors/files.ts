@@ -1,3 +1,4 @@
+import { sealFileBase64, targetFor } from '../ops/payload-seal'
 import { retryRequest } from './retry'
 import { RetryWait } from './retry-wait'
 import { sendRequest } from './request-transport'
@@ -15,7 +16,8 @@ const hex = (bytes: ArrayBuffer) => Array.from(new Uint8Array(bytes), b => b.toS
 export async function storeFile(env: CrankEnv, workflowId: string, file: { name: string; type: string; bytes: Uint8Array<ArrayBuffer>; source: string }) {
   if (file.bytes.byteLength > MAX_FILE_BYTES) throw new StepError('validation', `The file exceeds ${MAX_FILE_BYTES} bytes`)
   const ref = { file_id: id(), name: file.name.slice(0, 255) || 'file', type: (file.type || 'application/octet-stream').slice(0, 255), size: file.bytes.byteLength, sha256: hex(await crypto.subtle.digest('SHA-256', file.bytes)) }
-  await stmt(env, 'INSERT INTO crank_files(id,workflow_id,name,type,size,sha256,source,content_base64,created_at) VALUES(?,?,?,?,?,?,?,?,?)', ref.file_id, workflowId, ref.name, ref.type, ref.size, ref.sha256, file.source.slice(0, 2048), b64(file.bytes), now()).run()
+  const content = await sealFileBase64(await targetFor(env, workflowId), b64(file.bytes))
+  await stmt(env, 'INSERT INTO crank_files(id,workflow_id,name,type,size,sha256,source,content_base64,created_at) VALUES(?,?,?,?,?,?,?,?,?)', ref.file_id, workflowId, ref.name, ref.type, ref.size, ref.sha256, file.source.slice(0, 2048), content, now()).run()
   return ref
 }
 
