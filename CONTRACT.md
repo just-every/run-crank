@@ -66,9 +66,9 @@ Approval is a configurable step or policy boundary, not a requirement for every 
 
 #### TEAM-003 — Scoped preparation and trigger credentials.
 
-Owners issue one-time agent preparation/read credentials and one-flow trigger credentials stored only as hashes. Preparation authority cannot activate, approve, replay, manage data or escalate its own permissions. Revocation and owner identity/version changes invalidate credentials at the HTTP and transaction boundaries. Future execution tools receive separate explicit grants under TEAM-002.
+Owners issue agent preparation/read credentials and one-flow trigger credentials stored only as hashes. An agent preparation/read credential is shown once at issuance and is reusable for preparation and read until revoked or until the owner’s identity or version changes; it never carries execution authority. Preparation authority cannot activate, approve, replay, manage data or escalate its own permissions. Revocation and owner identity/version changes invalidate credentials at the HTTP and transaction boundaries. Future execution tools receive separate explicit grants under TEAM-002.
 
-**Acceptance evidence:** Issue both credential kinds through Access, prepare/read with an agent, submit with a trigger, try every owner-only route and another flow, then revoke; inspect state and archive for absence of bearer values.
+**Acceptance evidence:** Issue both credential kinds through Access; verify the agent preparation/read credential is shown once at issuance, is not retrievable afterward, and only its hash is kept. Reuse that credential for preparation and repeated reads, try execution and every owner-only route and see refusal, submit with a trigger and try another flow, then revoke and verify further preparation/read is refused. Separately change the owner’s identity or version and verify credential invalidation; inspect state and archive for absence of bearer values.
 
 #### TEAM-005 — Approve with edits, rejection routes and reviewer notices.
 
