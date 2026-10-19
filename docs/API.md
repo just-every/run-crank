@@ -181,4 +181,4 @@ do not retry. Retry-After seconds and HTTP dates are lower bounds, with growing
 backoff and jitter otherwise. The same policy covers each pagination page and
 readback request; restarting preserves failed request budgets and deadlines.
 An exhausted request remains failed with `exhausted` and `next_owner_action`.
-Account rate/concurrency admission and native connector parity remain pending.
+The API-request catalog action also exposes `request_limit`: HTTP retries/pages/readback share 100 requests per 10 seconds and concurrency 4 per connection, with unconnected calls sharing an origin bucket. Admission counts use a full window after response completion to prevent slow-call bursts. Native connector parity and slot-releasing durable backoff remain pending.

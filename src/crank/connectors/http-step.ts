@@ -1,5 +1,6 @@
 import { paginate, validatePagination } from './pagination'
 import { RETRY_POLICY, retryRequest, type AttemptPolicy } from './retry'
+import { acquireRequest } from './rate-limit'
 import { authorizeRequest } from '../connections/auth'
 import { assertDispatchAuthority } from '../engine/authority'
 import { fromBase64 } from './files'
@@ -68,6 +69,8 @@ async function send(ctx: StepContext, step: Record<string, unknown>, prepared: P
   const headers = new Headers(prepared.headers), url = new URL(prepared.url)
   if (connectionId) await authorizeRequest(ctx.env, connectionId, url, headers, prepared.body)
   await assertDispatchAuthority(ctx.env, ctx.run.id)
+  const release = await acquireRequest(ctx, connectionId, url.origin, Date.parse(policy.startedAt) + RETRY_POLICY.elapsed_ms, prepared.timeout)
+  try {
   const attemptId = id()
   const admitted = await stmt(ctx.env, `INSERT INTO crank_wf_attempts(id,run_id,path,number,method,destination_origin,started_at,request_key,retry_number,budget_started_at)
     SELECT ?,?,?,COALESCE((SELECT MAX(number)+1 FROM crank_wf_attempts WHERE run_id=? AND path=?),1),?,?,?,?,?,?
@@ -84,6 +87,7 @@ async function send(ctx: StepContext, step: Record<string, unknown>, prepared: P
     await stmt(ctx.env, 'UPDATE crank_wf_attempts SET finished_at=?,error_category=? WHERE id=?', now(), error instanceof StepError ? error.category : 'network', attemptId).run()
     throw error
   }
+  } finally { await release() }
 }
 
 async function sendRetried(ctx: StepContext, step: Record<string, unknown>, prepared: Prepared, connectionId: string | undefined) {
