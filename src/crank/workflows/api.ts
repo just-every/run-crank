@@ -23,7 +23,7 @@ import { releaseHistorical } from '../triggers/historical-release'
 import { createHook, listHooks, revokeHook } from '../triggers/webhook'
 import { previewReplay, replaySteps } from './replay'
 import { cancelRun, decideApproval, previewWorkflow, resumeRun, runDetail, runsToday, searchRuns, startRun } from './runs'
-import { createWorkflow, duplicateWorkflow, getWorkflow, listWorkflows, presentWorkflow, publishWorkflow, setWorkflowState, unpublishWorkflow, updateDraft, versionGraph } from './store'
+import { createWorkflow, duplicateWorkflow, getWorkflow, listWorkflows, presentWorkflow, publishWorkflow, rollbackWorkflow, setWorkflowState, unpublishWorkflow, updateDraft, versionGraph } from './store'
 
 const PREFIXES = ['/api/crank/historical', '/api/crank/workflows', '/api/crank/workflow-runs', '/api/crank/connections', '/api/crank/oauth', '/api/crank/hooks', '/api/crank/holds', '/api/crank/queues', '/api/crank/catalog', '/api/crank/coverage', '/api/crank/settings', '/api/crank/audit', '/api/crank/notices', '/api/crank/reports']
 const match = (path: string, pattern: RegExp) => pattern.exec(path)?.slice(1).map(decodeURIComponent) ?? null
@@ -122,7 +122,7 @@ export async function workflowApi(request: Request, env: CrankEnv): Promise<Resp
     if (path === '/api/crank/reports/obligations') return json(await createObligation(env, actor, input), 201)
     if ((m = match(path, /^\/api\/crank\/reports\/obligations\/([^/]+)\/verify$/))) return json(await verifyObligation(env, actor, m[0], input))
     if (path === '/api/crank/workflows') return json(await createWorkflow(env, actor, input), 201)
-    if ((m = match(path, /^\/api\/crank\/workflows\/([^/]+)\/(draft|validate|publish|unpublish|pause|resume|duplicate|run|preview|hooks)$/))) {
+    if ((m = match(path, /^\/api\/crank\/workflows\/([^/]+)\/(draft|validate|publish|rollback|unpublish|pause|resume|duplicate|run|preview|hooks)$/))) {
       const [workflowId, action] = m
       if (action === 'draft') return json(await updateDraft(env, actor, workflowId, input))
       if (action === 'validate') {
@@ -130,6 +130,7 @@ export async function workflowApi(request: Request, env: CrankEnv): Promise<Resp
         catch (error) { if (error instanceof StepError) return json({ ok: false, error: error.message }, 422); throw error }
       }
       if (action === 'publish') return json(await publishWorkflow(env, actor, workflowId, input), 201)
+      if (action === 'rollback') return json(await rollbackWorkflow(env, actor, workflowId, input), 201)
       if (action === 'unpublish') return json(await unpublishWorkflow(env, actor, workflowId))
       if (action === 'pause' || action === 'resume') return json(await setWorkflowState(env, actor, workflowId, action === 'pause' ? 'paused' : 'published'))
       if (action === 'duplicate') return json(await duplicateWorkflow(env, actor, workflowId), 201)
