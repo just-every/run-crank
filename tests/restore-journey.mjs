@@ -155,6 +155,7 @@ export async function restoreJourney() {
       const refused = await corrupt.send('/api/crank/data/restore', { archive: await rewritten(exported, change), confirm: 'RESTORE' }, corrupt.owner);
       assert.equal(refused.status, 400, refused.text);
       assert.match(refused.text, /staged_validation/);
+      assert.match(refused.text, /Re-export from an updated source installation/, 'unsafe older archives are refused with re-export guidance');
       assert.deepEqual(await corrupt.get('workflows'), [], 'semantic refusal commits no product records');
     }
   } finally { fixture.releaseExecution(); await fixture.pendingExecution; await corrupt?.close(); await restored?.close(); await source.close(); }
