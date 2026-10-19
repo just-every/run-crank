@@ -1,0 +1,10 @@
+import { esc, timestamp } from './document'
+
+const label: Record<string, string> = { queued: 'Queued', running: 'Running', waiting: 'Waiting', dead_letter: 'Dead letter' }
+export function executionQueueView(queue: any) {
+  return `<section class="panel"><h2>Execution queue</h2><p>Live inventory · ${timestamp(queue.as_of)}. Historical date filters do not hide pending work.</p>
+    <div class="grid">${queue.states.map((s: any) => `<div><h3>${label[s.state]} · ${s.depth}</h3><p>Oldest: ${s.oldest_received_at ? `${timestamp(s.oldest_received_at)} · ${Math.floor(s.oldest_age_ms / 1000).toLocaleString()} seconds since receipt` : 'None'}</p></div>`).join('')}</div>
+    <p>Dead letters retain failed checkpoints and never dispatch automatically. Uncertain writes need destination reconciliation before replay. Pausing a workflow holds new intake and stops new step dispatch, except existing waits whose published policy permits continuation on their frozen graph. Already-started effects may still complete.</p>
+    ${queue.truncated ? '<p>Showing the first 100 runs by published priority, then receipt time and run ID. Use Runs to search the remaining history.</p>' : ''}
+    <ul class="list">${queue.runs.map((r: any) => `<li class="history-item"><h3><a href="/app/workflow-runs/${esc(r.id)}">${esc(r.workflow)} · ${esc(r.id.slice(0, 8))}</a> · ${label[r.state]}</h3><p>Owner: ${esc(r.owner ?? r.owner_id)} · priority ${r.priority} · concurrency limit ${r.max_concurrency}</p><p>Received ${timestamp(r.received_at)} · ${r.completed_steps} completed checkpoints${r.uncertain_steps ? ` · ${r.uncertain_steps} uncertain writes` : ''}${r.error_category ? ` · ${esc(r.error_category)}` : ''}</p>${r.lease_expires_at ? `<p>Execution lease ends ${timestamp(r.lease_expires_at)}</p>` : ''}${r.status === 'paused' || r.status === 'awaiting_approval' ? `<p>${esc(r.status === 'paused' ? 'Paused; requires attention' : 'Waiting for approval')}</p>` : ''}</li>`).join('') || '<li>No pending work or dead letters.</li>'}</ul></section>`
+}

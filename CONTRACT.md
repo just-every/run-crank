@@ -515,11 +515,13 @@ Every “updated” or “changed” trigger defines what counts as an update: i
 
 #### EXEC-001 — Durable queues and execution checkpoints.
 
-Activated workflows execute without a person per run under their grants. Durable queues show queued/running/waiting/dead-letter states, depth, oldest age, priority and owner. Atomic claims, per-step checkpoints, concurrency limits and cancellation survive executor loss and deployment; lease expiry records uncertainty before recovery. Pausing states whether it stops intake, dispatch or both, and cancellation identifies already-started effects.
+Activated workflows execute without a person per run under published authority and any applicable grants. Durable queues show queued/running/waiting/dead-letter states, depth, oldest age, priority and owner. Atomic claims, per-step checkpoints, concurrency limits and cancellation survive executor loss and deployment; lease expiry records uncertainty before recovery. Pausing states whether it stops intake, dispatch or both, and cancellation identifies already-started effects.
 
 Execution priority is an integer from -100 to 100 (default 0), higher first, then receipt time and stable run ID. Each admitted version freezes `max_concurrency` (1–100, default 1); its claim counts every unexpired running lease of the same workflow across versions. Waiting, approval and paused runs occupy no execution slot. A saturated workflow is filtered before the scheduler’s candidate limit.
 
-**Acceptance evidence:** Queue a multi-step batch, stop the executor before and after a remote write, restart and inspect its checkpoints and oldest pending work; verify safe continuation, cancellation and no duplicate completed effect.
+The Operations live inventory is independent of historical date bounds and respects its workflow/team filters; depth counts the complete inventory, with the first 100 runs shown by execution order. Dead letters are retained terminal failed runs (including uncertain writes), with their checkpoints and error category, and never dispatch automatically. An expired lease atomically marks in-flight mutating checkpoints uncertain before recovery. Cancellation fences the lease and all later dispatch, preserves completed checkpoints, and labels an already-started write uncertain because it may still complete; it does not undo effects. Paused workflows hold new trigger intake and refuse on-demand starts. New/queued/running step dispatch stops, except existing waits permitted by TEAM-004’s frozen continuation policy; those waits still check live authority and connections.
+
+**Acceptance evidence:** Queue a multi-step batch, stop the executor before and after a remote write, restart and inspect its checkpoints and oldest pending work; verify safe continuation, cancellation and no duplicate completed effect. Also inspect queued, running, waiting and dead-letter depth, oldest receipt, published priority and accountable owner; cancel both queued and in-flight runs, inspect already-started effects, and verify paused intake and dispatch across restart.
 
 #### EXEC-002 — Rate limits, backoff and exhaustion.
 
@@ -815,8 +817,8 @@ Judged from the code and tests at commit `d68e5c8981c9984581920527fc78a58c6cdba4
 | Clauses | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
 | Published | 4 | 8 | 0 | 12 |
-| Target and push further | 8 | 28 | 37 | 73 |
-| All | 12 | 36 | 37 | 85 |
+| Target and push further | 9 | 27 | 37 | 73 |
+| All | 13 | 35 | 37 | 85 |
 
 MIG-006, BASE-004 and BASE-005 were added on 17 October 2026 so every homepage claim has a clause, and were judged from the code and tests at `eac16196cffe508a1eec962b1c116564707c1598` (main after the run site landed); every earlier row keeps its status from the commit above.
 
@@ -865,7 +867,7 @@ MIG-006, BASE-004 and BASE-005 were added on 17 October 2026 so every homepage c
 | `TRIG-006` | Hosted inbound email addresses | target | missing |  | No delivered product workflow. |
 | `TRIG-007` | Feed and URL polling triggers | target | partial | `src/crank/triggers/poll.ts`; `src/crank/triggers/feeds.ts`; `src/crank/triggers/xml.ts`; `tests/triggers.test.mjs` | URL-poll headers and query values are copied literally rather than resolved mappings; DNS-resolved private destinations need enforcing egress and parse time has no explicit bound. |
 | `TRIG-008` | Updated-record triggers on watched fields | target | missing |  | No delivered product workflow. |
-| `EXEC-001` | Durable queues and execution checkpoints | target | partial | `src/crank/runs.ts`; `src/crank/delivery.ts`; `src/crank/ui/flows.ts`; `tests/crank.test.mjs`; `src/crank/engine/queue.ts`; `tests/execution-queue.test.mjs` (EXEC-001 priority and atomic concurrency) | Dead-letter and execution queue dashboards remain; priority and atomic per-workflow concurrency now ship. |
+| `EXEC-001` | Durable queues and execution checkpoints | target | done | `src/crank/engine/queue.ts`; `src/crank/engine/interruption.ts`; `src/crank/ops/execution-queue.ts`; `src/crank/ops/scheduler.ts`; `src/crank/workflows/runs.ts`; `src/crank/ui/execution-queue.ts`; `tests/execution-queue.test.mjs`; `tests/dispatch-authority.test.mjs` (EXEC-001: atomic concurrency, priority, batch checkpoints/restarts, live inventory, dead letters, lease loss, cancellation and paused intake/dispatch) | |
 | `EXEC-002` | Rate limits, backoff and exhaustion | target | partial | `src/crank/connectors/http-step.ts`; `tests/connections.test.mjs` | Per-account rate limits, attempt budgets, dead-letter. |
 | `EXEC-003` | Error routes, alerts and escalation | target | partial | `src/crank/delivery.ts`; `src/crank/ui/run.ts`; `src/crank/ops/failures.ts`; `tests/logic.test.mjs` | Slack/Teams/Nook notices, calendar escalation, compensation. |
 | `EXEC-004` | Replay any eligible step safely | published | partial | `src/crank/delivery.ts`; `tests/crank.test.mjs` | Only one manual replay of the single HTTP action exists. |

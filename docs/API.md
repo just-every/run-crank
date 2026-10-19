@@ -155,3 +155,18 @@ Pause stops new/queued/running next-step dispatch. Only waits already present at
 Workspace caps are `{category,max_usd?,max_recipients?}`. Steps use `{cap:{max_usd?,amount?,max_recipients?,recipients?}}`, with mapped `amount`/`recipients`, and name their workspace `category`. The stricter bound applies inclusively. A recipient mapping resolves to one address or an array, counts duplicates and never parses delimiters; HTTP builders declare the same destination mapping used in the request. Excess actions wait for an exact-input decision; rejection sends nothing.
 
 Graph settings `priority` is an integer -100..100 (default 0), higher first, then receipt time/run ID. `max_concurrency` is 1..100 (default 1). Each admission freezes its version parameters; each atomic claim counts all unexpired running leases across that workflow’s versions. Waiting/approval/paused runs free a slot. A saturated workflow does not hide other queue candidates.
+
+### Live execution queue and cancellation (EXEC-001)
+
+The existing owner-only `GET /reports/operations` includes `execution_queue` with
+`states` (queued, running, waiting, dead_letter), complete depths and oldest
+receipt/age, plus the first 100 `runs` ordered by published priority descending,
+receipt and run ID. Each row names the owner, priority, concurrency limit,
+lease and completed/uncertain checkpoint counts. Workflow/team filters apply;
+historical date bounds do not hide live work. Terminal failed runs are retained
+dead letters, including uncertain writes, and are never automatically redriven.
+
+`POST /workflow-runs/:id/cancel` also accepts a running run. It fences its lease
+and later dispatch; a started write may still finish remotely and is retained
+as an uncertain checkpoint. Completed effects are never undone. Cron records
+uncertainty before recovering an expired execution lease.

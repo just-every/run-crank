@@ -1,5 +1,6 @@
 import { executeRun } from '../engine/executor'
 import { queueCandidates } from '../engine/queue'
+import { recoverExpiredExecutions } from '../engine/interruption'
 import { resolveWait } from '../engine/records'
 import { releaseDelayQueues } from './delay-queues'
 import { stmt, type CrankEnv } from '../model'
@@ -13,8 +14,7 @@ import { flushLogStreams } from './log-stream'
  * Cron controller's scheduled time. */
 export async function schedulerPass(env: CrankEnv, time = Date.now()) {
   const at = new Date(time).toISOString(), summary = { recovered: 0, released: 0, queued: 0, polls: 0, schedules: 0, executed: 0, holds: 0 }
-  // An expired lease returns its run to the queue; an interrupted remote write becomes uncertain on the next walk.
-  summary.recovered = (await stmt(env, "UPDATE crank_wf_runs SET status='queued',lease_id=NULL,lease_expires_at=NULL WHERE status='running' AND lease_expires_at<=? RETURNING id", at).all()).results.length
+  summary.recovered = await recoverExpiredExecutions(env, at)
   const delays = await stmt(env, "SELECT run_id,path,expires_at FROM crank_waits WHERE resolved_at IS NULL AND kind='delay' AND due_at<=? ORDER BY due_at LIMIT 200", at).all<{ run_id: string; path: string; expires_at: string | null }>()
   for (const wait of delays.results) if (await resolveWait(env, wait.run_id, wait.path, { released: true, expired: !!wait.expires_at && wait.expires_at < at }, null, { at })) summary.released++
   const callbacks = await stmt(env, "SELECT run_id,path FROM crank_waits WHERE resolved_at IS NULL AND kind='callback' AND expires_at<=? LIMIT 200", at).all<{ run_id: string; path: string }>()
