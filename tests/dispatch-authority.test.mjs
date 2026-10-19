@@ -5,7 +5,7 @@ import {connection, fakeEdge, fakeSecret, jsonResponse, publish, runs, settled, 
 
 const action = (id, connection_id) => ({id,type:'http',...(connection_id ? {connection_id} : {}),input:{method:'POST',url:'https://authority-receiver.example/'+id,body:{job:'{{trigger.input.job}}'}}});
 
-test('TEAM-004: pause and replacement stop queued and running next-step dispatch; only recorded waits retain frozen authority', async()=>{
+test('EXEC-001 / TEAM-004: pause and replacement stop queued and running next-step dispatch; only recorded waits retain frozen authority', async()=>{
  const fake=fakeEdge();let unblock;
  fake.routes.set('authority-receiver.example',({url,body})=> url.pathname==='/first' && JSON.parse(body).job==='blocked'
   ? new Promise(resolve=>{unblock=()=>resolve(jsonResponse({id:'first'}))}) : jsonResponse({id:url.pathname}));
@@ -51,7 +51,7 @@ test('TEAM-004: pause and replacement stop queued and running next-step dispatch
  }finally{unblock?.();await h.close()}
 });
 
-test('TEAM-004: pause preserves only existing permitted waits; unpublish ends every continuation and retains the draft and audit',async()=>{
+test('EXEC-001 / TEAM-004: pause preserves only existing permitted waits; unpublish ends every continuation and retains the draft and audit',async()=>{
  const fake=fakeEdge();fake.routes.set('authority-receiver.example',()=>jsonResponse({id:'recorded'}));
  const h=await harness('http://127.0.0.1:9',{edge:fake.edge});
  try{
