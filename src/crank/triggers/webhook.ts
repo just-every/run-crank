@@ -5,9 +5,10 @@ import { StepError } from '../engine/errors'
 import { executeRun } from '../engine/executor'
 import type { Graph } from '../engine/graph'
 import { lookup } from '../engine/values'
-import { digest, id, now, requireValue, stmt, type Actor, type CrankEnv } from '../model'
+import { CrankError, canonical, digest, id, now, requireValue, stmt, type Actor, type CrankEnv } from '../model'
 import { auditStatement } from '../ops/audit'
-import { admit, burstThreshold, type WorkflowRow } from './admission'
+import { burstThreshold, type WorkflowRow } from './admission'
+import { admitWebhook } from './webhook-admission'
 import { bodyDigest, parseInbound, rawBody } from './inbound'
 import { verifySignature } from './signatures'
 
@@ -48,7 +49,7 @@ const constantEqual = (a: string, b: string) => { if (a.length !== b.length) ret
 /** TRIG-001 public door. It admits events only: it can read no workspace data and
  * approve or activate nothing. */
 export async function receiveHook(request: Request, env: CrankEnv, secret: string, defer?: (work: Promise<unknown>) => void): Promise<Response> {
-  const hook = await stmt(env, `SELECT h.workflow_id FROM crank_hooks h WHERE h.secret_hash=? AND h.revoked_at IS NULL AND (h.expires_at IS NULL OR h.expires_at>?)`, await digest(secret), now()).first<{ workflow_id: string }>()
+  const hook = await stmt(env, `SELECT h.id,h.workflow_id FROM crank_hooks h WHERE h.secret_hash=? AND h.revoked_at IS NULL AND (h.expires_at IS NULL OR h.expires_at>?)`, await digest(secret), now()).first<{ id: string; workflow_id: string }>()
   if (!hook) return json({ error: 'Not found' }, 404)
   const workflow = await stmt(env, 'SELECT * FROM crank_workflows WHERE id=?', hook.workflow_id).first<WorkflowRow>()
   if (!workflow || workflow.status === 'draft' || !workflow.published_version_id) return json({ error: 'This workflow is not published' }, 404)
@@ -81,20 +82,11 @@ export async function receiveHook(request: Request, env: CrankEnv, secret: strin
       const value = path ? lookup(sources, path).value : undefined
       key = value !== undefined && value !== null && value !== '' ? 'key:' + String(value) : 'digest:' + await bodyDigest(inbound)
     }
-    const payloadDigest = await bodyDigest(inbound), at = now()
-    const windowStart = envelope ? '9999' : new Date(Date.now() - Number(trigger.dedup?.window_minutes ?? 1440) * 60000).toISOString()
-    const claimed = await stmt(env, `INSERT INTO crank_trigger_events(workflow_id,dedup_key,received_at,payload_digest) VALUES(?,?,?,?)
-      ON CONFLICT(workflow_id,dedup_key) DO UPDATE SET received_at=excluded.received_at,payload_digest=excluded.payload_digest,run_id=NULL WHERE crank_trigger_events.received_at<=?`, workflow.id, key, at, payloadDigest, windowStart).run()
-    if (claimed.meta.changes !== 1) {
-      const previous = await stmt(env, 'SELECT payload_digest,run_id FROM crank_trigger_events WHERE workflow_id=? AND dedup_key=?', workflow.id, key).first<{ payload_digest: string; run_id: string | null }>()
-      if (envelope && previous && previous.payload_digest !== payloadDigest) return json({ error: 'This event ID already belongs to different input' }, 409)
-      return json({ accepted: false, duplicate: true, run_id: previous?.run_id ?? null }, 200)
-    }
     const payload = envelope ? { event_id: envelope.event_id, input: envelope.input } : { method: inbound.method, headers: inbound.headers, query: inbound.query, body: inbound.body, files: inbound.files, ...(inbound.raw !== undefined ? { raw: inbound.raw } : {}) }
-    const { runs, holdId } = await admit(env, workflow, 'webhook', 'webhook', [{ key, payload, businessKey: key }], burstThreshold(graph), 'trigger')
-    if (holdId) return json({ accepted: true, held: true }, 202)
-    const run = runs[0]
-    await stmt(env, 'UPDATE crank_trigger_events SET run_id=? WHERE workflow_id=? AND dedup_key=?', run.id, workflow.id, key).run()
+    const admitted = await admitWebhook(env, workflow, hook.id, key, envelope ? await digest(canonical({ body: { event_id: envelope.event_id, input: envelope.input }, files: {} })) : await bodyDigest(inbound), payload, burstThreshold(graph), envelope ? null : Number(trigger.dedup?.window_minutes ?? 1440), inbound.uploads)
+    if (!admitted.accepted) return json({ accepted: false, duplicate: true, run_id: admitted.runId }, 200)
+    if (admitted.holdId) return json({ accepted: true, held: true }, 202)
+    const run = { id: admitted.runId! }
     const response = trigger.response ?? { mode: 'immediate' }
     if (response.mode === 'sync') {
       const timeout = Number(response.timeout_ms ?? 10000)
@@ -108,6 +100,7 @@ export async function receiveHook(request: Request, env: CrankEnv, secret: strin
     const body = response.body === undefined ? { accepted: true, run_id: run.id } : response.body
     return typeof body === 'string' ? new Response(body, { status: response.status ?? 200, headers: { 'content-type': 'text/plain; charset=utf-8', ...(response.headers ?? {}) } }) : json(body, response.status ?? 200, response.headers ?? {})
   } catch (error) {
+    if (error instanceof CrankError) return json({ error: error.message }, error.status)
     if (error instanceof StepError) return json({ error: error.message }, error.category === 'auth' ? 401 : error.category === 'connection' ? 503 : 400)
     throw error
   }

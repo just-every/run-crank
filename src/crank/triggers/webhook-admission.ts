@@ -1,0 +1,57 @@
+import { CrankError, digest, id, now, stmt, type CrankEnv } from '../model'
+import { notify } from '../ops/notices'
+import type { InboundUpload } from './inbound'
+import type { WorkflowRow } from './admission'
+
+/** D1 serializes the whole batch: an event identity is committed with exactly one
+ * queued run or held item. The admission ID distinguishes this request's claim. */
+export async function admitWebhook(env: CrankEnv, workflow: WorkflowRow, hookId: string, key: string, payloadDigest: string, payload: unknown, threshold: number, windowMinutes: number | null, files: InboundUpload[] = []) {
+  const token = id(), candidateHold = id(), guard = id(), at = now(), eventDigest = await digest(key)
+  const windowStart = windowMinutes === null ? '' : new Date(Date.now() - windowMinutes * 60000).toISOString()
+  const settings = JSON.parse(workflow.settings_json || '{}')
+  const expiry = Number.isInteger(settings.hold_expiry_hours) ? new Date(Date.now() + settings.hold_expiry_hours * 3600000).toISOString() : null
+  const authority = `EXISTS(SELECT 1 FROM crank_hooks h JOIN crank_workflows w ON w.id=h.workflow_id JOIN crank_workflow_versions v ON v.id=w.published_version_id
+    WHERE h.id=? AND h.workflow_id=? AND h.revoked_at IS NULL AND (h.expires_at IS NULL OR h.expires_at>?)
+    AND w.status IN ('published','paused') AND v.id=? AND v.retired_at IS NULL)
+    AND NOT EXISTS(SELECT 1 FROM crank_erased_webhook_events WHERE workflow_id=? AND event_digest=?)`
+  const args = [hookId, workflow.id, at, workflow.published_version_id, workflow.id, eventDigest]
+  const claimed = `EXISTS(SELECT 1 FROM crank_trigger_events WHERE workflow_id=? AND dedup_key=? AND admission_id=?)`
+  try {
+    await env.DB.batch([
+      stmt(env, `INSERT INTO crank_authority_guards(id,ok) SELECT ?,CASE WHEN ${authority} THEN 1 ELSE 0 END`, guard, ...args),
+      stmt(env, `INSERT INTO crank_trigger_events(workflow_id,dedup_key,received_at,payload_digest,admission_id) VALUES(?,?,?,?,?)
+        ON CONFLICT(workflow_id,dedup_key) DO UPDATE SET received_at=excluded.received_at,payload_digest=excluded.payload_digest,run_id=NULL,hold_id=NULL,admission_id=excluded.admission_id
+        WHERE ?=1 AND crank_trigger_events.received_at<=? AND (crank_trigger_events.hold_id IS NULL OR NOT EXISTS(SELECT 1 FROM crank_hold_items i WHERE i.hold_id=crank_trigger_events.hold_id AND i.item_key=crank_trigger_events.dedup_key AND i.status='held'))`, workflow.id, key, at, payloadDigest, token, windowMinutes === null ? 0 : 1, windowStart),
+      stmt(env, `INSERT INTO crank_holds(id,workflow_id,source,status,created_at,expires_at)
+        SELECT ?,?,'webhook','open',?,? WHERE ${claimed}
+        AND NOT EXISTS(SELECT 1 FROM crank_holds WHERE workflow_id=? AND status='open' AND source='webhook')
+        AND ((SELECT status FROM crank_workflows WHERE id=?)='paused' OR
+          (SELECT COUNT(*) FROM crank_trigger_events WHERE workflow_id=? AND received_at>? AND run_id IS NOT NULL)>=?)`,
+      candidateHold, workflow.id, at, expiry, workflow.id, key, token, workflow.id, workflow.id, workflow.id, new Date(Date.now() - 60000).toISOString(), threshold),
+      stmt(env, `UPDATE crank_trigger_events SET hold_id=(SELECT id FROM crank_holds WHERE workflow_id=? AND status='open' AND source='webhook' ORDER BY created_at,id LIMIT 1)
+        WHERE workflow_id=? AND dedup_key=? AND admission_id=?`, workflow.id, workflow.id, key, token),
+      ...files.map(file => stmt(env, `INSERT INTO crank_files(id,workflow_id,name,type,size,sha256,source,content_base64,created_at)
+        SELECT ?,?,?,?,?,?,'webhook upload',?,? WHERE ${claimed}`, file.file_id, workflow.id, file.name, file.type, file.size, file.sha256, file.content_base64, at, workflow.id, key, token)),
+      stmt(env, `INSERT INTO crank_wf_runs(id,workflow_id,version_id,trigger_kind,source_id,trigger_json,status,received_at,created_by,business_key)
+        SELECT ?,?,?,'webhook',?,?,'queued',?,'trigger',? WHERE ${claimed}
+        AND NOT EXISTS(SELECT 1 FROM crank_trigger_events WHERE workflow_id=? AND dedup_key=? AND hold_id IS NOT NULL)`,
+      token, workflow.id, workflow.published_version_id, key, JSON.stringify(payload), at, key, workflow.id, key, token, workflow.id, key),
+      stmt(env, `UPDATE crank_trigger_events SET run_id=? WHERE workflow_id=? AND dedup_key=? AND admission_id=? AND hold_id IS NULL`, token, workflow.id, key, token),
+      stmt(env, `INSERT INTO crank_hold_items(hold_id,item_key,payload_json,received_at,status)
+        SELECT hold_id,?,?,?,'held' FROM crank_trigger_events WHERE workflow_id=? AND dedup_key=? AND admission_id=? AND hold_id IS NOT NULL ON CONFLICT(hold_id,item_key) DO UPDATE SET payload_json=excluded.payload_json,received_at=excluded.received_at,status='held',decided_by=NULL,decided_at=NULL,run_id=NULL WHERE crank_hold_items.status!='held'`,
+      key, JSON.stringify(payload), at, workflow.id, key, token),
+      stmt(env, `UPDATE crank_authority_guards SET ok=CASE WHEN ${authority} THEN 1 ELSE 0 END WHERE id=?`, ...args, guard),
+      stmt(env, 'DELETE FROM crank_authority_guards WHERE id=?', guard),
+    ])
+  } catch (error) {
+    if (/crank_authority_guards|CHECK constraint failed: ok/.test(String(error))) throw new CrankError(409, 'Webhook authority changed or this event was erased; no event was admitted')
+    throw error
+  }
+  const event = await stmt(env, 'SELECT payload_digest,run_id,hold_id,admission_id FROM crank_trigger_events WHERE workflow_id=? AND dedup_key=?', workflow.id, key)
+    .first<{ payload_digest: string; run_id: string | null; hold_id: string | null; admission_id: string | null }>()
+  if (windowMinutes === null && event?.payload_digest !== payloadDigest) throw new CrankError(409, 'This event ID already belongs to different input')
+  const accepted = event?.admission_id === token
+  if (event?.hold_id) await notify(env, { key: `hold:${event.hold_id}`, workflowId: workflow.id, kind: 'hold',
+    subject: `${workflow.name}: trigger events are held for review`, text: `Crank held instant events for "${workflow.name}" because the workflow is paused or its burst threshold was reached. Review the batch before running all, selected items, or discarding it.`, link: `/api/crank/holds/${event.hold_id}` })
+  return { accepted, runId: event?.run_id ?? null, holdId: event?.hold_id ?? null }
+}

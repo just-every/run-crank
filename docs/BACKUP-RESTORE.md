@@ -88,3 +88,11 @@ backup. Keep the latest post-erasure archive with your recovery materials.
 
 See [Get started](GETTING-STARTED.md), [Flows and runs](FLOWS-AND-RUNS.md),
 [Access](ACCESS.md) and [Move in from n8n](IMPORTING.md).
+
+Multi-step webhook run erasure uses the same owner-only door with
+`{ "workflow_run_id": "RUN_ID", "confirm": "ERASE" }`. Pause its workflow and
+finish or cancel the run first. The linked run values and decisions are removed;
+the audit retains action chronology with an anonymized run subject and no detail.
+An opaque event-key digest prevents re-admission after restart and restore.
+This bounded run operation does not establish subject/operator erasure or erase
+shared file references; those DATA-002 obligations remain partial.
