@@ -595,7 +595,7 @@ Workspace caps use `{category,max_usd?,max_recipients?}`; step caps use `{max_us
 
 #### SEC-001 — Native authentication and origin-bound writes.
 
-Private product routes require a current native operator session or a specifically scoped machine credential. Authorization is enforced in handlers and durable write predicates; browser mutations require the configured exact Origin. Owner-only data/access/import decisions cannot be obtained by an admin, member, trigger or preparation agent. Local development identity remains local and is excluded from deployed assets.
+Private product routes require a current native operator session or a specifically scoped machine credential. Authorization is enforced in handlers and durable write predicates; browser mutations require the configured exact Origin. Owner-only data/access/import decisions cannot be obtained by an admin, member, trigger or preparation agent. Access decisions are inviting a person, deactivating or reactivating them, changing their role and ending another person’s sessions; until TEAM-001 adds narrower roles, only the owner makes them, admins may read the people list, and everyone may list and end their own sessions. A write admitted before its session or credential is revoked, signed out or demoted is refused when it commits. Local development identity remains local and is excluded from deployed assets.
 
 **Acceptance evidence:** Sign in through the ordinary email-link journey, call private HTTP doors signed out and with each lower role, send a foreign-Origin mutation and revoke a session/credential before a guarded write; verify denial without product effects and the build’s dev-identity exclusion.
 
@@ -843,8 +843,8 @@ Judged from the code and tests at commit `d68e5c8981c9984581920527fc78a58c6cdba4
 | Clauses | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
 | Published | 4 | 8 | 0 | 12 |
-| Target and push further | 9 | 27 | 37 | 73 |
-| All | 13 | 35 | 37 | 85 |
+| Target and push further | 10 | 26 | 37 | 73 |
+| All | 14 | 34 | 37 | 85 |
 
 MIG-006, BASE-004 and BASE-005 were added on 17 October 2026 so every homepage claim has a clause, and were judged from the code and tests at `eac16196cffe508a1eec962b1c116564707c1598` (main after the run site landed); every earlier row keeps its status from the commit above.
 
@@ -907,7 +907,7 @@ MIG-006, BASE-004 and BASE-005 were added on 17 October 2026 so every homepage c
 | `TEAM-003` | Scoped preparation and trigger credentials | published | done | `src/crank/tokens.ts`; `src/crank/access.ts`; `src/crank/workflows/runs.ts`; `src/crank/triggers/admission.ts`; `tests/crank.test.mjs` (TEAM-003) | |
 | `TEAM-004` | Publishing authorizes a workflow’s declared steps | target | done | `src/crank/engine/authority.ts`; `src/crank/engine/caps.ts`; `src/crank/workflows/store.ts`; `tests/publish-authority.test.mjs`; `tests/dispatch-authority.test.mjs`; `tests/logic.test.mjs` (TEAM-004: ten unattended workflows, publisher/version audit, caps, drafts, pause/replacement/unpublish and live reconnect) | |
 | `TEAM-005` | Approve with edits, rejection routes and reviewer notices | published | partial | `src/crank/delivery.ts`; `tests/crank.test.mjs`; `tests/logic.test.mjs` | Slack/Teams/Nook/mobile push notices, reminders and calendar timeouts. |
-| `SEC-001` | Native authentication and origin-bound writes | target | partial | `src/crank/access.ts`; `src/crank/api.ts`; `tests/crank.test.mjs`; `tests/email-link.mjs`; `SEED-COMMAND-CONTRACT.md` | HTTP role/origin boundaries are tested; commit-time session revocation and every private door/dev-layer exclusion are not all established by the cited product tests. |
+| `SEC-001` | Native authentication and origin-bound writes | target | done | `src/auth.server.ts`; `src/crank/access.ts`; `src/crank/api.ts`; `tests/crank.test.mjs` (SEC-001: every private API family and app page signed out, lower roles and machine credentials on access/data/import decisions, foreign-Origin owner writes, commit-time sign-out and credential revocation); `tests/email-link.mjs` (SEC-001: email-link sign-in, no dev identity doors or dev layer in the emitted build); `SEED-COMMAND-CONTRACT.md` | |
 | `SEC-002` | Bounded network and untrusted content | target | partial | `src/crank/flows.ts`; `src/crank/delivery.ts`; `src/crank/model.ts`; `src/crank/ui/document.ts`; `tests/crank.test.mjs`; `src/crank/engine/egress.ts` | DNS rebinding (Base gap), prompt injection. |
 | `SEC-003` | Permanent attributable audit | target | partial | `src/crank/delivery.ts`; `src/crank/imports.ts`; `src/crank/data.ts`; `tests/crank.test.mjs`; `src/crank/ops/audit.ts` | Export, erasure anonymisation. |
 | `DATA-001` | Complete portable archives and inactive restore | published | partial | `src/crank/data.ts`; `src/crank/archive-policy.mjs`; `src/crank/restore-policy.mjs`; `src/crank/workflows/restore.ts`; `tests/crank.test.mjs`; `tests/restore-journey.mjs` (DATA-001: whole portable inventory, fences, owner adoption and atomic refusal); `docs/BACKUP-RESTORE.md` | Older archives import normalized once Base’s import hook ships. |

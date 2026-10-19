@@ -20,13 +20,19 @@ before(async()=>{
 });
 after(async()=>{await h?.close();if(receiver)await new Promise(r=>receiver.close(r));});
 
+// The owner invites a person; they accept through the emailed link (the mail provider is the faked edge).
+async function join(role,email=`${role}-${crypto.randomUUID().slice(0,8)}@example.test`){
+ const invited=await h.send('/auth/invite',{email,displayName:role,role},h.owner);assert.equal(invited.status,202,invited.text);
+ const message=h.mail.findLast(message=>message.to.includes(email));
+ const token=new URL(message.html.match(/href="([^"]*\/auth\/confirm\?token=[^"]+)"/)[1].replaceAll('&amp;','&'),h.origin).searchParams.get('token');
+ assert.ok(token,'invitation delivered to mail provider');const joined=await h.send('/auth/confirm',{token});assert.equal(joined.status,303,joined.text);
+ return {cookie:joined.cookie,id:(await h.get('state',joined.cookie)).actor.id};
+}
+
 test('native owner sign-in, admin preparation and member read-only roles apply at each HTTP door',async()=>{
  await h.get('state','',401);
  for(const role of ['admin','member']) {
-  const email=role+'@example.test'; const invited=await h.send('/auth/invite',{email,displayName:role,role},h.owner);assert.equal(invited.status,202,invited.text);
-  const message=h.mail.findLast(message=>message.to.includes(email));
-  const token=new URL(message.html.match(/href="([^"]*\/auth\/confirm\?token=[^"]+)"/)[1].replaceAll('&amp;','&'),h.origin).searchParams.get('token');
-  assert.ok(token,'invitation delivered to mail provider');const joined=await h.send('/auth/confirm',{token});assert.equal(joined.status,303,joined.text);const cookie=joined.cookie;
+  const {cookie}=await join(role,role+'@example.test');
   assert.equal((await h.get('state',cookie)).actor.role,role);
   const f=await h.flow('Role boundary '+role),r=await h.run(f);
   for(const path of [`flows/${f.id}/activate`,`flows/${f.id}/pause`,`runs/${r.id}/approve`,`runs/${r.id}/reject`,`runs/${r.id}/replay`,'tokens','imports/plan','imports/apply','data/export','data/restore','data/erase']) await h.post(path,{},cookie,403);
@@ -34,6 +40,48 @@ test('native owner sign-in, admin preparation and member read-only roles apply a
  }
  const csrf=await h.send('/api/crank/flows',{name:'CSRF'},h.owner,{origin:'https://foreign.example'});assert.equal(csrf.status,403);
  for(const path of ['imports/plan','data/export']) assert.equal((await h.send('/api/crank/'+path,{},h.owner,{origin:'https://foreign.example'})).status,403);
+});
+
+test('SEC-001: private doors need a current session or scoped credential, access/data/import decisions stay the owner\'s, and revocation lands at commit',async()=>{
+ for(const door of ['','state','flows','flows/x','flows/x/activate','flows/x/runs','flows/x/trigger','runs/x','runs/x/approve','runs/x/replay','tokens','tokens/x/revoke','imports','imports/plan','imports/apply','data/export','data/restore','data/erase',
+  'historical','historical/x','workflows','workflows/x','workflows/x/publish','workflows/x/run','workflow-runs','workflow-runs/x','workflow-runs/x/resume','connections','connections/x','oauth/start','oauth/callback','oauth/apps/slack','hooks','holds/x','queues','catalog','coverage','settings','audit','notices','reports'])
+  for(const input of [undefined,{}]) assert.equal((await h.send('/api/crank'+(door&&'/'+door),input)).status,401,`SEC-001 signed-out ${input?'POST':'GET'} /api/crank/${door}`);
+ for(const page of ['/app','/app/operations','/app/approvals','/app/runs','/app/runs/x','/app/connections','/app/access','/app/account','/app/data','/app/import','/app/workflows/x','/app/workflow-runs/x','/app/action']) {
+  const r=await h.send(page,page==='/app/action'?{path:'/api/crank/data/erase'}:undefined);assert.equal(r.status,303,'SEC-001 signed-out '+page);assert.match(r.headers.get('location'),/^\/signin/);
+ }
+ assert.equal((await h.send('/auth/operators')).status,401);
+ const people=async()=>JSON.stringify((await h.send('/auth/operators',undefined,h.owner)).value);
+ const admin=await join('admin'),member=await join('member'),departing=await join('member');
+ const agent=await h.post('tokens',{label:'SEC-001 agent',scope:'agent'},h.owner,201),f=await h.flow('SEC-001 trigger flow'),trigger=await h.post('tokens',{label:'SEC-001 trigger',scope:'trigger',flow_id:f.id},h.owner,201);
+ const before=await people(),tokens=(await h.get()).tokens.length;
+ for(const [who,cookie,headers] of [['admin',admin.cookie,{}],['member',member.cookie,{}],['agent','',{authorization:'Bearer '+agent.token}],['trigger','',{authorization:'Bearer '+trigger.token}]]) {
+  for(const [path,input] of [['/auth/invite',{email:'uninvited@example.test',displayName:'Uninvited',role:'member'}],['/auth/operator/status',{operatorId:departing.id,status:'inactive'}],['/auth/operator/role',{operatorId:departing.id,role:'admin'}]]) {
+   const r=await h.send(path,input,cookie,headers);assert.ok([401,403].includes(r.status),`SEC-001 ${who} ${path}: ${r.status} ${r.text}`);
+  }
+  for(const path of ['tokens','tokens/'+agent.id+'/revoke','imports/plan','imports/apply','data/export','data/restore','data/erase']) assert.equal((await h.send('/api/crank/'+path,{},cookie,headers)).status,403,`SEC-001 ${who} ${path}`);
+ }
+ assert.equal(await people(),before,'no lower role changed who may sign in');assert.equal((await h.get()).tokens.length,tokens);
+ assert.ok(!h.mail.some(m=>m.to.includes('uninvited@example.test')),'no invitation was sent');
+ const flows=(await h.get()).flows.length;
+ for(const origin of ['https://foreign.example','null',h.origin.replace('127.0.0.1','localhost')]) for(const [path,input] of [['/api/crank/flows',{name:'SEC-001 cross-site',source_app:'Support desk',destination_app:'Inbox',target_url:target+'/events'}],['/api/crank/tokens',{label:'Cross-site',scope:'agent'}],['/api/crank/data/export',{}],['/api/crank/imports/plan',{}]])
+  assert.equal((await h.send(path,input,h.owner,{origin})).status,403,`SEC-001 ${origin} ${path}`);
+ assert.equal((await h.get()).flows.length,flows);assert.equal((await h.get()).tokens.length,tokens,'foreign-Origin owner mutations change nothing');
+ await h.get('state',departing.cookie);
+ const deactivated=await h.send('/auth/operator/status',{operatorId:departing.id,status:'inactive'},h.owner);assert.equal(deactivated.status,200,deactivated.text);
+ await h.get('state',departing.cookie,401);
+ // Admit a write, end its session or credential while the body is still arriving, then finish it:
+ // the durable write predicate refuses at commit and nothing is created.
+ const admitted=async(name,headers,revoke)=>{
+  let release;const gate=new Promise(r=>release=r),encoder=new TextEncoder();
+  const stream=new ReadableStream({async start(c){c.enqueue(encoder.encode(`{"name":${JSON.stringify(name)},`));await gate;c.enqueue(encoder.encode(JSON.stringify({source_app:'Support desk',destination_app:'Inbox',target_url:target+'/events'}).slice(1)));c.close()}});
+  const pending=h.mf.dispatchFetch(h.origin+'/api/crank/flows',{method:'POST',body:stream,duplex:'half',redirect:'manual',headers:{host:new URL(h.origin).host,origin:h.origin,'content-type':'application/json',...headers}});
+  await new Promise(r=>setTimeout(r,500));await revoke();release();
+  const response=await pending,text=await response.text();
+  assert.equal(response.status,403,text);assert.match(text,/Authority changed/);
+  assert.ok(!(await h.get()).flows.some(flow=>flow.name===name),name+' created nothing');
+ };
+ await admitted('SEC-001 admitted before sign-out',{cookie:admin.cookie},async()=>assert.equal((await h.send('/auth/signout',{},admin.cookie)).status,204));
+ await admitted('SEC-001 admitted before token revocation',{authorization:'Bearer '+agent.token},()=>h.post('tokens/'+agent.id+'/revoke'));
 });
 
 test('preparation does not send; approval binds input, records person and dispatches exactly once',async()=>{
