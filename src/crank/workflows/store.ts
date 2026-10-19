@@ -35,6 +35,9 @@ export async function presentWorkflow(env: CrankEnv, row: WorkflowRow) {
     enabled: row.status === 'published', draft: JSON.parse(row.draft_json), draft_updated_at: row.draft_updated_at, published_version_id: row.published_version_id,
     created_by: row.created_by, created_at: row.created_at,
     versions: versions.results.map(v => ({ id: v.id, number: v.number, graph_digest: v.graph_digest, authority: JSON.parse(v.declared_json), published_by: v.published_by, published_at: v.published_at, retired_at: v.retired_at })),
+    // WORK-008: every saved draft edit, newest first, with its author, time and changed fields.
+    drafts: (await stmt(env, "SELECT actor_id,at,version_id,detail_json FROM crank_audit WHERE subject_kind='workflow' AND subject_id=? AND action='workflow.draft' ORDER BY at DESC,id LIMIT 100", row.id).all<{ actor_id: string; at: string; version_id: string | null; detail_json: string }>())
+      .results.map(d => ({ author: d.actor_id, at: d.at, base_version_id: d.version_id, ...JSON.parse(d.detail_json) })),
     hooks: await listHooks(env, row.id),
     restore: await restoreReview(env, row),
   }
@@ -69,11 +72,14 @@ export async function updateDraft(env: CrankEnv, actor: Actor, workflowId: strin
   const current = await getWorkflow(env, workflowId)
   const graph = input.graph === undefined ? JSON.parse(current.draft_json) : checked(input.graph).graph
   const warnings = checked(graph).warnings
+  const changed = [['name', current.name], ['description', current.description], ['folder', current.folder], ['graph', null], ['settings', null]]
+    .filter(([field, before]) => field === 'graph' ? canonical(graph) !== canonical(JSON.parse(current.draft_json)) : field === 'settings' ? isObject(input.settings) : input[field as string] !== undefined && input[field as string] !== before)
+    .map(([field]) => field)
   await guardedBatch(env, actor, 'prepare', [
     stmt(env, 'UPDATE crank_workflows SET name=?,description=?,folder=?,draft_json=?,draft_updated_at=?,settings_json=? WHERE id=?',
       input.name === undefined ? current.name : text(input.name, 'name'), input.description === undefined ? current.description : description(input.description),
       input.folder === undefined ? current.folder : folder(input.folder), JSON.stringify(graph), now(), isObject(input.settings) ? JSON.stringify({ ...input.settings, restore_pending: pendingRestore(current) || undefined }) : current.settings_json, workflowId),
-    auditStatement(env, actor.id, 'workflow.draft', 'workflow', workflowId, { draft_digest: await digest(JSON.stringify(graph)) }, current.published_version_id),
+    auditStatement(env, actor.id, 'workflow.draft', 'workflow', workflowId, { draft_digest: await digest(JSON.stringify(graph)), changed }, current.published_version_id),
   ])
   return { ...await presentWorkflow(env, await getWorkflow(env, workflowId)), warnings }
 }
@@ -84,10 +90,22 @@ export async function duplicateWorkflow(env: CrankEnv, actor: Actor, workflowId:
 
 /** TEAM-004: publishing freezes the draft as an immutable version whose recorded authority is
  * exactly its declared steps on its bound connections, for every triggered run. */
-export async function publishWorkflow(env: CrankEnv, actor: Actor, workflowId: string, input: Record<string, unknown> = {}) {
+/** WORK-008 rollback: publish an earlier version's exact graph as a new version whose change
+ * record names the version it restores. The draft is left as it was. */
+export async function rollbackWorkflow(env: CrankEnv, actor: Actor, workflowId: string, input: Record<string, unknown>) {
+  requireOwner(actor)
+  requireValue(Number.isInteger(input.version), 'Choose the version number to roll back to')
+  const source = await stmt(env, 'SELECT number,graph_json FROM crank_workflow_versions WHERE workflow_id=? AND number=?', workflowId, input.version).first<{ number: number; graph_json: string }>()
+  requireValue(source, 'Version not found', 404)
+  const current = await getWorkflow(env, workflowId)
+  const live = current.published_version_id ? await stmt(env, 'SELECT number FROM crank_workflow_versions WHERE id=?', current.published_version_id).first<{ number: number }>() : null
+  requireValue(live?.number !== source.number, `Version ${source.number} is already the published version`, 409)
+  return publishWorkflow(env, actor, workflowId, {}, { graph: JSON.parse(source.graph_json), rollback_of: source.number })
+}
+export async function publishWorkflow(env: CrankEnv, actor: Actor, workflowId: string, input: Record<string, unknown> = {}, rollback?: { graph: unknown; rollback_of: number }) {
   requireOwner(actor)
   const current = await getWorkflow(env, workflowId)
-  const { graph, declared, warnings } = checked(JSON.parse(current.draft_json))
+  const { graph, declared, warnings } = checked(rollback ? rollback.graph : JSON.parse(current.draft_json))
   for (const connectionId of declared.connections) {
     const connection = await getConnection(env, connectionId).catch(() => null)
     requireValue(connection, `Connection ${connectionId} does not exist`, 422)
@@ -95,7 +113,7 @@ export async function publishWorkflow(env: CrankEnv, actor: Actor, workflowId: s
   }
   const previous = await stmt(env, 'SELECT MAX(number) AS n FROM crank_workflow_versions WHERE workflow_id=?', workflowId).first<{ n: number | null }>()
   const versionId = id(), at = now(), number = (previous?.n ?? 0) + 1, graphJson = canonical(graph)
-  const authority = { publisher: actor.id, published_at: at, steps: declared.steps, connections: declared.connections, trigger: graph.trigger.type }
+  const authority = { publisher: actor.id, published_at: at, steps: declared.steps, connections: declared.connections, trigger: graph.trigger.type, ...(rollback ? { rollback_of: rollback.rollback_of } : {}) }
   const adoption = await adoptionStatements(env, actor, current, input)
   const statements = [
     stmt(env, `UPDATE crank_wf_runs SET continuation_authority=continuation_authority|2 WHERE workflow_id=? AND version_id=?

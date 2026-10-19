@@ -345,3 +345,25 @@ test('EXEC-004: preview and replay a failed step after restart, then selected fa
   const owner = (await h.get()).actor.id, replays = audit.filter(a => a.action === 'run.replay');
   assert.equal(replays.length, 2); assert.ok(replays.every(a => a.actor_id === owner && a.version_id === run.version_id), 'EXEC-004 replays are attributable');
 });
+
+test('WORK-008: draft edits are listed with author, time and change; one-action rollback is audited and the next run uses that graph', async () => {
+  const graph = label => ({ trigger: { type: 'manual' }, steps: [{ id: 'label', type: 'map', input: { label } }] });
+  const workflow = await publish(h, 'Versioned labels', graph('v1'));
+  for (let i = 1; i <= 5; i++) await h.post(`workflows/${workflow.id}/draft`, i === 3 ? { name: 'Versioned labels (renamed)', graph: graph('v2-' + i) } : { graph: graph('v2-' + i) });
+  const owner = (await h.get()).actor.id;
+  let current = await h.get('workflows/' + workflow.id);
+  assert.equal(current.drafts.length, 5, 'WORK-008: each of five draft edits is listed');
+  assert.ok(current.drafts.every(d => d.author === owner && Date.parse(d.at) && d.changed.includes('graph') && /^[0-9a-f]{64}$/.test(d.draft_digest)));
+  assert.deepEqual(current.drafts.find(d => d.changed.includes('name')).changed, ['name', 'graph']);
+  await h.post(`workflows/${workflow.id}/publish`, {}, h.owner, 201);
+  assert.equal(stepOf(await startRun(h, workflow, {}), 'label').output.label, 'v2-5');
+  await h.post(`workflows/${workflow.id}/rollback`, { version: 2 }, h.owner, 409);
+  await h.post(`workflows/${workflow.id}/rollback`, { version: 9 }, h.owner, 404);
+  const rolled = await h.post(`workflows/${workflow.id}/rollback`, { version: 1 }, h.owner, 201);
+  assert.deepEqual([rolled.version.number, rolled.version.authority.rollback_of], [3, 1]);
+  assert.equal(stepOf(await startRun(h, workflow, {}), 'label').output.label, 'v1', 'WORK-008: the next run uses the rolled-back graph');
+  current = await h.get('workflows/' + workflow.id);
+  assert.equal(current.draft.steps[0].input.label, 'v2-5', 'rollback leaves the draft as it was');
+  const audit = await h.get(`audit?kind=workflow&id=${workflow.id}`);
+  assert.ok(audit.some(a => a.action === 'workflow.publish' && a.detail.rollback_of === 1 && a.actor_id === owner && a.version_id === rolled.version.id), 'WORK-008: the rollback is in the audit');
+});
