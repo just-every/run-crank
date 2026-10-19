@@ -3,6 +3,7 @@
 // or as a clock time ("9:12 AM") where the page marks it data-format="clock" and the time is
 // from today in the viewer's zone (any other day keeps its date).
 const formats = {
+  precise: new Intl.DateTimeFormat('en-US', { month:'short', day:'numeric', year:'numeric', hour:'numeric', minute:'2-digit', second:'2-digit', fractionalSecondDigits:3 }),
   date: new Intl.DateTimeFormat('en-US', { month:'short', day:'numeric', year:'numeric', hour:'numeric', minute:'2-digit' }),
   clock: new Intl.DateTimeFormat('en-US', { hour:'numeric', minute:'2-digit' }),
 };
