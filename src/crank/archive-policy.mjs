@@ -1,6 +1,7 @@
-import { fenceRow, validateRestore } from './restore-policy.mjs';
+import { fenceRow, importRow, importSafety, validateRestore } from './restore-policy.mjs';
 
-// Credentials, receiving authority and active execution never travel.
+// Credentials, receiving authority and active execution never travel; older
+// archives are normalized to the same inactive state on import (DATA-001).
 export default {
   product: 'automation/crank',
   includeTables: ['crank_erased_webhook_events'],
@@ -8,5 +9,7 @@ export default {
   secretColumns: { crank_connections: ['secret_iv', 'secret_ciphertext'] },
   requiredConfiguration: ['OWNER_EMAIL','SESSION_SECRET','AUTH_ORIGIN','MAIL_PROVIDER','MAIL_FROM','CRANK_TARGET_ORIGIN','CRANK_TARGET_TOKEN'],
   exportRow: fenceRow,
+  importSafety,
+  importRow,
   validateStaged: validateRestore,
 };

@@ -1,11 +1,35 @@
 # Import kit
 
+To bring existing data into a seed, sign in as the owner and use its import
+screen. First step: open this path on the destination app:
+
+```text
+/app/import
+```
+
+Upload a supported source export, review the plan and its differences, then
+approve that exact plan to apply it. Reconcile the result against native data;
+use Undo from the same history when needed. Base's reference accepts people JSON
+here, not installation `.rer` archives. Editions adopt this same door
+with their own supported readers and native adapters.
+
 The import kit plans and applies reviewed, inert data imports. It preserves the
 source records, exact available source bytes, and the provenance needed to inspect,
 resume, reconcile, or reverse an import. It does not send messages, enqueue work,
 activate access, or run application lifecycle hooks.
 
-## Consumer flow
+## Adopt the shared door
+
+For a seed, start with [the complete door adoption guide](src/door/ADOPTING.md).
+The signed-in screen, RER and Business share upload, plan, reviewed fingerprint,
+apply, reconcile and undo. Keep product readers, mappings and native adapters;
+remove separate importer routes and their job creation/apply callers. Owner
+history and Undo include jobs from either authority.
+
+## Engine primitives
+
+The APIs below implement the shared pipeline. They are not an alternative
+owner-facing importer to mount alongside the door.
 
 The source entry point is [`src/index.ts`](./src/index.ts). Its main exports are:
 
@@ -95,6 +119,110 @@ rollback flow instead of retrying them blindly.
 source and before-image audit data. Reversal is restartable and checks the exact
 applied revision and value before changing a target. A native edit is reported as
 `NATIVE_EDIT_CONFLICT` and preserved.
+
+## Credential names
+
+A name is a credential when its **whole parts** are a credential word or phrase,
+never because a part only contains the letters of one. The kit splits an object
+key, a header name, the name in a `[name, value]` pair and a URL query or
+fragment key into lower-case parts at camelCase and PascalCase boundaries
+(`apiKey`, `XAPIKey`), at `_`, `-`, `.`, spaces and any other non-letter, and at
+digits (`token2` is `token`). One rule serves refuse mode (`assertNoCredentials`,
+the readers), the import door's `credentials: 'remove'` (which drops the value
+and notes it per record) and rer's vendor exports, at two reaches:
+
+- **Refuse mode** takes the whole name as the phrase, after an optional header
+  `x-`: the word alone or after one qualifier (`token`, `access_token`,
+  `refresh_token`, `X-Auth-Token`, `password`, `httpPassword`, `client_secret`,
+  `api_key`, `x-api-key`, `private_key`, `cookie`, `Authorization`, `bearer`), a
+  `secret`, `subscription` or `functions` key under any name
+  (`Ocp-Apim-Subscription-Key`, `x-functions-key`, `secret_key`), and `pwd`. A
+  longer name such as the pagination cursor `next_page_token` is not refused.
+- **Remove mode and URL keys** take any name that ends in the phrase
+  (`pushToken`, `integration_key`, `db_pwd`, `webhook_url`), since removing a
+  value keeps the record.
+- **URL query and fragment keys** also count a bare `key` (the `?key=`
+  convention), a last part `sig` or `signature` (an Azure SAS `sig`,
+  `X-Amz-Signature`), `key`/`keys` after `application`, `user`, `account`,
+  `deploy` or `shared` (Datadog's `application_key`, 3scale's `user_key`,
+  `account_key`, `deploy_key`, `shared_key`), `auth` after `token`, `basic`,
+  `http`, `proxy` or `api` (Matomo's `token_auth`, `basic_auth`, `http_auth`), and
+  a one-part key ending in `apikey`, `accesstoken` or `authtoken` (HubSpot's
+  `hapikey`). As record fields these stay, since a field such as `user_key` or
+  `account_key` names a record far more often than a secret.
+- **Header-only names:** `sig`, `signature` and `sessionId` (`session_id`,
+  `Session-Id`) are credentials only as URL query or fragment keys and as HTTP
+  header names: the name in a `[name, value]` tuple, a key of an object under
+  `headers`, `header` or `customHttpHeaders`, or the name of a
+  `{name|key, value}` pair in such a header list (`customHttpHeaders`, HAR's
+  `headers`, Postman's `header`). As a record's field they are data, so a
+  support export's agent `signature` (Zendesk and Freshdesk users and agents)
+  and a chat's `session_id` import as they are in refuse and remove mode.
+- **A `{name|key, value}` pair outside a header container labels a field.**
+  Its name has the field place, so Help Scout's
+  `customFields: [{name: 'Session ID', value}]` and Zendesk's
+  `custom_field_options` named `Signature` or `Session ID` import intact, while
+  a pair named `Authorization`, `password` or `api_key` loses its value
+  anywhere.
+- **`auth` and `credentials` hold a credential only when they hold one.** A
+  field or container named `auth`, `X-Auth`, `credential` or `credentials` is
+  refused (or removed) when its value is text that is no placeholder and names
+  no scheme or mode, or a list with such a member; an object under it is searched
+  field by field like any other, so its credential-named fields (`auth: {token}`,
+  `credentials: {password}`) and credential-bearing URLs are refused, or removed
+  and noted at their own path. `auth: {type: 'oauth2'}`, `credentials: []`,
+  fetch's `request.credentials: 'include'` and `auth: 'Bearer'` are accepted as
+  they are. The scheme and mode names are fetch's `include`, `same-origin` and
+  `omit`, and the HTTP and API schemes (`none`, `basic`, `bearer`, `digest`,
+  `oauth2`, `apikey`, `jwt`, `ntlm`, `aws`, `sigv4`, `hmac` and the like) and the
+  boolean words `true`, `false`, `yes`, `no`, `on`, `off`, `enabled` and
+  `disabled`, so Keycloak's `smtpServer.auth: "true"` imports intact.
+- **Generic member names count inside `auth` and `credential(s)`.** Directly
+  under such a container (an object, or the objects in a list), a member named
+  `value`, `pass` or `pw`, or one whose first part is `secret` (`secretData`),
+  holds the credential: a Keycloak realm user's
+  `credentials: [{type: 'password', value}]` and `[{secretData}]`, nodemailer's
+  `auth: {user, pass}` and `credential: {type: 'apiKey', value}` are refused, or
+  removed and noted at their own path (`/credentials/0/value`), and rer's
+  vendor exports mark them `[removed]`. Elsewhere `value`, `pass` and `pw` are
+  data. Their siblings (`type`, `user`, `username`, `temporary`) stay, so
+  `auth: {type: 'bearer'}` and `credentials: {username: 'ops'}` import intact; a
+  bare `key` under them (`credentials: {key}`) usually labels and stays.
+
+The words are `token`, `secret`, `password`, `passwd`, `pwd`, `cookie`,
+`authorization`, `bearer` and `credential(s)`; `key` counts after a qualifier
+(`api`, `access`, `private`, `secret`, `auth`, `client`, `integration`,
+`routing`, `service`, `signing`, `session`, `refresh`, `subscription`,
+`functions`, `consumer`, `app`, `license`, `master`, `encryption` or `admin`);
+`auth` and `X-Auth` and the one-part spellings (`apikey`, `accesstoken`,
+`clientsecret`) count; `passphrase`, `jwt` and the Java and PHP session cookies
+`JSESSIONID` and `PHPSESSID`, however split (`passPhrase`, `jsessionId`), count
+everywhere, as fields, header names and URL keys, since they name nothing else
+(`jwt_issuer` and `jwtAudience` end in another word and stay); and `sig`,
+`signature` and `sessionId` count as a whole header name and as URL keys. Plurals (`tokens`, `apiKeys`, `secrets`,
+`passwords`) hold credentials only as text, so `tokens: 1500` is a count and
+stays.
+
+- **Borderline names are not credentials:** `primaryKey`, `foreignKey`, `sortKey`,
+  `monitorKey` and `keyType` name a database or sort key or an identifier, not a
+  secret, and treating them as credentials would fail real exports. A bare `key`
+  is a credential only as a URL query or fragment key, never as a field. Public
+  identifiers (`publicKey`, `keyId`, `AWSAccessKeyId`) are not credentials.
+- **Look-alikes are not credentials:** `keyword`, `keywords`, `monkey`, `donkey`,
+  `turkey`, `hockey`, `author`, `authority`, `authors`, `signal`, `design`,
+  `signup`, `tokenizer`, `passwordless`, `keyboard` and the like. An UptimeRobot
+  keyword monitor's `?keyword=up` plans with its URL intact, while an `?api_key=`
+  beside it is still removed (or refused).
+- **Trade-off:** a `Signature` or `Session-Id` header and a `?sig=` key are
+  credentials, but a record field of the same name is not, so a signature or
+  session token an exporter wrote as a plain record field is kept; the value
+  checks below still apply to it. A field named just `auth` holding text other
+  than a scheme, mode or boolean word is a credential.
+
+Value-shaped detection is unchanged: user names and passwords in URLs, known
+token prefixes, base64 and every encoding layer are checked as before. Null, an
+empty string, a mask (`****`, `[redacted]`, `[removed]`) and a boolean under a
+credential name are not credentials.
 
 ## Plan-size cap
 

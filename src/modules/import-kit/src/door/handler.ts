@@ -28,9 +28,14 @@ async function readInput(request: Request): Promise<Record<string,unknown>> {
   if (!value || typeof value!=='object' || Array.isArray(value)) throw new DoorError('invalid_input',400);
   return value;
 }
+/** The settings every mount needs whatever its source: a preserving undo policy needs the adapter's preserved undo. */
+export function mountValid(options: Partial<ImportDoorRuntimeOptions>): boolean {
+  return !!options.ownerPrincipalId?.trim() && !!options.destination?.trim() && [undefined,'strict','preserve-conflicts'].includes(options.reversalPolicy)
+    && (options.reversalPolicy!=='preserve-conflicts' || typeof options.targets?.preparePreservedUndo==='function');
+}
 /** Refuses a mount, or a resolved source, missing what the pipeline needs. */
 export function runtimeOptions<T extends Partial<ImportDoorRuntimeOptions>>(options: T): T & ImportDoorRuntimeOptions {
-  if (!options.ownerPrincipalId?.trim() || !options.destination?.trim() || !options.mapping?.version || typeof options.parse!=='function') throw new DoorError('invalid_configuration',503);
+  if (!options.mapping?.version || typeof options.parse!=='function' || !mountValid(options)) throw new DoorError('invalid_configuration',503);
   return options as T & ImportDoorRuntimeOptions;
 }
 /** Server-side mount only. A null response belongs to another dispatcher. Every

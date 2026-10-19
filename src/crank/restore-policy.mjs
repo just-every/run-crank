@@ -1,47 +1,65 @@
-const unfinished = new Set(['queued', 'running', 'waiting', 'awaiting_approval', 'paused']);
+const unfinished = ['queued', 'running', 'waiting', 'awaiting_approval', 'paused'];
 const distant = '9999-12-31T00:00:00.000Z';
 const encode = value => JSON.stringify(value);
+/** Restored workflows belong to no one until the receiving owner adopts them at publish. */
+export const RESTORED_OWNER = 'restore:awaiting-adoption';
+const runFence = (previous_status, previous_error = null) => encode({
+  category: 'restore_fence', message: 'Restored without execution authority. The owner must choose resume or cancel when publishing.',
+  previous_status, previous_error,
+});
+const uncertainWrite = encode({ category: 'uncertain', message: 'Restore interrupted a remote write; reconcile its destination before replaying.' });
+const deliveryFence = previous => encode({ status: 'failed', code: 'restore_fence', uncertain: true, previous });
+const fenced = (json, key, code) => json !== null && JSON.parse(json)[key] === code;
+const remoteWrite = row => row.status === 'running' &&
+  (row.type.startsWith('slack.') || row.type === 'http' && !['GET', 'HEAD'].includes(String(JSON.parse(row.input_json ?? '{}').method ?? 'GET').toUpperCase()));
 
-/** Pure/idempotent normalization: backups carry history, never execution authority. */
+/** Pure/idempotent export normalization: backups carry history, never execution authority. */
 export function fenceRow(table, row) {
+  if (table === 'crank_wf_runs' && unfinished.includes(row.status) && !fenced(row.error_json, 'category', 'restore_fence'))
+    return { ...importRow(table, row), error_json: runFence(row.status, row.error_json ? JSON.parse(row.error_json) : null) };
+  if (table === 'crank_runs' && ['running', 'failed'].includes(row.state) && !fenced(row.outcome_json, 'code', 'restore_fence'))
+    return { ...row, lease_id: null, lease_expires_at: null, state: 'failed', outcome_json: deliveryFence(row.outcome_json ? JSON.parse(row.outcome_json) : null) };
+  return importRow(table, row);
+}
+
+/** Every value importRow may write. Base refuses any other change to a staged row. */
+export const importSafety = {
+  crank_flows: { status: ['draft'] },
+  crank_workflows: { status: ['paused'], owner_id: [RESTORED_OWNER] },
+  crank_connections: { status: ['needs_reconnect'] },
+  crank_wf_runs: { status: ['paused'], error_json: unfinished.map(status => runFence(status)), lease_id: [null], lease_expires_at: [null], continuation_authority: [0] },
+  crank_wf_steps: { status: ['uncertain'], error_json: [uncertainWrite] },
+  crank_runs: { state: ['failed'], outcome_json: [deliveryFence(null)], replay_count: [1], lease_id: [null], lease_expires_at: [null] },
+  crank_polls: { next_due_at: [distant] },
+  crank_schedules: { next_due_at: [distant] },
+};
+
+/** Bounded import normalization for archives written before (or without) the
+ * export fence: activation off, adoption required, replay authority spent.
+ * A run-level pause reason or a failed delivery's outcome cannot be carried in a
+ * bounded value, so an unfenced unfinished run keeps only its previous status and
+ * a failed delivery keeps its outcome with its single replay marked used. */
+export function importRow(table, row) {
   if (table === 'crank_flows') return { ...row, status: 'draft' };
-  if (table === 'crank_workflows') return { ...row, status: row.status === 'draft' ? 'draft' : 'paused',
-    settings_json: encode({ ...JSON.parse(row.settings_json), restore_pending: true }) };
+  if (table === 'crank_workflows') return { ...row, status: row.status === 'draft' ? 'draft' : 'paused', owner_id: RESTORED_OWNER };
   if (table === 'crank_connections') return { ...row, status: row.status === 'revoked' ? 'revoked' : 'needs_reconnect' };
-  if (table === 'crank_wf_runs') {
-    const prior = row.error_json ? JSON.parse(row.error_json) : null;
-    return { ...row, lease_id: null, lease_expires_at: null, continuation_authority: 0,
-      ...(unfinished.has(row.status) ? { status: 'paused', error_json: prior?.category === 'restore_fence' ? row.error_json : encode({
-        category: 'restore_fence', message: 'Restored without execution authority. The owner must choose resume or cancel when publishing.',
-        previous_status: row.status, previous_error: prior,
-      }) } : {}) };
-  }
-  if (table === 'crank_wf_steps' && row.status === 'running' &&
-    (row.type.startsWith('slack.') || row.type === 'http' && !['GET', 'HEAD'].includes(String(JSON.parse(row.input_json ?? '{}').method ?? 'GET').toUpperCase())))
-    return { ...row, status: 'uncertain', error_json: encode({ category: 'uncertain', message: 'Restore interrupted a remote write; reconcile its destination before replaying.' }) };
+  if (table === 'crank_wf_runs') return { ...row, lease_id: null, lease_expires_at: null, continuation_authority: 0,
+    ...(unfinished.includes(row.status) && !fenced(row.error_json, 'category', 'restore_fence') ? { status: 'paused', error_json: runFence(row.status) } : {}) };
+  if (table === 'crank_wf_steps' && remoteWrite(row)) return { ...row, status: 'uncertain', error_json: uncertainWrite };
   if (table === 'crank_runs') {
-    const prior = row.outcome_json ? JSON.parse(row.outcome_json) : null;
+    const open = ['running', 'failed'].includes(row.state) && !fenced(row.outcome_json, 'code', 'restore_fence');
     return { ...row, lease_id: null, lease_expires_at: null,
-      ...(row.state === 'running' || row.state === 'failed' ? { state: 'failed', outcome_json: prior?.code === 'restore_fence' ? row.outcome_json : encode({
-        status: 'failed', code: 'restore_fence', uncertain: true, previous: prior,
-      }) } : {}) };
+      ...(open && row.outcome_json === null ? { state: 'failed', outcome_json: deliveryFence(null) } : open ? { state: 'failed', replay_count: 1 } : {}) };
   }
-  if (table === 'crank_polls') return { ...row, next_due_at: distant };
-  if (table === 'crank_schedules') return { ...row, next_due_at: distant };
+  if (table === 'crank_polls' || table === 'crank_schedules') return { ...row, next_due_at: distant };
   return row;
 }
 
-/** Unsafe older or hand-edited archives are refused before the atomic commit.
- * Checks cover the same rows on browser and CLI restore. */
+/** Semantic checks on the normalized staging rows, before the atomic commit.
+ * They cover the same rows on browser and CLI restore. */
 export async function validateRestore({ read }) {
   const cache = new Map();
   const rows = async table => { if (!cache.has(table)) cache.set(table, await read(table)); return cache.get(table); };
-  for (const table of ['crank_flows', 'crank_workflows', 'crank_connections', 'crank_wf_runs', 'crank_wf_steps', 'crank_runs', 'crank_polls', 'crank_schedules']) {
-    for (const row of await rows(table)) {
-      const normalized = fenceRow(table, row);
-      if (Object.keys(normalized).some(key => normalized[key] !== row[key])) return false;
-    }
-  }
   const workflows = new Map((await rows('crank_workflows')).map(row => [row.id, row]));
   const versions = new Map((await rows('crank_workflow_versions')).map(row => [row.id, row]));
   for (const workflow of workflows.values()) {
@@ -64,5 +82,5 @@ export async function validateRestore({ read }) {
     const ids = new Set((await rows(parent)).map(row => row.id));
     if ((await rows(child)).some(row => !ids.has(row[column]))) return false;
   }
-
+  return true;
 }

@@ -62,7 +62,7 @@ export async function createWorkflow(env: CrankEnv, actor: Actor, input: Record<
   const row = { id: id(), at: now() }
   await guardedBatch(env, actor, 'prepare', [
     stmt(env, `INSERT INTO crank_workflows(id,name,description,folder,owner_id,draft_json,draft_updated_at,status,settings_json,created_by,created_at) VALUES(?,?,?,?,?,?,?,'draft',?,?,?)`,
-      row.id, text(input.name, 'name'), description(input.description), folder(input.folder), actor.id, JSON.stringify(graph), row.at, JSON.stringify(isObject(input.settings) ? { ...input.settings, restore_pending: undefined } : {}), actor.id, row.at),
+      row.id, text(input.name, 'name'), description(input.description), folder(input.folder), actor.id, JSON.stringify(graph), row.at, JSON.stringify(isObject(input.settings) ? input.settings : {}), actor.id, row.at),
     auditStatement(env, actor.id, 'workflow.create', 'workflow', row.id),
   ])
   return { ...await presentWorkflow(env, await getWorkflow(env, row.id)), warnings }
@@ -78,7 +78,7 @@ export async function updateDraft(env: CrankEnv, actor: Actor, workflowId: strin
   await guardedBatch(env, actor, 'prepare', [
     stmt(env, 'UPDATE crank_workflows SET name=?,description=?,folder=?,draft_json=?,draft_updated_at=?,settings_json=? WHERE id=?',
       input.name === undefined ? current.name : text(input.name, 'name'), input.description === undefined ? current.description : description(input.description),
-      input.folder === undefined ? current.folder : folder(input.folder), JSON.stringify(graph), now(), isObject(input.settings) ? JSON.stringify({ ...input.settings, restore_pending: pendingRestore(current) || undefined }) : current.settings_json, workflowId),
+      input.folder === undefined ? current.folder : folder(input.folder), JSON.stringify(graph), now(), isObject(input.settings) ? JSON.stringify(input.settings) : current.settings_json, workflowId),
     auditStatement(env, actor.id, 'workflow.draft', 'workflow', workflowId, { draft_digest: await digest(JSON.stringify(graph)), changed }, current.published_version_id),
   ])
   return { ...await presentWorkflow(env, await getWorkflow(env, workflowId)), warnings }

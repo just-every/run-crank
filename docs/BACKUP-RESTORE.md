@@ -40,9 +40,13 @@ still need their separate current cost estimate and explicit release.
 Old actor IDs remain history only; invite people and create credentials afresh.
 Legacy pending deliveries require a fresh receiving-owner approval. Failed or
 interrupted legacy delivery history cannot be replayed from the archive; reconcile
-the destination and prepare a fresh run if needed. Older archives must ultimately import with activation forced off. Until Base’s
-import normalization hook ships, an unsafe older archive is refused atomically;
-export it again from an updated source. DATA-001 remains partial for that gap.
+the destination and prepare a fresh run if needed. An older archive written
+without these fences still restores: import forces its activation off before
+anything is committed (flows draft, workflows paused and awaiting adoption,
+connections to reconnect, unfinished runs fenced, running remote writes
+uncertain, polls and schedules parked, legacy delivery replay spent) and the
+receipt counts each change by table, column and value. An older run's run-level
+pause reason is not kept; its steps keep their errors.
 Schema, integrity, workflow version digests and product links are checked before
 any data is committed; unknown data is refused.
 

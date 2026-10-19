@@ -9,7 +9,7 @@ import { authResponse } from '../../auth.server'
 import { document, esc } from './document'
 import { flowsView, runsView } from './flows'
 import { runView } from './run'
-import { accessView, accountView, importView, previewView, dataView } from './settings'
+import { accessView, accountView, importView, previewView, dataView, restoreSummary } from './settings'
 import { connectionsView } from './connections'
 import { approvalsView, workflowRunView } from './workflow-run'
 import { editorView } from './editor'
@@ -95,7 +95,7 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
       if(path.startsWith('/api/crank/imports')) return redirect('/app/import')
       if(path.startsWith('/api/crank/tokens')) return redirect('/app/access')
       if(path.startsWith('/auth/')) return redirect('/app/access')
-      if(path.startsWith('/api/crank/data')) return page('Data operation complete',`<p class="notice">${path.endsWith('/erase')?'The run and its dependent data have been erased. Existing destination effects remain there.':'Your archive has been restored. Review the draft flows before activating them.'}</p><a href="/app">Return to flows</a>`)
+      if(path.startsWith('/api/crank/data')) return page('Data operation complete',`<p class="notice">${path.endsWith('/erase')?'The run and its dependent data have been erased. Existing destination effects remain there.':'Your archive has been restored. Every workflow is paused or draft and waits for your review at publish; flows are drafts and connections need reconnecting.'}</p>${restoreSummary(result)}<a href="/app">Return to flows</a>`)
       if(path.startsWith('/api/crank/workflow-runs/') || /^\/api\/crank\/workflows\/[^/]+\/run$/.test(path)) return redirect('/app/workflow-runs/'+encodeURIComponent(result.id))
       if(path==='/api/crank/workflows') return redirect('/app/workflows/'+encodeURIComponent(result.id))
       if(result.flow_id) return redirect('/app/runs/'+result.id)

@@ -3,7 +3,8 @@ import type { D1ImportContext, D1Sql, D1ProvenanceRow } from './types.ts';
 import { canonicalJson, sha256, attachmentHash } from '../provenance/identity.ts';
 import { guard, sql } from './database.ts';
 import { validatedProvenance } from './integrity.ts';
-import { changed, putRow, deleteRows } from './expected-state.ts';
+import { changed, putRow, deleteRows, updateRows } from './expected-state.ts';
+import { retainedSql } from './retained-values.ts';
 
 export const provenanceColumns = 'id,job_id,ordinal,effect_ordinal,source_identity,destination,target_kind,target_id,reversed,record_json';
 
@@ -44,4 +45,27 @@ export async function restorePredecessor(p: D1ProvenanceRow, context: D1ImportCo
   if (!p.before || p.before.destination !== predecessor.destination || p.before.targetKind !== predecessor.targetKind || p.before.targetId !== predecessor.targetId || p.before.revision !== predecessor.appliedRevision || sha256(canonicalJson(p.before.value)) !== predecessor.valueHash || attachmentHash(p.before.attachment) !== predecessor.attachmentHash) throw new Error('IMPORT_HISTORY_MISMATCH');
   const {successor_id,...restored}=prior;
   after.push(changed(sql(`INSERT INTO ik_provenance(${provenanceColumns}) SELECT ${provenanceColumns} FROM ik_d1_history WHERE id=? AND successor_id=?`, predecessor.id, p.id),putRow('ik_provenance',restored)), changed(sql('DELETE FROM ik_d1_history WHERE id=? AND successor_id=?', predecessor.id, p.id),deleteRows('ik_d1_history',row=>row.id===predecessor.id&&row.successor_id===p.id)));
+}
+
+/** A preserving undo kept `p` for the owner, so the history beneath it can never
+ * be restored. In the same batch each predecessor goes back to its own job's
+ * provenance as reversed, its job's claim goes once nothing else backs it, and
+ * `p` stops naming it. That job's own undo then reports it kept ('superseded'),
+ * so a lineage with a catch-up undoes fully instead of stopping at IMPORT_SUPERSEDED. */
+export async function releaseKeptPredecessors(p: D1ProvenanceRow, context: D1ImportContext, statements: D1Sql[]): Promise<void> {
+  if (p.predecessorId === undefined) return;
+  const db = context.storage.database;
+  for (let successor = p.id, prior = await db.prepare('SELECT * FROM ik_d1_history WHERE successor_id=?').bind(successor).first(); prior;
+    successor = prior.id, prior = await db.prepare('SELECT * FROM ik_d1_history WHERE successor_id=?').bind(successor).first()) {
+    const h = await validatedProvenance(prior, context, statements), record = canonicalJson({ ...h, reversed: true });
+    const { successor_id, ...row } = prior;
+    statements.push(
+      changed(retainedSql([`INSERT INTO ik_provenance(${provenanceColumns}) SELECT id,job_id,ordinal,effect_ordinal,source_identity,destination,target_kind,target_id,1,`, ' FROM ik_d1_history WHERE id=', ' AND successor_id=', ''], [record, h.id, successor], [0]), putRow('ik_provenance', { ...row, reversed: 1, record_json: record })),
+      changed(sql('DELETE FROM ik_d1_history WHERE id=? AND successor_id=?', h.id, successor), deleteRows('ik_d1_history', row => row.id === h.id)),
+      changed(sql('DELETE FROM ik_sources WHERE job_id=? AND identity=? AND NOT EXISTS(SELECT 1 FROM ik_provenance WHERE source_identity=? AND reversed=0) AND NOT EXISTS(SELECT 1 FROM ik_d1_history WHERE source_identity=?)', h.jobId, h.sourceIdentity, h.sourceIdentity, h.sourceIdentity),
+        deleteRows('ik_sources', (row, expected) => row.job_id === h.jobId && row.identity === h.sourceIdentity && ![...expected.rows('ik_provenance').values()].some(v => v.source_identity === row.identity && !v.reversed) && ![...expected.rows('ik_d1_history').values()].some(v => v.source_identity === row.identity))),
+    );
+  }
+  const { predecessorId: _released, ...kept } = p, record = canonicalJson(kept);
+  statements.push(changed(retainedSql(['UPDATE ik_provenance SET record_json=', ' WHERE id=', ' AND reversed=0'], [record, p.id], [0]), updateRows('ik_provenance', row => row.id === p.id, row => ({ ...row, record_json: record }))));
 }

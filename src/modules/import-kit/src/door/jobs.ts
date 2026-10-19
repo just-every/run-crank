@@ -55,7 +55,10 @@ export async function apply(request: DoorRequest, input: Record<string,unknown>)
   // The kit asserts the snapshot is still held at both ends of every batch.
   const result = await fenced(request,row.id,snapshotHeld(row.id),async()=>{
     await reserveApply(request,snapshot);
-    const job = await createD1ImportJob(snapshot.plan,context);
+    // Only creation selects the policy; a resume, even after a remount with
+    // another policy, continues with the job's durable one.
+    const policy = row.job_id ? undefined : request.options.reversalPolicy;
+    const job = await createD1ImportJob(snapshot.plan,policy ? {...context,reversalPolicy:policy} : context);
     await transact(request.options.database,request.authority,[
       sql('UPDATE ik_door_plans SET job_id=? WHERE id=? AND (job_id IS NULL OR job_id=?)',job.id,row.id,job.id),
       assertion(sql('EXISTS(SELECT 1 FROM ik_door_plans WHERE id=? AND job_id=?)',row.id,job.id)),
@@ -108,7 +111,16 @@ export async function undo(request: DoorRequest, input: Record<string,unknown>) 
     return {planId:id,state:'cancelled'};
   }
   const context = await jobContext(request,{...row,job_id:row.job_id}), job = await readD1ImportJob(row.job_id,context);
-  const result = ['completed','undoing','undone'].includes(job.state)?await undoD1Import(job.id,context):await rollbackD1Import(job.id,context);
+  const result = await (['completed','undoing','undone'].includes(job.state)?undoD1Import(job.id,context):rollbackD1Import(job.id,context)).catch(error=>{throw undoRefusal(error) ?? error;});
   await lineage(request);
   return {planId:id,job:result};
+}
+/** The kit's undo refusals an owner can act on, by name, never a bare conflict. */
+const undoRefusals: Record<string,[string,string]> = {
+  IMPORT_SUPERSEDED: ['import_superseded','A newer import of this source still holds records this import wrote. Undo the newer import first.'],
+  NATIVE_EDIT_CONFLICT: ['native_edit_conflict','Records this import wrote were changed in the seed since, and its undo is strict, so nothing more was undone.'],
+};
+function undoRefusal(error: unknown): DoorError | undefined {
+  const known = error instanceof Error && !(error instanceof DoorError) && Object.hasOwn(undoRefusals,error.message) ? undoRefusals[error.message] : undefined;
+  return known && new DoorError(known[0],409,{reason:known[1]});
 }

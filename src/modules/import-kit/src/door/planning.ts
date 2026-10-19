@@ -3,13 +3,14 @@ import { canonicalJson, sha256 } from '../provenance/identity.ts';
 import { readFileSource } from '../readers/file.ts';
 import { planD1Import } from '../d1/jobs.ts';
 import { erasedSourcePredicates } from '../d1/erasure-claims.ts';
-import type { ImportPlan, MappingResult } from '../types.ts';
+import type { ImportPlan, MappingResult, SourceBundle } from '../types.ts';
 import type { DoorPlanRow, DoorRecord, DoorRequest, DoorSnapshot } from './types.ts';
 import { kitContext } from './authority.ts';
 import { importedTargets, recordKey } from './inventory.ts';
 import { DoorError } from './protocol.ts';
-import { lineage, loadSnapshot, planRow, saveSnapshot, sql, statement, transact } from './store.ts';
+import { assertion, lineage, loadSnapshot, planRow, saveSnapshot, sql, statement, transact } from './store.ts';
 import { bundleBytes, text, uploadRow, type UploadRow } from './uploads.ts';
+import { sourceRefusal } from './refusals.ts';
 
 export function preview(snapshot: DoorSnapshot) {
   const {plan,differences} = snapshot;
@@ -23,18 +24,30 @@ export async function plan(request: DoorRequest, input: Record<string, unknown>)
   const upload = await uploadRow(request,text(input.uploadId,'upload_id'));
   try { return await planUpload(request,input,upload); }
   catch (error) {
+    // A reader or bundle-check refusal answers a named 4xx, never a bare conflict.
+    const refused = error instanceof DoorError ? error : sourceRefusal(error);
+    // An upload holding a credential the reader cannot remove, or a value it
+    // cannot inspect for one, never plans, so it is not kept.
+    const unreadable = refused?.code === 'source_credential' || refused?.code === 'source_invalid_or_credential_source_data';
+    if (unreadable) await forget(request,upload);
+    if (unreadable || refused?.code === 'source_erased') throw refused;
     // Whatever refuses this plan first (a pending import, interrupted staging, a
-    // withdrawn snapshot, the catch-up shape or a bound), an upload holding an
-    // erased record is refused for that instead, and goes. A failing screen leaves
-    // the original refusal standing.
-    if (error instanceof DoorError && error.code !== 'source_erased') await screen(request,upload).catch(screened => { if (screened instanceof DoorError && screened.code === 'source_erased') throw screened; });
-    throw error;
+    // withdrawn snapshot, the catch-up shape, a bound or the source itself), an
+    // upload holding an erased record is refused for that instead, and goes. A
+    // failing screen leaves the original refusal standing. No refused plan keeps
+    // credential values the reader removes: their uploaded bytes go.
+    const withheld = await screen(request,upload).catch(screened => { if (refused && screened instanceof DoorError && screened.code === 'source_erased') throw screened; return false; });
+    if (withheld) await dropChunks(request,upload);
+    throw refused ?? error;
   }
 }
 async function planUpload(request: DoorRequest, input: Record<string, unknown>, upload: UploadRow) {
   const current = await lineage(request);
+  // A plan whose apply failed, or whose import was undone or rolled back, has
+  // left the lineage: the same bundle plans afresh instead of reusing it.
   const existing = await request.options.database.prepare(`SELECT p.* FROM ik_door_plans p WHERE installation_id=? AND namespace=? AND bundle_sha256=?
-    AND NOT EXISTS(SELECT 1 FROM ik_door_apply_failures f WHERE f.plan_id=p.id)`)
+    AND NOT EXISTS(SELECT 1 FROM ik_door_apply_failures f WHERE f.plan_id=p.id)
+    AND NOT EXISTS(SELECT 1 FROM ik_jobs j WHERE j.operation_key='door:'||p.id AND j.state IN ('undone','rolled_back'))`)
     .bind(request.access.installationId,request.access.namespace,upload.bundle_sha256).first<DoorPlanRow>();
   if (existing) {
     if (!existing.complete) throw new DoorError('plan_staging_interrupted_cancel_and_replan',409,{planId:existing.id});
@@ -42,16 +55,26 @@ async function planUpload(request: DoorRequest, input: Record<string, unknown>, 
     if (snapshot.sourceCount > request.access.maxRecords) throw new DoorError('plan_exceeds_grant_quota');
     if (snapshot.plan.mappingVersion !== request.options.mapping.version) throw new DoorError('snapshot_mapping_changed_use_new_namespace',409);
     if (request.access.catchup === 'bounded' && (!snapshot.standingApproval || snapshot.standingApproval.id !== request.access.approvalRecordId || snapshot.standingApproval.at !== request.access.approvedAt)) throw new DoorError('standing_approval_mismatch');
+    await dropCredentialBytes(request,snapshot,upload);
     return preview(snapshot);
   }
   if (current.pending_id) throw new DoorError('namespace_has_pending_import',409);
-  const previous = current.head_id ? await loadSnapshot(request,await planRow(request,current.head_id)) : null;
+  // An erasure withdrew the live import's snapshot, so nothing can be compared
+  // with it. An owner-session plan retires it as the baseline and plans a new
+  // one, once no earlier import of this source still holds a record the new one
+  // writes. A Business catch-up still answers the snapshot's 410.
+  let head = current.head_id ? await planRow(request,current.head_id) : null, retired: DoorPlanRow | null = null;
+  if (head && request.via === 'operator' && (await request.options.database.prepare('SELECT 1 FROM ik_door_plan_chunks WHERE plan_id=?').bind(head.id).first()) === null) {
+    retired = head;
+    head = null;
+  }
+  const previous = head ? await loadSnapshot(request,head) : null;
   if (previous && input.catchup !== true) throw new DoorError('catchup_required',409);
   if (!previous && (input.catchup === true || request.access.catchup === 'bounded')) throw new DoorError('catchup_requires_baseline',409);
   // A catch-up reads the destination's whole native set, which a large destination
   // refuses (413); an upload holding an erased record is refused and goes first.
   if (previous) await screen(request,upload);
-  const planId = randomUUID(), options = request.options, {kitNamespace,source} = await readUpload(request,upload,planId);
+  const planId = randomUUID(), options = request.options, {kitNamespace,source,retainedFrom} = await readUpload(request,upload,planId);
   const prior = new Map((previous?.records ?? []).map(r=>[recordKey(r),r]));
   const revisions = new Map<string,{revision:string;matches:boolean}>();
   const priorTargets = [...prior.values()].flatMap(record=>record.targets), found = await importedTargets(request,priorTargets);
@@ -101,31 +124,84 @@ async function planUpload(request: DoorRequest, input: Record<string, unknown>, 
   }
   if (request.access.catchup === 'bounded') assertBounded(snapshot,previous!);
   await refuseErased(request,upload,snapshot.plan);
-  await saveSnapshot(request,snapshot,upload);
+  if (retired) await retire(request,retired,snapshot.plan);
+  await saveSnapshot(request,snapshot,upload,retainedFrom);
+  await dropCredentialBytes(request,snapshot,upload);
   return preview(snapshot);
 }
+/** Retire an erasure-withdrawn live import as the namespace's baseline. The kit
+ * never lets a new import write a record another live import holds, so while an
+ * earlier import of this source still holds one the new plan writes, the plan is
+ * refused now, by name, rather than its apply failing later; nothing is retired. */
+async function retire(request: DoorRequest, head: DoorPlanRow, plan: ImportPlan): Promise<void> {
+  const db = request.options.database, writes = new Set(plan.entries.flatMap(entry=>entry.effects.map(e=>canonicalJson([e.targetKind,e.targetId]))));
+  const {results} = await db.prepare(`SELECT d.id AS plan_id,p.target_kind,p.target_id FROM ik_provenance p JOIN ik_door_plans d ON d.job_id=p.job_id
+    WHERE p.reversed=0 AND d.installation_id=? AND d.namespace=?`).bind(request.access.installationId,request.access.namespace).all<{plan_id:string;target_kind:string;target_id:string}>();
+  const holders = [...new Set(results.filter(row=>writes.has(canonicalJson([row.target_kind,row.target_id]))).map(row=>row.plan_id))];
+  if (holders.length) throw new DoorError('earlier_import_holds_records',409,{planIds:holders,
+    reason:'An earlier import of this source, whose snapshot an erasure withdrew, still holds records this plan would write. Undo the earlier import first, then plan again.'});
+  await transact(db,request.authority,[
+    assertion(sql('NOT EXISTS(SELECT 1 FROM ik_door_plan_chunks WHERE plan_id=?)',head.id)),
+    sql('UPDATE ik_door_namespaces SET head_id=NULL WHERE installation_id=? AND namespace=? AND head_id=? AND pending_id IS NULL',request.access.installationId,request.access.namespace,head.id),
+  ]);
+}
+/** The reader removed credential values: the saved plan holds none and withholds
+ * the original, so the uploaded bytes that still hold them go once it is saved.
+ * The upload's header stays, so repeating this plan finds the saved one. */
+async function dropCredentialBytes(request: DoorRequest, snapshot: DoorSnapshot, upload: UploadRow): Promise<void> {
+  if (withheldCredentials(snapshot.plan.source)) await dropChunks(request,upload);
+}
+const withheldCredentials = (source: SourceBundle) => source.artifacts.some(a=>a.original?.status==='unavailable' && a.original.reason==='credentials-removed');
+const dropChunks = (request: DoorRequest, upload: UploadRow) => transact(request.options.database,request.authority,[sql('DELETE FROM ik_door_chunks WHERE upload_id=?',upload.id)]);
 /** Each plan has its own kit namespace, so a replan after a failed apply never
  * meets the failed job's kit namespace. */
 async function readUpload(request: DoorRequest, upload: UploadRow, planId: string) {
-  const bytes = await bundleBytes(request,upload), options = request.options;
+  const options = request.options;
   const kitNamespace = 'door:' + sha256(canonicalJson([request.access.namespace,upload.bundle_sha256,planId]));
-  const source = await readFileSource({namespace:kitNamespace,name:upload.name,bytes,format:options.format,parse:options.parse},
+  const retained = await retainedSource(request,upload);
+  if (retained) return {kitNamespace,retainedFrom:retained.planId,source:{...retained.source,records:retained.source.records.map(record=>({...record,namespace:kitNamespace}))}};
+  // Credential values are removed per record, never imported, and never refuse a record.
+  const source = await readFileSource({namespace:kitNamespace,name:upload.name,bytes:await bundleBytes(request,upload),format:options.format,parse:options.parse,credentials:'remove'},
     {...options.limits,maxBytes:Math.min(options.limits?.maxBytes ?? request.access.maxBytes,request.access.maxBytes),maxRecords:Math.min(options.limits?.maxRecords ?? request.access.maxRecords,request.access.maxRecords)});
-  return {kitNamespace,source};
+  return {kitNamespace,source,retainedFrom:undefined};
+}
+/** An upload whose bytes went because the reader removed credential values
+ * from them: chunks arrive with their upload header, so a header holding none
+ * lost them. Its records come from a plan of the same bytes the namespace still
+ * holds under the current mapping version (one whose apply failed, or that was
+ * undone), which read them without those values. With none left, Business
+ * uploads the bundle again. */
+async function retainedSource(request: DoorRequest, upload: UploadRow): Promise<{planId: string; source: SourceBundle} | null> {
+  const db = request.options.database;
+  if ((await db.prepare('SELECT 1 FROM ik_door_chunks WHERE upload_id=? LIMIT 1').bind(upload.id).first()) !== null) return null;
+  const {results} = await db.prepare('SELECT * FROM ik_door_plans WHERE installation_id=? AND namespace=? AND bundle_sha256=? AND complete=1 ORDER BY rowid DESC')
+    .bind(request.access.installationId,request.access.namespace,upload.bundle_sha256).all<DoorPlanRow>();
+  for (const row of results) {
+    const snapshot = await loadSnapshot(request,row).catch(error => { if (error instanceof DoorError && error.code === 'snapshot_withdrawn') return null; throw error; });
+    // Records parsed under another mapping version are not reused.
+    if (!snapshot || !withheldCredentials(snapshot.plan.source) || snapshot.plan.mappingVersion !== request.options.mapping.version) continue;
+    if (snapshot.plan.source.records.length > request.access.maxRecords) throw new DoorError('plan_exceeds_grant_quota');
+    return {planId:row.id,source:snapshot.plan.source};
+  }
+  throw new DoorError('upload_credentials_withheld',410,{reason:'The upload held credential values, so its bytes were not kept after its plan was refused or withdrawn. Upload the bundle again.'});
 }
 /** The kit never stages an erased record, and neither does the door: an upload
  * holding one can never be planned, so it goes too. The epoch fences a later erasure. */
 async function refuseErased(request: DoorRequest, upload: UploadRow, plan: ImportPlan): Promise<void> {
   const db = request.options.database;
   for (const clear of erasedSourcePredicates(plan)) if ((await statement(db, sql(`SELECT ${clear.sql} AS clear`, ...clear.params ?? [])).first())?.clear !== 1) {
-    await transact(db, request.authority, [sql('DELETE FROM ik_door_chunks WHERE upload_id=?', upload.id), sql('DELETE FROM ik_door_uploads WHERE id=?', upload.id)]);
+    await forget(request, upload);
     throw new DoorError('source_erased', 409);
   }
 }
-/** The upload planned on its own with the plain mapping: one holding an erased record is refused and goes. */
-async function screen(request: DoorRequest, upload: UploadRow): Promise<void> {
+const forget = (request: DoorRequest, upload: UploadRow) => transact(request.options.database, request.authority,
+  [sql('DELETE FROM ik_door_chunks WHERE upload_id=?', upload.id), sql('DELETE FROM ik_door_uploads WHERE id=?', upload.id)]);
+/** The upload planned on its own with the plain mapping: one holding an erased
+ * record is refused and goes. Answers whether the reader removed credential values. */
+async function screen(request: DoorRequest, upload: UploadRow): Promise<boolean> {
   const id = randomUUID(), {kitNamespace,source} = await readUpload(request,upload,id), mapping = request.options.mapping;
   await refuseErased(request,upload,await planD1Import(source,mapping,kitContext(request,{id,kitNamespace,plan:{mappingVersion:mapping.version} as ImportPlan})));
+  return withheldCredentials(source);
 }
 export function assertBounded(snapshot: DoorSnapshot, previous: DoorSnapshot): void {
   const d = snapshot.differences, changed = d.additions.length + d.replacements.length;

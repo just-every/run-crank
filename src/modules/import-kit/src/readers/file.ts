@@ -3,11 +3,13 @@ import { parseJson } from './json.ts';
 import type { FileSourceInput, Json, ParsedRecord, ReaderLimits, SourceBundle, SourceLocation } from '../types.ts';
 import { consumeBytes, utf8Decoder } from './bytes.ts';
 import { fail } from './errors.ts';
-import { limitsFor, RecordCollector, readerPaginationPolicy, safeValue, textId } from './records.ts';
+import { limitsFor, RecordCollector, readerCredentialPolicy, readerPaginationPolicy, safeValue, textId } from './records.ts';
+import { removeCredentials } from '../provenance/credentials.ts';
 
 /** JSON arrays are visited per element; an object/scalar is one input. NDJSON uses physical rows. */
 export async function readFileSource(input: FileSourceInput, limits?: ReaderLimits): Promise<SourceBundle> {
   const policy = readerPaginationPolicy(input.paginationCursorPolicy);
+  const remove = readerCredentialPolicy(input.credentials) === 'remove';
   const bounded = limitsFor(limits);
   textId(input.name); safeValue(input.name, [], undefined, policy);
   if (input.format !== 'json' && input.format !== 'ndjson') fail('INVALID_SOURCE_FORMAT');
@@ -15,14 +17,22 @@ export async function readFileSource(input: FileSourceInput, limits?: ReaderLimi
   const collector = new RecordCollector(input.namespace, bounded, [], policy);
   const location = { artifact: input.name };
   const decoder = utf8Decoder(location);
+  let withheld = false;
   const parse = (value: Json, index: number, at: SourceLocation): void => {
-    const encoded = safeValue(value, [], at, policy);
+    // Removing credentials: the source value must hold none once its plain ones
+    // go, and its records may repeat none of them. The parser sees the value as
+    // read, so each record reports its own removals.
+    // A value too deeply encoded to inspect is refused by name, as refuse mode does.
+    let clean: ReturnType<typeof removeCredentials> | undefined;
+    try { clean = remove ? removeCredentials(value, policy) : undefined; } catch { fail('INVALID_OR_CREDENTIAL_SOURCE_DATA', at); }
+    if (clean?.removed.some(item => !item.beforeUpload)) withheld = true;
+    const encoded = safeValue(clean ? clean.value : value, [], at, policy);
     if (Buffer.byteLength(encoded) > bounded.maxRecordBytes) fail('SOURCE_RECORD_BYTE_LIMIT', at);
     let result: ParsedRecord | ParsedRecord[];
     try { result = input.parse(value, index); } catch { fail('SOURCE_PARSER_FAILED', at); }
     const records = Array.isArray(result) ? result : [result];
     if (!records.length) fail('SOURCE_OBJECT_DROPPED', at);
-    collector.add(records, at, '');
+    collector.add(records, at, '', clean && { secrets: clean.secrets });
   };
   let pending = '', row = 0, index = 0;
   const line = (text: string): void => {
@@ -49,7 +59,8 @@ export async function readFileSource(input: FileSourceInput, limits?: ReaderLimi
     if (Array.isArray(root)) root.forEach((value, position) => parse(value, position, { ...location, row: position + 1, pointer: `/${position}` }));
     else parse(root, 0, { ...location, row: 1, pointer: '' });
   }
-  collector.bundle.artifacts.push({ name: input.name, ...artifact });
+  // Original bytes that held a removed credential value are never retained.
+  collector.bundle.artifacts.push({ name: input.name, ...artifact, ...(withheld || collector.credentialsRemoved ? { original: { status: 'unavailable' as const, reason: 'credentials-removed' as const } } : {}) });
   for (const record of collector.bundle.records) record.artifactHash = artifact.sha256;
   return collector.bundle;
 }

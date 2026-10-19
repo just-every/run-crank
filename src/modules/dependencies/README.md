@@ -1,5 +1,18 @@
 # Application dependency links
 
+To bring existing data into a seed, sign in as the owner and use its import
+screen. First step: open this path on the destination app:
+
+```text
+/app/import
+```
+
+Upload a supported source export, review the plan and its differences, then
+approve that exact plan to apply it. Reconcile the result against native data;
+use Undo from the same history when needed. Base's reference accepts people JSON
+here, not installation `.rer` archives. Editions adopt this same door
+with their own supported readers and native adapters.
+
 This module implements the application side of the pull-link protocol. Auth's
 provider implementation (auth-7) is separate. `createDependencies` mounts the
 well-known routes and owner controls; `AuthConfig.dependencies: true` resolves
@@ -180,7 +193,9 @@ refused. Credential consumers must record/check the fence; the provided
 with no recorded fence. Editor grants require the actual current install owner;
 OIDC sessions must also match that owner's current issuer/subject account binding.
 
-Exports omit server link keys, approvals, code state, provider sessions and OIDC
+To back up and restore this installation, apply the following identity policy
+to its archives. This is separate from bringing records in through the door.
+Archives omit server link keys, approvals, code state, provider sessions and OIDC
 transients, preserve durable people/bindings/grant use/sector, set sign-in off and
 mark links as needing re-link. Import checks these conditions and requires an
 explicit fresh provider approval. Local `rer import` returns `needsRelink: true`

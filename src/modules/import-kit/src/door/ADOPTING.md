@@ -1,5 +1,20 @@
 # Adopt one import pipeline
 
+For an owner moving data, start at the seed's signed-in import screen:
+
+```text
+/app/import
+```
+
+In a Base checkout, the [default reference journey](../../../../default-seed/IMPORTING.md) uses
+an exported people JSON file, review, apply, reconcile and undo. The
+[local-run guide](../../../../export/RUN-LOCALLY.md) describes how to launch and
+claim the local app. Installation `.rer` archive recovery is currently a
+separate developer-only mechanism; it is not accepted by this door.
+
+Installation backup/restore keeps its archive integrity and erasure fences. It
+is separate from bringing records in; never claim an archive traverses the door.
+
 The seed's signed-in move-in screen, `rer` and Business must share **upload →
 plan → reviewed fingerprint → apply → reconcile → undo**. Keep source readers,
 mappings and native target adapters; delete the old importer routes, separate
@@ -44,6 +59,21 @@ Owner history and undo must include jobs from either authority.
    already-imported target for catch-up, `list` must read the native set in a
    fixed number of queries, and large imports need a compact `matchesMany`
    (see Pitfalls).
+   **Undo policy.** Door jobs use the kit's `strict` undo unless the runtime
+   options set `reversalPolicy`. A seed whose own imports preserve the owner's
+   edits on undo passes `reversalPolicy: 'preserve-conflicts'` to every door
+   mount (operator and grant), and its adapter implements `preparePreservedUndo`
+   (a mount refuses construction with 503 `invalid_configuration` otherwise).
+   Door jobs are then created with that policy: the seed's ordinary history,
+   which reads each import job with its own policy, lists them, and door undo
+   after an owner edit keeps the owner's change and reverses the rest, as the
+   seed's local imports do. Only new door jobs take the option; earlier ones keep
+   the policy they were created with, even when an apply in flight resumes
+   after the seed remounts with another policy. Strict remains the default,
+   unchanged. With preserve, undoing a catch-up that kept an owner's edit
+   releases the layer beneath it, so the baseline then undoes too. A
+   seed that adapted `door/types.ts` and `door/authority.ts` to pass a policy
+   (Lamp) drops that change, re-vendors the door verbatim and passes the option.
 3. **Operator mount.** Import `createImportOperatorHandler` from
    `modules/import-kit/src/door/operator.ts`. Supply the runtime options in
    `types.ts`, plus server-owned `installationId`, `appOrigin`, `ownerEmail`,
@@ -80,9 +110,26 @@ Owner history and undo must include jobs from either authority.
      return createImportOperatorHandler({...runtime(env), ...source, namespace: name})(request);
    }
    ```
-4. **Settings and grants.** Create the installation settings row with
-   `writeImportDoorSettings(db, installationId, {enabled:false}, ownerPredicate)`.
-   This flag controls Business grants, not the owner's own imports. If the seed
+4. **Settings and grants.** The door is off until a settings row enables it;
+   the owner's settings action writes it with
+   `writeImportDoorSettings(db, installationId, {enabled}, ownerPredicate)`.
+   This flag controls Business grants, not the owner's own imports. On an
+   install RER provisions for a Business plan, `RER_IMPORT_DOOR` is `on`: when it
+   is exactly `on`, call
+   `enableDoorAtFirstClaim(db, installationId, ownerPredicate)` from the path
+   that completes the first owner claim (bootstrap or signed) **and** from every
+   later owner path while the variable is `on`: the claim's already-initialized
+   answer, and owner sign-in or session start. Pass the door key and a predicate
+   that holds once that owner exists. The claim and the enable are separate
+   commits and the claim cannot complete twice, so the later calls are what heal
+   a failure between them; without them the door stays closed until the owner
+   turns it on in settings. It enables the door only while no settings row
+   exists, so never write a disabled row before the first claim on such an
+   install; it never reopens a door the owner turned off.
+   Self-host `rer deploy` never sets the variable. Read the grant mount's claim
+   configuration from `RER_OWNER_CLAIM_ISSUER`, `RER_OWNER_CLAIM_INSTALLATION_ID`,
+   `RER_OWNER_CLAIM_APP_ORIGIN`, `RER_OWNER_CLAIM_PUBLIC_KEYS` and the owner
+   email; RER sets that trust on Business installs whatever the claim mode. If the seed
    has owner-claim, additionally mount `createImportDoorHandler` from `index.ts`
    with the **same** server-owned claim/key-ring configuration and
    `installationId` set to the operator mount's door key (it defaults to
@@ -92,12 +139,18 @@ Owner history and undo must include jobs from either authority.
    entry, and refuses an unlisted namespace with 403 `unknown_import_source`.
    Dispatch this grant handler **before** the operator
    handler. Enable only through an owner
-   settings action or the owner's provisioning approval. Keep durable key
+   settings action or `enableDoorAtFirstClaim` under the owner's provisioning
+   approval. Keep durable key
    revocations and show them in that settings row; re-enabling never unrevokes.
+   A seed route RER reads outside the door (Uptime's runner status) verifies
+   its request with `verifyRerGrant(request, claimConfig, action)` from
+   `index.ts`; see README.md.
 5. **Move-in screen.** Call POST `/api/operator/import/{uploads,plan,apply,status,
    reconcile,undo}` with the current owner cookie, exact `Origin` and normal
    seed CSRF headers. Bodies and results are in [README.md](README.md). Upload
-   original bytes, show the returned counts, rejections and differences, then
+   original bytes, show the returned counts, rejections, differences and each
+   `CREDENTIAL_REMOVED` diagnostic (a credential value the door removed from that
+   record), and each named source refusal's `details.reason`, then
    require the owner's review before posting `{planId, reviewedFingerprint}`.
    Repeat bounded apply calls with that fingerprint until `job.state` is
    `completed`; reconcile from native data and expose Undo. Never mint an import
@@ -118,7 +171,9 @@ Owner history and undo must include jobs from either authority.
    reads. Cover anonymous/non-owner and cross-origin refusal, no-write planning,
    fingerprint refusal, apply/reconcile/undo, native edit protection, session
    revocation during mutation, disabled/revoked grants, owner undo while Business
-   is off, and erasure of retained door custody. No test skips or SQL bypasses.
+   is off, the door opening at the first claim with `RER_IMPORT_DOOR=on` and
+   staying closed without it, and erasure of retained door custody. No test
+   skips or SQL bypasses.
 
 **Without owner-claim:** vendor the operator runtime, omitting the three optional
 grant-only files `door/index.ts`, `door/admission.ts` and `door/grants.ts` from
@@ -139,6 +194,26 @@ their lineage instead of re-creating them. The existing grant signature, nonce,
 scope, expiry and approval rules do not change.
 
 ## Pitfalls found in adoptions
+
+- **Credential fields in exports.** Vendor exports carry credential-named
+  fields (UptimeRobot's `apiKey: null` on every monitor) and URLs with
+  `user:pass@`. The door reads every upload with the kit's `credentials:
+  'remove'`: null, empty, masked and boolean values pass, and a real value is
+  removed from its record, which is kept and noted. Names match by whole parts
+  (camelCase, `_`, `-`, digits), not letters: it covers compound names
+  (`httpPassword`, `client_secret`, `customHttpHeaders['X-Api-Key']`,
+  `secret_key`, `Ocp-Apim-Subscription-Key`, `X-Auth`, `pwd`), plurals holding
+  text (`apiKeys: [...]`), header pairs (`{name: 'Authorization', value}`) and
+  `[name, value]` header tuples, and URLs of any scheme, including the markers
+  rer's vendor exports leave (`removed@`, `?api_key=removed`). Look-alikes such
+  as UptimeRobot's `?keyword=up`, `author`, `signal` or `primaryKey` are not
+  credentials and import with the URL and fields intact, and neither is a
+  support export's agent `signature` or a chat's `session_id` (`Signature` and
+  `Session-Id` count only as header names), nor `auth: {type: 'oauth2'}` or
+  `credentials: []`. The plan
+  holds none, the original bytes are withheld and the upload's chunks are
+  deleted once the plan is saved, or once a plan of them is refused.
+  Do not drop such records or fields in the seed's parser to get past a refusal.
 
 - **Export custody.** A seed whose export policy excludes import custody
   (`excludeTables`) must also exclude `ik_door_%`; door uploads and plans hold

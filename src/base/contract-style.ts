@@ -21,7 +21,7 @@ const PAGE = 'main{max-width:1440px;margin:0 auto;padding:0 56px}'
   // The hero: the figure beside the bar, the legend and the judged-at line.
   + '.hero{margin-top:28px;display:grid;grid-template-columns:auto 1fr;gap:48px;align-items:center}'
   + '.figure{display:flex;align-items:center;gap:22px;margin:0}.big{font:800 128px/.9 var(--heading);letter-spacing:-.045em;font-variant-numeric:tabular-nums;color:var(--rer-done-ink)}'
-  + '.of{font:600 34px/1.1 var(--heading);color:var(--site-ink);letter-spacing:-.01em}.of>span{display:block}'
+  + '.of{font:600 34px/1.35 var(--heading);color:var(--site-ink);letter-spacing:-.01em}.of>span{display:block}'
   + '.hero-side{min-width:0}.meter{display:flex;gap:2px;height:36px;border-radius:999px;overflow:hidden;background:var(--rer-surface,#fff)}'
   + '.seg{flex-basis:0;min-width:0;container-type:inline-size;display:flex;align-items:center;justify-content:center;font:600 15px/1 var(--rer-font-body,inherit);white-space:nowrap;font-variant-numeric:tabular-nums}'
   + '.seg.done{background:var(--rer-done);color:var(--rer-on-done)}.seg.partial{background:var(--rer-partial);color:var(--rer-on-partial)}.seg.missing{background:var(--rer-missing);color:var(--rer-on-missing)}'
@@ -75,13 +75,18 @@ const PAGE = 'main{max-width:1440px;margin:0 auto;padding:0 56px}'
   + '.foot-brand{display:flex;align-items:center;gap:16px;flex-wrap:wrap}.foot .brand{font-size:20px;gap:9px}.foot .brand img{width:28px;height:28px}'
   + '.foot nav{display:flex;gap:22px}.foot nav a{color:var(--site-ink)}.foot nav a:hover{text-decoration:underline;text-underline-offset:3px}'
 
+// Wrap counts only on narrower screens; keep the desktop split unchanged.
+// Give the table a full row before its fixed columns squeeze the title away.
+const TABLET = '@media(min-width:761px) and (max-width:1280px){.split{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.split .line{white-space:normal}.split .line>span:not(.sep){display:inline-block}}'
+  + '@media(min-width:761px) and (max-width:1200px){.layout{grid-template-columns:1fr}.areas{position:static;max-height:none;overflow:visible}}'
+
 const PHONE = '@media(max-width:760px){.bar{padding:18px 16px 0}.bar::after{left:16px;right:16px}.bar .brand{padding-bottom:12px}main{padding:0 16px}'
   + '.eyebrow{font-size:12px;margin-top:24px}main h1{font-size:30px;line-height:1.1}.lead{font-size:16px}'
-  + '.hero{grid-template-columns:1fr;gap:16px;margin-top:22px}.figure{gap:16px}.big{font-size:72px}.of{font-size:22px;line-height:1.15}'
+  + '.hero{grid-template-columns:1fr;gap:16px;margin-top:22px}.figure{gap:16px}.big{font-size:72px}.of{font-size:22px}'
   + '.meter{height:30px}.seg{font-size:14px;font-weight:700}.hero-foot{flex-direction:column;gap:12px}.legend{font-size:15px;gap:8px 18px}.legend li{gap:8px}.legend .glyph{width:22px;height:22px}'
   + '.judged{text-align:left}.layout{grid-template-columns:1fr;gap:16px;margin-top:22px}.card{padding:18px 16px}'
   + '.split .line{font-size:15px;white-space:normal}.split .line>span:not(.sep){display:block}.split .sep{display:none}'
-  + '.areas{background:var(--rer-surface,#fff)}.clauses.card{padding:0;border:0;border-radius:0;background:none;box-shadow:none}'
+  + '.areas{background:var(--rer-surface,#fff)}.clauses.card{padding:2px 0 0;border:0;border-radius:0;background:none;box-shadow:none}'
   + '.split>div+div{padding-left:14px;margin-left:14px}'
   + '.target dl{grid-template-columns:1fr!important}.target dl>div{display:grid;grid-template-columns:104px 1fr;gap:12px;padding:9px 0;border-top:1px solid var(--site-line)}'
   + '.target dl>div:first-child{border-top:0}.target dl>div+div{border-left:0;padding-left:0;margin-left:0}.target dd{margin:0}'
@@ -96,4 +101,4 @@ const PHONE = '@media(max-width:760px){.bar{padding:18px 16px 0}.bar::after{left
 
 const PRINT = '@media print{.search,.chips,.live,.empty{display:none!important}tbody.area[hidden]{display:table-row-group!important}tr.clause[hidden]{display:table-row!important}.areas{position:static;max-height:none;overflow:visible}}'
 
-export const CONTRACT_STYLE = DEFAULTS + HEADER + PAGE + PHONE + PRINT
+export const CONTRACT_STYLE = DEFAULTS + HEADER + PAGE + TABLET + PHONE + PRINT

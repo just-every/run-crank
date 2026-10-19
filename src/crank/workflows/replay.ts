@@ -3,7 +3,6 @@ import { executeRun } from '../engine/executor'
 import { isObject } from '../engine/values'
 import { canonical, digest, now, requireValue, stmt, type Actor, type CrankEnv } from '../model'
 import { auditStatement } from '../ops/audit'
-import type { WorkflowRow } from '../triggers/admission'
 import { pendingRestore } from './restore'
 import { runDetail } from './runs'
 
@@ -18,8 +17,8 @@ const isItem = (row: Row) => row.type === 'loop' && /\/items\/\d+$/.test(row.pat
  * reconciliation (EXEC-006) and are never offered for blind replay. */
 export async function previewReplay(env: CrankEnv, actor: Actor, runId: string) {
   requireOwner(actor)
-  const run = await stmt(env, 'SELECT r.id,r.status,r.version_id,r.workflow_id,w.status AS workflow_status,w.settings_json FROM crank_wf_runs r JOIN crank_workflows w ON w.id=r.workflow_id WHERE r.id=?', runId)
-    .first<{ id: string; status: string; version_id: string; workflow_id: string; workflow_status: string; settings_json: string }>()
+  const run = await stmt(env, 'SELECT r.id,r.status,r.version_id,r.workflow_id,w.status AS workflow_status,w.owner_id FROM crank_wf_runs r JOIN crank_workflows w ON w.id=r.workflow_id WHERE r.id=?', runId)
+    .first<{ id: string; status: string; version_id: string; workflow_id: string; workflow_status: string; owner_id: string }>()
   requireValue(run, 'Run not found', 404)
   const rows = (await stmt(env, 'SELECT path,step_id,type,status,input_json,error_json,output_json,operation_key FROM crank_wf_steps WHERE run_id=? ORDER BY started_at,path', runId).all<Row>()).results
   const revisions = (await stmt(env, 'SELECT path,COUNT(*) AS count FROM crank_wf_step_revisions WHERE run_id=? GROUP BY path', runId).all<{ path: string; count: number }>()).results
@@ -29,7 +28,7 @@ export async function previewReplay(env: CrankEnv, actor: Actor, runId: string) 
   const preview = {
     run_id: run.id, version_id: run.version_id, status: run.status, limit: REPLAY_LIMIT,
     blocked_reason: run.status !== 'failed' ? 'Only a failed run can replay its failed steps.'
-      : run.workflow_status !== 'published' || pendingRestore({ settings_json: run.settings_json } as WorkflowRow) ? 'Publish (and adopt) the workflow before replaying its runs.' : null,
+      : run.workflow_status !== 'published' || pendingRestore(run) ? 'Publish (and adopt) the workflow before replaying its runs.' : null,
     eligible: eligible.map(row => ({ path: row.path, step_id: row.step_id, type: row.type, input: parse(row.input_json), error: parse(row.error_json), operation_key: row.operation_key,
       revisions: count.get(row.path) ?? 0, correctable: !['loop', 'paths'].includes(row.type) })),
     uncertain: rows.filter(row => row.status === 'uncertain').map(row => ({ path: row.path, step_id: row.step_id, operation_key: row.operation_key, reconcile: 'Reconcile this write in its destination (EXEC-006); it is never replayed blindly.' })),

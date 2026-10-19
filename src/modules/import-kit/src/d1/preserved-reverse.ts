@@ -4,15 +4,15 @@ import { nativeStagingScope, readStagedTarget, expectedStagedTarget } from './na
 import { targetGuards } from './target-guards.ts';
 import type { ImportJob, ImportPlan } from '../types.ts';
 import type { D1ImportContext, D1Sql } from './types.ts';
-import type { D1UndoEffect } from './undo-types.ts';
+import type { D1UndoDisposition, D1UndoEffect } from './undo-types.ts';
 import { canonicalJson } from '../provenance/identity.ts';
 import { D1RequestLimitError, remaining } from './budget.ts';
 import { atomic, sql, guard, limits } from './database.ts';
 import { stored, storedReads, boundary } from './jobs.ts';
 import { custodyGuards, inventoryGuards, validatedProvenance } from './integrity.ts';
-import { noSuccessors, restorePredecessor } from './history.ts';
+import { noSuccessors, releaseKeptPredecessors, restorePredecessor } from './history.ts';
 import { readOriginals } from './originals.ts';
-import { reversalState, reportHash, reversalGuards } from './undo-state.ts';
+import { reversalState, reportHash, reversalGuards, undoEvidence } from './undo-state.ts';
 import { classifyUndo } from './undo-snapshot.ts';
 import { insertJsonRows } from './sets.ts';
 
@@ -41,10 +41,20 @@ export async function preserveReverse(current: { job: ImportJob; plan: ImportPla
         const p = await validatedProvenance(raw, context, statements), effect = plan.entries[raw.ordinal].effects[raw.effect_ordinal];
         effects.push({ provenance: p, retained: retained.has(p.id), expected: { destination: p.destination, targetKind: p.targetKind, targetId: p.targetId, revision: p.appliedRevision, value: effect.value, ...(effect.attachment ? { attachment: effect.attachment } : {}) } });
       }
+      // Effects a later import's kept effect released (releaseKeptPredecessors):
+      // reversed in provenance, never restorable, reported kept once.
+      const superseded: D1UndoDisposition[] = [];
+      for (const raw of (await db.prepare('SELECT * FROM ik_provenance p WHERE p.job_id=? AND p.reversed=1 AND NOT EXISTS(SELECT 1 FROM ik_d1_reversal_reports r WHERE r.job_id=p.job_id AND r.effect_id=p.id) ORDER BY ordinal DESC,effect_ordinal DESC').bind(id).all()).results) {
+        const p = await validatedProvenance(raw, context, statements), effect = plan.entries[raw.ordinal].effects[raw.effect_ordinal];
+        statements.push(guard(sql('NOT EXISTS(SELECT 1 FROM ik_d1_reversal_reports WHERE job_id=? AND effect_id=?)', id, p.id)));
+        superseded.push({ jobId: id, effectId: p.id, targetKind: p.targetKind, targetId: p.targetId, entity: { table: p.targetKind, recordId: p.targetId }, disposition: 'retained', reason: 'superseded',
+          expected: undoEvidence({ destination: p.destination, targetKind: p.targetKind, targetId: p.targetId, revision: p.appliedRevision, value: effect.value, ...(effect.attachment ? { attachment: effect.attachment } : {}) }, context),
+          observed: undoEvidence(null, context), protectedBy: [], evidence: null });
+      }
       const decision = classifyUndo(effects, await targets.preparePreservedUndo(db, context.destination, structuredClone(effects)), context);
       statements.push(...decision.guards);
       if(context.maxBatchBytes!==undefined)for(const effect of effects)await readStagedTarget(context,scope,effect.provenance.targetKind,effect.provenance.targetId);
-      const selected: typeof decision.ordered = [], newRows: any[] = [];
+      const selected: typeof decision.ordered = [], newRows: any[] = superseded.map((d, index) => ({ job_id: id, effect_id: d.effectId, position: state.cursor + index, record_json: canonicalJson(d) }));
       for (const group of decision.groups) {
         if (selected.length && selected.length + group.length > batchSize) break;
         selected.push(...group);
@@ -57,14 +67,14 @@ export async function preserveReverse(current: { job: ImportJob; plan: ImportPla
           await restorePredecessor(p, context, statements, restoration);
           const o = decision.observations.get(p.id)!;
           statements.push(guard(o.guard ?? targets.matches(o.current, context.destination, p.targetKind, p.targetId)), ...(p.before ? targets.write(p.before) : targets.remove(context.destination, p.targetKind, p.targetId)), guard(targets.matches(p.before, context.destination, p.targetKind, p.targetId)), changed(retainedSql(['UPDATE ik_provenance SET reversed=1,record_json=', ' WHERE id=', ''], [canonicalJson({ ...p, reversed: true }), p.id], [0]),updateRows('ik_provenance',row=>row.id===p.id,row=>({...row,reversed:1,record_json:canonicalJson({...p,reversed:true})}))), ...restoration);
-        }
+        } else await releaseKeptPredecessors(p, context, statements);
         expectedStagedTarget(scope,p.targetKind,p.targetId,d.disposition==='reversed'?!!p.before:!!decision.observations.get(p.id)!.current);
         newRows.push({ job_id: id, effect_id: d.effectId, position: state.cursor + newRows.length, record_json: canonicalJson(d) });
       }
       if(context.maxBatchBytes!==undefined)for(const effect of effects){const p=effect.provenance,reverse=selected.some(d=>d.effectId===p.id&&d.disposition==='reversed'),row=reverse?p.before:decision.observations.get(p.id)!.current;scope.postGuards.push(...targetGuards(targets,row,context.destination,p.targetKind,p.targetId));}
       statements.push(...insertJsonRows('ik_d1_reversal_reports', ['job_id','effect_id','position','record_json'], newRows));
       const done = selected.length === decision.ordered.length, allRows = [...state.rows, ...newRows];
-      const next = { ...state, cursor: allRows.length, hash: reportHash(allRows), rows: allRows, dispositions: [...state.dispositions, ...selected] };
+      const next = { ...state, cursor: allRows.length, hash: reportHash(allRows), rows: allRows, dispositions: [...state.dispositions, ...superseded, ...selected] };
       statements.push(changed(sql('DELETE FROM ik_sources WHERE job_id=? AND NOT EXISTS(SELECT 1 FROM ik_provenance WHERE ik_provenance.source_identity=ik_sources.identity AND reversed=0) AND NOT EXISTS(SELECT 1 FROM ik_d1_history WHERE ik_d1_history.source_identity=ik_sources.identity)', id),deleteRows('ik_sources',(row,expected)=>row.job_id===id&&![...expected.rows('ik_provenance').values()].some(p=>p.source_identity===row.identity&&!p.reversed)&&![...expected.rows('ik_d1_history').values()].some(p=>p.source_identity===row.identity))),
         changed(sql('INSERT INTO ik_batches(job_id,action,position,end_position,fence) VALUES(?,?,?,?,?)', id, action, job.fence, job.fence + 1, job.fence + 1),putRow('ik_batches',{job_id:id,action,position:job.fence,end_position:job.fence+1,fence:job.fence+1})),
         changed(sql('UPDATE ik_jobs SET state=?,fence=fence+1,error=NULL,reversal_cursor=?,reversal_hash=? WHERE id=?', done ? terminal : reversing, next.cursor, next.hash, id),updateRows('ik_jobs',row=>row.id===id,row=>({...row,state:done?terminal:reversing,fence:job.fence+1,error:null,reversal_cursor:next.cursor,reversal_hash:next.hash}))),

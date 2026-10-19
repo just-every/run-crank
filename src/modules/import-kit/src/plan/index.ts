@@ -64,7 +64,7 @@ function buildPlanWithHasher(source: SourceBundle, mapping: ImportMapping, conte
     artifacts.add(key);
     const previousBytes = budget.measure(artifact);
     if (!artifact.original) artifact.original = { status: 'unavailable', reason: 'not-supplied' };
-    if (artifact.original.status === 'unavailable') budget.diagnostic({ severity: 'warning', code: 'ORIGINAL_UNAVAILABLE', message: 'Exact original bytes were not supplied for ' + artifact.name });
+    if (artifact.original.status === 'unavailable') budget.diagnostic({ severity: 'warning', code: 'ORIGINAL_UNAVAILABLE', message: (artifact.original.reason === 'credentials-removed' ? 'Exact original bytes were withheld because they held credential values: ' : 'Exact original bytes were not supplied for ') + artifact.name });
     budget.replace(previousBytes, artifact); budget.assert();
     validateArtifactOriginal(artifact, copy.paginationCursorPolicy);
   }

@@ -1,5 +1,23 @@
 # Foundation setup adapter
 
+For a product that offers data move-in, sign in as the owner and use its import
+screen. First step: open this path on the destination app:
+
+```text
+/app/import
+```
+
+Upload a supported source export, review the plan and its differences, then
+approve that exact plan to apply it. Reconcile the result against native data;
+use Undo from the same history when needed. Base's reference accepts people JSON
+here, not installation `.rer` archives. Editions adopt this same door
+with their own supported readers and native adapters.
+
+This technical foundation has no product import screen or product data yet.
+When adding data move-in, mount the shared door and build `/app/import` before
+publishing that workflow; do not add a separate importer. Follow Base's
+[door adoption guide](https://github.com/runeditrun/base/blob/main/modules/import-kit/src/door/ADOPTING.md).
+
 First-party setup runs through `rer setup`. To set up a fresh clone in one line,
 run `npx -y @runeditrun/rer setup just-every/run-foundation` (`dev` in place of
 `setup` also starts the app; without Node, `curl -fsSL https://runeditrun.com/install.sh | sh -s -- setup just-every/run-foundation`).
@@ -55,7 +73,7 @@ fallbacks.
 Canonical local durable data is `.wrangler/state`; private settings and
 installer records remain outside source control. State selection rejects
 symlinks, unsafe overlap and ambiguous prior state. Preserve unclear bytes and
-require explicit recovery. Local export/import uses the declared portability
+require explicit recovery. To back up and restore this installation, use the declared portability
 policy, verifies archives and restores atomically into an empty destination.
 Every first-party seed verifies a complete local export/import/export round
 trip across supported resources. Remote transfer requires complete resource

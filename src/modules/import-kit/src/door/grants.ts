@@ -59,15 +59,21 @@ function approved(value: Record<string, unknown>): boolean {
   return Number.isFinite(date.getTime()) && date.toISOString() === value.approvedAt;
 }
 
+/** Payload members every RER grant carries, checked against the server-owned claim config. */
+const baseKeys = ['v', 'iss', 'aud', 'installationId', 'email', 'jti', 'iat', 'exp', 'action'];
+function bound(value: Record<string, unknown>, config: Readonly<OwnerClaimConfig>, now: number): boolean {
+  return value.v === 1 && value.iss === config.issuer && value.aud === config.appOrigin
+    && value.installationId === config.installationId && value.email === config.expectedEmail
+    && typeof value.jti === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value.jti)
+    && typeof value.iat === 'number' && typeof value.exp === 'number'
+    && Number.isSafeInteger(value.iat) && Number.isSafeInteger(value.exp) && value.iat >= 0
+    && value.iat - now <= 30 && value.exp > now && value.exp > value.iat && value.exp - value.iat <= 300;
+}
+
 function validateGrant(value: Record<string, unknown>, config: Readonly<OwnerClaimConfig>, now: number): Readonly<DoorGrant> {
   if (requiredKeys.some(key => !Object.hasOwn(value, key))
     || Object.keys(value).some(key => !requiredKeys.includes(key) && !optionalKeys.includes(key))
-    || value.v !== 1 || value.iss !== config.issuer || value.aud !== config.appOrigin
-    || value.installationId !== config.installationId || value.email !== config.expectedEmail
-    || typeof value.jti !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value.jti)
-    || typeof value.iat !== 'number' || typeof value.exp !== 'number'
-    || !Number.isSafeInteger(value.iat) || !Number.isSafeInteger(value.exp) || value.iat < 0
-    || value.iat - now > 30 || value.exp <= now || value.exp <= value.iat || value.exp - value.iat > 300
+    || !bound(value, config, now)
     || typeof value.action !== 'string' || !actions.includes(value.action)
     || typeof value.namespace !== 'string' || !value.namespace || value.namespace !== value.namespace.trim()
     || value.namespace.length > 256 || /[\x00-\x1f\x7f-\x9f]/.test(value.namespace)
@@ -86,10 +92,9 @@ function validateGrant(value: Record<string, unknown>, config: Readonly<OwnerCla
   return Object.freeze(value) as unknown as Readonly<DoorGrant>;
 }
 
-export async function verifyImportGrant(
-  token: string,
-  input: OwnerClaimConfig & { now?: number },
-): Promise<{ grant: Readonly<DoorGrant>; kid: string }> {
+/** Signature and header check shared by every RER grant: ES256 under the
+ * owner-claim key ring, with the exact `rer-import-grant+jwt` header. */
+async function signed(token: unknown, input: OwnerClaimConfig & { now?: number }): Promise<{ payload: Record<string, unknown>; kid: string; config: Readonly<OwnerClaimConfig>; now: number }> {
   const configKeys = ['issuer', 'installationId', 'appOrigin', 'expectedEmail', 'publicKeys', 'now'];
   if (!object(input) || Reflect.ownKeys(input).some(key => typeof key !== 'string' || !configKeys.includes(key))) throw new DoorError('invalid_configuration', 503);
   let config: Readonly<OwnerClaimConfig>;
@@ -112,5 +117,46 @@ export async function verifyImportGrant(
     const message = new TextEncoder().encode(`${parts[0]}.${parts[1]}`);
     if (!await crypto.subtle.verify({ name: 'ECDSA', hash: 'SHA-256' }, key, signature, message)) fail();
   } catch { fail(); }
-  return { grant: validateGrant(json(parts[1]), config, now), kid };
+  return { payload: json(parts[1]), kid, config, now };
+}
+
+export async function verifyImportGrant(
+  token: string,
+  input: OwnerClaimConfig & { now?: number },
+): Promise<{ grant: Readonly<DoorGrant>; kid: string }> {
+  const { payload, kid, config, now } = await signed(token, input);
+  return { grant: validateGrant(payload, config, now), kid };
+}
+
+/** A verified RER-signed read outside the import door. */
+export interface RerGrant {
+  v: 1; iss: string; aud: string; installationId: string; email: string;
+  jti: string; iat: number; exp: number; action: string;
+}
+
+/** Accept an RER-signed request on a seed route outside `/api/rer/import/`
+ * (for example Uptime's `POST /api/rer/runner-status`). The request carries
+ * `Authorization: Bearer <grant>`: the door's ES256 `rer-import-grant+jwt`
+ * under the same owner-claim key ring, whose payload is exactly `{v, iss, aud,
+ * installationId, email, jti, iat, exp, action}` with `action` equal to the
+ * route's own action. Door actions are reserved for the door, and a door grant
+ * (namespace and quotas) is refused here. The request must be addressed to the
+ * claim's app origin. Nonces are not recorded: use it for reads whose repeat
+ * within the grant's 300 seconds discloses nothing more. Revocation lives in
+ * the seed's database; check `kid` against it where the route needs that.
+ * Throws `DoorError`: 401 `grant_required`, 403 `invalid_grant` or
+ * `grant_binding_mismatch`, 503 `invalid_configuration`. */
+export async function verifyRerGrant(
+  request: Request,
+  claimConfig: OwnerClaimConfig & { now?: number },
+  action: string,
+): Promise<{ grant: Readonly<RerGrant>; kid: string }> {
+  if (typeof action !== 'string' || !/^[a-z][a-z0-9-]{0,62}$/.test(action) || actions.includes(action)) throw new DoorError('invalid_configuration', 503);
+  const authorization = request.headers.get('Authorization');
+  if (!authorization?.startsWith('Bearer ')) throw new DoorError('grant_required', 401);
+  const { payload, kid, config, now } = await signed(authorization.slice(7), claimConfig);
+  if (Object.keys(payload).length !== baseKeys.length || baseKeys.some(key => !Object.hasOwn(payload, key))
+    || !bound(payload, config, now) || payload.action !== action) fail();
+  if (new URL(request.url).origin !== config.appOrigin) throw new DoorError('grant_binding_mismatch');
+  return { grant: Object.freeze(payload) as unknown as Readonly<RerGrant>, kid };
 }

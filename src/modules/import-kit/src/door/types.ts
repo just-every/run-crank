@@ -1,4 +1,5 @@
 import type { D1Database, D1Sql, D1TargetAdapter } from '../d1/types.ts';
+import type { D1ReversalPolicy } from '../d1/undo-types.ts';
 import type { ImportMapping, ImportPlan, Json, ParsedRecord, ReaderLimits } from '../types.ts';
 import type { DoorGrant } from './protocol.ts';
 
@@ -16,6 +17,11 @@ export interface ImportDoorRuntimeOptions extends ImportDoorSource {
   destination: string;
   format: 'json' | 'ndjson';
   limits?: ReaderLimits;
+  /** The undo policy each new door job is created with: 'strict' (the default)
+   * refuses undo after a native edit; 'preserve-conflicts' keeps the owner's
+   * edits, as the seed's own imports do, and needs the adapter's
+   * `preparePreservedUndo`. Existing jobs keep the policy they were created with. */
+  reversalPolicy?: D1ReversalPolicy;
 }
 /** Structurally identical to owner-claim's server-owned trust configuration. */
 export interface ImportDoorClaimConfig {

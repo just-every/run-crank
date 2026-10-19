@@ -42,14 +42,15 @@ const accentStyle = (identity: EditionIdentity) => identity.accentColor ? `:root
 /**
  * The Lobby document for one state. Identity and state shape it; `loginHint`,
  * the claimed owner's email on a local instance only, rides on the Sign in link
- * as ?login_hint= so the sign-in form opens with it filled in.
+ * as ?login_hint= so the sign-in form opens with it filled in. The local
+ * request host enables project-folder recovery, even without a sole owner email.
  */
-export function lobbyHtml(identity: EditionIdentity, state: SetupState, loginHint?: string): string {
+export function lobbyHtml(identity: EditionIdentity, state: SetupState, loginHint?: string, local = false): string {
   checkIdentity(identity)
   const claimed = state === 'claimed', product = escape(identity.product)
   const line = claimed ? 'The owner is set up. Sign in to continue.' : `This ${product} is waiting for its owner.`
   const action = claimed ? `<a class="btn" href="${escape(identity.signInPath)}${loginHint ? `?login_hint=${encodeURIComponent(loginHint)}` : ''}">Sign in${ARROW}</a>` : `<a class="btn" href="/setup">Finish setup${ARROW}</a>`
-  const ownerHelp = claimed ? '<p class="credit">Owners can also run <code>rer signin</code> from the project folder.</p>' : ''
+  const ownerHelp = claimed && local ? '<p class="credit">Owners can also run <code>rer signin</code> from the project folder.</p>' : ''
   const credit = claimed
     ? `<p class="credit">Powered by <a href="${escape(identity.runSite)}">${product}</a>, free and open source</p>`
     : identity.manualSetupTokenClaim ? '<p class="credit">You’ll need the setup token from your install.</p>' : ''
@@ -89,10 +90,11 @@ export async function lobbyResponse(request: Request, bindings: LobbyBindings, i
   // Another origin or Host gets the app's ordinary document 404.
   if (!admitted(request, bindings.AUTH_ORIGIN)) return rejectedResponse(request, new Response('Not found', { status: 404, headers: base }))
   if (request.method !== 'GET' && request.method !== 'HEAD') return rejectedResponse(request, new Response(null, { status: 405, headers: { ...base, allow: 'GET, HEAD' } }))
+  const local = loopbackHost.test(new URL(request.url).hostname)
   let state: SetupState
   try { state = await setupState(bindings.DB, claimed) } catch { return Response.json({ error: 'setup_unavailable' }, { status: 503, headers: base }) }
   const style = accentStyle(identity) + STYLE
   if (!hashes.has(style)) hashes.set(style, digest(style))
   const policy = `default-src 'none'; style-src 'self' 'sha256-${await hashes.get(style)}'; font-src 'self'; img-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'`
-  return new Response(request.method === 'HEAD' ? null : lobbyHtml(identity, state, state === 'claimed' ? await localOwnerEmail(bindings.DB, bindings.AUTH_ORIGIN) : undefined), { headers: { ...base, 'content-type': 'text/html; charset=utf-8', 'content-security-policy': policy } })
+  return new Response(request.method === 'HEAD' ? null : lobbyHtml(identity, state, state === 'claimed' ? await localOwnerEmail(bindings.DB, bindings.AUTH_ORIGIN) : undefined, local), { headers: { ...base, 'content-type': 'text/html; charset=utf-8', 'content-security-policy': policy } })
 }

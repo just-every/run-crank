@@ -22,3 +22,11 @@ export function accountView(session:any, owner:boolean) {
   return `<section class="panel"><h2>Signed in</h2><dl class="facts"><dt>Name</dt><dd>${esc(operator.displayName ?? '')}</dd><dt>Email</dt><dd>${esc(operator.email ?? '')}</dd><dt>Role</dt><dd>${esc(stateWords(role))} · ${esc(may[role] ?? '')}</dd>${session?.createdAt ? `<dt>Signed in</dt><dd>${timestamp(new Date(session.createdAt).toISOString())}</dd>` : ''}</dl><form method="post" action="/app/signout" class="inline"><button class="btn btn-secondary">Sign out</button></form></section>
   ${owner ? `<section class="panel"><h2>Sign-in settings</h2><p class="muted">Whether invited people may sign in through your linked identity provider. Email sign-in links stay available to the owner.</p><div class="actions"><a class="btn btn-secondary" href="/auth/settings/identity">Open sign-in settings</a></div></section>` : ''}`
 }
+
+const SAFETY: Record<string, string> = { crank_flows: 'flows', crank_workflows: 'workflows', crank_connections: 'connections', crank_wf_runs: 'workflow runs', crank_wf_steps: 'interrupted steps', crank_runs: 'deliveries', crank_polls: 'polls', crank_schedules: 'schedules' }
+/** DATA-001: an older archive's activation state was normalized on import; say exactly what changed. */
+export function restoreSummary(result:any) {
+  const changes = Array.isArray(result?.safetyChanges) ? result.safetyChanges : []
+  if (!changes.length) return ''
+  return `<section class="panel"><h2>Made inactive on import</h2><p class="muted">This archive came from an older or unfenced source. Crank changed these values before restoring; nothing else was altered.</p><ul class="list">${changes.map((c:any)=>`<li>${esc(String(c.rows))} ${esc(SAFETY[c.table] ?? c.table)}: <span class="mono">${esc(c.column)}</span> set to <span class="mono">${esc(c.value === null ? 'empty' : String(c.value).length > 40 ? String(c.value).slice(0, 37) + '…' : String(c.value))}</span></li>`).join('')}</ul></section>`
+}

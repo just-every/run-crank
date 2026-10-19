@@ -67,6 +67,8 @@ export async function restoreFixture() {
     const legacy = await source.flow('Legacy approval');
     const pendingLegacy = await source.run(legacy);
     const erased = await source.run(legacy, 'erased-before-backup', { customer: 'Removed customer' });
+    const failedLegacy = await source.run(legacy, 'failed-before-backup');
+    assert.equal((await source.post(`runs/${failedLegacy.id}/approve`)).state, 'failed', 'a failed delivery stays replayable at the source');
     await source.post(`runs/${erased.id}/reject`); await source.post(`flows/${legacy.id}/pause`);
     await source.post('data/erase', { run_id: erased.id, confirm: 'ERASE' });
     const files = await publish(source, 'Invoice supporting files', { trigger: { type: 'webhook' }, steps: [{ id: 'file', type: 'map', input: { file: '{{trigger.files.invoice}}' } }] });
@@ -83,13 +85,13 @@ export async function restoreFixture() {
     await started;
     const queuedRun = await startRun(source, interrupted, {});
     assert.equal(queuedRun.status, 'queued');
-    return { source, fake, bound, token, workflow, resume, cancel, approval, waitingApproval, callbackRun, scheduled, poll, instant, oldHook, hold, finished, pendingLegacy, agent, interrupted, queuedRun, pendingExecution, releaseExecution };
+    return { source, fake, bound, token, workflow, resume, cancel, approval, waitingApproval, callbackRun, scheduled, poll, instant, oldHook, hold, finished, pendingLegacy, failedLegacy, agent, interrupted, queuedRun, pendingExecution, releaseExecution };
   } catch (error) { releaseExecution(); await source.close(); throw error; }
 }
 
 export async function restoreJourney() {
-  const fixture = await restoreFixture(), { source, fake, bound, token, workflow, resume, cancel, approval, waitingApproval, scheduled, poll, oldHook, hold, pendingLegacy, agent } = fixture;
-  let restored, corrupt;
+  const fixture = await restoreFixture(), { source, fake, bound, token, workflow, resume, cancel, approval, waitingApproval, scheduled, poll, oldHook, hold, pendingLegacy, failedLegacy, agent } = fixture;
+  let restored, corrupt, older;
   try {
     const exported = await archive(source), original = inventory(exported);
     fixture.releaseExecution();
@@ -150,15 +152,64 @@ export async function restoreJourney() {
     assert.deepEqual(await corrupt.get('workflows'), []);
     assert.deepEqual((await corrupt.get('workflow-runs')).runs, []);
     for (const change of [
-      (table, row) => { if (table === 'crank_workflows') row.status = 'published'; },
       (table, row) => { if (table === 'crank_workflow_versions') row.graph_json = '{}'; },
       (table, row) => { if (table === 'crank_wf_runs') row.version_id = 'unknown-version'; },
     ]) {
       const refused = await corrupt.send('/api/crank/data/restore', { archive: await rewritten(exported, change), confirm: 'RESTORE' }, corrupt.owner);
       assert.equal(refused.status, 400, refused.text);
       assert.match(refused.text, /staged_validation/);
-      assert.match(refused.text, /Re-export from an updated source installation/, 'unsafe older archives are refused with re-export guidance');
-      assert.deepEqual(await corrupt.get('workflows'), [], 'semantic refusal commits no product records');
+      assert.deepEqual(await corrupt.get('workflows'), [], 'a broken graph or reference commits no product records');
     }
-  } finally { fixture.releaseExecution(); await fixture.pendingExecution; await corrupt?.close(); await restored?.close(); await source.close(); }
+    // DATA-001 older archive: written by a source without the export fence, so it
+    // carries live activation state. Import normalizes it inactive for adoption.
+    const due = new Date(Date.now() - 60000).toISOString();
+    const unsafe = await rewritten(exported, (table, row) => {
+      if (table === 'crank_workflows') { const { restore_pending, ...settings } = JSON.parse(row.settings_json); Object.assign(row, { owner_id: row.created_by, settings_json: JSON.stringify(settings), status: row.published_version_id ? 'published' : row.status }); }
+      if (table === 'crank_flows') row.status = 'active';
+      if (table === 'crank_connections' && row.status === 'needs_reconnect') row.status = 'active';
+      const fence = table === 'crank_wf_runs' && row.error_json ? JSON.parse(row.error_json) : null;
+      if (fence?.category === 'restore_fence') Object.assign(row, { status: fence.previous_status, error_json: fence.previous_error ? JSON.stringify(fence.previous_error) : null, continuation_authority: 1,
+        ...(fence.previous_status === 'running' ? { lease_id: 'source-lease', lease_expires_at: '2099-01-01T00:00:00.000Z' } : {}) });
+      if (table === 'crank_wf_steps' && row.status === 'uncertain') Object.assign(row, { status: 'running', error_json: null });
+      const delivery = table === 'crank_runs' && row.outcome_json ? JSON.parse(row.outcome_json) : null;
+      if (delivery?.code === 'restore_fence') row.outcome_json = delivery.previous ? JSON.stringify(delivery.previous) : null;
+      if (table === 'crank_polls' || table === 'crank_schedules') row.next_due_at = due;
+    });
+    assert.ok(unsafe.includes('"status":"published"') && unsafe.includes('source-lease'), 'the older archive carries unsafe activation state');
+    older = await harness(target, { edge: fake.edge });
+    const olderBefore = fake.requests.length;
+    const imported = await older.post('data/restore', { archive: unsafe, confirm: 'RESTORE' });
+    const changed = new Set(imported.safetyChanges.map(c => `${c.table}.${c.column}=${c.value}`));
+    for (const expected of ['crank_workflows.status=paused', 'crank_workflows.owner_id=restore:awaiting-adoption', 'crank_flows.status=draft', 'crank_connections.status=needs_reconnect',
+      'crank_wf_runs.status=paused', 'crank_wf_runs.lease_id=null', 'crank_wf_runs.continuation_authority=0', 'crank_wf_steps.status=uncertain', 'crank_runs.replay_count=1'])
+      assert.ok(changed.has(expected), `normalization reports ${expected}`);
+    assert.ok(imported.safetyChanges.every(c => c.rows > 0 && !JSON.stringify(c).includes('Harbor')), 'the summary counts rows and carries no record values');
+    await older.post('data/restore', { archive: unsafe, confirm: 'RESTORE' }, older.owner, 409);
+    assert.ok((await older.get('workflows')).every(w => ['paused', 'draft'].includes(w.status)), 'workflows import inactive');
+    assert.ok((await older.get()).flows.every(f => f.status === 'draft'), 'legacy flows import as drafts');
+    const olderReview = (await older.get(`workflows/${workflow.id}`)).restore;
+    assert.deepEqual(olderReview.runs.map(r => [r.id, r.previous_status]).sort(), [[cancel.id, 'waiting'], [resume.id, 'waiting']].sort(), 'unfinished runs are flagged for owner adoption');
+    assert.equal(olderReview.connections[0].status, 'needs_reconnect');
+    const olderRaw = await older.db.prepare('SELECT lease_id,lease_expires_at,continuation_authority FROM crank_wf_runs').all();
+    assert.ok(olderRaw.results.every(r => r.lease_id === null && r.lease_expires_at === null && r.continuation_authority === 0), 'source leases and continuation rights are cleared');
+    assert.equal((await older.get(`workflow-runs/${fixture.queuedRun.id}`)).status, 'paused');
+    await older.restart();
+    await older.tick(Date.now() + 86400000 * 2);
+    assert.equal(fake.requests.length, olderBefore, 'due polls, schedules, waits and leases cause no network effect');
+    assert.ok(Date.parse((await older.get(`workflows/${poll.id}/trigger`)).poll.next_due_at) > Date.now() + 86400000 * 2);
+    assert.ok(Date.parse((await older.get(`workflows/${scheduled.id}/trigger`)).schedule.next_due_at) > Date.now() + 86400000 * 2);
+    await older.post(`workflows/${workflow.id}/resume`, {}, older.owner, 409);
+    await older.post(`workflow-runs/${resume.id}/resume`, {}, older.owner, 409);
+    await older.post(`runs/${failedLegacy.id}/replay`, {}, older.owner, 409);
+    assert.equal((await older.get()).runs.find(r => r.id === pendingLegacy.id).state, 'pending', 'a legacy pending delivery waits for fresh receiving-owner approval');
+    await older.post(`connections/${bound.id}/rotate`, { secret: { token: fakeSecret('older-ledger') } });
+    const adopt = (await older.get(`workflows/${workflow.id}`)).restore;
+    const adopted = await older.post(`workflows/${workflow.id}/publish`, { restore_snapshot: adopt.snapshot, restore_decisions: { [resume.id]: 'resume', [cancel.id]: 'cancel' } }, older.owner, 201);
+    assert.equal(adopted.workflow.restore, null, 'publish adopts the workflow under the receiving owner');
+    assert.equal(fake.requests.length, olderBefore, 'adoption dispatches nothing by itself');
+    await older.tick(Date.now() + 120000);
+    assert.equal((await older.get(`workflow-runs/${resume.id}`)).status, 'succeeded');
+    assert.equal((await older.get(`workflow-runs/${cancel.id}`)).status, 'cancelled');
+    assert.equal(fake.requests.length, olderBefore + 1, 'only the explicitly resumed run dispatches once');
+  } finally { fixture.releaseExecution(); await fixture.pendingExecution; await older?.close(); await corrupt?.close(); await restored?.close(); await source.close(); }
 }

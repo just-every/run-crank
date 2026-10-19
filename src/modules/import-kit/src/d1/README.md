@@ -1,5 +1,22 @@
 # Cloudflare D1 port
 
+To bring existing data into a seed, sign in as the owner and use its import
+screen. First step: open this path on the destination app:
+
+```text
+/app/import
+```
+
+Upload a supported source export, review the plan and its differences, then
+approve that exact plan to apply it. Reconcile the result against native data;
+use Undo from the same history when needed. Base's reference accepts people JSON
+here, not installation `.rer` archives. Editions adopt this same door
+with their own supported readers and native adapters.
+
+For seed integration, follow [the door adoption guide](../door/ADOPTING.md)
+first. The D1 primitives below back that shared pipeline; do not mount separate
+job creation/apply routes beside it. Keep native readers and target adapters.
+
 Import `src/d1/index.ts` in Workers with `nodejs_compat`. This entry point does
 not import `node:sqlite` or the optional file/API readers. Products that need the
 readers can explicitly import `src/readers/index.ts`. The synchronous Node API and its guarantees remain
@@ -718,7 +735,13 @@ Strict undo retains its full native revision/value/attachment comparison and
 current ordinary `undo` authorization in every transaction, including batches
 which only record conflicts and the terminal batch. The same selected policy applies to rollback of partially published work;
 its report covers only the effects already committed. Undo and rollback cannot change an existing reversal mode.
-A job beneath any successor still rejects with `IMPORT_SUPERSEDED`.
+A job beneath any successor still rejects with `IMPORT_SUPERSEDED`, except
+where the successor's preserved undo kept an effect for the owner: that undo
+releases, in the same batch, the history beneath the kept effect (each
+predecessor returns to its own job's provenance as reversed, and that job's
+claim goes once nothing else backs it). The predecessor job's own undo then
+reports each such effect `retained` with reason `superseded` (a strict job just
+skips it), so a lineage with a catch-up undoes fully and the owner's edit stays.
 
 To support preserved undo, implement `targets.preparePreservedUndo(db,
 destination, effects)` and, only when native effects own disjoint parts of a

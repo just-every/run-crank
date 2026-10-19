@@ -4,14 +4,17 @@ import type { Diagnostic, SourceLocation } from '../types.ts';
 export class ReaderError extends Error {
   readonly code: string;
   readonly diagnostics: Diagnostic[];
-  constructor(code: string, location?: SourceLocation) {
+  /** The kind of field a credential refusal concerns (never its value). */
+  readonly field?: string;
+  constructor(code: string, location?: SourceLocation, field?: string) {
     super(code);
     this.name = 'ReaderError';
     this.code = code;
-    this.diagnostics = [{ severity: 'error', code, message: code, ...(location ? { location } : {}) }];
+    if (field !== undefined) this.field = field;
+    this.diagnostics = [{ severity: 'error', code, message: code, ...(location ? { location } : {}), ...(field !== undefined ? { field } : {}) }];
   }
 }
-export function fail(code: string, location?: SourceLocation): never { throw new ReaderError(code, location); }
+export function fail(code: string, location?: SourceLocation, field?: string): never { throw new ReaderError(code, location, field); }
 export function checkAbort(signal?: AbortSignal): void { if (signal?.aborted) fail('SOURCE_CANCELLED'); }
 
 /** Observe cancellation even when a supplied transport/sleep does not cooperate. */

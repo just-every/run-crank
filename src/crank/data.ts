@@ -56,7 +56,7 @@ export async function dataApi(request:Request,env:CrankEnv):Promise<Response|nul
       try {
         for (const part of rows.slice(1,-1) as Part[]) await store.imports.uploadPart(id,part.index,part)
         const status = await store.imports.finalize(id,{archiveHash:closing.archiveHash,contentHash:closing.contentHash,laterJournal})
-        await guardedBatch(env,actor,'owner',[auditStatement(env,actor.id,'data.restore','workspace','data',{archive_hash:closing.archiveHash})])
+        await guardedBatch(env,actor,'owner',[auditStatement(env,actor.id,'data.restore','workspace','data',{archive_hash:closing.archiveHash,normalized:(status.safetyChanges ?? []).map(({table,column,rows}:{table:string;column:string;rows:number})=>({table,column,rows}))})])
         return Response.json(status,{headers:{'cache-control':'no-store'}})
       } catch(error) { await store.imports.abort(id); throw error }
     }
@@ -79,6 +79,6 @@ export async function dataApi(request:Request,env:CrankEnv):Promise<Response|nul
     }
     return Response.json({error:'Not found'},{status:404})
   } catch(error:any) {
-    return Response.json({error:error.code === 'staged_validation' ? 'staged_validation: Archive activation or product records are unsafe. Re-export from an updated source installation, then retry into an empty destination.' : error.code || (error.status ? error.message : 'Data operation refused. Check the archive and destination.')},{status:/^(erasure_epoch|erased_row)/.test(error.code || '') ? 409 : error.status || 409,headers:{'cache-control':'no-store'}})
+    return Response.json({error:error.code === 'staged_validation' ? 'staged_validation: Archive product records are inconsistent (a broken workflow graph, version digest or record reference). Nothing was restored.' : error.code || (error.status ? error.message : 'Data operation refused. Check the archive and destination.')},{status:/^(erasure_epoch|erased_row)/.test(error.code || '') ? 409 : error.status || 409,headers:{'cache-control':'no-store'}})
   }
 }

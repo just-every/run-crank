@@ -22,7 +22,7 @@ export function validateArtifactOriginal(artifact: SourceArtifact, policy?: Pagi
   if (artifact.original.status === 'unavailable') {
     if (artifact.original.reason === 'unavailable-after-erasure') {
       if (!['withdraw-affected-artifacts', 'withdraw-all-job-artifacts'].includes(artifact.original.policy) || Object.keys(artifact.original).some(k => !['status', 'reason', 'policy'].includes(k))) throw new Error('INVALID_ORIGINAL');
-    } else if (artifact.original.reason !== 'not-supplied' || Object.keys(artifact.original).some(k => !['status', 'reason'].includes(k))) throw new Error('INVALID_ORIGINAL');
+    } else if (!['not-supplied', 'credentials-removed'].includes(artifact.original.reason) || Object.keys(artifact.original).some(k => !['status', 'reason'].includes(k))) throw new Error('INVALID_ORIGINAL');
     return;
   }
   if (artifact.original.status !== 'available' || typeof artifact.original.base64 !== 'string' || Object.keys(artifact.original).some(k => !['status', 'base64'].includes(k))) throw new Error('INVALID_ORIGINAL');
