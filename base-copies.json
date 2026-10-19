@@ -28,6 +28,39 @@
       }
     },
     {
+      "path": "migrations/core/0032_import_custody_replace.sql",
+      "originPath": "default-seed/migrations/core/0026_import_custody_replace.sql",
+      "revision": "6d38b54a6401879989e8d1f7ab4a02ffbdb4c46c",
+      "files": {
+        "migrations/core/0032_import_custody_replace.sql": "3c18b6de3352ded7465ff87b628d0cad84472f475fe545e98cce78407e9a38ea"
+      },
+      "modes": {
+        "migrations/core/0032_import_custody_replace.sql": "100644"
+      }
+    },
+    {
+      "path": "migrations/core/0033_import_erasure_progress.sql",
+      "originPath": "default-seed/migrations/core/0027_import_erasure_progress.sql",
+      "revision": "6d38b54a6401879989e8d1f7ab4a02ffbdb4c46c",
+      "files": {
+        "migrations/core/0033_import_erasure_progress.sql": "a564a78f102b6e20d1e44d68662671fa40081ffbd5e434d044ba4d85e66d6f0f"
+      },
+      "modes": {
+        "migrations/core/0033_import_erasure_progress.sql": "100644"
+      }
+    },
+    {
+      "path": "migrations/core/0034_import_door.sql",
+      "originPath": "default-seed/migrations/core/0028_import_door.sql",
+      "revision": "6d38b54a6401879989e8d1f7ab4a02ffbdb4c46c",
+      "files": {
+        "migrations/core/0034_import_door.sql": "b8e836a88d82edca863fba821fba4f7ae8039395a2d8df975d2b956dafa8a165"
+      },
+      "modes": {
+        "migrations/core/0034_import_door.sql": "100644"
+      }
+    },
+    {
       "path": "ONBOARDING.md",
       "originPath": "foundation/template/ONBOARDING.md",
       "revision": "6d38b54a6401879989e8d1f7ab4a02ffbdb4c46c",

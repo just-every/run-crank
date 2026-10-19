@@ -2,6 +2,7 @@ import { operationsView } from './operations'
 import { crankApi } from '../api'
 import { workflowApi } from '../workflows/api'
 import { importApi } from '../import-api'
+import { importDoor } from '../import-door'
 import { dataApi } from '../data'
 import { authorize, requireOwner, requireWriteOrigin } from '../access'
 import { type CrankEnv } from '../model'
@@ -9,7 +10,9 @@ import { authResponse } from '../../auth.server'
 import { document, esc } from './document'
 import { flowsView, runsView } from './flows'
 import { runView } from './run'
-import { accessView, accountView, importView, previewView, dataView, restoreSummary } from './settings'
+import { accessView, accountView, dataView, restoreSummary } from './settings'
+import { appliedView, importView, previewView, refusalView } from './move-in-view'
+import { applyReviewed, DoorRefusal, undoPlan, uploadAndPlan } from './move-in'
 import { connectionsView } from './connections'
 import { approvalsView, workflowRunView } from './workflow-run'
 import { editorView } from './editor'
@@ -19,7 +22,7 @@ const redirect = (location:string) => new Response(null,{status:303,headers:{loc
 // A form may name where to return after its action: a path inside the app, nothing else.
 const safeReturn = (value:unknown) => typeof value==='string' && /^\/app(\/[A-Za-z0-9/_.-]*)?(\?[A-Za-z0-9=&%_.-]*)?$/.test(value) ? value : null
 export async function productApi(request:Request,env:CrankEnv):Promise<Response|null> {
-  return await importApi(request,env) ?? await dataApi(request,env) ?? await workflowApi(request,env) ?? await crankApi(request,env)
+  return await importDoor(request,env) ?? await importApi(request,env) ?? await dataApi(request,env) ?? await workflowApi(request,env) ?? await crankApi(request,env)
 }
 async function formValues(request:Request) {
   if (!request.headers.get('content-type')?.startsWith('application/x-www-form-urlencoded')) throw new Error('Use a form submission.')
@@ -36,6 +39,7 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
     if (actor.kind==='agent'||actor.kind==='trigger') return document('Use the API','<p>Machine credentials use the documented JSON API.</p>',undefined,403)
     const call = async (path:string,input?:unknown) => {
       const headers = new Headers(request.headers); headers.delete('content-length'); headers.set('content-type','application/json')
+      if (path.startsWith('/api/operator/import/')) headers.set('X-Import-Source','n8n')
       const forwarded = new Request(url.origin+path,{method:input===undefined?'GET':'POST',headers,...(input===undefined?{}:{body:JSON.stringify(input)})})
       return (path.startsWith('/auth/') ? await authResponse(forwarded,env) : await productApi(forwarded,env))!
     }
@@ -57,11 +61,16 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
         return new Response(null,{status:303,headers:{location:'/signin','cache-control':'no-store',...(cookie?{'set-cookie':cookie}:{})}})
       }
       const form = await formValues(request)
-      if (url.pathname === '/app/import/preview') {
+      if (url.pathname.startsWith('/app/import/')) {
         requireOwner(actor)
-        const response = await call('/api/crank/imports/plan',form), plan:any = await response.json()
-        if(!response.ok) return page('Import refused',`<p class="notice">${esc(plan.error)}</p><a href="/app/import">Back to move in</a>`,{},response.status)
-        return page('Import preview',previewView(plan,form.source,form.namespace))
+        try {
+          if (url.pathname === '/app/import/preview') return page('Import preview',previewView(await uploadAndPlan(call,form.source ?? '')))
+          if (url.pathname === '/app/import/apply') { const done = await applyReviewed(call,form.planId ?? '',form.reviewedFingerprint ?? ''); return page('Import applied',appliedView(done.report)) }
+          if (url.pathname === '/app/import/undo') { await undoPlan(call,form.planId ?? ''); return redirect('/app/import') }
+        } catch (error) {
+          if (!(error instanceof DoorRefusal)) throw error
+          return page('Import refused',refusalView(error.body),{},error.status)
+        }
       }
       const preview = /^\/app\/workflows\/([^/]+)\/preview$/.exec(url.pathname)
       if (preview) {

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {createServer} from 'node:http';
 import {readFile} from 'node:fs/promises';
 import {harness,freePort} from './harness.mjs';
-import {publish} from './kit.mjs';
+import {publish,door,doorPlan,doorImport,checkDoor} from './kit.mjs';
 import {restoreJourney} from './restore-journey.mjs';
 
 // Fake only the external receiver/network edge. Workerd, D1, auth and imports
@@ -35,17 +35,20 @@ test('native owner sign-in, admin preparation and member read-only roles apply a
   const {cookie}=await join(role,role+'@example.test');
   assert.equal((await h.get('state',cookie)).actor.role,role);
   const f=await h.flow('Role boundary '+role),r=await h.run(f);
-  for(const path of [`flows/${f.id}/activate`,`flows/${f.id}/pause`,`runs/${r.id}/approve`,`runs/${r.id}/reject`,`runs/${r.id}/replay`,'tokens','imports/plan','imports/apply','data/export','data/restore','data/erase']) await h.post(path,{},cookie,403);
+  for(const path of [`flows/${f.id}/activate`,`flows/${f.id}/pause`,`runs/${r.id}/approve`,`runs/${r.id}/reject`,`runs/${r.id}/replay`,'tokens','data/export','data/restore','data/erase']) await h.post(path,{},cookie,403);
+  for(const action of ['uploads','plan','apply','undo']) assert.equal((await door(h,action,{},cookie)).status,401,`${role} cannot use the import door`);
   await h.post('flows',{name:'Prepared by '+role,source_app:'Support desk',destination_app:'Inbox',target_url:target+'/events'},cookie,role==='admin'?201:403);
  }
  const csrf=await h.send('/api/crank/flows',{name:'CSRF'},h.owner,{origin:'https://foreign.example'});assert.equal(csrf.status,403);
- for(const path of ['imports/plan','data/export']) assert.equal((await h.send('/api/crank/'+path,{},h.owner,{origin:'https://foreign.example'})).status,403);
+ assert.equal((await h.send('/api/crank/data/export',{},h.owner,{origin:'https://foreign.example'})).status,403);assert.equal((await door(h,'plan',{},h.owner,{origin:'https://foreign.example'})).status,403);
 });
 
 test('SEC-001: private doors need a current session or scoped credential, access/data/import decisions stay the owner\'s, and revocation lands at commit',async()=>{
- for(const door of ['','state','flows','flows/x','flows/x/activate','flows/x/runs','flows/x/trigger','runs/x','runs/x/approve','runs/x/replay','tokens','tokens/x/revoke','imports','imports/plan','imports/apply','data/export','data/restore','data/erase',
+ for(const door of ['','state','flows','flows/x','flows/x/activate','flows/x/runs','flows/x/trigger','runs/x','runs/x/approve','runs/x/replay','tokens','tokens/x/revoke','imports','imports/x/undo','data/export','data/restore','data/erase',
   'historical','historical/x','workflows','workflows/x','workflows/x/publish','workflows/x/run','workflow-runs','workflow-runs/x','workflow-runs/x/resume','connections','connections/x','oauth/start','oauth/callback','oauth/apps/slack','hooks','holds/x','queues','catalog','coverage','settings','audit','notices','reports'])
   for(const input of [undefined,{}]) assert.equal((await h.send('/api/crank'+(door&&'/'+door),input)).status,401,`SEC-001 signed-out ${input?'POST':'GET'} /api/crank/${door}`);
+ for(const action of ['uploads','plan','apply','status','reconcile','undo']) assert.equal((await h.send('/api/operator/import/'+action,{},'',{'X-Import-Source':'n8n'})).status,401,'SEC-001 signed-out import door '+action);
+ assert.equal((await h.send('/api/rer/import/plan',{},h.owner)).status,404,'no grant mount without Business');
  for(const page of ['/app','/app/operations','/app/approvals','/app/runs','/app/runs/x','/app/connections','/app/access','/app/account','/app/data','/app/import','/app/workflows/x','/app/workflow-runs/x','/app/action']) {
   const r=await h.send(page,page==='/app/action'?{path:'/api/crank/data/erase'}:undefined);assert.equal(r.status,303,'SEC-001 signed-out '+page);assert.match(r.headers.get('location'),/^\/signin/);
  }
@@ -58,13 +61,14 @@ test('SEC-001: private doors need a current session or scoped credential, access
   for(const [path,input] of [['/auth/invite',{email:'uninvited@example.test',displayName:'Uninvited',role:'member'}],['/auth/operator/status',{operatorId:departing.id,status:'inactive'}],['/auth/operator/role',{operatorId:departing.id,role:'admin'}]]) {
    const r=await h.send(path,input,cookie,headers);assert.ok([401,403].includes(r.status),`SEC-001 ${who} ${path}: ${r.status} ${r.text}`);
   }
-  for(const path of ['tokens','tokens/'+agent.id+'/revoke','imports/plan','imports/apply','data/export','data/restore','data/erase']) assert.equal((await h.send('/api/crank/'+path,{},cookie,headers)).status,403,`SEC-001 ${who} ${path}`);
+  for(const path of ['tokens','tokens/'+agent.id+'/revoke','data/export','data/restore','data/erase']) assert.equal((await h.send('/api/crank/'+path,{},cookie,headers)).status,403,`SEC-001 ${who} ${path}`);
+  for(const action of ['uploads','plan','apply','undo']) assert.equal((await door(h,action,{},cookie,headers)).status,401,`SEC-001 ${who} import door ${action}`);
  }
  assert.equal(await people(),before,'no lower role changed who may sign in');assert.equal((await h.get()).tokens.length,tokens);
  assert.ok(!h.mail.some(m=>m.to.includes('uninvited@example.test')),'no invitation was sent');
  const flows=(await h.get()).flows.length;
- for(const origin of ['https://foreign.example','null',h.origin.replace('127.0.0.1','localhost')]) for(const [path,input] of [['/api/crank/flows',{name:'SEC-001 cross-site',source_app:'Support desk',destination_app:'Inbox',target_url:target+'/events'}],['/api/crank/tokens',{label:'Cross-site',scope:'agent'}],['/api/crank/data/export',{}],['/api/crank/imports/plan',{}]])
-  assert.equal((await h.send(path,input,h.owner,{origin})).status,403,`SEC-001 ${origin} ${path}`);
+ for(const origin of ['https://foreign.example','null',h.origin.replace('127.0.0.1','localhost')]) for(const [path,input] of [['/api/crank/flows',{name:'SEC-001 cross-site',source_app:'Support desk',destination_app:'Inbox',target_url:target+'/events'}],['/api/crank/tokens',{label:'Cross-site',scope:'agent'}],['/api/crank/data/export',{}],['/api/operator/import/plan',{}]])
+  assert.equal((await h.send(path,input,h.owner,{origin,'X-Import-Source':'n8n'})).status,403,`SEC-001 ${origin} ${path}`);
  assert.equal((await h.get()).flows.length,flows);assert.equal((await h.get()).tokens.length,tokens,'foreign-Origin owner mutations change nothing');
  await h.get('state',departing.cookie);
  const deactivated=await h.send('/auth/operator/status',{operatorId:departing.id,status:'inactive'},h.owner);assert.equal(deactivated.status,200,deactivated.text);
@@ -109,7 +113,8 @@ test('TEAM-003: scoped trigger and agent commands prepare only, revoked credenti
  const run=await h.post(`flows/${f.id}/trigger`,{event_id:'webhook-1',input:{subject:'New customer'}},'',201,t);
  await h.post(`flows/${other.id}/trigger`,{event_id:'webhook-1',input:{}},'',403,t);await h.get('state','',403,t);
  await h.post(`flows/${f.id}/runs`,{event_id:'agent-1',input:{subject:'Prepared'}},'',201,a);
- for(const path of [`runs/${run.id}/approve`,`runs/${run.id}/reject`,`runs/${run.id}/replay`,`flows/${f.id}/activate`,'tokens','imports/plan','data/export','data/erase'])await h.post(path,{},'',403,a);
+ for(const path of [`runs/${run.id}/approve`,`runs/${run.id}/reject`,`runs/${run.id}/replay`,`flows/${f.id}/activate`,'tokens','data/export','data/erase'])await h.post(path,{},'',403,a);
+ assert.equal((await door(h,'plan',{},'',a)).status,401,'an agent credential cannot import');
  const workflow=await publish(h,'Preparation cannot execute',{trigger:{type:'manual'},steps:[{id:'record',type:'map',input:{customer:'Harbour Workshop'}}]});
  await h.post('workflows',{name:'Agent-prepared draft',graph:{trigger:{type:'manual'},steps:[{id:'prepare',type:'map',input:{}}]}},'',201,a);
  await h.get('workflows/'+workflow.id,'',200,a);
@@ -139,21 +144,40 @@ test('rejection has an audit decision and no delivery; destinations cannot escap
 });
 
 const source=async()=> (await readFile('public/fixtures/n8n-workflow.json','utf8')).replace('http://127.0.0.1:9051',target);
-test('n8n dry run changes nothing; human-approved import has a durable journal and undo removes unused drafts',async()=>{
- const input={namespace:'move-in',source:await source()},before=(await h.get()).flows.length;
- const plan=await h.post('imports/plan',input);assert.equal((await h.get()).flows.length,before);
- const job=await h.post('imports/apply',{...input,fingerprint:plan.fingerprint});assert.equal(job.state,'completed');assert.equal((await h.get()).flows.length,before+1);
- const journal=await h.get('imports');assert.equal(journal.find(x=>x.id===job.id).approvedBy,(await h.get()).actor.id);
- assert.equal((await h.post(`imports/${job.id}/undo`)).state,'undone');assert.equal((await h.get()).flows.length,before);
+test('MIG-001 move-in door: owner upload, plan without writes, reviewed apply, reconcile, undo and history',async()=>{
+ const nativeSnapshot=async()=>(await h.get()).flows.map(f=>({id:f.id,name:f.name,status:f.status,target_url:f.target_url})).sort((x,y)=>x.id.localeCompare(y.id));
+ await checkDoor({request:async(action,body)=>{const r=await door(h,action,body);return new Response(r.text,{status:r.status})},bytes:Buffer.from(await source()),name:'n8n-workflows.json',nativeSnapshot,
+  assertApplied:async(before,after,report)=>{assert.deepEqual(after.filter(f=>!before.some(x=>x.id===f.id)).map(f=>[f.name,f.status,f.target_url]),[['Receive an event and forward its JSON body','draft',target+'/events']]);assert.equal(report.counts.present,1)},
+  assertUndone:async(before,after)=>assert.deepEqual(after,before)});
+ const [entry]=await h.get('imports');assert.equal(entry.authority,'door');assert.equal(entry.state,'undone');assert.match(entry.caption,/approved by/i);
+ const audit=await h.get('audit');assert.ok(audit.some(a=>a.action==='import.apply'&&a.subject_id===entry.planId)&&audit.some(a=>a.action==='import.undo'&&a.subject_id===entry.planId),'apply and undo are audited');
+ // The signed-in move-in screen drives the same door: review, approve the exact plan, reconcile, undo.
+ const screen=async(path,fields)=>{const r=await h.mf.dispatchFetch(h.origin+path,{method:'POST',redirect:'manual',headers:{host:new URL(h.origin).host,origin:h.origin,cookie:h.owner,'content-type':'application/x-www-form-urlencoded'},body:new URLSearchParams(fields).toString()});return {status:r.status,location:r.headers.get('location'),text:await r.text()}};
+ await screen('/setup',{confirm:'yes'});
+ const before=(await h.get()).flows.length,review=await screen('/app/import/preview',{source:await source()});
+ assert.equal(review.status,200,review.text.slice(0,300));assert.match(review.text,/1 workflows in the upload: 1 new/);assert.equal((await h.get()).flows.length,before,'review writes nothing');
+ const field=name=>review.text.match(new RegExp(`name="${name}" value="([^"]+)"`))[1];
+ const applied=await screen('/app/import/apply',{planId:field('planId'),reviewedFingerprint:field('reviewedFingerprint')});
+ assert.match(applied.text,/Reconciled: 1 of 1 source workflows are present as drafts/);assert.equal((await h.get()).flows.length,before+1);
+ assert.match((await h.send('/app/import',undefined,h.owner)).text,/Undo unused import/);
+ assert.equal((await screen('/app/import/undo',{planId:field('planId')})).location,'/app/import');assert.equal((await h.get()).flows.length,before);
+ const bad=JSON.parse(await source());bad.nodes[1].parameters.jsonBody='={{ $json.body.customer }}';
+ const refusal=await screen('/app/import/preview',{source:JSON.stringify(bad)});assert.equal(refusal.status,422);assert.match(refusal.text,/parser refused a source value\. \(record 1\)/);
 });
 
-test('n8n refuses unreviewed input, credential exports and changed or used targets on undo',async()=>{
- const input={namespace:'guarded-import',source:await source()},plan=await h.post('imports/plan',input);
- await h.post('imports/apply',{...input,source:input.source.replace('Receive an event','Changed event'),fingerprint:plan.fingerprint},h.owner,400);
- const credential=JSON.parse(input.source);credential.nodes[1].credentials={httpHeaderAuth:{id:'example-reference'}};await h.post('imports/plan',{...input,source:JSON.stringify(credential)},h.owner,400);
- const expression=JSON.parse(input.source);expression.nodes[1].parameters.jsonBody='={{ $json.body.customer }}';await h.post('imports/plan',{...input,source:JSON.stringify(expression)},h.owner,400);
- const job=await h.post('imports/apply',{...input,fingerprint:plan.fingerprint});const flow=(await h.get()).flows.find(x=>x.name==='Receive an event and forward its JSON body');assert.ok(flow);await h.post(`flows/${flow.id}/activate`);await h.run(flow,'imported-event');
- const undone=await h.send(`/api/crank/imports/${job.id}/undo`,{},h.owner);assert.ok(undone.status>=400 || undone.value.state!=='undone');assert.ok((await h.get()).flows.some(x=>x.id===flow.id));
+test('MIG-001 door refuses expressions and credential exports without echoing them, and keeps used drafts on undo',async()=>{
+ const text=await source(),flows=(await h.get()).flows.length;
+ const expression=JSON.parse(text);expression.nodes[1].parameters.jsonBody='={{ $json.body.customer }}';
+ const refused=await doorPlan(h,JSON.stringify(expression));assert.equal(refused.status,422,refused.text);assert.equal(refused.value.error,'source_parser_failed');assert.ok(refused.value.details.reason);
+ const credential=JSON.parse(text);credential.nodes[1].credentials={httpHeaderAuth:{id:'example-reference'}};
+ const withheld=await doorPlan(h,JSON.stringify(credential));assert.equal(withheld.status,422,withheld.text);assert.equal(withheld.value.error,'source_parser_failed');assert.ok(!withheld.text.includes('example-reference'),'a credential export is refused and never echoed');
+ assert.equal((await h.get()).flows.length,flows,'planning writes no flow');
+ await doorImport(h,text);const renamed=JSON.parse(text);renamed.name='Receive an event and forward it (renamed)';
+ assert.equal((await doorPlan(h,JSON.stringify(renamed))).value.error,'catchup_required');const catchup=await doorPlan(h,JSON.stringify(renamed),true);assert.equal(catchup.status,200,catchup.text);assert.equal(catchup.value.summary.updated,1,'a changed source workflow is a reviewed replacement');
+ assert.equal((await door(h,'apply',{planId:catchup.value.planId,reviewedFingerprint:catchup.value.fingerprint})).value.job.state,'completed');
+ const plan=catchup.value,flow=(await h.get()).flows.find(x=>x.name==='Receive an event and forward it (renamed)');assert.ok(flow,'catch-up replaced the unused draft in place');assert.equal(flow.status,'draft');
+ await h.post(`flows/${flow.id}/activate`);await h.run(flow,'imported-event');
+ const undone=await door(h,'undo',{planId:plan.planId});assert.ok(undone.status>=400 || undone.value.job?.state!=='undone',undone.text);assert.ok((await h.get()).flows.some(x=>x.id===flow.id),'a used import is never removed');
 });
 
 test('DATA-001: complete portable inventory, inactive restore, explicit per-run adoption and atomic refusal',async()=>{

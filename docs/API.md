@@ -18,10 +18,8 @@ allow a 128 KiB source in a 256 KiB JSON envelope. Errors are JSON `{error}`.
 | POST `/runs/:id/replay` | Native/dev owner | One further delivery for a failed/expired attempt, same bytes and key |
 | POST `/tokens` | Native/dev owner | `{label,scope:"agent"}` or `{label,scope:"trigger",flow_id}`; one-time token |
 | POST `/tokens/:id/revoke` | Native/dev owner | Immediately revoke |
-| POST `/imports/plan` | Native/dev owner | `{namespace,source}`; no native writes |
-| POST `/imports/apply` | Native/dev owner | Same input plus reviewed `fingerprint` |
-| GET `/imports` | Native/dev owner | Last 100 durable import jobs and approvals |
-| POST `/imports/:id/undo` | Native/dev owner | Undo unused drafts, refusing target drift |
+| GET `/imports` | Native/dev owner | Import history: door plans with approval captions, then jobs from the earlier importer |
+| POST `/imports/:id/undo` | Native/dev owner | Undo a job from the earlier importer, refusing target drift |
 | POST `/data/export` | Native/dev owner | Download installation archive |
 | POST `/data/restore` | Native/dev owner | `{archive,confirm:"RESTORE",journal?}`; empty destination only |
 | POST `/data/erase` | Native/dev owner | `{run_id,confirm:"ERASE"}` for a paused approval flow, or `{workflow_run_id,confirm:"ERASE"}` for a paused multi-step workflow; terminal run only |
@@ -37,6 +35,10 @@ Pending runs may still be deliberately approved or rejected by the owner.
 Erasure does not undo destination effects or erase the source app's records.
 Run IDs, event digests and value-free deletion records remain for deduplication
 and restoration fences. Data archives contain sensitive workflow inputs.
+
+## Import door
+
+Imports use Base's shared door at `/api/operator/import/{uploads,plan,apply,status,reconcile,undo}` (POST JSON, `X-Import-Source: n8n`, the owner's native session and exact `Origin`). Bodies and results are Base's: see `src/modules/import-kit/src/door/README.md` and [Move n8n workflows](IMPORTING.md). `/api/rer/import/*` answers 404.
 
 ## Workflows
 

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { harness } from './harness.mjs';
 import { makePart, ArchiveVerifier, ContentVerifier } from '@runeditrun/rer/internal/modules/portability/format.mjs';
-import { connection, deliver, estimateHold, fakeEdge, fakeSecret, hookUrl, jsonResponse, publish, startRun, settled } from './kit.mjs';
+import { connection, deliver, doorImport, estimateHold, fakeEdge, fakeSecret, hookUrl, jsonResponse, publish, startRun, settled } from './kit.mjs';
 
 const target = 'http://127.0.0.1:9';
 export const archive = async h => {
@@ -77,8 +77,7 @@ export async function restoreFixture() {
     await settled(source, uploaded.value.run_id);
     await source.post(`workflows/${completed.id}/historical`, { source: { url: 'https://ledger.example/feed', connection_id: bound.id, items_path: 'items', id_path: 'id' }, cost: { components: ['orchestration', 'connectors', 'models', 'executors'].map(kind => ({ kind, usd_per_run: '0', assumption: 'No charges at the test provider edge' })) } }, source.owner, 201);
     const text = (await readFile('public/fixtures/n8n-workflow.json', 'utf8')).replaceAll('http://127.0.0.1:9051', target);
-    const plan = await source.post('imports/plan', { namespace: 'restore-test', source: text });
-    await source.post('imports/apply', { namespace: 'restore-test', source: text, fingerprint: plan.fingerprint });
+    await doorImport(source, text);
     const agent = await source.post('tokens', { label: 'Source assistant', scope: 'agent' }, source.owner, 201);
     const interrupted = await publish(source, 'Interrupted ledger write', { settings: { max_concurrency: 1 }, trigger: { type: 'manual' }, steps: [{ ...effect(bound.id), input: { ...effect(bound.id).input, url: 'https://ledger.example/pending' } }] });
     const pendingExecution = startRun(source, interrupted, {});

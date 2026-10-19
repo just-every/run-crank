@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import assert from 'node:assert/strict';
 
 /** Third-party APIs faked at the network edge: `routes` maps a host to a handler that
@@ -55,4 +55,79 @@ export const fakeSecret = label => `${label}-${randomUUID()}`;
 /** An owner explicitly quotes every cost component before releasing held work. */
 export async function estimateHold(h, holdId, amounts = {}) {
   return h.post(`holds/${holdId}/estimate`, { cost: { components: ['orchestration', 'connectors', 'models', 'executors'].map(kind => ({ kind, usd_per_run: amounts[kind] ?? '0', assumption: 'Local acceptance journey; network edges do not charge this installation' })) } });
+}
+
+/** The shared import door at /api/operator/import/, through the owner's session. */
+export const door = (h, action, body, cookie = h.owner, headers = {}) => h.send('/api/operator/import/' + action, body, cookie, { 'X-Import-Source': 'n8n', ...headers });
+const sha = bytes => createHash('sha256').update(bytes).digest('hex');
+/** Upload one small source and plan it; returns the door's plan. */
+export async function doorPlan(h, text, catchup) {
+  const bytes = Buffer.from(text), upload = await door(h, 'uploads', { name: 'n8n-workflows.json', bundleSha256: sha(bytes), totalBytes: bytes.length, totalChunks: 1, index: 0, chunkSha256: sha(bytes), base64: bytes.toString('base64') });
+  assert.equal(upload.status, 200, upload.text);
+  return door(h, 'plan', { uploadId: upload.value.uploadId, ...(catchup ? { catchup } : {}) });
+}
+export async function doorImport(h, text) {
+  const plan = await doorPlan(h, text);
+  assert.equal(plan.status, 200, plan.text);
+  const applied = await door(h, 'apply', { planId: plan.value.planId, reviewedFingerprint: plan.value.fingerprint });
+  assert.equal(applied.value.job?.state, 'completed', applied.text);
+  return plan.value;
+}
+
+/** Base's copyable public HTTP conformance (import-kit door ADOPTING.md). */
+export async function checkDoor({request, bytes, name, nativeSnapshot,
+  assertApplied, assertUndone}) {
+  const hash = b => createHash('sha256').update(b).digest('hex');
+  const json = async (action, body, review, expected = 200) => {
+    const response = await request(action, body, review);
+    assert.equal(response.status, expected, `${action}: ${response.status}`);
+    return response.json();
+  };
+  const until = async (action, body, review, state) => {
+    for (let batch = 0; batch < 100; batch++) {
+      const result = await json(action, body, review);
+      if (result.job?.state === state) return result.job;
+      assert.ok(['queued','applying','undoing'].includes(result.job?.state));
+    }
+    assert.fail(`${action} did not finish`);
+  };
+  assert.ok(bytes.length > 0);
+  const before = await nativeSnapshot(), bundleSha256 = hash(bytes);
+  const totalChunks = Math.ceil(bytes.length / 65536);
+  let uploadId;
+  for (let index = 0; index < totalChunks; index++) {
+    const chunk = bytes.subarray(index * 65536, (index + 1) * 65536);
+    const uploaded = await json('uploads', {uploadId, name, bundleSha256,
+      totalBytes:bytes.length, totalChunks, index,
+      chunkSha256:hash(chunk), base64:chunk.toString('base64')});
+    uploadId = uploaded.uploadId;
+  }
+  const inventory = await json('uploads', {uploadId});
+  assert.equal(inventory.complete, true);
+  assert.equal(inventory.bundleSha256, bundleSha256);
+  assert.equal(inventory.received.reduce((n,c) => n + c.size, 0), bytes.length);
+  const plan = await json('plan', {uploadId});
+  assert.equal(plan.bundleSha256, bundleSha256);
+  assert.ok(plan.summary.sourceRecords > 0);
+  assert.deepEqual(await nativeSnapshot(), before);
+  const review = {fingerprint:plan.fingerprint,
+    approvalRecordId:randomUUID(), approvedAt:new Date().toISOString()};
+  const wrong = (plan.fingerprint[0] === '0' ? '1' : '0') + plan.fingerprint.slice(1);
+  await json('apply', {planId:plan.planId, reviewedFingerprint:wrong}, review, 403);
+  assert.deepEqual(await nativeSnapshot(), before);
+  const job = await until('apply', {planId:plan.planId,
+    reviewedFingerprint:plan.fingerprint}, review, 'completed');
+  const status = await json('status', {planId:plan.planId});
+  assert.equal(status.job.id, job.id);
+  assert.equal(status.job.state, 'completed');
+  const report = await json('reconcile', {planId:plan.planId});
+  assert.equal(report.ok, true);
+  assert.equal(report.fingerprint, plan.fingerprint);
+  assert.equal(report.bundleSha256, bundleSha256);
+  assert.equal(report.counts.sourceRecords, plan.summary.sourceRecords);
+  assert.equal(report.counts.present + report.counts.explained, report.counts.sourceRecords);
+  assert.equal(report.sourceIds.length, report.counts.sourceRecords);
+  await assertApplied(before, await nativeSnapshot(), report);
+  await until('undo', {planId:plan.planId}, undefined, 'undone');
+  await assertUndone(before, await nativeSnapshot());
 }

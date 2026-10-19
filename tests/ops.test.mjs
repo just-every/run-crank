@@ -3,7 +3,7 @@ import {createHash, createHmac} from 'node:crypto';
 import {readFile} from 'node:fs/promises';
 import {after, before, test} from 'node:test';
 import {harness} from './harness.mjs';
-import {connection, fakeEdge, fakeSecret, jsonResponse, publish, startRun} from './kit.mjs';
+import {connection, door, doorImport, fakeEdge, fakeSecret, jsonResponse, publish, startRun} from './kit.mjs';
 
 const fake = fakeEdge();
 let h;
@@ -87,8 +87,8 @@ test('SEC-003: the append-only audit records each kind of action with actor, tim
   const version=(await h.get('workflows/'+workflow.id)).published_version_id;
   const flow=await h.flow('Audited delivery'),failed=await h.run(flow),rejected=await h.run(flow);
   assert.equal((await h.post(`runs/${failed.id}/approve`)).state,'failed');await h.post(`runs/${failed.id}/replay`);await h.post(`runs/${rejected.id}/reject`);
-  const source=(await readFile('public/fixtures/n8n-workflow.json','utf8')).replace('http://127.0.0.1:9051','http://127.0.0.1:9'),plan=await h.post('imports/plan',{namespace:'audited',source});
-  const job=await h.post('imports/apply',{namespace:'audited',source,fingerprint:plan.fingerprint});await h.post(`imports/${job.id}/undo`);
+  const source=(await readFile('public/fixtures/n8n-workflow.json','utf8')).replace('http://127.0.0.1:9051','http://127.0.0.1:9'),job={id:(await doorImport(h,source)).planId};
+  assert.equal((await door(h,'undo',{planId:job.id})).value.job.state,'undone');
   assert.equal((await h.send('/api/crank/data/export',{},h.owner)).status,200);
   let rows=await h.get('audit');
   const mine=(action,subject)=>rows.find(r=>r.action===action&&(subject===undefined||r.subject_id===subject));

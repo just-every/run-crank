@@ -1,0 +1,32 @@
+import { action, chip, esc, hidden, timestamp } from './document'
+
+const list = (items:string[], empty='') => items.length ? `<ul class="list">${items.join('')}</ul>` : empty
+
+/** Move in: one door for every import, plus history from either authority. */
+export function importView(entries:any[]) {
+  const door = (j:any) => `<li class="settings-row"><span class="row-main"><strong>${esc(j.namespace)}</strong><span class="muted">${esc(j.caption)}</span><span class="mono flow-id">Plan ${esc(j.planId)}</span>${j.error?`<span>${esc(j.error)}</span>`:''}</span>${chip(j.state)}${j.state==='completed'?`<form method="post" action="/app/import/undo">${hidden('planId',j.planId)}<button class="btn btn-secondary">Undo unused import</button></form>`:''}</li>`
+  const legacy = (j:any) => `<li class="settings-row"><span class="row-main"><strong>${esc(j.namespace)}</strong><span class="muted">Approved by ${esc(j.approvedBy)} · ${timestamp(j.approvedAt)}</span><span class="muted">${esc(j.checkpoint)} of ${esc(j.total)} records</span><span class="mono flow-id">Job ${esc(j.id)}</span>${j.error?`<span>${esc(j.error)}</span>`:''}</span>${chip(j.state)}${j.state==='undone'?'':action(`/api/crank/imports/${j.id}/undo`,'Undo unused import',{},'secondary')}</li>`
+  return `<section class="panel"><h2>Move from n8n</h2><p class="muted">Import two-node Webhook → HTTP Request workflows as drafts with a mandatory human approval step. No credentials or executable expressions are imported; an export carrying either is refused.</p><p><a href="/fixtures/n8n-workflow.json" download>Download the documented-shape example</a>. Paste its JSON below. The example targets the local Operations inbox.</p><form method="post" action="/app/import/preview"><label>Workflow export JSON<textarea name="source" required rows="10" spellcheck="false"></textarea></label><button class="btn btn-primary">Upload and plan</button></form></section><section class="panel"><h2>Import history</h2>${list(entries.map(j=>j.authority==='door'?door(j):legacy(j)),'<div class="empty-state compact"><h3>No imports yet</h3><p>Uploading and planning change no data.</p></div>')}</section>`
+}
+
+/** The owner reviews counts, rejections, removed credentials and differences before approving this exact plan. */
+export function previewView(plan:any) {
+  const s = plan.summary, d = plan.differences
+  const rejected = plan.rejected.map((r:any)=>`<li>${esc(r.sourceId)}: ${esc(r.reason)}</li>`)
+  const notes = plan.diagnostics.map((n:any)=>`<li><span class="mono">${esc(n.code)}</span> ${esc(n.sourceId ?? '')} ${esc(n.field ?? n.location?.pointer ?? '')}</li>`)
+  return `<section class="panel"><h2>Review before importing</h2><p>${esc(s.sourceRecords)} workflows in the upload: ${esc(s.created)} new, ${esc(s.updated)} replaced, ${esc(s.unchanged)} unchanged, ${esc(s.gone)} gone from the source.</p>
+  ${rejected.length?`<h3>Rejected</h3>${list(rejected)}`:''}${notes.length?`<h3>Removed or noted</h3>${list(notes)}`:''}
+  ${d.additions.length?`<h3>New drafts</h3>${list(d.additions.map((id:string)=>`<li class="mono">${esc(id)}</li>`))}`:''}
+  <p class="notice">All flows remain drafts. Review the new webhook address, then explicitly activate each flow. The original n8n webhook URL is not retained as a live endpoint.</p>
+  <form method="post" action="/app/import/apply">${hidden('planId',plan.planId)}${hidden('reviewedFingerprint',plan.fingerprint)}<p class="mono flow-id">Plan ${esc(plan.fingerprint)}</p><div class="actions"><button class="btn btn-primary">Approve this plan</button><a class="btn btn-secondary" href="/app/import">Cancel</a></div></form></section>`
+}
+
+export function appliedView(report:any) {
+  const c = report.counts
+  return `<section class="panel"><h2>Import applied</h2><p class="notice">${report.ok?`Reconciled: ${esc(c.present)} of ${esc(c.sourceRecords)} source workflows are present as drafts${c.explained?`, ${esc(c.explained)} explained`:''}.`:'Reconciliation found differences. Review the history before activating anything.'}</p><a class="btn btn-primary" href="/app/import">Back to move in</a></section>`
+}
+
+export function refusalView(body:any) {
+  const where = body?.details?.row ? ` (record ${esc(body.details.row)}${body.details.pointer?` at ${esc(body.details.pointer)}`:''})` : ''
+  return `<p class="notice">${esc(body?.details?.reason ?? body?.error ?? 'Import refused')}${where}</p><p class="muted mono">${esc(body?.error ?? '')}</p><p>No success was reported and no data changed.</p><a href="/app/import">Back to move in</a>`
+}

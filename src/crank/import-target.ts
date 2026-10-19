@@ -69,9 +69,12 @@ export const importFlowTargets: D1TargetAdapter = {
   write(row) {
     scope(row.destination, row.targetKind)
     const v = value(row.value)
+    // Catch-up replaces an already-imported draft in place; the kit has already
+    // fenced its expected revision and full before-image in this batch.
     return [
-      sql("INSERT INTO crank_import_flow_state(flow_id,kit_revision,created_at) VALUES(?,?,strftime('%Y-%m-%dT%H:%M:%fZ','now'))", row.targetId, row.revision),
-      sql('INSERT INTO crank_flows(id,name,source_app,destination_app,target_url,revision,created_by,created_at,status) SELECT ?,?,?,?,?,?,?,created_at,? FROM crank_import_flow_state WHERE flow_id=?', row.targetId, v.name, v.source_app, v.destination_app, v.target_url, v.revision, v.created_by, v.status, row.targetId),
+      sql("INSERT INTO crank_import_flow_state(flow_id,kit_revision,created_at) VALUES(?,?,strftime('%Y-%m-%dT%H:%M:%fZ','now')) ON CONFLICT(flow_id) DO UPDATE SET kit_revision=excluded.kit_revision", row.targetId, row.revision),
+      sql(`INSERT INTO crank_flows(id,name,source_app,destination_app,target_url,revision,created_by,created_at,status) SELECT ?,?,?,?,?,?,?,created_at,? FROM crank_import_flow_state WHERE flow_id=?
+        ON CONFLICT(id) DO UPDATE SET name=excluded.name,source_app=excluded.source_app,destination_app=excluded.destination_app,target_url=excluded.target_url,revision=excluded.revision,created_by=excluded.created_by,status=excluded.status`, row.targetId, v.name, v.source_app, v.destination_app, v.target_url, v.revision, v.created_by, v.status, row.targetId),
     ]
   },
   remove(destination, kind, id) {

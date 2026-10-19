@@ -12,19 +12,24 @@ activate a Crank flow. Importing never executes a workflow or sends an HTTP requ
    **Download the documented-shape example** if you want to inspect the accepted
    format first. The example targets the local Operations inbox; it is not a
    customer export.
-2. Enter a stable **Source namespace** for this n8n workspace and paste your
-   export into **Workflow export JSON**. Select **Dry run import**. A dry run
-   changes no data.
-3. On **Review before importing**, check the number of drafts, workflow names
-   and destination URLs. Select **Cancel** to return without importing, or
-   **Approve import** to create the reviewed drafts.
-4. Check **Import journal** for the approving person, time and result. In
+2. Paste your export into **Workflow export JSON** and select **Upload and
+   plan**. Crank uploads the original bytes to Base's shared import door and
+   plans them. Planning changes no data.
+3. On **Review before importing**, check the counts (new, replaced, unchanged,
+   gone from the source), any rejected or noted records and the new drafts.
+   Select **Cancel** to return without importing, or **Approve this plan** to
+   apply exactly that plan. Crank then reconciles the drafts against the plan.
+4. Check **Import history** for the approving person, time and result. In
    **Flows**, review each imported draft before selecting **Activate flow**.
 5. In **Access**, create a **Trigger — one flow only** credential for the new
    flow. Point your source at `/api/crank/flows/FLOW_ID/trigger` on your Crank
    origin and use the [event envelope and authentication](ACCESS.md#connect-a-source-app).
    The old n8n webhook address is not a live Crank endpoint. Each event still
    needs the owner's **Approve and deliver** decision.
+
+Uploading the same n8n workflows again later plans a catch-up: a changed
+workflow replaces its unused imported draft once you approve that plan; a draft
+that was activated, run or edited blocks it.
 
 To remove an unused import, select **Undo unused import** in its journal entry.
 Undo requires the original draft values and no recorded runs. Active flows or
@@ -44,12 +49,10 @@ of stripping them silently. See [n8n export/import documentation](https://docs.n
 ## Supported shape
 
 Upload one workflow object or a JSON array containing 1–20 workflow objects,
-at most 128 KiB total UTF-8. Choose an import namespace of 1–64 ASCII letters,
-digits, dots, underscores or hyphens, starting with a letter or digit. Keep it
-stable when retrying the same export. Workflow IDs must be unique within an
-upload; an omitted ID receives `workflow-1`, `workflow-2`, etc. Changing an
-existing source workflow under the same namespace/ID is refused, rather than
-overwriting a native flow.
+at most 128 KiB total UTF-8. Every n8n upload shares the `n8n` import
+namespace, so a later upload of the same workflow IDs is a catch-up. A repeated
+workflow ID with different content in one upload is refused; an identical
+repeat counts once. An omitted ID receives `workflow-1`, `workflow-2`, etc.
 
 Each workflow must have exactly two distinct nodes with IDs, names and two-number
 positions:
@@ -100,18 +103,23 @@ selects `http://127.0.0.1:9051`. Imported target URLs must have that exact parse
 origin, without username/password, query or fragment. The configured origin
 cannot include a path. Import preview and apply use the same validator.
 
-The dry run returns a Base SHA-256 plan fingerprint and a summary. Explicit
-human apply must submit the same namespace, exact source bytes and fingerprint.
-Any source, mapping, actor or destination change invalidates the reviewed
-fingerprint. Base persists the immutable reviewed plan, source identities,
-original bytes, native provenance and batch progress in D1. Crank stores the
-approving owner, reviewed fingerprint and approval time separately before any
-flow can be applied. Repeating the same apply reuses its durable job.
+Every import goes through Base's shared import door
+(`src/modules/import-kit/src/door`, mounted by `src/crank/import-door.ts` at
+`/api/operator/import/{uploads,plan,apply,status,reconcile,undo}` with the
+`X-Import-Source: n8n` header). The plan returns a SHA-256 fingerprint, counts,
+rejections, diagnostics and differences. Apply must submit that plan id and the
+reviewed fingerprint; any source, mapping or destination change makes a new
+plan. Base persists the reviewed plan, its approval (owner email and time),
+source identities, native provenance and batch progress in D1, and repeating
+apply resumes the same job. Uploaded chunks are deleted once a plan is saved.
 
-Authorization is checked by the HTTP layer and again by SQL predicates inside
-Base's native transactions. Only an active `oa_operators` owner can plan, apply
-or reverse imports. Jobs remain bound to their creating principal. The history
-list shows at most the newest 100 jobs and includes approval information.
+Each door request authenticates the owner's current native session with an exact
+`Origin`; the same session predicate is rechecked inside every mutation. Admins,
+members, agent and trigger credentials, signed-out callers and other origins are
+refused. Crank answers `/api/rer/import/*` with 404: Business import grants are
+not mounted. History lists door imports with their approval caption and jobs
+approved by Crank's earlier importer, which keep their undo at
+`/api/crank/imports/JOB_ID/undo`. Apply and undo are written to the audit.
 
 Undo uses the retained Base journal after reopening the database; it does not
 need the upload again. It removes only the exact imported native values and
@@ -131,19 +139,19 @@ instance. Its evidence status is **documented format / synthetic-only / real
 export not supplied**. Change its URL to the installation's declared origin for
 production use. No broad n8n compatibility or provider acceptance is claimed.
 
-The import engine is copied without modifications from Base commit
-`fc0e1041efa55771142bbb57c4ab4743147e264d`, source directory
-`modules/import-kit/src`, into `src/modules/import-kit`. The copied files are
-the transitive source dependency closure of `d1/jobs.ts`, `d1/apply.ts`,
-`d1/reverse.ts`, `d1/database.ts` and `readers/file.ts`. Tests, the synchronous
-SQLite entry point, registry and API reader were not copied. Worker execution
-requires `nodejs_compat`. Product adaptation lives in `src/crank/imports.ts`,
-`src/crank/import-target.ts` and `src/crank/n8n.ts`.
+The import kit and its door are copied without modifications from Base commit
+`6d38b54a6401879989e8d1f7ab4a02ffbdb4c46c` (rer 0.2.68), source directory
+`modules/import-kit`, into `src/modules/import-kit`. Worker execution requires
+`nodejs_compat`. Product adaptation lives in `src/crank/import-door.ts`,
+`src/crank/import-target.ts`, `src/crank/n8n.ts` and, for jobs from the earlier
+importer, `src/crank/imports.ts`.
 
 `migrations/core/0015_import_kit.sql` materializes 311 statements from Base's
 exported D1 schema arrays, in `initializeD1ImportStorage` order, followed by the
 Crank approval and revision-sidecar tables and approval immutability triggers.
 The migration is applied once by the ordinary migration runner. It does not
-initialize or modify schema during an import request.
+initialize or modify schema during an import request. Base's later kit and door
+schemas follow verbatim as `0032_import_custody_replace.sql`,
+`0033_import_erasure_progress.sql` and `0034_import_door.sql`.
 
 The copied file inventory is recorded in `base-copies.json`.

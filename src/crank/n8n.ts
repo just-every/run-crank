@@ -1,5 +1,6 @@
-import { readFileSource } from '../modules/import-kit/src/readers/file.ts'
-import type { Json, SourceBundle } from '../modules/import-kit/src/types.ts'
+import { canonicalJson, sha256 } from '../modules/import-kit/src/provenance/identity.ts'
+import type { ImportDoorSource } from '../modules/import-kit/src/door/types.ts'
+import type { Json } from '../modules/import-kit/src/types.ts'
 import { validateImportTargetUrl, type ImportTargetEnv } from './import-target.ts'
 
 export const N8N_MAPPING_VERSION = 'crank-n8n-body-forward-v1'
@@ -86,24 +87,19 @@ function workflow(value: Json, index: number, env: ImportTargetEnv): N8nWorkflow
   return { sourceId, name, targetUrl: validateImportTargetUrl(env, request.url) }
 }
 
-export async function readN8nSource(env: ImportTargetEnv, namespace: string, source: string): Promise<{ bundle: SourceBundle; workflows: N8nWorkflow[] }> {
-  if (typeof namespace !== 'string' || !/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,63}$/.test(namespace)) throw new Error('IMPORT_NAMESPACE_INVALID')
-  if (typeof source !== 'string' || !source.trim()) throw new Error('N8N_SOURCE_REQUIRED')
-  const bytes = new TextEncoder().encode(source)
-  if (bytes.length > N8N_MAX_BYTES) throw new Error('N8N_SOURCE_BYTE_LIMIT')
-  const workflows: N8nWorkflow[] = []
-  // The kit reader checks every retained byte for credentials and duplicate keys.
-  // Only fully supported exports are accepted; no source rows can be skipped.
-  let failure: unknown
-  const bundle = await readFileSource({ namespace, name: 'n8n-workflows.json', bytes, format: 'json', parse(value, index) {
-    try {
-      if (index >= N8N_MAX_WORKFLOWS) throw new Error('N8N_WORKFLOW_LIMIT')
-      const parsed = workflow(value, index, env)
-      if (workflows.some(row => row.sourceId === parsed.sourceId)) throw new Error('N8N_DUPLICATE_WORKFLOW_ID')
-      workflows.push(parsed)
-      return { kind: 'n8n-workflow', sourceId: parsed.sourceId, payload: value }
-    } catch (error) { failure = error; throw error }
-  } }, { maxBytes: N8N_MAX_BYTES, maxRecords: N8N_MAX_WORKFLOWS, maxRecordBytes: N8N_MAX_BYTES }).catch(error => { throw failure ?? error })
-  if (!workflows.length) throw new Error('N8N_SOURCE_EMPTY')
-  return { bundle, workflows }
+/** The door's n8n source. Only fully supported exports are accepted; an
+ * unsupported workflow refuses the whole upload, never skips a row. A repeated
+ * workflow id with different content is the kit's DUPLICATE_SOURCE_CONFLICT. */
+export function n8nSource(env: ImportTargetEnv, ownerId: string): ImportDoorSource {
+  return {
+    parse(value, index) {
+      return { kind: 'n8n-workflow', sourceId: workflow(value, index, env).sourceId, payload: value }
+    },
+    mapping: { version: N8N_MAPPING_VERSION, map(record) {
+      const flow = workflow(record.payload, 0, env)
+      return { effects: [{ targetKind: 'flow', targetId: `import-${sha256(canonicalJson(['n8n', record.sourceId]))}`, value: {
+        name: flow.name, source_app: 'n8n', destination_app: 'HTTP inbox', target_url: flow.targetUrl, created_by: ownerId, status: 'draft', revision: 1,
+      } }] }
+    } },
+  }
 }
