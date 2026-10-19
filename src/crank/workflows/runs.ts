@@ -122,7 +122,7 @@ export async function decideApproval(env: CrankEnv, actor: Actor, runId: string,
 /** A paused run (for example after a connection was revoked) resumes from its checkpoint. */
 export async function resumeRun(env: CrankEnv, actor: Actor, runId: string) {
   requireOwner(actor)
-  const result = await stmt(env, "UPDATE crank_wf_runs SET status='queued',error_json=NULL WHERE id=? AND status='paused'", runId).run()
+  const result = await stmt(env, "UPDATE crank_wf_runs SET status='queued',error_json=NULL WHERE id=? AND status='paused' AND COALESCE(json_extract(error_json,'$.category'),'')!='restore_fence'", runId).run()
   requireValue(result.meta.changes > 0, 'Only a paused run can be resumed', 409)
   await auditStatement(env, actor.id, 'run.resume', 'run', runId).run()
   await executeRun(env, runId)

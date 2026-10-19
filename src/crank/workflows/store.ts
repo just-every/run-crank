@@ -9,6 +9,7 @@ import type { WorkflowRow } from '../triggers/admission'
 import { listHooks } from '../triggers/webhook'
 import { nextBoundary } from '../triggers/poll'
 import { nextOccurrence } from '../triggers/schedule'
+import { adoptionStatements, pendingRestore, restoreReview } from './restore'
 
 export interface VersionRow { id: string; workflow_id: string; number: number; graph_json: string; graph_digest: string; declared_json: string; published_by: string; published_at: string; retired_at: string | null }
 
@@ -35,6 +36,7 @@ export async function presentWorkflow(env: CrankEnv, row: WorkflowRow) {
     created_by: row.created_by, created_at: row.created_at,
     versions: versions.results.map(v => ({ id: v.id, number: v.number, graph_digest: v.graph_digest, authority: JSON.parse(v.declared_json), published_by: v.published_by, published_at: v.published_at, retired_at: v.retired_at })),
     hooks: await listHooks(env, row.id),
+    restore: await restoreReview(env, row),
   }
 }
 /** One published version's frozen graph, for comparing versions and restoring one into the draft. */
@@ -57,7 +59,7 @@ export async function createWorkflow(env: CrankEnv, actor: Actor, input: Record<
   const row = { id: id(), at: now() }
   await guardedBatch(env, actor, 'prepare', [
     stmt(env, `INSERT INTO crank_workflows(id,name,description,folder,owner_id,draft_json,draft_updated_at,status,settings_json,created_by,created_at) VALUES(?,?,?,?,?,?,?,'draft',?,?,?)`,
-      row.id, text(input.name, 'name'), description(input.description), folder(input.folder), actor.id, JSON.stringify(graph), row.at, JSON.stringify(isObject(input.settings) ? input.settings : {}), actor.id, row.at),
+      row.id, text(input.name, 'name'), description(input.description), folder(input.folder), actor.id, JSON.stringify(graph), row.at, JSON.stringify(isObject(input.settings) ? { ...input.settings, restore_pending: undefined } : {}), actor.id, row.at),
     auditStatement(env, actor.id, 'workflow.create', 'workflow', row.id),
   ])
   return { ...await presentWorkflow(env, await getWorkflow(env, row.id)), warnings }
@@ -70,7 +72,7 @@ export async function updateDraft(env: CrankEnv, actor: Actor, workflowId: strin
   await guardedBatch(env, actor, 'prepare', [
     stmt(env, 'UPDATE crank_workflows SET name=?,description=?,folder=?,draft_json=?,draft_updated_at=?,settings_json=? WHERE id=?',
       input.name === undefined ? current.name : text(input.name, 'name'), input.description === undefined ? current.description : description(input.description),
-      input.folder === undefined ? current.folder : folder(input.folder), JSON.stringify(graph), now(), isObject(input.settings) ? JSON.stringify(input.settings) : current.settings_json, workflowId),
+      input.folder === undefined ? current.folder : folder(input.folder), JSON.stringify(graph), now(), isObject(input.settings) ? JSON.stringify({ ...input.settings, restore_pending: pendingRestore(current) || undefined }) : current.settings_json, workflowId),
     auditStatement(env, actor.id, 'workflow.draft', 'workflow', workflowId),
   ])
   return { ...await presentWorkflow(env, await getWorkflow(env, workflowId)), warnings }
@@ -82,7 +84,7 @@ export async function duplicateWorkflow(env: CrankEnv, actor: Actor, workflowId:
 
 /** TEAM-004: publishing freezes the draft as an immutable version whose recorded authority is
  * exactly its declared steps on its bound connections, for every triggered run. */
-export async function publishWorkflow(env: CrankEnv, actor: Actor, workflowId: string) {
+export async function publishWorkflow(env: CrankEnv, actor: Actor, workflowId: string, input: Record<string, unknown> = {}) {
   requireOwner(actor)
   const current = await getWorkflow(env, workflowId)
   const { graph, declared, warnings } = checked(JSON.parse(current.draft_json))
@@ -94,6 +96,7 @@ export async function publishWorkflow(env: CrankEnv, actor: Actor, workflowId: s
   const previous = await stmt(env, 'SELECT MAX(number) AS n FROM crank_workflow_versions WHERE workflow_id=?', workflowId).first<{ n: number | null }>()
   const versionId = id(), at = now(), number = (previous?.n ?? 0) + 1, graphJson = canonical(graph)
   const authority = { publisher: actor.id, published_at: at, steps: declared.steps, connections: declared.connections, trigger: graph.trigger.type }
+  const adoption = await adoptionStatements(env, actor, current, input)
   const statements = [
     stmt(env, `UPDATE crank_wf_runs SET continuation_authority=continuation_authority|2 WHERE workflow_id=? AND version_id=?
       AND status IN ('waiting','awaiting_approval') AND COALESCE(json_extract((SELECT graph_json FROM crank_workflow_versions WHERE id=version_id),'$.settings.waiting_runs'),'continue')='continue'`, workflowId, current.published_version_id),
@@ -105,7 +108,8 @@ export async function publishWorkflow(env: CrankEnv, actor: Actor, workflowId: s
     auditStatement(env, actor.id, 'workflow.publish', 'workflow', workflowId, authority, versionId),
   ]
   statements.push(...await triggerSetup(env, workflowId, versionId, graph))
-  if (current.published_version_id && await waitingPolicy(env, current.published_version_id) === 'cancel_on_new_version') statements.push(...await cancellations(env, actor, workflowId, current.published_version_id, 'A new version was published'))
+  statements.push(...adoption)
+  if (!pendingRestore(current) && current.published_version_id && await waitingPolicy(env, current.published_version_id) === 'cancel_on_new_version') statements.push(...await cancellations(env, actor, workflowId, current.published_version_id, 'A new version was published'))
   await guardedBatch(env, actor, 'owner', statements)
   const hooks = await listHooks(env, workflowId)
   if (graph.trigger.type === 'webhook' && !hooks.some(hook => hook.active)) warnings.push('Create a webhook URL for this workflow (POST /api/crank/workflows/:id/hooks) and give it to the sender')
@@ -148,6 +152,7 @@ async function waitingPolicy(env: CrankEnv, versionId: string | null) {
 export async function setWorkflowState(env: CrankEnv, actor: Actor, workflowId: string, state: 'paused' | 'published') {
   requireOwner(actor)
   const current = await getWorkflow(env, workflowId)
+  requireValue(!pendingRestore(current), 'Review the restore and publish before resuming this workflow', 409)
   requireValue(current.published_version_id, 'Publish the workflow first', 409)
   const cancelVersions = state === 'paused' ? (await stmt(env, `SELECT id FROM crank_workflow_versions WHERE workflow_id=? AND json_extract(graph_json,'$.settings.waiting_runs')='cancel_on_pause'`, workflowId).all<{id: string}>()).results : []
   const cancelStatements = (await Promise.all(cancelVersions.map(version => cancellations(env, actor, workflowId, version.id, 'The workflow was paused')))).flat()

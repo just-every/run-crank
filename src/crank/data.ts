@@ -86,6 +86,6 @@ export async function dataApi(request:Request,env:CrankEnv):Promise<Response|nul
     }
     return Response.json({error:'Not found'},{status:404})
   } catch(error:any) {
-    return Response.json({error:error.code || (error.status ? error.message : 'Data operation refused. Check the archive and destination.')},{status:/^(erasure_epoch|erased_row)/.test(error.code || '') ? 409 : error.status || 409,headers:{'cache-control':'no-store'}})
+    return Response.json({error:error.code === 'staged_validation' ? 'staged_validation: Archive activation or product records are unsafe. Re-export from an updated source installation, then retry into an empty destination.' : error.code || (error.status ? error.message : 'Data operation refused. Check the archive and destination.')},{status:/^(erasure_epoch|erased_row)/.test(error.code || '') ? 409 : error.status || 409,headers:{'cache-control':'no-store'}})
   }
 }

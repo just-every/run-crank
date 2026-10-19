@@ -25,8 +25,26 @@ you to. Keep archive files outside public or shared folders.
 ## Restore into an empty installation
 
 Restore requires an empty destination for product data; it does not merge into
-an existing workspace. Restored flows are drafts. Restoration sends no events,
-and each flow needs owner review and activation before accepting new ones.
+an existing workspace. Restored legacy flows are drafts and multi-step workflows are draft or paused.
+Restoration sends no events. Unfinished runs are visibly fenced, leases and
+continuation authority are cleared, and waits, queues, held batches, polls and
+schedules cannot advance before owner adoption. Connections need reconnection.
+Open each restored workflow and select **Review restore**. The existing **Publish**
+control lists its connections and every interrupted run. Reconnect the connections,
+choose **Resume** or **Cancel** for each run, then select **Publish**. No run resumes
+implicitly. Resumed runs keep their original frozen graph/checkpoints and are
+checked against current connections at every step. Interrupted remote writes stay
+uncertain: reconcile the destination before taking further action. Held events
+still need their separate current cost estimate and explicit release.
+
+Old actor IDs remain history only; invite people and create credentials afresh.
+Legacy pending deliveries require a fresh receiving-owner approval. Failed or
+interrupted legacy delivery history cannot be replayed from the archive; reconcile
+the destination and prepare a fresh run if needed. Older archives must ultimately import with activation forced off. Until Base’s
+import normalization hook ships, an unsafe older archive is refused atomically;
+export it again from an updated source. DATA-001 remains partial for that gap.
+Schema, integrity, workflow version digests and product links are checked before
+any data is committed; unknown data is refused.
 
 For a small archive, sign in as the owner of a fresh installation. In **Data**,
 paste the archive text under **Restore into an empty installation**, type

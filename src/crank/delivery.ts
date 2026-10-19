@@ -94,6 +94,7 @@ async function send(env: CrankEnv, run: Run): Promise<Outcome> {
 export async function deliverRun(env: CrankEnv, actor: Actor, runId: string, replay = false): Promise<Run> {
   requireOwner(actor)
   const run = await getRun(env, runId)
+  requireValue(!run.outcome_json || JSON.parse(run.outcome_json).code !== 'restore_fence', 'Restored delivery history has no replay authority. Reconcile the destination and prepare a fresh run.', 409)
   await validateSnapshot(env, run)
   const lease = await claim(env, actor, run, replay)
   const outcome = await send(env, run), at = now(), encoded = JSON.stringify(outcome)

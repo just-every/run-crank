@@ -8,6 +8,7 @@ import { canvas } from './canvas'
 import { inspector } from './inspector'
 import { changedPaths, findNode, flatten, mappingRows, mappingText, nodes, rowLabel, summaryOf, type Connection, type RunDetail, type Version } from './model'
 import { runsStrip } from './runs'
+import { restorePanel } from './restore'
 
 export interface EditorData {
   workflow: any; current: Version | null; previous: Version | null; graphs: Map<string, Graph>; runs: RunDetail[]; connections: Connection[]
@@ -53,10 +54,10 @@ export function editorView(d: EditorData): { content: string; page: Page } {
   const sample = d.runs[0]?.trigger !== undefined ? JSON.stringify(d.runs[0].trigger, null, 2) : '{}'
 
   const live = wf.status === 'published' ? ['Live', 'live'] : wf.status === 'paused' ? ['Paused', 'paused'] : ['Draft', 'draft']
-  const liveControl = owner && wf.published_version_id
+  const liveControl = owner && !wf.restore && wf.published_version_id
     ? `<details class="menu live-menu"><summary class="pill" data-state="${live[1]}"><span class="pill-dot"></span>${live[0]}${icon('down')}</summary><div class="menu-body">${action(`/api/crank/workflows/${wf.id}/${wf.status === 'paused' ? 'resume' : 'pause'}`, wf.status === 'paused' ? 'Resume flow' : 'Pause flow', { return_to: `/app/workflows/${wf.id}` }, 'secondary')}<p>${wf.status === 'paused' ? 'New events are held for review while paused.' : 'Pausing holds new events for review.'}</p></div></details>`
     : `<span class="pill" data-state="${live[1]}"><span class="pill-dot"></span>${live[0]}</span>`
-  const bar = `${liveControl}${canPrepare ? `<a class="btn btn-secondary" href="?step=${encodeURIComponent(node.path)}&amp;tab=test">Test</a>` : ''}${canPrepare && wf.status === 'published' && graph.trigger.type === 'manual' ? `<details class="menu run-menu"><summary class="btn btn-secondary">Run now</summary><div class="menu-body"><form method="post" action="/app/action">${hidden('path', `/api/crank/workflows/${wf.id}/run`)}<label>Run input (JSON object)<textarea name="input" rows="4" spellcheck="false" required>{}</textarea></label><button class="btn btn-primary">Start run</button></form></div></details>` : ''}${owner ? (unpublished ? action(`/api/crank/workflows/${wf.id}/publish`, 'Publish', { return_to: `/app/workflows/${wf.id}` }) : '<button class="btn btn-primary" disabled title="The draft matches the live version">Published</button>') : ''}`
+  const bar = `${liveControl}${canPrepare ? `<a class="btn btn-secondary" href="?step=${encodeURIComponent(node.path)}&amp;tab=test">Test</a>` : ''}${canPrepare && wf.status === 'published' && graph.trigger.type === 'manual' ? `<details class="menu run-menu"><summary class="btn btn-secondary">Run now</summary><div class="menu-body"><form method="post" action="/app/action">${hidden('path', `/api/crank/workflows/${wf.id}/run`)}<label>Run input (JSON object)<textarea name="input" rows="4" spellcheck="false" required>{}</textarea></label><button class="btn btn-primary">Start run</button></form></div></details>` : ''}${owner ? (wf.restore ? '<a class="btn btn-secondary" href="#restore-review">Review restore</a>' : unpublished ? action(`/api/crank/workflows/${wf.id}/publish`, 'Publish', { return_to: `/app/workflows/${wf.id}` }) : '<button class="btn btn-primary" disabled title="The draft matches the live version">Published</button>') : ''}`
 
   const undo = (small = false) => d.previous && canPrepare ? action(`/api/crank/workflows/${wf.id}/draft`, 'Undo', { graph: JSON.stringify(d.previous.graph), return_to: `/app/workflows/${wf.id}` }, 'secondary', small ? 'btn-undo btn-small' : 'btn-undo') : ''
   const tools = `${d.previous ? `<a class="btn btn-secondary" href="?changes=1#changes">View changes</a>` : ''}${undo()}`
@@ -65,6 +66,6 @@ export function editorView(d: EditorData): { content: string; page: Page } {
   const head = `<div class="editor-head"><div class="editor-title"><h1>${esc(wf.name)}</h1>${unpublished && d.current ? chip('pending', 'Unpublished changes') : ''}${!d.current ? chip('draft', 'Draft') : ''}</div><div class="page-tools">${tools}</div>${wf.description ? `<p class="page-intro">${esc(wf.description)}</p>` : ''}</div>`
   const changes = d.params.get('changes') && d.current && d.previous ? changesPanel(d.current.graph, d.previous, changed, d.current.number) : ''
   const strip = runsStrip({ workflowId: wf.id, runs: d.runs, graphs: d.graphs, current: graph, live: d.current, connections: d.connections, today: d.today, q, status, selected: node.path })
-  const content = `<div class="editor"><div class="editor-main">${head}${changes}${canvas(graph, { workflowId: wf.id, connections: d.connections, runs: d.runs, selected: node.path, repaired, changedIn: d.current?.number ?? null, query })}${strip}</div><div class="editor-side">${inspector({ workflowId: wf.id, graph, live: d.current, node, tab, connections: d.connections, runs: d.runs, hooks: wf.hooks ?? [], canPrepare, preview: d.preview, sample, now: Date.now(), people: d.people })}${agentCard(d, changed, undo(true))}</div></div>`
+  const content = `<div class="editor"><div class="editor-main">${head}${owner ? restorePanel(wf) : ''}${changes}${canvas(graph, { workflowId: wf.id, connections: d.connections, runs: d.runs, selected: node.path, repaired, changedIn: d.current?.number ?? null, query })}${strip}</div><div class="editor-side">${inspector({ workflowId: wf.id, graph, live: d.current, node, tab, connections: d.connections, runs: d.runs, hooks: wf.hooks ?? [], canPrepare, preview: d.preview, sample, now: Date.now(), people: d.people })}${agentCard(d, changed, undo(true))}</div></div>`
   return { content, page: { editor: true, crumbs: [['Flows', '/app']], bar, approvals: d.approvals, section: 'Flows' } }
 }

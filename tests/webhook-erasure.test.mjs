@@ -89,7 +89,9 @@ test('TRIG-001: workflow erasure removes released event copies and decisions, su
       assert.deepEqual(auditAfter.map(row => restoredAudit.get(row.id)), auditAfter, 'snapshots preserve the anonymized chronology');
       assert.equal((await restored.get('workflows/' + workflow.id)).status, 'paused');
       const restoredUrl = await hookUrl(restored, workflow);
-      await restored.post(`workflows/${workflow.id}/resume`);
+      await restored.post(`workflows/${workflow.id}/resume`, {}, restored.owner, 409);
+      const review = (await restored.get(`workflows/${workflow.id}`)).restore;
+      await restored.post(`workflows/${workflow.id}/publish`, { restore_snapshot: review.snapshot, restore_decisions: {} }, restored.owner, 201);
       assert.equal((await deliver(restored, restoredUrl, envelope(event, input))).status, 409);
       assert.equal((await runs(restored, workflow)).length, 0);
       const fresh = await deliver(restored, restoredUrl, envelope('fresh-event', input));

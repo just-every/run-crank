@@ -1,17 +1,12 @@
-// No credentials or sessions travel. Restored flows need fresh human activation;
-// restored workflows arrive paused and their connections must be reconnected.
+import { fenceRow, validateRestore } from './restore-policy.mjs';
+
+// Credentials, receiving authority and active execution never travel.
 export default {
   product: 'automation/crank',
-  // Erasure fences are product data, including permanent webhook event markers.
   includeTables: ['crank_erased_webhook_events'],
   excludeTables: ['crank_request_admissions', 'crank_tokens', 'crank_authority_guards', 'crank_hooks', 'crank_oauth_apps', 'crank_oauth_states', 'crank_locks', 'crank_log_sinks', 'crank_ops_events'],
   secretColumns: { crank_connections: ['secret_iv', 'secret_ciphertext'] },
   requiredConfiguration: ['OWNER_EMAIL','SESSION_SECRET','AUTH_ORIGIN','MAIL_PROVIDER','MAIL_FROM','CRANK_TARGET_ORIGIN','CRANK_TARGET_TOKEN'],
-  exportRow(table,row) {
-    if (table === 'crank_flows') return {...row,status:'draft'};
-    if (table === 'crank_workflows') return {...row,status:row.status === 'draft' ? 'draft' : 'paused'};
-    if (table === 'crank_wf_runs') return {...row,continuation_authority:0};
-    if (table === 'crank_connections') return {...row,status:row.status === 'revoked' ? 'revoked' : 'needs_reconnect'};
-    return row;
-  },
+  exportRow: fenceRow,
+  validateStaged: validateRestore,
 };

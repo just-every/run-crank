@@ -34,14 +34,14 @@ export async function schedulerPass(env: CrankEnv, time = Date.now()) {
 /** Open holds remind their owner daily and, with an owner-chosen expiry, discard what remains. */
 async function holdUpkeep(env: CrankEnv, time: number) {
   const at = new Date(time).toISOString(), dayAgo = new Date(time - 86400000).toISOString()
-  const expired = await stmt(env, "SELECT id FROM crank_holds WHERE status='open' AND expires_at IS NOT NULL AND expires_at<=?", at).all<{ id: string }>()
+  const expired = await stmt(env, "SELECT id FROM crank_holds WHERE status='open' AND NOT EXISTS(SELECT 1 FROM crank_workflows w WHERE w.id=crank_holds.workflow_id AND json_extract(w.settings_json,'$.restore_pending')=1) AND expires_at IS NOT NULL AND expires_at<=?", at).all<{ id: string }>()
   for (const hold of expired.results) {
     await env.DB.batch([
       stmt(env, "UPDATE crank_hold_items SET status='discarded',decided_by='system:expiry',decided_at=? WHERE hold_id=? AND status='held'", at, hold.id),
       stmt(env, "UPDATE crank_holds SET status='closed',closed_at=? WHERE id=?", at, hold.id),
     ])
   }
-  const due = await stmt(env, "SELECT h.id,h.workflow_id,w.name FROM crank_holds h JOIN crank_workflows w ON w.id=h.workflow_id WHERE h.status='open' AND COALESCE(h.reminded_at,h.created_at)<=?", dayAgo).all<{ id: string; workflow_id: string; name: string }>()
+  const due = await stmt(env, "SELECT h.id,h.workflow_id,w.name FROM crank_holds h JOIN crank_workflows w ON w.id=h.workflow_id WHERE h.status='open' AND COALESCE(json_extract(w.settings_json,'$.restore_pending'),0)!=1 AND COALESCE(h.reminded_at,h.created_at)<=?", dayAgo).all<{ id: string; workflow_id: string; name: string }>()
   for (const hold of due.results) {
     await stmt(env, 'UPDATE crank_holds SET reminded_at=? WHERE id=?', at, hold.id).run()
     await notify(env, { key: `hold-reminder:${hold.id}:${at.slice(0, 10)}`, workflowId: hold.workflow_id, kind: 'hold_reminder', subject: `${hold.name}: held trigger events still need a decision`, text: 'Run all, run selected items or discard the held batch.', link: `/api/crank/holds/${hold.id}` })

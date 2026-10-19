@@ -49,7 +49,7 @@ export async function insertWait(env: CrankEnv, run: RunRow, path: string, spec:
 export async function resolveWait(env: CrankEnv, runId: string, path: string, resolution: unknown, decidedBy: string | null, extra: { digest?: string; at?: string; beforeExpiry?: boolean } = {}) {
   const at = extra.at ?? now()
   const results = await env.DB.batch([
-    stmt(env, `UPDATE crank_waits SET resolved_at=?,resolution_json=?,decided_by=? WHERE run_id=? AND path=? AND resolved_at IS NULL${extra.digest ? ' AND proposal_digest=?' : ''}${extra.beforeExpiry ? " AND kind='callback' AND (expires_at IS NULL OR expires_at>strftime('%Y-%m-%dT%H:%M:%fZ','now'))" : ''}`,
+    stmt(env, `UPDATE crank_waits SET resolved_at=?,resolution_json=?,decided_by=? WHERE run_id=? AND path=? AND resolved_at IS NULL AND NOT EXISTS(SELECT 1 FROM crank_wf_runs r WHERE r.id=crank_waits.run_id AND json_extract(r.error_json,'$.category')='restore_fence')${extra.digest ? ' AND proposal_digest=?' : ''}${extra.beforeExpiry ? " AND kind='callback' AND (expires_at IS NULL OR expires_at>strftime('%Y-%m-%dT%H:%M:%fZ','now'))" : ''}`,
       at, JSON.stringify(resolution), decidedBy, runId, path, ...(extra.digest ? [extra.digest] : [])),
     stmt(env, "UPDATE crank_wf_runs SET status='queued' WHERE id=? AND status IN ('waiting','awaiting_approval') AND EXISTS(SELECT 1 FROM crank_waits WHERE run_id=? AND path=? AND resolved_at=?)", runId, runId, path, at),
   ])

@@ -77,6 +77,10 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
       const input:Record<string,unknown> = {...form}
       if(form.input) { try {input.input=JSON.parse(form.input)} catch {return page('Invalid event','<p>Event input must be a JSON object.</p><a href="/app">Return to flows</a>',{},400)} }
       if(form.graph) { try {input.graph=JSON.parse(form.graph)} catch {return page('Invalid workflow','<p class="notice">The workflow graph must be JSON.</p><a href="/app">Return to flows</a>',{},400)} }
+      if(form.restore_snapshot) {
+        input.restore_decisions = Object.fromEntries(Object.entries(form).filter(([key]) => key.startsWith('restore_run_')).map(([key, value]) => [key.slice('restore_run_'.length), value]))
+        for (const key of Object.keys(input)) if (key.startsWith('restore_run_')) delete input[key]
+      }
       if(form.sink_token) { input.secret={token:form.sink_token}; delete input.sink_token }
       if(form.confirm_business_outcome==='true') input.confirm_business_outcome=true
       if(form.step_path!==undefined) { input.path=form.step_path; delete input.step_path }

@@ -4,6 +4,7 @@ import {createServer} from 'node:http';
 import {readFile} from 'node:fs/promises';
 import {harness,freePort} from './harness.mjs';
 import {publish} from './kit.mjs';
+import {restoreJourney} from './restore-journey.mjs';
 
 // Fake only the external receiver/network edge. Workerd, D1, auth and imports
 // run the application's real code, through HTTP requests.
@@ -107,7 +108,9 @@ test('n8n refuses unreviewed input, credential exports and changed or used targe
  const undone=await h.send(`/api/crank/imports/${job.id}/undo`,{},h.owner);assert.ok(undone.status>=400 || undone.value.state!=='undone');assert.ok((await h.get()).flows.some(x=>x.id===flow.id));
 });
 
-test('data export and restore preserve runs and journals, exclude credentials, and refuse nonempty or corrupt restores',async()=>{
+test('DATA-001: complete portable inventory, inactive restore, explicit per-run adoption and atomic refusal',async()=>{
+ await restoreJourney();
+ const archiveFlow=await h.flow('Archive fixture independent of test order');await h.run(archiveFlow);
  const exported=await h.send('/api/crank/data/export',{},h.owner);assert.equal(exported.status,200,exported.text);
  const lines=exported.text.trim().split('\n').map(JSON.parse),manifest=lines[0];assert.ok(!manifest.tables.some(x=>x.name==='crank_tokens'));assert.ok(!manifest.tables.some(x=>x.name==='oa_sessions'));
  const other=await harness(target);try{
