@@ -57,6 +57,8 @@ A graph's `settings` set its `timezone`, `burst_threshold` (1 to 10,000, default
 | POST `/workflows/:id/draft`, `/validate`, `/duplicate` | Owner, admin, agent | Edit or check a draft; validation names the step |
 | POST `/workflows/:id/publish`, `/pause`, `/resume` | Native/dev owner | Publish a new immutable version; pausing holds new events |
 | POST `/workflows/:id/run` | Owner, admin, agent | On-demand run `{input}` of the published version |
+| GET `/workflow-runs/:id/replay` | Native/dev owner | Digest-bound failed-step preview, retained input and prior effects; `linked_repair` mode for succeeded continue-on-error items |
+| POST `/workflow-runs/:id/replay` | Native/dev owner | Selected `paths` (1–100), preview `digest`, optional input `corrections` keyed by path; returns resumed run or linked repair |
 | POST `/workflows/:id/preview` | Owner, admin, agent | Run filters, paths and transforms on a manual sample; no effects |
 | POST `/workflows/:id/hooks` | Native/dev owner | New secret webhook URL, shown once; `{rotate:HOOK_ID,overlap_minutes}` rotates |
 | GET `/workflows/:id/trigger` | Person or agent | Poll state and log, schedule plan (`from`, `count`) and occurrences |

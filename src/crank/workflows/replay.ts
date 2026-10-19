@@ -5,6 +5,7 @@ import { canonical, digest, now, requireValue, stmt, type Actor, type CrankEnv }
 import { auditStatement } from '../ops/audit'
 import { pendingRestore } from './restore'
 import { runDetail } from './runs'
+import { createRepair, type ReplaySelection } from './repair'
 
 /** At most this many steps or items are replayed in one decision. */
 export const REPLAY_LIMIT = 100
@@ -17,21 +18,29 @@ const isItem = (row: Row) => row.type === 'loop' && /\/items\/\d+$/.test(row.pat
  * reconciliation (EXEC-006) and are never offered for blind replay. */
 export async function previewReplay(env: CrankEnv, actor: Actor, runId: string) {
   requireOwner(actor)
-  const run = await stmt(env, 'SELECT r.id,r.status,r.version_id,r.workflow_id,w.status AS workflow_status,w.owner_id FROM crank_wf_runs r JOIN crank_workflows w ON w.id=r.workflow_id WHERE r.id=?', runId)
-    .first<{ id: string; status: string; version_id: string; workflow_id: string; workflow_status: string; owner_id: string }>()
+  const run = await stmt(env, 'SELECT r.id,r.status,r.version_id,r.workflow_id,r.repair_paths_json,w.status AS workflow_status,w.owner_id FROM crank_wf_runs r JOIN crank_workflows w ON w.id=r.workflow_id WHERE r.id=?', runId)
+    .first<{ id: string; status: string; version_id: string; workflow_id: string; workflow_status: string; owner_id: string; repair_paths_json: string | null }>()
   requireValue(run, 'Run not found', 404)
   const rows = (await stmt(env, 'SELECT path,step_id,type,status,input_json,error_json,output_json,operation_key FROM crank_wf_steps WHERE run_id=? ORDER BY started_at,path', runId).all<Row>()).results
   const revisions = (await stmt(env, 'SELECT path,COUNT(*) AS count FROM crank_wf_step_revisions WHERE run_id=? GROUP BY path', runId).all<{ path: string; count: number }>()).results
   const count = new Map(revisions.map(r => [r.path, r.count]))
   const failedBelow = (row: Row) => rows.some(other => other.status === 'failed' && other.path.startsWith(row.path + '/'))
-  const eligible = run.status === 'failed' ? rows.filter(row => row.status === 'failed' && !isItem(row) && !failedBelow(row)) : []
+  const claimed = (await stmt(env, 'SELECT chosen.value AS path FROM crank_wf_runs repair,json_each(repair.repair_paths_json) chosen WHERE repair.repair_of=?', runId).all<{ path: string }>()).results.map(row => row.path)
+  const repairPaths: string[] | null = run.repair_paths_json ? JSON.parse(run.repair_paths_json) : null
+  const withinRepair = (path: string) => !repairPaths || repairPaths.some(selected => {
+    const item = selected.match(/^(.*\/items\/\d+)\//)?.[1]
+    return path === selected || !!item && path.startsWith(item + '/')
+  })
+  const eligible = ['failed', 'succeeded'].includes(run.status) ? rows.filter(row => row.status === 'failed' && !isItem(row) && !failedBelow(row)
+    && !parse(row.error_json)?.uncertain && withinRepair(row.path) && !claimed.includes(row.path)
+    && (run.status === 'failed' || /\/items\/\d+\//.test(row.path))) : []
   const preview = {
-    run_id: run.id, version_id: run.version_id, status: run.status, limit: REPLAY_LIMIT,
-    blocked_reason: run.status !== 'failed' ? 'Only a failed run can replay its failed steps.'
+    run_id: run.id, version_id: run.version_id, status: run.status, mode: run.status === 'succeeded' ? 'linked_repair' : 'resume', limit: REPLAY_LIMIT,
+    blocked_reason: !['failed', 'succeeded'].includes(run.status) ? 'Only a failed or succeeded run can replay eligible failed steps.'
       : run.workflow_status !== 'published' || pendingRestore(run) ? 'Publish (and adopt) the workflow before replaying its runs.' : null,
     eligible: eligible.map(row => ({ path: row.path, step_id: row.step_id, type: row.type, input: parse(row.input_json), error: parse(row.error_json), operation_key: row.operation_key,
       revisions: count.get(row.path) ?? 0, correctable: !['loop', 'paths'].includes(row.type) })),
-    uncertain: rows.filter(row => row.status === 'uncertain').map(row => ({ path: row.path, step_id: row.step_id, operation_key: row.operation_key, reconcile: 'Reconcile this write in its destination (EXEC-006); it is never replayed blindly.' })),
+    uncertain: rows.filter(row => row.status === 'uncertain' || parse(row.error_json)?.uncertain).map(row => ({ path: row.path, step_id: row.step_id, operation_key: row.operation_key, reconcile: 'Reconcile this write in its destination (EXEC-006); it is never replayed blindly.' })),
     completed_effects: rows.filter(row => row.status === 'succeeded' && !isItem(row) && !['loop', 'paths'].includes(row.type)).map(row => ({ path: row.path, step_id: row.step_id, type: row.type, operation_key: row.operation_key })),
   }
   return { ...preview, digest: await digest(canonical(preview)) }
@@ -52,13 +61,14 @@ export async function replaySteps(env: CrankEnv, actor: Actor, runId: string, in
   const rows = (await stmt(env, 'SELECT path,step_id,type,status,input_json,error_json,output_json,operation_key FROM crank_wf_steps WHERE run_id=?', runId).all<Row>()).results
   // Every statement repeats the run-state check, so a run that changed meanwhile is left untouched.
   const stillFailed = "EXISTS(SELECT 1 FROM crank_wf_runs WHERE id=? AND status='failed')"
-  const at = now(), statements: D1PreparedStatement[] = [], parents = new Set<string>()
+  const at = now(), statements: D1PreparedStatement[] = [], parents = new Set<string>(), selected: ReplaySelection[] = []
   for (const path of paths as string[]) {
     const step = byPath.get(path)
     requireValue(step, `${path} is not a failed step this run can replay`, 409)
     const corrected = Object.hasOwn(corrections, path)
     requireValue(!corrected || step.correctable && isObject((corrections as Record<string, unknown>)[path]), `Correct ${path} with an input object; loop and path steps are corrected at their source step`)
     const revision = step.revisions + 1, next = corrected ? JSON.stringify((corrections as Record<string, unknown>)[path]) : step.input === null ? null : JSON.stringify(step.input)
+    selected.push({ path, revision, input: next, operationKey: corrected ? `${step.operation_key.split('#r')[0]}#r${revision}` : step.operation_key, corrected })
     statements.push(
       stmt(env, `INSERT INTO crank_wf_step_revisions(run_id,path,revision,prior_input_json,prior_error_json,prior_operation_key,input_json,operation_key,corrected,created_by,created_at)
         SELECT run_id,path,?,input_json,error_json,operation_key,?,?,?,?,? FROM crank_wf_steps WHERE run_id=? AND path=? AND status='failed' AND ${stillFailed}`,
@@ -66,6 +76,11 @@ export async function replaySteps(env: CrankEnv, actor: Actor, runId: string, in
       stmt(env, `DELETE FROM crank_wf_steps WHERE run_id=? AND path=? AND status='failed' AND ${stillFailed}`, runId, path, runId),
     )
     for (const row of rows) if (path.startsWith(row.path + '/') && row.status === 'failed') parents.add(row.path)
+  }
+  if (preview.mode === 'linked_repair') {
+    const repairId = await createRepair(env, actor, runId, preview.version_id, selected)
+    await executeRun(env, repairId)
+    return runDetail(env, actor, repairId)
   }
   // A failed loop item restarts from its item ordinal; a failed loop or branch resumes
   // with its retained input, so completed items and branches are not repeated.

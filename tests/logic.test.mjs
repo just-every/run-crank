@@ -332,6 +332,47 @@ test('EXEC-004: preview and replay a failed step after restart, then selected fa
   assert.deepEqual([revision.prior_input.body.amount, revision.input.body.amount, revision.corrected], ['bad', '20.00', true], 'original and corrected inputs stay distinguishable');
   assert.notEqual(revision.operation_key, revision.prior_operation_key, 'a corrected input is a new revision with its own operation key');
   assert.equal(stepOf(run, 'orders').status, 'succeeded');
+  const continuing = await publish(h, 'Quarter-end invoices — continue past rejected rows', { trigger: { type: 'manual' }, steps: [
+    { id: 'orders', type: 'loop', max_items: 10, concurrency: 2, order: 'input', empty: 'error', item_errors: 'continue', input: { items: '{{trigger.input.orders}}' }, result: '{{steps.invoice.body.id}}',
+      steps: [post('invoice', 'invoice', { order: '{{item.order}}', amount: '{{item.amount}}' })] }, post('summary', 'summary') ] });
+  const completed = await startRun(h, continuing, { orders: [{ order: 'C-1', amount: '10.00' }, { order: 'C-2', amount: 'bad' }, { order: 'C-3', amount: 'bad' }] });
+  assert.equal(completed.status, 'succeeded'); assert.equal(sent('/summary').length, 1);
+  await h.restart();
+  const repairPreview = await h.get(`workflow-runs/${completed.id}/replay`);
+  assert.equal(repairPreview.mode, 'linked_repair'); assert.equal(repairPreview.blocked_reason, null);
+  assert.deepEqual(repairPreview.eligible.map(s => s.path).sort(), ['orders/items/1/invoice', 'orders/items/2/invoice']);
+  assert.ok(repairPreview.completed_effects.some(s => s.path === 'summary'));
+  const repairPath = 'orders/items/1/invoice', fix = { ...repairPreview.eligible.find(s => s.path === repairPath).input, body: { order: 'C-2', amount: '20.00' } };
+  const repairRequest = { paths: [repairPath], digest: repairPreview.digest, corrections: { [repairPath]: fix } };
+  await h.post(`workflow-runs/${completed.id}/replay`, { ...repairRequest, digest: 'stale' }, h.owner, 409);
+  const contenders = await Promise.all([h.send(`/api/crank/workflow-runs/${completed.id}/replay`, repairRequest, h.owner), h.send(`/api/crank/workflow-runs/${completed.id}/replay`, repairRequest, h.owner)]);
+  assert.deepEqual(contenders.map(r => r.status).sort(), [200, 409], 'EXEC-004: concurrent replay decisions create only one repair: ' + JSON.stringify(contenders.map(r => r.value)));
+  const repaired = contenders.find(r => r.status === 200).value;
+  assert.notEqual(repaired.id, completed.id); assert.equal(repaired.repair_of, completed.id); assert.deepEqual(repaired.repair_paths, [repairPath]);
+  assert.equal(repaired.version_id, completed.version_id); assert.equal(repaired.status, 'succeeded');
+  assert.equal(repaired.steps.find(s => s.path === 'orders/items/2/invoice').status, 'failed', 'unselected item stays failed');
+  const original = await h.get('workflow-runs/' + completed.id);
+  assert.equal(original.status, 'succeeded'); assert.deepEqual(original.steps, completed.steps, 'EXEC-004: source history and downstream results remain unchanged');
+  assert.deepEqual(original.repairs, [{ id: repaired.id, status: 'succeeded' }]);
+  assert.equal(sent('/summary').length, 1, 'EXEC-004: a repair never repeats a completed downstream effect');
+  assert.equal(sent('/invoice').filter(r => JSON.parse(r.body).order === 'C-1').length, 1);
+  assert.equal(sent('/invoice').filter(r => JSON.parse(r.body).order === 'C-2').length, 2);
+  assert.equal(sent('/invoice').filter(r => JSON.parse(r.body).order === 'C-3').length, 1);
+  assert.deepEqual([repaired.revisions[0].prior_input.body.amount, repaired.revisions[0].input.body.amount], ['bad', '20.00']);
+  assert.notEqual(repaired.revisions[0].operation_key, repaired.revisions[0].prior_operation_key);
+  assert.deepEqual((await h.get(`workflow-runs/${completed.id}/replay`)).eligible.map(s => s.path), ['orders/items/2/invoice']);
+  assert.deepEqual((await h.get(`workflow-runs/${repaired.id}/replay`)).eligible, [], 'unselected historical failures cannot be repaired again through a copied checkpoint');
+  const repairAudit = await h.get(`audit?kind=run&id=${repaired.id}`);
+  assert.ok(repairAudit.some(a => a.action === 'run.replay' && a.detail.repair_of === completed.id && a.actor_id === (original.version.published_by)));
+  // An uncorrected repair keeps the failed operation key as well as its retained bytes.
+  let allowRetry = false;
+  fake.routes.set('repair-retry.example', ({ headers }) => allowRetry ? jsonResponse({ id: 'repaired', key: headers['idempotency-key'] }) : jsonResponse({ error: 'not ready' }, 422));
+  const retryFlow = await publish(h, 'Retained failed item', { trigger: { type: 'manual' }, steps: [{ id: 'items', type: 'loop', max_items: 1, concurrency: 1, order: 'input', empty: 'error', item_errors: 'continue', input: { items: [{ order: 'D-1' }] }, result: '{{steps.send.body.id}}', steps: [{ id: 'send', type: 'http', input: { method: 'POST', url: 'https://repair-retry.example/orders', body: { order: '{{item.order}}' } } }] }] });
+  const retrySource = await startRun(h, retryFlow, {}), retryPreview = await h.get(`workflow-runs/${retrySource.id}/replay`);
+  allowRetry = true;
+  const retried = await h.post(`workflow-runs/${retrySource.id}/replay`, { paths: ['items/items/0/send'], digest: retryPreview.digest });
+  assert.equal(retried.status, 'succeeded'); assert.equal(retried.revisions[0].operation_key, retried.revisions[0].prior_operation_key);
+  assert.deepEqual(retried.revisions[0].input, retried.revisions[0].prior_input);
   // DATA-001 inherited: revisions travel in the portable archive and restore without replay authority.
   const exported = await archive(h), receiving = await harness('http://127.0.0.1:9', { edge: fake.edge });
   try {
@@ -339,6 +380,10 @@ test('EXEC-004: preview and replay a failed step after restart, then selected fa
     await receiving.post('data/restore', { archive: exported, confirm: 'RESTORE' });
     const restored = await receiving.get('workflow-runs/' + run.id);
     assert.deepEqual(restored.revisions, run.revisions, 'EXEC-004 revisions restore unchanged');
+    const restoredRepair = await receiving.get('workflow-runs/' + repaired.id);
+    assert.equal(restoredRepair.repair_of, completed.id); assert.deepEqual(restoredRepair.repair_paths, [repairPath]);
+    assert.deepEqual(restoredRepair.revisions, repaired.revisions);
+    assert.ok((await receiving.get(`workflow-runs/${completed.id}/replay`)).blocked_reason, 'restored repairs have no dispatch authority');
     assert.ok((await receiving.get('workflows')).every(w => ['paused', 'draft'].includes(w.status)), 'restored workflows stay inactive');
   } finally { await receiving.close(); }
   const audit = await h.get(`audit?kind=run&id=${run.id}`);

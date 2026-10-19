@@ -56,6 +56,8 @@ export async function runDetail(env: CrankEnv, actor: Actor, runId: string) {
   const parse = (value: string | null) => value === null ? null : JSON.parse(value)
   return {
     ...presentRun(run, payload),
+    repair_of: run.repair_of ?? null, repair_paths: payload && run.repair_paths_json ? JSON.parse(run.repair_paths_json) : null,
+    repairs: (await stmt(env, 'SELECT id,status FROM crank_wf_runs WHERE repair_of=? ORDER BY received_at,id', runId).all<{ id: string; status: string }>()).results,
     version: version ? { number: version.number, published_by: version.published_by, published_at: version.published_at, authority: 'published workflow', declared: payload ? JSON.parse(version.declared_json) : undefined } : null,
     steps: steps.results.map(s => ({ path: s.path, step_id: s.step_id, type: s.type, status: s.status, started_at: s.started_at, finished_at: s.finished_at, operation_key: s.operation_key,
       ...(payload ? { input: parse(s.input_json), output: parse(s.output_json), trace: parse(s.trace_json) } : {}), error: s.error_json ? (payload ? parse(s.error_json) : { category: parse(s.error_json).category, message: 'Details restricted for your role' }) : null })),

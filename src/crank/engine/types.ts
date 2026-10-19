@@ -22,6 +22,7 @@ export type StepResult =
   | { status: 'rejected'; reason: string }
 
 export interface RunRow {
+  repair_of?: string | null; repair_paths_json?: string | null
   id: string; workflow_id: string; version_id: string; trigger_kind: string; source_id: string | null; trigger_json: string
   status: string; source_time: string | null; received_at: string; started_at: string | null; finished_at: string | null
   lease_id: string | null; lease_expires_at: string | null; error_json: string | null; response_json: string | null; created_by: string; business_key: string | null
