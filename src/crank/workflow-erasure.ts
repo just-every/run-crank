@@ -46,3 +46,26 @@ export async function eraseWorkflowRun(env: CrankEnv, actor: Actor, portability:
   ])
   return service.deleteBlobs(prepared.operationId)
 }
+
+/** Erase one finished flow run (the original approval flows) through Base, with its event fence. */
+export async function eraseFlowRun(env: CrankEnv, actor: Actor, portability: PortabilityFence, runId: string) {
+  const row = await env.DB.prepare('SELECT r.*,f.status AS flow_status FROM crank_runs r JOIN crank_flows f ON f.id=r.flow_id WHERE r.id=?').bind(runId).first<{id:string;flow_id:string;event_id:string;state:string;flow_status:string}>()
+  requireValue(row,'Run not found.',404)
+  requireValue(row.flow_status === 'draft' && ['succeeded','failed','rejected'].includes(row.state),'Pause the flow and finish or reject this run before erasing it.',409)
+  const marker = await digest(row.event_id)
+  const service = createErasure({db:env.DB,portability,declarations:[defineErasure({
+    entity:'run',root:{table:'crank_runs'},
+    edges:[{table:'crank_approvals',from:'crank_runs',on:{run_id:'id'}},{table:'crank_attempts',from:'crank_runs',on:{run_id:'id'}}],
+    audit:[{table:'crank_audit',column:'subject_id',of:'crank_runs',where:"subject_kind='flow_run'",clear:{detail_json:'{}'}}],
+    retain:[{table:'crank_erased_events',reason:'An opaque event digest blocks redelivery of the erased event. The receiving app owns its existing effect.'}],
+    beforeStatements:async()=>[
+      env.DB.prepare("INSERT INTO crank_authority_guards(id,ok) SELECT 'erase:'||?,CASE WHEN EXISTS(SELECT 1 FROM crank_runs r JOIN crank_flows f ON f.id=r.flow_id WHERE r.id=? AND r.state IN ('succeeded','failed','rejected') AND f.status='draft') THEN 1 ELSE 0 END").bind(row.id,row.id),
+      env.DB.prepare('INSERT OR IGNORE INTO crank_erased_events(flow_id,event_digest) VALUES(?,?)').bind(row.flow_id,marker),
+    ],
+  })]})
+  const prepared = await service.nativeStatements('run',{id:row.id})
+  await guardedBatch(env,actor,'owner',[...prepared.statements.map(s=>env.DB.prepare(s.sql).bind(...s.params)),
+    env.DB.prepare("DELETE FROM crank_authority_guards WHERE id='erase:'||?").bind(row.id),
+    auditStatement(env,actor.id,'data.erase','erasure',prepared.operationId,{entity:'run'})])
+  return service.deleteBlobs(prepared.operationId)
+}

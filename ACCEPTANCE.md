@@ -40,7 +40,7 @@ Each item below is one clause’s acceptance evidence. The named journey must be
   Current evidence: `src/crank/data.ts`; `src/crank/archive-policy.mjs`; `tests/crank.test.mjs`; `docs/BACKUP-RESTORE.md`; `tests/connections.test.mjs`. Remaining: Whole-inventory restore proof.
 
 - **DATA-002 — Erasure, receipts and restoration fences. Status: partial.** Pause work and erase a terminal run/subject through Data; inspect histories, files, search and agent memory, attempt duplicate source readmission and restore its old archive with the later journal, then verify only value-free receipts/audit survive.
-  Current evidence: `src/crank/data.ts`; `src/crank/runs.ts`; `tests/crank.test.mjs`; `docs/BACKUP-RESTORE.md`. Remaining: Terminal run/approval/attempt erasure, event fence and later-journal refusal ship; subject/operator traversal and future file/index/agent data are not proven.
+  Current evidence: `src/crank/data.ts`; `src/crank/runs.ts`; `tests/crank.test.mjs`; `docs/BACKUP-RESTORE.md`. Remaining: operator erasure (ct-approved semantics, not built); file, index and agent-memory records arrive with WORK-009, AI-001 and AGENT-004. Subject erasure is asserted by `tests/webhook-erasure.test.mjs` (DATA-002).
 
 ### Migration and runnable site
 

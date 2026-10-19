@@ -88,6 +88,19 @@ installation. A downloaded archive is a separate copy: erasing a run cannot
 remove data from files you already downloaded. Handle those copies according to
 your own data retention requirements.
 
+## Erase everything about one person or key
+
+To erase every run that carries one identifier, such as a customer's email
+address or a business key, `POST /api/crank/data/subject` with
+`{"subject":"..."}` as the owner. The preview lists each matching workflow run
+and flow run (matched case-insensitively by business key, event id, or anywhere
+in the retained trigger, inputs and outputs) and names any that must first be
+finished or cancelled and whose workflow or flow must be paused. Then `POST
+/api/crank/data/erase` with `{"subject":"...","confirm":"ERASE","digest":"..."}`
+using the preview's digest. Each run is erased with its event fence and
+receipt, and the audit keeps one subject receipt with only a SHA-256 digest of
+the identifier.
+
 ## Recover an older backup after erasure
 
 Make a new export after erasure. When restoring an older backup into a different

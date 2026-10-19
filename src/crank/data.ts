@@ -1,13 +1,12 @@
 import { createPortability, readArchive, type Manifest, type Part, type Closing } from '@runeditrun/rer/internal/modules/portability/index.mjs'
-import { createErasure, defineErasure } from '@runeditrun/rer/internal/modules/erasure/index.mjs'
 import policy from './archive-policy.mjs'
 import { authorize, requireOwner, requireWriteOrigin, guardedBatch } from './access'
 import { body, type CrankEnv } from './model'
-import { eraseWorkflowRun } from './workflow-erasure'
+import { eraseFlowRun, eraseWorkflowRun } from './workflow-erasure'
+import { eraseSubject, previewSubject } from './subject-erasure'
 import { auditStatement } from './ops/audit'
 
 export const portability = (env: CrankEnv) => createPortability({ db:env.DB, policy })
-const digest = async (s:string) => Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s))),b=>b.toString(16).padStart(2,'0')).join('')
 
 export async function dataApi(request:Request,env:CrankEnv):Promise<Response|null> {
   const path = new URL(request.url).pathname
@@ -67,27 +66,16 @@ export async function dataApi(request:Request,env:CrankEnv):Promise<Response|nul
         if (value.confirm !== 'ERASE' || typeof value.workflow_run_id !== 'string' || !value.workflow_run_id || value.run_id !== undefined) return Response.json({error:'Confirm ERASE and select one workflow run.'},{status:400})
         return Response.json(await eraseWorkflowRun(env,actor,store,value.workflow_run_id),{headers:{'cache-control':'no-store'}})
       }
+      if (value.subject !== undefined) {
+        if (value.confirm !== 'ERASE' || typeof value.subject !== 'string' || typeof value.digest !== 'string') return Response.json({error:'Confirm ERASE with the subject and its preview digest.'},{status:400})
+        return Response.json(await eraseSubject(env,actor,store,value.subject,value.digest),{headers:{'cache-control':'no-store'}})
+      }
       if (value.confirm !== 'ERASE' || typeof value.run_id !== 'string') return Response.json({error:'Confirm ERASE and select a run.'},{status:400})
-      const row = await env.DB.prepare('SELECT r.*,f.status AS flow_status FROM crank_runs r JOIN crank_flows f ON f.id=r.flow_id WHERE r.id=?').bind(value.run_id).first<{id:string;flow_id:string;event_id:string;state:string;flow_status:string}>()
-      if (!row) return Response.json({error:'Run not found.'},{status:404})
-      if (row.flow_status !== 'draft' || !['succeeded','failed','rejected'].includes(row.state)) return Response.json({error:'Pause the flow and finish or reject this run before erasing it.'},{status:409})
-      const marker = await digest(row.event_id)
-      const service = createErasure({db:env.DB,portability:store,declarations:[defineErasure({
-        entity:'run',root:{table:'crank_runs'},
-        edges:[{table:'crank_approvals',from:'crank_runs',on:{run_id:'id'}},{table:'crank_attempts',from:'crank_runs',on:{run_id:'id'}}],
-        audit:[{table:'crank_audit',column:'subject_id',of:'crank_runs',where:"subject_kind='flow_run'",clear:{detail_json:'{}'}}],
-        retain:[{table:'crank_erased_events',reason:'An opaque event digest blocks redelivery of the erased event. The receiving app owns its existing effect.'}],
-        beforeStatements:async()=>[
-          env.DB.prepare("INSERT INTO crank_authority_guards(id,ok) SELECT 'erase:'||?,CASE WHEN EXISTS(SELECT 1 FROM crank_runs r JOIN crank_flows f ON f.id=r.flow_id WHERE r.id=? AND r.state IN ('succeeded','failed','rejected') AND f.status='draft') THEN 1 ELSE 0 END").bind(row.id,row.id),
-          env.DB.prepare('INSERT OR IGNORE INTO crank_erased_events(flow_id,event_digest) VALUES(?,?)').bind(row.flow_id,marker),
-        ],
-      })]})
-      const prepared = await service.nativeStatements('run',{id:row.id})
-      await guardedBatch(env,actor,'owner',[...prepared.statements.map(s=>env.DB.prepare(s.sql).bind(...s.params)),
-        env.DB.prepare("DELETE FROM crank_authority_guards WHERE id='erase:'||?").bind(row.id),
-        auditStatement(env,actor.id,'data.erase','erasure',prepared.operationId,{entity:'run'})])
-      const receipt = await service.deleteBlobs(prepared.operationId)
-      return Response.json(receipt,{headers:{'cache-control':'no-store'}})
+      return Response.json(await eraseFlowRun(env,actor,store,value.run_id),{headers:{'cache-control':'no-store'}})
+    }
+    if (path === '/api/crank/data/subject' && request.method === 'POST') {
+      const value = await body(request)
+      return Response.json(await previewSubject(env,value.subject),{headers:{'cache-control':'no-store'}})
     }
     return Response.json({error:'Not found'},{status:404})
   } catch(error:any) {
