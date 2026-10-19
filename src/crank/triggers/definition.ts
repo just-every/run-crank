@@ -5,6 +5,8 @@ import { StepError } from '../engine/errors'
 import { isObject } from '../engine/values'
 import { SIGNATURE_PRESETS } from './signatures'
 
+/** TRIG-007: what a URL poll's header and query values may map. */
+export const POLL_FIELDS = ['poll.since', 'poll.now', 'poll.interval_minutes']
 /** TRIG-004: 1, 2, 5, 15, 30 and 60 minutes, or whole hours up to a day; no plan gate. */
 export const POLL_INTERVALS = [1, 2, 5, 15, 30, 60]
 export const DAYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']
@@ -69,6 +71,13 @@ export function validateTrigger(trigger: Record<string, unknown>) {
       if ((trigger.items_path === undefined) === (trigger.xpath === undefined) && trigger.items_path !== '') fail('choose items_path (JSON) or xpath (XML/HTML)')
       if (trigger.dedup !== undefined && typeof trigger.dedup !== 'string') fail('dedup must be a field path or $digest')
       if (trigger.pagination !== undefined && (!isObject(trigger.pagination) || !['cursor', 'page', 'link'].includes(trigger.pagination.kind as string))) fail('pagination.kind must be cursor, page or link')
+      for (const field of ['headers', 'query'] as const) {
+        const values = trigger[field]
+        if (values === undefined) continue
+        if (!isObject(values) || Object.values(values).some(v => !['string', 'number', 'boolean'].includes(typeof v))) fail(`${field} must map names to text, number or boolean values`)
+        for (const v of Object.values(values as Record<string, unknown>)) for (const [, path] of String(v).matchAll(/\{\{\s*([^}]*?)\s*\}\}/g))
+          if (!POLL_FIELDS.includes(path)) fail(`${field} values may map only ${POLL_FIELDS.map(f => '{{' + f + '}}').join(', ')}`)
+      }
       interval(trigger); backfill(trigger)
       return
     }

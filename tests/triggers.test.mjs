@@ -127,6 +127,24 @@ test('TRIG-007: URL polls follow cursor pages with a bearer connection, dedup on
   assert.equal(state.poll.last_status, 'error'); assert.equal(state.poll.last_cause, 'refused address');
   assert.ok(!fake.requests.some(r => r.url.hostname === '169.254.169.254'), 'no request past the refusal');
   assert.ok(h.mail.slice(before).some(m => /trigger poll failed/.test(m.subject)), 'owner notice');
+  const sinceSeen = [];
+  fake.routes.set('changes.example', ({ url, headers }) => {
+    sinceSeen.push({ since: url.searchParams.get('since'), limit: url.searchParams.get('limit'), started: headers['x-poll-started'] });
+    return url.pathname === '/huge.xml' ? new Response('<r>' + '<a/>'.repeat(200001) + '</r>', { headers: { 'content-type': 'application/xml' } }) : jsonResponse([{ id: 'c' + sinceSeen.length }]);
+  });
+  const changes = await publish(h, 'Changes since', { trigger: { type: 'url_poll', url: 'https://changes.example/changes', items_path: '', query: { since: '{{poll.since}}', limit: 50 }, headers: { 'x-poll-started': '{{poll.now}}' }, interval_minutes: 1, backfill: 'existing' }, steps: [] });
+  const first = time += MINUTE; await h.tick(first);
+  await h.tick(time += MINUTE);
+  const [one, two] = sinceSeen;
+  assert.deepEqual([one.since, one.limit], [null, '50'], 'TRIG-007: the first poll has no since; literal values pass through');
+  assert.equal(two.since, one.started, 'TRIG-007: {{poll.since}} maps the last successful poll start'); assert.ok(Date.parse(one.started));
+  const unmapped = await h.send('/api/crank/workflows', { name: 'Unmapped', graph: { trigger: { type: 'url_poll', url: 'https://changes.example/changes', items_path: '', headers: { authorization: '{{trigger.token}}' }, interval_minutes: 1 }, steps: [] } }, h.owner);
+  assert.equal(unmapped.status, 422); assert.match(unmapped.text, /poll\.since/);
+  const huge = await publish(h, 'Huge document', { trigger: { type: 'url_poll', url: 'https://changes.example/huge.xml', xpath: '//a', interval_minutes: 1, backfill: 'existing' }, steps: [] });
+  await h.tick(time += MINUTE);
+  const bounded = (await h.get(`workflows/${huge.id}/trigger`)).poll;
+  assert.equal(bounded.last_status, 'error'); assert.match(bounded.last_error, /too many nodes/, 'TRIG-007: parsing stops at its node bound with a visible error');
+  assert.equal((await runs(h, huge)).length, 0); void changes;
   mode = 'malformed';
   await h.tick(time += MINUTE);
   assert.match((await h.get(`workflows/${w.id}/trigger`)).poll.last_error, /JSON|parsed/);
