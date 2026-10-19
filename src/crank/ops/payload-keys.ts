@@ -1,7 +1,7 @@
 import { guardedBatch, requireOwner } from '../access'
 import { open as openVault, seal as sealVault } from '../connections/vault'
 import { CrankError, id, now, requireValue, stmt, type Actor, type CrankEnv } from '../model'
-import { auditStatement } from './audit'
+import { auditStatement, auditStatementWhen } from './audit'
 
 /** DATA-003 key custody (ct 19 Oct 17:42Z). Each installation holds one active AES-256-GCM
  * key per sealed data class; its raw material is sealed under the installation secret, the
@@ -46,7 +46,10 @@ export const forgetKey = (keyId: string) => derived.delete(keyId)
 
 async function keyInsert(env: CrankEnv, dataClass: string, status: 'active' | 'retiring', origin: 'created' | 'imported', createdBy: string, raw: Uint8Array, keyId: string = id()) {
   const sealed = await sealVault(env, binding(keyId), b64(raw))
-  return { keyId, statement: stmt(env, 'INSERT INTO crank_payload_keys(id,data_class,status,origin,sealed_iv,sealed_key,created_by,created_at,retired_at) VALUES(?,?,?,?,?,?,?,?,?) ON CONFLICT DO NOTHING',
+  // An imported key whose material this installation already destroyed is restored for reading.
+  return { keyId, statement: stmt(env, `INSERT INTO crank_payload_keys(id,data_class,status,origin,sealed_iv,sealed_key,created_by,created_at,retired_at) VALUES(?,?,?,?,?,?,?,?,?)
+    ON CONFLICT(id) DO UPDATE SET status='retiring',sealed_iv=excluded.sealed_iv,sealed_key=excluded.sealed_key,retired_at=excluded.retired_at,destroyed_at=NULL
+    WHERE excluded.status='retiring' AND crank_payload_keys.sealed_key IS NULL AND crank_payload_keys.data_class=excluded.data_class ON CONFLICT DO NOTHING`,
     keyId, dataClass, status, origin, sealed.iv, sealed.ciphertext, createdBy, now(), status === 'retiring' ? now() : null) }
 }
 
@@ -56,7 +59,7 @@ export async function activeKey(env: CrankEnv, dataClass: string): Promise<Paylo
   let row = await stmt(env, "SELECT id FROM crank_payload_keys WHERE data_class=? AND status='active'", dataClass).first<{ id: string }>()
   if (!row) {
     const created = await keyInsert(env, dataClass, 'active', 'created', SYSTEM_KEYS, crypto.getRandomValues(new Uint8Array(32)))
-    await env.DB.batch([created.statement, auditStatement(env, SYSTEM_KEYS, 'data.key_create', 'data_key', created.keyId, { data_class: dataClass })])
+    await env.DB.batch([created.statement, auditStatementWhen(env, 'EXISTS(SELECT 1 FROM crank_payload_keys WHERE id=?)', [created.keyId], SYSTEM_KEYS, 'data.key_create', 'data_key', created.keyId, { data_class: dataClass })])
     row = await stmt(env, "SELECT id FROM crank_payload_keys WHERE data_class=? AND status='active'", dataClass).first<{ id: string }>()
   }
   const key = await loadKey(env, row!.id)
@@ -149,7 +152,7 @@ export async function importKeyFile(env: CrankEnv, actor: Actor, input: Record<s
     keys = JSON.parse(new TextDecoder().decode(plain))
   } catch { throw new CrankError(400, 'The passphrase does not open this key file') }
   requireValue(Array.isArray(keys) && keys.every(k => typeof k.id === 'string' && SEALED_CLASSES.includes(k.data_class) && typeof k.raw === 'string'), 'This is not a Crank key file')
-  const held = new Set((await stmt(env, 'SELECT id FROM crank_payload_keys').all<{ id: string }>()).results.map(r => r.id))
+  const held = new Set((await stmt(env, 'SELECT id FROM crank_payload_keys WHERE sealed_key IS NOT NULL').all<{ id: string }>()).results.map(r => r.id))
   const fresh = keys.filter(k => !held.has(k.id))
   const inserts = await Promise.all(fresh.map(k => keyInsert(env, k.data_class, 'retiring', 'imported', actor.id, unb64(k.raw), k.id)))
   await guardedBatch(env, actor, 'owner', [...inserts.map(i => i.statement), auditStatement(env, actor.id, 'data.key_import', 'data_key', 'file', { keys: fresh.map(k => k.id) })])
