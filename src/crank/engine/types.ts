@@ -2,6 +2,9 @@ import type { CrankEnv } from '../model'
 import type { Scope } from './mapping'
 
 export type Step = Record<string, unknown> & { id: string; type: string }
+export type ExecutionOutcome =
+  | { kind: 'completed' } | { kind: 'stopped'; reason: 'filter' | 'search' } | { kind: 'waiting'; approval: boolean }
+  | { kind: 'paused'; reason: string; connectionId?: string } | { kind: 'failed'; error: unknown } | { kind: 'rejected'; reason: string }
 export interface WaitSpec {
   kind: 'delay' | 'callback' | 'queue' | 'approval'
   dueAt?: string | null; expiresAt?: string | null; proposal?: unknown; reason?: string; queue?: { name: string; spacingSeconds: number }

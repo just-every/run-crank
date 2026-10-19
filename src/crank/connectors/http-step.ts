@@ -1,3 +1,4 @@
+import { paginate, validatePagination } from './pagination'
 import { authorizeRequest } from '../connections/auth'
 import { fromBase64 } from './files'
 import { evaluate, validateGroups, type Groups } from '../engine/conditions'
@@ -102,6 +103,7 @@ export const httpRequest: StepType = {
     if (step.body_kind !== undefined && !['json', 'form', 'multipart', 'xml', 'raw'].includes(step.body_kind as string)) throw new StepError('validation', `HTTP ${step.id}: body_kind must be json, form, multipart, xml or raw`)
     if (isObject(step.success) && step.success.when !== undefined) validateGroups(step.success.when, `HTTP ${step.id} success`)
     if (step.timeout_ms !== undefined && (!Number.isInteger(step.timeout_ms) || (step.timeout_ms as number) < 100 || (step.timeout_ms as number) > 30000)) throw new StepError('validation', `HTTP ${step.id}: timeout_ms must be 100 to 30000`)
+    validatePagination(step)
     if (step.readback !== undefined && (!isObject(step.readback) || step.readback.url === undefined)) throw new StepError('validation', `HTTP ${step.id}: readback needs a url, path and equals`)
   },
   async execute(step, ctx) {
@@ -109,6 +111,7 @@ export const httpRequest: StepType = {
     if (typeof input.url !== 'string') throw new StepError('mapping', `HTTP ${step.id}: url is required`, { field: 'url' })
     const url = checkEgress(input.url)
     if (isObject(input.query)) for (const [key, value] of Object.entries(input.query)) if (value !== undefined && value !== null) url.searchParams.set(key, textOf(value) ?? JSON.stringify(value))
+    if (isObject(step.pagination) && step.pagination.kind === 'page') url.searchParams.set(String(step.pagination.param ?? 'page'), String(step.pagination.start ?? 1))
     const headers = new Headers({ accept: 'application/json, application/xml;q=0.9, text/plain;q=0.8, */*;q=0.5' })
     if (isObject(input.headers)) for (const [name, value] of Object.entries(input.headers)) {
       if (SECRET_HEADER.test(name)) throw new StepError('validation', `Put credentials in a connection, not header ${name}`)
@@ -151,39 +154,7 @@ export const httpRequest: StepType = {
       const category = business ? 'business' : response!.status === 401 || response!.status === 403 ? 'auth' : response!.status === 429 ? 'rate_limit' : 'provider'
       throw new StepError(category, `HTTP ${step.id}: ${business ? 'business failure' : 'request failed'} with status ${response!.status}`, { status: response!.status, body })
     }
-    if (!mutating && isObject(step.pagination)) return { status: 'succeeded', output: { ...result, ...await paginate(ctx, step, prepared, connectionId, body, response!) } }
+    if (!mutating && isObject(step.pagination)) return { status: 'succeeded', output: { ...result, ...await paginate(step, prepared.url, body, response!, url => send(ctx, step, { ...prepared, url }, connectionId), parseBody) } }
     return { status: 'succeeded', output: result }
   },
-}
-
-async function paginate(ctx: StepContext, step: Record<string, unknown>, first: Prepared, connectionId: string | undefined, body: unknown, response: BoundedResponse) {
-  const spec = step.pagination as Record<string, unknown>, itemsPath = typeof spec.items_path === 'string' ? spec.items_path : ''
-  const maxPages = Math.min(Number(spec.max_pages ?? 10), 50)
-  const itemsOf = (value: unknown) => { const found = itemsPath ? lookup(value, itemsPath) : { found: true, value }; return Array.isArray(found.value) ? found.value : [] }
-  const items = [...itemsOf(body)]
-  let pages = 1, current = body, currentResponse = response, page = Number(spec.start ?? 1)
-  while (pages < maxPages) {
-    const url = new URL(first.url)
-    if (spec.kind === 'cursor') {
-      const cursor = lookup(current, String(spec.cursor_path)).value
-      if (cursor === undefined || cursor === null || cursor === '') break
-      url.searchParams.set(String(spec.param ?? 'cursor'), String(cursor))
-    } else if (spec.kind === 'page') {
-      if (!itemsOf(current).length) break
-      page++; url.searchParams.set(String(spec.param ?? 'page'), String(page))
-    } else if (spec.kind === 'link') {
-      const next = /<([^>]+)>\s*;\s*rel="?next"?/i.exec(currentResponse.headers.get('link') ?? '')
-      if (!next) break
-      const target = new URL(next[1], first.url)
-      if (target.origin !== first.url.origin) throw new StepError('egress', 'A pagination link left the API origin')
-      url.href = target.href
-    } else throw new StepError('validation', 'pagination.kind must be cursor, page or link')
-    currentResponse = await send(ctx, step, { ...first, url }, connectionId)
-    if (currentResponse.status < 200 || currentResponse.status > 299) throw new StepError('provider', `Pagination request failed with status ${currentResponse.status}`, { status: currentResponse.status })
-    current = parseBody(currentResponse); pages++
-    const more = itemsOf(current)
-    if (spec.kind === 'page' && !more.length) break
-    items.push(...more)
-  }
-  return { items, pages }
 }

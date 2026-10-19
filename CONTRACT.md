@@ -787,8 +787,8 @@ Judged from the code and tests at commit `06ace84667d83032ec41a8a210a5084cd0c854
 | Clauses | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
 | Published | 4 | 8 | 0 | 12 |
-| Target and push further | 2 | 33 | 38 | 73 |
-| All | 6 | 41 | 38 | 85 |
+| Target and push further | 3 | 33 | 37 | 73 |
+| All | 7 | 41 | 37 | 85 |
 
 MIG-006, BASE-004 and BASE-005 were added on 17 October 2026 so every homepage claim has a clause, and were judged from the code and tests at `eac16196cffe508a1eec962b1c116564707c1598` (main after the run site landed); every earlier row keeps its status from the commit above.
 
@@ -796,7 +796,7 @@ MIG-006, BASE-004 and BASE-005 were added on 17 October 2026 so every homepage c
 | --- | --- | --- | --- | --- | --- |
 | `WORK-001` | Visual multi-step workspace | published | partial | `src/crank/ui/flows.ts`; `src/crank/flows.ts`; `tests/crank.test.mjs`; `src/crank/workflows/store.ts`; `src/crank/engine/graph.ts` | No visual node-and-edge editor, no sample data on edges (WORK-014), no picker-filled steps (CONN-019). |
 | `WORK-002` | Mapping, formatting and conditional routes | target | partial | `src/crank/engine/mapping.ts`; `src/crank/engine/transforms/index.ts`; `src/crank/connectors/files.ts`; `tests/logic.test.mjs`; `tests/connections.test.mjs` | Connector schema validation; HubSpot, Square and QuickBooks line-item read/write and Drive upload readback need accounts (HubSpot, Square, QuickBooks sandbox, Typeform, Google Drive). |
-| `WORK-003` | Loops, joins and batch processing | target | missing |  | No delivered product workflow. |
+| `WORK-003` | Loops, joins and batch processing | target | done | `src/crank/engine/loop.ts`; `src/crank/engine/graph.ts`; `src/crank/engine/executor.ts`; `src/crank/engine/steps/join.ts`; `src/crank/connectors/pagination.ts`; `tests/batch.test.mjs`; `tests/pagination.test.mjs` (WORK-003) |  |
 | `WORK-004` | Durable delay and event waits | target | done | `src/crank/engine/steps/flow.ts`; `src/crank/engine/records.ts`; `src/crank/ops/delay-queues.ts`; `src/crank/ops/scheduler.ts`; `src/crank/triggers/callbacks.ts`; `tests/logic.test.mjs` (`WORK-004`: storage interruption, concurrent release, restart, DST, expiry and cancellation) | |
 | `WORK-005` | Isolated code steps and external executors | target | missing |  | No delivered product workflow. |
 | `WORK-006` | Reusable subflows and recipes | target | missing |  | No delivered product workflow. |

@@ -4,9 +4,10 @@ import { slackSteps } from '../../connectors/slack'
 import type { StepType } from '../types'
 import { filter, map, respond, transform } from './core'
 import { approval, delay, waitForCallback } from './flow'
+import { join } from './join'
 
 /** Every step a published version may declare; `paths` groups are handled by the executor. */
 export const STEP_TYPES: Record<string, StepType> = {
-  filter, transform, map, respond, delay, wait_for_callback: waitForCallback, approval,
+  filter, transform, map, respond, delay, wait_for_callback: waitForCallback, approval, join,
   http: httpRequest, 'file.fetch': fileFetch, ...slackSteps,
 }

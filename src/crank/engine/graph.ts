@@ -3,6 +3,7 @@ import { validateGroups } from './conditions'
 import { requireZone } from './dates'
 import { StepError } from './errors'
 import { STEP_TYPES } from './steps'
+import { validateLoop } from './loop'
 import type { Step } from './types'
 import { isObject } from './values'
 
@@ -25,14 +26,17 @@ export function validateGraph(value: unknown): Validation {
   if (settings.run_columns !== undefined && (!Array.isArray(settings.run_columns) || settings.run_columns.length > 4 || settings.run_columns.some(c => !isObject(c) || typeof c.label !== 'string' || !c.label || c.label.length > 40 || c.value === undefined))) throw new StepError('validation', 'settings.run_columns lists up to 4 {label, value} columns shown beside each run')
   if (value.trigger.name !== undefined && !named(value.trigger.name)) throw new StepError('validation', 'trigger.name is text of at most 80 characters')
   const warnings: string[] = [], declared: Declared = { steps: [], connections: [] }, ids = new Set<string>()
+  let expanded = 0
   validateTrigger(value.trigger)
   if (typeof value.trigger.connection_id === 'string') declared.connections.push(value.trigger.connection_id)
   if (typeof value.trigger.signing_connection_id === 'string') declared.connections.push(value.trigger.signing_connection_id)
   if (isObject(value.trigger.header_auth) && typeof value.trigger.header_auth.connection_id === 'string') declared.connections.push(value.trigger.header_auth.connection_id)
-  const walk = (steps: unknown[], prefix: string, depth: number) => {
+  const walk = (steps: unknown[], prefix: string, depth: number, expansion = 1) => {
     steps.forEach((raw, index) => {
       if (!isObject(raw) || typeof raw.id !== 'string' || typeof raw.type !== 'string') throw new StepError('validation', `${prefix || 'steps'}[${index}] needs an id and a type`)
       const step = raw as Step
+      expanded += expansion
+      if (expanded > 10000) throw new StepError('validation', 'Workflow loop bounds allow at most 10000 expanded step invocations')
       if (!/^[a-z][a-z0-9_]{0,39}$/.test(step.id)) throw new StepError('validation', `Step id ${step.id} must be lower case letters, digits and underscores`)
       if (ids.has(step.id)) throw new StepError('validation', `Step id ${step.id} is used twice`)
       if (step.id === 'trigger') throw new StepError('validation', 'trigger is reserved')
@@ -41,11 +45,17 @@ export function validateGraph(value: unknown): Validation {
       if (ids.size > MAX_STEPS) throw new StepError('validation', `A workflow has at most ${MAX_STEPS} steps`)
       if (step.on_error !== undefined && !['stop', 'continue'].includes(step.on_error as string)) throw new StepError('validation', `Step ${step.id}: on_error must be stop or continue`)
       const path = prefix + step.id
+      if (step.type === 'loop') {
+        if (depth > PATH_LIMITS.depth) throw new StepError('validation', `Loops and paths nest at most ${PATH_LIMITS.depth} levels`)
+        validateLoop(step)
+        declared.steps.push({ path, id: step.id, type: step.type })
+        walk(step.steps as unknown[], `${path}/items/*/`, depth + 1, expansion * Number(step.max_items))
+        return
+      }
       if (step.type === 'paths') {
-        if (index !== steps.length - 1) throw new StepError('validation', `Path group ${step.id} must be the last step of its branch`)
         validatePaths(step, depth, warnings)
         declared.steps.push({ path, id: step.id, type: step.type })
-        for (const branch of branchesOf(step)) walk(branch.steps, `${path}/${branch.id}/`, depth + 1)
+        for (const branch of branchesOf(step)) walk(branch.steps, `${path}/${branch.id}/`, depth + 1, expansion)
         return
       }
       const type = STEP_TYPES[step.type]

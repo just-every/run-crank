@@ -8,15 +8,13 @@ import { compare, parseDecimal } from './decimal'
 import { requireZone } from './dates'
 import { StepError } from './errors'
 import { branchesOf, type Graph } from './graph'
+import { executeLoop } from './loop'
 import { requireFields, resolve, type Scope } from './mapping'
 import { deleteRecord, getWfRun, insertWait, loadRecords, loadWaits, saveRecord, type StepRecord } from './records'
 import { STEP_TYPES } from './steps'
-import type { RunRow, Step, StepContext, StepResult, WaitRow } from './types'
+import type { ExecutionOutcome as Outcome, RunRow, Step, StepContext, StepResult, WaitRow } from './types'
 import { isObject } from './values'
 
-type Outcome =
-  | { kind: 'completed' } | { kind: 'stopped'; reason: 'filter' | 'search' } | { kind: 'waiting'; approval: boolean }
-  | { kind: 'paused'; reason: string; connectionId?: string } | { kind: 'failed'; error: unknown } | { kind: 'rejected'; reason: string }
 const LEASE_MS = 5 * 60000
 
 export async function resumeToken(env: CrankEnv, runId: string, path: string) {
@@ -37,25 +35,45 @@ class Execution {
     this.records = records; this.waits = waits
     this.zone = requireZone(this.graph.settings?.timezone ?? settings.timezone)
     this.caps = settings.caps
-    const resumeUrls: Record<string, string> = {}
-    const collect = (steps: Step[], prefix: string) => steps.forEach(step => {
-      if (step.type === 'wait_for_callback') resumeUrls[step.id] = prefix + step.id
-      if (step.type === 'paths') for (const branch of branchesOf(step)) collect(branch.steps, `${prefix}${step.id}/${branch.id}/`)
-    })
-    collect(this.graph.steps, '')
-    for (const [stepId, path] of Object.entries(resumeUrls)) resumeUrls[stepId] = new URL('/hooks/resume/' + await resumeToken(this.env, this.run.id, path), this.env.AUTH_ORIGIN).href
-    this.scope = { trigger: JSON.parse(this.run.trigger_json), steps: {}, run: { id: this.run.id, workflow_id: this.run.workflow_id, version_id: this.run.version_id, received_at: this.run.received_at, resume_urls: resumeUrls } }
+    this.scope = { trigger: JSON.parse(this.run.trigger_json), steps: {}, run: { id: this.run.id, workflow_id: this.run.workflow_id, version_id: this.run.version_id, received_at: this.run.received_at, resume_urls: {} } }
+    await this.callbacks(this.graph.steps, '')
   }
 
-  private save(step: Step, path: string, status: StepRecord['status'], extra: { input?: unknown; output?: unknown; trace?: unknown; error?: unknown }) {
+  private async callbacks(steps: Step[], prefix: string) {
+    const resumeUrls = { ...(this.scope.run.resume_urls as Record<string, string>) }
+    const paths: Record<string, string> = {}
+    const collect = (steps: Step[], prefix: string) => steps.forEach(step => {
+      if (step.type === 'wait_for_callback') paths[step.id] = prefix + step.id
+      if (step.type === 'paths') for (const branch of branchesOf(step)) collect(branch.steps, `${prefix}${step.id}/${branch.id}/`)
+    })
+    collect(steps, prefix)
+    for (const [stepId, path] of Object.entries(paths)) resumeUrls[stepId] = new URL('/hooks/resume/' + await resumeToken(this.env, this.run.id, path), this.env.AUTH_ORIGIN).href
+    this.scope.run.resume_urls = resumeUrls
+  }
+
+  async fork(steps: Step[], prefix: string, item: unknown, index: number) {
+    const child = new Execution(this.env, this.run, this.lease, this.graph, this.time)
+    child.records = this.records; child.waits = this.waits; child.zone = this.zone; child.caps = this.caps
+    child.scope = { ...this.scope, item, item_index: index, steps: { ...this.scope.steps }, run: { ...this.scope.run } }
+    await child.callbacks(steps, prefix)
+    return child
+  }
+
+  async save(step: Step, path: string, status: StepRecord['status'], extra: { input?: unknown; output?: unknown; trace?: unknown; error?: unknown }) {
     const previous = this.records.get(path)
-    return saveRecord(this.env, this.run, this.lease, { run_id: this.run.id, path, step_id: step.id, type: step.type, status, started_at: previous?.started_at ?? new Date(this.time).toISOString(), finished_at: ['running', 'waiting'].includes(status) ? null : now(), operation_key: previous?.operation_key ?? `${this.run.id}:${path}`, ...extra })
+    const record = { run_id: this.run.id, path, step_id: step.id, type: step.type, status, started_at: previous?.started_at ?? new Date(this.time).toISOString(), finished_at: ['running', 'waiting'].includes(status) ? null : now(), operation_key: previous?.operation_key ?? `${this.run.id}:${path}` }
+    await saveRecord(this.env, this.run, this.lease, { ...record, ...extra })
+    const encode = (value: unknown) => value === undefined ? null : JSON.stringify(value)
+    this.records.set(path, { ...record, input_json: extra.input === undefined ? previous?.input_json ?? null : encode(extra.input), output_json: encode(extra.output), trace_json: encode(extra.trace), error_json: encode(extra.error) })
   }
 
   async walk(steps: Step[], prefix: string): Promise<Outcome> {
     for (const step of steps) {
+      // Renew before another action; a stale executor must not begin new effects.
+      const held = await stmt(this.env, "UPDATE crank_wf_runs SET lease_expires_at=? WHERE id=? AND lease_id=? AND status='running' RETURNING id", new Date(Date.now() + LEASE_MS).toISOString(), this.run.id, this.lease).first<{ id: string }>()
+      if (!held) throw new StepError('uncertain', 'The execution lease changed; no further action was started', { uncertain: true })
       const path = prefix + step.id
-      const outcome = step.type === 'paths' ? await this.paths(step, path) : await this.step(step, path)
+      const outcome = step.type === 'paths' ? await this.paths(step, path) : step.type === 'loop' ? await executeLoop(step, path, this) : await this.step(step, path)
       if (outcome.kind !== 'completed') return outcome
     }
     return { kind: 'completed' }
@@ -63,11 +81,16 @@ class Execution {
 
   private async step(step: Step, path: string): Promise<Outcome> {
     const type = STEP_TYPES[step.type], record = this.records.get(path)
+    // HTTP's registry entry supports writes, but a statically declared read is
+    // safe to repeat after interruption. Never reclassify a retained write.
+    const method = isObject(step.input) ? String(step.input.method ?? 'GET').toUpperCase() : 'GET'
+    const priorMethod = record?.input_json ? String(JSON.parse(record.input_json).method ?? 'GET').toUpperCase() : method
+    const mutating = type.mutating && !(step.type === 'http' && ['GET', 'HEAD'].includes(method) && ['GET', 'HEAD'].includes(priorMethod))
     const output = (r: StepRecord) => r.output_json ? JSON.parse(r.output_json) : null
     if (record?.status === 'succeeded' || record?.status === 'skipped' || (record?.status === 'failed' && step.on_error === 'continue')) { this.scope.steps[step.id] = output(record); return { kind: 'completed' } }
     if (record?.status === 'stopped') { const value = output(record); return value?.rejected ? { kind: 'rejected', reason: value.reason } : { kind: 'stopped', reason: value?.reason ?? 'filter' } }
     if (record?.status === 'failed' || record?.status === 'uncertain') return { kind: 'failed', error: record.error_json ? JSON.parse(record.error_json) : { category: 'uncertain' } }
-    if (record?.status === 'running' && type.mutating) {
+    if (record?.status === 'running' && mutating) {
       await this.save(step, path, 'uncertain', { error: { category: 'uncertain', message: 'Interrupted during a remote write; check the destination before replaying' } })
       return { kind: 'failed', error: { category: 'uncertain', message: 'Interrupted during a remote write' } }
     }
@@ -79,25 +102,26 @@ class Execution {
       respond: async response => { await stmt(this.env, 'UPDATE crank_wf_runs SET response_json=? WHERE id=? AND lease_id=?', JSON.stringify(response), this.run.id, this.lease).run() },
     }
     try {
-      input = (resolve(step.input ?? {}, this.scope) ?? {}) as Record<string, unknown>
+      input = record?.input_json ? JSON.parse(record.input_json) : (resolve(step.input ?? {}, this.scope) ?? {}) as Record<string, unknown>
       ctx.input = input
       let result: StepResult
       if (record?.status === 'waiting' && wait?.resolved_at && type.resume) {
         result = await type.resume(step, { ...ctx, wait })
       } else {
         if (type.required) requireFields(input, type.required, step.id)
-        if (type.mutating) {
+        if (mutating) {
           const capped = await this.cap(step, path, input, wait)
           if (capped) return capped
         }
         if (typeof step.connection_id === 'string') await credential(this.env, step.connection_id)
-        if (type.mutating) await this.save(step, path, 'running', { input })
+        if (mutating) await this.save(step, path, 'running', { input })
         result = await type.execute(step, ctx)
       }
       return await this.settle(step, path, input, result)
     } catch (error) {
       if (error instanceof StepError && error.category === 'connection') {
         await deleteRecord(this.env, this.run, path)
+        this.records.delete(path)
         return { kind: 'paused', reason: error.message, connectionId: String(error.detail.connection_id ?? '') }
       }
       const failure = error instanceof StepError ? error.toJSON() : { category: 'provider', message: `Step ${step.id} failed unexpectedly` }
@@ -226,7 +250,13 @@ export async function executeRun(env: CrankEnv, runId: string, time = Date.now()
   if (outcome.kind === 'waiting' && outcome.approval) status = 'awaiting_approval'
   const terminal = !['waiting', 'awaiting_approval', 'paused'].includes(status)
   const error = outcome.kind === 'failed' ? outcome.error : outcome.kind === 'paused' ? { category: 'connection', message: outcome.reason, connection_id: outcome.connectionId, reconnect: true } : outcome.kind === 'rejected' ? { category: 'rejected', message: outcome.reason } : null
-  await stmt(env, 'UPDATE crank_wf_runs SET status=?,finished_at=?,error_json=?,lease_id=NULL,lease_expires_at=NULL WHERE id=? AND lease_id=?', status, terminal ? now() : null, error ? JSON.stringify(error) : null, runId, lease).run()
+  // A callback/approval can resolve while another item is still running. Queue
+  // only waits whose child checkpoint remains waiting, so old completed waits
+  // cannot spin an otherwise parked run.
+  await stmt(env, `UPDATE crank_wf_runs SET status=CASE WHEN ? IN ('waiting','awaiting_approval') AND EXISTS(
+    SELECT 1 FROM crank_waits w JOIN crank_wf_steps s ON s.run_id=w.run_id AND s.path=w.path
+    WHERE w.run_id=crank_wf_runs.id AND w.resolved_at IS NOT NULL AND s.status='waiting'
+  ) THEN 'queued' ELSE ? END,finished_at=?,error_json=?,lease_id=NULL,lease_expires_at=NULL WHERE id=? AND lease_id=?`, status, status, terminal ? now() : null, error ? JSON.stringify(error) : null, runId, lease).run()
   const settled = (await getWfRun(env, runId))!
   await afterSettle(env, settled)
   return settled

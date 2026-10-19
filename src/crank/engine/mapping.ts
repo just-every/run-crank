@@ -3,7 +3,7 @@ import { runTransform } from './transforms'
 import { isObject, kindOf, lookup, textOf } from './values'
 
 /** What a mapping can read: the trigger payload, earlier step outputs and run facts. */
-export interface Scope { trigger: unknown; steps: Record<string, unknown>; run: Record<string, unknown>; item?: unknown }
+export interface Scope { trigger: unknown; steps: Record<string, unknown>; run: Record<string, unknown>; item?: unknown; item_index?: number }
 const TOKEN = /\{\{\s*([A-Za-z_][\w.\-[\]]*)\s*\}\}/g
 
 export function read(scope: Scope, path: string) { return lookup(scope, path) }

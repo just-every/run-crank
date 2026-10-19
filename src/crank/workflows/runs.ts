@@ -77,6 +77,10 @@ function stepAt(graph: Graph, path: string): Step | null {
     const step = steps.find(s => s.id === parts[i])
     if (!step) return null
     if (i === parts.length - 1) return step
+    if (step.type === 'loop') {
+      if (parts[i+1] !== 'items' || !/^(0|[1-9][0-9]*)$/.test(parts[i+2] ?? '') || !Array.isArray(step.steps)) return null
+      steps = step.steps as Step[]; i += 2; continue
+    }
     const branch = branchesOf(step).find(b => b.id === parts[i + 1])
     if (!branch) return null
     steps = branch.steps; i++
