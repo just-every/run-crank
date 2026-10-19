@@ -9,6 +9,7 @@ import { cappedProposal } from './caps'
 import { claimQueuedRun } from './queue'
 import { requireZone } from './dates'
 import { StepError } from './errors'
+import { liveTestProposal } from './test-authority'
 import { branchesOf, type Graph } from './graph'
 import { executeLoop } from './loop'
 import { requireFields, resolve, type Scope } from './mapping'
@@ -165,8 +166,10 @@ class Execution {
    * pauses only an out-of-cap action for approval of its exact input. */
   private async cap(step: Step, path: string, input: Record<string, unknown>, wait?: WaitRow): Promise<Outcome | null> {
     const capped = cappedProposal(step, input, this.scope, (await workspaceSettings(this.env)).caps)
-    if (!capped) return null
-    const {proposal, reason} = capped
+    const liveTest = await liveTestProposal(this.env, this.run, step, input)
+    if (!capped && !liveTest) return null
+    const proposal = { ...capped?.proposal, ...liveTest?.proposal }
+    const reason = [capped?.reason, liveTest?.reason].filter(Boolean).join('; ')
     if (!wait) {
       await insertWait(this.env, this.run, path, { kind: 'approval', proposal, reason })
       await this.save(step, path, 'waiting', { input })

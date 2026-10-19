@@ -71,6 +71,11 @@ export async function validateRestore({ read }) {
     const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(version.graph_json));
     if (Array.from(new Uint8Array(hash), byte => byte.toString(16).padStart(2, '0')).join('') !== version.graph_digest) return false;
   }
+  for (const draft of await rows('crank_workflow_drafts')) {
+    if (!workflows.has(draft.workflow_id) || draft.base_version_id && versions.get(draft.base_version_id)?.workflow_id !== draft.workflow_id) return false;
+    const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(draft.graph_json));
+    if (Array.from(new Uint8Array(hash), byte => byte.toString(16).padStart(2, '0')).join('') !== draft.graph_digest) return false;
+  }
   for (const run of await rows('crank_wf_runs')) if (!workflows.has(run.workflow_id) || versions.get(run.version_id)?.workflow_id !== run.workflow_id) return false;
   // These product links predate foreign-key declarations; validate them explicitly.
   for (const [child, column, parent] of [

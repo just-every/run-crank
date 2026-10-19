@@ -9,6 +9,7 @@ import { open, seal } from './vault'
 
 export interface ConnectionRow {
   id: string; app: string; label: string; auth_kind: AuthKind; account_name: string; domains_json: string; scopes_json: string
+  purpose: 'production' | 'test'
   secret_iv: string | null; secret_ciphertext: string | null; expires_at: string | null
   status: 'active' | 'revoked' | 'needs_reconnect'; created_by: string; created_at: string; rotated_at: string | null; revoked_at: string | null; consented_at: string | null
 }
@@ -16,7 +17,7 @@ export type Secret = Record<string, string>
 
 /** Public view: never any credential material. */
 export function present(row: ConnectionRow) {
-  return { id: row.id, app: row.app, label: row.label, auth_kind: row.auth_kind, account_name: row.account_name, domains: JSON.parse(row.domains_json), scopes: JSON.parse(row.scopes_json), status: row.status, expires_at: row.expires_at, created_by: row.created_by, created_at: row.created_at, rotated_at: row.rotated_at, revoked_at: row.revoked_at, consented_at: row.consented_at }
+  return { id: row.id, app: row.app, purpose: row.purpose, label: row.label, auth_kind: row.auth_kind, account_name: row.account_name, domains: JSON.parse(row.domains_json), scopes: JSON.parse(row.scopes_json), status: row.status, expires_at: row.expires_at, created_by: row.created_by, created_at: row.created_at, rotated_at: row.rotated_at, revoked_at: row.revoked_at, consented_at: row.consented_at }
 }
 const binding = (row: { id: string; app: string }) => `crank-connection:${row.id}:${row.app}`
 
@@ -56,12 +57,14 @@ export async function createConnection(env: CrankEnv, actor: Actor, input: Recor
   requireValue(definition.kinds.includes(kind), `${definition.name} connections accept ${definition.kinds.join(', ')}`)
   const secret = validateSecret(kind, input.secret), row = { id: id(), app }
   const sealed = await seal(env, binding(row), secret), at = now()
+  requireValue(input.purpose === undefined || ['production', 'test'].includes(String(input.purpose)), 'purpose must be production or test')
   const scopes = granted.scopes ?? (Array.isArray(input.scopes) ? input.scopes.map(String) : [])
   await guardedBatch(env, actor, 'owner', [
     stmt(env, `INSERT INTO crank_connections(id,app,label,auth_kind,account_name,domains_json,scopes_json,secret_iv,secret_ciphertext,expires_at,status,created_by,created_at,consented_at)
       VALUES(?,?,?,?,?,?,?,?,?,?,'active',?,?,?)`, row.id, app, text(input.label, 'label'), kind, granted.account ?? (typeof input.account_name === 'string' ? input.account_name.slice(0, 200) : ''),
       JSON.stringify(domains(app, input.domains)), JSON.stringify(scopes), sealed.iv, sealed.ciphertext, granted.expiresAt ?? secret.expires_at ?? null, actor.id, at, at),
-    auditStatement(env, actor.id, 'connection.create', 'connection', row.id, { app, auth_kind: kind, scopes }),
+    stmt(env, 'UPDATE crank_connections SET purpose=? WHERE id=?', input.purpose ?? 'production', row.id),
+    auditStatement(env, actor.id, 'connection.create', 'connection', row.id, { app, auth_kind: kind, scopes, purpose: input.purpose ?? 'production' }),
   ])
   return present(await getConnection(env, row.id))
 }
@@ -117,4 +120,16 @@ export const REDACTED = '[redacted]'
 export function assertNoSecret(value: unknown, secret: Secret) {
   const textValue = JSON.stringify(value)
   for (const part of Object.values(secret)) if (part.length >= 8 && textValue.includes(part)) throw new CrankError(500, 'A credential would have been exposed')
+}
+
+/** WORK-008: only the owner declares an account to be a test connection. */
+export async function setConnectionPurpose(env: CrankEnv, actor: Actor, connectionId: string, input: Record<string, unknown>) {
+  requireOwner(actor)
+  requireValue(input.purpose === 'production' || input.purpose === 'test', 'purpose must be production or test')
+  await getConnection(env, connectionId)
+  await guardedBatch(env, actor, 'owner', [
+    stmt(env, 'UPDATE crank_connections SET purpose=? WHERE id=?', input.purpose, connectionId),
+    auditStatement(env, actor.id, 'connection.purpose', 'connection', connectionId, { purpose: input.purpose }),
+  ])
+  return present(await getConnection(env, connectionId))
 }

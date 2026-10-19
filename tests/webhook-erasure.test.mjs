@@ -202,6 +202,7 @@ test('DATA-002: subject erasure previews every run carrying one identifier, wait
     const link = h.mail.findLast(m => m.to.includes(email)).html.match(/href="([^"]*\/auth\/confirm\?token=[^"]+)"/)[1].replaceAll('&amp;', '&');
     const leaver = (await h.send('/auth/confirm', { token: new URL(link, h.origin).searchParams.get('token') })).cookie, leaverId = (await h.get('state', leaver)).actor.id;
     const prepared = await h.post('flows', { name: 'Prepared by a leaver', source_app: 'Support desk', destination_app: 'Inbox', target_url: target + '/events' }, leaver, 201);
+    const preparedDraft = await h.post('workflows', { name: 'Draft prepared by a leaver', graph: { trigger: { type: 'manual' }, steps: [{ id: 'summary', type: 'map', input: { label: 'Retained draft parameters' } }] } }, leaver, 201);
     await h.post('data/erase', { operator_id: leaverId, confirm: 'ERASE' }, h.owner, 409);
     await h.post('data/erase', { operator_id: (await h.get()).actor.id, confirm: 'ERASE' }, h.owner, 409);
     assert.equal((await h.send('/auth/operator/status', { operatorId: leaverId, status: 'inactive' }, h.owner)).status, 200);
@@ -216,6 +217,7 @@ test('DATA-002: subject erasure previews every run carrying one identifier, wait
     const people = (await h.send('/auth/operators', undefined, h.owner)).text;
     assert.ok(!people.includes(email) && !people.includes('Leaving Builder'), 'email address and display name are removed');
     await h.get('state', leaver, 401);
+    assert.ok((await h.get('workflows/' + preparedDraft.id)).draft_versions.every(draft => draft.author === label), 'WORK-008 / DATA-002: immutable draft attribution is anonymized without losing the graph');
     const later = await snapshot(h);
     assert.ok(!later.includes(leaverId) && !later.includes(email), 'DATA-002: archives carry only the label');
     await h.post('data/erase', { operator_id: leaverId, confirm: 'ERASE' }, h.owner, 409);

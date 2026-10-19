@@ -6,7 +6,7 @@ import { stmt, type CrankEnv } from '../model'
 export async function executionQueue(env: CrankEnv, workflow: string | null, team: string | null, time: number) {
   const filter = `FROM crank_wf_runs r JOIN crank_workflows w ON w.id=r.workflow_id
     LEFT JOIN crank_ops_teams t ON t.workflow_id=w.id LEFT JOIN oa_operators o ON o.id=w.owner_id
-    WHERE r.status IN ('queued','running','waiting','awaiting_approval','paused','failed')
+    WHERE r.mode='production' AND r.status IN ('queued','running','waiting','awaiting_approval','paused','failed')
     AND (?1 IS NULL OR w.id=?1) AND (?2 IS NULL OR COALESCE(t.team,'Unassigned')=?2)`
   const state = `CASE WHEN r.status='failed' THEN 'dead_letter' WHEN r.status IN ('awaiting_approval','paused') THEN 'waiting' ELSE r.status END`
   const [counts, rows] = await Promise.all([

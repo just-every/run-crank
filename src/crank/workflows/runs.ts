@@ -21,7 +21,7 @@ import { getWorkflow } from './store'
 export const canReadPayload = (actor: Actor) => actor.role === 'owner' || actor.role === 'admin' || actor.kind === 'agent'
 const BUSINESS_COMPLETE = `status='succeeded' AND EXISTS(SELECT 1 FROM crank_obligations o WHERE o.run_id=crank_wf_runs.id) AND NOT EXISTS(SELECT 1 FROM crank_obligations o WHERE o.run_id=crank_wf_runs.id AND o.verified_at IS NULL) AND NOT EXISTS(SELECT 1 FROM crank_wf_steps s WHERE s.run_id=crank_wf_runs.id AND (s.status='uncertain' OR COALESCE(json_extract(s.error_json,'$.category'),'')='uncertain'))`
 function presentRun(run: RunRow & { business_complete?: number }, payload: boolean) {
-  const base = { id: run.id, workflow_id: run.workflow_id, version_id: run.version_id, trigger_kind: run.trigger_kind, business_outcome: run.business_complete ? 'owner_verified' : 'unverified', status: run.business_complete ? 'business_complete' : run.status === 'failed' && run.error_json && JSON.parse(run.error_json).category === 'uncertain' ? 'uncertain' : run.status, business_key: run.business_key,
+  const base = { id: run.id, mode: run.mode ?? 'production', workflow_id: run.workflow_id, version_id: run.version_id, trigger_kind: run.trigger_kind, business_outcome: run.business_complete ? 'owner_verified' : 'unverified', status: run.business_complete ? 'business_complete' : run.status === 'failed' && run.error_json && JSON.parse(run.error_json).category === 'uncertain' ? 'uncertain' : run.status, business_key: run.business_key,
     source_id: payload ? run.source_id : null, source_time: run.source_time, received_at: run.received_at, started_at: run.started_at, finished_at: run.finished_at,
     latency_ms: run.started_at ? Date.parse(run.started_at) - Date.parse(run.received_at) : null, error: run.error_json ? (payload ? JSON.parse(run.error_json) : { category: JSON.parse(run.error_json).category, message: 'Details restricted for your role' }) : null }
   return payload ? { ...base, trigger: JSON.parse(run.trigger_json), response: run.response_json ? JSON.parse(run.response_json) : null } : { ...base, payload: 'restricted' }
@@ -49,7 +49,7 @@ export async function runDetail(env: CrankEnv, actor: Actor, runId: string) {
   const [steps, waits, version, attempts, revisions] = await Promise.all([
     stmt(env, 'SELECT * FROM crank_wf_steps WHERE run_id=? ORDER BY started_at,path', runId).all<Record<string, string | null>>(),
     stmt(env, 'SELECT path,kind,due_at,expires_at,proposal_json,proposal_digest,reason,created_at,resolved_at,resolution_json,decided_by FROM crank_waits WHERE run_id=? ORDER BY created_at', runId).all<Record<string, string | null>>(),
-    stmt(env, 'SELECT number,published_by,published_at,declared_json FROM crank_workflow_versions WHERE id=?', run.version_id).first<{ number: number; published_by: string; published_at: string; declared_json: string }>(),
+    stmt(env, 'SELECT number,mode,published_by,published_at,declared_json FROM crank_workflow_versions WHERE id=?', run.version_id).first<{ number: number; mode: string; published_by: string; published_at: string; declared_json: string }>(),
     stmt(env, 'SELECT * FROM crank_wf_attempts WHERE run_id=? ORDER BY path,number', runId).all<any>(),
     stmt(env, 'SELECT * FROM crank_wf_step_revisions WHERE run_id=? ORDER BY path,revision', runId).all<any>(),
   ])
@@ -58,7 +58,7 @@ export async function runDetail(env: CrankEnv, actor: Actor, runId: string) {
     ...presentRun(run, payload),
     repair_of: run.repair_of ?? null, repair_paths: payload && run.repair_paths_json ? JSON.parse(run.repair_paths_json) : null,
     repairs: (await stmt(env, 'SELECT id,status FROM crank_wf_runs WHERE repair_of=? ORDER BY received_at,id', runId).all<{ id: string; status: string }>()).results,
-    version: version ? { number: version.number, published_by: version.published_by, published_at: version.published_at, authority: 'published workflow', declared: payload ? JSON.parse(version.declared_json) : undefined } : null,
+    version: version ? { number: version.number, published_by: version.published_by, published_at: version.published_at, authority: version.mode === 'test' ? 'owner-authorized draft test' : 'published workflow', declared: payload ? JSON.parse(version.declared_json) : undefined } : null,
     steps: steps.results.map(s => ({ path: s.path, step_id: s.step_id, type: s.type, status: s.status, started_at: s.started_at, finished_at: s.finished_at, operation_key: s.operation_key,
       ...(payload ? { input: parse(s.input_json), output: parse(s.output_json), trace: parse(s.trace_json) } : {}), error: s.error_json ? (payload ? parse(s.error_json) : { category: parse(s.error_json).category, message: 'Details restricted for your role' }) : null })),
     // EXEC-004: each replay keeps the replaced attempt beside the input the next attempt used.
@@ -73,7 +73,7 @@ export async function runDetail(env: CrankEnv, actor: Actor, runId: string) {
 export async function runsToday(env: CrankEnv, workflowId: string) {
   const workflow = await getWorkflow(env, workflowId), graph = JSON.parse(workflow.draft_json) as Graph
   const zone = requireZone(graph.settings?.timezone ?? (await workspaceSettings(env)).timezone), since = new Date(startOfDay(Date.now(), zone)).toISOString()
-  const row = await stmt(env, `SELECT COUNT(*) AS runs, SUM(status='failed' AND COALESCE(json_extract(error_json,'$.category'),'')!='uncertain') AS failed, SUM(status='awaiting_approval') AS awaiting_approval FROM crank_wf_runs WHERE workflow_id=? AND received_at>=?`, workflowId, since).first<{ runs: number; failed: number | null; awaiting_approval: number | null }>()
+  const row = await stmt(env, `SELECT COUNT(*) AS runs, SUM(status='failed' AND COALESCE(json_extract(error_json,'$.category'),'')!='uncertain') AS failed, SUM(status='awaiting_approval') AS awaiting_approval FROM crank_wf_runs WHERE workflow_id=? AND mode='production' AND received_at>=?`, workflowId, since).first<{ runs: number; failed: number | null; awaiting_approval: number | null }>()
   return { since, timezone: zone, runs: row?.runs ?? 0, failed: row?.failed ?? 0, awaiting_approval: row?.awaiting_approval ?? 0 }
 }
 

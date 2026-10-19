@@ -5,7 +5,7 @@ import { canonical } from '../../model'
 
 export interface Connection { id: string; app: string; label: string; status: string; domains: string[]; account_name: string }
 export interface StepRecord { path: string; step_id: string; type: string; status: string; started_at: string; finished_at: string | null; input?: unknown; output?: unknown; error?: any; trace?: unknown; operation_key?: string }
-export interface RunDetail { repair_of?: string | null; repairs?: { id: string; status: string }[]; id: string; workflow_id: string; version_id: string; status: string; trigger_kind: string; business_key: string | null; received_at: string; started_at: string | null; finished_at: string | null; error: any; trigger?: unknown; steps: StepRecord[]; attempts?: any[]; waits: any[]; business_outcome?: string; source_id?: string | null; source_time?: string | null; version: { number: number; published_by?: string; published_at?: string; authority?: string; declared?: unknown } | null }
+export interface RunDetail { mode?: 'production' | 'test'; repair_of?: string | null; repairs?: { id: string; status: string }[]; id: string; workflow_id: string; version_id: string; status: string; trigger_kind: string; business_key: string | null; received_at: string; started_at: string | null; finished_at: string | null; error: any; trigger?: unknown; steps: StepRecord[]; attempts?: any[]; waits: any[]; business_outcome?: string; source_id?: string | null; source_time?: string | null; version: { number: number; published_by?: string; published_at?: string; authority?: string; declared?: unknown } | null }
 export interface Version { number: number; graph: Graph; published_at: string; published_by: string }
 
 /** One card on the canvas: the trigger, a step, or a path group with its branches. */
@@ -51,7 +51,7 @@ export function appOf(node: Node, connections: Connection[]): { title: string; t
 
 /** How a run started, in words: "Stripe webhook", "Run now", "Schedule". */
 export function triggerWords(kind: string, graph: Graph | undefined, connections: Connection[]) {
-  const words: Record<string, string> = { webhook: 'Webhook', manual: 'Run now', historical: 'Historical run', schedule: 'Schedule', feed: 'New feed item', url_poll: 'URL poll', slack_event: 'Slack event' }
+  const words: Record<string, string> = { webhook: 'Webhook', manual: 'Run now', test: 'Draft test', historical: 'Historical run', schedule: 'Schedule', feed: 'New feed item', url_poll: 'URL poll', slack_event: 'Slack event' }
   const app = graph ? appOf({ path: 'trigger', step: null, trigger: graph.trigger }, connections).title : ''
   if (kind === 'webhook' && app && app !== TRIGGERS.webhook) return `${app} webhook`
   return words[kind] ?? titleCase(kind.replace(/_/g, ' '))

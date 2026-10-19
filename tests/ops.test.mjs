@@ -3,7 +3,7 @@ import {createHash, createHmac} from 'node:crypto';
 import {readFile} from 'node:fs/promises';
 import {after, before, test} from 'node:test';
 import {harness} from './harness.mjs';
-import {connection, door, doorImport, fakeEdge, fakeSecret, jsonResponse, publish, startRun} from './kit.mjs';
+import {connection, door, doorImport, fakeEdge, fakeSecret, jsonResponse, publish, startRun, stepOf} from './kit.mjs';
 
 const fake = fakeEdge();
 let h;
@@ -12,6 +12,66 @@ before(async () => {
   h = await harness('http://127.0.0.1:9', {edge:fake.edge});
 });
 after(async () => {if(h) await h.close()});
+
+test('WORK-008: draft tests retain labelled history without production reports, notices or automatic pause counts', async () => {
+  const settings = await h.get('settings');
+  await h.post('settings',{auto_pause:{enabled:true,min_runs:3,failure_rate:0.5,window_hours:24}});
+  try {
+    const graph = {trigger:{type:'manual'},steps:[
+      {id:'eligible',type:'filter',when:[[{field:'trigger.input.amount',op:'number.gt',value:0}]]},
+      {id:'summary',type:'map',input:{customer:'{{trigger.input.customer}}'}},
+    ]};
+    const workflow = await h.post('workflows',{name:'Draft settlement checks',graph},h.owner,201);
+    const before = await h.get('workflows/'+workflow.id), mails = h.mail.length;
+    const testDraft = input => h.post(`workflows/${workflow.id}/test`,{input,bindings:{}},h.owner,201);
+    const passed = await testDraft({amount:100,customer:'Harbor Workshop'});
+    assert.equal(passed.mode,'test'); assert.equal(passed.status,'succeeded');
+    assert.deepEqual(stepOf(passed,'summary').output,{customer:'Harbor Workshop'});
+    const stopped = await testDraft({amount:0,customer:'Harbor Workshop'});
+    assert.equal(stopped.status,'stopped_by_filter'); assert.equal(stepOf(stopped,'summary'),undefined);
+    await h.post('reports/obligations',{run_id:passed.id,key:'test-only',description:'Sample settlement evidence'},h.owner,201);
+    await h.post(`workflows/${workflow.id}/draft`,{graph:{trigger:{type:'manual'},steps:[
+      {id:'divide',type:'transform',fn:'number.divide',input:{a:10,b:'{{trigger.input.divisor}}'}},
+    ]}});
+    const failures = [];
+    for (let i=0;i<3;i++) {
+      const failed = await testDraft({divisor:0});
+      assert.equal(failed.mode,'test'); assert.equal(failed.status,'failed'); failures.push(failed);
+    }
+    const after = await h.get('workflows/'+workflow.id);
+    assert.equal(after.status,before.status); assert.equal(after.published_version_id,before.published_version_id);
+    assert.equal(h.mail.length,mails,'draft failures send no operational email');
+    assert.deepEqual((await h.get('notices')).filter(n=>n.workflow_id===workflow.id),[]);
+    const history = (await h.get('workflow-runs?workflow='+workflow.id)).runs;
+    assert.equal(history.length,5); assert.ok(history.every(r=>r.mode==='test'));
+    assert.equal((await h.get('workflow-runs/'+failures[0].id)).mode,'test');
+    let report = await h.get('reports/operations?workflow='+workflow.id);
+    assert.equal(report.summary.runs,0); assert.equal(report.today.runs,0);
+    assert.equal(report.summary.run_latency.count,0); assert.equal(report.summary.trigger_to_start.count,0);
+    assert.equal(report.summary.outstanding_obligations,0); assert.deepEqual(report.obligations,[]);
+    assert.equal(report.execution_queue.depth,0); assert.deepEqual(report.execution_queue.runs,[]);
+    const latency = (await h.get('reports/latency?workflow='+workflow.id)).workflows[0];
+    assert.deepEqual(latency.outcomes,{}); assert.equal(latency.trigger_to_start.count,0);
+    const csv = await h.send('/api/crank/reports/operations?workflow='+workflow.id+'&format=csv',undefined,h.owner);
+    assert.equal(csv.status,200);
+    const [columns,row] = csv.text.trim().split('\r\n').map(line=>line.split(',').map(cell=>JSON.parse(cell)));
+    assert.equal(row[columns.indexOf('runs')],'0'); assert.equal(row[columns.indexOf('failed')],'0');
+    await h.post(`workflows/${workflow.id}/publish`,{},h.owner,201);
+    const production = await startRun(h,workflow,{divisor:0});
+    assert.equal(production.status,'failed');
+    assert.equal((await h.get('workflows/'+workflow.id)).status,'published','test failures do not satisfy the production pause minimum');
+    report = await h.get('reports/operations?workflow='+workflow.id);
+    assert.equal(report.summary.runs,1); assert.equal(report.summary.failed,1);
+    assert.deepEqual(report.execution_queue.runs.map(r=>r.id),[production.id]);
+    for (let i=0;i<2;i++) assert.equal((await startRun(h,workflow,{divisor:0})).status,'failed');
+    assert.equal((await h.get('workflows/'+workflow.id)).status,'paused','production failures still enforce the configured policy');
+    const notices = (await h.get('notices')).filter(n=>n.workflow_id===workflow.id);
+    assert.equal(notices.filter(n=>n.kind==='run_failed').length,1);
+    assert.equal(notices.filter(n=>n.kind==='auto_paused').length,1);
+  } finally {
+    await h.post('settings',{auto_pause:settings.auto_pause});
+  }
+});
 
 test('OPS-001: scoped report and CSV reconcile real run outcomes, obligations and connector health', async () => {
   const vendor = await connection(h,{app:'http',label:'Business system',auth_kind:'bearer',domains:['business.example'],secret:{token:fakeSecret('vendor')}});

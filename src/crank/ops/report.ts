@@ -48,12 +48,12 @@ export async function operationsReport(env: CrankEnv, params: URLSearchParams, t
       (SELECT MIN(q.arrived_at) FROM crank_queue_items q WHERE q.run_id=r.id AND q.released_at IS NULL) AS queue_arrived_at,
       (SELECT COUNT(*) FROM crank_obligations o WHERE o.run_id=r.id) AS obligation_count,
       (SELECT COUNT(*) FROM crank_obligations o WHERE o.run_id=r.id AND o.verified_at IS NULL) AS open_obligations
-      FROM crank_wf_runs r WHERE r.received_at>=? AND r.received_at<?`, start, end).all<ReportRun>(),
-    stmt(env, `SELECT id,workflow_id,CASE WHEN status='failed' AND json_extract(error_json,'$.category')='uncertain' THEN 'uncertain' ELSE status END AS status FROM crank_wf_runs WHERE received_at>=? AND received_at<?`, dayStart, dayEnd).all<{ id: string; workflow_id: string; status: string }>(),
-    stmt(env, 'SELECT o.*,r.workflow_id FROM crank_obligations o JOIN crank_wf_runs r ON r.id=o.run_id WHERE r.received_at>=? AND r.received_at<? ORDER BY o.due_at,o.id', start, end).all<any>(),
+      FROM crank_wf_runs r WHERE r.mode='production' AND r.received_at>=? AND r.received_at<?`, start, end).all<ReportRun>(),
+    stmt(env, `SELECT id,workflow_id,CASE WHEN status='failed' AND json_extract(error_json,'$.category')='uncertain' THEN 'uncertain' ELSE status END AS status FROM crank_wf_runs WHERE mode='production' AND received_at>=? AND received_at<?`, dayStart, dayEnd).all<{ id: string; workflow_id: string; status: string }>(),
+    stmt(env, "SELECT o.*,r.workflow_id FROM crank_obligations o JOIN crank_wf_runs r ON r.id=o.run_id WHERE r.mode='production' AND r.received_at>=? AND r.received_at<? ORDER BY o.due_at,o.id", start, end).all<any>(),
     stmt(env, 'SELECT id,app,label,status,expires_at FROM crank_connections').all<{ id: string; app: string; label: string; status: string; expires_at: string | null }>(),
     stmt(env, 'SELECT workflow_id,next_due_at FROM crank_schedules WHERE next_due_at<?', new Date(time).toISOString()).all<{ workflow_id: string; next_due_at: string }>(),
-    stmt(env, `SELECT o.workflow_id,o.planned_at,o.outcome,o.run_id FROM crank_schedule_occurrences o LEFT JOIN crank_wf_runs r ON r.id=o.run_id WHERE o.planned_at>=? AND o.planned_at<? AND (o.outcome='skipped' OR r.id IS NULL OR r.started_at IS NULL)`, dayStart, new Date(time).toISOString()).all<{ workflow_id: string; planned_at: string; outcome: string; run_id: string | null }>(),
+    stmt(env, `SELECT o.workflow_id,o.planned_at,o.outcome,o.run_id FROM crank_schedule_occurrences o LEFT JOIN crank_wf_runs r ON r.id=o.run_id WHERE o.planned_at>=? AND o.planned_at<? AND (r.id IS NULL OR r.mode='production') AND (o.outcome='skipped' OR r.id IS NULL OR r.started_at IS NULL)`, dayStart, new Date(time).toISOString()).all<{ workflow_id: string; planned_at: string; outcome: string; run_id: string | null }>(),
     listLogSinks(env, time),
   ])
   const ids = new Set(workflows.results.map(w => w.id)), filtered = rows.results.filter(r => ids.has(r.workflow_id))
@@ -135,7 +135,7 @@ export async function latencyReport(env: CrankEnv, params: URLSearchParams) {
   const workflows = await stmt(env, 'SELECT id,name FROM crank_workflows WHERE (? IS NULL OR id=?) ORDER BY name', workflow, workflow).all<{ id: string; name: string }>()
   const report = []
   for (const w of workflows.results) {
-    const runs = await stmt(env, 'SELECT status,source_time,received_at,started_at FROM crank_wf_runs WHERE workflow_id=? AND received_at>=?', w.id, since).all<{ status: string; source_time: string | null; received_at: string; started_at: string | null }>()
+    const runs = await stmt(env, "SELECT status,source_time,received_at,started_at FROM crank_wf_runs WHERE mode='production' AND workflow_id=? AND received_at>=?", w.id, since).all<{ status: string; source_time: string | null; received_at: string; started_at: string | null }>()
     const polls = await stmt(env, 'SELECT due_at,started_at,status,cause,error,http_status FROM crank_poll_log WHERE workflow_id=? AND due_at>=? ORDER BY due_at', w.id, since).all<{ due_at: string; started_at: string; status: string; cause: string | null; error: string | null; http_status: number | null }>()
     const poll = await stmt(env, 'SELECT interval_minutes,next_due_at,last_status,last_error,last_cause FROM crank_polls WHERE workflow_id=?', w.id).first()
     const outcomes: Record<string, number> = {}

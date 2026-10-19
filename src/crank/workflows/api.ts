@@ -2,7 +2,7 @@ import { authorize, guardedBatch, requireOwner, requireWriteOrigin } from '../ac
 import { APPS, hostAllowed } from '../connections/apps'
 import { CATALOG } from '../connections/catalog'
 import { finishOauth, setOauthApp, startOauth } from '../connections/oauth'
-import { createConnection, credential, getConnection, listConnections, revokeConnection, rotateConnection } from '../connections/store'
+import { createConnection, credential, getConnection, listConnections, revokeConnection, rotateConnection, setConnectionPurpose } from '../connections/store'
 import { authorizeRequest } from '../connections/auth'
 import { slackCall } from '../connectors/slack'
 import { boundedFetch } from '../engine/egress'
@@ -21,6 +21,9 @@ import { plannedTimes } from '../triggers/schedule'
 import { previewHistorical, readHistorical } from '../triggers/historical'
 import { releaseHistorical } from '../triggers/historical-release'
 import { createHook, listHooks, revokeHook } from '../triggers/webhook'
+import { readDraft } from './drafts'
+import { compareWorkflow } from './comparison'
+import { testWorkflow } from './testing'
 import { previewReplay, replaySteps } from './replay'
 import { cancelRun, decideApproval, previewWorkflow, resumeRun, runDetail, runsToday, searchRuns, startRun } from './runs'
 import { createWorkflow, duplicateWorkflow, getWorkflow, listWorkflows, presentWorkflow, publishWorkflow, rollbackWorkflow, setWorkflowState, unpublishWorkflow, updateDraft, versionGraph } from './store'
@@ -86,6 +89,8 @@ export async function workflowApi(request: Request, env: CrankEnv): Promise<Resp
       if ((m = match(path, /^\/api\/crank\/historical\/([^/]+)$/))) return json(await readHistorical(env, actor, m[0]))
       if (path === '/api/crank/workflows') return json(await listWorkflows(env, url.searchParams))
       if ((m = match(path, /^\/api\/crank\/workflows\/([^/]+)$/))) return json(await presentWorkflow(env, await getWorkflow(env, m[0])))
+      if ((m = match(path, /^\/api\/crank\/workflows\/([^/]+)\/drafts\/([^/]+)$/))) return json(await readDraft(env, m[0], m[1]))
+      if ((m = match(path, /^\/api\/crank\/workflows\/([^/]+)\/compare$/))) return json(await compareWorkflow(env, m[0], url.searchParams))
       if ((m = match(path, /^\/api\/crank\/workflows\/([^/]+)\/trigger$/))) return json(await triggerState(env, m[0], url.searchParams))
       if ((m = match(path, /^\/api\/crank\/workflows\/([^/]+)\/versions\/(\d+)$/))) return json(await versionGraph(env, m[0], Number(m[1])))
       if ((m = match(path, /^\/api\/crank\/workflows\/([^/]+)\/today$/))) return json(await runsToday(env, m[0]))
@@ -122,7 +127,7 @@ export async function workflowApi(request: Request, env: CrankEnv): Promise<Resp
     if (path === '/api/crank/reports/obligations') return json(await createObligation(env, actor, input), 201)
     if ((m = match(path, /^\/api\/crank\/reports\/obligations\/([^/]+)\/verify$/))) return json(await verifyObligation(env, actor, m[0], input))
     if (path === '/api/crank/workflows') return json(await createWorkflow(env, actor, input), 201)
-    if ((m = match(path, /^\/api\/crank\/workflows\/([^/]+)\/(draft|validate|publish|rollback|unpublish|pause|resume|duplicate|run|preview|hooks)$/))) {
+    if ((m = match(path, /^\/api\/crank\/workflows\/([^/]+)\/(draft|validate|publish|rollback|unpublish|pause|resume|duplicate|run|test|preview|hooks)$/))) {
       const [workflowId, action] = m
       if (action === 'draft') return json(await updateDraft(env, actor, workflowId, input))
       if (action === 'validate') {
@@ -134,6 +139,7 @@ export async function workflowApi(request: Request, env: CrankEnv): Promise<Resp
       if (action === 'unpublish') return json(await unpublishWorkflow(env, actor, workflowId))
       if (action === 'pause' || action === 'resume') return json(await setWorkflowState(env, actor, workflowId, action === 'pause' ? 'paused' : 'published'))
       if (action === 'duplicate') return json(await duplicateWorkflow(env, actor, workflowId), 201)
+      if (action === 'test') return json(await testWorkflow(env, actor, workflowId, input), 201)
       if (action === 'run') return json(await startRun(env, actor, workflowId, input), 201)
       if (action === 'preview') return json(await previewWorkflow(env, workflowId, input))
       return json(await createHook(env, actor, workflowId, input), 201)
@@ -147,7 +153,8 @@ export async function workflowApi(request: Request, env: CrankEnv): Promise<Resp
       return json(m[1] === 'resume' ? await resumeRun(env, actor, m[0]) : await cancelRun(env, actor, m[0]))
     }
     if (path === '/api/crank/connections') return json(await createConnection(env, actor, input), 201)
-    if ((m = match(path, /^\/api\/crank\/connections\/([^/]+)\/(rotate|revoke|test)$/))) {
+    if ((m = match(path, /^\/api\/crank\/connections\/([^/]+)\/(rotate|revoke|test|purpose)$/))) {
+      if (m[1] === 'purpose') return json(await setConnectionPurpose(env, actor, m[0], input))
       if (m[1] === 'rotate') return json(await rotateConnection(env, actor, m[0], input))
       if (m[1] === 'revoke') return json(await revokeConnection(env, actor, m[0]))
       return json(await testConnection(env, actor, m[0], input))

@@ -8,6 +8,7 @@ import { workspaceSettings } from './settings'
  * EXEC-003: one notice per workflow, failure category and hour, then the auto-pause
  * policy. `stopped by filter` and `stopped by search` are not failures. */
 export async function afterSettle(env: CrankEnv, run: RunRow) {
+  if (run.mode === 'test') return
   if (run.status === 'awaiting_approval') return approvalNotice(env, run)
   if (run.status !== 'failed' && run.status !== 'paused') return
   const workflow = await stmt(env, 'SELECT id,name,status,owner_id FROM crank_workflows WHERE id=?', run.workflow_id).first<{ id: string; name: string; status: string; owner_id: string }>()
@@ -25,14 +26,14 @@ export async function afterSettle(env: CrankEnv, run: RunRow) {
   if (!policy.enabled || workflow.status !== 'published') return
   const since = new Date(Date.now() - policy.window_hours * 3600000).toISOString()
   const counts = await stmt(env, `SELECT COUNT(*) AS total, SUM(CASE WHEN status='failed' THEN 1 ELSE 0 END) AS failed FROM crank_wf_runs
-    WHERE workflow_id=? AND received_at>=? AND status IN ('succeeded','failed','rejected','cancelled')`, workflow.id, since).first<{ total: number; failed: number }>()
+    WHERE mode='production' AND workflow_id=? AND received_at>=? AND status IN ('succeeded','failed','rejected','cancelled')`, workflow.id, since).first<{ total: number; failed: number }>()
   if (!counts || counts.total < policy.min_runs || counts.failed / counts.total < policy.failure_rate) return
   const paused = await env.DB.batch([
     stmt(env, "UPDATE crank_workflows SET status='paused' WHERE id=? AND status='published'", workflow.id),
     auditStatement(env, 'system', 'workflow.auto_pause', 'workflow', workflow.id, { failed: counts.failed, total: counts.total, window_hours: policy.window_hours }),
   ])
   if (paused[0].meta.changes !== 1) return
-  const categories = await stmt(env, `SELECT json_extract(error_json,'$.category') AS category, COUNT(*) AS n FROM crank_wf_runs WHERE workflow_id=? AND status='failed' AND received_at>=? GROUP BY 1`, workflow.id, since).all<{ category: string; n: number }>()
+  const categories = await stmt(env, `SELECT json_extract(error_json,'$.category') AS category, COUNT(*) AS n FROM crank_wf_runs WHERE mode='production' AND workflow_id=? AND status='failed' AND received_at>=? GROUP BY 1`, workflow.id, since).all<{ category: string; n: number }>()
   await notify(env, { key: `autopause:${workflow.id}:${now()}`, workflowId: workflow.id, kind: 'auto_paused', subject: `${workflow.name} was paused after repeated failures`,
     text: `"${workflow.name}" was paused automatically: ${counts.failed} of ${counts.total} runs failed in ${policy.window_hours} hours (${categories.results.map(c => `${c.category}: ${c.n}`).join(', ')}). New trigger events are held with no effect. Resume the workflow, then run or discard the held events.` })
 }
