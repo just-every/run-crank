@@ -4,6 +4,7 @@ import { workflowApi } from '../workflows/api'
 import { importApi } from '../import-api'
 import { importDoor } from '../import-door'
 import { dataApi } from '../data'
+import { retentionPanels, retentionPreview, sensitivePanel } from './retention-view'
 import { authorize, requireOwner, requireWriteOrigin } from '../access'
 import { type CrankEnv } from '../model'
 import { authResponse } from '../../auth.server'
@@ -67,6 +68,12 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
         const response = await call('/api/crank/data/subject',{subject:form.subject}), preview:any = await response.json()
         if(!response.ok) return page('Erasure refused',`<p class="notice">${esc(preview.error)}</p><a href="/app/data">Back to Data</a>`,{},response.status)
         return page('Erasure preview',subjectPreview(form.subject ?? '',preview))
+      }
+      if (url.pathname === '/app/data/retention') {
+        requireOwner(actor)
+        const response = await call('/api/crank/data/retention/preview',{payload_days:form.payload_days,attachment_days:form.attachment_days,history_days:form.history_days}), preview:any = await response.json()
+        if(!response.ok) return page('Retention refused',`<p class="notice">${esc(preview.error)}</p><a href="/app/data">Back to Data</a>`,{},response.status)
+        return page('Retention dry run',retentionPreview(preview))
       }
       if (url.pathname.startsWith('/app/import/')) {
         requireOwner(actor)
@@ -154,7 +161,7 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
     requireOwner(actor)
     if(url.pathname==='/app/operations') return page('Operations',operationsView(await read('/api/crank/reports/operations?'+url.searchParams),await read('/api/crank/workflows'),url.searchParams),{state,intro:'Execution health, business obligations and delivery to your own logs.'})
     if(url.pathname==='/app/access') {const people=await call('/auth/operators'); return page('Access',accessView({...state,people:people.ok?await people.json():[]}),{state,intro:'Credentials for agents and sending apps, and the people who can sign in.'})}
-    if(url.pathname==='/app/data') return page('Data',dataView()+(actor.role==='owner'?erasurePanels((people=>Array.isArray(people)?people:people.operators??[])(await read('/auth/operators'))):''),{state,intro:'Export, restore and erase. Your data stays on this installation.'})
+    if(url.pathname==='/app/data') { const [retention,workflows] = await Promise.all([read('/api/crank/data/retention'),read('/api/crank/workflows')]); return page('Data',dataView()+retentionPanels(retention,workflows)+sensitivePanel(retention.sensitive,workflows)+erasurePanels((people=>Array.isArray(people)?people:people.operators??[])(await read('/auth/operators'))),{state,intro:'Export, restore and erase. Your data stays on this installation.'}) }
     if(url.pathname==='/app/import') { const jobs=await call('/api/crank/imports'); if(!jobs.ok) throw new Error('Import journal unavailable'); return page('Move in',importView(await jobs.json() as any[],await read('/api/operator/import-settings')),{state,intro:'Bring workflows from another tool as drafts you review first.'}) }
     return page('Not found','<a href="/app">Return to flows</a>',{state},404)
   } catch(error:any) {

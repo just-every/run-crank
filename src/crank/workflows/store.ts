@@ -5,6 +5,7 @@ import { validateGraph, type Graph } from '../engine/graph'
 import { isObject } from '../engine/values'
 import { CrankError, digest, canonical, id, now, requireValue, stmt, text, type Actor, type CrankEnv } from '../model'
 import { auditStatement } from '../ops/audit'
+import { attestedGuard, requireAttested } from '../ops/sensitive-data'
 import type { WorkflowRow } from '../triggers/admission'
 import { listHooks } from '../triggers/webhook'
 import { nextBoundary } from '../triggers/poll'
@@ -34,7 +35,7 @@ export async function presentWorkflow(env: CrankEnv, row: WorkflowRow) {
   const versions = await stmt(env, "SELECT id,number,graph_digest,declared_json,published_by,published_at,retired_at FROM crank_workflow_versions WHERE workflow_id=? AND mode='production' ORDER BY number DESC", row.id).all<Omit<VersionRow, 'graph_json' | 'workflow_id'>>()
   const owner = await stmt(env, 'SELECT display_name FROM oa_operators WHERE id=?', row.owner_id).first<{ display_name: string }>()
   return {
-    id: row.id, name: row.name, description: row.description, folder: row.folder, owner: { id: row.owner_id, name: owner?.display_name ?? null }, status: row.status,
+    id: row.id, name: row.name, description: row.description, folder: row.folder, data_class: (row as { data_class?: string }).data_class ?? 'none', owner: { id: row.owner_id, name: owner?.display_name ?? null }, status: row.status,
     enabled: row.status === 'published', draft: JSON.parse(row.draft_json), draft_updated_at: row.draft_updated_at, published_version_id: row.published_version_id,
     created_by: row.created_by, created_at: row.created_at,
     versions: versions.results.map(v => ({ id: v.id, number: v.number, graph_digest: v.graph_digest, authority: JSON.parse(v.declared_json), published_by: v.published_by, published_at: v.published_at, retired_at: v.retired_at })),
@@ -111,6 +112,7 @@ export async function rollbackWorkflow(env: CrankEnv, actor: Actor, workflowId: 
 export async function publishWorkflow(env: CrankEnv, actor: Actor, workflowId: string, input: Record<string, unknown> = {}, rollback?: { graph: unknown; rollback_of: number; retryPolicy: Record<string, unknown> }) {
   requireOwner(actor)
   const current = await getWorkflow(env, workflowId)
+  await requireAttested(env, workflowId)
   const { graph, declared, warnings } = checked(rollback ? rollback.graph : JSON.parse(current.draft_json))
   for (const connectionId of declared.connections) {
     const connection = await getConnection(env, connectionId).catch(() => null)
@@ -121,7 +123,9 @@ export async function publishWorkflow(env: CrankEnv, actor: Actor, workflowId: s
   const versionId = id(), at = now(), number = (previous?.n ?? 0) + 1, graphJson = canonical(graph)
   const authority = { publisher: actor.id, published_at: at, workflow_settings: JSON.parse(current.settings_json), steps: declared.steps, connections: declared.connections, bindings: await snapshotBindings(env, declared.connections), trigger: graph.trigger.type, ...(rollback ? { rollback_of: rollback.rollback_of } : {}) }
   const adoption = await adoptionStatements(env, actor, current, input)
+  const guard = `attested:${versionId}`
   const statements = [
+    attestedGuard(env, guard, workflowId), stmt(env, 'DELETE FROM crank_authority_guards WHERE id=?', guard),
     stmt(env, `UPDATE crank_wf_runs SET continuation_authority=continuation_authority|2 WHERE workflow_id=? AND version_id=?
       AND status IN ('waiting','awaiting_approval') AND COALESCE(json_extract((SELECT graph_json FROM crank_workflow_versions WHERE id=version_id),'$.settings.waiting_runs'),'continue')='continue'`, workflowId, current.published_version_id),
     stmt(env, 'UPDATE crank_workflow_versions SET retired_at=? WHERE workflow_id=? AND retired_at IS NULL', at, workflowId),
@@ -178,6 +182,8 @@ export async function setWorkflowState(env: CrankEnv, actor: Actor, workflowId: 
   const current = await getWorkflow(env, workflowId)
   requireValue(!pendingRestore(current), 'Review the restore and publish before resuming this workflow', 409)
   requireValue(current.published_version_id, 'Publish the workflow first', 409)
+  if (state === 'published') await requireAttested(env, workflowId)
+  const guard = `attested:resume:${workflowId}:${id()}`
   const cancelVersions = state === 'paused' ? (await stmt(env, `SELECT id FROM crank_workflow_versions WHERE workflow_id=? AND json_extract(graph_json,'$.settings.waiting_runs')='cancel_on_pause'`, workflowId).all<{id: string}>()).results : []
   const cancelStatements = (await Promise.all(cancelVersions.map(version => cancellations(env, actor, workflowId, version.id, 'The workflow was paused')))).flat()
   await guardedBatch(env, actor, 'owner', [
@@ -186,6 +192,7 @@ export async function setWorkflowState(env: CrankEnv, actor: Actor, workflowId: 
       stmt(env, `UPDATE crank_wf_runs SET continuation_authority=continuation_authority|1 WHERE workflow_id=? AND status IN ('waiting','awaiting_approval')
         AND COALESCE(json_extract((SELECT graph_json FROM crank_workflow_versions WHERE id=version_id),'$.settings.waiting_runs'),'continue') IN ('continue','cancel_on_new_version')`, workflowId),
     ] : []),
+    ...(state === 'published' ? [attestedGuard(env, guard, workflowId), stmt(env, 'DELETE FROM crank_authority_guards WHERE id=?', guard)] : []),
     stmt(env, 'UPDATE crank_workflows SET status=? WHERE id=?', state, workflowId),
     auditStatement(env, actor.id, state === 'paused' ? 'workflow.pause' : 'workflow.resume', 'workflow', workflowId, {}, current.published_version_id),
     ...cancelStatements,

@@ -18,8 +18,8 @@ const isItem = (row: Row) => row.type === 'loop' && /\/items\/\d+$/.test(row.pat
  * reconciliation (EXEC-006) and are never offered for blind replay. */
 export async function previewReplay(env: CrankEnv, actor: Actor, runId: string) {
   requireOwner(actor)
-  const run = await stmt(env, 'SELECT r.id,r.status,r.version_id,r.workflow_id,r.mode,r.repair_paths_json,r.repaired_paths_json,w.status AS workflow_status,w.owner_id FROM crank_wf_runs r JOIN crank_workflows w ON w.id=r.workflow_id WHERE r.id=?', runId)
-    .first<{ id: string; status: string; version_id: string; workflow_id: string; workflow_status: string; mode: string; owner_id: string; repair_paths_json: string | null; repaired_paths_json: string }>()
+  const run = await stmt(env, 'SELECT r.id,r.status,r.payload_expired_at,r.version_id,r.workflow_id,r.mode,r.repair_paths_json,r.repaired_paths_json,w.status AS workflow_status,w.owner_id FROM crank_wf_runs r JOIN crank_workflows w ON w.id=r.workflow_id WHERE r.id=?', runId)
+    .first<{ id: string; status: string; payload_expired_at: string | null; version_id: string; workflow_id: string; workflow_status: string; mode: string; owner_id: string; repair_paths_json: string | null; repaired_paths_json: string }>()
   requireValue(run, 'Run not found', 404)
   const rows = (await stmt(env, 'SELECT path,step_id,type,status,input_json,error_json,output_json,operation_key FROM crank_wf_steps WHERE run_id=? ORDER BY started_at,path', runId).all<Row>()).results
   const revisions = (await stmt(env, 'SELECT path,COUNT(*) AS count FROM crank_wf_step_revisions WHERE run_id=? GROUP BY path', runId).all<{ path: string; count: number }>()).results
@@ -37,7 +37,8 @@ export async function previewReplay(env: CrankEnv, actor: Actor, runId: string) 
     && (run.status === 'failed' || /\/items\/\d+\//.test(row.path))) : []
   const preview = {
     run_id: run.id, version_id: run.version_id, status: run.status, mode: run.status === 'succeeded' ? 'linked_repair' : 'resume', claimed_paths: claimed, limit: REPLAY_LIMIT,
-    blocked_reason: !['failed', 'succeeded'].includes(run.status) ? 'Only a failed or succeeded run can replay eligible failed steps.'
+    blocked_reason: run.payload_expired_at ? 'This run’s values expired under the retention policy, so its steps cannot be replayed.'
+      : !['failed', 'succeeded'].includes(run.status) ? 'Only a failed or succeeded run can replay eligible failed steps.'
       : run.workflow_status === 'paused' || run.mode !== 'test' && run.workflow_status !== 'published' || pendingRestore(run) ? 'Publish (and adopt) the workflow before replaying its runs.' : null,
     eligible: eligible.map(row => ({ path: row.path, step_id: row.step_id, type: row.type, input: parse(row.input_json), error: parse(row.error_json), operation_key: row.operation_key,
       revisions: count.get(row.path) ?? 0, correctable: !['loop', 'paths'].includes(row.type) })),

@@ -41,7 +41,7 @@ async function claim(env: CrankEnv, actor: Actor, run: Run, replay: boolean): Pr
       AND EXISTS(SELECT 1 FROM crank_runs r WHERE r.id=crank_attempts.run_id AND r.state='running' AND r.lease_id=crank_attempts.id AND r.lease_expires_at<=? AND r.replay_count=0)` ,
     at, JSON.stringify(interrupted), run.id, at))
     jobs.push(stmt(env, `UPDATE crank_runs SET state='running',lease_id=?,lease_expires_at=?,updated_at=?,replay_count=1,outcome_json=NULL
-      WHERE id=? AND replay_count=0 AND (state='failed' OR (state='running' AND lease_expires_at<=?)) AND input_digest=? AND action_digest=? AND target_url=? AND ${approvalMatch} AND ${fence.sql}`,
+      WHERE id=? AND replay_count=0 AND payload_expired_at IS NULL AND (state='failed' OR (state='running' AND lease_expires_at<=?)) AND input_digest=? AND action_digest=? AND target_url=? AND ${approvalMatch} AND ${fence.sql}`,
     lease, expires, at, run.id, at, run.input_digest, run.action_digest, run.target_url, ...fence.args))
   }
   jobs.push(stmt(env, `INSERT INTO crank_attempts(id,run_id,number,started_at)
@@ -97,6 +97,7 @@ export async function deliverRun(env: CrankEnv, actor: Actor, runId: string, rep
   requireOwner(actor)
   const run = await getRun(env, runId)
   requireValue(!run.outcome_json || JSON.parse(run.outcome_json).code !== 'restore_fence', 'Restored delivery history has no replay authority. Reconcile the destination and prepare a fresh run.', 409)
+  requireValue(!(run as Run & { payload_expired_at?: string | null }).payload_expired_at, 'This run’s input expired under the retention policy, so it cannot be replayed. Prepare a fresh run.', 409)
   await validateSnapshot(env, run)
   const lease = await claim(env, actor, run, replay)
   const outcome = await send(env, run), at = now(), encoded = JSON.stringify(outcome)

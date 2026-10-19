@@ -120,6 +120,32 @@ their email address and display name are replaced. What they did stays in the
 history under the label, recorded as `operator.erase`. Archives never contain
 sign-in identities.
 
+## Keep data for a set time
+
+Nothing expires until you set a period on the Data screen. Payload, attachment
+and run-history periods are whole days after a run finished, counted in UTC.
+Preview what a period removes first: the dry run lists every run and file it
+would remove now and every run it keeps, with the reason. Saving needs that
+preview. The per-minute maintenance pass then expires up to 25 runs of each
+kind a minute.
+
+- Payload expiry clears trigger data and step input and output, but keeps the
+  run, its step outcomes, times, failure category and audit. The run can no
+  longer be replayed.
+- Attachment expiry deletes the run's files.
+- History expiry removes the run and leaves a receipt without values.
+
+Unfinished runs, runs waiting for a decision, runs with an unverified
+obligation or an uncertain write, runs being repaired and held runs are never
+expired. A legal hold names one exact identifier or one workflow; a held run
+cannot be erased until you release the hold. An archive made before an expiry
+is refused on this installation, or when you supply a later archive as the
+journal.
+
+Mark a workflow as financial or health data on the Data screen. It publishes
+only after you record the provider agreements in place and where the data is
+held. Crank records this as your attestation; it does not verify it.
+
 ## Recover an older backup after erasure
 
 Make a new export after erasure. When restoring an older backup into a different

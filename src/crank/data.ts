@@ -6,6 +6,8 @@ import { eraseFlowRun, eraseWorkflowRun } from './workflow-erasure'
 import { eraseSubject, previewSubject } from './subject-erasure'
 import { eraseOperator } from './operator-erasure'
 import { auditStatement } from './ops/audit'
+import { attest, revokeAttestation, sensitiveData, setDataClass } from './ops/sensitive-data'
+import { DISCLOSURE, listHolds, placeHold, previewRetention, releaseHold, retentionPolicy, retentionScope, setRetention } from './ops/retention'
 
 export const portability = (env: CrankEnv) => createPortability({ db:env.DB, policy })
 
@@ -78,6 +80,19 @@ export async function dataApi(request:Request,env:CrankEnv):Promise<Response|nul
       if (value.confirm !== 'ERASE' || typeof value.run_id !== 'string') return Response.json({error:'Confirm ERASE and select a run.'},{status:400})
       return Response.json(await eraseFlowRun(env,actor,store,value.run_id),{headers:{'cache-control':'no-store'}})
     }
+    if (path === '/api/crank/data/retention' && request.method === 'GET') {
+      const policy = await retentionPolicy(env)
+      return Response.json({ policy, disclosure: DISCLOSURE, holds: await listHolds(env), scope: await retentionScope(env, policy), sensitive: await sensitiveData(env) },{headers:{'cache-control':'no-store'}})
+    }
+    if (path === '/api/crank/data/retention/preview' && request.method === 'POST') return Response.json(await previewRetention(env,await body(request)),{headers:{'cache-control':'no-store'}})
+    if (path === '/api/crank/data/retention' && request.method === 'POST') return Response.json(await setRetention(env,actor,await body(request)),{headers:{'cache-control':'no-store'}})
+    if (path === '/api/crank/data/holds' && request.method === 'POST') return Response.json(await placeHold(env,actor,await body(request)),{status:201,headers:{'cache-control':'no-store'}})
+    const release = /^\/api\/crank\/data\/holds\/([^/]+)\/release$/.exec(path)
+    if (release && request.method === 'POST') return Response.json(await releaseHold(env,actor,decodeURIComponent(release[1])),{headers:{'cache-control':'no-store'}})
+    if (path === '/api/crank/data/classes' && request.method === 'POST') { const value = await body(request); return Response.json(await setDataClass(env,actor,String(value.workflow_id ?? ''),value.data_class),{headers:{'cache-control':'no-store'}}) }
+    if (path === '/api/crank/data/attestations' && request.method === 'POST') return Response.json(await attest(env,actor,await body(request)),{status:201,headers:{'cache-control':'no-store'}})
+    const revoke = /^\/api\/crank\/data\/attestations\/([^/]+)\/revoke$/.exec(path)
+    if (revoke && request.method === 'POST') return Response.json(await revokeAttestation(env,actor,decodeURIComponent(revoke[1])),{headers:{'cache-control':'no-store'}})
     if (path === '/api/crank/data/subject' && request.method === 'POST') {
       const value = await body(request)
       return Response.json(await previewSubject(env,value.subject),{headers:{'cache-control':'no-store'}})

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { harness } from './harness.mjs';
 import { readFile } from 'node:fs/promises';
-import { estimateHold, deliver, doorImport, fakeEdge, hookUrl, jsonResponse, publish, runs, settled } from './kit.mjs';
+import { estimateHold, deliver, doorImport, fakeEdge, hookUrl, jsonResponse, publish, runs, settled, startRun, stepOf } from './kit.mjs';
 
 const target = 'http://127.0.0.1:9';
 const envelope = (event_id, input) => ({ method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ event_id, input }) });
@@ -221,5 +221,130 @@ test('DATA-002: subject erasure previews every run carrying one identifier, wait
     const later = await snapshot(h);
     assert.ok(!later.includes(leaverId) && !later.includes(email), 'DATA-002: archives carry only the label');
     await h.post('data/erase', { operator_id: leaverId, confirm: 'ERASE' }, h.owner, 409);
+  } finally { await h.close() }
+});
+
+test('DATA-003: owner retention with dry run and legal holds expires only eligible finished data across restart; outcomes, audit and fences remain', async () => {
+  const fake = fakeEdge(), DAY = 86400000;
+  fake.routes.set('ledger.example', () => jsonResponse({ receipt: 'ledger-ok' }));
+  fake.routes.set('files.example', () => new Response('%PDF-1.4 retained statement', { headers: { 'content-type': 'application/pdf', 'content-disposition': 'attachment; filename="statement.pdf"' } }));
+  const h = await harness(target, { edge: fake.edge });
+  try {
+    // Defaults are disclosed and nothing expires until the owner sets a period.
+    const initial = await h.get('data/retention');
+    assert.deepEqual(initial.policy, { payload_days: null, attachment_days: null, history_days: null });
+    assert.match(initial.disclosure.default, /Nothing expires until you set a period/);
+    assert.ok(initial.disclosure.automatic.length > 0 && /kept/.test(initial.disclosure.page_limits) && /no model context/.test(initial.disclosure.model_context));
+    const workflow = await publish(h, 'Statement delivery', { trigger: { type: 'manual' }, steps: [
+      { id: 'statement', type: 'file.fetch', input: { url: 'https://files.example/statement.pdf' } },
+      { id: 'ledger', type: 'http', input: { method: 'POST', url: 'https://ledger.example/entries', body: { customer: '{{trigger.input.customer}}' } } },
+    ] });
+    const review = await publish(h, 'Refund review', { trigger: { type: 'manual' }, steps: [{ id: 'review', type: 'approval', input: { customer: '{{trigger.input.customer}}' } }] });
+    const start = async customer => { const run = await startRun(h, workflow, { customer }); assert.equal(run.status, 'succeeded', JSON.stringify(run.error)); return run };
+    const expiring = await start('expire-alpha@example.test'), held = await start('held-bravo@example.test'), owed = await start('owed-charlie@example.test')
+    const waiting = await startRun(h, review, { customer: 'waiting-delta@example.test' });
+    assert.equal(waiting.status, 'awaiting_approval');
+    await h.post('reports/obligations', { run_id: owed.id, key: 'ledger', description: 'Ledger entry still to be reconciled' }, h.owner, 201);
+    await h.post('data/holds', { kind: 'subject', subject: 'HELD-bravo@example.test', reason: 'Dispute 4471' }, '', 401);
+    const hold = await h.post('data/holds', { kind: 'subject', subject: 'HELD-bravo@example.test', reason: 'Dispute 4471' }, h.owner, 201);
+    assert.equal(hold.subject, 'held-bravo@example.test');
+    // Nothing set: a pass two months later expires nothing.
+    await h.tick(Date.now() + 60 * DAY);
+    assert.equal((await h.get('workflow-runs/' + expiring.id)).trigger.input.customer, 'expire-alpha@example.test');
+    const older = await h.send('/api/crank/data/export', {}, h.owner);
+    assert.equal(older.status, 200, older.text);
+    const fileId = stepOf(expiring, 'statement').output.file_id;
+    assert.ok(older.text.includes(fileId) && older.text.includes('expire-alpha@example.test'));
+
+    // The dry run, as of two days ahead, names what would go and what stays and why.
+    const policy = { payload_days: 1, attachment_days: 1, history_days: 30 };
+    await h.post('data/retention/preview', { ...policy, history_days: 0 }, h.owner, 400);
+    await h.post('data/retention/preview', { payload_days: 10, history_days: 5 }, h.owner, 400);
+    const ahead = await h.post('data/retention/preview', { ...policy, at: new Date(Date.now() + 2 * DAY).toISOString() });
+    assert.deepEqual(ahead.payload.runs.map(r => r.id), [expiring.id]);
+    const kept = Object.fromEntries(ahead.payload.kept.map(r => [r.id, r.reason]));
+    assert.deepEqual(kept, { [held.id]: 'legal hold', [owed.id]: 'unverified business obligation', [waiting.id]: 'unfinished' });
+    assert.deepEqual(ahead.attachments.files.map(f => f.id), [stepOf(expiring, 'statement').output.file_id]);
+    assert.deepEqual(ahead.history.runs, [], 'history is not due for 30 days');
+    assert.equal((await h.get('workflow-runs/' + expiring.id)).trigger.input.customer, 'expire-alpha@example.test', 'a dry run deletes nothing');
+    const now = await h.post('data/retention/preview', policy);
+    await h.post('data/retention', { ...policy, digest: 'stale' }, h.owner, 409);
+    assert.deepEqual((await h.post('data/retention', { ...policy, digest: now.digest })).policy, policy);
+    assert.ok((await h.get('audit?kind=workspace&id=retention')).some(row => row.action === 'retention.update'));
+
+    // Just before the boundary nothing expires; just after, only the eligible run does, and a restart resumes.
+    const finished = Date.parse((await h.get('workflow-runs/' + expiring.id)).finished_at);
+    await h.tick(finished + DAY - 60000);
+    assert.equal((await h.get('workflow-runs/' + expiring.id)).payload_expired_at, null);
+    await h.tick(finished + DAY + 60000);
+    await h.restart();
+    await h.tick(finished + DAY + 120000);
+    const expired = await h.get('workflow-runs/' + expiring.id);
+    assert.equal(expired.status, 'succeeded', 'the outcome outlives its payload');
+    assert.ok(expired.payload_expired_at);
+    assert.deepEqual(expired.trigger, {});
+    assert.ok(expired.steps.every(s => s.status === 'succeeded' && s.input === null && s.output === null));
+    assert.ok(!JSON.stringify(expired).includes('expire-alpha@example.test'));
+    for (const run of [held, owed]) assert.equal((await h.get('workflow-runs/' + run.id)).steps.find(s => s.step_id === 'ledger').input.body.customer.length > 0, true, 'held and obligated runs keep their payload');
+    const stillWaiting = await h.get('workflow-runs/' + waiting.id);
+    assert.equal(stillWaiting.status, 'awaiting_approval');
+    assert.equal(stillWaiting.trigger.input.customer, 'waiting-delta@example.test', 'unfinished work stays visible');
+    const audit = await h.get(`audit?kind=run&id=${expiring.id}`);
+    assert.ok(audit.some(row => row.action === 'retention.expire_payload' && row.actor_id === 'system:retention'));
+    assert.match((await h.get(`workflow-runs/${expiring.id}/replay`)).blocked_reason, /expired under the retention policy/);
+    const later = await h.send('/api/crank/data/export', {}, h.owner);
+    assert.ok(!later.text.includes('expire-alpha@example.test') && !later.text.includes(fileId), 'payload and attachment are gone from new archives');
+    assert.ok(later.text.includes('held-bravo@example.test'));
+
+    // A held run cannot be erased either; released, it expires on the next pass.
+    await h.post(`workflows/${workflow.id}/pause`);
+    await h.post('data/erase', { workflow_run_id: held.id, confirm: 'ERASE' }, h.owner, 409);
+    assert.match((await h.post('data/subject', { subject: 'held-bravo@example.test' })).workflow_runs[0].blocked, /legal hold/);
+    await h.post(`workflows/${workflow.id}/resume`);
+    assert.equal((await h.post(`data/holds/${hold.id}/release`)).subject, null);
+    await h.tick(finished + DAY + 180000);
+    assert.ok((await h.get('workflow-runs/' + held.id)).payload_expired_at);
+
+    // History removes the run itself and leaves a value-free receipt; obligated and unfinished runs stay.
+    await h.tick(finished + 30 * DAY + 60000);
+    await h.get('workflow-runs/' + expiring.id, h.owner, 404);
+    const receipts = (await h.get('audit')).filter(row => row.action === 'retention.expire_history');
+    assert.ok(receipts.some(row => row.detail.status === 'succeeded' && row.detail.workflow_id === workflow.id));
+    assert.ok(!JSON.stringify(receipts).includes('example.test'));
+    assert.equal((await h.get('workflow-runs/' + owed.id)).status, 'succeeded');
+    assert.equal((await h.get('workflow-runs/' + waiting.id)).status, 'awaiting_approval');
+
+    // The Data screen discloses the defaults, automatic cleanup and holds.
+    const setup = await h.mf.dispatchFetch(h.origin + '/setup', { method: 'POST', redirect: 'manual', headers: { host: new URL(h.origin).host, origin: h.origin, cookie: h.owner, 'content-type': 'application/x-www-form-urlencoded' }, body: 'confirm=yes' });
+    assert.equal(setup.headers.get('location'), '/app');
+    const screen = await h.send('/app/data', undefined, h.owner);
+    assert.equal(screen.status, 200, screen.text);
+    assert.match(screen.text, /Nothing expires until you set a period/);
+    assert.match(screen.text, /older runs are kept/);
+    assert.match(screen.text, /Legal holds/);
+
+    // Sensitive data: a health workflow publishes or resumes only with the owner's recorded, owner-attested agreements.
+    await h.post('data/classes', { workflow_id: workflow.id, data_class: 'health' }, h.owner, 409);
+    await h.post(`workflows/${workflow.id}/pause`);
+    await h.post('data/classes', { workflow_id: workflow.id, data_class: 'health' });
+    await h.post(`workflows/${workflow.id}/resume`, {}, h.owner, 409);
+    await h.post(`workflows/${workflow.id}/publish`, {}, h.owner, 409);
+    const agreement = { data_class: 'health', agreements: ['Cloudflare BAA, signed 2026-09-01'], data_location: 'Cloudflare D1, US jurisdiction' };
+    await h.post('data/attestations', agreement, h.owner, 400);
+    assert.equal((await h.post('data/attestations', { ...agreement, confirm: 'ATTEST' }, h.owner, 201)).basis, 'owner_attested');
+    assert.match((await h.get('data/retention')).sensitive.label, /not verified or certified/);
+    await h.post(`workflows/${workflow.id}/resume`);
+    assert.deepEqual((await h.post('data/attestations/health/revoke')).paused, [workflow.id]);
+    assert.equal((await h.get(`workflows/${workflow.id}`)).status, 'paused', 'withdrawing the attestation stops production processing');
+    assert.ok((await h.get('audit?kind=data_class&id=health')).some(row => row.action === 'data.attest' && row.detail.basis === 'owner_attested'));
+
+    // A pre-expiry snapshot is refused against the later journal.
+    const journal = await h.send('/api/crank/data/export', {}, h.owner);
+    const empty = await harness(target);
+    try {
+      const restored = await empty.send('/api/crank/data/restore', { archive: older.text, journal: journal.text, confirm: 'RESTORE' }, empty.owner);
+      assert.equal(restored.status, 409);
+      assert.match(restored.text, /erasure_epoch|erased_row/);
+    } finally { await empty.close() }
   } finally { await h.close() }
 });
