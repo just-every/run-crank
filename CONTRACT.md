@@ -754,7 +754,7 @@ Every capability the homepage states, in page order, for the owner-approved stru
 | 13 | Move in import card: "Formatter → code step" | `MIG-002`, `WORK-005` | missing | contract, not yet in code |
 | 14 | Move in import card: "Needs you · Paths step has no default. Send other refunds to Finance or Support?" | `MIG-002`, `WORK-013` | partial | partly: `src/crank/engine/conditions.ts` (paths); the import question is contract, not yet in code |
 | 15 | Move in import card: Stripe, QuickBooks, Shopify, Slack, Gmail, Google Sheets, Typeform, HubSpot and Zendesk workflows | `CONN-008`, `CONN-007`, `CONN-004`, `CONN-003`, `CONN-005`, `CONN-012`, `CONN-006`, `CONN-009` | partial | partly: `src/crank/connectors/slack.ts`; the other apps are contract, not yet in code |
-| 16 | One run: a run traced step by step with its payload values and times ("Run #1,412 · 5 steps") | `EXEC-005` | partial | partly: `src/crank/workflows/runs.ts`, `src/crank/runs.ts` |
+| 16 | One run: a run traced step by step with its payload values and times ("Run #1,412 · 5 steps") | `EXEC-005` | done | `src/crank/workflows/runs.ts`, `src/crank/ui/workflow-run.ts`, `tests/app.test.mjs` |
 | 17 | One run: "AI step · Summarize" | `AI-001` | missing | contract, not yet in code |
 | 18 | One run: "Rate limited · retried after 90s" | `EXEC-002` | partial | partly: `src/crank/connectors/http-step.ts` |
 | 19 | One run: field mapping `amount ÷ 100 → Amount (USD)`, `customer.name → Customer`, blank `metadata.po → "none"` | `WORK-002`, `WORK-012` | partial | partly: `src/crank/engine/mapping.ts`, `src/crank/engine/transforms/index.ts` |
@@ -786,9 +786,9 @@ Judged from the code and tests at commit `06ace84667d83032ec41a8a210a5084cd0c854
 
 | Clauses | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
-| Published | 3 | 9 | 0 | 12 |
+| Published | 4 | 8 | 0 | 12 |
 | Target and push further | 1 | 34 | 38 | 73 |
-| All | 4 | 43 | 38 | 85 |
+| All | 5 | 42 | 38 | 85 |
 
 MIG-006, BASE-004 and BASE-005 were added on 17 October 2026 so every homepage claim has a clause, and were judged from the code and tests at `eac16196cffe508a1eec962b1c116564707c1598` (main after the run site landed); every earlier row keeps its status from the commit above.
 
@@ -841,7 +841,7 @@ MIG-006, BASE-004 and BASE-005 were added on 17 October 2026 so every homepage c
 | `EXEC-002` | Rate limits, backoff and exhaustion | target | partial | `src/crank/connectors/http-step.ts`; `tests/connections.test.mjs` | Per-account rate limits, attempt budgets, dead-letter. |
 | `EXEC-003` | Error routes, alerts and escalation | target | partial | `src/crank/delivery.ts`; `src/crank/ui/run.ts`; `src/crank/ops/failures.ts`; `tests/logic.test.mjs` | Slack/Teams/Nook notices, calendar escalation, compensation. |
 | `EXEC-004` | Replay any eligible step safely | published | partial | `src/crank/delivery.ts`; `tests/crank.test.mjs` | Only one manual replay of the single HTTP action exists. |
-| `EXEC-005` | Searchable run history and debugging | published | partial | `src/crank/api.ts`; `src/crank/runs.ts`; `src/crank/delivery.ts`; `src/crank/ui/run.ts`; `tests/crank.test.mjs`; `src/crank/workflows/runs.ts` | UI, run comparison. |
+| `EXEC-005` | Searchable run history and debugging | published | done | `src/crank/workflows/runs.ts`; `src/crank/ui/flows.ts`; `src/crank/ui/workflow-run.ts`; `src/crank/ui/run-debug.ts`; `tests/app.test.mjs` (EXEC-005) | HTTP and UI filters, cursor paging, frozen mapping/decision traces, comparison, safe remote links and restricted-reader payloads. |
 | `EXEC-006` | Effect reconciliation and compensation | published | partial | `src/crank/delivery.ts`; `tests/crank.test.mjs`; `src/crank/connectors/http-step.ts`; `src/crank/engine/search.ts` | Compensation, ambiguous-match decisions. |
 | `EXEC-007` | Built-in email and SMS steps | target | missing |  | No delivered product workflow. |
 | `OPS-001` | Operations reporting and external logs | target | partial | `src/crank/ops/report.ts` | CSV export, external log streams. |

@@ -19,8 +19,8 @@ Each item below is one clause’s acceptance evidence. The named journey must be
 - **EXEC-004 — Replay any eligible step safely. Status: partial.** Fail the fourth step after three committed effects, restart, preview and resume that step, then replay selected failed items with corrected data; verify the first three effects persist once and the original and corrected inputs remain distinguishable.
   Current evidence: `src/crank/delivery.ts`; `tests/crank.test.mjs`. Remaining: Only one manual replay of the single HTTP action exists.
 
-- **EXEC-005 — Searchable run history and debugging. Status: partial.** Find an older failed invoice by customer key, inspect its exact mapping and decisions, compare a passing run and follow the remote record link; deny a reader access to a restricted payload while retaining safe status/timing.
-  Current evidence: `src/crank/api.ts`; `src/crank/runs.ts`; `src/crank/delivery.ts`; `src/crank/ui/run.ts`; `tests/crank.test.mjs`; `src/crank/workflows/runs.ts`. Remaining: UI, run comparison.
+- **EXEC-005 — Searchable run history and debugging. Status: done.** Find an older failed invoice by customer key, inspect its exact mapping and decisions, compare a passing run and follow the remote record link; deny a reader access to a restricted payload while retaining safe status/timing.
+  Current evidence: `src/crank/workflows/runs.ts`; `src/crank/ui/flows.ts`; `src/crank/ui/workflow-run.ts`; `src/crank/ui/run-debug.ts`; `tests/app.test.mjs` (EXEC-005: filters, cursor paging, traces, comparison and restricted-reader payloads).
 
 - **EXEC-006 — Effect reconciliation and compensation. Status: partial.** Lose the response after an invoice/refund is created, restart and reconcile it by provider readback; simulate zero, one and multiple matches, then fail a downstream step and inspect an authorized compensation without duplicating the initial write.
   Current evidence: `src/crank/delivery.ts`; `tests/crank.test.mjs`; `src/crank/connectors/http-step.ts`; `src/crank/engine/search.ts`. Remaining: Compensation, ambiguous-match decisions.
@@ -273,7 +273,7 @@ Each item below is one clause’s acceptance evidence. The named journey must be
 - **BOUND-001 — US-first product and provider responsibilities. Status: missing.** Configure a US business workflow with USD sales-tax lines and an ACH/1099 handoff, inspect provider responsibilities and consent, and attempt a regulated operation without the required agreement/scope; verify a named setup requirement and retained obligation, then complete it through an authorized sandbox/provider connection.
   Current evidence: none; this is build work.
 
-**85 clauses: 7 done, 39 partial, 39 missing.** Status details and product behavior are in the contract’s final table. Completion requires the whole journey, including negative cases and observable end states; a cited partial implementation alone cannot promote an item.
+**85 clauses: 5 done, 42 partial, 38 missing.** Status details and product behavior are in the contract’s final table. Completion requires the whole journey, including negative cases and observable end states; a cited partial implementation alone cannot promote an item.
 
 ## Push further: agents that own the outcome
 

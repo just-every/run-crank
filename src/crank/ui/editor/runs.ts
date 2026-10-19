@@ -7,7 +7,7 @@ import { flatten, nodes, summaryOf, triggerWords, type Connection, type RunDetai
 
 export const RUN_STATE: Record<string, string> = {
   queued: 'Queued', running: 'Running', waiting: 'Waiting', awaiting_approval: 'Waiting for approval', paused: 'Paused', succeeded: 'Success', failed: 'Failed',
-  stopped_by_filter: 'Stopped by filter', stopped_by_search: 'Stopped by search', cancelled: 'Cancelled', rejected: 'Rejected',
+  stopped_by_filter: 'Stopped by filter', stopped_by_search: 'Stopped by search', cancelled: 'Cancelled', rejected: 'Rejected', uncertain: 'Uncertain', business_complete: 'Business complete',
 }
 const tone = (status: string) => status === 'succeeded' ? 'good' : status === 'failed' || status === 'rejected' ? 'bad' : ['awaiting_approval', 'waiting', 'paused', 'queued', 'running'].includes(status) ? 'wait' : 'quiet'
 export const duration = (from: string | null, to: string | null) => {

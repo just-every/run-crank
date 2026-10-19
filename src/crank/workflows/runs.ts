@@ -17,23 +17,26 @@ import { createRun } from '../triggers/admission'
 import { getWorkflow } from './store'
 
 /** Payloads are readable by owners, admins and agents; members see status and timing only. */
-const canReadPayload = (actor: Actor) => actor.role === 'owner' || actor.role === 'admin' || actor.kind === 'agent'
+export const canReadPayload = (actor: Actor) => actor.role === 'owner' || actor.role === 'admin' || actor.kind === 'agent'
 function presentRun(run: RunRow, payload: boolean) {
-  const base = { id: run.id, workflow_id: run.workflow_id, version_id: run.version_id, trigger_kind: run.trigger_kind, status: run.status, business_key: run.business_key,
-    source_time: run.source_time, received_at: run.received_at, started_at: run.started_at, finished_at: run.finished_at,
-    latency_ms: run.started_at ? Date.parse(run.started_at) - Date.parse(run.received_at) : null, error: run.error_json ? JSON.parse(run.error_json) : null }
+  const base = { id: run.id, workflow_id: run.workflow_id, version_id: run.version_id, trigger_kind: run.trigger_kind, status: run.status === 'failed' && run.error_json && JSON.parse(run.error_json).category === 'uncertain' ? 'uncertain' : run.status, business_key: run.business_key,
+    source_id: payload ? run.source_id : null, source_time: run.source_time, received_at: run.received_at, started_at: run.started_at, finished_at: run.finished_at,
+    latency_ms: run.started_at ? Date.parse(run.started_at) - Date.parse(run.received_at) : null, error: run.error_json ? (payload ? JSON.parse(run.error_json) : { category: JSON.parse(run.error_json).category, message: 'Details restricted for your role' }) : null }
   return payload ? { ...base, trigger: JSON.parse(run.trigger_json), response: run.response_json ? JSON.parse(run.response_json) : null } : { ...base, payload: 'restricted' }
 }
 
 /** EXEC-005: search by workflow, status, business key or text, date range and error category; page with `before`. */
 export async function searchRuns(env: CrankEnv, actor: Actor, params: URLSearchParams) {
-  const limit = Math.min(Math.max(Number(params.get('limit') ?? 50), 1), 100)
+  const requested = Number(params.get('limit') ?? 50)
+  requireValue(Number.isInteger(requested) && requested > 0, 'limit must be a positive whole number', 422)
+  const limit = Math.min(requested, 100)
+  for (const key of ['from', 'to']) if (params.get(key)) requireValue(Number.isFinite(Date.parse(params.get(key)!)), `${key} must be an ISO date`, 422)
   const q = params.get('q'), before = params.get('before')
-  const rows = await stmt(env, `SELECT * FROM crank_wf_runs WHERE (?1 IS NULL OR workflow_id=?1) AND (?2 IS NULL OR status=?2) AND (?3 IS NULL OR business_key=?3)
+  const rows = await stmt(env, `SELECT * FROM crank_wf_runs WHERE (?1 IS NULL OR workflow_id=?1) AND (?2 IS NULL OR (?2='uncertain' AND json_extract(error_json,'$.category')='uncertain') OR (status=?2 AND (?2!='failed' OR COALESCE(json_extract(error_json,'$.category'),'')!='uncertain'))) AND (?3 IS NULL OR business_key=?3)
     AND (?4 IS NULL OR received_at>=?4) AND (?5 IS NULL OR received_at<=?5) AND (?6 IS NULL OR json_extract(error_json,'$.category')=?6)
-    AND (?7 IS NULL OR trigger_json LIKE ?8 OR source_id LIKE ?8) AND (?9 IS NULL OR received_at||'|'||id < ?9)
+    AND (?7 IS NULL OR trigger_json LIKE ?8 OR source_id LIKE ?8 OR business_key LIKE ?8 OR error_json LIKE ?8) AND (?9 IS NULL OR received_at||'|'||id < ?9)
     ORDER BY received_at DESC,id DESC LIMIT ?10`,
-  params.get('workflow'), params.get('status'), params.get('business_key'), params.get('from'), params.get('to'), params.get('error'), canReadPayload(actor) ? q : null, `%${q}%`, before, limit + 1).all<RunRow>()
+  params.get('workflow'), params.get('status'), params.get('business_key'), params.get('from'), params.get('to')?.length === 10 ? params.get('to') + 'T23:59:59.999Z' : params.get('to'), params.get('error'), canReadPayload(actor) ? q : null, `%${q}%`, before, limit + 1).all<RunRow>()
   const page = rows.results.slice(0, limit), last = page.at(-1)
   return { runs: page.map(run => presentRun(run, canReadPayload(actor))), next: rows.results.length > limit && last ? `${last.received_at}|${last.id}` : null }
 }
@@ -41,18 +44,20 @@ export async function runDetail(env: CrankEnv, actor: Actor, runId: string) {
   const run = await stmt(env, 'SELECT * FROM crank_wf_runs WHERE id=?', runId).first<RunRow>()
   requireValue(run, 'Run not found', 404)
   const payload = canReadPayload(actor)
-  const [steps, waits, version] = await Promise.all([
+  const [steps, waits, version, attempts] = await Promise.all([
     stmt(env, 'SELECT * FROM crank_wf_steps WHERE run_id=? ORDER BY started_at,path', runId).all<Record<string, string | null>>(),
     stmt(env, 'SELECT path,kind,due_at,expires_at,proposal_json,proposal_digest,reason,created_at,resolved_at,resolution_json,decided_by FROM crank_waits WHERE run_id=? ORDER BY created_at', runId).all<Record<string, string | null>>(),
     stmt(env, 'SELECT number,published_by,published_at,declared_json FROM crank_workflow_versions WHERE id=?', run.version_id).first<{ number: number; published_by: string; published_at: string; declared_json: string }>(),
+    stmt(env, 'SELECT * FROM crank_wf_attempts WHERE run_id=? ORDER BY path,number', runId).all<any>(),
   ])
   const parse = (value: string | null) => value === null ? null : JSON.parse(value)
   return {
     ...presentRun(run, payload),
-    version: version ? { number: version.number, published_by: version.published_by, published_at: version.published_at } : null,
+    version: version ? { number: version.number, published_by: version.published_by, published_at: version.published_at, authority: 'published workflow', declared: payload ? JSON.parse(version.declared_json) : undefined } : null,
     steps: steps.results.map(s => ({ path: s.path, step_id: s.step_id, type: s.type, status: s.status, started_at: s.started_at, finished_at: s.finished_at, operation_key: s.operation_key,
-      ...(payload ? { input: parse(s.input_json), output: parse(s.output_json), trace: parse(s.trace_json) } : {}), error: parse(s.error_json) })),
-    waits: waits.results.map(w => ({ ...w, proposal: payload ? parse(w.proposal_json) : 'restricted', resolution: payload ? parse(w.resolution_json) : 'restricted', proposal_json: undefined, resolution_json: undefined })),
+      ...(payload ? { input: parse(s.input_json), output: parse(s.output_json), trace: parse(s.trace_json) } : {}), error: s.error_json ? (payload ? parse(s.error_json) : { category: parse(s.error_json).category, message: 'Details restricted for your role' }) : null })),
+    attempts: attempts.results.map(a => ({ id: a.id, path: a.path, number: a.number, method: a.method, started_at: a.started_at, finished_at: a.finished_at, http_status: a.http_status, error_category: a.error_category, ...(payload ? { destination_origin: a.destination_origin } : {}) })),
+    waits: waits.results.map(w => ({ ...w, reason: payload ? w.reason : null, proposal: payload ? parse(w.proposal_json) : 'restricted', resolution: payload ? parse(w.resolution_json) : w.resolution_json ? { approved: parse(w.resolution_json).approved, cancelled: parse(w.resolution_json).cancelled } : null, proposal_json: undefined, resolution_json: undefined })),
   }
 }
 
@@ -60,7 +65,7 @@ export async function runDetail(env: CrankEnv, actor: Actor, runId: string) {
 export async function runsToday(env: CrankEnv, workflowId: string) {
   const workflow = await getWorkflow(env, workflowId), graph = JSON.parse(workflow.draft_json) as Graph
   const zone = requireZone(graph.settings?.timezone ?? (await workspaceSettings(env)).timezone), since = new Date(startOfDay(Date.now(), zone)).toISOString()
-  const row = await stmt(env, `SELECT COUNT(*) AS runs, SUM(status='failed') AS failed, SUM(status='awaiting_approval') AS awaiting_approval FROM crank_wf_runs WHERE workflow_id=? AND received_at>=?`, workflowId, since).first<{ runs: number; failed: number | null; awaiting_approval: number | null }>()
+  const row = await stmt(env, `SELECT COUNT(*) AS runs, SUM(status='failed' AND COALESCE(json_extract(error_json,'$.category'),'')!='uncertain') AS failed, SUM(status='awaiting_approval') AS awaiting_approval FROM crank_wf_runs WHERE workflow_id=? AND received_at>=?`, workflowId, since).first<{ runs: number; failed: number | null; awaiting_approval: number | null }>()
   return { since, timezone: zone, runs: row?.runs ?? 0, failed: row?.failed ?? 0, awaiting_approval: row?.awaiting_approval ?? 0 }
 }
 

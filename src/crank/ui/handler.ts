@@ -104,10 +104,10 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
     if(workflowPath) return editorPage(decodeURIComponent(workflowPath[1]),url.searchParams)
     if(url.pathname==='/app/runs') {
       const q = url.searchParams.get('q') ?? '', status = url.searchParams.get('status') ?? '', workflow = url.searchParams.get('workflow') ?? ''
-      const search = new URLSearchParams({limit:'50'}); if(q) search.set('q',q); if(status) search.set('status',status); if(workflow) search.set('workflow',workflow); const before = url.searchParams.get('before'); if(before) search.set('before',before)
+      const search = new URLSearchParams({limit:'50'}); if(q) search.set('q',q); if(status) search.set('status',status); if(workflow) search.set('workflow',workflow); for (const key of ['before','business_key','from','to','error']) { const value = url.searchParams.get(key); if(value) search.set(key,value) }
       const [runs,workflows] = await Promise.all([read('/api/crank/workflow-runs?'+search),read('/api/crank/workflows')])
       const {graphs,live} = await runGraphs(read,runs.runs)
-      return page('Runs',runsView(state,url.searchParams.get('flow'),{runs:runs.runs,next:runs.next,workflows,q,status,workflow,graphs,live}),{state,intro:'Every run keeps its own record: workflow runs step by step, approval flow runs with their decision and delivery.'})
+      return page('Runs',runsView(state,url.searchParams.get('flow'),{runs:runs.runs,next:runs.next,workflows,q,status,workflow,graphs,live,params:url.searchParams}),{state,intro:'Every run keeps its own record: workflow runs step by step, approval flow runs with their decision and delivery.'})
     }
     if(/^\/app\/runs\/[^/]+$/.test(url.pathname)) return page('Run details',runView(state,url.pathname.split('/')[3]),{state,crumbs:[['Runs','/app/runs']]})
     const runPath = /^\/app\/workflow-runs\/([^/]+)$/.exec(url.pathname)
@@ -115,7 +115,10 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
       const run = await read('/api/crank/workflow-runs/'+runPath[1]), workflow = await read('/api/crank/workflows/'+encodeURIComponent(run.workflow_id))
       const versions = `/api/crank/workflows/${encodeURIComponent(run.workflow_id)}/versions/`, liveNumber = workflow.versions?.find((v:any)=>v.id===workflow.published_version_id)?.number
       const [graph,live] = await Promise.all([run.version ? read(versions+run.version.number).then((v:any)=>v.graph) : undefined, liveNumber ? read(versions+liveNumber).then((v:any)=>({graph:v.graph,number:liveNumber})) : null])
-      return page('Workflow run',workflowRunView(run,workflow,graph,live,await read('/api/crank/connections'),actor,state.people ?? []),{state,crumbs:[['Runs','/app/runs']]})
+      const compareId = url.searchParams.get('older') || url.searchParams.get('compare'), comparison = compareId ? await read('/api/crank/workflow-runs/'+encodeURIComponent(compareId)) : null
+      if(comparison && comparison.workflow_id !== run.workflow_id) throw Object.assign(new Error('Compare runs of the same workflow'),{status:422})
+      const prior = await read('/api/crank/workflow-runs?'+new URLSearchParams({workflow:run.workflow_id,limit:'50'}))
+      return page('Workflow run',workflowRunView(run,workflow,graph,live,await read('/api/crank/connections'),actor,state.people ?? [],comparison,prior.runs),{state,crumbs:[['Runs','/app/runs']]})
     }
     if(url.pathname==='/app/approvals') {
       const waiting = await read('/api/crank/workflow-runs?status=awaiting_approval&limit=100')
