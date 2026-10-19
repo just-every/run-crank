@@ -16,6 +16,9 @@ export async function dataApi(request:Request,env:CrankEnv):Promise<Response|nul
     if(request.method !== 'GET') requireWriteOrigin(request,env,actor)
     const store = await portability(env)
     if (path === '/api/crank/data/export' && request.method === 'POST') {
+      // Finish the incoming POST stream before returning a large download.
+      // Discard its unused bytes without retaining or interpreting their values.
+      await request.body?.pipeTo(new WritableStream({ write() {} }))
       const id = await store.exports.create(actor.id)
       try {
         let status = await store.exports.status(id)
