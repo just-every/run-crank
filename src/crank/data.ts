@@ -3,6 +3,7 @@ import { createErasure, defineErasure } from '@runeditrun/rer/internal/modules/e
 import policy from './archive-policy.mjs'
 import { authorize, requireOwner, requireWriteOrigin, guardedBatch } from './access'
 import { body, type CrankEnv } from './model'
+import { eraseWorkflowRun } from './workflow-erasure'
 
 export const portability = (env: CrankEnv) => createPortability({ db:env.DB, policy })
 const digest = async (s:string) => Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s))),b=>b.toString(16).padStart(2,'0')).join('')
@@ -56,6 +57,10 @@ export async function dataApi(request:Request,env:CrankEnv):Promise<Response|nul
     }
     if (path === '/api/crank/data/erase' && request.method === 'POST') {
       const value = await body(request)
+      if (value.workflow_run_id !== undefined) {
+        if (value.confirm !== 'ERASE' || typeof value.workflow_run_id !== 'string' || !value.workflow_run_id || value.run_id !== undefined) return Response.json({error:'Confirm ERASE and select one workflow run.'},{status:400})
+        return Response.json(await eraseWorkflowRun(env,actor,store,value.workflow_run_id),{headers:{'cache-control':'no-store'}})
+      }
       if (value.confirm !== 'ERASE' || typeof value.run_id !== 'string') return Response.json({error:'Confirm ERASE and select a run.'},{status:400})
       const row = await env.DB.prepare('SELECT r.*,f.status AS flow_status FROM crank_runs r JOIN crank_flows f ON f.id=r.flow_id WHERE r.id=?').bind(value.run_id).first<{id:string;flow_id:string;event_id:string;state:string;flow_status:string}>()
       if (!row) return Response.json({error:'Run not found.'},{status:404})

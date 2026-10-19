@@ -52,6 +52,9 @@ test('TRIG-001: raw GET and multipart files are mappable, and a synchronous resp
   const got = await deliver(h, url + '?ref=A1', { headers: { 'x-vendor': 'Northline' } });
   const getRun = await settled(h, got.value.run_id);
   assert.equal(stepOf(getRun, 'seen').output.ref, 'A1'); assert.equal(stepOf(getRun, 'seen').output.vendor, 'Northline');
+  const otherGet = await deliver(h, url + '?ref=A2', { headers: { 'x-vendor': 'Northline' } });
+  assert.equal(otherGet.value.accepted, true, 'a different GET query is a distinct event');
+  assert.equal((await deliver(h, url + '?ref=A1', { headers: { 'x-vendor': 'Changed delivery header' } })).value.duplicate, true);
   const body = new FormData(); body.append('note', 'Quote attached'); body.append('doc', new File(['%PDF-1.4 quote'], 'quote.pdf', { type: 'application/pdf' }));
   const posted = await deliver(h, url, { method: 'POST', body });
   const file = stepOf(await settled(h, posted.value.run_id), 'seen').output.file;
@@ -236,4 +239,56 @@ test('TRIG-002: weekday schedules keep 9 a.m. local across DST, admit each occur
   await Promise.all([h.tick(overlapDue + 15 * MINUTE), h.tick(overlapDue + 15 * MINUTE)]);
   assert.equal((await runs(h, overlap)).length, 1);
   assert.deepEqual((await h.get(`workflows/${overlap.id}/trigger`)).occurrences.map(o => o.outcome).sort(), ['admitted', 'skipped']);
+});
+
+test('TRIG-001: envelope identity, transactional admission and revocation preserve one durable run or hold', async () => {
+  const isolated = await harness('http://127.0.0.1:9');
+  try {
+    const w = await publish(isolated, 'Harbour Workshop invoice callbacks', { trigger: { type: 'webhook', envelope: true }, steps: [{ id: 'invoice', type: 'map', input: { customer: '{{trigger.input.customer}}' } }] });
+    const url = await hookUrl(isolated, w);
+    const event = (event_id, input = { customer: 'Harbour Workshop — wholesale invoices' }, headers = {}) => deliver(isolated, url, { method: 'POST', headers: { 'content-type': 'application/json', ...headers }, body: JSON.stringify({ event_id, input }) });
+    const concurrent = await Promise.all([event('inv-1042'), event('inv-1042', undefined, { 'x-delivery-attempt': '2' })]);
+    assert.equal(concurrent.filter(r => r.value.accepted).length, 1);
+    assert.equal(concurrent.filter(r => r.value.duplicate).length, 1);
+    assert.equal(concurrent[0].value.run_id, concurrent[1].value.run_id);
+    assert.equal((await settled(isolated, concurrent[0].value.run_id)).status, 'succeeded');
+    assert.equal((await event('inv-1042', { customer: 'Changed account' })).status, 409);
+    await isolated.db.prepare('UPDATE crank_trigger_events SET received_at=? WHERE workflow_id=?').bind('2000-01-01T00:00:00.000Z', w.id).run();
+    await isolated.restart();
+    assert.equal((await event('inv-1042')).value.duplicate, true, 'envelope identity has no time-window expiry');
+    assert.equal((await runs(isolated, w)).length, 1);
+
+    await isolated.db.exec(`CREATE TRIGGER interrupt_hook_run BEFORE INSERT ON crank_wf_runs WHEN NEW.workflow_id='${w.id}' BEGIN SELECT RAISE(ABORT,'test admission interruption'); END;`);
+    try { assert.equal((await event('inv-interrupted')).status, 500); }
+    finally { await isolated.db.exec('DROP TRIGGER interrupt_hook_run'); }
+    assert.equal((await isolated.db.prepare('SELECT COUNT(*) AS n FROM crank_trigger_events WHERE workflow_id=? AND dedup_key=?').bind(w.id, 'event:inv-interrupted').first()).n, 0, 'failed run creation rolls back its dedup claim');
+    await isolated.restart();
+    assert.equal((await event('inv-interrupted')).value.accepted, true);
+
+    await isolated.post(`workflows/${w.id}/pause`);
+    await isolated.db.exec(`CREATE TRIGGER interrupt_hook_hold BEFORE INSERT ON crank_hold_items BEGIN SELECT RAISE(ABORT,'test hold interruption'); END;`);
+    try { assert.equal((await event('inv-held')).status, 500); }
+    finally { await isolated.db.exec('DROP TRIGGER interrupt_hook_hold'); }
+    assert.equal((await isolated.get(`workflows/${w.id}/holds`)).length, 0, 'hold and event claim roll back together');
+    const held = await Promise.all([event('inv-held'), event('inv-held')]);
+    assert.equal(held.filter(r => r.value.held).length, 1);
+    const [hold] = await isolated.get(`workflows/${w.id}/holds`);
+    assert.equal((await isolated.get('holds/' + hold.id)).counts.held, 1);
+    assert.equal((await event('inv-held', { customer: 'Conflicting held input' })).status, 409);
+
+    await isolated.post(`workflows/${w.id}/resume`);
+    const hook = (await isolated.get('workflows/' + w.id)).hooks[0];
+    // Revoke after the initial HTTP read, inside the real admission transaction.
+    await isolated.db.exec(`CREATE TRIGGER revoke_during_admission AFTER INSERT ON crank_trigger_events WHEN NEW.dedup_key='event:inv-revoked' BEGIN UPDATE crank_hooks SET revoked_at='2000-01-01' WHERE id='${hook.id}'; END;`);
+    try { assert.equal((await event('inv-revoked')).status, 409); }
+    finally { await isolated.db.exec('DROP TRIGGER revoke_during_admission'); }
+    assert.equal((await isolated.db.prepare('SELECT COUNT(*) AS n FROM crank_trigger_events WHERE workflow_id=? AND dedup_key=?').bind(w.id, 'event:inv-revoked').first()).n, 0);
+    assert.equal((await event('inv-revoked')).value.accepted, true, 'no phantom claim remains after the transaction rolls back');
+    await isolated.post(`hooks/${hook.id}/revoke`);
+    assert.equal((await event('inv-after-revoke')).status, 404);
+    const target = await publish(isolated, 'Another receiving workflow', { trigger: { type: 'webhook', envelope: true }, steps: [] });
+    const otherUrl = await hookUrl(isolated, target);
+    assert.equal((await deliver(isolated, otherUrl, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ event_id: 'inv-1042', input: {} }) })).value.accepted, true, 'identities are workflow scoped');
+    assert.equal((await deliver(isolated, url.replace('/hooks/w/', '/api/crank/workflows/'))).status, 401, 'a URL secret gives no private read authority');
+  } finally { await isolated.close(); }
 });

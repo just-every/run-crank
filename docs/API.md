@@ -24,7 +24,7 @@ allow a 128 KiB source in a 256 KiB JSON envelope. Errors are JSON `{error}`.
 | POST `/imports/:id/undo` | Native/dev owner | Undo unused drafts, refusing target drift |
 | POST `/data/export` | Native/dev owner | Download installation archive |
 | POST `/data/restore` | Native/dev owner | `{archive,confirm:"RESTORE",journal?}`; empty destination only |
-| POST `/data/erase` | Native/dev owner | `{run_id,confirm:"ERASE"}`; paused flow, terminal run |
+| POST `/data/erase` | Native/dev owner | `{run_id,confirm:"ERASE"}` for a paused approval flow, or `{workflow_run_id,confirm:"ERASE"}` for a paused multi-step workflow; terminal run only |
 
 POSTs without other fields use `{}`. A failed HTTP attempt records a safe status
 code, uncertainty and timing, never arbitrary destination response content.

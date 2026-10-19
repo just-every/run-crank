@@ -1,6 +1,6 @@
-import { storeFile, MAX_FILE_BYTES } from '../connectors/files'
+import { MAX_FILE_BYTES } from '../connectors/files'
 import { StepError } from '../engine/errors'
-import { canonical, digest, type CrankEnv } from '../model'
+import { canonical, digest, id, type CrankEnv } from '../model'
 import { parseXml, toJson } from './xml'
 
 export const MAX_INBOUND_BYTES = 2 * 1024 * 1024
@@ -27,14 +27,15 @@ function formObject(params: URLSearchParams) {
   return out
 }
 
-export interface Inbound { method: string; headers: Record<string, string>; query: Record<string, unknown>; body: unknown; files: Record<string, unknown>; raw?: string; form: URLSearchParams | null; normalized: string }
+export interface InboundUpload { file_id: string; name: string; type: string; size: number; sha256: string; content_base64: string }
+export interface Inbound { method: string; headers: Record<string, string>; query: Record<string, unknown>; body: unknown; files: Record<string, unknown>; raw?: string; form: URLSearchParams | null; normalized: string; uploads: InboundUpload[] }
 /** Parses JSON, form-encoded, multipart (files become stored file references), XML and raw bodies. */
 export async function parseInbound(env: CrankEnv, workflowId: string, request: Request, bytes: Uint8Array<ArrayBuffer>, raw: boolean): Promise<Inbound> {
   const url = new URL(request.url), type = request.headers.get('content-type')?.split(';')[0].trim().toLowerCase() ?? ''
   const text = new TextDecoder().decode(bytes)
   const headers = Object.fromEntries([...request.headers.entries()].filter(([name]) => !HIDDEN_HEADERS.has(name)))
   let body: unknown = null, form: URLSearchParams | null = null
-  const files: Record<string, unknown> = {}
+  const files: Record<string, unknown> = {}, uploads: InboundUpload[] = []
   if (bytes.length) {
     if (type.includes('json')) { try { body = JSON.parse(text) } catch { throw new StepError('validation', 'The body is not valid JSON') } }
     else if (type === 'application/x-www-form-urlencoded') { form = new URLSearchParams(text); body = formObject(form) }
@@ -45,14 +46,18 @@ export async function parseInbound(env: CrankEnv, workflowId: string, request: R
         if (typeof value === 'string') { fields[name] = name in fields ? [...[fields[name]].flat(), value] : value; continue }
         const file = value as File
         if (file.size > MAX_FILE_BYTES) throw new StepError('validation', `File ${file.name} exceeds ${MAX_FILE_BYTES} bytes`)
-        files[name] = await storeFile(env, workflowId, { name: file.name, type: file.type, bytes: new Uint8Array(await file.arrayBuffer()), source: 'webhook upload' })
+        const fileBytes = new Uint8Array(await file.arrayBuffer())
+        const sha256 = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', fileBytes)), b => b.toString(16).padStart(2, '0')).join('')
+        const reference = { file_id: id(), name: file.name.slice(0, 255) || 'file', type: (file.type || 'application/octet-stream').slice(0, 255), size: file.size, sha256 }
+        let binary = ''; for (let i = 0; i < fileBytes.length; i += 8192) binary += String.fromCharCode(...fileBytes.subarray(i, i + 8192))
+        uploads.push({ ...reference, content_base64: btoa(binary) }); files[name] = reference
       }
       body = fields
     } else if (type.includes('xml')) { const root = parseXml(text); const element = root.children.find(c => c.type === 'element') as any; body = element ? { [element.name]: toJson(element) } : null }
     else body = text
   }
-  const normalized = typeof body === 'string' ? body : canonical({ body, files: Object.fromEntries(Object.entries(files).map(([k, f]: any) => [k, f.sha256])) })
-  return { method: request.method, headers, query: formObject(url.searchParams), body, files, ...(raw ? { raw: text } : {}), form, normalized }
+  const normalized = request.method === 'GET' ? canonical({ method: 'GET', query: formObject(url.searchParams) }) : typeof body === 'string' ? body : canonical({ body, files: Object.fromEntries(Object.entries(files).map(([k, f]: any) => [k, f.sha256])) })
+  return { method: request.method, headers, query: formObject(url.searchParams), body, files, ...(raw ? { raw: text } : {}), form, normalized, uploads }
 }
 
 export const bodyDigest = async (inbound: Inbound) => digest(inbound.normalized)
