@@ -193,8 +193,8 @@ Each item below is one clause’s acceptance evidence. The named journey must be
 - **EXEC-007 — Built-in email and SMS steps. Status: missing.** Verify a test sending domain’s SPF, DKIM and DMARC records in setup, then send a mapped email with a PDF attachment from a published workflow with no mail connection and verify receipt, a passing DKIM signature and the delivered event on the run; send to a hard-bouncing address and verify the bounce is recorded and the next send is suppressed; attempt a production send before the records verify and see a named setup requirement; send an SMS step through a Twilio test number and see its delivery status; route a failure alert to the workflow owner with no Twilio connection and verify it arrives by email and mobile push.
   Current evidence: none; this is build work.
 
-- **OPS-001 — Operations reporting and external logs. Status: partial.** Generate passing, failed, waiting and uncertain runs; filter an operations report, export it and stream events to an unavailable then restored sink; reconcile counts to run history and show incomplete business outcomes separately. On the operations home, verify that today’s run count and failed count, for the business day in the workspace timezone, equal that day’s runs and failures in run history, and that it shows how many active workflows ran today out of all active workflows and names any scheduled workflow whose due run did not happen.
-  Current evidence: `src/crank/ops/report.ts`. Remaining: CSV export, external log streams.
+- **OPS-001 — Operations reporting and external logs. Status: done.** Generate passing, failed, waiting and uncertain runs; filter an operations report, export it and stream events to an unavailable then restored sink; reconcile counts to run history and show incomplete business outcomes separately. On the operations home, verify that today’s run count and failed count, for the business day in the workspace timezone, equal that day’s runs and failures in run history, and that it shows how many active workflows ran today out of all active workflows and names any scheduled workflow whose due run did not happen.
+  Current evidence: `src/crank/ops/report.ts`; `src/crank/ops/log-stream.ts`; `src/crank/ui/operations.ts`; `tests/ops.test.mjs` (OPS-001). Business completion is explicitly owner-attested and cannot be inferred from HTTP success.
 
 - **OPS-002 — USD usage, forecasts and spending controls. Status: missing.** Estimate a batch, run it against metered provider test edges, approach and exhaust a budget and replenish it; verify timely notices, no unauthorized overage, preserved backlog and a report separating estimates, observed usage and provider charges.
   Current evidence: none; this is build work.
@@ -273,7 +273,7 @@ Each item below is one clause’s acceptance evidence. The named journey must be
 - **BOUND-001 — US-first product and provider responsibilities. Status: missing.** Configure a US business workflow with USD sales-tax lines and an ACH/1099 handoff, inspect provider responsibilities and consent, and attempt a regulated operation without the required agreement/scope; verify a named setup requirement and retained obligation, then complete it through an authorized sandbox/provider connection.
   Current evidence: none; this is build work.
 
-**85 clauses: 5 done, 42 partial, 38 missing.** Status details and product behavior are in the contract’s final table. Completion requires the whole journey, including negative cases and observable end states; a cited partial implementation alone cannot promote an item.
+**85 clauses: 6 done, 41 partial, 38 missing.** Status details and product behavior are in the contract’s final table. Completion requires the whole journey, including negative cases and observable end states; a cited partial implementation alone cannot promote an item.
 
 ## Push further: agents that own the outcome
 

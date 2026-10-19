@@ -1,3 +1,4 @@
+import { operationsView } from './operations'
 import { crankApi } from '../api'
 import { workflowApi } from '../workflows/api'
 import { importApi } from '../import-api'
@@ -76,6 +77,8 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
       const input:Record<string,unknown> = {...form}
       if(form.input) { try {input.input=JSON.parse(form.input)} catch {return page('Invalid event','<p>Event input must be a JSON object.</p><a href="/app">Return to flows</a>',{},400)} }
       if(form.graph) { try {input.graph=JSON.parse(form.graph)} catch {return page('Invalid workflow','<p class="notice">The workflow graph must be JSON.</p><a href="/app">Return to flows</a>',{},400)} }
+      if(form.sink_token) { input.secret={token:form.sink_token}; delete input.sink_token }
+      if(form.confirm_business_outcome==='true') input.confirm_business_outcome=true
       if(form.step_path!==undefined) { input.path=form.step_path; delete input.step_path }
       if(input.reason==='') delete input.reason
       if(input.flow_id==='') delete input.flow_id
@@ -128,6 +131,7 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
     if(url.pathname==='/app/account') { const session = await read('/auth/session'); return page('Account',accountView(session,owner),{state,intro:'Who is signed in on this browser, and what that role may do.'}) }
     if(url.pathname==='/app/connections') return page('Connections',connectionsView(await read('/api/crank/connections'),owner),{state,intro:'The apps your workflows act on, each with one stored credential.'})
     requireOwner(actor)
+    if(url.pathname==='/app/operations') return page('Operations',operationsView(await read('/api/crank/reports/operations?'+url.searchParams),await read('/api/crank/workflows'),url.searchParams),{state,intro:'Execution health, business obligations and delivery to your own logs.'})
     if(url.pathname==='/app/access') {const people=await call('/auth/operators'); return page('Access',accessView({...state,people:people.ok?await people.json():[]}),{state,intro:'Credentials for agents and sending apps, and the people who can sign in.'})}
     if(url.pathname==='/app/data') return page('Data',dataView(),{state,intro:'Export, restore and erase. Your data stays on this installation.'})
     if(url.pathname==='/app/import') { const jobs=await call('/api/crank/imports'); if(!jobs.ok) throw new Error('Import journal unavailable'); return page('Move in',importView(await jobs.json() as any[]),{state,intro:'Bring workflows from another tool as drafts you review first.'}) }

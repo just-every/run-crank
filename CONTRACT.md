@@ -747,7 +747,7 @@ Every capability the homepage states, in page order, for the owner-approved stru
 | 6 | Hero: "alternative to Zapier, Make and Workato" | `MIG-002`, `MIG-003`, `MIG-004`, `CONN-001` | partial | partly: `src/crank/connections/catalog.ts`; the three migrations are contract, not yet in code |
 | 7 | Hero cards: Stripe payment → Google Sheets → Slack #sales → QuickBooks invoice, with times | `CONN-008`, `CONN-005`, `CONN-004`, `CONN-007` | partial | partly: `src/crank/connectors/slack.ts`; Stripe, Sheets and QuickBooks are contract, not yet in code |
 | 8 | Hero cards: "Field renamed: amount → amount_total · Repaired, re-tested" | `AGENT-002` | missing | contract, not yet in code |
-| 9 | Hero cards: "Runs today 1,284 · 0 failed" | `OPS-001` | partial | partly: `src/crank/ops/report.ts` |
+| 9 | Hero cards: "Runs today 1,284 · 0 failed" | `OPS-001` | done | `src/crank/ops/report.ts` |
 | 10 | Move in: "Give Crank your Zapier, Make or Workato export. It rebuilds each workflow" | `MIG-002`, `MIG-003`, `MIG-004` | missing | contract, not yet in code |
 | 11 | Move in: "runs it beside the old one until the results match"; import card "Past runs checked · 212 of 212 match", "37 running side by side" | `MIG-006`, `MIG-002` | missing | contract, not yet in code |
 | 12 | Move in terminal: `git clone` the repository, then `cd crank && rer dev` starts Crank | `BASE-005` | partial | partly: `RUN-LOCALLY.md`, `src/site/run.json` |
@@ -763,7 +763,7 @@ Every capability the homepage states, in page order, for the owner-approved stru
 | 22 | All day: "webhooks" | `TRIG-001` | done | code: `src/crank/triggers/webhook.ts` |
 | 23 | All day: "and app events" | `TRIG-003`, `TRIG-008` | partial | partly: `src/crank/triggers/slack-events.ts`, `src/crank/triggers/poll.ts` |
 | 24 | All day: "Duplicates are caught before they run twice" ("Duplicate skipped") | `TRIG-001`, `TRIG-003` | partial | partly: `src/crank/triggers/webhook.ts`, `src/crank/triggers/admission.ts` |
-| 25 | All day log: "Today · 1,284 runs · 0 lost", eight runs by trigger | `OPS-001`, `EXEC-005` | partial | partly: `src/crank/ops/report.ts`, `src/crank/workflows/runs.ts` |
+| 25 | All day log: "Today · 1,284 runs · 0 lost", eight runs by trigger | `OPS-001`, `EXEC-005` | done | `src/crank/ops/report.ts`, `src/crank/workflows/runs.ts` |
 | 26 | All day log: "Priya Shah · Fieldstone Dental · AI score 9 · Posted to #sales" | `AI-001`, `CONN-012`, `CONN-004` | partial | partly: `src/crank/connectors/slack.ts`; the AI step and Typeform are contract, not yet in code |
 | 27 | All day log: "Refund $1,250 · Order #4729 → QuickBooks credit memo" | `CONN-008`, `CONN-007` | missing | contract, not yet in code |
 | 28 | Outage: "Failed steps retry with backoff" (503s at 1, 2, 4, 8 and 16 minutes) | `EXEC-002` | partial | partly: `src/crank/connectors/http-step.ts` |
@@ -778,7 +778,7 @@ Every capability the homepage states, in page order, for the owner-approved stru
 | 37 | Limits: "No desktop or screen-scraping robots" | none needed: a boundary, true of the code | done | code: `src/crank/engine/steps/index.ts` (no desktop or screen step type exists) |
 | 38 | Limits: "Apps outside the library connect over HTTP or a code step" | `HTTP-002`, `WORK-005` | partial | partly: `src/crank/connectors/http-step.ts`; code steps are contract, not yet in code |
 | 39 | Closing: "Open source workflow automation for every team" / "Free and open source, MIT licensed" | `BASE-004` | partial | partly: `LICENSE`, `src/site/shell/SiteFooter.tsx` |
-| 40 | Closing art: "All 38 workflows ran" | `OPS-001` | partial | partly: `src/crank/ops/report.ts` |
+| 40 | Closing art: "All 38 workflows ran" | `OPS-001` | done | `src/crank/ops/report.ts` |
 
 ## Status
 
@@ -787,8 +787,8 @@ Judged from the code and tests at commit `06ace84667d83032ec41a8a210a5084cd0c854
 | Clauses | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
 | Published | 4 | 8 | 0 | 12 |
-| Target and push further | 1 | 34 | 38 | 73 |
-| All | 5 | 42 | 38 | 85 |
+| Target and push further | 2 | 33 | 38 | 73 |
+| All | 6 | 41 | 38 | 85 |
 
 MIG-006, BASE-004 and BASE-005 were added on 17 October 2026 so every homepage claim has a clause, and were judged from the code and tests at `eac16196cffe508a1eec962b1c116564707c1598` (main after the run site landed); every earlier row keeps its status from the commit above.
 
@@ -841,10 +841,10 @@ MIG-006, BASE-004 and BASE-005 were added on 17 October 2026 so every homepage c
 | `EXEC-002` | Rate limits, backoff and exhaustion | target | partial | `src/crank/connectors/http-step.ts`; `tests/connections.test.mjs` | Per-account rate limits, attempt budgets, dead-letter. |
 | `EXEC-003` | Error routes, alerts and escalation | target | partial | `src/crank/delivery.ts`; `src/crank/ui/run.ts`; `src/crank/ops/failures.ts`; `tests/logic.test.mjs` | Slack/Teams/Nook notices, calendar escalation, compensation. |
 | `EXEC-004` | Replay any eligible step safely | published | partial | `src/crank/delivery.ts`; `tests/crank.test.mjs` | Only one manual replay of the single HTTP action exists. |
-| `EXEC-005` | Searchable run history and debugging | published | done | `src/crank/workflows/runs.ts`; `src/crank/ui/flows.ts`; `src/crank/ui/workflow-run.ts`; `src/crank/ui/run-debug.ts`; `tests/app.test.mjs` (EXEC-005) | HTTP and UI filters, cursor paging, frozen mapping/decision traces, comparison, safe remote links and restricted-reader payloads. |
+| `EXEC-005` | Searchable run history and debugging | published | done | `src/crank/workflows/runs.ts`; `src/crank/ui/flows.ts`; `src/crank/ui/workflow-run.ts`; `src/crank/ui/run-debug.ts`; `tests/app.test.mjs` (EXEC-005: filters, paging, traces, comparison, remote links and restricted payloads) |  |
 | `EXEC-006` | Effect reconciliation and compensation | published | partial | `src/crank/delivery.ts`; `tests/crank.test.mjs`; `src/crank/connectors/http-step.ts`; `src/crank/engine/search.ts` | Compensation, ambiguous-match decisions. |
 | `EXEC-007` | Built-in email and SMS steps | target | missing |  | No delivered product workflow. |
-| `OPS-001` | Operations reporting and external logs | target | partial | `src/crank/ops/report.ts` | CSV export, external log streams. |
+| `OPS-001` | Operations reporting and external logs | target | done | `src/crank/ops/report.ts`; `src/crank/ops/log-stream.ts`; `src/crank/ui/operations.ts`; `tests/ops.test.mjs` (OPS-001: reports, CSV, queue ages, redacted durable streams; business completion explicitly owner-attested) |  |
 | `OPS-002` | USD usage, forecasts and spending controls | target | missing |  | No delivered product workflow. |
 | `TEAM-001` | Team workspaces and permissions | target | partial | `src/crank/access.ts`; `src/crank/ui/settings.ts`; `tests/crank.test.mjs` | Owner/admin/member roles and deactivation exist; workspace sharing scopes, approver/operator roles and team connection ownership do not. |
 | `TEAM-002` | Optional approvals and standing grants | published | partial | `src/crank/delivery.ts`; `src/crank/access.ts`; `tests/crank.test.mjs` | Exact owner approval/rejection ships; optional approval nodes and standing grants are absent. |

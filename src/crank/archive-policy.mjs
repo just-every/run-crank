@@ -2,7 +2,7 @@
 // restored workflows arrive paused and their connections must be reconnected.
 export default {
   product: 'automation/crank',
-  excludeTables: ['crank_tokens', 'crank_authority_guards', 'crank_hooks', 'crank_oauth_apps', 'crank_oauth_states', 'crank_locks'],
+  excludeTables: ['crank_tokens', 'crank_authority_guards', 'crank_hooks', 'crank_oauth_apps', 'crank_oauth_states', 'crank_locks', 'crank_log_sinks', 'crank_ops_events'],
   secretColumns: { crank_connections: ['secret_iv', 'secret_ciphertext'] },
   requiredConfiguration: ['OWNER_EMAIL','SESSION_SECRET','AUTH_ORIGIN','MAIL_PROVIDER','MAIL_FROM','CRANK_TARGET_ORIGIN','CRANK_TARGET_TOKEN'],
   exportRow(table,row) {

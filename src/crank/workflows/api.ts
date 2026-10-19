@@ -11,7 +11,8 @@ import { validateGraph } from '../engine/graph'
 import { body, CrankError, json, requireValue, stmt, type Actor, type CrankEnv } from '../model'
 import { readAudit } from '../ops/audit'
 import { coverageReport } from '../ops/coverage'
-import { latencyReport } from '../ops/report'
+import { latencyReport, operationsReport, operationsCsv, configureOperations, createObligation, verifyObligation } from '../ops/report'
+import { listLogSinks, configureLogSink, removeLogSink, flushLogStreams } from '../ops/log-stream'
 import { updateSettings, workspaceSettings } from '../ops/settings'
 import { decideHold, getHold } from '../triggers/admission'
 import { plannedTimes } from '../triggers/schedule'
@@ -84,12 +85,24 @@ export async function workflowApi(request: Request, env: CrankEnv): Promise<Resp
       if (path === '/api/crank/settings') return json(await workspaceSettings(env))
       if (path === '/api/crank/audit') { requireOwner(actor); return json(await readAudit(env, url.searchParams.get('kind') ?? undefined, url.searchParams.get('id') ?? undefined)) }
       if (path === '/api/crank/notices') { requireOwner(actor); return json((await stmt(env, 'SELECT * FROM crank_notices ORDER BY created_at DESC LIMIT 200').all()).results) }
+      if (path === '/api/crank/reports/operations') {
+        requireOwner(actor)
+        const report = await operationsReport(env, url.searchParams)
+        return url.searchParams.get('format') === 'csv' ? new Response(operationsCsv(report), { headers: { 'content-type': 'text/csv; charset=utf-8', 'content-disposition': 'attachment; filename=crank-operations.csv', 'cache-control': 'no-store' } }) : json(report)
+      }
+      if (path === '/api/crank/reports/log-sinks') { requireOwner(actor); return json(await listLogSinks(env)) }
       if (path === '/api/crank/reports/latency') return json(await latencyReport(env, url.searchParams))
       return json({ error: 'Route not found' }, 404)
     }
     requireValue(request.method === 'POST', 'Method not allowed', 405)
     requireWriteOrigin(request, env, actor)
     const input = request.body ? await body(request, 256 * 1024) : {}
+    if (path === '/api/crank/reports/log-sinks') return json(await configureLogSink(env, actor, input), 201)
+    if ((m = match(path, /^\/api\/crank\/reports\/log-sinks\/([^/]+)\/delete$/))) return json(await removeLogSink(env, actor, m[0]))
+    if (path === '/api/crank/reports/log-streams/flush') { requireOwner(actor); return json(await flushLogStreams(env)) }
+    if (path === '/api/crank/reports/settings') return json(await configureOperations(env, actor, input))
+    if (path === '/api/crank/reports/obligations') return json(await createObligation(env, actor, input), 201)
+    if ((m = match(path, /^\/api\/crank\/reports\/obligations\/([^/]+)\/verify$/))) return json(await verifyObligation(env, actor, m[0], input))
     if (path === '/api/crank/workflows') return json(await createWorkflow(env, actor, input), 201)
     if ((m = match(path, /^\/api\/crank\/workflows\/([^/]+)\/(draft|validate|publish|pause|resume|duplicate|run|preview|hooks)$/))) {
       const [workflowId, action] = m

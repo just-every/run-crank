@@ -5,6 +5,7 @@ import { stmt, type CrankEnv } from '../model'
 import { runPoll, type PollRow } from '../triggers/poll'
 import { runSchedule } from '../triggers/schedule'
 import { notify } from './notices'
+import { flushLogStreams } from './log-stream'
 
 /** The executor pass, run by the per-minute Cron trigger. Everything it does is driven by
  * durable rows, so a restart or redeploy resumes where the last pass stopped. `time` is the
@@ -12,7 +13,7 @@ import { notify } from './notices'
 export async function schedulerPass(env: CrankEnv, time = Date.now()) {
   const at = new Date(time).toISOString(), summary = { recovered: 0, released: 0, queued: 0, polls: 0, schedules: 0, executed: 0, holds: 0 }
   // An expired lease returns its run to the queue; an interrupted remote write becomes uncertain on the next walk.
-  summary.recovered = (await stmt(env, "UPDATE crank_wf_runs SET status='queued',lease_id=NULL,lease_expires_at=NULL WHERE status='running' AND lease_expires_at<=?", at).run()).meta.changes
+  summary.recovered = (await stmt(env, "UPDATE crank_wf_runs SET status='queued',lease_id=NULL,lease_expires_at=NULL WHERE status='running' AND lease_expires_at<=? RETURNING id", at).all()).results.length
   const delays = await stmt(env, "SELECT run_id,path,expires_at FROM crank_waits WHERE resolved_at IS NULL AND kind='delay' AND due_at<=? ORDER BY due_at LIMIT 200", at).all<{ run_id: string; path: string; expires_at: string | null }>()
   for (const wait of delays.results) if (await resolveWait(env, wait.run_id, wait.path, { released: true, expired: !!wait.expires_at && wait.expires_at < at }, null, { at })) summary.released++
   const callbacks = await stmt(env, "SELECT run_id,path FROM crank_waits WHERE resolved_at IS NULL AND kind='callback' AND expires_at<=? LIMIT 200", at).all<{ run_id: string; path: string }>()
@@ -25,6 +26,7 @@ export async function schedulerPass(env: CrankEnv, time = Date.now()) {
   summary.holds = await holdUpkeep(env, time)
   const queued = await stmt(env, "SELECT id FROM crank_wf_runs WHERE status='queued' ORDER BY received_at LIMIT 50").all<{ id: string }>()
   for (const run of queued.results) { await executeRun(env, run.id, time); summary.executed++ }
+  await flushLogStreams(env, time)
   return summary
 }
 

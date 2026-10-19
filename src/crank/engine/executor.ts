@@ -208,7 +208,9 @@ const STATUS: Record<Outcome['kind'], string> = { completed: 'succeeded', stoppe
 export async function executeRun(env: CrankEnv, runId: string, time = Date.now()): Promise<RunRow | null> {
   const lease = id(), at = new Date(time).toISOString()
   const claimed = await stmt(env, "UPDATE crank_wf_runs SET status='running',lease_id=?,lease_expires_at=?,started_at=COALESCE(started_at,?) WHERE id=? AND status='queued'", lease, new Date(time + LEASE_MS).toISOString(), at, runId).run()
-  if (claimed.meta.changes !== 1) return getWfRun(env, runId)
+  // D1 includes transactional outbox trigger writes in changes; the unique run id
+  // still guarantees that any positive count means this caller claimed the run.
+  if (claimed.meta.changes === 0) return getWfRun(env, runId)
   const run = (await getWfRun(env, runId))!
   const version = await stmt(env, 'SELECT graph_json FROM crank_workflow_versions WHERE id=?', run.version_id).first<{ graph_json: string }>()
   const execution = new Execution(env, run, lease, JSON.parse(version!.graph_json), time)

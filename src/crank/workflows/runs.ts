@@ -18,8 +18,9 @@ import { getWorkflow } from './store'
 
 /** Payloads are readable by owners, admins and agents; members see status and timing only. */
 export const canReadPayload = (actor: Actor) => actor.role === 'owner' || actor.role === 'admin' || actor.kind === 'agent'
-function presentRun(run: RunRow, payload: boolean) {
-  const base = { id: run.id, workflow_id: run.workflow_id, version_id: run.version_id, trigger_kind: run.trigger_kind, status: run.status === 'failed' && run.error_json && JSON.parse(run.error_json).category === 'uncertain' ? 'uncertain' : run.status, business_key: run.business_key,
+const BUSINESS_COMPLETE = `status='succeeded' AND EXISTS(SELECT 1 FROM crank_obligations o WHERE o.run_id=crank_wf_runs.id) AND NOT EXISTS(SELECT 1 FROM crank_obligations o WHERE o.run_id=crank_wf_runs.id AND o.verified_at IS NULL) AND NOT EXISTS(SELECT 1 FROM crank_wf_steps s WHERE s.run_id=crank_wf_runs.id AND (s.status='uncertain' OR COALESCE(json_extract(s.error_json,'$.category'),'')='uncertain'))`
+function presentRun(run: RunRow & { business_complete?: number }, payload: boolean) {
+  const base = { id: run.id, workflow_id: run.workflow_id, version_id: run.version_id, trigger_kind: run.trigger_kind, business_outcome: run.business_complete ? 'owner_verified' : 'unverified', status: run.business_complete ? 'business_complete' : run.status === 'failed' && run.error_json && JSON.parse(run.error_json).category === 'uncertain' ? 'uncertain' : run.status, business_key: run.business_key,
     source_id: payload ? run.source_id : null, source_time: run.source_time, received_at: run.received_at, started_at: run.started_at, finished_at: run.finished_at,
     latency_ms: run.started_at ? Date.parse(run.started_at) - Date.parse(run.received_at) : null, error: run.error_json ? (payload ? JSON.parse(run.error_json) : { category: JSON.parse(run.error_json).category, message: 'Details restricted for your role' }) : null }
   return payload ? { ...base, trigger: JSON.parse(run.trigger_json), response: run.response_json ? JSON.parse(run.response_json) : null } : { ...base, payload: 'restricted' }
@@ -32,16 +33,16 @@ export async function searchRuns(env: CrankEnv, actor: Actor, params: URLSearchP
   const limit = Math.min(requested, 100)
   for (const key of ['from', 'to']) if (params.get(key)) requireValue(Number.isFinite(Date.parse(params.get(key)!)), `${key} must be an ISO date`, 422)
   const q = params.get('q'), before = params.get('before')
-  const rows = await stmt(env, `SELECT * FROM crank_wf_runs WHERE (?1 IS NULL OR workflow_id=?1) AND (?2 IS NULL OR (?2='uncertain' AND json_extract(error_json,'$.category')='uncertain') OR (status=?2 AND (?2!='failed' OR COALESCE(json_extract(error_json,'$.category'),'')!='uncertain'))) AND (?3 IS NULL OR business_key=?3)
+  const rows = await stmt(env, `SELECT *, CASE WHEN (${BUSINESS_COMPLETE}) THEN 1 ELSE 0 END AS business_complete FROM crank_wf_runs WHERE (?1 IS NULL OR workflow_id=?1) AND (?2 IS NULL OR (?2='business_complete' AND (${BUSINESS_COMPLETE})) OR (?2='uncertain' AND json_extract(error_json,'$.category')='uncertain') OR (status=?2 AND (?2!='succeeded' OR NOT (${BUSINESS_COMPLETE})) AND (?2!='failed' OR COALESCE(json_extract(error_json,'$.category'),'')!='uncertain'))) AND (?3 IS NULL OR business_key=?3)
     AND (?4 IS NULL OR received_at>=?4) AND (?5 IS NULL OR received_at<=?5) AND (?6 IS NULL OR json_extract(error_json,'$.category')=?6)
     AND (?7 IS NULL OR trigger_json LIKE ?8 OR source_id LIKE ?8 OR business_key LIKE ?8 OR error_json LIKE ?8) AND (?9 IS NULL OR received_at||'|'||id < ?9)
     ORDER BY received_at DESC,id DESC LIMIT ?10`,
-  params.get('workflow'), params.get('status'), params.get('business_key'), params.get('from'), params.get('to')?.length === 10 ? params.get('to') + 'T23:59:59.999Z' : params.get('to'), params.get('error'), canReadPayload(actor) ? q : null, `%${q}%`, before, limit + 1).all<RunRow>()
+  params.get('workflow'), params.get('status'), params.get('business_key'), params.get('from'), params.get('to')?.length === 10 ? params.get('to') + 'T23:59:59.999Z' : params.get('to'), params.get('error'), canReadPayload(actor) ? q : null, `%${q}%`, before, limit + 1).all<RunRow & {business_complete: number}>()
   const page = rows.results.slice(0, limit), last = page.at(-1)
   return { runs: page.map(run => presentRun(run, canReadPayload(actor))), next: rows.results.length > limit && last ? `${last.received_at}|${last.id}` : null }
 }
 export async function runDetail(env: CrankEnv, actor: Actor, runId: string) {
-  const run = await stmt(env, 'SELECT * FROM crank_wf_runs WHERE id=?', runId).first<RunRow>()
+  const run = await stmt(env, `SELECT *, CASE WHEN (${BUSINESS_COMPLETE}) THEN 1 ELSE 0 END AS business_complete FROM crank_wf_runs WHERE id=?`, runId).first<RunRow & {business_complete: number}>()
   requireValue(run, 'Run not found', 404)
   const payload = canReadPayload(actor)
   const [steps, waits, version, attempts] = await Promise.all([
@@ -117,7 +118,7 @@ export async function decideApproval(env: CrankEnv, actor: Actor, runId: string,
 export async function resumeRun(env: CrankEnv, actor: Actor, runId: string) {
   requireOwner(actor)
   const result = await stmt(env, "UPDATE crank_wf_runs SET status='queued',error_json=NULL WHERE id=? AND status='paused'", runId).run()
-  requireValue(result.meta.changes === 1, 'Only a paused run can be resumed', 409)
+  requireValue(result.meta.changes > 0, 'Only a paused run can be resumed', 409)
   await auditStatement(env, actor.id, 'run.resume', 'run', runId).run()
   await executeRun(env, runId)
   return runDetail(env, actor, runId)
@@ -131,7 +132,7 @@ export async function cancelRun(env: CrankEnv, actor: Actor, runId: string) {
     stmt(env, 'DELETE FROM crank_queue_items WHERE run_id=? AND released_at IS NULL AND EXISTS(SELECT 1 FROM crank_wf_runs WHERE id=? AND status=\'cancelled\')', runId, runId),
     auditStatement(env, actor.id, 'run.cancel', 'run', runId),
   ])
-  requireValue(result[0].meta.changes === 1, 'This run cannot be cancelled now', 409)
+  requireValue(result[0].meta.changes > 0, 'This run cannot be cancelled now', 409)
   return runDetail(env, actor, runId)
 }
 
