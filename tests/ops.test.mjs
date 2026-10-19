@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import {createHash, createHmac} from 'node:crypto';
+import {readFile} from 'node:fs/promises';
 import {after, before, test} from 'node:test';
 import {harness} from './harness.mjs';
 import {connection, fakeEdge, fakeSecret, jsonResponse, publish, startRun} from './kit.mjs';
@@ -71,6 +72,63 @@ test('OPS-001: scoped report and CSV reconcile real run outcomes, obligations an
   assert.ok(csv.text.includes(flow.id)); assert.ok(!csv.text.includes('private@buyer.example'));
   assert.equal((await h.get('reports/operations?team=Other')).summary.runs,0);
   await h.get('reports/operations?from=invalid',h.owner,400);
+});
+
+test('SEC-003: the append-only audit records each kind of action with actor, time and version, exports to the owner, survives erasure anonymized and reaches log sinks', async () => {
+  fake.routes.set('audit-logs.example',()=>jsonResponse({accepted:true}));
+  const sinkToken=fakeSecret('audit-logs'), privateValue=fakeSecret('private-input'), privateReason=fakeSecret('private-reason');
+  const sink=await h.post('reports/log-sinks',{label:'Audit trail',kind:'http',endpoint:'https://audit-logs.example/events',secret:{token:sinkToken},fields:['at','event','actor_id','subject_kind','subject_id','action'],events:['audit']},h.owner,201);
+  const owner=(await h.get()).actor.id;
+  const credential=await h.post('tokens',{label:'Audit agent',scope:'agent'},h.owner,201);await h.post('tokens/'+credential.id+'/revoke');
+  const workflow=await publish(h,'Audited refunds',{trigger:{type:'manual'},steps:[{id:'review',type:'approval',input:{note:'{{trigger.input.note}}'}}]});
+  await h.post(`workflows/${workflow.id}/draft`,{name:'Audited refunds (edited)'});
+  let run=await startRun(h,workflow,{note:privateValue});const wait=run.waits.find(w=>!w.resolved_at);
+  run=await h.post(`workflow-runs/${run.id}/approve`,{path:wait.path,digest:wait.proposal_digest,reason:privateReason});assert.equal(run.status,'succeeded');
+  const version=(await h.get('workflows/'+workflow.id)).published_version_id;
+  const flow=await h.flow('Audited delivery'),failed=await h.run(flow),rejected=await h.run(flow);
+  assert.equal((await h.post(`runs/${failed.id}/approve`)).state,'failed');await h.post(`runs/${failed.id}/replay`);await h.post(`runs/${rejected.id}/reject`);
+  const source=(await readFile('public/fixtures/n8n-workflow.json','utf8')).replace('http://127.0.0.1:9051','http://127.0.0.1:9'),plan=await h.post('imports/plan',{namespace:'audited',source});
+  const job=await h.post('imports/apply',{namespace:'audited',source,fingerprint:plan.fingerprint});await h.post(`imports/${job.id}/undo`);
+  assert.equal((await h.send('/api/crank/data/export',{},h.owner)).status,200);
+  let rows=await h.get('audit');
+  const mine=(action,subject)=>rows.find(r=>r.action===action&&(subject===undefined||r.subject_id===subject));
+  for(const [action,subject] of [['credential.create',credential.id],['credential.revoke',credential.id],['workflow.publish',workflow.id],['flow.create',flow.id],['flow.activate',flow.id],['flow_run.approve',failed.id],['flow_run.replay',failed.id],['flow_run.reject',rejected.id],['import.apply',job.id],['import.undo',job.id],['data.export','data']])
+    assert.equal(mine(action,subject)?.actor_id,owner,`SEC-003 audit records ${action}`);
+  const draft=mine('workflow.draft',workflow.id),started=mine('run.start',run.id),approved=mine('run.approve',run.id),replayed=mine('flow_run.replay',failed.id);
+  for(const row of [draft,started,approved]){assert.equal(row.actor_id,owner);assert.ok(Date.parse(row.at));assert.equal(row.version_id,version,'SEC-003: draft edit, run and approval of one workflow name its version')}
+  assert.match(draft.detail.draft_digest,/^[0-9a-f]{64}$/);assert.equal(started.detail.authority,'published workflow');assert.equal(approved.detail.reason,privateReason);
+  const admin=await (async()=>{const email='auditor-'+fakeSecret('admin')+'@example.test';assert.equal((await h.send('/auth/invite',{email,displayName:'Builder',role:'admin'},h.owner)).status,202);
+    const token=new URL(h.mail.findLast(m=>m.to.includes(email)).html.match(/href="([^"]*\/auth\/confirm\?token=[^"]+)"/)[1].replaceAll('&amp;','&'),h.origin).searchParams.get('token');return (await h.send('/auth/confirm',{token})).cookie})();
+  rows=await h.get('audit');const builder=rows.find(r=>r.action==='access.invite');
+  assert.equal(builder?.actor_id,owner,'SEC-003 audit records access decisions');assert.deepEqual(builder.detail,{role:'admin'});assert.ok(!JSON.stringify(rows).includes('@example.test'),'value-free subject identity');
+  const count=rows.length;
+  for(const cookie of [admin,h.owner]) for(const path of ['/api/crank/audit','/api/crank/audit/export','/api/crank/audit/'+draft.id]) for(const method of ['POST','PUT','DELETE']) {
+    const response=await h.mf.dispatchFetch(h.origin+path,{method,body:'{}',headers:{host:new URL(h.origin).host,origin:h.origin,'content-type':'application/json',cookie}});
+    assert.equal(response.status,405,`SEC-003 ${method} ${path}`);await response.text();
+  }
+  for(const path of ['audit','audit/export']) await h.get(path,admin,403);
+  assert.equal((await h.get('audit')).length,count,'no caller changed the audit');
+  const delivered=async actions=>{
+    assert.equal((await h.post('reports/log-streams/flush')).failed,0);
+    const health=(await h.get('reports/log-sinks')).find(s=>s.id===sink.id);assert.equal(health.pending,0);assert.ok(health.last_delivered_at);
+    const events=fake.to('audit-logs.example').flatMap(r=>JSON.parse(r.body).events);
+    for(const action of actions) assert.ok(events.some(e=>e.event==='audit'&&e.action===action),'SEC-003 log sink receives '+action);
+  };
+  await delivered(['credential.create','workflow.publish','run.approve','flow_run.replay','import.apply','data.export']);
+  await h.post(`workflows/${workflow.id}/pause`);await h.post('data/erase',{workflow_run_id:run.id,confirm:'ERASE'});
+  await h.post(`flows/${flow.id}/pause`);await h.post('data/erase',{run_id:failed.id,confirm:'ERASE'});
+  const exported=await h.send('/api/crank/audit/export',undefined,h.owner);assert.equal(exported.status,200);assert.match(exported.headers.get('content-disposition'),/attachment/);
+  rows=exported.text.trim().split('\n').map(line=>JSON.parse(line));
+  assert.deepEqual(rows.map(r=>r.at),rows.map(r=>r.at).sort(),'chronological');assert.equal(rows.at(-1).action,'audit.export');
+  for(const [before,subject] of [[started,run.id],[approved,run.id],[replayed,failed.id]]) {
+    const after=rows.find(r=>r.id===before.id);
+    assert.deepEqual([after.at,after.actor_id,after.action,after.version_id],[before.at,before.actor_id,before.action,before.version_id],'SEC-003: erasure keeps chronology, actor and action');
+    assert.notEqual(after.subject_id,subject,'erased subject link is anonymized');assert.deepEqual(after.detail,{});
+  }
+  assert.equal(rows.filter(r=>r.action==='data.erase').length,2);
+  for(const value of [privateValue,privateReason,sinkToken]) assert.ok(!exported.text.includes(value),'no erased payload or secret in the audit');
+  await delivered(['data.erase','audit.export']);
+  await h.post('reports/log-sinks/'+sink.id+'/delete');
 });
 
 test('OPS-001: durable redacted stream survives outage and restart, preserves lag, then catches up', async () => {

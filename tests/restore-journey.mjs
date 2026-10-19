@@ -101,7 +101,9 @@ export async function restoreJourney() {
     await restored.post('data/restore', { archive: exported, confirm: 'RESTORE' });
     assert.equal((await restored.get(`workflow-runs/${interruptedRun.id}`)).steps[0].status, 'uncertain', 'an interrupted write cannot be blindly replayed');
     assert.equal((await restored.get(`workflow-runs/${fixture.queuedRun.id}`)).status, 'paused', 'queued work loses receiving authority');
-    assert.deepEqual(inventory(await archive(restored)), original, 'every portable record survives export/restore/re-export');
+    const reexported = inventory(await archive(restored)), added = reexported.filter(row => !original.includes(row));
+    assert.deepEqual(added.map(row => [JSON.parse(row).table, JSON.parse(row).row.action]), [['crank_audit', 'data.restore']], 'the receiving audit adds only its restore record');
+    assert.deepEqual(reexported.filter(row => row !== added[0]), original, 'every portable record survives export/restore/re-export');
     const review = (await restored.get(`workflows/${workflow.id}`)).restore;
     assert.deepEqual(review.runs.map(r => r.id).sort(), [resume.id, cancel.id].sort());
     assert.equal(review.connections[0].status, 'needs_reconnect');

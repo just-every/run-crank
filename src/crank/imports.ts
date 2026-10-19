@@ -6,6 +6,8 @@ import type { D1Database, D1ImportContext } from '../modules/import-kit/src/d1/t
 import type { ImportMapping } from '../modules/import-kit/src/types.ts'
 import { IMPORT_DESTINATION, importFlowTargets, type ImportTargetEnv } from './import-target.ts'
 import { readN8nSource, N8N_MAPPING_VERSION, N8N_MAX_WORKFLOWS } from './n8n.ts'
+import type { CrankEnv } from './model'
+import { auditStatement, auditStatementWhen } from './ops/audit'
 
 export interface ImportEnv extends ImportTargetEnv { DB: D1Database }
 export interface N8nInput { namespace: string; source: string }
@@ -57,6 +59,7 @@ export async function applyN8n(env: ImportEnv, actorId: string, input: N8nInput 
   await env.DB.batch([
     env.DB.prepare(`INSERT INTO ik_d1_assertions(ok) SELECT CASE WHEN ${OWNER_SQL} AND EXISTS(SELECT 1 FROM ik_jobs WHERE id=? AND fingerprint=? AND principal_id=?) THEN 1 ELSE 0 END`).bind(actorId, job.id, input.fingerprint, actorId),
     env.DB.prepare("INSERT INTO crank_import_approvals(job_id,fingerprint,approved_by,approved_at) VALUES(?,?,?,strftime('%Y-%m-%dT%H:%M:%fZ','now')) ON CONFLICT(job_id) DO NOTHING").bind(job.id, input.fingerprint, actorId),
+    auditStatementWhen(env as CrankEnv, 'changes()=1', [], actorId, 'import.apply', 'import', job.id, { source: 'n8n', fingerprint: input.fingerprint }),
     env.DB.prepare('DELETE FROM ik_d1_assertions'),
   ])
   ctx.authorization.predicate = () => ({
@@ -81,5 +84,7 @@ export async function undoN8n(env: ImportEnv, actorId: string, jobId: string) {
   const ctx = context(env, actorId, job.namespace)
   // Partial imports can be reversed too. Base persists intent and progress;
   // strict native matches fence edits, activation and every recorded flow run.
-  return ['completed', 'undoing', 'undone'].includes(job.state) ? undoD1Import(jobId, ctx) : rollbackD1Import(jobId, ctx)
+  const result = await (['completed', 'undoing', 'undone'].includes(job.state) ? undoD1Import(jobId, ctx) : rollbackD1Import(jobId, ctx))
+  await auditStatement(env as CrankEnv, actorId, 'import.undo', 'import', jobId).run()
+  return result
 }

@@ -73,7 +73,7 @@ export async function updateDraft(env: CrankEnv, actor: Actor, workflowId: strin
     stmt(env, 'UPDATE crank_workflows SET name=?,description=?,folder=?,draft_json=?,draft_updated_at=?,settings_json=? WHERE id=?',
       input.name === undefined ? current.name : text(input.name, 'name'), input.description === undefined ? current.description : description(input.description),
       input.folder === undefined ? current.folder : folder(input.folder), JSON.stringify(graph), now(), isObject(input.settings) ? JSON.stringify({ ...input.settings, restore_pending: pendingRestore(current) || undefined }) : current.settings_json, workflowId),
-    auditStatement(env, actor.id, 'workflow.draft', 'workflow', workflowId),
+    auditStatement(env, actor.id, 'workflow.draft', 'workflow', workflowId, { draft_digest: await digest(JSON.stringify(graph)) }, current.published_version_id),
   ])
   return { ...await presentWorkflow(env, await getWorkflow(env, workflowId)), warnings }
 }

@@ -4,6 +4,7 @@ import policy from './archive-policy.mjs'
 import { authorize, requireOwner, requireWriteOrigin, guardedBatch } from './access'
 import { body, type CrankEnv } from './model'
 import { eraseWorkflowRun } from './workflow-erasure'
+import { auditStatement } from './ops/audit'
 
 export const portability = (env: CrankEnv) => createPortability({ db:env.DB, policy })
 const digest = async (s:string) => Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s))),b=>b.toString(16).padStart(2,'0')).join('')
@@ -34,6 +35,7 @@ export async function dataApi(request:Request,env:CrankEnv):Promise<Response|nul
         const bytes=new Uint8Array(length);let offset=0
         for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.length}
         await store.exports.abort(id)
+        await guardedBatch(env,actor,'owner',[auditStatement(env,actor.id,'data.export','workspace','data',{bytes:length})])
         return new Response(bytes,{headers:{'content-type':'application/x-ndjson','content-disposition':'attachment; filename="crank.rer"','cache-control':'no-store'}})
       } catch(error) { await store.exports.abort(id); throw error }
     }
@@ -55,6 +57,7 @@ export async function dataApi(request:Request,env:CrankEnv):Promise<Response|nul
       try {
         for (const part of rows.slice(1,-1) as Part[]) await store.imports.uploadPart(id,part.index,part)
         const status = await store.imports.finalize(id,{archiveHash:closing.archiveHash,contentHash:closing.contentHash,laterJournal})
+        await guardedBatch(env,actor,'owner',[auditStatement(env,actor.id,'data.restore','workspace','data',{archive_hash:closing.archiveHash})])
         return Response.json(status,{headers:{'cache-control':'no-store'}})
       } catch(error) { await store.imports.abort(id); throw error }
     }
@@ -72,15 +75,17 @@ export async function dataApi(request:Request,env:CrankEnv):Promise<Response|nul
       const service = createErasure({db:env.DB,portability:store,declarations:[defineErasure({
         entity:'run',root:{table:'crank_runs'},
         edges:[{table:'crank_approvals',from:'crank_runs',on:{run_id:'id'}},{table:'crank_attempts',from:'crank_runs',on:{run_id:'id'}}],
+        audit:[{table:'crank_audit',column:'subject_id',of:'crank_runs',where:"subject_kind='flow_run'",clear:{detail_json:'{}'}}],
         retain:[{table:'crank_erased_events',reason:'An opaque event digest blocks redelivery of the erased event. The receiving app owns its existing effect.'}],
         beforeStatements:async()=>[
           env.DB.prepare("INSERT INTO crank_authority_guards(id,ok) SELECT 'erase:'||?,CASE WHEN EXISTS(SELECT 1 FROM crank_runs r JOIN crank_flows f ON f.id=r.flow_id WHERE r.id=? AND r.state IN ('succeeded','failed','rejected') AND f.status='draft') THEN 1 ELSE 0 END").bind(row.id,row.id),
           env.DB.prepare('INSERT OR IGNORE INTO crank_erased_events(flow_id,event_digest) VALUES(?,?)').bind(row.flow_id,marker),
-          env.DB.prepare("DELETE FROM crank_authority_guards WHERE id='erase:'||?").bind(row.id),
         ],
       })]})
       const prepared = await service.nativeStatements('run',{id:row.id})
-      await guardedBatch(env,actor,'owner',prepared.statements.map(s=>env.DB.prepare(s.sql).bind(...s.params)))
+      await guardedBatch(env,actor,'owner',[...prepared.statements.map(s=>env.DB.prepare(s.sql).bind(...s.params)),
+        env.DB.prepare("DELETE FROM crank_authority_guards WHERE id='erase:'||?").bind(row.id),
+        auditStatement(env,actor.id,'data.erase','erasure',prepared.operationId,{entity:'run'})])
       const receipt = await service.deleteBlobs(prepared.operationId)
       return Response.json(receipt,{headers:{'cache-control':'no-store'}})
     }

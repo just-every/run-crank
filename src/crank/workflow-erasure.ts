@@ -1,6 +1,7 @@
 import { createErasure, defineErasure, type PortabilityFence } from '@runeditrun/rer/internal/modules/erasure/index.mjs'
 import { guardedBatch } from './access'
 import { digest, requireValue, stmt, type Actor, type CrankEnv } from './model'
+import { auditStatement } from './ops/audit'
 
 const terminal = ['succeeded', 'failed', 'stopped_by_filter', 'stopped_by_search', 'cancelled', 'rejected']
 const eligible = `SELECT 1 FROM crank_wf_runs r JOIN crank_workflows w ON w.id=r.workflow_id
@@ -41,6 +42,7 @@ export async function eraseWorkflowRun(env: CrankEnv, actor: Actor, portability:
   await guardedBatch(env, actor, 'owner', [
     ...prepared.statements.map(s => stmt(env, s.sql, ...s.params)),
     stmt(env, "DELETE FROM crank_authority_guards WHERE id='erase-workflow:'||?", runId),
+    auditStatement(env, actor.id, 'data.erase', 'erasure', prepared.operationId, { entity: 'workflow-run' }),
   ])
   return service.deleteBlobs(prepared.operationId)
 }

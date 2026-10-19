@@ -1,4 +1,4 @@
-import { authorize, requireOwner, requireWriteOrigin } from '../access'
+import { authorize, guardedBatch, requireOwner, requireWriteOrigin } from '../access'
 import { APPS, hostAllowed } from '../connections/apps'
 import { CATALOG } from '../connections/catalog'
 import { finishOauth, setOauthApp, startOauth } from '../connections/oauth'
@@ -9,7 +9,7 @@ import { boundedFetch } from '../engine/egress'
 import { StepError } from '../engine/errors'
 import { validateGraph } from '../engine/graph'
 import { body, CrankError, json, requireValue, stmt, type Actor, type CrankEnv } from '../model'
-import { readAudit } from '../ops/audit'
+import { auditStatement, exportAudit, readAudit } from '../ops/audit'
 import { coverageReport } from '../ops/coverage'
 import { latencyReport, operationsReport, operationsCsv, configureOperations, createObligation, verifyObligation } from '../ops/report'
 import { listLogSinks, configureLogSink, removeLogSink, flushLogStreams } from '../ops/log-stream'
@@ -71,6 +71,16 @@ export async function workflowApi(request: Request, env: CrankEnv): Promise<Resp
     const actor = await authorize(request, env)
     requireValue(actor.kind !== 'trigger', 'Trigger tokens only admit events', 403)
     let m: string[] | null
+    if (path === '/api/crank/audit' || path.startsWith('/api/crank/audit/')) {
+      requireValue(request.method === 'GET', 'The audit is append-only: no caller can change or remove its records.', 405)
+      requireOwner(actor)
+      if (path === '/api/crank/audit/export') {
+        await guardedBatch(env, actor, 'owner', [auditStatement(env, actor.id, 'audit.export', 'workspace', 'audit')])
+        return new Response(await exportAudit(env), { headers: { 'content-type': 'application/x-ndjson', 'content-disposition': 'attachment; filename="crank-audit.ndjson"', 'cache-control': 'no-store' } })
+      }
+      requireValue(path === '/api/crank/audit', 'Route not found', 404)
+      return json(await readAudit(env, url.searchParams.get('kind') ?? undefined, url.searchParams.get('id') ?? undefined))
+    }
     if (request.method === 'GET') {
       if ((m = match(path, /^\/api\/crank\/historical\/([^/]+)$/))) return json(await readHistorical(env, actor, m[0]))
       if (path === '/api/crank/workflows') return json(await listWorkflows(env, url.searchParams))
@@ -88,7 +98,6 @@ export async function workflowApi(request: Request, env: CrankEnv): Promise<Resp
       if (path === '/api/crank/catalog') return json({ apps: CATALOG })
       if (path === '/api/crank/oauth/callback') return json(await finishOauth(env, actor, url.searchParams), 201)
       if (path === '/api/crank/settings') return json(await workspaceSettings(env))
-      if (path === '/api/crank/audit') { requireOwner(actor); return json(await readAudit(env, url.searchParams.get('kind') ?? undefined, url.searchParams.get('id') ?? undefined)) }
       if (path === '/api/crank/notices') { requireOwner(actor); return json((await stmt(env, 'SELECT * FROM crank_notices ORDER BY created_at DESC LIMIT 200').all()).results) }
       if (path === '/api/crank/reports/operations') {
         requireOwner(actor)

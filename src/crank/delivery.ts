@@ -1,5 +1,6 @@
 import { demoEffect } from '../modules/demo/index.mjs'
 import { authority, guardedBatch, requireOwner } from './access'
+import { auditStatementWhen } from './ops/audit'
 import { targetUrl } from './flows'
 import { digest, id, now, requireValue, stmt, type Actor, type CrankEnv, type Run } from './model'
 import { getRun } from './runs'
@@ -45,6 +46,7 @@ async function claim(env: CrankEnv, actor: Actor, run: Run, replay: boolean): Pr
   }
   jobs.push(stmt(env, `INSERT INTO crank_attempts(id,run_id,number,started_at)
     SELECT ?,id,replay_count+1,? FROM crank_runs WHERE id=? AND state='running' AND lease_id=?`, lease, at, run.id, lease))
+  jobs.push(auditStatementWhen(env, 'EXISTS(SELECT 1 FROM crank_attempts WHERE id=?)', [lease], actor.id, replay ? 'flow_run.replay' : 'flow_run.approve', 'flow_run', run.id, { attempt: lease }))
   const result = await guardedBatch(env, actor, 'owner', jobs)
   requireValue(result[1].meta.changes === 1 && result[2].meta.changes === 1, 'Run changed or another caller claimed delivery', 409)
   return lease
@@ -116,6 +118,7 @@ export async function rejectRun(env: CrankEnv, actor: Actor, runId: string): Pro
       SELECT ?,r.id,?,?,'reject',r.input_digest,r.action_digest,r.action_json,? FROM crank_runs r
       WHERE r.id=? AND r.state='pending' AND ${fence.sql}`, decision, actor.id, actor.sessionId, at, runId, ...fence.args),
     stmt(env, `UPDATE crank_runs SET state='rejected',updated_at=? WHERE id=? AND state='pending' AND EXISTS(SELECT 1 FROM crank_approvals WHERE id=? AND decision='reject') AND ${fence.sql}`, at, runId, decision, ...fence.args),
+    auditStatementWhen(env, "EXISTS(SELECT 1 FROM crank_approvals WHERE id=? AND decision='reject')", [decision], actor.id, 'flow_run.reject', 'flow_run', runId),
   ])
   requireValue(result[1].meta.changes === 1, 'Run is no longer awaiting a decision', 409)
   return getRun(env, runId)

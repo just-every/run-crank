@@ -3,7 +3,9 @@ import { createDependencies } from './modules/dependencies/index.mjs'
 import { createIdpOwnerClaimHandler, createOwnerClaimHandler } from './modules/owner-claim/index.mjs'
 import { firstRunResponse } from './base/setup'
 import { fontDocumentResponse } from './base/font-response'
-import { createOperatorAuth, createAuthHandler, createSignInHandler, defaultRolePolicy, devGate, devNotFound, type AuthConfig, type RolePolicy } from './modules/operator-auth/index.mjs'
+import { createOperatorAuth, createAuthHandler, createSignInHandler, defaultRolePolicy, devGate, devNotFound, normalizeEmail, type AuthConfig, type RolePolicy } from './modules/operator-auth/index.mjs'
+import { auditStatement } from './crank/ops/audit'
+import type { CrankEnv } from './crank/model'
 import { operatorMail } from './mail.server.mjs'
 import branding from './branding.json'
 
@@ -47,6 +49,21 @@ export const authConfig = (env: Bindings): AuthConfig => ({ dependencies: true, 
 // the owner's alone. Admins may still read the people list; everyone manages their own sessions.
 const rolePolicy: RolePolicy = input => defaultRolePolicy(input) && (input.actor.role === 'owner' || input.action === 'operators:list'
  || (input.action === 'sessions:list' || input.action === 'sessions:revoke') && input.target?.id === input.actor.id)
+// SEC-003: each accepted access decision enters Crank's audit with the deciding owner and
+// the person's operator id, never their email address.
+const ACCESS_ACTIONS: Record<string, string> = { '/auth/invite': 'access.invite', '/auth/operator/status': 'access.status', '/auth/operator/role': 'access.role' }
+async function auditedAuth(request: Request, env: Bindings): Promise<Response | null> {
+ const action = request.method === 'POST' && request.headers.get('content-type')?.startsWith('application/json') ? ACCESS_ACTIONS[new URL(request.url).pathname] : undefined
+ const copy = action ? request.clone() : null
+ const response = await createAuthHandler(operatorAuth(env))(request)
+ if (!copy || !response || response.status >= 300) return response
+ const [session, input] = await Promise.all([operatorAuth(env).getSession(copy.clone() as Request), copy.json() as Promise<Record<string, string>>])
+ const subject = action === 'access.invite'
+  ? (await env.DB.prepare('SELECT id FROM oa_operators WHERE email=?').bind(normalizeEmail(input.email)).first<{ id: string }>())?.id
+  : input.operatorId
+ if (session && subject) await auditStatement(env as CrankEnv, session.operator.id, action!, 'operator', subject, action === 'access.status' ? { status: input.status } : { role: input.role ?? 'member' }).run()
+ return response
+}
 export function operatorAuth(env: Bindings) {
  return createOperatorAuth({ db: env.DB, config: authConfig(env), mailSender: operatorMail(env), rolePolicy, clientIp: request => request.headers.get('CF-Connecting-IP') ?? '' })
 }
@@ -74,7 +91,7 @@ async function handleAuthResponse(request: Request, original: Bindings): Promise
   })(request)
   if (page) return fontDocumentResponse(page)
  }
- if (url.pathname.startsWith('/auth/')) return fontDocumentResponse(await createAuthHandler(operatorAuth(env))(request))
+ if (url.pathname.startsWith('/auth/')) return fontDocumentResponse(await auditedAuth(request, env))
  if (url.pathname === '/setup' || url.pathname === '/app' || url.pathname.startsWith('/app/')) {
   const setup = await firstRunResponse(request, env, operatorAuth(env), { theme })
   if (setup) return setup
