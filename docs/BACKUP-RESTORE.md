@@ -192,3 +192,14 @@ finish or cancel the run first. The linked run values and decisions are removed;
 the audit retains action chronology with an anonymized run subject and no detail.
 An opaque event-key digest prevents re-admission after restart and restore.
 Files the run's trigger or steps name are erased with it.
+
+
+OPS-002 usage archives contain quotes and version estimates, monthly budgets and
+owner allowances, reservations, value-free per-scope/month spending totals,
+observations, physical request history, source-reported charges, unusable reports,
+notices and budget holds. Restored budgets, allowances and pending notices are
+inactive. Saving a budget is a new owner action; old allowances never reactivate.
+The workflow/approval-flow DATA-001 fence remains in force, so restart and Cron
+cannot dispatch restored work. Erasure removes run-linked usage details, while its
+receipt discloses that value-free scope/month debit totals remain; erasure cannot
+replenish an allowance.

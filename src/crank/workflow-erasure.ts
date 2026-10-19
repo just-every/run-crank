@@ -37,7 +37,7 @@ export async function eraseWorkflowRun(env: CrankEnv, actor: Actor | null, porta
   const service = createErasure({ db: env.DB, portability, declarations: [defineErasure({
     entity: 'workflow-run', root: { table: 'crank_wf_runs' },
     edges: [
-      ...['crank_wf_steps', 'crank_blind_index', 'crank_wf_step_revisions', 'crank_waits', 'crank_wf_attempts', 'crank_obligations', 'crank_callback_events', 'crank_queue_items', 'crank_hold_items', 'crank_historical_items', 'crank_ops_events', 'crank_request_admissions', 'crank_request_checkpoints', 'crank_request_checkpoint_chunks']
+      ...['crank_wf_steps', 'crank_blind_index', 'crank_wf_step_revisions', 'crank_waits', 'crank_wf_attempts', 'crank_obligations', 'crank_callback_events', 'crank_queue_items', 'crank_hold_items', 'crank_historical_items', 'crank_ops_events', 'crank_request_admissions', 'crank_request_checkpoints', 'crank_request_checkpoint_chunks', 'crank_usage_observations', 'crank_usage_provider_charges', 'crank_usage_reporting_errors', 'crank_usage_reservations', 'crank_step_admissions']
         .map(table => ({ table, from: 'crank_wf_runs', on: { run_id: 'id' } })),
       { table: 'crank_trigger_events', from: 'crank_wf_runs', on: { run_id: 'id' } },
       // Uploaded and connector files belong to the run whose trigger or step output names them.
@@ -48,7 +48,7 @@ export async function eraseWorkflowRun(env: CrankEnv, actor: Actor | null, porta
       { table: 'crank_trigger_events', from: 'crank_hold_items', where: 'dedup_key=? AND workflow_id=(SELECT workflow_id FROM crank_holds WHERE id=?)', params: ['item_key', 'hold_id'] },
     ],
     audit: [{ table: 'crank_audit', column: 'subject_id', of: 'crank_wf_runs', where: "subject_kind='run'", clear: { detail_json: '{}' } }],
-    retain: [{ table: 'crank_erased_webhook_events', reason: 'An opaque event-key digest permanently blocks redelivery. Existing effects in receiving apps remain under their custody.' }],
+    retain: [{ table: 'crank_usage_spend', reason: 'Value-free per-scope UTC-month debit totals are retained so erasure cannot replenish an allowance.' }, { table: 'crank_erased_webhook_events', reason: 'An opaque event-key digest permanently blocks redelivery. Existing effects in receiving apps remain under their custody.' }],
     beforeStatements: async () => [
       system ? stmt(env, `INSERT INTO crank_authority_guards(id,ok) SELECT 'erase-workflow:'||?1,CASE WHEN EXISTS(${system.eligible}) THEN 1 ELSE 0 END`, ...system.params)
         : stmt(env, `INSERT INTO crank_authority_guards(id,ok) SELECT 'erase-workflow:'||?,CASE WHEN EXISTS(${eligible}) THEN 1 ELSE 0 END`, runId, runId),
@@ -80,9 +80,9 @@ export async function eraseFlowRun(env: CrankEnv, actor: Actor | null, portabili
   const marker = await digest(row.event_id)
   const service = createErasure({db:env.DB,portability,declarations:[defineErasure({
     entity:'run',root:{table:'crank_runs'},
-    edges:[{table:'crank_approvals',from:'crank_runs',on:{run_id:'id'}},{table:'crank_attempts',from:'crank_runs',on:{run_id:'id'}}],
+    edges:[...['crank_usage_observations','crank_usage_provider_charges', 'crank_usage_reporting_errors','crank_usage_reservations','crank_hold_items'].map(table=>({table,from:'crank_runs',on:{run_id:'id'}})),{table:'crank_approvals',from:'crank_runs',on:{run_id:'id'}},{table:'crank_attempts',from:'crank_runs',on:{run_id:'id'}}],
     audit:[{table:'crank_audit',column:'subject_id',of:'crank_runs',where:"subject_kind='flow_run'",clear:{detail_json:'{}'}}],
-    retain:[{table:'crank_erased_events',reason:'An opaque event digest blocks redelivery of the erased event. The receiving app owns its existing effect.'}],
+    retain:[{table:'crank_usage_spend',reason:'Value-free per-scope UTC-month debit totals are retained so erasure cannot replenish an allowance.'},{table:'crank_erased_events',reason:'An opaque event digest blocks redelivery of the erased event. The receiving app owns its existing effect.'}],
     beforeStatements:async()=>[
       system ? env.DB.prepare(`INSERT INTO crank_authority_guards(id,ok) SELECT 'erase:'||?1,CASE WHEN EXISTS(${system.eligible}) THEN 1 ELSE 0 END`).bind(...system.params)
         : env.DB.prepare(`INSERT INTO crank_authority_guards(id,ok) SELECT 'erase:'||?,CASE WHEN EXISTS(SELECT 1 FROM crank_runs r JOIN crank_flows f ON f.id=r.flow_id WHERE r.id=? AND r.state IN ('succeeded','failed','rejected') AND f.status='draft' AND NOT ${HELD_FLOW_RUN}) THEN 1 ELSE 0 END`).bind(row.id,row.id),

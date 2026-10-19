@@ -1,3 +1,4 @@
+import { flushUsageNotices } from './usage'
 import { executeRun } from '../engine/executor'
 import { queueCandidates } from '../engine/queue'
 import { recoverExpiredExecutions } from '../engine/interruption'
@@ -33,6 +34,7 @@ export async function schedulerPass(env: CrankEnv, time = Date.now()) {
   summary.holds = await holdUpkeep(env, time)
   const queued = await queueCandidates(env, 50)
   for (const run of queued) { await executeRun(env, run.id, time); summary.executed++ }
+  await flushUsageNotices(env)
   await flushLogStreams(env, time)
   summary.sealed = await payloadPass(env, time)
   summary.expired = await retentionPass(env, () => portability(env), time)
@@ -42,7 +44,7 @@ export async function schedulerPass(env: CrankEnv, time = Date.now()) {
 /** Open holds remind their owner daily and, with an owner-chosen expiry, discard what remains. */
 async function holdUpkeep(env: CrankEnv, time: number) {
   const at = new Date(time).toISOString(), dayAgo = new Date(time - 86400000).toISOString()
-  const expired = await stmt(env, "SELECT id FROM crank_holds WHERE status='open' AND NOT EXISTS(SELECT 1 FROM crank_workflows w WHERE w.id=crank_holds.workflow_id AND w.owner_id=?) AND expires_at IS NOT NULL AND expires_at<=?", RESTORED_OWNER, at).all<{ id: string }>()
+  const expired = await stmt(env, "SELECT id FROM crank_holds WHERE status='open' AND NOT EXISTS(SELECT 1 FROM crank_workflows w WHERE w.id=crank_holds.workflow_id AND w.owner_id=?) AND budget_hold=0 AND expires_at IS NOT NULL AND expires_at<=?", RESTORED_OWNER, at).all<{ id: string }>()
   for (const hold of expired.results) {
     await env.DB.batch([
       stmt(env, "UPDATE crank_hold_items SET status='discarded',decided_by='system:expiry',decided_at=? WHERE hold_id=? AND status='held'", at, hold.id),

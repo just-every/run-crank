@@ -10,7 +10,7 @@ import {unstable_splitSqlQuery} from 'wrangler';
 export async function freePort() { const s=createServer();await new Promise(r=>s.listen(0,'127.0.0.1',r)); const port=s.address().port; await new Promise(r=>s.close(r));return port; }
 let bundle;
 /** `edge` fakes third-party APIs at the network edge: a function from Request to a Response, or undefined to use the real network. */
-export async function harness(target,{emitted=false,edge}={}) {
+export async function harness(target,{emitted=false,edge,quoteCosts=true}={}) {
   bundle ??= (await build({entryPoints:['tests/worker.ts'],bundle:true,write:false,format:'esm',platform:'neutral',conditions:['workerd','worker','browser'],external:['node:*','cloudflare:*'],target:'es2023'})).outputFiles[0].text;
   const port=await freePort(),origin=`http://127.0.0.1:${port}`,directory=await mkdtemp(join(tmpdir(),'crank-tests-'));
   const mail=[];
@@ -32,7 +32,17 @@ export async function harness(target,{emitted=false,edge}={}) {
     };
     const boot=await send('/auth/bootstrap',{token:'synthetic-test-owner-claim-01234567890123456789',displayName:'Harbour owner'});assert.equal(boot.status,303,boot.text);
     const owner=boot.cookie;
-    const post=async(path,body={},cookie=owner,status=200,headers={})=>{const r=await send('/api/crank/'+path,body,cookie,headers);assert.equal(r.status,status,`${path}: ${r.text}`);return r.value};
+    // Ordinary fixture owners explicitly review zero-cost network test edges before publication.
+    // Cost-gate journeys use send() (or quoteCosts:false) so this is never production behavior.
+    const zeroCost={components:['orchestration','connectors','models','executors'].map(kind=>({kind,usd_per_run:'0',assumption:'Owner acceptance fixture: local/network test edges do not bill this installation'}))};
+    const post=async(path,body={},cookie=owner,status=200,headers={})=>{
+      const activation=/^(workflows|flows)\/([^/]+)\/(publish|activate)$/.exec(path);
+      if(quoteCosts && activation && cookie===owner && [200,201].includes(status)) {
+        const quoted=await send('/api/crank/'+activation[1]+'/'+activation[2]+'/estimate',{cost:zeroCost},owner);
+        assert.equal(quoted.status,200,quoted.text);
+      }
+      const r=await send('/api/crank/'+path,body,cookie,headers);assert.equal(r.status,status,`${path}: ${r.text}`);return r.value
+    };
     const get=async(path='state',cookie=owner,status=200,headers={})=>{const r=await send('/api/crank/'+path,undefined,cookie,headers);assert.equal(r.status,status,`${path}: ${r.text}`);return r.value};
     const flow=async(name='Support follow-up')=>{const f=await post('flows',{name,source_app:'Support desk',destination_app:'Operations inbox',target_url:target+'/events'},owner,201);await post('flows/'+f.id+'/activate');return f};
     const run=async(f,event='ticket-'+crypto.randomUUID(),input={customer:'Harbour Workshop',task:'Book a callback'})=>post('flows/'+f.id+'/runs',{event_id:event,input},owner,201);

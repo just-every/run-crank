@@ -1,3 +1,4 @@
+import { reportedResponse, assertReportedBudget } from './ops/usage-transport'
 import { demoEffect } from '../modules/demo/index.mjs'
 import { authority, guardedBatch, requireOwner } from './access'
 import { auditStatementWhen } from './ops/audit'
@@ -5,6 +6,7 @@ import { targetUrl } from './flows'
 import { digest, id, now, requireValue, stmt, type Actor, type CrankEnv, type Run } from './model'
 import { getRun } from './runs'
 import { acceptanceMs, DELIVERY_TIMEOUT_MS } from './delivery-window'
+import { recordStepUsage, flushUsageNotices } from './ops/usage'
 
 interface Outcome {
   status: 'succeeded' | 'failed'; code: string; uncertain: boolean
@@ -13,6 +15,7 @@ interface Outcome {
 const interrupted: Outcome = { status: 'failed', code: 'delivery_interrupted', uncertain: true }
 const approvalMatch = `EXISTS(SELECT 1 FROM crank_approvals a WHERE a.run_id=crank_runs.id AND a.decision='approve'
   AND a.input_digest=crank_runs.input_digest AND a.action_digest=crank_runs.action_digest AND a.action_json=crank_runs.action_json)`
+const usageMatch = 'EXISTS(SELECT 1 FROM crank_usage_reservations u WHERE u.run_id=crank_runs.id AND u.workflow_id=crank_runs.flow_id)'
 
 async function validateSnapshot(env: CrankEnv, run: Run) {
   requireValue(await digest(run.input_json) === run.input_digest && await digest(run.action_json) === run.action_digest, 'Run snapshot is inconsistent', 409)
@@ -31,9 +34,10 @@ async function claim(env: CrankEnv, actor: Actor, run: Run, replay: boolean): Pr
     const approval = id()
     jobs.push(stmt(env, `INSERT INTO crank_approvals(id,run_id,actor_id,session_id,decision,input_digest,action_digest,action_json,created_at)
       SELECT ?,r.id,?,?,'approve',r.input_digest,r.action_digest,r.action_json,? FROM crank_runs r
-      WHERE r.id=? AND r.state='pending' AND r.input_digest=? AND r.action_digest=? AND r.target_url=? AND ${fence.sql}`, approval, actor.id, actor.sessionId, at, run.id, run.input_digest, run.action_digest, run.target_url, ...fence.args))
+      WHERE r.id=? AND r.state='pending' AND r.input_digest=? AND r.action_digest=? AND r.target_url=?
+      AND EXISTS(SELECT 1 FROM crank_usage_reservations u WHERE u.run_id=r.id AND u.workflow_id=r.flow_id) AND ${fence.sql}`, approval, actor.id, actor.sessionId, at, run.id, run.input_digest, run.action_digest, run.target_url, ...fence.args))
     jobs.push(stmt(env, `UPDATE crank_runs SET state='running',lease_id=?,lease_expires_at=?,updated_at=?
-      WHERE id=? AND state='pending' AND ${approvalMatch} AND EXISTS(SELECT 1 FROM crank_approvals WHERE id=?) AND ${fence.sql}`,
+      WHERE id=? AND state='pending' AND ${approvalMatch} AND ${usageMatch} AND EXISTS(SELECT 1 FROM crank_approvals WHERE id=?) AND ${fence.sql}`,
     lease, expires, at, run.id, approval, ...fence.args))
   } else {
     requireValue(run.replay_count === 0 && (run.state === 'failed' || (run.state === 'running' && run.lease_expires_at !== null && run.lease_expires_at <= at)), 'Replay is unavailable or has already been used', 409)
@@ -41,7 +45,7 @@ async function claim(env: CrankEnv, actor: Actor, run: Run, replay: boolean): Pr
       AND EXISTS(SELECT 1 FROM crank_runs r WHERE r.id=crank_attempts.run_id AND r.state='running' AND r.lease_id=crank_attempts.id AND r.lease_expires_at<=? AND r.replay_count=0)` ,
     at, JSON.stringify(interrupted), run.id, at))
     jobs.push(stmt(env, `UPDATE crank_runs SET state='running',lease_id=?,lease_expires_at=?,updated_at=?,replay_count=1,outcome_json=NULL
-      WHERE id=? AND replay_count=0 AND payload_expired_at IS NULL AND (state='failed' OR (state='running' AND lease_expires_at<=?)) AND input_digest=? AND action_digest=? AND target_url=? AND ${approvalMatch} AND ${fence.sql}`,
+      WHERE id=? AND replay_count=0 AND payload_expired_at IS NULL AND (state='failed' OR (state='running' AND lease_expires_at<=?)) AND input_digest=? AND action_digest=? AND target_url=? AND ${approvalMatch} AND ${usageMatch} AND ${fence.sql}`,
     lease, expires, at, run.id, at, run.input_digest, run.action_digest, run.target_url, ...fence.args))
   }
   jobs.push(stmt(env, `INSERT INTO crank_attempts(id,run_id,number,started_at)
@@ -54,16 +58,20 @@ async function claim(env: CrankEnv, actor: Actor, run: Run, replay: boolean): Pr
 
 /** Responses are intentionally reduced to contract fields. Provider bodies,
  * headers, exception text and credentials are never persisted as outcomes. */
-async function send(env: CrankEnv, run: Run): Promise<Outcome> {
+async function send(env: CrankEnv, run: Run, attemptId: string): Promise<Outcome> {
   const controller = new AbortController(), timeout = setTimeout(() => controller.abort(), DELIVERY_TIMEOUT_MS)
   let response: Response | undefined
   try {
     const headers: Record<string, string> = { 'content-type': 'application/json', 'idempotency-key': run.id }
     if (env.CRANK_TARGET_TOKEN) headers.authorization = 'Bearer ' + env.CRANK_TARGET_TOKEN
     response = await demoEffect(
-      () => fetch(run.target_url, { method: 'POST', headers, body: run.input_json, redirect: 'manual', signal: controller.signal }),
+      async () => {
+        await recordStepUsage(env, run.id, attemptId, 'http.request')
+        return fetch(run.target_url, { method: 'POST', headers, body: run.input_json, redirect: 'manual', signal: controller.signal })
+      },
       () => Response.json({ id: `demo-delivery-${run.id}`, idempotencyKey: run.id }),
     )
+    await reportedResponse(env, run.id, attemptId, new URL(run.target_url).origin, response.headers)
     if (response.status >= 300 && response.status < 400) return { status: 'failed', code: 'redirect_refused', uncertain: true, http_status: response.status }
     if (!response.ok) return { status: 'failed', code: 'destination_rejected', uncertain: true, http_status: response.status }
     if (response.headers.get('content-type')?.split(';')[0].trim() !== 'application/json') return { status: 'failed', code: 'invalid_destination_contract', uncertain: true, http_status: response.status }
@@ -98,9 +106,12 @@ export async function deliverRun(env: CrankEnv, actor: Actor, runId: string, rep
   const run = await getRun(env, runId)
   requireValue(!run.outcome_json || JSON.parse(run.outcome_json).code !== 'restore_fence', 'Restored delivery history has no replay authority. Reconcile the destination and prepare a fresh run.', 409)
   requireValue(!(run as Run & { payload_expired_at?: string | null }).payload_expired_at, 'This run’s input expired under the retention policy, so it cannot be replayed. Prepare a fresh run.', 409)
+  requireValue(await stmt(env, 'SELECT 1 FROM crank_usage_reservations WHERE run_id=? AND workflow_id=?', run.id, run.flow_id).first(),
+    'usage_reservation_required: This retained run predates usage admission and cannot dispatch. Quote all four cost components, reactivate the flow, and prepare a fresh event ID for owner approval.', 409)
+  await assertReportedBudget(env, runId)
   await validateSnapshot(env, run)
   const lease = await claim(env, actor, run, replay)
-  const outcome = await send(env, run), at = now(), encoded = JSON.stringify(outcome)
+  const outcome = await send(env, run, lease), at = now(), encoded = JSON.stringify(outcome)
   // Settlement records an already-authorized external result even if the human
   // session expired during HTTP. Only this exact claim may settle its attempt.
   await env.DB.batch([
@@ -108,6 +119,7 @@ export async function deliverRun(env: CrankEnv, actor: Actor, runId: string, rep
       AND EXISTS(SELECT 1 FROM crank_runs WHERE id=? AND state='running' AND lease_id=?)`, at, encoded, lease, runId, lease),
     stmt(env, "UPDATE crank_runs SET state=?,outcome_json=?,updated_at=?,lease_id=NULL,lease_expires_at=NULL WHERE id=? AND state='running' AND lease_id=?", outcome.status, encoded, at, runId, lease),
   ])
+  await flushUsageNotices(env)
   return getRun(env, runId)
 }
 

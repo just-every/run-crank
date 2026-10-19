@@ -1,3 +1,5 @@
+import { isLegacyHold, decideLegacyHold } from '../ops/legacy-usage'
+import { flushUsageNotices } from '../ops/usage'
 import { guardedBatch, requireOwner } from '../access'
 import { executeRun } from '../engine/executor'
 import { getWfRun } from '../engine/records'
@@ -11,6 +13,7 @@ import { getHold } from './admission'
  * Dispatch happens afterwards, so executor loss cannot lose a released event. */
 export async function decideHold(env: CrankEnv, actor: Actor, holdId: string, decision: 'release' | 'discard', input: Record<string, unknown>) {
   requireOwner(actor)
+  if (await isLegacyHold(env, holdId)) return decideLegacyHold(env, actor, holdId, decision, input)
   const hold = await getHold(env, holdId)
   requireValue(hold.status === 'open', 'This hold is already closed', 409)
   const keys = input.all === true ? undefined : Array.isArray(input.items) ? input.items.map(String) : undefined
@@ -45,6 +48,7 @@ export async function decideHold(env: CrankEnv, actor: Actor, holdId: string, de
     }
     throw error
   }
+  await flushUsageNotices(env)
   const runs: RunRow[] = []
   if (decision === 'release') for (const item of selected) {
     const run = await getWfRun(env, item.run)

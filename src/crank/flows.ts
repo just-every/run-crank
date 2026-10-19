@@ -1,5 +1,6 @@
 import { guardedBatch, requireOwner, requirePrepare } from './access'
 import { auditStatement, auditStatementWhen } from './ops/audit'
+import { publishFlowUsageStatements } from './ops/usage'
 import { CrankError, id, now, requireValue, stmt, text, type Actor, type CrankEnv, type Flow } from './model'
 
 /** Only the deployment-selected origin may receive action bytes or its credential. */
@@ -30,8 +31,16 @@ export async function setFlowStatus(env: CrankEnv, actor: Actor, flowId: string,
   requireOwner(actor)
   const flow = await getFlow(env, flowId)
   if (status === 'active') targetUrl(flow.target_url, env)
-  const result = await guardedBatch(env, actor, 'owner', [stmt(env, 'UPDATE crank_flows SET status=? WHERE id=?', status, flowId),
-    auditStatementWhen(env, 'EXISTS(SELECT 1 FROM crank_flows WHERE id=? AND status=?)', [flowId, status], actor.id, status === 'active' ? 'flow.activate' : 'flow.pause', 'flow', flowId)])
-  requireValue(result[0].meta.changes === 1, 'Flow no longer exists', 409)
+  const usage = status === 'active' ? await publishFlowUsageStatements(env, flowId) : []
+  const guard = id()
+  const result = await guardedBatch(env, actor, 'owner', [
+    stmt(env, `INSERT INTO crank_authority_guards(id,ok) SELECT ?,CASE WHEN EXISTS(SELECT 1 FROM crank_flows
+      WHERE id=? AND revision=? AND target_url=? AND source_app=? AND destination_app=?) THEN 1 ELSE 0 END`,
+    guard, flowId, flow.revision, flow.target_url, flow.source_app, flow.destination_app),
+    ...usage, stmt(env, 'UPDATE crank_flows SET status=? WHERE id=?', status, flowId),
+    auditStatementWhen(env, 'EXISTS(SELECT 1 FROM crank_flows WHERE id=? AND status=?)', [flowId, status], actor.id, status === 'active' ? 'flow.activate' : 'flow.pause', 'flow', flowId),
+    stmt(env, 'DELETE FROM crank_authority_guards WHERE id=?', guard),
+  ])
+  requireValue(result[usage.length + 1].meta.changes === 1, 'Flow changed; review it again', 409)
   return getFlow(env, flowId)
 }

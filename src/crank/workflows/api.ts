@@ -1,3 +1,5 @@
+import { usageApi } from '../ops/usage-api'
+import { isBudgetExceeded } from '../ops/usage'
 import { authorize, guardedBatch, requireOwner, requireWriteOrigin } from '../access'
 import { APPS, hostAllowed } from '../connections/apps'
 import { CATALOG } from '../connections/catalog'
@@ -28,7 +30,7 @@ import { previewReplay, replaySteps } from './replay'
 import { cancelRun, decideApproval, previewWorkflow, resumeRun, runDetail, runsToday, searchRuns, startRun } from './runs'
 import { createWorkflow, duplicateWorkflow, getWorkflow, listWorkflows, presentWorkflow, publishWorkflow, rollbackWorkflow, setWorkflowState, unpublishWorkflow, updateDraft, versionGraph } from './store'
 
-const PREFIXES = ['/api/crank/historical', '/api/crank/workflows', '/api/crank/workflow-runs', '/api/crank/connections', '/api/crank/oauth', '/api/crank/hooks', '/api/crank/holds', '/api/crank/queues', '/api/crank/catalog', '/api/crank/coverage', '/api/crank/settings', '/api/crank/audit', '/api/crank/notices', '/api/crank/reports']
+const PREFIXES = ['/api/crank/usage', '/api/crank/historical', '/api/crank/workflows', '/api/crank/workflow-runs', '/api/crank/connections', '/api/crank/oauth', '/api/crank/hooks', '/api/crank/holds', '/api/crank/queues', '/api/crank/catalog', '/api/crank/coverage', '/api/crank/settings', '/api/crank/audit', '/api/crank/notices', '/api/crank/reports']
 const match = (path: string, pattern: RegExp) => pattern.exec(path)?.slice(1).map(decodeURIComponent) ?? null
 
 async function testConnection(env: CrankEnv, actor: Actor, connectionId: string, input: Record<string, unknown>) {
@@ -74,6 +76,8 @@ export async function workflowApi(request: Request, env: CrankEnv): Promise<Resp
   try {
     const actor = await authorize(request, env)
     requireValue(actor.kind !== 'trigger', 'Trigger tokens only admit events', 403)
+    const usage = await usageApi(request, env, actor)
+    if (usage) return usage
     let m: string[] | null
     if (path === '/api/crank/audit' || path.startsWith('/api/crank/audit/')) {
       requireValue(request.method === 'GET', 'The audit is append-only: no caller can change or remove its records.', 405)
@@ -165,6 +169,7 @@ export async function workflowApi(request: Request, env: CrankEnv): Promise<Resp
     if (path === '/api/crank/settings') return json(await updateSettings(env, actor, input))
     return json({ error: 'Route not found' }, 404)
   } catch (error) {
+    if (isBudgetExceeded(error)) return json({ error: 'USD budget exhausted. Work remains held or in its existing preview; replenish the budget or record an owner allowance before release.' }, 409)
     if (error instanceof CrankError) return json({ error: error.message }, error.status)
     if (error instanceof StepError) return json({ error: error.message, category: error.category }, error.category === 'auth' ? 502 : 422)
     const authError = error as { status?: unknown }

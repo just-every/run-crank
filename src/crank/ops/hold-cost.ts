@@ -1,3 +1,4 @@
+import { isLegacyHold, quoteLegacyHold } from './legacy-usage'
 import { guardedBatch, requireOwner } from '../access'
 import { canonical, digest, id, now, requireValue, stmt, type Actor, type CrankEnv } from '../model'
 import { auditStatement } from './audit'
@@ -78,6 +79,7 @@ export async function readHoldCost(env: CrankEnv, holdId: string): Promise<HoldC
 /** Saves assumptions and who reviewed them, without admitting any held event. */
 export async function quoteHold(env: CrankEnv, actor: Actor, holdId: string, input: Record<string, unknown>): Promise<HoldCostView> {
   requireOwner(actor)
+  if (await isLegacyHold(env, holdId)) return quoteLegacyHold(env, actor, holdId, input)
   historicalCost(input.cost, 0)
   const current = await snapshot(env, holdId)
   requireValue(current.status === 'open' && current.items.length > 0, 'This hold has no remaining events to estimate', 409)

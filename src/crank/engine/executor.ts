@@ -1,3 +1,5 @@
+import { admitStep } from './step-limit'
+import { recordStepUsage, flushUsageNotices } from '../ops/usage'
 import { sealText, targetFor } from '../ops/payload-seal'
 import { mac } from '../connections/vault'
 import { credential } from '../connections/store'
@@ -36,6 +38,7 @@ class Execution {
   constructor(readonly env: CrankEnv, public run: RunRow, readonly lease: string, readonly graph: Graph, readonly time: number, readonly retryPolicy: Record<string, unknown>) {}
 
   async prepare() {
+    if (this.run.mode !== 'test' && !await stmt(this.env, 'SELECT 1 FROM crank_usage_reservations WHERE run_id=?', this.run.id).first()) throw new StepError('authority', 'Cost estimate required for this pre-metering run. Its work is retained; cancel it and prepare a freshly quoted run before dispatch.')
     const [records, waits, replays, settings] = await Promise.all([loadRecords(this.env, this.run.id), loadWaits(this.env, this.run.id), loadReplays(this.env, this.run.id), workspaceSettings(this.env)])
     this.records = records; this.waits = waits; this.replays = replays
     this.zone = requireZone(this.graph.settings?.timezone ?? settings.timezone)
@@ -79,6 +82,8 @@ class Execution {
       if (!held) throw new StepError('uncertain', 'The execution lease changed; no further action was started', { uncertain: true })
       await assertDispatchAuthority(this.env, this.run.id)
       const path = prefix + step.id
+      await admitStep(this.env, this.run.id, path, Number(this.graph.settings?.max_steps ?? 10000))
+      await recordStepUsage(this.env, this.run.id, path, step.type)
       const outcome = step.type === 'paths' ? await this.paths(step, path) : step.type === 'loop' ? await executeLoop(step, path, this) : await this.step(step, path)
       if (outcome.kind !== 'completed') return outcome
     }
@@ -265,5 +270,6 @@ export async function executeRun(env: CrankEnv, runId: string, time = Date.now()
   ) THEN 'queued' ELSE ? END,finished_at=?,error_json=?,lease_id=NULL,lease_expires_at=NULL WHERE id=? AND lease_id=?`, status, status, terminal ? now() : null, error ? await sealText(await targetFor(env, run.workflow_id), JSON.stringify(error)) : null, runId, lease).run()
   const settled = (await getWfRun(env, runId))!
   await afterSettle(env, settled)
+  await flushUsageNotices(env)
   return settled
 }

@@ -1,3 +1,4 @@
+import { usageView, usageHoldView } from './usage'
 import { operationsView } from './operations'
 import { crankApi } from '../api'
 import { workflowApi } from '../workflows/api'
@@ -115,6 +116,16 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
       if(form.sink_token) { input.secret={token:form.sink_token}; delete input.sink_token }
       if(form.confirm_business_outcome==='true') input.confirm_business_outcome=true
       if(form.step_path!==undefined) { input.path=form.step_path; delete input.step_path }
+      if (form.all !== undefined) input.all = form.all === 'true'
+      if (Object.keys(form).some(key => /^hold_item_\d+$/.test(key))) {
+        input.items = Object.entries(form).filter(([key]) => /^hold_item_\d+$/.test(key)).map(([,value]) => value)
+        for (const key of Object.keys(input)) if (key.startsWith('hold_item_')) delete input[key]
+      }
+      if (form.items !== undefined) { try { input.items = JSON.parse(form.items) } catch { return page('Invalid selection', '<p>Select held items again.</p>', {}, 400) } }
+      if (form.estimate_orchestration_usd_per_run !== undefined) {
+        input.cost = { components: ['orchestration', 'connectors', 'models', 'executors'].map(kind => ({ kind, usd_per_run: form[`estimate_${kind}_usd_per_run`], assumption: form[`estimate_${kind}_assumption`] })) }
+        for (const key of Object.keys(input)) if (key.startsWith('estimate_') && key !== 'estimate_fingerprint') delete input[key]
+      }
       if(input.reason==='') delete input.reason
       if(input.flow_id==='') delete input.flow_id
       const response = await call(path,input)
@@ -122,6 +133,7 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
       const result:any = await response.json()
       if(!response.ok) return page('Action refused',`<p class="notice">${esc(result.error)}</p><p>No success was reported. Review the latest state before retrying.</p><a href="${back ?? (path.includes('/imports')?'/app/import':'/app')}">Return to workspace</a>`,{},response.status)
       if(result.token) return page('Credential created',`<section class="panel"><p>Shown once. Save this in a private file for your agent. Crank stores only its hash.</p><label>Credential<input type="password" value="${esc(result.token)}" readonly aria-label="Credential"></label><p class="muted">You can select and copy the hidden value. Do not share it in chat or commit it. Local dev credentials additionally need the local gate described in the README.</p><a class="btn btn-secondary" href="/app/access">Return to access</a></section>`)
+      if (result.held && (result.hold_id || result.holdId)) return redirect('/app/holds/' + encodeURIComponent(result.hold_id || result.holdId))
       if(back) return redirect(back)
       if(path.startsWith('/api/crank/imports')) return redirect('/app/import')
       if(path.startsWith('/api/crank/tokens')) return redirect('/app/access')
@@ -166,7 +178,13 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
     if(url.pathname==='/app/account') { const session = await read('/auth/session'); return page('Account',accountView(session,owner),{state,intro:'Who is signed in on this browser, and what that role may do.'}) }
     if(url.pathname==='/app/connections') return page('Connections',connectionsView(await read('/api/crank/connections'),owner),{state,intro:'The apps your workflows act on, each with one stored credential.'})
     requireOwner(actor)
-    if(url.pathname==='/app/operations') return page('Operations',operationsView(await read('/api/crank/reports/operations?'+url.searchParams),await read('/api/crank/workflows'),url.searchParams),{state,intro:'Execution health, business obligations and delivery to your own logs.'})
+    if(url.pathname==='/app/operations') {
+      const workflows = await read('/api/crank/workflows')
+      const choices = [...workflows, ...state.flows.map((flow:any) => ({ ...flow, kind: 'flow' }))]
+      return page('Operations', usageView(await read('/api/crank/reports/usage?' + url.searchParams), choices) + operationsView(await read('/api/crank/reports/operations?' + url.searchParams), workflows, url.searchParams), {state,intro:'Execution health, business obligations and delivery to your own logs.'})
+    }
+    const heldPath = /^\/app\/holds\/([^/]+)$/.exec(url.pathname)
+    if (heldPath) return page('Held work', usageHoldView(await read('/api/crank/holds/' + encodeURIComponent(heldPath[1]))), {state})
     if(url.pathname==='/app/access') {const people=await call('/auth/operators'); return page('Access',accessView({...state,people:people.ok?await people.json():[]}),{state,intro:'Credentials for agents and sending apps, and the people who can sign in.'})}
     if(url.pathname==='/app/data') { const [retention,workflows] = await Promise.all([read('/api/crank/data/retention'),read('/api/crank/workflows')]); return page('Data',dataView()+retentionPanels(retention,workflows)+sensitivePanel(retention.sensitive,workflows)+encryptionPanel(retention.sensitive)+erasurePanels((people=>Array.isArray(people)?people:people.operators??[])(await read('/auth/operators'))),{state,intro:'Export, restore and erase. Your data stays on this installation.'}) }
     if(url.pathname==='/app/import') { const jobs=await call('/api/crank/imports'); if(!jobs.ok) throw new Error('Import journal unavailable'); return page('Move in',importView(await jobs.json() as any[],await read('/api/operator/import-settings')),{state,intro:'Bring workflows from another tool as drafts you review first.'}) }

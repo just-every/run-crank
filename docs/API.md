@@ -229,3 +229,43 @@ calls share an origin bucket. A full window after response completion prevents
 slow-call bursts. CONN-002 must share buckets by provider-verified account ID
 before that identity capability ships. The real-time multi-minute journey is
 `node --test tests/retry-backoff-journey.mjs` (nightly/manual CI).
+
+
+### Owner usage and budgets (OPS-002)
+
+Before `POST workflows/:id/publish` or `POST flows/:id/activate`, quote the exact
+current graph with `POST workflows/:id/estimate` (or `flows/:id/estimate`):
+`{"cost":{"components":[{"kind":"orchestration","usd_per_run":"0.002","assumption":"Owner infrastructure estimate"},{"kind":"connectors","usd_per_run":"0","assumption":"No billed connector use expected"},{"kind":"models","usd_per_run":"0","assumption":"No model step"},{"kind":"executors","usd_per_run":"0","assumption":"No external executor"}]}}`.
+The owner must provide all four assumptions and amounts, including explicit zero.
+GET the same path with `?count=25` to see the exact batch estimate. A changed graph
+invalidates the quote; retained version GET responses include their immutable
+estimate, reused on rollback. Quotes are owner estimates, not provider verification.
+
+`GET /api/crank/reports/usage?month=2026-10&workflow=ID&team=NAME&count=25`
+separates estimates/forecasts, observed production steps/requests and source-reported
+charges. Each filter is optional. Months are UTC calendar months. Report absence is
+unknown, never a zero-charge claim. An executing endpoint can report a nonnegative
+USD decimal in `x-crank-usage-usd`; its origin/header is retained as self-reported
+provenance. Invalid reports remain visible as unknown without discarding execution.
+
+Owner-only `POST /api/crank/usage/budgets` takes `scope` (`workspace`, `workflow`,
+`team`), `workflow_id` or `team` for the selected scope, and `monthly_usd` as an
+exact decimal string (null removes a limit). An installation workspace is the
+account scope; team assignments are managed by the existing operations settings.
+`POST /api/crank/usage/allowance` adds `usd` and an attributable `reason` to one
+scope for the current UTC month. Each mutation is audited. Neither action releases
+held work. At 80%/100%, durable owner notices show delivery state. Admission reserves
+its owner estimate atomically against all applicable limits; reported charges
+replace a lower reservation without double debit. Extra reported spend stops the
+next request at an exhausted limit until funded.
+
+At exhaustion the event remains in the ordinary TRIG-005 hold. A held workflow
+manual start responds with `held:true,hold_id`; public webhook holds also name
+`hold_id`. A legacy prepared/triggered approval responds HTTP 202 with
+`held:true,holdId`. Review `/app/holds/ID` or GET `/api/crank/holds/ID`, quote its
+four components with POST `/estimate`, then POST `/release` with the returned
+`estimate_fingerprint` and `all:true` or selected `items`. Release rechecks the
+current budget and complete reviewed batch. A legacy release creates pending
+approval runs and performs no external delivery. Budget holds never auto-expire.
+`settings.max_steps` bounds distinct expanded execution paths per run (1–10,000;
+default 10,000), retained across restarts. Production budgets exclude draft tests.

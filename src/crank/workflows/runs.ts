@@ -1,3 +1,5 @@
+import { isBudgetExceeded, flushUsageNotices } from '../ops/usage'
+import { hold } from '../triggers/admission'
 import { requireOwner } from '../access'
 import { evaluate, type Groups } from '../engine/conditions'
 import { requireZone, startOfDay } from '../engine/dates'
@@ -162,9 +164,16 @@ export async function startRun(env: CrankEnv, actor: Actor, workflowId: string, 
   requireValue(!actor.tokenId && actor.kind !== 'review' && ['owner', 'admin'].includes(actor.role), 'Starting a run requires an administrator session; preparation credentials cannot execute workflows', 403)
   const workflow = await getWorkflow(env, workflowId)
   requireValue(workflow.status === 'published' && workflow.published_version_id, 'Publish (and resume) the workflow before starting a run', 409)
-  const run = await createRun(env, workflow, 'manual', { key: 'manual:' + crypto.randomUUID(), payload: { input: input.input ?? {} }, businessKey: typeof input.business_key === 'string' ? input.business_key.slice(0, 200) : null }, actor.id, now(), actor)
-  await executeRun(env, run.id)
-  return runDetail(env, actor, run.id)
+  const event = { key: 'manual:' + crypto.randomUUID(), payload: { input: input.input ?? {} }, businessKey: typeof input.business_key === 'string' ? input.business_key.slice(0, 200) : null }
+  try {
+    const run = await createRun(env, workflow, 'manual', event, actor.id, now(), actor)
+    await flushUsageNotices(env)
+    await executeRun(env, run.id)
+    return runDetail(env, actor, run.id)
+  } catch (error) {
+    if (!isBudgetExceeded(error) && !/crank_usage_estimate_required/.test(String(error))) throw error
+    return { held: true, hold_id: await hold(env, workflow, 'manual', [event], 'USD budget exhausted', true), workflow_id: workflowId }
+  }
 }
 
 /** WORK-012/WORK-013 preview: pure steps run on a manual sample, labelled as such; the

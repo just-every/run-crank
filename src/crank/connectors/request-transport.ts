@@ -1,3 +1,5 @@
+import { reportedResponse, assertReportedBudget } from '../ops/usage-transport'
+import { flushUsageNotices } from '../ops/usage'
 import { authorizeRequest } from '../connections/auth'
 import { assertDispatchAuthority } from '../engine/authority'
 import { boundedFetch } from '../engine/egress'
@@ -17,6 +19,7 @@ export async function sendRequest(ctx: StepContext, prepared: Prepared, connecti
     // Admission can wait behind another request. Recheck after that wait before
     // recording or dispatching a physical request with live credentials.
     await assertDispatchAuthority(ctx.env, ctx.run.id)
+    await assertReportedBudget(ctx.env, ctx.run.id)
     if (connectionId) await authorizeRequest(ctx.env, connectionId, url, headers, prepared.body)
     const attemptId = id()
     const admitted = await stmt(ctx.env, `INSERT INTO crank_wf_attempts(id,run_id,path,number,method,destination_origin,started_at,request_key,retry_number,budget_started_at,slice_started_at)
@@ -29,6 +32,8 @@ export async function sendRequest(ctx: StepContext, prepared: Prepared, connecti
       if (remaining <= 0) throw new StepError('provider', 'The request elapsed-time budget ended before dispatch', { exhausted: true })
       const response = await boundedFetch(url.href, { method: prepared.method, headers, body: prepared.body, timeoutMs: Math.min(prepared.timeout, remaining), maxBytes: prepared.maxBytes ?? 2 * 1024 * 1024, follow: prepared.follow ?? (prepared.method === 'GET' || prepared.method === 'HEAD' ? 3 : 0) })
       await stmt(ctx.env, 'UPDATE crank_wf_attempts SET finished_at=?,http_status=? WHERE id=?', now(), response.status, attemptId).run()
+      await reportedResponse(ctx.env, ctx.run.id, attemptId, new URL(response.url).origin, response.headers)
+      await flushUsageNotices(ctx.env)
       return response
     } catch (error) {
       await stmt(ctx.env, 'UPDATE crank_wf_attempts SET finished_at=?,error_category=? WHERE id=?', now(), error instanceof StepError ? error.category : 'network', attemptId).run()

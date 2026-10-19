@@ -1,3 +1,5 @@
+import { isBudgetExceeded, flushUsageNotices } from '../ops/usage'
+import { isLegacyHold, readLegacyHold } from '../ops/legacy-usage'
 import { guardedBatch } from '../access'
 import type { RunRow } from '../engine/types'
 import { id, now, requireValue, stmt, type Actor, type CrankEnv } from '../model'
@@ -34,15 +36,20 @@ export async function createRun(env: CrankEnv, workflow: WorkflowRow, kind: stri
 }
 
 /** TRIG-005: one open reviewable batch per workflow; items stay deduplicated by source ID. */
-export async function hold(env: CrankEnv, workflow: WorkflowRow, source: 'poll' | 'webhook', events: TriggerEvent[], reason: string) {
+export async function hold(env: CrankEnv, workflow: WorkflowRow, source: 'poll' | 'webhook' | 'schedule' | 'manual', events: TriggerEvent[], reason: string, budget = false) {
   const at = now(), settings = JSON.parse(workflow.settings_json || '{}')
-  let holdRow = await stmt(env, "SELECT id FROM crank_holds WHERE workflow_id=? AND status='open' ORDER BY created_at LIMIT 1", workflow.id).first<{ id: string }>()
+  let holdRow = await stmt(env, "SELECT id FROM crank_holds WHERE workflow_id=? AND status='open' AND COALESCE(origin_kind,source)=? ORDER BY created_at LIMIT 1", workflow.id, source).first<{ id: string }>()
   let created = false
   if (!holdRow) {
-    const holdId = id(), expiry = Number.isInteger(settings.hold_expiry_hours) ? new Date(Date.now() + settings.hold_expiry_hours * 3600000).toISOString() : null
-    await stmt(env, "INSERT INTO crank_holds(id,workflow_id,source,status,created_at,expires_at) VALUES(?,?,?,'open',?,?)", holdId, workflow.id, source, at, expiry).run()
-    holdRow = { id: holdId }; created = true
+    const holdId = id(), expiry = !budget && Number.isInteger(settings.hold_expiry_hours) ? new Date(Date.now() + settings.hold_expiry_hours * 3600000).toISOString() : null
+    const inserted = await stmt(env, `INSERT INTO crank_holds(id,workflow_id,source,status,created_at,expires_at,origin_kind,budget_hold)
+      SELECT ?,?,?,'open',?,?,?,? WHERE NOT EXISTS(SELECT 1 FROM crank_holds WHERE workflow_id=? AND status='open' AND COALESCE(origin_kind,source)=?)`,
+      holdId, workflow.id, source === 'poll' ? 'poll' : 'webhook', at, expiry, source, budget ? 1 : 0, workflow.id, source).run()
+    holdRow = await stmt(env, "SELECT id FROM crank_holds WHERE workflow_id=? AND status='open' AND COALESCE(origin_kind,source)=? ORDER BY created_at,id LIMIT 1", workflow.id, source).first<{id:string}>()
+    requireValue(holdRow, 'Hold could not be retained', 503)
+    created = inserted.meta.changes === 1
   }
+  if (budget) await stmt(env, 'UPDATE crank_holds SET budget_hold=1,expires_at=NULL WHERE id=?', holdRow.id).run()
   const target = await targetFor(env, workflow.id), sealed = await Promise.all(events.map(event => sealText(target, JSON.stringify(event.payload ?? null))))
   for (let i = 0; i < events.length; i += 50) {
     await env.DB.batch(events.slice(i, i + 50).map((event, j) => stmt(env, "INSERT INTO crank_hold_items(hold_id,item_key,payload_json,source_time,received_at,status) VALUES(?,?,?,?,?,'held') ON CONFLICT DO NOTHING",
@@ -51,7 +58,7 @@ export async function hold(env: CrankEnv, workflow: WorkflowRow, source: 'poll' 
   if (created) {
     const count = await stmt(env, "SELECT COUNT(*) AS n FROM crank_hold_items WHERE hold_id=? AND status='held'", holdRow.id).first<{ n: number }>()
     await notify(env, { key: `hold:${holdRow.id}`, workflowId: workflow.id, kind: 'hold', subject: `${workflow.name}: ${count?.n ?? events.length} trigger events are held for review`,
-      text: `Crank held ${count?.n ?? events.length} ${source === 'poll' ? 'new records from one poll' : 'instant events'} for "${workflow.name}" (${reason}). Nothing has run. Review the batch, then run all, run selected items or discard them.`, link: `/api/crank/holds/${holdRow.id}` })
+      text: `Crank held ${count?.n ?? events.length} ${source} events for "${workflow.name}" (${reason}). Nothing has run. Review the batch, then run all, run selected items or discard them.`, link: `/api/crank/holds/${holdRow.id}` })
   }
   return holdRow.id
 }
@@ -68,15 +75,23 @@ export async function admit(env: CrankEnv, workflow: WorkflowRow, kind: string, 
     if (open || (recent?.n ?? 0) >= threshold) return { runs: [], holdId: await hold(env, workflow, 'webhook', events, `more than ${threshold} instant events in one minute`) }
   }
   const runs: RunRow[] = []
-  for (const event of events) runs.push(await createRun(env, workflow, kind, event, createdBy))
+  for (let index = 0; index < events.length; index++) {
+    try { runs.push(await createRun(env, workflow, kind, events[index], createdBy)) }
+    catch (error) {
+      if (!isBudgetExceeded(error) && !/crank_usage_estimate_required/.test(String(error))) throw error
+      return { runs, holdId: await hold(env, workflow, source, events.slice(index), 'USD budget exhausted', true) }
+    }
+  }
+  await flushUsageNotices(env)
   return { runs, holdId: null }
 }
 
 export async function getHold(env: CrankEnv, holdId: string) {
+  if (await isLegacyHold(env, holdId)) return readLegacyHold(env, holdId)
   const row = await stmt(env, 'SELECT * FROM crank_holds WHERE id=?', holdId).first<{ id: string; workflow_id: string; source: string; status: string; created_at: string; expires_at: string | null }>()
   requireValue(row, 'Hold not found', 404)
   const items = await stmt(env, 'SELECT item_key,payload_json,source_time,received_at,status,decided_by,decided_at,run_id FROM crank_hold_items WHERE hold_id=? ORDER BY received_at,item_key', holdId).all<{ item_key: string; payload_json: string; source_time: string | null; received_at: string; status: string; decided_by: string | null; decided_at: string | null; run_id: string | null }>()
   const counts = { held: 0, released: 0, discarded: 0 } as Record<string, number>
   for (const item of items.results) counts[item.status as string]++
-  return { ...row, counts, cost: await readHoldCost(env, holdId), items: await Promise.all(items.results.map(async item => ({ ...item, payload: JSON.parse((await openText(env, row.workflow_id, item.payload_json as string, 'display'))!), payload_json: undefined }))) }
+  return { ...row, source: (row as any).origin_kind ?? row.source, counts, cost: await readHoldCost(env, holdId), items: await Promise.all(items.results.map(async item => ({ ...item, payload: JSON.parse((await openText(env, row.workflow_id, item.payload_json as string, 'display'))!), payload_json: undefined }))) }
 }

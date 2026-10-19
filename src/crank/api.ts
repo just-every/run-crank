@@ -4,6 +4,8 @@ import { createFlow, getFlow, setFlowStatus } from './flows'
 import { CrankError, body, json, presentRun, publicActor, requireValue, stmt, type Actor, type CrankEnv, type Flow, type Run } from './model'
 import { getRun, prepareRun } from './runs'
 import { mintToken, revokeToken, tokenColumns } from './tokens'
+import { quoteWorkflow, readWorkflowEstimate, flushUsageNotices } from './ops/usage'
+import { StepError } from './engine/errors'
 
 async function state(env: CrankEnv, actor: Actor): Promise<Response> {
   requireValue(actor.kind !== 'trigger', 'Trigger tokens only admit events to their scoped flow', 403)
@@ -29,6 +31,13 @@ export async function crankApi(request: Request, env: CrankEnv): Promise<Respons
     if (request.method === 'GET') {
       if (path === '/api/crank/state') return await state(env, actor)
       requireValue(actor.kind !== 'trigger', 'Trigger tokens only admit events', 403)
+      const estimate = /^\/api\/crank\/flows\/([^/]+)\/estimate$/.exec(path)
+      if (estimate) {
+        requireOwner(actor)
+        const rawCount = new URL(request.url).searchParams.get('count') ?? '1', count = Number(rawCount)
+        requireValue(/^[1-9]\d*$/.test(rawCount) && Number.isSafeInteger(count), 'count must be a positive safe integer')
+        return json(await readWorkflowEstimate(env, decodeURIComponent(estimate[1]), count))
+      }
       const flow = /^\/api\/crank\/flows\/([^/]+)$/.exec(path)
       if (flow) return json(await getFlow(env, decodeURIComponent(flow[1])))
       const run = /^\/api\/crank\/runs\/([^/]+)$/.exec(path)
@@ -37,6 +46,8 @@ export async function crankApi(request: Request, env: CrankEnv): Promise<Respons
     }
     requireValue(request.method === 'POST', 'Method not allowed', 405)
     requireWriteOrigin(request, env, actor)
+    const estimate = /^\/api\/crank\/flows\/([^/]+)\/estimate$/.exec(path)
+    if (estimate) return json(await quoteWorkflow(env, actor, decodeURIComponent(estimate[1]), await body(request, 16 * 1024)))
     if (path === '/api/crank/flows') return json(await createFlow(env, actor, await body(request)), 201)
     if (path === '/api/crank/tokens') return json(await mintToken(env, actor, await body(request)), 201)
     const flowAction = /^\/api\/crank\/flows\/([^/]+)\/(activate|pause|runs|trigger)$/.exec(path)
@@ -44,7 +55,9 @@ export async function crankApi(request: Request, env: CrankEnv): Promise<Respons
       const flowId = decodeURIComponent(flowAction[1]), action = flowAction[2]
       if (action === 'runs' || action === 'trigger') {
         requireValue(action === 'trigger' ? actor.kind === 'trigger' : actor.kind !== 'trigger', action === 'trigger' ? 'A scoped trigger bearer is required' : 'Use the scoped trigger endpoint', 403)
-        return json(presentRun(await prepareRun(env, actor, flowId, await body(request))), 201)
+        const result = await prepareRun(env, actor, flowId, await body(request))
+        await flushUsageNotices(env)
+        return json('held' in result ? result : presentRun(result), 'held' in result ? 202 : 201)
       }
       requireOwner(actor)
       if (request.body) await body(request)
@@ -66,6 +79,7 @@ export async function crankApi(request: Request, env: CrankEnv): Promise<Respons
     return json({ error: 'Route not found' }, 404)
   } catch (error) {
     if (error instanceof CrankError) return json({ error: error.message }, error.status)
+    if (error instanceof StepError) return json({ error: error.message, category: error.category }, 422)
     // Base authentication errors carry a safe code and status; never expose SQL,
     // upstream bodies or exception text to clients.
     const authError = error as { status?: unknown; code?: unknown }

@@ -25,6 +25,9 @@ export function fenceRow(table, row) {
 /** Every value importRow may write. Base refuses any other change to a staged row. */
 export const importSafety = {
   crank_flows: { status: ['draft'] },
+  crank_usage_budgets: { active: [0] },
+  crank_usage_allowances: { active: [0] },
+  crank_usage_notices: { active: [0] },
   crank_workflows: { status: ['paused'], owner_id: [RESTORED_OWNER] },
   crank_connections: { status: ['needs_reconnect'] },
   crank_wf_runs: { status: ['paused'], error_json: unfinished.map(status => runFence(status)), lease_id: [null], lease_expires_at: [null], continuation_authority: [0] },
@@ -40,6 +43,7 @@ export const importSafety = {
  * bounded value, so an unfenced unfinished run keeps only its previous status and
  * a failed delivery keeps its outcome with its single replay marked used. */
 export function importRow(table, row) {
+  if (table === 'crank_usage_budgets' || table === 'crank_usage_allowances' || table === 'crank_usage_notices') return { ...row, active: 0 };
   if (table === 'crank_flows') return { ...row, status: 'draft' };
   if (table === 'crank_workflows') return { ...row, status: row.status === 'draft' ? 'draft' : 'paused', owner_id: RESTORED_OWNER };
   if (table === 'crank_connections') return { ...row, status: row.status === 'revoked' ? 'revoked' : 'needs_reconnect' };
@@ -118,11 +122,18 @@ export async function validateRestore({ read }) {
   for (const [child, column, parent] of [
     ['crank_runs', 'flow_id', 'crank_flows'], ['crank_approvals', 'run_id', 'crank_runs'], ['crank_attempts', 'run_id', 'crank_runs'],
     ['crank_request_checkpoints', 'run_id', 'crank_wf_runs'], ['crank_wf_steps', 'run_id', 'crank_wf_runs'], ['crank_wf_step_revisions', 'run_id', 'crank_wf_runs'], ['crank_waits', 'run_id', 'crank_wf_runs'], ['crank_callback_events', 'run_id', 'crank_wf_runs'],
-    ['crank_queue_items', 'run_id', 'crank_wf_runs'], ['crank_holds', 'workflow_id', 'crank_workflows'], ['crank_hold_items', 'hold_id', 'crank_holds'],
+    ['crank_queue_items', 'run_id', 'crank_wf_runs'], ['crank_hold_items', 'hold_id', 'crank_holds'],
     ['crank_historical_batches', 'workflow_id', 'crank_workflows'], ['crank_historical_items', 'batch_id', 'crank_historical_batches'],
   ]) {
     const ids = new Set((await rows(parent)).map(row => row.id));
     if ((await rows(child)).some(row => !ids.has(row[column]))) return false;
   }
+  const subjects = new Set([...workflows.keys(), ...(await rows('crank_flows')).map(row => row.id)]);
+  for (const hold of await rows('crank_holds')) if (!subjects.has(hold.workflow_id)) return false;
+  const allRuns = new Set([...(await rows('crank_wf_runs')).map(row => row.id), ...(await rows('crank_runs')).map(row => row.id)]);
+  const estimates = new Map((await rows('crank_usage_version_estimates')).map(row => [row.version_id, row]));
+  for (const row of await rows('crank_usage_reservations')) if (!allRuns.has(row.run_id) || estimates.get(row.version_id)?.workflow_id !== row.workflow_id || !subjects.has(row.workflow_id)) return false;
+  for (const table of ['crank_usage_observations','crank_usage_provider_charges','crank_usage_reporting_errors','crank_step_admissions']) for (const row of await rows(table)) if (!allRuns.has(row.run_id)) return false;
+  for (const table of ['crank_usage_workflow_estimates','crank_usage_version_estimates','crank_usage_flow_versions']) for (const row of await rows(table)) if (!subjects.has(row.workflow_id)) return false;
   return true;
 }

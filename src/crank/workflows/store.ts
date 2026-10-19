@@ -1,3 +1,4 @@
+import { publishUsageStatements, readWorkflowEstimate } from '../ops/usage'
 import { guardedBatch, requireOwner, requirePrepare } from '../access'
 import { getConnection } from '../connections/store'
 import { StepError } from '../engine/errors'
@@ -45,13 +46,15 @@ export async function presentWorkflow(env: CrankEnv, row: WorkflowRow) {
     draft_versions: (await stmt(env, 'SELECT id,base_version_id,graph_digest,created_by AS author,created_at AS at FROM crank_workflow_drafts WHERE workflow_id=? ORDER BY created_at DESC,id DESC LIMIT 100', row.id).all()).results,
     hooks: await listHooks(env, row.id),
     restore: await restoreReview(env, row),
+    estimate: await readWorkflowEstimate(env, row.id),
   }
 }
 /** One published version's frozen graph, for comparing versions and restoring one into the draft. */
 export async function versionGraph(env: CrankEnv, workflowId: string, number: number) {
-  const row = await stmt(env, 'SELECT number,graph_json,graph_digest,published_by,published_at,retired_at FROM crank_workflow_versions WHERE workflow_id=? AND number=?', workflowId, number).first<VersionRow>()
+  const row = await stmt(env, 'SELECT id,number,graph_json,graph_digest,published_by,published_at,retired_at FROM crank_workflow_versions WHERE workflow_id=? AND number=?', workflowId, number).first<VersionRow>()
   requireValue(row, 'Version not found', 404)
-  return { number: row.number, graph: JSON.parse(row.graph_json), graph_digest: row.graph_digest, published_by: row.published_by, published_at: row.published_at, retired_at: row.retired_at }
+  const estimate = await stmt(env, 'SELECT cost_json FROM crank_usage_version_estimates WHERE version_id=?', row.id).first<{cost_json: string}>()
+  return { estimate: estimate ? JSON.parse(estimate.cost_json) : null, number: row.number, graph: JSON.parse(row.graph_json), graph_digest: row.graph_digest, published_by: row.published_by, published_at: row.published_at, retired_at: row.retired_at }
 }
 export async function listWorkflows(env: CrankEnv, params: URLSearchParams) {
   const q = params.get('q'), folderName = params.get('folder')
@@ -102,14 +105,14 @@ export async function duplicateWorkflow(env: CrankEnv, actor: Actor, workflowId:
 export async function rollbackWorkflow(env: CrankEnv, actor: Actor, workflowId: string, input: Record<string, unknown>) {
   requireOwner(actor)
   requireValue(Number.isInteger(input.version), 'Choose the version number to roll back to')
-  const source = await stmt(env, "SELECT number,graph_json,retry_policy_json FROM crank_workflow_versions WHERE workflow_id=? AND number=? AND mode='production'", workflowId, input.version).first<{ number: number; graph_json: string; retry_policy_json: string }>()
+  const source = await stmt(env, "SELECT id,number,graph_json,retry_policy_json FROM crank_workflow_versions WHERE workflow_id=? AND number=? AND mode='production'", workflowId, input.version).first<{ id: string; number: number; graph_json: string; retry_policy_json: string }>()
   requireValue(source, 'Version not found', 404)
   const current = await getWorkflow(env, workflowId)
   const live = current.published_version_id ? await stmt(env, 'SELECT number FROM crank_workflow_versions WHERE id=?', current.published_version_id).first<{ number: number }>() : null
   requireValue(live?.number !== source.number, `Version ${source.number} is already the published version`, 409)
-  return publishWorkflow(env, actor, workflowId, {}, { graph: JSON.parse(source.graph_json), rollback_of: source.number, retryPolicy: JSON.parse(source.retry_policy_json) })
+  return publishWorkflow(env, actor, workflowId, {}, { graph: JSON.parse(source.graph_json), rollback_of: source.number, estimateVersionId: source.id, retryPolicy: JSON.parse(source.retry_policy_json) })
 }
-export async function publishWorkflow(env: CrankEnv, actor: Actor, workflowId: string, input: Record<string, unknown> = {}, rollback?: { graph: unknown; rollback_of: number; retryPolicy: Record<string, unknown> }) {
+export async function publishWorkflow(env: CrankEnv, actor: Actor, workflowId: string, input: Record<string, unknown> = {}, rollback?: { graph: unknown; rollback_of: number; estimateVersionId: string; retryPolicy: Record<string, unknown> }) {
   requireOwner(actor)
   const current = await getWorkflow(env, workflowId)
   await requireAttested(env, workflowId)
@@ -135,6 +138,7 @@ export async function publishWorkflow(env: CrankEnv, actor: Actor, workflowId: s
     stmt(env, 'DELETE FROM crank_schedules WHERE workflow_id=?', workflowId),
     auditStatement(env, actor.id, 'workflow.publish', 'workflow', workflowId, authority, versionId),
   ]
+  statements.push(...await publishUsageStatements(env, workflowId, versionId, graphJson, rollback?.estimateVersionId))
   statements.push(...await triggerSetup(env, workflowId, versionId, graph))
   statements.push(...adoption)
   if (!pendingRestore(current) && current.published_version_id && await waitingPolicy(env, current.published_version_id) === 'cancel_on_new_version') statements.push(...await cancellations(env, actor, workflowId, current.published_version_id, 'A new version was published'))

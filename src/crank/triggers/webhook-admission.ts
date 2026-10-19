@@ -1,3 +1,4 @@
+import { isBudgetExceeded, flushUsageNotices } from '../ops/usage'
 import { CrankError, digest, id, now, stmt, type CrankEnv } from '../model'
 import { notify } from '../ops/notices'
 import { indexStatement, sealFileBase64, sealText, targetFor } from '../ops/payload-seal'
@@ -6,7 +7,7 @@ import type { WorkflowRow } from './admission'
 
 /** D1 serializes the whole batch: an event identity is committed with exactly one
  * queued run or held item. The admission ID distinguishes this request's claim. */
-export async function admitWebhook(env: CrankEnv, workflow: WorkflowRow, hookId: string, key: string, payloadDigest: string, payload: unknown, threshold: number, windowMinutes: number | null, files: InboundUpload[] = []) {
+export async function admitWebhook(env: CrankEnv, workflow: WorkflowRow, hookId: string, key: string, payloadDigest: string, payload: unknown, threshold: number, windowMinutes: number | null, files: InboundUpload[] = [], budgetHold = false) {
   const token = id(), candidateHold = id(), guard = id(), at = now(), eventDigest = await digest(key)
   const windowStart = windowMinutes === null ? '' : new Date(Date.now() - windowMinutes * 60000).toISOString()
   const settings = JSON.parse(workflow.settings_json || '{}')
@@ -30,9 +31,10 @@ export async function admitWebhook(env: CrankEnv, workflow: WorkflowRow, hookId:
       stmt(env, `INSERT INTO crank_holds(id,workflow_id,source,status,created_at,expires_at)
         SELECT ?,?,'webhook','open',?,? WHERE ${claimed}
         AND NOT EXISTS(SELECT 1 FROM crank_holds WHERE workflow_id=? AND status='open' AND source='webhook')
-        AND ((SELECT status FROM crank_workflows WHERE id=?)='paused' OR
+        AND (?=1 OR (SELECT status FROM crank_workflows WHERE id=?)='paused' OR
           (SELECT COUNT(*) FROM crank_trigger_events WHERE workflow_id=? AND received_at>? AND run_id IS NOT NULL)>=?)`,
-      candidateHold, workflow.id, at, expiry, workflow.id, key, token, workflow.id, workflow.id, workflow.id, new Date(Date.now() - 60000).toISOString(), threshold),
+      candidateHold, workflow.id, at, expiry, workflow.id, key, token, workflow.id, budgetHold ? 1 : 0, workflow.id, workflow.id, new Date(Date.now() - 60000).toISOString(), threshold),
+      ...(budgetHold ? [stmt(env, "UPDATE crank_holds SET budget_hold=1,expires_at=NULL WHERE workflow_id=? AND status='open' AND source='webhook'", workflow.id)] : []),
       stmt(env, `UPDATE crank_trigger_events SET hold_id=(SELECT id FROM crank_holds WHERE workflow_id=? AND status='open' AND source='webhook' ORDER BY created_at,id LIMIT 1)
         WHERE workflow_id=? AND dedup_key=? AND admission_id=?`, workflow.id, workflow.id, key, token),
       ...files.map((file, i) => stmt(env, `INSERT INTO crank_files(id,workflow_id,name,type,size,sha256,source,content_base64,created_at)
@@ -50,14 +52,16 @@ export async function admitWebhook(env: CrankEnv, workflow: WorkflowRow, hookId:
       stmt(env, 'DELETE FROM crank_authority_guards WHERE id=?', guard),
     ])
   } catch (error) {
+    if ((isBudgetExceeded(error) || /crank_usage_estimate_required/.test(String(error))) && !budgetHold) return admitWebhook(env, workflow, hookId, key, payloadDigest, payload, threshold, windowMinutes, files, true)
     if (/crank_authority_guards|CHECK constraint failed: ok/.test(String(error))) throw new CrankError(409, 'Webhook authority changed or this event was erased; no event was admitted')
     throw error
   }
   const event = await stmt(env, 'SELECT payload_digest,run_id,hold_id,admission_id FROM crank_trigger_events WHERE workflow_id=? AND dedup_key=?', workflow.id, key)
     .first<{ payload_digest: string; run_id: string | null; hold_id: string | null; admission_id: string | null }>()
   if (windowMinutes === null && event?.payload_digest !== payloadDigest) throw new CrankError(409, 'This event ID already belongs to different input')
+  await flushUsageNotices(env)
   const accepted = event?.admission_id === token
   if (event?.hold_id) await notify(env, { key: `hold:${event.hold_id}`, workflowId: workflow.id, kind: 'hold',
-    subject: `${workflow.name}: trigger events are held for review`, text: `Crank held instant events for "${workflow.name}" because the workflow is paused or its burst threshold was reached. Review the batch before running all, selected items, or discarding it.`, link: `/api/crank/holds/${event.hold_id}` })
+    subject: `${workflow.name}: trigger events are held for review`, text: `Crank held instant events for "${workflow.name}" because the workflow is paused, its burst threshold was reached, or its USD budget is exhausted. Review the batch before running all, selected items, or discarding it.`, link: `/api/crank/holds/${event.hold_id}` })
   return { accepted, runId: event?.run_id ?? null, holdId: event?.hold_id ?? null }
 }

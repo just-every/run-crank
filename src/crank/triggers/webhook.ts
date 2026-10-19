@@ -85,8 +85,8 @@ export async function receiveHook(request: Request, env: CrankEnv, secret: strin
     }
     const payload = envelope ? { event_id: envelope.event_id, input: envelope.input } : { method: inbound.method, headers: inbound.headers, query: inbound.query, body: inbound.body, files: inbound.files, ...(inbound.raw !== undefined ? { raw: inbound.raw } : {}) }
     const admitted = await admitWebhook(env, workflow, hook.id, key, envelope ? await digest(canonical({ body: { event_id: envelope.event_id, input: envelope.input }, files: {} })) : await bodyDigest(inbound), payload, burstThreshold(graph), envelope ? null : Number(trigger.dedup?.window_minutes ?? 1440), inbound.uploads)
-    if (!admitted.accepted) return json({ accepted: false, duplicate: true, run_id: admitted.runId }, 200)
-    if (admitted.holdId) return json({ accepted: true, held: true }, 202)
+    if (!admitted.accepted) return json({ accepted: false, duplicate: true, run_id: admitted.runId, ...(admitted.holdId ? { hold_id: admitted.holdId } : {}) }, 200)
+    if (admitted.holdId) return json({ accepted: true, held: true, hold_id: admitted.holdId }, 202)
     const run = { id: admitted.runId! }
     const response = trigger.response ?? { mode: 'immediate' }
     if (response.mode === 'sync') {
