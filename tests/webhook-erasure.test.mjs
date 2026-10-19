@@ -130,3 +130,46 @@ test('TRIG-001: an interrupted workflow erasure rolls back both the row deletion
     assert.equal((await runs(h, workflow)).length, 0);
   } finally { await h.close(); }
 });
+
+test('DATA-002: subject erasure previews every run carrying one identifier, waits for finished work, erases them all with fences and keeps only a digest', async () => {
+  const fake = fakeEdge();
+  fake.routes.set('crm.example', () => jsonResponse({ id: 'contact-1' }));
+  const h = await harness(target, { edge: fake.edge });
+  try {
+    const subject = 'Dana.Reyes@Example.test', other = 'someone-else@example.test';
+    const contact = await publish(h, 'Contact sync', { trigger: { type: 'webhook', envelope: true }, steps: [{ id: 'sync', type: 'http', input: { method: 'POST', url: 'https://crm.example/contacts', body: { email: '{{trigger.input.email}}' } } }] });
+    const review = await publish(h, 'Refund review', { trigger: { type: 'manual' }, steps: [{ id: 'review', type: 'approval', input: { email: '{{trigger.input.email}}' } }] });
+    const url = await hookUrl(h, contact);
+    const synced = await deliver(h, url, envelope('signup-77', { email: subject.toLowerCase() }));
+    const unrelated = await deliver(h, url, envelope('signup-78', { email: other }));
+    await h.tick();
+    const syncedRun = await settled(h, synced.value.run_id), unrelatedRun = await settled(h, unrelated.value.run_id);
+    const waiting = await h.post(`workflows/${review.id}/run`, { input: { email: subject } }, h.owner, 201);
+    const flow = await h.flow('Legacy follow-up'), legacy = await h.run(flow, 'legacy-77', { customer: subject });
+    await h.post(`runs/${legacy.id}/reject`);
+    let preview = await h.post('data/subject', { subject });
+    assert.deepEqual(preview.workflow_runs.map(r => r.id).sort(), [syncedRun.id, waiting.id].sort(), 'DATA-002: matches by retained input, case-insensitively');
+    assert.deepEqual(preview.flow_runs.map(r => r.id), [legacy.id]);
+    assert.ok(preview.blocked); assert.ok(!JSON.stringify(preview).toLowerCase().includes(subject.toLowerCase()), 'the preview carries only a digest');
+    await h.post('data/erase', { subject, confirm: 'ERASE', digest: preview.digest }, h.owner, 409);
+    await h.post(`workflow-runs/${waiting.id}/cancel`);
+    for (const id of [contact.id, review.id]) await h.post(`workflows/${id}/pause`);
+    await h.post(`flows/${flow.id}/pause`);
+    await h.post('data/erase', { subject, confirm: 'ERASE', digest: preview.digest }, h.owner, 409);
+    preview = await h.post('data/subject', { subject });
+    assert.equal(preview.blocked, false);
+    const receipt = await h.post('data/erase', { subject, confirm: 'ERASE', digest: preview.digest });
+    assert.deepEqual([receipt.workflow_runs, receipt.flow_runs, receipt.operations.length], [2, 1, 3]);
+    for (const id of [syncedRun.id, waiting.id]) await h.get('workflow-runs/' + id, h.owner, 404);
+    await h.get('runs/' + legacy.id, h.owner, 404);
+    assert.equal((await h.get('workflow-runs/' + unrelatedRun.id)).status, 'succeeded', 'an unrelated run stays');
+    await h.post(`workflows/${contact.id}/resume`);
+    await deliver(h, url, envelope('signup-77', { email: subject.toLowerCase() })); await h.tick();
+    assert.equal((await runs(h, contact)).length, 1, 'DATA-002: the erased event is not readmitted');
+    const audit = await h.get('audit');
+    assert.ok(audit.some(a => a.action === 'data.erase_subject' && a.detail.subject_digest === receipt.subject_digest));
+    const archive = await snapshot(h);
+    assert.ok(!archive.toLowerCase().includes(subject.toLowerCase()) && !JSON.stringify(audit).toLowerCase().includes(subject.toLowerCase()), 'DATA-002: only value-free receipts and audit survive');
+    await h.post('data/subject', { subject: 'ab' }, h.owner, 400);
+  } finally { await h.close() }
+});
