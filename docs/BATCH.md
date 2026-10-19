@@ -126,8 +126,18 @@ Resumption walks the retained inputs and successful child checkpoints. A
 confirmed invoice is not sent again. An interrupted remote write or lost
 response stays uncertain and is never blindly repeated. Static HTTP GET/HEAD
 reads can restart safely. The existing HTTP idempotency/readback policy applies
-to writes. Repairing failed or uncertain items through broader replay belongs
-to EXEC-004.
+to writes.
+
+## Replay failed steps and items
+
+When a run fails, `GET /api/crank/workflow-runs/RUN_ID/replay` previews what a
+replay would run: each failed step or loop item with its retained input, error
+and operation key, the uncertain writes that need reconciliation first, the
+completed effects that will not run again, and a digest. As the owner,
+`POST` the same path with `{"paths":[...],"digest":"..."}` to replay up to 100
+of them, optionally with `"corrections":{"PATH":{...input}}`. A corrected
+input is a new revision with its own operation key; the run detail lists every
+revision beside the input it replaced. Unselected failed items stay failed.
 
 ## Merge by explicit keys
 

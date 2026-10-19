@@ -1,6 +1,7 @@
 import { before, after, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { harness } from './harness.mjs';
+import { archive } from './restore-journey.mjs';
 import { estimateHold, connection, deliver, fakeEdge, fakeSecret, hookUrl, jsonResponse, publish, runs, settled, startRun, stepOf, until } from './kit.mjs';
 
 const fake = fakeEdge();
@@ -283,4 +284,64 @@ test('EXEC-003: repeated failures notify once per category, auto-pause the workf
   const [holdRow] = await h.get(`workflows/${w.id}/holds`);
   const released = await h.post(`holds/${holdRow.id}/release`, { all: true, estimate_fingerprint: (await estimateHold(h, holdRow.id)).estimate_fingerprint });
   assert.equal(released.runs.length, 1); assert.equal(released.runs[0].status, 'succeeded');
+});
+
+test('EXEC-004: preview and replay a failed step after restart, then selected failed items with corrected input; completed effects never repeat', async () => {
+  let down = true;
+  fake.routes.set('replay.example', ({ url, body }) => {
+    const value = body ? JSON.parse(body) : {};
+    if (url.pathname === '/charge' && down) return jsonResponse({ error: 'temporarily refused' }, 422);
+    if (url.pathname === '/invoice' && value.amount === 'bad') return jsonResponse({ error: 'invalid amount' }, 422);
+    return jsonResponse({ id: url.pathname + ':' + fake.to('replay.example').length }, 201);
+  });
+  const sent = path => fake.to('replay.example').filter(r => new URL(r.url).pathname === path);
+  const post = (id, path, body = { order: '{{trigger.input.order}}' }) => ({ id, type: 'http', input: { method: 'POST', url: 'https://replay.example/' + path, body } });
+  const four = await publish(h, 'Four effects', { trigger: { type: 'manual' }, steps: [post('customer', 'customer'), post('order', 'order'), post('receipt', 'receipt'), post('charge', 'charge')] });
+  let run = await startRun(h, four, { order: 'A-1' });
+  assert.equal(run.status, 'failed'); assert.equal(stepOf(run, 'charge').status, 'failed');
+  await h.restart();
+  const preview = await h.get(`workflow-runs/${run.id}/replay`);
+  assert.deepEqual(preview.eligible.map(s => s.path), ['charge']); assert.deepEqual(preview.eligible[0].input.body, { order: 'A-1' });
+  assert.deepEqual(preview.completed_effects.map(s => s.path), ['customer', 'order', 'receipt'], 'EXEC-004 preview names the effects that will not repeat');
+  await h.post(`workflow-runs/${run.id}/replay`, { paths: ['charge'], digest: 'stale' }, h.owner, 409);
+  await h.post(`workflow-runs/${run.id}/replay`, { paths: ['customer'], digest: preview.digest }, h.owner, 409);
+  down = false;
+  run = await h.post(`workflow-runs/${run.id}/replay`, { paths: ['charge'], digest: preview.digest });
+  assert.equal(run.status, 'succeeded');
+  for (const path of ['/customer', '/order', '/receipt']) assert.equal(sent(path).length, 1, 'EXEC-004: committed effect ' + path + ' persists once');
+  assert.equal(sent('/charge').length, 2); assert.equal(run.revisions[0].operation_key, run.revisions[0].prior_operation_key, 'an uncorrected retry keeps its idempotency key');
+  await h.post(`workflow-runs/${run.id}/replay`, { paths: ['charge'], digest: (await h.get(`workflow-runs/${run.id}/replay`)).digest }, h.owner, 409);
+
+  const batch = await publish(h, 'Invoice batch', { trigger: { type: 'manual' }, steps: [{ id: 'orders', type: 'loop', max_items: 10, concurrency: 4, order: 'input', empty: 'error', item_errors: 'stop', input: { items: '{{trigger.input.orders}}' }, result: '{{steps.invoice.body.id}}',
+    steps: [post('invoice', 'invoice', { order: '{{item.order}}', amount: '{{item.amount}}' })] }] });
+  run = await startRun(h, batch, { orders: [{ order: 'B-1', amount: '10.00' }, { order: 'B-2', amount: 'bad' }, { order: 'B-3', amount: 'bad' }, { order: 'B-4', amount: '40.00' }] });
+  assert.equal(run.status, 'failed');
+  let items = await h.get(`workflow-runs/${run.id}/replay`);
+  assert.deepEqual(items.eligible.map(s => s.path).sort(), ['orders/items/1/invoice', 'orders/items/2/invoice']);
+  await h.post(`workflow-runs/${run.id}/replay`, { paths: Array.from({ length: 101 }, (_, i) => 'p' + i), digest: items.digest }, h.owner, 400);
+  const corrected = { ...items.eligible.find(s => s.path === 'orders/items/1/invoice').input, body: { order: 'B-2', amount: '20.00' } };
+  run = await h.post(`workflow-runs/${run.id}/replay`, { paths: ['orders/items/1/invoice'], corrections: { 'orders/items/1/invoice': corrected }, digest: items.digest });
+  assert.equal(run.status, 'failed', 'an unselected failed item stays failed');
+  items = await h.get(`workflow-runs/${run.id}/replay`);
+  assert.deepEqual(items.eligible.map(s => s.path), ['orders/items/2/invoice']);
+  run = await h.post(`workflow-runs/${run.id}/replay`, { paths: ['orders/items/2/invoice'], corrections: { 'orders/items/2/invoice': { ...corrected, body: { order: 'B-3', amount: '30.00' } } }, digest: items.digest });
+  assert.equal(run.status, 'succeeded');
+  const invoices = sent('/invoice').map(r => JSON.parse(r.body));
+  for (const order of ['B-1', 'B-4']) assert.equal(invoices.filter(b => b.order === order).length, 1, 'EXEC-004: completed item ' + order + ' is not repeated');
+  const revision = run.revisions.find(r => r.path === 'orders/items/1/invoice');
+  assert.deepEqual([revision.prior_input.body.amount, revision.input.body.amount, revision.corrected], ['bad', '20.00', true], 'original and corrected inputs stay distinguishable');
+  assert.notEqual(revision.operation_key, revision.prior_operation_key, 'a corrected input is a new revision with its own operation key');
+  assert.equal(stepOf(run, 'orders').status, 'succeeded');
+  // DATA-001 inherited: revisions travel in the portable archive and restore without replay authority.
+  const exported = await archive(h), receiving = await harness('http://127.0.0.1:9', { edge: fake.edge });
+  try {
+    assert.ok(exported.includes('"crank_wf_step_revisions"'));
+    await receiving.post('data/restore', { archive: exported, confirm: 'RESTORE' });
+    const restored = await receiving.get('workflow-runs/' + run.id);
+    assert.deepEqual(restored.revisions, run.revisions, 'EXEC-004 revisions restore unchanged');
+    assert.ok((await receiving.get('workflows')).every(w => ['paused', 'draft'].includes(w.status)), 'restored workflows stay inactive');
+  } finally { await receiving.close(); }
+  const audit = await h.get(`audit?kind=run&id=${run.id}`);
+  const owner = (await h.get()).actor.id, replays = audit.filter(a => a.action === 'run.replay');
+  assert.equal(replays.length, 2); assert.ok(replays.every(a => a.actor_id === owner && a.version_id === run.version_id), 'EXEC-004 replays are attributable');
 });

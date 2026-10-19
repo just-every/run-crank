@@ -57,7 +57,7 @@ export async function validateRestore({ read }) {
   // These product links predate foreign-key declarations; validate them explicitly.
   for (const [child, column, parent] of [
     ['crank_runs', 'flow_id', 'crank_flows'], ['crank_approvals', 'run_id', 'crank_runs'], ['crank_attempts', 'run_id', 'crank_runs'],
-    ['crank_wf_steps', 'run_id', 'crank_wf_runs'], ['crank_waits', 'run_id', 'crank_wf_runs'], ['crank_callback_events', 'run_id', 'crank_wf_runs'],
+    ['crank_wf_steps', 'run_id', 'crank_wf_runs'], ['crank_wf_step_revisions', 'run_id', 'crank_wf_runs'], ['crank_waits', 'run_id', 'crank_wf_runs'], ['crank_callback_events', 'run_id', 'crank_wf_runs'],
     ['crank_queue_items', 'run_id', 'crank_wf_runs'], ['crank_holds', 'workflow_id', 'crank_workflows'], ['crank_hold_items', 'hold_id', 'crank_holds'],
     ['crank_historical_batches', 'workflow_id', 'crank_workflows'], ['crank_historical_items', 'batch_id', 'crank_historical_batches'],
   ]) {

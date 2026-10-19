@@ -21,6 +21,7 @@ import { plannedTimes } from '../triggers/schedule'
 import { previewHistorical, readHistorical } from '../triggers/historical'
 import { releaseHistorical } from '../triggers/historical-release'
 import { createHook, listHooks, revokeHook } from '../triggers/webhook'
+import { previewReplay, replaySteps } from './replay'
 import { cancelRun, decideApproval, previewWorkflow, resumeRun, runDetail, runsToday, searchRuns, startRun } from './runs'
 import { createWorkflow, duplicateWorkflow, getWorkflow, listWorkflows, presentWorkflow, publishWorkflow, setWorkflowState, unpublishWorkflow, updateDraft, versionGraph } from './store'
 
@@ -91,6 +92,7 @@ export async function workflowApi(request: Request, env: CrankEnv): Promise<Resp
       if ((m = match(path, /^\/api\/crank\/workflows\/([^/]+)\/holds$/))) return json((await stmt(env, 'SELECT * FROM crank_holds WHERE workflow_id=? ORDER BY created_at DESC', m[0]).all()).results)
       if (path === '/api/crank/workflow-runs') return json(await searchRuns(env, actor, url.searchParams))
       if ((m = match(path, /^\/api\/crank\/workflow-runs\/([^/]+)$/))) return json(await runDetail(env, actor, m[0]))
+      if ((m = match(path, /^\/api\/crank\/workflow-runs\/([^/]+)\/replay$/))) return json(await previewReplay(env, actor, m[0]))
       if ((m = match(path, /^\/api\/crank\/holds\/([^/]+)$/))) return json(await getHold(env, m[0]))
       if (path === '/api/crank/queues') return json((await stmt(env, `SELECT q.name,q.spacing_seconds,q.last_release_at,COUNT(i.seq) AS depth,MIN(i.arrived_at) AS oldest_arrived_at FROM crank_delay_queues q
         LEFT JOIN crank_queue_items i ON i.queue=q.name AND i.released_at IS NULL GROUP BY q.name ORDER BY q.name`).all<any>()).results.map(q => ({ ...q, next_release_at: q.depth ? new Date(Math.max(Date.now(), q.last_release_at ? Date.parse(q.last_release_at) + q.spacing_seconds * 1000 : 0)).toISOString() : null })))
@@ -138,6 +140,7 @@ export async function workflowApi(request: Request, env: CrankEnv): Promise<Resp
     if ((m = match(path, /^\/api\/crank\/hooks\/([^/]+)\/revoke$/))) return json(await revokeHook(env, actor, m[0]))
     if ((m = match(path, /^\/api\/crank\/holds\/([^/]+)\/estimate$/))) return json(await quoteHold(env, actor, m[0], input))
     if ((m = match(path, /^\/api\/crank\/holds\/([^/]+)\/(release|discard)$/))) return json(await decideHold(env, actor, m[0], m[1] as 'release' | 'discard', input))
+    if ((m = match(path, /^\/api\/crank\/workflow-runs\/([^/]+)\/replay$/))) return json(await replaySteps(env, actor, m[0], input))
     if ((m = match(path, /^\/api\/crank\/workflow-runs\/([^/]+)\/(approve|reject|resume|cancel)$/))) {
       if (m[1] === 'approve' || m[1] === 'reject') return json(await decideApproval(env, actor, m[0], m[1], input))
       return json(m[1] === 'resume' ? await resumeRun(env, actor, m[0]) : await cancelRun(env, actor, m[0]))

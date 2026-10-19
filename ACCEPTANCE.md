@@ -16,8 +16,8 @@ Each item below is one clause’s acceptance evidence. The named journey must be
 
 ### Run history and recovery
 
-- **EXEC-004 — Replay any eligible step safely. Status: partial.** Fail the fourth step after three committed effects, restart, preview and resume that step, then replay selected failed items with corrected data; verify the first three effects persist once and the original and corrected inputs remain distinguishable.
-  Current evidence: `src/crank/delivery.ts`; `tests/crank.test.mjs`. Remaining: Only one manual replay of the single HTTP action exists.
+- **EXEC-004 — Replay any eligible step safely. Status: done.** Fail the fourth step after three committed effects, restart, preview and resume that step, then replay selected failed items with corrected data; verify the first three effects persist once and the original and corrected inputs remain distinguishable.
+  Current evidence: `src/crank/workflows/replay.ts`, `src/crank/engine/executor.ts`, `migrations/core/0031_step_revisions.sql`; `tests/logic.test.mjs` names EXEC-004 and asserts every point above through HTTP doors, including restart, the stale-digest and 100-item limits, and portable revisions.
 
 - **EXEC-005 — Searchable run history and debugging. Status: done.** Find an older failed invoice by customer key, inspect its exact mapping and decisions, compare a passing run and follow the remote record link; deny a reader access to a restricted payload while retaining safe status/timing.
   Current evidence: `src/crank/workflows/runs.ts`; `src/crank/ui/flows.ts`; `src/crank/ui/workflow-run.ts`; `src/crank/ui/run-debug.ts`; `tests/app.test.mjs` (EXEC-005: filters, cursor paging, traces, comparison and restricted-reader payloads).

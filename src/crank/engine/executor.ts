@@ -12,7 +12,7 @@ import { StepError } from './errors'
 import { branchesOf, type Graph } from './graph'
 import { executeLoop } from './loop'
 import { requireFields, resolve, type Scope } from './mapping'
-import { deleteRecord, getWfRun, insertWait, loadRecords, loadWaits, saveRecord, type StepRecord } from './records'
+import { deleteRecord, getWfRun, insertWait, loadRecords, loadReplays, loadWaits, saveRecord, type Replay, type StepRecord } from './records'
 import { STEP_TYPES } from './steps'
 import type { ExecutionOutcome as Outcome, RunRow, Step, StepContext, StepResult, WaitRow } from './types'
 import { isObject } from './values'
@@ -27,13 +27,14 @@ export async function resumeToken(env: CrankEnv, runId: string, path: string) {
 class Execution {
   records!: Map<string, StepRecord>
   waits!: Map<string, WaitRow>
+  replays!: Map<string, Replay>
   scope!: Scope
   zone = 'America/New_York'
   constructor(readonly env: CrankEnv, public run: RunRow, readonly lease: string, readonly graph: Graph, readonly time: number) {}
 
   async prepare() {
-    const [records, waits, settings] = await Promise.all([loadRecords(this.env, this.run.id), loadWaits(this.env, this.run.id), workspaceSettings(this.env)])
-    this.records = records; this.waits = waits
+    const [records, waits, replays, settings] = await Promise.all([loadRecords(this.env, this.run.id), loadWaits(this.env, this.run.id), loadReplays(this.env, this.run.id), workspaceSettings(this.env)])
+    this.records = records; this.waits = waits; this.replays = replays
     this.zone = requireZone(this.graph.settings?.timezone ?? settings.timezone)
     this.scope = { trigger: JSON.parse(this.run.trigger_json), steps: {}, run: { id: this.run.id, workflow_id: this.run.workflow_id, version_id: this.run.version_id, received_at: this.run.received_at, resume_urls: {} } }
     await this.callbacks(this.graph.steps, '')
@@ -53,7 +54,7 @@ class Execution {
 
   async fork(steps: Step[], prefix: string, item: unknown, index: number) {
     const child = new Execution(this.env, this.run, this.lease, this.graph, this.time)
-    child.records = this.records; child.waits = this.waits; child.zone = this.zone
+    child.records = this.records; child.waits = this.waits; child.replays = this.replays; child.zone = this.zone
     child.scope = { ...this.scope, item, item_index: index, steps: { ...this.scope.steps }, run: { ...this.scope.run } }
     await child.callbacks(steps, prefix)
     return child
@@ -61,7 +62,7 @@ class Execution {
 
   async save(step: Step, path: string, status: StepRecord['status'], extra: { input?: unknown; output?: unknown; trace?: unknown; error?: unknown }) {
     const previous = this.records.get(path)
-    const record = { run_id: this.run.id, path, step_id: step.id, type: step.type, status, started_at: previous?.started_at ?? new Date(this.time).toISOString(), finished_at: ['running', 'waiting'].includes(status) ? null : now(), operation_key: previous?.operation_key ?? `${this.run.id}:${path}` }
+    const record = { run_id: this.run.id, path, step_id: step.id, type: step.type, status, started_at: previous?.started_at ?? new Date(this.time).toISOString(), finished_at: ['running', 'waiting'].includes(status) ? null : now(), operation_key: previous?.operation_key ?? this.replays.get(path)?.operation_key ?? `${this.run.id}:${path}` }
     await saveRecord(this.env, this.run, this.lease, { ...record, ...extra })
     const encode = (value: unknown) => value === undefined ? null : JSON.stringify(value)
     this.records.set(path, { ...record, input_json: extra.input === undefined ? previous?.input_json ?? null : encode(extra.input), output_json: encode(extra.output), trace_json: encode(extra.trace), error_json: encode(extra.error) })
@@ -100,11 +101,12 @@ class Execution {
     if (record?.status === 'waiting' && wait && !wait.resolved_at) return { kind: 'waiting', approval: wait.kind === 'approval' }
     let input: Record<string, unknown> = {}
     const ctx: StepContext = {
-      env: this.env, run: this.run, scope: this.scope, path, operationKey: record?.operation_key ?? `${this.run.id}:${path}`, now: this.time, zone: this.zone, input,
+      env: this.env, run: this.run, scope: this.scope, path, operationKey: record?.operation_key ?? this.replays.get(path)?.operation_key ?? `${this.run.id}:${path}`, now: this.time, zone: this.zone, input,
       respond: async response => { await stmt(this.env, 'UPDATE crank_wf_runs SET response_json=? WHERE id=? AND lease_id=?', JSON.stringify(response), this.run.id, this.lease).run() },
     }
     try {
-      input = record?.input_json ? JSON.parse(record.input_json) : (resolve(step.input ?? {}, this.scope) ?? {}) as Record<string, unknown>
+      const replay = record ? undefined : this.replays.get(path)
+      input = record?.input_json ? JSON.parse(record.input_json) : replay?.input_json ? JSON.parse(replay.input_json) : (resolve(step.input ?? {}, this.scope) ?? {}) as Record<string, unknown>
       ctx.input = input
       let result: StepResult
       if (record?.status === 'waiting' && wait?.resolved_at && type.resume) {

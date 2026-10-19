@@ -13,6 +13,12 @@ export async function loadRecords(env: CrankEnv, runId: string) {
   const rows = await stmt(env, 'SELECT * FROM crank_wf_steps WHERE run_id=?', runId).all<StepRecord>()
   return new Map(rows.results.map(row => [row.path, row]))
 }
+export interface Replay { path: string; input_json: string | null; operation_key: string }
+/** EXEC-004: the newest replay revision of each path supplies its next input and operation key. */
+export async function loadReplays(env: CrankEnv, runId: string) {
+  const rows = await stmt(env, 'SELECT path,input_json,operation_key FROM crank_wf_step_revisions r WHERE run_id=? AND revision=(SELECT MAX(revision) FROM crank_wf_step_revisions WHERE run_id=r.run_id AND path=r.path)', runId).all<Replay>()
+  return new Map(rows.results.map(row => [row.path, row]))
+}
 export async function loadWaits(env: CrankEnv, runId: string) {
   const rows = await stmt(env, 'SELECT * FROM crank_waits WHERE run_id=?', runId).all<WaitRow>()
   return new Map(rows.results.map(row => [row.path, row]))
