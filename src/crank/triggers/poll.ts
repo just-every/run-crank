@@ -5,6 +5,7 @@ import { StepError } from '../engine/errors'
 import { executeRun } from '../engine/executor'
 import type { Graph } from '../engine/graph'
 import { lookup, textOf } from '../engine/values'
+import { resolve, type Scope } from '../engine/mapping'
 import { canonical, digest, id, stmt, type CrankEnv } from '../model'
 import { notify } from '../ops/notices'
 import { admit, burstThreshold, type TriggerEvent, type WorkflowRow } from './admission'
@@ -49,10 +50,19 @@ async function feedItems(env: CrankEnv, trigger: Record<string, any>): Promise<T
   return events
 }
 
-async function urlItems(env: CrankEnv, trigger: Record<string, any>): Promise<TriggerEvent[]> {
+/** Header and query values map {{poll.since}} (the start of the last successful poll, ISO 8601 UTC),
+ * {{poll.now}} (this poll's start) and {{poll.interval_minutes}}. A value that maps to nothing is left out,
+ * so the first poll sends no `since`. */
+type PollScope = { since: string | null; now: string; interval_minutes: number }
+function mapped(value: unknown, poll: PollScope) {
+  const resolved = resolve(value, { poll } as unknown as Scope)
+  return resolved === undefined || resolved === null || resolved === '' ? null : textOf(resolved) ?? JSON.stringify(resolved)
+}
+
+async function urlItems(env: CrankEnv, trigger: Record<string, any>, poll: PollScope): Promise<TriggerEvent[]> {
   const base = checkEgress(String(trigger.url)), headers = new Headers({ accept: 'application/json, application/xml;q=0.9, text/html;q=0.8' })
-  for (const [key, value] of Object.entries(trigger.query ?? {})) base.searchParams.set(key, textOf(value) ?? JSON.stringify(value))
-  for (const [key, value] of Object.entries(trigger.headers ?? {})) headers.set(key, String(value))
+  for (const [key, value] of Object.entries(trigger.query ?? {})) { const text = mapped(value, poll); if (text !== null) base.searchParams.set(key, text) }
+  for (const [key, value] of Object.entries(trigger.headers ?? {})) { const text = mapped(value, poll); if (text !== null) headers.set(key, text) }
   const pagination = trigger.pagination as Record<string, any> | undefined, items: unknown[] = []
   let url = base, page = Number(pagination?.start ?? 1)
   for (let n = 0; n < Math.min(Number(pagination?.max_pages ?? MAX_PAGES), MAX_PAGES); n++) {
@@ -107,10 +117,11 @@ export async function runPoll(env: CrankEnv, poll: PollRow, time: number) {
   const graph = JSON.parse((await stmt(env, 'SELECT graph_json FROM crank_workflow_versions WHERE id=?', poll.version_id).first<{ graph_json: string }>())!.graph_json) as Graph
   const trigger = graph.trigger as Record<string, any>
   const logId = id(), started = new Date(time).toISOString(), lag = time - Date.parse(poll.next_due_at)
+  const since = (await stmt(env, "SELECT MAX(started_at) AS at FROM crank_poll_log WHERE workflow_id=? AND status='ok'", poll.workflow_id).first<{ at: string | null }>())?.at ?? null
   const next = new Date(nextBoundary(time, poll.interval_minutes)).toISOString()
   await stmt(env, "INSERT INTO crank_poll_log(id,workflow_id,due_at,started_at,status) VALUES(?,?,?,?,'running')", logId, poll.workflow_id, poll.next_due_at, started).run()
   try {
-    const events = trigger.type === 'feed' ? await feedItems(env, trigger) : await urlItems(env, trigger)
+    const events = trigger.type === 'feed' ? await feedItems(env, trigger) : await urlItems(env, trigger, { since, now: started, interval_minutes: poll.interval_minutes })
     const fresh: TriggerEvent[] = []
     for (let i = 0; i < events.length; i += 50) {
       const slice = events.slice(i, i + 50)
