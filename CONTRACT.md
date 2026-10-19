@@ -786,7 +786,7 @@ Every capability the homepage states, in page order, for the owner-approved stru
 
 ## Status
 
-Judged from the code and tests at commit `06ace84667d83032ec41a8a210a5084cd0c85497` (18 October 2026).
+Judged from the code and tests at commit `d68e5c8981c9984581920527fc78a58c6cdba431` (19 October 2026).
 
 | Clauses | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
