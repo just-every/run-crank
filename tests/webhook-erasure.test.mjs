@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { harness } from './harness.mjs';
-import { deliver, fakeEdge, hookUrl, jsonResponse, publish, runs, settled } from './kit.mjs';
+import { estimateHold, deliver, fakeEdge, hookUrl, jsonResponse, publish, runs, settled } from './kit.mjs';
 
 const target = 'http://127.0.0.1:9';
 const envelope = (event_id, input) => ({ method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ event_id, input }) });
@@ -26,7 +26,7 @@ test('TRIG-001: workflow erasure removes released event copies and decisions, su
     assert.equal(held.value.held, true, held.text);
     const [hold] = await h.get(`workflows/${workflow.id}/holds`);
     await h.post(`workflows/${workflow.id}/resume`);
-    const released = await h.post(`holds/${hold.id}/release`, { all: true });
+    const released = await h.post(`holds/${hold.id}/release`, { all: true, estimate_fingerprint: (await estimateHold(h, hold.id)).estimate_fingerprint });
     const runId = released.runs[0].id;
     const review = await settled(h, runId);
     assert.equal(review.status, 'awaiting_approval');

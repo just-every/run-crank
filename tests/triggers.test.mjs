@@ -2,7 +2,7 @@ import { before, after, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHmac } from 'node:crypto';
 import { harness } from './harness.mjs';
-import { connection, deliver, fakeEdge, fakeSecret, hookUrl, jsonResponse, publish, runs, settled, stepOf, until } from './kit.mjs';
+import { estimateHold, connection, deliver, fakeEdge, fakeSecret, hookUrl, jsonResponse, publish, runs, settled, stepOf, until } from './kit.mjs';
 
 // Feeds, vendor APIs and mail are faked only at the network edge.
 const fake = fakeEdge();
@@ -141,34 +141,48 @@ test('TRIG-005: a burst becomes one held batch with no effects; selected release
   let contacts = ['c1', 'c2', 'c3'];
   fake.routes.set('crm.example', () => jsonResponse({ results: contacts.map(id => ({ id, email: `${id}@example.com` })) }));
   fake.routes.set('mail.example', () => jsonResponse({ queued: true }));
-  const w = await publish(h, 'Welcome email', { settings: { burst_threshold: 5 }, trigger: { type: 'url_poll', url: 'https://crm.example/contacts', items_path: 'results', interval_minutes: 1 },
+  const w = await publish(h, 'Welcome email', { settings: { burst_threshold: 100 }, trigger: { type: 'url_poll', url: 'https://crm.example/contacts', items_path: 'results', interval_minutes: 1 },
     steps: [{ id: 'send', type: 'http', input: { method: 'POST', url: 'https://mail.example/send', body: { to: '{{trigger.email}}' } } }] });
   let time = Date.now() + 30 * MINUTE;
   await h.tick(time);
-  contacts = [...contacts, ...Array.from({ length: 8 }, (_, i) => 'n' + i)];
+  contacts = [...contacts, ...Array.from({ length: 500 }, (_, i) => 'n' + i)];
   const mailBefore = h.mail.length;
   await h.tick(time += MINUTE);
   assert.equal((await runs(h, w)).length, 0); assert.equal(fake.to('mail.example').length, 0);
   const [holdRow] = await h.get(`workflows/${w.id}/holds`);
   let held = await h.get('holds/' + holdRow.id);
-  assert.equal(held.counts.held, 8); assert.ok(h.mail.slice(mailBefore).some(m => /held for review/.test(m.subject)));
-  const released = await h.post(`holds/${holdRow.id}/release`, { items: ['key:n0', 'key:n1'] });
-  assert.equal(released.runs.length, 2);
-  await until(async () => fake.to('mail.example').length === 2, 'two sends');
+  assert.equal(held.counts.held, 500); assert.ok(h.mail.slice(mailBefore).some(m => /held for review/.test(m.subject)));
+  const released = await h.post(`holds/${holdRow.id}/release`, { items: Array.from({ length: 20 }, (_, i) => 'key:n' + i), estimate_fingerprint: (await estimateHold(h, holdRow.id)).estimate_fingerprint });
+  assert.equal(released.runs.length, 20);
+  await until(async () => fake.to('mail.example').length === 20, 'twenty sends');
   await h.tick(time += MINUTE);
   held = await h.get('holds/' + holdRow.id);
-  assert.equal(held.counts.held, 6); assert.equal((await h.get(`workflows/${w.id}/holds`)).length, 1, 'the same records start no new hold');
+  assert.equal(held.counts.held, 480); assert.equal((await h.get(`workflows/${w.id}/holds`)).length, 1, 'the same records start no new hold');
+  const reminders = h.mail.length;
+  await h.tick(time += 86400000);
+  assert.ok(h.mail.slice(reminders).some(message => /held trigger events still need a decision/.test(message.subject)), 'undecided events remind the owner across the daily boundary');
   await h.post(`holds/${holdRow.id}/discard`, { all: true });
   assert.equal((await h.get('holds/' + holdRow.id)).status, 'closed');
   await h.tick(time += MINUTE);
-  assert.equal(fake.to('mail.example').length, 2);
+  assert.equal(fake.to('mail.example').length, 20);
 
-  const burst = await publish(h, 'Instant burst', { settings: { burst_threshold: 3 }, trigger: { type: 'webhook', dedup: { key: 'body.id' } }, steps: [] });
+  const burst = await publish(h, 'Instant burst', { settings: { burst_threshold: 100 }, trigger: { type: 'webhook', dedup: { key: 'body.id' } }, steps: [] });
   const url = await hookUrl(h, burst);
   const results = [];
-  for (let i = 0; i < 5; i++) results.push(await deliver(h, url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id: 'e' + i }) }));
-  assert.deepEqual(results.map(r => r.value.held === true), [false, false, false, true, true]);
-  assert.equal((await h.get('holds/' + (await h.get(`workflows/${burst.id}/holds`))[0].id)).counts.held, 2);
+  for (let i = 0; i < 150; i++) results.push(await deliver(h, url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id: 'e' + i }) }));
+  assert.equal(results.filter(r => r.value.held === true).length, 50);
+  assert.equal((await runs(h, burst, '&limit=100')).length, 100, 'only in-threshold events start work');
+  assert.equal((await h.get('holds/' + (await h.get(`workflows/${burst.id}/holds`))[0].id)).counts.held, 50);
+  const expiring = await publish(h, 'Owner-expiring vendor backlog', { trigger: { type: 'webhook', envelope: true }, steps: [] });
+  await h.post(`workflows/${expiring.id}/draft`, { settings: { hold_expiry_hours: 1 } });
+  await h.post(`workflows/${expiring.id}/pause`);
+  const expiryUrl = await hookUrl(h, expiring);
+  assert.equal((await deliver(h, expiryUrl, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ event_id: 'expired-vendor-event', input: { invoice: 'INV-73' } }) })).value.held, true);
+  const [expiringHold] = await h.get(`workflows/${expiring.id}/holds`);
+  await h.restart(); await h.tick(Date.parse(expiringHold.expires_at) + MINUTE);
+  const expired = await h.get('holds/' + expiringHold.id);
+  assert.equal(expired.status, 'closed'); assert.equal(expired.counts.discarded, 1);
+  assert.equal((await runs(h, expiring)).length, 0, 'owner expiry discards without dispatch');
 });
 
 test('TRIG-002: weekday schedules keep 9 a.m. local across DST, admit each occurrence once and apply catch-up', async () => {

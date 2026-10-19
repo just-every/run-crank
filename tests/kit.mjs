@@ -51,3 +51,8 @@ export async function startRun(h, workflow, input) { return h.post(`workflows/${
 export const connection = (h, body) => h.post('connections', body, h.owner, 201);
 /** Credentials for fakes are generated per run, so no secret-shaped literal is committed. */
 export const fakeSecret = label => `${label}-${randomUUID()}`;
+
+/** An owner explicitly quotes every cost component before releasing held work. */
+export async function estimateHold(h, holdId, amounts = {}) {
+  return h.post(`holds/${holdId}/estimate`, { cost: { components: ['orchestration', 'connectors', 'models', 'executors'].map(kind => ({ kind, usd_per_run: amounts[kind] ?? '0', assumption: 'Local acceptance journey; network edges do not charge this installation' })) } });
+}

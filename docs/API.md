@@ -128,3 +128,20 @@ the source query when a bound is reached; Crank never previews a truncated count
 Snapshots are exported with domain data and do not start work on restore;
 an owner must deliberately re-enable restored workflows and reconnect their
 connections. Replacing a workflow version requires a fresh preview.
+
+### Held bursts and USD estimates
+
+`GET /api/crank/holds/:id` returns source, counts, retained items and `cost`.
+Before releasing, an owner posts `{cost:{components:[...]}}` to
+`/api/crank/holds/:id/estimate`. Supply exactly one `orchestration`, `connectors`,
+`models` and `executors` component, each with decimal-string `usd_per_run` and
+nonempty `assumption`. Explicit zero is allowed; absent prices never imply zero.
+The response labels this an owner estimate, not provider-verified pricing, and
+returns `estimate_fingerprint`.
+
+Post `{all:true,estimate_fingerprint}` or `{items:[SOURCE_KEY],estimate_fingerprint}`
+to `/api/crank/holds/:id/release`. New items, changed payloads, partial decisions
+or replaced versions invalidate the estimate. The response includes `estimate`
+for the selected count, `selected_count`, runs and the updated hold. Components
+sum exactly and round half-up to cents after multiplication, as in historical
+previews. `/discard` needs only `all:true` or selected `items`; no quote is needed.

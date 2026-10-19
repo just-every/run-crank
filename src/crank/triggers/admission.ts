@@ -1,9 +1,9 @@
-import { guardedBatch, requireOwner } from '../access'
-import { executeRun } from '../engine/executor'
+import { guardedBatch } from '../access'
 import type { RunRow } from '../engine/types'
-import { CrankError, id, now, requireValue, stmt, type Actor, type CrankEnv } from '../model'
+import { id, now, requireValue, stmt, type Actor, type CrankEnv } from '../model'
 import { auditStatement } from '../ops/audit'
 import { notify } from '../ops/notices'
+import { readHoldCost } from '../ops/hold-cost'
 
 export interface WorkflowRow {
   id: string; name: string; description: string; folder: string; owner_id: string; draft_json: string; draft_updated_at: string
@@ -67,41 +67,10 @@ export async function admit(env: CrankEnv, workflow: WorkflowRow, kind: string, 
 }
 
 export async function getHold(env: CrankEnv, holdId: string) {
-  const row = await stmt(env, 'SELECT * FROM crank_holds WHERE id=?', holdId).first<Record<string, unknown>>()
+  const row = await stmt(env, 'SELECT * FROM crank_holds WHERE id=?', holdId).first<{ id: string; workflow_id: string; source: string; status: string; created_at: string; expires_at: string | null }>()
   requireValue(row, 'Hold not found', 404)
-  const items = await stmt(env, 'SELECT item_key,payload_json,source_time,received_at,status,decided_by,decided_at,run_id FROM crank_hold_items WHERE hold_id=? ORDER BY received_at,item_key', holdId).all<Record<string, unknown>>()
+  const items = await stmt(env, 'SELECT item_key,payload_json,source_time,received_at,status,decided_by,decided_at,run_id FROM crank_hold_items WHERE hold_id=? ORDER BY received_at,item_key', holdId).all<{ item_key: string; payload_json: string; source_time: string | null; received_at: string; status: string; decided_by: string | null; decided_at: string | null; run_id: string | null }>()
   const counts = { held: 0, released: 0, discarded: 0 } as Record<string, number>
   for (const item of items.results) counts[item.status as string]++
-  return { ...row, counts, items: items.results.map(item => ({ ...item, payload: JSON.parse(item.payload_json as string), payload_json: undefined })) }
-}
-
-/** Run all or selected held items once each, or discard them; the rest stay held. */
-export async function decideHold(env: CrankEnv, actor: Actor, holdId: string, decision: 'release' | 'discard', input: Record<string, unknown>) {
-  requireOwner(actor)
-  const holdRow = await stmt(env, 'SELECT * FROM crank_holds WHERE id=?', holdId).first<{ id: string; workflow_id: string; status: string }>()
-  requireValue(holdRow, 'Hold not found', 404)
-  requireValue(holdRow.status === 'open', 'This hold is already closed', 409)
-  const workflow = await stmt(env, 'SELECT * FROM crank_workflows WHERE id=?', holdRow.workflow_id).first<WorkflowRow>()
-  requireValue(workflow, 'Workflow not found', 404)
-  if (decision === 'release') requireValue(workflow.status === 'published' && workflow.published_version_id, 'Resume the workflow before running held events', 409)
-  const keys = input.all === true ? null : Array.isArray(input.items) ? input.items.map(String) : null
-  requireValue(input.all === true || (keys && keys.length > 0), 'Choose items or all:true')
-  const items = (await stmt(env, "SELECT item_key,payload_json,source_time FROM crank_hold_items WHERE hold_id=? AND status='held' ORDER BY received_at,item_key", holdId).all<{ item_key: string; payload_json: string; source_time: string | null }>()).results
-    .filter(item => !keys || keys.includes(item.item_key))
-  const at = now(), runs: RunRow[] = []
-  for (const item of items) {
-    const claimed = await stmt(env, "UPDATE crank_hold_items SET status=?,decided_by=?,decided_at=? WHERE hold_id=? AND item_key=? AND status='held'", decision === 'release' ? 'released' : 'discarded', actor.id, at, holdId, item.item_key).run()
-    if (claimed.meta.changes !== 1 || decision === 'discard') continue
-    const run = await createRun(env, workflow, 'held', { key: item.item_key, payload: JSON.parse(item.payload_json), sourceTime: item.source_time }, actor.id)
-    await stmt(env, 'UPDATE crank_hold_items SET run_id=? WHERE hold_id=? AND item_key=?', run.id, holdId, item.item_key).run()
-    runs.push(run)
-  }
-  await guardedBatch(env, actor, 'owner', [
-    stmt(env, "UPDATE crank_holds SET status='closed',closed_at=? WHERE id=? AND NOT EXISTS(SELECT 1 FROM crank_hold_items WHERE hold_id=? AND status='held')", at, holdId, holdId),
-    auditStatement(env, actor.id, decision === 'release' ? 'hold.release' : 'hold.discard', 'hold', holdId, { items: items.length }),
-  ])
-  if (!items.length && keys) throw new CrankError(409, 'None of those items are still held')
-  const settled: RunRow[] = []
-  for (const run of runs) settled.push((await executeRun(env, run.id)) ?? run)
-  return { hold: await getHold(env, holdId), runs: settled }
+  return { ...row, counts, cost: await readHoldCost(env, holdId), items: items.results.map(item => ({ ...item, payload: JSON.parse(item.payload_json as string), payload_json: undefined })) }
 }

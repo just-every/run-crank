@@ -14,7 +14,9 @@ import { coverageReport } from '../ops/coverage'
 import { latencyReport, operationsReport, operationsCsv, configureOperations, createObligation, verifyObligation } from '../ops/report'
 import { listLogSinks, configureLogSink, removeLogSink, flushLogStreams } from '../ops/log-stream'
 import { updateSettings, workspaceSettings } from '../ops/settings'
-import { decideHold, getHold } from '../triggers/admission'
+import { getHold } from '../triggers/admission'
+import { decideHold } from '../triggers/hold-decisions'
+import { quoteHold } from '../ops/hold-cost'
 import { plannedTimes } from '../triggers/schedule'
 import { previewHistorical, readHistorical } from '../triggers/historical'
 import { releaseHistorical } from '../triggers/historical-release'
@@ -124,6 +126,7 @@ export async function workflowApi(request: Request, env: CrankEnv): Promise<Resp
       return json(await createHook(env, actor, workflowId, input), 201)
     }
     if ((m = match(path, /^\/api\/crank\/hooks\/([^/]+)\/revoke$/))) return json(await revokeHook(env, actor, m[0]))
+    if ((m = match(path, /^\/api\/crank\/holds\/([^/]+)\/estimate$/))) return json(await quoteHold(env, actor, m[0], input))
     if ((m = match(path, /^\/api\/crank\/holds\/([^/]+)\/(release|discard)$/))) return json(await decideHold(env, actor, m[0], m[1] as 'release' | 'discard', input))
     if ((m = match(path, /^\/api\/crank\/workflow-runs\/([^/]+)\/(approve|reject|resume|cancel)$/))) {
       if (m[1] === 'approve' || m[1] === 'reject') return json(await decideApproval(env, actor, m[0], m[1], input))

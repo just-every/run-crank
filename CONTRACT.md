@@ -471,6 +471,10 @@ Each polling workflow has its own interval, chosen from 1, 2, 5, 15, 30 and 60 m
 
 Each workflow has a burst threshold (default 100 new records in one poll, or 100 instant events in one minute; configurable from 1 to 10,000). When a poll or burst exceeds it, Crank creates no business effects for the excess: it holds the whole burst as one reviewable batch, notifies the workflow owner (EXEC-003 channels), and shows the count, source, sample records and estimated USD cost. The owner can run all, run selected items, or discard; held events stay deduplicated by source ID and retained until decided, with reminders and an optional owner-chosen expiry. Releases are attributable and partial releases leave the rest held. Activation backfill (TRIG-003) remains a separate explicit choice.
 
+The current held-batch review door is `GET /api/crank/holds/:id`: source, item count, retained samples/items, decision attribution and USD estimate state are returned together. Before any release, the owner quotes all four per-run components (orchestration, connectors, models and executors), including explicit zero quotes where applicable, with assumptions through `POST /api/crank/holds/:id/estimate`. Amounts are nonnegative USD decimals with at most eight decimal places; components sum exactly, multiply by the batch or selected item count, and round half-up to cents once. Estimates are labelled **owner estimate; not provider-verified**, as in TRIG-002. Missing pricing is labelled **cost estimate required** and releases stay blocked; no provider charge or zero is invented. OPS-002 separately owns measured usage, forecasts and spending controls.
+
+A release supplies the reviewed `estimate_fingerprint`, binding the quoted assumptions and owner/time to the current published version and all remaining held source IDs and payload digests. New items, payload changes, a partial decision or version replacement require a fresh review. The owner may discard without a quote. A release commits its attributable decision and durable queued runs atomically; interruption before that commit leaves all selected items held, while executor loss afterwards leaves queued runs that resume once. Email is the current owner-notice channel; each notice channel added under EXEC-003 and CONN-004 inherits held-batch notices before shipping.
+
 **Acceptance evidence:** With a threshold of 100, return 500 new contacts from one poll of a CRM test edge to a welcome-email workflow; verify zero emails and zero downstream writes, one held batch with 500 deduplicated items and an owner notice; release 20 selected items and verify exactly 20 runs and emails; return the same 500 records on the next poll and verify no new hold or duplicate items; discard the remainder and verify they never run; send 150 instant webhooks in one minute and verify the same hold.
 
 #### TRIG-006 — Hosted inbound email addresses.
@@ -795,8 +799,8 @@ Judged from the code and tests at commit `d68e5c8981c9984581920527fc78a58c6cdba4
 | Clauses | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
 | Published | 4 | 8 | 0 | 12 |
-| Target and push further | 6 | 30 | 37 | 73 |
-| All | 10 | 38 | 37 | 85 |
+| Target and push further | 7 | 29 | 37 | 73 |
+| All | 11 | 37 | 37 | 85 |
 
 MIG-006, BASE-004 and BASE-005 were added on 17 October 2026 so every homepage claim has a clause, and were judged from the code and tests at `eac16196cffe508a1eec962b1c116564707c1598` (main after the run site landed); every earlier row keeps its status from the commit above.
 
@@ -841,7 +845,7 @@ MIG-006, BASE-004 and BASE-005 were added on 17 October 2026 so every homepage c
 | `TRIG-002` | Schedules and on-demand runs | target | done | `src/crank/triggers/schedule.ts`; `src/crank/triggers/schedule-admission.ts`; `src/crank/triggers/historical.ts`; `src/crank/triggers/historical-release.ts`; `tests/triggers.test.mjs`; `tests/historical.test.mjs` (`TRIG-002`: DST, calendars, atomic admission, interrupted dispatch, concurrent restart, bounded catch-up and 40-deal historical preview/release) | |
 | `TRIG-003` | App, polling and email triggers | target | partial | `src/crank/triggers/poll.ts`; `src/crank/triggers/slack-events.ts`; `tests/triggers.test.mjs` | Email triggers, CRM/app polling, renewable subscriptions, TRIG-008. |
 | `TRIG-004` | Polling frequency and trigger latency | target | partial | `src/crank/ops/report.ts`; `tests/triggers.test.mjs` | Provider rate tables with slowest-safe-interval warnings; HubSpot/Typeform journey needs accounts. |
-| `TRIG-005` | Flood protection for bursts of trigger events | target | partial | `src/crank/triggers/admission.ts`; `tests/triggers.test.mjs`; `tests/logic.test.mjs` | Estimated USD cost of a held batch (needs OPS-002). |
+| `TRIG-005` | Flood protection for bursts of trigger events | target | done | `src/crank/triggers/admission.ts`; `src/crank/triggers/webhook-admission.ts`; `src/crank/triggers/hold-decisions.ts`; `src/crank/ops/hold-cost.ts`; `src/crank/ops/scheduler.ts`; `tests/triggers.test.mjs`; `tests/hold-cost.test.mjs`; `tests/logic.test.mjs` (TRIG-005: no-effect holds, exact owner USD estimates, stale-review refusal, selected/concurrent/atomic release, reminders and expiry) | |
 | `TRIG-006` | Hosted inbound email addresses | target | missing |  | No delivered product workflow. |
 | `TRIG-007` | Feed and URL polling triggers | target | partial | `src/crank/triggers/poll.ts`; `src/crank/triggers/feeds.ts`; `src/crank/triggers/xml.ts`; `tests/triggers.test.mjs` | URL-poll headers and query values are copied literally rather than resolved mappings; DNS-resolved private destinations need enforcing egress and parse time has no explicit bound. |
 | `TRIG-008` | Updated-record triggers on watched fields | target | missing |  | No delivered product workflow. |

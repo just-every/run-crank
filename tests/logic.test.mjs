@@ -1,7 +1,7 @@
 import { before, after, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { harness } from './harness.mjs';
-import { connection, deliver, fakeEdge, fakeSecret, hookUrl, jsonResponse, publish, runs, settled, startRun, stepOf, until } from './kit.mjs';
+import { estimateHold, connection, deliver, fakeEdge, fakeSecret, hookUrl, jsonResponse, publish, runs, settled, startRun, stepOf, until } from './kit.mjs';
 
 const fake = fakeEdge();
 let h;
@@ -281,6 +281,6 @@ test('EXEC-003: repeated failures notify once per category, auto-pause the workf
   failing = false;
   await h.post(`workflows/${w.id}/resume`);
   const [holdRow] = await h.get(`workflows/${w.id}/holds`);
-  const released = await h.post(`holds/${holdRow.id}/release`, { all: true });
+  const released = await h.post(`holds/${holdRow.id}/release`, { all: true, estimate_fingerprint: (await estimateHold(h, holdRow.id)).estimate_fingerprint });
   assert.equal(released.runs.length, 1); assert.equal(released.runs[0].status, 'succeeded');
 });
