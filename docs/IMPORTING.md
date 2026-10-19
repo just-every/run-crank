@@ -116,8 +116,12 @@ apply resumes the same job. Uploaded chunks are deleted once a plan is saved.
 Each door request authenticates the owner's current native session with an exact
 `Origin`; the same session predicate is rechecked inside every mutation. Admins,
 members, agent and trigger credentials, signed-out callers and other origins are
-refused. Crank answers `/api/rer/import/*` with 404: Business import grants are
-not mounted. History lists door imports with their approval caption and jobs
+refused. Run Edit Run Business grants (`/api/rer/import/*`) reach the same door
+only when RER's owner-claim key ring (`RER_OWNER_CLAIM_PUBLIC_KEYS`) is
+configured and the owner has turned **Business imports** on at Move in
+(`/api/operator/import-settings`); otherwise they answer 404 or are refused.
+Crank does not read `RER_IMPORT_DOOR`: the setting starts off and only the owner
+turns it on. Revoked signing keys stay revoked. History lists door imports with their approval caption and jobs
 approved by Crank's earlier importer, which keep their undo at
 `/api/crank/imports/JOB_ID/undo`. Apply and undo are written to the audit.
 

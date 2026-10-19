@@ -67,6 +67,7 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
           if (url.pathname === '/app/import/preview') return page('Import preview',previewView(await uploadAndPlan(call,form.source ?? '')))
           if (url.pathname === '/app/import/apply') { const done = await applyReviewed(call,form.planId ?? '',form.reviewedFingerprint ?? ''); return page('Import applied',appliedView(done.report)) }
           if (url.pathname === '/app/import/undo') { await undoPlan(call,form.planId ?? ''); return redirect('/app/import') }
+          if (url.pathname === '/app/import/settings') { const r = await call('/api/operator/import-settings',{enabled:form.enabled==='true'}); if(!r.ok) throw new DoorRefusal(r.status,await r.json()); return redirect('/app/import') }
         } catch (error) {
           if (!(error instanceof DoorRefusal)) throw error
           return page('Import refused',refusalView(error.body),{},error.status)
@@ -147,7 +148,7 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
     if(url.pathname==='/app/operations') return page('Operations',operationsView(await read('/api/crank/reports/operations?'+url.searchParams),await read('/api/crank/workflows'),url.searchParams),{state,intro:'Execution health, business obligations and delivery to your own logs.'})
     if(url.pathname==='/app/access') {const people=await call('/auth/operators'); return page('Access',accessView({...state,people:people.ok?await people.json():[]}),{state,intro:'Credentials for agents and sending apps, and the people who can sign in.'})}
     if(url.pathname==='/app/data') return page('Data',dataView(),{state,intro:'Export, restore and erase. Your data stays on this installation.'})
-    if(url.pathname==='/app/import') { const jobs=await call('/api/crank/imports'); if(!jobs.ok) throw new Error('Import journal unavailable'); return page('Move in',importView(await jobs.json() as any[]),{state,intro:'Bring workflows from another tool as drafts you review first.'}) }
+    if(url.pathname==='/app/import') { const jobs=await call('/api/crank/imports'); if(!jobs.ok) throw new Error('Import journal unavailable'); return page('Move in',importView(await jobs.json() as any[],await read('/api/operator/import-settings')),{state,intro:'Bring workflows from another tool as drafts you review first.'}) }
     return page('Not found','<a href="/app">Return to flows</a>',{state},404)
   } catch(error:any) {
     if(error.status===401) return redirect('/signin?returnTo='+encodeURIComponent(url.pathname))

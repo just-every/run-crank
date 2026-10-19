@@ -38,7 +38,7 @@ and restoration fences. Data archives contain sensitive workflow inputs.
 
 ## Import door
 
-Imports use Base's shared door at `/api/operator/import/{uploads,plan,apply,status,reconcile,undo}` (POST JSON, `X-Import-Source: n8n`, the owner's native session and exact `Origin`). Bodies and results are Base's: see `src/modules/import-kit/src/door/README.md` and [Move n8n workflows](IMPORTING.md). `/api/rer/import/*` answers 404.
+Imports use Base's shared door at `/api/operator/import/{uploads,plan,apply,status,reconcile,undo}` (POST JSON, `X-Import-Source: n8n`, the owner's native session and exact `Origin`). Bodies and results are Base's: see `src/modules/import-kit/src/door/README.md` and [Move n8n workflows](IMPORTING.md). GET/POST `/api/operator/import-settings` (`{enabled, revokedKids?}`, owner only) turns Run Edit Run Business grants at `/api/rer/import/*` on or off; those answer 404 without RER's owner-claim key ring.
 
 ## Workflows
 

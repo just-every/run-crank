@@ -63,6 +63,7 @@ test('SEC-001: private doors need a current session or scoped credential, access
   }
   for(const path of ['tokens','tokens/'+agent.id+'/revoke','data/export','data/restore','data/erase']) assert.equal((await h.send('/api/crank/'+path,{},cookie,headers)).status,403,`SEC-001 ${who} ${path}`);
   for(const action of ['uploads','plan','apply','undo']) assert.equal((await door(h,action,{},cookie,headers)).status,401,`SEC-001 ${who} import door ${action}`);
+  assert.ok([401,403].includes((await h.send('/api/operator/import-settings',{enabled:true},cookie,headers)).status),`SEC-001 ${who} cannot open Business imports`);
  }
  assert.equal(await people(),before,'no lower role changed who may sign in');assert.equal((await h.get()).tokens.length,tokens);
  assert.ok(!h.mail.some(m=>m.to.includes('uninvited@example.test')),'no invitation was sent');
@@ -162,6 +163,13 @@ test('MIG-001 move-in door: owner upload, plan without writes, reviewed apply, r
  assert.match((await h.send('/app/import',undefined,h.owner)).text,/Undo unused import/);
  assert.equal((await screen('/app/import/undo',{planId:field('planId')})).location,'/app/import');assert.equal((await h.get()).flows.length,before);
  const bad=JSON.parse(await source());bad.nodes[1].parameters.jsonBody='={{ $json.body.customer }}';
+ const settings=async body=>{const r=await h.send('/api/operator/import-settings',body,h.owner);assert.equal(r.status,200,r.text);return r.value};
+ assert.deepEqual(await settings(),{enabled:false,revokedKids:[],businessKeys:false},'Business grants start off; the owner door works regardless');
+ assert.equal((await settings({enabled:true,revokedKids:['retired-test-key']})).enabled,true);await settings({enabled:false});
+ assert.deepEqual((await settings({enabled:true})).revokedKids,['retired-test-key'],'turning Business on again never unrevokes a signing key');
+ assert.equal((await screen('/app/import/settings',{enabled:'false'})).location,'/app/import');assert.match((await h.send('/app/import',undefined,h.owner)).text,/Turn on Business imports/);
+ assert.equal((await h.send('/api/rer/import/plan',{},h.owner)).status,404,'no grant reaches the door without RER\'s key ring');
+ assert.equal((await h.send('/api/operator/import-settings',{enabled:true},h.owner,{origin:'https://foreign.example'})).status,403);
  const refusal=await screen('/app/import/preview',{source:JSON.stringify(bad)});assert.equal(refusal.status,422);assert.match(refusal.text,/parser refused a source value\. \(record 1\)/);
 });
 
