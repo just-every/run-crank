@@ -1,5 +1,6 @@
 import { paginate, validatePagination } from './pagination'
 import { authorizeRequest } from '../connections/auth'
+import { assertDispatchAuthority } from '../engine/authority'
 import { fromBase64 } from './files'
 import { evaluate, validateGroups, type Groups } from '../engine/conditions'
 import { boundedFetch, checkEgress, utf8, type BoundedResponse } from '../engine/egress'
@@ -66,6 +67,7 @@ interface Prepared { url: URL; method: string; headers: Headers; body: Uint8Arra
 async function send(ctx: StepContext, step: Record<string, unknown>, prepared: Prepared, connectionId: string | undefined) {
   const headers = new Headers(prepared.headers), url = new URL(prepared.url)
   if (connectionId) await authorizeRequest(ctx.env, connectionId, url, headers, prepared.body)
+  await assertDispatchAuthority(ctx.env, ctx.run.id)
   const attemptId = id()
   const admitted = await stmt(ctx.env, `INSERT INTO crank_wf_attempts(id,run_id,path,number,method,destination_origin,started_at)
     SELECT ?,?,?,COALESCE((SELECT MAX(number)+1 FROM crank_wf_attempts WHERE run_id=? AND path=?),1),?,?,?

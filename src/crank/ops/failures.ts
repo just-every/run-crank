@@ -15,8 +15,8 @@ export async function afterSettle(env: CrankEnv, run: RunRow) {
   const error = run.error_json ? JSON.parse(run.error_json) : {}, category = String(error.category ?? 'provider')
   const owner = await stmt(env, 'SELECT display_name FROM oa_operators WHERE id=?', workflow.owner_id).first<{ display_name: string }>()
   if (run.status === 'paused') {
-    await notify(env, { key: `paused:${run.id}`, workflowId: workflow.id, kind: 'run_paused', subject: `Reconnect needed: ${workflow.name}`,
-      text: `A run of "${workflow.name}" paused: ${error.message ?? 'a connection needs attention'}. Accountable owner: ${owner?.display_name ?? 'workflow owner'}. Next action: reconnect the connection, then resume the run.`, link: `/api/crank/workflow-runs/${run.id}` })
+    await notify(env, { key: `paused:${run.id}:${category}`, workflowId: workflow.id, kind: 'run_paused', subject: `${category === 'authority' ? 'Workflow authority needed' : 'Reconnect needed'}: ${workflow.name}`,
+      text: `A run of "${workflow.name}" paused: ${error.message ?? 'a connection needs attention'}. Accountable owner: ${owner?.display_name ?? 'workflow owner'}. Next action: ${category === 'authority' ? 'resume the workflow, or start a new run of its current published version' : 'reconnect the connection, then resume the run'}.`, link: `/api/crank/workflow-runs/${run.id}` })
     return
   }
   await notify(env, { key: `failed:${workflow.id}:${category}:${now().slice(0, 13)}`, workflowId: workflow.id, kind: 'run_failed', subject: `Run failed in ${workflow.name} (${category})`,

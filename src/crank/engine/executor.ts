@@ -4,7 +4,9 @@ import { canonical, digest, id, now, stmt, type CrankEnv } from '../model'
 import { afterSettle } from '../ops/failures'
 import { workspaceSettings } from '../ops/settings'
 import { evaluate, type Groups } from './conditions'
-import { compare, parseDecimal } from './decimal'
+import { assertDispatchAuthority } from './authority'
+import { cappedProposal } from './caps'
+import { claimQueuedRun } from './queue'
 import { requireZone } from './dates'
 import { StepError } from './errors'
 import { branchesOf, type Graph } from './graph'
@@ -27,14 +29,12 @@ class Execution {
   waits!: Map<string, WaitRow>
   scope!: Scope
   zone = 'America/New_York'
-  caps: { category: string; max_usd: string }[] = []
   constructor(readonly env: CrankEnv, public run: RunRow, readonly lease: string, readonly graph: Graph, readonly time: number) {}
 
   async prepare() {
     const [records, waits, settings] = await Promise.all([loadRecords(this.env, this.run.id), loadWaits(this.env, this.run.id), workspaceSettings(this.env)])
     this.records = records; this.waits = waits
     this.zone = requireZone(this.graph.settings?.timezone ?? settings.timezone)
-    this.caps = settings.caps
     this.scope = { trigger: JSON.parse(this.run.trigger_json), steps: {}, run: { id: this.run.id, workflow_id: this.run.workflow_id, version_id: this.run.version_id, received_at: this.run.received_at, resume_urls: {} } }
     await this.callbacks(this.graph.steps, '')
   }
@@ -53,7 +53,7 @@ class Execution {
 
   async fork(steps: Step[], prefix: string, item: unknown, index: number) {
     const child = new Execution(this.env, this.run, this.lease, this.graph, this.time)
-    child.records = this.records; child.waits = this.waits; child.zone = this.zone; child.caps = this.caps
+    child.records = this.records; child.waits = this.waits; child.zone = this.zone
     child.scope = { ...this.scope, item, item_index: index, steps: { ...this.scope.steps }, run: { ...this.scope.run } }
     await child.callbacks(steps, prefix)
     return child
@@ -70,8 +70,10 @@ class Execution {
   async walk(steps: Step[], prefix: string): Promise<Outcome> {
     for (const step of steps) {
       // Renew before another action; a stale executor must not begin new effects.
-      const held = await stmt(this.env, "UPDATE crank_wf_runs SET lease_expires_at=? WHERE id=? AND lease_id=? AND status='running' RETURNING id", new Date(Date.now() + LEASE_MS).toISOString(), this.run.id, this.lease).first<{ id: string }>()
+      const leaseTime = Date.now()
+      const held = await stmt(this.env, "UPDATE crank_wf_runs SET lease_expires_at=? WHERE id=? AND lease_id=? AND status='running' AND lease_expires_at>? RETURNING id", new Date(leaseTime + LEASE_MS).toISOString(), this.run.id, this.lease, new Date(leaseTime).toISOString()).first<{ id: string }>()
       if (!held) throw new StepError('uncertain', 'The execution lease changed; no further action was started', { uncertain: true })
+      await assertDispatchAuthority(this.env, this.run.id)
       const path = prefix + step.id
       const outcome = step.type === 'paths' ? await this.paths(step, path) : step.type === 'loop' ? await executeLoop(step, path, this) : await this.step(step, path)
       if (outcome.kind !== 'completed') return outcome
@@ -119,10 +121,10 @@ class Execution {
       }
       return await this.settle(step, path, input, result)
     } catch (error) {
-      if (error instanceof StepError && error.category === 'connection') {
+      if (error instanceof StepError && (error.category === 'connection' || error.category === 'authority')) {
         await deleteRecord(this.env, this.run, path)
         this.records.delete(path)
-        return { kind: 'paused', reason: error.message, connectionId: String(error.detail.connection_id ?? '') }
+        return { kind: 'paused', reason: error.message, connectionId: String(error.detail.connection_id ?? ''), authority: error.category === 'authority' }
       }
       const failure = error instanceof StepError ? error.toJSON() : { category: 'provider', message: `Step ${step.id} failed unexpectedly` }
       if (step.on_error === 'continue') {
@@ -160,16 +162,11 @@ class Execution {
   /** TEAM-004 opt-in caps: a per-step cap, or a workspace cap for the step's category,
    * pauses only an out-of-cap action for approval of its exact input. */
   private async cap(step: Step, path: string, input: Record<string, unknown>, wait?: WaitRow): Promise<Outcome | null> {
-    const own = isObject(step.cap) ? step.cap : null
-    const workspace = typeof step.category === 'string' ? this.caps.find(cap => cap.category === step.category) : undefined
-    const limit = own?.max_usd ?? workspace?.max_usd
-    if (limit === undefined) return null
-    const amount = parseDecimal(resolve(own?.amount ?? step.amount, this.scope)), max = parseDecimal(limit)
-    if (!amount || !max) throw new StepError('validation', `Step ${step.id}: the capped amount is not a number`)
-    if (compare(amount, max) <= 0) return null
-    const proposal = { step: step.id, type: step.type, input, amount: resolve(own?.amount ?? step.amount, this.scope), cap: limit }
+    const capped = cappedProposal(step, input, this.scope, (await workspaceSettings(this.env)).caps)
+    if (!capped) return null
+    const {proposal, reason} = capped
     if (!wait) {
-      await insertWait(this.env, this.run, path, { kind: 'approval', proposal, reason: `${step.type} amount exceeds the ${limit} cap` })
+      await insertWait(this.env, this.run, path, { kind: 'approval', proposal, reason })
       await this.save(step, path, 'waiting', { input })
       return { kind: 'waiting', approval: true }
     }
@@ -230,11 +227,8 @@ const STATUS: Record<Outcome['kind'], string> = { completed: 'succeeded', stoppe
 
 /** Claims a queued run, walks its version's graph from the checkpoints and settles it. */
 export async function executeRun(env: CrankEnv, runId: string, time = Date.now()): Promise<RunRow | null> {
-  const lease = id(), at = new Date(time).toISOString()
-  const claimed = await stmt(env, "UPDATE crank_wf_runs SET status='running',lease_id=?,lease_expires_at=?,started_at=COALESCE(started_at,?) WHERE id=? AND status='queued'", lease, new Date(time + LEASE_MS).toISOString(), at, runId).run()
-  // D1 includes transactional outbox trigger writes in changes; the unique run id
-  // still guarantees that any positive count means this caller claimed the run.
-  if (claimed.meta.changes === 0) return getWfRun(env, runId)
+  const lease = id()
+  if (!await claimQueuedRun(env, runId, lease, time, LEASE_MS)) return getWfRun(env, runId)
   const run = (await getWfRun(env, runId))!
   const version = await stmt(env, 'SELECT graph_json FROM crank_workflow_versions WHERE id=?', run.version_id).first<{ graph_json: string }>()
   const execution = new Execution(env, run, lease, JSON.parse(version!.graph_json), time)
@@ -243,13 +237,15 @@ export async function executeRun(env: CrankEnv, runId: string, time = Date.now()
     await execution.prepare()
     outcome = await execution.walk(execution.graph.steps, '')
   } catch (error) {
-    outcome = { kind: 'failed', error: error instanceof StepError ? error.toJSON() : { category: 'provider', message: 'The run failed unexpectedly' } }
+    outcome = error instanceof StepError && (error.category === 'authority' || error.category === 'connection')
+      ? {kind: 'paused', reason: error.message, authority: error.category === 'authority', connectionId: String(error.detail.connection_id ?? '')}
+      : { kind: 'failed', error: error instanceof StepError ? error.toJSON() : { category: 'provider', message: 'The run failed unexpectedly' } }
   }
   let status = STATUS[outcome.kind]
   if (outcome.kind === 'stopped' && outcome.reason === 'search') status = 'stopped_by_search'
   if (outcome.kind === 'waiting' && outcome.approval) status = 'awaiting_approval'
   const terminal = !['waiting', 'awaiting_approval', 'paused'].includes(status)
-  const error = outcome.kind === 'failed' ? outcome.error : outcome.kind === 'paused' ? { category: 'connection', message: outcome.reason, connection_id: outcome.connectionId, reconnect: true } : outcome.kind === 'rejected' ? { category: 'rejected', message: outcome.reason } : null
+  const error = outcome.kind === 'failed' ? outcome.error : outcome.kind === 'paused' ? { category: outcome.authority ? 'authority' : 'connection', message: outcome.reason, connection_id: outcome.connectionId, reconnect: !outcome.authority } : outcome.kind === 'rejected' ? { category: 'rejected', message: outcome.reason } : null
   // A callback/approval can resolve while another item is still running. Queue
   // only waits whose child checkpoint remains waiting, so old completed waits
   // cannot spin an otherwise parked run.

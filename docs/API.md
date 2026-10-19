@@ -42,7 +42,7 @@ and restoration fences. Data archives contain sensitive workflow inputs.
 
 Published workflows run unattended: publishing a version authorizes exactly its
 declared steps on its bound connections, recorded on the version (publisher,
-time, steps, connections). Approval steps and USD caps are opt-in. Drafts run
+time, steps, connections). Approval steps and USD/recipient caps are opt-in. Drafts run
 nothing. The per-minute Cron pass releases delays and queues, polls feeds and
 URLs, admits schedules and runs queued work, so restarts resume from durable state.
 A graph's `settings` set its `timezone`, `burst_threshold` (1 to 10,000, default
@@ -70,7 +70,7 @@ A graph's `settings` set its `timezone`, `burst_threshold` (1 to 10,000, default
 | GET/POST `/connections`; POST `/connections/:id/rotate`, `/revoke`, `/test` | Native/dev owner for writes | Credentials are encrypted and never returned |
 | POST `/oauth/apps/:app`, `/oauth/start`; GET `/oauth/callback` | Native/dev owner | Your provider OAuth app, consent start and redirect |
 | GET `/catalog`; POST `/coverage` | Person or agent | Native operations; classify `{items}`, `{n8n}` or `{make}` inventories |
-| GET/POST `/settings` | Owner for writes | Timezone, category USD caps, auto-pause policy |
+| GET/POST `/settings` | Owner for writes | Timezone, category USD/recipient caps, auto-pause policy |
 | GET `/reports/latency`, `/audit`, `/notices` | Person or agent; audit and notices owner | Trigger latency, poll lag and causes; append-only audit; owner notices |
 
 Inbound doors need no session and admit events only: `/hooks/w/SECRET` (POST,
@@ -145,3 +145,13 @@ or replaced versions invalidate the estimate. The response includes `estimate`
 for the selected count, `selected_count`, runs and the updated hold. Components
 sum exactly and round half-up to cents after multiplication, as in historical
 previews. `/discard` needs only `all:true` or selected `items`; no quote is needed.
+
+### Publish authority and queue parameters
+
+POST `/workflows/:id/unpublish` uses the existing owner publish authority. It retires the version, removes trigger schedules, cancels queued/waiting work and retains the draft and history. Running effects already started remain recorded; later dispatch stops. Republishing never revives withdrawn work.
+
+Pause stops new/queued/running next-step dispatch. Only waits already present at pause continue when their frozen policy is `continue` (default) or `cancel_on_new_version`. Replacement allows only existing waits with `continue`. Live connection checks remain at every step/attempt; unpublish permits no exception.
+
+Workspace caps are `{category,max_usd?,max_recipients?}`. Steps use `{cap:{max_usd?,amount?,max_recipients?,recipients?}}`, with mapped `amount`/`recipients`, and name their workspace `category`. The stricter bound applies inclusively. A recipient mapping resolves to one address or an array, counts duplicates and never parses delimiters; HTTP builders declare the same destination mapping used in the request. Excess actions wait for an exact-input decision; rejection sends nothing.
+
+Graph settings `priority` is an integer -100..100 (default 0), higher first, then receipt time/run ID. `max_concurrency` is 1..100 (default 1). Each admission freezes its version parameters; each atomic claim counts all unexpired running leases across that workflow’s versions. Waiting/approval/paused runs free a slot. A saturated workflow does not hide other queue candidates.

@@ -2,18 +2,20 @@ import { authorizeRequest } from '../connections/auth'
 import { credential } from '../connections/store'
 import { boundedFetch, utf8 } from '../engine/egress'
 import { StepError } from '../engine/errors'
+import { assertDispatchAuthority } from '../engine/authority'
 import { searchKey, searchOutcome, validateSearch, withKeyLock } from '../engine/search'
 import type { Step, StepContext, StepResult, StepType } from '../engine/types'
 import { isObject, textOf } from '../engine/values'
 
 /** Slack Web API (https://api.slack.com/methods), form-encoded, with the connection's bot token. */
-export async function slackCall(ctx: Pick<StepContext, 'env'>, connectionId: string, method: string, params: Record<string, unknown>, write: boolean) {
+export async function slackCall(ctx: Pick<StepContext, 'env'> & Partial<Pick<StepContext, 'run'>>, connectionId: string, method: string, params: Record<string, unknown>, write: boolean) {
   const url = new URL('https://slack.com/api/' + method), headers = new Headers({ 'content-type': 'application/x-www-form-urlencoded; charset=utf-8', accept: 'application/json' })
   const body = new TextEncoder().encode(new URLSearchParams(Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== '').map(([k, v]) => [k, textOf(v) ?? JSON.stringify(v)])).toString())
   await authorizeRequest(ctx.env, connectionId, url, headers, body)
   let attempt = 0
   for (;;) {
     attempt++
+    if (ctx.run) await assertDispatchAuthority(ctx.env, ctx.run.id)
     let response
     try { response = await boundedFetch(url.href, { method: 'POST', headers, body, timeoutMs: 15000, maxBytes: 4 * 1024 * 1024 }) }
     catch (error) {

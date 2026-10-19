@@ -1,4 +1,5 @@
 import { executeRun } from '../engine/executor'
+import { queueCandidates } from '../engine/queue'
 import { resolveWait } from '../engine/records'
 import { releaseDelayQueues } from './delay-queues'
 import { stmt, type CrankEnv } from '../model'
@@ -24,8 +25,8 @@ export async function schedulerPass(env: CrankEnv, time = Date.now()) {
   const schedules = await stmt(env, 'SELECT * FROM crank_schedules WHERE next_due_at<=? ORDER BY next_due_at LIMIT 25', at).all<{ workflow_id: string; version_id: string; next_due_at: string }>()
   for (const schedule of schedules.results) summary.schedules += await runSchedule(env, schedule, time)
   summary.holds = await holdUpkeep(env, time)
-  const queued = await stmt(env, "SELECT id FROM crank_wf_runs WHERE status='queued' ORDER BY received_at LIMIT 50").all<{ id: string }>()
-  for (const run of queued.results) { await executeRun(env, run.id, time); summary.executed++ }
+  const queued = await queueCandidates(env, 50)
+  for (const run of queued) { await executeRun(env, run.id, time); summary.executed++ }
   await flushLogStreams(env, time)
   return summary
 }

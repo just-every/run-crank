@@ -6,6 +6,7 @@ import { STEP_TYPES } from './steps'
 import { validateLoop } from './loop'
 import type { Step } from './types'
 import { isObject } from './values'
+import { validateCap } from './caps'
 
 /** Path groups allow at least 20 branches and 5 levels (Zapier: 10 and 3). */
 export const PATH_LIMITS = { branches: 25, depth: 8 } as const
@@ -22,6 +23,8 @@ export function validateGraph(value: unknown): Validation {
   if (!Array.isArray(value.steps)) throw new StepError('validation', 'graph.steps must be a list')
   const settings = isObject(value.settings) ? value.settings : {}
   if (settings.timezone !== undefined) requireZone(settings.timezone)
+  if (settings.priority !== undefined && (!Number.isInteger(settings.priority) || (settings.priority as number) < -100 || (settings.priority as number) > 100)) throw new StepError('validation', 'settings.priority must be a whole number from -100 to 100')
+  if (settings.max_concurrency !== undefined && (!Number.isInteger(settings.max_concurrency) || (settings.max_concurrency as number) < 1 || (settings.max_concurrency as number) > 100)) throw new StepError('validation', 'settings.max_concurrency must be a whole number from 1 to 100')
   if (settings.waiting_runs !== undefined && !['continue', 'cancel_on_pause', 'cancel_on_new_version'].includes(settings.waiting_runs as string)) throw new StepError('validation', 'settings.waiting_runs must be continue, cancel_on_pause or cancel_on_new_version')
   if (settings.run_columns !== undefined && (!Array.isArray(settings.run_columns) || settings.run_columns.length > 4 || settings.run_columns.some(c => !isObject(c) || typeof c.label !== 'string' || !c.label || c.label.length > 40 || c.value === undefined))) throw new StepError('validation', 'settings.run_columns lists up to 4 {label, value} columns shown beside each run')
   if (value.trigger.name !== undefined && !named(value.trigger.name)) throw new StepError('validation', 'trigger.name is text of at most 80 characters')
@@ -66,7 +69,7 @@ export function validateGraph(value: unknown): Validation {
         if (typeof step.connection_id !== 'string' || !type.connection) throw new StepError('validation', `Step ${step.id}: this step does not use a connection`)
         if (!declared.connections.includes(step.connection_id)) declared.connections.push(step.connection_id)
       }
-      if (step.cap !== undefined && (!isObject(step.cap) || step.cap.max_usd === undefined || step.cap.amount === undefined)) throw new StepError('validation', `Step ${step.id}: a cap needs amount and max_usd`)
+      validateCap(step)
       type.validate?.(step)
       declared.steps.push({ path, id: step.id, type: step.type, ...(typeof step.connection_id === 'string' ? { connection_id: step.connection_id } : {}) })
     })

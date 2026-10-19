@@ -8,7 +8,7 @@ import { auditStatement } from './audit'
 /** Workspace defaults: timezone, opt-in USD caps by step category and the auto-pause policy. */
 export interface WorkspaceSettings {
   timezone: string
-  caps: { category: string; max_usd: string }[]
+  caps: { category: string; max_usd?: string; max_recipients?: number }[]
   auto_pause: { enabled: boolean; min_runs: number; failure_rate: number; window_hours: number }
 }
 export const DEFAULT_SETTINGS: WorkspaceSettings = { timezone: 'America/New_York', caps: [], auto_pause: { enabled: true, min_runs: 20, failure_rate: 0.95, window_hours: 24 } }
@@ -26,8 +26,10 @@ export async function updateSettings(env: CrankEnv, actor: Actor, input: Record<
     requireValue(Array.isArray(input.caps) && input.caps.length <= 50, 'caps must be a list')
     next.caps = (input.caps as unknown[]).map(cap => {
       requireValue(isObject(cap) && typeof cap.category === 'string' && /^[a-z][a-z0-9_]{0,39}$/.test(cap.category), 'Each cap names a step category')
-      requireValue(parseDecimal(cap.max_usd) !== null, 'Each cap has a max_usd amount')
-      return { category: cap.category as string, max_usd: String(cap.max_usd) }
+      requireValue(cap.max_usd !== undefined || cap.max_recipients !== undefined, 'Each cap has max_usd or max_recipients')
+      if (cap.max_usd !== undefined) requireValue(parseDecimal(cap.max_usd) !== null, 'max_usd must be an amount')
+      if (cap.max_recipients !== undefined) requireValue(Number.isSafeInteger(cap.max_recipients) && (cap.max_recipients as number) >= 0, 'max_recipients must be a nonnegative whole number')
+      return { category: cap.category as string, ...(cap.max_usd !== undefined ? {max_usd: String(cap.max_usd)} : {}), ...(cap.max_recipients !== undefined ? {max_recipients: cap.max_recipients as number} : {}) }
     })
   }
   if (input.auto_pause !== undefined) {

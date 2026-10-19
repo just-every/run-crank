@@ -10,6 +10,7 @@ export default {
   exportRow(table,row) {
     if (table === 'crank_flows') return {...row,status:'draft'};
     if (table === 'crank_workflows') return {...row,status:row.status === 'draft' ? 'draft' : 'paused'};
+    if (table === 'crank_wf_runs') return {...row,continuation_authority:0};
     if (table === 'crank_connections') return {...row,status:row.status === 'revoked' ? 'revoked' : 'needs_reconnect'};
     return row;
   },
