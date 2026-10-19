@@ -1,0 +1,56 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { build } from 'esbuild';
+import { harness } from './harness.mjs';
+import { connection, deliver, fakeEdge, fakeSecret, jsonResponse, publish, settled, startRun, stepOf } from './kit.mjs';
+import { ownershipGraph, ownershipInput, ownershipProviders } from './ownership-workflow.mjs';
+
+test('BASE-004: an owned installation publishes and finishes every shipped step type while author traffic is blocked', async () => {
+  const fake = fakeEdge(), refused = [];
+  ownershipProviders(fake, jsonResponse);
+  // All unconfigured destinations are refused, including every author domain
+  // and subdomain. No successful author, telemetry or licensing response exists.
+  const h = await harness('http://127.0.0.1:9', { edge: async request => {
+    if (!fake.routes.has(new URL(request.url).host)) { refused.push(new URL(request.url).hostname); return new Response('Outbound traffic blocked', { status: 503 }); }
+    return fake.edge(request);
+  } });
+  try {
+    const setup = await h.mf.dispatchFetch(h.origin + '/setup', { method: 'POST', redirect: 'manual', headers: { origin: h.origin, cookie: h.owner, 'content-type': 'application/x-www-form-urlencoded' }, body: 'confirm=yes' });
+    assert.equal(setup.status, 303);
+    const slack = await connection(h, { app: 'slack', label: 'Harbor sales team', auth_kind: 'bearer', secret: { token: fakeSecret('slack') } });
+    const graph = ownershipGraph(slack.id), workflow = await publish(h, 'Harbor wholesale · owned installation', graph);
+    const initial = await startRun(h, workflow, ownershipInput);
+    assert.equal(initial.status, 'waiting', JSON.stringify(initial.error));
+    assert.equal(initial.waits[0].kind, 'delay');
+    await h.restart();
+    await h.tick(Date.parse(initial.waits[0].due_at) + 1000);
+    const callback = await h.get('workflow-runs/' + initial.id);
+    assert.equal(callback.waits.find(w => !w.resolved_at).kind, 'callback');
+    const invoice = fake.to('ledger.example');
+    assert.equal(invoice.length, 1);
+    const body = JSON.parse(invoice[0].body);
+    assert.equal(body.customer, ownershipInput.customer.trim());
+    assert.equal(body.lines.length, 2);
+    const receipt = await deliver(h, body.callback, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id: 'receipt-1042' }) });
+    assert.equal(receipt.status, 202);
+    const review = await settled(h, initial.id);
+    assert.equal(review.status, 'awaiting_approval');
+    const wait = review.waits.find(w => w.kind === 'approval');
+    await h.post(`workflow-runs/${initial.id}/approve`, { path: wait.path, digest: wait.proposal_digest });
+    const done = await h.get('workflow-runs/' + initial.id);
+    assert.equal(done.status, 'succeeded', JSON.stringify(done.error));
+    assert.deepEqual(done.response.body, { customer: ownershipInput.customer.trim(), receipt: 'receipt-1042', invoice: 'invoice-harbor-1042' });
+    assert.equal(stepOf(done, 'rep_name').output.record.id, 'U000001');
+    assert.equal(stepOf(done, 'find_note').output.count, 1);
+    assert.equal(stepOf(done, 'quote').output.size, new TextEncoder().encode('Harbor Workshop quote: $521.00').length);
+    assert.equal(fake.to('ledger.example').length, 1, 'restart and approval do not repeat the invoice');
+    // Discover the live registry rather than pinning a version-specific list.
+    // Execution itself above goes exclusively through HTTP and Worker Cron.
+    const registry = await build({ stdin: { contents: "export { STEP_TYPES } from './src/crank/engine/steps/index.ts'", resolveDir: process.cwd() }, bundle: true, write: false, format: 'esm', platform: 'node' });
+    const { STEP_TYPES } = await import('data:text/javascript;base64,' + Buffer.from(registry.outputFiles[0].text).toString('base64'));
+    const succeeded = new Set(done.steps.filter(s => s.status === 'succeeded').map(s => s.type));
+    for (const type of [...Object.keys(STEP_TYPES), 'paths', 'loop']) assert.ok(succeeded.has(type), `BASE-004 needs a successful public-door journey for ${type}`);
+    assert.deepEqual(refused, [], 'core operation never tries an author or other unconfigured host');
+    assert.equal((await h.send('/app/workflow-runs/' + done.id, undefined, h.owner)).status, 200);
+  } finally { await h.close(); }
+});

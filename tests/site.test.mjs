@@ -6,7 +6,28 @@ import { resolve, extname } from 'node:path'
 import { verifyRunCommands } from './run-commands.mjs'
 
 // Exercise the emitted static site through HTTP, as a visitor without JavaScript.
-test('the run site leads to runnable commands and repository guides with working local links', async () => {
+test('BASE-004: the MIT-licensed run site leads to runnable commands and repository guides with working local links', async () => {
+  const license = await readFile('LICENSE', 'utf8');
+  assert.match(license, /^MIT License\s+Copyright/);
+  const mit = `Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.`;
+  const normalize = text => text.replace(/\s+/g, ' ').trim();
+  assert.equal(normalize(license.slice(license.indexOf('Permission is hereby granted'))), normalize(mit));
+  assert.equal(JSON.parse(await readFile('package.json', 'utf8')).license, 'MIT');
+  assert.match(await readFile('README.md', 'utf8'), /\[MIT licensed\]\(LICENSE\)/);
   const root=resolve('dist/site')
   const server=createServer(async(req,res)=>{
     try {
@@ -49,6 +70,7 @@ test('the run site leads to runnable commands and repository guides with working
     assert.ok(documents.has('/run'),'the homepage has a path to running the app')
     assert.ok(documents.has('/docs'),'the homepage has a path to documentation')
     const home=documents.get('/'),homeText=home.replace(/<[^>]+>/g,'').replaceAll('&amp;','&')
+    assert.match(home, /<a\s+href="https:\/\/github\.com\/just-every\/run-crank\/blob\/main\/LICENSE"[^>]*>MIT licensed<\/a>/);
     assert.match(homeText,/git clone https:\/\/github\.com\/just-every\/run-crank\.git crank\s*\$?\s*cd crank && rer dev/,'the homepage shows the commands that start Crank')
     assert.doesNotMatch(home,/localhost|127\.0\.0\.1|\bRER_[A-Z]/,'the homepage shows no local addresses or rer output')
     const run=documents.get('/run'),runText=run.replace(/<[^>]+>/g,'').replaceAll('&amp;','&')

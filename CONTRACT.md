@@ -743,7 +743,7 @@ Every capability the homepage states, in page order, for the owner-approved stru
 | 2 | Hero: "runs every step on schedule" | `TRIG-002` | partial | partly: `src/crank/triggers/schedule.ts` |
 | 3 | Hero: "retries what fails" | `EXEC-002` | partial | partly: `src/crank/connectors/http-step.ts` |
 | 4 | Hero: "fixes the mapping when an app changes" | `AGENT-002` | missing | contract, not yet in code |
-| 5 | Hero: "100% free, open source" | `BASE-004` | partial | partly: `LICENSE`, `src/site/run.json` |
+| 5 | Hero: "100% free, open source" | `BASE-004` | done | `LICENSE`, `package.json`, `tests/site.test.mjs`, `tests/ownership.test.mjs` |
 | 6 | Hero: "alternative to Zapier, Make and Workato" | `MIG-002`, `MIG-003`, `MIG-004`, `CONN-001` | partial | partly: `src/crank/connections/catalog.ts`; the three migrations are contract, not yet in code |
 | 7 | Hero cards: Stripe payment → Google Sheets → Slack #sales → QuickBooks invoice, with times | `CONN-008`, `CONN-005`, `CONN-004`, `CONN-007` | partial | partly: `src/crank/connectors/slack.ts`; Stripe, Sheets and QuickBooks are contract, not yet in code |
 | 8 | Hero cards: "Field renamed: amount → amount_total · Repaired, re-tested" | `AGENT-002` | missing | contract, not yet in code |
@@ -777,7 +777,7 @@ Every capability the homepage states, in page order, for the owner-approved stru
 | 36 | Books match ledger: "Created INV-4410", "Applied to INV-4398", "Credit memo CM-212" | `CONN-007` | missing | contract, not yet in code |
 | 37 | Limits: "No desktop or screen-scraping robots" | none needed: a boundary, true of the code | done | code: `src/crank/engine/steps/index.ts` (no desktop or screen step type exists) |
 | 38 | Limits: "Apps outside the library connect over HTTP or a code step" | `HTTP-002`, `WORK-005` | partial | partly: `src/crank/connectors/http-step.ts`; code steps are contract, not yet in code |
-| 39 | Closing: "Open source workflow automation for every team" / "Free and open source, MIT licensed" | `BASE-004` | partial | partly: `LICENSE`, `src/site/shell/SiteFooter.tsx` |
+| 39 | Closing: "Open source workflow automation for every team" / "Free and open source, MIT licensed" | `BASE-004` | done | `LICENSE`, `package.json`, `tests/site.test.mjs`, `tests/ownership.test.mjs` |
 | 40 | Closing art: "All 38 workflows ran" | `OPS-001` | done | `src/crank/ops/report.ts` |
 
 ## Status
@@ -876,6 +876,6 @@ MIG-006, BASE-004 and BASE-005 were added on 17 October 2026 so every homepage c
 | `BASE-001` | Owned operation and explicit Base replacements | target | partial | `AGENTS.md`; `SEED-COMMAND-CONTRACT.md`; `src/crank/archive-policy.mjs`; `src/crank/delivery.ts`; `tests/crank.test.mjs` | Native owned workflow/archives exist; complete egress independence and expanded provider/data-lifecycle guarantees are not established. |
 | `BASE-002` | Runnable site and unchanged installed home | published | done | `src/site/pages.tsx`; `src/site/docs/build/site.ts`; `tests/site.test.mjs`; `tests/runtime.mjs` |  |
 | `BASE-003` | Observable operation and recovery | target | partial | `src/base/deployment-health.ts`; `src/crank/delivery.ts`; `src/crank/api.ts`; `tests/runtime.mjs`; `tests/crank.test.mjs` | Basic runtime health and read-triggered delivery-lease expiry exist; the complete future execution classes and operational guarantees are not proven. |
-| `BASE-004` | Free, MIT-licensed source with no paid tier | target | partial | `LICENSE`; `src/site/run.json`; `src/site/shell/SiteFooter.tsx`; `src/site/landing/sections/Closing.tsx` | `package.json` declares no license; no test asserts the MIT text, the site statement or the absence of a paid gate; the run with author traffic blocked is not tested. |
+| `BASE-004` | Free, MIT-licensed source with no paid tier | target | done | `LICENSE`; `package.json`; `README.md`; `tests/site.test.mjs`; `tests/ownership.test.mjs` | Every shipped step type finishes through HTTP/Cron with unconfigured outbound hosts blocked, including author domains, across restart/callback/approval. MIT text, metadata, README and built-site license link are checked; product route/step/screen and shared-source scan found no commercial entitlement gates. |
 | `BASE-005` | Run on your own computer, server or Cloudflare account | target | partial | `RUN-LOCALLY.md`; `src/site/run.json`; `deploy.json`; `tests/runtime.mjs` | No supported own-server production path (a supervised workerd service with on-disk data, Cron and HTTPS); `rer dev` stops after 12 idle hours and is not a production service; live owner-account deploy is not proven by the cited tests. |
 | `BOUND-001` | US-first product and provider responsibilities | target | partial | `src/crank/engine/transforms/utilities.ts`; `src/crank/engine/calendar.ts`; `tests/logic.test.mjs` | USD cents, tax-code line fields and US business calendars ship; USD forecasts, ACH/1099/W-2 provider handoffs and regulated-operation agreement/scope obligations are absent. |

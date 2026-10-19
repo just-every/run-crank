@@ -6,6 +6,11 @@ Human-approved workflow automation. An incoming event becomes a visible run;
 a person approves its exact body and destination before Crank sends anything.
 Failed delivery gets one manual replay with the same idempotency key.
 
+Crank’s complete source is [MIT licensed](LICENSE), including its connectors,
+workflow engine, run site and migration modules. All shipped capabilities are
+available on every installation with no paid tier, author account or license
+key. You pay only for your own infrastructure, providers and model usage.
+
 ## Run it
 
 The same two lines as [run-crank.com/run](https://run-crank.com/run):
