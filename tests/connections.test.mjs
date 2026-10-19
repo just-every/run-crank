@@ -159,7 +159,7 @@ test('CONN-004: Slack posts by channel name and user email, applies search outco
   assert.deepEqual([posts[0].channel, posts[0].username, posts[0].text], ['C01', 'Crank Bot', '<@U01> New lead Harbour Workshop']);
   assert.equal(posts[1].channel, 'D01'); assert.equal(stepOf(run, 'post').output.ts, '1700000000.001');
 
-  const search = no_match => ({ trigger: { type: 'manual' }, steps: [{ id: 'who', type: 'slack.find_user_by_email', connection_id: slack.id, no_match, input: { email: '{{trigger.input.email}}' } },
+  const search = no_match => ({ trigger: { type: 'manual' }, steps: [{ id: 'who', type: 'slack.find_user_by_email', retry_policy: { base_delay_ms: 500 }, connection_id: slack.id, no_match, input: { email: '{{trigger.input.email}}' } },
     { id: 'route', type: 'paths', mode: 'exclusive', branches: [{ id: 'missing', when: [[{ field: 'steps.who.outcome', op: 'text.equals', value: 'not found' }]], steps: [] }], fallback: { steps: [] } }] });
   const lookup = await publish(h, 'Owner lookup', search('continue'));
   assert.deepEqual(stepOf(await startRun(h, lookup, { email: 'nobody@acme.example' }), 'route').output.matched, ['missing']);
@@ -213,7 +213,7 @@ test('EXEC-002: two accounts progress independently through 429, backoff, perman
     if (url.pathname === '/pages') return !url.searchParams.has('cursor') ? jsonResponse({ items: [{ id: 'order-1' }], next: 'second' })
       : seen === 0 ? jsonResponse({ error: 'temporary second-page outage' }, 503) : jsonResponse({ items: [{ id: 'order-2' }], next: null });
     if (url.pathname === '/always-unavailable') return jsonResponse({ error: 'maintenance' }, 503);
-    if (url.pathname === '/long-wait') return jsonResponse({ error: 'quota exhausted' }, 429, { 'retry-after': '120' });
+    if (url.pathname === '/long-wait') return jsonResponse({ error: 'quota exhausted' }, 429, { 'retry-after': '3601' });
     if (url.pathname === '/date-wait') return seen === 0 ? jsonResponse({ error: 'rate limited' }, 429, { 'retry-after': new Date(Date.now() + 2500).toUTCString() }) : jsonResponse({ id: 'after-provider-date' });
     if (url.pathname === '/malformed-after') return seen === 0 ? jsonResponse({ error: 'unavailable' }, 503, { 'retry-after': 'later please' }) : jsonResponse({ id: 'after-backoff' });
     if (account === 'Bearer ' + slowToken) return seen === 0 ? jsonResponse({ error: 'rate limited' }, 429, { 'retry-after': '1' })
@@ -222,7 +222,7 @@ test('EXEC-002: two accounts progress independently through 429, backoff, perman
   });
   const [slowToken, healthyToken] = [fakeSecret('slow-account'), fakeSecret('healthy-account')];
   const accounts = await Promise.all([slowToken, healthyToken].map((token, i) => connection(h, { app: 'http', label: i ? 'Healthy supplier' : 'Throttled supplier', auth_kind: 'bearer', domains: ['retry.vendor.example'], secret: { token } })));
-  const workflow = async (account, path) => publish(h, 'Retry policy ' + account.label + path, { trigger: { type: 'manual' }, steps: [{ id: 'read', type: 'http', connection_id: account.id, input: { url: 'https://retry.vendor.example' + path } }] });
+  const workflow = async (account, path) => publish(h, 'Retry policy ' + account.label + path, { trigger: { type: 'manual' }, steps: [{ id: 'read', type: 'http', retry_policy: { base_delay_ms: 500 }, connection_id: account.id, input: { url: 'https://retry.vendor.example' + path } }] });
   const slow = await workflow(accounts[0], '/records'), healthy = await workflow(accounts[1], '/records');
   const delayed = startRun(h, slow, {});
   await until(() => times.has('Bearer ' + slowToken + '/records'), 'throttled account first request');
@@ -248,14 +248,14 @@ test('EXEC-002: two accounts progress independently through 429, backoff, perman
   assert.ok(gaps[0] > 0 && gaps[1] > gaps[0], 'growing backoff schedules are visible in attempts');
   const deadline = await startRun(h, await workflow(accounts[1], '/long-wait'), {});
   assert.equal(deadline.error.category, 'rate_limit'); assert.equal(deadline.error.exhausted, true);
-  assert.equal(deadline.attempts.length, 1); assert.ok(Date.parse(deadline.attempts[0].retry_at) - Date.parse(deadline.attempts[0].finished_at) >= 120000, 'the budget ends without capping Retry-After to an earlier send');
+  assert.equal(deadline.attempts.length, 1); assert.ok(Date.parse(deadline.attempts[0].retry_at) - Date.parse(deadline.attempts[0].finished_at) >= 3601000, 'the one-hour wait budget ends without capping Retry-After to an earlier send');
   for (const path of ['/date-wait', '/malformed-after']) {
     const result = await startRun(h, await workflow(accounts[1], path), {});
     assert.equal(result.status, 'succeeded'); assert.equal(result.attempts.length, 2);
     assert.ok(Date.parse(result.attempts[1].started_at) >= Date.parse(result.attempts[0].retry_at));
   }
   const paged = await publish(h, 'Retry a later inventory page', { trigger: { type: 'manual' }, steps: [
-    { id: 'read', type: 'http', connection_id: accounts[1].id, input: { url: 'https://retry.vendor.example/pages' }, pagination: { kind: 'cursor', items_path: 'items', cursor_path: 'next', max_pages: 2 } },
+    { id: 'read', type: 'http', retry_policy: { base_delay_ms: 500 }, connection_id: accounts[1].id, input: { url: 'https://retry.vendor.example/pages' }, pagination: { kind: 'cursor', items_path: 'items', cursor_path: 'next', max_pages: 2 } },
   ] });
   const pages = await startRun(h, paged, {});
   assert.equal(pages.status, 'succeeded'); assert.deepEqual(stepOf(pages, 'read').output.items, [{ id: 'order-1' }, { id: 'order-2' }]);
@@ -285,7 +285,7 @@ test('EXEC-002: native Slack reads honor retry timing and account isolation; per
     times.set(key, at);
     if (email === 'permanent@acme.example') return jsonResponse({ ok: false, error: 'token_revoked' });
     if (email === 'unavailable@acme.example') return new Response('temporary outage', { status: 503 });
-    if (email === 'long-wait@acme.example') return jsonResponse({ ok: false, error: 'ratelimited' }, 200, { 'retry-after': '120' });
+    if (email === 'long-wait@acme.example') return jsonResponse({ ok: false, error: 'ratelimited' }, 200, { 'retry-after': '3601' });
     if (email === 'json-limit@acme.example' && at.length === 1) return jsonResponse({ ok: false, error: 'ratelimited' }, 200, { 'retry-after': '1' });
     if (headers.authorization === 'Bearer ' + slowToken) return at.length === 1 ? jsonResponse({ ok: false, error: 'ratelimited' }, 429, { 'retry-after': '1' })
       : at.length === 2 ? new Response('temporary outage', { status: 503 }) : jsonResponse({ ok: false, error: 'invalid_auth' });
@@ -294,7 +294,7 @@ test('EXEC-002: native Slack reads honor retry timing and account isolation; per
   const accounts = await Promise.all([slowToken, healthyToken].map((token, i) => connection(h, { app: 'slack', label: i ? 'Healthy Slack' : 'Throttled Slack', auth_kind: 'bearer', scopes: ['users:read.email', 'chat:write'], secret: { token } })));
   assert.deepEqual(await h.post(`connections/${accounts[0].id}/test`), { ok: true, account: 'Retry workspace', user: 'crankbot' }, 'connection checks work without an execution ledger');
   const workflow = account => publish(h, account.label + ' lookup', { trigger: { type: 'manual' }, steps: [
-    { id: 'who', type: 'slack.find_user_by_email', connection_id: account.id, input: { email: '{{trigger.input.email}}' } },
+    { id: 'who', type: 'slack.find_user_by_email', retry_policy: { base_delay_ms: 500 }, connection_id: account.id, input: { email: '{{trigger.input.email}}' } },
   ] });
   const [slow, healthy] = await Promise.all(accounts.map(workflow));
   const key = (token, email) => 'Bearer ' + token + ':' + email;
@@ -312,7 +312,7 @@ test('EXEC-002: native Slack reads honor retry timing and account isolation; per
   const policy = (await h.get('catalog')).apps.find(a => a.app === 'slack').retry_policy;
   const at = times.get(key(slowToken, 'rep@acme.example'));
   assert.ok(at[1] - at[0] >= 1000, 'native Retry-After is a lower bound');
-  assert.ok(at[2] - at[1] >= policy.base_delay_ms * 2 ** (bad.attempts[1].retry_number - 1), 'a transient 503 uses growing backoff');
+  assert.ok(at[2] - at[1] >= 500 * 2 ** (bad.attempts[1].retry_number - 1), 'a transient 503 uses growing backoff');
   assert.ok(bad.attempts.slice(0, 2).every(a => a.retry_at && a.retry_reason));
   assert.ok(bad.attempts.slice(1).every((a, i) => Date.parse(a.started_at) >= Date.parse(bad.attempts[i].retry_at)));
 
@@ -328,7 +328,7 @@ test('EXEC-002: native Slack reads honor retry timing and account isolation; per
   assert.equal(exhausted.attempts.length, policy.read_attempts); assert.ok(exhausted.error.next_owner_action);
   const deadline = await startRun(h, healthy, { email: 'long-wait@acme.example' });
   assert.equal(deadline.error.category, 'rate_limit'); assert.equal(deadline.error.exhausted, true); assert.equal(deadline.attempts.length, 1);
-  assert.ok(Date.parse(deadline.attempts[0].retry_at) - Date.parse(deadline.attempts[0].finished_at) >= 120000, 'native JSON throttling cannot dispatch early outside the budget');
+  assert.ok(Date.parse(deadline.attempts[0].retry_at) - Date.parse(deadline.attempts[0].finished_at) >= 3601000, 'native JSON throttling cannot dispatch early outside the budget');
 
   const posting = await publish(h, 'Uncertain native Slack post', { trigger: { type: 'manual' }, steps: [
     { id: 'post', type: 'slack.send_channel_message', connection_id: accounts[1].id, input: { channel: 'C01234567', text: 'Commit this once' } },
@@ -348,7 +348,7 @@ test('EXEC-002: executor loss during a retry wait retains the original request b
   let calls = 0;
   fake.routes.set('restart-retry.example', () => { calls++; return jsonResponse({ error: 'temporary outage' }, 503, { 'retry-after': '2' }); });
   const workflow = await publish(h, 'Durable supplier retry', { trigger: { type: 'manual' }, steps: [
-    { id: 'read', type: 'http', input: { url: 'https://restart-retry.example/inventory' } },
+    { id: 'read', type: 'http', retry_policy: { base_delay_ms: 500 }, input: { url: 'https://restart-retry.example/inventory' } },
   ] });
   // Dispose the actual executor after it commits the first response and retry
   // deadline, before its timer fires. Only the provider edge is faked.

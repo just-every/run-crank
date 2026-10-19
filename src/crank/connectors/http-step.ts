@@ -1,16 +1,14 @@
 import { paginate, validatePagination } from './pagination'
-import { RETRY_POLICY, retryRequest, type AttemptPolicy } from './retry'
-import { acquireRequest } from './rate-limit'
-import { authorizeRequest } from '../connections/auth'
-import { assertDispatchAuthority } from '../engine/authority'
-import { fromBase64 } from './files'
+import { retryRequest } from './retry'
+import { sendRequest, type Prepared } from './request-transport'
+import { multipart } from './multipart'
 import { evaluate, validateGroups, type Groups } from '../engine/conditions'
-import { boundedFetch, checkEgress, utf8, type BoundedResponse } from '../engine/egress'
+import { checkEgress, utf8, type BoundedResponse } from '../engine/egress'
 import { StepError } from '../engine/errors'
 import { resolve } from '../engine/mapping'
 import type { StepContext, StepType } from '../engine/types'
 import { isObject, lookup, textOf } from '../engine/values'
-import { canonical, id, now, stmt } from '../model'
+import { canonical, digest, stmt } from '../model'
 import { parseXml, toJson } from '../triggers/xml'
 
 const METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD']
@@ -45,16 +43,7 @@ async function encode(ctx: StepContext, kind: string, value: unknown, contentTyp
   }
   if (kind === 'multipart') {
     if (!isObject(value)) throw new StepError('validation', 'A multipart body must be an object of fields')
-    const form = new FormData()
-    for (const [name, field] of Object.entries(value)) {
-      if (isObject(field) && typeof field.file_id === 'string') {
-        const file = await stmt(ctx.env, 'SELECT name,type,content_base64 FROM crank_files WHERE id=? AND workflow_id=?', field.file_id, ctx.run.workflow_id).first<{ name: string; type: string; content_base64: string }>()
-        if (!file) throw new StepError('validation', `File ${field.file_id} is not available to this workflow`)
-        form.append(name, new File([fromBase64(file.content_base64)], file.name, { type: file.type }))
-      } else form.append(name, textOf(field) ?? JSON.stringify(field))
-    }
-    const encoded = new Response(form)
-    return { body: new Uint8Array(await encoded.arrayBuffer()), type: encoded.headers.get('content-type') }
+    return multipart(ctx, value)
   }
   if (kind === 'xml' || kind === 'raw') {
     const text = textOf(value)
@@ -64,34 +53,8 @@ async function encode(ctx: StepContext, kind: string, value: unknown, contentTyp
   throw new StepError('validation', `Unknown body kind ${kind}`)
 }
 
-interface Prepared { url: URL; method: string; headers: Headers; body: Uint8Array<ArrayBuffer> | null; timeout: number }
-async function send(ctx: StepContext, step: Record<string, unknown>, prepared: Prepared, connectionId: string | undefined, policy: AttemptPolicy) {
-  const headers = new Headers(prepared.headers), url = new URL(prepared.url)
-  if (connectionId) await authorizeRequest(ctx.env, connectionId, url, headers, prepared.body)
-  await assertDispatchAuthority(ctx.env, ctx.run.id)
-  const release = await acquireRequest(ctx, connectionId, url.origin, Date.parse(policy.startedAt) + RETRY_POLICY.elapsed_ms, prepared.timeout)
-  try {
-    const attemptId = id()
-    const admitted = await stmt(ctx.env, `INSERT INTO crank_wf_attempts(id,run_id,path,number,method,destination_origin,started_at,request_key,retry_number,budget_started_at)
-      SELECT ?,?,?,COALESCE((SELECT MAX(number)+1 FROM crank_wf_attempts WHERE run_id=? AND path=?),1),?,?,?,?,?,?
-      WHERE EXISTS(SELECT 1 FROM crank_wf_runs WHERE id=? AND status='running' AND lease_id=?) RETURNING id`,
-      attemptId, ctx.run.id, ctx.path, ctx.run.id, ctx.path, prepared.method, url.origin, now(), policy.requestKey, policy.number, policy.startedAt, ctx.run.id, ctx.run.lease_id).first()
-    if (!admitted) throw new StepError('uncertain', 'Execution authority expired before the HTTP attempt', { uncertain: true })
-    try {
-      const remaining = RETRY_POLICY.elapsed_ms - (Date.now() - Date.parse(policy.startedAt))
-      if (remaining <= 0) throw new StepError('provider', 'The request elapsed-time budget ended before dispatch', { exhausted: true })
-      const response = await boundedFetch(url.href, { method: prepared.method, headers, body: prepared.body, timeoutMs: Math.min(prepared.timeout, remaining), maxBytes: 2 * 1024 * 1024, follow: prepared.method === 'GET' || prepared.method === 'HEAD' ? 3 : 0 })
-      await stmt(ctx.env, 'UPDATE crank_wf_attempts SET finished_at=?,http_status=? WHERE id=?', now(), response.status, attemptId).run()
-      return response
-    } catch (error) {
-      await stmt(ctx.env, 'UPDATE crank_wf_attempts SET finished_at=?,error_category=? WHERE id=?', now(), error instanceof StepError ? error.category : 'network', attemptId).run()
-      throw error
-    }
-  } finally { await release() }
-}
-
 async function sendRetried(ctx: StepContext, step: Record<string, unknown>, prepared: Prepared, connectionId: string | undefined) {
-  return retryRequest(ctx, { ...prepared, idempotent: typeof step.idempotency_header === 'string' }, policy => send(ctx, step, prepared, connectionId, policy))
+  return retryRequest(ctx, { ...prepared, idempotent: typeof step.idempotency_header === 'string' }, policy => sendRequest(ctx, prepared, connectionId, policy))
 }
 
 /** Reads back by a declared business key before any retry of a write with a lost response. */
@@ -133,7 +96,7 @@ export const httpRequest: StepType = {
     if (encoded.type) headers.set('content-type', encoded.type)
     if (mutating && typeof step.idempotency_header === 'string') headers.set(step.idempotency_header, ctx.operationKey)
     const timeout = Number(step.timeout_ms ?? 15000), connectionId = typeof step.connection_id === 'string' ? step.connection_id : undefined
-    const prepared: Prepared = { url, method, headers, body: encoded.body, timeout }
+    const prepared: Prepared = { url, method, headers, body: encoded.body, timeout, ...(step.body_kind === 'multipart' ? { bodyIdentity: await digest(canonical({ kind: 'multipart', body: input.body })) } : {}) }
 
     let response: BoundedResponse, reconciled = false, attempts = 0, budgetExhausted = false
     try {

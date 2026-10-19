@@ -31,6 +31,8 @@ export interface RunRow {
 export interface StepContext {
   env: CrankEnv; run: RunRow; scope: Scope; path: string; operationKey: string; now: number; zone: string
   input: Record<string, unknown>
+  requests: { next: number }
+  retryPolicy?: Record<string, unknown>
   /** Earlier completed decision for this step, when resuming after a wait. */
   wait?: WaitRow
   respond(response: { status: number; headers: Record<string, string>; body: unknown }): Promise<void>

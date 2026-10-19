@@ -9,6 +9,7 @@ import { runPoll, type PollRow } from '../triggers/poll'
 import { runSchedule } from '../triggers/schedule'
 import { notify } from './notices'
 import { flushLogStreams } from './log-stream'
+import { releaseRetryWaits } from '../connectors/retry-wait'
 
 /** The executor pass, run by the per-minute Cron trigger. Everything it does is driven by
  * durable rows, so a restart or redeploy resumes where the last pass stopped. `time` is the
@@ -16,6 +17,7 @@ import { flushLogStreams } from './log-stream'
 export async function schedulerPass(env: CrankEnv, time = Date.now()) {
   const at = new Date(time).toISOString(), summary = { recovered: 0, released: 0, queued: 0, polls: 0, schedules: 0, executed: 0, holds: 0 }
   summary.recovered = await recoverExpiredExecutions(env, at)
+  summary.released += await releaseRetryWaits(env, at)
   const delays = await stmt(env, "SELECT run_id,path,expires_at FROM crank_waits WHERE resolved_at IS NULL AND kind='delay' AND due_at<=? ORDER BY due_at LIMIT 200", at).all<{ run_id: string; path: string; expires_at: string | null }>()
   for (const wait of delays.results) if (await resolveWait(env, wait.run_id, wait.path, { released: true, expired: !!wait.expires_at && wait.expires_at < at }, null, { at })) summary.released++
   const callbacks = await stmt(env, "SELECT run_id,path FROM crank_waits WHERE resolved_at IS NULL AND kind='callback' AND expires_at<=? LIMIT 200", at).all<{ run_id: string; path: string }>()

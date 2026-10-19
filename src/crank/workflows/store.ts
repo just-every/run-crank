@@ -12,8 +12,9 @@ import { nextOccurrence } from '../triggers/schedule'
 import { draftSnapshot } from './drafts'
 import { snapshotBindings } from './snapshot'
 import { adoptionStatements, pendingRestore, restoreReview } from './restore'
+import { RETRY_POLICY } from '../connectors/retry-policy'
 
-export interface VersionRow { id: string; workflow_id: string; number: number; graph_json: string; graph_digest: string; declared_json: string; published_by: string; published_at: string; retired_at: string | null }
+export interface VersionRow { id: string; workflow_id: string; number: number; graph_json: string; graph_digest: string; declared_json: string; published_by: string; published_at: string; retired_at: string | null; retry_policy_json: string }
 
 function checked(graph: unknown) {
   try { return validateGraph(graph) } catch (error) {
@@ -100,14 +101,14 @@ export async function duplicateWorkflow(env: CrankEnv, actor: Actor, workflowId:
 export async function rollbackWorkflow(env: CrankEnv, actor: Actor, workflowId: string, input: Record<string, unknown>) {
   requireOwner(actor)
   requireValue(Number.isInteger(input.version), 'Choose the version number to roll back to')
-  const source = await stmt(env, "SELECT number,graph_json FROM crank_workflow_versions WHERE workflow_id=? AND number=? AND mode='production'", workflowId, input.version).first<{ number: number; graph_json: string }>()
+  const source = await stmt(env, "SELECT number,graph_json,retry_policy_json FROM crank_workflow_versions WHERE workflow_id=? AND number=? AND mode='production'", workflowId, input.version).first<{ number: number; graph_json: string; retry_policy_json: string }>()
   requireValue(source, 'Version not found', 404)
   const current = await getWorkflow(env, workflowId)
   const live = current.published_version_id ? await stmt(env, 'SELECT number FROM crank_workflow_versions WHERE id=?', current.published_version_id).first<{ number: number }>() : null
   requireValue(live?.number !== source.number, `Version ${source.number} is already the published version`, 409)
-  return publishWorkflow(env, actor, workflowId, {}, { graph: JSON.parse(source.graph_json), rollback_of: source.number })
+  return publishWorkflow(env, actor, workflowId, {}, { graph: JSON.parse(source.graph_json), rollback_of: source.number, retryPolicy: JSON.parse(source.retry_policy_json) })
 }
-export async function publishWorkflow(env: CrankEnv, actor: Actor, workflowId: string, input: Record<string, unknown> = {}, rollback?: { graph: unknown; rollback_of: number }) {
+export async function publishWorkflow(env: CrankEnv, actor: Actor, workflowId: string, input: Record<string, unknown> = {}, rollback?: { graph: unknown; rollback_of: number; retryPolicy: Record<string, unknown> }) {
   requireOwner(actor)
   const current = await getWorkflow(env, workflowId)
   const { graph, declared, warnings } = checked(rollback ? rollback.graph : JSON.parse(current.draft_json))
@@ -124,7 +125,7 @@ export async function publishWorkflow(env: CrankEnv, actor: Actor, workflowId: s
     stmt(env, `UPDATE crank_wf_runs SET continuation_authority=continuation_authority|2 WHERE workflow_id=? AND version_id=?
       AND status IN ('waiting','awaiting_approval') AND COALESCE(json_extract((SELECT graph_json FROM crank_workflow_versions WHERE id=version_id),'$.settings.waiting_runs'),'continue')='continue'`, workflowId, current.published_version_id),
     stmt(env, 'UPDATE crank_workflow_versions SET retired_at=? WHERE workflow_id=? AND retired_at IS NULL', at, workflowId),
-    stmt(env, 'INSERT INTO crank_workflow_versions(id,workflow_id,number,graph_json,graph_digest,declared_json,published_by,published_at) VALUES(?,?,?,?,?,?,?,?)', versionId, workflowId, number, graphJson, await digest(graphJson), JSON.stringify(authority), actor.id, at),
+    stmt(env, 'INSERT INTO crank_workflow_versions(id,workflow_id,number,graph_json,graph_digest,declared_json,published_by,published_at,retry_policy_json) VALUES(?,?,?,?,?,?,?,?,?)', versionId, workflowId, number, graphJson, await digest(graphJson), JSON.stringify(authority), actor.id, at, canonical(rollback?.retryPolicy ?? RETRY_POLICY)),
     stmt(env, "UPDATE crank_workflows SET status='published',published_version_id=? WHERE id=?", versionId, workflowId),
     stmt(env, 'DELETE FROM crank_polls WHERE workflow_id=?', workflowId),
     stmt(env, 'DELETE FROM crank_schedules WHERE workflow_id=?', workflowId),

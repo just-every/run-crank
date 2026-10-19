@@ -33,10 +33,6 @@ export async function saveRecord(env: CrankEnv, run: RunRow, lease: string, reco
     trace_json=excluded.trace_json,error_json=excluded.error_json,finished_at=excluded.finished_at`,
   run.id, record.path, record.step_id, record.type, record.status, encode(record.input), encode(record.output), encode(record.trace), encode(record.error), record.started_at, record.finished_at, record.operation_key, run.id, lease).run()
 }
-export async function deleteRecord(env: CrankEnv, run: RunRow, path: string) {
-  await stmt(env, "DELETE FROM crank_wf_steps WHERE run_id=? AND path=? AND status='running'", run.id, path).run()
-}
-
 export async function insertWait(env: CrankEnv, run: RunRow, path: string, spec: WaitSpec) {
   const at = now(), proposal = spec.proposal === undefined ? null : canonical(spec.proposal)
   const statements = [stmt(env, 'INSERT INTO crank_waits(id,run_id,path,kind,due_at,expires_at,proposal_json,proposal_digest,reason,created_at) VALUES(?,?,?,?,?,?,?,?,?,?) ON CONFLICT(run_id,path) DO NOTHING',

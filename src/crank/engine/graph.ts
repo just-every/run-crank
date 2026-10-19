@@ -7,6 +7,7 @@ import { validateLoop } from './loop'
 import type { Step } from './types'
 import { isObject } from './values'
 import { validateCap } from './caps'
+import { validateRetryPolicy } from '../connectors/retry'
 
 /** Path groups allow at least 20 branches and 5 levels (Zapier: 10 and 3). */
 export const PATH_LIMITS = { branches: 25, depth: 8 } as const
@@ -48,6 +49,7 @@ export function validateGraph(value: unknown): Validation {
       if (ids.size > MAX_STEPS) throw new StepError('validation', `A workflow has at most ${MAX_STEPS} steps`)
       if (step.on_error !== undefined && !['stop', 'continue'].includes(step.on_error as string)) throw new StepError('validation', `Step ${step.id}: on_error must be stop or continue`)
       const path = prefix + step.id
+      if (step.retry_policy !== undefined) validateRetryPolicy(step.retry_policy)
       if (step.type === 'loop') {
         if (depth > PATH_LIMITS.depth) throw new StepError('validation', `Loops and paths nest at most ${PATH_LIMITS.depth} levels`)
         validateLoop(step)

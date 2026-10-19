@@ -1,5 +1,5 @@
 {
   "maximum": 200,
-  "current": 70,
-  "notes": "HTTP business journeys for flows, triggers, workflow logic, connections, history, operations and batches; plus runtime and ordinary email-link sign-in scripts. Base verify also checks build assets and hydration."
+  "current": 73,
+  "notes": "Public-door business journeys plus the real-time EXEC-002 retry journey (nightly/manual, outside push Verify); below the 200-test cap."
 }

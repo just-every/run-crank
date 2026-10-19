@@ -3,6 +3,7 @@ import { guardedBatch, requireOwner } from './access'
 import { canonical, digest, id, requireValue, stmt, type Actor, type CrankEnv } from './model'
 import { auditStatement } from './ops/audit'
 import { eraseFlowRun, eraseWorkflowRun } from './workflow-erasure'
+import { checkpointSubjects } from './connectors/request-checkpoints'
 
 const FINISHED_WORKFLOW = ['succeeded', 'failed', 'stopped_by_filter', 'stopped_by_search', 'cancelled', 'rejected']
 const FINISHED_FLOW = ['succeeded', 'failed', 'rejected']
@@ -13,11 +14,13 @@ const FINISHED_FLOW = ['succeeded', 'failed', 'rejected']
 export async function previewSubject(env: CrankEnv, subject: unknown) {
   requireValue(typeof subject === 'string' && subject.trim().length >= 3 && subject.length <= 500, 'Enter the exact identifier to erase (3 to 500 characters)')
   const value = subject.trim().toLowerCase(), encoded = JSON.stringify(value).slice(1, -1)
+  const continuationRuns = await checkpointSubjects(env, value)
   const [workflowRuns, flowRuns] = await Promise.all([
     stmt(env, `SELECT r.id,r.workflow_id,r.status,w.status AS workflow_status FROM crank_wf_runs r JOIN crank_workflows w ON w.id=r.workflow_id
       WHERE lower(COALESCE(r.business_key,''))=?1 OR instr(lower(r.trigger_json),?2)>0
       OR EXISTS(SELECT 1 FROM crank_wf_steps s WHERE s.run_id=r.id AND (instr(lower(COALESCE(s.input_json,'')),?2)>0 OR instr(lower(COALESCE(s.output_json,'')),?2)>0))
-      ORDER BY r.received_at,r.id`, value, encoded).all<{ id: string; workflow_id: string; status: string; workflow_status: string }>(),
+      OR r.id IN (SELECT value FROM json_each(?3))
+      ORDER BY r.received_at,r.id`, value, encoded, JSON.stringify(continuationRuns)).all<{ id: string; workflow_id: string; status: string; workflow_status: string }>(),
     stmt(env, `SELECT r.id,r.flow_id,r.state,f.status AS flow_status FROM crank_runs r JOIN crank_flows f ON f.id=r.flow_id
       WHERE lower(r.event_id)=?1 OR instr(lower(r.input_json),?2)>0 ORDER BY r.created_at,r.id`, value, encoded).all<{ id: string; flow_id: string; state: string; flow_status: string }>(),
   ])

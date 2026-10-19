@@ -6,9 +6,9 @@ import type { StepContext } from '../engine/types'
 import { textOf } from '../engine/values'
 import { id, now, stmt } from '../model'
 import { acquireRequest } from './rate-limit'
-import { RETRY_POLICY, retryRequest, type AttemptPolicy, type RequestContext } from './retry'
+import { retryRequest, type AttemptPolicy, type RequestContext } from './retry'
 
-type SlackContext = Pick<StepContext, 'env'> & Partial<Pick<StepContext, 'run' | 'path'>>
+type SlackContext = Pick<StepContext, 'env'> & Partial<Pick<StepContext, 'run' | 'path' | 'operationKey' | 'requests' | 'retryPolicy'>>
 const timeout = 15000
 const authErrors = ['invalid_auth', 'not_authed', 'token_revoked', 'token_expired', 'account_inactive', 'missing_scope', 'not_allowed_token_type']
 
@@ -32,10 +32,10 @@ async function send(ctx: SlackContext, connectionId: string, method: string, url
   const headers = new Headers({ 'content-type': 'application/x-www-form-urlencoded; charset=utf-8', accept: 'application/json' })
   await authorizeRequest(ctx.env, connectionId, url, headers, body)
   if (ctx.run) await assertDispatchAuthority(ctx.env, ctx.run.id)
-  const workflow: RequestContext | undefined = ctx.run && ctx.path !== undefined ? { env: ctx.env, run: ctx.run, path: ctx.path } : undefined
+  const workflow: RequestContext | undefined = ctx.run && ctx.path !== undefined ? { env: ctx.env, run: ctx.run, path: ctx.path, operationKey: ctx.operationKey!, requests: ctx.requests!, retryPolicy: ctx.retryPolicy } : undefined
   // The workflow caller supplies the full step context; admission consumes only
   // its env/run/path identity, which is also the retry context above.
-  const release = workflow && policy ? await acquireRequest(ctx as StepContext, connectionId, url.origin, Date.parse(policy.startedAt) + RETRY_POLICY.elapsed_ms, timeout) : undefined
+  const release = workflow && policy ? await acquireRequest(ctx as StepContext, connectionId, url.origin, policy.deadline, timeout) : undefined
   let attemptId: string | undefined
   try {
     // Capacity waits can outlive a pause, revocation or credential rotation.
@@ -45,13 +45,13 @@ async function send(ctx: SlackContext, connectionId: string, method: string, url
     }
     if (workflow && policy) {
       attemptId = id()
-      const admitted = await stmt(ctx.env, `INSERT INTO crank_wf_attempts(id,run_id,path,number,method,destination_origin,started_at,request_key,retry_number,budget_started_at)
-        SELECT ?,?,?,COALESCE((SELECT MAX(number)+1 FROM crank_wf_attempts WHERE run_id=? AND path=?),1),'POST',?,?,?,?,?
+      const admitted = await stmt(ctx.env, `INSERT INTO crank_wf_attempts(id,run_id,path,number,method,destination_origin,started_at,request_key,retry_number,budget_started_at,slice_started_at)
+        SELECT ?,?,?,COALESCE((SELECT MAX(number)+1 FROM crank_wf_attempts WHERE run_id=? AND path=?),1),'POST',?,?,?,?,?,?
         WHERE EXISTS(SELECT 1 FROM crank_wf_runs WHERE id=? AND status='running' AND lease_id=?) RETURNING id`,
-      attemptId, workflow.run.id, workflow.path, workflow.run.id, workflow.path, url.origin, now(), policy.requestKey, policy.number, policy.startedAt, workflow.run.id, workflow.run.lease_id).first()
+      attemptId, workflow.run.id, workflow.path, workflow.run.id, workflow.path, url.origin, now(), policy.requestKey, policy.number, policy.startedAt, policy.sliceStartedAt, workflow.run.id, workflow.run.lease_id).first()
       if (!admitted) { attemptId = undefined; throw new StepError('uncertain', 'Execution authority expired before the Slack attempt', { uncertain: true }) }
     }
-    const remaining = policy ? RETRY_POLICY.elapsed_ms - (Date.now() - Date.parse(policy.startedAt)) : timeout
+    const remaining = policy ? policy.deadline - Date.now() : timeout
     if (remaining <= 0) throw new StepError('provider', 'The Slack request elapsed-time budget ended before dispatch', { exhausted: true })
     let response: BoundedResponse
     try { response = await boundedFetch(url.href, { method: 'POST', headers, body, timeoutMs: Math.min(timeout, remaining), maxBytes: 4 * 1024 * 1024 }) }
@@ -81,7 +81,7 @@ export async function slackCall(ctx: SlackContext, connectionId: string, method:
   try {
     // Connection auth.test runs outside execution and has no run ledger.
     const result = ctx.run && ctx.path !== undefined
-      ? await retryRequest({ env: ctx.env, run: ctx.run, path: ctx.path }, { method: 'POST', url, body, idempotent: false, safeRead: !write }, policy => send(ctx, connectionId, method, url, body, policy))
+      ? await retryRequest({ env: ctx.env, run: ctx.run, path: ctx.path, operationKey: ctx.operationKey!, requests: ctx.requests!, retryPolicy: ctx.retryPolicy }, { method: 'POST', url, body, idempotent: false, safeRead: !write }, policy => send(ctx, connectionId, method, url, body, policy))
       : { response: await send(ctx, connectionId, method, url, body), exhausted: false }
     const value = decode(result.response), error = failure(method, result.response, value)
     if (error) throw result.exhausted ? new StepError(error.category, error.message, { ...error.detail, exhausted: true, next_owner_action: 'Inspect the retained attempts, correct the provider or account issue, then deliberately start a new run.' }) : error

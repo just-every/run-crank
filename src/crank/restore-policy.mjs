@@ -68,6 +68,9 @@ export async function validateRestore({ read }) {
   }
   for (const version of versions.values()) {
     if (!workflows.has(version.workflow_id)) return false;
+    const policy = JSON.parse(version.retry_policy_json);
+    if (!policy || typeof policy !== 'object' || Array.isArray(policy) || Object.keys(policy).some(key => !['read_attempts','base_delay_ms','write_base_delay_ms','idempotent_write_attempts','elapsed_ms','jitter_ms','max_wait_ms','run_parked_ms'].includes(key) || !Number.isSafeInteger(policy[key]) || policy[key] < 0)) return false;
+    if (!(policy.read_attempts >= 1 && policy.read_attempts <= 10 && policy.base_delay_ms >= 1 && policy.base_delay_ms <= 3600000 && policy.write_base_delay_ms >= 1 && policy.write_base_delay_ms <= 3600000)) return false;
     const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(version.graph_json));
     if (Array.from(new Uint8Array(hash), byte => byte.toString(16).padStart(2, '0')).join('') !== version.graph_digest) return false;
   }
@@ -77,10 +80,44 @@ export async function validateRestore({ read }) {
     if (Array.from(new Uint8Array(hash), byte => byte.toString(16).padStart(2, '0')).join('') !== draft.graph_digest) return false;
   }
   for (const run of await rows('crank_wf_runs')) if (!workflows.has(run.workflow_id) || versions.get(run.version_id)?.workflow_id !== run.workflow_id) return false;
+  const checkpointKey = row => JSON.stringify([row.run_id, row.path, row.operation_key, row.ordinal]);
+  const chunks = new Map();
+  for (const chunk of await rows('crank_request_checkpoint_chunks')) {
+    const key = checkpointKey(chunk), group = chunks.get(key) ?? [];
+    group.push(chunk); chunks.set(key, group);
+  }
+  for (const checkpoint of await rows('crank_request_checkpoints')) {
+    try {
+      const response = JSON.parse(checkpoint.response_json), url = new URL(response.url);
+      const run = (await rows('crank_wf_runs')).find(row => row.id === checkpoint.run_id);
+      const graph = run && versions.get(run.version_id)?.graph_json;
+      const leaf = checkpoint.path.split('/').at(-1);
+      const find = steps => steps.flatMap(step => [step, ...find(step.steps ?? []), ...(step.branches ?? []).flatMap(branch => find(branch.steps ?? [])), ...find(step.fallback?.steps ?? []), ...find(step.always?.steps ?? [])]);
+      const step = graph && find(JSON.parse(graph).steps).find(step => step.id === leaf);
+      if (!step || !['http','file.fetch'].includes(step.type) && !step.type.startsWith('slack.')) return false;
+      const bound = (step.type === 'file.fetch' ? 1 : step.type.startsWith('slack.') ? 4 : 2) * 1024 * 1024;
+      if (!Number.isSafeInteger(checkpoint.ordinal) || checkpoint.ordinal < 0 || !/^[a-f0-9]{64}$/.test(checkpoint.request_key) || typeof checkpoint.operation_key !== 'string' || !checkpoint.operation_key) return false;
+      if (!Number.isInteger(response.status) || response.status < 100 || response.status > 599 || !['http:', 'https:'].includes(url.protocol) || url.username || url.password || url.search || url.hash) return false;
+      if (!Number.isSafeInteger(response.body_bytes) || response.body_bytes < 0 || response.body_bytes > bound || response.chunk_count !== Math.ceil(response.body_bytes / 65536) || !Array.isArray(response.headers)) return false;
+      const key = checkpointKey(checkpoint), body = (chunks.get(key) ?? []).sort((a, b) => a.chunk_index - b.chunk_index);
+      if (body.length !== response.chunk_count) return false;
+      let length = 0;
+      for (const [index, chunk] of body.entries()) {
+        if (chunk.chunk_index !== index || typeof chunk.content_base64 !== 'string') return false;
+        const bytes = atob(chunk.content_base64).length;
+        if (bytes !== Math.min(65536, response.body_bytes - length)) return false;
+        length += bytes;
+      }
+      if (length !== response.body_bytes) return false;
+      chunks.delete(key);
+      if (response.headers.some(pair => !Array.isArray(pair) || pair.length !== 2 || pair.some(value => typeof value !== 'string') || /authorization|cookie|api[-_]?key|token|secret|password|signature/i.test(pair[0]))) return false;
+    } catch { return false; }
+  }
+  if (chunks.size) return false;
   // These product links predate foreign-key declarations; validate them explicitly.
   for (const [child, column, parent] of [
     ['crank_runs', 'flow_id', 'crank_flows'], ['crank_approvals', 'run_id', 'crank_runs'], ['crank_attempts', 'run_id', 'crank_runs'],
-    ['crank_wf_steps', 'run_id', 'crank_wf_runs'], ['crank_wf_step_revisions', 'run_id', 'crank_wf_runs'], ['crank_waits', 'run_id', 'crank_wf_runs'], ['crank_callback_events', 'run_id', 'crank_wf_runs'],
+    ['crank_request_checkpoints', 'run_id', 'crank_wf_runs'], ['crank_wf_steps', 'run_id', 'crank_wf_runs'], ['crank_wf_step_revisions', 'run_id', 'crank_wf_runs'], ['crank_waits', 'run_id', 'crank_wf_runs'], ['crank_callback_events', 'run_id', 'crank_wf_runs'],
     ['crank_queue_items', 'run_id', 'crank_wf_runs'], ['crank_holds', 'workflow_id', 'crank_workflows'], ['crank_hold_items', 'hold_id', 'crank_holds'],
     ['crank_historical_batches', 'workflow_id', 'crank_workflows'], ['crank_historical_items', 'batch_id', 'crank_historical_batches'],
   ]) {

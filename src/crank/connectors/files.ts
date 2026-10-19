@@ -1,4 +1,7 @@
-import { boundedFetch } from '../engine/egress'
+import { retryRequest } from './retry'
+import { RetryWait } from './retry-wait'
+import { sendRequest } from './request-transport'
+import { checkEgress } from '../engine/egress'
 import { StepError } from '../engine/errors'
 import type { StepType } from '../engine/types'
 import { digest, id, now, stmt, type CrankEnv } from '../model'
@@ -24,10 +27,14 @@ export const fileFetch: StepType = {
   required: ['url'],
   async execute(_step, ctx) {
     const url = String(ctx.input.url)
-    let response
-    try { response = await boundedFetch(url, { method: 'GET', timeoutMs: 15000, maxBytes: MAX_FILE_BYTES, follow: 5 }) }
-    catch (error) { throw new StepError('validation', `file fetch failed: ${error instanceof StepError ? error.message : 'request refused'}`, { code: 'file_fetch_failed' }) }
-    if (response.status < 200 || response.status > 299) throw new StepError('validation', `file fetch failed: status ${response.status}`, { code: 'file_fetch_failed', status: response.status })
+    let response, exhausted = false
+    try {
+      const prepared = { url: checkEgress(url), method: 'GET', headers: new Headers(), body: null, timeout: 15000, maxBytes: MAX_FILE_BYTES, follow: 5 }
+      const result = await retryRequest(ctx, { ...prepared, idempotent: false }, policy => sendRequest(ctx, prepared, undefined, policy))
+      response = result.response; exhausted = result.exhausted ?? false
+    }
+    catch (error) { if (error instanceof RetryWait) throw error; throw new StepError('validation', `file fetch failed: ${error instanceof StepError ? error.message : 'request refused'}`, { ...(error instanceof StepError ? error.detail : {}), code: 'file_fetch_failed' }) }
+    if (response.status < 200 || response.status > 299) throw new StepError('validation', `file fetch failed: status ${response.status}`, { code: 'file_fetch_failed', status: response.status, ...(exhausted ? { exhausted: true, next_owner_action: 'Inspect the retained attempts, correct the provider issue, then deliberately start a new run.' } : {}) })
     const type = response.headers.get('content-type')?.split(';')[0].trim() || 'application/octet-stream'
     const disposition = /filename\*?=(?:UTF-8'')?"?([^";]+)"?/i.exec(response.headers.get('content-disposition') ?? '')?.[1]
     const name = typeof ctx.input.name === 'string' && ctx.input.name ? ctx.input.name : decodeURIComponent(disposition ?? new URL(response.url).pathname.split('/').filter(Boolean).at(-1) ?? 'file')

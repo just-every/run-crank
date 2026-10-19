@@ -49,7 +49,7 @@ export async function runDetail(env: CrankEnv, actor: Actor, runId: string) {
   const [steps, waits, version, attempts, revisions] = await Promise.all([
     stmt(env, 'SELECT * FROM crank_wf_steps WHERE run_id=? ORDER BY started_at,path', runId).all<Record<string, string | null>>(),
     stmt(env, 'SELECT path,kind,due_at,expires_at,proposal_json,proposal_digest,reason,created_at,resolved_at,resolution_json,decided_by FROM crank_waits WHERE run_id=? ORDER BY created_at', runId).all<Record<string, string | null>>(),
-    stmt(env, 'SELECT number,mode,published_by,published_at,declared_json FROM crank_workflow_versions WHERE id=?', run.version_id).first<{ number: number; mode: string; published_by: string; published_at: string; declared_json: string }>(),
+    stmt(env, 'SELECT number,mode,published_by,published_at,declared_json,retry_policy_json FROM crank_workflow_versions WHERE id=?', run.version_id).first<{ number: number; mode: string; published_by: string; published_at: string; declared_json: string; retry_policy_json: string }>(),
     stmt(env, 'SELECT * FROM crank_wf_attempts WHERE run_id=? ORDER BY path,number', runId).all<any>(),
     stmt(env, 'SELECT * FROM crank_wf_step_revisions WHERE run_id=? ORDER BY path,revision', runId).all<any>(),
   ])
@@ -58,13 +58,13 @@ export async function runDetail(env: CrankEnv, actor: Actor, runId: string) {
     ...presentRun(run, payload),
     repair_of: run.repair_of ?? null, repair_paths: payload && run.repair_paths_json ? JSON.parse(run.repair_paths_json) : null,
     repairs: (await stmt(env, 'SELECT id,status FROM crank_wf_runs WHERE repair_of=? ORDER BY received_at,id', runId).all<{ id: string; status: string }>()).results,
-    version: version ? { number: version.number, published_by: version.published_by, published_at: version.published_at, authority: version.mode === 'test' ? 'owner-authorized draft test' : 'published workflow', declared: payload ? JSON.parse(version.declared_json) : undefined } : null,
+    version: version ? { number: version.number, published_by: version.published_by, published_at: version.published_at, authority: version.mode === 'test' ? 'owner-authorized draft test' : 'published workflow', retry_policy: JSON.parse(version.retry_policy_json), declared: payload ? JSON.parse(version.declared_json) : undefined } : null,
     steps: steps.results.map(s => ({ path: s.path, step_id: s.step_id, type: s.type, status: s.status, started_at: s.started_at, finished_at: s.finished_at, operation_key: s.operation_key,
       ...(payload ? { input: parse(s.input_json), output: parse(s.output_json), trace: parse(s.trace_json) } : {}), error: s.error_json ? (payload ? parse(s.error_json) : { category: parse(s.error_json).category, message: 'Details restricted for your role' }) : null })),
     // EXEC-004: each replay keeps the replaced attempt beside the input the next attempt used.
     revisions: revisions.results.map(r => ({ path: r.path, revision: r.revision, corrected: !!r.corrected, created_by: r.created_by, created_at: r.created_at, prior_operation_key: r.prior_operation_key, operation_key: r.operation_key,
       ...(payload ? { prior_input: parse(r.prior_input_json), prior_error: parse(r.prior_error_json), input: parse(r.input_json) } : {}) })),
-    attempts: attempts.results.map(a => ({ id: a.id, path: a.path, number: a.number, method: a.method, started_at: a.started_at, finished_at: a.finished_at, http_status: a.http_status, error_category: a.error_category, retry_number: a.retry_number, budget_started_at: a.budget_started_at, retry_at: a.retry_at, retry_reason: a.retry_reason, ...(payload ? { destination_origin: a.destination_origin } : {}) })),
+    attempts: attempts.results.map(a => ({ id: a.id, path: a.path, number: a.number, method: a.method, started_at: a.started_at, finished_at: a.finished_at, http_status: a.http_status, error_category: a.error_category, retry_number: a.retry_number, budget_started_at: a.budget_started_at, slice_started_at: a.slice_started_at, retry_at: a.retry_at, retry_reason: a.retry_reason, retry_parked_at: a.retry_parked_at, retry_released_at: a.retry_released_at, retry_resumed_at: a.retry_resumed_at, ...(payload ? { destination_origin: a.destination_origin } : {}) })),
     waits: waits.results.map(w => ({ ...w, reason: payload ? w.reason : null, proposal: payload ? parse(w.proposal_json) : 'restricted', resolution: payload ? parse(w.resolution_json) : w.resolution_json ? { approved: parse(w.resolution_json).approved, cancelled: parse(w.resolution_json).cancelled } : null, proposal_json: undefined, resolution_json: undefined })),
   }
 }

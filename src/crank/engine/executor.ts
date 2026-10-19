@@ -1,5 +1,6 @@
 import { mac } from '../connections/vault'
 import { credential } from '../connections/store'
+import { RetryWait } from '../connectors/retry-wait'
 import { canonical, digest, id, now, stmt, type CrankEnv } from '../model'
 import { afterSettle } from '../ops/failures'
 import { workspaceSettings } from '../ops/settings'
@@ -13,7 +14,7 @@ import { liveTestProposal } from './test-authority'
 import { branchesOf, type Graph } from './graph'
 import { executeLoop } from './loop'
 import { requireFields, resolve, type Scope } from './mapping'
-import { deleteRecord, getWfRun, insertWait, loadRecords, loadReplays, loadWaits, saveRecord, type Replay, type StepRecord } from './records'
+import { getWfRun, insertWait, loadRecords, loadReplays, loadWaits, saveRecord, type Replay, type StepRecord } from './records'
 import { STEP_TYPES } from './steps'
 import type { ExecutionOutcome as Outcome, RunRow, Step, StepContext, StepResult, WaitRow } from './types'
 import { isObject } from './values'
@@ -31,7 +32,7 @@ class Execution {
   replays!: Map<string, Replay>
   scope!: Scope
   zone = 'America/New_York'
-  constructor(readonly env: CrankEnv, public run: RunRow, readonly lease: string, readonly graph: Graph, readonly time: number) {}
+  constructor(readonly env: CrankEnv, public run: RunRow, readonly lease: string, readonly graph: Graph, readonly time: number, readonly retryPolicy: Record<string, unknown>) {}
 
   async prepare() {
     const [records, waits, replays, settings] = await Promise.all([loadRecords(this.env, this.run.id), loadWaits(this.env, this.run.id), loadReplays(this.env, this.run.id), workspaceSettings(this.env)])
@@ -54,7 +55,7 @@ class Execution {
   }
 
   async fork(steps: Step[], prefix: string, item: unknown, index: number) {
-    const child = new Execution(this.env, this.run, this.lease, this.graph, this.time)
+    const child = new Execution(this.env, this.run, this.lease, this.graph, this.time, this.retryPolicy)
     child.records = this.records; child.waits = this.waits; child.replays = this.replays; child.zone = this.zone
     child.scope = { ...this.scope, item, item_index: index, steps: { ...this.scope.steps }, run: { ...this.scope.run } }
     await child.callbacks(steps, prefix)
@@ -102,7 +103,7 @@ class Execution {
     if (record?.status === 'waiting' && wait && !wait.resolved_at) return { kind: 'waiting', approval: wait.kind === 'approval' }
     let input: Record<string, unknown> = {}
     const ctx: StepContext = {
-      env: this.env, run: this.run, scope: this.scope, path, operationKey: record?.operation_key ?? this.replays.get(path)?.operation_key ?? `${this.run.id}:${path}`, now: this.time, zone: this.zone, input,
+      env: this.env, run: this.run, scope: this.scope, path, operationKey: record?.operation_key ?? this.replays.get(path)?.operation_key ?? `${this.run.id}:${path}`, now: this.time, zone: this.zone, input, requests: { next: 0 }, retryPolicy: { ...this.retryPolicy, ...(isObject(step.retry_policy) ? step.retry_policy : {}), write_base_delay_ms: isObject(step.retry_policy) ? step.retry_policy.base_delay_ms ?? this.retryPolicy.write_base_delay_ms : this.retryPolicy.write_base_delay_ms },
       respond: async response => { await stmt(this.env, 'UPDATE crank_wf_runs SET response_json=? WHERE id=? AND lease_id=?', JSON.stringify(response), this.run.id, this.lease).run() },
     }
     try {
@@ -124,9 +125,12 @@ class Execution {
       }
       return await this.settle(step, path, input, result)
     } catch (error) {
+      if (error instanceof RetryWait) {
+        await this.save(step, path, 'waiting', { input, trace: { retry_attempt_id: error.attemptId, retry_at: error.dueAt } })
+        return { kind: 'waiting', approval: false }
+      }
       if (error instanceof StepError && (error.category === 'connection' || error.category === 'authority')) {
-        await deleteRecord(this.env, this.run, path)
-        this.records.delete(path)
+        await this.save(step, path, 'waiting', { input })
         return { kind: 'paused', reason: error.message, connectionId: String(error.detail.connection_id ?? ''), authority: error.category === 'authority' }
       }
       const failure = error instanceof StepError ? error.toJSON() : { category: 'provider', message: `Step ${step.id} failed unexpectedly` }
@@ -235,8 +239,8 @@ export async function executeRun(env: CrankEnv, runId: string, time = Date.now()
   const lease = id()
   if (!await claimQueuedRun(env, runId, lease, time, LEASE_MS)) return getWfRun(env, runId)
   const run = (await getWfRun(env, runId))!
-  const version = await stmt(env, 'SELECT graph_json FROM crank_workflow_versions WHERE id=?', run.version_id).first<{ graph_json: string }>()
-  const execution = new Execution(env, run, lease, JSON.parse(version!.graph_json), time)
+  const version = await stmt(env, 'SELECT graph_json,retry_policy_json FROM crank_workflow_versions WHERE id=?', run.version_id).first<{ graph_json: string; retry_policy_json: string }>()
+  const execution = new Execution(env, run, lease, JSON.parse(version!.graph_json), time, JSON.parse(version!.retry_policy_json))
   let outcome: Outcome
   try {
     await execution.prepare()
@@ -256,7 +260,7 @@ export async function executeRun(env: CrankEnv, runId: string, time = Date.now()
   // cannot spin an otherwise parked run.
   await stmt(env, `UPDATE crank_wf_runs SET status=CASE WHEN ? IN ('waiting','awaiting_approval') AND EXISTS(
     SELECT 1 FROM crank_waits w JOIN crank_wf_steps s ON s.run_id=w.run_id AND s.path=w.path
-    WHERE w.run_id=crank_wf_runs.id AND w.resolved_at IS NOT NULL AND s.status='waiting'
+    WHERE w.run_id=crank_wf_runs.id AND w.resolved_at IS NOT NULL AND s.status='waiting' AND json_extract(s.trace_json,'$.retry_attempt_id') IS NULL
   ) THEN 'queued' ELSE ? END,finished_at=?,error_json=?,lease_id=NULL,lease_expires_at=NULL WHERE id=? AND lease_id=?`, status, status, terminal ? now() : null, error ? JSON.stringify(error) : null, runId, lease).run()
   const settled = (await getWfRun(env, runId))!
   await afterSettle(env, settled)

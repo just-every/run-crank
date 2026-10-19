@@ -179,14 +179,45 @@ and later dispatch; a started write may still finish remotely and is retained
 as an uncertain checkpoint. Completed effects are never undone. Cron records
 uncertainty before recovering an expired execution lease.
 
-### HTTP retry timing (EXEC-002, partial)
+### Connector retry timing (EXEC-002)
 
-General HTTP attempts include `retry_number`, `budget_started_at`, `retry_at`
-and `retry_reason`. `retry_at` is the earliest permitted next request, not a
-claim that it was sent. The catalog's API-request action exposes `retry_policy`.
-Reads retry transient network errors and 429/502/503/504; permanent auth errors
-do not retry. Retry-After seconds and HTTP dates are lower bounds, with growing
-backoff and jitter otherwise. The same policy covers each pagination page and
-readback request; restarting preserves failed request budgets and deadlines.
-An exhausted request remains failed with `exhausted` and `next_owner_action`.
-The API-request catalog action also exposes `request_limit`: HTTP retries/pages/readback share 100 requests per 10 seconds and concurrency 4 per connection, with unconnected calls sharing an origin bucket. Admission counts use a full window after response completion to prevent slow-call bursts. Native connector parity and slot-releasing durable backoff remain pending.
+HTTP, native Slack workflow requests and public file downloads share retained
+attempts, connection/origin admission and durable retry waits. Attempts expose
+`retry_number`, the original `budget_started_at`, `slice_started_at`, `retry_at`,
+`retry_reason`, `retry_parked_at`, `retry_released_at` and `retry_resumed_at`.
+The earliest permitted retry, Cron release and actual execution resume are
+separate instants; none claims a provider effect.
+
+Safe reads on newly published/tested versions default to 6 attempts with 60,000 ms × 2^(completed attempts − 1) plus uniform
+0–250 ms jitter. A step's `retry_policy` can set `read_attempts` (1–10) and
+`base_delay_ms` (1–3,600,000). The unconfigured default provides 1/2/4/8/16-minute outage backoff. Existing immutable versions retain their reviewed defaults; rollback retains the restored version’s policy. `version.retry_policy` exposes that frozen policy. Exponential waits saturate at one
+hour. Retry-After delta seconds or HTTP dates are lower bounds; a provider wait
+beyond an hour durably exhausts instead of sending early. 429/502/503/504 and
+transient network failures retry safe reads; auth errors stop. Writes retry only
+a lost response under an explicitly declared provider idempotency guarantee
+(at most 2 attempts); Slack writes have one attempt. A lost write without that
+guarantee resumes its declared readback or remains uncertain, never blind replay.
+
+A wait over 30 seconds parks the step/run, preserving input, operation identity,
+version and attempt budget, and frees its workflow execution slot. Cron releases
+it on the first minute tick at or after due (up to one minute rounding, plus any
+workflow-capacity delay), with current connection and publish-authority checks.
+Shorter waits sleep in-request. Each request has 60 seconds of active wall-clock
+time per execution slice; a recorded park starts a new slice on actual resume.
+A restart without a park preserves that slice's deadline. Parked intervals,
+including rounding/capacity delay, are bounded to one hour each and summed
+across the run's requests with a 24-hour total bound. Crossing either bound
+leaves a durable dead letter naming the exhausted budget and next owner action.
+
+An unfinished step privately checkpoints completed responses to preserve earlier
+pages and the readback phase. Credential headers and credential query URLs are
+excluded; bodies keep the existing HTTP/file/Slack byte bounds. These records
+are portable under DATA-001, restore inactive, participate in DATA-002 subject
+review and disappear atomically when the step/run settles or is erased.
+
+The catalog exposes `retry_policy` and `request_limit`: retries/pages/readback
+share 100 requests per 10 seconds and concurrency 4 per connection; unconnected
+calls share an origin bucket. A full window after response completion prevents
+slow-call bursts. CONN-002 must share buckets by provider-verified account ID
+before that identity capability ships. The real-time multi-minute journey is
+`node --test tests/retry-backoff-journey.mjs` (nightly/manual CI).

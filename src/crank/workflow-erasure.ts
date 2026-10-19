@@ -24,7 +24,7 @@ export async function eraseWorkflowRun(env: CrankEnv, actor: Actor, portability:
   const service = createErasure({ db: env.DB, portability, declarations: [defineErasure({
     entity: 'workflow-run', root: { table: 'crank_wf_runs' },
     edges: [
-      ...['crank_wf_steps', 'crank_wf_step_revisions', 'crank_waits', 'crank_wf_attempts', 'crank_obligations', 'crank_callback_events', 'crank_queue_items', 'crank_hold_items', 'crank_historical_items', 'crank_ops_events', 'crank_request_admissions']
+      ...['crank_wf_steps', 'crank_wf_step_revisions', 'crank_waits', 'crank_wf_attempts', 'crank_obligations', 'crank_callback_events', 'crank_queue_items', 'crank_hold_items', 'crank_historical_items', 'crank_ops_events', 'crank_request_admissions', 'crank_request_checkpoints', 'crank_request_checkpoint_chunks']
         .map(table => ({ table, from: 'crank_wf_runs', on: { run_id: 'id' } })),
       { table: 'crank_trigger_events', from: 'crank_wf_runs', on: { run_id: 'id' } },
       // Uploaded and connector files belong to the run whose trigger or step output names them.
