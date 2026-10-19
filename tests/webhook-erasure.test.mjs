@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { harness } from './harness.mjs';
-import { estimateHold, deliver, fakeEdge, hookUrl, jsonResponse, publish, runs, settled } from './kit.mjs';
+import { readFile } from 'node:fs/promises';
+import { estimateHold, deliver, doorImport, fakeEdge, hookUrl, jsonResponse, publish, runs, settled } from './kit.mjs';
 
 const target = 'http://127.0.0.1:9';
 const envelope = (event_id, input) => ({ method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ event_id, input }) });
@@ -137,6 +138,8 @@ test('DATA-002: subject erasure previews every run carrying one identifier, wait
   const h = await harness(target, { edge: fake.edge });
   try {
     const subject = 'Dana.Reyes@Example.test', other = 'someone-else@example.test';
+    // Every erase path below runs with the import door's custody rows present.
+    await doorImport(h, (await readFile('public/fixtures/n8n-workflow.json', 'utf8')).replace('http://127.0.0.1:9051', target));
     const contact = await publish(h, 'Contact sync', { trigger: { type: 'webhook', envelope: true }, steps: [{ id: 'sync', type: 'http', input: { method: 'POST', url: 'https://crm.example/contacts', body: { email: '{{trigger.input.email}}' } } }] });
     const review = await publish(h, 'Refund review', { trigger: { type: 'manual' }, steps: [{ id: 'review', type: 'approval', input: { email: '{{trigger.input.email}}' } }] });
     const url = await hookUrl(h, contact);
