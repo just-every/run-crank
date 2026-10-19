@@ -202,3 +202,94 @@ test('CONN-001: the catalog lists exact native operations and the coverage repor
   const n8n = await h.post('coverage', { n8n: { name: 'Lead flow', nodes: [{ type: 'n8n-nodes-base.webhook' }, { type: 'n8n-nodes-base.if' }, { type: 'n8n-nodes-base.slack', parameters: { resource: 'message', operation: 'post' } }, { type: 'n8n-nodes-base.hubspot', parameters: { resource: 'contact', operation: 'upsert' } }] } });
   assert.deepEqual(n8n.items.map(i => i.status), ['native', 'native', 'native', 'agent-buildable']);
 });
+
+test('EXEC-002: two accounts progress independently through 429, backoff, permanent auth and exhausted read failures; attempts retain retry timing', async () => {
+  const times = new Map(), sequences = new Map();
+  fake.routes.set('retry.vendor.example', ({ headers, url }) => {
+    const account = headers.authorization;
+    const key = account + url.pathname + url.search, seen = sequences.get(key) ?? 0;
+    sequences.set(key, seen + 1);
+    times.set(key, [...(times.get(key) ?? []), Date.now()]);
+    if (url.pathname === '/pages') return !url.searchParams.has('cursor') ? jsonResponse({ items: [{ id: 'order-1' }], next: 'second' })
+      : seen === 0 ? jsonResponse({ error: 'temporary second-page outage' }, 503) : jsonResponse({ items: [{ id: 'order-2' }], next: null });
+    if (url.pathname === '/always-unavailable') return jsonResponse({ error: 'maintenance' }, 503);
+    if (url.pathname === '/long-wait') return jsonResponse({ error: 'quota exhausted' }, 429, { 'retry-after': '120' });
+    if (url.pathname === '/date-wait') return seen === 0 ? jsonResponse({ error: 'rate limited' }, 429, { 'retry-after': new Date(Date.now() + 2500).toUTCString() }) : jsonResponse({ id: 'after-provider-date' });
+    if (url.pathname === '/malformed-after') return seen === 0 ? jsonResponse({ error: 'unavailable' }, 503, { 'retry-after': 'later please' }) : jsonResponse({ id: 'after-backoff' });
+    if (account === 'Bearer ' + slowToken) return seen === 0 ? jsonResponse({ error: 'rate limited' }, 429, { 'retry-after': '1' })
+      : seen === 1 ? jsonResponse({ error: 'transient' }, 503) : jsonResponse({ error: 'invalid credentials' }, 401);
+    return jsonResponse({ id: 'healthy-account' });
+  });
+  const [slowToken, healthyToken] = [fakeSecret('slow-account'), fakeSecret('healthy-account')];
+  const accounts = await Promise.all([slowToken, healthyToken].map((token, i) => connection(h, { app: 'http', label: i ? 'Healthy supplier' : 'Throttled supplier', auth_kind: 'bearer', domains: ['retry.vendor.example'], secret: { token } })));
+  const workflow = async (account, path) => publish(h, 'Retry policy ' + account.label + path, { trigger: { type: 'manual' }, steps: [{ id: 'read', type: 'http', connection_id: account.id, input: { url: 'https://retry.vendor.example' + path } }] });
+  const slow = await workflow(accounts[0], '/records'), healthy = await workflow(accounts[1], '/records');
+  const delayed = startRun(h, slow, {});
+  await until(() => times.has('Bearer ' + slowToken + '/records'), 'throttled account first request');
+  const good = await startRun(h, healthy, {});
+  assert.equal(good.status, 'succeeded');
+  assert.equal(sequences.get('Bearer ' + slowToken + '/records'), 1, 'another account completes while the first is in backoff');
+  const bad = await delayed;
+  assert.equal(bad.status, 'failed'); assert.equal(bad.error.category, 'auth');
+  assert.deepEqual(bad.attempts.map(a => a.http_status), [429, 503, 401]);
+  const at = times.get('Bearer ' + slowToken + '/records');
+  assert.ok(at[1] - at[0] >= 1000, 'Retry-After is a lower bound');
+  assert.ok(at[2] - at[1] >= 1000, 'a missing header uses growing backoff rather than zero');
+  assert.ok(bad.attempts.slice(0, 2).every(a => a.retry_at && a.retry_reason));
+  assert.ok(bad.attempts.slice(1).every((a, i) => Date.parse(a.started_at) >= Date.parse(bad.attempts[i].retry_at)));
+  await h.restart(); await h.tick();
+  assert.equal(sequences.get('Bearer ' + slowToken + '/records'), 3, 'permanent auth errors have no automatic redrive');
+
+  const policy = (await h.get('catalog')).apps.find(a => a.app === 'webhooks').actions.find(a => a.id === 'request').retry_policy;
+  const exhausted = await startRun(h, await workflow(accounts[1], '/always-unavailable'), {});
+  assert.equal(exhausted.status, 'failed'); assert.equal(exhausted.attempts.length, policy.read_attempts);
+  assert.equal(exhausted.error.exhausted, true); assert.ok(exhausted.error.next_owner_action);
+  const gaps = exhausted.attempts.slice(0, 2).map(a => Date.parse(a.retry_at) - Date.parse(a.finished_at));
+  assert.ok(gaps[0] > 0 && gaps[1] > gaps[0], 'growing backoff schedules are visible in attempts');
+  const deadline = await startRun(h, await workflow(accounts[1], '/long-wait'), {});
+  assert.equal(deadline.error.category, 'rate_limit'); assert.equal(deadline.error.exhausted, true);
+  assert.equal(deadline.attempts.length, 1); assert.ok(Date.parse(deadline.attempts[0].retry_at) - Date.parse(deadline.attempts[0].finished_at) >= 120000, 'the budget ends without capping Retry-After to an earlier send');
+  for (const path of ['/date-wait', '/malformed-after']) {
+    const result = await startRun(h, await workflow(accounts[1], path), {});
+    assert.equal(result.status, 'succeeded'); assert.equal(result.attempts.length, 2);
+    assert.ok(Date.parse(result.attempts[1].started_at) >= Date.parse(result.attempts[0].retry_at));
+  }
+  const paged = await publish(h, 'Retry a later inventory page', { trigger: { type: 'manual' }, steps: [
+    { id: 'read', type: 'http', connection_id: accounts[1].id, input: { url: 'https://retry.vendor.example/pages' }, pagination: { kind: 'cursor', items_path: 'items', cursor_path: 'next', max_pages: 2 } },
+  ] });
+  const pages = await startRun(h, paged, {});
+  assert.equal(pages.status, 'succeeded'); assert.deepEqual(stepOf(pages, 'read').output.items, [{ id: 'order-1' }, { id: 'order-2' }]);
+  assert.deepEqual(pages.attempts.map(a => a.http_status), [200, 503, 200]);
+  assert.ok(pages.attempts[1].retry_at); assert.ok(Date.parse(pages.attempts[2].started_at) >= Date.parse(pages.attempts[1].retry_at));
+  const queue = (await h.get('reports/operations')).execution_queue;
+  assert.equal(queue.runs.find(r => r.id === exhausted.id).state, 'dead_letter');
+  assert.equal(queue.runs.find(r => r.id === deadline.id).state, 'dead_letter');
+});
+
+test('EXEC-002: executor loss during a retry wait retains the original request budget and earliest retry time', async () => {
+  let calls = 0;
+  fake.routes.set('restart-retry.example', () => { calls++; return jsonResponse({ error: 'temporary outage' }, 503, { 'retry-after': '2' }); });
+  const workflow = await publish(h, 'Durable supplier retry', { trigger: { type: 'manual' }, steps: [
+    { id: 'read', type: 'http', input: { url: 'https://restart-retry.example/inventory' } },
+  ] });
+  // Dispose the actual executor after it commits the first response and retry
+  // deadline, before its timer fires. Only the provider edge is faked.
+  const interrupted = startRun(h, workflow, {}).catch(() => null);
+  const waiting = await until(async () => {
+    const run = (await runs(h, workflow))[0];
+    if (!run) return null;
+    const detail = await h.get('workflow-runs/' + run.id);
+    return detail.attempts[0]?.retry_at ? detail : null;
+  }, 'persisted retry deadline');
+  const budget = waiting.attempts[0].budget_started_at, due = waiting.attempts[0].retry_at;
+  await h.restart(); await interrupted;
+  assert.equal((await h.get('workflow-runs/' + waiting.id)).status, 'running', 'executor loss leaves a lease for Cron to reconcile');
+  await h.tick(Date.now() + 6 * 60000);
+  const finished = await h.get('workflow-runs/' + waiting.id);
+  const maximum = (await h.get('catalog')).apps.find(a => a.app === 'webhooks').actions[0].retry_policy.read_attempts;
+  assert.equal(finished.status, 'failed'); assert.equal(finished.error.exhausted, true);
+  assert.equal(calls, maximum, 'executor loss does not buy another attempt budget');
+  assert.equal(finished.attempts.length, maximum);
+  assert.ok(finished.attempts.every(a => a.budget_started_at === budget));
+  assert.ok(Date.parse(finished.attempts[1].started_at) >= Date.parse(due), 'restart cannot dispatch before the stored deadline');
+});

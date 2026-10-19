@@ -1,4 +1,5 @@
 import { paginate, validatePagination } from './pagination'
+import { RETRY_POLICY, retryRequest, type AttemptPolicy } from './retry'
 import { authorizeRequest } from '../connections/auth'
 import { assertDispatchAuthority } from '../engine/authority'
 import { fromBase64 } from './files'
@@ -13,7 +14,6 @@ import { parseXml, toJson } from '../triggers/xml'
 
 const METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD']
 const SECRET_HEADER = /authorization|cookie|api[-_]?key|token|secret|password|signature/i
-const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
 function statusMatches(status: number, rules: unknown): boolean {
   const list = Array.isArray(rules) && rules.length ? rules : ['200-299']
@@ -64,18 +64,20 @@ async function encode(ctx: StepContext, kind: string, value: unknown, contentTyp
 }
 
 interface Prepared { url: URL; method: string; headers: Headers; body: Uint8Array<ArrayBuffer> | null; timeout: number }
-async function send(ctx: StepContext, step: Record<string, unknown>, prepared: Prepared, connectionId: string | undefined) {
+async function send(ctx: StepContext, step: Record<string, unknown>, prepared: Prepared, connectionId: string | undefined, policy: AttemptPolicy) {
   const headers = new Headers(prepared.headers), url = new URL(prepared.url)
   if (connectionId) await authorizeRequest(ctx.env, connectionId, url, headers, prepared.body)
   await assertDispatchAuthority(ctx.env, ctx.run.id)
   const attemptId = id()
-  const admitted = await stmt(ctx.env, `INSERT INTO crank_wf_attempts(id,run_id,path,number,method,destination_origin,started_at)
-    SELECT ?,?,?,COALESCE((SELECT MAX(number)+1 FROM crank_wf_attempts WHERE run_id=? AND path=?),1),?,?,?
+  const admitted = await stmt(ctx.env, `INSERT INTO crank_wf_attempts(id,run_id,path,number,method,destination_origin,started_at,request_key,retry_number,budget_started_at)
+    SELECT ?,?,?,COALESCE((SELECT MAX(number)+1 FROM crank_wf_attempts WHERE run_id=? AND path=?),1),?,?,?,?,?,?
     WHERE EXISTS(SELECT 1 FROM crank_wf_runs WHERE id=? AND status='running' AND lease_id=?) RETURNING id`,
-    attemptId, ctx.run.id, ctx.path, ctx.run.id, ctx.path, prepared.method, url.origin, now(), ctx.run.id, ctx.run.lease_id).first()
+    attemptId, ctx.run.id, ctx.path, ctx.run.id, ctx.path, prepared.method, url.origin, now(), policy.requestKey, policy.number, policy.startedAt, ctx.run.id, ctx.run.lease_id).first()
   if (!admitted) throw new StepError('uncertain', 'Execution authority expired before the HTTP attempt', { uncertain: true })
   try {
-    const response = await boundedFetch(url.href, { method: prepared.method, headers, body: prepared.body, timeoutMs: prepared.timeout, maxBytes: 2 * 1024 * 1024, follow: prepared.method === 'GET' || prepared.method === 'HEAD' ? 3 : 0 })
+    const remaining = RETRY_POLICY.elapsed_ms - (Date.now() - Date.parse(policy.startedAt))
+    if (remaining <= 0) throw new StepError('provider', 'The request elapsed-time budget ended before dispatch', { exhausted: true })
+    const response = await boundedFetch(url.href, { method: prepared.method, headers, body: prepared.body, timeoutMs: Math.min(prepared.timeout, remaining), maxBytes: 2 * 1024 * 1024, follow: prepared.method === 'GET' || prepared.method === 'HEAD' ? 3 : 0 })
     await stmt(ctx.env, 'UPDATE crank_wf_attempts SET finished_at=?,http_status=? WHERE id=?', now(), response.status, attemptId).run()
     return response
   } catch (error) {
@@ -84,11 +86,15 @@ async function send(ctx: StepContext, step: Record<string, unknown>, prepared: P
   }
 }
 
+async function sendRetried(ctx: StepContext, step: Record<string, unknown>, prepared: Prepared, connectionId: string | undefined) {
+  return retryRequest(ctx, { ...prepared, idempotent: typeof step.idempotency_header === 'string' }, policy => send(ctx, step, prepared, connectionId, policy))
+}
+
 /** Reads back by a declared business key before any retry of a write with a lost response. */
 async function readback(ctx: StepContext, step: Record<string, unknown>, connectionId: string | undefined, timeout: number) {
   const spec = step.readback as Record<string, unknown>
   const resolved = resolve({ url: spec.url, equals: spec.equals }, ctx.scope) as { url: string; equals: unknown }
-  const response = await send(ctx, step, { url: checkEgress(String(resolved.url)), method: 'GET', headers: new Headers({ accept: 'application/json' }), body: null, timeout }, connectionId)
+  const { response } = await sendRetried(ctx, step, { url: checkEgress(String(resolved.url)), method: 'GET', headers: new Headers({ accept: 'application/json' }), body: null, timeout }, connectionId)
   if (response.status < 200 || response.status > 299) return null
   const body = parseBody(response), found = lookup(body, String(spec.path ?? 'id'))
   return found.found && canonical(found.value) === canonical(resolved.equals) ? { response, body } : null
@@ -125,27 +131,17 @@ export const httpRequest: StepType = {
     const timeout = Number(step.timeout_ms ?? 15000), connectionId = typeof step.connection_id === 'string' ? step.connection_id : undefined
     const prepared: Prepared = { url, method, headers, body: encoded.body, timeout }
 
-    let response: BoundedResponse | undefined, reconciled = false, attempts = 0
-    for (;;) {
-      attempts++
-      try { response = await send(ctx, step, prepared, connectionId) }
-      catch (error) {
-        if (!(error instanceof StepError) || error.category !== 'network') throw error
-        if (!mutating && attempts < 3) { await sleep(250 * 2 ** attempts); continue }
-        if (mutating && typeof step.idempotency_header === 'string' && attempts < 2) continue
-        if (mutating && isObject(step.readback)) {
-          const found = await readback(ctx, step, connectionId, timeout)
-          if (found) { response = found.response; reconciled = true; break }
-          throw new StepError('uncertain', `HTTP ${step.id}: the response was lost and readback found no record; not retried`, { uncertain: true })
-        }
-        throw new StepError('uncertain', `HTTP ${step.id}: the response was lost; not retried automatically`, { uncertain: true })
-      }
-      if (!mutating && [429, 502, 503, 504].includes(response.status) && attempts < 3) {
-        const after = Number(response.headers.get('retry-after'))
-        await sleep(Number.isFinite(after) && after >= 0 ? Math.min(after, 5) * 1000 : 250 * 2 ** attempts + Math.random() * 100)
-        continue
-      }
-      break
+    let response: BoundedResponse, reconciled = false, attempts = 0, budgetExhausted = false
+    try {
+      const result = await sendRetried(ctx, step, prepared, connectionId)
+      response = result.response; attempts = result.attempts; budgetExhausted = result.exhausted ?? false
+    } catch (error) {
+      if (!mutating || !(error instanceof StepError) || error.category !== 'network') throw error
+      if (isObject(step.readback)) {
+        const found = await readback(ctx, step, connectionId, timeout)
+        if (found) { response = found.response; reconciled = true; attempts = (await stmt(ctx.env, 'SELECT COUNT(*) AS n FROM crank_wf_attempts WHERE run_id=? AND path=?', ctx.run.id, ctx.path).first<{n:number}>())!.n }
+        else throw new StepError('uncertain', `HTTP ${step.id}: the response was lost and readback found no record; not retried`, { uncertain: true })
+      } else throw new StepError('uncertain', `HTTP ${step.id}: the response was lost; not retried automatically`, { uncertain: true })
     }
     const body = parseBody(response!)
     const result = { status: response!.status, headers: outputHeaders(response!.headers), body, reconciled, attempts }
@@ -154,9 +150,9 @@ export const httpRequest: StepType = {
     if (!ok) {
       const business = Array.isArray(step.business_failures) && statusMatches(response!.status, step.business_failures)
       const category = business ? 'business' : response!.status === 401 || response!.status === 403 ? 'auth' : response!.status === 429 ? 'rate_limit' : 'provider'
-      throw new StepError(category, `HTTP ${step.id}: ${business ? 'business failure' : 'request failed'} with status ${response!.status}`, { status: response!.status, body })
+      throw new StepError(category, `HTTP ${step.id}: ${business ? 'business failure' : 'request failed'} with status ${response!.status}`, { status: response!.status, body, ...(budgetExhausted ? { exhausted: true, next_owner_action: 'Inspect the retained attempts, correct the provider or account issue, then deliberately start a new run.' } : {}) })
     }
-    if (!mutating && isObject(step.pagination)) return { status: 'succeeded', output: { ...result, ...await paginate(step, prepared.url, body, response!, url => send(ctx, step, { ...prepared, url }, connectionId), parseBody) } }
+    if (!mutating && isObject(step.pagination)) return { status: 'succeeded', output: { ...result, ...await paginate(step, prepared.url, body, response!, async url => (await sendRetried(ctx, step, { ...prepared, url }, connectionId)).response, parseBody) } }
     return { status: 'succeeded', output: result }
   },
 }

@@ -170,3 +170,15 @@ dead letters, including uncertain writes, and are never automatically redriven.
 and later dispatch; a started write may still finish remotely and is retained
 as an uncertain checkpoint. Completed effects are never undone. Cron records
 uncertainty before recovering an expired execution lease.
+
+### HTTP retry timing (EXEC-002, partial)
+
+General HTTP attempts include `retry_number`, `budget_started_at`, `retry_at`
+and `retry_reason`. `retry_at` is the earliest permitted next request, not a
+claim that it was sent. The catalog's API-request action exposes `retry_policy`.
+Reads retry transient network errors and 429/502/503/504; permanent auth errors
+do not retry. Retry-After seconds and HTTP dates are lower bounds, with growing
+backoff and jitter otherwise. The same policy covers each pagination page and
+readback request; restarting preserves failed request budgets and deadlines.
+An exhausted request remains failed with `exhausted` and `next_owner_action`.
+Account rate/concurrency admission and native connector parity remain pending.
