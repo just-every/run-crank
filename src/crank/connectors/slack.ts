@@ -1,44 +1,10 @@
-import { authorizeRequest } from '../connections/auth'
+import { slackCall } from './slack-request'
+export { slackCall } from './slack-request'
 import { credential } from '../connections/store'
-import { boundedFetch, utf8 } from '../engine/egress'
 import { StepError } from '../engine/errors'
-import { assertDispatchAuthority } from '../engine/authority'
 import { searchKey, searchOutcome, validateSearch, withKeyLock } from '../engine/search'
 import type { Step, StepContext, StepResult, StepType } from '../engine/types'
-import { isObject, textOf } from '../engine/values'
-
-/** Slack Web API (https://api.slack.com/methods), form-encoded, with the connection's bot token. */
-export async function slackCall(ctx: Pick<StepContext, 'env'> & Partial<Pick<StepContext, 'run'>>, connectionId: string, method: string, params: Record<string, unknown>, write: boolean) {
-  const url = new URL('https://slack.com/api/' + method), headers = new Headers({ 'content-type': 'application/x-www-form-urlencoded; charset=utf-8', accept: 'application/json' })
-  const body = new TextEncoder().encode(new URLSearchParams(Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== '').map(([k, v]) => [k, textOf(v) ?? JSON.stringify(v)])).toString())
-  await authorizeRequest(ctx.env, connectionId, url, headers, body)
-  let attempt = 0
-  for (;;) {
-    attempt++
-    if (ctx.run) await assertDispatchAuthority(ctx.env, ctx.run.id)
-    let response
-    try { response = await boundedFetch(url.href, { method: 'POST', headers, body, timeoutMs: 15000, maxBytes: 4 * 1024 * 1024 }) }
-    catch (error) {
-      if (error instanceof StepError && error.category === 'network') {
-        if (!write && attempt < 3) continue
-        throw new StepError(write ? 'uncertain' : 'network', `Slack ${method}: the response was lost${write ? '; not retried automatically' : ''}`, { uncertain: write })
-      }
-      throw error
-    }
-    if (response.status === 429) {
-      const after = Number(response.headers.get('retry-after') ?? 1)
-      if (!write && attempt < 3 && after <= 5) { await new Promise(r => setTimeout(r, after * 1000)); continue }
-      throw new StepError('rate_limit', `Slack ${method} is rate limited; retry after ${after} seconds`, { retry_after_seconds: after })
-    }
-    let value: any
-    try { value = JSON.parse(utf8(response.bytes)) } catch { throw new StepError('provider', `Slack ${method} returned status ${response.status} without JSON`) }
-    if (value?.ok === true) return value
-    const error = typeof value?.error === 'string' ? value.error : 'unknown_error'
-    if (['invalid_auth', 'not_authed', 'token_revoked', 'token_expired', 'account_inactive', 'missing_scope', 'not_allowed_token_type'].includes(error)) throw new StepError('auth', `Slack refused ${method}: ${error}`, { slack_error: error, needed: value.needed })
-    if (error === 'ratelimited') throw new StepError('rate_limit', `Slack ${method} is rate limited`)
-    throw new StepError(/not_found$/.test(error) ? 'not_found' : 'provider', `Slack ${method} failed: ${error}`, { slack_error: error })
-  }
-}
+import { isObject } from '../engine/values'
 
 const user = (u: any) => ({ id: u.id, name: u.name, real_name: u.real_name ?? u.profile?.real_name ?? null, display_name: u.profile?.display_name ?? null, email: u.profile?.email ?? null, is_bot: !!u.is_bot, team_id: u.team_id ?? null })
 const channel = (c: any) => ({ id: c.id, name: c.name, is_private: !!c.is_private, is_archived: !!c.is_archived, num_members: c.num_members ?? null })

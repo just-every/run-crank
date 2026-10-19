@@ -240,7 +240,7 @@ test('EXEC-002: two accounts progress independently through 429, backoff, perman
   await h.restart(); await h.tick();
   assert.equal(sequences.get('Bearer ' + slowToken + '/records'), 3, 'permanent auth errors have no automatic redrive');
 
-  const policy = (await h.get('catalog')).apps.find(a => a.app === 'webhooks').actions.find(a => a.id === 'request').retry_policy;
+  const policy = (await h.get('catalog')).apps.find(a => a.app === 'slack').retry_policy;
   const exhausted = await startRun(h, await workflow(accounts[1], '/always-unavailable'), {});
   assert.equal(exhausted.status, 'failed'); assert.equal(exhausted.attempts.length, policy.read_attempts);
   assert.equal(exhausted.error.exhausted, true); assert.ok(exhausted.error.next_owner_action);
@@ -268,6 +268,80 @@ test('EXEC-002: two accounts progress independently through 429, backoff, perman
   const page = await h.send('/app/workflow-runs/' + exhausted.id, undefined, h.owner);
   assert.equal(page.status, 200); assert.ok(page.text.includes(exhausted.error.next_owner_action), 'exhaustion shows the owner the next action');
   for (const attempt of exhausted.attempts.filter(a => a.retry_at)) assert.ok(page.text.includes(`datetime="${attempt.retry_at}"`), 'attempt history shows the stored earliest retry instant');
+});
+
+test('EXEC-002: native Slack reads honor retry timing and account isolation; permanent auth and lost writes stop', async () => {
+  const [slowToken, healthyToken] = [fakeSecret('slack-throttled'), fakeSecret('slack-healthy')];
+  const times = new Map(); let writes = 0;
+  fake.routes.set('slack.com', ({ url, body, headers }) => {
+    const method = url.pathname.replace('/api/', ''), email = form(body).get('email');
+    if (method === 'auth.test') return jsonResponse({ ok: true, team: 'Retry workspace', user: 'crankbot' });
+    if (method === 'chat.postMessage') {
+      writes++;
+      // The provider commits the effect, then the network drops its response.
+      return new Response(new ReadableStream({ start(controller) { controller.error(new Error('provider response lost after commit')); } }));
+    }
+    const key = headers.authorization + ':' + email, at = [...(times.get(key) ?? []), Date.now()];
+    times.set(key, at);
+    if (email === 'permanent@acme.example') return jsonResponse({ ok: false, error: 'token_revoked' });
+    if (email === 'unavailable@acme.example') return new Response('temporary outage', { status: 503 });
+    if (email === 'long-wait@acme.example') return jsonResponse({ ok: false, error: 'ratelimited' }, 200, { 'retry-after': '120' });
+    if (email === 'json-limit@acme.example' && at.length === 1) return jsonResponse({ ok: false, error: 'ratelimited' }, 200, { 'retry-after': '1' });
+    if (headers.authorization === 'Bearer ' + slowToken) return at.length === 1 ? jsonResponse({ ok: false, error: 'ratelimited' }, 429, { 'retry-after': '1' })
+      : at.length === 2 ? new Response('temporary outage', { status: 503 }) : jsonResponse({ ok: false, error: 'invalid_auth' });
+    return jsonResponse({ ok: true, user: { id: 'UHEALTHY', name: 'healthy', profile: { email } } });
+  });
+  const accounts = await Promise.all([slowToken, healthyToken].map((token, i) => connection(h, { app: 'slack', label: i ? 'Healthy Slack' : 'Throttled Slack', auth_kind: 'bearer', scopes: ['users:read.email', 'chat:write'], secret: { token } })));
+  assert.deepEqual(await h.post(`connections/${accounts[0].id}/test`), { ok: true, account: 'Retry workspace', user: 'crankbot' }, 'connection checks work without an execution ledger');
+  const workflow = account => publish(h, account.label + ' lookup', { trigger: { type: 'manual' }, steps: [
+    { id: 'who', type: 'slack.find_user_by_email', connection_id: account.id, input: { email: '{{trigger.input.email}}' } },
+  ] });
+  const [slow, healthy] = await Promise.all(accounts.map(workflow));
+  const key = (token, email) => 'Bearer ' + token + ':' + email;
+  const delayed = startRun(h, slow, { email: 'rep@acme.example' });
+  await until(() => times.has(key(slowToken, 'rep@acme.example')), 'native Slack first throttled request');
+  const good = await startRun(h, healthy, { email: 'rep@acme.example' });
+  assert.equal(good.status, 'succeeded'); assert.equal(stepOf(good, 'who').output.record.id, 'UHEALTHY');
+  assert.equal(times.get(key(slowToken, 'rep@acme.example')).length, 1, 'an independent connection progresses during native Slack backoff');
+  const bad = await delayed;
+  assert.equal(bad.status, 'failed'); assert.equal(bad.error.category, 'auth');
+  assert.deepEqual(bad.attempts.map(a => a.http_status), [429, 503, 200]);
+  assert.deepEqual(bad.attempts.map(a => a.error_category), ['rate_limit', 'provider', 'auth']);
+  assert.deepEqual(bad.attempts.map(a => a.retry_number), [1, 2, 3]);
+  assert.ok(bad.attempts.every(a => a.method === 'POST' && a.budget_started_at === bad.attempts[0].budget_started_at));
+  const policy = (await h.get('catalog')).apps.find(a => a.app === 'slack').retry_policy;
+  const at = times.get(key(slowToken, 'rep@acme.example'));
+  assert.ok(at[1] - at[0] >= 1000, 'native Retry-After is a lower bound');
+  assert.ok(at[2] - at[1] >= policy.base_delay_ms * 2 ** (bad.attempts[1].retry_number - 1), 'a transient 503 uses growing backoff');
+  assert.ok(bad.attempts.slice(0, 2).every(a => a.retry_at && a.retry_reason));
+  assert.ok(bad.attempts.slice(1).every((a, i) => Date.parse(a.started_at) >= Date.parse(bad.attempts[i].retry_at)));
+
+  const permanent = await startRun(h, healthy, { email: 'permanent@acme.example' });
+  assert.equal(permanent.error.category, 'auth'); assert.equal(permanent.attempts.length, 1);
+  assert.equal(times.get(key(healthyToken, 'permanent@acme.example')).length, 1, 'permanent Slack auth is never retried');
+  const limited = await startRun(h, healthy, { email: 'json-limit@acme.example' });
+  assert.equal(limited.status, 'succeeded'); assert.deepEqual(limited.attempts.map(a => a.http_status), [200, 200]);
+  assert.equal(limited.attempts[0].error_category, 'rate_limit'); assert.ok(limited.attempts[0].retry_at);
+  assert.ok(Date.parse(limited.attempts[1].started_at) >= Date.parse(limited.attempts[0].retry_at));
+  const exhausted = await startRun(h, healthy, { email: 'unavailable@acme.example' });
+  assert.equal(exhausted.error.category, 'provider'); assert.equal(exhausted.error.exhausted, true);
+  assert.equal(exhausted.attempts.length, policy.read_attempts); assert.ok(exhausted.error.next_owner_action);
+  const deadline = await startRun(h, healthy, { email: 'long-wait@acme.example' });
+  assert.equal(deadline.error.category, 'rate_limit'); assert.equal(deadline.error.exhausted, true); assert.equal(deadline.attempts.length, 1);
+  assert.ok(Date.parse(deadline.attempts[0].retry_at) - Date.parse(deadline.attempts[0].finished_at) >= 120000, 'native JSON throttling cannot dispatch early outside the budget');
+
+  const posting = await publish(h, 'Uncertain native Slack post', { trigger: { type: 'manual' }, steps: [
+    { id: 'post', type: 'slack.send_channel_message', connection_id: accounts[1].id, input: { channel: 'C01234567', text: 'Commit this once' } },
+  ] });
+  const uncertain = await startRun(h, posting, {});
+  assert.equal(uncertain.status, 'uncertain', JSON.stringify(uncertain.error)); assert.equal(uncertain.error.category, 'uncertain');
+  assert.equal(uncertain.attempts.length, 1); assert.equal(uncertain.attempts[0].error_category, 'network');
+  assert.equal(uncertain.attempts[0].retry_at, null); assert.equal(writes, 1, 'a committed Slack write with a lost acknowledgement is never blindly retried');
+  const queue = (await h.get('reports/operations')).execution_queue;
+  assert.equal(queue.runs.find(r => r.id === exhausted.id).state, 'dead_letter');
+  assert.equal(queue.runs.find(r => r.id === uncertain.id).state, 'dead_letter');
+  const history = JSON.stringify([bad, good, limited, exhausted, deadline, uncertain]);
+  for (const token of [slowToken, healthyToken]) assert.ok(!history.includes(token), 'native attempts do not retain credentials');
 });
 
 test('EXEC-002: executor loss during a retry wait retains the original request budget and earliest retry time', async () => {
