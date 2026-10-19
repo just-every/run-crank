@@ -27,6 +27,9 @@ export async function eraseWorkflowRun(env: CrankEnv, actor: Actor, portability:
       ...['crank_wf_steps', 'crank_wf_step_revisions', 'crank_waits', 'crank_wf_attempts', 'crank_obligations', 'crank_callback_events', 'crank_queue_items', 'crank_hold_items', 'crank_historical_items', 'crank_ops_events', 'crank_request_admissions']
         .map(table => ({ table, from: 'crank_wf_runs', on: { run_id: 'id' } })),
       { table: 'crank_trigger_events', from: 'crank_wf_runs', on: { run_id: 'id' } },
+      // Uploaded and connector files belong to the run whose trigger or step output names them.
+      { table: 'crank_files', from: 'crank_wf_runs', where: 'workflow_id=? AND instr(?,id)>0', params: ['workflow_id', 'trigger_json'] },
+      { table: 'crank_files', from: 'crank_wf_steps', where: "instr(COALESCE(?,''),id)>0", params: ['output_json'] },
       // Released hold items retain their original event key even when the event
       // row has no run link. Include that copy in the same erasure journal.
       { table: 'crank_trigger_events', from: 'crank_hold_items', where: 'dedup_key=? AND workflow_id=(SELECT workflow_id FROM crank_holds WHERE id=?)', params: ['item_key', 'hold_id'] },

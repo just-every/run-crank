@@ -4,6 +4,7 @@ import { authorize, requireOwner, requireWriteOrigin, guardedBatch } from './acc
 import { body, type CrankEnv } from './model'
 import { eraseFlowRun, eraseWorkflowRun } from './workflow-erasure'
 import { eraseSubject, previewSubject } from './subject-erasure'
+import { eraseOperator } from './operator-erasure'
 import { auditStatement } from './ops/audit'
 
 export const portability = (env: CrankEnv) => createPortability({ db:env.DB, policy })
@@ -65,6 +66,10 @@ export async function dataApi(request:Request,env:CrankEnv):Promise<Response|nul
       if (value.workflow_run_id !== undefined) {
         if (value.confirm !== 'ERASE' || typeof value.workflow_run_id !== 'string' || !value.workflow_run_id || value.run_id !== undefined) return Response.json({error:'Confirm ERASE and select one workflow run.'},{status:400})
         return Response.json(await eraseWorkflowRun(env,actor,store,value.workflow_run_id),{headers:{'cache-control':'no-store'}})
+      }
+      if (value.operator_id !== undefined) {
+        if (value.confirm !== 'ERASE' || typeof value.operator_id !== 'string' || !value.operator_id) return Response.json({error:'Confirm ERASE and select one deactivated person.'},{status:400})
+        return Response.json(await eraseOperator(env,actor,value.operator_id),{headers:{'cache-control':'no-store'}})
       }
       if (value.subject !== undefined) {
         if (value.confirm !== 'ERASE' || typeof value.subject !== 'string' || typeof value.digest !== 'string') return Response.json({error:'Confirm ERASE with the subject and its preview digest.'},{status:400})

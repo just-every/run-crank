@@ -147,20 +147,35 @@ test('DATA-002: subject erasure previews every run carrying one identifier, wait
     const waiting = await h.post(`workflows/${review.id}/run`, { input: { email: subject } }, h.owner, 201);
     const flow = await h.flow('Legacy follow-up'), legacy = await h.run(flow, 'legacy-77', { customer: subject });
     await h.post(`runs/${legacy.id}/reject`);
+    const consent = await publish(h, 'Signed consent', { trigger: { type: 'webhook' }, steps: [{ id: 'keep', type: 'map', input: { file: '{{trigger.files.consent}}' } }] });
+    const form = new FormData(); form.append('email', subject); form.append('consent', new File([`Consent signed by ${subject}`], 'consent.txt', { type: 'text/plain' }));
+    const signed = await deliver(h, await hookUrl(h, consent), { method: 'POST', body: form }); await h.tick();
+    const signedRun = await settled(h, signed.value.run_id);
+    const files = async () => (await h.db.prepare('SELECT COUNT(*) AS n FROM crank_files WHERE workflow_id=?').bind(consent.id).first()).n;
+    assert.equal(await files(), 1, 'the uploaded file is retained with its run');
+    const search = async () => (await h.get('workflow-runs?q=' + encodeURIComponent(subject.toLowerCase()))).runs.map(r => r.id);
+    assert.ok((await search()).length > 0, 'run history search finds the subject before erasure');
     let preview = await h.post('data/subject', { subject });
-    assert.deepEqual(preview.workflow_runs.map(r => r.id).sort(), [syncedRun.id, waiting.id].sort(), 'DATA-002: matches by retained input, case-insensitively');
+    assert.deepEqual(preview.workflow_runs.map(r => r.id).sort(), [syncedRun.id, waiting.id, signedRun.id].sort(), 'DATA-002: matches by retained input, case-insensitively');
     assert.deepEqual(preview.flow_runs.map(r => r.id), [legacy.id]);
     assert.ok(preview.blocked); assert.ok(!JSON.stringify(preview).toLowerCase().includes(subject.toLowerCase()), 'the preview carries only a digest');
     await h.post('data/erase', { subject, confirm: 'ERASE', digest: preview.digest }, h.owner, 409);
     await h.post(`workflow-runs/${waiting.id}/cancel`);
-    for (const id of [contact.id, review.id]) await h.post(`workflows/${id}/pause`);
+    for (const id of [contact.id, review.id, consent.id]) await h.post(`workflows/${id}/pause`);
     await h.post(`flows/${flow.id}/pause`);
     await h.post('data/erase', { subject, confirm: 'ERASE', digest: preview.digest }, h.owner, 409);
     preview = await h.post('data/subject', { subject });
     assert.equal(preview.blocked, false);
+    const screen = async (path, fields) => { const r = await h.mf.dispatchFetch(h.origin + path, { method: 'POST', redirect: 'manual', headers: { host: new URL(h.origin).host, origin: h.origin, cookie: h.owner, 'content-type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams(fields).toString() }); return { status: r.status, text: await r.text() } };
+    await screen('/setup', { confirm: 'yes' });
+    const shown = await screen('/app/data/subject', { subject });
+    assert.match(shown.text, /4 runs carry this identifier/); assert.match(shown.text, new RegExp(`name="digest" value="${preview.digest}"`), 'the Data screen confirms against the preview digest');
+    const older = await snapshot(h);
     const receipt = await h.post('data/erase', { subject, confirm: 'ERASE', digest: preview.digest });
-    assert.deepEqual([receipt.workflow_runs, receipt.flow_runs, receipt.operations.length], [2, 1, 3]);
-    for (const id of [syncedRun.id, waiting.id]) await h.get('workflow-runs/' + id, h.owner, 404);
+    assert.deepEqual([receipt.workflow_runs, receipt.flow_runs, receipt.operations.length], [3, 1, 4]);
+    for (const id of [syncedRun.id, waiting.id, signedRun.id]) await h.get('workflow-runs/' + id, h.owner, 404);
+    assert.equal(await files(), 0, 'DATA-002: the run\'s uploaded file is erased with it');
+    assert.deepEqual(await search(), [], 'DATA-002: history search no longer finds the subject');
     await h.get('runs/' + legacy.id, h.owner, 404);
     assert.equal((await h.get('workflow-runs/' + unrelatedRun.id)).status, 'succeeded', 'an unrelated run stays');
     await h.post(`workflows/${contact.id}/resume`);
@@ -170,6 +185,36 @@ test('DATA-002: subject erasure previews every run carrying one identifier, wait
     assert.ok(audit.some(a => a.action === 'data.erase_subject' && a.detail.subject_digest === receipt.subject_digest));
     const archive = await snapshot(h);
     assert.ok(!archive.toLowerCase().includes(subject.toLowerCase()) && !JSON.stringify(audit).toLowerCase().includes(subject.toLowerCase()), 'DATA-002: only value-free receipts and audit survive');
+    assert.ok(!archive.includes(Buffer.from(`Consent signed by ${subject}`).toString('base64')), 'DATA-002: no erased file bytes survive in the archive');
+    const stale = await harness(target);
+    try {
+      const refused = await stale.send('/api/crank/data/restore', { archive: older, journal: archive, confirm: 'RESTORE' }, stale.owner);
+      assert.equal(refused.status, 409, refused.text); assert.match(refused.text, /erasure_epoch|erased_row/); assert.equal((await stale.get('workflow-runs')).runs.length, 0, 'DATA-002: the pre-erasure archive is fenced by the later journal');
+    } finally { await stale.close() }
     await h.post('data/subject', { subject: 'ab' }, h.owner, 400);
+
+    // Operator erasure: a deactivated non-owner's id becomes one stable label; email and name go.
+    const email = `leaving-${crypto.randomUUID().slice(0, 8)}@example.test`;
+    assert.equal((await h.send('/auth/invite', { email, displayName: 'Leaving Builder', role: 'admin' }, h.owner)).status, 202);
+    const link = h.mail.findLast(m => m.to.includes(email)).html.match(/href="([^"]*\/auth\/confirm\?token=[^"]+)"/)[1].replaceAll('&amp;', '&');
+    const leaver = (await h.send('/auth/confirm', { token: new URL(link, h.origin).searchParams.get('token') })).cookie, leaverId = (await h.get('state', leaver)).actor.id;
+    const prepared = await h.post('flows', { name: 'Prepared by a leaver', source_app: 'Support desk', destination_app: 'Inbox', target_url: target + '/events' }, leaver, 201);
+    await h.post('data/erase', { operator_id: leaverId, confirm: 'ERASE' }, h.owner, 409);
+    await h.post('data/erase', { operator_id: (await h.get()).actor.id, confirm: 'ERASE' }, h.owner, 409);
+    assert.equal((await h.send('/auth/operator/status', { operatorId: leaverId, status: 'inactive' }, h.owner)).status, 200);
+    await h.post('data/erase', { operator_id: leaverId, confirm: 'ERASE' }, leaver, 401);
+    assert.match((await h.send('/app/data', undefined, h.owner)).text, /Erase this person/, 'the Data screen offers erasure of a deactivated team member');
+    const erasedPerson = await h.post('data/erase', { operator_id: leaverId, confirm: 'ERASE' });
+    const label = erasedPerson.label, after = await h.get('audit');
+    assert.match(label, /^erased-operator-/);
+    assert.ok(!JSON.stringify(after).includes(leaverId), 'DATA-002: the operator id is gone from the audit');
+    assert.ok(after.some(a => a.action === 'flow.create' && a.subject_id === prepared.id && a.actor_id === label), 'chronology and actions stay under the label');
+    assert.ok(after.some(a => a.action === 'access.invite' && a.subject_id === label) && after.some(a => a.action === 'operator.erase' && a.subject_id === label));
+    const people = (await h.send('/auth/operators', undefined, h.owner)).text;
+    assert.ok(!people.includes(email) && !people.includes('Leaving Builder'), 'email address and display name are removed');
+    await h.get('state', leaver, 401);
+    const later = await snapshot(h);
+    assert.ok(!later.includes(leaverId) && !later.includes(email), 'DATA-002: archives carry only the label');
+    await h.post('data/erase', { operator_id: leaverId, confirm: 'ERASE' }, h.owner, 409);
   } finally { await h.close() }
 });

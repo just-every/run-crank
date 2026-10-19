@@ -95,7 +95,9 @@ your own data retention requirements.
 ## Erase everything about one person or key
 
 To erase every run that carries one identifier, such as a customer's email
-address or a business key, `POST /api/crank/data/subject` with
+address or a business key, open **Data**, enter it under **Erase a person or
+key** and select **Preview erasure**; type ERASE to confirm the previewed runs.
+Over HTTP, `POST /api/crank/data/subject` with
 `{"subject":"..."}` as the owner. The preview lists each matching workflow run
 and flow run (matched case-insensitively by business key, event id, or anywhere
 in the retained trigger, inputs and outputs) and names any that must first be
@@ -103,7 +105,20 @@ finished or canceled and whose workflow or flow must be paused. Then `POST
 /api/crank/data/erase` with `{"subject":"...","confirm":"ERASE","digest":"..."}`
 using the preview's digest. Each run is erased with its event fence and
 receipt, and the audit keeps one subject receipt with only a SHA-256 digest of
-the identifier.
+the identifier. Files uploaded to an erased run, or written by its steps, are
+erased with it, and run history search no longer finds it.
+
+## Erase a former team member
+
+Deactivate the person in **Access** first; the owner cannot be erased. In
+**Data**, select **Erase this person** under **Erase a former team member** (or
+`POST /api/crank/data/erase` with `{"operator_id":"...","confirm":"ERASE"}`).
+Their id becomes one random label everywhere Crank records who acted or created
+something (audit, decisions, runs, versions, credentials, flows and workflows),
+their sessions are revoked, any linked sign-in provider identity is removed, and
+their email address and display name are replaced. What they did stays in the
+history under the label, recorded as `operator.erase`. Archives never contain
+sign-in identities.
 
 ## Recover an older backup after erasure
 
@@ -129,5 +144,4 @@ Multi-step webhook run erasure uses the same owner-only door with
 finish or cancel the run first. The linked run values and decisions are removed;
 the audit retains action chronology with an anonymized run subject and no detail.
 An opaque event-key digest prevents re-admission after restart and restore.
-This bounded run operation does not establish subject/operator erasure or erase
-shared file references; those DATA-002 obligations remain partial.
+Files the run's trigger or steps name are erased with it.
