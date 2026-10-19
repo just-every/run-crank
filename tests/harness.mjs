@@ -26,7 +26,7 @@ export async function harness(target,{emitted=false,edge}={}) {
       const response=await mf.dispatchFetch(origin+path,{method:body===undefined?'GET':'POST',redirect:'manual',headers:{host:new URL(origin).host,origin,'content-type':'application/json',cookie,...headers},...(body===undefined?{}:{body:JSON.stringify(body)})});
       // Name the public door if the Worker transport interrupts its response.
       let text;
-      try { text=await response.text() } catch(error) { throw new Error(`${new URL(path,origin).pathname}: response body interrupted (${error.cause?.code ?? error.message})`,{cause:error}) }
+      try { text=await response.text() } catch(error) { throw new Error(`${new URL(path,origin).pathname}: response body interrupted (${error.cause?.code ?? error.message}; length=${response.headers.get('content-length')}; encoding=${response.headers.get('content-encoding')}; transfer=${response.headers.get('transfer-encoding')})`,{cause:error}) }
       let value;try{value=JSON.parse(text)}catch{value=text}
       return {status:response.status,value,text,cookie:response.headers.get('set-cookie')?.split(';')[0],headers:response.headers};
     };
