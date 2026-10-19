@@ -174,6 +174,12 @@ test('TRIG-002: weekday schedules keep 9 a.m. local across DST, admit each occur
   assert.deepEqual(planned, ['2026-10-29T13:00:00.000Z', '2026-10-30T13:00:00.000Z', '2026-11-02T14:00:00.000Z', '2026-11-03T14:00:00.000Z']);
   const spring = await publish(h, 'Early job', { trigger: { type: 'schedule', at: '02:30', timezone: 'America/New_York' }, steps: [] });
   assert.equal((await h.get(`workflows/${spring.id}/trigger?from=2027-03-13T12:00:00Z&count=1`)).planned[0].at, '2027-03-14T07:30:00.000Z', 'a skipped local time runs at the shifted instant');
+  const business = await publish(h, 'Business-day closing', { trigger: { type: 'schedule', at: '09:00', timezone: 'America/New_York', business_days_only: true, calendar: 'us_federal' }, steps: [] });
+  assert.deepEqual((await h.get(`workflows/${business.id}/trigger?from=2026-11-25T15:00:00Z&count=2`)).planned.map(p => p.at), ['2026-11-27T14:00:00.000Z', '2026-11-30T14:00:00.000Z'], 'Thanksgiving and the weekend are skipped');
+  await h.post(`workflows/${business.id}/pause`);
+  const monthly = await publish(h, 'Month-end closing', { trigger: { type: 'schedule', at: '10:00', day_of_month: 31, timezone: 'America/Chicago' }, steps: [] });
+  assert.equal((await h.get(`workflows/${monthly.id}/trigger?from=2027-01-31T18:00:00Z&count=1`)).planned[0].at, '2027-02-28T16:00:00.000Z');
+  await h.post(`workflows/${monthly.id}/pause`);
 
   const interval = await publish(h, 'Quarter-hourly sync', { trigger: { type: 'schedule', every_minutes: 15, timezone: 'America/Chicago', missed: 'catch_up' }, steps: [] });
   const due = Date.parse((await h.get(`workflows/${interval.id}/trigger`)).schedule.next_due_at);
@@ -184,4 +190,50 @@ test('TRIG-002: weekday schedules keep 9 a.m. local across DST, admit each occur
   const dailyDue = Date.parse((await h.get(`workflows/${daily.id}/trigger`)).schedule.next_due_at);
   await h.tick(dailyDue + 10 * MINUTE);
   assert.equal((await h.get(`workflows/${daily.id}/trigger`)).occurrences[0].outcome, 'skipped', 'a run missed by more than the grace period is skipped under the skip policy');
+
+  for (const workflow of [daily, spring, interval]) await h.post(`workflows/${workflow.id}/pause`);
+  const durable = await publish(h, 'Durable scheduled invoices', { trigger: { type: 'schedule', every_minutes: 15, timezone: 'America/Chicago', missed: 'catch_up' }, steps: [] });
+  const firstDue = Date.parse((await h.get(`workflows/${durable.id}/trigger`)).schedule.next_due_at);
+  // Interrupt inside real D1 admission, before a run can be created. A claim
+  // without its run must never survive the failed Cron pass.
+  await h.db.exec(`CREATE TRIGGER interrupt_schedule BEFORE INSERT ON crank_wf_runs WHEN NEW.workflow_id='${durable.id}' BEGIN SELECT RAISE(ABORT,'test schedule interruption'); END;`);
+  try {
+    await h.tick(firstDue);
+    assert.equal((await h.get(`workflows/${durable.id}/trigger`)).occurrences.length, 0, 'the occurrence rolls back with its missing run');
+  } finally { await h.db.exec('DROP TRIGGER interrupt_schedule'); }
+  await h.restart();
+  await Promise.all([h.tick(firstDue), h.tick(firstDue)]);
+  assert.equal((await runs(h, durable)).length, 1, 'concurrent passes after restart admit the interrupted occurrence exactly once');
+
+  // A committed admission followed by executor loss retains queued work.
+  const secondDue = firstDue + 15 * MINUTE;
+  await h.db.exec(`CREATE TRIGGER interrupt_schedule_dispatch BEFORE UPDATE OF status ON crank_wf_runs WHEN NEW.workflow_id='${durable.id}' AND NEW.status='running' BEGIN SELECT RAISE(ABORT,'test dispatch interruption'); END;`);
+  try { await h.tick(secondDue); assert.equal((await runs(h, durable)).filter(r => r.status === 'queued').length, 1, 'the admitted run remains queued after executor loss'); }
+  finally { await h.db.exec('DROP TRIGGER interrupt_schedule_dispatch'); }
+  await h.restart(); await h.tick(secondDue); await h.tick(firstDue);
+  const recovered = await runs(h, durable);
+  assert.equal(recovered.length, 2); assert.ok(recovered.every(r => r.status === 'succeeded'));
+  assert.ok((await h.get(`workflows/${durable.id}/trigger`)).occurrences.every(o => o.run_id), 'every admitted occurrence has its durable run link');
+  await h.post(`workflows/${durable.id}/pause`);
+
+  const backlog = await publish(h, 'Catch up a long outage', { trigger: { type: 'schedule', every_minutes: 15, timezone: 'America/Chicago', missed: 'catch_up' }, steps: [] });
+  const backlogDue = Date.parse((await h.get(`workflows/${backlog.id}/trigger`)).schedule.next_due_at), count = 240, through = backlogDue + (count - 1) * 15 * MINUTE;
+  await h.tick(through); await h.restart(); await Promise.all([h.tick(through), h.tick(through)]);
+  const caughtUp = [];
+  let before = '';
+  do {
+    const page = await h.get(`workflow-runs?workflow=${backlog.id}&limit=100${before ? '&before=' + encodeURIComponent(before) : ''}`);
+    caughtUp.push(...page.runs); before = page.next;
+  } while (before);
+  assert.equal(caughtUp.length, count, 'bounded passes retain and drain all due occurrences beyond one pass');
+  assert.equal(new Set(caughtUp.map(r => r.source_id)).size, count);
+  assert.ok(caughtUp.every(r => r.status === 'succeeded'));
+  assert.ok(Date.parse((await h.get(`workflows/${backlog.id}/trigger`)).schedule.next_due_at) > through);
+  await h.post(`workflows/${backlog.id}/pause`);
+  const overlap = await publish(h, 'One approval at a time', { trigger: { type: 'schedule', every_minutes: 15, timezone: 'America/Chicago', overlap: 'skip' }, steps: [{ id: 'review', type: 'approval', input: { customer: 'Harbor Workshop' } }] });
+  const triggerState = await h.get(`workflows/${overlap.id}/trigger`), overlapDue = Date.parse(triggerState.schedule.next_due_at);
+  assert.equal(triggerState.policies.overlap, 'skip');
+  await Promise.all([h.tick(overlapDue + 15 * MINUTE), h.tick(overlapDue + 15 * MINUTE)]);
+  assert.equal((await runs(h, overlap)).length, 1);
+  assert.deepEqual((await h.get(`workflows/${overlap.id}/trigger`)).occurrences.map(o => o.outcome).sort(), ['admitted', 'skipped']);
 });

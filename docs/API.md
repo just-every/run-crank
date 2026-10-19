@@ -63,6 +63,9 @@ A graph's `settings` set its `timezone`, `burst_threshold` (1 to 10,000, default
 | POST `/workflow-runs/:id/approve`, `/reject` | Native/dev owner | `{path,digest,edits?,reason?}` for a waiting approval |
 | POST `/workflow-runs/:id/resume`, `/cancel` | Native/dev owner | Resume a paused run from its checkpoint, or cancel it |
 | GET `/holds/:id`; POST `/holds/:id/release`, `/discard` | Owner for decisions | Flood-held events: `{items:[keys]}` or `{all:true}` |
+| POST `/workflows/:id/historical` | Native/dev owner | Snapshot a source and preview selected count, samples and USD estimate; no workflow effects |
+| GET `/historical/:id` | Native/dev owner | Reviewed snapshot, remaining items and real per-item run outcomes |
+| POST `/historical/:id/run` | Native/dev owner | `{fingerprint,items:[sourceIds]}` or `{fingerprint,all:true}`; once per source ID in this batch |
 | GET `/queues` | Person or agent | Delay queues: depth, oldest item, next release |
 | GET/POST `/connections`; POST `/connections/:id/rotate`, `/revoke`, `/test` | Native/dev owner for writes | Credentials are encrypted and never returned |
 | POST `/oauth/apps/:app`, `/oauth/start`; GET `/oauth/callback` | Native/dev owner | Your provider OAuth app, consent start and redirect |
@@ -74,3 +77,54 @@ Inbound doors need no session and admit events only: `/hooks/w/SECRET` (POST,
 PUT, GET; JSON, form, multipart, XML or raw; optional Stripe, Shopify, GitHub,
 Calendly, Typeform, Twilio or custom HMAC signatures), `/hooks/resume/TOKEN`
 for callback waits, and `/hooks/slack/CONNECTION_ID` for signed Slack events.
+
+## Historical runs (TRIG-002)
+
+Publish a graph whose mappings use the source record at `trigger.<field>`.
+POST `/workflows/:id/historical` with a real JSON source, a filter and/or
+`date_range`, and explicit cost assumptions. For example:
+
+```json
+{
+  "source": {"url":"https://crm.example/deals","connection_id":"YOUR_CONNECTION","items_path":"results","id_path":"id","pagination":{"kind":"cursor","cursor_path":"next","param":"cursor"}},
+  "filter": [[{"field":"trigger.status","op":"text.equals","value":"closed"}]],
+  "date_range": {"field":"closed_at","from":"2026-07-01","to":"2026-09-30"},
+  "cost": {"components":[
+    {"kind":"orchestration","usd_per_run":"0.000125","assumption":"Your infrastructure estimate per execution"},
+    {"kind":"connectors","usd_per_run":"0.025","assumption":"Your estimate of the declared connector requests"},
+    {"kind":"models","usd_per_run":"0","assumption":"No model step in this graph"},
+    {"kind":"executors","usd_per_run":"0","assumption":"No external executor in this graph"}
+  ]}
+}
+```
+
+These are illustrative owner estimates, never provider-verified prices. All
+four components and their assumptions are required, including quoted zeros.
+USD totals sum the exact components, multiply by selected count, then round
+half-up to cents. Filter rules use WORK-013 semantics and `timezone` (workspace
+default), evaluated at the stored preview clock. Date-range bounds are inclusive
+UTC instants; a date-only end includes its entire UTC day. Source dates without
+a zone are read in UTC. Unparseable dates/type mismatches fail the preview.
+
+Read the returned `count`, `sample`, `cost`, `fingerprint` and item IDs. Send
+`{ "fingerprint":"RETURNED_FINGERPRINT", "items":["deal-1","deal-2"] }` to
+`/historical/:id/run`, then `{ "fingerprint":"RETURNED_FINGERPRINT", "all":true }`
+for the remainder. The selected source records are frozen; later source edits
+cannot change an approved snapshot. Repeat or concurrent releases create one
+run per source ID per batch. A new preview creates a new batch deliberately.
+Each item links to a real run and its outcome, including failed/waiting work.
+The reviewed workflow version must still be current and enabled. Replaced
+versions require a new preview. Existing optional approval/cap steps still apply.
+
+Sources support public HTTP(S) or stored connection auth, JSON lists at the
+root or `items_path`, and cursor/page/Link pagination. Redirects, foreign-origin
+pagination, inline credentials, conflicting duplicate IDs, missing IDs and
+incomplete pagination fail visibly. Identical duplicate IDs collapse. Integer
+IDs convert to decimal strings. No pagination means the supplied URL is a
+complete-list door. Page pagination needs an empty terminal page; cursor/Link
+pagination needs an absent next marker. Bounds are 1,000 source records including
+page overlaps, 50 pages, 2 MiB per response and 4 MiB retained payload. Narrow
+the source query when a bound is reached; Crank never previews a truncated count.
+Snapshots are exported with domain data and do not start work on restore;
+an owner must deliberately re-enable restored workflows and reconnect their
+connections. Replacing a workflow version requires a fresh preview.

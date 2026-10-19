@@ -30,7 +30,7 @@
     "check": "rer check",
     "deps": "rer install",
     "rer": "rer",
-    "test:crank": "node --test --test-concurrency=1 tests/crank.test.mjs tests/triggers.test.mjs tests/logic.test.mjs tests/connections.test.mjs tests/app.test.mjs tests/ops.test.mjs tests/batch.test.mjs tests/pagination.test.mjs tests/ownership.test.mjs",
+    "test:crank": "node --test --test-concurrency=1 tests/crank.test.mjs tests/triggers.test.mjs tests/logic.test.mjs tests/connections.test.mjs tests/app.test.mjs tests/ops.test.mjs tests/batch.test.mjs tests/pagination.test.mjs tests/ownership.test.mjs tests/historical.test.mjs",
     "inbox": "node examples/inbox/server.mjs",
     "test:site": "node --test --test-concurrency=1 tests/site.test.mjs"
   },

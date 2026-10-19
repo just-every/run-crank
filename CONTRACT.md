@@ -445,6 +445,10 @@ Every workflow can receive webhooks from senders that cannot add custom headers 
 
 Owners start a run on demand or schedule intervals, daily/weekly business times and calendar-aware recurrence in an IANA timezone. A historical run applies a published workflow to existing source records the owner selects by filter or date range (for example last quarter’s closed deals), with a preview of the count, sample records and estimated USD cost before any effect (as in TRIG-005), runs selected or all items once each by source ID, and reports per-item outcomes. DST behavior, missed-run catch-up/skip policy and concurrent-run policy are inspectable. Due occurrences have stable identities, continue unattended and do not duplicate after restart or clock movement.
 
+Historical runs currently read complete, bounded JSON lists through an authorized HTTP source connection (or a public source), keeping an immutable snapshot of the selected records and published version. Source IDs are strings (safe integer IDs convert to decimal strings), deduplicated within that snapshot; identical duplicate records collapse and conflicting records fail the preview. The selected record is the run’s trigger payload unchanged. A new preview is an explicit new historical batch; repeat or concurrent release of one batch never reruns a source ID. Every record/list door added under CONN-003–019 or WORK-007 inherits this count/sample/cost/selection and release obligation before it ships.
+
+Selection uses WORK-013 filters on `trigger.<field>` at the preview’s recorded clock and timezone. Date-range bounds are inclusive UTC instants; date-only bounds cover the entire UTC day. Cost components for orchestration, connectors, models and executors are explicit owner-supplied USD per-run estimates with assumptions, labelled **owner estimate; not provider-verified**; no zero price is invented. Components are summed exactly, multiplied by the selected count and rounded half-up to cents once. The owner releases selected IDs or all remaining records with the preview fingerprint. Paused/replaced versions cannot start a release; per-item outcomes link to the actual runs. Resource bounds fail visibly rather than showing a truncated count (1,000 source records, 50 pages, 2 MiB per response and 4 MiB retained payload; narrower queries can be prepared as separate batches).
+
 **Acceptance evidence:** Configure weekday 9 a.m. America/New_York execution, an interval and an on-demand run; cross both DST changes and restart during a due occurrence, then inspect the planned and actual times and exactly one admitted run per due occurrence. Start a historical run over last quarter’s 40 closed test deals: verify the preview shows 40 items and an estimated USD cost with no effects, run 10 selected items and then the rest, and verify exactly 40 runs, one per deal, with per-item outcomes.
 
 #### TRIG-003 — App, polling and email triggers.
@@ -740,7 +744,7 @@ Every capability the homepage states, in page order, for the owner-approved stru
 | # | Claim | Clause(s) | Status | Backing |
 | --- | --- | --- | --- | --- |
 | 1 | Hero: "Crank connects your apps" | `CONN-001`, `CONN-002` | partial | partly: `src/crank/connections/catalog.ts`, `src/crank/connections/oauth.ts` |
-| 2 | Hero: "runs every step on schedule" | `TRIG-002` | partial | partly: `src/crank/triggers/schedule.ts` |
+| 2 | Hero: "runs every step on schedule" | `TRIG-002` | done | `src/crank/triggers/schedule.ts`, `src/crank/triggers/historical.ts`, `tests/triggers.test.mjs`, `tests/historical.test.mjs` |
 | 3 | Hero: "retries what fails" | `EXEC-002` | partial | partly: `src/crank/connectors/http-step.ts` |
 | 4 | Hero: "fixes the mapping when an app changes" | `AGENT-002` | missing | contract, not yet in code |
 | 5 | Hero: "100% free, open source" | `BASE-004` | done | `LICENSE`, `package.json`, `tests/site.test.mjs`, `tests/ownership.test.mjs` |
@@ -758,7 +762,7 @@ Every capability the homepage states, in page order, for the owner-approved stru
 | 17 | One run: "AI step · Summarize" | `AI-001` | missing | contract, not yet in code |
 | 18 | One run: "Rate limited · retried after 90s" | `EXEC-002` | partial | partly: `src/crank/connectors/http-step.ts` |
 | 19 | One run: field mapping `amount ÷ 100 → Amount (USD)`, `customer.name → Customer`, blank `metadata.po → "none"` | `WORK-002`, `WORK-012` | partial | partly: `src/crank/engine/mapping.ts`, `src/crank/engine/transforms/index.ts` |
-| 20 | All day: "Schedules … start every run" | `TRIG-002` | partial | partly: `src/crank/triggers/schedule.ts` |
+| 20 | All day: "Schedules … start every run" | `TRIG-002` | done | `src/crank/triggers/schedule.ts`, `src/crank/triggers/historical.ts`, `tests/triggers.test.mjs`, `tests/historical.test.mjs` |
 | 21 | All day: "new emails" | `CONN-003`, `TRIG-003`, `TRIG-006` | partial | partly: `src/crank/triggers/poll.ts`; email triggers are contract, not yet in code |
 | 22 | All day: "webhooks" | `TRIG-001` | done | code: `src/crank/triggers/webhook.ts` |
 | 23 | All day: "and app events" | `TRIG-003`, `TRIG-008` | partial | partly: `src/crank/triggers/slack-events.ts`, `src/crank/triggers/poll.ts` |
@@ -787,8 +791,8 @@ Judged from the code and tests at commit `06ace84667d83032ec41a8a210a5084cd0c854
 | Clauses | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
 | Published | 4 | 8 | 0 | 12 |
-| Target and push further | 4 | 32 | 37 | 73 |
-| All | 8 | 40 | 37 | 85 |
+| Target and push further | 5 | 31 | 37 | 73 |
+| All | 9 | 39 | 37 | 85 |
 
 MIG-006, BASE-004 and BASE-005 were added on 17 October 2026 so every homepage claim has a clause, and were judged from the code and tests at `eac16196cffe508a1eec962b1c116564707c1598` (main after the run site landed); every earlier row keeps its status from the commit above.
 
@@ -830,7 +834,7 @@ MIG-006, BASE-004 and BASE-005 were added on 17 October 2026 so every homepage c
 | `HTTP-001` | Authorized HTTP dispatch | published | done | `src/crank/flows.ts`; `src/crank/runs.ts`; `src/crank/delivery.ts`; `tests/crank.test.mjs` |  |
 | `HTTP-002` | General HTTP and connector API request steps | target | partial | `src/crank/connectors/http-step.ts`; `src/crank/engine/egress.ts`; `tests/connections.test.mjs` | HubSpot raw API proof needs an account; DNS-rebinding needs an enforcing Worker egress binding (Base gap). |
 | `TRIG-001` | Scoped, deduplicated webhook admission | target | partial | `src/crank/triggers/webhook.ts`; `src/crank/triggers/inbound.ts`; `src/crank/triggers/signatures.ts`; `tests/triggers.test.mjs`; `tests/crank.test.mjs` | Secret-URL envelope admission re-admits repeated event IDs, does not reject changed payloads and has no erased-event fence; the legacy scoped-envelope path retains these protections. |
-| `TRIG-002` | Schedules and on-demand runs | target | partial | `src/crank/ui/flows.ts`; `src/crank/runs.ts`; `src/crank/triggers/schedule.ts`; `tests/triggers.test.mjs` | Historical runs over existing source records with count, sample and USD preview. |
+| `TRIG-002` | Schedules and on-demand runs | target | done | `src/crank/triggers/schedule.ts`; `src/crank/triggers/schedule-admission.ts`; `src/crank/triggers/historical.ts`; `src/crank/triggers/historical-release.ts`; `tests/triggers.test.mjs`; `tests/historical.test.mjs` (`TRIG-002`: DST, calendars, atomic admission, interrupted dispatch, concurrent restart, bounded catch-up and 40-deal historical preview/release) | |
 | `TRIG-003` | App, polling and email triggers | target | partial | `src/crank/triggers/poll.ts`; `src/crank/triggers/slack-events.ts`; `tests/triggers.test.mjs` | Email triggers, CRM/app polling, renewable subscriptions, TRIG-008. |
 | `TRIG-004` | Polling frequency and trigger latency | target | partial | `src/crank/ops/report.ts`; `tests/triggers.test.mjs` | Provider rate tables with slowest-safe-interval warnings; HubSpot/Typeform journey needs accounts. |
 | `TRIG-005` | Flood protection for bursts of trigger events | target | partial | `src/crank/triggers/admission.ts`; `tests/triggers.test.mjs`; `tests/logic.test.mjs` | Estimated USD cost of a held batch (needs OPS-002). |

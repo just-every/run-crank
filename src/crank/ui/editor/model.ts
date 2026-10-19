@@ -51,7 +51,7 @@ export function appOf(node: Node, connections: Connection[]): { title: string; t
 
 /** How a run started, in words: "Stripe webhook", "Run now", "Schedule". */
 export function triggerWords(kind: string, graph: Graph | undefined, connections: Connection[]) {
-  const words: Record<string, string> = { webhook: 'Webhook', manual: 'Run now', schedule: 'Schedule', feed: 'New feed item', url_poll: 'URL poll', slack_event: 'Slack event' }
+  const words: Record<string, string> = { webhook: 'Webhook', manual: 'Run now', historical: 'Historical run', schedule: 'Schedule', feed: 'New feed item', url_poll: 'URL poll', slack_event: 'Slack event' }
   const app = graph ? appOf({ path: 'trigger', step: null, trigger: graph.trigger }, connections).title : ''
   if (kind === 'webhook' && app && app !== TRIGGERS.webhook) return `${app} webhook`
   return words[kind] ?? titleCase(kind.replace(/_/g, ' '))

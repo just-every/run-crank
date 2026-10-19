@@ -3,11 +3,11 @@ import { dateKey, formatDate, fromWallTime, wallTime } from '../engine/dates'
 import { executeRun } from '../engine/executor'
 import type { Graph } from '../engine/graph'
 import { stmt, type CrankEnv } from '../model'
-import { admit, burstThreshold, type WorkflowRow } from './admission'
+import type { WorkflowRow } from './admission'
 import { DAYS } from './definition'
+import { admitScheduleOccurrence, advanceSchedule, type ScheduleRow } from './schedule-admission'
 
 export interface Occurrence { at: number; key: string; local: string }
-const MISSED_GRACE_MS = 5 * 60000
 
 /** The first occurrence strictly after `after`. Daily times are local wall times in the
  * schedule's IANA zone: a time skipped by DST runs at the shifted instant, a repeated
@@ -42,30 +42,36 @@ export function plannedTimes(trigger: Record<string, any>, from: number, count =
 
 /** Admits each due occurrence exactly once by its stable key, honouring the missed-run
  * (catch up or skip) and overlap (allow or skip) policies. */
-export async function runSchedule(env: CrankEnv, row: { workflow_id: string; version_id: string; next_due_at: string }, time: number) {
+export async function runSchedule(env: CrankEnv, row: ScheduleRow, time: number) {
   const workflow = await stmt(env, 'SELECT * FROM crank_workflows WHERE id=?', row.workflow_id).first<WorkflowRow>()
-  if (!workflow || workflow.status === 'draft' || workflow.published_version_id !== row.version_id) { await stmt(env, 'DELETE FROM crank_schedules WHERE workflow_id=? AND version_id=?', row.workflow_id, row.version_id).run(); return 0 }
+  if (!workflow || workflow.status === 'draft' || workflow.published_version_id !== row.version_id) {
+    await stmt(env, `DELETE FROM crank_schedules WHERE workflow_id=? AND version_id=? AND NOT EXISTS(
+      SELECT 1 FROM crank_workflows WHERE id=crank_schedules.workflow_id AND status IN ('published','paused') AND published_version_id=crank_schedules.version_id
+    )`, row.workflow_id, row.version_id).run()
+    return 0
+  }
   // A paused workflow keeps its schedule; the missed-run policy applies when it resumes.
   if (workflow.status === 'paused') return 0
   const graph = JSON.parse((await stmt(env, 'SELECT graph_json FROM crank_workflow_versions WHERE id=?', row.version_id).first<{ graph_json: string }>())!.graph_json) as Graph
   const trigger = graph.trigger as Record<string, any>
-  let cursor = Date.parse(row.next_due_at) - 1, admitted = 0, guard = 0, last = cursor
+  let cursor = Date.parse(row.next_due_at) - 1, admitted = 0, guard = 0, last: number | null = null
   const runs: string[] = []
   while (guard++ < 200) {
     const occurrence = nextOccurrence(trigger, cursor)
     if (!occurrence || occurrence.at > time) break
+    const decision = await admitScheduleOccurrence(env, row, occurrence, trigger, time)
+    // Authority can change after the initial read. Keep an undecided occurrence
+    // due so a pause/resume during this pass cannot lose it.
+    if (!decision.decided) break
     cursor = occurrence.at; last = occurrence.at
-    const late = time - occurrence.at > MISSED_GRACE_MS && trigger.missed === 'skip'
-    const busy = trigger.overlap === 'skip' && await stmt(env, "SELECT 1 FROM crank_wf_runs WHERE workflow_id=? AND status IN ('queued','running','waiting','awaiting_approval')", workflow.id).first()
-    const outcome = late || busy ? 'skipped' : 'admitted'
-    const claimed = await stmt(env, 'INSERT INTO crank_schedule_occurrences(workflow_id,occurrence,planned_at,admitted_at,outcome) VALUES(?,?,?,?,?) ON CONFLICT DO NOTHING', workflow.id, occurrence.key, new Date(occurrence.at).toISOString(), new Date(time).toISOString(), outcome).run()
-    if (claimed.meta.changes !== 1 || outcome === 'skipped') continue
-    const { runs: created } = await admit(env, workflow, 'schedule', 'schedule', [{ key: 'schedule:' + occurrence.key, payload: { scheduled_for: new Date(occurrence.at).toISOString(), local_time: occurrence.local, timezone: trigger.timezone, occurrence: occurrence.key }, sourceTime: new Date(occurrence.at).toISOString() }], burstThreshold(graph), 'trigger')
-    for (const run of created) { runs.push(run.id); await stmt(env, 'UPDATE crank_schedule_occurrences SET run_id=? WHERE workflow_id=? AND occurrence=?', run.id, workflow.id, occurrence.key).run() }
-    admitted++
+    if (decision.runId) { runs.push(decision.runId); admitted++ }
   }
-  const next = nextOccurrence(trigger, Math.max(last, time))
-  await stmt(env, 'UPDATE crank_schedules SET next_due_at=?,last_planned_at=? WHERE workflow_id=? AND version_id=?', next ? new Date(next.at).toISOString() : '9999-12-31T00:00:00.000Z', new Date(last).toISOString(), workflow.id, row.version_id).run()
+  // The 200-occurrence bound leaves the oldest unprocessed occurrence due,
+  // rather than jumping past the rest of a catch-up backlog.
+  if (last !== null) {
+    const next = nextOccurrence(trigger, cursor)
+    await advanceSchedule(env, row, next ? new Date(next.at).toISOString() : '9999-12-31T00:00:00.000Z', new Date(last).toISOString())
+  }
   for (const runId of runs) await executeRun(env, runId, time)
   return admitted
 }
