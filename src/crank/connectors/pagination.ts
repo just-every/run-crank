@@ -49,7 +49,7 @@ export async function paginate(step: Record<string, unknown>, firstUrl: URL, bod
     if (visited.has(url.href)) throw new StepError('validation', `HTTP ${step.id}: pagination repeated a page`, { outcome: 'pagination cycle', pages })
     visited.add(url.href)
     currentResponse = await sendPage(url)
-    if (currentResponse.status < 200 || currentResponse.status > 299) throw new StepError('provider', `Pagination request failed with status ${currentResponse.status}`, { status: currentResponse.status })
+    if (currentResponse.status < 200 || currentResponse.status > 299) throw new StepError([401, 403].includes(currentResponse.status) ? 'auth' : currentResponse.status === 429 ? 'rate_limit' : 'provider', `Pagination request failed with status ${currentResponse.status}`, { status: currentResponse.status, next_owner_action: 'Inspect this page’s retained attempts and correct the provider or account issue before starting a new run.' })
     current = parseResponse(currentResponse); pages++; bytes += currentResponse.bytes.byteLength
     items.push(...itemsOf(current))
   }

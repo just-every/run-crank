@@ -1,3 +1,4 @@
+import { RETRY_POLICY } from '../connectors/retry'
 import { LIMITS, OPERATORS } from '../engine/conditions'
 import { PATH_LIMITS } from '../engine/graph'
 import { TRANSFORMS } from '../engine/transforms'
@@ -12,7 +13,7 @@ const op = (id: string, name: string, extra: Record<string, unknown> = {}) => ({
 export const CATALOG = [
   { app: 'webhooks', name: 'Webhooks', clauses: ['TRIG-001', 'HTTP-002'], auth: ['none', 'signature', 'header secret'],
     triggers: [op('catch_hook', 'Catch hook (secret URL, POST/PUT/GET, JSON/form/multipart/XML/raw)', { trigger: 'webhook', signature_presets: SIGNATURE_PRESETS, dedup: 'key path or SHA-256 body digest, 1 minute to 30 days', responses: ['immediate', 'sync'] })],
-    actions: [op('request', 'API request (GET, POST, PUT, PATCH, DELETE, HEAD)', { step: 'http', bodies: ['json', 'form', 'multipart', 'xml', 'raw'], auth: ['bearer', 'basic', 'api_key', 'hmac', 'oauth2', 'oauth2_client_credentials'], pagination: ['cursor', 'page', 'link'] })], searches: [] },
+    actions: [op('request', 'API request (GET, POST, PUT, PATCH, DELETE, HEAD)', { step: 'http', bodies: ['json', 'form', 'multipart', 'xml', 'raw'], auth: ['bearer', 'basic', 'api_key', 'hmac', 'oauth2', 'oauth2_client_credentials'], pagination: ['cursor', 'page', 'link'], retry_policy: RETRY_POLICY })], searches: [] },
   { app: 'schedule', name: 'Schedule', clauses: ['TRIG-002'], triggers: [op('every', 'Every N minutes', { trigger: 'schedule' }), op('daily', 'Daily, weekday or monthly time in an IANA timezone', { trigger: 'schedule', business_days: 'us_federal or custom calendar' })], actions: [], searches: [] },
   { app: 'rss', name: 'RSS, Atom and JSON Feed', clauses: ['TRIG-007'], triggers: [op('new_item', 'New item in one or several feeds', { trigger: 'feed', intervals_minutes: POLL_INTERVALS })], actions: [], searches: [] },
   { app: 'retrieve_poll', name: 'URL poll (Retrieve Poll)', clauses: ['TRIG-007'], triggers: [op('new_record', 'New record at a JSON path or XPath', { trigger: 'url_poll', pagination: ['cursor', 'page', 'link'], intervals_minutes: POLL_INTERVALS })], actions: [], searches: [] },
