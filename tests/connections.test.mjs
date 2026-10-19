@@ -15,15 +15,21 @@ before(async () => {
 after(async () => { await h?.close() });
 const form = s => new URLSearchParams(s);
 
-test('HTTP-002/EXEC-005: requests use stored connections, map responses, route business failures, read back lost writes and refuse other destinations', async () => {
+test('HTTP-002/EXEC-005: requests use stored connections, map responses, route business failures, read back lost writes and refuse other destinations', async t => {
   const token = fakeSecret('vendor'), records = { r1: { id: 'r1', status: 'new' } };
   let lose = false;
+  const pendingResponses = new Set();
+  t.after(async () => { await Promise.allSettled([...pendingResponses]); });
   fake.routes.set('api.vendor.example', ({ method, url, headers, body }) => {
     if (headers.authorization !== 'Bearer ' + token) return jsonResponse({ error: 'unauthorized' }, 401);
     if (method === 'PATCH') {
       Object.assign(records.r1, JSON.parse(body));
-      // The write lands, then its response never arrives within the step's deadline.
-      return lose ? new Promise(resolve => setTimeout(() => resolve(jsonResponse(records.r1)), 1500)) : jsonResponse(records.r1);
+      // The effect lands before the request deadline, but its acknowledgement
+      // arrives too late. Drain this edge fixture before another journey starts.
+      if (!lose) return jsonResponse(records.r1);
+      const pending = new Promise(resolve => setTimeout(() => resolve(jsonResponse(records.r1)), 1500));
+      pendingResponses.add(pending); pending.finally(() => pendingResponses.delete(pending));
+      return pending;
     }
     if (url.pathname === '/conflict') return jsonResponse({ error: 'duplicate order' }, 409);
     if (url.pathname === '/forms' || url.pathname === '/uploads') return jsonResponse({ ok: true, type: headers['content-type'] });

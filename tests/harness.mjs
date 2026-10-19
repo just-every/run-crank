@@ -23,9 +23,8 @@ export async function harness(target,{emitted=false,edge}={}) {
     let db=await mf.getD1Database('DB');
     for(const file of (await readdir('migrations/core')).filter(x=>x.endsWith('.sql')).sort()) await db.batch(unstable_splitSqlQuery(await readFile('migrations/core/'+file,'utf8')).map(sql=>db.prepare(sql)));
     const send=async(path,body,cookie='',headers={})=>{
-      const response=await mf.dispatchFetch(origin+path,{method:body===undefined?'GET':'POST',redirect:'manual',headers:{host:new URL(origin).host,origin,'content-type':'application/json',connection:'close',cookie,...headers},...(body===undefined?{}:{body:JSON.stringify(body)})});
-      // An aborted provider request must not leave a reusable bridge socket
-      // underneath the next archive response or a newly restarted executor.
+      const response=await mf.dispatchFetch(origin+path,{method:body===undefined?'GET':'POST',redirect:'manual',headers:{host:new URL(origin).host,origin,'content-type':'application/json',cookie,...headers},...(body===undefined?{}:{body:JSON.stringify(body)})});
+      // Name the public door if the Worker transport interrupts its response.
       let text;
       try { text=await response.text() } catch(error) { throw new Error(`${new URL(path,origin).pathname}: response body interrupted (${error.cause?.code ?? error.message})`,{cause:error}) }
       let value;try{value=JSON.parse(text)}catch{value=text}
