@@ -39,6 +39,8 @@ export async function archiveRecovery(h, flow, time, inFlight) {
   assert.equal((await h.get('data/transfers')).find(job => job.id === building.id).phase, 'building', 'refused callers do not abort the export');
   const aborted = await h.post(`data/transfers/${building.id}/abort`);
   assert.equal(aborted.phase, 'aborted');
+  const audit = await h.get(`audit?kind=archive_transfer&id=${building.id}`);
+  assert.equal(audit.filter(row=>row.action==='data.transfer.abort' && row.detail.kind==='export').length,1);
   await h.command('tick', { time: time + 40 * 60000 });
   const reconciled = await h.get('reports/operations');
   assert.equal(reconciled.recovery.operations.find(job => job.id === operation.id).status, 'interrupted');

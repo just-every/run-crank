@@ -28,7 +28,9 @@ export async function dataApi(request:Request,env:CrankEnv):Promise<Response|nul
     if (abort && request.method === 'POST') {
       const transfer = await env.DB.prepare('SELECT id,kind FROM rer_portability_jobs WHERE id=?').bind(decodeURIComponent(abort[1])).first<{ id: string; kind: string }>()
       if (!transfer) return Response.json({ error: 'Transfer not found' }, { status: 404 })
-      return Response.json(await (transfer.kind === 'export' ? store.exports : store.imports).abort(transfer.id), { headers: { 'cache-control': 'no-store' } })
+      const result = await (transfer.kind === 'export' ? store.exports : store.imports).abort(transfer.id)
+      await guardedBatch(env, actor, 'owner', [auditStatement(env, actor.id, 'data.transfer.abort', 'archive_transfer', transfer.id, { kind: transfer.kind })])
+      return Response.json(result, { headers: { 'cache-control': 'no-store' } })
     }
     if (path === '/api/crank/data/export' && request.method === 'POST') {
       // Finish the incoming POST stream before returning a large download.
