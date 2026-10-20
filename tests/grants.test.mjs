@@ -36,6 +36,7 @@ test('TEAM-002: grant-free publication and credential-bound dynamic tasks; exact
   const grants=await h.get('grants');assert.equal(grants[0].credential,undefined);assert.equal(grants[0].token_hash,undefined);
   assert.ok(!(JSON.stringify(await h.get('state'))).includes(g.credential));
   await h.post('grants',{...g},'',403,headers(g));await h.post('tokens',{label:'self escalation',scope:'agent'},'',403,headers(g));
+  await h.get('state','',403,headers(g));await h.get('connections','',403,headers(g));
   await h.post('workflows',{name:'Unauthorized draft',graph:{trigger:{type:'manual'},steps:[]}},'',403,headers(g));
   const preparer=await h.post('tokens',{label:'Preparation only',scope:'agent'},h.owner,201);
   await h.post('agent-tasks',{task_id:'not authorized',actions:[action(steps[0],{})]},'',403,{authorization:'Bearer '+preparer.token});
