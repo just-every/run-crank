@@ -30,7 +30,7 @@
     "check": "rer check",
     "deps": "rer install",
     "rer": "rer",
-    "test:crank": "node --test --test-concurrency=1 tests/crank.test.mjs tests/triggers.test.mjs tests/webhook-erasure.test.mjs tests/hold-cost.test.mjs tests/usage.test.mjs tests/logic.test.mjs tests/connections.test.mjs tests/app.test.mjs tests/ops.test.mjs tests/batch.test.mjs tests/pagination.test.mjs tests/ownership.test.mjs tests/historical.test.mjs tests/publish-authority.test.mjs tests/execution-queue.test.mjs tests/dispatch-authority.test.mjs tests/request-limits.test.mjs tests/version-comparison.test.mjs tests/deployment.test.mjs tests/skills.test.mjs tests/grants.test.mjs tests/platform.test.mjs",
+    "test:crank": "node --test --test-concurrency=1 tests/crank.test.mjs tests/triggers.test.mjs tests/webhook-erasure.test.mjs tests/hold-cost.test.mjs tests/usage.test.mjs tests/logic.test.mjs tests/connections.test.mjs tests/app.test.mjs tests/ops.test.mjs tests/batch.test.mjs tests/pagination.test.mjs tests/ownership.test.mjs tests/historical.test.mjs tests/publish-authority.test.mjs tests/execution-queue.test.mjs tests/dispatch-authority.test.mjs tests/request-limits.test.mjs tests/version-comparison.test.mjs tests/deployment.test.mjs tests/skills.test.mjs tests/grants.test.mjs tests/platform.test.mjs tests/security.test.mjs",
     "inbox": "node examples/inbox/server.mjs",
     "test:site": "node --test --test-concurrency=1 tests/site.test.mjs"
   },
