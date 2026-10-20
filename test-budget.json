@@ -1,5 +1,5 @@
 {
   "maximum": 200,
-  "current": 81,
-  "notes": "Public-door business journeys plus the real-time EXEC-002 retry journey (nightly/manual, outside push Verify); below the 200-test cap."
+  "current": 83,
+  "notes": "Public-door business journeys, including BASE-001 owned operation/disclosure, plus the real-time EXEC-002 retry journey (nightly/manual, outside push Verify); below the 200-test cap."
 }

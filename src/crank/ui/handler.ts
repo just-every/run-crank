@@ -17,6 +17,7 @@ import { appliedView, importView, previewView, refusalView } from './move-in-vie
 import { erasurePanels, subjectPreview } from './erasure-view'
 import { applyReviewed, DoorRefusal, undoPlan, uploadAndPlan } from './move-in'
 import { connectionsView } from './connections'
+import { dataFlowsPanel } from './data-flows'
 import { approvalsView, workflowRunView } from './workflow-run'
 import { editorView } from './editor'
 import { runGraphs, workflowData } from './workflow-data'
@@ -186,7 +187,7 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
     const heldPath = /^\/app\/holds\/([^/]+)$/.exec(url.pathname)
     if (heldPath) return page('Held work', usageHoldView(await read('/api/crank/holds/' + encodeURIComponent(heldPath[1]))), {state})
     if(url.pathname==='/app/access') {const people=await call('/auth/operators'); return page('Access',accessView({...state,people:people.ok?await people.json():[]}),{state,intro:'Credentials for agents and sending apps, and the people who can sign in.'})}
-    if(url.pathname==='/app/data') { const [retention,workflows] = await Promise.all([read('/api/crank/data/retention'),read('/api/crank/workflows')]); return page('Data',dataView()+retentionPanels(retention,workflows)+sensitivePanel(retention.sensitive,workflows)+encryptionPanel(retention.sensitive)+erasurePanels((people=>Array.isArray(people)?people:people.operators??[])(await read('/auth/operators'))),{state,intro:'Export, restore and erase. Your data stays on this installation.'}) }
+    if(url.pathname==='/app/data') { const [retention,workflows,flows] = await Promise.all([read('/api/crank/data/retention'),read('/api/crank/workflows'),read('/api/crank/data/flows')]); return page('Data',dataFlowsPanel(flows)+dataView()+retentionPanels(retention,workflows)+sensitivePanel(retention.sensitive,workflows)+encryptionPanel(retention.sensitive)+erasurePanels((people=>Array.isArray(people)?people:people.operators??[])(await read('/auth/operators'))),{state,intro:'Export, restore and erase. Your data stays on this installation.'}) }
     if(url.pathname==='/app/import') { const jobs=await call('/api/crank/imports'); if(!jobs.ok) throw new Error('Import journal unavailable'); return page('Move in',importView(await jobs.json() as any[],await read('/api/operator/import-settings')),{state,intro:'Bring workflows from another tool as drafts you review first.'}) }
     return page('Not found','<a href="/app">Return to flows</a>',{state},404)
   } catch(error:any) {

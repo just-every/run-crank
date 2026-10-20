@@ -23,6 +23,7 @@ allow a 128 KiB source in a 256 KiB JSON envelope. Errors are JSON `{error}`.
 | POST `/data/export` | Native/dev owner | Download installation archive |
 | POST `/data/restore` | Native/dev owner | `{archive,confirm:"RESTORE",journal?}`; empty destination only |
 | POST `/data/erase` | Native/dev owner | `{run_id,confirm:"ERASE"}` for a paused approval flow, or `{workflow_run_id,confirm:"ERASE"}` for a paused multi-step workflow; terminal run only |
+| GET `/data/flows` | Native/dev owner | Read-only current destination/data-category inventory: recipient, purpose, field categories, region/retention uncertainty and credential kinds; no credential/graph values or provider requests |
 | GET `/data/retention` | Native/dev owner | Retention periods, disclosed defaults and automatic cleanup, legal holds, the current dry run and sensitive-data attestations |
 | POST `/data/retention/preview` | Native/dev owner | `{payload_days,attachment_days,history_days,at?}` (whole days 1–3650 or empty); returns what would expire and what is kept with reasons, plus `digest`; deletes nothing |
 | POST `/data/retention` | Native/dev owner | The same periods with the current dry run's `digest` |

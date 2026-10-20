@@ -4,6 +4,10 @@ Owners manage archives in **Data** (`/app/data`). An archive contains sensitive
 event input and workflow details. Keep it private and retain a new archive after
 erasing a run.
 
+Inspect **Where data can leave** on this screen before exporting or reconnecting
+a restored provider. See [Data flows](DATA-FLOWS.md) for the current request
+classes, field disclosures and provider-controlled region/retention labels.
+
 ## Download a backup
 
 Select **Download archive** under **Export your data**. The archive includes

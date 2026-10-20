@@ -9,6 +9,7 @@ import { auditStatement } from './ops/audit'
 import { attest, revokeAttestation, sensitiveData, setDataClass } from './ops/sensitive-data'
 import { exportKeyFile, importKeyFile, rotateKey } from './ops/payload-keys'
 import { operatorAuth } from '../auth.server'
+import { dataFlows } from './data-flows'
 import { DISCLOSURE, listHolds, placeHold, previewRetention, releaseHold, retentionPolicy, retentionScope, setRetention } from './ops/retention'
 
 export const portability = (env: CrankEnv) => createPortability({ db:env.DB, policy })
@@ -19,6 +20,7 @@ export async function dataApi(request:Request,env:CrankEnv):Promise<Response|nul
   try {
     const actor = await authorize(request,env); requireOwner(actor)
     if(request.method !== 'GET') requireWriteOrigin(request,env,actor)
+    if (path === '/api/crank/data/flows' && request.method === 'GET') return Response.json(await dataFlows(env),{headers:{'cache-control':'no-store'}})
     const store = await portability(env)
     if (path === '/api/crank/data/export' && request.method === 'POST') {
       // Finish the incoming POST stream before returning a large download.

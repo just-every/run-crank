@@ -136,6 +136,8 @@ Technical builders run JavaScript/TypeScript and Python transformations with dec
 
 Before shipping any added workflow request operation, this clause inherits EXEC-002’s provider/account admission, bounded retries and parked budgets, exact continuation/readback and uncertain-write safety, with a named public-door acceptance journey.
 
+Before shipping added capabilities, this clause inherits BASE-001: prove owned operation and inactive, credential-free restoration, preserve input/file safety, and disclose each outgoing recipient, purpose, field category, required credential, region and retention (provider-controlled terms labelled unverified).
+
 **Acceptance evidence:** From a published workflow run a code transformation and a remote Python job; exceed a limit, attempt unauthorized egress and cancel a long job; inspect explicit failures and verify a restart reconciles the remote task without launching a duplicate.
 
 #### WORK-006 — Reusable subflows and recipes.
@@ -277,6 +279,8 @@ Recipient actions inherit TEAM-004: count actual mapped destinations (including 
 
 Before shipping any added workflow request operation, this clause inherits EXEC-002’s provider/account admission, bounded retries and parked budgets, exact continuation/readback and uncertain-write safety, with a named public-door acceptance journey.
 
+Before shipping added capabilities, this clause inherits BASE-001: prove owned operation and inactive, credential-free restoration, preserve input/file safety, and disclose each outgoing recipient, purpose, field category, required credential, region and retention (provider-controlled terms labelled unverified).
+
 **Acceptance evidence:** In each provider’s authorized test account, trigger from an incoming message, find its thread, draft and authorize a reply with an attachment, create a calendar follow-up and verify both by provider readback; duplicate notifications create no duplicate reply. Trigger on the search `from:billing has:attachment`, on a newly applied label and on new attachments: verify only matching messages start runs, each attachment arrives as one file reference, and relabeling a message does not start a second run. Test an inclusive recipient bound, one excess destination, duplicate destinations and rejection: only the excess action waits, rejection sends nothing, and approval sends exactly the reviewed list under TEAM-004.
 
 #### CONN-004 — Slack, Nook and Microsoft Teams.
@@ -293,6 +297,8 @@ Recipient actions inherit TEAM-004: count actual mapped destinations (including 
 
 Before shipping any added workflow request operation, this clause inherits EXEC-002’s provider/account admission, bounded retries and parked budgets, exact continuation/readback and uncertain-write safety, with a named public-door acceptance journey.
 
+Before shipping added capabilities, this clause inherits BASE-001: prove owned operation and inactive, credential-free restoration, preserve input/file safety, and disclose each outgoing recipient, purpose, field category, required credential, region and retention (provider-controlled terms labelled unverified).
+
 **Acceptance evidence:** For each service, connect a workspace, start a workflow from an authorized thread, post its result back to that thread, handle a human decision and revoke access; verify no delivery to a different workspace and no repeated ping after completion. For each service, send a direct or chat message to a user found by email from a HubSpot lifecycle-stage change and verify by readback that only that user received it; search a user email that matches no one and verify the WORK-011 not-found route. In Slack, start one run from a new :white_check_mark: reaction and one from a new mention of a chosen user, verify an unrelated reaction starts nothing, and post as the bot with a custom name and icon, verified by readback. In Teams, start one run from a new channel message and one from a chat message, and send a channel message that mentions a user. Test an inclusive recipient bound, one excess destination, duplicate destinations and rejection: only the excess action waits, rejection sends nothing, and approval sends exactly the reviewed list under TEAM-004.
 
 #### CONN-005 — Sheets, Airtable, Google Drive and Microsoft 365 files.
@@ -301,6 +307,8 @@ Google Sheets, Airtable and Microsoft Excel (workbooks on OneDrive or SharePoint
 
 Before shipping any added workflow request operation, this clause inherits EXEC-002’s provider/account admission, bounded retries and parked budgets, exact continuation/readback and uncertain-write safety, with a named public-door acceptance journey.
 
+Before shipping added capabilities, this clause inherits BASE-001: prove owned operation and inactive, credential-free restoration, preserve input/file safety, and disclose each outgoing recipient, purpose, field category, required credential, region and retention (provider-controlled terms labelled unverified).
+
 **Acceptance evidence:** Run a changed spreadsheet row into an Airtable upsert, attach a permitted Drive document and archive a generated file; repeat the event and deny access to a private file, verifying one record and a visible file-permission error. In a Microsoft 365 test tenant, run the same journey with an Excel table row on OneDrive upserted by business key, a SharePoint list item created from it and a generated file saved to a SharePoint document library: verify each by provider readback, repeat the triggering event with no duplicate row, item or file, and deny a file in a library the connection cannot read with a visible permission error. Add one row and then a batch of 3 rows to an Excel table and a Google Sheets worksheet with no key column: verify 4 appended rows in order by readback, and on a retried batch with a lost response, still 4 rows (EXEC-006). With Status as the watched column, edit another cell of a Google Sheets row and of an Excel table row and verify no run, then change each Status and verify one run per row carrying the previous and new Status (TRIG-008).
 
 #### CONN-006 — HubSpot, Orbit and Salesforce.
@@ -308,6 +316,8 @@ Before shipping any added workflow request operation, this clause inherits EXEC-
 HubSpot, Orbit and Salesforce connections trigger on new leads, contacts, companies and deals and on changes to chosen watched properties or a deal’s stage, with optional changed-to values (TRIG-008, covering HubSpot Deal, Contact and Company Property Change and Updated Deal Stage), search associations and custom fields with WORK-011 find-or-create and match outcomes, read and write deal/opportunity line items and products as WORK-002 line-item arrays, create/update records and tasks, and prevent synchronization loops. Buyers choose the authoritative system and conflict policy per mapped field; ambiguous merges enter an exception queue.
 
 Before shipping any added workflow request operation, this clause inherits EXEC-002’s provider/account admission, bounded retries and parked budgets, exact continuation/readback and uncertain-write safety, with a named public-door acceptance journey.
+
+Before shipping added capabilities, this clause inherits BASE-001: prove owned operation and inactive, credential-free restoration, preserve input/file safety, and disclose each outgoing recipient, purpose, field category, required credential, region and retention (provider-controlled terms labelled unverified).
 
 **Acceptance evidence:** For each CRM, ingest a changed lead, match an existing company, update a custom deal field, read a deal’s three line items with their products, quantities and discounts as one line-item array, and create a task; run a WORK-011 “find or create contact by email” step twice for one new email and verify `created`, then `found`, and one contact by readback; send the reflected event back and a conflicting edit, verifying no infinite loop or silent overwrite. With a trigger watching deal stage changed to Closed Won, move a deal to Closed Won and verify one run carrying the previous and new stage, then edit its amount and verify no run.
 
@@ -324,6 +334,8 @@ Accounting/ERP connectors run the invoicing, collection and payment-recording wo
 - **Coverage and migration:** CONN-001’s coverage report marks a QuickBooks Online, Xero or NetSuite operation native only when this clause names it; any other operation reports agent-buildable under CONN-011 or blocked with its reason, never native. MIG-002 maps Zapier’s QuickBooks Online and Xero triggers, searches (including find-or-create) and actions named here to these operations, and MIG-003 and MIG-001 do the same for Make and n8n modules.
 
 Before shipping any added workflow request operation, this clause inherits EXEC-002’s provider/account admission, bounded retries and parked budgets, exact continuation/readback and uncertain-write safety, with a named public-door acceptance journey.
+
+Before shipping added capabilities, this clause inherits BASE-001: prove owned operation and inactive, credential-free restoration, preserve input/file safety, and disclose each outgoing recipient, purpose, field category, required credential, region and retention (provider-controlled terms labelled unverified).
 
 **Acceptance evidence:** For each provider’s sandbox, map a customer and a source with five lines (mixed tax codes, one discount line and one non-taxable line) into a draft invoice, read it back with five lines whose per-line amounts and total match the source to the cent, handle a locked period and revoked scope, and record a payment reference without rounding cents away. Then, in a QuickBooks Online sandbox:
 
@@ -353,6 +365,8 @@ Stripe and Shopify connectors run the store’s order, customer, catalog, invent
 - **Coverage and migration:** CONN-001’s coverage report marks a Shopify operation native only when this clause names it; any other Shopify operation reports agent-buildable under CONN-011 or blocked with its reason. Stripe, which is on Zapier’s popular-apps list, is checked by CONN-001’s template fixture and also by every operation named here. MIG-002 maps Zapier’s Shopify and Stripe triggers, searches (including find-or-create) and actions named here to these operations, and MIG-003 and MIG-001 do the same for Make and n8n modules.
 
 Before shipping any added workflow request operation, this clause inherits EXEC-002’s provider/account admission, bounded retries and parked budgets, exact continuation/readback and uncertain-write safety, with a named public-door acceptance journey.
+
+Before shipping added capabilities, this clause inherits BASE-001: prove owned operation and inactive, credential-free restoration, preserve input/file safety, and disclose each outgoing recipient, purpose, field category, required credential, region and retention (provider-controlled terms labelled unverified).
 
 **Acceptance evidence:** Use Stripe test mode and a Shopify development store to process duplicate/out-of-order paid-order events (the Shopify order carrying three products with a discount and shipping, mapped as three lines whose total reconciles to the order total), read back payment and order state, create one fulfillment handoff and require the configured authorization for a refund; an uncertain refund is reconciled before another attempt. Then, in the Shopify development store:
 
@@ -385,6 +399,8 @@ Zendesk Support and Jira Software Cloud connectors run the buyer’s support and
 
 Before shipping any added workflow request operation, this clause inherits EXEC-002’s provider/account admission, bounded retries and parked budgets, exact continuation/readback and uncertain-write safety, with a named public-door acceptance journey.
 
+Before shipping added capabilities, this clause inherits BASE-001: prove owned operation and inactive, credential-free restoration, preserve input/file safety, and disclose each outgoing recipient, purpose, field category, required credential, region and retention (provider-controlled terms labelled unverified).
+
 **Acceptance evidence:** In a Zendesk sandbox and a Jira Cloud test site:
 
 1. Create a ticket tagged `bug`: a **New Ticket** trigger with a tag filter starts one run, and **Find or Create Issue** creates one Jira issue. Re-deliver the event: verify `found` and still one issue.
@@ -403,6 +419,8 @@ Every sibling seed has a named connector using its public events/API and app-spe
 
 Before shipping any added workflow request operation, this clause inherits EXEC-002’s provider/account admission, bounded retries and parked budgets, exact continuation/readback and uncertain-write safety, with a named public-door acceptance journey.
 
+Before shipping added capabilities, this clause inherits BASE-001: prove owned operation and inactive, credential-free restoration, preserve input/file safety, and disclose each outgoing recipient, purpose, field category, required credential, region and retention (provider-controlled terms labelled unverified).
+
 **Acceptance evidence:** For each listed sibling, connect an authorized installation, receive a real domain event, read the originating record, perform an allowed domain action and observe its outcome in that sibling; duplicate events, revoked grants and foreign-tenant IDs must fail safely. Demonstrate a CRM-to-accounting-to-chat business journey across sibling connectors.
 
 #### CONN-011 — Custom, enterprise and private app connections.
@@ -410,6 +428,8 @@ Before shipping any added workflow request operation, this clause inherits EXEC-
 Technical teams build versioned custom connectors from documented APIs/OpenAPI with typed inputs, pagination, OAuth/key declarations, webhook verification and reusable tests. When a buyer needs an app with no native connector, an agent builds one on request from the provider’s public API documentation or OpenAPI description: it proposes the triggers (update triggers with TRIG-008 watched fields and detection), searches (each with WORK-011 create-if-not-found, no-match and multi-match settings) and actions the buyer’s workflows use, their auth and scopes, and test cases; a person reviews scopes before first consent; the connector passes the same sandbox acceptance as a native connector (readback, duplicate event, revoked scope) before any production run, and is versioned and repairable under AGENT-002. PostgreSQL, MySQL, SQL Server, SFTP and S3-compatible data-pipeline recipes, plus enterprise applications such as ServiceNow and SAP, use typed connectors or reviewed custom connectors, authenticated customer-controlled private gateways and incremental checkpoints; large files stream with explicit bounds. Workato-class deployment includes SSO through Auth or the buyer’s IdP, environment separation and scoped service accounts.
 
 Before shipping any added workflow request operation, this clause inherits EXEC-002’s provider/account admission, bounded retries and parked budgets, exact continuation/readback and uncertain-write safety, with a named public-door acceptance journey.
+
+Before shipping added capabilities, this clause inherits BASE-001: prove owned operation and inactive, credential-free restoration, preserve input/file safety, and disclose each outgoing recipient, purpose, field category, required credential, region and retention (provider-controlled terms labelled unverified).
 
 **Acceptance evidence:** Install a custom connector, call a private test database through an enrolled gateway, checkpoint and resume a paginated file pipeline, then revoke the gateway and attempt a cross-environment secret read; inspect the failed run and SSO access decisions. Ask the agent for a connector to an app with a public OpenAPI description and no native connector: review its proposed operations and scopes, refuse one scope and verify the connector omits the dependent operation, then pass its sandbox readback, duplicate-event and revoked-scope tests and use it in a published workflow.
 
@@ -419,6 +439,8 @@ Facebook Lead Ads, Google Forms, Typeform, Jotform and Gravity Forms (WordPress)
 
 Before shipping any added workflow request operation, this clause inherits EXEC-002’s provider/account admission, bounded retries and parked budgets, exact continuation/readback and uncertain-write safety, with a named public-door acceptance journey.
 
+Before shipping added capabilities, this clause inherits BASE-001: prove owned operation and inactive, credential-free restoration, preserve input/file safety, and disclose each outgoing recipient, purpose, field category, required credential, region and retention (provider-controlled terms labelled unverified).
+
 **Acceptance evidence:** For each provider’s test account, connect, pick a form, submit a response with a hidden UTM field and a file, and verify one run whose mapped fields match the response by provider readback; resend the same provider delivery and verify no second run; add a form field and verify drift is reported before the next run maps it; disconnect and verify the connector removed its provider webhook.
 
 #### CONN-013 — Calendars, scheduling and meetings.
@@ -426,6 +448,8 @@ Before shipping any added workflow request operation, this clause inherits EXEC-
 Google Calendar is its own connector: triggers on new, updated, canceled and starting-soon events on chosen calendars, searches events and free/busy, and creates, updates and cancels events with attendees, conferencing and reminders. Calendly triggers on invitee created and invitee canceled (with rescheduling linked), exposes event type, questions/answers, UTM and payment fields, and looks up scheduled events and invitees. Zoom triggers on meeting/webinar registration, meeting ended and recording completed, and creates meetings, registrants and recording links. Time zones stay explicit IANA zones end to end.
 
 Before shipping any added workflow request operation, this clause inherits EXEC-002’s provider/account admission, bounded retries and parked budgets, exact continuation/readback and uncertain-write safety, with a named public-door acceptance journey.
+
+Before shipping added capabilities, this clause inherits BASE-001: prove owned operation and inactive, credential-free restoration, preserve input/file safety, and disclose each outgoing recipient, purpose, field category, required credential, region and retention (provider-controlled terms labelled unverified).
 
 **Acceptance evidence:** Book a Calendly test event with answered questions and verify one run that creates a Google Calendar event with a Zoom meeting for the invitee, each read back from its provider; reschedule the booking and verify the same calendar event and meeting are updated rather than duplicated; cancel it and verify both are canceled; deliver the Calendly webhook twice with no duplicate effect.
 
@@ -435,6 +459,8 @@ Notion (databases and pages), Trello (boards, lists, cards), monday.com (boards,
 
 Before shipping any added workflow request operation, this clause inherits EXEC-002’s provider/account admission, bounded retries and parked budgets, exact continuation/readback and uncertain-write safety, with a named public-door acceptance journey.
 
+Before shipping added capabilities, this clause inherits BASE-001: prove owned operation and inactive, credential-free restoration, preserve input/file safety, and disclose each outgoing recipient, purpose, field category, required credential, region and retention (provider-controlled terms labelled unverified).
+
 **Acceptance evidence:** For each provider’s test workspace, trigger on a new item, update a custom field, move it to a done status and comment, reading each change back; create a Google Doc from a template with mapped USD and date fields and verify its text by readback; repeat the triggering event and verify no duplicate item, comment or document. With a trigger watching status, edit an item’s description and verify no run, then move it to done and verify one run carrying the previous and new status.
 
 #### CONN-015 — Marketing and sales pipelines.
@@ -443,6 +469,8 @@ Mailchimp (audiences, tags, campaigns), LeadConnector/HighLevel (contacts, oppor
 
 Before shipping any added workflow request operation, this clause inherits EXEC-002’s provider/account admission, bounded retries and parked budgets, exact continuation/readback and uncertain-write safety, with a named public-door acceptance journey.
 
+Before shipping added capabilities, this clause inherits BASE-001: prove owned operation and inactive, credential-free restoration, preserve input/file safety, and disclose each outgoing recipient, purpose, field category, required credential, region and retention (provider-controlled terms labelled unverified).
+
 **Acceptance evidence:** For each provider’s test account, route a new lead into a contact/subscriber with a tag and a deal/opportunity in a chosen stage, read each back, move the stage and observe exactly one change-trigger run carrying the previous and new stage, then edit the deal’s value and notes and verify no run; attempt to resubscribe an unsubscribed Mailchimp member and verify the status stays unsubscribed with a named refusal; repeat the lead through WORK-011 find-or-create steps on the contact/subscriber and the deal/opportunity and verify run history reports `found` for both and readback shows one contact and one deal. Post a new RSS item (TRIG-007) with an image to a Facebook test Page, an Instagram test business account and a LinkedIn test organization, and verify each post by readback and one run per item.
 
 #### CONN-016 — File storage and e-signature.
@@ -450,6 +478,8 @@ Before shipping any added workflow request operation, this clause inherits EXEC-
 Dropbox and Box connectors watch folders for new/changed files and find, upload, copy, move and share files with size/type bounds; Box metadata templates and Dropbox shared links are mappable. DocuSign and PandaDoc connectors create envelopes/documents from templates with mapped recipients and fields, send them for signature, trigger on sent, viewed, completed and declined, and download the completed document and certificate into a chosen storage connector. Signature legal validity stays with the e-signature provider.
 
 Before shipping any added workflow request operation, this clause inherits EXEC-002’s provider/account admission, bounded retries and parked budgets, exact continuation/readback and uncertain-write safety, with a named public-door acceptance journey.
+
+Before shipping added capabilities, this clause inherits BASE-001: prove owned operation and inactive, credential-free restoration, preserve input/file safety, and disclose each outgoing recipient, purpose, field category, required credential, region and retention (provider-controlled terms labelled unverified).
 
 **Acceptance evidence:** In sandbox accounts, generate a PandaDoc document and a DocuSign envelope from templates with mapped recipient and USD fields, complete each as the test signer, verify the completed trigger fires once, and file the signed PDF and certificate into Box and Dropbox folders verified by readback; decline a second envelope and verify the declined branch; deliver the completion event twice with one filed copy.
 
@@ -461,6 +491,8 @@ Recipient actions inherit TEAM-004: count actual mapped destinations (including 
 
 Before shipping any added workflow request operation, this clause inherits EXEC-002’s provider/account admission, bounded retries and parked budgets, exact continuation/readback and uncertain-write safety, with a named public-door acceptance journey.
 
+Before shipping added capabilities, this clause inherits BASE-001: prove owned operation and inactive, credential-free restoration, preserve input/file safety, and disclose each outgoing recipient, purpose, field category, required credential, region and retention (provider-controlled terms labelled unverified).
+
 **Acceptance evidence:** With a Twilio test number, send an SMS from a workflow and see its delivered status in the run; reply from a handset and verify one inbound-triggered run; send STOP and verify the next send to that number is refused with a named opt-out reason and no Twilio charge; verify an unregistered sender shows its registration requirement before publish. Test an inclusive recipient bound, one excess destination, duplicate destinations and rejection: only the excess action waits, rejection sends nothing, and approval sends exactly the reviewed list under TEAM-004.
 
 #### CONN-018 — Square, PayPal and WooCommerce.
@@ -468,6 +500,8 @@ Before shipping any added workflow request operation, this clause inherits EXEC-
 Square (payments, orders, customers, invoices, catalog), PayPal (captured payments, refunds, invoices, disputes) and WooCommerce (orders, customers, products, coupons, through the store’s REST API and signed webhooks) connectors trigger on new orders, payments and disputes and on changes to chosen watched fields such as order, payment or dispute status (TRIG-008), search with WORK-011 outcomes (find customer by email or phone in Square and WooCommerce, with find-or-create; find order by number or ID; find product or catalog item by SKU in Square and WooCommerce, with find-or-create; find a PayPal invoice or captured payment by ID or reference), and create customers, invoices and order notes, update order status, and set or adjust product stock (WooCommerce product and variation stock quantity, Square inventory count at a chosen location); refunds obey TEAM-002 limits and EXEC-006 reconciliation. Provider event IDs deduplicate, and funds, card data and tax calculation stay with the provider.
 
 Before shipping any added workflow request operation, this clause inherits EXEC-002’s provider/account admission, bounded retries and parked budgets, exact continuation/readback and uncertain-write safety, with a named public-door acceptance journey.
+
+Before shipping added capabilities, this clause inherits BASE-001: prove owned operation and inactive, credential-free restoration, preserve input/file safety, and disclose each outgoing recipient, purpose, field category, required credential, region and retention (provider-controlled terms labelled unverified).
 
 **Acceptance evidence:** In Square sandbox, PayPal sandbox and a WooCommerce test store, process a paid order with four lines into one QuickBooks Online draft invoice with four lines (readback quantities, amounts and total matching the order to the cent) and a Slack notice, verify the order and payment by provider readback, replay the provider event with no duplicate invoice, and request a refund above the configured USD limit to verify it pauses for approval, then reconcile a lost refund response before any second attempt. With a trigger watching order status changed to completed, add an order note and verify no run, then complete the order and verify one run. Run **find or create customer** by email twice for one new email in Square and in WooCommerce and verify `created`, then `found`, and one customer each; set a WooCommerce product’s stock quantity and a Square item’s inventory count from a Google Sheets row and verify both by readback.
 
@@ -484,6 +518,8 @@ Every connector input that names a resource in the connected account (spreadshee
 - **Migration:** MIG-002 keeps each source Zap’s chosen resources, matched by ID under the buyer’s new connection and shown by name in the draft; MIG-003 does the same for Make module selections and MIG-001 for n8n resource locators (from list, by ID, by URL). A chosen resource the new connection cannot see is named in the coverage report as needing a choice, never replaced with a different resource.
 
 Before shipping any added workflow request operation, this clause inherits EXEC-002’s provider/account admission, bounded retries and parked budgets, exact continuation/readback and uncertain-write safety, with a named public-door acceptance journey.
+
+Before shipping added capabilities, this clause inherits BASE-001: prove owned operation and inactive, credential-free restoration, preserve input/file safety, and disclose each outgoing recipient, purpose, field category, required credential, region and retention (provider-controlled terms labelled unverified).
 
 **Acceptance evidence:** In Google Sheets, Slack and HubSpot sandboxes, build steps with no typed IDs. Pick a spreadsheet by name, then a worksheet, and verify the worksheet picker is disabled before a spreadsheet is chosen and the sheet’s columns load as mappable fields. Add a column in the sheet, use refresh fields and verify the new column appears; delete a mapped column and verify a named pre-publish error; delete another mapped column after publish and verify the run fails with `field no longer exists` and no write. Pick a Slack channel by name in a workspace with more than 1,000 channels by searching, and pick a HubSpot pipeline then a stage; switch pipelines and verify the stages reload and the old stage is cleared and named. Switch the stage to a custom value mapped from an earlier step and run once with a valid stage ID and once with an invalid one, verifying the named `resource not found` error and no write on the second. Paste a Google Sheets URL as a custom value and verify it resolves to that spreadsheet. Back the HubSpot owner input with an inline search by owner email and verify the deal is assigned to the right owner. Connect a second Slack account without access to a private channel and verify that channel is not listed. Migrate a Zap with a chosen spreadsheet, worksheet and Slack channel and verify the draft shows the same resources by name under the new connection, and that a resource the new connection cannot see is named in the coverage report.
 
@@ -602,6 +638,8 @@ A send-email step works without connecting a mail provider: it sends from the in
 Recipient actions inherit TEAM-004: count actual mapped destinations (including duplicates), apply both workspace and step caps using the stricter bound, and pause only excess actions for an exact-input approval; no approval means no out-of-cap send.
 
 Before shipping any added workflow request operation, this clause inherits EXEC-002’s provider/account admission, bounded retries and parked budgets, exact continuation/readback and uncertain-write safety, with a named public-door acceptance journey.
+
+Before shipping added capabilities, this clause inherits BASE-001: prove owned operation and inactive, credential-free restoration, preserve input/file safety, and disclose each outgoing recipient, purpose, field category, required credential, region and retention (provider-controlled terms labelled unverified).
 
 **Acceptance evidence:** Verify a test sending domain’s SPF, DKIM and DMARC records in setup, then send a mapped email with a PDF attachment from a published workflow with no mail connection and verify receipt, a passing DKIM signature and the delivered event on the run; send to a hard-bouncing address and verify the bounce is recorded and the next send is suppressed; attempt a production send before the records verify and see a named setup requirement; send an SMS step through a Twilio test number and see its delivery status; route a failure alert to the workflow owner with no Twilio connection and verify it arrives by email and mobile push. Test an inclusive recipient bound, one excess destination, duplicate destinations and rejection: only the excess action waits, rejection sends nothing, and approval sends exactly the reviewed list under TEAM-004.
 
@@ -746,6 +784,8 @@ DATA-001 applies before this capability ships: include its AI execution data in 
 
 Before shipping any added workflow request operation, this clause inherits EXEC-002’s provider/account admission, bounded retries and parked budgets, exact continuation/readback and uncertain-write safety, with a named public-door acceptance journey.
 
+Before shipping added capabilities, this clause inherits BASE-001: prove owned operation and inactive, credential-free restoration, preserve input/file safety, and disclose each outgoing recipient, purpose, field category, required credential, region and retention (provider-controlled terms labelled unverified).
+
 **Acceptance evidence:** Run an invoice-extraction node on the installation’s default model with no model key configured and see its USD usage in OPS-002, then run a tool-using agent on a buyer-selected endpoint against authorized documents and MCP tools; inspect model/tool/cost provenance, inject a hostile instruction and exceed a tool/spend limit, verifying schema failure or escalation without an unauthorized write. Then: Export and restore these AI execution data, compare their full portable records and assert inactive receiving state under DATA-001.
 
 1. **Vendor bill.** Forward a vendor email carrying a 2-page scanned PDF bill to a TRIG-006 address. An extract-structured-data node reads the PDF as a file reference, not as pasted text, and returns vendor, bill number, date, three line items and total. A QuickBooks Online sandbox bill is created for the vendor, found or created by name (CONN-007), with the PDF attached. Readback shows lines and total matching the PDF to the cent.
@@ -759,11 +799,15 @@ Before shipping any added workflow request operation, this clause inherits EXEC-
 
 A builder describes a business result; an agent inspects only authorized app schemas/sample data and proposes an editable workflow, mappings, triggers, grants, test cases, costs and unresolved business questions. It validates the proposal against real connector schemas and test accounts. Human promotion or a previously approved bounded deployment policy controls activation; natural language alone does not silently grant production access.
 
+Before shipping added capabilities, this clause inherits BASE-001: prove owned operation and inactive, credential-free restoration, preserve input/file safety, and disclose each outgoing recipient, purpose, field category, required credential, region and retention (provider-controlled terms labelled unverified).
+
 **Acceptance evidence:** Ask for a US lead-to-invoice workflow, inspect and edit the generated graph and samples, refuse a requested new scope and then approve a tested version; verify no production sends occur during authoring and unresolved choices remain explicit.
 
 #### AI-003 — Reusable agent skills and recurring tasks.
 
 Teams version reusable agent instructions, tools and evaluation cases as skills and schedule recurring tasks against scoped business data. Skill updates cannot broaden grants. Runs expose progress, remaining obligations, cost and human takeover/cancellation; recurring tasks stop when their objective is satisfied, authority expires or the owner pauses them.
+
+Before shipping added capabilities, this clause inherits BASE-001: prove owned operation and inactive, credential-free restoration, preserve input/file safety, and disclose each outgoing recipient, purpose, field category, required credential, region and retention (provider-controlled terms labelled unverified).
 
 **Acceptance evidence:** Publish a recurring overdue-invoice follow-up skill, run it across several due dates, update its version and revoke one tool; verify bounded contact cadence, visible stopped/blocked work, prior run provenance and human takeover.
 
@@ -779,6 +823,8 @@ Builders and operators use responsive web interfaces and iOS/Android mobile acce
 
 The product exposes documented, versioned APIs, paginated reads, outgoing signed run/outcome webhooks, SDKs and an MCP server for authorized workflow/run/connection operations. Idempotent writes, scoped service accounts, event retries, subscription rotation and public error contracts support app and agent integrations. Remote clients have the same grants and audit trail as UI operators and cannot bypass approval. Connected-app actions exposed to the buyer’s own AI clients are covered by PLATFORM-002.
 
+Before shipping added capabilities, this clause inherits BASE-001: prove owned operation and inactive, credential-free restoration, preserve input/file safety, and disclose each outgoing recipient, purpose, field category, required credential, region and retention (provider-controlled terms labelled unverified).
+
 **Acceptance evidence:** Use an SDK and MCP client to create a draft, start granted work, inspect progress and subscribe to signed completion events; duplicate writes, rotate a webhook secret and attempt an out-of-grant action, verifying stable IDs, delivery history and denial.
 
 #### PLATFORM-002 — Connector actions as MCP tools for the buyer’s AI clients.
@@ -787,11 +833,15 @@ Owners create per-client MCP servers (for example one for a person’s Claude, C
 
 Before shipping any added workflow request operation, this clause inherits EXEC-002’s provider/account admission, bounded retries and parked budgets, exact continuation/readback and uncertain-write safety, with a named public-door acceptance journey.
 
+Before shipping added capabilities, this clause inherits BASE-001: prove owned operation and inactive, credential-free restoration, preserve input/file safety, and disclose each outgoing recipient, purpose, field category, required credential, region and retention (provider-controlled terms labelled unverified).
+
 **Acceptance evidence:** Create an MCP server with Slack “send channel message” and Google Calendar “create event” enabled; from an MCP client (Claude Desktop or the MCP Inspector) create a calendar event and post to a Slack channel, verifying both by provider readback and as audited calls in run history; call a HubSpot action that is not enabled and a Slack post to a channel outside the grant, verifying both are refused, audited and produce no provider effect; revoke the client and verify its next call fails.
 
 #### BASE-001 — Owned operation and explicit Base replacements.
 
-Crank remains a standalone owned product with native sign-in, local data and editable source; core operation needs no author telemetry, license check or kill switch. The RER command contract remains in force. DATA-001 explicitly excludes installation authority and credentials from archives instead of claiming full BASE-DATA-001 equivalence. Structured JSON/graph inputs and literal text replace arbitrary owner HTML under BASE-INPUT-002; future attachments must satisfy explicit type/size/access/erasure rules rather than inheriting a no-upload exception. Authorized provider/LLM/executor data flows disclose recipient, purpose, fields, region, retention and required credentials; no blanket zero-egress or completed compliance claim is made.
+Crank remains a standalone owned product with native sign-in, local data and editable source; core operation needs no author telemetry, license check or kill switch. The RER command contract remains in force. DATA-001 explicitly excludes installation authority and credentials from archives instead of claiming full BASE-DATA-001 equivalence. Structured JSON/graph inputs and literal text replace arbitrary owner HTML under BASE-INPUT-002; future attachments must satisfy explicit type/size/access/erasure rules rather than inheriting a no-upload exception. Authorized provider/LLM/executor data flows disclose recipient, purpose, fields, region, retention and required credentials; no blanket zero-egress or completed compliance claim is made. When provider region or retention is not established, the disclosure states “provider-controlled; not verified by Crank; consult your provider agreement”, without inventing terms or requiring an attestation before activation.
+
+This obligation applies to every capability and public door shipped today: native sign-in and linked identity, approved HTTP delivery, published and test workflows, connections and OAuth, polling and historical previews, file transfer, notices and logs, local development AI, data retention/erasure and inactive archives. Any future clause or capability, including additions under `WORK-001`, `WORK-002`, `WORK-005`, `WORK-006`, `WORK-007`, `WORK-009`, `WORK-010`, `WORK-011`, `WORK-012`, `WORK-013`, `WORK-014`, `CONN-001`, `CONN-002`, `CONN-003`, `CONN-004`, `CONN-005`, `CONN-006`, `CONN-007`, `CONN-008`, `CONN-009`, `CONN-010`, `CONN-011`, `CONN-012`, `CONN-013`, `CONN-014`, `CONN-015`, `CONN-016`, `CONN-017`, `CONN-018`, `CONN-019`, `HTTP-002`, `TRIG-003`, `TRIG-004`, `TRIG-006`, `TRIG-007`, `TRIG-008`, `EXEC-003`, `EXEC-006`, `EXEC-007`, `TEAM-001`, `TEAM-002`, `TEAM-005`, `SEC-002`, `MIG-001`, `MIG-002`, `MIG-003`, `MIG-004`, `MIG-005`, `MIG-006`, `AI-001`, `AI-002`, `AI-003`, `AGENT-001`, `AGENT-002`, `AGENT-003`, `AGENT-004`, `UX-001`, `PLATFORM-001`, `PLATFORM-002`, `BASE-003`, `BASE-005`, `BOUND-001` inherits owned operation, structured/literal input and file safety, authority-free archives and recipient/purpose/fields/region/retention/credential disclosure before it ships; no future capability is counted as already passing.
 
 **Acceptance evidence:** With optional providers disconnected, run native sign-in, local HTTP automation, history and export without author traffic; inspect every enabled external destination/data category, then restore elsewhere with fresh authority and verify a removed provider cannot receive data.
 
@@ -827,17 +877,23 @@ An outcome agent turns an owner-defined recurring objective into durable obligat
 
 DATA-001 applies before this capability ships: include its reconciliation records in the versioned portable inventory and restore them without execution or receiving authority.
 
+Before shipping added capabilities, this clause inherits BASE-001: prove owned operation and inactive, credential-free restoration, preserve input/file safety, and disclose each outgoing recipient, purpose, field category, required credential, region and retention (provider-controlled terms labelled unverified).
+
 **Acceptance evidence:** Run a lead-to-draft-invoice-and-notify objective where all requests return success but the invoice is missing or linked to the wrong customer; observe that the obligation stays open, reconcile provider records, repair only within the grant and close it only after correct readback. Export and restore these reconciliation records, compare their full portable records and assert inactive receiving state under DATA-001.
 
 ### AGENT-002 — Detect, repair and test API drift.
 
 An agent compares authorized run inputs/outputs, connector schemas, API changelogs and permission errors to detect source/API drift before or during failures. It pauses affected writes, prepares a minimal versioned connector/mapping repair, tests retained authorized cases and target sandbox APIs, reports changed fields/scopes and restores service only under human approval or a bounded preapproved repair policy. New scopes and business meaning changes always require human choice; rollback remains available.
 
+Before shipping added capabilities, this clause inherits BASE-001: prove owned operation and inactive, credential-free restoration, preserve input/file safety, and disclose each outgoing recipient, purpose, field category, required credential, region and retention (provider-controlled terms labelled unverified).
+
 **Acceptance evidence:** Rename a provider field and revoke a permission in a running workflow; inspect the detected drift, proposed diff and sandbox tests, reject the new scope, approve a mapping-only repair and resume from the durable checkpoint without duplicate effects. Verify the repair is replayed in test mode against the workflow’s 20 most recent retained runs with each result shown before approval, and that after approval the workflow is unpaused and its held runs complete with the repaired mapping.
 
 ### AGENT-003 — Turn recurring exceptions into tested capabilities.
 
 An agent clusters recurring errors and manual corrections using only retained, authorized cases, proposes a transformation/subflow/connector improvement and evaluates it on both passing and failing cases. The owner controls sample retention, deployment policy and semantic changes. It measures exception reduction and business correctness after deployment; it cannot simply suppress failures, add blind retries or substitute fabricated application results.
+
+Before shipping added capabilities, this clause inherits BASE-001: prove owned operation and inactive, credential-free restoration, preserve input/file safety, and disclose each outgoing recipient, purpose, field category, required credential, region and retention (provider-controlled terms labelled unverified).
 
 **Acceptance evidence:** Accumulate recurring address-format failures and successful counterexamples, inspect a proposed reusable normalization skill and its cases, approve it, then verify later outcomes and roll back if valid addresses regress; confirm original failures remain in history.
 
@@ -846,6 +902,8 @@ An agent clusters recurring errors and manual corrections using only retained, a
 An agent maintains due obligations, next actions, business calendars, accountable employees and evidence while work spans days. It asks the right person only for missing facts or unresolved business choices, chases stalled approvals under agreed cadence and escalates when authority or deadlines require it. It resumes the exact durable step after the answer, stops contact on completion/revocation and exposes takeover, cancellation and an audit of every communication.
 
 DATA-001 applies before this capability ships: include its agent obligations and memory in the versioned portable inventory and restore them without execution or receiving authority.
+
+Before shipping added capabilities, this clause inherits BASE-001: prove owned operation and inactive, credential-free restoration, preserve input/file safety, and disclose each outgoing recipient, purpose, field category, required credential, region and retention (provider-controlled terms labelled unverified).
 
 **Acceptance evidence:** Leave a customer tax fact unresolved over a weekend, restart the service, answer from the authorized employee and finish the obligation; test unanswered escalation, a late duplicate answer and revoked contact authority, verifying one continuation and no further reminders after completion. Export and restore these agent obligations and memory, compare their full portable records and assert inactive receiving state under DATA-001.
 
@@ -908,8 +966,8 @@ Judged from the code and tests at commit `d68e5c8981c9984581920527fc78a58c6cdba4
 | Clauses | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
 | Published | 7 | 5 | 0 | 12 |
-| Target and push further | 15 | 23 | 35 | 73 |
-| All | 22 | 28 | 35 | 85 |
+| Target and push further | 16 | 22 | 35 | 73 |
+| All | 23 | 27 | 35 | 85 |
 
 MIG-006, BASE-004 and BASE-005 were added on 17 October 2026 so every homepage claim has a clause, and were judged from the code and tests at `eac16196cffe508a1eec962b1c116564707c1598` (main after the run site landed); every earlier row keeps its status from the commit above.
 
@@ -994,7 +1052,7 @@ MIG-006, BASE-004 and BASE-005 were added on 17 October 2026 so every homepage c
 | `UX-001` | Accessible mobile operation | target | partial | `src/crank/ui/document.ts`; `src/crank/ui/flows.ts`; `src/crank/ui/run.ts`; `public/ui/shell.css` | Responsive HTML forms and state text exist; mobile apps/push, offline decision reconciliation and accessibility conformance are unproven. |
 | `PLATFORM-001` | Public API, webhooks, SDK and MCP | target | partial | `src/crank/api.ts`; `scripts/crank.mjs`; `docs/API.md`; `tests/crank.test.mjs` | Native scoped HTTP preparation/trigger/read API and CLI exist; SDK, MCP, outgoing events and execution grants are missing. |
 | `PLATFORM-002` | Connector actions as MCP tools for the buyer’s AI clients | target | missing |  | No delivered product workflow. |
-| `BASE-001` | Owned operation and explicit Base replacements | target | partial | `AGENTS.md`; `SEED-COMMAND-CONTRACT.md`; `src/crank/archive-policy.mjs`; `src/crank/delivery.ts`; `tests/crank.test.mjs` | Native owned workflow/archives exist; complete egress independence and expanded provider/data-lifecycle guarantees are not established. |
+| `BASE-001` | Owned operation and explicit Base replacements | target | done | `src/crank/data-flows.ts`; `src/crank/data-flow-types.ts`; `src/crank/data-flow-graphs.ts`; `src/crank/ui/data-flows.ts`; `src/crank/restore-policy.mjs`; `src/crank/archive-policy.mjs`; `src/crank/delivery.ts`; `docs/DATA-FLOWS.md`; `tests/owned-operation.mjs`; `tests/ownership.test.mjs` | With the optional provider revoked, native email-link sign-in, local HTTP delivery, literal history and export run with zero non-local requests; the owner-only Data inventory lists every configured recipient, purpose, field category, credential kind, region and retention (unestablished provider terms labelled provider-controlled and unverified) without values; the archive carries no installation authority or credential and restores inactive under fresh owner authority, where the removed provider stays revoked and cannot receive data. Future capabilities inherit before shipping. |
 | `BASE-002` | Runnable site and unchanged installed home | published | done | `src/site/pages.tsx`; `src/site/docs/build/site.ts`; `tests/site.test.mjs`; `tests/runtime.mjs` |  |
 | `BASE-003` | Observable operation and recovery | target | partial | `src/base/deployment-health.ts`; `src/crank/delivery.ts`; `src/crank/api.ts`; `tests/runtime.mjs`; `tests/crank.test.mjs` | Basic runtime health and read-triggered delivery-lease expiry exist; the complete future execution classes and operational guarantees are not proven. |
 | `BASE-004` | Free, MIT-licensed source with no paid tier | target | done | `LICENSE`; `package.json`; `README.md`; `tests/site.test.mjs`; `tests/ownership.test.mjs` | Every shipped step type finishes through HTTP/Cron with unconfigured outbound hosts blocked, including author domains, across restart/callback/approval. MIT text, metadata, README and built-site license link are checked; product route/step/screen and shared-source scan found no commercial entitlement gates. |
