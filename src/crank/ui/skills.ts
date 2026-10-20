@@ -7,7 +7,7 @@ interface SkillCase {
   run_id: string; corrected: boolean; error: object | null; input: unknown; expected: unknown; proposed: unknown; pass: boolean
 }
 interface SkillDetail {
-  id: string; workflow_id: string; workflow_name: string; step_id: string; field: string
+  id: string; workflow_id: string; workflow_name: string; workflow_status: string; step_id: string; field: string
   pipeline: { fn: string; args: unknown }[]; expression: unknown; base_version: number; staged_at: string | null
   digest: string; cases: SkillCase[]; cluster: { corrected: number; passing: number }
   metrics: { runs: number; failed: number; exception_rate: number | null; correctness: string; owner_verified: number; measured_version: number | null; baseline_exceptions: number; baseline_cases: number }
@@ -48,7 +48,7 @@ export function skillView(p: SkillDetail) {
   const rate = p.metrics.exception_rate === null ? 'Unavailable' : `${(p.metrics.exception_rate * 100).toFixed(1)}%`
   return `<p class="back-link"><a href="/app/skills">← All skills</a></p>
     <section class="panel"><div class="title-row"><h2>${esc(p.workflow_name)} · ${esc(p.field)}</h2>${status}</div>
-    <dl class="facts"><dt>Step</dt><dd><code>${esc(p.step_id)}</code></dd><dt>Retained input field</dt><dd><code>${esc(p.field)}</code></dd><dt>Base version</dt><dd>${esc(p.base_version)}</dd><dt>Current published version</dt><dd>${esc(p.current_version)}</dd>${p.staged_at ? `<dt>Draft staged</dt><dd>${timestamp(p.staged_at)}</dd>` : ''}</dl>
+    <dl class="facts"><dt>Step</dt><dd><code>${esc(p.step_id)}</code></dd><dt>Retained input field</dt><dd><code>${esc(p.field)}</code></dd><dt>Workflow state</dt><dd>${esc(p.workflow_status)}</dd><dt>Base version</dt><dd>${esc(p.base_version)}</dd><dt>Current published version</dt><dd>${esc(p.current_version)}</dd>${p.staged_at ? `<dt>Draft staged</dt><dd>${timestamp(p.staged_at)}</dd>` : ''}</dl>
     <p>${p.active ? 'The published workflow contains this normalization. Review the cases and current measurements below.' : 'Approval rechecks retained cases and stages the normalization in the workflow draft only. It does not dispatch a run. Review the draft and publish it in the workflow editor.'}</p>
     <a class="btn btn-secondary" href="${esc(editor)}">Open workflow editor</a></section>
     <section class="panel"><h2>Proposed transform</h2><pre>${json(p.expression)}</pre><details><summary>Existing transform pipeline</summary><ol>${p.pipeline.map(step => `<li><code>${esc(step.fn)}</code><pre>${json(step.args)}</pre></li>`).join('')}</ol></details>

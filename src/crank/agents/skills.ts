@@ -30,14 +30,14 @@ export async function readSkill(env: CrankEnv, actor: Actor, skillId: string) {
   const graph = improvedGraph(JSON.parse(source.graph_json), skill.step_id, skill.field, pipeline)
   const current = workflow.published_version_id ? await sourceVersion(env, workflow.published_version_id) : null
   // Compare exact graph, never infer deployment from a successful HTTP response.
-  const active = !!current && canonical(JSON.parse(current.graph_json)) === canonical(graph)
+  const active = workflow.status === 'published' && !!current && canonical(JSON.parse(current.graph_json)) === canonical(graph)
   const deployed = await stmt(env, "SELECT id,number FROM crank_workflow_versions WHERE workflow_id=? AND graph_json=? AND mode='production' ORDER BY number DESC LIMIT 1", skill.workflow_id, canonical(graph)).first<{id:string;number:number}>()
   const measured = deployed ? await stmt(env, `SELECT COUNT(*) AS runs,COALESCE(SUM(r.status='failed'),0) AS failed,
     COALESCE(SUM(EXISTS(SELECT 1 FROM crank_obligations o WHERE o.run_id=r.id) AND NOT EXISTS(SELECT 1 FROM crank_obligations o WHERE o.run_id=r.id AND o.verified_at IS NULL)),0) AS owner_verified
     FROM crank_wf_runs r WHERE r.version_id=? AND r.mode='production'`, deployed.id).first<{runs:number;failed:number;owner_verified:number}>() : null
   const metrics = { runs: measured?.runs ?? 0, failed: measured?.failed ?? 0, exception_rate: measured?.runs ? measured.failed / measured.runs : null,
     owner_verified: measured?.owner_verified ?? 0, measured_version: deployed?.number ?? null, baseline_exceptions: cases.filter(c => c.corrected).length, baseline_cases: cases.length, correctness: 'Owner readback required' }
-  const result = { id: skill.id, workflow_id: skill.workflow_id, workflow_name: workflow.name, step_id: skill.step_id, field: skill.field,
+  const result = { id: skill.id, workflow_id: skill.workflow_id, workflow_name: workflow.name, workflow_status: workflow.status, step_id: skill.step_id, field: skill.field,
     pipeline, expression: expression(lookup(stepIn(JSON.parse(source.graph_json), skill.step_id)?.input, skill.field).value, pipeline), base_version: source.number, proposed_at: skill.proposed_at, staged_at: skill.staged_at, cases: evaluated,
     cluster: { corrected: cases.filter(c => c.corrected).length, passing: cases.filter(c => !c.corrected).length }, metrics, active, current_version: current?.number ?? 0 }
   return { ...result, digest: await digest(canonical({ id: skill.id, cases: evaluated, pipeline, draft: workflow.draft_json, version: workflow.published_version_id })) }
