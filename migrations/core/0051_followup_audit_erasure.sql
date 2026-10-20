@@ -45,7 +45,7 @@ WHEN NOT (
   AND EXISTS(SELECT 1 FROM crank_authority_guards g WHERE g.ok=1
    AND g.id LIKE 'erase-operator:%'
    AND EXISTS(SELECT 1 FROM json_tree(OLD.detail_json) j WHERE j.type='text'
-    AND g.id LIKE 'erase-operator:'||j.value||':%')))
+    AND substr(g.id,1,length('erase-operator:'||j.value||':'))='erase-operator:'||j.value||':')))
 
 )
 BEGIN SELECT RAISE(ABORT,'crank_audit_append_only'); END;
