@@ -970,8 +970,10 @@ Judged from the code and tests at commit `d68e5c8981c9984581920527fc78a58c6cdba4
 | Clauses | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
 | Published | 7 | 5 | 0 | 12 |
-| Target and push further | 16 | 22 | 35 | 73 |
-| All | 23 | 27 | 35 | 85 |
+| Target and push further | 17 | 21 | 35 | 73 |
+| All | 24 | 26 | 35 | 85 |
+
+BASE-003 was completed on 20 October 2026 with the named emitted-service and public-door recovery journeys below.
 
 MIG-006, BASE-004 and BASE-005 were added on 17 October 2026 so every homepage claim has a clause, and were judged from the code and tests at `eac16196cffe508a1eec962b1c116564707c1598` (main after the run site landed); every earlier row keeps its status from the commit above.
 
