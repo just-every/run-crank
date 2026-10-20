@@ -1,3 +1,5 @@
+import { grantProposal } from '../grants/policy'
+import { approvalSpec } from '../grants/reviews'
 import { admitStep } from './step-limit'
 import { recordStepUsage, flushUsageNotices } from '../ops/usage'
 import { sealText, targetFor } from '../ops/payload-seal'
@@ -121,10 +123,8 @@ class Execution {
         result = await type.resume(step, { ...ctx, wait })
       } else {
         if (type.required) requireFields(input, type.required, step.id)
-        if (mutating) {
-          const capped = await this.cap(step, path, input, wait)
-          if (capped) return capped
-        }
+        const boundary = await this.cap(step, path, input, wait, mutating)
+        if (boundary) return boundary
         if (typeof step.connection_id === 'string') await credential(this.env, step.connection_id)
         if (mutating) await this.save(step, path, 'running', { input })
         result = await type.execute(step, ctx)
@@ -158,7 +158,7 @@ class Execution {
         this.scope.steps[step.id] = result.output
         return { kind: 'completed' }
       case 'waiting':
-        await insertWait(this.env, this.run, path, result.wait)
+        await insertWait(this.env, this.run, path, result.wait.kind === 'approval' ? await approvalSpec(this.env, this.run, result.wait.proposal, result.wait.reason ?? 'approval step') : result.wait)
         await this.save(step, path, 'waiting', { input })
         return { kind: 'waiting', approval: result.wait.kind === 'approval' }
       case 'stopped':
@@ -172,25 +172,30 @@ class Execution {
     }
   }
 
-  /** TEAM-004 opt-in caps: a per-step cap, or a workspace cap for the step's category,
-   * pauses only an out-of-cap action for approval of its exact input. */
-  private async cap(step: Step, path: string, input: Record<string, unknown>, wait?: WaitRow): Promise<Outcome | null> {
-    const capped = cappedProposal(step, input, this.scope, (await workspaceSettings(this.env)).caps)
-    const liveTest = await liveTestProposal(this.env, this.run, step, input)
-    if (!capped && !liveTest) return null
-    const proposal = { ...capped?.proposal, ...liveTest?.proposal }
-    const reason = [capped?.reason, liveTest?.reason].filter(Boolean).join('; ')
-    if (!wait) {
-      await insertWait(this.env, this.run, path, { kind: 'approval', proposal, reason })
-      await this.save(step, path, 'waiting', { input })
-      return { kind: 'waiting', approval: true }
+  /** TEAM-002/004: approval covers one exact effect; grants remain live limits. */
+  private async cap(step: Step, path: string, input: Record<string, unknown>, wait: WaitRow | undefined, mutating: boolean): Promise<Outcome | null> {
+    if (wait?.kind === 'approval') {
+      if (!wait.resolved_at) return {kind:'waiting',approval:true}
+      const decision = JSON.parse(wait.resolution_json ?? '{}')
+      if (!decision.approved) {
+        await this.save(step,path,'stopped',{input,output:{rejected:true,reason:decision.reason ?? 'rejected'}})
+        return {kind:'rejected',reason:decision.reason ?? 'rejected'}
+      }
+      const reviewed = JSON.parse(wait.proposal_json ?? '{}')
+      if (canonical(reviewed.input) !== canonical(input) || wait.proposal_digest !== await digest(canonical(reviewed)))
+        throw new StepError('authority','The proposed effect changed; a fresh review is required')
+      await grantProposal(this.env,this.run,step,path,input,true)
+      return null
     }
-    if (!wait.resolved_at) return { kind: 'waiting', approval: true }
-    const resolution = JSON.parse(wait.resolution_json ?? '{}')
-    if (!resolution.approved) { await this.save(step, path, 'stopped', { input, output: { rejected: true, reason: resolution.reason ?? 'rejected' } }); return { kind: 'rejected', reason: resolution.reason ?? 'rejected' } }
-    // The approved decision covers exactly the input it reviewed.
-    if (wait.proposal_digest !== await digest(canonical(proposal))) throw new StepError('validation', `Step ${step.id}: the input changed after approval`)
-    return null
+    const grant = await grantProposal(this.env,this.run,step,path,input)
+    const capped = mutating ? cappedProposal(step,input,this.scope,(await workspaceSettings(this.env)).caps) : null
+    const liveTest = mutating ? await liveTestProposal(this.env,this.run,step,input) : null
+    if (!grant && !capped && !liveTest) return null
+    const proposal = {...grant?.proposal,...capped?.proposal,...liveTest?.proposal,step:step.id,type:step.type,input}
+    const reason = [grant?.reason,capped?.reason,liveTest?.reason].filter(Boolean).join('; ')
+    await insertWait(this.env,this.run,path,await approvalSpec(this.env,this.run,proposal,reason))
+    await this.save(step,path,'waiting',{input})
+    return {kind:'waiting',approval:true}
   }
 
   /** WORK-013 path groups: exclusive or parallel, with fallback or always-run branches. */

@@ -71,7 +71,7 @@ export async function validateRestore({ read }) {
     if (!graph.trigger || !Array.isArray(graph.steps) || workflow.published_version_id && versions.get(workflow.published_version_id)?.workflow_id !== workflow.id) return false;
   }
   for (const version of versions.values()) {
-    if (!workflows.has(version.workflow_id)) return false;
+    if (!workflows.has(version.workflow_id) || version.grant_source_version_id && versions.get(version.grant_source_version_id)?.workflow_id !== version.workflow_id) return false;
     const policy = JSON.parse(version.retry_policy_json);
     if (!policy || typeof policy !== 'object' || Array.isArray(policy) || Object.keys(policy).some(key => !['read_attempts','base_delay_ms','write_base_delay_ms','idempotent_write_attempts','elapsed_ms','jitter_ms','max_wait_ms','run_parked_ms'].includes(key) || !Number.isSafeInteger(policy[key]) || policy[key] < 0)) return false;
     if (!(policy.read_attempts >= 1 && policy.read_attempts <= 10 && policy.base_delay_ms >= 1 && policy.base_delay_ms <= 3600000 && policy.write_base_delay_ms >= 1 && policy.write_base_delay_ms <= 3600000)) return false;
@@ -121,7 +121,7 @@ export async function validateRestore({ read }) {
   // These product links predate foreign-key declarations; validate them explicitly.
   for (const [child, column, parent] of [
     ['crank_runs', 'flow_id', 'crank_flows'], ['crank_approvals', 'run_id', 'crank_runs'], ['crank_attempts', 'run_id', 'crank_runs'],
-    ['crank_request_checkpoints', 'run_id', 'crank_wf_runs'], ['crank_wf_steps', 'run_id', 'crank_wf_runs'], ['crank_wf_step_revisions', 'run_id', 'crank_wf_runs'], ['crank_waits', 'run_id', 'crank_wf_runs'], ['crank_callback_events', 'run_id', 'crank_wf_runs'],
+    ['crank_grant_escalations', 'run_id', 'crank_wf_runs'], ['crank_request_checkpoints', 'run_id', 'crank_wf_runs'], ['crank_wf_steps', 'run_id', 'crank_wf_runs'], ['crank_wf_step_revisions', 'run_id', 'crank_wf_runs'], ['crank_waits', 'run_id', 'crank_wf_runs'], ['crank_callback_events', 'run_id', 'crank_wf_runs'],
     ['crank_queue_items', 'run_id', 'crank_wf_runs'], ['crank_hold_items', 'hold_id', 'crank_holds'],
     ['crank_historical_batches', 'workflow_id', 'crank_workflows'], ['crank_historical_items', 'batch_id', 'crank_historical_batches'],
   ]) {

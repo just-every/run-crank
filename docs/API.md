@@ -324,3 +324,45 @@ remains unverified. Measurements survive rollback; the owner can restore the
 source version using the existing rollback door, while original failure and
 correction history remains intact. The expression can be reused in other draft
 mappings, subject to their normal review and publish controls.
+
+## Standing grants and agent tasks (TEAM-002)
+
+Preparation/trigger credentials keep their existing permissions. A native owner
+uses Access or `POST /grants` to issue `{label,workflow_id,version_id,expires_at,policy}`
+for the current published version; `expires_at` is an ISO UTC timestamp ending in
+Z. `GET /grants` returns metadata only; `POST /grants/:id/revoke` stops new dispatch
+and marks already-started writes uncertain. The separate execution credential is
+shown once; only its hash is held. Agents cannot issue, extend or revoke grants.
+
+`policy.rules` has one entry per existing leaf tool:
+`{step_id,type,connection_id,app,fields,recipients,max_per_minute}`. Connection/app
+must exactly match the published tool (null/`none` without a connection). `fields`
+names permitted top-level inputs and their JSON subtrees. Optional
+`recipient_field` and `amount_field` are exact dotted input paths, for example
+`body.to` and `body.amount`; `recipients` lists exact values, and `max_usd` is a
+nonnegative decimal string with an inclusive limit and no rounding. Every
+recipient in an array must be listed. The per-tool rate window is the preceding
+60 seconds, atomically admitted once per invocation; retries retain admission.
+`policy.approval` supplies positive `timeout_seconds`, `delegate_ids` and
+`escalate_to`, chosen by the owner from active native people. Timeout opens a
+durable internal Approvals task; it never approves or claims an external notice.
+
+With the execution bearer, `POST /agent-tasks` takes
+`{task_id,actions:[{step_id,input}]}`. It selects and orders a subset of the owner's
+tools, at most once each. Inputs are literal JSON; method, URL, headers,
+connections and transport/retry/readback settings cannot change. The task keeps
+an immutable version with value references; supplied values remain in the
+sealable, erasable run payload. It conservatively reserves the source workflow's
+full owner-estimated cost, even for a subset. `GET /agent-tasks/:runId` reads only
+that credential's tasks. Other product doors refuse the execution credential.
+
+Out-of-policy effects wait for exact review at the existing workflow-run
+approve/reject doors. The owner or selected native reviewer decides; an
+unassigned person cannot. `defer:true` records a grant-task approval for the next
+Cron pass. Before dispatch, an agent can POST
+`/agent-tasks/:runId/proposal` with `{path,digest,input}` to revise a held effect.
+Its old approval is spent, its input revision is retained, and fresh review is
+required. A stale digest refuses the decision. Started effects cannot be revised.
+Revocation, expiry, owner identity/version changes or publication replacement
+stop authority at subsequent steps and physical requests. Check history and
+reconcile an already-started write; revocation cannot undo a remote effect.

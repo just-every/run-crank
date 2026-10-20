@@ -28,6 +28,7 @@ export async function crankApi(request: Request, env: CrankEnv): Promise<Respons
   if (path !== '/api/crank' && !path.startsWith('/api/crank/')) return null
   try {
     const actor = await authorize(request, env)
+    requireValue(!actor.grantId, 'Execution credentials use the agent task door', 403)
     if (request.method === 'GET') {
       if (path === '/api/crank/state') return await state(env, actor)
       requireValue(actor.kind !== 'trigger', 'Trigger tokens only admit events', 403)

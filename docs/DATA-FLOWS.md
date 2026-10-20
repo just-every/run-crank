@@ -26,6 +26,9 @@ Current request classes are:
   explicit deregistration request when the owner unlinks a provider. Unlinking
   stops later sign-in authority; its deregistration notification is deliberate.
 - Legacy approved HTTP deliveries to the installation's permitted exact origin.
+- Standing-grant agent tasks use the same declared tools and destinations,
+  with literal submitted values retained in sealable run payloads. Review and
+  deadline escalation are native internal tasks, without external-delivery claims.
 - Workflow HTTP requests, file downloads and Slack operations, including nested
   paths/loops, pagination, readback, current drafts and old versions retained by
   unfinished work. Draft tests use an immutable test version with their explicitly

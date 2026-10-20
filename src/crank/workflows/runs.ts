@@ -1,6 +1,8 @@
+import { grantFence } from '../grants/authority'
+import { assertReviewer } from '../grants/reviews'
 import { isBudgetExceeded, flushUsageNotices } from '../ops/usage'
 import { hold } from '../triggers/admission'
-import { requireOwner } from '../access'
+import { authority, requireOwner } from '../access'
 import { evaluate, type Groups } from '../engine/conditions'
 import { requireZone, startOfDay } from '../engine/dates'
 import { StepError } from '../engine/errors'
@@ -14,7 +16,7 @@ import { runTransform } from '../engine/transforms'
 import type { RunRow, Step } from '../engine/types'
 import { isObject } from '../engine/values'
 import { canonical, CrankError, digest, now, requireValue, stmt, type Actor, type CrankEnv } from '../model'
-import { auditStatement } from '../ops/audit'
+import { auditStatement, auditStatementWhen } from '../ops/audit'
 import { openRow, openText, plain } from '../ops/payload-seal'
 import { workspaceSettings } from '../ops/settings'
 import { createRun } from '../triggers/admission'
@@ -60,22 +62,29 @@ export async function runDetail(env: CrankEnv, actor: Actor, runId: string) {
     stmt(env, 'SELECT * FROM crank_wf_attempts WHERE run_id=? ORDER BY path,number', runId).all<any>(),
     stmt(env, 'SELECT * FROM crank_wf_step_revisions WHERE run_id=? ORDER BY path,revision', runId).all<any>(),
   ])
+  const reviewable = new Set<string>()
+  for (const wait of waits.results) if (wait.kind === 'approval' && !wait.resolved_at) {
+    try { await assertReviewer(env,actor,runId,wait.path!); reviewable.add(wait.path!) }
+    catch (error) { if (!(error instanceof CrankError) && !(error instanceof StepError)) throw error }
+  }
   const parse = (value: string | null) => value === null ? null : JSON.parse(value)
   const opened = <T extends Record<string, any>>(rows: T[], columns: (keyof T)[]) => payload ? Promise.all(rows.map(row => openRow(env, run.workflow_id, row, columns, 'display'))) : Promise.resolve(rows)
   const [openSteps, openRevisions, openWaits, openRun] = await Promise.all([opened(steps.results, ['input_json', 'output_json', 'trace_json', 'error_json']), opened(revisions.results, ['input_json', 'prior_input_json', 'prior_error_json']),
     Promise.all(waits.results.map(row => openRow(env, run.workflow_id, row, ['proposal_json', 'resolution_json'], 'display'))), payload ? openRow(env, run.workflow_id, run, ['trigger_json', 'response_json', 'error_json'], 'display') : run])
   return {
     ...presentRun(openRun, payload),
+    grant_id: run.grant_id ?? null,
+    escalations: (await stmt(env,'SELECT path,escalated_at,recipient_ids_json FROM crank_grant_escalations WHERE run_id=?',runId).all()).results,
     repair_of: run.repair_of ?? null, repair_paths: payload && run.repair_paths_json ? JSON.parse(run.repair_paths_json) : null,
     repairs: (await stmt(env, 'SELECT id,status FROM crank_wf_runs WHERE repair_of=? ORDER BY received_at,id', runId).all<{ id: string; status: string }>()).results,
-    version: version ? { number: version.number, published_by: version.published_by, published_at: version.published_at, authority: version.mode === 'test' ? 'owner-authorized draft test' : 'published workflow', retry_policy: JSON.parse(version.retry_policy_json), declared: payload ? JSON.parse(version.declared_json) : undefined } : null,
+    version: version ? { number: version.number, published_by: version.published_by, published_at: version.published_at, authority: run.grant_id ? 'owner-issued standing grant' : version.mode === 'test' ? 'owner-authorized draft test' : 'published workflow', retry_policy: JSON.parse(version.retry_policy_json), declared: payload ? JSON.parse(version.declared_json) : undefined } : null,
     steps: openSteps.map(s => ({ path: s.path, step_id: s.step_id, type: s.type, status: s.status, started_at: s.started_at, finished_at: s.finished_at, operation_key: s.operation_key,
       ...(payload ? { input: parse(s.input_json), output: parse(s.output_json), trace: parse(s.trace_json) } : {}), error: s.error_json ? (payload ? parse(s.error_json) : { category: parse(s.error_json).category, message: 'Details restricted for your role' }) : null })),
     // EXEC-004: each replay keeps the replaced attempt beside the input the next attempt used.
     revisions: openRevisions.map(r => ({ path: r.path, revision: r.revision, corrected: !!r.corrected, created_by: r.created_by, created_at: r.created_at, prior_operation_key: r.prior_operation_key, operation_key: r.operation_key,
       ...(payload ? { prior_input: parse(r.prior_input_json), prior_error: parse(r.prior_error_json), input: parse(r.input_json) } : {}) })),
     attempts: attempts.results.map(a => ({ id: a.id, path: a.path, number: a.number, method: a.method, started_at: a.started_at, finished_at: a.finished_at, http_status: a.http_status, error_category: a.error_category, retry_number: a.retry_number, budget_started_at: a.budget_started_at, slice_started_at: a.slice_started_at, retry_at: a.retry_at, retry_reason: a.retry_reason, retry_parked_at: a.retry_parked_at, retry_released_at: a.retry_released_at, retry_resumed_at: a.retry_resumed_at, ...(payload ? { destination_origin: a.destination_origin } : {}) })),
-    waits: openWaits.map(w => ({ ...w, reason: payload ? w.reason : null, proposal: payload ? parse(w.proposal_json) : 'restricted', resolution: payload ? parse(w.resolution_json) : w.resolution_json ? { approved: parse(w.resolution_json).approved, cancelled: parse(w.resolution_json).cancelled } : null, proposal_json: undefined, resolution_json: undefined })),
+    waits: openWaits.map(w => ({ ...w, can_review: reviewable.has(w.path!), reason: payload || reviewable.has(w.path!) ? w.reason : null, proposal: payload || reviewable.has(w.path!) ? parse(w.proposal_json) : 'restricted', resolution: payload ? parse(w.resolution_json) : w.resolution_json ? { approved: parse(w.resolution_json).approved, cancelled: parse(w.resolution_json).cancelled } : null, proposal_json: undefined, resolution_json: undefined })),
   }
 }
 
@@ -108,16 +117,17 @@ function stepAt(graph: Graph, path: string): Step | null {
 /** An approval decision covers exactly the proposal its digest names. Reviewers may edit
  * only the step's editable fields; edits are re-validated against its caps. */
 export async function decideApproval(env: CrankEnv, actor: Actor, runId: string, decision: 'approve' | 'reject', input: Record<string, unknown>) {
-  requireOwner(actor)
   const path = String(input.path ?? '')
+  await assertReviewer(env, actor, runId, path)
   const wait = await stmt(env, "SELECT * FROM crank_waits WHERE run_id=? AND path=? AND kind='approval'", runId, path).first<{ proposal_json: string; proposal_digest: string; resolved_at: string | null }>()
   requireValue(wait, 'No approval is waiting at that step', 404)
   requireValue(!wait.resolved_at, 'This approval was already decided', 409)
   requireValue(input.digest === wait.proposal_digest, 'The proposal changed; review it again', 409)
-  const run = await stmt(env, 'SELECT version_id,workflow_id FROM crank_wf_runs WHERE id=?', runId).first<{ version_id: string; workflow_id: string }>()
+  const run = await stmt(env, 'SELECT version_id,workflow_id,grant_id FROM crank_wf_runs WHERE id=?', runId).first<{ version_id: string; workflow_id: string; grant_id: string | null }>()
   const graph = JSON.parse((await stmt(env, 'SELECT graph_json FROM crank_workflow_versions WHERE id=?', run!.version_id).first<{ graph_json: string }>())!.graph_json) as Graph
   const step = stepAt(graph, path)
   requireValue(step, 'That step is not in this run’s version', 404)
+  if (input.defer === true) requireValue(await stmt(env,'SELECT 1 FROM crank_wf_runs WHERE id=? AND grant_id IS NOT NULL',runId).first(),'Deferred review applies only to granted tasks',422)
   const original = JSON.parse((await openText(env, run!.workflow_id, wait.proposal_json))!) as Record<string, unknown>, reason = typeof input.reason === 'string' ? input.reason.slice(0, 1000) : null
   let resolution: Record<string, unknown>
   if (decision === 'approve') {
@@ -130,8 +140,16 @@ export async function decideApproval(env: CrankEnv, actor: Actor, runId: string,
     const edited = canonical(proposal) !== canonical(original)
     resolution = { approved: true, proposal, original, edited, reviewer: actor.id, reason, decided_at: now() }
   } else resolution = { approved: false, original, reviewer: actor.id, reason: reason ?? 'rejected', decided_at: now() }
-  requireValue(await resolveWait(env, runId, path, resolution, actor.id, { digest: wait.proposal_digest }), 'This approval was already decided', 409)
-  await auditStatement(env, actor.id, decision === 'approve' ? 'run.approve' : 'run.reject', 'run', runId, { path, edited: resolution.edited ?? false, reason }, run!.version_id).run()
+  const sessionFence=authority(actor,run!.grant_id ? 'read':'owner')
+  const executionFence=run!.grant_id ? grantFence(env,run!.grant_id,run!.workflow_id,run!.version_id) : {sql:'1',args:[]}
+  const guard={sql:`(${sessionFence.sql}) AND (${executionFence.sql})`,args:[...sessionFence.args,...executionFence.args]}
+  requireValue(await resolveWait(env, runId, path, resolution, actor.id, { digest: wait.proposal_digest,guard,
+    audit: auditStatementWhen(env,"changes()=1",[],actor.id,decision==='approve'?'run.approve':'run.reject','run',runId,{path,edited:resolution.edited??false,reason},run!.version_id)
+  }), 'The proposal or reviewer authority changed; read the current decision again',409)
+  if (input.defer === true) {
+    requireValue(run && await stmt(env,'SELECT 1 FROM crank_wf_runs WHERE id=? AND grant_id IS NOT NULL',runId).first(),'Deferred review applies only to granted tasks',422)
+    return runDetail(env,actor,runId)
+  }
   return runDetail(env, actor, (await executeRun(env, runId))!.id)
 }
 

@@ -12,7 +12,8 @@ classes, field disclosures and provider-controlled region/retention labels.
 
 Select **Download archive** under **Export your data**. The archive includes
 flows, runs, approvals, delivery attempts and the import journal. It excludes
-owners, sign-in sessions, agent and trigger credentials, and private
+owners, sign-in sessions, agent and trigger credentials, standing grants and
+rate authority, and private
 configuration. It does not back up the source app or destination app.
 
 For larger archives, stop Crank and export from the checkout root:
@@ -51,6 +52,10 @@ implicitly. Resumed runs keep their original frozen graph/checkpoints and are
 checked against current connections at every step. Interrupted remote writes stay
 uncertain: reconcile the destination before taking further action. Held events
 still need their separate current cost estimate and explicit release.
+
+Standing-grant task versions, payloads, reviews, revisions, escalation records
+and audit travel as history; their source grant credential cannot execute in the
+receiving installation. Issue fresh grants after adopting and reviewing work.
 
 Old actor IDs remain history only; invite people and create credentials afresh.
 Legacy pending deliveries require a fresh receiving-owner approval. Failed or

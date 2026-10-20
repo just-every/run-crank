@@ -5,7 +5,7 @@ export type Role = 'owner' | 'admin' | 'member'
 export type ActorKind = 'native' | 'dev' | 'oidc' | 'password' | 'review' | 'agent' | 'trigger'
 export interface Actor {
   id: string; name: string; role: Role; kind: ActorKind; version: number
-  sessionId?: string; tokenId?: string; flowId?: string | null; local: boolean
+  sessionId?: string; tokenId?: string; grantId?: string; flowId?: string | null; local: boolean
 }
 export interface Flow {
   id: string; name: string; source_app: string; destination_app: string; target_url: string

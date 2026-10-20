@@ -1,3 +1,4 @@
+import { grantsPanel } from './grants'
 import { usageView, usageHoldView } from './usage'
 import { operationsView } from './operations'
 import { crankApi } from '../api'
@@ -109,6 +110,11 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
       if (url.pathname !== '/app/action' || (!/^\/api\/crank\/[A-Za-z0-9/_-]+$/.test(form.path ?? '') && !['/auth/invite','/auth/operator/status','/auth/operator/role'].includes(form.path))) return page('Not found','<a href="/app">Return to flows</a>',{},404)
       const path = form.path, back = safeReturn(form.return_to); delete form.path; delete form.return_to
       const input:Record<string,unknown> = {...form}
+      if(path==='/api/crank/grants') {
+        requireOwner(actor)
+        try { input.policy=JSON.parse(form.policy ?? '') } catch { return page('Invalid grant','<p>The grant policy must be JSON.</p><a href="/app/access">Return to access</a>',{},422) }
+        input.version_id=(await read('/api/crank/workflows/'+encodeURIComponent(form.workflow_id))).published_version_id
+      }
       if(path.startsWith('/api/crank/skills')) requireOwner(actor)
       if(path==='/api/crank/skills') input.run_ids=(form.run_ids ?? '').split(',').map(id=>id.trim()).filter(Boolean)
       if(/^\/api\/crank\/workflows\/[^/]+\/rollback$/.test(path)) input.version=Number(form.version)
@@ -138,11 +144,13 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
       if(path==='/api/crank/data/export' && response.ok) return response
       const result:any = await response.json()
       if(!response.ok) return page('Action refused',`<p class="notice">${esc(result.error)}</p><p>No success was reported. Review the latest state before retrying.</p><a href="${back ?? (path.includes('/imports')?'/app/import':'/app')}">Return to workspace</a>`,{},response.status)
+      if(result.credential) result.token=result.credential
       if(result.token) return page('Credential created',`<section class="panel"><p>Shown once. Save this in a private file for your agent. Crank stores only its hash.</p><label>Credential<input type="password" value="${esc(result.token)}" readonly aria-label="Credential"></label><p class="muted">You can select and copy the hidden value. Do not share it in chat or commit it. Local dev credentials additionally need the local gate described in the README.</p><a class="btn btn-secondary" href="/app/access">Return to access</a></section>`)
       if (result.held && (result.hold_id || result.holdId)) return redirect('/app/holds/' + encodeURIComponent(result.hold_id || result.holdId))
       if(path==='/api/crank/skills') return redirect('/app/skills/'+encodeURIComponent(result.id))
       if(back) return redirect(back)
       if(path.startsWith('/api/crank/imports')) return redirect('/app/import')
+      if(path.startsWith('/api/crank/grants')) return redirect('/app/access')
       if(path.startsWith('/api/crank/tokens')) return redirect('/app/access')
       if(path.startsWith('/auth/')) return redirect('/app/access')
       if(path.startsWith('/api/crank/data')) return page('Data operation complete',`<p class="notice">${path.endsWith('/erase')?'The run and its dependent data have been erased. Existing destination effects remain there.':'Your archive has been restored. Every workflow is paused or draft and waits for your review at publish; flows are drafts and connections need reconnecting.'}</p>${restoreSummary(result)}<a href="/app">Return to flows</a>`)
@@ -198,7 +206,7 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
     }
     const heldPath = /^\/app\/holds\/([^/]+)$/.exec(url.pathname)
     if (heldPath) return page('Held work', usageHoldView(await read('/api/crank/holds/' + encodeURIComponent(heldPath[1]))), {state})
-    if(url.pathname==='/app/access') {const people=await call('/auth/operators'); return page('Access',accessView({...state,people:people.ok?await people.json():[]}),{state,intro:'Credentials for agents and sending apps, and the people who can sign in.'})}
+    if(url.pathname==='/app/access') {const people=await call('/auth/operators'); return page('Access',accessView({...state,people:people.ok?await people.json():[]})+grantsPanel(await read('/api/crank/grants'),await read('/api/crank/workflows'),state.people ?? []),{state,intro:'Credentials for agents and sending apps, and the people who can sign in.'})}
     if(url.pathname==='/app/data') { const [retention,workflows,flows] = await Promise.all([read('/api/crank/data/retention'),read('/api/crank/workflows'),read('/api/crank/data/flows')]); return page('Data',dataFlowsPanel(flows)+dataView()+retentionPanels(retention,workflows)+sensitivePanel(retention.sensitive,workflows)+encryptionPanel(retention.sensitive)+erasurePanels((people=>Array.isArray(people)?people:people.operators??[])(await read('/auth/operators'))),{state,intro:'Export, restore and erase. Your data stays on this installation.'}) }
     if(url.pathname==='/app/import') { const jobs=await call('/api/crank/imports'); if(!jobs.ok) throw new Error('Import journal unavailable'); return page('Move in',importView(await jobs.json() as any[],await read('/api/operator/import-settings')),{state,intro:'Bring workflows from another tool as drafts you review first.'}) }
     return page('Not found','<a href="/app">Return to flows</a>',{state},404)

@@ -1,3 +1,6 @@
+import { reviseProposal } from '../grants/proposals'
+import { issueGrant, readGrants, revokeGrant } from '../grants/store'
+import { startTask, readTask } from '../grants/tasks'
 import { listSkills, readSkill, proposeSkill, approveSkill } from '../agents/skills'
 import { usageApi } from '../ops/usage-api'
 import { isBudgetExceeded } from '../ops/usage'
@@ -31,7 +34,7 @@ import { previewReplay, replaySteps } from './replay'
 import { cancelRun, decideApproval, previewWorkflow, resumeRun, runDetail, runsToday, searchRuns, startRun } from './runs'
 import { createWorkflow, duplicateWorkflow, getWorkflow, listWorkflows, presentWorkflow, publishWorkflow, rollbackWorkflow, setWorkflowState, unpublishWorkflow, updateDraft, versionGraph } from './store'
 
-const PREFIXES = ['/api/crank/skills', '/api/crank/usage', '/api/crank/historical', '/api/crank/workflows', '/api/crank/workflow-runs', '/api/crank/connections', '/api/crank/oauth', '/api/crank/hooks', '/api/crank/holds', '/api/crank/queues', '/api/crank/catalog', '/api/crank/coverage', '/api/crank/settings', '/api/crank/audit', '/api/crank/notices', '/api/crank/reports']
+const PREFIXES = ['/api/crank/grants', '/api/crank/agent-tasks', '/api/crank/skills', '/api/crank/usage', '/api/crank/historical', '/api/crank/workflows', '/api/crank/workflow-runs', '/api/crank/connections', '/api/crank/oauth', '/api/crank/hooks', '/api/crank/holds', '/api/crank/queues', '/api/crank/catalog', '/api/crank/coverage', '/api/crank/settings', '/api/crank/audit', '/api/crank/notices', '/api/crank/reports']
 const match = (path: string, pattern: RegExp) => pattern.exec(path)?.slice(1).map(decodeURIComponent) ?? null
 
 async function testConnection(env: CrankEnv, actor: Actor, connectionId: string, input: Record<string, unknown>) {
@@ -76,6 +79,21 @@ export async function workflowApi(request: Request, env: CrankEnv): Promise<Resp
   if (!PREFIXES.some(prefix => path === prefix || path.startsWith(prefix + '/'))) return null
   try {
     const actor = await authorize(request, env)
+    if (actor.grantId) {
+      if (request.method === 'POST' && path === '/api/crank/agent-tasks') {
+        requireWriteOrigin(request, env, actor)
+        return json(await startTask(env, actor, await body(request, 256 * 1024)), 201)
+      }
+      const proposal = /^\/api\/crank\/agent-tasks\/([^/]+)\/proposal$/.exec(path)
+      if (request.method === 'POST' && proposal) {
+        requireWriteOrigin(request,env,actor)
+        return json(await reviseProposal(env,actor,decodeURIComponent(proposal[1]),await body(request)))
+      }
+      const task = /^\/api\/crank\/agent-tasks\/([^/]+)$/.exec(path)
+      if (request.method === 'GET' && task) return json(await readTask(env, actor, decodeURIComponent(task[1])))
+      return json({error:'This execution credential only starts and reads its own agent tasks'},403)
+    }
+    requireValue(!path.startsWith('/api/crank/agent-tasks'), 'Agent tasks require a separate execution credential',403)
     requireValue(actor.kind !== 'trigger', 'Trigger tokens only admit events', 403)
     const usage = await usageApi(request, env, actor)
     if (usage) return usage
@@ -91,6 +109,7 @@ export async function workflowApi(request: Request, env: CrankEnv): Promise<Resp
       return json(await readAudit(env, url.searchParams.get('kind') ?? undefined, url.searchParams.get('id') ?? undefined))
     }
     if (request.method === 'GET') {
+      if (path === '/api/crank/grants') return json(await readGrants(env, actor))
       if (path === '/api/crank/skills') return json(await listSkills(env, actor))
       if ((m = match(path, /^\/api\/crank\/skills\/([^/]+)$/))) return json(await readSkill(env, actor, m[0]))
       if ((m = match(path, /^\/api\/crank\/historical\/([^/]+)$/))) return json(await readHistorical(env, actor, m[0]))
@@ -125,6 +144,8 @@ export async function workflowApi(request: Request, env: CrankEnv): Promise<Resp
     requireValue(request.method === 'POST', 'Method not allowed', 405)
     requireWriteOrigin(request, env, actor)
     const input = request.body ? await body(request, 256 * 1024) : {}
+    if (path === '/api/crank/grants') return json(await issueGrant(env, actor, input), 201)
+    if ((m = match(path, /^\/api\/crank\/grants\/([^/]+)\/revoke$/))) return json(await revokeGrant(env, actor, m[0]))
     if (path === '/api/crank/skills') return json(await proposeSkill(env, actor, input), 201)
     if ((m = match(path, /^\/api\/crank\/skills\/([^/]+)\/approve$/))) return json(await approveSkill(env, actor, m[0], input))
     if ((m = match(path, /^\/api\/crank\/workflows\/([^/]+)\/historical$/))) return json(await previewHistorical(env, actor, m[0], input), 201)

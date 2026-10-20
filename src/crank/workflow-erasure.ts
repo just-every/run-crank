@@ -37,7 +37,7 @@ export async function eraseWorkflowRun(env: CrankEnv, actor: Actor | null, porta
   const service = createErasure({ db: env.DB, portability, declarations: [defineErasure({
     entity: 'workflow-run', root: { table: 'crank_wf_runs' },
     edges: [
-      ...['crank_skill_cases', 'crank_wf_steps', 'crank_blind_index', 'crank_wf_step_revisions', 'crank_waits', 'crank_wf_attempts', 'crank_obligations', 'crank_callback_events', 'crank_queue_items', 'crank_hold_items', 'crank_historical_items', 'crank_ops_events', 'crank_request_admissions', 'crank_request_checkpoints', 'crank_request_checkpoint_chunks', 'crank_usage_observations', 'crank_usage_provider_charges', 'crank_usage_reporting_errors', 'crank_usage_reservations', 'crank_step_admissions']
+      ...['crank_grant_escalations', 'crank_grant_admissions', 'crank_skill_cases', 'crank_wf_steps', 'crank_blind_index', 'crank_wf_step_revisions', 'crank_waits', 'crank_wf_attempts', 'crank_obligations', 'crank_callback_events', 'crank_queue_items', 'crank_hold_items', 'crank_historical_items', 'crank_ops_events', 'crank_request_admissions', 'crank_request_checkpoints', 'crank_request_checkpoint_chunks', 'crank_usage_observations', 'crank_usage_provider_charges', 'crank_usage_reporting_errors', 'crank_usage_reservations', 'crank_step_admissions']
         .map(table => ({ table, from: 'crank_wf_runs', on: { run_id: 'id' } })),
       { table: 'crank_trigger_events', from: 'crank_wf_runs', on: { run_id: 'id' } },
       // Uploaded and connector files belong to the run whose trigger or step output names them.

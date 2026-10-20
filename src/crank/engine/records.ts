@@ -54,11 +54,12 @@ export async function insertWait(env: CrankEnv, run: RunRow, path: string, spec:
 }
 
 /** Resolves a wait exactly once and queues its run; a second resolution changes nothing. */
-export async function resolveWait(env: CrankEnv, runId: string, path: string, resolution: unknown, decidedBy: string | null, extra: { digest?: string; at?: string; beforeExpiry?: boolean } = {}) {
+export async function resolveWait(env: CrankEnv, runId: string, path: string, resolution: unknown, decidedBy: string | null, extra: { digest?: string; at?: string; beforeExpiry?: boolean; guard?: {sql:string;args:unknown[]}; audit?: D1PreparedStatement } = {}) {
   const at = extra.at ?? now(), sealed = await sealText(await targetFor(env, await workflowOf(env, runId)), JSON.stringify(resolution))
   const results = await env.DB.batch([
-    stmt(env, `UPDATE crank_waits SET resolved_at=?,resolution_json=?,decided_by=? WHERE run_id=? AND path=? AND resolved_at IS NULL AND NOT EXISTS(SELECT 1 FROM crank_wf_runs r WHERE r.id=crank_waits.run_id AND json_extract(r.error_json,'$.category')='restore_fence')${extra.digest ? ' AND proposal_digest=?' : ''}${extra.beforeExpiry ? " AND kind='callback' AND (expires_at IS NULL OR expires_at>strftime('%Y-%m-%dT%H:%M:%fZ','now'))" : ''}`,
-      at, sealed, decidedBy, runId, path, ...(extra.digest ? [extra.digest] : [])),
+    stmt(env, `UPDATE crank_waits SET resolved_at=?,resolution_json=?,decided_by=? WHERE run_id=? AND path=? AND resolved_at IS NULL AND NOT EXISTS(SELECT 1 FROM crank_wf_runs r WHERE r.id=crank_waits.run_id AND json_extract(r.error_json,'$.category')='restore_fence')${extra.digest ? ' AND proposal_digest=?' : ''}${extra.beforeExpiry ? " AND kind='callback' AND (expires_at IS NULL OR expires_at>strftime('%Y-%m-%dT%H:%M:%fZ','now'))" : ''}${extra.guard ? ` AND (${extra.guard.sql})` : ''}`,
+      at, sealed, decidedBy, runId, path, ...(extra.digest ? [extra.digest] : []),...(extra.guard?.args ?? [])),
+    ...(extra.audit ? [extra.audit] : []),
     stmt(env, "UPDATE crank_wf_runs SET status='queued' WHERE id=? AND status IN ('waiting','awaiting_approval') AND EXISTS(SELECT 1 FROM crank_waits WHERE run_id=? AND path=? AND resolved_at=?)", runId, runId, path, at),
   ])
   return results[0].meta.changes === 1
