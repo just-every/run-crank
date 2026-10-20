@@ -92,7 +92,7 @@ try {
 
   const workflow = await send('workflows',{name:'Harbour Workshop — finance supplier settlement and tax review',graph:{trigger:{type:'manual'},steps:[{id:'review',type:'approval',input:{supplier:'Northshore Fabrication and Industrial Supplies',amount:'2450.00',question:'Confirm the interstate sales-tax treatment before settlement.'}},{id:'record',type:'map',input:{approved:true}}]}},201);
   await send(`workflows/${workflow.id}/estimate`,quote); await send(`workflows/${workflow.id}/publish`,{},201);
-  const connection = await send('connections',{app:'http',label:'Harbour Workshop — owned finance API',auth_kind:'none',domains:['finance.example.test'],secret:{}},201);
+  const connection = await send('connections',{app:'http',label:'Harbour Workshop — owned finance API',auth_kind:'bearer',domains:['finance.example.test'],secret:{token:'synthetic-browser-fixture-'+crypto.randomUUID()}},201);
   for (const [name,role] of [['Dana Reyes — supplier finance builder','builder'],['Morgan Lee — operations viewer','viewer'],['Alex Rivera — settlement approver','approver']]) {
     const response=await owner.request.post(origin+'/auth/invite',{headers:{origin},data:{email:name.split(' — ')[0].toLowerCase().replaceAll(' ','-')+'@example.test',displayName:name,role:'member'}});
     assert.equal(response.status(),202);
