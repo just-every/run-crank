@@ -13,8 +13,8 @@ const privateDir=await mkdtemp(join(tmpdir(),'crank-grants-')),log=join(privateD
 const pause=ms=>new Promise(r=>setTimeout(r,ms));
 const socket=createServer();await new Promise(r=>socket.listen(0,'127.0.0.1',r));const port=socket.address().port;await new Promise(r=>socket.close(r));
 let browser,page;
-function start(command,args,env=process.env) {
- const child=spawn(command,args,{env,stdio:['ignore','pipe','pipe']});children.push(child);
+function start(command,args,env=process.env,cwd=process.cwd()) {
+ const child=spawn(command,args,{env,cwd,stdio:['ignore','pipe','pipe']});children.push(child);
  const stream=createWriteStream(log,{flags:'a',mode:0o600});child.stdout.pipe(stream,{end:false});child.stderr.pipe(stream,{end:false});child.once('close',()=>stream.end());return child;
 }
 async function stop(child) {
@@ -24,7 +24,7 @@ async function stop(child) {
  for(const pid of [...owned].reverse())try{process.kill(pid,'SIGTERM')}catch{}
 }
 try {
- start(process.execPath,['examples/inbox/server.mjs'],{...process.env,INBOX_PORT:String(port),INBOX_DATA:join(privateDir,'inbox')});
+ start(process.execPath,[join(process.cwd(),'examples/inbox/server.mjs')],{...process.env,INBOX_PORT:String(port),INBOX_DATA:join(privateDir,'inbox')},privateDir);
  const dev=start('rer',['dev','--foreground'],{...process.env,PATH:dirname(process.execPath)+':'+process.env.PATH});
  let open;const deadline=Date.now()+10*60000;
  while(Date.now()<deadline){const text=await readFile(log,'utf8').catch(()=>'');open=/RER_OPEN\s+(https?:\/\/\S+)/.exec(text)?.[1];if(open)break;if(dev.exitCode!==null)throw Error('rer dev exited: '+text.replace(/https?:\/\/\S+/g,'[private URL]').slice(-1800));await pause(1000)}

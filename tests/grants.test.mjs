@@ -108,5 +108,13 @@ test('TEAM-002 BASE-001 DATA-001 BASE-003: owner-selected native delegation and 
   const disclosures=await h.get('data/flows');assert.ok(disclosures.flows.some(f=>f.recipients.includes('https://grants-ledger.example')&&f.fields.includes('body.amount')));
   assert.equal((await decide(h,escalated,'reject',{},outsider.cookie)).status,'rejected');
   assert.equal((await h.get('audit')).filter(a=>a.action==='grant.approval.escalate').length,1);
+  const recoverySteps=[tool('before_wait'),{id:'checkpoint',type:'delay',mode:'for',input:{amount:1,unit:'minutes'}},tool('after_wait')];
+  const recovery=await publish(h,'Granted task durable continuation',{trigger:{type:'manual'},steps:recoverySteps}),rp=policy(recoverySteps);
+  rp.rules[1]={step_id:'checkpoint',type:'delay',connection_id:null,app:'none',fields:['amount','unit'],recipients:[],max_per_minute:10};
+  const rg=await issue(h,recovery,rp),parked=await task(h,rg,[action(recoverySteps[0],{}),{step_id:'checkpoint',input:{amount:1,unit:'minutes'}},action(recoverySteps[2],{})]);
+  assert.equal(parked.status,'waiting');const beforeWait=edge.to('grants-ledger.example').filter(r=>r.url.pathname==='/before_wait').length;
+  await h.restart();await h.tick(Date.parse(parked.waits[0].due_at)+1);const continued=await h.get('workflow-runs/'+parked.id);
+  assert.equal(continued.status,'succeeded');assert.equal(continued.version_id,parked.version_id);assert.equal(edge.to('grants-ledger.example').filter(r=>r.url.pathname==='/before_wait').length,beforeWait,'restart never repeats a granted effect');assert.equal(edge.to('grants-ledger.example').filter(r=>r.url.pathname==='/after_wait').length,1);
+
  }finally{await restored?.close();await h.close()}
 });
