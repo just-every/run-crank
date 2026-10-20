@@ -15,7 +15,8 @@ try {
   await page.goto(open);
   await page.waitForURL(url => ['/app', '/setup'].includes(url.pathname), { timeout: 60000 });
   if (new URL(page.url()).pathname === '/setup') {
-    await page.locator('form').filter({ has: page.locator('[name="confirm"]') }).evaluate(form => form.requestSubmit());
+    await page.getByRole('checkbox').check();
+    await page.getByRole('button', { name: 'Finish setup', exact: true }).click();
     await page.waitForURL('**/app');
   }
   const send = async (path, body, expected = 200) => {
