@@ -5,6 +5,7 @@ export type Role = 'owner' | 'admin' | 'member'
 export type ActorKind = 'native' | 'dev' | 'oidc' | 'password' | 'review' | 'agent' | 'trigger'
 export interface Actor {
   id: string; name: string; role: Role; kind: ActorKind; version: number
+  team?: import('./team/policy').TeamAccess
   sessionId?: string; tokenId?: string; grantId?: string; flowId?: string | null; local: boolean
 }
 export interface Flow {

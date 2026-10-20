@@ -4,7 +4,7 @@ import { auditStatement } from './ops/audit'
 
 /** Every Crank column that records which person acted or created something. */
 const ATTRIBUTION: [table: string, column: string][] = [
-  ['crank_skills', 'created_by'],
+  ['crank_skills', 'created_by'], ['crank_team_access', 'changed_by'],
   ['crank_usage_workflow_estimates', 'quoted_by'], ['crank_usage_version_estimates', 'quoted_by'], ['crank_usage_budgets', 'updated_by'], ['crank_usage_allowances', 'created_by'],
   ['crank_audit', 'actor_id'], ['crank_approvals', 'actor_id'], ['crank_waits', 'decided_by'], ['crank_hold_items', 'decided_by'],
   ['crank_flows', 'created_by'], ['crank_runs', 'created_by'], ['crank_workflows', 'owner_id'], ['crank_workflows', 'created_by'],
@@ -26,6 +26,7 @@ export async function eraseOperator(env: CrankEnv, actor: Actor, operatorId: str
   await guardedBatch(env, actor, 'owner', [
     stmt(env, `INSERT INTO crank_authority_guards(id,ok) SELECT ?,CASE WHEN EXISTS(SELECT 1 FROM oa_operators WHERE id=? AND email=? AND role!='owner' AND status='inactive') THEN 1 ELSE 0 END`, guard, person.id, person.email),
     ...ATTRIBUTION.map(([table, column]) => stmt(env, `UPDATE ${table} SET ${column}=? WHERE ${column}=?`, label, person.id)),
+    stmt(env, 'DELETE FROM crank_team_access WHERE operator_id=?', person.id),
     stmt(env, 'DELETE FROM crank_workflow_idempotency WHERE actor_id=?', person.id),
     stmt(env, "UPDATE crank_audit SET subject_id=? WHERE subject_kind='operator' AND subject_id=?", label, person.id),
     stmt(env, 'UPDATE oa_auth_audit SET actor_id=CASE WHEN actor_id=?1 THEN ?2 ELSE actor_id END,value=CASE WHEN value IN (?1,?3) THEN ?2 ELSE value END WHERE actor_id=?1 OR value IN (?1,?3)', person.id, label, person.email),

@@ -1,16 +1,18 @@
+import { admitTeamRequest, mayPrepare, mayPublish, teamAccess, teamFence } from './team/policy'
 import { operatorAuth, runtimeBindings } from '../auth.server'
 import { devGate } from '../modules/operator-auth/index.mjs'
 import { CrankError, digest, id, requireValue, stmt, type Actor, type CrankEnv } from './model'
 import { authorizeGrant, grantFence } from './grants/authority'
 
-export type AuthorityMode = 'read' | 'prepare' | 'owner' | 'trigger'
+export type AuthorityMode = 'read' | 'prepare' | 'publish' | 'operate' | 'owner' | 'trigger'
 export function requireOwner(actor: Actor): void {
   requireValue(actor.role === 'owner' && (actor.kind === 'native' || actor.kind === 'dev'), 'A native owner session is required', 403)
 }
 export function requirePrepare(actor: Actor): void {
   requireValue(!actor.grantId, 'Execution grants do not authorize preparation', 403)
-  requireValue(actor.kind === 'agent' || (actor.kind !== 'trigger' && actor.kind !== 'review' && (actor.role === 'owner' || actor.role === 'admin')), 'Preparation requires an administrator or agent', 403)
+  requireValue(actor.kind === 'agent' || (actor.kind !== 'trigger' && actor.kind !== 'review' && mayPrepare(actor)), 'Preparation requires an administrator or agent', 403)
 }
+export function requirePublish(actor: Actor): void { requireValue(mayPublish(actor), 'Publishing requires a scoped builder or native owner', 403) }
 export const ownerGuard = requireOwner
 /** Cookie writes require an exact origin, including port, with no absent-Origin exemption. */
 export function requireWriteOrigin(request: Request, env: CrankEnv, actor: Actor): void {
@@ -39,7 +41,10 @@ export async function authorize(request: Request, original: CrankEnv): Promise<A
   }
   const session = await operatorAuth(env).getSession(request)
   requireValue(session, 'Sign in to continue', 401)
-  return { id: session.operator.id, name: session.operator.displayName, role: session.operator.role, kind: session.kind, version: session.operator.version, sessionId: session.id, local: env.AUTH_LOCAL === 'true' }
+  const actor: Actor = { id: session.operator.id, name: session.operator.displayName, role: session.operator.role, kind: session.kind, version: session.operator.version, sessionId: session.id, local: env.AUTH_LOCAL === 'true' }
+  actor.team = await teamAccess(env, actor)
+  await admitTeamRequest(request, env, actor)
+  return actor
 }
 
 /** SQL authority is repeated inside every write transaction, not just at HTTP admission.
@@ -59,16 +64,18 @@ export function authority(actor: Actor, mode: AuthorityMode): { sql: string; arg
       args: [actor.tokenId, allowed, actor.id, actor.version, actor.local ? 1 : 0, actor.flowId ?? null],
     }
   }
-  const roles = mode === 'owner' ? "o.role='owner' AND s.kind IN ('native','dev')" : mode === 'prepare' ? "o.role IN ('owner','admin') AND s.kind!='review'" : mode === 'trigger' ? '0' : '1'
+  const product = teamFence(actor)
+  const teamAllowed = actor.team && (mode === 'prepare' ? mayPrepare(actor) : mode === 'publish' ? mayPublish(actor) : mode === 'operate' ? ['admin','operator'].includes(actor.team.role) : mode === 'read')
+  const roles = actor.team ? (teamAllowed ? "s.kind!='review'" : '0') : mode === 'publish' ? "o.role='owner' AND s.kind IN ('native','dev')" : mode === 'operate' ? "o.role IN ('owner','admin') AND s.kind!='review'" : mode === 'owner' ? "o.role='owner' AND s.kind IN ('native','dev')" : mode === 'prepare' ? "o.role IN ('owner','admin') AND s.kind!='review'" : mode === 'trigger' ? '0' : '1'
   return {
     sql: `EXISTS(SELECT 1 FROM oa_sessions s JOIN oa_operators o ON o.id=s.operator_id
       WHERE s.id=? AND s.operator_id=? AND s.kind=? AND s.operator_version=? AND o.version=s.operator_version
-      AND o.status='active' AND s.revoked_at IS NULL AND s.expires_at>? AND (s.kind!='dev' OR ?=1) AND ${roles}
+      AND o.status='active' AND s.revoked_at IS NULL AND s.expires_at>? AND (s.kind!='dev' OR ?=1) AND ${roles} AND (${product.sql})
       AND (s.kind!='oidc' OR EXISTS(SELECT 1 FROM oa_provider_sessions p JOIN oa_auth_settings a ON a.singleton=1 WHERE p.session_id=s.id AND a.idp_sign_in=1 AND a.generation=p.generation))
       AND NOT EXISTS(SELECT 1 FROM oa_provider_session_pins pin WHERE pin.session_id=s.id AND NOT EXISTS(
         SELECT 1 FROM oa_identity_providers provider WHERE provider.provider_id=pin.provider_id AND provider.status='linked'
         AND provider.issuer=pin.issuer AND provider.client_id=pin.client_id AND provider.linked_at=pin.linked_at)))`,
-    args: [actor.sessionId ?? null, actor.id, actor.kind, actor.version, time, actor.local ? 1 : 0],
+    args: [actor.sessionId ?? null, actor.id, actor.kind, actor.version, time, actor.local ? 1 : 0, ...product.args],
   }
 }
 export async function guardedBatch(env: CrankEnv, actor: Actor, mode: AuthorityMode, jobs: D1PreparedStatement[]): Promise<D1Result[]> {

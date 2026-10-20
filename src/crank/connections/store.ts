@@ -45,8 +45,8 @@ export async function getConnection(env: CrankEnv, connectionId: string): Promis
   requireValue(row, 'Connection not found', 404)
   return row
 }
-export async function listConnections(env: CrankEnv) {
-  return (await stmt(env, 'SELECT * FROM crank_connections ORDER BY created_at DESC,id').all<ConnectionRow>()).results.map(present)
+export async function listConnections(env: CrankEnv, actor?: Actor) {
+  return (await stmt(env, 'SELECT * FROM crank_connections WHERE (? IS NULL OR id IN (SELECT value FROM json_each(?))) ORDER BY created_at DESC,id', actor?.team ? JSON.stringify(actor.team.connection_ids) : null, actor?.team ? JSON.stringify(actor.team.connection_ids) : null).all<ConnectionRow>()).results.map(present)
 }
 
 export async function createConnection(env: CrankEnv, actor: Actor, input: Record<string, unknown>, granted: { scopes?: string[]; account?: string; expiresAt?: string | null } = {}) {

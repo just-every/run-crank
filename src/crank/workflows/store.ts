@@ -1,5 +1,6 @@
+import { workflowScope, connectionScope } from '../team/policy'
 import { publishUsageStatements, readWorkflowEstimate } from '../ops/usage'
-import { guardedBatch, requireOwner, requirePrepare } from '../access'
+import { guardedBatch, requireOwner, requirePrepare, requirePublish } from '../access'
 import { getConnection } from '../connections/store'
 import { StepError } from '../engine/errors'
 import { validateGraph, type Graph } from '../engine/graph'
@@ -56,10 +57,10 @@ export async function versionGraph(env: CrankEnv, workflowId: string, number: nu
   const estimate = await stmt(env, 'SELECT cost_json FROM crank_usage_version_estimates WHERE version_id=?', row.id).first<{cost_json: string}>()
   return { estimate: estimate ? JSON.parse(estimate.cost_json) : null, number: row.number, graph: JSON.parse(row.graph_json), graph_digest: row.graph_digest, published_by: row.published_by, published_at: row.published_at, retired_at: row.retired_at }
 }
-export async function listWorkflows(env: CrankEnv, params: URLSearchParams) {
+export async function listWorkflows(env: CrankEnv, params: URLSearchParams, actor?: Actor) {
   const q = params.get('q'), folderName = params.get('folder')
-  const rows = await stmt(env, `SELECT * FROM crank_workflows WHERE (? IS NULL OR name LIKE ? OR description LIKE ?) AND (? IS NULL OR folder=?) ORDER BY folder,name,id LIMIT 500`,
-    q, `%${q}%`, `%${q}%`, folderName, folderName).all<WorkflowRow>()
+  const rows = await stmt(env, `SELECT * FROM crank_workflows WHERE (? IS NULL OR id IN (SELECT value FROM json_each(?))) AND (? IS NULL OR name LIKE ? OR description LIKE ?) AND (? IS NULL OR folder=?) ORDER BY folder,name,id LIMIT 500`,
+    actor?.team ? JSON.stringify(actor.team.workflow_ids) : null, actor?.team ? JSON.stringify(actor.team.workflow_ids) : null, q, `%${q}%`, `%${q}%`, folderName, folderName).all<WorkflowRow>()
   return rows.results.map(row => ({ id: row.id, name: row.name, folder: row.folder, description: row.description, status: row.status, owner_id: row.owner_id, published_version_id: row.published_version_id, trigger: JSON.parse(row.draft_json).trigger?.type ?? null }))
 }
 
@@ -84,6 +85,7 @@ export async function createWorkflow(env: CrankEnv, actor: Actor, input: Record<
 }
 export async function updateDraft(env: CrankEnv, actor: Actor, workflowId: string, input: Record<string, unknown>, idempotencyKey?: string | null) {
   requirePrepare(actor)
+  workflowScope(actor, workflowId)
   const command = await workflowCommand(env, actor, idempotencyKey, 'draft', workflowId, input)
   if (command?.existing) return savedWorkflow(env, workflowId, command.existing, true)
   const current = await getWorkflow(env, workflowId)
@@ -128,7 +130,8 @@ export async function duplicateWorkflow(env: CrankEnv, actor: Actor, workflowId:
 /** WORK-008 rollback: publish an earlier version's exact graph as a new version whose change
  * record names the version it restores. The draft is left as it was. */
 export async function rollbackWorkflow(env: CrankEnv, actor: Actor, workflowId: string, input: Record<string, unknown>) {
-  requireOwner(actor)
+  requirePublish(actor)
+  workflowScope(actor, workflowId)
   requireValue(Number.isInteger(input.version), 'Choose the version number to roll back to')
   const source = await stmt(env, "SELECT id,number,graph_json,retry_policy_json FROM crank_workflow_versions WHERE workflow_id=? AND number=? AND mode='production'", workflowId, input.version).first<{ id: string; number: number; graph_json: string; retry_policy_json: string }>()
   requireValue(source, 'Version not found', 404)
@@ -138,11 +141,14 @@ export async function rollbackWorkflow(env: CrankEnv, actor: Actor, workflowId: 
   return publishWorkflow(env, actor, workflowId, {}, { graph: JSON.parse(source.graph_json), rollback_of: source.number, estimateVersionId: source.id, retryPolicy: JSON.parse(source.retry_policy_json) })
 }
 export async function publishWorkflow(env: CrankEnv, actor: Actor, workflowId: string, input: Record<string, unknown> = {}, rollback?: { graph: unknown; rollback_of: number; estimateVersionId: string; retryPolicy: Record<string, unknown> }) {
-  requireOwner(actor)
+  requirePublish(actor)
+  workflowScope(actor, workflowId)
   const current = await getWorkflow(env, workflowId)
+  requireValue(!actor.team || !pendingRestore(current), 'Only the native owner may adopt a restored workflow', 403)
   await requireAttested(env, workflowId)
   const { graph, declared, warnings } = checked(rollback ? rollback.graph : JSON.parse(current.draft_json))
   for (const connectionId of declared.connections) {
+    connectionScope(actor, connectionId)
     const connection = await getConnection(env, connectionId).catch(() => null)
     requireValue(connection, `Connection ${connectionId} does not exist`, 422)
     requireValue(connection.status === 'active', `Connection "${connection.label}" is ${connection.status}; reconnect it before publishing`, 422)
@@ -167,7 +173,7 @@ export async function publishWorkflow(env: CrankEnv, actor: Actor, workflowId: s
   statements.push(...await triggerSetup(env, workflowId, versionId, graph))
   statements.push(...adoption)
   if (!pendingRestore(current) && current.published_version_id && await waitingPolicy(env, current.published_version_id) === 'cancel_on_new_version') statements.push(...await cancellations(env, actor, workflowId, current.published_version_id, 'A new version was published'))
-  await guardedBatch(env, actor, 'owner', statements)
+  await guardedBatch(env, actor, 'publish', statements)
   const hooks = await listHooks(env, workflowId)
   if (graph.trigger.type === 'webhook' && !hooks.some(hook => hook.active)) warnings.push('Create a webhook URL for this workflow (POST /api/crank/workflows/:id/hooks) and give it to the sender')
   return { workflow: await presentWorkflow(env, await getWorkflow(env, workflowId)), version: { id: versionId, number, authority }, warnings }
@@ -207,7 +213,8 @@ async function waitingPolicy(env: CrankEnv, versionId: string | null) {
 
 /** Pausing stops dispatch; new trigger events are held as a reviewable batch. */
 export async function setWorkflowState(env: CrankEnv, actor: Actor, workflowId: string, state: 'paused' | 'published') {
-  requireOwner(actor)
+  requirePublish(actor)
+  workflowScope(actor, workflowId)
   const current = await getWorkflow(env, workflowId)
   requireValue(!pendingRestore(current), 'Review the restore and publish before resuming this workflow', 409)
   requireValue(current.published_version_id, 'Publish the workflow first', 409)
@@ -215,7 +222,7 @@ export async function setWorkflowState(env: CrankEnv, actor: Actor, workflowId: 
   const guard = `attested:resume:${workflowId}:${id()}`
   const cancelVersions = state === 'paused' ? (await stmt(env, `SELECT id FROM crank_workflow_versions WHERE workflow_id=? AND json_extract(graph_json,'$.settings.waiting_runs')='cancel_on_pause'`, workflowId).all<{id: string}>()).results : []
   const cancelStatements = (await Promise.all(cancelVersions.map(version => cancellations(env, actor, workflowId, version.id, 'The workflow was paused')))).flat()
-  await guardedBatch(env, actor, 'owner', [
+  await guardedBatch(env, actor, 'publish', [
     ...(state === 'paused' ? [
       stmt(env, 'UPDATE crank_wf_runs SET continuation_authority=continuation_authority&~1 WHERE workflow_id=?', workflowId),
       stmt(env, `UPDATE crank_wf_runs SET continuation_authority=continuation_authority|1 WHERE workflow_id=? AND status IN ('waiting','awaiting_approval')
@@ -231,10 +238,11 @@ export async function setWorkflowState(env: CrankEnv, actor: Actor, workflowId: 
 
 /** Unpublishing ends all authority, including previously recorded wait exceptions. */
 export async function unpublishWorkflow(env: CrankEnv, actor: Actor, workflowId: string) {
-  requireOwner(actor)
+  requirePublish(actor)
+  workflowScope(actor, workflowId)
   const current = await getWorkflow(env, workflowId), at = now()
   requireValue(current.published_version_id, 'This workflow is not published', 409)
-  await guardedBatch(env, actor, 'owner', [
+  await guardedBatch(env, actor, 'publish', [
     stmt(env, 'UPDATE crank_workflow_versions SET retired_at=COALESCE(retired_at,?) WHERE workflow_id=?', at, workflowId),
     stmt(env, 'UPDATE crank_wf_runs SET continuation_authority=0 WHERE workflow_id=?', workflowId),
     stmt(env, "UPDATE crank_workflows SET status='draft',published_version_id=NULL WHERE id=?", workflowId),

@@ -9,6 +9,7 @@ import { StepError } from './engine/errors'
 
 async function state(env: CrankEnv, actor: Actor): Promise<Response> {
   requireValue(actor.kind !== 'trigger', 'Trigger tokens only admit events to their scoped flow', 403)
+  if (actor.team) return json({ actor: publicActor(actor), flows: [], runs: [], approvals: [], attempts: [], tokens: [], people: [] })
   await recoverExpiredRuns(env, actor)
   const canManage = actor.role === 'owner' && (actor.kind === 'native' || actor.kind === 'dev')
   const [flows, runs, approvals, attempts, tokens, people] = await Promise.all([

@@ -28,7 +28,7 @@ export async function createRun(env: CrankEnv, workflow: WorkflowRow, kind: stri
     SELECT ?,?,?,?,?,?,'queued',?,?,?,?,?,? WHERE EXISTS(SELECT 1 FROM crank_workflows WHERE id=? AND status='published' AND published_version_id=?)`, runId, workflow.id, workflow.published_version_id, kind, event.key, await sealText(target, plain), event.sourceTime ?? null, receivedAt, createdBy, event.businessKey ?? null,
     target.key?.id ?? null, target.key ? target.fieldsJson : null, workflow.id, workflow.published_version_id)
   const jobs = [insert, ...(index ? [index] : [])]
-  if (actor) await guardedBatch(env, actor, 'prepare', jobs)
+  if (actor) await guardedBatch(env, actor, actor.team ? 'operate' : 'prepare', jobs)
   else await env.DB.batch(jobs)
   const run = await getWfRun(env, runId)
   requireValue(run, 'Workflow authority changed before the run started', 409)
