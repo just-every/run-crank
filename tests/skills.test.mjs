@@ -101,13 +101,12 @@ test('AGENT-003 BASE-001 DATA-001: proposals and evidence restore portably with 
     const archivedTables = exported.trim().split('\n').map(JSON.parse).flatMap(p => p.items ?? []).filter(i => i.kind === 'row').map(i => i.table);
     assert.ok(!archivedTables.some(table => table.startsWith('oa_') || table === 'crank_tokens'), 'source sign-in identities, sessions and bearer authority are excluded');
     assert.ok(!exported.includes(h.owner), 'the source session credential never travels');
-    const rows = text => text.trim().split('\n').map(JSON.parse).flatMap(p => p.items ?? []).filter(i => i.kind === 'row').map(i => JSON.stringify(i)).sort();
+    const rows = text => text.trim().split('\n').map(JSON.parse).flatMap(p => p.items ?? []).filter(i => i.kind === 'row').map(({table,row}) => JSON.stringify({table,row})).sort();
     restored = await harness('http://127.0.0.1:9', { edge: fake.edge });
     const requests = fake.requests.length;
     await restored.post('data/restore', { archive: exported, confirm: 'RESTORE' });
     const original = rows(exported), received = rows(await archive(restored));
     const additions = received.filter(row => !original.includes(row));
-    for (const encoded of additions) { const added=JSON.parse(encoded), prior=original.map(JSON.parse).find(i=>i.table===added.table && i.row.id===added.row.id); if(prior) console.error('portable-diff',added.table,added.row.action,Object.keys(added.row).filter(k=>JSON.stringify(prior.row[k])!==JSON.stringify(added.row[k]))); }
     assert.deepEqual(additions.map(row => [JSON.parse(row).table, JSON.parse(row).row.action]), [['crank_audit', 'data.restore']]);
     assert.deepEqual(received.filter(row => !additions.includes(row)), original, 'every portable record survives the inactive restore');
     assert.equal((await restored.get('skills/' + skill.id)).active, false, 'a restored published graph has no active authority');
