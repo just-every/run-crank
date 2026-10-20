@@ -37,6 +37,7 @@ export async function archiveRecovery(h) {
   const aborted=await h.post('data/transfers',{kind:'export'},201);
   await h.restart();
   assert.equal((await h.post(`data/transfers/${aborted.id}/abort`)).phase,'aborted');
+  assert.equal((await h.get('data/transfers')).find(t=>t.id===aborted.id).retained_parts,0);
   const abortAudit=await h.get(`audit?kind=archive_transfer&id=${aborted.id}`);
   assert.equal(abortAudit.filter(r=>r.action==='data.transfer.abort').length,1);
   await h.post(`data/transfers/${aborted.id}/advance`,{maxParts:1},409);

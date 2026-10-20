@@ -311,7 +311,7 @@ test('BASE-003: dependency failure, maintenance interruption and archive custody
     report = await r.get('reports/operations');
     assert.ok(report.recovery.backup.last_generated_at);
     assert.equal(report.recovery.backup.verified_external_copy,false,'generation never claims receipt');
-    assert.ok((await r.get('data/transfers')).some(t=>t.kind==='export' && t.phase==='aborted'));
+    assert.ok((await r.get('data/transfers')).some(t=>t.kind==='export' && t.phase==='aborted' && t.retained_parts===0),'released export snapshots retain no archive parts');
     await r.mf.dispatchFetch(r.origin+'/setup',{method:'POST',redirect:'manual',headers:{origin:r.origin,cookie:r.owner,'content-type':'application/x-www-form-urlencoded'},body:'confirm=yes'});
     const page = await r.send('/app/operations',undefined,r.owner);
     assert.equal(page.status,200); assert.ok(page.text.includes('Service recovery')); assert.ok(page.text.includes('not verified'));

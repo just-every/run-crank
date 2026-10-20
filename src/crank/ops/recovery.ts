@@ -25,7 +25,7 @@ export async function operation<T>(env: CrankEnv, kind: string, work: () => Prom
 }
 export async function archiveTransfers(env: CrankEnv) {
   const exists = await stmt(env, "SELECT name FROM sqlite_master WHERE type='table' AND name='rer_portability_jobs'").first()
-  return exists ? (await stmt(env, 'SELECT id,kind,phase,completed FROM rer_portability_jobs ORDER BY rowid DESC LIMIT 30').all<{ id: string; kind: string; phase: string; completed: number }>()).results : []
+  return exists ? (await stmt(env, 'SELECT j.id,j.kind,j.phase,j.completed,(SELECT COUNT(*) FROM rer_portability_parts p WHERE p.job=j.id) AS retained_parts FROM rer_portability_jobs j ORDER BY j.rowid DESC LIMIT 30').all<{ id: string; kind: string; phase: string; completed: number; retained_parts: number }>()).results : []
 }
 export async function recoveryReport(env: CrankEnv, time = Date.now()) {
   await recoverOperations(env, time)
