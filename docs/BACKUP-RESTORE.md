@@ -57,8 +57,8 @@ Standing-grant task versions, payloads, reviews, revisions, escalation records
 and audit travel as history; their source grant credential cannot execute in the
 receiving installation. When the receiving owner explicitly chooses Resume at
 publish, the frozen task becomes native-owner-authorized fixed work, with its
-original grant provenance still in the immutable version and audit. A fresh
-review is required for its pending effect. Issue a new grant for new agent tasks.
+original grant provenance still in the immutable version and audit. Any still-pending
+approval requires receiving-owner review. Issue a new grant for new agent tasks.
 
 Old actor IDs remain history only; invite people and create credentials afresh.
 Legacy pending deliveries require a fresh receiving-owner approval. Failed or

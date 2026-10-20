@@ -35,11 +35,12 @@ try {
  for(const width of [1440,390]){
   await page.setViewportSize({width,height:1000});
   const tool={id:'refund',type:'http',idempotency_header:'Idempotency-Key',input:{method:'POST',url:'https://httpbin.org/anything',body:{amount:'25.00',to:'finance@harbor.example',description:'Harbor Workshop — replacement valve shipment / order 4729'}}};
+  const slow={...tool,id:'slow',input:{...tool.input,url:'https://httpbin.org/delay/10'}};
   const wait={id:'wait',type:'delay',mode:'for',input:{amount:5,unit:'minutes'}};
-  const workflow=await send('workflows',{name:`Harbor Workshop — supplier refund decisions and weekend follow-up (${width})`,graph:{trigger:{type:'manual'},steps:[tool,wait]}},201);
+  const workflow=await send('workflows',{name:`Harbor Workshop — supplier refund decisions and weekend follow-up (${width})`,graph:{trigger:{type:'manual'},steps:[tool,wait,slow]}},201);
   await send(`workflows/${workflow.id}/estimate`,{cost:{components:['orchestration','connectors','models','executors'].map(kind=>({kind,usd_per_run:'0',assumption:'Owner-reviewed public HTTP echo using synthetic acceptance data; no authenticated provider or executor'}))}});
   await send(`workflows/${workflow.id}/publish`,{},201);
-  const policy={rules:[{step_id:'refund',type:'http',connection_id:null,app:'none',fields:['method','url','body'],recipients:['finance@harbor.example'],recipient_field:'body.to',amount_field:'body.amount',max_usd:'100.00',max_per_minute:20},{step_id:'wait',type:'delay',connection_id:null,app:'none',fields:['amount','unit'],recipients:[],max_per_minute:20}],approval:{timeout_seconds:1,delegate_ids:[],escalate_to:[]}};
+  const policy={rules:[{step_id:'slow',type:'http',connection_id:null,app:'none',fields:['method','url','body'],recipients:['finance@harbor.example'],recipient_field:'body.to',amount_field:'body.amount',max_usd:'100.00',max_per_minute:20},{step_id:'refund',type:'http',connection_id:null,app:'none',fields:['method','url','body'],recipients:['finance@harbor.example'],recipient_field:'body.to',amount_field:'body.amount',max_usd:'100.00',max_per_minute:20},{step_id:'wait',type:'delay',connection_id:null,app:'none',fields:['amount','unit'],recipients:[],max_per_minute:20}],approval:{timeout_seconds:1,delegate_ids:[],escalate_to:[]}};
   await page.goto(origin+'/app/access');const panel=page.locator('section').filter({has:page.getByRole('heading',{name:'Standing grants for agent work',exact:true})});
   await panel.getByLabel('Label',{exact:true}).fill(`Supplier refund assistant — Harbor Workshop (${width}, ${workflow.id.slice(0,6)})`);await panel.getByLabel('Published workflow').selectOption(workflow.id);await panel.getByLabel('Expires at (UTC)').fill(new Date(Date.now()+86400000).toISOString());await panel.getByLabel('Grant policy (JSON)').fill(JSON.stringify(policy,null,2));await shot(width,'grant-policy');
   await panel.getByRole('button',{name:'Issue standing grant'}).click();await page.waitForLoadState('networkidle');const credential=await page.getByLabel('Credential',{exact:true}).inputValue();assert.match(credential,/^crg_/);await shot(width,'credential-created');
@@ -53,7 +54,14 @@ try {
   // Wait through the real per-minute Cron pass; the HTTP journey also proves restart.
   const due=Date.now()+75000;let escalation;while(Date.now()<due){escalation=await send('agent-tasks/'+changed.id,undefined,200,credential);if(escalation.escalations.length)break;await pause(1000)}assert.ok(escalation.escalations.length);await page.reload();await shot(width,'deadline-escalated');await page.getByRole('button',{name:'Reject',exact:true}).click();await page.waitForLoadState('networkidle');
   const parked=await task('80.00',[{step_id:'wait',input:{amount:5,unit:'minutes'}}]);assert.equal(parked.status,'waiting');
-  await page.goto(origin+'/app/access');const row=page.locator('li.history-item').filter({has:page.getByRole('heading',{name:grant.label,exact:true})});await row.getByRole('button',{name:'Revoke grant'}).click();await page.waitForLoadState('networkidle');await shot(width,'grant-revoked');
+  await page.goto(origin+'/app/access');
+  const inFlight=send('agent-tasks',{task_id:crypto.randomUUID(),actions:[{step_id:'slow',input:{body:tool.input.body}},{step_id:'refund',input:{body:tool.input.body}}]},201,credential);
+  const startedDeadline=Date.now()+10000;let running;
+  while(Date.now()<startedDeadline){const candidates=await send('workflow-runs?workflow='+workflow.id);for(const candidate of candidates.runs.filter(r=>r.status==='running')){const detail=await send('workflow-runs/'+candidate.id);if(detail.attempts.length){running=detail;break}}if(running)break;await pause(100)}
+  assert.ok(running,'physical remote attempt must start before revocation');
+  const row=page.locator('li.history-item').filter({has:page.getByRole('heading',{name:grant.label,exact:true})});await row.getByRole('button',{name:'Revoke grant'}).click();await page.waitForLoadState('networkidle');await shot(width,'grant-revoked');
+  const interrupted=await inFlight;assert.equal(interrupted.status,'paused');assert.equal(interrupted.steps.find(s=>s.step_id==='slow').status,'uncertain');assert.equal(interrupted.steps.find(s=>s.step_id==='refund'),undefined);
+  await page.goto(origin+'/app/workflow-runs/'+interrupted.id);await shot(width,'revoked-in-flight-uncertain');
   await send('agent-tasks',{task_id:'revoked',actions:[{step_id:'refund',input:{body:tool.input.body}}]},401,credential);await page.goto(origin+'/app/workflow-runs/'+parked.id);assert.match(await page.locator('body').innerText(),/grant revoked/i);await shot(width,'revoked-task-paused');
   console.log(`TEAM-002 ${width}: owner issuance, live HTTP response, exact approval/rejection, stale-review refusal, timeout escalation and revocation passed`);
  }
