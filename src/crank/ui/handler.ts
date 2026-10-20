@@ -199,7 +199,7 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
       const details = await Promise.all(waiting.runs.map(async (r:any)=>({run:await read('/api/crank/workflow-runs/'+r.id),workflow:await read('/api/crank/workflows/'+encodeURIComponent(r.workflow_id))})))
       return page('Approvals',approvalsView(state,details),{state,intro:'Decisions that only a person can make. Everything else runs on its own.'})
     }
-    if(url.pathname==='/app/account') { const session = await read('/auth/session'); return page('Account',accountView(session,owner),{state,intro:'Who is signed in on this browser, and what that role may do.'}) }
+    if(url.pathname==='/app/account') { const session = await read('/auth/session'); return page('Account',accountView(session,owner,actor.team?.role),{state,intro:'Who is signed in on this browser, and what that role may do.'}) }
     if(url.pathname==='/app/connections') return page('Connections',connectionsView(await read('/api/crank/connections'),owner),{state,intro:'The apps your workflows act on, each with one stored credential.'})
     requireOwner(actor)
     if(url.pathname==='/app/skills') {

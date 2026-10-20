@@ -25,7 +25,7 @@ const shortName = (name: string) => { const [first, last] = name.split(/\s+/); r
 
 function topBar(title: string, actor: any, page: Page) {
   const crumbs = page.crumbs?.length ? `<nav class="crumbs" aria-label="Breadcrumb">${page.crumbs.map(([label, href]) => `<a href="${esc(href)}">${esc(label)}</a><span aria-hidden="true">/</span>`).join('')}<strong aria-current="page">${esc(title)}</strong></nav>` : ''
-  const person = actor ? `<a class="search" href="/app/runs#run-search" aria-label="Search runs">${icon('search')}</a><a class="person" href="/app/account" aria-label="${esc(actor.name)} · ${esc(actor.role)}"><span class="avatar" aria-hidden="true">${esc(initials(actor.name ?? ''))}</span><span class="person-name">${esc(shortName(actor.name ?? ''))}<small>${esc(actor.role)}</small></span></a>` : ''
+  const person = actor ? `<a class="search" href="/app/runs#run-search" aria-label="Search runs">${icon('search')}</a><a class="person" href="/app/account" aria-label="${esc(actor.name)} · ${esc(actor.team?.role ?? actor.product_role ?? actor.role)}"><span class="avatar" aria-hidden="true">${esc(initials(actor.name ?? ''))}</span><span class="person-name">${esc(shortName(actor.name ?? ''))}<small>${esc(actor.team?.role ?? actor.product_role ?? actor.role)}</small></span></a>` : ''
   return `<header class="top-bar${page.bar ? ' has-bar' : ''}"><a class="lockup" href="/app" aria-label="Crank flows"><img src="/brand/mark.svg" alt="" width="44" height="44"><span data-rer-name>Crank</span></a>${crumbs}${page.bar ? `<div class="bar-actions">${page.bar}</div>` : ''}<div class="top-person">${person}</div></header>`
 }
 

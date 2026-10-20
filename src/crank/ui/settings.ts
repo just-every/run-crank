@@ -10,10 +10,10 @@ export function dataView() {
 }
 
 /** The signed-in person, in the shell: who they are, what their role may do, and sign out. */
-export function accountView(session:any, owner:boolean) {
-  const operator = session?.operator ?? {}, role = String(operator.role ?? '')
-  const may: Record<string,string> = { owner:'Approve, publish, activate, replay and manage data, people and credentials.', admin:'Prepare flows and runs and read everything; an owner approves and publishes.', member:'Read flows, runs and results.' }
-  return `<section class="panel"><h2>Signed in</h2><dl class="facts"><dt>Name</dt><dd>${esc(operator.displayName ?? '')}</dd><dt>Email</dt><dd>${esc(operator.email ?? '')}</dd><dt>Role</dt><dd>${esc(stateWords(role))} · ${esc(may[role] ?? '')}</dd>${session?.createdAt ? `<dt>Signed in</dt><dd>${timestamp(new Date(session.createdAt).toISOString())}</dd>` : ''}</dl><form method="post" action="/app/signout" class="inline"><button class="btn btn-secondary">Sign out</button></form></section>
+export function accountView(session:any, owner:boolean, productRole?:string) {
+  const operator = session?.operator ?? {}, role = productRole ?? String(operator.role ?? '')
+  const may: Record<string,string> = { builder:'Prepare and publish selected workflows; approval requires a named approver.', operator:'Start selected published workflows.', approver:'Review selected workflows; your own runs require another reviewer.', viewer:'Read status and timing of selected workflows.', owner:'Approve, publish, activate, replay and manage data, people and credentials.', admin:'Prepare flows and runs and read everything; an owner approves and publishes.', member:'Read flows, runs and results.' }
+  return `<section class="panel"><h2>Signed in</h2><dl class="facts"><dt>Name</dt><dd>${esc(operator.displayName ?? '')}</dd><dt>Email</dt><dd>${esc(operator.email ?? '')}</dd><dt>Role</dt><dd>${esc(stateWords(role))} · ${esc(productRole === 'admin' ? 'Prepare and publish selected workflows; owner settings remain with the native owner.' : may[role] ?? '')}</dd>${session?.createdAt ? `<dt>Signed in</dt><dd>${timestamp(new Date(session.createdAt).toISOString())}</dd>` : ''}</dl><form method="post" action="/app/signout" class="inline"><button class="btn btn-secondary">Sign out</button></form></section>
   ${owner ? `<section class="panel"><h2>Sign-in settings</h2><p class="muted">Whether invited people may sign in through your linked identity provider. Email sign-in links stay available to the owner.</p><div class="actions"><a class="btn btn-secondary" href="/auth/settings/identity">Open sign-in settings</a></div></section>` : ''}`
 }
 

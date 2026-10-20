@@ -434,3 +434,32 @@ Outgoing signed completion subscriptions, webhook retry history and secret
 rotation are not shipped. PLATFORM-001 remains partial, including the Base
 egress door requirement for owner-entered destinations. This MCP server does
 not claim the connected-app MCP capabilities of PLATFORM-002.
+
+### Scoped workflow teams (TEAM-001 partial slice)
+
+Base membership stays owner/admin/member. The native owner may assign an
+installation-local product policy with `POST /api/crank/team/:operator_id`:
+`{role,workflow_ids,connection_ids}`. Roles are `admin`, `builder`, `operator`,
+`approver` and `viewer`. An empty scope grants no access; `role:"none"` stores
+a viewer policy with empty scopes. `GET /api/crank/team` lists these policies
+for the owner. Changes and their resource IDs are audited and apply on the next
+request; writes admitted under an old policy revision fail at commit.
+
+Scoped builders/admins can edit and publish shared workflows using only shared
+connections. The owner still supplies the exact graph's cost estimate, and only
+the owner adopts restored workflows. Scoped operators can start published runs;
+named scoped approvers can decide shared workflows' exact proposals, but cannot
+approve a run they started, including after changing roles. Viewers receive run
+status/timing with restricted payloads. Lists, direct requests and the v1 adapter
+enforce the same scopes. Other product doors remain unavailable to assigned
+scoped roles. Connection credentials cannot be read by any role.
+
+`POST /api/crank/team/transfer` with `{workflow_id,new_owner_id}` transfers a
+workflow to an active person without retiring its published version or changing
+sharing. Deactivation ends the departing person's sessions; published work and
+its history survive. Policies never travel as authority in archives.
+
+This slice does not complete TEAM-001: folder/environment policy, SCIM/group
+provisioning, full operator recovery/admin powers and delegated draft tests/
+creation remain. Existing people without a product policy retain their prior
+Base-role behavior, including legacy approval-flow and owner approval semantics.

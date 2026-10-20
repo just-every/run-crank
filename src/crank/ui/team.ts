@@ -17,9 +17,9 @@ const nameOf = (person: Person) => person.displayName ?? person.name ?? person.e
 const formStart = (path: string) => `<form method="post" action="/app/action">${hidden('path', path)}${hidden('return_to', '/app/access')}`
 
 function scopeChoices(kind: 'workflow' | 'connection', choices: { id: string; label: string }[], selected: string[]) {
-  return `<fieldset><legend>${kind === 'workflow' ? 'Workflows' : 'Connections'}</legend>${choices.length
+  return `<section role="group" aria-label="${kind === 'workflow' ? 'Workflows' : 'Connections'}"><h4>${kind === 'workflow' ? 'Workflows' : 'Connections'}</h4>${choices.length
     ? `<div class="grid">${choices.map(choice => `<label><span><input type="checkbox" name="${esc(kind + '_' + choice.id)}" value="true"${selected.includes(choice.id) ? ' checked' : ''}> ${esc(choice.label)}</span></label>`).join('')}</div>`
-    : `<p class="muted">No ${kind === 'workflow' ? 'workflows' : 'connections'} available.</p>`}</fieldset>`
+    : `<p class="muted">No ${kind === 'workflow' ? 'workflows' : 'connections'} available.</p>`}</section>`
 }
 
 function personPolicy(person: Person, policy: TeamPolicy | undefined, workflows: Workflow[], connections: Connection[]) {

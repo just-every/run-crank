@@ -45,7 +45,7 @@ export function canonical(value: unknown, depth = 0): string {
   const object = value as Record<string, unknown>
   return '{' + Object.keys(object).sort().map(key => JSON.stringify(key) + ':' + canonical(object[key], depth + 1)).join(',') + '}'
 }
-export function publicActor(actor: Actor) { return { id: actor.id, name: actor.name, role: actor.role, kind: actor.kind } }
+export function publicActor(actor: Actor) { return { id: actor.id, name: actor.name, role: actor.role, product_role: actor.team?.role ?? actor.role, kind: actor.kind } }
 export function presentRun(run: Run) {
   return { ...run, input: JSON.parse(run.input_json), action: JSON.parse(run.action_json), outcome: run.outcome_json ? JSON.parse(run.outcome_json) : null }
 }
