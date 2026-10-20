@@ -93,12 +93,22 @@ try {
   const workflow = await send('workflows',{name:'Harbour Workshop — finance supplier settlement and tax review',graph:{trigger:{type:'manual'},steps:[{id:'review',type:'approval',input:{supplier:'Northshore Fabrication and Industrial Supplies',amount:'2450.00',question:'Confirm the interstate sales-tax treatment before settlement.'}},{id:'record',type:'map',input:{approved:true}}]}},201);
   await send(`workflows/${workflow.id}/estimate`,quote); await send(`workflows/${workflow.id}/publish`,{},201);
   const connection = await send('connections',{app:'http',label:'Harbour Workshop — owned finance API',auth_kind:'bearer',domains:['finance.example.test'],secret:{token:'synthetic-browser-fixture-'+crypto.randomUUID()}},201);
+  const invited=[];
+  let builderContext,builderPage;
   for (const [name,role] of [['Dana Reyes — supplier finance builder','builder'],['Morgan Lee — operations viewer','viewer'],['Alex Rivera — settlement approver','approver']]) {
-    const response=await owner.request.post(origin+'/auth/invite',{headers:{origin},data:{email:name.split(' — ')[0].toLowerCase().replaceAll(' ','-')+'@example.test',displayName:name,role:'member'}});
+    const email=name.split(' — ')[0].toLowerCase().replaceAll(' ','-')+'-'+Date.now()+'@example.test';
+    const response=await owner.request.post(origin+'/auth/invite',{headers:{origin},data:{email,displayName:name,role:'member'}});
     assert.equal(response.status(),202);
+    let local;
+    try { local=execFileSync('rer',['dev','--as',email],{encoding:'utf8',env:process.env,timeout:60000,stdio:['ignore','pipe','pipe']}); }
+    catch { throw new Error('Native development persona sign-in failed'); }
+    const link=/RER_OPEN\s+(https?:\/\/\S+)/.exec(local)?.[1];assert.ok(link,'Native person sign-in link');
+    const context=await browser.newContext(),personPage=await context.newPage();await personPage.goto(link);await personPage.waitForURL('**/app');
+    if(role==='builder') {builderContext=context;builderPage=personPage;} else await context.close();
+    invited.push({email,role});
   }
   const peopleResponse=await owner.request.get(origin+'/auth/operators'),people=await peopleResponse.json();
-  const dana=people.find(p=>p.displayName.startsWith('Dana Reyes')),morgan=people.find(p=>p.displayName.startsWith('Morgan Lee'));
+  const dana=people.find(p=>p.email===invited.find(p=>p.role==='builder').email),morgan=people.find(p=>p.email===invited.find(p=>p.role==='viewer').email);
   for(const width of [1440,390]) {
     await page.setViewportSize({width,height:1000});
     await page.goto(origin+'/app/access');
@@ -112,7 +122,8 @@ try {
     const policies=await send('team');const saved=policies.find(p=>p.operator_id===dana.id);
     assert.equal(saved.role,'builder');assert.deepEqual(saved.workflow_ids,[workflow.id]);assert.deepEqual(saved.connection_ids,[connection.id]);
     await shot(width,'scope-saved');
-    await page.goto(origin+'/app/workflows/'+workflow.id);await expect(page.getByText(workflow.name,{exact:true}).first()).toBeVisible();await shot(width,'workflow');
+    const ownerPage=page;page=builderPage;await page.setViewportSize({width,height:1000});
+    await page.goto(origin+'/app/workflows/'+workflow.id);await expect(page.getByText(workflow.name,{exact:true}).first()).toBeVisible();await shot(width,'workflow');page=ownerPage;
     await page.goto(origin+'/app/access');
     const transfer=page.locator('form').filter({has:page.locator('input[name="path"][value="/api/crank/team/transfer"]')});
     await transfer.locator('select[name="workflow_id"]').selectOption(workflow.id);await transfer.locator('select[name="new_owner_id"]').selectOption(morgan.id);
