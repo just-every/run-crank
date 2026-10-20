@@ -117,7 +117,7 @@ try {
     await form.locator('select[name="role"]').selectOption('builder');
     await form.locator(`input[name="workflow_${workflow.id}"]`).check();
     await form.locator(`input[name="connection_${connection.id}"]`).check();
-    await shot(width,'scope-selection');
+    await shot(width,'scope-selection');await form.screenshot({path:join(evidence,`${width}-scope-form.png`)});
     await form.getByRole('button').click(); await page.waitForURL('**/app/access');
     const policies=await send('team');const saved=policies.find(p=>p.operator_id===dana.id);
     assert.equal(saved.role,'builder');assert.deepEqual(saved.workflow_ids,[workflow.id]);assert.deepEqual(saved.connection_ids,[connection.id]);
@@ -129,7 +129,7 @@ try {
     await transfer.locator('select[name="workflow_id"]').selectOption(workflow.id);await transfer.locator('select[name="new_owner_id"]').selectOption(morgan.id);
     await transfer.getByRole('button',{name:'Transfer ownership'}).click();await page.waitForURL('**/app/access');
     assert.equal((await send('workflows/'+workflow.id)).owner.id,morgan.id);await shot(width,'transferred');
-    report.push({clause:'TEAM-001',width,states:['scope-selection','scope-saved','workflow','transferred'],status:'pass'});
+    report.push({clause:'TEAM-001',width,states:['scope-selection','scope-saved','workflow','account','transferred'],status:'pass'});
   }
   await writeFile(join(evidence,'team-browser.json'),JSON.stringify(report,null,2));
   console.log('TEAM-001: scoped role selection, saved policy and owner handover passed at 1440 and 390.');

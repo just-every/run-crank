@@ -50,6 +50,12 @@ test('TEAM-001: product scopes fence direct reads, lists, publication, review an
   assert.equal((await h.send(`/api/crank/workflow-runs/${own.id}/approve`,{path:'review',digest:own.waits[0].proposal_digest},operator.cookie)).status,403,'run starter cannot gain self-approval by changing roles');
   await scope(approver,'approver',[]);assert.equal((await h.send(`/api/crank/workflow-runs/${own.id}/approve`,{path:'review',digest:own.waits[0].proposal_digest},approver.cookie)).status,403);
   assert.deepEqual((await h.get('workflow-runs',approver.cookie)).runs,[]);
+  let release;const arriving=new Promise(resolve=>release=resolve),encoder=new TextEncoder();
+  const stream=new ReadableStream({async start(controller){controller.enqueue(encoder.encode('{"name":'));await arriving;controller.enqueue(encoder.encode('"A revoked builder must not save this"}'));controller.close()}});
+  const pending=h.mf.dispatchFetch(h.origin+`/api/crank/workflows/${restricted.id}/draft`,{method:'POST',body:stream,duplex:'half',redirect:'manual',headers:{host:new URL(h.origin).host,origin:h.origin,cookie:builder.cookie,'content-type':'application/json'}});
+  await new Promise(resolve=>setTimeout(resolve,500));await scope(builder,'viewer',[]);release();
+  const refused=await pending;assert.equal(refused.status,403,await refused.text());assert.notEqual((await h.get('workflows/'+restricted.id)).name,'A revoked builder must not save this');
+  await scope(builder,'builder');
   await h.post('team/transfer',{workflow_id:restricted.id,new_owner_id:viewer.id});
   assert.equal((await h.get('workflows/'+restricted.id)).owner.id,viewer.id);
   const deactivated=await h.send('/auth/operator/status',{operatorId:builder.id,status:'inactive'},h.owner);assert.equal(deactivated.status,200,deactivated.text);

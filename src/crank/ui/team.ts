@@ -35,7 +35,7 @@ function personPolicy(person: Person, policy: TeamPolicy | undefined, workflows:
     <label>Product role<select name="role">${ROLES.map(([value, label]) => `<option value="${value}"${role === value ? ' selected' : ''}>${label}</option>`).join('')}</select></label>
     <p class="form-help">Select every workflow and connection this person may use. An empty selection grants no access in that group. Selecting “No product access” clears all product scopes.</p>
     ${scopeChoices('workflow', workflowChoices, policy?.workflow_ids ?? [])}${scopeChoices('connection', connectionChoices, policy?.connection_ids ?? [])}
-    <button class="btn btn-secondary">Save access for ${esc(nameOf(person))}</button></form></details>`}</li>`
+    <button class="btn btn-secondary" aria-label="Save access for ${esc(nameOf(person))}">Save access</button></form></details>`}</li>`
 }
 
 function transferForm(workflows: Workflow[], people: Person[]) {
