@@ -338,7 +338,7 @@ Each item below is one clause’s acceptance evidence. The named journey must be
 - **BOUND-001 — US-first product and provider responsibilities. Status: missing.** Configure a US business workflow with USD sales-tax lines and an ACH/1099 handoff, inspect provider responsibilities and consent, and attempt a regulated operation without the required agreement/scope; verify a named setup requirement and retained obligation, then complete it through an authorized sandbox/provider connection.
   Current evidence: none; this is build work.
 
-**85 clauses: 26 done, 25 partial, 34 missing.** Status details and product behavior are in the contract’s final table. Completion requires the whole journey, including negative cases and observable end states; a cited partial implementation alone cannot promote an item.
+**85 clauses: 27 done, 24 partial, 34 missing.** Status details and product behavior are in the contract’s final table. Completion requires the whole journey, including negative cases and observable end states; a cited partial implementation alone cannot promote an item.
 
 ## Push further: agents that own the outcome
 
