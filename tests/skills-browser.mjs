@@ -67,6 +67,12 @@ try {
     skill = await send('skills/' + skillId); assert.ok(skill.staged_at); assert.equal(skill.active, false);
     await shot(width, 'staged');
     await page.getByRole('link', { name: 'Open workflow editor', exact: true }).click();
+    await page.getByText('Review four per-run estimates for ' + workflow.name, { exact: true }).click();
+    for (const kind of ['orchestration','connectors','models','executors']) {
+      await page.locator(`[name="estimate_${kind}_usd_per_run"]`).fill('0');
+      await page.locator(`[name="estimate_${kind}_assumption"]`).fill('Owner reviewed this native normalization: no external provider or executor charge');
+    }
+    await page.getByRole('button', { name: 'Save owner estimate', exact: true }).click();
     await page.getByRole('button', { name: 'Publish', exact: true }).click();
     await page.waitForLoadState('networkidle');
     const later = await send(`workflows/${workflow.id}/run`, { input: { address: '  81 Cedar Lane\nUse loading dock  ' } }, 201);
