@@ -1,4 +1,4 @@
-import { workflowScope } from '../team/policy'
+import { workflowScope, versionConnectionScope } from '../team/policy'
 import { authority, requireOwner } from '../access'
 import type { RunRow, WaitSpec } from '../engine/types'
 import { requireValue, stmt, type Actor, type CrankEnv } from '../model'
@@ -30,7 +30,8 @@ export async function assertReviewer(env: CrankEnv, actor: Actor, runId: string,
     workflowScope(actor, run.workflow_id)
     requireValue(actor.team.role === 'approver' && !actor.tokenId && !actor.grantId && actor.kind !== 'review', 'A named scoped approver is required', 403)
     requireValue(run.created_by !== actor.id, 'You cannot approve your own run', 403)
-    return
+    await versionConnectionScope(env, actor, run.version_id)
+    if (!run.grant_id) return
   }
   if (!run.grant_id) { requireOwner(actor); return }
   await assertGrantAuthority(env, runId)

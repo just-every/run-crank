@@ -17,6 +17,13 @@ export function workflowScope(actor: Actor, workflowId: string) {
 export function connectionScope(actor: Actor, connectionId: string) {
   requireValue(!actor.team || actor.team.connection_ids.includes(connectionId), 'This connection is outside your scope', 403)
 }
+/** Starting/reviewing fixed work uses its frozen connection declaration, never a draft. */
+export async function versionConnectionScope(env: CrankEnv, actor: Actor, versionId: string) {
+  if (!actor.team) return
+  const version = await stmt(env, 'SELECT declared_json FROM crank_workflow_versions WHERE id=?', versionId).first<{declared_json:string}>()
+  requireValue(version, 'Version not found', 404)
+  for (const connectionId of JSON.parse(version.declared_json).connections ?? []) connectionScope(actor, connectionId)
+}
 export const mayPrepare = (actor: Actor) => actor.team ? ['admin','builder'].includes(actor.team.role) : ['owner','admin'].includes(actor.role)
 export const mayPublish = (actor: Actor) => !actor.tokenId && !actor.grantId && actor.kind !== 'review' && (actor.team ? ['admin','builder'].includes(actor.team.role) : actor.role === 'owner' && ['native','dev'].includes(actor.kind))
 

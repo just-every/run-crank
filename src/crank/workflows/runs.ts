@@ -1,4 +1,4 @@
-import { workflowScope } from '../team/policy'
+import { workflowScope, versionConnectionScope } from '../team/policy'
 import { grantFence } from '../grants/authority'
 import { assertReviewer } from '../grants/reviews'
 import { isBudgetExceeded, flushUsageNotices } from '../ops/usage'
@@ -186,6 +186,7 @@ export async function startRun(env: CrankEnv, actor: Actor, workflowId: string, 
   workflowScope(actor, workflowId)
   const workflow = await getWorkflow(env, workflowId)
   requireValue(workflow.status === 'published' && workflow.published_version_id, 'Publish (and resume) the workflow before starting a run', 409)
+  await versionConnectionScope(env, actor, workflow.published_version_id)
   const event = { key: 'manual:' + crypto.randomUUID(), payload: { input: input.input ?? {} }, businessKey: typeof input.business_key === 'string' ? input.business_key.slice(0, 200) : null }
   try {
     const run = await createRun(env, workflow, 'manual', event, actor.id, now(), actor)

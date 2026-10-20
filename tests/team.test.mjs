@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {harness} from './harness.mjs';
-import {publish,connection,fakeSecret} from './kit.mjs';
+import {publish,connection,fakeSecret,fakeEdge,jsonResponse} from './kit.mjs';
 
 async function invite(h,name,baseRole='member') {
  const invited=await h.send('/auth/invite',{email:name.toLowerCase().replaceAll(' ','-')+'@example.test',displayName:name,role:baseRole},h.owner);
@@ -15,7 +15,8 @@ async function invite(h,name,baseRole='member') {
 }
 
 test('TEAM-001: product scopes fence direct reads, lists, publication, review and next-request changes; transfer survives departure',async()=>{
- const h=await harness('http://127.0.0.1:9');
+ const edge=fakeEdge();edge.routes.set('other.example',()=>jsonResponse({id:'settlement-receipt'}));
+ const h=await harness('http://127.0.0.1:9',{edge:edge.edge});
  try{
   const graph={trigger:{type:'manual'},steps:[{id:'review',type:'approval',input:{amount:'25.00'}},{id:'record',type:'map',input:{approved:true}}]};
   const restricted=await publish(h,'Harbour supplier settlement — restricted',graph),other=await publish(h,'Other department payroll facts',graph);
@@ -50,6 +51,16 @@ test('TEAM-001: product scopes fence direct reads, lists, publication, review an
   assert.equal((await h.send(`/api/crank/workflow-runs/${own.id}/approve`,{path:'review',digest:own.waits[0].proposal_digest},operator.cookie)).status,403,'run starter cannot gain self-approval by changing roles');
   await scope(approver,'approver',[]);assert.equal((await h.send(`/api/crank/workflow-runs/${own.id}/approve`,{path:'review',digest:own.waits[0].proposal_digest},approver.cookie)).status,403);
   assert.deepEqual((await h.get('workflow-runs',approver.cookie)).runs,[]);
+  const spending=await publish(h,'Shared settlement still requires account-use authority',{...graph,steps:[...graph.steps,...bound.steps]});
+  await scope(operator,'operator',[spending.id],[]);
+  assert.equal((await h.send(`/api/crank/workflows/${spending.id}/run`,{input:{}},operator.cookie)).status,403,'workflow sharing cannot bypass connection-use scope');
+  assert.equal(edge.requests.length,0);
+  await scope(operator,'operator',[spending.id],[hidden.id]);
+  const spend=await h.post(`workflows/${spending.id}/run`,{input:{}},operator.cookie,201),spendDecision={path:'review',digest:spend.waits[0].proposal_digest};
+  await scope(approver,'approver',[spending.id],[]);
+  assert.equal((await h.send(`/api/crank/workflow-runs/${spend.id}/approve`,spendDecision,approver.cookie)).status,403,'approvers also need the declared connection-use scope');
+  await scope(approver,'approver',[spending.id],[hidden.id]);
+  assert.equal((await h.post(`workflow-runs/${spend.id}/approve`,spendDecision,approver.cookie)).status,'succeeded');assert.equal(edge.requests.length,1);
   let release;const arriving=new Promise(resolve=>release=resolve),encoder=new TextEncoder();
   const stream=new ReadableStream({async start(controller){controller.enqueue(encoder.encode('{"name":'));await arriving;controller.enqueue(encoder.encode('"A revoked builder must not save this"}'));controller.close()}});
   const pending=h.mf.dispatchFetch(h.origin+`/api/crank/workflows/${restricted.id}/draft`,{method:'POST',body:stream,duplex:'half',redirect:'manual',headers:{host:new URL(h.origin).host,origin:h.origin,cookie:builder.cookie,'content-type':'application/json'}});
@@ -67,6 +78,6 @@ test('TEAM-001: product scopes fence direct reads, lists, publication, review an
   const archive=await h.post('data/export');assert.ok(!JSON.stringify(archive).includes('private-finance'));assert.ok(!JSON.stringify(archive).includes('hidden-account'));
   assert.ok(!archive.trim().split('\n').map(JSON.parse).flatMap(line=>line.items??[]).some(item=>item.kind==='row'&&item.table==='crank_team_access'));
   const setup=await h.mf.dispatchFetch(h.origin+'/setup',{method:'POST',redirect:'manual',headers:{origin:h.origin,cookie:h.owner,'content-type':'application/x-www-form-urlencoded'},body:'confirm=yes'});assert.equal(setup.status,303);
-  const page=await h.send('/app/access',undefined,h.owner);assert.equal(page.status,200);assert.match(page.text,/Team workflow access/);
+  const page=await h.send('/app/access',undefined,h.owner);assert.equal(page.status,200);assert.ok(page.text.includes('/api/crank/team/'+viewer.id));
  }finally{await h.close()}
 });

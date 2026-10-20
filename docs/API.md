@@ -447,8 +447,8 @@ request; writes admitted under an old policy revision fail at commit.
 
 Scoped builders/admins can edit and publish shared workflows using only shared
 connections. The owner still supplies the exact graph's cost estimate, and only
-the owner adopts restored workflows. Scoped operators can start published runs;
-named scoped approvers can decide shared workflows' exact proposals, but cannot
+the owner adopts restored workflows. Scoped operators can start published runs only on shared bound connections;
+named scoped approvers need the same connection-use scope and any grant's separate reviewer routing. They can decide shared workflows' exact proposals, but cannot
 approve a run they started, including after changing roles. Viewers receive run
 status/timing with restricted payloads. Lists, direct requests and the v1 adapter
 enforce the same scopes. Other product doors remain unavailable to assigned
