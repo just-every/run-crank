@@ -8,10 +8,11 @@ await mkdir(directory, { recursive: true });
 const log = await readFile(process.env.CRANK_DEV_LOG, 'utf8');
 const open = /RER_OPEN\s+(https?:\/\/\S+)/.exec(log)?.[1];
 assert.ok(open, 'rer dev must be ready');
+let page;
 const browser = await chromium.launch({ headless: true, args: ['--use-mock-keychain', '--password-store=basic'] });
 try {
   const context = await browser.newContext();
-  const page = await context.newPage();
+  page = await context.newPage();
   await page.goto(open);
   await page.waitForURL(url => ['/app', '/setup'].includes(url.pathname), { timeout: 60000 });
   if (new URL(page.url()).pathname === '/setup') {
@@ -83,5 +84,6 @@ try {
   }
   await context.close();
 } catch (error) {
+  if (page) { console.error('screen path:', new URL(page.url()).pathname, (await page.locator('body').innerText()).slice(0, 1000)); await page.screenshot({path: `${directory}/journey-error.png`, fullPage:true}); }
   console.error(String(error.message).replace(/https?:\/\/\S+/g, '[redacted-url]')); process.exitCode = 1;
 } finally { await browser.close(); }
