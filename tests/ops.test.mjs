@@ -301,7 +301,7 @@ test('BASE-003: dependency failure, maintenance interruption and archive custody
     report = await r.get('reports/operations');
     assert.equal(report.recovery.executor.status,'observed');
     assert.ok(report.recovery.operations.some(j=>j.status==='finished'));
-    const poll = await publish(r,'Harbor Workshop supplier outage',{trigger:{type:'url_poll',url:'https://unavailable-provider.example/invoices',interval_minutes:1,backfill:'existing'},steps:[]});
+    const poll = await publish(r,'Harbor Workshop supplier outage',{trigger:{type:'url_poll',url:'https://unavailable-provider.example/invoices',items_path:'',interval_minutes:1,backfill:'existing'},steps:[]});
     await r.tick(Date.now()+60000);
     report = await r.get('reports/operations');
     assert.equal(report.recovery.provider_outages.find(p=>p.workflow_id===poll.id).last_cause,'outage');
