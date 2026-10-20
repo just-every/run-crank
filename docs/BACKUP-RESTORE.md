@@ -30,7 +30,8 @@ you to. Keep archive files outside public or shared folders.
 
 Open **Operations → Service recovery** after a disconnected export or restore.
 The archive transfer ID, phase and retained part count survive a service restart.
-An unfinished transfer does not claim completion. Select **Resume export** to continue an export from its retained cursor, then
+An unfinished transfer does not claim completion. Select **Resume export** to build the next ten parts from its retained cursor;
+repeat until complete, then select
 **Download archive** when complete. Alternatively select **Abort retained transfer**
 as the owner, then start a fresh export or restore from **Data**. The abort is
 attributed in the permanent audit. Export generation records that an archive was

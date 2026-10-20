@@ -51,7 +51,7 @@ const http = (id, method, path) => ({ id, type: 'http', input: { method, url: en
 
 /** BASE-003: emitted deployment, real HTTP/native sessions, durable D1 and
  * SIGKILL/restart. Only receiver acknowledgement and mail are network fakes.
- * No application bundles, mocks, direct state edits or injected outcomes. */
+ * No application doubles, mocks, direct state edits or injected outcomes. */
 export async function emittedRecovery() {
   const receiver = await receiverEdge();
   let h;
