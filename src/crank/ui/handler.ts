@@ -21,6 +21,7 @@ import { dataFlowsPanel } from './data-flows'
 import { approvalsView, workflowRunView } from './workflow-run'
 import { editorView } from './editor'
 import { runGraphs, workflowData } from './workflow-data'
+import { skillsView, skillView } from './skills'
 
 const redirect = (location:string) => new Response(null,{status:303,headers:{location,'cache-control':'no-store'}})
 // A form may name where to return after its action: a path inside the app, nothing else.
@@ -108,6 +109,9 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
       if (url.pathname !== '/app/action' || (!/^\/api\/crank\/[A-Za-z0-9/_-]+$/.test(form.path ?? '') && !['/auth/invite','/auth/operator/status','/auth/operator/role'].includes(form.path))) return page('Not found','<a href="/app">Return to flows</a>',{},404)
       const path = form.path, back = safeReturn(form.return_to); delete form.path; delete form.return_to
       const input:Record<string,unknown> = {...form}
+      if(path.startsWith('/api/crank/skills')) requireOwner(actor)
+      if(path==='/api/crank/skills') input.run_ids=(form.run_ids ?? '').split(',').map(id=>id.trim()).filter(Boolean)
+      if(/^\/api\/crank\/workflows\/[^/]+\/rollback$/.test(path)) input.version=Number(form.version)
       if(form.maxParts !== undefined) input.maxParts=Number(form.maxParts)
       if(form.input) { try {input.input=JSON.parse(form.input)} catch {return page('Invalid event','<p>Event input must be a JSON object.</p><a href="/app">Return to flows</a>',{},400)} }
       if(form.graph) { try {input.graph=JSON.parse(form.graph)} catch {return page('Invalid workflow','<p class="notice">The workflow graph must be JSON.</p><a href="/app">Return to flows</a>',{},400)} }
@@ -136,6 +140,7 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
       if(!response.ok) return page('Action refused',`<p class="notice">${esc(result.error)}</p><p>No success was reported. Review the latest state before retrying.</p><a href="${back ?? (path.includes('/imports')?'/app/import':'/app')}">Return to workspace</a>`,{},response.status)
       if(result.token) return page('Credential created',`<section class="panel"><p>Shown once. Save this in a private file for your agent. Crank stores only its hash.</p><label>Credential<input type="password" value="${esc(result.token)}" readonly aria-label="Credential"></label><p class="muted">You can select and copy the hidden value. Do not share it in chat or commit it. Local dev credentials additionally need the local gate described in the README.</p><a class="btn btn-secondary" href="/app/access">Return to access</a></section>`)
       if (result.held && (result.hold_id || result.holdId)) return redirect('/app/holds/' + encodeURIComponent(result.hold_id || result.holdId))
+      if(path==='/api/crank/skills') return redirect('/app/skills/'+encodeURIComponent(result.id))
       if(back) return redirect(back)
       if(path.startsWith('/api/crank/imports')) return redirect('/app/import')
       if(path.startsWith('/api/crank/tokens')) return redirect('/app/access')
@@ -180,6 +185,12 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
     if(url.pathname==='/app/account') { const session = await read('/auth/session'); return page('Account',accountView(session,owner),{state,intro:'Who is signed in on this browser, and what that role may do.'}) }
     if(url.pathname==='/app/connections') return page('Connections',connectionsView(await read('/api/crank/connections'),owner),{state,intro:'The apps your workflows act on, each with one stored credential.'})
     requireOwner(actor)
+    if(url.pathname==='/app/skills') {
+      const [proposals,workflows] = await Promise.all([read('/api/crank/skills'),read('/api/crank/workflows')])
+      return page('Skills',skillsView(proposals,workflows),{state,intro:'Review retained exceptions and corrections, then stage reusable normalizations for an owner to publish.'})
+    }
+    const skillPath = /^\/app\/skills\/([^/]+)$/.exec(url.pathname)
+    if(skillPath) return page('Normalization proposal',skillView(await read('/api/crank/skills/'+encodeURIComponent(decodeURIComponent(skillPath[1])))),{state,section:'Skills',crumbs:[['Skills','/app/skills']]})
     if(url.pathname==='/app/operations') {
       const workflows = await read('/api/crank/workflows')
       const choices = [...workflows, ...state.flows.map((flow:any) => ({ ...flow, kind: 'flow' }))]

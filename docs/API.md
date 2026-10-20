@@ -289,3 +289,38 @@ observed poll failures and archive generation. Provider capacity, current execut
 availability and off-installation backup receipt remain unestablished. Attempts
 without a terminal record after fifteen minutes become `interrupted` on the next
 Cron/report read; this never authorizes an uncertain remote write to run again.
+
+## Retained exception skills (AGENT-003)
+
+The owner opens `/app/skills`, selects retained production run IDs from one
+published workflow version, a step ID and a text input field (for example
+`body.address`). Include corrected failures and successful counterexamples.
+Crank groups corrections by error category/status/code and searches compositions
+of existing pure text transforms against the original and corrected values.
+Every chosen case must match exactly; an unsupported correction yields an
+explicit refusal. No model, provider call, retry or synthetic result is involved.
+
+`POST /api/crank/skills` takes `workflow_id`, `step_id`, `field` and `run_ids`.
+`GET /api/crank/skills` lists proposals; `GET /api/crank/skills/:id` rechecks the
+retained cases, shows the reusable mapping expression, and returns its digest.
+`POST /api/crank/skills/:id/approve` with that digest stages the graph in a draft.
+It refuses changed samples, a changed source version, and unrelated draft edits.
+The owner reviews and publishes through the normal workflow editor. Approval
+alone sends nothing. The version, account bindings, input/file safety, cost
+checks and all normal runtime limits remain those of the existing workflow.
+
+The proposal retains only run references and built-in operations. Selected
+sample values remain in normal sealed run/replay history under the owner's
+retention controls; expiry or erasure makes them unavailable to the proposal.
+No extra sample copy, new outgoing recipient or installation credential is
+created. Proposals and case references travel in the versioned archive; restored
+workflows remain paused and require normal receiving-owner adoption. Proposed
+operations never confer execution authority.
+
+The detail screen compares selected baseline exceptions with production run
+failures for the deployed graph, and counts outcomes independently read back
+and attested through the existing Operations obligations. HTTP success alone
+remains unverified. Measurements survive rollback; the owner can restore the
+source version using the existing rollback door, while original failure and
+correction history remains intact. The expression can be reused in other draft
+mappings, subject to their normal review and publish controls.

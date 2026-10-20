@@ -1,3 +1,4 @@
+import { listSkills, readSkill, proposeSkill, approveSkill } from '../agents/skills'
 import { usageApi } from '../ops/usage-api'
 import { isBudgetExceeded } from '../ops/usage'
 import { authorize, guardedBatch, requireOwner, requireWriteOrigin } from '../access'
@@ -30,7 +31,7 @@ import { previewReplay, replaySteps } from './replay'
 import { cancelRun, decideApproval, previewWorkflow, resumeRun, runDetail, runsToday, searchRuns, startRun } from './runs'
 import { createWorkflow, duplicateWorkflow, getWorkflow, listWorkflows, presentWorkflow, publishWorkflow, rollbackWorkflow, setWorkflowState, unpublishWorkflow, updateDraft, versionGraph } from './store'
 
-const PREFIXES = ['/api/crank/usage', '/api/crank/historical', '/api/crank/workflows', '/api/crank/workflow-runs', '/api/crank/connections', '/api/crank/oauth', '/api/crank/hooks', '/api/crank/holds', '/api/crank/queues', '/api/crank/catalog', '/api/crank/coverage', '/api/crank/settings', '/api/crank/audit', '/api/crank/notices', '/api/crank/reports']
+const PREFIXES = ['/api/crank/skills', '/api/crank/usage', '/api/crank/historical', '/api/crank/workflows', '/api/crank/workflow-runs', '/api/crank/connections', '/api/crank/oauth', '/api/crank/hooks', '/api/crank/holds', '/api/crank/queues', '/api/crank/catalog', '/api/crank/coverage', '/api/crank/settings', '/api/crank/audit', '/api/crank/notices', '/api/crank/reports']
 const match = (path: string, pattern: RegExp) => pattern.exec(path)?.slice(1).map(decodeURIComponent) ?? null
 
 async function testConnection(env: CrankEnv, actor: Actor, connectionId: string, input: Record<string, unknown>) {
@@ -90,6 +91,8 @@ export async function workflowApi(request: Request, env: CrankEnv): Promise<Resp
       return json(await readAudit(env, url.searchParams.get('kind') ?? undefined, url.searchParams.get('id') ?? undefined))
     }
     if (request.method === 'GET') {
+      if (path === '/api/crank/skills') return json(await listSkills(env, actor))
+      if ((m = match(path, /^\/api\/crank\/skills\/([^/]+)$/))) return json(await readSkill(env, actor, m[0]))
       if ((m = match(path, /^\/api\/crank\/historical\/([^/]+)$/))) return json(await readHistorical(env, actor, m[0]))
       if (path === '/api/crank/workflows') return json(await listWorkflows(env, url.searchParams))
       if ((m = match(path, /^\/api\/crank\/workflows\/([^/]+)$/))) return json(await presentWorkflow(env, await getWorkflow(env, m[0])))
@@ -122,6 +125,8 @@ export async function workflowApi(request: Request, env: CrankEnv): Promise<Resp
     requireValue(request.method === 'POST', 'Method not allowed', 405)
     requireWriteOrigin(request, env, actor)
     const input = request.body ? await body(request, 256 * 1024) : {}
+    if (path === '/api/crank/skills') return json(await proposeSkill(env, actor, input), 201)
+    if ((m = match(path, /^\/api\/crank\/skills\/([^/]+)\/approve$/))) return json(await approveSkill(env, actor, m[0], input))
     if ((m = match(path, /^\/api\/crank\/workflows\/([^/]+)\/historical$/))) return json(await previewHistorical(env, actor, m[0], input), 201)
     if ((m = match(path, /^\/api\/crank\/historical\/([^/]+)\/run$/))) return json(await releaseHistorical(env, actor, m[0], input))
     if (path === '/api/crank/reports/log-sinks') return json(await configureLogSink(env, actor, input), 201)

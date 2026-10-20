@@ -135,5 +135,18 @@ export async function validateRestore({ read }) {
   for (const row of await rows('crank_usage_reservations')) if (!allRuns.has(row.run_id) || estimates.get(row.version_id)?.workflow_id !== row.workflow_id || !subjects.has(row.workflow_id)) return false;
   for (const table of ['crank_usage_observations','crank_usage_provider_charges','crank_usage_reporting_errors','crank_step_admissions']) for (const row of await rows(table)) if (!allRuns.has(row.run_id)) return false;
   for (const table of ['crank_usage_workflow_estimates','crank_usage_version_estimates','crank_usage_flow_versions']) for (const row of await rows(table)) if (!subjects.has(row.workflow_id)) return false;
+  for (const skill of await rows('crank_skills')) {
+    if (!workflows.has(skill.workflow_id) || versions.get(skill.version_id)?.workflow_id !== skill.workflow_id) return false;
+    const pipeline = JSON.parse(skill.pipeline_json);
+    if (!Array.isArray(pipeline) || pipeline.length < 1 || pipeline.length > 2 || pipeline.some(op =>
+      !['text.trim','text.case','text.strip_html','text.url_decode'].includes(op.fn) || !op.args || typeof op.args !== 'object' || Array.isArray(op.args)
+      || Object.keys(op.args).some(key => op.fn === 'text.trim' ? key !== 'collapse' || typeof op.args[key] !== 'boolean' : op.fn === 'text.case' ? key !== 'to' || !['upper','lower','title','sentence'].includes(op.args[key]) : true))) return false;
+  }
+  const skills = new Map((await rows('crank_skills')).map(row => [row.id, row]));
+  const runs = new Map((await rows('crank_wf_runs')).map(row => [row.id,row]));
+  for (const sample of await rows('crank_skill_cases')) {
+    const skill = skills.get(sample.skill_id), run = runs.get(sample.run_id);
+    if (!skill || !run || run.workflow_id !== skill.workflow_id || run.version_id !== skill.version_id) return false;
+  }
   return true;
 }
