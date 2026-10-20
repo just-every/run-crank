@@ -87,7 +87,9 @@ test('AGENT-003 BASE-001 DATA-001: proposals and evidence restore portably with 
     const { workflow, cases, proposal } = await correctionCases(h, 'https://addresses.example/addresses');
     const skill = await h.post('skills', proposal, h.owner, 201);
     const exported = await archive(h);
-    assert.ok(!exported.includes('owner@example.test'));
+    const archivedTables = exported.trim().split('\n').map(JSON.parse).flatMap(p => p.items ?? []).filter(i => i.kind === 'row').map(i => i.table);
+    assert.ok(!archivedTables.some(table => table.startsWith('oa_') || table === 'crank_tokens'), 'source sign-in identities, sessions and bearer authority are excluded');
+    assert.ok(!exported.includes(h.owner), 'the source session credential never travels');
     const rows = text => text.trim().split('\n').map(JSON.parse).flatMap(p => p.items ?? []).filter(i => ['crank_skills','crank_skill_cases'].includes(i.table)).map(i => JSON.stringify(i)).sort();
     restored = await harness('http://127.0.0.1:9', { edge: fake.edge });
     const requests = fake.requests.length;
