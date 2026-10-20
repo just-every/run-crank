@@ -224,7 +224,7 @@ test('DATA-002: subject erasure previews every run carrying one identifier, wait
   } finally { await h.close() }
 });
 
-test('DATA-003: owner retention with dry run and legal holds expires only eligible finished data across restart; outcomes, audit and fences remain', async () => {
+test('BASE-003 DATA-003: owner retention with dry run and legal holds expires only eligible finished data across restart; outcomes, audit and fences remain', async () => {
   const fake = fakeEdge(), DAY = 86400000;
   fake.routes.set('ledger.example', () => jsonResponse({ receipt: 'ledger-ok' }));
   fake.routes.set('files.example', () => new Response('%PDF-1.4 retained statement', { headers: { 'content-type': 'application/pdf', 'content-disposition': 'attachment; filename="statement.pdf"' } }));
@@ -276,7 +276,13 @@ test('DATA-003: owner retention with dry run and legal holds expires only eligib
     const finished = Date.parse((await h.get('workflow-runs/' + expiring.id)).finished_at);
     await h.tick(finished + DAY - 60000);
     assert.equal((await h.get('workflow-runs/' + expiring.id)).payload_expired_at, null);
-    await h.tick(finished + DAY + 60000);
+    await h.db.exec(`CREATE TRIGGER interrupt_retention BEFORE UPDATE OF payload_expired_at ON crank_wf_runs WHEN NEW.id='${expiring.id}' BEGIN SELECT RAISE(ABORT,'test maintenance interruption'); END;`);
+    try { await h.tick(finished + DAY + 60000); } catch { /* The interrupted maintenance pass fails. */ }
+    const interrupted = await h.get('workflow-runs/' + expiring.id);
+    assert.equal(interrupted.payload_expired_at,null,'BASE-003: a failed expiry rolls back the entire run payload');
+    assert.equal(interrupted.trigger.input.customer,'expire-alpha@example.test');
+    assert.ok(!(await h.get(`audit?kind=run&id=${expiring.id}`)).some(row=>row.action==='retention.expire_payload'));
+    await h.db.exec('DROP TRIGGER interrupt_retention');
     await h.restart();
     await h.tick(finished + DAY + 120000);
     const expired = await h.get('workflow-runs/' + expiring.id);
@@ -290,7 +296,7 @@ test('DATA-003: owner retention with dry run and legal holds expires only eligib
     assert.equal(stillWaiting.status, 'awaiting_approval');
     assert.equal(stillWaiting.trigger.input.customer, 'waiting-delta@example.test', 'unfinished work stays visible');
     const audit = await h.get(`audit?kind=run&id=${expiring.id}`);
-    assert.ok(audit.some(row => row.action === 'retention.expire_payload' && row.actor_id === 'system:retention'));
+    assert.equal(audit.filter(row => row.action === 'retention.expire_payload' && row.actor_id === 'system:retention').length,1,'BASE-003: restart expires the committed payload once');
     assert.match((await h.get(`workflow-runs/${expiring.id}/replay`)).blocked_reason, /expired under the retention policy/);
     const later = await h.send('/api/crank/data/export', {}, h.owner);
     assert.ok(!later.text.includes('expire-alpha@example.test') && !later.text.includes(fileId), 'payload and attachment are gone from new archives');

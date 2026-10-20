@@ -160,7 +160,7 @@ test('EXEC-001: a multi-step batch restarts before and after writes, exposes dur
   } finally { await h.close(); }
 });
 
-test('EXEC-001: lease loss retains uncertain writes as dead letters; cancellation fences running and queued work and identifies started effects', async () => {
+test('BASE-003 EXEC-001: lease loss retains uncertain writes as dead letters; cancellation fences running and queued work and identifies started effects', async () => {
   const remote = receiver(), h = await harness('http://127.0.0.1:9', { edge: remote.fake.edge });
   const pending = [];
   try {

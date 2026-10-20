@@ -1,3 +1,4 @@
+import { archiveTransfers, operation } from './ops/recovery'
 import { createPortability, readArchive, type Manifest, type Part, type Closing } from '@runeditrun/rer/internal/modules/portability/index.mjs'
 import policy from './archive-policy.mjs'
 import { authorize, requireOwner, requireWriteOrigin, guardedBatch } from './access'
@@ -22,10 +23,18 @@ export async function dataApi(request:Request,env:CrankEnv):Promise<Response|nul
     if(request.method !== 'GET') requireWriteOrigin(request,env,actor)
     if (path === '/api/crank/data/flows' && request.method === 'GET') return Response.json(await dataFlows(env),{headers:{'cache-control':'no-store'}})
     const store = await portability(env)
+    if (path === '/api/crank/data/transfers' && request.method === 'GET') return Response.json(await archiveTransfers(env), { headers: { 'cache-control': 'no-store' } })
+    const abort = /^\/api\/crank\/data\/transfers\/([^/]+)\/abort$/.exec(path)
+    if (abort && request.method === 'POST') {
+      const transfer = await env.DB.prepare('SELECT id,kind FROM rer_portability_jobs WHERE id=?').bind(decodeURIComponent(abort[1])).first<{ id: string; kind: string }>()
+      if (!transfer) return Response.json({ error: 'Transfer not found' }, { status: 404 })
+      return Response.json(await (transfer.kind === 'export' ? store.exports : store.imports).abort(transfer.id), { headers: { 'cache-control': 'no-store' } })
+    }
     if (path === '/api/crank/data/export' && request.method === 'POST') {
       // Finish the incoming POST stream before returning a large download.
       // Discard its unused bytes without retaining or interpreting their values.
       await request.body?.pipeTo(new WritableStream({ write() {} }))
+      return await operation(env, 'archive.export', async () => {
       const id = await store.exports.create(actor.id)
       try {
         let status = await store.exports.status(id)
@@ -44,6 +53,7 @@ export async function dataApi(request:Request,env:CrankEnv):Promise<Response|nul
         await guardedBatch(env,actor,'owner',[auditStatement(env,actor.id,'data.export','workspace','data',{bytes:length})])
         return new Response(bytes,{headers:{'content-type':'application/x-ndjson','content-disposition':'attachment; filename="crank.rer"','cache-control':'no-store'}})
       } catch(error) { await store.exports.abort(id); throw error }
+      }, actor.id)
     }
     if (path === '/api/crank/data/restore' && request.method === 'POST') {
       const value = await body(request, 8 * 1024 * 1024)

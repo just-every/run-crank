@@ -5,7 +5,7 @@ import start from '@tanstack/react-start/server-entry'
 import { Hono } from 'hono'
 import { dispatch } from './base/dispatch'
 import { staticAssetResponse } from './base/static-assets'
-import { deploymentHealth } from './base/deployment-health'
+import { healthResponse } from './crank/health'
 import { lobbyResponse } from './base/lobby'
 import { setupStateResponse } from './base/setup-state'
 import { authResponse, runtimeBindings, type Bindings } from './auth.server'
@@ -15,7 +15,7 @@ import { publicHooks } from './crank/triggers/public'
 import { schedulerPass } from './crank/ops/scheduler'
 
 const api = new Hono<{ Bindings: Bindings }>()
-api.get('/health', (context) => context.json({ status: 'ok', ...deploymentHealth(context.env) }))
+api.get('/health', (context) => healthResponse(context.env))
 
 // Start documents keep their own cache policy and add no-transform, so no proxy
 // rewrites the HTML React hydrates (Cloudflare's email address obfuscation

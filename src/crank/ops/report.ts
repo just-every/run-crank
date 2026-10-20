@@ -1,3 +1,4 @@
+import { recoveryReport } from './recovery'
 import { guardedBatch, requireOwner } from '../access'
 import { addTime, dateKey, startOfDay, wallTime } from '../engine/dates'
 import { id, now, requireValue, stmt, text, type Actor, type CrankEnv } from '../model'
@@ -66,6 +67,7 @@ export async function operationsReport(env: CrankEnv, params: URLSearchParams, t
   const health = connectors.results.map(c => ({ ...c, health: c.status !== 'active' ? c.status : c.expires_at && Date.parse(c.expires_at) <= time ? 'expired' : 'connected' }))
   return {
     from: start, to: end, timezone, workflow, team, summary: summarize(filtered, time, hours),
+    recovery: await recoveryReport(env, time),
     execution_queue: await executionQueue(env, workflow, team, time),
     business_completion_basis: 'All declared obligations verified by a named owner with evidence. HTTP delivery and workflow success alone do not establish business completion.',
     today: { date: dateKey(wallTime(time, timezone)), from: dayStart, to: dayEnd, runs: todays.length, failed: todays.filter(r => r.status === 'failed').length, active_workflows: active.length, active_workflows_ran: activeRan.size, missed_schedules: missed },

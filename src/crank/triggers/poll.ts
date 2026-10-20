@@ -8,7 +8,7 @@ import { lookup, textOf } from '../engine/values'
 import { resolve, type Scope } from '../engine/mapping'
 import { canonical, digest, id, stmt, type CrankEnv } from '../model'
 import { notify } from '../ops/notices'
-import { admit, burstThreshold, type TriggerEvent, type WorkflowRow } from './admission'
+import { admit, hold, burstThreshold, type TriggerEvent, type WorkflowRow } from './admission'
 import { parseFeed } from './feeds'
 import { parseXml, toJson, xpath } from './xml'
 
@@ -19,6 +19,7 @@ export interface PollRow {
 /** Due times sit on interval boundaries, so a healthy per-minute executor starts each poll within seconds. */
 export const nextBoundary = (time: number, minutes: number) => (Math.floor(time / (minutes * 60000)) + 1) * minutes * 60000
 const MAX_PAGES = 10
+const POLL_LEASE_MS = 5 * 60000
 
 class PollFailure extends Error { constructor(message: string, readonly cause: string, readonly status?: number) { super(message) } }
 function classify(response: BoundedResponse, what: string) {
@@ -119,30 +120,50 @@ export async function runPoll(env: CrankEnv, poll: PollRow, time: number) {
   const logId = id(), started = new Date(time).toISOString(), lag = time - Date.parse(poll.next_due_at)
   const since = (await stmt(env, "SELECT MAX(started_at) AS at FROM crank_poll_log WHERE workflow_id=? AND status='ok'", poll.workflow_id).first<{ at: string | null }>())?.at ?? null
   const next = new Date(nextBoundary(time, poll.interval_minutes)).toISOString()
-  await stmt(env, "INSERT INTO crank_poll_log(id,workflow_id,due_at,started_at,status) VALUES(?,?,?,?,'running')", logId, poll.workflow_id, poll.next_due_at, started).run()
+  // A dead reader has no external write to repeat. Close its durable attempt,
+  // retain the successful cursor, and retry any items not atomically admitted.
+  const wall = new Date().toISOString()
+  const claimed = await env.DB.batch([
+    stmt(env, "UPDATE crank_poll_log SET status='error',finished_at=?,cause='executor interrupted',error='Poll executor stopped before completion; unadmitted items will be retried' WHERE workflow_id=? AND status='running' AND (lease_expires_at IS NULL OR lease_expires_at<=?)", wall, poll.workflow_id, wall),
+    stmt(env, `INSERT INTO crank_poll_log(id,workflow_id,due_at,started_at,status,lease_expires_at)
+      SELECT ?,?,?,?,'running',? WHERE NOT EXISTS(SELECT 1 FROM crank_poll_log WHERE workflow_id=? AND status='running') RETURNING id`,
+    logId, poll.workflow_id, poll.next_due_at, started, new Date(Date.now() + POLL_LEASE_MS).toISOString(), poll.workflow_id),
+  ])
+  if (!claimed[1].results.length) return { runs: 0 }
   try {
     const events = trigger.type === 'feed' ? await feedItems(env, trigger) : await urlItems(env, trigger, { since, now: started, interval_minutes: poll.interval_minutes })
-    const fresh: TriggerEvent[] = []
+    if (!await stmt(env, "SELECT id FROM crank_poll_log WHERE id=? AND status='running' AND lease_expires_at>?", logId, new Date().toISOString()).first()) return { runs: 0 }
+    const fresh: TriggerEvent[] = [], fetchedKeys = new Set<string>()
     for (let i = 0; i < events.length; i += 50) {
       const slice = events.slice(i, i + 50)
-      const results = await env.DB.batch(slice.map(event => stmt(env, 'INSERT INTO crank_seen_items(workflow_id,item_key,first_seen_at) VALUES(?,?,?) ON CONFLICT DO NOTHING', poll.workflow_id, event.key, started)))
-      results.forEach((result, j) => { if (result.meta.changes === 1) fresh.push(slice[j]) })
+      const seen = await stmt(env, `SELECT item_key FROM crank_seen_items WHERE workflow_id=? AND item_key IN (${slice.map(() => '?').join(',')})`, poll.workflow_id, ...slice.map(event => event.key)).all<{ item_key: string }>()
+      const keys = new Set(seen.results.map(row => row.item_key))
+      for (const event of slice) if (!keys.has(event.key) && !fetchedKeys.has(event.key)) { fresh.push(event); fetchedKeys.add(event.key) }
     }
     const seeding = !poll.seeded, backfill = trigger.backfill === 'existing'
     let runs: { id: string }[] = []
-    if (!seeding || backfill) runs = (await admit(env, workflow, trigger.type, 'poll', fresh, burstThreshold(graph), 'trigger')).runs
+    if (!seeding || backfill) {
+      // A partially retained burst stays in its original review batch on retry,
+      // even when its remaining unseen tail is below the burst threshold.
+      const pending = await stmt(env, "SELECT budget_hold FROM crank_holds WHERE workflow_id=? AND status='open' AND COALESCE(origin_kind,source)='poll' LIMIT 1", workflow.id).first<{ budget_hold: number }>()
+      if (pending && fresh.length) await hold(env, workflow, 'poll', fresh, 'an earlier poll batch still needs a decision', !!pending.budget_hold)
+      else runs = (await admit(env, workflow, trigger.type, 'poll', fresh, burstThreshold(graph), 'trigger')).runs
+    }
+    else for (let i = 0; i < fresh.length; i += 50) {
+      await env.DB.batch(fresh.slice(i, i + 50).map(event => stmt(env, 'INSERT INTO crank_seen_items(workflow_id,item_key,first_seen_at) VALUES(?,?,?) ON CONFLICT DO NOTHING', poll.workflow_id, event.key, started)))
+    }
     const cause = lag > 30000 ? 'executor backlog' : null
     await env.DB.batch([
-      stmt(env, "UPDATE crank_poll_log SET finished_at=?,status='ok',items=?,new_items=?,cause=? WHERE id=?", new Date().toISOString(), events.length, seeding && !backfill ? 0 : fresh.length, cause, logId),
-      stmt(env, "UPDATE crank_polls SET seeded=1,last_started_at=?,last_finished_at=?,last_status='ok',last_error=NULL,last_cause=?,error_notified=0,next_due_at=? WHERE workflow_id=? AND version_id=?", started, new Date().toISOString(), cause, next, poll.workflow_id, poll.version_id),
+      stmt(env, "UPDATE crank_poll_log SET finished_at=?,status='ok',items=?,new_items=?,cause=? WHERE id=? AND status='running'", new Date().toISOString(), events.length, seeding && !backfill ? 0 : fresh.length, cause, logId),
+      stmt(env, "UPDATE crank_polls SET seeded=1,last_started_at=?,last_finished_at=?,last_status='ok',last_error=NULL,last_cause=?,error_notified=0,next_due_at=? WHERE workflow_id=? AND version_id=? AND EXISTS(SELECT 1 FROM crank_poll_log WHERE id=? AND status='ok')", started, new Date().toISOString(), cause, next, poll.workflow_id, poll.version_id, logId),
     ])
     for (const run of runs) await executeRun(env, run.id, time)
     return { runs: runs.length }
   } catch (error) {
     const failure = error instanceof PollFailure ? error : new PollFailure(error instanceof StepError ? error.message : 'The poll failed', error instanceof StepError && error.category === 'egress' ? 'refused address' : 'provider error')
     await env.DB.batch([
-      stmt(env, "UPDATE crank_poll_log SET finished_at=?,status='error',http_status=?,cause=?,error=? WHERE id=?", new Date().toISOString(), failure.status ?? null, failure.cause, failure.message, logId),
-      stmt(env, "UPDATE crank_polls SET last_started_at=?,last_finished_at=?,last_status='error',last_error=?,last_cause=?,next_due_at=? WHERE workflow_id=? AND version_id=?", started, new Date().toISOString(), failure.message, failure.cause, next, poll.workflow_id, poll.version_id),
+      stmt(env, "UPDATE crank_poll_log SET finished_at=?,status='error',http_status=?,cause=?,error=? WHERE id=? AND status='running'", new Date().toISOString(), failure.status ?? null, failure.cause, failure.message, logId),
+      stmt(env, "UPDATE crank_polls SET last_started_at=?,last_finished_at=?,last_status='error',last_error=?,last_cause=?,next_due_at=? WHERE workflow_id=? AND version_id=? AND EXISTS(SELECT 1 FROM crank_poll_log WHERE id=? AND status='error' AND cause!='executor interrupted')", started, new Date().toISOString(), failure.message, failure.cause, next, poll.workflow_id, poll.version_id, logId),
     ])
     if (!poll.error_notified) {
       await notify(env, { key: `poll:${poll.workflow_id}:${started}`, workflowId: poll.workflow_id, kind: 'trigger_error', subject: `${workflow.name}: its trigger poll failed (${failure.cause})`,

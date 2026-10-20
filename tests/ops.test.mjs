@@ -191,7 +191,7 @@ test('SEC-003: the append-only audit records each kind of action with actor, tim
   await h.post('reports/log-sinks/'+sink.id+'/delete');
 });
 
-test('OPS-001: durable redacted stream survives outage and restart, preserves lag, then catches up', async () => {
+test('BASE-003 OPS-001: durable redacted stream survives outage and restart, preserves lag, then catches up', async () => {
   let available=false;
   fake.routes.set('logs.example',()=>jsonResponse(available?{accepted:true}:{error:'down'},available?200:503));
   const token=fakeSecret('logs'), secretValue=fakeSecret('payload');
@@ -270,4 +270,51 @@ test('OPS-001: durable delay-queue ages appear in the report and cancellation re
   assert.equal(report.summary.waiting,1); assert.equal(report.summary.queue_age.count,1); assert.ok(report.summary.queue_age.max_ms>=0);
   await h.post('workflow-runs/'+run.id+'/cancel');
   assert.equal((await h.get('reports/operations?workflow='+workflow.id)).summary.queue_age.count,0);
+});
+
+
+test('BASE-003: dependency failure, maintenance interruption and archive custody stay observable after restart', async () => {
+  const edge = fakeEdge(); edge.routes.set('unavailable-provider.example',()=>jsonResponse({error:'provider down'},503));
+  const r = await harness('http://127.0.0.1:9',{edge:edge.edge});
+  try {
+    assert.equal((await r.send('/health')).status,200);
+    await r.db.exec('ALTER TABLE crank_wf_runs RENAME TO unavailable_runs');
+    const started = Date.now(), unavailable = await r.send('/health');
+    assert.equal(unavailable.status,503); assert.equal(unavailable.value.status,'unavailable');
+    assert.ok(Date.now()-started < 5000); assert.ok(!unavailable.text.includes('unavailable_runs'));
+    await r.db.exec('ALTER TABLE unavailable_runs RENAME TO crank_wf_runs');
+    assert.equal((await r.send('/health')).status,200);
+    let report = await r.get('reports/operations');
+    assert.equal(report.recovery.executor.status,'unobserved');
+    assert.equal(report.recovery.storage.capacity_bytes,null);
+    assert.ok(report.recovery.storage.allocated_bytes>0);
+    assert.equal(report.recovery.backup.verified_external_copy,false);
+    assert.equal(report.recovery.backup.last_generated_at,null);
+    await r.db.exec('ALTER TABLE crank_waits RENAME TO unavailable_waits');
+    try { await r.tick(); } catch { /* The real scheduled handler rejects its failed pass. */ }
+    await r.db.exec('ALTER TABLE unavailable_waits RENAME TO crank_waits');
+    await r.restart();
+    report = await r.get('reports/operations');
+    assert.equal(report.recovery.operations.find(j=>j.kind==='scheduler').status,'failed');
+    assert.equal(report.recovery.executor.status,'unobserved','failed maintenance is not a completed Cron pass');
+    await r.tick();
+    report = await r.get('reports/operations');
+    assert.equal(report.recovery.executor.status,'observed');
+    assert.ok(report.recovery.operations.some(j=>j.status==='finished'));
+    const poll = await publish(r,'Harbor Workshop supplier outage',{trigger:{type:'url_poll',url:'https://unavailable-provider.example/invoices',interval_minutes:1,backfill:'existing'},steps:[]});
+    await r.tick(Date.now()+60000);
+    report = await r.get('reports/operations');
+    assert.equal(report.recovery.provider_outages.find(p=>p.workflow_id===poll.id).last_cause,'outage');
+    assert.equal((await r.send('/health')).status,200,'an optional provider outage is not healthy-provider evidence or a required storage outage');
+    const archive = await r.send('/api/crank/data/export',{},r.owner);
+    assert.equal(archive.status,200);
+    report = await r.get('reports/operations');
+    assert.ok(report.recovery.backup.last_generated_at);
+    assert.equal(report.recovery.backup.verified_external_copy,false,'generation never claims receipt');
+    assert.ok((await r.get('data/transfers')).some(t=>t.kind==='export' && t.phase==='aborted'));
+    await r.mf.dispatchFetch(r.origin+'/setup',{method:'POST',redirect:'manual',headers:{origin:r.origin,cookie:r.owner,'content-type':'application/x-www-form-urlencoded'},body:'confirm=yes'});
+    const page = await r.send('/app/operations',undefined,r.owner);
+    assert.equal(page.status,200); assert.ok(page.text.includes('Service recovery')); assert.ok(page.text.includes('not verified'));
+    assert.equal((await r.send('/api/crank/reports/operations')).status,401);
+  } finally { await r.close(); }
 });

@@ -1,3 +1,4 @@
+import { operation, recoverOperations } from './recovery'
 import { flushUsageNotices } from './usage'
 import { executeRun } from '../engine/executor'
 import { queueCandidates } from '../engine/queue'
@@ -19,6 +20,11 @@ import { portability } from '../data'
  * durable rows, so a restart or redeploy resumes where the last pass stopped. `time` is the
  * Cron controller's scheduled time. */
 export async function schedulerPass(env: CrankEnv, time = Date.now()) {
+  await recoverOperations(env, time)
+  return operation(env, 'scheduler', () => runSchedulerPass(env, time))
+}
+
+async function runSchedulerPass(env: CrankEnv, time: number) {
   const at = new Date(time).toISOString(), summary = { recovered: 0, released: 0, queued: 0, polls: 0, schedules: 0, executed: 0, holds: 0, sealed: { runs: 0, items: 0, files: 0, destroyed: 0 }, expired: { payload: 0, files: 0, history: 0 } }
   summary.recovered = await recoverExpiredExecutions(env, at)
   summary.released += await releaseRetryWaits(env, at)

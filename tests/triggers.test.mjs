@@ -68,6 +68,61 @@ test('TRIG-001: raw GET and multipart files are mappable, and a synchronous resp
 });
 
 const rss = items => `<?xml version="1.0"?><rss version="2.0"><channel><title>Harbour news</title>${items.map(i => `<item><guid>${i.guid}</guid><title>${i.title}</title><link>https://news.example/${i.guid}</link><pubDate>Fri, 16 Oct 2026 12:00:00 GMT</pubDate></item>`).join('')}</channel></rss>`;
+test('BASE-003: interrupted poll admission retries unseen items after restart and closes the abandoned attempt without duplicate work', async () => {
+  const edge = fakeEdge();
+  edge.routes.set('poll-recovery.example', () => jsonResponse([{ id: 'first' }, { id: 'second' }]));
+  const isolated = await harness('http://127.0.0.1:9', { edge: edge.edge });
+  try {
+    const workflow = await publish(isolated, 'Invoice poll recovery', {
+      trigger: { type: 'url_poll', url: 'https://poll-recovery.example/invoices', items_path: '', interval_minutes: 1, backfill: 'existing' },
+      steps: [{ id: 'invoice', type: 'map', input: { id: '{{trigger.id}}' } }],
+    });
+    // Interrupt between two admissions, then make the attempt's error write fail
+    // as it would when storage disappears before a process can record shutdown.
+    await isolated.db.exec(`CREATE TRIGGER fail_poll_admission BEFORE INSERT ON crank_wf_runs WHEN NEW.workflow_id='${workflow.id}' AND NEW.source_id='key:second' BEGIN SELECT RAISE(ABORT,'injected admission interruption'); END;`);
+    await isolated.db.exec(`CREATE TRIGGER fail_poll_completion BEFORE UPDATE OF status ON crank_poll_log WHEN OLD.workflow_id='${workflow.id}' BEGIN SELECT RAISE(ABORT,'injected log interruption'); END;`);
+    const time = Date.now();
+    await isolated.tick(time);
+    const interrupted = await isolated.get(`workflows/${workflow.id}/trigger`);
+    assert.equal(interrupted.poll_log[0].status, 'running');
+    assert.equal((await runs(isolated, workflow)).length, 1, 'the first admission remains durable');
+    await isolated.db.exec('DROP TRIGGER fail_poll_admission');
+    await isolated.db.exec('DROP TRIGGER fail_poll_completion');
+    // Expire only this dead executor's wall-clock lease; Cron time remains the
+    // production public door and does not need a five-minute real-time sleep.
+    await isolated.db.prepare('UPDATE crank_poll_log SET lease_expires_at=? WHERE workflow_id=?').bind(new Date(time - MINUTE).toISOString(), workflow.id).run();
+    await isolated.restart();
+    await Promise.all([isolated.tick(time + MINUTE), isolated.tick(time + MINUTE)]);
+    const recovered = await isolated.get(`workflows/${workflow.id}/trigger`);
+    const abandoned = recovered.poll_log.find(log => log.id === interrupted.poll_log[0].id);
+    assert.equal(abandoned.status, 'error');
+    assert.equal(abandoned.cause, 'executor interrupted');
+    assert.ok(abandoned.finished_at);
+    assert.equal(recovered.poll.last_status, 'ok');
+    assert.ok(recovered.poll_log.every(log => log.status !== 'running'));
+    const completed = await Promise.all((await runs(isolated, workflow)).map(run => isolated.get('workflow-runs/' + run.id)));
+    assert.deepEqual(completed.map(run => stepOf(run, 'invoice').output.id).sort(), ['first', 'second']);
+    assert.ok(completed.every(run => run.status === 'succeeded'));
+    await isolated.restart(); await isolated.tick(time + 2 * MINUTE);
+    assert.equal((await runs(isolated, workflow)).length, 2, 'another restart cannot repeat either admitted invoice');
+
+    edge.routes.set('poll-held-recovery.example', () => jsonResponse(Array.from({ length: 51 }, (_, i) => ({ id: 'held-' + i }))));
+    const burst = await publish(isolated, 'Interrupted poll review batch', {
+      settings: { burst_threshold: 1 },
+      trigger: { type: 'url_poll', url: 'https://poll-held-recovery.example/invoices', items_path: '', interval_minutes: 1, backfill: 'existing' }, steps: [],
+    });
+    await isolated.db.exec(`CREATE TRIGGER fail_poll_hold BEFORE INSERT ON crank_hold_items WHEN NEW.item_key='key:held-50' BEGIN SELECT RAISE(ABORT,'injected hold interruption'); END;`);
+    await isolated.tick(time + 3 * MINUTE);
+    const [batch] = await isolated.get(`workflows/${burst.id}/holds`);
+    assert.equal((await isolated.get('holds/' + batch.id)).counts.held, 50);
+    await isolated.db.exec('DROP TRIGGER fail_poll_hold');
+    await isolated.restart(); await isolated.tick(time + 4 * MINUTE);
+    assert.equal((await isolated.get('holds/' + batch.id)).counts.held, 51, 'the remaining item rejoins the durable burst instead of running below the threshold');
+    assert.equal((await runs(isolated, burst)).length, 0);
+
+  } finally { await isolated.close(); }
+});
+
 test('TRIG-007/TRIG-004: feeds start one run per new item, name their source and report poll latency', async () => {
   let items = [{ guid: 'a', title: 'Opening hours' }, { guid: 'b', title: 'New range' }];
   fake.routes.set('news.example', ({ url }) => url.pathname === '/rss.xml' ? new Response(rss(items), { headers: { 'content-type': 'application/rss+xml' } })
@@ -203,7 +258,7 @@ test('TRIG-005: a burst becomes one held batch with no effects; selected release
   assert.equal((await runs(h, expiring)).length, 0, 'owner expiry discards without dispatch');
 });
 
-test('TRIG-002: weekday schedules keep 9 a.m. local across DST, admit each occurrence once and apply catch-up', async () => {
+test('BASE-003 TRIG-002: weekday schedules keep 9 a.m. local across DST, admit each occurrence once and apply catch-up', async () => {
   const daily = await publish(h, 'Morning report', { trigger: { type: 'schedule', at: '09:00', days: ['mon', 'tue', 'wed', 'thu', 'fri'], timezone: 'America/New_York', missed: 'skip' }, steps: [] });
   const planned = (await h.get(`workflows/${daily.id}/trigger?from=2026-10-29T00:00:00Z&count=4`)).planned.map(p => p.at);
   assert.deepEqual(planned, ['2026-10-29T13:00:00.000Z', '2026-10-30T13:00:00.000Z', '2026-11-02T14:00:00.000Z', '2026-11-03T14:00:00.000Z']);

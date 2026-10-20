@@ -156,7 +156,7 @@ test('EXEC-002: parked pagination and lost-write readback resume their exact req
 });
 
 
-test('EXEC-002: long retry waits release workflow slots, survive restart and resume once on the due Cron tick with retained inputs and live authority', async () => {
+test('BASE-003 EXEC-002: long retry waits release workflow slots, survive restart and resume once on the due Cron tick with retained inputs and live authority', async () => {
   const fake = fakeEdge(), calls = new Map();
   fake.routes.set('parked-provider.example', ({ url }) => {
     const record = url.searchParams.get('record'), seen = calls.get(record) ?? [];
