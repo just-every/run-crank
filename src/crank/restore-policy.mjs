@@ -24,6 +24,7 @@ export function fenceRow(table, row) {
 
 /** Every value importRow may write. Base refuses any other change to a staged row. */
 export const importSafety = {
+  crank_agent_followups: { status: ['inactive'] },
   crank_flows: { status: ['draft'] },
   crank_usage_budgets: { active: [0] },
   crank_usage_allowances: { active: [0] },
@@ -43,6 +44,7 @@ export const importSafety = {
  * bounded value, so an unfenced unfinished run keeps only its previous status and
  * a failed delivery keeps its outcome with its single replay marked used. */
 export function importRow(table, row) {
+  if (table === 'crank_agent_followups') return {...row,status:'inactive'};
   if (table === 'crank_usage_budgets' || table === 'crank_usage_allowances' || table === 'crank_usage_notices') return { ...row, active: 0 };
   if (table === 'crank_flows') return { ...row, status: 'draft' };
   if (table === 'crank_workflows') return { ...row, status: row.status === 'draft' ? 'draft' : 'paused', owner_id: RESTORED_OWNER };
@@ -148,5 +150,9 @@ export async function validateRestore({ read }) {
     const skill = skills.get(sample.skill_id), run = runs.get(sample.run_id);
     if (!skill || !run || run.workflow_id !== skill.workflow_id || run.version_id !== skill.version_id) return false;
   }
+  const followups = new Map((await rows('crank_agent_followups')).map(row=>[row.id,row]));
+  const waits = await rows('crank_waits');
+  for (const followup of followups.values()) if (!runs.has(followup.run_id) || !waits.some(wait=>wait.run_id===followup.run_id && wait.path===followup.path && wait.kind==='approval')) return false;
+  for (const table of ['crank_agent_followup_recipients','crank_agent_followup_contacts']) for (const row of await rows(table)) if (!followups.has(row.followup_id)) return false;
   return true;
 }

@@ -32,6 +32,7 @@ export async function admitTeamRequest(request: Request, env: CrankEnv, actor: A
   if (!actor.team) return
   const path = new URL(request.url).pathname.replace('/api/crank/v1/', '/api/crank/'), read = request.method === 'GET'
   if (!path.startsWith('/api/')) return
+  if (read && (path === '/api/crank/inbox' || path === '/api/crank/followups' || path.startsWith('/api/crank/followups/'))) return
   if (read && ['/api/crank/state','/api/crank/workflows','/api/crank/workflow-runs','/api/crank/connections','/api/crank/catalog'].includes(path)) return
   const wf = /^\/api\/crank\/workflows\/([^/]+)(?:\/(.*))?$/.exec(path)
   if (wf) {

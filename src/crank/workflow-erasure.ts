@@ -39,6 +39,8 @@ export async function eraseWorkflowRun(env: CrankEnv, actor: Actor | null, porta
     edges: [
       ...['crank_grant_escalations', 'crank_grant_admissions', 'crank_skill_cases', 'crank_wf_steps', 'crank_blind_index', 'crank_wf_step_revisions', 'crank_waits', 'crank_wf_attempts', 'crank_obligations', 'crank_callback_events', 'crank_queue_items', 'crank_hold_items', 'crank_historical_items', 'crank_ops_events', 'crank_request_admissions', 'crank_request_checkpoints', 'crank_request_checkpoint_chunks', 'crank_usage_observations', 'crank_usage_provider_charges', 'crank_usage_reporting_errors', 'crank_usage_reservations', 'crank_step_admissions']
         .map(table => ({ table, from: 'crank_wf_runs', on: { run_id: 'id' } })),
+      { table: 'crank_agent_followups', from: 'crank_wf_runs', on: {run_id:'id'} },
+      ...['crank_agent_followup_recipients','crank_agent_followup_contacts','crank_agent_followup_authorizations'].map(table=>({table,from:'crank_agent_followups',on:{followup_id:'id'}})),
       { table: 'crank_trigger_events', from: 'crank_wf_runs', on: { run_id: 'id' } },
       // Uploaded and connector files belong to the run whose trigger or step output names them.
       { table: 'crank_files', from: 'crank_wf_runs', where: 'workflow_id=? AND instr(?,id)>0', params: ['workflow_id', 'trigger_json'] },
@@ -47,8 +49,8 @@ export async function eraseWorkflowRun(env: CrankEnv, actor: Actor | null, porta
       // row has no run link. Include that copy in the same erasure journal.
       { table: 'crank_trigger_events', from: 'crank_hold_items', where: 'dedup_key=? AND workflow_id=(SELECT workflow_id FROM crank_holds WHERE id=?)', params: ['item_key', 'hold_id'] },
     ],
-    audit: [{ table: 'crank_audit', column: 'subject_id', of: 'crank_wf_runs', where: "subject_kind='run'", clear: { detail_json: '{}' } }],
-    retain: [{ table: 'crank_usage_spend', reason: 'Value-free per-scope UTC-month debit totals are retained so erasure cannot replenish an allowance.' }, { table: 'crank_erased_webhook_events', reason: 'An opaque event-key digest permanently blocks redelivery. Existing effects in receiving apps remain under their custody.' }],
+    audit: [{table:'crank_audit',column:'subject_id',of:'crank_agent_followups',where:"subject_kind='followup'",clear:{detail_json:'{}'}}, { table: 'crank_audit', column: 'subject_id', of: 'crank_wf_runs', where: "subject_kind='run'", clear: { detail_json: '{}' } }],
+    retain: [{table:'crank_agent_followup_admissions',reason:'Value-free person-digest/day receipts prevent erasure from funding more contacts.'}, { table: 'crank_usage_spend', reason: 'Value-free per-scope UTC-month debit totals are retained so erasure cannot replenish an allowance.' }, { table: 'crank_erased_webhook_events', reason: 'An opaque event-key digest permanently blocks redelivery. Existing effects in receiving apps remain under their custody.' }],
     beforeStatements: async () => [
       system ? stmt(env, `INSERT INTO crank_authority_guards(id,ok) SELECT 'erase-workflow:'||?1,CASE WHEN EXISTS(${system.eligible}) THEN 1 ELSE 0 END`, ...system.params)
         : stmt(env, `INSERT INTO crank_authority_guards(id,ok) SELECT 'erase-workflow:'||?,CASE WHEN EXISTS(${eligible}) THEN 1 ELSE 0 END`, runId, runId),

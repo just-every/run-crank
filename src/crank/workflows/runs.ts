@@ -60,7 +60,7 @@ export async function runDetail(env: CrankEnv, actor: Actor, runId: string) {
   const [steps, waits, version, attempts, revisions] = await Promise.all([
     stmt(env, 'SELECT * FROM crank_wf_steps WHERE run_id=? ORDER BY started_at,path', runId).all<Record<string, string | null>>(),
     stmt(env, 'SELECT path,kind,due_at,expires_at,proposal_json,proposal_digest,reason,created_at,resolved_at,resolution_json,decided_by FROM crank_waits WHERE run_id=? ORDER BY created_at', runId).all<Record<string, string | null>>(),
-    stmt(env, 'SELECT number,mode,published_by,published_at,declared_json,retry_policy_json FROM crank_workflow_versions WHERE id=?', run.version_id).first<{ number: number; mode: string; published_by: string; published_at: string; declared_json: string; retry_policy_json: string }>(),
+    stmt(env, 'SELECT number,mode,published_by,published_at,declared_json,graph_json,retry_policy_json FROM crank_workflow_versions WHERE id=?', run.version_id).first<{ number: number; mode: string; published_by: string; published_at: string; declared_json: string; graph_json: string; retry_policy_json: string }>(),
     stmt(env, 'SELECT * FROM crank_wf_attempts WHERE run_id=? ORDER BY path,number', runId).all<any>(),
     stmt(env, 'SELECT * FROM crank_wf_step_revisions WHERE run_id=? ORDER BY path,revision', runId).all<any>(),
   ])
@@ -86,7 +86,7 @@ export async function runDetail(env: CrankEnv, actor: Actor, runId: string) {
     revisions: openRevisions.map(r => ({ path: r.path, revision: r.revision, corrected: !!r.corrected, created_by: r.created_by, created_at: r.created_at, prior_operation_key: r.prior_operation_key, operation_key: r.operation_key,
       ...(payload ? { prior_input: parse(r.prior_input_json), prior_error: parse(r.prior_error_json), input: parse(r.input_json) } : {}) })),
     attempts: attempts.results.map(a => ({ id: a.id, path: a.path, number: a.number, method: a.method, started_at: a.started_at, finished_at: a.finished_at, http_status: a.http_status, error_category: a.error_category, retry_number: a.retry_number, budget_started_at: a.budget_started_at, slice_started_at: a.slice_started_at, retry_at: a.retry_at, retry_reason: a.retry_reason, retry_parked_at: a.retry_parked_at, retry_released_at: a.retry_released_at, retry_resumed_at: a.retry_resumed_at, ...(payload ? { destination_origin: a.destination_origin } : {}) })),
-    waits: openWaits.map(w => ({ ...w, can_review: reviewable.has(w.path!), reason: payload || reviewable.has(w.path!) ? w.reason : null, proposal: payload || reviewable.has(w.path!) ? parse(w.proposal_json) : 'restricted', resolution: payload ? parse(w.resolution_json) : w.resolution_json ? { approved: parse(w.resolution_json).approved, cancelled: parse(w.resolution_json).cancelled } : null, proposal_json: undefined, resolution_json: undefined })),
+    waits: openWaits.map(w => ({ ...w, editable: payload || reviewable.has(w.path!) ? (()=>{const step=version ? stepAt(JSON.parse(version.graph_json),w.path!) : null;return step?.type==='approval' && Array.isArray(step.editable) ? step.editable : []})() : [], can_review: reviewable.has(w.path!), reason: payload || reviewable.has(w.path!) ? w.reason : null, proposal: payload || reviewable.has(w.path!) ? parse(w.proposal_json) : 'restricted', resolution: payload ? parse(w.resolution_json) : w.resolution_json ? { approved: parse(w.resolution_json).approved, cancelled: parse(w.resolution_json).cancelled } : null, proposal_json: undefined, resolution_json: undefined })),
   }
 }
 

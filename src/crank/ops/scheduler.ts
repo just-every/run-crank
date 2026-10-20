@@ -1,3 +1,4 @@
+import { followupPass } from '../agents/followups/scheduler'
 import { checkApprovalDeadlines } from '../grants/reviews'
 import { operation, recoverOperations } from './recovery'
 import { flushUsageNotices } from './usage'
@@ -42,6 +43,7 @@ async function runSchedulerPass(env: CrankEnv, time: number) {
   summary.holds = await holdUpkeep(env, time)
   const queued = await queueCandidates(env, 50)
   for (const run of queued) { await executeRun(env, run.id, time); summary.executed++ }
+  await followupPass(env, time)
   await flushUsageNotices(env)
   await flushLogStreams(env, time)
   summary.sealed = await payloadPass(env, time)

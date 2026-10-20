@@ -58,3 +58,14 @@ On another installation, reconnect providers and explicitly adopt workflows;
 old sessions and tokens cannot authorize work there. A revoked connection cannot
 send new requests. See [Backup and restore](BACKUP-RESTORE.md) for the exact
 inactive restoration and erasure behavior.
+
+AGENT-004 follow-up notices stay inside this installation. Only owner-named
+active native people receive them in their Crank inbox during their configured
+working windows and cadence. A notice stores an opaque recipient, run/step link,
+kind and time, without a copy of the proposed fact or answer. Opening that link
+requires the workflow's existing access and decision authority. No email, SMS or
+external address is used. Calendars and contact authority stay installation-local;
+portable obligation/contact history restores inactive. Run erasure removes that
+history, while value-free person-digest/day admissions keep the contact limit
+spent. Operator erasure removes local contact authority and calendars and
+anonymizes portable recipients and audit attribution.

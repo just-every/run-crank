@@ -463,3 +463,13 @@ This slice does not complete TEAM-001: folder/environment policy, SCIM/group
 provisioning, full operator recovery/admin powers and delegated draft tests/
 creation remain. Existing people without a product policy retain their prior
 Base-role behavior, including legacy approval-flow and owner approval semantics.
+
+### Native decision follow-up (AGENT-004)
+
+`GET /api/crank/followups` returns owner obligation/contact history and working calendars; a named person receives only their own reference/history rows. `GET /api/crank/inbox` is always the signed-in native person's own notices. A notice never authorizes workflow reads or decisions.
+
+The native owner saves `POST /api/crank/followups/people/:personId` with `timezone` (IANA), `weekdays` (Monday=1 through Sunday=7), local `start`/`end` (HH:mm), optional `holiday_dates` (YYYY-MM-DD), `interval_minutes` (default 1440) and `daily_limit` (default 1). Bounds are start inclusive/end exclusive; overnight shifts belong to the starting weekday. Both current and shift-start holidays silence contacts. Daily limits use the person's local date across all obligations; intervals are elapsed minutes across DST.
+
+`POST /api/crank/followups` accepts an unresolved production `run_id`, exact approval `path`, explicit-zone ISO `due_at`, `recipient_ids`, and optional paired `escalate_at`/`escalation_ids`. Each recipient must be an active native person with an explicit calendar. `POST /api/crank/followups/:id/revoke` immediately ends contact authority, leaving the human workflow wait untouched. Native deactivation permanently fences prior authorization. Contact records contain no question or answer copies, and no external messages are sent.
+
+The owner uses `/app/followups`; people use `/app/inbox` and the original run's allowed-field approval form. Existing digest-bound approval, self-approval restrictions and run cancellation remain authoritative. Contacts, admissions and authorizing-owner audits commit atomically. Archives carry complete reference/history records in inactive state, excluding local calendars and grants. Run erasure removes their history; operator erasure anonymizes references. Value-free person-digest/day admission receipts remain local so erasure cannot grant another daily contact.

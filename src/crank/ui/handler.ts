@@ -1,3 +1,6 @@
+import { followupApi } from '../agents/followups/api'
+import { followupsPanel, inboxPanel } from './followups'
+import { decisionEdits } from './decision-fields'
 import { teamApi } from '../team/api'
 import { teamPanel } from './team'
 import { grantsPanel } from './grants'
@@ -31,7 +34,7 @@ const redirect = (location:string) => new Response(null,{status:303,headers:{loc
 // A form may name where to return after its action: a path inside the app, nothing else.
 const safeReturn = (value:unknown) => typeof value==='string' && /^\/app(\/[A-Za-z0-9/_.-]*)?(\?[A-Za-z0-9=&%_.-]*)?$/.test(value) ? value : null
 export async function productApi(request:Request,env:CrankEnv):Promise<Response|null> {
-  return await teamApi(request,env) ?? await versionedApi(request,env) ?? await importDoor(request,env) ?? await importApi(request,env) ?? await dataApi(request,env) ?? await workflowApi(request,env) ?? await crankApi(request,env)
+  return await followupApi(request,env) ?? await teamApi(request,env) ?? await versionedApi(request,env) ?? await importDoor(request,env) ?? await importApi(request,env) ?? await dataApi(request,env) ?? await workflowApi(request,env) ?? await crankApi(request,env)
 }
 async function formValues(request:Request) {
   if (!request.headers.get('content-type')?.startsWith('application/x-www-form-urlencoded')) throw new Error('Use a form submission.')
@@ -118,6 +121,20 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
         input.workflow_ids=Object.keys(form).filter(key=>key.startsWith('workflow_') && form[key]==='true').map(key=>key.slice('workflow_'.length))
         input.connection_ids=Object.keys(form).filter(key=>key.startsWith('connection_') && form[key]==='true').map(key=>key.slice('connection_'.length))
       }
+      if(form.followup_form==='true') {
+        if(form.followup_wait) {const wait=JSON.parse(form.followup_wait);input.run_id=wait.run_id;input.path=wait.path;delete input.followup_wait}
+        if(input.escalate_at==='') delete input.escalate_at
+        for(const [prefix,key] of [['recipient_','recipient_ids'],['escalation_','escalation_ids']]) input[key]=Object.keys(form).filter(name=>name.startsWith(prefix) && form[name]==='true').map(name=>name.slice(prefix.length))
+        for(const key of Object.keys(input)) if(key==='followup_form' || key.startsWith('recipient_') && key!=='recipient_ids' || key.startsWith('escalation_') && key!=='escalation_ids') delete input[key]
+      }
+      if(path.startsWith('/api/crank/followups/people/')) {
+        input.weekdays=(form.weekdays ?? '').split(',').filter(Boolean).map(Number)
+        input.holiday_dates=(form.holiday_dates ?? '').split(',').map(day=>day.trim()).filter(Boolean)
+        if(form.interval_minutes!==undefined) input.interval_minutes=Number(form.interval_minutes)
+        if(form.daily_limit!==undefined) input.daily_limit=Number(form.daily_limit)
+      }
+      if (/\/workflow-runs\/[^/]+\/approve$/.test(path)) {const edits=decisionEdits(form);if(edits) input.edits=edits}
+      for(const key of Object.keys(input)) if(key.startsWith('decision_edit_') || key.startsWith('decision_kind_')) delete input[key]
       if(path==='/api/crank/grants') {
         requireOwner(actor)
         try { input.policy=JSON.parse(form.policy ?? '') } catch { return page('Invalid grant','<p>The grant policy must be JSON.</p><a href="/app/access">Return to access</a>',{},422) }
@@ -159,6 +176,7 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
       if(back) return redirect(back)
       if(path.startsWith('/api/crank/imports')) return redirect('/app/import')
       if(path.startsWith('/api/crank/grants')) return redirect('/app/access')
+      if(path.startsWith('/api/crank/followups')) return redirect('/app/followups')
       if(path.startsWith('/api/crank/team')) return redirect('/app/access')
       if(path.startsWith('/api/crank/tokens')) return redirect('/app/access')
       if(path.startsWith('/auth/')) return redirect('/app/access')
@@ -201,7 +219,13 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
     }
     if(url.pathname==='/app/account') { const session = await read('/auth/session'); return page('Account',accountView(session,owner,actor.team?.role),{state,intro:'Who is signed in on this browser, and what that role may do.'}) }
     if(url.pathname==='/app/connections') return page('Connections',connectionsView(await read('/api/crank/connections'),owner),{state,intro:'The apps your workflows act on, each with one stored credential.'})
+    if(url.pathname==='/app/inbox') return page('Inbox',inboxPanel(await read('/api/crank/inbox')),{state,intro:'In-app requests addressed to you. The original workflow controls access and every decision.'})
     requireOwner(actor)
+    if(url.pathname==='/app/followups') {
+      const [people,waiting,workflows,followups]=await Promise.all([read('/auth/operators'),read('/api/crank/workflow-runs?status=awaiting_approval&limit=100'),read('/api/crank/workflows'),read('/api/crank/followups')])
+      const runs=await Promise.all(waiting.runs.map(async (run:any)=>({...await read('/api/crank/workflow-runs/'+encodeURIComponent(run.id)),workflow_name:workflows.find((w:any)=>w.id===run.workflow_id)?.name})))
+      return page('Follow-ups',followupsPanel(followups,people as any[],runs),{state,intro:'Name native people and working hours for reminders. Only a person decides the waiting step.'})
+    }
     if(url.pathname==='/app/skills') {
       const [proposals,workflows] = await Promise.all([read('/api/crank/skills'),read('/api/crank/workflows')])
       return page('Skills',skillsView(proposals,workflows),{state,intro:'Review retained exceptions and corrections, then stage reusable normalizations for an owner to publish.'})
