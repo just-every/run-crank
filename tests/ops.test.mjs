@@ -315,6 +315,15 @@ test('BASE-003: dependency failure, maintenance interruption and archive custody
     await r.mf.dispatchFetch(r.origin+'/setup',{method:'POST',redirect:'manual',headers:{origin:r.origin,cookie:r.owner,'content-type':'application/x-www-form-urlencoded'},body:'confirm=yes'});
     const page = await r.send('/app/operations',undefined,r.owner);
     assert.equal(page.status,200); assert.ok(page.text.includes('Service recovery')); assert.ok(page.text.includes('not verified'));
+    const retained = await r.post('data/transfers',{kind:'export'},r.owner,201);
+    const resumePage=await r.send('/app/operations',undefined,r.owner);
+    assert.ok(resumePage.text.includes('Resume export'));
+    const resumed=await r.mf.dispatchFetch(r.origin+'/app/action',{method:'POST',redirect:'manual',headers:{origin:r.origin,cookie:r.owner,'content-type':'application/x-www-form-urlencoded'},body:new URLSearchParams({path:`/api/crank/data/transfers/${retained.id}/advance`,maxParts:'10',return_to:'/app/operations'}).toString()});
+    assert.equal(resumed.status,303); assert.equal(resumed.headers.get('location'),'/app/operations');
+    assert.equal((await r.get('data/transfers')).find(t=>t.id===retained.id).phase,'complete');
+    assert.ok((await r.send('/app/operations',undefined,r.owner)).text.includes(`/data/transfers/${retained.id}/download`));
+    assert.equal((await r.send(`/api/crank/data/transfers/${retained.id}/download`,undefined,r.owner)).status,200);
+
     assert.equal((await r.send('/api/crank/reports/operations')).status,401);
   } finally { await r.close(); }
 });

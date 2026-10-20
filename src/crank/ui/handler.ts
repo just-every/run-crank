@@ -108,6 +108,7 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
       if (url.pathname !== '/app/action' || (!/^\/api\/crank\/[A-Za-z0-9/_-]+$/.test(form.path ?? '') && !['/auth/invite','/auth/operator/status','/auth/operator/role'].includes(form.path))) return page('Not found','<a href="/app">Return to flows</a>',{},404)
       const path = form.path, back = safeReturn(form.return_to); delete form.path; delete form.return_to
       const input:Record<string,unknown> = {...form}
+      if(form.maxParts !== undefined) input.maxParts=Number(form.maxParts)
       if(form.input) { try {input.input=JSON.parse(form.input)} catch {return page('Invalid event','<p>Event input must be a JSON object.</p><a href="/app">Return to flows</a>',{},400)} }
       if(form.graph) { try {input.graph=JSON.parse(form.graph)} catch {return page('Invalid workflow','<p class="notice">The workflow graph must be JSON.</p><a href="/app">Return to flows</a>',{},400)} }
       if(form.restore_snapshot) {
