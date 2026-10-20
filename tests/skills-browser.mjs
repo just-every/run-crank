@@ -19,12 +19,14 @@ try {
     await page.getByRole('button', { name: 'Finish setup', exact: true }).click();
     await page.waitForURL('**/app');
   }
+  const origin = new URL(open).origin;
   const send = async (path, body, expected = 200) => {
-    const result = await page.evaluate(async ({ path, body }) => {
-      const response = await fetch('/api/crank/' + path, { method: body === undefined ? 'GET' : 'POST', headers: body === undefined ? {} : { 'content-type': 'application/json' }, ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
-      return { status: response.status, value: await response.json() };
-    }, { path, body });
-    assert.equal(result.status, expected, `${path}: ${JSON.stringify(result.value)}`); return result.value;
+    const response = await context.request.fetch(origin + '/api/crank/' + path, {
+      method: body === undefined ? 'GET' : 'POST', headers: { origin },
+      ...(body === undefined ? {} : { data: body }),
+    });
+    const value = await response.json();
+    assert.equal(response.status(), expected, `${path}: ${JSON.stringify(value)}`); return value;
   };
   const costs = { cost: { components: ['orchestration','connectors','models','executors'].map(kind => ({ kind, usd_per_run: '0', assumption: 'Owner-reviewed native normalization; no external provider or executor charges' })) } };
   const shot = async (width, state) => {
