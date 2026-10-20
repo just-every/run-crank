@@ -40,20 +40,10 @@ process.on('message', async ({ id, action, config, time }) => {
       await (await mf.getWorker()).scheduled({ scheduledTime: new Date(time), cron: '* * * * *' });
     } else if (action === 'mail') {
       value = mail;
-    } else if (action === 'await-building-export') {
-      const db = await mf.getD1Database('DB'), deadline = Date.now() + 10000;
-      // Read-only observation of actual archive progress. Polling yields to D1
-      // on every query and never manufactures an interrupted transfer.
-      while (Date.now() < deadline) {
-        value = await db.prepare("SELECT id,phase,completed FROM rer_portability_jobs WHERE kind='export' AND phase='building' AND EXISTS(SELECT 1 FROM crank_audit s WHERE s.action='operation.started' AND json_extract(s.detail_json,'$.kind')='archive.export' AND NOT EXISTS(SELECT 1 FROM crank_audit t WHERE t.subject_id=s.subject_id AND t.action!='operation.started')) ORDER BY rowid DESC LIMIT 1").first();
-        if (value) break;
-        await new Promise(resolve => setTimeout(resolve, 5));
-      }
-      if (!value) throw new Error('No building export observed');
     } else throw new Error('Unknown fixture command');
     process.send({ id, ok: true, value });
-  } catch (error) {
+  } catch {
     // Never echo Worker environment, mail, private URLs or provider exceptions.
-    process.send({ id, ok: false, error: `Emitted recovery fixture ${action} failed${action === 'await-building-export' ? (/No building export observed/.test(String(error)) ? ': no unfinished export observed' : ': progress query refused') : ''}` });
+    process.send({ id, ok: false, error: `Emitted recovery fixture ${action} failed` });
   }
 });

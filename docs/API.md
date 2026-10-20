@@ -22,6 +22,9 @@ allow a 128 KiB source in a 256 KiB JSON envelope. Errors are JSON `{error}`.
 | POST `/imports/:id/undo` | Native/dev owner | Undo a job from the earlier importer, refusing target drift |
 | POST `/data/export` | Native/dev owner | Download installation archive |
 | GET `/data/transfers` | Native/dev owner | Latest 30 archive transfer IDs, kinds, phases and retained part counts |
+| POST `/data/transfers` | Native/dev owner | Create a resumable `{kind:"export"}` snapshot |
+| POST `/data/transfers/:id/advance` | Native/dev owner | Build the next `maxParts` (1–10); repeat after a restart on the same ID |
+| GET `/data/transfers/:id/download` | Native/dev owner | Download a complete transfer; repeat returns identical bytes, receipt remains unverified |
 | POST `/data/transfers/:id/abort` | Native/dev owner | Abort a retained transfer; records the owner decision in the audit |
 | POST `/data/restore` | Native/dev owner | `{archive,confirm:"RESTORE",journal?}`; empty destination only |
 | POST `/data/erase` | Native/dev owner | `{run_id,confirm:"ERASE"}` for a paused approval flow, or `{workflow_run_id,confirm:"ERASE"}` for a paused multi-step workflow; terminal run only |

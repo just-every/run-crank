@@ -1,57 +1,46 @@
 import assert from 'node:assert/strict';
 
-/** Observe a real export snapshot, kill its process, then reconcile through
- * the owner's transfer doors. Application state is never injected by IPC. */
-export async function archiveRecovery(h, flow, time, inFlight) {
-  // A few real pending runs keep the streaming snapshot large enough to inspect
-  // its durable building phase before killing the executor. They send nothing.
-  for (let index = 0; index < 5; index++) await h.post(`flows/${flow.id}/runs`, {
-    event_id: 'archive-process-loss-' + index, input: { invoice: 'INV-ARCHIVE-' + index, note: 'acceptance-data '.repeat(2000) },
-  }, 201);
+/** BASE-003: a real bounded archive job survives executor loss between chunks;
+ * every transition and byte crosses the owner's public Data door. */
+export async function archiveRecovery(h) {
   const invitation = await h.send('/auth/invite', { email: 'recovery-member@example.test', displayName: 'Recovery reader', role: 'member' });
   assert.equal(invitation.status, 202);
   const message = (await h.command('mail')).findLast(message => message.to.includes('recovery-member@example.test'));
-  assert.ok(message, 'native invitation reaches the mail network edge');
-  const link = message.html.match(/href="([^"]*\/auth\/confirm\?token=[^"]+)"/);
-  assert.ok(link);
-  const token = new URL(link[1].replaceAll('&amp;', '&'), 'http://acceptance.test').searchParams.get('token');
+  const token = new URL(message.html.match(/href="([^"]*\/auth\/confirm\?token=[^"]+)"/)[1].replaceAll('&amp;', '&'), 'http://acceptance.test').searchParams.get('token');
   const member = await h.send('/auth/confirm', { token }, '');
   assert.equal(member.status, 303); assert.ok(member.cookie);
-
-  await h.get('data/transfers'); // Initialize Base's real portability tables.
-  const observed = h.command('await-building-export');
-  const download = inFlight(h.send('/api/crank/data/export', {}));
-  let building;
-  try { building = await observed; } catch (error) {
-    const result = await download;
-    assert.fail(`${error.message}; HTTP export ${result.error ? 'transport failed' : 'status '+result.value.status}; ${result.value?.value?.error ?? 'no public error code'}`);
+  for (const cookie of ['', member.cookie]) assert.equal((await h.send('/api/crank/data/transfers',{kind:'export'},cookie)).status,cookie?403:401);
+  const job = await h.post('data/transfers',{kind:'export'},201);
+  assert.equal(job.phase,'building'); assert.equal(job.completed,0);
+  await h.restart(); // Actual SIGKILL while the durable transfer is active.
+  assert.equal((await h.get('data/transfers')).find(t=>t.id===job.id).phase,'building');
+  const path = `data/transfers/${job.id}`;
+  for (const cookie of ['', member.cookie]) {
+    assert.equal((await h.send('/api/crank/'+path+'/advance',{maxParts:1},cookie)).status,cookie?403:401);
+    assert.equal((await h.send('/api/crank/'+path+'/download',undefined,cookie)).status,cookie?403:401);
+    assert.equal((await h.send('/api/crank/'+path+'/abort',{},cookie)).status,cookie?403:401);
   }
-  assert.equal(building.phase, 'building');
+  await h.post(path+'/advance',{maxParts:0},400);
+  let status = await h.post(path+'/advance',{maxParts:1});
+  await h.restart(); // Retained completed parts and cursor survive another kill.
+  assert.equal((await h.get('data/transfers')).find(t=>t.id===job.id).completed,status.completed);
+  while(status.phase==='building') status=await h.post(path+'/advance',{maxParts:1});
+  assert.equal(status.phase,'complete');
+  const first=await h.send('/api/crank/'+path+'/download');
+  assert.equal(first.status,200); assert.ok(first.text.includes('"kind":"closing"'));
   await h.restart();
-  assert.ok((await download).error, 'killing an in-flight export interrupts its HTTP response');
-  const transfer = (await h.get('data/transfers')).find(job => job.id === building.id);
-  assert.ok(transfer, 'the interrupted export remains visible after restart');
-  assert.equal(transfer.phase, 'building', 'an interrupted export never claims completion');
-  const before = await h.get('reports/operations');
-  const operation = before.recovery.operations.find(job => job.kind === 'archive.export');
-  assert.ok(operation); assert.equal(operation.status, 'running');
-  assert.equal(before.recovery.backup.last_generated_at, null);
-  assert.equal(before.recovery.backup.verified_external_copy, false);
-  const path = `/api/crank/data/transfers/${building.id}/abort`;
-  assert.equal((await h.send(path, {}, '')).status, 401);
-  assert.equal((await h.send(path, {}, member.cookie)).status, 403);
-  assert.equal((await h.get('data/transfers')).find(job => job.id === building.id).phase, 'building', 'refused callers do not abort the export');
-  const aborted = await h.post(`data/transfers/${building.id}/abort`);
-  assert.equal(aborted.phase, 'aborted');
-  const audit = await h.get(`audit?kind=archive_transfer&id=${building.id}`);
-  assert.equal(audit.filter(row=>row.action==='data.transfer.abort' && row.detail.kind==='export').length,1);
-  await h.command('tick', { time: time + 40 * 60000 });
-  const reconciled = await h.get('reports/operations');
-  assert.equal(reconciled.recovery.operations.find(job => job.id === operation.id).status, 'interrupted');
-  const archive = await h.send('/api/crank/data/export', {});
-  assert.equal(archive.status, 200);
-  const after = await h.get('reports/operations');
-  assert.ok(after.recovery.backup.last_generated_at);
-  assert.equal(after.recovery.backup.verified_external_copy, false, 'archive generation does not establish external custody');
-  assert.equal((await h.get('data/transfers')).find(job => job.id === building.id).phase, 'aborted');
+  const second=await h.send('/api/crank/'+path+'/download');
+  assert.equal(second.status,200); assert.equal(second.text,first.text,'resumed download has identical bytes');
+  const audit=await h.get(`audit?kind=archive_transfer&id=${job.id}`);
+  assert.equal(audit.filter(r=>r.action==='data.export').length,1);
+  assert.equal(audit.filter(r=>r.action==='data.transfer.download').length,2);
+  const aborted=await h.post('data/transfers',{kind:'export'},201);
+  await h.restart();
+  assert.equal((await h.post(`data/transfers/${aborted.id}/abort`)).phase,'aborted');
+  const abortAudit=await h.get(`audit?kind=archive_transfer&id=${aborted.id}`);
+  assert.equal(abortAudit.filter(r=>r.action==='data.transfer.abort').length,1);
+  await h.post(`data/transfers/${aborted.id}/advance`,{maxParts:1},409);
+  const report=await h.get('reports/operations');
+  assert.ok(report.recovery.backup.last_generated_at);
+  assert.equal(report.recovery.backup.verified_external_copy,false,'archive generation never establishes external custody');
 }

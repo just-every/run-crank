@@ -137,8 +137,8 @@ export async function emittedRecovery() {
     assert.equal(report.recovery.executor.status, 'observed');
     assert.ok(report.execution_queue.runs.some(run => run.id === writeRun.id && run.uncertain_steps === 1));
     assert.equal(report.recovery.backup.verified_external_copy, false);
-    await archiveRecovery(h, flow, time, inFlight);
-    console.log('BASE-003 passed against emitted service: bounded dependency failure/repair, killed legacy and workflow delivery, durable queue/delay recovery, interrupted Cron/export, authorized archive reconciliation and custody');
+    await archiveRecovery(h);
+    console.log('BASE-003 passed against emitted service: bounded dependency failure/repair, killed legacy and workflow delivery, durable queue/delay recovery, interrupted Cron, resumable archive transfer and authorized reconciliation and custody');
   } finally {
     await h?.close();
     await Promise.allSettled(pending);

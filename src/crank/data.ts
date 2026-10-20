@@ -1,3 +1,4 @@
+import { archiveTransferApi } from './archive-api'
 import { archiveTransfers, operation } from './ops/recovery'
 import { createPortability, readArchive, type Manifest, type Part, type Closing } from '@runeditrun/rer/internal/modules/portability/index.mjs'
 import policy from './archive-policy.mjs'
@@ -23,6 +24,8 @@ export async function dataApi(request:Request,env:CrankEnv):Promise<Response|nul
     if(request.method !== 'GET') requireWriteOrigin(request,env,actor)
     if (path === '/api/crank/data/flows' && request.method === 'GET') return Response.json(await dataFlows(env),{headers:{'cache-control':'no-store'}})
     const store = await portability(env)
+    const transferResponse = await archiveTransferApi(request, env, store, actor)
+    if (transferResponse) return transferResponse
     if (path === '/api/crank/data/transfers' && request.method === 'GET') return Response.json(await archiveTransfers(env), { headers: { 'cache-control': 'no-store' } })
     const abort = /^\/api\/crank\/data\/transfers\/([^/]+)\/abort$/.exec(path)
     if (abort && request.method === 'POST') {
