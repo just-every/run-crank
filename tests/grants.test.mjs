@@ -33,6 +33,8 @@ test('TEAM-002: grant-free publication and credential-bound dynamic tasks; exact
   await h.post('data/attestations',{data_class:'financial',agreements:['Local acceptance test receiver and synthetic financial data only'],data_location:'Local test D1',confirm:'ATTEST'},h.owner,201);
   await h.post('data/classes',{workflow_id:w.id,data_class:'financial',identifier_fields:['to']});
   const g=await issue(h,w,policy(steps,c.id));
+  const setup=await h.mf.dispatchFetch(h.origin+'/setup',{method:'POST',headers:{origin:h.origin,cookie:h.owner,'content-type':'application/x-www-form-urlencoded'},body:'confirm=yes',redirect:'manual'});assert.equal(setup.status,303);
+  const access=await h.send('/app/access',undefined,h.owner);assert.equal(access.status,200);assert.ok(access.text.includes((await h.get('state')).actor.id),'owner can see native reviewer identifiers in the grant controls');
   const grants=await h.get('grants');assert.equal(grants[0].credential,undefined);assert.equal(grants[0].token_hash,undefined);
   assert.ok(!(JSON.stringify(await h.get('state'))).includes(g.credential));
   await h.post('grants',{...g},'',403,headers(g));await h.post('tokens',{label:'self escalation',scope:'agent'},'',403,headers(g));
