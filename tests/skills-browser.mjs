@@ -13,6 +13,7 @@ try {
   const context = await browser.newContext();
   const page = await context.newPage();
   await page.goto(open);
+  await page.waitForURL(url => ['/app', '/setup'].includes(url.pathname), { timeout: 60000 });
   if (new URL(page.url()).pathname === '/setup') {
     await page.locator('form').filter({ has: page.locator('[name="confirm"]') }).evaluate(form => form.requestSubmit());
     await page.waitForURL('**/app');
@@ -22,7 +23,7 @@ try {
       const response = await fetch('/api/crank/' + path, { method: body === undefined ? 'GET' : 'POST', headers: body === undefined ? {} : { 'content-type': 'application/json' }, ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
       return { status: response.status, value: await response.json() };
     }, { path, body });
-    assert.equal(result.status, expected, JSON.stringify(result.value)); return result.value;
+    assert.equal(result.status, expected, `${path}: ${JSON.stringify(result.value)}`); return result.value;
   };
   const costs = { cost: { components: ['orchestration','connectors','models','executors'].map(kind => ({ kind, usd_per_run: '0', assumption: 'Owner-reviewed native normalization; no external provider or executor charges' })) } };
   const shot = async (width, state) => {
