@@ -36,8 +36,10 @@ export async function dataApi(request:Request,env:CrankEnv):Promise<Response|nul
       // Finish the incoming POST stream before returning a large download.
       // Discard its unused bytes without retaining or interpreting their values.
       await request.body?.pipeTo(new WritableStream({ write() {} }))
-      return await operation(env, 'archive.export', async () => {
+      // Take the snapshot before journaling its generation, so it does not
+      // contain its own unfinished operation or change portable-record equality.
       const id = await store.exports.create(actor.id)
+      return await operation(env, 'archive.export', async () => {
       try {
         let status = await store.exports.status(id)
         while (status.phase === 'building') status = await store.exports.advance(id,{maxParts:10})

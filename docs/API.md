@@ -21,6 +21,8 @@ allow a 128 KiB source in a 256 KiB JSON envelope. Errors are JSON `{error}`.
 | GET `/imports` | Native/dev owner | Import history: door plans with approval captions, then jobs from the earlier importer |
 | POST `/imports/:id/undo` | Native/dev owner | Undo a job from the earlier importer, refusing target drift |
 | POST `/data/export` | Native/dev owner | Download installation archive |
+| GET `/data/transfers` | Native/dev owner | Latest 30 archive transfer IDs, kinds, phases and retained part counts |
+| POST `/data/transfers/:id/abort` | Native/dev owner | Abort a retained transfer; records the owner decision in the audit |
 | POST `/data/restore` | Native/dev owner | `{archive,confirm:"RESTORE",journal?}`; empty destination only |
 | POST `/data/erase` | Native/dev owner | `{run_id,confirm:"ERASE"}` for a paused approval flow, or `{workflow_run_id,confirm:"ERASE"}` for a paused multi-step workflow; terminal run only |
 | GET `/data/flows` | Native/dev owner | Read-only current destination/data-category inventory: recipient, purpose, field categories, region/retention uncertainty and credential kinds; no credential/graph values or provider requests |
@@ -270,3 +272,17 @@ current budget and complete reviewed batch. A legacy release creates pending
 approval runs and performs no external delivery. Budget holds never auto-expire.
 `settings.max_steps` bounds distinct expanded execution paths per run (1–10,000;
 default 10,000), retained across restarts. Production budgets exclude draft tests.
+
+## Dependency health and recovery
+
+`GET /health` is public and returns 503 with safe missing binding names or an
+unavailable storage state when required auth/executor storage fails its two-second
+probe. It never returns configuration values or database exception text. Optional
+provider errors appear separately in the owner-only Operations report.
+
+The report's `recovery` field shows timestamped Cron completion observations,
+allocated database bytes (when reported by D1), retained operation/transfer status,
+observed poll failures and archive generation. Provider capacity, current executor
+availability and off-installation backup receipt remain unestablished. Attempts
+without a terminal record after fifteen minutes become `interrupted` on the next
+Cron/report read; this never authorizes an uncertain remote write to run again.

@@ -26,6 +26,15 @@ chmod 600 exports/crank.rer
 The browser download supports archives up to 8 MiB; use the command when it asks
 you to. Keep archive files outside public or shared folders.
 
+## Interrupted transfers
+
+Open **Operations → Service recovery** after a disconnected export or restore.
+The archive transfer ID, phase and retained part count survive a service restart.
+An unfinished transfer does not claim completion. Select **Abort retained transfer**
+as the owner, then start a fresh export or restore from **Data**. The abort is
+attributed in the permanent audit. Export generation records that an archive was
+built; Crank does not verify that you received or stored an external backup.
+
 ## Restore into an empty installation
 
 Restore requires an empty destination for product data; it does not merge into

@@ -188,7 +188,7 @@ test('MIG-001 door refuses expressions and credential exports without echoing th
  const undone=await door(h,'undo',{planId:plan.planId});assert.ok(undone.status>=400 || undone.value.job?.state!=='undone',undone.text);assert.ok((await h.get()).flows.some(x=>x.id===flow.id),'a used import is never removed');
 });
 
-test('DATA-001: complete portable inventory, inactive restore, explicit per-run adoption and atomic refusal',async()=>{
+test('BASE-003 DATA-001: complete portable inventory, inactive restore, explicit per-run adoption and atomic refusal',async()=>{
  await restoreJourney();
  const archiveFlow=await h.flow('Archive fixture independent of test order');await h.run(archiveFlow);
  const exported=await h.send('/api/crank/data/export',{},h.owner);assert.equal(exported.status,200,exported.text);

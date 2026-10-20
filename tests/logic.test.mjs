@@ -107,7 +107,7 @@ test('WORK-012/WORK-002: no-code transforms, exact USD math, business days and l
   assert.equal(fake.to('crm.example').length, writes, 'validation failures create no invoice');
 });
 
-test('WORK-004: business-day delays, callback waits and a shared delay queue resume each step exactly once', async () => {
+test('BASE-003 WORK-004: business-day delays, callback waits and a shared delay queue resume each step exactly once', async () => {
   const delayed = await publish(h, 'Two-day follow-up', { trigger: { type: 'manual' }, steps: [
     { id: 'wait', type: 'delay', mode: 'for', input: { amount: 2, unit: 'business_days' }, timezone: 'America/Chicago' },
     { id: 'chase', type: 'http', input: { method: 'POST', url: 'https://crm.example/follow-ups', body: { run: '{{run.id}}' } } }] });

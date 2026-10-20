@@ -21,7 +21,11 @@ export async function archiveRecovery(h, flow, time, inFlight) {
   await h.get('data/transfers'); // Initialize Base's real portability tables.
   const observed = h.command('await-building-export');
   const download = inFlight(h.send('/api/crank/data/export', {}));
-  const building = await observed;
+  let building;
+  try { building = await observed; } catch (error) {
+    const result = await download;
+    assert.fail(`${error.message}; HTTP export ${result.error ? 'transport failed' : 'status '+result.value.status}; ${result.value?.value?.error ?? 'no public error code'}`);
+  }
   assert.equal(building.phase, 'building');
   await h.restart();
   assert.ok((await download).error, 'killing an in-flight export interrupts its HTTP response');

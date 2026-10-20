@@ -5,6 +5,27 @@ states with run history. Success means the workflow finished its declared steps;
 it does not mean an invoice settled, a customer received a parcel, or another
 business outcome happened.
 
+## Service recovery
+
+The owner sees the last completed Cron pass, allocated database size, recent
+scheduler/archive outcomes, observed poll failures and retained archive transfers.
+An observed Cron completion is timestamped; it does not establish current executor
+availability. Provider capacity and external backup receipt are labelled unverified.
+Queue depth, concurrency and lag below remain the measured execution capacity.
+
+Each scheduler or archive-generation attempt records a value-free start and outcome
+in the portable audit. A process lost before recording its outcome remains unfinished
+until its fifteen-minute deadline passes; the next Cron pass or report read records
+it as interrupted. Committed queues and safe reads resume from durable state. An
+uncertain write stays visible for destination reconciliation and cannot resume blindly.
+Maintenance changes commit atomically per retained record, so interrupted cleanup
+can resume without claiming an uncommitted expiry.
+
+Retained archive transfers show their phase and parts. The owner can abort one here
+before starting a fresh archive operation. Archive generation never establishes receipt
+or custody outside the installation. Connection state is separate from observed provider
+failure; credentials being active does not prove that a provider is available.
+
 ## Reports and the business day
 
 `GET /api/crank/reports/operations` returns aggregate counts, workflow and team
