@@ -2,7 +2,7 @@ import { action, esc, timestamp } from './document'
 function transferView(job: any) {
   const path = '/api/crank/data/transfers/' + encodeURIComponent(job.id)
   const resume = job.kind === 'export' && job.phase === 'building' ? action(path+'/advance','Resume export',{maxParts:'10',return_to:'/app/operations'}) : ''
-  const download = job.kind === 'export' && job.phase === 'complete' ? `<a href="${path}/download">Download archive</a>` : ''
+  const download = job.kind === 'export' && job.phase === 'complete' ? `<div class="actions"><a class="btn btn-secondary" href="${path}/download">Download archive</a></div>` : ''
   const abort = ['building','staging','applying'].includes(job.phase) ? action(path+'/abort','Abort retained transfer',{return_to:'/app/operations'},'danger') : ''
   return `<li>${esc(job.kind)} · <code>${esc(job.id)}</code> · ${esc(job.phase)} · ${job.retained_parts} parts retained${resume}${download}${abort}</li>`
 }
