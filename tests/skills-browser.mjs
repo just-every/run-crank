@@ -51,7 +51,7 @@ try {
     const good = await send(`workflows/${workflow.id}/run`, { input: { address: '29 Oak Street\nRear entrance  —  preserve internal spacing' } }, 201);
     assert.equal(good.status, 'succeeded'); samples.push(good.id);
     await page.goto(new URL('/app/skills', page.url()).href);
-    await page.getByLabel('Workflow', { exact: true }).selectOption(workflow.id);
+    await page.getByRole('combobox').selectOption(workflow.id);
     await page.getByLabel('Step ID', { exact: true }).fill('delivery_address');
     await page.getByLabel('Retained input field', { exact: true }).fill('value');
     await page.getByLabel('Retained run IDs, separated by commas').fill(samples.join(', '));
