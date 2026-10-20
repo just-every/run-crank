@@ -20,7 +20,7 @@ async function join(h,name) {
  const result=await h.send('/auth/confirm',{token});assert.equal(result.status,303);return {cookie:result.cookie,id:(await h.get('state',result.cookie)).actor.id};
 }
 
-test('TEAM-002: grant-free publication and credential-bound dynamic tasks; exact USD/recipient/field review, rejection, edited approval and reapproval after external changes',async()=>{
+test('TEAM-002 PLATFORM-001: grant-free publication and credential-bound dynamic tasks; exact USD/recipient/field review, rejection, edited approval and reapproval after external changes',async()=>{
  const edge=fakeEdge();edge.routes.set('grants-ledger.example',({body})=>jsonResponse({id:crypto.randomUUID(),effect:JSON.parse(body)}));
  const h=await harness('http://127.0.0.1:9',{edge:edge.edge});
  try{
@@ -66,7 +66,7 @@ test('TEAM-002: grant-free publication and credential-bound dynamic tasks; exact
  }finally{await h.close()}
 });
 
-test('TEAM-002: atomic rate bounds, immutable account/version grants, expiry and mid-dispatch revocation retain in-flight uncertainty and stop the next action',async()=>{
+test('TEAM-002 PLATFORM-001: atomic rate bounds, immutable account/version grants, expiry and mid-dispatch revocation retain in-flight uncertainty and stop the next action',async()=>{
  const edge=fakeEdge();let release,hold=false;
  edge.routes.set('grants-ledger.example',({url})=>hold&&url.pathname==='/first'?new Promise(resolve=>{release=()=>resolve(jsonResponse({id:'remote-recorded'}))}):jsonResponse({id:'recorded'}));
  const h=await harness('http://127.0.0.1:9',{edge:edge.edge});
@@ -88,7 +88,7 @@ test('TEAM-002: atomic rate bounds, immutable account/version grants, expiry and
  }finally{release?.();await h.close()}
 });
 
-test('TEAM-002 BASE-001 DATA-001 BASE-003: owner-selected native delegation and durable timeout escalation, complete inactive history restore and no inherited execution credential',async()=>{
+test('TEAM-002 PLATFORM-001 BASE-001 DATA-001 BASE-003: owner-selected native delegation and durable timeout escalation, complete inactive history restore and no inherited execution credential',async()=>{
  const edge=fakeEdge();edge.routes.set('grants-ledger.example',()=>jsonResponse({id:'retained'}));const h=await harness('http://127.0.0.1:9',{edge:edge.edge});let restored;
  try{
   const delegate=await join(h,'Finance reviewer'),outsider=await join(h,'Unassigned reviewer'),step=tool('refund'),w=await publish(h,'Weekend refund decision',{trigger:{type:'manual'},steps:[step]});

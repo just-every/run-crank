@@ -5,13 +5,13 @@ import { StepError } from '../engine/errors'
 import { validateGraph, type Graph } from '../engine/graph'
 import { isObject } from '../engine/values'
 import { CrankError, digest, canonical, id, now, requireValue, stmt, text, type Actor, type CrankEnv } from '../model'
-import { auditStatement } from '../ops/audit'
+import { auditStatement, auditStatementWhen } from '../ops/audit'
 import { attestedGuard, requireAttested } from '../ops/sensitive-data'
 import type { WorkflowRow } from '../triggers/admission'
 import { listHooks } from '../triggers/webhook'
 import { nextBoundary } from '../triggers/poll'
 import { nextOccurrence } from '../triggers/schedule'
-import { draftSnapshot } from './drafts'
+import { claimCommand, commandCondition, commandReceipt, committedReceipt, receiptMetadata, workflowCommand, type WorkflowCommand, type WorkflowReceipt } from './idempotency'
 import { snapshotBindings } from './snapshot'
 import { adoptionStatements, pendingRestore, restoreReview } from './restore'
 import { RETRY_POLICY } from '../connectors/retry-policy'
@@ -64,34 +64,59 @@ export async function listWorkflows(env: CrankEnv, params: URLSearchParams) {
 }
 
 /** Drafts are validated on save; they authorize nothing until an owner publishes them. */
-export async function createWorkflow(env: CrankEnv, actor: Actor, input: Record<string, unknown>) {
+export async function createWorkflow(env: CrankEnv, actor: Actor, input: Record<string, unknown>, idempotencyKey?: string | null) {
   requirePrepare(actor)
-  const { graph, warnings } = checked(input.graph)
-  const row = { id: id(), at: now() }
-  await guardedBatch(env, actor, 'prepare', [
-    stmt(env, `INSERT INTO crank_workflows(id,name,description,folder,owner_id,draft_json,draft_updated_at,status,settings_json,created_by,created_at) VALUES(?,?,?,?,?,?,?,'draft',?,?,?)`,
-      row.id, text(input.name, 'name'), description(input.description), folder(input.folder), actor.id, JSON.stringify(graph), row.at, JSON.stringify(isObject(input.settings) ? input.settings : {}), actor.id, row.at),
-    await draftSnapshot(env, actor, row.id, null, graph, { name: input.name, description: description(input.description), folder: folder(input.folder), settings: isObject(input.settings) ? input.settings : {} }),
-    auditStatement(env, actor.id, 'workflow.create', 'workflow', row.id),
+  const command = await workflowCommand(env, actor, idempotencyKey, 'create', '', input)
+  if (command?.existing) return savedWorkflow(env, command.existing.workflow_id, command.existing, true)
+  const { graph } = checked(input.graph)
+  const workflowId = id(), draftId = id(), at = now(), condition = commandCondition(command)
+  const metadata = { name: text(input.name, 'name'), description: description(input.description), folder: folder(input.folder), settings: isObject(input.settings) ? input.settings : {} }
+  const results = await guardedBatch(env, actor, 'prepare', [
+    ...(command ? [claimCommand(env, actor, command, workflowId, draftId)] : []),
+    stmt(env, `INSERT INTO crank_workflows(id,name,description,folder,owner_id,draft_json,draft_updated_at,status,settings_json,created_by,created_at) SELECT ?,?,?,?,?,?,?,'draft',?,?,? WHERE ${condition.sql}`,
+      workflowId, metadata.name, metadata.description, metadata.folder, actor.id, JSON.stringify(graph), at, JSON.stringify(metadata.settings), actor.id, at, ...condition.args),
+    await savedDraft(env, actor, workflowId, draftId, null, graph, metadata, at, command),
+    auditStatementWhen(env, condition.sql, condition.args, actor.id, 'workflow.create', 'workflow', workflowId),
+    ...(command ? [commandReceipt(env, command)] : []),
   ])
-  return { ...await presentWorkflow(env, await getWorkflow(env, row.id)), warnings }
+  const receipt = committedReceipt(results, command)
+  return savedWorkflow(env, receipt?.workflow_id ?? workflowId, receipt, receipt ? receipt.attempt_id !== command!.attempt : false)
 }
-export async function updateDraft(env: CrankEnv, actor: Actor, workflowId: string, input: Record<string, unknown>) {
+export async function updateDraft(env: CrankEnv, actor: Actor, workflowId: string, input: Record<string, unknown>, idempotencyKey?: string | null) {
   requirePrepare(actor)
+  const command = await workflowCommand(env, actor, idempotencyKey, 'draft', workflowId, input)
+  if (command?.existing) return savedWorkflow(env, workflowId, command.existing, true)
   const current = await getWorkflow(env, workflowId)
   const graph = input.graph === undefined ? JSON.parse(current.draft_json) : checked(input.graph).graph
-  const warnings = checked(graph).warnings
+  checked(graph)
+  const draftId = id(), at = now(), condition = commandCondition(command)
+  const metadata = { name: input.name === undefined ? current.name : text(input.name, 'name'), description: input.description === undefined ? current.description : description(input.description),
+    folder: input.folder === undefined ? current.folder : folder(input.folder), settings: isObject(input.settings) ? input.settings : JSON.parse(current.settings_json) }
   const changed = [['name', current.name], ['description', current.description], ['folder', current.folder], ['graph', null], ['settings', null]]
     .filter(([field, before]) => field === 'graph' ? canonical(graph) !== canonical(JSON.parse(current.draft_json)) : field === 'settings' ? isObject(input.settings) : input[field as string] !== undefined && input[field as string] !== before)
     .map(([field]) => field)
-  await guardedBatch(env, actor, 'prepare', [
-    stmt(env, 'UPDATE crank_workflows SET name=?,description=?,folder=?,draft_json=?,draft_updated_at=?,settings_json=? WHERE id=?',
-      input.name === undefined ? current.name : text(input.name, 'name'), input.description === undefined ? current.description : description(input.description),
-      input.folder === undefined ? current.folder : folder(input.folder), JSON.stringify(graph), now(), isObject(input.settings) ? JSON.stringify(input.settings) : current.settings_json, workflowId),
-    await draftSnapshot(env, actor, workflowId, current.published_version_id, graph, { name: input.name ?? current.name, description: input.description ?? current.description, folder: input.folder ?? current.folder, settings: isObject(input.settings) ? input.settings : JSON.parse(current.settings_json) }),
-    auditStatement(env, actor.id, 'workflow.draft', 'workflow', workflowId, { draft_digest: await digest(JSON.stringify(graph)), changed }, current.published_version_id),
+  const results = await guardedBatch(env, actor, 'prepare', [
+    ...(command ? [claimCommand(env, actor, command, workflowId, draftId)] : []),
+    stmt(env, `UPDATE crank_workflows SET name=?,description=?,folder=?,draft_json=?,draft_updated_at=?,settings_json=? WHERE id=? AND ${condition.sql}`,
+      metadata.name, metadata.description, metadata.folder, JSON.stringify(graph), at, JSON.stringify(metadata.settings), workflowId, ...condition.args),
+    await savedDraft(env, actor, workflowId, draftId, current.published_version_id, graph, metadata, at, command),
+    auditStatementWhen(env, condition.sql, condition.args, actor.id, 'workflow.draft', 'workflow', workflowId, { draft_digest: await digest(JSON.stringify(graph)), changed }, current.published_version_id),
+    ...(command ? [commandReceipt(env, command)] : []),
   ])
-  return { ...await presentWorkflow(env, await getWorkflow(env, workflowId)), warnings }
+  const receipt = committedReceipt(results, command)
+  return savedWorkflow(env, workflowId, receipt, receipt ? receipt.attempt_id !== command!.attempt : false)
+}
+
+async function savedDraft(env: CrankEnv, actor: Actor, workflowId: string, draftId: string, base: string | null, graph: unknown, metadata: Record<string, unknown>, at: string, command: WorkflowCommand | null) {
+  const graphJson = canonical(graph), condition = commandCondition(command)
+  return stmt(env, `INSERT INTO crank_workflow_drafts(id,workflow_id,base_version_id,graph_json,graph_digest,metadata_json,created_by,created_at)
+    SELECT ?,?,?,?,?,?,?,? WHERE ${condition.sql}`, draftId, workflowId, base, graphJson, await digest(graphJson), canonical(metadata), actor.id, at, ...condition.args)
+}
+
+async function savedWorkflow(env: CrankEnv, workflowId: string, receipt: WorkflowReceipt | null, replayed: boolean) {
+  const current = await getWorkflow(env, workflowId)
+  return { ...await presentWorkflow(env, current), warnings: checked(JSON.parse(current.draft_json)).warnings,
+    ...(receipt ? { idempotency: receiptMetadata(receipt, replayed) } : {}) }
 }
 export async function duplicateWorkflow(env: CrankEnv, actor: Actor, workflowId: string) {
   const current = await getWorkflow(env, workflowId)

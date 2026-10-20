@@ -1,0 +1,12 @@
+{
+  "name": "@automation/crank-sdk",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": { "types": "./index.d.ts", "import": "./index.js" }
+  },
+  "files": ["index.js", "transport.js", "errors.js", "index.d.ts", "README.md"],
+  "engines": { "node": ">=22" },
+  "license": "MIT"
+}

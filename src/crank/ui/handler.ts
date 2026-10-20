@@ -3,6 +3,7 @@ import { usageView, usageHoldView } from './usage'
 import { operationsView } from './operations'
 import { crankApi } from '../api'
 import { workflowApi } from '../workflows/api'
+import { versionedApi } from '../platform/versioned'
 import { importApi } from '../import-api'
 import { importDoor } from '../import-door'
 import { dataApi } from '../data'
@@ -28,7 +29,7 @@ const redirect = (location:string) => new Response(null,{status:303,headers:{loc
 // A form may name where to return after its action: a path inside the app, nothing else.
 const safeReturn = (value:unknown) => typeof value==='string' && /^\/app(\/[A-Za-z0-9/_.-]*)?(\?[A-Za-z0-9=&%_.-]*)?$/.test(value) ? value : null
 export async function productApi(request:Request,env:CrankEnv):Promise<Response|null> {
-  return await importDoor(request,env) ?? await importApi(request,env) ?? await dataApi(request,env) ?? await workflowApi(request,env) ?? await crankApi(request,env)
+  return await versionedApi(request,env) ?? await importDoor(request,env) ?? await importApi(request,env) ?? await dataApi(request,env) ?? await workflowApi(request,env) ?? await crankApi(request,env)
 }
 async function formValues(request:Request) {
   if (!request.headers.get('content-type')?.startsWith('application/x-www-form-urlencoded')) throw new Error('Use a form submission.')

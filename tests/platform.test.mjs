@@ -1,0 +1,96 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {harness} from './harness.mjs';
+import {fakeEdge,jsonResponse} from './kit.mjs';
+import {CrankClient,CrankApiError} from '../sdk/index.js';
+import {archive} from './restore-journey.mjs';
+
+const graph={trigger:{type:'manual'},steps:[{id:'receipt',type:'http',input:{method:'POST',url:'https://platform-ledger.example/receipts',body:{to:'operations@harbor.example',amount:'25.00'}}}]};
+const costs={cost:{components:['orchestration','connectors','models','executors'].map(kind=>({kind,usd_per_run:'0',assumption:'Owner-reviewed synthetic network edge; no paid operations'}))}};
+const client=(h,authority={cookie:h.owner})=>new CrankClient({baseUrl:h.origin,...authority,fetch:(url,init)=>h.mf.dispatchFetch(url,init)});
+const mcp=(h,authority={cookie:h.owner})=>async(method,params={},id=crypto.randomUUID())=>{
+ const response=await h.mf.dispatchFetch(h.origin+'/api/crank/v1/mcp',{method:'POST',headers:{origin:h.origin,accept:'application/json, text/event-stream','content-type':'application/json','mcp-protocol-version':'2025-06-18',...(authority.cookie?{cookie:authority.cookie}:{}),...(authority.token?{authorization:'Bearer '+authority.token}:{})},body:JSON.stringify({jsonrpc:'2.0',...(id===undefined?{}:{id}),method,params})});
+ return {status:response.status,value:response.status===202?null:await response.json()};
+};
+const call=async(rpc,name,args={})=>{const r=await rpc('tools/call',{name,arguments:args});assert.equal(r.status,200);assert.ok(!r.value.error,JSON.stringify(r.value));return r.value.result};
+const issue=async(h,w)=>h.post('grants',{label:'Harbor supplier receipt agent',workflow_id:w.id,version_id:w.published_version_id,expires_at:new Date(Date.now()+3600000).toISOString(),policy:{rules:[{step_id:'receipt',type:'http',connection_id:null,app:'none',fields:['method','url','body'],recipients:['operations@harbor.example'],recipient_field:'body.to',amount_field:'body.amount',max_usd:'100.00',max_per_minute:50}],approval:{timeout_seconds:60,delegate_ids:[],escalate_to:[]}}},h.owner,201);
+
+test('PLATFORM-001: SDK and MCP draft lifecycle, granted execution/progress, paginated reads and out-of-grant denial share native approval and audit',async()=>{
+ const edge=fakeEdge();edge.routes.set('platform-ledger.example',({body})=>jsonResponse({id:crypto.randomUUID(),receipt:JSON.parse(body)}));
+ const h=await harness('http://127.0.0.1:9',{edge:edge.edge});
+ try{
+  const sdk=client(h),rpc=mcp(h);
+  const initialized=await rpc('initialize',{protocolVersion:'2025-06-18',capabilities:{},clientInfo:{name:'Crank public-door acceptance',version:'1'}});
+  assert.equal(initialized.value.result.capabilities.tools.listChanged,false);
+  const notification=await h.mf.dispatchFetch(h.origin+'/api/crank/v1/mcp',{method:'POST',headers:{origin:h.origin,cookie:h.owner,accept:'application/json, text/event-stream','content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',method:'notifications/initialized'})});assert.equal(notification.status,202);assert.equal(await notification.text(),'');
+  const hostile=await h.mf.dispatchFetch(h.origin+'/api/crank/v1/mcp',{method:'POST',headers:{origin:'https://foreign.example',cookie:h.owner,accept:'application/json, text/event-stream','content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:1,method:'tools/list'})});assert.equal(hostile.status,403);
+  const malformed=await h.mf.dispatchFetch(h.origin+'/api/crank/v1/mcp',{method:'POST',headers:{origin:h.origin,cookie:h.owner,accept:'application/json, text/event-stream','content-type':'application/json'},body:'{'});assert.equal(malformed.status,400);assert.equal((await malformed.json()).error.code,-32700);
+  const listed=await rpc('tools/list');assert.ok(listed.value.result.tools.some(t=>t.name==='start_task'));
+  assert.equal((await rpc('invented')).value.error.code,-32601);
+  assert.equal((await rpc('tools/call',{name:'get_run',arguments:{run_id:'x',url:'https://untrusted.example'}})).value.error.code,-32602);
+  const draft=await sdk.createDraft({name:'Harbor Workshop — supplier receipt integration',graph},{idempotencyKey:'sdk-create'});
+  assert.equal(draft.status,'draft');assert.equal(edge.requests.length,0);
+  assert.equal((await sdk.validateDraft(draft.id)).ok,true);
+  const mcpDraft=await call(rpc,'create_draft',{input:{name:'Harbor Workshop — MCP draft only',graph},idempotency_key:'mcp-create'});
+  const duplicate=await call(rpc,'create_draft',{input:{name:'Harbor Workshop — MCP draft only',graph},idempotency_key:'mcp-create'});
+  assert.equal(mcpDraft.structuredContent.value.id,duplicate.structuredContent.value.id);
+  assert.equal(edge.requests.length,0,'remote draft creation/validation never dispatches actions');
+  assert.equal((await call(rpc,'validate_draft',{workflow_id:mcpDraft.structuredContent.value.id})).structuredContent.value.ok,true);
+  const preparer=await h.post('tokens',{label:'Harbor integrations preparation',scope:'agent'},h.owner,201), prep=client(h,{token:preparer.token});
+  assert.equal((await prep.createDraft({name:'Agent-prepared inert draft',graph})).status,'draft');
+  await assert.rejects(()=>prep.publishDraft(draft.id),e=>e instanceof CrankApiError&&e.status===403&&e.code==='forbidden');
+  await h.post(`workflows/${draft.id}/estimate`,costs);
+  const published=await sdk.publishDraft(draft.id);assert.ok(published.version.id);
+  const current=await sdk.readWorkflow(draft.id), grant=await issue(h,current), exec=client(h,{token:grant.credential}), agentRpc=mcp(h,{token:grant.credential});
+  const input={task_id:'sdk-receipt',actions:[{step_id:'receipt',input:{body:{to:'operations@harbor.example',amount:'25.00'}}}]};
+  const run=await exec.startTask(input);assert.equal(run.status,'succeeded');assert.equal((await exec.readTask(run.id)).id,run.id);
+  const second=await call(agentRpc,'start_task',{input:{...input,task_id:'mcp-receipt'}});assert.equal(second.structuredContent.value.status,'succeeded');
+  assert.equal((await call(agentRpc,'get_task',{run_id:second.structuredContent.value.id})).structuredContent.value.grant_id,grant.id);
+  const count=edge.requests.length;
+  await assert.rejects(()=>exec.startTask({task_id:'foreign',actions:[{step_id:'foreign',input:{}}]}),e=>e.status===422&&e.code==='invalid_operation');
+  assert.equal((await call(agentRpc,'create_draft',{input:{name:'Escalate',graph}})).isError,true);
+  assert.equal((await call(agentRpc,'list_connections')).isError,true);
+  const held=await call(agentRpc,'start_task',{input:{task_id:'outside-limit',actions:[{step_id:'receipt',input:{body:{to:'outsider@example.test',amount:'100.01'}}}]}});
+  assert.equal(held.structuredContent.value.status,'awaiting_approval');assert.equal(edge.requests.length,count,'grant limit cannot bypass exact human approval');
+  const waiting=held.structuredContent.value;
+  assert.equal((await h.post(`workflow-runs/${waiting.id}/reject`,{path:waiting.waits[0].path,digest:waiting.waits[0].proposal_digest})).status,'rejected');
+  assert.equal(edge.requests.length,count);
+  const seen=[];for await(const r of sdk.iterateRuns({workflow:draft.id,limit:1}))seen.push(r.id);
+  assert.deepEqual(new Set(seen),new Set([run.id,second.structuredContent.value.id,waiting.id]));assert.equal(seen.length,3);
+  const page=await call(rpc,'list_runs',{workflow:draft.id,limit:1});assert.ok(page.structuredContent.value.next);
+  const next=await call(rpc,'list_runs',{workflow:draft.id,limit:1,before:page.structuredContent.value.next});assert.notEqual(next.structuredContent.value.runs[0].id,page.structuredContent.value.runs[0].id);
+  const audit=await h.get('audit');for(const action of ['workflow.create','workflow.publish','grant.task','run.reject'])assert.ok(audit.some(a=>a.action===action),action);
+  assert.equal((await h.send('/api/crank/v1/workflows')).value.code,'unauthenticated');
+  await h.post(`grants/${grant.id}/revoke`);await assert.rejects(()=>exec.readTask(run.id),e=>e.status===401);
+ }finally{await h.close()}
+});
+
+test('PLATFORM-001: concurrent and restarted draft retries retain one identity/snapshot/audit, reject changed keys and restore without local receipts',async()=>{
+ const h=await harness('http://127.0.0.1:9');let restored;
+ try{
+  const sdk=client(h), input={name:'Harbor Workshop — durable draft write',graph};
+  const copies=await Promise.all(Array.from({length:4},()=>sdk.createDraft(input,{idempotencyKey:'create-one'})));
+  assert.equal(new Set(copies.map(w=>w.id)).size,1);assert.equal(new Set(copies.map(w=>w.idempotency.draft_id)).size,1);
+  const id=copies[0].id;assert.equal((await sdk.listWorkflows()).length,1);assert.equal((await sdk.readWorkflow(id)).draft_versions.length,1);
+  await assert.rejects(()=>sdk.createDraft({...input,name:'Conflicting reuse'},{idempotencyKey:'create-one'}),e=>e.status===409&&e.code==='conflict');
+  const edit={description:'Supplier onboarding — owner reviews before publication'};
+  const saves=await Promise.all(Array.from({length:4},()=>sdk.updateDraft(id,edit,{idempotencyKey:'draft-one'})));
+  assert.equal(new Set(saves.map(w=>w.idempotency.draft_id)).size,1);assert.equal((await sdk.readWorkflow(id)).draft_versions.length,2);
+  await sdk.updateDraft(id,{description:'Later owner revision'});
+  await h.restart();const retry=await sdk.updateDraft(id,edit,{idempotencyKey:'draft-one'});
+  assert.equal(retry.description,'Later owner revision');assert.equal(retry.idempotency.replayed,true);assert.equal(retry.idempotency.draft_id,saves[0].idempotency.draft_id);
+  await assert.rejects(()=>sdk.updateDraft(id,{description:'Changed key payload'},{idempotencyKey:'draft-one'}),e=>e.status===409);
+  const audit=(await h.get('audit')).filter(a=>a.subject_id===id);assert.equal(audit.filter(a=>a.action==='workflow.create').length,1);assert.equal(audit.filter(a=>a.action==='workflow.draft').length,2);
+  const actor=await h.post('tokens',{label:'Different preparer credential',scope:'agent'},h.owner,201);
+  const agent=client(h,{token:actor.token}), own=await agent.createDraft(input,{idempotencyKey:'create-one'});assert.notEqual(own.id,id);
+  await h.post(`tokens/${actor.id}/revoke`);await assert.rejects(()=>agent.createDraft(input,{idempotencyKey:'create-one'}),e=>e.status===401);
+  const exported=await archive(h),items=exported.trim().split('\n').map(JSON.parse).flatMap(line=>line.items??[]);
+  assert.ok(!items.some(item=>item.kind==='row'&&item.table==='crank_workflow_idempotency'));assert.ok(!exported.includes('create-one'));assert.ok(!exported.includes('draft-one'));
+  restored=await harness('http://127.0.0.1:9');await restored.post('data/restore',{archive:exported,confirm:'RESTORE'});
+  assert.equal((await restored.get(`workflows/${id}`)).status,'draft');assert.equal((await restored.get(`workflows/${id}`)).draft_versions.length,3);
+  const rows=text=>text.trim().split('\n').map(JSON.parse).flatMap(line=>line.items??[]).filter(item=>item.kind==='row').map(({table,row})=>JSON.stringify({table,row})).sort();
+  const before=rows(exported),after=rows(await archive(restored));assert.deepEqual(after.filter(item=>before.includes(item)),before);
+  assert.deepEqual(after.filter(item=>!before.includes(item)).map(item=>JSON.parse(item).row.action),['data.restore']);
+  await restored.restart();await restored.tick();assert.equal((await restored.get(`workflows/${id}`)).status,'draft');
+ }finally{await restored?.close();await h.close()}
+});

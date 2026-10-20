@@ -366,3 +366,71 @@ required. A stale digest refuses the decision. Started effects cannot be revised
 Revocation, expiry, owner identity/version changes or publication replacement
 stop authority at subsequent steps and physical requests. Check history and
 reconcile an already-started write; revocation cannot undo a remote effect.
+
+
+## Version 1, SDK and MCP (PLATFORM-001)
+
+The workflow and flow routes above also accept `/api/crank/v1` instead of
+`/api/crank`. Existing routes remain available. V1 responses carry
+`Crank-API-Version: 1`. Error JSON preserves `error` (a safe message) and adds
+`api_version: "1"`, numeric `status` and stable `code`: `invalid_request`
+(400/405/406/413/415), `unauthenticated` (401), `forbidden` (403), `not_found`
+(404), `conflict` (409), `invalid_operation` (422), `unavailable` (502/503),
+or `operation_failed` for another HTTP error. A workflow validation failure
+can also report `ok:false` and an engine `category`. Never infer success from
+an unavailable response: inspect retained progress before repeating a write.
+Archive, import and authentication doors keep their existing URLs.
+
+The dependency-free [JavaScript SDK](../sdk/README.md) supports native session
+cookies (Node), same-origin browser sessions, preparation bearer credentials
+and separate execution bearer credentials. It creates, saves, reads, validates
+and publishes drafts, reads run pages and starts/inspects granted tasks. It
+never retries a write automatically. Publish still requires a native owner and
+the existing reviewed USD estimate; execution still requires an owner-issued
+grant. The SDK and MCP add no external recipient or execution class: the same
+published destinations, input/file limits, audit, sealing, erasure, recovery
+and inactive archive rules apply.
+
+Only workflow create and draft save add `Idempotency-Key` support. The optional
+header is 1–200 visible ASCII characters, scoped to the current credential
+(session or token), operation and target workflow. Canonical JSON comparison
+ignores object-key order; the same key/body yields one workflow/save, snapshot
+and audit entry even concurrently or after restart. A changed body under that
+key returns 409 `conflict`. A response includes
+`idempotency:{replayed,workflow_id,draft_id}`. The original draft receipt remains
+stable while the workflow representation reflects current edits; a replay
+cannot revert newer edits. A new session/token is a separate key namespace.
+Receipts retain only hashes and IDs, are installation-local, do not travel in
+archives, and are removed during operator erasure. Other write endpoints keep
+their documented existing behavior.
+
+### MCP client connection
+
+Connect a Streamable HTTP MCP client to `/api/crank/v1/mcp`, using the same
+native or bearer credential as the JSON API. The stateless server implements
+protocol `2025-06-18` with JSON responses: `initialize`, `ping`, `tools/list`
+and `tools/call`; initialized/cancelled notifications return 202. Send
+`Accept: application/json, text/event-stream`, JSON-RPC 2.0 and, after
+initialization, `MCP-Protocol-Version: 2025-06-18`. GET returns 405; the server
+does not provide an SSE notification stream or retain MCP sessions. Origin
+checks and authentication apply to every request. The transport follows the
+[MCP Streamable HTTP specification](https://modelcontextprotocol.io/specification/2025-06-18/basic/transports).
+
+Tools are `create_draft`, `update_draft`, `validate_draft`, `publish_workflow`,
+`get_workflow`, `list_workflows`, `list_runs`, `get_run`, `list_connections`,
+`start_task` and `get_task`. Discover their argument schemas with `tools/list`.
+Create/update take `input` and optional `idempotency_key`; workflow tools take
+`workflow_id`, run/task reads take `run_id`. `start_task` takes `input` containing
+`task_id` and `actions`. `list_runs` returns the normal `{runs,next}` page;
+pass `next` as `before` on the next call. Tool responses include text JSON and
+`structuredContent:{status,value}`; native refusal sets `isError:true`.
+Protocol/argument errors use JSON-RPC errors. Draft tools cannot execute work,
+preparation credentials cannot publish or start tasks, and an execution
+credential can only start/read its own tasks. Above-limit proposals wait for
+normal exact human review, and unknown tools/transport changes are refused.
+MCP tool metadata is descriptive; the native API enforces every permission.
+
+Outgoing signed completion subscriptions, webhook retry history and secret
+rotation are not shipped. PLATFORM-001 remains partial, including the Base
+egress door requirement for owner-entered destinations. This MCP server does
+not claim the connected-app MCP capabilities of PLATFORM-002.

@@ -26,6 +26,7 @@ export async function eraseOperator(env: CrankEnv, actor: Actor, operatorId: str
   await guardedBatch(env, actor, 'owner', [
     stmt(env, `INSERT INTO crank_authority_guards(id,ok) SELECT ?,CASE WHEN EXISTS(SELECT 1 FROM oa_operators WHERE id=? AND email=? AND role!='owner' AND status='inactive') THEN 1 ELSE 0 END`, guard, person.id, person.email),
     ...ATTRIBUTION.map(([table, column]) => stmt(env, `UPDATE ${table} SET ${column}=? WHERE ${column}=?`, label, person.id)),
+    stmt(env, 'DELETE FROM crank_workflow_idempotency WHERE actor_id=?', person.id),
     stmt(env, "UPDATE crank_audit SET subject_id=? WHERE subject_kind='operator' AND subject_id=?", label, person.id),
     stmt(env, 'UPDATE oa_auth_audit SET actor_id=CASE WHEN actor_id=?1 THEN ?2 ELSE actor_id END,value=CASE WHEN value IN (?1,?3) THEN ?2 ELSE value END WHERE actor_id=?1 OR value IN (?1,?3)', person.id, label, person.email),
     stmt(env, 'UPDATE oa_sessions SET revoked_at=? WHERE operator_id=? AND revoked_at IS NULL', at, person.id),

@@ -156,10 +156,10 @@ export async function workflowApi(request: Request, env: CrankEnv): Promise<Resp
     if (path === '/api/crank/reports/settings') return json(await configureOperations(env, actor, input))
     if (path === '/api/crank/reports/obligations') return json(await createObligation(env, actor, input), 201)
     if ((m = match(path, /^\/api\/crank\/reports\/obligations\/([^/]+)\/verify$/))) return json(await verifyObligation(env, actor, m[0], input))
-    if (path === '/api/crank/workflows') return json(await createWorkflow(env, actor, input), 201)
+    if (path === '/api/crank/workflows') return json(await createWorkflow(env, actor, input, request.headers.get('Idempotency-Key')), 201)
     if ((m = match(path, /^\/api\/crank\/workflows\/([^/]+)\/(draft|validate|publish|rollback|unpublish|pause|resume|duplicate|run|test|preview|hooks)$/))) {
       const [workflowId, action] = m
-      if (action === 'draft') return json(await updateDraft(env, actor, workflowId, input))
+      if (action === 'draft') return json(await updateDraft(env, actor, workflowId, input, request.headers.get('Idempotency-Key')))
       if (action === 'validate') {
         try { const { warnings, declared } = validateGraph(input.graph ?? JSON.parse((await getWorkflow(env, workflowId)).draft_json)); return json({ ok: true, warnings, declared }) }
         catch (error) { if (error instanceof StepError) return json({ ok: false, error: error.message }, 422); throw error }
