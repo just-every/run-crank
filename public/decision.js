@@ -65,12 +65,13 @@ function showPage(response, html) {
   document.title = page.title;
   document.body.replaceChildren(...page.body.childNodes);
   history.replaceState(null, '', url.href);
+  document.dispatchEvent(new Event('crank:page'));
   refreshUrl = url.href;
   pending = false;
   return true;
 }
 
-async function reconcile(message = 'Latest state loaded. Review the current proposal before deciding.') {
+async function reconcile(message = 'Latest state loaded. Review the current run state below.') {
   if (refreshing) return;
   refreshing = true;
   lock();
