@@ -106,6 +106,10 @@ test('TEAM-002 BASE-001 DATA-001 BASE-003: owner-selected native delegation and 
   const original=items(exported),received=items(await archive(restored));assert.deepEqual(received.filter(r=>!original.includes(r)).map(r=>JSON.parse(r).row.action),['data.restore']);assert.deepEqual(received.filter(r=>original.includes(r)),original);
   assert.deepEqual(await restored.get('grants'),[]);await task(restored,g,[action(step,{})],401);
   await restored.restart();await restored.tick(deadline+86400000);assert.equal(edge.requests.length,count);assert.equal((await restored.get('workflow-runs/'+timeout.id)).status,'paused');
+  const adoption=await restored.get('workflows/'+w.id);
+  await restored.post(`workflows/${w.id}/publish`,{restore_snapshot:adoption.restore.snapshot,restore_decisions:{[timeout.id]:'resume'}},restored.owner,201);
+  const receiving=await restored.get('workflow-runs/'+timeout.id);assert.equal(receiving.grant_id,null,'explicit native adoption replaces the source execution authority');
+  const resumed=await decide(restored,receiving);assert.equal(resumed.status,'succeeded');assert.equal(resumed.version_id,timeout.version_id);assert.equal(edge.requests.length,count+1,'only explicit receiving-owner review dispatches the frozen task');await task(restored,g,[action(step,{})],401);
   const disclosures=await h.get('data/flows');assert.ok(disclosures.flows.some(f=>f.recipients.includes('https://grants-ledger.example')&&f.fields.includes('body.amount')));
   assert.equal((await decide(h,escalated,'reject',{},outsider.cookie)).status,'rejected');
   assert.equal((await h.get('audit')).filter(a=>a.action==='grant.approval.escalate').length,1);

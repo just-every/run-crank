@@ -41,10 +41,13 @@ export async function adoptionStatements(env: CrankEnv, actor: Actor, workflow: 
     (SELECT COUNT(*) FROM crank_wf_runs WHERE workflow_id=? AND status='paused' AND json_extract(error_json,'$.category')='restore_fence')=? AND
     NOT EXISTS(SELECT 1 FROM json_each(?) j WHERE NOT EXISTS(SELECT 1 FROM crank_wf_runs r WHERE r.id=json_extract(j.value,'$.id') AND r.status='paused' AND r.error_json=json_extract(j.value,'$.error_json')))
     THEN 1 ELSE 0 END`, guard, workflow.id, RESTORED_OWNER, workflow.draft_json, workflow.settings_json, workflow.id, review.runs.length, JSON.stringify(review.runs))]
+  // DATA-001: adoption is a native owner's authority over the frozen graph,
+  // never imported agent authority. Original grant provenance stays in the
+  // immutable version declaration and audit; the source credential stays inert.
   for (const run of review.runs) {
     const resume = choices[run.id] === 'resume', prior = JSON.parse(run.error_json)
     const state = resume ? (['waiting', 'awaiting_approval'].includes(prior.previous_status) ? prior.previous_status : 'queued') : 'cancelled'
-    statements.push(stmt(env, `UPDATE crank_wf_runs SET status=?,error_json=?,continuation_authority=?,finished_at=? WHERE id=? AND status='paused' AND error_json=?`,
+    statements.push(stmt(env, `UPDATE crank_wf_runs SET status=?,error_json=?,continuation_authority=?,finished_at=?,grant_id=NULL WHERE id=? AND status='paused' AND error_json=?`,
       state, resume && prior.previous_error ? JSON.stringify(prior.previous_error) : null, resume ? 2 : 0, resume ? null : at, run.id, run.error_json))
     if (!resume) statements.push(
       stmt(env, `UPDATE crank_waits SET resolved_at=?,resolution_json='{"cancelled":true}',decided_by=? WHERE run_id=? AND resolved_at IS NULL`, at, actor.id, run.id),
