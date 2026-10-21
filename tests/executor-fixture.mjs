@@ -24,6 +24,6 @@ export async function linuxExecutor() {
  };
  let origin=await start();
  const stop=async(signal='SIGTERM')=>{const previous=child;if(previous.exitCode!==null)return;const stopped=new Promise(r=>previous.once('close',r));previous.kill(signal);await stopped};
- const call=async(path,body,authorization=token)=>{const response=await fetch(origin+path,{method:body===undefined?'GET':'POST',headers:{authorization:'Bearer '+authorization,'content-type':'application/json'},...(body===undefined?{}:{body:JSON.stringify(body)}),signal:AbortSignal.timeout(10000)});return {status:response.status,value:await response.json()}};
+ const call=async(path,body,authorization=token)=>{const response=await fetch(origin+path,{method:body===undefined?'GET':'POST',headers:{authorization:'Bearer '+authorization,'content-type':'application/json'},...(body===undefined?{}:{body:JSON.stringify(body)}),signal:AbortSignal.timeout(10000)}).catch(error=>{throw new Error(`Executor transport failed (exit=${child.exitCode}, signal=${child.signalCode}): ${log}`,{cause:error})});return {status:response.status,value:await response.json()}};
  return {get origin(){return origin},token,call,async restart(crash=false){await stop(crash?'SIGKILL':'SIGTERM');origin=await start()},async close(){await stop();await rm(root,{recursive:true,force:true})}};
 }

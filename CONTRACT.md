@@ -946,7 +946,7 @@ Every capability the homepage states, in page order, for the owner-approved stru
 | 10 | Move in: "Give Crank your Zapier, Make or Workato export. It rebuilds each workflow" | `MIG-002`, `MIG-003`, `MIG-004` | missing | contract, not yet in code |
 | 11 | Move in: "runs it beside the old one until the results match"; import card "Past runs checked · 212 of 212 match", "37 running side by side" | `MIG-006`, `MIG-002` | missing | contract, not yet in code |
 | 12 | Move in terminal: `git clone` the repository, then `cd crank && rer dev` starts Crank | `BASE-005` | partial | partly: `RUN-LOCALLY.md`, `src/site/run.json` |
-| 13 | Move in import card: "Formatter → code step" | `MIG-002`, `WORK-005` | partial | contract, not yet in code |
+| 13 | Move in import card: "Formatter → code step" | `MIG-002`, `WORK-005` | partial | partly: `src/crank/executors/step.ts`; Formatter Zap migration remains contract, not yet in code |
 | 14 | Move in import card: "Needs you · Paths step has no default. Send other refunds to Finance or Support?" | `MIG-002`, `WORK-013` | partial | partly: `src/crank/engine/conditions.ts` (paths); the import question is contract, not yet in code |
 | 15 | Move in import card: Stripe, QuickBooks, Shopify, Slack, Gmail, Google Sheets, Typeform, HubSpot and Zendesk workflows | `CONN-008`, `CONN-007`, `CONN-004`, `CONN-003`, `CONN-005`, `CONN-012`, `CONN-006`, `CONN-009` | partial | partly: `src/crank/connectors/slack.ts`; the other apps are contract, not yet in code |
 | 16 | One run: a run traced step by step with its payload values and times ("Run #1,412 · 5 steps") | `EXEC-005` | done | `src/crank/workflows/runs.ts`, `src/crank/ui/workflow-run.ts`, `tests/app.test.mjs` |
@@ -971,7 +971,7 @@ Every capability the homepage states, in page order, for the owner-approved stru
 | 35 | Books match: "Crank checks every Stripe payment against its QuickBooks invoice, and fixes what is missing"; ledger "1,912 payments · $148,920.40 · Matched" | `AGENT-001`, `CONN-008`, `CONN-007` | partial | partly: `src/crank/delivery.ts`; Stripe and QuickBooks are contract, not yet in code |
 | 36 | Books match ledger: "Created INV-4410", "Applied to INV-4398", "Credit memo CM-212" | `CONN-007` | missing | contract, not yet in code |
 | 37 | Limits: "No desktop or screen-scraping robots" | none needed: a boundary, true of the code | done | code: `src/crank/engine/steps/index.ts` (no desktop or screen step type exists) |
-| 38 | Limits: "Apps outside the library connect over HTTP or a code step" | `HTTP-002`, `WORK-005` | partial | partly: `src/crank/connectors/http-step.ts`; code steps are contract, not yet in code |
+| 38 | Limits: "Apps outside the library connect over HTTP or a code step" | `HTTP-002`, `WORK-005` | partial | partly: `src/crank/connectors/http-step.ts`; `src/crank/executors/step.ts`; network-enabled code and dependency installation remain unfinished |
 | 39 | Closing: "Open source workflow automation for every team" / "Free and open source, MIT licensed" | `BASE-004` | done | `LICENSE`, `package.json`, `tests/site.test.mjs`, `tests/ownership.test.mjs` |
 | 40 | Closing art: "All 38 workflows ran" | `OPS-001` | done | `src/crank/ops/report.ts` |
 
@@ -982,8 +982,8 @@ Judged from the code and tests at commit `d68e5c8981c9984581920527fc78a58c6cdba4
 | Clauses | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
 | Published | 8 | 4 | 0 | 12 |
-| Target and push further | 19 | 20 | 34 | 73 |
-| All | 27 | 24 | 34 | 85 |
+| Target and push further | 19 | 21 | 33 | 73 |
+| All | 27 | 25 | 33 | 85 |
 
 BASE-003 was completed on 20 October 2026 with the named emitted-service and public-door recovery journeys below.
 
@@ -995,7 +995,7 @@ MIG-006, BASE-004 and BASE-005 were added on 17 October 2026 so every homepage c
 | `WORK-002` | Mapping, formatting and conditional routes | target | partial | `src/crank/engine/mapping.ts`; `src/crank/engine/transforms/index.ts`; `src/crank/connectors/files.ts`; `tests/logic.test.mjs`; `tests/connections.test.mjs` | Connector schema validation; HubSpot, Square and QuickBooks line-item read/write and Drive upload readback need accounts (HubSpot, Square, QuickBooks sandbox, Typeform, Google Drive). |
 | `WORK-003` | Loops, joins and batch processing | target | done | `src/crank/engine/loop.ts`; `src/crank/engine/graph.ts`; `src/crank/engine/executor.ts`; `src/crank/engine/steps/join.ts`; `src/crank/connectors/pagination.ts`; `tests/batch.test.mjs`; `tests/pagination.test.mjs` (WORK-003) |  |
 | `WORK-004` | Durable delay and event waits | target | done | `src/crank/engine/steps/flow.ts`; `src/crank/engine/records.ts`; `src/crank/ops/delay-queues.ts`; `src/crank/ops/scheduler.ts`; `src/crank/triggers/callbacks.ts`; `tests/logic.test.mjs` (WORK-004: storage interruption, concurrent release, restart, DST, expiry and cancellation) | |
-| `WORK-005` | Isolated code steps and external executors | target | partial |  | No delivered product workflow. |
+| `WORK-005` | Isolated code steps and external executors | target | partial | `src/crank/executors/step.ts`; `src/crank/executors/scheduler.ts`; `executors/linux/server.mjs`; `executors/linux/sandbox.mjs`; `tests/executors.test.mjs`; `tests/executor-linux.mjs` | Published isolated Python/JavaScript/TypeScript jobs, durable task readback, bounded requests, cancellation and crash refusal, per-process address-space/time/network isolation, inactive task-reference restore and run erasure. Gap: network-enabled jobs, versioned third-party dependencies, aggregate task-memory quotas and heavier browser/ETL executors; executor transport retains HTTP-002’s enforcing-egress gap. |
 | `WORK-006` | Reusable subflows and recipes | target | missing |  | No delivered product workflow. |
 | `WORK-007` | Workflow tables and intake forms | target | missing |  | No delivered product workflow. |
 | `WORK-008` | Versions, testing and controlled deployment | target | done | `src/crank/workflows/store.ts`; `src/crank/workflows/testing.ts`; `src/crank/workflows/drafts.ts`; `src/crank/workflows/comparison.ts`; `src/crank/engine/test-authority.ts`; `src/crank/engine/authority.ts`; `migrations/core/0037_draft_tests.sql`; `tests/logic.test.mjs`; `tests/deployment.test.mjs`; `tests/version-comparison.test.mjs`; `tests/ops.test.mjs` (WORK-008: immutable snapshots, explicit bindings, live confirmation, test history/audit, production exclusions, in-flight version retention, promotion, rollback and inactive restore) | |
