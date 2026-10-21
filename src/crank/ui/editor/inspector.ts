@@ -62,7 +62,7 @@ function setup(ctx: InspectorContext) {
     step!.type === 'approval' && typeof step!.instructions === 'string' ? `<section class="inspector-block"><h3>Instructions</h3><p class="inspector-note">${esc(step!.instructions)}</p>${Array.isArray(step!.editable) ? field('Editable', esc((step!.editable as string[]).join(', ')), false) : ''}</section>` : '',
     step!.type === 'http' && typeof (step!.input as any)?.url === 'string' ? request(step!.input as any) : '',
     mapping.length ? `<section class="inspector-block"><h3>Field mapping</h3>${mapping.map(([key, value]) => field(rowLabel(key), mapped(value))).join('')}</section>` : '',
-    step!.type === 'code' ? `<section class="inspector-block"><h3>Code executor</h3>${field('Language',esc(step!.language),false)}${field('Executor',esc(step!.executor_url),false)}${field('Wall limit',`${esc(step!.timeout_ms)} ms`,false)}${field('Memory limit',`${esc(step!.memory_mb)} MiB`,false)}${field('Network','Disabled',false)}<details><summary>Source</summary><pre>${esc(step!.source)}</pre></details></section>` : '',
+    step!.type === 'code' ? `<section class="inspector-block"><h3>Code executor</h3>${field('Language',esc(step!.language),false)}${field('Executor',esc(step!.executor_url),false)}${field('Wall limit',`${esc(step!.timeout_ms)} ms`,false)}${field('Address space per process',`${esc(step!.memory_mb)} MiB`,false)}${field('Network','Disabled',false)}<details><summary>Source</summary><pre>${esc(step!.source)}</pre></details></section>` : '',
     retryPolicy(node),
   ]
   return parts.join('')
