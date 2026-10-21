@@ -4,6 +4,7 @@ import { checkEgress } from '../engine/egress'
 import type { StepType } from '../engine/types'
 import { isObject } from '../engine/values'
 import { executorRequest } from './transport'
+import { assertExecutorOutput, validateOutputSchema } from './output-schema'
 
 export class ExecutorWait extends Error {
   constructor(readonly taskId: string) { super('Waiting for the owner-deployed executor') }
@@ -22,6 +23,7 @@ export const code: StepType = {
     if (!Array.isArray(step.allowed_egress) || step.allowed_egress.length) throw new StepError('validation',`Code ${step.id}: this executor supports only explicit allowed_egress: []; network-enabled jobs are not implemented`)
     if (step.dependencies!==undefined && (!isObject(step.dependencies) || Object.keys(step.dependencies).length)) throw new StepError('validation',`Code ${step.id}: third-party dependencies are not implemented`)
     if (step.runtime_version!==undefined && (typeof step.runtime_version!=='string' || !/^\d+\.\d+\.\d+$/.test(step.runtime_version))) throw new StepError('validation',`Code ${step.id}: runtime_version must be an exact version`)
+    if (step.output_schema!==undefined) validateOutputSchema(step.output_schema,step.id)
   },
   async execute(step,ctx) {
     const connectionId=String(step.connection_id), endpoint=new URL(String(step.executor_url)).origin
@@ -54,6 +56,7 @@ export const code: StepType = {
       const reason=isObject(response.value.error) && ['timeout','output_limit','invalid_output','execution_failed','sandbox_unavailable','invalid_source','cancelled','interrupted'].includes(String(response.value.error.category)) ? String(response.value.error.category) : status
       throw new StepError(status==='interrupted'?'uncertain':'provider',`Executor task ${status} (${reason})`,{task_id:taskId,executor_error_category:reason,...(status==='interrupted'?{uncertain:true}:{})})
     }
+    if (step.output_schema!==undefined) assertExecutorOutput(response.value.output,step.output_schema,step.id,taskId)
     return {status:'succeeded',output:{task_id:taskId,status,output:response.value.output}}
   },
 }

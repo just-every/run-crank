@@ -489,8 +489,26 @@ declarations. Nonempty dependencies and egress declarations are refused before
 publication. Wall time is in milliseconds (100–60000); memory is MiB of virtual
 address space **per process** (Python 64–2048; JavaScript/TypeScript 512–2048),
 not an aggregate RSS quota. Native Linux process/file bounds also apply.
-Declared output-schema validation, network-enabled jobs, versioned third-party dependencies, aggregate task memory
+Network-enabled jobs, versioned third-party dependencies, aggregate task memory
 and heavier browser/ETL executors remain unfinished clause obligations.
+
+An optional `output_schema` declares the returned JSON value, independently of the
+task envelope. It supports exactly one `type`: `object`, `array`, `string`,
+`number`, `integer`, `boolean` or `null`. Objects accept nested `properties`,
+`required` (distinct declared properties) and boolean `additionalProperties`
+(default true); arrays require an `items` schema. Integer means a safe integer;
+numbers must be finite. No values are coerced. Other keywords/types are rejected
+when creating, saving or publishing the graph. Declarations are bounded to 16,384
+characters, 128 schema nodes and eight levels; results to 10,000 schema-visited
+values. Missing required fields, wrong types and forbidden extra properties fail
+the step with `reason: "output_schema_mismatch"` and no successful output. The
+normal step error policy applies: the default stops later steps; an explicit
+`on_error: "continue"` continues with the failed checkpoint.
+Diagnostics name a JSON Pointer path and fixed reason, without returned values
+or undeclared field names. Existing jobs without a declaration retain their
+unconstrained JSON result. Readback after restart applies the original immutable
+version's schema to the same durable task; no replacement task is submitted.
+The step inspector exposes the declaration; history exposes any failure.
 
 Every physical submission/read uses existing connection custody, account admission,
 usage observations and bounded request retries. An ambiguous submission is read back

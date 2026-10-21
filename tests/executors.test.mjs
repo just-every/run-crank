@@ -21,7 +21,7 @@ test('WORK-005 EXEC-002 BASE-001: published executor work keeps one durable iden
  const h=await harness('https://unused.example',{edge:edge.edge});
  try{
   const account=await connection(h,{app:'http',label:'Harbour isolated code host',auth_kind:'bearer',domains:['executor.example'],secret:{token}});
-  const w=await publish(h,'Harbour Workshop — customer normalization',codeGraph(account.id));
+  const w=await publish(h,'Harbour Workshop — customer normalization',codeGraph(account.id,{output_schema:{type:'object',properties:{customer:{type:'string'}},required:['customer'],additionalProperties:false}}));
   const run=await startRun(h,w,{customer:'  Harbour Workshop & Supply  '});assert.equal(run.status,'waiting',JSON.stringify(run));
   const task=run.executor_tasks[0];assert.equal(task.status,'running');assert.equal(stepOf(run,'normalize').trace.executor_task_id,task.id);
   assert.equal(new Set(submitted).size,1);assert.ok(submitted.length>=1);
@@ -64,4 +64,41 @@ test('WORK-005 DATA-001 DATA-002: cancellation reports remote confirmation, task
   await h.post(`workflow-runs/${pending.id}/cancel`);await h.post(`workflows/${w.id}/pause`);await h.post('data/erase',{workflow_run_id:run.id,confirm:'ERASE'});
   assert.equal((await h.db.prepare('SELECT COUNT(*) AS n FROM crank_executor_tasks WHERE run_id=?').bind(run.id).first()).n,0,'erasure removes local remote-task references');
  }finally{await receiving?.close();await h.close()}
+});
+
+
+test('WORK-005: declared output schemas reject invalid authoring and fence mismatched remote results before downstream effects',async()=>{
+ const edge=fakeEdge(),tasks=new Map();let effects=0;
+ edge.routes.set('executor.example',({url,method,body})=>{
+  const task_id=url.pathname.split('/')[2];
+  if(method==='POST')tasks.set(task_id,{task_id,status:'succeeded',output:JSON.parse(body).input.output});
+  return tasks.has(task_id)?jsonResponse(tasks.get(task_id)):jsonResponse({error:'not_found'},404);
+ });
+ edge.routes.set('receiver.example',()=>{effects++;return jsonResponse({ok:true})});
+ const h=await harness('https://unused.example',{edge:edge.edge});
+ try{
+  const c=await connection(h,{app:'http',label:'Harbour schema-checked executor',auth_kind:'bearer',domains:['executor.example'],secret:{token:fakeSecret('schema-executor')}});
+  const schema={type:'object',properties:{customer:{type:'string'},lines:{type:'array',items:{type:'object',properties:{quantity:{type:'integer'},amount:{type:'number'},active:{type:'boolean'},note:{type:'null'}},required:['quantity','amount','active','note'],additionalProperties:false}}},required:['customer','lines'],additionalProperties:false};
+  const graph=output_schema=>{const g=codeGraph(c.id,{input:{output:'{{trigger.input.output}}'},output_schema});g.steps.push({id:'deliver',type:'http',input:{url:'https://receiver.example/events',method:'POST',body:{supplier:'{{steps.normalize.output}}'}}});return g};
+  const w=await publish(h,'Harbour Workshop — typed supplier line items',graph(schema));
+  const valid={customer:'Harbour Workshop & Supply',lines:[{quantity:2,amount:19.95,active:true,note:null}]};
+  const run=await startRun(h,w,{output:valid});assert.equal(run.status,'succeeded');assert.deepEqual(stepOf(run,'normalize').output.output,valid);assert.equal(effects,1);
+  const badCases=[
+   [null,''],
+   [{...valid,customer:17},'/customer'],
+   [{lines:valid.lines},'/customer'],
+   [{...valid,lines:{}},'/lines'],
+   [{...valid,lines:[{...valid.lines[0],quantity:1.5}]},'/lines/0/quantity'],
+   [{...valid,lines:[{...valid.lines[0],amount:'19.95'}]},'/lines/0/amount'],
+   [{...valid,lines:[{...valid.lines[0],active:1}]},'/lines/0/active'],
+   [{...valid,lines:[{...valid.lines[0],note:'private rejected value'}]},'/lines/0/note'],
+   [{...valid,private_customer_fact:'private rejected value'},''],
+  ];
+  for(const [output,path]of badCases){const failed=await startRun(h,w,{output});assert.equal(failed.status,'failed');const step=stepOf(failed,'normalize');assert.equal(step.error.category,'validation');assert.equal(step.error.reason,'output_schema_mismatch');assert.equal(step.error.output_path,path);assert.equal(step.output,null);assert.equal(stepOf(failed,'deliver'),undefined);assert.ok(!JSON.stringify(step.error).includes('private rejected value'));assert.equal(effects,1,'schema failure never reaches downstream delivery')}
+  const invalid=[null,{type:'unknown'},{type:'string',pattern:'.*'},{type:'object',properties:[]},{type:'object',required:['missing']},{type:'object',properties:{name:{type:'string'}},required:['name','name']},{type:'object',additionalProperties:{type:'string'}},{type:'array'},{type:'array',items:{type:'string'},properties:{}}];
+  let deep={type:'string'};for(let i=0;i<20;i++)deep={type:'array',items:deep};invalid.push(deep);
+  for(const output_schema of invalid){const rejected=await h.send('/api/crank/workflows',{name:'Invalid schema must not save',graph:graph(output_schema)},h.owner);assert.equal(rejected.status,422);assert.match(rejected.text,/output_schema/)}
+  const update=await h.send('/api/crank/workflows/'+w.id+'/draft',{graph:graph({type:'string',format:'email'})},h.owner);assert.equal(update.status,422,'unsupported constraints cannot enter a new draft');
+  const again=await startRun(h,w,{output:valid});assert.equal(again.status,'succeeded');assert.equal(effects,2,'invalid declaration did not replace the valid published graph');
+ }finally{await h.close()}
 });
