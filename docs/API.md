@@ -489,7 +489,7 @@ declarations. Nonempty dependencies and egress declarations are refused before
 publication. Wall time is in milliseconds (100–60000); memory is MiB of virtual
 address space **per process** (Python 64–2048; JavaScript/TypeScript 512–2048),
 not an aggregate RSS quota. Native Linux process/file bounds also apply.
-Network-enabled jobs, versioned third-party dependencies, aggregate task memory
+Declared output-schema validation, network-enabled jobs, versioned third-party dependencies, aggregate task memory
 and heavier browser/ETL executors remain unfinished clause obligations.
 
 Every physical submission/read uses existing connection custody, account admission,
