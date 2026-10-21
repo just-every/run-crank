@@ -543,16 +543,15 @@ test('Enrolled private gateway reads a real database, checkpoints file pages acr
   }
   await writeFile(manifestPath,JSON.stringify(manifest),{mode:0o600});
   await h.post(`gateways/grants/${grant.id}/revoke`);
-  const restrictedGrant=await h.post(base+'/grants',{environment:'production',connector_id:connectorId,connector_version:1,operations:['record'],destinations:manifestDestinations(manifest,manifestPath)},h.owner,201);
+  const restrictedGrant=await h.post(base+'/grants',{environment:'production',connector_id:connectorId,connector_version:1,operations:['record'],destinations:manifestDestinations({operations:{stock:manifest.operations.stock}},manifestPath)},h.owner,201);
   const operationRefused=await draftTest(h,'Crank refuses an operation absent from the owner grant',[file]);assert.equal(operationRefused.run.status,'failed');
   const pendingGrant=await draftTest(h,'Grant revocation withholds an already claimed private read',[record]);
   const pendingTask=pollPayload(await gatewayPost(h,state,base+'/poll',{environment:'production'})).task;assert.ok(pendingTask);
   await h.post(`gateways/grants/${restrictedGrant.id}/revoke`);
   await gatewayPost(h,state,`gateways/${state.gateway.id}/tasks/${pendingTask.id}/result`,{environment:'production',output:{rows:[]}},403);
   await h.tick();const grantStopped=await h.get('workflow-runs/'+pendingGrant.run.id);assert.equal(grantStopped.status,'failed');assert.match(grantStopped.error.message,/gateway revoked/);assert.equal(stepOf(grantStopped,'stock').output,null);
-  const destinationGrant=await h.post(base+'/grants',{environment:'production',connector_id:connectorId,connector_version:1,operations:['record','file'],destinations:manifestDestinations({operations:{stock:manifest.operations.stock}},manifestPath)},h.owner,201);
+  await h.post(base+'/grants',{environment:'production',connector_id:connectorId,connector_version:1,operations:['record','file'],destinations:manifestDestinations({operations:{stock:manifest.operations.stock}},manifestPath)},h.owner,400); // Every selected operation needs its own reviewed concrete recipient.
   const destinationRefused=await draftTest(h,'Crank refuses a destination absent from the owner grant',[file]);assert.equal(destinationRefused.run.status,'failed');
-  await h.post(`gateways/grants/${destinationGrant.id}/revoke`);
   await h.post(base+'/grants',{environment:'production',connector_id:connectorId,connector_version:1,operations:['record','file','scope_probe'],destinations:manifestDestinations(manifest,manifestPath)},h.owner,201);
   const dnsId='synthetic-crank-dns-edge',dnsDefinition=customDefinition(dnsId,{gateway:true});dnsDefinition.operations=dnsDefinition.operations.filter(op=>op.id==='record');await installDefinition(h,dnsDefinition,['records.read']);
   const dnsHost='synthetic-crank-dns.example',dnsManifest=namedManifest({version:1,operations:{stock:{type:'postgres-query',connector_id:dnsId,connector_version:1,destination:'inventory-db',read_only_credentials:true,connection:{host:dnsHost,port:5432,database:'synthetic-crank-61',user:'synthetic-crank-62',password:'synthetic-crank-63',ssl:true},query:'SELECT name FROM stock WHERE name=$1',parameter_order:['name'],parameters:{name:{type:'string'}},maxRows:10}}});
