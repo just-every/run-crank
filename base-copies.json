@@ -1270,17 +1270,6 @@
       }
     },
     {
-      "path": "src/server.dev.ts",
-      "originPath": "foundation/template/src/server.dev.ts",
-      "revision": "6d38b54a6401879989e8d1f7ab4a02ffbdb4c46c",
-      "files": {
-        "src/server.dev.ts": "4892545be3afaf55d1a45b99933f017baa43512d7152f56b21422010aa70b8a5"
-      },
-      "modes": {
-        "src/server.dev.ts": "100644"
-      }
-    },
-    {
       "path": "VERIFY-WORKFLOW.md",
       "originPath": "export/VERIFY-WORKFLOW.md",
       "revision": "6d38b54a6401879989e8d1f7ab4a02ffbdb4c46c",

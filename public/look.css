@@ -1,0 +1,113 @@
+/* Crank's look beside its theme. public/rer-theme.css holds only what Base's theme grammar
+   allows (the --rer-* tokens and the faces), so everything else every document wears is here:
+   the page font, Crank's own tokens and Base's shared pages in the app's shell. Linked with
+   the theme through src/base/font-head.ts (the root document, /setup, sign-in and its
+   confirmation, the app's documents, and the development sign-in and hand-off pages through
+   src/server.dev.ts), the edition identity's stylesheet (the Lobby and Base's Run, contract
+   and not-found pages) and the run site (src/site/pages.tsx). */
+
+/* The page font, form controls included. */
+:root { font-family: var(--font-body); }
+button, input, select, textarea { font-family: inherit; }
+
+/* Crank's tokens, defined once: the app (public/ui), the run site (src/site/styles) and the
+   rules below read them with the --rer-* tokens. */
+:root {
+  --rer-font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --rer-button-radius: 999px;
+  --rer-code-background: #11192c;
+  --rer-code-text: #e6ebf5;
+  --rer-wordmark-weight: 700;
+  --rer-wordmark-tracking: -.035em;
+
+  /* Ink and paper */
+  --navy: #011646;
+  --ink: var(--rer-text);
+  --body: #4e5a73;
+  --soft: #6b7690;
+  --faint: #9aa5ba;
+  --paper: var(--rer-page);
+  --paper-deep: #e8f2fc;
+  --surface: var(--rer-surface);
+  --line: #e4eaf3;
+  --line-strong: #d3dce9;
+  --row: #f4f7fc;
+  /* Accents: the mark's brass and crank, the label blue, and states */
+  --brass: #fdc321;
+  --brass-deep: #b98100;
+  --crank: #fd6a15;
+  --blue: #1667e0;
+  --blue-tint: #e6f0fe;
+  --green: #1f9d4c;
+  --green-ink: #17703a;
+  --green-tint: #e6f7ec;
+  --amber: #c8780a;
+  --amber-ink: #9a5a05;
+  --amber-tint: #fdf3e1;
+  --amber-line: #f6dca8;
+  --red: #d64b62;
+  --red-tint: #fbe6ea;
+  --toggle: #152d7c;
+  --terminal: #11192c;
+  --terminal-bar: #172238;
+  /* Type and shape */
+  --font-body: var(--rer-font-body);
+  --font-head: var(--rer-font-heading);
+  --font-mono: var(--rer-font-mono);
+  --radius-card: 18px;
+  --radius-field: 10px;
+  --radius-chip: 999px;
+  --shadow-card: 0 1px 2px rgba(6, 25, 67, .05), 0 18px 40px -22px rgba(22, 64, 140, .28);
+  --shadow-lift: 0 2px 4px rgba(6, 25, 67, .06), 0 26px 50px -24px rgba(22, 64, 140, .4);
+  /* App tiles for third-party apps: a tint and a letter or glyph, never a trademark */
+  --tile-stripe: linear-gradient(160deg, #7a6bff, #5b45f0);
+  --tile-slack: #4a154b;
+  --tile-sheets: #188038;
+  --tile-quickbooks: #2ca01c;
+  --tile-hubspot: #ff7a59;
+  /* The machine motif: brass connectors */
+  --brass-light: #ffd987;
+  --brass-dark: #b5813c;
+  /* App surfaces (public/ui): sky ground and bar, white sheets, hairline edges */
+  --app-ground: #eaf6ff;
+  --app-sky: linear-gradient(110deg, #d9eeff, #e6f4ff 58%, #eaf6ff);
+  --app-rail: #f2f9ff;
+  --app-sheet: linear-gradient(180deg, rgba(255, 255, 255, .18), rgba(255, 255, 255, .32));
+  --app-edge: #d4e6f6;
+  --app-selected: #d8eaff;
+  --app-card-edge: #d3deec;
+  --app-inspector-edge: #bcd8fb;
+  --app-card-shadow: 0 5px 12px rgba(87, 113, 139, .08);
+  --app-control-edge: #c5d8ef;
+  --app-field-edge: #d3deec;
+  --app-focus-ring: rgba(22, 103, 224, .22);
+  --wrap: 1290px;
+  --gutter: 75px;
+}
+@media (max-width: 760px) { :root { --gutter: 16px; } }
+
+/* Base's shared pages (sign-in, /setup) keep their markup and wear the app's shell:
+   the sky bar with the lake haze, a white sheet with hairline edges, thin fields. */
+.rer-themed body:has(>main:not(.crank)) { display: grid; place-items: start center; min-height: 100vh; padding: 140px 16px 48px; background: var(--app-ground); }
+.rer-themed body:has(>main:not(.crank))::before { content: ""; position: absolute; inset: 0 0 auto; height: 76px; background: var(--app-sky); border-bottom: 1px solid var(--app-edge); }
+/* The haze fades in from the sky over its left part, as in the app's top bar. */
+.rer-themed body:has(>main:not(.crank))::after { content: ""; position: absolute; top: 0; right: 0; height: 76px; aspect-ratio: 1340 / 166; max-width: 100%; background: url('/brand/haze-top.webp') right center / auto 100% no-repeat; -webkit-mask-image: linear-gradient(90deg, transparent, #000 45%); mask-image: linear-gradient(90deg, transparent, #000 45%); pointer-events: none; }
+.rer-themed main:not(.crank) { position: relative; width: 100%; max-width: 520px; padding: 36px 40px; border: 1px solid var(--app-card-edge); border-radius: 16px; background: var(--surface); box-shadow: var(--app-card-shadow), 0 24px 48px -32px rgba(22, 64, 140, .35); }
+.rer-themed main:not(.crank) h1 { font-size: 32px; line-height: 1.1; letter-spacing: -.035em; font-weight: 800; color: var(--ink); margin-block: 22px 14px; }
+.rer-themed .rer-brand, .rer-themed main:not(.crank) .brand { gap: 8px; font-size: 26px !important; font-weight: 800 !important; letter-spacing: -.04em; color: var(--ink); }
+.rer-themed main:not(.crank) .brand .mark, .rer-themed .rer-brand::before { width: 34px; height: 34px; }
+.rer-themed main:not(.crank) label { font-size: 14px; color: #21365f; }
+.rer-themed main:not(.crank) input:not([type=checkbox]) { min-height: 42px; border: 1px solid var(--app-field-edge); border-radius: 9px; background: #fcfdff; }
+.rer-themed main:not(.crank) input:not([type=checkbox]):focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 3px var(--app-focus-ring); }
+.rer-themed main:not(.crank) button { min-height: 44px; border-radius: 11px; background: var(--navy); color: #fff; font-weight: 600; box-shadow: 0 10px 20px -14px rgba(1, 22, 70, .8); }
+.rer-themed main:not(.crank) dl { padding: 14px 0; border-block: 1px solid var(--line); margin-bottom: 22px; gap: 10px 24px; grid-template-columns: 100px minmax(0, 1fr); }
+.rer-themed main:not(.crank) dd { font-family: var(--font-mono); font-size: 13.5px; }
+@media (max-width: 600px) { .rer-themed body:has(>main:not(.crank)) { padding-top: 100px; } .rer-themed body:has(>main:not(.crank))::before, .rer-themed body:has(>main:not(.crank))::after { height: 60px; } .rer-themed main:not(.crank) { padding: 26px 20px; } .rer-themed main:not(.crank) h1 { font-size: 27px; } .rer-themed main:not(.crank) dl { grid-template-columns: 1fr; gap: 4px; } .rer-themed main:not(.crank) dd { margin-bottom: 10px; } }
+
+/* Base's Run and not-found pages (src/base/run-site.ts) in the site's look: the heavy
+   headline, the bold lockup and the navy numerals. Their inline style keeps the layout. */
+body > .bar .brand { font-weight: 700; font-size: 32px; gap: 9px; }
+body > main .intro h1, body > main .hero h1 { font-weight: 800; letter-spacing: -.045em; word-spacing: .03em; }
+body > main .step h2 { font-weight: 700; }
+body > main .num { background: var(--navy); font-weight: 700; }
+@media (max-width: 760px) { body > .bar .brand { font-size: 25px; } }

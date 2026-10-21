@@ -8,7 +8,8 @@
 The variable WOFF2 subsets come from Fontsource's distributions
 (`@fontsource-variable/figtree` and `@fontsource-variable/jetbrains-mono` 5.3.0).
 
-`fonts.css` declares the faces and a metric-matched `Figtree Fallback` on
-Arial, so text does not jump when the web font arrives. Every page links
-`/fonts/fonts.css` once and preloads only the Latin Figtree file. No page
-requests a third-party font service.
+`/rer-theme.css` declares the faces and a metric-matched `Figtree Fallback`
+on Arial, so text does not jump when the web font arrives, and the installer
+serves them too; `/look.css` sets the page font. Every page links both once
+and preloads only the Latin Figtree file. No page requests a third-party font
+service.

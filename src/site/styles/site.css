@@ -1,5 +1,5 @@
 /* The run site's frame: page base, header, footer and the actions. Tokens come from
-   /rer-theme.css (defined once there, shared with the app); every page links it before this sheet. */
+   /rer-theme.css and /look.css (defined once there, shared with the app); every page links them before this sheet. */
 *, *::before, *::after { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
 body { margin: 0; overflow-x: clip; background: var(--paper); color: var(--ink); font: 400 18px/1.55 var(--font-body); -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }

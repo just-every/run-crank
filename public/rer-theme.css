@@ -1,119 +1,91 @@
-/* Crank's tokens, defined once. The run site (src/site/styles), Base's Run and
-   not-found pages, the Lobby, sign-in, /setup and the app all read this file.
-   Crank's look (design desk, 17 Oct 2026): pale sky paper, navy ink from the
-   mark, the mark's brass yellow and crank orange as accents, a clear blue for
-   section labels and links, Figtree throughout and JetBrains Mono for code. */
-@import url('/fonts/fonts.css');
-
+/* Crank's theme for Base: the --rer-* tokens and the faces that the installer, sign-in, its
+   confirmation, /setup, the development hand-off page, the Lobby and Base's Run, contract and
+   not-found pages read. The installer reads this file with Base's theme grammar (only :root
+   --rer-* tokens with literal values, and @font-face rules) and checks its colour pairs, so
+   Crank's own tokens and Base's shared pages in the app's shell are in public/look.css, linked
+   beside this file. Crank's look (design desk, 17 Oct 2026): pale sky paper, navy ink from the
+   mark, the mark's brass yellow and crank orange as accents, a clear blue for section labels and
+   links, Figtree throughout and JetBrains Mono for code. */
 :root {
   --rer-font-body: 'Figtree', 'Figtree Fallback', Arial, sans-serif;
   --rer-font-heading: 'Figtree', 'Figtree Fallback', Arial, sans-serif;
-  --rer-font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   --rer-page: #f3f8fd;
   --rer-surface: #ffffff;
   --rer-text: #061943;
   --rer-muted: #4e5a73;
-  --rer-border: #8a96ad;
+  /* A control edge needs 3:1 on white: #8a96ad was 2.98:1. */
+  --rer-border: #8995ac;
   --rer-focus: #1667e0;
   --rer-link: #061943;
   --rer-radius: 16px;
-  --rer-button-radius: 999px;
   --rer-accent: #011646;
   --rer-accent-text: #ffffff;
-  --rer-code-background: #11192c;
-  --rer-code-text: #e6ebf5;
-  --rer-wordmark-weight: 700;
-  --rer-wordmark-tracking: -.035em;
   --rer-logo: url('/brand/mark.svg');
-
-  /* Ink and paper */
-  --navy: #011646;
-  --ink: var(--rer-text);
-  --body: #4e5a73;
-  --soft: #6b7690;
-  --faint: #9aa5ba;
-  --paper: var(--rer-page);
-  --paper-deep: #e8f2fc;
-  --surface: var(--rer-surface);
-  --line: #e4eaf3;
-  --line-strong: #d3dce9;
-  --row: #f4f7fc;
-  /* Accents: the mark's brass and crank, the label blue, and states */
-  --brass: #fdc321;
-  --brass-deep: #b98100;
-  --crank: #fd6a15;
-  --blue: #1667e0;
-  --blue-tint: #e6f0fe;
-  --green: #1f9d4c;
-  --green-ink: #17703a;
-  --green-tint: #e6f7ec;
-  --amber: #c8780a;
-  --amber-ink: #9a5a05;
-  --amber-tint: #fdf3e1;
-  --amber-line: #f6dca8;
-  --red: #d64b62;
-  --red-tint: #fbe6ea;
-  --toggle: #152d7c;
-  --terminal: #11192c;
-  --terminal-bar: #172238;
-  /* Type and shape */
-  --font-body: var(--rer-font-body);
-  --font-head: var(--rer-font-heading);
-  --font-mono: var(--rer-font-mono);
-  --radius-card: 18px;
-  --radius-field: 10px;
-  --radius-chip: 999px;
-  --shadow-card: 0 1px 2px rgba(6, 25, 67, .05), 0 18px 40px -22px rgba(22, 64, 140, .28);
-  --shadow-lift: 0 2px 4px rgba(6, 25, 67, .06), 0 26px 50px -24px rgba(22, 64, 140, .4);
-  /* App tiles for third-party apps: a tint and a letter or glyph, never a trademark */
-  --tile-stripe: linear-gradient(160deg, #7a6bff, #5b45f0);
-  --tile-slack: #4a154b;
-  --tile-sheets: #188038;
-  --tile-quickbooks: #2ca01c;
-  --tile-hubspot: #ff7a59;
-  /* The machine motif: brass connectors */
-  --brass-light: #ffd987;
-  --brass-dark: #b5813c;
-  /* App surfaces (public/ui): sky ground and bar, white sheets, hairline edges */
-  --app-ground: #eaf6ff;
-  --app-sky: linear-gradient(110deg, #d9eeff, #e6f4ff 58%, #eaf6ff);
-  --app-rail: #f2f9ff;
-  --app-sheet: linear-gradient(180deg, rgba(255, 255, 255, .18), rgba(255, 255, 255, .32));
-  --app-edge: #d4e6f6;
-  --app-selected: #d8eaff;
-  --app-card-edge: #d3deec;
-  --app-inspector-edge: #bcd8fb;
-  --app-card-shadow: 0 5px 12px rgba(87, 113, 139, .08);
-  --app-control-edge: #c5d8ef;
-  --app-field-edge: #d3deec;
-  --app-focus-ring: rgba(22, 103, 224, .22);
-  --wrap: 1290px;
-  --gutter: 75px;
 }
-@media (max-width: 760px) { :root { --gutter: 16px; } }
 
-/* Base's shared pages (sign-in, /setup) keep their markup and wear the app's shell:
-   the sky bar with the lake haze, a white sheet with hairline edges, thin fields. */
-.rer-themed body:has(>main:not(.crank)) { display: grid; place-items: start center; min-height: 100vh; padding: 140px 16px 48px; background: var(--app-ground); }
-.rer-themed body:has(>main:not(.crank))::before { content: ""; position: absolute; inset: 0 0 auto; height: 76px; background: var(--app-sky); border-bottom: 1px solid var(--app-edge); }
-/* The haze fades in from the sky over its left part, as in the app's top bar. */
-.rer-themed body:has(>main:not(.crank))::after { content: ""; position: absolute; top: 0; right: 0; height: 76px; aspect-ratio: 1340 / 166; max-width: 100%; background: url('/brand/haze-top.webp') right center / auto 100% no-repeat; -webkit-mask-image: linear-gradient(90deg, transparent, #000 45%); mask-image: linear-gradient(90deg, transparent, #000 45%); pointer-events: none; }
-.rer-themed main:not(.crank) { position: relative; width: 100%; max-width: 520px; padding: 36px 40px; border: 1px solid var(--app-card-edge); border-radius: 16px; background: var(--surface); box-shadow: var(--app-card-shadow), 0 24px 48px -32px rgba(22, 64, 140, .35); }
-.rer-themed main:not(.crank) h1 { font-size: 32px; line-height: 1.1; letter-spacing: -.035em; font-weight: 800; color: var(--ink); margin-block: 22px 14px; }
-.rer-themed .rer-brand, .rer-themed main:not(.crank) .brand { gap: 8px; font-size: 26px !important; font-weight: 800 !important; letter-spacing: -.04em; color: var(--ink); }
-.rer-themed main:not(.crank) .brand .mark, .rer-themed .rer-brand::before { width: 34px; height: 34px; }
-.rer-themed main:not(.crank) label { font-size: 14px; color: #21365f; }
-.rer-themed main:not(.crank) input:not([type=checkbox]) { min-height: 42px; border: 1px solid var(--app-field-edge); border-radius: 9px; background: #fcfdff; }
-.rer-themed main:not(.crank) input:not([type=checkbox]):focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 3px var(--app-focus-ring); }
-.rer-themed main:not(.crank) button { min-height: 44px; border-radius: 11px; background: var(--navy); color: #fff; font-weight: 600; box-shadow: 0 10px 20px -14px rgba(1, 22, 70, .8); }
-.rer-themed main:not(.crank) dl { padding: 14px 0; border-block: 1px solid var(--line); margin-bottom: 22px; gap: 10px 24px; grid-template-columns: 100px minmax(0, 1fr); }
-.rer-themed main:not(.crank) dd { font-family: var(--font-mono); font-size: 13.5px; }
-@media (max-width: 600px) { .rer-themed body:has(>main:not(.crank)) { padding-top: 100px; } .rer-themed body:has(>main:not(.crank))::before, .rer-themed body:has(>main:not(.crank))::after { height: 60px; } .rer-themed main:not(.crank) { padding: 26px 20px; } .rer-themed main:not(.crank) h1 { font-size: 27px; } .rer-themed main:not(.crank) dl { grid-template-columns: 1fr; gap: 4px; } .rer-themed main:not(.crank) dd { margin-bottom: 10px; } }
-
-/* Base's Run and not-found pages (src/base/run-site.ts) in the site's look: the heavy
-   headline, the bold lockup and the navy numerals. Their inline style keeps the layout. */
-body > .bar .brand { font-weight: 700; font-size: 32px; gap: 9px; }
-body > main .intro h1, body > main .hero h1 { font-weight: 800; letter-spacing: -.045em; word-spacing: .03em; }
-body > main .step h2 { font-weight: 700; }
-body > main .num { background: var(--navy); font-weight: 700; }
-@media (max-width: 760px) { body > .bar .brand { font-size: 25px; } }
+/* Figtree (headings, the Crank wordmark and body text) and JetBrains Mono (code, field paths and the terminal),
+   both under the SIL Open Font License 1.1 and self-hosted from public/fonts/. No page makes a third-party request. */
+@font-face {
+  font-family: 'Figtree';
+  font-style: normal;
+  font-weight: 300 900;
+  font-display: swap;
+  src: url('/fonts/figtree/figtree-latin-wght-normal.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Figtree';
+  font-style: normal;
+  font-weight: 300 900;
+  font-display: swap;
+  src: url('/fonts/figtree/figtree-latin-ext-wght-normal.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 100 800;
+  font-display: swap;
+  src: url('/fonts/jetbrains-mono/jetbrains-mono-latin-wght-normal.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 100 800;
+  font-display: swap;
+  src: url('/fonts/jetbrains-mono/jetbrains-mono-latin-ext-wght-normal.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* Match Figtree's sampled advance widths and its 950/-250/0 vertical metrics.
+   Divide each vertical override by size-adjust, which scales it again. */
+@font-face {
+  font-family: 'Figtree Fallback';
+  font-style: normal;
+  font-weight: 100 450;
+  src: local('Arial'), local('ArialMT'), local('Liberation Sans'), local('LiberationSans');
+  size-adjust: 99.7846%;
+  ascent-override: 95.2052%;
+  descent-override: 25.0540%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'Figtree Fallback';
+  font-style: normal;
+  font-weight: 451 549;
+  src: local('Arial'), local('ArialMT'), local('Liberation Sans'), local('LiberationSans');
+  size-adjust: 100.6086%;
+  ascent-override: 94.4254%;
+  descent-override: 24.8488%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'Figtree Fallback';
+  font-style: normal;
+  font-weight: 550 900;
+  src: local('Arial Bold'), local('Arial-BoldMT'), local('Liberation Sans Bold'), local('LiberationSans-Bold');
+  size-adjust: 98.5050%;
+  ascent-override: 96.4418%;
+  descent-override: 25.3794%;
+  line-gap-override: 0%;
+}
