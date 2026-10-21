@@ -1,3 +1,4 @@
+import {freshGatewayOwner,gatewayPost,signedGatewayHeaders,pollPayload,namedManifest,manifestDestinations} from './gateway-fixture.mjs';
 // Standalone REAL provider interoperability proof, outside push Verify.
 // Requires root dependencies and `npm ci --prefix gateways/node --ignore-scripts`.
 // Run from root: CRANK_DOCKER=docker node tests/storage-provider-journey.mjs
@@ -21,7 +22,7 @@ const abort = new AbortController(), interrupt = () => abort.abort();
 process.once('SIGTERM', interrupt); process.once('SIGINT', interrupt);
 const providers = storageProviders(abort.signal), deliveries = [], reports = [], bridgeErrors = [];
 let h, bridge, gatewayId, state, enrollmentCode, sequence = 100;
-const authority = () => [enrollmentCode, state?.credential, ...providers.providers.flatMap(provider => [provider.connection.privateKey, provider.refusedKey,
+const authority = () => [enrollmentCode, state?.private_key, ...providers.providers.flatMap(provider => [provider.connection.privateKey, provider.refusedKey,
   provider.connection.accessKeyId, provider.connection.secretAccessKey])].filter(Boolean);
 function excludes(text, value) { return !text.includes(value) && !text.includes(JSON.stringify(value).slice(1, -1)); }
 function assertPrivate(text) { for (const value of authority()) assert(excludes(text, value), 'destination/gateway authority must stay private'); }
@@ -47,17 +48,17 @@ function workerBridge() {
       }
       const workerResponse = await h.mf.dispatchFetch(h.origin + request.url, { method: 'POST', headers, body: raw });
       const text = await workerResponse.text();
-      if (request.url.endsWith('/poll') && workerResponse.ok) { const task = JSON.parse(text).task; if (task) deliveries.push(task); }
+      if (request.url.endsWith('/poll') && workerResponse.ok) { const task = pollPayload(text).task; if (task) deliveries.push(task); }
       if (request.url.endsWith('/result') && workerResponse.ok) { assertPrivate(raw); reports.push(body); }
       response.writeHead(workerResponse.status, { 'content-type': 'application/json' }); response.end(text);
     } catch (error) { bridgeErrors.push(error); response.writeHead(500); response.end('{}'); }
   });
 }
 async function manifest(name, op) {
-  await writeFile(manifestPath, JSON.stringify({ version: 1, operations: { [name]: op } }), { mode: 0o600 });
+  await writeFile(manifestPath, JSON.stringify(namedManifest({ version: 1, operations: { [name]: op } })), { mode: 0o600 });
 }
 async function draft(name, op, suffix, input = {}) {
-  return await draftTest(h, fixture(sequence++), [{ id: 'stock', type: 'custom.request', connector_id: op.connector_id,
+  return await draftTest(h, fixture(sequence++), [{ id: 'stock', type: 'custom.request', retry_policy:{read_attempts:1}, connector_id: op.connector_id,
     connector_version: 1, operation: name + suffix, gateway_id: gatewayId, environment: 'production', input }]);
 }
 async function work() {
@@ -117,13 +118,14 @@ try {
     return [{ ...operation, id: name + '_file', name: name + '_file' }, probe];
   });
   await installDefinition(h, definition, ['files.read']);
-  await writeFile(manifestPath, JSON.stringify({ version: 1, operations }), { mode: 0o600 });
+  await writeFile(manifestPath, JSON.stringify(namedManifest({ version: 1, operations })), { mode: 0o600 });
+  await freshGatewayOwner(h);
   const enrollment = await h.post('gateways', { label: fixture(37), environment: 'production' }, h.owner, 201);
   enrollmentCode = enrollment.code; registerPrivate(enrollmentCode); gatewayId = enrollment.gateway.id;
   await cli(['enroll', '--origin', h.origin, '--code', enrollmentCode, '--environment', 'production', '--state', statePath, '--manifest', manifestPath]);
-  state = JSON.parse(await readFile(statePath, 'utf8')); registerPrivate(state.credential);
+  state = JSON.parse(await readFile(statePath, 'utf8')); registerPrivate(state.private_key);
   await h.post(`gateways/${gatewayId}/grants`, { environment: 'production', connector_id: common.connector_id, connector_version: 1,
-    operations: definition.operations.map(operation => operation.id), destinations: Object.values(operations).map(op => op.destination) }, h.owner, 201);
+    operations: definition.operations.map(operation => operation.id), destinations: manifestDestinations({operations},manifestPath) }, h.owner, 201);
 
   for (const provider of providers.providers) {
     const name = provider.kind + '_lines', op = operations[name];

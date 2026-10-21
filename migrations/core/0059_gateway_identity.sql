@@ -1,0 +1,21 @@
+-- Older bearer gateways have no signing identity and cannot regain authority.
+UPDATE crank_gateways SET status='revoked',credential_hash=NULL,code_hash=NULL,code_expires_at=NULL;
+UPDATE crank_gateway_grants SET status='revoked';
+ALTER TABLE crank_gateways ADD COLUMN public_key TEXT;
+ALTER TABLE crank_gateways ADD COLUMN fingerprint TEXT;
+ALTER TABLE crank_gateways ADD COLUMN last_seen_at TEXT;
+ALTER TABLE crank_gateways ADD COLUMN program_version TEXT;
+ALTER TABLE crank_gateway_grants ADD COLUMN revision INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE crank_gateway_tasks ADD COLUMN grant_revision INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE crank_gateway_tasks ADD COLUMN authority_revision INTEGER NOT NULL DEFAULT 0;
+CREATE TABLE crank_installation_signing(singleton INTEGER PRIMARY KEY CHECK(singleton=1),public_key TEXT NOT NULL,secret_iv TEXT NOT NULL,secret_ciphertext TEXT NOT NULL);
+CREATE TABLE crank_gateway_nonces(gateway_id TEXT NOT NULL,nonce TEXT NOT NULL,expires_at INTEGER NOT NULL,PRIMARY KEY(gateway_id,nonce));
+CREATE TABLE crank_team_authority(singleton INTEGER PRIMARY KEY CHECK(singleton=1),revision INTEGER NOT NULL);
+INSERT INTO crank_team_authority VALUES(1,1);
+CREATE TRIGGER crank_gateway_authority_insert AFTER INSERT ON crank_gateways BEGIN UPDATE crank_team_authority SET revision=revision+1 WHERE singleton=1; END;
+CREATE TRIGGER crank_gateway_authority_update AFTER UPDATE OF status,public_key ON crank_gateways BEGIN UPDATE crank_team_authority SET revision=revision+1 WHERE singleton=1; END;
+CREATE TRIGGER crank_gateway_grant_insert AFTER INSERT ON crank_gateway_grants BEGIN UPDATE crank_team_authority SET revision=revision+1 WHERE singleton=1; END;
+CREATE TRIGGER crank_gateway_grant_update AFTER UPDATE ON crank_gateway_grants BEGIN UPDATE crank_team_authority SET revision=revision+1 WHERE singleton=1; END;
+CREATE TRIGGER crank_team_authority_update AFTER UPDATE ON crank_team_access BEGIN UPDATE crank_team_authority SET revision=revision+1 WHERE singleton=1; END;
+CREATE TRIGGER crank_team_authority_insert AFTER INSERT ON crank_team_access BEGIN UPDATE crank_team_authority SET revision=revision+1 WHERE singleton=1; END;
+CREATE TRIGGER crank_operator_authority_update AFTER UPDATE OF status,role,version ON oa_operators BEGIN UPDATE crank_team_authority SET revision=revision+1 WHERE singleton=1; END;

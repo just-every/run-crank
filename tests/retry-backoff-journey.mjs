@@ -1,3 +1,4 @@
+import {privateRetryFixture} from './private-retry-fixture.mjs';
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { harness } from './harness.mjs';
@@ -17,7 +18,9 @@ test('EXEC-002: real 90-second Retry-After and 1/2/4/8/16-minute outage backoff 
   let customOutage=false;
   fake.routes.set('custom.example',()=>{if(!customOutage)return jsonResponse({id:'stock-24',quantity:24});const times=[...(arrivals.get('/custom-outage')??[]),Date.now()];arrivals.set('/custom-outage',times);return times.length<=5?jsonResponse({error:'upstream outage'},503):jsonResponse({id:'stock-24',quantity:24})});
   const h = await harness('http://127.0.0.1:9', { edge: fake.edge });
+  let privateSource;
   try {
+    privateSource=await privateRetryFixture(h);
     const custom=await preparePublicCustom(h,{id:'long-custom-outage'});
     const customWorkflow=await publish(h,'Fieldstone Dental custom accounting outage recovery',{trigger:{type:'manual'},steps:[custom.step]});
     customOutage=true;
@@ -28,6 +31,7 @@ test('EXEC-002: real 90-second Retry-After and 1/2/4/8/16-minute outage backoff 
     const outage = await workflow('Fieldstone Dental accounting outage recovery', '/outage');
     let runs = [await startRun(h, quota, {}), await startRun(h, outage, {}),await startRun(h,customWorkflow,{})];
     assert.ok(runs.every(run => run.status === 'waiting'));
+    const privateRun=await privateSource.start();await privateSource.work();runs.push(await h.get('workflow-runs/'+privateRun.run.id));
     const originalBudgets = runs.map(run => run.attempts[0].budget_started_at);
     await h.restart();
     while (runs.some(run => run.status === 'waiting')) {
@@ -35,6 +39,8 @@ test('EXEC-002: real 90-second Retry-After and 1/2/4/8/16-minute outage backoff 
       const tick = Math.ceil(due / 60000) * 60000;
       while (Date.now() < tick) await new Promise(resolve => setTimeout(resolve, Math.min(60000, tick - Date.now())));
       await h.tick();
+      if(privateSource.arrivals.length===5)privateSource.ready();
+      await privateSource.work();
       runs = await Promise.all(runs.map(run => h.get('workflow-runs/' + run.id)));
       console.info('EXEC-002 real-time progress:', runs.map(run => `${run.status}, ${run.attempts.length} attempts`).join('; '));
       assert.ok(runs.every(run => ['waiting', 'succeeded'].includes(run.status)), JSON.stringify(runs.map(run => run.error)));
@@ -43,10 +49,16 @@ test('EXEC-002: real 90-second Retry-After and 1/2/4/8/16-minute outage backoff 
     assert.deepEqual(runs[0].attempts.map(a => a.http_status), [429, 200]);
     assert.ok(arrivals.get('/quota')[1] - arrivals.get('/quota')[0] >= 90000);
     assert.deepEqual(runs[1].attempts.map(a => a.http_status), [503, 503, 503, 503, 503, 200]);
+    assert.deepEqual(runs[3].steps.find(step=>step.step_id==='stock').output.body,{rows:[{name:'Oak workbench',quantity:24}]});
+    assert.equal(privateSource.arrivals.length,6);assert.ok(privateSource.reported.slice(0,5).every(result=>result.error?.category==='execution_failed'));
     assert.deepEqual(runs[2].attempts.map(a=>a.http_status),[503,503,503,503,503,200]);
     const gaps = [60000, 120000, 240000, 480000, 960000];
     for (const [index, minimum] of gaps.entries()) {
       const attempt = runs[1].attempts[index];
+      const privateAttempt=runs[3].attempts[index];
+      assert.ok(Date.parse(privateAttempt.retry_at)-Date.parse(privateAttempt.finished_at)>=minimum);
+      assert.ok(privateSource.arrivals[index+1]-privateSource.arrivals[index]>=minimum);
+      assert.ok(Date.parse(privateAttempt.retry_resumed_at)>=Date.parse(privateAttempt.retry_at));
       const customAttempt=runs[2].attempts[index];
       assert.ok(Date.parse(customAttempt.retry_at)-Date.parse(customAttempt.finished_at)>=minimum);
       assert.ok(Date.parse(customAttempt.retry_resumed_at)>=Date.parse(customAttempt.retry_at));
@@ -61,5 +73,5 @@ test('EXEC-002: real 90-second Retry-After and 1/2/4/8/16-minute outage backoff 
       assert.ok(run.attempts.every(attempt => attempt.budget_started_at === originalBudgets[index]), 'parked waits do not reset the retained request identity or attempt budget');
       assert.ok(run.attempts.slice(1).every(attempt => Date.parse(attempt.slice_started_at) > Date.parse(originalBudgets[index])), 'active-time slices restart only after a recorded park');
     }
-  } finally { await h.close(); }
+  } finally { await privateSource?.close();await h.close(); }
 });

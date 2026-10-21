@@ -1,3 +1,4 @@
+import { authenticateGateway, signedGatewayJob, verifyEnrollment } from './gateway-identity'
 import { proposeEnterpriseRecipe } from './enterprise-recipes'
 import { authorize, guardedBatch, requireOwner, requirePrepare, requireWriteOrigin } from '../access'
 import { executeRun } from '../engine/executor'
@@ -6,7 +7,7 @@ import { checkEgress } from '../engine/egress'
 import { body, canonical, CrankError, digest, json, requireValue, stmt, type CrankEnv } from '../model'
 import { auditStatement } from '../ops/audit'
 import { parseDefinition } from './definition'
-import { enroll, enrollment, gatewayActor, grantGateway, listGateways, revokeGateway } from './gateways'
+import { enroll, enrollment, grantGateway, listGateways, revokeGateway, revokeGatewayGrant } from './gateways'
 import { gatewayResult, pollGateway, wakeGatewayTask } from './gateway-tasks'
 import { proposeOpenApi } from './openapi'
 import { loadPicker, readPicker, selectPicker } from './pickers'
@@ -17,12 +18,16 @@ export async function customApi(request:Request,env:CrankEnv):Promise<Response|n
   const path=new URL(request.url).pathname
   if(!/^\/api\/crank\/(custom-connectors|gateways)(\/|$)/.test(path))return null
   try {
-    if(request.method==='POST' && path==='/api/crank/gateways/enroll')return json(await enroll(env,await body(request,4096)),201)
+    if(request.method==='POST' && path==='/api/crank/gateways/enroll') {
+      const signed=request.clone(),input=await body(request,4096)
+      await verifyEnrollment(request,input,await signed.text())
+      return json(await enroll(env,input),201)
+    }
     const service=/^\/api\/crank\/gateways\/([^/]+)\/(poll|tasks\/([^/]+)\/result)$/.exec(path)
     if(service) {
       requireValue(request.method==='POST','Method not allowed',405)
-      const input=await body(request,96*1024),gateway=await gatewayActor(request,env,decodeURIComponent(service[1]),input)
-      if(service[2]==='poll')return json(await pollGateway(env,gateway))
+      const signed=request.clone(),input=await body(request,96*1024),gateway=await authenticateGateway(request,env,decodeURIComponent(service[1]),input,await signed.text())
+      if(service[2]==='poll')return json(await signedGatewayJob(env,gateway,request,await pollGateway(env,gateway)))
       const taskId=decodeURIComponent(service[3]),result=await gatewayResult(env,gateway,taskId,input)
       const runId=await wakeGatewayTask(env,gateway.id,taskId)
       if(runId)await executeRun(env,runId)
@@ -40,6 +45,11 @@ export async function customApi(request:Request,env:CrankEnv):Promise<Response|n
       }
       await guardedBatch(env,actor,'prepare',[auditStatement(env,actor.id,'custom.propose','custom_connector',definition.id,{version:definition.version,operations:definition.operations.map(op=>op.id)})])
       return json({definition,digest:await digest(canonical(definition)),requires_owner_review:true,runtime:'Read-only actions/searches and signed webhook delivery; unsupported operations are refused'})
+    }
+    const revoke=/^\/api\/crank\/gateways\/(?:grants\/)?([^/]+)\/revoke$/.exec(path)
+    if(revoke && request.method==='POST') {
+      await body(request,4096)
+      return json(path.includes('/grants/')?await revokeGatewayGrant(env,actor,decodeURIComponent(revoke[1])):await revokeGateway(env,actor,decodeURIComponent(revoke[1])))
     }
     try {requireOwner(actor)} catch(error) {
       await auditStatement(env,actor.id,'custom.owner_denied','workspace','custom_connectors',{session_kind:actor.kind,role:actor.role}).run()
@@ -66,12 +76,6 @@ export async function customApi(request:Request,env:CrankEnv):Promise<Response|n
     if(path==='/api/crank/gateways')return json(await enrollment(env,actor,input),201)
     const gateway=/^\/api\/crank\/gateways\/([^/]+)\/(grants|revoke)$/.exec(path)
     if(gateway)return json(gateway[2]==='grants'?await grantGateway(env,actor,decodeURIComponent(gateway[1]),input):await revokeGateway(env,actor,decodeURIComponent(gateway[1])),gateway[2]==='grants'?201:200)
-    const grant=/^\/api\/crank\/gateways\/grants\/([^/]+)\/revoke$/.exec(path)
-    if(grant) {
-      const grantId=decodeURIComponent(grant[1]);requireValue(await stmt(env,'SELECT id FROM crank_gateway_grants WHERE id=?',grantId).first(),'Grant not found',404)
-      await guardedBatch(env,actor,'owner',[stmt(env,"UPDATE crank_gateway_grants SET status='revoked',revoked_at=COALESCE(revoked_at,datetime('now')) WHERE id=?",grantId),auditStatement(env,actor.id,'gateway.grant_revoke','gateway_grant',grantId)])
-      return json({id:grantId,status:'revoked'})
-    }
     const action=/^\/api\/crank\/custom-connectors\/([^/]+)\/versions\/(\d+)\/(sandbox|revoke-scopes|revoke|review)$/.exec(path)
     if(action && action[3]==='review')return json(await reviewCustom(env,actor,decodeURIComponent(action[1]),Number(action[2]),input))
     if(action && action[3]==='revoke')return json(await revokeCustom(env,actor,decodeURIComponent(action[1]),Number(action[2])))

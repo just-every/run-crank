@@ -1,3 +1,4 @@
+import {freshGatewayOwner,gatewayPost,signedGatewayHeaders,pollPayload,namedManifest,manifestDestinations} from './gateway-fixture.mjs';
 import { before, after, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHmac } from 'node:crypto';
@@ -474,8 +475,8 @@ test('Enrolled private gateway reads a real database, checkpoints file pages acr
   const {mkdtemp,writeFile,readFile,rm}=await import('node:fs/promises'),{join}=await import('node:path'),{tmpdir}=await import('node:os'),{createServer}=await import('node:http'),{execFile}=await import('node:child_process'),{promisify}=await import('node:util'),{DatabaseSync}=await import('node:sqlite');
   const {customDefinition,installDefinition,draftTest}=await import('./custom-fixture.mjs');
   const dir=await mkdtemp(join(tmpdir(),'crank-private-gateway-')),statePath=join(dir,'state.json'),manifestPath=join(dir,'manifest.json'),cli=promisify(execFile),deliveries=[],results=[];
-  let restored;
-  const bridge=createServer(async(req,res)=>{try{let raw='';for await(const chunk of req)raw+=chunk;const headers={...req.headers};delete headers['content-length'];const response=await h.mf.dispatchFetch(h.origin+req.url,{method:req.method,headers,body:raw});const value=await response.text();if(req.url.endsWith('/poll') && response.ok){const task=JSON.parse(value).task;if(task)deliveries.push(task)}if(req.url.endsWith('/result') && response.ok)results.push({path:req.url,input:JSON.parse(raw)});res.writeHead(response.status,{'content-type':'application/json'});res.end(value)}catch{res.writeHead(503);res.end('{}')}});
+  let restored,tamperPoll=false;
+  const bridge=createServer(async(req,res)=>{try{let raw='';for await(const chunk of req)raw+=chunk;const headers={...req.headers};delete headers['content-length'];const response=await h.mf.dispatchFetch(h.origin+req.url,{method:req.method,headers,body:raw});let value=await response.text();if(tamperPoll && req.url.endsWith('/poll') && response.ok){tamperPoll=false;const envelope=JSON.parse(value);envelope.signature='synthetic-crank-99';value=JSON.stringify(envelope)}if(req.url.endsWith('/poll') && response.ok){const task=pollPayload(value).task;if(task)deliveries.push(task)}if(req.url.endsWith('/result') && response.ok)results.push({path:req.url,input:JSON.parse(raw)});res.writeHead(response.status,{'content-type':'application/json'});res.end(value)}catch{res.writeHead(503);res.end('{}')}});
   t.after(async()=>{bridge.closeAllConnections();await new Promise(r=>bridge.close(r));await restored?.close();await rm(dir,{recursive:true,force:true})});
   await new Promise(r=>bridge.listen(Number(new URL(h.origin).port),'127.0.0.1',r));
   const db=new DatabaseSync(join(dir,'inventory.sqlite'));db.exec("CREATE TABLE stock(name TEXT,quantity INTEGER); INSERT INTO stock VALUES ('Oak workbench',24),('Brass lamp',9)");db.close();
@@ -485,45 +486,116 @@ test('Enrolled private gateway reads a real database, checkpoints file pages acr
   await writeFile(manifestPath,JSON.stringify(manifest),{mode:0o600});
   for(const type of ['postgres-query','mysql-query','sqlserver-query']){
     const unsafe=join(dir,type+'.json'),remote={...manifest.operations.stock,type,read_only_credentials:true,connection:{[type==='sqlserver-query'?'server':'host']:'127.0.0.1',port:9,database:'synthetic-crank-7',user:'synthetic-crank-8',password:'synthetic-crank-9'},query:'WITH removed AS (DELETE FROM stock RETURNING *) SELECT * FROM removed',parameter_order:['name']};
-    await writeFile(unsafe,JSON.stringify({version:1,operations:{stock:remote}}),{mode:0o600});
+    await writeFile(unsafe,JSON.stringify(namedManifest({version:1,operations:{stock:remote}})),{mode:0o600});
     await assert.rejects(cli(process.execPath,['gateways/node/cli.mjs','enroll','--origin',h.origin,'--code','synthetic-crank-10','--environment','production','--state',join(dir,type+'-state.json'),'--manifest',unsafe],{timeout:20000}),e=>/read-only SELECT|Mutation|one supported/.test(e.stderr),'A mutation-bearing remote query is rejected before enrollment or any DB connection');
   }
 
-  const unencrypted=join(dir,'unencrypted.json');await writeFile(unencrypted,JSON.stringify({version:1,operations:{stock:{...manifest.operations.stock,type:'postgres-query',read_only_credentials:true,connection:{host:'warehouse.synthetic.example',port:5432,database:'synthetic-crank-11',user:'synthetic-crank-12',password:'synthetic-crank-13',ssl:false},query:'SELECT name FROM stock WHERE name=$1',parameter_order:['name']}}}),{mode:0o600});
+  const unencrypted=join(dir,'unencrypted.json');await writeFile(unencrypted,JSON.stringify(namedManifest({version:1,operations:{stock:{...manifest.operations.stock,type:'postgres-query',read_only_credentials:true,connection:{host:'warehouse.synthetic.example',port:5432,database:'synthetic-crank-11',user:'synthetic-crank-12',password:'synthetic-crank-13',ssl:false},query:'SELECT name FROM stock WHERE name=$1',parameter_order:['name']}}})),{mode:0o600});
   await assert.rejects(cli(process.execPath,['gateways/node/cli.mjs','enroll','--origin',h.origin,'--code','synthetic-crank-14','--environment','production','--state',join(dir,'unencrypted-state.json'),'--manifest',unencrypted],{timeout:20000}),e=>/verified TLS/.test(e.stderr),'Credentials cannot leave the gateway over an unverified database connection');
+  await h.post('gateways',{label:'Unconfirmed enrollment',environment:'production'},h.owner,403);
+  await freshGatewayOwner(h);
+  const expiredCode=await h.post('gateways',{label:'Expired warehouse enrollment',environment:'production'},h.owner,201);
+  const {createHash,randomBytes}=await import('node:crypto');
+  const persisted=await h.db.prepare('SELECT code_hash,code_expires_at FROM crank_gateways WHERE id=?').bind(expiredCode.gateway.id).first();
+  assert.equal(persisted.code_hash,createHash('sha256').update(expiredCode.code).digest('hex'));assert.equal(Buffer.from(expiredCode.code,'base64url').byteLength,32);
+  await h.db.prepare('UPDATE crank_gateways SET code_expires_at=? WHERE id=?').bind(new Date(Date.now()-1000).toISOString(),expiredCode.gateway.id).run();
+  await assert.rejects(cli(process.execPath,['gateways/node/cli.mjs','enroll','--origin',h.origin,'--code',expiredCode.code,'--environment','production','--state',join(dir,'expired.json'),'--manifest',manifestPath],{timeout:20000}),e=>/HTTP 403/.test(e.stderr));
+  assert.equal((await h.get('gateways')).gateways.find(g=>g.id===expiredCode.gateway.id).status,'revoked');
+  const prepared=await h.post('tokens',{label:'Gateway preparation credential cannot enroll',scope:'agent'},h.owner,201);
+  await h.post('gateways',{label:'Refused API enrollment',environment:'production'},'',403,{authorization:'Bearer '+prepared.token});
   const enrollment=await h.post('gateways',{label:'Harbour workshop private inventory',environment:'production'},h.owner,201),base=`gateways/${enrollment.gateway.id}`;
   await h.post('gateways/enroll',{code:enrollment.code,environment:'staging'},h.owner,403);
   await cli(process.execPath,['gateways/node/cli.mjs','enroll','--origin',h.origin,'--code',enrollment.code,'--environment','production','--state',statePath,'--manifest',manifestPath],{timeout:20000});
   await h.post('gateways/enroll',{code:enrollment.code,environment:'production'},h.owner,403);
-  const state=JSON.parse(await readFile(statePath,'utf8')),headers={authorization:'Bearer '+state.credential};
-  await h.post(base+'/poll',{environment:'staging'},'',403,headers);
+  const state=JSON.parse(await readFile(statePath,'utf8')),headers={};
+  await gatewayPost(h,state,base+'/poll',{environment:'staging'},403);
+  const input={environment:'production'},path='/api/crank/'+base+'/poll';
+  const {createIdentity}=await import('../gateways/node/identity.mjs');
+  await gatewayPost(h,state,base+'/poll',input,401,{privateKey:createIdentity().private_key});
+  await gatewayPost(h,state,base+'/poll',input,401,{timestamp:Math.floor(Date.now()/1000)-301});
+  const nonce=randomBytes(32).toString('base64url');
+  assert.equal(pollPayload(await gatewayPost(h,state,base+'/poll',input,200,{nonce})).task,null);
+  await gatewayPost(h,state,base+'/poll',input,401,{nonce});
+  await h.post(base+'/poll',input,'',401,{authorization:'Bearer synthetic-crank-98'});
+
   await h.get(base+'/secrets','',401,headers);
-  const grant=await h.post(base+'/grants',{environment:'production',connector_id:connectorId,connector_version:1,operations:['record','file','scope_probe'],destinations:['inventory-db','inventory-files']},h.owner,201);
+  const grant=await h.post(base+'/grants',{environment:'production',connector_id:connectorId,connector_version:1,operations:['record','file','scope_probe'],destinations:manifestDestinations(manifest,manifestPath)},h.owner,201);
   const record={id:'stock',type:'custom.request',connector_id:connectorId,connector_version:1,operation:'record',gateway_id:state.gateway.id,environment:'production',input:{name:'Oak workbench'}},file={...record,id:'file',operation:'file',input:{}};
   const test=await draftTest(h,'Harbour private database and paginated stock file',[record,file]);assert.equal(test.run.status,'waiting');
   const work=()=>cli(process.execPath,['gateways/node/cli.mjs','work','--state',statePath,'--manifest',manifestPath,'--once'],{timeout:20000});
-  await work();const duplicate=results[0];assert.ok(duplicate);assert.equal((await h.send(duplicate.path,duplicate.input,'',headers)).value.replayed,true);
+  await work();const duplicate=results[0];assert.ok(duplicate);assert.equal((await gatewayPost(h,state,duplicate.path,duplicate.input)).replayed,true);
   await h.tick();let progress=await h.get('workflow-runs/'+test.run.id);assert.equal(stepOf(progress,'stock').status,'succeeded');assert.deepEqual(stepOf(progress,'stock').output.body.rows,[{name:'Oak workbench',quantity:24}]);assert.equal(progress.status,'waiting');
   await work();await h.restart();await h.tick();assert.equal(deliveries.length,2,'restart consumes the saved first file page without dispatching it again');
   await work();await h.tick();await work();await h.tick();
   const done=await h.get('workflow-runs/'+test.run.id);assert.equal(done.status,'succeeded',JSON.stringify(done.error));
   const lines=['Oak workbench,24','Brass lamp,9','Cedar shelf,12','Walnut desk,6','Steel cabinet,3'];assert.deepEqual(stepOf(done,'file').output.body,{items:lines,pages:3,complete:true});
   assert.equal(deliveries.length,4);assert.equal(new Set(deliveries.map(task=>task.id)).size,4);assert.equal(deliveries[1].input.cursor,undefined);assert.ok(deliveries[2].input.cursor);assert.ok(deliveries[3].input.cursor);
+  const outsideManifest=structuredClone(manifest);outsideManifest.operations.stock.database='ungranted.sqlite';await writeFile(manifestPath,JSON.stringify(outsideManifest),{mode:0o600});
+  const outside=await draftTest(h,'A local alias cannot widen its concrete destination grant',[record]);await work();
+  const outsideDone=await h.get('workflow-runs/'+outside.run.id);assert.equal(outsideDone.status,'failed');assert.equal(stepOf(outsideDone,'stock').error.gateway_error_category,'operation_refused');
+  await writeFile(manifestPath,JSON.stringify(manifest),{mode:0o600});
+  const dnsId='synthetic-crank-dns-edge',dnsDefinition=customDefinition(dnsId,{gateway:true});dnsDefinition.operations=dnsDefinition.operations.filter(op=>op.id==='record');await installDefinition(h,dnsDefinition,['records.read']);
+  const dnsHost='synthetic-crank-dns.example',dnsManifest=namedManifest({version:1,operations:{stock:{type:'postgres-query',connector_id:dnsId,connector_version:1,destination:'inventory-db',read_only_credentials:true,connection:{host:dnsHost,port:5432,database:'synthetic-crank-61',user:'synthetic-crank-62',password:'synthetic-crank-63',ssl:true},query:'SELECT name FROM stock WHERE name=$1',parameter_order:['name'],parameters:{name:{type:'string'}},maxRows:10}}});
+  await h.post(base+'/grants',{environment:'production',connector_id:dnsId,connector_version:1,operations:['record'],destinations:manifestDestinations(dnsManifest,manifestPath)},h.owner,201);
+  await writeFile(manifestPath,JSON.stringify(dnsManifest),{mode:0o600});
+  const {pathToFileURL}=await import('node:url');
+  for(const address of ['169.254.169.254','::ffff:169.254.169.254','fe80::1']) {
+    const probing=await draftTest(h,'Hostile DNS answers cannot reach metadata',[{...record,connector_id:dnsId}]);
+    await cli(process.execPath,['gateways/node/cli.mjs','work','--state',statePath,'--manifest',manifestPath,'--once'],{timeout:20000,env:{...process.env,NODE_OPTIONS:`--import=${pathToFileURL(join(process.cwd(),'tests/gateway-dns-edge.mjs')).href}`,CRANK_TEST_DNS_HOST:dnsHost,CRANK_TEST_DNS_ADDRESS:address}});
+    const denied=await h.get('workflow-runs/'+probing.run.id);assert.equal(denied.status,'failed');assert.equal(stepOf(denied,'stock').error.gateway_error_category,'operation_refused','Gateway DNS resolution must refuse before creating a private socket');
+  }
+  await writeFile(manifestPath,JSON.stringify(manifest),{mode:0o600});
+  const version2=customDefinition(connectorId,{gateway:true});version2.version=2;await installDefinition(h,version2);
+  const ungranted=await draftTest(h,'A connector repair cannot reuse another version grant',[{...record,connector_version:2}]);assert.equal(ungranted.run.status,'failed');
   const before=deliveries.length,cross=await draftTest(h,'Staging cannot read production database',[{...record,environment:'staging'}]);assert.equal(cross.run.status,'failed');assert.equal(deliveries.length,before);
   await h.post(`custom-connectors/${connectorId}/versions/1/revoke-scopes`,{scopes:['scope.probe']});
   const revoked=await draftTest(h,'Scope revoked before any private dispatch',[{...record,operation:'scope_probe'}]);assert.equal(revoked.run.status,'failed');assert.equal(stepOf(revoked.run,'stock').error.custom_scope,true);
   const suite=await h.post(`custom-connectors/${connectorId}/versions/1/sandbox`,{readbacks:[{run_id:done.id,step_id:'stock',path:'body.rows',equals:[{name:'Oak workbench',quantity:24}]},{run_id:done.id,step_id:'file',path:'body.items',equals:lines}],revoked_run_id:revoked.run.id,duplicate_run_id:done.id});assert.equal(suite.status,'ready');
+  const productionSecret=await connection(h,{app:'http',label:'Production-only inventory credential',purpose:'test',environment:'production',auth_kind:'bearer',domains:['private-account.example'],secret:{token:'synthetic-crank-52'}});
+  const stagingWorkflow=await h.post('workflows',{name:'Staging cannot read a production secret',environment:'staging',graph:{trigger:{type:'manual'},steps:[{id:'secret',type:'http',connection_id:productionSecret.id,input:{url:'https://private-account.example/read'}}]}},h.owner,201);
+  const crossSecret=await h.post(`workflows/${stagingWorkflow.id}/test`,{bindings:{[productionSecret.id]:productionSecret.id}},h.owner,201);
+  assert.equal(crossSecret.status,'failed');assert.equal(crossSecret.error.access_decision,'cross_environment');
+  assert.ok((await h.get('audit')).some(a=>a.subject_id===crossSecret.id && a.action==='access.denied' && a.detail.reason_class==='cross_environment'));
+  assert.equal(fake.to('private-account.example').length,0);
   const production=await publish(h,'Harbour production inventory pipeline',{trigger:{type:'manual'},steps:[record,file]});
   const waiting=await startRun(h,production,{});assert.equal(waiting.status,'waiting');
-  await h.post(base+'/revoke');await h.tick();const refused=await h.get('workflow-runs/'+waiting.id);assert.equal(refused.status,'failed');assert.match(refused.error.message,/gateway is revoked/);assert.equal(deliveries.length,before);
-  await h.post(base+'/poll',{environment:'production'},'',401,headers);
-  const audit=await h.get('audit');assert.ok(audit.some(a=>a.action==='gateway.environment_denied'&&a.detail.environment==='staging'));
+  const pendingResults=results.length;tamperPoll=true;
+  await assert.rejects(work(),e=>/signature or installation binding/.test(e.stderr),'The real gateway must reject an unsigned or altered installation job');
+  assert.equal(results.length,pendingResults,'An altered signed job cannot execute or return output');
+  const dispatchedBeforeRevoke=deliveries.length;
+  const invitation=await h.send('/auth/invite',{email:'warehouse-admin@example.test',displayName:'Warehouse administrator',role:'admin'},h.owner);assert.equal(invitation.status,202,invitation.text);
+  const link=h.mail.at(-1).html.match(/href="([^"]*\/auth\/confirm\?token=[^"]+)"/)[1].replaceAll('&amp;','&');const admin=await h.send('/auth/confirm',{token:new URL(link).searchParams.get('token')});assert.equal(admin.status,303,admin.text);
+  await h.post(base+'/grants',{environment:'production',connector_id:connectorId,connector_version:1,operations:['record'],destinations:manifestDestinations({operations:{stock:manifest.operations.stock}},manifestPath)},admin.cookie,403);
+  await h.post(base+'/revoke',{},admin.cookie);await h.tick();const refused=await h.get('workflow-runs/'+waiting.id);assert.equal(refused.status,'failed');assert.match(refused.error.message,/gateway revoked/);assert.equal(deliveries.length,dispatchedBeforeRevoke);assert.equal(stepOf(refused,'stock').output,null);
+  await gatewayPost(h,state,`gateways/${state.gateway.id}/tasks/${deliveries.at(-1).id}/result`,{environment:'production',output:{rows:[{name:'Oak workbench',quantity:999}]}},401);
+  await gatewayPost(h,state,base+'/poll',{environment:'production'},401);
+  const audit=await h.get('audit');assert.ok(audit.some(a=>a.action==='gateway.environment_denied'&&a.detail.environment==='staging'));assert.ok(audit.some(a=>a.action==='gateway.code_expired'));assert.ok(audit.some(a=>a.action==='gateway.request_denied'&&a.detail.reason_class==='signature'));assert.ok(audit.some(a=>a.action==='gateway.dispatch_denied'&&a.detail.reason_class==='cross_environment'));
   const inventory=await h.get('data/flows'),disclosure=inventory.flows.find(f=>f.id===`custom:${connectorId}:1`);assert.match(disclosure.credentials,/credentials stay on the customer gateway/);assert.equal(JSON.stringify(inventory).includes('inventory.sqlite'),false);
-  const exported=await h.send('/api/crank/data/export',{},h.owner);assert.equal(exported.status,200);assert.equal(exported.text.includes(state.credential),false);assert.equal(exported.text.includes(enrollment.code),false);assert.equal(exported.text.includes('inventory.sqlite'),false);
+  const exported=await h.send('/api/crank/data/export',{},h.owner);assert.equal(exported.status,200,exported.text);assert.equal(exported.text.includes(state.private_key),false);assert.equal(exported.text.includes(enrollment.code),false);assert.ok(!exported.text.includes(state.public_key),'Archives contain no gateway key');
   restored=await harness('http://127.0.0.1:9',{edge:fake.edge});await restored.post('data/restore',{archive:exported.text,confirm:'RESTORE'});
-  const imported=await restored.get('custom-connectors');assert.equal(imported.find(c=>c.id===connectorId).status,'needs_review');assert.equal(imported.find(c=>c.id===connectorId).sandbox,null);assert.deepEqual(await restored.get('gateways'),{gateways:[],grants:[]});
+  const imported=await restored.get('custom-connectors');assert.equal(imported.find(c=>c.id===connectorId).status,'needs_review');assert.equal(imported.find(c=>c.id===connectorId).sandbox,null);assert.ok((await restored.get('gateways')).gateways.every(g=>g.status==='revoked'));assert.ok((await restored.get('gateways')).grants.every(g=>g.status==='revoked'));
   assert.equal((await restored.get('workflows/'+production.id)).status,'paused');
-  const importedVersion=imported.find(c=>c.id===connectorId);await restored.post(`custom-connectors/${connectorId}/versions/1/review`,{reviewed_digest:importedVersion.digest,disclosure_confirmed:true,granted_scopes:importedVersion.granted_scopes});assert.equal((await restored.get('custom-connectors')).find(c=>c.id===connectorId).status,'sandbox');assert.deepEqual(await restored.get('gateways'),{gateways:[],grants:[]});
+  const importedVersion=imported.find(c=>c.id===connectorId && c.version===1);await restored.post(`custom-connectors/${connectorId}/versions/1/review`,{reviewed_digest:importedVersion.digest,disclosure_confirmed:true,granted_scopes:importedVersion.granted_scopes});assert.equal((await restored.get('custom-connectors')).find(c=>c.id===connectorId).status,'sandbox');assert.ok((await restored.get('gateways')).gateways.every(g=>g.status==='revoked'));assert.ok((await restored.get('gateways')).grants.every(g=>g.status==='revoked'));
   await restored.post(`custom-connectors/${connectorId}/versions/1/sandbox`,{readbacks:[{run_id:done.id,step_id:'stock',path:'body.rows',equals:[{name:'Oak workbench',quantity:24}]}],revoked_run_id:revoked.run.id,duplicate_run_id:done.id},restored.owner,422);
-  await restored.post(base+'/poll',{environment:'production'},'',401,headers);
+  await gatewayPost(restored,state,base+'/poll',{environment:'production'},401);
+});
+
+
+test('Private gateway read retries retain admission, inputs and budget across restart, recover automatically and stop at exhaustion',async()=>{
+  const {privateRetryFixture}=await import('./private-retry-fixture.mjs');
+  const isolated=await harness('http://127.0.0.1:9');let source;
+  try {
+    source=await privateRetryFixture(isolated,{retry_policy:{read_attempts:2,base_delay_ms:1}});
+    const recovery=await source.start();await source.work();
+    const waiting=await isolated.get('workflow-runs/'+recovery.run.id);assert.equal(waiting.status,'waiting');assert.equal(waiting.attempts.length,1);assert.equal(waiting.attempts[0].error_category,'network');
+    await isolated.restart();source.ready();await source.work();
+    const recovered=await isolated.get('workflow-runs/'+recovery.run.id);assert.equal(recovered.status,'succeeded',JSON.stringify(recovered.error));
+    assert.deepEqual(stepOf(recovered,'stock').output.body,{rows:[{name:'Oak workbench',quantity:24}]});assert.equal(recovered.attempts.length,2);
+    assert.equal(recovered.attempts[0].request_key,recovered.attempts[1].request_key);assert.equal(recovered.attempts[0].budget_started_at,recovered.attempts[1].budget_started_at);
+    assert.deepEqual(recovered.attempts.map(a=>a.retry_number),[1,2]);assert.equal(source.arrivals.length,2);
+    source.offline();const failing=await source.start();await source.work();await source.work();
+    const exhausted=await isolated.get('workflow-runs/'+failing.run.id);assert.equal(exhausted.status,'failed');assert.equal(exhausted.error.exhausted,true);assert.ok(exhausted.error.next_owner_action);assert.equal(exhausted.attempts.length,2);
+    const count=source.arrivals.length;await source.work();assert.equal(source.arrivals.length,count,'The gateway cannot send another request after the run exhausts its budget');
+    const admissions=await isolated.db.prepare('SELECT COUNT(*) AS n FROM crank_request_admissions WHERE finished_at IS NULL AND expires_at>?').bind(Date.now()).first();assert.equal(admissions.n,0,'Completed attempts release their physical account slots');
+  } finally {await source?.close();await isolated.close()}
 });

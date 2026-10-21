@@ -13,7 +13,7 @@ const transient = (status: number) => [429, 502, 503, 504].includes(status)
 
 /** A restart retains failed budgets/deadlines; completed earlier calls are
  * reconstructed from the unfinished step's private continuation checkpoints. */
-export async function retryRequest(ctx: RequestContext, request: { method: string; url: URL; body: Uint8Array | null; bodyIdentity?: string; idempotent: boolean; safeRead?: boolean; checkpoint?: boolean }, send: (policy: AttemptPolicy) => Promise<BoundedResponse>) {
+export async function retryRequest(ctx: RequestContext, request: { method: string; url: URL; body: Uint8Array | null; bodyIdentity?: string; idempotent: boolean; safeRead?: boolean; checkpoint?: boolean; deferred?: boolean }, send: (policy: AttemptPolicy) => Promise<BoundedResponse>) {
   const ordinal = ctx.requests.next++
   const bodyHash = request.bodyIdentity ?? (request.body ? [...new Uint8Array(await crypto.subtle.digest('SHA-256', new Uint8Array(request.body)))].map(byte => byte.toString(16).padStart(2, '0')).join('') : null)
   const safeRead = request.safeRead ?? ['GET', 'HEAD'].includes(request.method)
@@ -29,7 +29,8 @@ export async function retryRequest(ctx: RequestContext, request: { method: strin
   const unfinished = previous && (previous.http_status === null || transient(previous.http_status) || ['rate_limit', 'network'].includes(previous.error_category ?? ''))
   const startedAt = unfinished ? previous.budget_started_at : now()
   let sliceStartedAt = unfinished ? previous.retry_resumed_at ?? previous.slice_started_at ?? previous.budget_started_at : startedAt
-  let attempts = unfinished ? previous.retry_number : 0
+  // A deferred gateway response is consumed once after its worker wakes the run.
+  let attempts = unfinished ? previous.retry_number - (request.deferred && !previous.retry_at ? 1 : 0) : 0
   const maximum = safeRead ? Number(ctx.retryPolicy?.read_attempts ?? RETRY_POLICY.read_attempts) : request.idempotent ? RETRY_POLICY.idempotent_write_attempts : 1
   // A parked readback re-enters its lost-write phase without another mutation.
   if (unfinished && !safeRead && previous.error_category === 'network' && attempts >= maximum) throw retryExhausted('network', 'the prior write response was lost; resume its readback without another write')

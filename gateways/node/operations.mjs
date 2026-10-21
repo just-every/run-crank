@@ -4,6 +4,8 @@ import { open, constants } from 'node:fs/promises';
 import { resolve, dirname } from 'node:path';
 import { fileLines } from './file-lines.mjs';
 import { GatewayError, fail, isObject, MAX_OUTPUT_BYTES } from './errors.mjs';
+import { withCredentials } from './credentials.mjs';
+import { authorizeTask } from './authority.mjs';
 export { GatewayError, isObject, MAX_OUTPUT_BYTES } from './errors.mjs';
 
 const text = value => typeof value === 'string' && value.length > 0 && value.length <= 512;
@@ -25,10 +27,12 @@ export async function readPrivateJson(path) {
 
 export function validateManifest(manifest) {
   if (!isObject(manifest) || manifest.version !== 1 || !isObject(manifest.operations) ||
-      Object.keys(manifest.operations).length > 100) fail('configuration', 'Invalid gateway manifest.');
+      Object.keys(manifest.operations).length > 100 ||
+      (manifest.credentials !== undefined && (!isObject(manifest.credentials) || Object.keys(manifest.credentials).length > 100))) fail('configuration', 'Invalid gateway manifest.');
   for (const [name, op] of Object.entries(manifest.operations)) {
     if (!text(name) || !isObject(op) || !text(op.connector_id) || (!Number.isSafeInteger(op.connector_version) || op.connector_version < 1) ||
-        !text(op.destination) || !isObject(op.parameters) || Object.keys(op.parameters).length > 32) {
+        !text(op.destination) || (op.connector_operation !== undefined && !text(op.connector_operation)) ||
+        !isObject(op.parameters) || Object.keys(op.parameters).length > 32) {
       fail('configuration', 'Invalid operation binding.');
     }
     for (const [parameter, schema] of Object.entries(op.parameters)) {
@@ -43,9 +47,9 @@ export function validateManifest(manifest) {
       }
     }
     if (['postgres-query','mysql-query','sqlserver-query'].includes(op.type)) {
-      validateRemoteDatabase(op);
+      validateRemoteDatabase(withCredentials(manifest, op));
     } else if (['sftp-lines', 's3-lines'].includes(op.type)) {
-      validateStorage(op);
+      validateStorage(withCredentials(manifest, op));
     } else if (op.type === 'sqlite-query') {
       if (!text(op.database) || typeof op.query !== 'string' || op.query.length > 16384 ||
           !/^\s*(SELECT|WITH)\b/i.test(op.query) || !Number.isInteger(op.maxRows) || op.maxRows < 1 || op.maxRows > 1000) {
@@ -109,11 +113,8 @@ async function sqliteQuery(op, input, base) {
   } finally { db?.close(); }
 }
 
-export async function executeTask(manifest, manifestPath, task) {
-  const op = isObject(task) && Object.hasOwn(manifest.operations, task.operation) ? manifest.operations[task.operation] : undefined;
-  if (!op || task.connector_id !== op.connector_id || task.connector_version !== op.connector_version || task.destination !== op.destination) {
-    fail('operation_refused', 'Task does not match an explicitly configured operation.');
-  }
+export async function executeTask(manifest, manifestPath, task, authority) {
+  const op = withCredentials(manifest, authorizeTask(manifest, manifestPath, task, authority));
   if (!text(task.operation_key)) fail('invalid_input', 'Task operation key is required.');
   validateInput(op, task.input);
   const base = dirname(resolve(manifestPath));

@@ -4,7 +4,8 @@ Run this runtime on a customer-controlled host with Node **22.20.0**. It opens
 no listener. It sends enrollment, polling and results only to the configured Crank
 origin, and connects to private destinations explicitly configured below.
 Plain HTTP is allowed for `localhost`, `127.0.0.1` and `::1` development
-origins. Redirects fail; bearer credentials are never forwarded to a redirect.
+origins. Redirects fail. Every outward request, including enrollment, is signed
+with an Ed25519 identity generated on this host; no bearer credential is used.
 SQLite and local file operations have no package dependencies. Remote database
 and SFTP operations require `npm ci --prefix gateways/node --ignore-scripts`;
 drivers, the SQL parser and SSH load only for their selected operations. S3 uses
@@ -13,11 +14,15 @@ Node's HTTP/TLS and crypto modules with AWS Signature Version 4.
 The owner creates a private JSON manifest and keeps the databases and files on
 that host. Both the manifest and enrolled state must be regular, mode-0600 files;
 symlinks are rejected. Keep their directory private too. Private destination
-credentials and configuration stay in these local files and are never included in
-enrollment, polling or result requests. The gateway's own enrollment credential
-is sent only in its Authorization header. Only the explicitly selected
-operation's output is returned to Crank. Choose its columns and file content
-accordingly.
+credentials stay in a named `credentials` map in the private manifest. Remote
+operations reference the map by their `credential` name. Destination details
+(host, port, database, path, endpoint and bucket) stay in `connection` and the
+operation; user names, passwords and private keys belong only in the named
+credential. Credential values and names are never included in enrollment, polls,
+results, logs or audit. Only the selected operation's output is returned to
+Crank. Choose its columns and file content accordingly. The enrollment state
+contains the host's private identity and the pinned installation public key;
+protect it as carefully as the credentials.
 
 ## Configure the local operations
 
@@ -60,8 +65,14 @@ database path, file path, URL, SQL statement or undeclared parameter. The
 `operation` is the exact key in `operations`; its connector ID, version and
 destination must all match. Connector versions are positive safe integers, with
 no string coercion. A new connector version needs an explicit manifest
-change before it can execute. `operation_key` must be present and nonempty; the
-server owns task identity and leases. These local operations are read-only.
+change and a new exact-version owner grant before it can execute. A local
+`connector_operation` optionally narrows the connector operation ID that can
+select this binding. Otherwise the installation's signed connector-operation
+mapping selects this exact local operation key. `operation_key` must be present
+and nonempty; the server owns task identity and leases. These local operations
+are read-only. A manifest alone grants no authority: every task also needs the
+installation's signed, active grant at the task's exact grant revision and
+current TEAM authority revision.
 
 Parameter types are `string`, `integer` (safe JavaScript integer), finite `number`
 and `boolean`. Parameters are required unless `optional` is true. Numeric `min`
@@ -100,7 +111,10 @@ A single line larger than that bound fails explicitly.
 
 ## Enroll and run
 
-Issue a one-use enrollment code in Crank, then run on the customer host:
+In Crank, the owner first completes a fresh email-link step-up, then issues a
+single-use enrollment code bound to this installation, gateway and environment.
+The step-up lasts five minutes and the code expires after fifteen minutes.
+Run on the customer host:
 
 ```sh
 node gateways/node/cli.mjs enroll \
@@ -112,9 +126,12 @@ node gateways/node/cli.mjs work \
 ```
 
 The enrollment code is a short-lived secret; protect command history/process
-visibility on the customer host. The long-lived gateway credential is written
-only to a newly created mode-0600 state file, never printed. Enrollment refuses
-to replace existing state. Run `work` without `--once` under a customer-managed
+visibility on the customer host. The gateway generates its own Ed25519 key
+pair, redeems the code with the public key and its SHA-256 fingerprint, and
+saves the identity only to a newly created mode-0600 state file, never printed.
+Enrollment refuses to replace existing state. The identity serves exactly one
+installation and one environment. Existing bearer state is rejected; revoke the
+old gateway and enroll a new identity instead of copying old state. Run `work` without `--once` under a customer-managed
 service supervisor for continuous polling. A manifest is loaded at startup;
 restart after local configuration changes. `--once` processes at most one task
 and exits successfully when idle or after reporting its result. A reported
@@ -125,37 +142,88 @@ request has a ten-second deadline. Stop the owned process normally to stop work.
 
 ## Worker protocol
 
-All requests are JSON `POST`. Enrollment sends
-`/api/crank/gateways/enroll` with `{ "code": "...", "environment": "..." }`
-and receives `{ "gateway": { "id": "...", "environment": "..." },
-"credential": "..." }`. The local state records these fields plus `version: 1`
-and the configured `origin`.
+All requests are JSON `POST` over HTTPS (HTTP loopback is permitted only for
+local development). Enrollment sends `/api/crank/gateways/enroll` with
+`{code, environment, public_key, public_key_fingerprint}` and receives
+`{gateway:{id,environment,installation}, installation_public_key}`. Both public
+keys are Ed25519 SPKI DER encoded as unpadded base64url; the fingerprint is the
+lowercase hexadecimal SHA-256 of the public DER bytes. The local version-2
+state also records `origin`, `public_key` and the local PKCS8 DER `private_key`
+as base64url. The installation is the exact canonical Crank origin.
 
-Subsequent requests carry `Authorization: Bearer <credential>`.
-`/api/crank/gateways/:id/poll` sends `{ "environment": "..." }` and receives
-`{ "task": null }` or `{ "task": { "id": "...", "connector_id": "...",
-"connector_version": 1, "operation": "...", "destination": "...",
-"input": {}, "operation_key": "..." } }`.
+Every request carries `x-crank-gateway-id`, `x-crank-environment`,
+`x-crank-timestamp` (Unix seconds), `x-crank-nonce` (32 random bytes as base64url)
+and `x-crank-signature` (Ed25519 signature as base64url). Enrollment uses
+`enrolling` as its header gateway ID. Sign the UTF-8 bytes below, with literal
+newline separators and no final newline:
 
-`/api/crank/gateways/:id/tasks/:taskId/result` sends
-`{ "environment": "...", "output": {} }` or
-`{ "environment": "...", "error": { "category": "...", "message": "..." } }`.
-Categories are `operation_refused`, `invalid_input`, `output_limit`,
-`execution_failed`, `file_changed` and `timeout`. Messages are fixed sanitized descriptions, never raw
-SQLite exceptions, local paths, queries or credentials. HTTP error bodies are
-never printed. Worker responses are capped at 96 KiB. Result acknowledgement
-may be an empty successful response or JSON.
+```text
+crank-gateway-request-v1
+POST
+<pathname and query>
+<lowercase hexadecimal SHA-256 of exact transmitted JSON bytes>
+<timestamp>
+<nonce>
+```
 
-This runtime supports the bounded SQLite, file, remote SQL and storage doors
-described here. It does not execute shell commands, arbitrary task SQL or
-task-supplied network URLs.
+Crank checks the timestamp within 300 seconds and consumes each nonce once.
+`/api/crank/gateways/:id/poll` sends `{environment}` and receives a signed
+envelope `{payload:"<JSON string>",signature:"<base64url>"}`. The installation
+signs `crank-gateway-job-v1` followed by a newline and the exact payload string.
+The payload contains `installation`, `environment`, `gateway_id`, `status`,
+`authority_revision`, `issued_at`, `expires_at`, `nonce`, `request_nonce`,
+`grants` and `task` (null when idle). Times use Unix seconds; the envelope
+expires within 300 seconds. `request_nonce` must match the current poll's nonce,
+so an old signed job cannot be replayed on another poll. Invalid signatures,
+bindings, status, expiry or decreasing authority revisions stop the worker.
+
+A grant is `{id,revision,status,connector_id,connector_version,operations,
+destinations}`. Operations are connector operation IDs. Each destination is a
+concrete descriptor with its connector destination `label`:
+
+- Database: `{label,type:"database",host,port,database}`.
+- SFTP: `{label,type:"sftp",host,port,path_prefix}`.
+- S3-compatible: `{label,type:"s3",endpoint,bucket,prefix}`.
+- SQLite or local file: `{label,type:"local",path}` (absolute local path).
+
+The host derives the destination from its own local operation, checks every
+concrete field and confines SFTP paths and S3 keys to the granted prefix. A
+label alone never authorizes a destination. `deriveDestination(operation,
+manifestPath)` in `destinations.mjs` returns the concrete descriptor without
+credentials. An optional local `destination_spec` adds another destination
+restriction. This runtime has no arbitrary HTTP operation or proxy door.
+
+A non-null task contains `id`, `connector_id`, `connector_version`,
+`connector_operation`, `operation` (the exact manifest key), `destination`
+(the grant label), `input`, `operation_key`, `installation`, `environment`,
+`gateway_id`, `grant_id`, `grant_revision` and `authority_revision`. The host
+checks active status, environment, revisions, exact version, operation and
+concrete destination before invoking a driver. Crank repeats its checks when
+accepting the result. Revocation prevents the next dispatch and withholds later
+results; replacement requires a new enrollment.
+
+`/api/crank/gateways/:id/tasks/:taskId/result` sends `{environment,output:{}}`
+or `{environment,error:{category,message}}`. Categories are `operation_refused`,
+`invalid_input`, `output_limit`, `execution_failed`, `file_changed` and `timeout`.
+Messages are fixed descriptions, never raw driver exceptions, paths, queries or
+credentials. HTTP error bodies are never printed. Worker responses and requests
+are capped at 96 KiB. A result acknowledgement may be empty or JSON.
+
+The host resolves every remote destination itself and pins the checked address
+into its actual socket while preserving the configured TLS host and SSH host
+pin. Any DNS answer containing link-local, metadata, unspecified or multicast
+addresses is refused, including IPv4-mapped IPv6 forms and known metadata
+hosts. Private and loopback addresses are permitted only when the concrete
+destination matches the grant. HTTP, S3 and SQL Server redirects cannot select
+another endpoint. No shell command, task SQL, task URL, proxy environment or
+credential chain is consulted.
 
 ## Remote SQL adapters
 
 The optional `postgres-query`, `mysql-query` and `sqlserver-query` doors use
 parameterized official drivers and a single-SELECT SQL syntax gate. Configure
-`connection` locally with host (SQL Server: server), port, database, user,
-password and verified driver TLS settings (mandatory outside loopback). Unencrypted
+`connection` locally with host (SQL Server: server), port, database and verified
+driver TLS settings, and `credential` with a name from `manifest.credentials` (mandatory outside loopback). Unencrypted
 connections or disabled certificate verification outside loopback are refused.
 Those credentials never travel to
 Crank. Declare `read_only_credentials:true` and use an independently restricted
@@ -173,13 +241,23 @@ the SQLite example, plus:
 {
   "type": "postgres-query",
   "read_only_credentials": true,
+  "credential": "synthetic-crank-13",
   "connection": {
     "host": "synthetic-crank-11.internal", "port": 5432,
-    "database": "synthetic-crank-12", "user": "synthetic-crank-13",
-    "password": "synthetic-crank-14", "ssl": true
+    "database": "synthetic-crank-12", "ssl": true
   },
   "query": "SELECT id, name FROM customers WHERE id=$1",
   "parameter_order": ["id"]
+}
+```
+
+The enclosing manifest supplies the credential by name:
+
+```json
+{
+  "credentials": {
+    "synthetic-crank-13": { "user": "synthetic-crank-14", "password": "synthetic-crank-27" }
+  }
 }
 ```
 
@@ -213,11 +291,10 @@ An SFTP operation is:
   "connector_id": "synthetic-crank-1",
   "connector_version": 1,
   "destination": "synthetic-crank-15",
+  "credential": "synthetic-crank-17",
   "connection": {
     "host": "synthetic-crank-16.internal",
     "port": 22,
-    "username": "synthetic-crank-17",
-    "password": "synthetic-crank-18",
     "hostKeySha256": "REPLACE_WITH_INDEPENDENTLY_VERIFIED_SHA256_FINGERPRINT"
   },
   "path": "/synthetic-crank-19.txt",
@@ -233,9 +310,11 @@ An SFTP operation is:
 43 unpadded base64 characters, obtained through an independently trusted channel.
 The placeholder above deliberately fails validation. Every SSH handshake checks
 that fingerprint before authentication; there is no accept-first-use mode or
-agent forwarding. Configure exactly one of `password` or `privateKey`. The
-`privateKey` value contains the actual private key text in the private JSON
-manifest; an encrypted key may also use `passphrase`. No key files, SSH agents,
+agent forwarding. The named credential contains `username` and exactly one of `password` or
+`privateKey`. For example, `credentials["synthetic-crank-17"]` holds
+`{"username":"synthetic-crank-18","password":"synthetic-crank-28"}`. The
+`privateKey` value contains the actual private key text in that named entry;
+an encrypted key may also use `passphrase`. No key files, SSH agents,
 environment credentials or alternate authentication methods are consulted. The
 configured absolute remote path is opened read-only and must be a regular file.
 
@@ -247,11 +326,10 @@ An S3-compatible operation is:
   "connector_id": "synthetic-crank-1",
   "connector_version": 1,
   "destination": "synthetic-crank-20",
+  "credential": "synthetic-crank-23",
   "connection": {
     "endpoint": "https://synthetic-crank-21.example",
-    "region": "synthetic-crank-22",
-    "accessKeyId": "synthetic-crank-23",
-    "secretAccessKey": "synthetic-crank-24"
+    "region": "synthetic-crank-22"
   },
   "bucket": "synthetic-crank-25",
   "key": "synthetic-crank-26.txt",
@@ -266,7 +344,9 @@ An S3-compatible operation is:
 The endpoint is an HTTPS origin without a path, query, fragment or URL credentials.
 Requests use path-style bucket/object URLs and sign every request with AWS SigV4;
 the owner must configure the endpoint's actual region. Temporary credentials may
-add `connection.sessionToken`. Explicit test-only cleartext loopback endpoints
+add `sessionToken` to the named credential. For example,
+`credentials["synthetic-crank-23"]` holds
+`{"accessKeyId":"synthetic-crank-24","secretAccessKey":"synthetic-crank-29"}`. Explicit test-only cleartext loopback endpoints
 also require `connection.allowInsecureLoopback: true`; allowed hosts are
 `127.0.0.1`, `localhost` and `::1`. Cleartext localhost resolves only to loopback.
 TLS certificate verification is mandatory. Redirects, retries, proxy environment

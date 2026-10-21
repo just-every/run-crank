@@ -12,10 +12,10 @@ export function teamFence(actor: Actor) {
     { sql: 'NOT EXISTS(SELECT 1 FROM crank_team_access WHERE operator_id=?)', args: [actor.id] }
 }
 export function workflowScope(actor: Actor, workflowId: string) {
-  requireValue(!actor.team || actor.team.workflow_ids.includes(workflowId), 'This workflow is outside your scope', 403)
+  requireValue((!actor.serviceAccountId || actor.serviceWorkflowIds?.includes(workflowId)) && (!actor.team || actor.team.workflow_ids.includes(workflowId)), 'This workflow is outside your scope', 403)
 }
 export function connectionScope(actor: Actor, connectionId: string) {
-  requireValue(!actor.team || actor.team.connection_ids.includes(connectionId), 'This connection is outside your scope', 403)
+  requireValue((!actor.serviceAccountId || actor.serviceConnectionIds?.includes(connectionId)) && (!actor.team || actor.team.connection_ids.includes(connectionId)), 'This connection is outside your scope', 403)
 }
 /** Starting/reviewing fixed work uses its frozen connection declaration, never a draft. */
 export async function versionConnectionScope(env: CrankEnv, actor: Actor, versionId: string) {
@@ -32,6 +32,7 @@ export async function admitTeamRequest(request: Request, env: CrankEnv, actor: A
   if (!actor.team) return
   const path = new URL(request.url).pathname.replace('/api/crank/v1/', '/api/crank/'), read = request.method === 'GET'
   if (!path.startsWith('/api/')) return
+  if (!read && actor.team.role==='admin' && /^\/api\/crank\/gateways\/(?:grants\/)?[^/]+\/revoke$/.test(path))return
   if (read && (path === '/api/crank/inbox' || path === '/api/crank/followups' || path.startsWith('/api/crank/followups/'))) return
   if (read && ['/api/crank/state','/api/crank/workflows','/api/crank/workflow-runs','/api/crank/connections','/api/crank/catalog'].includes(path)) return
   const wf = /^\/api\/crank\/workflows\/([^/]+)(?:\/(.*))?$/.exec(path)

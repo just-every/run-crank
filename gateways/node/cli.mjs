@@ -5,6 +5,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { resolve } from 'node:path';
 import { GatewayError, isObject, readPrivateJson, validateManifest } from './operations.mjs';
 import { checkedOrigin, checkedState, post, saveState } from './transport.mjs';
+import { createIdentity, nonce, verifyPoll } from './identity.mjs';
 
 const usage = 'Usage: node gateways/node/cli.mjs enroll --origin URL --code CODE --environment ENV --state PATH --manifest PATH\n' +
   '       node gateways/node/cli.mjs work --state PATH --manifest PATH [--once]';
@@ -26,7 +27,7 @@ function argumentsFor(argv) {
   return { command, options };
 }
 
-async function runOperation(manifest, manifestPath, task) {
+async function runOperation(manifest, manifestPath, task, authority) {
   const worker = fork(new URL('./operation-process.mjs', import.meta.url), [], {
     execArgv: ['--max-old-space-size=64'], silent: true,
   });
@@ -39,7 +40,7 @@ async function runOperation(manifest, manifestPath, task) {
       worker.once('message', resolveResult);
       worker.once('error', () => resolveResult({ error: { category: 'execution_failed', message: 'Configured local operation failed.' } }));
       worker.once('exit', () => resolveResult({ error: { category: 'execution_failed', message: 'Configured local operation exited without a result.' } }));
-      worker.send({ manifest, manifestPath, task }, error => {
+      worker.send({ manifest, manifestPath, task, authority }, error => {
         if (error) resolveResult({ error: { category: 'execution_failed', message: 'Configured local operation could not start.' } });
       });
     });
@@ -56,8 +57,11 @@ async function enroll(options) {
   // Check before consuming the one-use code; saveState still uses exclusive creation.
   try { await lstat(options.state); throw new GatewayError('configuration', 'Gateway state already exists; use a new private state path.'); }
   catch (error) { if (error.code !== 'ENOENT') throw error; }
-  const response = await post(origin, '/api/crank/gateways/enroll', { code: options.code, environment: options.environment });
-  const state = checkedState({ version: 1, origin, gateway: response?.gateway, credential: response?.credential });
+  const identity = createIdentity();
+  const response = await post(origin, '/api/crank/gateways/enroll', { code: options.code, environment: options.environment,
+    public_key: identity.public_key, public_key_fingerprint: identity.public_key_fingerprint },
+    { ...identity, gateway: { id: 'enrolling', environment: options.environment } });
+  const state = checkedState({ version: 2, origin, gateway: response?.gateway, ...identity, installation_public_key: response?.installation_public_key });
   if (state.gateway.environment !== options.environment) throw new GatewayError('transport', 'Enrollment returned a different environment.');
   await saveState(options.state, state);
   process.stdout.write('Gateway enrolled; private state saved.\n');
@@ -67,14 +71,17 @@ async function work(options, manifest) {
   const state = checkedState(await readPrivateJson(options.state));
   const environment = state.gateway.environment;
   const gatewayPath = `/api/crank/gateways/${encodeURIComponent(state.gateway.id)}`;
+  let minimumRevision = 0;
   for (;;) {
-    const response = await post(state.origin, `${gatewayPath}/poll`, { environment }, state.credential);
-    if (!isObject(response) || !Object.hasOwn(response, 'task')) throw new GatewayError('transport', 'Worker returned an invalid poll response.');
+    const requestNonce = nonce();
+    const envelope = await post(state.origin, `${gatewayPath}/poll`, { environment }, state, requestNonce);
+    const response = verifyPoll(state, envelope, requestNonce, minimumRevision);
+    minimumRevision = response.authority_revision;
     if (response.task !== null) {
       const task = response.task;
       if (!isObject(task) || typeof task.id !== 'string' || !task.id || task.id.length > 256) throw new GatewayError('transport', 'Worker returned an invalid task.');
-      const result = await runOperation(manifest, resolve(options.manifest), task);
-      await post(state.origin, `${gatewayPath}/tasks/${encodeURIComponent(task.id)}/result`, { environment, ...result }, state.credential);
+      const result = await runOperation(manifest, resolve(options.manifest), task, response);
+      await post(state.origin, `${gatewayPath}/tasks/${encodeURIComponent(task.id)}/result`, { environment, ...result }, state);
       process.stdout.write(result.error ? 'Task failure reported.\n' : 'Task completed.\n');
     }
     if (options.once) return;

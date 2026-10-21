@@ -8,7 +8,7 @@ import type { Step, StepContext, StepResult, StepType } from '../engine/types'
 import { isObject, lookup } from '../engine/values'
 import { canonical } from '../model'
 import type { CustomOperation } from './definition'
-import { gatewayPage } from './gateway-tasks'
+import { gatewayPage } from './gateway-request'
 import { allowedOperation, customVersion } from './store'
 
 function typedInput(op:CustomOperation,input:Record<string,unknown>) {

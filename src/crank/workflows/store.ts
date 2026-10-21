@@ -1,3 +1,4 @@
+import { environmentName } from '../custom/gateways'
 import { customBindings } from '../custom/bindings'
 import { checkCustomPublication } from '../custom/store'
 import { checkCustomTriggerPublication } from '../custom/triggers'
@@ -40,7 +41,7 @@ export async function presentWorkflow(env: CrankEnv, row: WorkflowRow) {
   const versions = await stmt(env, "SELECT id,number,graph_digest,declared_json,published_by,published_at,retired_at FROM crank_workflow_versions WHERE workflow_id=? AND mode='production' ORDER BY number DESC", row.id).all<Omit<VersionRow, 'graph_json' | 'workflow_id'>>()
   const owner = await stmt(env, 'SELECT display_name FROM oa_operators WHERE id=?', row.owner_id).first<{ display_name: string }>()
   return {
-    id: row.id, name: row.name, description: row.description, folder: row.folder, data_class: (row as { data_class?: string }).data_class ?? 'none', owner: { id: row.owner_id, name: owner?.display_name ?? null }, status: row.status,
+    id: row.id, environment:(row as WorkflowRow & {environment:string}).environment, name: row.name, description: row.description, folder: row.folder, data_class: (row as { data_class?: string }).data_class ?? 'none', owner: { id: row.owner_id, name: owner?.display_name ?? null }, status: row.status,
     enabled: row.status === 'published', draft: JSON.parse(row.draft_json), draft_updated_at: row.draft_updated_at, published_version_id: row.published_version_id,
     created_by: row.created_by, created_at: row.created_at,
     versions: versions.results.map(v => ({ id: v.id, number: v.number, graph_digest: v.graph_digest, authority: JSON.parse(v.declared_json), published_by: v.published_by, published_at: v.published_at, retired_at: v.retired_at })),
@@ -64,7 +65,7 @@ export async function listWorkflows(env: CrankEnv, params: URLSearchParams, acto
   const q = params.get('q'), folderName = params.get('folder')
   const rows = await stmt(env, `SELECT * FROM crank_workflows WHERE (? IS NULL OR id IN (SELECT value FROM json_each(?))) AND (? IS NULL OR name LIKE ? OR description LIKE ?) AND (? IS NULL OR folder=?) ORDER BY folder,name,id LIMIT 500`,
     actor?.team ? JSON.stringify(actor.team.workflow_ids) : null, actor?.team ? JSON.stringify(actor.team.workflow_ids) : null, q, `%${q}%`, `%${q}%`, folderName, folderName).all<WorkflowRow>()
-  return rows.results.map(row => ({ id: row.id, name: row.name, folder: row.folder, description: row.description, status: row.status, owner_id: row.owner_id, published_version_id: row.published_version_id, trigger: JSON.parse(row.draft_json).trigger?.type ?? null }))
+  return rows.results.map(row => ({ id: row.id, name: row.name, environment:(row as WorkflowRow & {environment:string}).environment, folder: row.folder, description: row.description, status: row.status, owner_id: row.owner_id, published_version_id: row.published_version_id, trigger: JSON.parse(row.draft_json).trigger?.type ?? null }))
 }
 
 /** Drafts are validated on save; they authorize nothing until an owner publishes them. */
@@ -78,11 +79,11 @@ async function createWorkflowDraft(env: CrankEnv, actor: Actor, input: Record<st
   if (command?.existing) return savedWorkflow(env, command.existing.workflow_id, command.existing, true)
   const { graph } = checked(input.graph)
   const workflowId = id(), draftId = id(), at = now(), condition = commandCondition(command)
-  const metadata = { name: text(input.name, 'name'), description: description(input.description), folder: folder(input.folder), settings: isObject(input.settings) ? input.settings : {} }
+  const metadata = { environment:environmentName(input.environment??'production'), name: text(input.name, 'name'), description: description(input.description), folder: folder(input.folder), settings: isObject(input.settings) ? input.settings : {} }
   const results = await guardedBatch(env, actor, 'prepare', [
     ...(command ? [claimCommand(env, actor, command, workflowId, draftId)] : []),
-    stmt(env, `INSERT INTO crank_workflows(id,name,description,folder,owner_id,draft_json,draft_updated_at,status,settings_json,created_by,created_at) SELECT ?,?,?,?,?,?,?,'draft',?,?,? WHERE ${condition.sql}`,
-      workflowId, metadata.name, metadata.description, metadata.folder, actor.id, JSON.stringify(graph), at, JSON.stringify(metadata.settings), actor.id, at, ...condition.args),
+    stmt(env, `INSERT INTO crank_workflows(id,name,description,folder,owner_id,draft_json,draft_updated_at,status,settings_json,created_by,created_at,environment) SELECT ?,?,?,?,?,?,?,'draft',?,?,?,? WHERE ${condition.sql}`,
+      workflowId, metadata.name, metadata.description, metadata.folder, actor.id, JSON.stringify(graph), at, JSON.stringify(metadata.settings), actor.id, at, metadata.environment, ...condition.args),
     await savedDraft(env, actor, workflowId, draftId, null, graph, metadata, at, command),
     auditStatementWhen(env, condition.sql, condition.args, actor.id, 'workflow.create', 'workflow', workflowId),
     ...(command ? [commandReceipt(env, command)] : []),

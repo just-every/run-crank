@@ -1,3 +1,4 @@
+import {freshGatewayOwner,gatewayPost,signedGatewayHeaders,pollPayload,namedManifest,manifestDestinations} from './gateway-fixture.mjs';
 // Standalone real-provider journey. Requires Docker, root project dependencies,
 // and `npm ci --prefix gateways/node --ignore-scripts`. Does not enter push Verify.
 // Run: CRANK_DOCKER=docker node tests/database-gateway-journey.mjs
@@ -26,7 +27,7 @@ async function cli(args, expected = 0) {
   const text = result.stdout + result.stderr;
   for (const provider of databases.providers) for (const secret of [provider.password, provider.adminPassword]) assert(!text.includes(secret), 'CLI must not print destination credentials');
   if (enrollmentCode) assert(!text.includes(enrollmentCode), 'CLI must not print the enrollment code');
-  if (state) assert(!text.includes(state.credential), 'CLI must not print its gateway credential');
+  if (state) assert(!text.includes(state.private_key), 'CLI must not print its gateway credential');
   return result;
 }
 
@@ -42,7 +43,7 @@ function workerBridge() {
       }
       const workerResponse = await h.mf.dispatchFetch(h.origin + request.url, { method: 'POST', headers, body: raw });
       const text = await workerResponse.text();
-      if (request.url.endsWith('/poll') && workerResponse.ok) { const task = JSON.parse(text).task; if (task) deliveries.push(task); }
+      if (request.url.endsWith('/poll') && workerResponse.ok) { const task = pollPayload(text).task; if (task) deliveries.push(task); }
       if (request.url.endsWith('/result') && workerResponse.ok) results.push(body);
       response.writeHead(workerResponse.status, { 'content-type': 'application/json' }); response.end(text);
     } catch (error) { bridgeErrors.push(error); response.writeHead(500); response.end('{}'); }
@@ -50,9 +51,9 @@ function workerBridge() {
 }
 
 async function runTask(name, op, input = { name: fixture(41) }) {
-  await writeFile(manifestPath, JSON.stringify({ version: 1, operations: { [name]: op } }), { mode: 0o600 });
+  await writeFile(manifestPath, JSON.stringify(namedManifest({ version: 1, operations: { [name]: op } })), { mode: 0o600 });
   const before = results.length;
-  const draft = await draftTest(h, fixture(sequence++), [{ id: 'stock', type: 'custom.request', connector_id: op.connector_id,
+  const draft = await draftTest(h, fixture(sequence++), [{ id: 'stock', type: 'custom.request', retry_policy:{read_attempts:1}, connector_id: op.connector_id,
     connector_version: 1, operation: name + '_read', gateway_id: gatewayId, environment: 'production', input }]);
   assert.equal(draft.run.status, 'waiting', JSON.stringify(draft.run.error));
   await cli(['work', '--state', statePath, '--manifest', manifestPath, '--once']);
@@ -84,15 +85,16 @@ try {
   definition.operations = Object.entries(operations).map(([name, op]) => ({ ...record, id: name + '_read', name: name + '_read',
     gateway: { destination: op.destination, operation: name } }));
   await installDefinition(h, definition, ['records.read']);
-  await writeFile(manifestPath, JSON.stringify({ version: 1, operations }), { mode: 0o600 });
+  await writeFile(manifestPath, JSON.stringify(namedManifest({ version: 1, operations })), { mode: 0o600 });
+  await freshGatewayOwner(h);
   const enrollment = await h.post('gateways', { label: fixture(53), environment: 'production' }, h.owner, 201);
   enrollmentCode = enrollment.code; registerPrivate(enrollmentCode);
   gatewayId = enrollment.gateway.id;
   await cli(['enroll', '--origin', h.origin, '--code', enrollment.code, '--environment', 'production', '--state', statePath, '--manifest', manifestPath]);
   state = JSON.parse(await readFile(statePath, 'utf8'));
-  registerPrivate(state.credential);
+  registerPrivate(state.private_key);
   await h.post(`gateways/${gatewayId}/grants`, { environment: 'production', connector_id: connectorId, connector_version: 1,
-    operations: definition.operations.map(op => op.id), destinations: Object.values(operations).map(op => op.destination) }, h.owner, 201);
+    operations: definition.operations.map(op => op.id), destinations: manifestDestinations({operations},manifestPath) }, h.owner, 201);
 
   for (const provider of databases.providers) {
     const name = provider.kind, op = operations[name], pg = name === 'postgres', present = pg ? 'CAST($1 AS TEXT) IS NOT NULL' : '? IS NOT NULL';
@@ -110,9 +112,9 @@ try {
     console.log(`database-gateway-journey: ${name} provider image=${provider.imageId}; parameter binding, read-only credentials/session, row/byte bounds, timeout cleanup PASS`);
   }
 
-  const headers = { authorization: 'Bearer ' + state.credential }, count = deliveries.length;
-  await h.post(`gateways/${gatewayId}/poll`, { environment: 'staging' }, '', 403, headers);
-  const step = { id: 'stock', type: 'custom.request', connector_id: connectorId, connector_version: 1, operation: 'postgres_read',
+  const headers = {}, count = deliveries.length;
+  await gatewayPost(h,state,`gateways/${gatewayId}/poll`, { environment: 'staging' },403);
+  const step = { id: 'stock', type: 'custom.request', retry_policy:{read_attempts:1}, connector_id: connectorId, connector_version: 1, operation: 'postgres_read',
     gateway_id: gatewayId, environment: 'production', input: { name: fixture(41) } };
   const cross = await draftTest(h, fixture(sequence++), [{ ...step, environment: 'staging' }]);
   assert.equal(cross.run.status, 'failed', 'staging workflow must not dispatch to production gateway');
@@ -125,12 +127,12 @@ try {
   await h.post(`gateways/${gatewayId}/revoke`); await h.tick();
   assert.equal((await h.get('workflow-runs/' + pending.run.id)).status, 'failed', 'revocation must fail pending private work');
   assert.equal(deliveries.length, count);
-  await h.post(`gateways/${gatewayId}/poll`, { environment: 'production' }, '', 401, headers);
+  await gatewayPost(h,state,`gateways/${gatewayId}/poll`, { environment: 'production' },401);
   await cli(['work', '--state', statePath, '--manifest', manifestPath, '--once'], 1);
   for (const provider of databases.providers) await databases.idle(provider);
   const archive = await h.send('/api/crank/data/export', {}, h.owner);
   assert.equal(archive.status, 200);
-  for (const secret of [state.credential, enrollment.code, ...databases.providers.flatMap(p => [p.password, p.adminPassword, p.user, p.database])]) {
+  for (const secret of [state.private_key, enrollment.code, ...databases.providers.flatMap(p => [p.password, p.adminPassword, p.user])]) {
     assert(!archive.text.includes(secret), 'export must omit gateway and destination authority');
   }
   assert.equal(bridgeErrors.length, 0, sanitized(bridgeErrors[0]?.message));

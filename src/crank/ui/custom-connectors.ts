@@ -64,16 +64,16 @@ function grantForm(gateway: any, connectors: any[]): string {
     ${hidden('path', `/api/crank/gateways/${encodeURIComponent(String(gateway.id))}/grants`)}${hidden('return_to', back.return_to)}${hidden('environment', gateway.environment)}
     <label>Exact connector version<select name="connector_binding" required><option value="">Choose connector and version</option>${eligible.map(c => `<option value="${esc(JSON.stringify([c.id, c.version]))}">${esc(c.definition.name)} · ${esc(c.id)} · version ${esc(c.version)}</option>`).join('')}</select></label>
     <label>Allowed operation IDs (JSON array)<textarea name="operations" required rows="3" spellcheck="false"></textarea></label>
-    <label>Exact private destination labels (JSON array)<textarea name="destinations" required rows="3" spellcheck="false"></textarea></label>
-    <p class="form-help">Use only named GET or HEAD gateway operations of the selected version and all of their exact destination labels. This grant is bound to environment ${esc(gateway.environment)}.</p>
+    <label>Private destinations (JSON array)<textarea name="destinations" required rows="3" spellcheck="false"></textarea></label>
+    <p class="form-help">Use only named GET or HEAD gateway operations of the selected version and their concrete destinations (database host, port and database; SFTP host, port and path_prefix; S3 endpoint, bucket and prefix). This grant is bound to environment ${esc(gateway.environment)}.</p>
     <button class="btn btn-secondary">Grant gateway access</button></form></details>`
 }
 
 function gatewayRow(gateway: any, grants: any[], connectors: any[], owner: boolean): string {
   const assigned = grants.filter(grant => grant.gateway_id === gateway.id)
   return `<li class="settings-row"><div class="row-main"><strong>${esc(gateway.label)}</strong><span class="muted">Environment: ${esc(gateway.environment)} · ${esc(gateway.status)}</span>
-    <span class="mono flow-id">${esc(gateway.id)}</span>${assigned.length ? `<ul class="list">${assigned.map(grant => `<li class="settings-row"><span class="row-main"><strong>${esc(grant.connector_id)} · version ${esc(grant.connector_version)}</strong>
-      <span class="muted">${esc(grant.status)} · operations: ${esc(grant.operations.join(', '))}</span><span class="muted">Private destinations: ${esc(grant.destinations.join(', '))}</span></span>
+    <span class="mono flow-id">${esc(gateway.id)}</span><span class="muted">Fingerprint: ${esc(gateway.fingerprint??'Awaiting enrollment')} · Last seen: ${gateway.last_seen_at?timestamp(gateway.last_seen_at):'Never'} · Program: ${esc(gateway.program_version??'Unknown')}</span>${assigned.length ? `<ul class="list">${assigned.map(grant => `<li class="settings-row"><span class="row-main"><strong>${esc(grant.connector_id)} · version ${esc(grant.connector_version)}</strong>
+      <span class="muted">${esc(grant.status)} · operations: ${esc(grant.operations.join(', '))}</span><span class="muted">Private destinations: ${esc(JSON.stringify(grant.destinations))}</span></span>
       ${owner && grant.status === 'active' ? action(`/api/crank/gateways/grants/${encodeURIComponent(String(grant.id))}/revoke`, 'Revoke grant', back, 'secondary') : ''}</li>`).join('')}</ul>` : '<p class="muted">No grants issued for this gateway.</p>'}
     ${owner && gateway.status === 'active' ? grantForm(gateway, connectors) : ''}</div>${chip(gateway.status)}
     ${owner && gateway.status !== 'revoked' ? action(`/api/crank/gateways/${encodeURIComponent(String(gateway.id))}/revoke`, 'Revoke gateway', back, 'secondary') : ''}</li>`
@@ -84,11 +84,11 @@ export function customConnectionsPanel(connectors: any[], gateways: { gateways: 
   return `<section class="panel"><h2>Custom connectors</h2><p class="muted">Versions retain their reviewed operations and scopes. Production use requires sandbox evidence for the exact version and current scope grant.</p>
     ${connectors.length ? `<ul class="list">${connectors.map(c => connectorRow(c, owner)).join('')}</ul>` : '<p class="muted">No custom connector versions installed.</p>'}
     ${owner ? `<details><summary>Propose a connector from OpenAPI</summary>${proposalForm()}</details>` : ''}</section>
-    <section class="panel"><h2>Private gateways</h2><p class="muted">Gateways receive only the private read operations and destination labels you grant in one environment.</p>
+    <section class="panel"><h2>Private gateways</h2><p class="muted">Gateways receive only the private read operations and concrete destinations you grant in one environment.</p>
     ${gateways.gateways.length ? `<ul class="list">${gateways.gateways.map(g => gatewayRow(g, gateways.grants, connectors, owner)).join('')}</ul>` : '<p class="muted">No gateways enrolled.</p>'}
     ${owner ? `<details><summary>Enroll a gateway</summary><form class="form-row" method="post" action="/app/action">${hidden('path', '/api/crank/gateways')}${hidden('return_to', back.return_to)}
       <div class="grid grid-2"><label>Gateway label<input name="label" required maxlength="200"></label><label>Environment<input name="environment" required maxlength="60" pattern="[a-z][a-z0-9_-]*" placeholder="production"></label></div>
-      <p class="form-help">The enrollment code is shown once and expires in ten minutes. Keep provider credentials on the customer-controlled gateway.</p><button class="btn btn-secondary">Create enrollment code</button></form></details>` : ''}</section>`
+      <p><a href="/app/gateway-confirmation">Confirm by email before enrollment</a></p><p class="form-help">Only a native owner session with an email confirmation in the last five minutes can enroll. The enrollment code is shown once and expires in fifteen minutes. Keep provider credentials on the customer-controlled gateway.</p><button class="btn btn-secondary">Create enrollment code</button></form></details>` : ''}</section>`
 }
 
 export function proposalReview(proposal: any): string {

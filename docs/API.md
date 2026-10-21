@@ -654,41 +654,20 @@ Owner `POST /custom-connectors/:id/versions/:n/revoke` revokes a whole version
 and its gateway grants. `POST .../review` with the exact `reviewed_digest`,
 `granted_scopes` and `disclosure_confirmed:true` reviews a revoked or restored
 version again; it starts in sandbox and restores no gateway grant. Archive
-restoration carries definitions in `needs_review`, with no gateway, service
-credential, local DB/storage credential, grant, task or sandbox authority.
+restoration carries definitions in `needs_review`, gateway metadata revoked and grants inactive. Codes, gateway keys, service accounts, local DB/storage credentials, tasks and sandbox authority do not travel.
 
-For private operations, enroll under **Connections → Enroll a gateway**, or
-`POST /api/crank/gateways` with `{label,environment}`. Its code is shown once,
-expires in ten minutes and works only in that environment. The customer's
-outbound-only process exchanges it at `/api/crank/gateways/enroll`; see
-[the gateway installation and local manifest](../gateways/node/README.md).
-The server stores only the service credential's hash. The actual database query,
-file path and private credentials are configured only in the mode-0600 local
-manifest, never sent to Crank.
+For private operations, the owner first confirms an email link in a native browser session, then enrolls within five minutes under **Connections → Enroll a gateway**, or `POST /api/crank/gateways` with `{label,environment}`. Local dev/provider sign-in and CLI proof cannot replace that email proof. The single-use 256-bit code is shown once, stored only as SHA-256, expires in fifteen minutes and binds the installation, environment and gateway name.
 
-Owner `POST /gateways/:id/grants` explicitly names
-`{environment,connector_id,connector_version,operations,destinations}`.
-A private workflow step also pins `gateway_id` and `environment`; its connector
-operation names the local gateway operation and private destination label.
-The process must match all of those bindings. Current local adapters cover read-only SQLite, PostgreSQL, MySQL, SQL Server,
-SFTP/S3 and streamed UTF-8 file pages: 64 MiB source, 64 KiB page,
-1 MiB aggregate workflow output, declared page/item limits and a five-second
-local process deadline. Source-bound cursors refuse changed files; partial
-pipelines release no output to later steps. Tasks wait without holding an
-execution slot and expire after fifteen minutes. Gateway account dispatch uses
-the catalog request/concurrency limits; no failed or interrupted private operation
-is silently repeated. Result retries can acknowledge only the same task/result.
+The customer's outbound-only HTTPS process generates its Ed25519 identity locally and redeems the code with its public key and signed possession proof. Crank holds only that public key/fingerprint. All later requests sign method, path, exact body digest, Unix timestamp (within 300 seconds) and a single-use nonce. The host pins the installation public key and accepts only signed, nonce-bound, current jobs; see [the gateway installation and local manifest](../gateways/node/README.md).
 
-`POST /gateways/:id/revoke` erases enrollment/service authority and revokes its
-grants. `POST /gateways/grants/:id/revoke` removes one grant. Poll and result doors
-require the current gateway credential/environment and recheck current owner,
-version/scope, workflow and grant authority; no cookie or arbitrary private target
-is accepted as a substitute. A result wakes only its exact waiting checkpoint;
-Cron covers races and revocation. Run history shows each private page's status.
+Owner `POST /gateways/:id/grants` explicitly names `{environment,connector_id,connector_version,operations,destinations}`. Each destination is an object with `label`, `type` and concrete recipient fields: database `host,port,database`; SFTP `host,port,path_prefix`; S3 `endpoint,bucket,prefix`; HTTP `base_url`. Local SQLite/file recipes use the exact customer-host `path`. These consented recipient descriptors are visible to the owner and retained inactive in archives. Queries and named local credentials stay on the host. A connector repair or new version needs a new grant. Grant changes bump TEAM-001's authority revision; both ends check exact version, operation, destination, environment, grant revision and status. The gateway resolves recipients itself and pins the resulting socket, follows no redirect, and refuses metadata/link-local addresses, including mapped IPv6.
 
-These are native-owner defaults adopted pending ct approval. External provider
-sandboxes, buyer IdP interoperability, full enterprise recipes, write operations,
-updated-record detection, find-or-create and automatic schema/field refresh remain gaps.
-Resource choices use explicit owner reads, rather than automatic background refresh.
+A private workflow step pins `gateway_id` and `environment`. Existing workflows/connections migrate to production; new records may name an environment, and each dispatch refuses a connection or gateway from a different environment with an audited `cross_environment` access decision. Current adapters cover read-only SQLite, PostgreSQL, MySQL, SQL Server, SFTP/S3 and streamed UTF-8 file pages: 64 MiB source, 64 KiB page, 1 MiB aggregate output, declared page/item limits and a five-second local process deadline. Source-bound cursors refuse changed files. Tasks wait without holding an execution slot and expire after fifteen minutes. Physical gateway attempts use account admission and the ordinary retained request/retry ledger. Transient read failures retry with bounded exponential backoff and parked budgets, retaining the same page and input; refused operations, changed sources and invalid inputs fail without retry. No private write operation ships through this read-only door.
+
+Owners and admins can `POST /gateways/:id/revoke` or `/gateways/grants/:id/revoke` without step-up. Revocation is terminal, effective at the next dispatch; later results are withheld and the run fails with `gateway revoked`. Poll/result doors recheck current owner, workflow, environment and grant authority. Run history shows each page's status and each physical attempt; Cron resumes the exact waiting checkpoint or fails revoked work.
+
+Under **Connections → Create a scoped service account**, or `POST /api/crank/service-accounts`, the native owner after the same five-minute email proof names `{label,environment,workflow_ids,connection_ids,expires_in_days}`. Expiry defaults to 365 days and cannot exceed 730. The non-person credential is shown once and SHA-256-held. It can read named workflow/draft/version data and save an existing workflow draft referencing only its scoped connections. It cannot create workflows, inspect collections, publish, test, execute, approve or manage access. Scope/environment/minter changes permanently suspend it; neither revocation nor suspension can be reversed or transferred. Owner `GET /service-accounts` lists metadata and `POST /service-accounts/:id/revoke` ends authority. Archives exclude these credentials.
+
+These rules implement ct's 21 October gateway ruling. SQL Server and other real-provider journeys require their exact-candidate receipts before DONE. Agent-built connectors, ServiceNow/SAP test instances and buyer Auth/IdP interoperability belong to CONN-020. Writes, watched-field triggers, find-or-create and automatic schema/field refresh remain unimplemented; resource reads remain explicit owner actions.
 
 Enterprise GET proposals use the same `POST /api/crank/custom-connectors/propose` door with the reviewed recipe request documented in `docs/enterprise-connectors.md`. SFTP/S3 gateway manifests and their source-bound cursor protocol are documented in `gateways/node/README.md`. Connector re-review rotates consent generation: existing published snapshots and sandbox receipts cannot confer authority on the new review.

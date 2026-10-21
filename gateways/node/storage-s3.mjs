@@ -3,6 +3,7 @@ import https from 'node:https';
 import { fail } from './errors.mjs';
 import { encodeS3Path, signedHeaders } from './storage-sigv4.mjs';
 import { CHUNK_BYTES, MAX_SOURCE_BYTES, changed, identity, scanLines } from './storage-lines.mjs';
+import { resolveDestination, pinnedLookup } from './network-policy.mjs';
 
 const refused = () => fail('execution_failed', 'S3 endpoint must support consistent conditional, exact byte-range reads without redirects.');
 
@@ -10,15 +11,14 @@ const refused = () => fail('execution_failed', 'S3 endpoint must support consist
 // responses, retries requests, or consults proxy/credential-chain environment.
 async function request(op, method, extra, signal) {
   const endpoint = new URL(op.connection.endpoint);
+  const address = await resolveDestination(endpoint.hostname, { loopbackOnly: endpoint.protocol === 'http:' });
   const path = encodeS3Path(`/${op.bucket}/${op.key}`);
   return await new Promise((resolve, reject) => {
     const req = (endpoint.protocol === 'https:' ? https : http).request({
       protocol: endpoint.protocol, hostname: endpoint.hostname.replace(/^\[|\]$/g, ''), port: endpoint.port || undefined,
       method, path, headers: signedHeaders(op.connection, endpoint, method, path, extra),
       signal, agent: false, maxHeaderSize: 16384, highWaterMark: CHUNK_BYTES,
-      // A cleartext localhost exception must never resolve beyond loopback.
-      ...(endpoint.protocol === 'http:' && endpoint.hostname === 'localhost' ?
-        { lookup: (_host, options, callback) => callback(null, options.all ? [{ address: '127.0.0.1', family: 4 }] : '127.0.0.1', 4) } : {}),
+      lookup: pinnedLookup(address),
     }, response => {
       // Keep an observer until the body iterator attaches; never log raw errors.
       response.on('error', () => {});

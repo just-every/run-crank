@@ -2,10 +2,11 @@ import type { Bindings } from '../auth.server'
 
 export type CrankEnv = Bindings & { CRANK_TARGET_ORIGIN?: string; CRANK_TARGET_TOKEN?: string }
 export type Role = 'owner' | 'admin' | 'member'
-export type ActorKind = 'native' | 'dev' | 'oidc' | 'password' | 'review' | 'agent' | 'trigger'
+export type ActorKind = 'native' | 'dev' | 'oidc' | 'password' | 'review' | 'agent' | 'trigger' | 'service'
 export interface Actor {
   id: string; name: string; role: Role; kind: ActorKind; version: number
   team?: import('./team/policy').TeamAccess
+  serviceAccountId?:string; serviceOwnerId?:string; serviceEnvironment?:string; serviceWorkflowIds?:string[]; serviceConnectionIds?:string[]
   sessionId?: string; tokenId?: string; grantId?: string; flowId?: string | null; local: boolean
 }
 export interface Flow {

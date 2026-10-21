@@ -1,3 +1,4 @@
+import {freshGatewayOwner,gatewayPost,signedGatewayHeaders,pollPayload,namedManifest,manifestDestinations} from './gateway-fixture.mjs';
 // Standalone public CLI journey. Only the remote network edges are fixtures.
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
@@ -67,7 +68,7 @@ function workerBridge() {
       const workerResponse = await h.mf.dispatchFetch(h.origin + request.url, { method: request.method, headers, body: JSON.stringify(body) });
       const text = await workerResponse.text();
       if (request.url.endsWith('/poll') && workerResponse.ok) {
-        const task = JSON.parse(text).task; if (task) deliveries.push(task);
+        const task = pollPayload(text).task; if (task) deliveries.push(task);
       }
       if (request.url.endsWith('/result') && workerResponse.ok) {
         reported = body;
@@ -178,7 +179,7 @@ async function runTask(operation, op, input = {}) {
 }
 
 async function workflowPages(operation, op) {
-  await writeFile(manifestPath, JSON.stringify({ version: 1, operations: { [operation]: op } }), { mode: 0o600 });
+  await writeFile(manifestPath, JSON.stringify(namedManifest({ version: 1, operations: { [operation]: op } })), { mode: 0o600 });
   const before = deliveries.length;
   reported = undefined;
   const draft = await draftTest(h, fixture(100 + sequence++), [{ id: 'stock', type: 'custom.request',
@@ -247,7 +248,7 @@ try {
     host: '127.0.0.1', port: sftpPort, username: fixture(11), password: fixture(12), hostKeySha256: sftp.fingerprint } };
   const s3Op = { ...common, destination: fixture(34), type: 's3-lines', bucket: fixture(26), key: `${fixture(27)}//../${fixture(28)} 雪.txt`, connection: {
     endpoint: `http://127.0.0.1:${s3Port}`, allowInsecureLoopback: true, region: fixture(22), accessKeyId: fixture(23), secretAccessKey: fixture(25), sessionToken: fixture(24) } };
-  await writeFile(manifestPath, JSON.stringify({ version: 1, operations: { sftp_lines: sftpOp, s3_lines: s3Op } }), { mode: 0o600 });
+  await writeFile(manifestPath, JSON.stringify(namedManifest({ version: 1, operations: { sftp_lines: sftpOp, s3_lines: s3Op } })), { mode: 0o600 });
   const definition = customDefinition(common.connector_id, { gateway: true });
   const file = definition.operations.find(operation => operation.id === 'file');
   definition.operations = Object.entries({ sftp_lines: sftpOp, s3_lines: s3Op }).flatMap(([name, op]) => {
@@ -257,12 +258,13 @@ try {
     return [{ ...operation, id: name + '_file', name: name + '_file' }, probe];
   });
   await installDefinition(h, definition, ['files.read']);
+  await freshGatewayOwner(h);
   const enrollment = await h.post('gateways', { label: fixture(37), environment: 'production' }, h.owner, 201);
   gatewayId = enrollment.gateway.id;
   await cli(['enroll', '--origin', h.origin, '--code', enrollment.code, '--environment', 'production', '--state', statePath, '--manifest', manifestPath]);
   await h.post(`gateways/${gatewayId}/grants`, { environment: 'production', connector_id: common.connector_id, connector_version: 1,
-    operations: definition.operations.map(operation => operation.id), destinations: [sftpOp.destination, s3Op.destination] }, h.owner, 201);
-  const injected = await draftTest(h, fixture(38), [{ id: 'stock', type: 'custom.request', connector_id: common.connector_id,
+    operations: definition.operations.map(operation => operation.id), destinations: manifestDestinations({operations:{sftp_lines:sftpOp,s3_lines:s3Op}},manifestPath) }, h.owner, 201);
+  const injected = await draftTest(h, fixture(38), [{ id: 'stock', type: 'custom.request', retry_policy:{read_attempts:1}, connector_id: common.connector_id,
     connector_version: 1, operation: 'sftp_lines_probe', gateway_id: gatewayId, environment: 'production', input: { path: `/${fixture(39)}` } }]);
   assert.equal(injected.run.status, 'failed', 'undeclared task paths must fail before private dispatch');
   assert.equal(deliveries.length, 0);

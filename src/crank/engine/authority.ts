@@ -1,3 +1,4 @@
+import { auditStatement } from '../ops/audit'
 import { assertGrantAuthority } from '../grants/authority'
 import { now, stmt, type CrankEnv } from '../model'
 import { StepError } from './errors'
@@ -13,9 +14,9 @@ export async function assertDispatchAuthority(env: CrankEnv, runId: string) {
         AND t.revision=json_extract(v.declared_json,'$.test_team_revision')
         AND EXISTS(SELECT 1 FROM json_each(t.workflow_ids_json) WHERE value=r.workflow_id))
     )) AS test_member_current,r.version_id,r.continuation_authority,v.retired_at,r.error_json,
-    (SELECT json_object('id',j.value,'label',c.label) FROM json_each(v.declared_json,'$.connections') j
+    (SELECT json_object('id',j.value,'label',c.label,'cross_environment',CASE WHEN c.environment!=w.environment THEN 1 ELSE 0 END) FROM json_each(v.declared_json,'$.connections') j
      LEFT JOIN crank_connections c ON c.id=j.value
-     WHERE c.id IS NULL OR c.status!='active' OR (c.auth_kind!='oauth2' AND c.expires_at IS NOT NULL AND c.expires_at<=?) LIMIT 1) AS broken
+     WHERE c.id IS NULL OR c.environment!=w.environment OR c.status!='active' OR (c.auth_kind!='oauth2' AND c.expires_at IS NOT NULL AND c.expires_at<=?) LIMIT 1) AS broken
     FROM crank_wf_runs r JOIN crank_workflows w ON w.id=r.workflow_id JOIN crank_workflow_versions v ON v.id=r.version_id WHERE r.id=?`, now(), runId)
     .first<{grant_id: string | null; mode: string; version_mode: string; test_member_current: number; error_json: string | null; status: string; published_version_id: string | null; version_id: string; continuation_authority: number; retired_at: string | null; broken: string | null}>()
   if (state?.error_json && JSON.parse(state.error_json).category === 'restore_fence') throw new StepError('authority', 'Review the restore and choose resume at publish before dispatching this run.')
@@ -29,6 +30,10 @@ export async function assertDispatchAuthority(env: CrankEnv, runId: string) {
   }
   if (state.broken) {
     const connection = JSON.parse(state.broken)
-    throw new StepError('connection', `Reconnect ${connection.label ?? 'the bound connection'} before resuming this run`, {connection_id: connection.id, reconnect: true})
+    if(connection.cross_environment) {
+      await auditStatement(env,'system:dispatch','access.denied','run',runId,{reason_class:'cross_environment',connection_id:connection.id}).run()
+      throw new StepError('auth','The connection is outside this workflow environment',{connection_id:connection.id,access_decision:'cross_environment'})
+    }
+    throw new StepError('connection', `Reconnect ${connection.label ?? 'the bound connection'} in this workflow's environment before resuming this run`, {connection_id: connection.id, reconnect: true})
   }
 }

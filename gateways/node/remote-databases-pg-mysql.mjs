@@ -1,8 +1,10 @@
 import { rowCollector } from './remote-databases-policy.mjs';
+import { resolveDestination, pinnedSocket, connectPinned } from './network-policy.mjs';
 
 export async function postgresQuery(op, input) {
   const [{ default: pg }, { default: Cursor }] = await Promise.all([import('pg'), import('pg-cursor')]);
-  const client = new pg.Client({ ...op.connection, query_timeout: 0, statement_timeout: 5000, lock_timeout: 5000,
+  const address = await resolveDestination(op.connection.host);
+  const client = new pg.Client({ ...op.connection, stream: () => pinnedSocket(address), query_timeout: 0, statement_timeout: 5000, lock_timeout: 5000,
     connectionTimeoutMillis: 5000, idle_in_transaction_session_timeout: 5000, application_name: 'crank-private-gateway' });
   client.on('error', () => {}); // Query/cursor promises own reporting; never print driver exceptions.
   const collected = rowCollector(op.maxRows);
@@ -29,7 +31,10 @@ function mysqlCommand(connection, sql) {
 
 export async function mysqlQuery(op, input) {
   const { default: mysql } = await import('mysql2');
-  const connection = mysql.createConnection({ ...op.connection, connectTimeout: 5000, multipleStatements: false,
+  const address = await resolveDestination(op.connection.host);
+  const connection = mysql.createConnection({ ...op.connection, stream: () => connectPinned(address, op.connection.port),
+    ...(op.connection.ssl ? { ssl: { ...(typeof op.connection.ssl === 'object' ? op.connection.ssl : {}), rejectUnauthorized: true, verifyIdentity: true } } : {}),
+    connectTimeout: 5000, multipleStatements: false,
     namedPlaceholders: false, supportBigNumbers: true, bigNumberStrings: true, dateStrings: true, decimalNumbers: false });
   connection.on('error', () => {});
   const collected = rowCollector(op.maxRows);

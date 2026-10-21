@@ -1,6 +1,7 @@
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { GatewayError, fail } from './errors.mjs';
 import { CHUNK_BYTES, MAX_SOURCE_BYTES, changed, identity, scanLines } from './storage-lines.mjs';
+import { connectPinned, resolveDestination } from './network-policy.mjs';
 
 function invoke(sftp, method, args, signal) {
   signal.throwIfAborted();
@@ -54,12 +55,13 @@ export async function sftpLines(op, input, outerSignal) {
   client.on('close', failed);
   try {
     const c = op.connection;
+    const address = await resolveDestination(c.host);
     const expected = Buffer.from(c.hostKeySha256.slice(7), 'base64');
     await new Promise((resolve, reject) => {
       const stopped = () => reject(signal.reason);
       signal.addEventListener('abort', stopped, { once: true });
       client.once('ready', () => { signal.removeEventListener('abort', stopped); resolve(); });
-      client.connect({ host: c.host, port: c.port, username: c.username,
+      client.connect({ sock: connectPinned(address, c.port, signal), host: c.host, port: c.port, username: c.username,
         ...(c.password !== undefined ? { password: c.password, authHandler: ['password'] } :
           { privateKey: c.privateKey, passphrase: c.passphrase, authHandler: ['publickey'] }),
         hostVerifier: key => timingSafeEqual(createHash('sha256').update(key).digest(), expected),

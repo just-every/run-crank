@@ -20,3 +20,20 @@ jobs:
       - run: npm ci --prefix gateways/node --ignore-scripts
       - run: node tests/storage-gateway-journey.mjs
       - run: node --test tests/retry-backoff-journey.mjs
+
+  private-recipes:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: '22.20.0'
+          package-manager-cache: false
+      - run: npm install --global pnpm@10.12.4
+      - run: pnpm install --frozen-lockfile
+      - run: npm ci --prefix gateways/node --ignore-scripts
+      - run: node tests/database-gateway-journey.mjs
+      - run: node tests/sqlserver-gateway-journey.mjs
+      - run: node tests/storage-provider-journey.mjs
+      - run: node tests/gateway-streaming-journey.mjs

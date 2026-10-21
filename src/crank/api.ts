@@ -1,3 +1,4 @@
+import { serviceAccountApi } from './team/service-accounts'
 import { authorize, requireOwner, requireWriteOrigin } from './access'
 import { deliverRun, recoverExpiredRuns, rejectRun } from './delivery'
 import { createFlow, getFlow, setFlowStatus } from './flows'
@@ -29,6 +30,8 @@ export async function crankApi(request: Request, env: CrankEnv): Promise<Respons
   if (path !== '/api/crank' && !path.startsWith('/api/crank/')) return null
   try {
     const actor = await authorize(request, env)
+    if(request.method!=='GET')requireWriteOrigin(request,env,actor)
+    const service=await serviceAccountApi(request,env,actor);if(service)return service
     requireValue(!actor.grantId, 'Execution credentials use the agent task door', 403)
     if (request.method === 'GET') {
       if (path === '/api/crank/state') return await state(env, actor)

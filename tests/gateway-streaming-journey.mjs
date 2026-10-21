@@ -1,3 +1,4 @@
+import {freshGatewayOwner,gatewayPost,signedGatewayHeaders,pollPayload,namedManifest,manifestDestinations} from './gateway-fixture.mjs';
 // Standalone scale journey, outside push Verify. From the checkout root:
 // node tests/gateway-streaming-journey.mjs
 // Uses the existing real Worker harness and dependency-free local-file gateway.
@@ -65,7 +66,7 @@ function workerBridge() {
       assert(!raw.includes(sourcePath), 'the private source path must never be sent to the Worker');
       const workerResponse = await h.mf.dispatchFetch(h.origin + request.url, { method: 'POST', headers, body: raw });
       const text = await workerResponse.text();
-      if (request.url.endsWith('/poll') && workerResponse.ok) { const task = JSON.parse(text).task; if (task) deliveries.push(task); }
+      if (request.url.endsWith('/poll') && workerResponse.ok) { const task = pollPayload(text).task; if (task) deliveries.push(task); }
       if (request.url.endsWith('/result') && workerResponse.ok) results.push(body);
       response.writeHead(workerResponse.status, { 'content-type': 'application/json' }); response.end(text);
     } catch (error) { bridgeErrors.push(error); response.writeHead(500); response.end('{}'); }
@@ -115,13 +116,14 @@ try {
   await installDefinition(h, definition, ['files.read']);
   await writeFile(manifestPath, JSON.stringify({ version: 1, operations: { lines: { type: 'file-lines', connector_id: fixture(5), connector_version: 1,
     destination: fixture(7), path: sourcePath, pageLines: 2, parameters: { cursor: { type: 'string', optional: true, maxLength: 512 } } } } }), { mode: 0o600 });
+  await freshGatewayOwner(h);
   const enrollment = await h.post('gateways', { label: fixture(8), environment: 'production' }, h.owner, 201);
   gatewayId = enrollment.gateway.id; privateValues.push(enrollment.code);
   await cli(['enroll', '--origin', h.origin, '--code', enrollment.code, '--environment', 'production', '--state', statePath, '--manifest', manifestPath]);
-  const state = JSON.parse(await readFile(statePath, 'utf8')); privateValues.push(state.credential);
+  const state = JSON.parse(await readFile(statePath, 'utf8')); privateValues.push(state.private_key);
   for (const path of [manifestPath, statePath]) assert.equal((await stat(path)).mode & 0o777, 0o600, 'private manifest and enrolled state must remain mode-0600');
   await h.post(`gateways/${gatewayId}/grants`, { environment: 'production', connector_id: fixture(5), connector_version: 1,
-    operations: ['read_page'], destinations: [fixture(7)] }, h.owner, 201);
+    operations: ['read_page'], destinations: [{label:fixture(7),type:'local',path:sourcePath}] }, h.owner, 201);
 
   const first = await readPage();
   assert.equal(first.reported.output?.lines.length, 1, 'the byte bound must reduce this two-line page to one complete source line');

@@ -1,12 +1,20 @@
 import { fail } from './errors.mjs';
 import { rowCollector } from './remote-databases-policy.mjs';
+import { connectedSocket, normalizedHost, resolveDestination } from './network-policy.mjs';
 
 export async function sqlserverQuery(op, input) {
   const { default: sql } = await import('mssql');
+  const address = await resolveDestination(op.connection.server);
   const pool = new sql.ConnectionPool({ ...op.connection, connectionTimeout: 5000, requestTimeout: 5000,
     pool: { max: 1, min: 0, idleTimeoutMillis: 5000, acquireTimeoutMillis: 5000 },
     options: { ...op.connection.options, readOnlyIntent: true, requestTimeout: 5000,
-      connectTimeout: 5000, maxRetriesOnTransientErrors: 0 } });
+      connectTimeout: 5000, maxRetriesOnTransientErrors: 0,
+      connector: async (options, _lookup, signal) => {
+        if (!options || normalizedHost(options.host) !== normalizedHost(op.connection.server) || options.port !== op.connection.port) {
+          fail('operation_refused', 'SQL Server redirects are refused.');
+        }
+        return await connectedSocket(address, op.connection.port, signal);
+      } } });
   pool.on('error', () => {});
   let transaction, begun = false;
   try {
