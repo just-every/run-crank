@@ -1013,8 +1013,8 @@ Judged from the code and tests at commit `7cc39b1c83297fd30ef04197cc486c3aac5eec
 | Clauses | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
 | Published | 8 | 4 | 0 | 12 |
-| Target and push further | 19 | 21 | 33 | 73 |
-| All | 27 | 25 | 33 | 85 |
+| Target and push further | 19 | 22 | 32 | 73 |
+| All | 27 | 26 | 32 | 85 |
 
 BASE-003 was completed on 20 October 2026 with the named emitted-service and public-door recovery journeys below.
 
