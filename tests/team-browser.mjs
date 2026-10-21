@@ -94,7 +94,7 @@ try {
   await send(`workflows/${workflow.id}/estimate`,quote); await send(`workflows/${workflow.id}/publish`,{},201);
   const connection = await send('connections',{app:'http',label:'Harbour Workshop — owned finance API',auth_kind:'bearer',domains:['finance.example.test'],secret:{token:'synthetic-browser-fixture-'+crypto.randomUUID()}},201);
   const invited=[];
-  let builderContext,builderPage;
+  let builderContext,builderPage,approverContext,approverPage;
   for (const [name,role] of [['Dana Reyes — supplier finance builder','builder'],['Morgan Lee — operations viewer','viewer'],['Alex Rivera — settlement approver','approver']]) {
     const email=name.split(' — ')[0].toLowerCase().replaceAll(' ','-')+'-'+Date.now()+'@example.test';
     const response=await owner.request.post(origin+'/auth/invite',{headers:{origin},data:{email,displayName:name,role:'member'}});
@@ -104,7 +104,7 @@ try {
     catch { throw new Error('Native development persona sign-in failed'); }
     const link=/RER_OPEN\s+(https?:\/\/\S+)/.exec(local)?.[1];assert.ok(link,'Native person sign-in link');
     const context=await browser.newContext(),personPage=await context.newPage();await personPage.goto(link);await personPage.waitForURL('**/app');
-    if(role==='builder') {builderContext=context;builderPage=personPage;} else await context.close();
+    if(role==='builder') {builderContext=context;builderPage=personPage;} else if(role==='approver') {approverContext=context;approverPage=personPage;} else await context.close();
     invited.push({email,role});
   }
   const peopleResponse=await owner.request.get(origin+'/auth/operators'),people=await peopleResponse.json();
@@ -147,6 +147,16 @@ try {
     assert.equal(repaired.status,'succeeded');assert.equal(repaired.repair_of,failed.id);assert.equal(repaired.steps.find(step=>step.path==='rows/items/0/amount').output,782.25);
     await page.goto(origin+'/app/workflow-runs/'+repaired.id);await expect(page.locator('.detail-primary > .title-row .status[data-tone="good"]')).toBeVisible();await expect(page.locator(`a[href="/app/workflow-runs/${failed.id}"]`)).toBeVisible();await shot(width,'builder-test-repaired');
     await send('team/'+dana.id,{role:'builder',workflow_ids:[workflow.id],connection_ids:[connection.id]});
+    const liveWorkflow=await send('workflows',{name:'Harbour Workshop — owner confirmation of a live rehearsal '+width,graph:{trigger:{type:'manual'},steps:[{id:'settle',type:'http',connection_id:connection.id,input:{url:'https://finance.example.test/events',method:'POST',body:{supplier:'Northshore Fabrication',amount:'2450.00'}}}]}},201);
+    const alex=people.find(person=>person.email===invited.find(person=>person.role==='approver').email);
+    await send('team/'+dana.id,{role:'builder',workflow_ids:[workflow.id,liveWorkflow.id],connection_ids:[connection.id]});
+    await send('team/'+alex.id,{role:'approver',workflow_ids:[workflow.id,liveWorkflow.id],connection_ids:[connection.id]});
+    const liveTest=await builderSend(`workflows/${liveWorkflow.id}/test`,{bindings:{[connection.id]:connection.id}});assert.equal(liveTest.status,'awaiting_approval');
+    const forbidden=await approverContext.request.post(origin+`/api/crank/workflow-runs/${liveTest.id}/approve`,{headers:{origin},data:{path:'settle',digest:liveTest.waits[0].proposal_digest}});assert.equal(forbidden.status(),403);
+    page=approverPage;await page.setViewportSize({width,height:1000});await page.goto(origin+'/app/workflow-runs/'+liveTest.id);await expect(decisionForms(page)).toHaveCount(0);await shot(width,'owner-only-live-test-confirmation');page=builderPage;
+    const refused=await send(`workflow-runs/${liveTest.id}/reject`,{path:'settle',digest:liveTest.waits[0].proposal_digest});assert.equal(refused.status,'rejected');assert.equal(refused.attempts.length,0);
+    await send('team/'+dana.id,{role:'builder',workflow_ids:[workflow.id],connection_ids:[connection.id]});
+
     await page.goto(origin+'/app/workflows/'+workflow.id);await expect(page.getByText(workflow.name,{exact:true}).first()).toBeVisible();await expect(page.locator(`input[name="path"][value="/api/crank/workflows/${workflow.id}/run"]`)).toHaveCount(0);await shot(width,'workflow');await page.goto(origin+'/app/account');await expect(page.locator('main dd').filter({hasText:/Builder/})).toBeVisible();await shot(width,'account');page=ownerPage;
     await page.goto(origin+'/app/access');
     const transfer=page.locator('form').filter({has:page.locator('input[name="path"][value="/api/crank/team/transfer"]')});
@@ -157,7 +167,7 @@ try {
     const docsPage=await owner.newPage();await docsPage.setViewportSize({width,height:1000});await docsPage.goto(site+'/docs/api');
     await docsPage.getByRole('cell',{name:'POST /workflows/:id/test',exact:true}).scrollIntoViewIfNeeded();await docsPage.screenshot({path:join(evidence,`${width}-api-test-role.png`)});
     await docsPage.getByRole('heading',{name:/Scoped workflow teams/}).scrollIntoViewIfNeeded();await docsPage.getByText(/Scoped builders\/admins can edit and publish/).scrollIntoViewIfNeeded();await docsPage.screenshot({path:join(evidence,`${width}-api-builder-tests.png`)});await docsPage.close();
-    report.push({clause:'TEAM-001',width,states:['scope-selection','scope-saved','builder-test-waiting','builder-test-succeeded','builder-test-revoked','builder-test-repaired','workflow','account','transferred'],status:'pass'});
+    report.push({clause:'TEAM-001',width,states:['scope-selection','scope-saved','builder-test-waiting','builder-test-succeeded','builder-test-revoked','builder-test-repaired','owner-only-live-test-confirmation','workflow','account','transferred'],status:'pass'});
   }
   await writeFile(join(evidence,'team-browser.json'),JSON.stringify(report,null,2));
   console.log('TEAM-001: scoped role selection, builder draft-test completion/revocation and owner handover passed at 1440 and 390.');
