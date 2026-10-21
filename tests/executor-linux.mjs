@@ -12,7 +12,7 @@ const terminal=async id=>until(async()=>{const r=await executor.call('/tasks/'+i
 try{
  assert.equal((await executor.call('/tasks/'+taskId(),undefined,fakeSecret('wrong'))).status,401);
  const python=taskId(),job=payload('def main(input): return {"customer": input["customer"].strip()}');
- await executor.call('/tasks/'+python,job);assert.deepEqual((await terminal(python)).output,{customer:'Harbour Workshop & Supply'});
+ await executor.call('/tasks/'+python,job);const pythonResult=await terminal(python);assert.deepEqual(pythonResult.output,{customer:'Harbour Workshop & Supply'},JSON.stringify(pythonResult));
  assert.equal((await executor.call('/tasks/'+python,job)).value.task_id,python);assert.equal((await executor.call('/tasks/'+python,{...job,input:{customer:'different'}})).status,409);
  for(const language of ['javascript','typescript']){const id=taskId();await executor.call('/tasks/'+id,payload(language==='typescript'?'export default function(input: {customer: string}) {return {customer:input.customer.trim()}}':'export default function(input) {return {customer:input.customer.trim()}}',{language,memory_mb:1024}));assert.deepEqual((await terminal(id)).output,{customer:'Harbour Workshop & Supply'})}
  for(const [name,source,extra] of [

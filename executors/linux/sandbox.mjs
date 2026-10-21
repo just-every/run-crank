@@ -45,7 +45,7 @@ export function validatePayload(value, runtime) {
 }
 
 function command(runtime, payload, sourceDir) {
-  const args = [bwrap, '--unshare-all', '--die-with-parent', '--disable-userns', '--cap-drop', 'ALL', '--clearenv', '--hostname', 'crank-task',
+  const args = [bwrap, '--unshare-all', '--unshare-user', '--die-with-parent', '--disable-userns', '--cap-drop', 'ALL', '--clearenv', '--hostname', 'crank-task',
     '--dir', '/usr', '--dir', '/usr/bin', '--dir', '/usr/lib',
     '--ro-bind', '/usr/lib/x86_64-linux-gnu', '/usr/lib/x86_64-linux-gnu',
     '--ro-bind', '/usr/lib64', '/usr/lib64', '--symlink', 'usr/lib', '/lib', '--symlink', 'usr/lib64', '/lib64',
