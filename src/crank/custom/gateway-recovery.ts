@@ -13,18 +13,20 @@ export async function recoverGatewayTask(env:CrankEnv,gateway:Gateway,taskId:str
       AND json_extract(op.value,'$.id')=crank_gateway_tasks.operation AND json_extract(op.value,'$.method')='POST')`
   const task=await stmt(env,`SELECT run_id,path FROM crank_gateway_tasks WHERE id=? AND ${condition}`,taskId,gateway.id,now()).first<{run_id:string;path:string}>()
   requireValue(task,'Only a current, unfinished private write can request receipt reconciliation',403)
-  const requestId=id(),at=now(),accepted='EXISTS(SELECT 1 FROM crank_gateway_tasks WHERE id=? AND recovery_request_id=?)'
+  const requestId=id(),at=now(),guard='EXISTS(SELECT 1 FROM crank_authority_guards WHERE id=?)',accepted='EXISTS(SELECT 1 FROM crank_gateway_tasks WHERE id=? AND recovery_request_id=?)'
   const result=await env.DB.batch([
+    stmt(env,`INSERT INTO crank_authority_guards(id,ok) SELECT ?,1 FROM crank_gateway_tasks WHERE id=? AND ${condition}`,requestId,taskId,gateway.id,at),
     stmt(env,`UPDATE crank_wf_attempts SET finished_at=COALESCE(finished_at,?),error_category=COALESCE(error_category,'network')
-      WHERE id=(SELECT attempt_id FROM crank_gateway_tasks WHERE id=? AND ${condition})`,at,taskId,gateway.id,at),
-    stmt(env,`UPDATE crank_request_admissions SET finished_at=? WHERE id=(SELECT admission_id FROM crank_gateway_tasks WHERE id=? AND ${condition})`,Date.now(),taskId,gateway.id,at),
+      WHERE id=(SELECT attempt_id FROM crank_gateway_tasks WHERE id=?) AND ${guard}`,at,taskId,requestId),
+    stmt(env,`UPDATE crank_request_admissions SET finished_at=? WHERE id=(SELECT admission_id FROM crank_gateway_tasks WHERE id=?) AND ${guard}`,Date.now(),taskId,requestId),
     stmt(env,`UPDATE crank_gateway_tasks SET status='queued',recovery_only=1,recovery_request_id=?,output_json=NULL,output_digest=NULL,error_json=NULL,completed_at=NULL,attempt_id=NULL
-      WHERE id=? AND ${condition} RETURNING id`,requestId,taskId,gateway.id,at),
+      WHERE id=? AND ${guard} RETURNING id`,requestId,taskId,requestId),
     stmt(env,`UPDATE crank_wf_steps SET status='waiting',finished_at=NULL,error_json=NULL,trace_json=? WHERE run_id=? AND path=? AND ${accepted}`,
       JSON.stringify({gateway_task_id:taskId,recovery_only:true}),task.run_id,task.path,taskId,requestId),
     stmt(env,`UPDATE crank_wf_runs SET status='queued',error_json=NULL,finished_at=NULL,lease_id=NULL,lease_expires_at=NULL WHERE id=? AND ${accepted}`,task.run_id,taskId,requestId),
     auditStatementWhen(env,accepted,[taskId,requestId],'gateway:'+gateway.id,'gateway.receipt_recovery','run',task.run_id,{task_id:taskId,recovery_only:true}),
+    stmt(env,'DELETE FROM crank_authority_guards WHERE id=?',requestId),
   ])
-  requireValue(result[2].results.length,'The private write no longer has reconciliation authority',403)
+  requireValue(result[3].results.length,'The private write no longer has reconciliation authority',403)
   return {id:taskId,run_id:task.run_id,recovery_only:true}
 }
