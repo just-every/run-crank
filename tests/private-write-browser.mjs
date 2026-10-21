@@ -5,7 +5,7 @@ import {customDefinition,installDefinition,draftTest} from './custom-fixture.mjs
 import {manifestDestinations,namedManifest} from './gateway-fixture.mjs';
 
 /** The changed approval states use an actual restricted PostgreSQL writer. */
-export async function privateWriteBrowser({h,page,shots,origin,state,manifest,work,id}) {
+export async function privateWriteBrowser({h,page,shots,origin,state,manifest,work,id,tick}) {
   const database=postgresWriteFixture();
   const original=await readFile(manifest,'utf8');
   try {
@@ -28,7 +28,7 @@ export async function privateWriteBrowser({h,page,shots,origin,state,manifest,wo
     assert.equal(draft.run.status,'awaiting_approval');
     await shots('gateway-write-owner-review',()=>page.goto(origin+'/app/workflow-runs/'+draft.run.id));
     await page.getByRole('button',{name:'Approve',exact:true}).click();
-    for(let n=0;n<30;n++){if((await h.get('workflow-runs/'+draft.run.id)).status==='waiting')break;await new Promise(done=>setTimeout(done,100))}
+    for(let n=0;n<30;n++){const status=(await h.get('workflow-runs/'+draft.run.id)).status;if(status==='waiting')break;if(status==='queued')await tick();await new Promise(done=>setTimeout(done,100))}
     assert.equal((await h.get('workflow-runs/'+draft.run.id)).status,'waiting');
     await shots('gateway-write-approved',()=>page.goto(origin+'/app/workflow-runs/'+draft.run.id));
     await work();const completed=await h.get('workflow-runs/'+draft.run.id);assert.equal(completed.status,'succeeded',JSON.stringify(completed.error));

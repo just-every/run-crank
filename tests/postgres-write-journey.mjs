@@ -66,7 +66,8 @@ async function prepare(operation, input = { name: fixture(241), quantity: 25 }) 
   await work(); assert.equal(deliveries.length, before, 'unapproved writes cannot reach the host');
   const wait = draft.run.waits.find(wait => wait.path === 'write'); assert.ok(wait?.proposal_digest);
   const approved = await h.post(`workflow-runs/${draft.run.id}/approve`, { path: 'write', digest: wait.proposal_digest });
-  assert.equal(approved.status, 'waiting', JSON.stringify(approved.error));
+  assert.ok(['queued','waiting'].includes(approved.status),JSON.stringify(approved.error));
+  await h.tick();assert.equal((await h.get('workflow-runs/'+draft.run.id)).status,'waiting');
   return draft;
 }
 async function finished(draft, expected = 'succeeded') {

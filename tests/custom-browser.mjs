@@ -82,7 +82,7 @@ try {
   await shots('gateway-revoked-scope-run',()=>page.goto(origin+'/app/workflow-runs/'+revoked.run.id));
   await shots('custom-pinned-editor',()=>page.goto(origin+`/app/workflows/${proof.workflow.id}?step=stock`));
   const cost={components:['orchestration','connectors','models','executors'].map(kind=>({kind,usd_per_run:'0',assumption:'Owner-local SQLite and file acceptance; no provider service charge'}))};await h.post(`workflows/${proof.workflow.id}/estimate`,{cost});await h.post(`workflows/${proof.workflow.id}/publish`,{},h.owner,201);
-  await privateWriteBrowser({h,page,shots,origin,state,manifest,work,id});
+  await privateWriteBrowser({h,page,shots,origin,state,manifest,work,id,tick:()=>runtime.h.tick()});
   const address={workflow_id:workflow.id,step_path:'stock',input_name:'name'},cached=await h.post('custom-connectors/pickers',address);await work();
   const cachedPath='/api/crank/custom-connectors/pickers/'+cached.run_id+'?'+new URLSearchParams(address);assert.equal((await send(cachedPath)).status,'succeeded');
   const originalGrant=(await h.get('gateways')).grants.find(g=>g.gateway_id===state.gateway.id&&g.connector_id===id&&g.status==='active');assert.ok(originalGrant);
