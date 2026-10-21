@@ -25,6 +25,7 @@ jobs:
       - run: npm install --global pnpm@10.12.4
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec playwright install --with-deps chromium
+      - run: npm ci --prefix gateways/node --ignore-scripts
       - run: pnpm run verify
 
   decisions:

@@ -35,7 +35,8 @@ export async function payloadPass(env: CrankEnv, time = Date.now()) {
     try { if (await resealRun(env, await target(run.workflow_id), run.id, at)) summary.runs++ }
     catch { await stmt(env, 'UPDATE crank_wf_runs SET payload_failed_at=? WHERE id=?', at, run.id).run() }
   }
-  const copies = [
+  const copies: {table:string;from:string;workflow:string;column:string;files?:boolean}[] = [
+    ...['input_json','output_json'].map(column=>({table:'crank_gateway_tasks',from:'crank_gateway_tasks i JOIN crank_wf_runs r ON r.id=i.run_id JOIN crank_workflows w ON w.id=r.workflow_id',workflow:'r.workflow_id',column})),
     { table: 'crank_hold_items', from: 'crank_hold_items i JOIN crank_holds h ON h.id=i.hold_id JOIN crank_workflows w ON w.id=h.workflow_id', workflow: 'h.workflow_id', column: 'payload_json' },
     { table: 'crank_historical_items', from: 'crank_historical_items i JOIN crank_historical_batches h ON h.id=i.batch_id JOIN crank_workflows w ON w.id=h.workflow_id', workflow: 'h.workflow_id', column: 'payload_json' },
     { table: 'crank_files', from: 'crank_files i JOIN crank_workflows w ON w.id=i.workflow_id', workflow: 'i.workflow_id', column: 'content_base64', files: true },

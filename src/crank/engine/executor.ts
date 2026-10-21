@@ -1,3 +1,4 @@
+import { GatewayWait } from '../custom/gateway-tasks'
 import { ExecutorWait } from '../executors/step'
 import { grantProposal } from '../grants/policy'
 import { approvalSpec } from '../grants/reviews'
@@ -132,6 +133,10 @@ class Execution {
       }
       return await this.settle(step, path, input, result)
     } catch (error) {
+      if (error instanceof GatewayWait) {
+        await this.save(step,path,'waiting',{input,trace:{gateway_task_id:error.taskId}})
+        return {kind:'waiting',approval:false}
+      }
       if (error instanceof ExecutorWait) {
         await this.save(step,path,'waiting',{input,trace:{executor_task_id:error.taskId}})
         return {kind:'waiting',approval:false}
@@ -279,6 +284,8 @@ export async function executeRun(env: CrankEnv, runId: string, time = Date.now()
     WHERE w.run_id=crank_wf_runs.id AND w.resolved_at IS NOT NULL AND s.status='waiting' AND json_extract(s.trace_json,'$.retry_attempt_id') IS NULL
   ) THEN 'queued' ELSE ? END,finished_at=?,error_json=?,lease_id=NULL,lease_expires_at=NULL WHERE id=? AND lease_id=?`, status, status, terminal ? now() : null, error ? await sealText(await targetFor(env, run.workflow_id), JSON.stringify(error)) : null, runId, lease).run()
   const settled = (await getWfRun(env, runId))!
+  // Page payloads are continuation state, not a second permanent copy of run data.
+  await stmt(env,`UPDATE crank_gateway_tasks SET input_json='{}',output_json=NULL WHERE run_id=? AND (EXISTS(SELECT 1 FROM crank_wf_steps s WHERE s.run_id=crank_gateway_tasks.run_id AND s.path=crank_gateway_tasks.path AND s.status='succeeded') OR ?=1)`,runId,terminal?1:0).run()
   await afterSettle(env, settled)
   await flushUsageNotices(env)
   return settled

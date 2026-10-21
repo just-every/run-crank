@@ -19,7 +19,11 @@ test('BASE-001/BASE-004: an owned installation publishes and finishes every ship
     assert.equal(setup.status, 303);
     const slack = await connection(h, { app: 'slack', label: 'Harbor sales team', auth_kind: 'bearer', secret: { token: fakeSecret('slack') } });
     const executor=await connection(h,{app:'http',label:'Owner code executor',auth_kind:'bearer',domains:['executor.example'],secret:{token:fakeSecret('executor')}});
-    const graph = ownershipGraph(slack.id,executor.id), workflow = await publish(h, 'Harbor wholesale · owned installation', graph);
+    const {preparePublicCustom}=await import('./custom-fixture.mjs');
+    fake.routes.set('custom.example',()=>jsonResponse({id:'stock-24',quantity:24}));
+    const custom=await preparePublicCustom(h,{id:'owned-stock'});
+    const graph = ownershipGraph(slack.id,executor.id);graph.steps.unshift(custom.step);
+    const workflow = await publish(h, 'Harbor wholesale · owned installation', graph);
     const initial = await startRun(h, workflow, ownershipInput);
     assert.equal(initial.status, 'waiting', JSON.stringify(initial.error));
     assert.equal(initial.waits[0].kind, 'delay');

@@ -1,3 +1,4 @@
+import { customApi } from '../custom/api'
 import { followupApi } from '../agents/followups/api'
 import { crankApi } from '../api'
 import { workflowApi } from '../workflows/api'
@@ -10,7 +11,7 @@ const codes: Record<number, string> = { 400: 'invalid_request', 401: 'unauthenti
 export async function versionedApi(request: Request, env: CrankEnv): Promise<Response | null> {
   const url = new URL(request.url)
   if (url.pathname !== '/api/crank/v1' && !url.pathname.startsWith('/api/crank/v1/')) return null
-  const dispatch = async (forwarded: Request) => await followupApi(forwarded, env) ?? await workflowApi(forwarded, env) ?? await crankApi(forwarded, env) ?? json({ error: 'Route not found' }, 404)
+  const dispatch = async (forwarded: Request) => await customApi(forwarded,env) ?? await followupApi(forwarded, env) ?? await workflowApi(forwarded, env) ?? await crankApi(forwarded, env) ?? json({ error: 'Route not found' }, 404)
   if (url.pathname === '/api/crank/v1/mcp') return mcpApi(request, env, dispatch)
   url.pathname = url.pathname.replace('/api/crank/v1', '/api/crank')
   const response = await dispatch(new Request(url, request))

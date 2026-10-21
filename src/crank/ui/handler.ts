@@ -1,3 +1,5 @@
+import { customConnectionsPanel, proposalReview } from './custom-connectors'
+import { customApi } from '../custom/api'
 import { followupApi } from '../agents/followups/api'
 import { followupsPanel, inboxPanel } from './followups'
 import { decisionEdits } from './decision-fields'
@@ -34,7 +36,7 @@ const redirect = (location:string) => new Response(null,{status:303,headers:{loc
 // A form may name where to return after its action: a path inside the app, nothing else.
 const safeReturn = (value:unknown) => typeof value==='string' && /^\/app(\/[A-Za-z0-9/_.-]*)?(\?[A-Za-z0-9=&%_.-]*)?$/.test(value) ? value : null
 export async function productApi(request:Request,env:CrankEnv):Promise<Response|null> {
-  return await followupApi(request,env) ?? await teamApi(request,env) ?? await versionedApi(request,env) ?? await importDoor(request,env) ?? await importApi(request,env) ?? await dataApi(request,env) ?? await workflowApi(request,env) ?? await crankApi(request,env)
+  return await customApi(request,env) ?? await followupApi(request,env) ?? await teamApi(request,env) ?? await versionedApi(request,env) ?? await importDoor(request,env) ?? await importApi(request,env) ?? await dataApi(request,env) ?? await workflowApi(request,env) ?? await crankApi(request,env)
 }
 async function formValues(request:Request) {
   if (!request.headers.get('content-type')?.startsWith('application/x-www-form-urlencoded')) throw new Error('Use a form submission.')
@@ -73,6 +75,21 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
         return new Response(null,{status:303,headers:{location:'/signin','cache-control':'no-store',...(cookie?{'set-cookie':cookie}:{})}})
       }
       const form = await formValues(request)
+      if(url.pathname==='/app/custom-connectors/propose' || url.pathname==='/app/custom-connectors/install') {
+        requireOwner(actor)
+        let input:Record<string,unknown>
+        try {
+          if(url.pathname.endsWith('/propose')) input={openapi:JSON.parse(form.openapi ?? '')}
+          else {
+            const definition=JSON.parse(form.definition ?? '')
+            input={definition,reviewed_digest:form.reviewed_digest,granted_scopes:definition.auth.scopes.filter((_:string,index:number)=>form['scope_'+index]==='true'),disclosure_confirmed:form.disclosure_confirmed==='true'}
+          }
+        } catch {return page('Invalid connector description','<p class="notice">Supply a complete JSON connector description.</p><a href="/app/connections">Return to connections</a>',{},400)}
+        const response=await call(url.pathname.endsWith('/propose')?'/api/crank/custom-connectors/propose':'/api/crank/custom-connectors',input),result:any=await response.json()
+        if(!response.ok)return page('Connector refused',`<p class="notice">${esc(result.error)}</p><a href="/app/connections">Return to connections</a>`,{},response.status)
+        if(url.pathname.endsWith('/propose'))return page('Review connector',proposalReview({...result,source:form.openapi}))
+        return redirect('/app/connections')
+      }
       if (url.pathname === '/app/data/subject') {
         requireOwner(actor)
         const response = await call('/api/crank/data/subject',{subject:form.subject}), preview:any = await response.json()
@@ -113,9 +130,16 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
         if(!response.ok) return page('Preview refused',`<p class="notice">${esc(result.error)}</p><a href="/app/workflows/${esc(id)}">Back to the flow</a>`,{},response.status)
         return editorPage(id,new URLSearchParams({step:form.step ?? '',tab:'test'}),result)
       }
-      if (url.pathname !== '/app/action' || (!/^\/api\/crank\/[A-Za-z0-9/_-]+$/.test(form.path ?? '') && !['/auth/invite','/auth/operator/status','/auth/operator/role'].includes(form.path))) return page('Not found','<a href="/app">Return to flows</a>',{},404)
+      if (url.pathname !== '/app/action' || (!/^\/api\/crank\/[A-Za-z0-9/_.%-]+$/.test(form.path ?? '') && !['/auth/invite','/auth/operator/status','/auth/operator/role'].includes(form.path))) return page('Not found','<a href="/app">Return to flows</a>',{},404)
       const path = form.path, back = safeReturn(form.return_to); delete form.path; delete form.return_to
       const input:Record<string,unknown> = {...form}
+      if(path.startsWith('/api/crank/gateways/') || path.startsWith('/api/crank/custom-connectors/')) {
+        requireOwner(actor)
+        try {
+          if(form.connector_binding){const [id,version]=JSON.parse(form.connector_binding);input.connector_id=id;input.connector_version=version;delete input.connector_binding}
+          for(const key of ['operations','destinations','readbacks','granted_scopes'])if(form[key])input[key]=JSON.parse(form[key])
+        } catch{return page('Invalid connector selection','<p class="notice">Review the JSON selections and connector version.</p><a href="/app/connections">Return to connections</a>',{},400)}
+      }
       if(form.team_scope_form==='true') {
         for(const key of Object.keys(input)) if(key==='team_scope_form' || key.startsWith('workflow_') || key.startsWith('connection_')) delete input[key]
         input.workflow_ids=Object.keys(form).filter(key=>key.startsWith('workflow_') && form[key]==='true').map(key=>key.slice('workflow_'.length))
@@ -151,6 +175,7 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
         for (const key of Object.keys(input)) if (key.startsWith('restore_run_')) delete input[key]
       }
       if(form.sink_token) { input.secret={token:form.sink_token}; delete input.sink_token }
+      if(form.disclosure_confirmed==='true')input.disclosure_confirmed=true
       if(form.confirm_business_outcome==='true') input.confirm_business_outcome=true
       if(form.step_path!==undefined) { input.path=form.step_path; delete input.step_path }
       if (form.all !== undefined) input.all = form.all === 'true'
@@ -169,6 +194,7 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
       if(path==='/api/crank/data/export' && response.ok) return response
       const result:any = await response.json()
       if(!response.ok) return page('Action refused',`<p class="notice">${esc(result.error)}</p><p>No success was reported. Review the latest state before retrying.</p><a href="${back ?? (path.includes('/imports')?'/app/import':'/app')}">Return to workspace</a>`,{},response.status)
+      if(result.code && path==='/api/crank/gateways')return page('Gateway enrollment',`<section class="panel"><h2>Enroll your gateway</h2><p>This code is shown once and expires ${esc(result.expires_at)}. Its authority is bound to environment ${esc(result.gateway.environment)}. Use the customer gateway CLI and save its state in a private file.</p><label>Single-use enrollment code<input type="password" readonly aria-label="Enrollment code" value="${esc(result.code)}"></label><p>Private database and storage credentials stay in the gateway manifest.</p><a href="/app/connections">Return to connections</a></section>`)
       if(result.credential) result.token=result.credential
       if(result.token) return page('Credential created',`<section class="panel"><p>Shown once. Save this in a private file for your agent. Crank stores only its hash.</p><label>Credential<input type="password" value="${esc(result.token)}" readonly aria-label="Credential"></label><p class="muted">You can select and copy the hidden value. Do not share it in chat or commit it. Local dev credentials additionally need the local gate described in the README.</p><a class="btn btn-secondary" href="/app/access">Return to access</a></section>`)
       if (result.held && (result.hold_id || result.holdId)) return redirect('/app/holds/' + encodeURIComponent(result.hold_id || result.holdId))
@@ -218,7 +244,11 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
       return page('Approvals',approvalsView(state,details),{state,intro:'Decisions that only a person can make. Everything else runs on its own.'})
     }
     if(url.pathname==='/app/account') { const session = await read('/auth/session'); return page('Account',accountView(session,owner,actor.team?.role),{state,intro:'Who is signed in on this browser, and what that role may do.'}) }
-    if(url.pathname==='/app/connections') return page('Connections',connectionsView(await read('/api/crank/connections'),owner),{state,intro:'The apps your workflows act on, each with one stored credential.'})
+    if(url.pathname==='/app/connections') {
+      const nativeOwner=actor.role==='owner' && ['native','dev'].includes(actor.kind)
+      const [connections,custom,gateways]=await Promise.all([read('/api/crank/connections'),nativeOwner?read('/api/crank/custom-connectors'):[],nativeOwner?read('/api/crank/gateways'):{gateways:[],grants:[]}])
+      return page('Connections',connectionsView(connections,owner)+(nativeOwner?customConnectionsPanel(custom,gateways,true):''),{state,intro:'The apps your workflows act on, each with one stored credential.'})
+    }
     if(url.pathname==='/app/inbox') return page('Inbox',inboxPanel(await read('/api/crank/inbox')),{state,intro:'In-app requests addressed to you. The original workflow controls access and every decision.'})
     requireOwner(actor)
     if(url.pathname==='/app/followups') {

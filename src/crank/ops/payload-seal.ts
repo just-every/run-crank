@@ -21,7 +21,7 @@ export async function targetFor(env: CrankEnv, workflowId: string): Promise<Targ
 }
 /** Value-free routing fields kept readable beside the ciphertext: an HTTP step's method, a failure's
  * category, code, HTTP status and uncertainty, retry bookkeeping and restore/reconnect markers. */
-export const KEPT = ['method', 'category', 'code', 'status', 'uncertain', 'exhausted', 'retry_attempt_id', 'retry_at', 'previous_status', 'connection_id', 'reconnect']
+export const KEPT = ['gateway_task_id', 'method', 'category', 'code', 'status', 'uncertain', 'exhausted', 'retry_attempt_id', 'retry_at', 'previous_status', 'connection_id', 'reconnect']
 const aad = (workflowId: string, keyId: string) => new TextEncoder().encode(`crank-payload-v1|${workflowId}|${keyId}`)
 
 function fileIds(value: unknown, out = new Set<string>(), depth = 0): Set<string> {

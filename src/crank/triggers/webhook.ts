@@ -1,3 +1,4 @@
+import { customTrigger, recordCustomHook } from '../custom/triggers'
 import { openText } from '../ops/payload-seal'
 import { guardedBatch, requireOwner } from '../access'
 import { credential } from '../connections/store'
@@ -60,6 +61,7 @@ export async function receiveHook(request: Request, env: CrankEnv, secret: strin
   const methods: string[] = trigger.methods ?? ['POST', 'PUT', 'GET']
   if (!methods.includes(request.method)) return json({ error: 'Method not allowed' }, 405, { allow: methods.join(', ') })
   try {
+    const custom = await customTrigger(env,trigger)
     const bytes = await rawBody(request)
     // Authenticity is checked on the raw bytes before anything is parsed or stored.
     if (trigger.signature) {
@@ -85,6 +87,7 @@ export async function receiveHook(request: Request, env: CrankEnv, secret: strin
     }
     const payload = envelope ? { event_id: envelope.event_id, input: envelope.input } : { method: inbound.method, headers: inbound.headers, query: inbound.query, body: inbound.body, files: inbound.files, ...(inbound.raw !== undefined ? { raw: inbound.raw } : {}) }
     const admitted = await admitWebhook(env, workflow, hook.id, key, envelope ? await digest(canonical({ body: { event_id: envelope.event_id, input: envelope.input }, files: {} })) : await bodyDigest(inbound), payload, burstThreshold(graph), envelope ? null : Number(trigger.dedup?.window_minutes ?? 1440), inbound.uploads)
+    if(custom) await recordCustomHook(env,custom,workflow.id,workflow.published_version_id!,admitted.runId, !admitted.accepted)
     if (!admitted.accepted) return json({ accepted: false, duplicate: true, run_id: admitted.runId, ...(admitted.holdId ? { hold_id: admitted.holdId } : {}) }, 200)
     if (admitted.holdId) return json({ accepted: true, held: true, hold_id: admitted.holdId }, 202)
     const run = { id: admitted.runId! }

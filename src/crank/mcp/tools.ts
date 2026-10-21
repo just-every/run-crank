@@ -5,6 +5,7 @@ const part = (a: Input, key: string) => encodeURIComponent(String(a[key]))
 const tool = (name: string, description: string, method: 'GET' | 'POST', path: Tool['path'], properties: Record<string, unknown> = {}, required: string[] = [], body?: Tool['body']): Tool => ({ name, description, method, path, body, inputSchema: { type: 'object', properties, required, additionalProperties: false } })
 const workflow = (a: Input) => '/workflows/' + part(a, 'workflow_id')
 export const tools: Tool[] = [
+  tool('propose_connector','Propose a custom connector from a supplied public OpenAPI description. No consent, credential, installation or execution authority is created.','POST',()=>'/custom-connectors/propose',{openapi:object},['openapi'],a=>({openapi:a.openapi})),
   tool('create_draft', 'Create an inert workflow draft. No actions run.', 'POST', () => '/workflows', { input: object, idempotency_key: string }, ['input'], a => a.input),
   tool('update_draft', 'Save a workflow draft without publishing or sending.', 'POST', a => workflow(a) + '/draft', { workflow_id: string, input: object, idempotency_key: string }, ['workflow_id', 'input'], a => a.input),
   tool('duplicate_workflow', 'Copy the current draft into a new inert workflow using existing preparation authority; keyed retries retain the original copy.', 'POST', a => workflow(a) + '/duplicate', { workflow_id: string, idempotency_key: string }, ['workflow_id'], () => ({})),

@@ -1,3 +1,4 @@
+import { customSteps } from '../custom/store'
 import { sealText, targetFor } from '../ops/payload-seal'
 import { guardedBatch, requireOwner, requirePrepare } from '../access'
 import { connectionScope, workflowScope } from '../team/policy'
@@ -39,6 +40,7 @@ export async function testWorkflow(env: CrankEnv, actor: Actor, workflowId: stri
   const workflow = await getWorkflow(env, workflowId)
   requireValue(workflow.status !== 'paused' && !pendingRestore(workflow), 'Resume or adopt the workflow before testing its draft', 409)
   const draft = validateGraph(JSON.parse(workflow.draft_json))
+  if(customSteps(draft.graph).length || draft.graph.trigger.custom_connector_id)requireOwner(actor)
   const connectionIds = [...new Set(draft.declared.connections)]
   const bindings = input.bindings ?? {}
   requireValue(isObject(bindings) && Object.keys(bindings).length === connectionIds.length && connectionIds.every(key => typeof bindings[key] === 'string'), 'Explicitly bind every declared connection for this test', 422)

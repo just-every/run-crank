@@ -6,7 +6,7 @@ import { canonical } from '../../model'
 export interface Connection { id: string; app: string; label: string; status: string; domains: string[]; account_name: string }
 export interface StepRecord { path: string; step_id: string; type: string; status: string; started_at: string; finished_at: string | null; input?: unknown; output?: unknown; error?: any; trace?: unknown; operation_key?: string }
 export interface RunDetail {
-  executor_tasks?: {id:string;path:string;status:string;active:number}[]; grant_id?: string | null; escalations?: {path:string;escalated_at:string;recipient_ids_json:string}[]; mode?: 'production' | 'test'; repair_of?: string | null; repairs?: { id: string; status: string }[]; id: string; workflow_id: string; version_id: string; status: string; trigger_kind: string; business_key: string | null; received_at: string; started_at: string | null; finished_at: string | null; error: any; trigger?: unknown; steps: StepRecord[]; attempts?: any[]; waits: any[]; business_outcome?: string; source_id?: string | null; source_time?: string | null; version: { number: number; published_by?: string; published_at?: string; authority?: string; declared?: unknown } | null }
+  gateway_tasks?: {id:string;path:string;ordinal:number;status:string;expires_at:string}[]; executor_tasks?: {id:string;path:string;status:string;active:number}[]; grant_id?: string | null; escalations?: {path:string;escalated_at:string;recipient_ids_json:string}[]; mode?: 'production' | 'test'; repair_of?: string | null; repairs?: { id: string; status: string }[]; id: string; workflow_id: string; version_id: string; status: string; trigger_kind: string; business_key: string | null; received_at: string; started_at: string | null; finished_at: string | null; error: any; trigger?: unknown; steps: StepRecord[]; attempts?: any[]; waits: any[]; business_outcome?: string; source_id?: string | null; source_time?: string | null; version: { number: number; published_by?: string; published_at?: string; authority?: string; declared?: unknown } | null }
 export interface Version { number: number; graph: Graph; published_at: string; published_by: string }
 
 /** One card on the canvas: the trigger, a step, or a path group with its branches. */
@@ -28,7 +28,7 @@ export const findNode = (graph: Graph, path: string) => flatten(nodes(graph)).fi
 
 const titleCase = (text: string) => text.charAt(0).toUpperCase() + text.slice(1)
 const TRIGGERS: Record<string, string> = { webhook: 'Webhooks', schedule: 'Schedule', feed: 'RSS, Atom and JSON Feed', url_poll: 'URL poll', slack_event: 'Slack', manual: 'Manual start' }
-const STEPS: Record<string, string> = { code: 'Code executor', filter: 'Filter', paths: 'Paths', transform: 'Formatter', map: 'Formatter', delay: 'Delay', wait_for_callback: 'Delay', approval: 'Approval', 'file.fetch': 'Files', respond: 'Webhooks', http: 'Webhooks' }
+const STEPS: Record<string, string> = { 'custom.request':'Custom connector', code: 'Code executor', filter: 'Filter', paths: 'Paths', transform: 'Formatter', map: 'Formatter', delay: 'Delay', wait_for_callback: 'Delay', approval: 'Approval', 'file.fetch': 'Files', respond: 'Webhooks', http: 'Webhooks' }
 
 /** The app or tool a card names: the connection's label for API requests, Slack for Slack steps,
  * the signing preset for a signed webhook, otherwise the built-in tool. */

@@ -192,6 +192,7 @@ async function expireWorkflowPayload(env: CrankEnv, portability: PortabilityFenc
     stmt(env, "UPDATE crank_hold_items SET payload_json='{}' WHERE run_id=?", runId),
     stmt(env, "UPDATE crank_historical_items SET payload_json='{}' WHERE run_id=?", runId),
     stmt(env, 'DELETE FROM crank_blind_index WHERE run_id=?', runId),
+    stmt(env, "UPDATE crank_gateway_tasks SET input_json='{}',output_json=NULL WHERE run_id=?", runId),
     stmt(env, 'DELETE FROM crank_request_checkpoint_chunks WHERE run_id=?', runId),
     stmt(env, 'DELETE FROM crank_request_checkpoints WHERE run_id=?', runId),
     ...await portability.redactionStatements!(),

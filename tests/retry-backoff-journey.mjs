@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { harness } from './harness.mjs';
+import { preparePublicCustom } from './custom-fixture.mjs';
 import { fakeEdge, jsonResponse, publish, startRun } from './kit.mjs';
 
 // Real elapsed-time journey. It belongs to nightly/manual CI, not push Verify:
@@ -13,14 +14,19 @@ test('EXEC-002: real 90-second Retry-After and 1/2/4/8/16-minute outage backoff 
     if (url.pathname === '/quota') return times.length === 1 ? jsonResponse({ error: 'quota resets in 90 seconds' }, 429, { 'retry-after': '90' }) : jsonResponse({ invoice: 'INV-1042' });
     return times.length <= 5 ? jsonResponse({ error: 'upstream outage' }, 503) : jsonResponse({ invoice: 'INV-1043' });
   });
+  let customOutage=false;
+  fake.routes.set('custom.example',()=>{if(!customOutage)return jsonResponse({id:'stock-24',quantity:24});const times=[...(arrivals.get('/custom-outage')??[]),Date.now()];arrivals.set('/custom-outage',times);return times.length<=5?jsonResponse({error:'upstream outage'},503):jsonResponse({id:'stock-24',quantity:24})});
   const h = await harness('http://127.0.0.1:9', { edge: fake.edge });
   try {
+    const custom=await preparePublicCustom(h,{id:'long-custom-outage'});
+    const customWorkflow=await publish(h,'Fieldstone Dental custom accounting outage recovery',{trigger:{type:'manual'},steps:[custom.step]});
+    customOutage=true;
     const workflow = async (name, path, retry_policy) => publish(h, name, { trigger: { type: 'manual' }, steps: [
       { id: 'read', type: 'http', ...(retry_policy ? { retry_policy } : {}), input: { url: 'https://long-outage.example' + path } },
     ] });
     const quota = await workflow('Fieldstone Dental provider quota reset', '/quota');
     const outage = await workflow('Fieldstone Dental accounting outage recovery', '/outage');
-    let runs = [await startRun(h, quota, {}), await startRun(h, outage, {})];
+    let runs = [await startRun(h, quota, {}), await startRun(h, outage, {}),await startRun(h,customWorkflow,{})];
     assert.ok(runs.every(run => run.status === 'waiting'));
     const originalBudgets = runs.map(run => run.attempts[0].budget_started_at);
     await h.restart();
@@ -37,9 +43,14 @@ test('EXEC-002: real 90-second Retry-After and 1/2/4/8/16-minute outage backoff 
     assert.deepEqual(runs[0].attempts.map(a => a.http_status), [429, 200]);
     assert.ok(arrivals.get('/quota')[1] - arrivals.get('/quota')[0] >= 90000);
     assert.deepEqual(runs[1].attempts.map(a => a.http_status), [503, 503, 503, 503, 503, 200]);
+    assert.deepEqual(runs[2].attempts.map(a=>a.http_status),[503,503,503,503,503,200]);
     const gaps = [60000, 120000, 240000, 480000, 960000];
     for (const [index, minimum] of gaps.entries()) {
       const attempt = runs[1].attempts[index];
+      const customAttempt=runs[2].attempts[index];
+      assert.ok(Date.parse(customAttempt.retry_at)-Date.parse(customAttempt.finished_at)>=minimum);
+      assert.ok(Date.parse(customAttempt.retry_resumed_at)>=Date.parse(customAttempt.retry_at));
+      assert.ok(arrivals.get('/custom-outage')[index+1]-arrivals.get('/custom-outage')[index]>=minimum);
       assert.ok(Date.parse(attempt.retry_at) - Date.parse(attempt.finished_at) >= minimum);
       assert.ok(Date.parse(attempt.retry_at) - Date.parse(attempt.finished_at) < minimum + 1000, 'stored backoff includes bounded jitter');
       assert.ok(Date.parse(attempt.retry_resumed_at) >= Date.parse(attempt.retry_at));

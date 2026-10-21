@@ -77,6 +77,7 @@ export async function runDetail(env: CrankEnv, actor: Actor, runId: string) {
   return {
     ...presentRun(openRun, payload),
     grant_id: run.grant_id ?? null,
+    gateway_tasks: payload ? (await stmt(env,'SELECT id,path,ordinal,status,created_at,dispatched_at,completed_at,expires_at FROM crank_gateway_tasks WHERE run_id=? ORDER BY path,ordinal',runId).all()).results : [],
     executor_tasks: (await stmt(env,'SELECT id,path,status,next_poll_at,active FROM crank_executor_tasks WHERE run_id=?',runId).all()).results,
     escalations: (await stmt(env,'SELECT path,escalated_at,recipient_ids_json FROM crank_grant_escalations WHERE run_id=?',runId).all()).results,
     repair_of: run.repair_of ?? null, repair_paths: payload && run.repair_paths_json ? JSON.parse(run.repair_paths_json) : null,

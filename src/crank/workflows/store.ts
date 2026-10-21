@@ -1,3 +1,5 @@
+import { checkCustomPublication } from '../custom/store'
+import { checkCustomTriggerPublication } from '../custom/triggers'
 import { workflowScope, connectionScope } from '../team/policy'
 import { publishUsageStatements, readWorkflowEstimate } from '../ops/usage'
 import { guardedBatch, requireOwner, requirePrepare, requirePublish } from '../access'
@@ -186,6 +188,8 @@ async function publishVersion(env: CrankEnv, actor: Actor, workflowId: string, i
   requireValue(!actor.team || !pendingRestore(current), 'Only the native owner may adopt a restored workflow', 403)
   await requireAttested(env, workflowId)
   const { graph, declared, warnings } = checked(rollback ? rollback.graph : JSON.parse(current.draft_json))
+  await checkCustomPublication(env,graph,actor)
+  await checkCustomTriggerPublication(env,graph)
   for (const connectionId of declared.connections) {
     connectionScope(actor, connectionId)
     const connection = await getConnection(env, connectionId).catch(() => null)

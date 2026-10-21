@@ -581,3 +581,91 @@ source/input workspace; its independent output retention is the owner's responsi
 Crank's Data inventory discloses the executor recipient and source/input field
 categories. This slice inherits HTTP-002's unresolved private-DNS transport boundary;
 it does not claim an enforcing Base egress service or hosted deployment qualification.
+
+### Reviewed custom connectors and private gateways
+
+The native owner installs and consents to custom versions. Preparation agents can
+call `POST /api/crank/custom-connectors/propose` with `{openapi: <OpenAPI 3 object>}`
+or `{definition: <typed declaration>}`; MCP's `propose_connector` takes `openapi`.
+The result is inert `{definition,digest,requires_owner_review:true}`. It fetches
+nothing and creates no credential or production authority. Unsupported schemas,
+security alternatives and remote/recursive references fail visibly. The owner
+can use **Connections → Propose a connector from OpenAPI** for the same review.
+
+Install with `POST /api/crank/custom-connectors` and
+`{definition,reviewed_digest,granted_scopes,disclosure_confirmed:true}`. Declining
+any scope omits every dependent operation. ID/version pairs are immutable;
+propose a higher integer version to change the definition. List versions with
+`GET /api/crank/custom-connectors`. The disclosure names recipient, purpose,
+field categories, region and retention; provider terms stay labelled unverified.
+Do not put credentials in the description, URLs, input mappings or disclosure.
+Use an ordinary stored connection for authenticated HTTPS requests.
+
+A workflow read step is `{id,type:"custom.request",connector_id,
+connector_version,operation,input,connection_id?}`. The runtime validates all
+inputs against the operation's flat primitive types and refuses undeclared
+fields. Current public operations support GET/HEAD reads, bounded cursor
+pagination and normal HTTP connection admission/retry checkpoints. Search
+operations use the shared `no_match` and `multi_match` outcomes; find-or-create
+and write requests are refused. A signed webhook uses the ordinary `webhook`
+trigger with `custom_connector_id`, `custom_connector_version`,
+`custom_operation`, `signing_connection_id` and `signature`. All current custom
+workflow tests and publication require the native owner.
+
+Every installed version starts in `sandbox`. Run explicit workflow draft tests
+through `POST /workflows/:id/test`. A test listener can use
+`custom_sandbox:true`, but its graph may contain only map/filter/transform/respond
+steps. It still requires a valid signature. Send its same event twice and retain
+the one resulting run. Revoke a required scope with
+`POST /custom-connectors/:id/versions/:n/revoke-scopes` and `{scopes:[...]}` and
+retain the failed test: nothing is dispatched for that missing scope.
+
+`POST /custom-connectors/:id/versions/:n/sandbox` takes
+`{readbacks:[{run_id,step_id,path,equals}],duplicate_run_id,revoked_run_id}`.
+Crank reads actual retained results; it does not accept a caller's pass flag.
+Every currently executable read operation needs a successful explicit test
+readback. Every installed trigger needs signed duplicate-delivery evidence.
+A pipeline without triggers can instead prove an authenticated gateway completion
+was repeated with the identical result and did not start another run. Unrelated
+runs, mismatched expected data and unknown-operation errors cannot pass the suite.
+Only then is production publication allowed for that exact version/current scopes.
+
+Owner `POST /custom-connectors/:id/versions/:n/revoke` revokes a whole version
+and its gateway grants. `POST .../review` with the exact `reviewed_digest`,
+`granted_scopes` and `disclosure_confirmed:true` reviews a revoked or restored
+version again; it starts in sandbox and restores no gateway grant. Archive
+restoration carries definitions in `needs_review`, with no gateway, service
+credential, local DB/storage credential, grant, task or sandbox authority.
+
+For private operations, enroll under **Connections → Enroll a gateway**, or
+`POST /api/crank/gateways` with `{label,environment}`. Its code is shown once,
+expires in ten minutes and works only in that environment. The customer's
+outbound-only process exchanges it at `/api/crank/gateways/enroll`; see
+[the gateway installation and local manifest](../gateways/node/README.md).
+The server stores only the service credential's hash. The actual database query,
+file path and private credentials are configured only in the mode-0600 local
+manifest, never sent to Crank.
+
+Owner `POST /gateways/:id/grants` explicitly names
+`{environment,connector_id,connector_version,operations,destinations}`.
+A private workflow step also pins `gateway_id` and `environment`; its connector
+operation names the local gateway operation and private destination label.
+The process must match all of those bindings. Current real local doors are
+read-only SQLite and streamed UTF-8 file pages: 64 MiB source, 64 KiB page,
+1 MiB aggregate workflow output, declared page/item limits and a five-second
+local process deadline. Source-bound cursors refuse changed files; partial
+pipelines release no output to later steps. Tasks wait without holding an
+execution slot and expire after fifteen minutes. Gateway account dispatch uses
+the catalog request/concurrency limits; no failed or interrupted private operation
+is silently repeated. Result retries can acknowledge only the same task/result.
+
+`POST /gateways/:id/revoke` erases enrollment/service authority and revokes its
+grants. `POST /gateways/grants/:id/revoke` removes one grant. Poll and result doors
+require the current gateway credential/environment and recheck current owner,
+version/scope, workflow and grant authority; no cookie or arbitrary private target
+is accepted as a substitute. A result wakes only its exact waiting checkpoint;
+Cron covers races and revocation. Run history shows each private page's status.
+
+These are native-owner defaults adopted pending ct approval. External provider
+sandboxes, buyer IdP interoperability, full enterprise recipes, write operations,
+updated-record detection, find-or-create and account resource pickers remain gaps.

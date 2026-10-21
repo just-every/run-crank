@@ -10,6 +10,8 @@ import { type DataFlow, recipient, queryFields, providerFlow } from './data-flow
  * additional authorization. The existing owner-only Data door guards access. */
 export async function dataFlows(env: CrankEnv) {
   const connections = await listConnections(env), flows: DataFlow[] = []
+  const custom=await stmt(env,'SELECT id,version,definition_json,status FROM crank_custom_versions ORDER BY id,version').all<{id:string;version:number;definition_json:string;status:string}>()
+  for(const c of custom.results){const d=JSON.parse(c.definition_json),x=d.disclosure;flows.push({id:`custom:${c.id}:${c.version}`,kind:'custom',label:d.name,state:c.status,recipients:[x.recipient],purpose:x.purpose,fields:x.fields,credentials:d.operations.some((o:any)=>o.gateway)?'Installation-bound gateway service credential; private DB/file credentials stay on the customer gateway':'Explicit workflow connection; credential values stay on this installation',region:x.region+' (owner declared; provider terms unverified)',retention:x.retention+' (owner declared; provider terms unverified)'})}
   const add = (flow: Omit<DataFlow, 'region' | 'retention'> & Partial<Pick<DataFlow, 'region' | 'retention'>>) => {
     flows.push(providerFlow(flow))
   }

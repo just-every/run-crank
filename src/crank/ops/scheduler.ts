@@ -1,3 +1,4 @@
+import { releaseGatewayTasks } from '../custom/gateway-tasks'
 import { cancelExecutorTasks, releaseExecutorTasks } from '../executors/scheduler'
 import { followupPass } from '../agents/followups/scheduler'
 import { checkApprovalDeadlines } from '../grants/reviews'
@@ -31,6 +32,7 @@ async function runSchedulerPass(env: CrankEnv, time: number) {
   const at = new Date(time).toISOString(), summary = { recovered: 0, released: 0, queued: 0, polls: 0, schedules: 0, executed: 0, holds: 0, sealed: { runs: 0, items: 0, files: 0, destroyed: 0 }, expired: { payload: 0, files: 0, history: 0 } }
   await cancelExecutorTasks(env,undefined,time)
   summary.released += await releaseExecutorTasks(env,at)
+  summary.released += await releaseGatewayTasks(env,at)
   await checkApprovalDeadlines(env, time)
   summary.recovered = await recoverExpiredExecutions(env, at)
   summary.released += await releaseRetryWaits(env, at)
