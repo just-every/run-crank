@@ -669,3 +669,5 @@ Cron covers races and revocation. Run history shows each private page's status.
 These are native-owner defaults adopted pending ct approval. External provider
 sandboxes, buyer IdP interoperability, full enterprise recipes, write operations,
 updated-record detection, find-or-create and account resource pickers remain gaps.
+
+Enterprise GET proposals use the same `POST /api/crank/custom-connectors/propose` door with the reviewed recipe request documented in `docs/enterprise-connectors.md`. SFTP/S3 gateway manifests and their source-bound cursor protocol are documented in `gateways/node/README.md`. Connector re-review rotates consent generation: existing published snapshots and sandbox receipts cannot confer authority on the new review.

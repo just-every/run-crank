@@ -17,4 +17,6 @@ jobs:
           package-manager-cache: false
       - run: npm install --global pnpm@10.12.4
       - run: pnpm install --frozen-lockfile
+      - run: npm ci --prefix gateways/node --ignore-scripts
+      - run: node tests/storage-gateway-journey.mjs
       - run: node --test tests/retry-backoff-journey.mjs
