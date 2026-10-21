@@ -45,7 +45,7 @@ export async function authenticateGateway(request:Request,env:CrankEnv,gatewayId
     const accepted=await stmt(env,'INSERT INTO crank_gateway_nonces(gateway_id,nonce,expires_at) VALUES(?,?,?) ON CONFLICT DO NOTHING RETURNING nonce',gatewayId,nonce,Number(timestamp)+301).first()
     requireValue(accepted,'Gateway nonce was already used',401)
   } catch(error) {
-    await auditStatement(env,'gateway:'+gatewayId,reason==='environment'?'gateway.environment_denied':'gateway.request_denied','gateway',gatewayId,{reason_class:reason,...(reason==='environment'?{environment:input.environment}:{})}).run()
+    await auditStatement(env,'gateway:'+gatewayId,reason==='environment'?'gateway.environment_denied':'gateway.request_denied','gateway',gatewayId,{reason_class:reason,...(reason==='environment'?{environment:typeof input.environment==='string' && /^[a-z][a-z0-9_-]{0,59}$/.test(input.environment)?input.environment:'invalid'}:{})}).run()
     throw error
   }
   await stmt(env,'UPDATE crank_gateways SET last_seen_at=? WHERE id=?',now(),gatewayId).run()
