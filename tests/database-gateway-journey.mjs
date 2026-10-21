@@ -142,4 +142,4 @@ try {
   try { await h?.close(); }
   finally { try { await databases.close(); } finally { await rm(directory, { recursive: true, force: true }); } }
 }
-console.log('database-gateway-journey: PASS — real PostgreSQL/MySQL containers, real Worker enrollment/grants/draft workflows, real Node CLI, private credentials, input/session/permission authority, output bounds, timeout cleanup, cross-environment and revoked gateway. Owned containers removed. SQL Server live proof pending.');
+console.log('database-gateway-journey: PASS — real PostgreSQL/MySQL containers, real Worker enrollment/grants/draft workflows, real Node CLI, private credentials, input/session/permission authority, output bounds, timeout cleanup, cross-environment and revoked gateway. Owned containers removed. SQL Server has its separate sqlserver-gateway-journey.mjs.');

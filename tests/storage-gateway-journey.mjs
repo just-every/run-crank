@@ -162,9 +162,9 @@ function s3Server() {
 
 async function runTask(operation, op, input = {}) {
   const manifest = { version: 1, operations: { [operation]: op } };
-  await writeFile(manifestPath, JSON.stringify(manifest), { mode: 0o600 });
+  await writeFile(manifestPath, JSON.stringify(namedManifest(manifest)), { mode: 0o600 });
   reported = undefined;
-  const draft = await draftTest(h, fixture(100 + sequence++), [{ id: 'stock', type: 'custom.request',
+  const draft = await draftTest(h, fixture(100 + sequence++), [{ id: 'stock', type: 'custom.request',retry_policy:{read_attempts:1},
     connector_id: op.connector_id, connector_version: 1, operation: operation + '_probe', gateway_id: gatewayId,
     environment: 'production', input }]);
   assert.equal(draft.run.status, 'waiting', JSON.stringify(draft.run.error));
@@ -182,7 +182,7 @@ async function workflowPages(operation, op) {
   await writeFile(manifestPath, JSON.stringify(namedManifest({ version: 1, operations: { [operation]: op } })), { mode: 0o600 });
   const before = deliveries.length;
   reported = undefined;
-  const draft = await draftTest(h, fixture(100 + sequence++), [{ id: 'stock', type: 'custom.request',
+  const draft = await draftTest(h, fixture(100 + sequence++), [{ id: 'stock', type: 'custom.request',retry_policy:{read_attempts:1},
     connector_id: op.connector_id, connector_version: 1, operation: operation + '_file', gateway_id: gatewayId,
     environment: 'production', input: {} }]);
   assert.equal(draft.run.status, 'waiting');
@@ -292,7 +292,7 @@ try {
   s3.state.mode = 'normal';
   await bounds('s3_lines', s3Op, s3.state);
   assert(sftp.state.reads > 0 && s3.state.signed > 0);
-  console.log('storage-gateway-journey: PASS — real Worker enrollment/grants/draft workflows and public CLI poll/result; SFTP/S3 pagination across Worker restart, mutation, host-key and SigV4 rejection, range/redirect refusal, byte/source bounds and UTF-8 validation (provider edges only faked; live provider proof pending)');
+  console.log('storage-gateway-journey: PASS — real Worker enrollment/grants/draft workflows and public CLI poll/result; SFTP/S3 pagination across Worker restart, mutation, host-key and SigV4 rejection, range/redirect refusal, byte/source bounds and UTF-8 validation (provider edges only faked; real provider interoperability has its separate storage-provider-journey.mjs)');
 } finally {
   await Promise.all(servers.map(server => new Promise(resolve => { server.close(resolve); server.closeAllConnections?.(); })));
   await h?.close();

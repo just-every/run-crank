@@ -609,8 +609,7 @@ pagination and normal HTTP connection admission/retry checkpoints. Search
 operations use the shared `no_match` and `multi_match` outcomes; find-or-create
 and write requests are refused. A signed webhook uses the ordinary `webhook`
 trigger with `custom_connector_id`, `custom_connector_version`,
-`custom_operation`, `signing_connection_id` and `signature`. All current custom
-workflow tests and publication require the native owner.
+`custom_operation`, `signing_connection_id` and `signature`. Custom workflow tests and publication require a current person session and the named workflow, connection and gateway-use scopes under TEAM-001 and TEAM-004. Connector installation, scope review, gateway enrollment and concrete grants remain owner-only; custom webhook installation remains owner-only.
 
 A string input can declare `resource:{operation,items_path,value_path,label_path,parents?}`
 (or OpenAPI parameter `x-crank-resource`). The source is a reviewed GET/HEAD

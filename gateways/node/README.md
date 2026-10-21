@@ -197,7 +197,8 @@ restriction. This runtime has no arbitrary HTTP operation or proxy door.
 A non-null task contains `id`, `connector_id`, `connector_version`,
 `connector_operation`, `operation` (the exact manifest key), `destination`
 (the grant label), `input`, `operation_key`, `installation`, `environment`,
-`gateway_id`, `grant_id`, `grant_revision` and `authority_revision`. The host
+`gateway_id`, `grant_id`, `grant_revision`, `authority_revision`, `method` and
+`recovery_only`. The host
 checks active status, environment, revisions, exact version, operation and
 concrete destination before invoking a driver. Crank repeats its checks when
 accepting the result. Revocation prevents the next dispatch and withholds later
