@@ -590,7 +590,8 @@ test('Enrolled private gateway reads a real database, checkpoints file pages acr
   const late=await h.send(`/api/crank/gateways/${state.gateway.id}/tasks/${claimed.id}/result`,{environment:'production',output:{rows:[]}},'',signedGatewayHeaders(state,`/api/crank/gateways/${state.gateway.id}/tasks/${claimed.id}/result`,{environment:'production',output:{rows:[]}}));
   assert.equal(late.status,403,late.text);
   await share(['gateway:'+state.gateway.id]);await h.restart();await h.tick();
-  const stopped=await h.get('workflow-runs/'+interrupted.id);assert.equal(stopped.status,'failed');assert.equal(stepOf(stopped,'stock').output,null);
+  const stopped=await h.get('workflow-runs/'+interrupted.id);assert.equal(stopped.status,'paused');assert.equal(stepOf(stopped,'stock').output,null);
+  const afterScopeEnd=results.length;await work();assert.equal(results.length,afterScopeEnd,'A later scope regrant cannot resume a frozen paused run');
   const scopedAccountInput={label:'Private inventory preparation',environment:'production',workflow_ids:[shared.id],connection_ids:[]};
   await h.post('service-accounts',scopedAccountInput,h.owner,403);
   const service=await h.post('service-accounts',{...scopedAccountInput,connection_ids:['gateway:'+state.gateway.id]},h.owner,201);
