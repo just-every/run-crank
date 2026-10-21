@@ -70,6 +70,12 @@ export function importRow(table, row) {
 export async function validateRestore({ read }) {
   const cache = new Map();
   const rows = async table => { if (!cache.has(table)) cache.set(table, await read(table)); return cache.get(table); };
+  for (const row of await rows('crank_custom_versions')) {
+    const definition=JSON.parse(row.definition_json);
+    if(definition.id!==row.id || definition.version!==row.version || !Array.isArray(definition.operations))return false;
+    const hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(row.definition_json));
+    if(Array.from(new Uint8Array(hash),byte=>byte.toString(16).padStart(2,'0')).join('')!==row.definition_digest)return false;
+  }
   const workflows = new Map((await rows('crank_workflows')).map(row => [row.id, row]));
   const versions = new Map((await rows('crank_workflow_versions')).map(row => [row.id, row]));
   for (const workflow of workflows.values()) {

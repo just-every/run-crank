@@ -392,6 +392,21 @@ test('Custom connector review, agent OpenAPI proposal and sandbox gates retain e
   await h.post('custom-connectors/propose',{openapi:{...openapi,servers:[{url:'https://169.254.169.254'}]}},h.owner,422);
   const structured={...openapi,paths:{'/unsafe':{get:{operationId:'unsafe',parameters:[{name:'payload',in:'query',schema:{type:'object'}}],responses:{200:{description:'unsafe'}}}}}};
   await h.post('custom-connectors/propose',{openapi:structured},h.owner,400);
+  for(const [recipe,host,key,operation,expectedPath,envelope] of [
+    ['servicenow_incidents','harbour.service-now.example','sys_id','get_incident','/api/now/table/incident/INC%200042',{result:{number:'INC0042',short_description:'Warehouse scanner'}}],
+    ['sap_business_partners','harbour.sap.example','BusinessPartner','get_business_partner',"/sap/opu/odata/SAP/API_BUSINESS_PARTNER/A_BusinessPartner(BusinessPartner='O%27%27Neil')",{d:{BusinessPartner:"O'Neil",BusinessPartnerFullName:'Harbour Workshop'}}],
+  ]) {
+    const tenant='https://'+host,recipeInput={recipe,tenant_origin:tenant,id:'harbour-'+recipe,version:1,scopes:['records.read'],disclosure:{...customDefinition(id).disclosure,recipient:tenant,fields:[key,'selected record fields']}};
+    const proposal=await h.post('custom-connectors/propose',recipeInput,'',200,{authorization:'Bearer '+agent.token});
+    const connector=await h.post('custom-connectors',{definition:proposal.definition,reviewed_digest:proposal.digest,granted_scopes:['records.read'],disclosure_confirmed:true},h.owner,201);
+    const credential=await connection(h,{app:'http',label:'Harbour '+recipe,auth_kind:'bearer',purpose:'test',domains:[host],scopes:['records.read'],secret:{token:'synthetic-crank-15'}});
+    let called=0;fake.routes.set(host,({url,method,headers})=>{called++;assert.equal(url.pathname,expectedPath);assert.equal(method,'GET');assert.equal(headers.authorization,'Bearer synthetic-crank-15');return jsonResponse(envelope)});
+    const recipeStep={id:'enterprise',type:'custom.request',connector_id:connector.id,connector_version:1,operation,connection_id:credential.id,input:{[key]:recipe==='servicenow_incidents'?'INC 0042':"O'Neil"}};
+    const readback=await draftTest(h,'Harbour reviewed '+recipe,[recipeStep],{},{[credential.id]:credential.id});assert.equal(readback.run.status,'succeeded',JSON.stringify(readback.run.error));assert.deepEqual(stepOf(readback.run,'enterprise').output.body,envelope);assert.equal(called,1);
+    await h.post(`custom-connectors/${connector.id}/versions/1/revoke-scopes`,{scopes:['records.read']});
+    const denied=await draftTest(h,'Harbour revoked '+recipe,[recipeStep],{},{[credential.id]:credential.id});assert.equal(denied.run.status,'failed');assert.equal(called,1);
+    await h.post('custom-connectors/propose',{...recipeInput,tenant_origin:'https://127.0.0.1',disclosure:{...recipeInput.disclosure,recipient:'https://127.0.0.1'}},h.owner,422);
+  }
   const installed=await installDefinition(h,customDefinition('harbour-sandbox-gates'));
   const account=await connection(h,{app:'http',label:'Harbour stock sandbox',auth_kind:'bearer',purpose:'test',domains:['custom.example'],scopes:['records.read','scope.probe'],secret:{token:'synthetic-crank-6'}});
   const step={id:'stock',type:'custom.request',connector_id:installed.id,connector_version:1,operation:'record',connection_id:account.id,input:{}};

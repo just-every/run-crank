@@ -1,4 +1,5 @@
 import { validateRemoteDatabase, executeRemoteDatabase } from './remote-databases.mjs';
+import { validateStorage, executeStorage } from './storage.mjs';
 import { open, constants } from 'node:fs/promises';
 import { resolve, dirname } from 'node:path';
 import { fileLines } from './file-lines.mjs';
@@ -43,6 +44,8 @@ export function validateManifest(manifest) {
     }
     if (['postgres-query','mysql-query','sqlserver-query'].includes(op.type)) {
       validateRemoteDatabase(op);
+    } else if (['sftp-lines', 's3-lines'].includes(op.type)) {
+      validateStorage(op);
     } else if (op.type === 'sqlite-query') {
       if (!text(op.database) || typeof op.query !== 'string' || op.query.length > 16384 ||
           !/^\s*(SELECT|WITH)\b/i.test(op.query) || !Number.isInteger(op.maxRows) || op.maxRows < 1 || op.maxRows > 1000) {
@@ -115,5 +118,6 @@ export async function executeTask(manifest, manifestPath, task) {
   validateInput(op, task.input);
   const base = dirname(resolve(manifestPath));
   if(['postgres-query','mysql-query','sqlserver-query'].includes(op.type))return bounded(await executeRemoteDatabase(op,task.input));
+  if (['sftp-lines', 's3-lines'].includes(op.type)) return bounded(await executeStorage(op, task.input));
   return bounded(await (op.type === 'sqlite-query' ? sqliteQuery(op, task.input, base) : fileLines(op, task.input, base)));
 }

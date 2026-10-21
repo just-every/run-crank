@@ -1,12 +1,14 @@
 # Customer-controlled outbound gateway
 
 Run this runtime on a customer-controlled host with Node **22.20.0**. It opens
-no listener and makes outbound HTTPS requests only to the configured Crank
-origin. Plain HTTP is allowed for `localhost`, `127.0.0.1` and `::1` development
+no listener. It sends enrollment, polling and results only to the configured Crank
+origin, and connects to private destinations explicitly configured below.
+Plain HTTP is allowed for `localhost`, `127.0.0.1` and `::1` development
 origins. Redirects fail; bearer credentials are never forwarded to a redirect.
 SQLite and local file operations have no package dependencies. Remote database
-operations require `npm ci --prefix gateways/node --ignore-scripts`; drivers and
-the SQL parser load only for those explicitly configured operations.
+and SFTP operations require `npm ci --prefix gateways/node --ignore-scripts`;
+drivers, the SQL parser and SSH load only for their selected operations. S3 uses
+Node's HTTP/TLS and crypto modules with AWS Signature Version 4.
 
 The owner creates a private JSON manifest and keeps the databases and files on
 that host. Both the manifest and enrolled state must be regular, mode-0600 files;
@@ -144,8 +146,9 @@ SQLite exceptions, local paths, queries or credentials. HTTP error bodies are
 never printed. Worker responses are capped at 96 KiB. Result acknowledgement
 may be an empty successful response or JSON.
 
-This runtime supports the bounded SQLite query and file-line doors above.
-It does not execute PostgreSQL, shell commands, arbitrary SQL or network URLs.
+This runtime supports the bounded SQLite, file, remote SQL and storage doors
+described here. It does not execute shell commands, arbitrary task SQL or
+task-supplied network URLs.
 
 ## Remote SQL adapters (live database proof pending)
 
@@ -185,4 +188,102 @@ query deadlines are five seconds, under the existing owned subprocess deadline.
 Missing packages, unsupported read-only controls, failed TLS/authentication and
 remote errors are explicit failures; there is no alternate writable adapter.
 Live PostgreSQL/MySQL/SQL Server acceptance has not been established by the
-SQLite/file journey. SFTP and S3 adapters are not shipped in this runtime.
+SQLite/file journey.
+
+## Read-only SFTP and S3-compatible lines (live provider proof pending)
+
+Storage operations use the same connector binding fields as `read_lines` above.
+The owner fixes one remote path or bucket/object in the private manifest. Tasks
+may provide only the declared optional `cursor` and `limit`; they cannot choose
+a host, path, bucket, object, URL, credential or authentication option.
+
+An SFTP operation is:
+
+```json
+{
+  "type": "sftp-lines",
+  "connector_id": "synthetic-crank-1",
+  "connector_version": 1,
+  "destination": "synthetic-crank-15",
+  "connection": {
+    "host": "synthetic-crank-16.internal",
+    "port": 22,
+    "username": "synthetic-crank-17",
+    "password": "synthetic-crank-18",
+    "hostKeySha256": "REPLACE_WITH_INDEPENDENTLY_VERIFIED_SHA256_FINGERPRINT"
+  },
+  "path": "/synthetic-crank-19.txt",
+  "pageLines": 100,
+  "parameters": {
+    "cursor": { "type": "string", "optional": true, "maxLength": 512 },
+    "limit": { "type": "integer", "optional": true, "min": 1, "max": 100 }
+  }
+}
+```
+
+`hostKeySha256` must be the exact OpenSSH `SHA256:` fingerprint followed by
+43 unpadded base64 characters, obtained through an independently trusted channel.
+The placeholder above deliberately fails validation. Every SSH handshake checks
+that fingerprint before authentication; there is no accept-first-use mode or
+agent forwarding. Configure exactly one of `password` or `privateKey`. The
+`privateKey` value contains the actual private key text in the private JSON
+manifest; an encrypted key may also use `passphrase`. No key files, SSH agents,
+environment credentials or alternate authentication methods are consulted. The
+configured absolute remote path is opened read-only and must be a regular file.
+
+An S3-compatible operation is:
+
+```json
+{
+  "type": "s3-lines",
+  "connector_id": "synthetic-crank-1",
+  "connector_version": 1,
+  "destination": "synthetic-crank-20",
+  "connection": {
+    "endpoint": "https://synthetic-crank-21.example",
+    "region": "synthetic-crank-22",
+    "accessKeyId": "synthetic-crank-23",
+    "secretAccessKey": "synthetic-crank-24"
+  },
+  "bucket": "synthetic-crank-25",
+  "key": "synthetic-crank-26.txt",
+  "pageLines": 100,
+  "parameters": {
+    "cursor": { "type": "string", "optional": true, "maxLength": 512 },
+    "limit": { "type": "integer", "optional": true, "min": 1, "max": 100 }
+  }
+}
+```
+
+The endpoint is an HTTPS origin without a path, query, fragment or URL credentials.
+Requests use path-style bucket/object URLs and sign every request with AWS SigV4;
+the owner must configure the endpoint's actual region. Temporary credentials may
+add `connection.sessionToken`. Explicit test-only cleartext loopback endpoints
+also require `connection.allowInsecureLoopback: true`; allowed hosts are
+`127.0.0.1`, `localhost` and `::1`. Cleartext localhost resolves only to loopback.
+TLS certificate verification is mandatory. Redirects, retries, proxy environment
+settings and automatic credential lookup are never used.
+
+S3 requires exact `Content-Length`, strong quoted ETag and Last-Modified metadata.
+It checks a HEAD snapshot, then uses `If-Match` with an exact byte `Range`,
+requires HTTP 206 with matching `Content-Range`/metadata and complete body, and
+checks a conditional HEAD afterwards. Unsupported range or consistency semantics,
+changed metadata, compressed sources and authentication errors fail explicitly.
+
+Both adapters return `{ "lines": [...], "next_cursor": "..." }` with the same
+newline/CRLF/blank-line behavior as local files. Sources are bounded to **64 MiB**;
+each page streams and hashes the complete UTF-8 source without retaining it in
+memory. Cursors bind source location, source metadata, SHA-256 digest and next
+line byte offset. A source change rejects continuation as `file_changed`, even
+when SFTP size and timestamp remain unchanged. Each serialized page is at most
+**64 KiB**; `pageLines` is 1–1000, and optional `limit` cannot exceed it. Byte
+bounds can reduce a page's line count; an oversized individual line fails.
+The storage operation has a four-second deadline inside the existing five-second,
+64 MiB-heap subprocess. Slow sources fail rather than returning a partial page.
+
+`node tests/storage-gateway-journey.mjs` uses the existing real Worker harness for
+enrollment, grants, draft workflows, polling and results. The real gateway CLI
+connects to temporary network-edge SFTP/S3 protocol fixtures, including pagination
+across Worker restart, mutation, fingerprint and request-signature rejection,
+source/page bounds and UTF-8 validation. This establishes local protocol behavior;
+live customer SFTP/S3 provider acceptance remains unproven.

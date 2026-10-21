@@ -41,7 +41,8 @@ async function publicRead(step:Step,ctx:StepContext,op:CustomOperation) {
     const value=ctx.input[name];if(value===undefined || value===null)continue
     if(spec.location==='path') {
       if(['.','..'].includes(String(value)) || /[\\/\u0000-\u001f]/.test(String(value))) throw new StepError('validation',`Custom path input ${name} is not a path segment`)
-      path=path.replaceAll('{'+name+'}',encodeURIComponent(String(value)))
+      const segment=spec.encoding==='odata-string'?String(value).replaceAll("'","''"):String(value)
+      path=path.replaceAll('{'+name+'}',encodeURIComponent(segment).replace(/[!'()*]/g,char=>'%'+char.charCodeAt(0).toString(16).toUpperCase()))
     } else query[name]=value
   }
   checkEgress(path)

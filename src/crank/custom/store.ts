@@ -78,7 +78,7 @@ export async function checkCustomPublication(env:CrankEnv,graph:Graph,actor:Acto
 export async function reviewCustom(env:CrankEnv,actor:Actor,connectorId:string,version:number,input:Record<string,unknown>) {
   requireOwner(actor)
   const row=await customVersion(env,connectorId,version),definition=parseDefinition(JSON.parse(row.definition_json)),generation=id()
-  requireValue(await digest(canonical(definition))===row.definition_digest,'Stored connector bytes do not match their reviewed digest',409)
+  requireValue(definition.id===row.id && definition.version===row.version && await digest(canonical(definition))===row.definition_digest,'Stored connector bytes do not match their reviewed digest',409)
   requireValue(['needs_review','revoked'].includes(row.status),'Only a revoked or restored version needs re-review',409)
   requireValue(input.reviewed_digest===row.definition_digest && input.disclosure_confirmed===true,'Review the exact definition digest and confirm its disclosure',409)
   requireValue(Array.isArray(input.granted_scopes) && input.granted_scopes.every(scope=>typeof scope==='string' && definition.auth.scopes.includes(scope)),'Explicitly review the scopes for this installation')

@@ -1,6 +1,6 @@
 import { requireValue } from '../model'
 
-export type CustomInput = { type: 'string' | 'number' | 'integer' | 'boolean'; required: boolean; location?: 'path' | 'query' | 'body' }
+export type CustomInput = { type: 'string' | 'number' | 'integer' | 'boolean'; required: boolean; location?: 'path' | 'query' | 'body'; encoding?: 'odata-string' }
 export type CustomOperation = {
   id: string; name: string; kind: 'action' | 'search' | 'trigger'
   method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'HEAD' | 'OPTIONS'
@@ -95,11 +95,12 @@ function operation(value: unknown): CustomOperation {
   for (const [name, value] of Object.entries(inputs)) {
     identifier(name, 'Input name')
     const input = object(value, 'Input')
-    keys(input, ['type', 'required', 'location'], 'Input')
+    keys(input, ['type', 'required', 'location', 'encoding'], 'Input')
     requireValue(['string', 'number', 'integer', 'boolean'].includes(String(input.type)), 'Unsupported input type')
     requireValue(typeof input.required === 'boolean', 'Input required must be boolean')
     requireValue(input.location === undefined || ['path', 'query', 'body'].includes(String(input.location)), 'Unsupported input location')
-    parsed[name] = { type: input.type as CustomInput['type'], required: input.required, location: input.location as CustomInput['location'] ?? 'query' }
+    requireValue(input.encoding === undefined || input.encoding === 'odata-string' && input.type === 'string' && input.location === 'path', 'OData string encoding requires a string path input')
+    parsed[name] = { type: input.type as CustomInput['type'], required: input.required, location: input.location as CustomInput['location'] ?? 'query', ...(input.encoding ? {encoding:input.encoding as 'odata-string'} : {}) }
   }
   const path = endpoint(raw.path), placeholders = [...path.matchAll(/\{([^{}]+)\}/g)].map(match => match[1])
   requireValue(!/[{}]/.test(path.replace(/\{[^{}]+\}/g, '')), 'Operation path has malformed placeholders')

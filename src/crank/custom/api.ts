@@ -1,3 +1,4 @@
+import { proposeEnterpriseRecipe } from './enterprise-recipes'
 import { authorize, guardedBatch, requireOwner, requirePrepare, requireWriteOrigin } from '../access'
 import { executeRun } from '../engine/executor'
 import { StepError } from '../engine/errors'
@@ -30,7 +31,7 @@ export async function customApi(request:Request,env:CrankEnv):Promise<Response|n
     if(request.method==='POST')requireWriteOrigin(request,env,actor)
     if(request.method==='POST' && path==='/api/crank/custom-connectors/propose') {
       requirePrepare(actor)
-      const input=await body(request,512*1024),definition=input.openapi===undefined?parseDefinition(input.definition):proposeOpenApi(input.openapi)
+      const input=await body(request,512*1024),definition=input.recipe!==undefined?proposeEnterpriseRecipe(input):input.openapi===undefined?parseDefinition(input.definition):proposeOpenApi(input.openapi)
       for(const op of definition.operations) if(!op.gateway && op.kind!=='trigger') {
         // A path parameter cannot control the scheme or recipient host.
         const url=checkEgress(op.path.replace(/\{[^}]+\}/g,'sample'))
