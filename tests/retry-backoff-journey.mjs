@@ -18,10 +18,15 @@ test('Real owner email freshness, expired enrollment and 90-second Retry-After p
   let customOutage=false;
   fake.routes.set('custom.example',()=>{if(!customOutage)return jsonResponse({id:'stock-24',quantity:24});const times=[...(arrivals.get('/custom-outage')??[]),Date.now()];arrivals.set('/custom-outage',times);return times.length<=5?jsonResponse({error:'upstream outage'},503):jsonResponse({id:'stock-24',quantity:24})});
   const h = await harness('http://127.0.0.1:9', { edge: fake.edge });
-  let privateSource;
+  let privateSource, enrollmentSource, enrollmentHarness;
   try {
+    // Code expiry is an authority change. Exercise its real elapsed window in
+    // a separate installation so it cannot correctly fence the unrelated frozen
+    // outage run halfway through its 31-minute backoff sequence.
+    enrollmentHarness=await harness('http://127.0.0.1:9');
+    enrollmentSource=await privateRetryFixture(enrollmentHarness);
+    await enrollmentSource.proveFreshness();
     privateSource=await privateRetryFixture(h);
-    await privateSource.proveFreshness();
     const custom=await preparePublicCustom(h,{id:'long-custom-outage'});
     const customWorkflow=await publish(h,'Fieldstone Dental custom accounting outage recovery',{trigger:{type:'manual'},steps:[custom.step]});
     customOutage=true;
@@ -47,7 +52,7 @@ test('Real owner email freshness, expired enrollment and 90-second Retry-After p
       assert.ok(runs.every(run => ['waiting', 'succeeded'].includes(run.status)), JSON.stringify(runs.map(run => run.error)));
     }
     assert.ok(runs.every(run => run.status === 'succeeded'));
-    await privateSource.proveExpiredCode();
+    await enrollmentSource.proveExpiredCode();
     assert.deepEqual(runs[0].attempts.map(a => a.http_status), [429, 200]);
     assert.ok(arrivals.get('/quota')[1] - arrivals.get('/quota')[0] >= 90000);
     assert.deepEqual(runs[1].attempts.map(a => a.http_status), [503, 503, 503, 503, 503, 200]);
@@ -75,5 +80,5 @@ test('Real owner email freshness, expired enrollment and 90-second Retry-After p
       assert.ok(run.attempts.every(attempt => attempt.budget_started_at === originalBudgets[index]), 'parked waits do not reset the retained request identity or attempt budget');
       assert.ok(run.attempts.slice(1).every(attempt => Date.parse(attempt.slice_started_at) > Date.parse(originalBudgets[index])), 'active-time slices restart only after a recorded park');
     }
-  } finally { await privateSource?.close();await h.close(); }
+  } finally { await privateSource?.close();await enrollmentSource?.close();await enrollmentHarness?.close();await h.close(); }
 });
