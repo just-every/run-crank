@@ -502,6 +502,9 @@ poll or continuation. Cancelling a run durably fences further workflow dispatch,
 then asks the executor to stop; run history distinguishes `cancel_pending`,
 `cancel_unconfirmed` and the executor's reported terminal state. A cancellation
 before submission leaves an executor tombstone, so a late submission cannot start.
+Cancellation uses the existing connection request/concurrency bucket and at most
+two physical attempts, with the next attempt no earlier than the next minute;
+an exhausted or revoked connection leaves cancellation explicitly unconfirmed.
 
 Task references travel in archives with `active: 0`; restore/restart/Cron never
 contact the source executor. Local run erasure deletes these references. The separate

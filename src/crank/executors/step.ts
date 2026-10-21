@@ -50,7 +50,10 @@ export const code: StepType = {
     const status=String(response.value.status)
     await stmt(ctx.env,`UPDATE crank_executor_tasks SET status=?,next_poll_at=? WHERE id=? AND active=1 AND EXISTS(SELECT 1 FROM crank_wf_runs WHERE id=? AND status='running' AND lease_id=?)`,status,new Date(Date.now()+60000).toISOString(),taskId,ctx.run.id,ctx.run.lease_id).run()
     if (status==='queued' || status==='running') throw new ExecutorWait(taskId)
-    if (status!=='succeeded') throw new StepError(status==='interrupted'?'uncertain':'provider',`Executor task ${status}`,{task_id:taskId,...(status==='interrupted'?{uncertain:true}:{})})
+    if (status!=='succeeded') {
+      const reason=isObject(response.value.error) && ['timeout','output_limit','invalid_output','execution_failed','sandbox_unavailable','invalid_source','cancelled','interrupted'].includes(String(response.value.error.category)) ? String(response.value.error.category) : status
+      throw new StepError(status==='interrupted'?'uncertain':'provider',`Executor task ${status} (${reason})`,{task_id:taskId,executor_error_category:reason,...(status==='interrupted'?{uncertain:true}:{})})
+    }
     return {status:'succeeded',output:{task_id:taskId,status,output:response.value.output}}
   },
 }

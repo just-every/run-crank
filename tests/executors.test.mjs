@@ -37,10 +37,10 @@ test('WORK-005 EXEC-002 BASE-001: published executor work keeps one durable iden
 });
 
 test('WORK-005 DATA-001 DATA-002: cancellation reports remote confirmation, task references restore inactive and erase with their run',async()=>{
- const edge=fakeEdge(),tasks=new Map();let cancelled=0;
+ const edge=fakeEdge(),tasks=new Map();let cancelled=0,refuseCancellation=false;
  edge.routes.set('executor.example',({url,method})=>{
   const task_id=url.pathname.split('/')[2];
-  if(url.pathname.endsWith('/cancel')){cancelled++;tasks.set(task_id,{task_id,status:'cancelled'})}
+  if(url.pathname.endsWith('/cancel')){cancelled++;if(refuseCancellation)return jsonResponse({error:'service unavailable'},503);tasks.set(task_id,{task_id,status:'cancelled'})}
   else if(method==='POST')tasks.set(task_id,{task_id,status:'running'});
   return tasks.has(task_id)?jsonResponse(tasks.get(task_id)):jsonResponse({error:'not_found'},404);
  });
@@ -50,9 +50,12 @@ test('WORK-005 DATA-001 DATA-002: cancellation reports remote confirmation, task
   const run=await startRun(h,w,{customer:'Harbour Workshop'}),pending=await startRun(h,w,{customer:'Restore remains inactive'});
   const stopped=await h.post(`workflow-runs/${run.id}/cancel`);assert.equal(stopped.status,'cancelled');assert.equal(stopped.executor_tasks[0].status,'cancelled');assert.equal(cancelled,1);
   const after=edge.requests.length;await h.tick(Date.now());assert.equal(edge.requests.length,after,'cancelled work never resumes');
-  const exported=await archive(h);const items=exported.trim().split('\n').map(JSON.parse).flatMap(p=>p.items??[]),refs=items.filter(i=>i.kind==='row'&&i.table==='crank_executor_tasks');assert.equal(refs.length,2);assert.ok(refs.every(i=>i.row.active===0));
+  const uncertain=await startRun(h,w,{customer:'Cancellation needs remote inspection'});refuseCancellation=true;
+  const unconfirmed=await h.post(`workflow-runs/${uncertain.id}/cancel`);assert.equal(unconfirmed.executor_tasks[0].status,'cancel_unconfirmed');const attempts=cancelled;await h.tick(Date.now());assert.equal(cancelled,attempts,'no early cancellation retry');await Promise.all([h.tick(Date.now()+61000),h.tick(Date.now()+61000)]);const exhausted=cancelled;await h.tick(Date.now()+180000);assert.equal(cancelled,exhausted,'cancellation attempts remain bounded across concurrent Cron passes');assert.equal((await h.get('workflow-runs/'+uncertain.id)).executor_tasks[0].status,'cancel_unconfirmed');refuseCancellation=false;
+  const exported=await archive(h);const items=exported.trim().split('\n').map(JSON.parse).flatMap(p=>p.items??[]),refs=items.filter(i=>i.kind==='row'&&i.table==='crank_executor_tasks');assert.equal(refs.length,3);assert.ok(refs.every(i=>i.row.active===0));
+  const archivedRequests=edge.requests.length;
   receiving=await harness('https://unused.example',{edge:edge.edge});await receiving.post('data/restore',{archive:exported,confirm:'RESTORE'});await receiving.restart();await receiving.tick(Date.now()+86400000);
-  assert.equal(edge.requests.length,after,'restored task references never contact the source executor');assert.equal((await receiving.get('workflow-runs/'+pending.id)).status,'paused');
+  assert.equal(edge.requests.length,archivedRequests,'restored task references never contact the source executor');assert.equal((await receiving.get('workflow-runs/'+pending.id)).status,'paused');
   await h.post(`workflow-runs/${pending.id}/cancel`);await h.post(`workflows/${w.id}/pause`);await h.post('data/erase',{workflow_run_id:run.id,confirm:'ERASE'});
   assert.equal((await h.db.prepare('SELECT COUNT(*) AS n FROM crank_executor_tasks WHERE run_id=?').bind(run.id).first()).n,0,'erasure removes local remote-task references');
  }finally{await receiving?.close();await h.close()}
