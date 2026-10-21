@@ -75,7 +75,7 @@ A graph's `settings` set its `timezone`, `burst_threshold` (1 to 10,000, default
 | POST `/workflow-runs/:id/replay` | Native/dev owner | Selected `paths` (1–100), preview `digest`, optional input `corrections` keyed by path; returns resumed run or linked repair |
 | GET `/workflows/:id/compare` | Signed-in reader | Exact graphs and JSON Pointer changes; `from`/`to` select `published`, `draft`, or a retained version number |
 | GET `/workflows/:id/drafts/:draftId` | Signed-in reader | Immutable saved draft graph, metadata, author, time and base publication |
-| POST `/workflows/:id/test` | Native/dev owner | Freeze draft and sample as a test run; explicitly map every connection with `bindings`; production writes wait for exact live confirmation |
+| POST `/workflows/:id/test` | Native/dev owner or scoped admin/builder | Freeze draft and sample as a test run; explicitly map every connection with `bindings`; production writes wait for exact live confirmation |
 | POST `/connections/:id/purpose` | Native/dev owner | Audited owner declaration of `purpose: test` or `production`; not provider verification |
 | POST `/workflows/:id/preview` | Owner, admin, agent | Run filters, paths and transforms on a manual sample; no effects |
 | POST `/workflows/:id/hooks` | Native/dev owner | New secret webhook URL, shown once; `{rotate:HOOK_ID,overlap_minutes}` rotates |
@@ -446,7 +446,18 @@ for the owner. Changes and their resource IDs are audited and apply on the next
 request; writes admitted under an old policy revision fail at commit.
 
 Scoped builders/admins can edit and publish shared workflows using only shared
-connections. The owner still supplies the exact graph's cost estimate, and only
+connections. They may also start draft tests at `/workflows/:id/test` with explicit
+`bindings` for every declared connection. Both original and replacement connections
+must be shared. The immutable test version records its initiating person and product
+policy revision; every dispatch checks that person's current role/version and revision.
+A role/scope change or deactivation stops later dispatch, even after regranting access.
+Owner-created linked repairs retain that original test authority and separately record
+the repairing owner; repair never refreshes revoked test authority. Tests never publish
+or authorize production starts or approval. Production-account test effects still wait
+for an owner's exact-effect confirmation. Test history and provenance travel in archives,
+but receiving access and execution authority do not.
+
+The owner still supplies the exact graph's cost estimate, and only
 the owner adopts restored workflows. Scoped operators can start published runs only on shared bound connections;
 named scoped approvers need the same connection-use scope and any grant's separate reviewer routing. They can decide shared workflows' exact proposals, but cannot
 approve a run they started, including after changing roles. Viewers receive run
@@ -460,8 +471,7 @@ sharing. Deactivation ends the departing person's sessions; published work and
 its history survive. Policies never travel as authority in archives.
 
 This slice does not complete TEAM-001: folder/environment policy, SCIM/group
-provisioning, full operator recovery/admin powers and delegated draft tests/
-creation remain. Existing people without a product policy retain their prior
+provisioning, full operator recovery/admin powers and delegated creation remain. Existing people without a product policy retain their prior
 Base-role behavior, including legacy approval-flow and owner approval semantics.
 
 ### Native decision follow-up (AGENT-004)
