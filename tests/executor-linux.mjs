@@ -14,7 +14,7 @@ try{
  const python=taskId(),job=payload('def main(input): return {"customer": input["customer"].strip()}');
  await executor.call('/tasks/'+python,job);const pythonResult=await terminal(python);assert.deepEqual(pythonResult.output,{customer:'Harbour Workshop & Supply'},JSON.stringify(pythonResult));
  assert.equal((await executor.call('/tasks/'+python,job)).value.task_id,python);assert.equal((await executor.call('/tasks/'+python,{...job,input:{customer:'different'}})).status,409);
- for(const language of ['javascript','typescript']){const id=taskId();await executor.call('/tasks/'+id,payload(language==='typescript'?'export default function(input: {customer: string}) {return {customer:input.customer.trim()}}':'export default function(input) {return {customer:input.customer.trim()}}',{language,memory_mb:1024}));assert.deepEqual((await terminal(id)).output,{customer:'Harbour Workshop & Supply'})}
+ for(const language of ['javascript','typescript']){const id=taskId();await executor.call('/tasks/'+id,payload(language==='typescript'?'export default function(input: {customer: string}) {return {customer:input.customer.trim()}}':'export default function(input) {return {customer:input.customer.trim()}}',{language,memory_mb:1024}));const actual=await terminal(id);assert.deepEqual(actual.output,{customer:'Harbour Workshop & Supply'},language+JSON.stringify(actual))}
  for(const [name,source,extra] of [
   ['wall deadline','def main(input):\n while True: pass',{timeout_ms:300}],
   ['memory bound','def main(input): return bytearray(1024*1024*512)',{memory_mb:64}],

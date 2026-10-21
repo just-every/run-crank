@@ -17,7 +17,7 @@ export async function linuxExecutor() {
  await mkdir(join(modules,'@esbuild'),{recursive:true});await cp(dirname(dirname(esbuild)),join(modules,'esbuild'),{recursive:true,dereference:true});await cp(native,join(modules,'@esbuild/linux-x64'),{recursive:true,dereference:true});
  const token=fakeSecret('isolated-executor');let child,log='';
  const start=async()=>{
-  log='';child=spawn(binary,[join(app,'server.mjs')],{uid,gid,env:{PATH:'/usr/bin:/bin',CRANK_EXECUTOR_TOKEN:token,CRANK_EXECUTOR_DATA:data,CRANK_EXECUTOR_PORT:'0'},stdio:['ignore','pipe','pipe']});
+  log='';child=spawn(binary,[join(app,'server.mjs')],{cwd:root,uid,gid,env:{PATH:'/usr/bin:/bin',CRANK_EXECUTOR_TOKEN:token,CRANK_EXECUTOR_DATA:data,CRANK_EXECUTOR_PORT:'0'},stdio:['ignore','pipe','pipe']});
   child.stdout.on('data',b=>log+=b);child.stderr.on('data',b=>log+=b);
   const port=await until(()=>{if(child.exitCode!==null)throw Error('Executor startup failed: '+log);return /listening on 127.0.0.1:(\d+)/.exec(log)?.[1]},'real Linux executor readiness',10000);
   return `http://127.0.0.1:${port}`;
