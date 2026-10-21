@@ -40,6 +40,8 @@ export interface StepContext {
 }
 export interface StepType {
   mutating: boolean
+  /** Durable remote identity permits readback after an interrupted dispatch. */
+  reconciles?: boolean
   /** Steps that name a connection must be bound to one at publish. */
   connection?: 'required' | 'optional'
   /** Inputs that must resolve to a value before any effect. */

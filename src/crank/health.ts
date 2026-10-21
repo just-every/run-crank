@@ -14,6 +14,7 @@ export async function healthResponse(env: Bindings): Promise<Response> {
         env.DB.prepare('SELECT grant_source_version_id FROM crank_workflow_versions LIMIT 1'),
         env.DB.prepare('SELECT g.id FROM crank_grants g LEFT JOIN crank_grant_admissions a ON a.grant_id=g.id LEFT JOIN crank_grant_escalations e ON e.run_id=a.run_id LIMIT 1'),
         env.DB.prepare('SELECT id FROM crank_audit LIMIT 1'),
+        env.DB.prepare('SELECT id,active FROM crank_executor_tasks LIMIT 1'),
       ]),
       new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('deadline')), 2000) }),
     ])

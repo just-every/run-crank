@@ -1,3 +1,4 @@
+import { cancelExecutorTasks } from '../executors/scheduler'
 import { workflowScope, versionConnectionScope } from '../team/policy'
 import { grantFence } from '../grants/authority'
 import { assertReviewer } from '../grants/reviews'
@@ -76,6 +77,7 @@ export async function runDetail(env: CrankEnv, actor: Actor, runId: string) {
   return {
     ...presentRun(openRun, payload),
     grant_id: run.grant_id ?? null,
+    executor_tasks: (await stmt(env,'SELECT id,path,status,next_poll_at,active FROM crank_executor_tasks WHERE run_id=?',runId).all()).results,
     escalations: (await stmt(env,'SELECT path,escalated_at,recipient_ids_json FROM crank_grant_escalations WHERE run_id=?',runId).all()).results,
     repair_of: run.repair_of ?? null, repair_paths: payload && run.repair_paths_json ? JSON.parse(run.repair_paths_json) : null,
     repairs: (await stmt(env, 'SELECT id,status FROM crank_wf_runs WHERE repair_of=? ORDER BY received_at,id', runId).all<{ id: string; status: string }>()).results,
@@ -172,11 +174,13 @@ export async function cancelRun(env: CrankEnv, actor: Actor, runId: string) {
     stmt(env, "UPDATE crank_wf_runs SET status='cancelled',finished_at=?,lease_id=NULL,lease_expires_at=NULL WHERE id=? AND status IN ('queued','running','waiting','awaiting_approval','paused') RETURNING id", at, runId),
     interruptedWrites(env, "SELECT id FROM crank_wf_runs WHERE id=? AND status='cancelled' AND finished_at=?", [runId, at],
       'Cancellation stopped further dispatch; this already-started write may have completed and needs destination reconciliation', at),
+    stmt(env, "UPDATE crank_wf_steps SET status='stopped',finished_at=? WHERE run_id=? AND type='code' AND status IN ('running','waiting') AND EXISTS(SELECT 1 FROM crank_wf_runs WHERE id=? AND status='cancelled')",at,runId,runId),
     stmt(env, `UPDATE crank_waits SET resolved_at=?,resolution_json='{"cancelled":true}',decided_by=? WHERE run_id=? AND resolved_at IS NULL AND EXISTS(SELECT 1 FROM crank_wf_runs WHERE id=? AND status='cancelled' AND finished_at=?)`, at, actor.id, runId, runId, at),
     stmt(env, 'DELETE FROM crank_queue_items WHERE run_id=? AND released_at IS NULL AND EXISTS(SELECT 1 FROM crank_wf_runs WHERE id=? AND status=\'cancelled\')', runId, runId),
     auditStatement(env, actor.id, 'run.cancel', 'run', runId),
   ])
   requireValue(result[0].results.length > 0, 'This run cannot be cancelled now', 409)
+  await cancelExecutorTasks(env,runId)
   return runDetail(env, actor, runId)
 }
 

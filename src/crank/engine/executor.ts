@@ -1,3 +1,4 @@
+import { ExecutorWait } from '../executors/step'
 import { grantProposal } from '../grants/policy'
 import { approvalSpec } from '../grants/reviews'
 import { admitStep } from './step-limit'
@@ -103,7 +104,7 @@ class Execution {
     if (record?.status === 'succeeded' || record?.status === 'skipped' || (record?.status === 'failed' && step.on_error === 'continue')) { this.scope.steps[step.id] = output(record); return { kind: 'completed' } }
     if (record?.status === 'stopped') { const value = output(record); return value?.rejected ? { kind: 'rejected', reason: value.reason } : { kind: 'stopped', reason: value?.reason ?? 'filter' } }
     if (record?.status === 'failed' || record?.status === 'uncertain') return { kind: 'failed', error: record.error_json ? JSON.parse(record.error_json) : { category: 'uncertain' } }
-    if (record?.status === 'running' && mutating) {
+    if (record?.status === 'running' && mutating && !type.reconciles) {
       await this.save(step, path, 'uncertain', { error: { category: 'uncertain', message: 'Interrupted during a remote write; check the destination before replaying' } })
       return { kind: 'failed', error: { category: 'uncertain', message: 'Interrupted during a remote write' } }
     }
@@ -131,6 +132,10 @@ class Execution {
       }
       return await this.settle(step, path, input, result)
     } catch (error) {
+      if (error instanceof ExecutorWait) {
+        await this.save(step,path,'waiting',{input,trace:{executor_task_id:error.taskId}})
+        return {kind:'waiting',approval:false}
+      }
       if (error instanceof RetryWait) {
         await this.save(step, path, 'waiting', { input, trace: { retry_attempt_id: error.attemptId, retry_at: error.dueAt } })
         return { kind: 'waiting', approval: false }

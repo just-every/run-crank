@@ -1,9 +1,10 @@
 // A complete owned-installation workflow. Network fakes live only in tests.
-export function ownershipGraph(connectionId) {
+export function ownershipGraph(connectionId,executorId) {
   const slack = (id, type, input) => ({ id, type: 'slack.' + type, connection_id: connectionId, input });
   return {
     trigger: { type: 'manual' },
     steps: [
+      {id:'normalize_code',type:'code',connection_id:executorId,executor_url:'https://executor.example',language:'python',source:'def main(input): return input',timeout_ms:1000,memory_mb:128,allowed_egress:[],input:{customer:'{{trigger.input.customer}}'}},
       { id: 'eligible', type: 'filter', when: [[{ field: 'trigger.input.amount', op: 'number.gt', value: 0 }]] },
       { id: 'customer', type: 'transform', fn: 'text.trim', input: { value: '{{trigger.input.customer}}' } },
       { id: 'summary', type: 'map', input: { customer: '{{steps.customer}}', amount: '{{trigger.input.amount}}' } },
@@ -37,6 +38,8 @@ export function ownershipGraph(connectionId) {
 export const ownershipInput = { customer: '  Harbor Workshop & Supply · October wholesale order  ', amount: '521.00', items: [{ sku: 'DESK-OAK', quantity: 1 }, { sku: 'LAMP-BRASS', quantity: 2 }] };
 
 export function ownershipProviders(fake, jsonResponse) {
+  const tasks=new Map();
+  fake.routes.set('executor.example',({url,method,body})=>{const task_id=url.pathname.split('/')[2];if(method==='POST'){tasks.set(task_id,{task_id,status:'succeeded',output:JSON.parse(body).input})}return tasks.has(task_id)?jsonResponse(tasks.get(task_id)):jsonResponse({error:'not_found'},404)});
   const user = { id: 'U000001', name: 'ana', real_name: 'Ana Morales', profile: { email: 'ana@harbor.example' } };
   fake.routes.set('files.example', () => new Response('Harbor Workshop quote: $521.00', { headers: { 'content-type': 'text/plain' } }));
   fake.routes.set('ledger.example', () => jsonResponse({ id: 'invoice-harbor-1042' }, 201));

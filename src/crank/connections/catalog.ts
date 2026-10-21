@@ -12,6 +12,7 @@ const op = (id: string, name: string, extra: Record<string, unknown> = {}) => ({
 
 /** Native apps and built-in tools that exist in this installation, with their exact operations. */
 export const CATALOG = [
+  { app:'executor', name:'Owner-deployed code executor', clauses:['WORK-005'], auth:['bearer'], triggers:[], searches:[], actions:[op('code','Isolated code job',{step:'code',languages:['python','javascript','typescript'],allowed_egress:[],dependencies:'standard library only; third-party dependencies not implemented'})] },
   { app: 'webhooks', name: 'Webhooks', clauses: ['TRIG-001', 'HTTP-002'], auth: ['none', 'signature', 'header secret'],
     triggers: [op('catch_hook', 'Catch hook (secret URL, POST/PUT/GET, JSON/form/multipart/XML/raw)', { trigger: 'webhook', signature_presets: SIGNATURE_PRESETS, dedup: 'key path or SHA-256 body digest, 1 minute to 30 days', responses: ['immediate', 'sync'] })],
     actions: [op('request', 'API request (GET, POST, PUT, PATCH, DELETE, HEAD)', { step: 'http', bodies: ['json', 'form', 'multipart', 'xml', 'raw'], auth: ['bearer', 'basic', 'api_key', 'hmac', 'oauth2', 'oauth2_client_credentials'], pagination: ['cursor', 'page', 'link'], retry_policy: RETRY_POLICY, request_limit: HTTP_REQUEST_LIMIT })], searches: [] },

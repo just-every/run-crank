@@ -13,12 +13,12 @@ const transient = (status: number) => [429, 502, 503, 504].includes(status)
 
 /** A restart retains failed budgets/deadlines; completed earlier calls are
  * reconstructed from the unfinished step's private continuation checkpoints. */
-export async function retryRequest(ctx: RequestContext, request: { method: string; url: URL; body: Uint8Array | null; bodyIdentity?: string; idempotent: boolean; safeRead?: boolean }, send: (policy: AttemptPolicy) => Promise<BoundedResponse>) {
+export async function retryRequest(ctx: RequestContext, request: { method: string; url: URL; body: Uint8Array | null; bodyIdentity?: string; idempotent: boolean; safeRead?: boolean; checkpoint?: boolean }, send: (policy: AttemptPolicy) => Promise<BoundedResponse>) {
   const ordinal = ctx.requests.next++
   const bodyHash = request.bodyIdentity ?? (request.body ? [...new Uint8Array(await crypto.subtle.digest('SHA-256', new Uint8Array(request.body)))].map(byte => byte.toString(16).padStart(2, '0')).join('') : null)
   const safeRead = request.safeRead ?? ['GET', 'HEAD'].includes(request.method)
   const requestKey = await digest(canonical({ method: request.method, url: request.url.href, body: bodyHash, ...(request.safeRead === undefined ? {} : { safe_read: safeRead }) }))
-  const retained = await requestCheckpoint(ctx, ordinal, requestKey)
+  const retained = request.checkpoint === false ? null : await requestCheckpoint(ctx, ordinal, requestKey)
   if (retained) {
     const base = new URL(retained.response.url)
     if (base.origin === request.url.origin && base.pathname === request.url.pathname) retained.response.url = request.url.href
@@ -44,10 +44,10 @@ export async function retryRequest(ctx: RequestContext, request: { method: strin
       if (!(error instanceof StepError) || error.category !== 'network' || !(safeRead || request.idempotent)) throw error
       failure = error
     }
-    if (response && (!safeRead || !transient(response.status))) return saveRequestCheckpoint(ctx, ordinal, requestKey, { response, attempts })
+    if (response && (!safeRead || !transient(response.status))) return request.checkpoint === false ? { response, attempts } : saveRequestCheckpoint(ctx, ordinal, requestKey, { response, attempts })
     const category = response?.status === 429 ? 'rate_limit' : failure ? 'network' : 'provider'
     if (attempts >= maximum) {
-      if (response) return saveRequestCheckpoint(ctx, ordinal, requestKey, { response, attempts, exhausted: true })
+      if (response) return request.checkpoint === false ? { response, attempts, exhausted: true } : saveRequestCheckpoint(ctx, ordinal, requestKey, { response, attempts, exhausted: true })
       throw retryExhausted(category, 'the response was repeatedly lost')
     }
     const delay = retryDelay(attempts, response?.headers.get('retry-after') ?? null, Number(safeRead ? ctx.retryPolicy?.base_delay_ms ?? RETRY_POLICY.base_delay_ms : ctx.retryPolicy?.write_base_delay_ms ?? RETRY_POLICY.write_base_delay_ms))

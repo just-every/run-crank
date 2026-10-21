@@ -473,3 +473,40 @@ The native owner saves `POST /api/crank/followups/people/:personId` with `timezo
 `POST /api/crank/followups` accepts an unresolved production `run_id`, exact approval `path`, explicit-zone ISO `due_at`, `recipient_ids`, and optional paired `escalate_at`/`escalation_ids`. Each recipient must be an active native person with an explicit calendar. `POST /api/crank/followups/:id/revoke` immediately ends contact authority, leaving the human workflow wait untouched. Native deactivation permanently fences prior authorization. Contact records contain no question or answer copies, and no external messages are sent.
 
 The owner uses `/app/followups`; people use `/app/inbox` and the original run's allowed-field approval form. Existing digest-bound approval, self-approval restrictions and run cancellation remain authoritative. Contacts, admissions and authorizing-owner audits commit atomically. Archives carry complete reference/history records in inactive state, excluding local calendars and grants. Run erasure removes their history; operator erasure anonymizes references. Value-free person-digest/day admission receipts remain local so erasure cannot grant another daily contact.
+
+### Owner-deployed code jobs (WORK-005, partial)
+
+The workflow API accepts `type: "code"` with a stored HTTP connection, a literal
+`executor_url` origin, `language` (`python`, `javascript`, `typescript`), reviewed
+`source`, mapped `input`, `timeout_ms`, `memory_mb` and explicit `allowed_egress: []`.
+Python defines `main(input)`; JavaScript/TypeScript exports a default function.
+See [the Linux executor](../executors/linux/README.md) for installation and the
+public task protocol. Code source belongs to the immutable published graph;
+execution inputs and outputs use the run's existing sealing, retention and erasure.
+
+This slice supports standard libraries and exact installed `runtime_version`
+declarations. Nonempty dependencies and egress declarations are refused before
+publication. Wall time is in milliseconds (100–60000); memory is MiB of virtual
+address space **per process** (Python 64–2048; JavaScript/TypeScript 512–2048),
+not an aggregate RSS quota. Native Linux process/file bounds also apply.
+Network-enabled jobs, versioned third-party dependencies, aggregate task memory
+and heavier browser/ETL executors remain unfinished clause obligations.
+
+Every physical submission/read uses existing connection custody, account admission,
+usage observations and bounded request retries. An ambiguous submission is read back
+under the same durable task ID; it never starts a replacement task. Waiting jobs
+release the workflow slot, and Cron checks the same ID at or after the next minute.
+A missing previously submitted task or executor interruption is uncertain, never
+successful and never automatically relaunched. Pause/revocation prevents the next
+poll or continuation. Cancelling a run durably fences further workflow dispatch,
+then asks the executor to stop; run history distinguishes `cancel_pending`,
+`cancel_unconfirmed` and the executor's reported terminal state. A cancellation
+before submission leaves an executor tombstone, so a late submission cannot start.
+
+Task references travel in archives with `active: 0`; restore/restart/Cron never
+contact the source executor. Local run erasure deletes these references. The separate
+owner-hosted executor retains output and value-free task identity after deleting its
+source/input workspace; its independent output retention is the owner's responsibility.
+Crank's Data inventory discloses the executor recipient and source/input field
+categories. This slice inherits HTTP-002's unresolved private-DNS transport boundary;
+it does not claim an enforcing Base egress service or hosted deployment qualification.

@@ -62,6 +62,7 @@ function setup(ctx: InspectorContext) {
     step!.type === 'approval' && typeof step!.instructions === 'string' ? `<section class="inspector-block"><h3>Instructions</h3><p class="inspector-note">${esc(step!.instructions)}</p>${Array.isArray(step!.editable) ? field('Editable', esc((step!.editable as string[]).join(', ')), false) : ''}</section>` : '',
     step!.type === 'http' && typeof (step!.input as any)?.url === 'string' ? request(step!.input as any) : '',
     mapping.length ? `<section class="inspector-block"><h3>Field mapping</h3>${mapping.map(([key, value]) => field(rowLabel(key), mapped(value))).join('')}</section>` : '',
+    step!.type === 'code' ? `<section class="inspector-block"><h3>Code executor</h3>${field('Language',esc(step!.language),false)}${field('Executor',esc(step!.executor_url),false)}${field('Wall limit',`${esc(step!.timeout_ms)} ms`,false)}${field('Memory limit',`${esc(step!.memory_mb)} MiB`,false)}${field('Network','Disabled',false)}<details><summary>Source</summary><pre>${esc(step!.source)}</pre></details></section>` : '',
     retryPolicy(node),
   ]
   return parts.join('')
@@ -75,7 +76,7 @@ function lastResult(ctx: InspectorContext) {
   const result = found.record ? summaryOfResult(ctx.node, found.record, ctx.people) : null
   const summary = found.record?.error ? `<p class="result-error">${causeHtml(found.record.error, renameOf(found.record.error, ctx.node.path, ctx.live))}</p>`
     : result ? `<div class="result-card" data-state="${esc(status)}"><span class="tile tile-result" aria-hidden="true">${icon(STATE_ICON[status] ?? 'check')}</span><div>${summaryHtml(result)}</div></div>`
-    : found.record?.status === 'waiting' ? '<p class="muted">Waiting for an owner’s decision in Approvals.</p>' : ''
+    : found.record?.status === 'waiting' && ctx.node.step?.type === 'code' ? '<p class="muted">Waiting for the owner-deployed executor. Cron checks the same task.</p>' : found.record?.status === 'waiting' ? '<p class="muted">Waiting for an owner’s decision in Approvals.</p>' : ''
   return `<section class="inspector-block last-result">${head}<p class="result-status" data-state="${esc(status)}">${icon(STATE_ICON[status] ?? 'check', 'icon state-mark')}<strong>${esc(STEP_STATE[status] ?? status)}</strong> <span class="muted">${ago(at, ctx.now)}</span></p>${summary}<a class="result-link" href="/app/workflow-runs/${esc(found.run.id)}">Open run ${esc(found.run.id.slice(0, 8))} ${icon('chevron')}</a></section>`
 }
 
