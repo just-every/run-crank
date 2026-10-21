@@ -21,6 +21,7 @@ const liveTask=`EXISTS(SELECT 1 FROM crank_gateway_grants a JOIN crank_gateways 
   WHERE a.id=crank_gateway_tasks.grant_id AND a.gateway_id=crank_gateway_tasks.gateway_id
   AND a.connector_id=crank_gateway_tasks.connector_id AND a.connector_version=crank_gateway_tasks.connector_version
   AND a.status='active' AND g.status='active' AND o.status='active' AND o.role='owner' AND o.version=g.owner_version
+  AND EXISTS(SELECT 1 FROM json_each(v.declared_json,'$.custom_bindings') b WHERE json_extract(b.value,'$.id')=c.id AND json_extract(b.value,'$.version')=c.version AND json_extract(b.value,'$.definition_digest')=c.definition_digest AND json_extract(b.value,'$.consent_generation')=c.consent_generation)
   AND c.status IN ('sandbox','ready') AND (r.mode='test' OR c.status='ready')
   AND r.status IN ('queued','running','waiting') AND w.status!='paused' AND w.owner_id!='restore:awaiting-adoption'
   AND (r.mode='test' AND r.test_owner_version=o.version AND r.created_by=o.id OR r.mode='production' AND w.status='published' AND (w.published_version_id=r.version_id OR (r.continuation_authority&2)!=0))

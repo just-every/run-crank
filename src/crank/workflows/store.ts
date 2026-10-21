@@ -1,3 +1,4 @@
+import { customBindings } from '../custom/bindings'
 import { checkCustomPublication } from '../custom/store'
 import { checkCustomTriggerPublication } from '../custom/triggers'
 import { workflowScope, connectionScope } from '../team/policy'
@@ -198,7 +199,7 @@ async function publishVersion(env: CrankEnv, actor: Actor, workflowId: string, i
   }
   const previous = await stmt(env, 'SELECT MAX(number) AS n FROM crank_workflow_versions WHERE workflow_id=?', workflowId).first<{ n: number | null }>()
   const versionId = id(), at = now(), number = (previous?.n ?? 0) + 1, graphJson = canonical(graph)
-  const authority = { publisher: actor.id, published_at: at, workflow_settings: JSON.parse(current.settings_json), steps: declared.steps, connections: declared.connections, bindings: await snapshotBindings(env, declared.connections), trigger: graph.trigger.type, ...(rollback ? { rollback_of: rollback.rollback_of } : {}) }
+  const authority = { custom_bindings: await customBindings(env,graph), publisher: actor.id, published_at: at, workflow_settings: JSON.parse(current.settings_json), steps: declared.steps, connections: declared.connections, bindings: await snapshotBindings(env, declared.connections), trigger: graph.trigger.type, ...(rollback ? { rollback_of: rollback.rollback_of } : {}) }
   const adoption = await adoptionStatements(env, actor, current, input)
   const guard = `attested:${versionId}`
   const statements = [

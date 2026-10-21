@@ -1,3 +1,4 @@
+import { requireCustomBinding } from './bindings'
 import { StepError } from '../engine/errors'
 import type { Graph } from '../engine/graph'
 import { stmt, type CrankEnv } from '../model'
@@ -6,12 +7,13 @@ import { customVersion } from './store'
 
 /** Signed webhook transport is shared with native webhook workflows; a custom
  * operation adds a pinned version/scope gate before even parsing the event. */
-export async function customTrigger(env:CrankEnv,trigger:Record<string,unknown>) {
+export async function customTrigger(env:CrankEnv,trigger:Record<string,unknown>,versionId?:string) {
   if(trigger.custom_connector_id===undefined) return null
   if(trigger.type!=='webhook' || typeof trigger.custom_connector_id!=='string' || !Number.isSafeInteger(trigger.custom_connector_version) || typeof trigger.custom_operation!=='string') throw new StepError('validation','Pin a custom webhook connector, version and operation')
   if(!trigger.signature || typeof trigger.signing_connection_id!=='string') throw new StepError('validation','Custom webhook events require signature verification with a stored signing connection')
   const row=await customVersion(env,trigger.custom_connector_id,Number(trigger.custom_connector_version))
   if(!['sandbox','ready'].includes(row.status) || trigger.custom_sandbox!==true && row.status!=='ready') throw new StepError('auth','The custom webhook version has no current production authority')
+  if(versionId)await requireCustomBinding(env,versionId,row)
   const definition=JSON.parse(row.definition_json) as CustomDefinition,op=definition.operations.find(op=>op.id===trigger.custom_operation),scopes=JSON.parse(row.scopes_json) as string[]
   if(!op || op.kind!=='trigger' || !op.scopes.every(s=>scopes.includes(s))) throw new StepError('auth','The custom webhook operation or scope was refused or revoked')
   return {id:row.id,version:row.version,operation:op.id,sandbox:trigger.custom_sandbox===true}

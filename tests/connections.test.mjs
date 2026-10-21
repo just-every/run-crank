@@ -420,6 +420,11 @@ test('Custom connector review, agent OpenAPI proposal and sandbox gates retain e
   fake.routes.set('custom.example',()=>jsonResponse(body));
   const disclosures=await h.get('data/flows');assert.equal(disclosures.flows.find(f=>f.id==='custom:'+installed.id+':1').purpose,installed.definition.disclosure.purpose);
   assert.equal(JSON.stringify(disclosures).includes('synthetic-crank-6'),false);
+  await h.post(`custom-connectors/${installed.id}/versions/1/revoke`);
+  const current=(await h.get('custom-connectors')).find(v=>v.id===installed.id&&v.version===1);
+  await h.post(`custom-connectors/${installed.id}/versions/1/review`,{reviewed_digest:current.digest,disclosure_confirmed:true,granted_scopes:current.granted_scopes});
+  await h.post(`custom-connectors/${installed.id}/versions/1/sandbox`,receipt,h.owner,422);
+  assert.equal((await h.get('custom-connectors')).find(v=>v.id===installed.id&&v.version===1).status,'sandbox','Re-review requires fresh readback and duplicate-event proof');
   const decisions=await h.get('audit');assert.ok(decisions.some(d=>d.action==='custom.owner_denied'&&d.detail.session_kind==='agent'));
 });
 
@@ -477,5 +482,6 @@ test('Enrolled private gateway reads a real database, checkpoints file pages acr
   const imported=await restored.get('custom-connectors');assert.equal(imported.find(c=>c.id===connectorId).status,'needs_review');assert.equal(imported.find(c=>c.id===connectorId).sandbox,null);assert.deepEqual(await restored.get('gateways'),{gateways:[],grants:[]});
   assert.equal((await restored.get('workflows/'+production.id)).status,'paused');
   const importedVersion=imported.find(c=>c.id===connectorId);await restored.post(`custom-connectors/${connectorId}/versions/1/review`,{reviewed_digest:importedVersion.digest,disclosure_confirmed:true,granted_scopes:importedVersion.granted_scopes});assert.equal((await restored.get('custom-connectors')).find(c=>c.id===connectorId).status,'sandbox');assert.deepEqual(await restored.get('gateways'),{gateways:[],grants:[]});
+  await restored.post(`custom-connectors/${connectorId}/versions/1/sandbox`,{readbacks:[{run_id:done.id,step_id:'stock',path:'body.rows',equals:[{name:'Oak workbench',quantity:24}]}],revoked_run_id:revoked.run.id,duplicate_run_id:done.id},restored.owner,422);
   await restored.post(base+'/poll',{environment:'production'},'',401,headers);
 });

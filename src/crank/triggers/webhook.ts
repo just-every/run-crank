@@ -61,7 +61,7 @@ export async function receiveHook(request: Request, env: CrankEnv, secret: strin
   const methods: string[] = trigger.methods ?? ['POST', 'PUT', 'GET']
   if (!methods.includes(request.method)) return json({ error: 'Method not allowed' }, 405, { allow: methods.join(', ') })
   try {
-    const custom = await customTrigger(env,trigger)
+    const custom = await customTrigger(env,trigger,workflow.published_version_id!)
     const bytes = await rawBody(request)
     // Authenticity is checked on the raw bytes before anything is parsed or stored.
     if (trigger.signature) {

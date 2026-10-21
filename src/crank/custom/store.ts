@@ -2,13 +2,13 @@ import { guardedBatch, requireOwner } from '../access'
 import { branchesOf, type Graph } from '../engine/graph'
 import { StepError } from '../engine/errors'
 import type { Step } from '../engine/types'
-import { canonical, digest, now, requireValue, stmt, type Actor, type CrankEnv } from '../model'
+import { canonical, digest, id, now, requireValue, stmt, type Actor, type CrankEnv } from '../model'
 import { auditStatement } from '../ops/audit'
 import { parseDefinition, type CustomDefinition, type CustomOperation } from './definition'
 
 export interface CustomVersion {
   id:string; version:number; definition_json:string; definition_digest:string; scopes_json:string
-  status:'sandbox'|'ready'|'revoked'|'needs_review'; sandbox_json:string|null; created_by:string; created_at:string
+  consent_generation:string; status:'sandbox'|'ready'|'revoked'|'needs_review'; sandbox_json:string|null; created_by:string; created_at:string
 }
 export function presentCustom(row:CustomVersion) {
   return {id:row.id,version:row.version,definition:JSON.parse(row.definition_json),digest:row.definition_digest,
@@ -34,9 +34,9 @@ export async function installCustom(env:CrankEnv,actor:Actor,input:Record<string
   const scopes=[...new Set(input.granted_scopes as string[])], installed={...definition,operations:definition.operations.filter(op=>op.scopes.every(scope=>scopes.includes(scope)))}
   requireValue(installed.operations.length,'No operations remain after scope review')
   requireValue(!await stmt(env,'SELECT 1 FROM crank_custom_versions WHERE id=? AND version=?',definition.id,definition.version).first(),'This immutable version is already installed; propose a new version',409)
-  const at=now(), definitionJson=canonical(installed)
+  const at=now(), definitionJson=canonical(installed), generation=id()
   await guardedBatch(env,actor,'owner',[
-    stmt(env,"INSERT INTO crank_custom_versions(id,version,definition_json,definition_digest,scopes_json,status,created_by,created_at) VALUES(?,?,?,?,?,'sandbox',?,?)",definition.id,definition.version,definitionJson,await digest(definitionJson),canonical(scopes),actor.id,at),
+    stmt(env,"INSERT INTO crank_custom_versions(id,version,definition_json,definition_digest,scopes_json,status,created_by,created_at,consent_generation) VALUES(?,?,?,?,?,'sandbox',?,?,?)",definition.id,definition.version,definitionJson,await digest(definitionJson),canonical(scopes),actor.id,at,generation),
     auditStatement(env,actor.id,'custom.install','custom_connector',definition.id,{version:definition.version,scopes,operations:installed.operations.map(op=>op.id)}),
   ])
   return presentCustom(await customVersion(env,definition.id,definition.version))
@@ -77,22 +77,23 @@ export async function checkCustomPublication(env:CrankEnv,graph:Graph,actor:Acto
  * native-owner act and starts the sandbox gate again; gateway grants never return. */
 export async function reviewCustom(env:CrankEnv,actor:Actor,connectorId:string,version:number,input:Record<string,unknown>) {
   requireOwner(actor)
-  const row=await customVersion(env,connectorId,version),definition=parseDefinition(JSON.parse(row.definition_json))
+  const row=await customVersion(env,connectorId,version),definition=parseDefinition(JSON.parse(row.definition_json)),generation=id()
+  requireValue(await digest(canonical(definition))===row.definition_digest,'Stored connector bytes do not match their reviewed digest',409)
   requireValue(['needs_review','revoked'].includes(row.status),'Only a revoked or restored version needs re-review',409)
   requireValue(input.reviewed_digest===row.definition_digest && input.disclosure_confirmed===true,'Review the exact definition digest and confirm its disclosure',409)
   requireValue(Array.isArray(input.granted_scopes) && input.granted_scopes.every(scope=>typeof scope==='string' && definition.auth.scopes.includes(scope)),'Explicitly review the scopes for this installation')
   await guardedBatch(env,actor,'owner',[
-    stmt(env,"UPDATE crank_custom_versions SET scopes_json=?,status='sandbox',sandbox_json=NULL WHERE id=? AND version=? AND status IN ('needs_review','revoked')",canonical([...new Set(input.granted_scopes as string[])]),connectorId,version),
-    auditStatement(env,actor.id,'custom.review','custom_connector',connectorId,{version,scopes:input.granted_scopes}),
+    stmt(env,"UPDATE crank_custom_versions SET scopes_json=?,status='sandbox',sandbox_json=NULL,consent_generation=? WHERE id=? AND version=? AND status IN ('needs_review','revoked')",canonical([...new Set(input.granted_scopes as string[])]),generation,connectorId,version),
+    auditStatement(env,actor.id,'custom.review','custom_connector',connectorId,{version,scopes:input.granted_scopes,generation,prior_generation:row.status==='revoked'?row.consent_generation:null}),
   ])
   return presentCustom(await customVersion(env,connectorId,version))
 }
 export async function revokeCustom(env:CrankEnv,actor:Actor,connectorId:string,version:number) {
-  requireOwner(actor);await customVersion(env,connectorId,version)
+  requireOwner(actor);const row=await customVersion(env,connectorId,version)
   await guardedBatch(env,actor,'owner',[
     stmt(env,"UPDATE crank_custom_versions SET status='revoked',sandbox_json=NULL WHERE id=? AND version=?",connectorId,version),
     stmt(env,"UPDATE crank_gateway_grants SET status='revoked',revoked_at=COALESCE(revoked_at,?) WHERE connector_id=? AND connector_version=?",now(),connectorId,version),
-    auditStatement(env,actor.id,'custom.revoke','custom_connector',connectorId,{version}),
+    auditStatement(env,actor.id,'custom.revoke','custom_connector',connectorId,{version,generation:row.consent_generation}),
   ])
   return presentCustom(await customVersion(env,connectorId,version))
 }

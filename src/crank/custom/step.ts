@@ -1,3 +1,4 @@
+import { requireCustomBinding } from './bindings'
 import { httpRequest } from '../connectors/http-step'
 import { credential } from '../connections/store'
 import { checkEgress } from '../engine/egress'
@@ -60,6 +61,7 @@ export const customRequest:StepType={
   },
   async execute(step,ctx):Promise<StepResult> {
     const row=await customVersion(ctx.env,String(step.connector_id),Number(step.connector_version)),op=allowedOperation(row,String(step.operation),ctx.run.mode==='test')
+    await requireCustomBinding(ctx.env,ctx.run.version_id,row)
     typedInput(op,ctx.input)
     if(op.gateway) {
       if(!step.gateway_id || !step.environment || step.connection_id) throw new StepError('auth','A private operation requires its enrolled gateway and environment; credentials stay on that gateway')
