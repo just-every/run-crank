@@ -286,7 +286,7 @@ export async function executeRun(env: CrankEnv, runId: string, time = Date.now()
   // cannot spin an otherwise parked run.
   await stmt(env, `UPDATE crank_wf_runs SET status=CASE WHEN ? IN ('waiting','awaiting_approval') AND EXISTS(
     SELECT 1 FROM crank_waits w JOIN crank_wf_steps s ON s.run_id=w.run_id AND s.path=w.path
-    WHERE w.run_id=crank_wf_runs.id AND w.resolved_at IS NOT NULL AND s.status='waiting' AND json_extract(s.trace_json,'$.retry_attempt_id') IS NULL
+    WHERE w.run_id=crank_wf_runs.id AND w.resolved_at IS NOT NULL AND s.status='waiting' AND json_extract(s.trace_json,'$.retry_attempt_id') IS NULL AND json_extract(s.trace_json,'$.gateway_task_id') IS NULL
   ) THEN 'queued' ELSE ? END,finished_at=?,error_json=?,lease_id=NULL,lease_expires_at=NULL WHERE id=? AND lease_id=?`, status, status, terminal ? now() : null, error ? await sealText(await targetFor(env, run.workflow_id), JSON.stringify(error)) : null, runId, lease).run()
   const settled = (await getWfRun(env, runId))!
   // Page payloads are continuation state, not a second permanent copy of run data.
