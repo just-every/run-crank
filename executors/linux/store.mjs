@@ -14,7 +14,7 @@ export function openStore(dataDir) {
   const info = fs.statSync(root);
   if (info.uid !== process.getuid() || (info.mode & 0o077)) throw new Error('Data directory must be private and owned by the executor user');
   const tasks = path.join(root, 'tasks');
-  fs.mkdirSync(tasks, { mode: 0o700 });
+  fs.mkdirSync(tasks, { recursive: true, mode: 0o700 });
   function save(record) {
     const dir = path.join(tasks, record.task_id);
     fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
