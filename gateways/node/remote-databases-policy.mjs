@@ -19,6 +19,10 @@ export function validateRemoteDatabase(op) {
       !Number.isInteger(connection.port) || connection.port < 1 || connection.port > 65535) {
     fail('operation_refused', 'Remote database connection must explicitly configure host, port, database and local credentials.');
   }
+  const local=['127.0.0.1','localhost','::1'].includes(connection[server?'server':'host']);
+  if(!local && (server ? connection.options?.encrypt===false || connection.options?.trustServerCertificate===true : !connection.ssl || isObject(connection.ssl) && connection.ssl.rejectUnauthorized===false)) {
+    fail('operation_refused','Remote database credentials require verified TLS outside loopback.');
+  }
   if ((server && connection.options !== undefined && !isObject(connection.options)) ||
       (!server && connection.ssl !== undefined && typeof connection.ssl !== 'boolean' && !isObject(connection.ssl))) {
     fail('operation_refused', 'Remote database TLS configuration must use explicit driver options.');

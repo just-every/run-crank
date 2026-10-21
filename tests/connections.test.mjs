@@ -442,6 +442,8 @@ test('Enrolled private gateway reads a real database, checkpoints file pages acr
     await assert.rejects(cli(process.execPath,['gateways/node/cli.mjs','enroll','--origin',h.origin,'--code','synthetic-crank-10','--environment','production','--state',join(dir,type+'-state.json'),'--manifest',unsafe],{timeout:20000}),e=>/read-only SELECT|Mutation|one supported/.test(e.stderr),'A mutation-bearing remote query is rejected before enrollment or any DB connection');
   }
 
+  const unencrypted=join(dir,'unencrypted.json');await writeFile(unencrypted,JSON.stringify({version:1,operations:{stock:{...manifest.operations.stock,type:'postgres-query',read_only_credentials:true,connection:{host:'warehouse.synthetic.example',port:5432,database:'synthetic-crank-11',user:'synthetic-crank-12',password:'synthetic-crank-13',ssl:false},query:'SELECT name FROM stock WHERE name=$1',parameter_order:['name']}}}),{mode:0o600});
+  await assert.rejects(cli(process.execPath,['gateways/node/cli.mjs','enroll','--origin',h.origin,'--code','synthetic-crank-14','--environment','production','--state',join(dir,'unencrypted-state.json'),'--manifest',unencrypted],{timeout:20000}),e=>/verified TLS/.test(e.stderr),'Credentials cannot leave the gateway over an unverified database connection');
   const enrollment=await h.post('gateways',{label:'Harbour workshop private inventory',environment:'production'},h.owner,201),base=`gateways/${enrollment.gateway.id}`;
   await h.post('gateways/enroll',{code:enrollment.code,environment:'staging'},h.owner,403);
   await cli(process.execPath,['gateways/node/cli.mjs','enroll','--origin',h.origin,'--code',enrollment.code,'--environment','production','--state',statePath,'--manifest',manifestPath],{timeout:20000});

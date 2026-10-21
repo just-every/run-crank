@@ -152,7 +152,9 @@ It does not execute PostgreSQL, shell commands, arbitrary SQL or network URLs.
 The optional `postgres-query`, `mysql-query` and `sqlserver-query` doors use
 parameterized official drivers and a single-SELECT SQL syntax gate. Configure
 `connection` locally with host (SQL Server: server), port, database, user,
-password and optional driver TLS settings. Those credentials never travel to
+password and verified driver TLS settings (mandatory outside loopback). Unencrypted
+connections or disabled certificate verification outside loopback are refused.
+Those credentials never travel to
 Crank. Declare `read_only_credentials:true` and use an independently restricted
 DB login. PostgreSQL and MySQL execute inside read-only transactions; SQL Server
 also requires its connected database to report `READ_ONLY`, and refuses writable
