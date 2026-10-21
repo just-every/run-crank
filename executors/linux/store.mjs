@@ -17,7 +17,7 @@ export function openStore(dataDir) {
   fs.mkdirSync(tasks, { mode: 0o700 });
   function save(record) {
     const dir = path.join(tasks, record.task_id);
-    fs.mkdirSync(dir, { mode: 0o700 });
+    fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
     const temporary = path.join(dir, `state-${randomUUID()}.tmp`);
     const fd = fs.openSync(temporary, 'wx', 0o600);
     try { fs.writeFileSync(fd, JSON.stringify(record)); fs.fsyncSync(fd); } finally { fs.closeSync(fd); }
