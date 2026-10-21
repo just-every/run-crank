@@ -174,3 +174,62 @@ test('PLATFORM-001: concurrent and restarted draft/publication/rollback retries 
 
  }finally{await restored?.close();await h.close()}
 });
+
+test('PLATFORM-001: lost, concurrent and restarted duplicate requests keep one inert preparation without overwriting later work',async()=>{
+ const edge=fakeEdge();edge.routes.set('platform-ledger.example',({body})=>jsonResponse({id:crypto.randomUUID(),receipt:JSON.parse(body)}));
+ const h=await harness('http://127.0.0.1:9',{edge:edge.edge});let restored;
+ try{
+  const sdk=client(h),source=await sdk.createDraft({name:'Northshore supplier onboarding',description:'Approved purchasing workflow',graph});
+  await h.post(`workflows/${source.id}/estimate`,costs);await sdk.publishDraft(source.id);
+  let loseResponse=true;
+  const lossy=new CrankClient({baseUrl:h.origin,cookie:h.owner,fetch:async(url,init)=>{
+   const response=await h.mf.dispatchFetch(url,init);
+   if(loseResponse){loseResponse=false;await response.text();throw Error('Simulated loss after committed duplication')}
+   return response;
+  }});
+  const attempts=await Promise.allSettled([lossy.duplicateWorkflow(source.id,{idempotencyKey:'supplier-copy'}),
+   ...Array.from({length:3},()=>sdk.duplicateWorkflow(source.id,{idempotencyKey:'supplier-copy'}))]);
+  assert.equal(attempts[0].status,'rejected');assert.equal(attempts[0].reason.code,'network_error');
+  const copies=attempts.slice(1).map(result=>{assert.equal(result.status,'fulfilled',result.reason?.message);return result.value});
+  const copy=copies[0];
+  assert.equal((await sdk.listWorkflows()).length,2,'a lost response and concurrent retries create only one preparation');
+  assert.deepEqual(copy.draft,source.draft);assert.equal(copy.draft_versions.length,1);
+  assert.equal(copy.published_version_id,null);assert.deepEqual(copy.versions,[]);assert.deepEqual(copy.hooks,[]);
+  assert.equal(edge.requests.length,0,'duplicating a published workflow grants no dispatch authority');
+  assert.equal((await h.send(`/api/crank/workflows/${copy.id}/run`,{},h.owner)).status,409);
+  await sdk.updateDraft(source.id,{graph:{...graph,steps:[{...graph.steps[0],input:{...graph.steps[0].input,body:{to:'operations@harbor.example',amount:'89.00'}}}]}});
+  await h.restart();
+  const retried=(await call(mcp(h),'duplicate_workflow',{workflow_id:source.id,idempotency_key:'supplier-copy'})).structuredContent.value;
+  assert.deepEqual(retried.draft,copy.draft,'retry preserves the reviewed copy even after its source changes');
+  const edited={...graph,steps:[{...graph.steps[0],input:{...graph.steps[0].input,body:{to:'operations@harbor.example',amount:'42.00'}}}]};
+  await sdk.updateDraft(copy.id,{description:'Owner customized this preparation',graph:edited});
+  const current=await sdk.duplicateWorkflow(source.id,{idempotencyKey:'supplier-copy'});
+  assert.equal(current.description,'Owner customized this preparation');assert.deepEqual(current.draft,edited);
+  assert.equal((await sdk.listWorkflows()).length,2);
+  const conflict=await h.send(`/api/crank/v1/workflows/${source.id}/duplicate`,{changed:true},h.owner,{'Idempotency-Key':'supplier-copy'});
+  assert.equal(conflict.status,409);assert.equal((await sdk.listWorkflows()).length,2);
+  const otherSource=await sdk.createDraft({name:'A separate supplier workflow',graph});
+  await sdk.duplicateWorkflow(otherSource.id,{idempotencyKey:'supplier-copy'});
+  assert.equal((await sdk.listWorkflows()).length,4,'a key is scoped to its source workflow');
+  const token=await h.post('tokens',{label:'Supplier preparation integration',scope:'agent'},h.owner,201),agent=client(h,{token:token.token});
+  await agent.duplicateWorkflow(source.id,{idempotencyKey:'supplier-copy'});
+  assert.equal((await sdk.listWorkflows()).length,5,'independent credentials have independent preparations');
+  await h.post(`tokens/${token.id}/revoke`);
+  await assert.rejects(()=>agent.duplicateWorkflow(source.id,{idempotencyKey:'supplier-copy'}),e=>e.status===401);
+  const audit=(await h.get('audit')).filter(row=>row.subject_id===copy.id);
+  assert.equal(audit.filter(row=>row.action==='workflow.create').length,1);assert.equal(audit.filter(row=>row.action==='workflow.draft').length,1);
+  assert.equal(edge.requests.length,0);
+  await h.post(`workflows/${copy.id}/estimate`,costs);await sdk.publishDraft(copy.id);
+  const run=await h.post(`workflows/${copy.id}/run`,{},h.owner,201);await settled(h,run.id);
+  assert.equal(edge.requests.length,1);assert.equal(JSON.parse(edge.requests[0].body).amount,'42.00','only explicit publication/start sends the owner-customized work');
+  await sdk.duplicateWorkflow(source.id,{idempotencyKey:'supplier-copy'});await h.tick();
+  assert.equal(edge.requests.length,1,'late retries cannot start or replay the copied workflow');
+  const exported=await archive(h),items=exported.trim().split('\n').map(JSON.parse).flatMap(line=>line.items??[]);
+  assert.ok(!items.some(item=>item.kind==='row'&&item.table==='crank_workflow_idempotency'));
+  restored=await harness('http://127.0.0.1:9',{edge:edge.edge});await restored.post('data/restore',{archive:exported,confirm:'RESTORE'});
+  const local=client(restored),fresh=await local.duplicateWorkflow(source.id,{idempotencyKey:'supplier-copy'});
+  assert.deepEqual(fresh.draft,(await local.readWorkflow(source.id)).draft);assert.equal(fresh.published_version_id,null);assert.deepEqual(fresh.versions,[]);
+  assert.equal((await restored.send(`/api/crank/workflows/${fresh.id}/run`,{},restored.owner)).status,409);
+  await restored.restart();await restored.tick();assert.equal(edge.requests.length,1,'receipt-free restoration and fresh duplication stay inactive');
+ }finally{await restored?.close();await h.close()}
+});

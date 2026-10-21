@@ -68,6 +68,10 @@ export async function listWorkflows(env: CrankEnv, params: URLSearchParams, acto
 export async function createWorkflow(env: CrankEnv, actor: Actor, input: Record<string, unknown>, idempotencyKey?: string | null) {
   requirePrepare(actor)
   const command = await workflowCommand(env, actor, idempotencyKey, 'create', '', input)
+  return createWorkflowDraft(env, actor, input, command)
+}
+
+async function createWorkflowDraft(env: CrankEnv, actor: Actor, input: Record<string, unknown>, command: WorkflowCommand | null) {
   if (command?.existing) return savedWorkflow(env, command.existing.workflow_id, command.existing, true)
   const { graph } = checked(input.graph)
   const workflowId = id(), draftId = id(), at = now(), condition = commandCondition(command)
@@ -120,9 +124,15 @@ async function savedWorkflow(env: CrankEnv, workflowId: string, receipt: Workflo
   return { ...await presentWorkflow(env, current), warnings: checked(JSON.parse(current.draft_json)).warnings,
     ...(receipt ? { idempotency: receiptMetadata(receipt, replayed) } : {}) }
 }
-export async function duplicateWorkflow(env: CrankEnv, actor: Actor, workflowId: string) {
+export async function duplicateWorkflow(env: CrankEnv, actor: Actor, workflowId: string, input: Record<string, unknown> = {}, key?: string | null) {
+  requirePrepare(actor)
+  workflowScope(actor, workflowId)
+  const command = await workflowCommand(env, actor, key, 'duplicate', workflowId, input)
+  // Resolve the original destination before reading the source's current draft.
+  // A retry must not copy a later source revision or overwrite destination edits.
+  if (command?.existing) return savedWorkflow(env, command.existing.workflow_id, command.existing, true)
   const current = await getWorkflow(env, workflowId)
-  return createWorkflow(env, actor, { name: `${current.name} (copy)`.slice(0, 200), description: current.description, folder: current.folder, graph: JSON.parse(current.draft_json), settings: JSON.parse(current.settings_json) })
+  return createWorkflowDraft(env, actor, { name: `${current.name} (copy)`.slice(0, 200), description: current.description, folder: current.folder, graph: JSON.parse(current.draft_json), settings: JSON.parse(current.settings_json) }, command)
 }
 
 /** Retrying publication reads the original version without changing current state. */

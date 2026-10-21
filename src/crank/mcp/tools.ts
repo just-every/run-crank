@@ -7,6 +7,7 @@ const workflow = (a: Input) => '/workflows/' + part(a, 'workflow_id')
 export const tools: Tool[] = [
   tool('create_draft', 'Create an inert workflow draft. No actions run.', 'POST', () => '/workflows', { input: object, idempotency_key: string }, ['input'], a => a.input),
   tool('update_draft', 'Save a workflow draft without publishing or sending.', 'POST', a => workflow(a) + '/draft', { workflow_id: string, input: object, idempotency_key: string }, ['workflow_id', 'input'], a => a.input),
+  tool('duplicate_workflow', 'Copy the current draft into a new inert workflow using existing preparation authority; keyed retries retain the original copy.', 'POST', a => workflow(a) + '/duplicate', { workflow_id: string, idempotency_key: string }, ['workflow_id'], () => ({})),
   tool('validate_draft', 'Validate the saved draft without execution.', 'POST', a => workflow(a) + '/validate', { workflow_id: string }, ['workflow_id'], () => ({})),
   tool('publish_workflow', 'Publish the reviewed draft using native owner authority and existing cost checks.', 'POST', a => workflow(a) + '/publish', { workflow_id: string, input: object, idempotency_key: string }, ['workflow_id'], a => a.input ?? {}),
   tool('get_workflow', 'Read workflow progress, draft and versions.', 'GET', workflow, { workflow_id: string }, ['workflow_id']),

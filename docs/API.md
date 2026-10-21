@@ -391,7 +391,7 @@ grant. The SDK and MCP add no external recipient or execution class: the same
 published destinations, input/file limits, audit, sealing, erasure, recovery
 and inactive archive rules apply.
 
-Workflow create, draft save, publication, rollback and granted task starts support `Idempotency-Key`. The optional
+Workflow create, draft save, duplication, publication, rollback and granted task starts support `Idempotency-Key`. The optional
 header is 1–200 visible ASCII characters, scoped to the current credential
 (session or token), operation and target workflow. Canonical JSON comparison
 ignores object-key order; the same key/body yields one workflow/save, snapshot
@@ -429,6 +429,21 @@ accepts `publishDraft(id, input, {idempotencyKey, signal})` and
 `publish_workflow` accepts `idempotency_key`. Other writes keep their existing
 semantics; neither client retries automatically.
 
+Duplication (`POST /workflows/:id/duplicate`, body `{}`) supports the same optional
+key under a separate operation and the source workflow as target. The first
+successful transaction saves one new inert workflow, draft snapshot, creation
+audit and receipt. Concurrent calls or a retry after a lost response/restart
+return the original destination's current workflow and original draft receipt.
+They neither copy a newer source revision nor overwrite destination edits,
+publish a version or start work. Existing preparation permissions and source
+scope remain required, including for retries. Different source workflows or
+credentials have separate key namespaces; changed canonical bodies conflict.
+Without a key, each request continues to create a fresh draft. Receipt custody,
+operator erasure and archive exclusion follow the rules above. Restored data
+has no local receipts, and duplication there prepares a fresh inactive draft.
+Use SDK `duplicateWorkflow(sourceId, {idempotencyKey, signal})` or MCP
+`duplicate_workflow({workflow_id, idempotency_key})`. No client retries automatically.
+
 ### MCP client connection
 
 Connect a Streamable HTTP MCP client to `/api/crank/v1/mcp`, using the same
@@ -442,7 +457,7 @@ checks and authentication apply to every request. The transport follows the
 [MCP Streamable HTTP specification](https://modelcontextprotocol.io/specification/2025-06-18/basic/transports).
 
 Tools are `create_draft`, `update_draft`, `validate_draft`, `publish_workflow`,
-`get_workflow`, `list_workflows`, `list_runs`, `get_run`, `list_connections`,
+`duplicate_workflow`, `get_workflow`, `list_workflows`, `list_runs`, `get_run`, `list_connections`,
 `start_task` and `get_task`. Discover their argument schemas with `tools/list`.
 Create/update/publish/start-task take `input` and optional `idempotency_key`; workflow tools take
 `workflow_id`, run/task reads take `run_id`. `start_task` takes `input` containing

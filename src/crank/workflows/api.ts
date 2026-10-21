@@ -168,7 +168,7 @@ export async function workflowApi(request: Request, env: CrankEnv): Promise<Resp
       if (action === 'rollback') return json(await rollbackWorkflow(env, actor, workflowId, input, request.headers.get('Idempotency-Key')), 201)
       if (action === 'unpublish') return json(await unpublishWorkflow(env, actor, workflowId))
       if (action === 'pause' || action === 'resume') return json(await setWorkflowState(env, actor, workflowId, action === 'pause' ? 'paused' : 'published'))
-      if (action === 'duplicate') return json(await duplicateWorkflow(env, actor, workflowId), 201)
+      if (action === 'duplicate') return json(await duplicateWorkflow(env, actor, workflowId, input, request.headers.get('Idempotency-Key')), 201)
       if (action === 'test') return json(await testWorkflow(env, actor, workflowId, input), 201)
       if (action === 'run') return json(await startRun(env, actor, workflowId, input), 201)
       if (action === 'preview') return json(await previewWorkflow(env, workflowId, input))

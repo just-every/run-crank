@@ -5,7 +5,7 @@ export interface WorkflowReceipt {
   request_digest: string; workflow_id: string; draft_id: string | null; version_id: string | null; attempt_id: string
 }
 export interface WorkflowCommand {
-  scope: string; key: string; operation: 'create' | 'draft' | 'publish' | 'rollback'; target: string
+  scope: string; key: string; operation: 'create' | 'draft' | 'duplicate' | 'publish' | 'rollback'; target: string
   request: string; attempt: string; existing: WorkflowReceipt | null
 }
 

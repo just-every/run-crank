@@ -45,6 +45,12 @@ try {
   assert.equal((await sdk.createDraft(input,{idempotencyKey:'browser-'+width})).id,draft.id);
   assert.equal((await rpc('validate_draft',{workflow_id:draft.id})).structuredContent.value.ok,true);
   await page.goto(origin+'/app/workflows/'+draft.id);await shot(width,'sdk-draft');
+  const copied=await sdk.duplicateWorkflow(draft.id,{idempotencyKey:'duplicate-browser-'+width});
+  await sdk.updateDraft(copied.id,{description:'Owner reviewed this independent supplier preparation'});
+  const copyRetry=await rpc('duplicate_workflow',{workflow_id:draft.id,idempotency_key:'duplicate-browser-'+width});
+  assert.equal(copyRetry.isError,false);assert.equal(copyRetry.structuredContent.value.description,'Owner reviewed this independent supplier preparation');
+  assert.deepEqual(copyRetry.structuredContent.value.draft,graph);assert.equal(copyRetry.structuredContent.value.published_version_id,null);
+  await page.goto(origin+'/app/workflows/'+copied.id);await shot(width,'retry-safe-duplicate-draft');
   const mcpDraft=await rpc('create_draft',{input:{...input,name:input.name+' — MCP prepared'},idempotency_key:'mcp-browser-'+width});assert.equal(mcpDraft.isError,false);
   await send(`workflows/${draft.id}/estimate`,costs);await sdk.publishDraft(draft.id);const workflow=await sdk.readWorkflow(draft.id);
   const grant=await send('grants',{label:`Supplier receipt agent (${width})`,workflow_id:draft.id,version_id:workflow.published_version_id,expires_at:new Date(Date.now()+3600000).toISOString(),policy:{rules:[{step_id:'receipt',type:'map',connection_id:null,app:'none',fields:['supplier','amount','to','reference'],recipients:['operations@harbor.example'],recipient_field:'to',amount_field:'amount',max_usd:'100.00',max_per_minute:20}],approval:{timeout_seconds:60,delegate_ids:[],escalate_to:[]}}},201);

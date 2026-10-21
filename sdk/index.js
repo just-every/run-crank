@@ -27,6 +27,9 @@ export class CrankClient {
   async updateDraft(workflowId, input, options = {}) {
     return this.#request('POST', `workflows/${segment(workflowId)}/draft`, { ...options, body: input });
   }
+  async duplicateWorkflow(workflowId, options = {}) {
+    return this.#request('POST', `workflows/${segment(workflowId)}/duplicate`, { ...options, body: {} });
+  }
   async validateDraft(workflowId, input = {}, options = {}) {
     return this.#request('POST', `workflows/${segment(workflowId)}/validate`, { ...options, body: input });
   }
