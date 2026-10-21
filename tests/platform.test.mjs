@@ -60,6 +60,15 @@ test('PLATFORM-001: SDK and MCP draft lifecycle, granted execution/progress, pag
   assert.equal((await h.get('audit')).filter(a=>a.action==='grant.task'&&a.subject_id===run.id).length,1);
   const exported=await archive(h);assert.ok(!exported.includes('receipt-one'));assert.ok(!exported.trim().split('\n').map(JSON.parse).flatMap(line=>line.items??[]).some(item=>item.table==='crank_task_idempotency'));
   assert.equal((await exec.readTask(run.id)).id,run.id);
+  const restored=await harness('http://127.0.0.1:9',{edge:edge.edge});
+  try{
+   await restored.post('data/restore',{archive:exported,confirm:'RESTORE'});
+   assert.equal((await restored.get(`workflows/${draft.id}`)).status,'paused');
+   assert.equal((await restored.get(`workflow-runs/${run.id}`)).status,'succeeded');
+   await assert.rejects(()=>client(restored,{token:grant.credential}).startTask(input,{idempotencyKey:'receipt-one'}),e=>e.status===401);
+   await restored.restart();await restored.tick();assert.equal(edge.requests.length,1);
+  }finally{await restored.close()}
+
   const second=await call(agentRpc,'start_task',{input:{...input,task_id:'mcp-receipt'},idempotency_key:'mcp-task'});assert.equal(second.structuredContent.value.status,'succeeded');
   const secondRetry=await call(agentRpc,'start_task',{input:{...input,task_id:'mcp-receipt'},idempotency_key:'mcp-task'});assert.equal(secondRetry.structuredContent.value.id,second.structuredContent.value.id);assert.equal(edge.requests.length,2);
   assert.equal((await call(agentRpc,'get_task',{run_id:second.structuredContent.value.id})).structuredContent.value.grant_id,grant.id);
@@ -84,7 +93,7 @@ test('PLATFORM-001: SDK and MCP draft lifecycle, granted execution/progress, pag
   const independent=await issue(h,current), other=client(h,{token:independent.credential});
   const separate=await other.startTask(input,{idempotencyKey:'receipt-one'});assert.notEqual(separate.id,run.id);assert.equal(edge.requests.length,count+1);
   await h.post(`workflows/${draft.id}/pause`);
-  await h.post('data/erase',{workflow_run_id:run.id,confirm:'ERASE'});
+  const erased=await h.post('data/erase',{workflow_run_id:run.id,confirm:'ERASE'});assert.ok(erased.retained.some(item=>item.table==='crank_task_idempotency'));
   await h.post(`workflows/${draft.id}/resume`);
   await assert.rejects(()=>exec.startTask(input,{idempotencyKey:'receipt-one'}),e=>e.status===409);assert.equal(edge.requests.length,count+1);
   await h.post(`grants/${grant.id}/revoke`);await assert.rejects(()=>exec.readTask(waiting.id),e=>e.status===401);

@@ -109,6 +109,9 @@ Erasure removes the run's input, approval and attempt records from Crank. It
 does not delete the source app's records or reverse an existing destination
 effect. Crank retains a value-free deletion record, the run identity and an
 opaque event digest to block restoration and readmission of the erased event.
+Granted-task idempotency receipts likewise keep hashes and IDs only, disclosed in
+the erasure receipt, to refuse a lost-response retry after the history is erased.
+These local receipts and execution grants never travel in archives.
 
 Erasure invalidates local transfer snapshots and fences older archives on this
 installation. A downloaded archive is a separate copy: erasing a run cannot
