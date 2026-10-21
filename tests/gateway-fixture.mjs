@@ -11,7 +11,7 @@ export async function nativeGatewayEnrollment(h,input,status=201) {
   if(status!==201)return;
   const code=/aria-label="Enrollment code" value="([A-Za-z0-9_-]+)"/.exec(html)?.[1];assert.ok(code,'The native owner sees the enrollment code once');
   const gateway=(await h.get('gateways')).gateways.find(row=>row.label===input.label && row.environment===input.environment && row.status==='enrolling');assert.ok(gateway);
-  return {gateway,code,expires_at:/expires ([0-9TZ:.\-]+)/.exec(html)?.[1]};
+  return {gateway,code,expires_at:/expires (\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z)/.exec(html)?.[1]};
 }
 
 export async function freshGatewayOwner(h) {
@@ -20,6 +20,7 @@ export async function freshGatewayOwner(h) {
   const href=h.mail.at(-1).html.match(/href="([^"]*\/auth\/confirm\?token=[^"]+)"/)[1].replaceAll('&amp;','&');
   const response=await h.send('/auth/confirm',{token:new URL(href).searchParams.get('token')},h.owner);
   assert.equal(response.status,303,response.text);
+  return Date.now();
 }
 export function signedGatewayHeaders(state,path,input,{timestamp=Math.floor(Date.now()/1000),nonce=randomBytes(32).toString('base64url'),privateKey=state.private_key}={}) {
   const raw=JSON.stringify(input),message=`crank-gateway-request-v1\nPOST\n${path}\n${createHash('sha256').update(raw).digest('hex')}\n${timestamp}\n${nonce}`;

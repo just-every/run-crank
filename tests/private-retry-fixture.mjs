@@ -32,12 +32,30 @@ export async function privateRetryFixture(h,{retry_policy}={}) {
     const definition=customDefinition('synthetic-crank-private-retry',{gateway:true});definition.operations=definition.operations.filter(op=>op.id==='record');
     await installDefinition(h,definition,['records.read']);
     const manifest={version:1,operations:{stock:{type:'sqlite-query',connector_id:definition.id,connector_version:1,destination:'inventory-db',database:'stock.sqlite',parameters:{name:{type:'string'}},query:'SELECT name,quantity FROM stock WHERE name=:name',maxRows:10}}};
-    await writeFile(manifestPath,JSON.stringify(manifest),{mode:0o600});await freshGatewayOwner(h);
+    await writeFile(manifestPath,JSON.stringify(manifest),{mode:0o600});const confirmedAt=await freshGatewayOwner(h);
     const enrollment=await nativeGatewayEnrollment(h,{label:'Harbour private source outage recovery',environment:'production'},201);
     await cli(['enroll','--origin',h.origin,'--code',enrollment.code,'--environment','production','--state',statePath,'--manifest',manifestPath]);
     const state=JSON.parse(await readFile(statePath,'utf8'));
     await h.post(`gateways/${state.gateway.id}/grants`,{environment:'production',connector_id:definition.id,connector_version:1,operations:['record'],destinations:manifestDestinations(manifest,manifestPath)},h.owner,201);
     const start=()=>draftTest(h,'Harbour private database automatic outage recovery',[{id:'stock',type:'custom.request',connector_id:definition.id,connector_version:1,operation:'record',gateway_id:state.gateway.id,environment:'production',input:{name:'Oak workbench'},...(retry_policy?{retry_policy}:{})}]);
-    return {arrivals,reported,start,work:()=>cli(['work','--state',statePath,'--manifest',manifestPath,'--once']),ready(){if(madeReady)return;madeReady=true;const db=new DatabaseSync(dbPath);try{db.exec("CREATE TABLE stock(name TEXT,quantity INTEGER);INSERT INTO stock VALUES('Oak workbench',24)")}finally{db.close()}},offline(){const db=new DatabaseSync(dbPath);try{db.exec('DROP TABLE stock');madeReady=false}finally{db.close()}},close};
+    const until=async at=>{while(Date.now()<at)await new Promise(done=>setTimeout(done,Math.min(30000,at-Date.now())))};
+    let expiring;
+    return {arrivals,reported,start,work:()=>cli(['work','--state',statePath,'--manifest',manifestPath,'--once']),
+      async proveFreshness(){
+        await until(confirmedAt+295000);
+        expiring=await nativeGatewayEnrollment(h,{label:'Harbour code before the fresh confirmation ends',environment:'production'});
+        await until(confirmedAt+305000);
+        await nativeGatewayEnrollment(h,{label:'An old email proof cannot enroll another gateway',environment:'production'},403);
+        console.info('Native owner enrollment succeeds before, and is refused after, the actual five-minute email proof window.');
+      },
+      async proveExpiredCode(){
+        assert.ok(expiring && Date.now()>Date.parse(expiring.expires_at),'The unused real enrollment code must have reached its advertised expiry');
+        let refused=false;
+        try{await execute(process.execPath,['gateways/node/cli.mjs','enroll','--origin',h.origin,'--code',expiring.code,'--environment','production','--state',join(directory,'expired-state.json'),'--manifest',manifestPath],{timeout:15000})}
+        catch(error){refused=error.code===1 && /HTTP 403/.test(error.stderr??'')}
+        assert.ok(refused,'The actual gateway CLI must refuse a code after its advertised expiry');
+        assert.ok((await h.get('audit')).some(row=>row.action==='gateway.code_expired' && row.subject_id===expiring.gateway.id));
+      },
+      ready(){if(madeReady)return;madeReady=true;const db=new DatabaseSync(dbPath);try{db.exec("CREATE TABLE stock(name TEXT,quantity INTEGER);INSERT INTO stock VALUES('Oak workbench',24)")}finally{db.close()}},offline(){const db=new DatabaseSync(dbPath);try{db.exec('DROP TABLE stock');madeReady=false}finally{db.close()}},close};
   } catch(error){await close();throw error}
 }

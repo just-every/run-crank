@@ -102,7 +102,7 @@ async function currentConsent(env: CrankEnv, actor: Actor, current: TargetDescri
       const grant = await stmt(env, `SELECT a.id FROM crank_gateway_grants a JOIN crank_gateways g ON g.id=a.gateway_id JOIN oa_operators o ON o.id=g.owner_id
         WHERE a.gateway_id=? AND g.environment=? AND g.origin=? AND g.status='active' AND o.status='active' AND o.role='owner' AND o.version=g.owner_version
         AND a.status='active' AND a.connector_id=? AND a.connector_version=?
-        AND EXISTS(SELECT 1 FROM json_each(a.operations_json) WHERE value=?) AND EXISTS(SELECT 1 FROM json_each(a.destinations_json) WHERE value=?)`,
+        AND EXISTS(SELECT 1 FROM json_each(a.operations_json) WHERE value=?) AND EXISTS(SELECT 1 FROM json_each(a.destinations_json) WHERE json_extract(value,'$.label')=?)`,
       target.gateway_id, target.environment, env.AUTH_ORIGIN, current.row.id, current.row.version, operation.id, operation.gateway.destination).first()
       requireValue(grant, 'The private picker gateway or its reviewed grant is no longer current', 403)
     } else {

@@ -7,7 +7,7 @@ import { fakeEdge, jsonResponse, publish, startRun } from './kit.mjs';
 
 // Real elapsed-time journey. It belongs to nightly/manual CI, not push Verify:
 // its promised 1/2/4/8/16-minute waits alone require 31 minutes.
-test('EXEC-002: real 90-second Retry-After and 1/2/4/8/16-minute outage backoff survive restart and finish automatically', { timeout: 2400000 }, async () => {
+test('Real owner email freshness, expired enrollment and 90-second Retry-After plus 1/2/4/8/16-minute public and private outage backoff survive restart', { timeout: 3000000 }, async () => {
   const fake = fakeEdge(), arrivals = new Map();
   fake.routes.set('long-outage.example', ({ url }) => {
     const times = [...(arrivals.get(url.pathname) ?? []), Date.now()];
@@ -21,6 +21,7 @@ test('EXEC-002: real 90-second Retry-After and 1/2/4/8/16-minute outage backoff 
   let privateSource;
   try {
     privateSource=await privateRetryFixture(h);
+    await privateSource.proveFreshness();
     const custom=await preparePublicCustom(h,{id:'long-custom-outage'});
     const customWorkflow=await publish(h,'Fieldstone Dental custom accounting outage recovery',{trigger:{type:'manual'},steps:[custom.step]});
     customOutage=true;
@@ -46,6 +47,7 @@ test('EXEC-002: real 90-second Retry-After and 1/2/4/8/16-minute outage backoff 
       assert.ok(runs.every(run => ['waiting', 'succeeded'].includes(run.status)), JSON.stringify(runs.map(run => run.error)));
     }
     assert.ok(runs.every(run => run.status === 'succeeded'));
+    await privateSource.proveExpiredCode();
     assert.deepEqual(runs[0].attempts.map(a => a.http_status), [429, 200]);
     assert.ok(arrivals.get('/quota')[1] - arrivals.get('/quota')[0] >= 90000);
     assert.deepEqual(runs[1].attempts.map(a => a.http_status), [503, 503, 503, 503, 503, 200]);
