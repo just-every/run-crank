@@ -545,7 +545,11 @@ test('Enrolled private gateway reads a real database, checkpoints file pages acr
   await h.post(`gateways/grants/${grant.id}/revoke`);
   const restrictedGrant=await h.post(base+'/grants',{environment:'production',connector_id:connectorId,connector_version:1,operations:['record'],destinations:manifestDestinations(manifest,manifestPath)},h.owner,201);
   const operationRefused=await draftTest(h,'Crank refuses an operation absent from the owner grant',[file]);assert.equal(operationRefused.run.status,'failed');
+  const pendingGrant=await draftTest(h,'Grant revocation withholds an already claimed private read',[record]);
+  const pendingTask=pollPayload(await gatewayPost(h,state,base+'/poll',{environment:'production'})).task;assert.ok(pendingTask);
   await h.post(`gateways/grants/${restrictedGrant.id}/revoke`);
+  await gatewayPost(h,state,`gateways/${state.gateway.id}/tasks/${pendingTask.id}/result`,{environment:'production',output:{rows:[]}},403);
+  await h.tick();const grantStopped=await h.get('workflow-runs/'+pendingGrant.run.id);assert.equal(grantStopped.status,'failed');assert.match(grantStopped.error.message,/gateway revoked/);assert.equal(stepOf(grantStopped,'stock').output,null);
   const destinationGrant=await h.post(base+'/grants',{environment:'production',connector_id:connectorId,connector_version:1,operations:['record','file'],destinations:manifestDestinations({operations:{stock:manifest.operations.stock}},manifestPath)},h.owner,201);
   const destinationRefused=await draftTest(h,'Crank refuses a destination absent from the owner grant',[file]);assert.equal(destinationRefused.run.status,'failed');
   await h.post(`gateways/grants/${destinationGrant.id}/revoke`);

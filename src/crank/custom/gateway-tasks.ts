@@ -45,6 +45,7 @@ async function checkTask(env:CrankEnv,task:Task) {
 export async function gatewayAttempt(ctx:StepContext,step:Record<string,unknown>,op:CustomOperation,input:Record<string,unknown>,ordinal:number,policy:AttemptPolicy) {
   await assertDispatchAuthority(ctx.env,ctx.run.id)
   const gatewayId=String(step.gateway_id),environment=String(step.environment),connectorId=String(step.connector_id),version=Number(step.connector_version)
+  const taskId=await digest(`${ctx.operationKey}:gateway:${ordinal}:${policy.number}`)
   const grant=await stmt(ctx.env,`SELECT a.id,a.revision,(SELECT revision FROM crank_team_authority WHERE singleton=1) AS authority_revision FROM crank_gateway_grants a JOIN crank_gateways g ON g.id=a.gateway_id JOIN oa_operators o ON o.id=g.owner_id
     WHERE a.gateway_id=? AND g.environment=? AND g.origin=? AND g.status='active' AND o.status='active' AND o.role='owner' AND o.version=g.owner_version
     AND g.environment=(SELECT environment FROM crank_workflows WHERE id=?) AND a.status='active' AND a.connector_id=? AND a.connector_version=?
@@ -53,15 +54,16 @@ export async function gatewayAttempt(ctx:StepContext,step:Record<string,unknown>
     const target=await stmt(ctx.env,'SELECT environment,status FROM crank_gateways WHERE id=?',gatewayId).first<{environment:string;status:string}>()
     const reason=target && target.environment!==environment?'cross_environment':'gateway_revoked_or_ungranted'
     await auditStatementWhen(ctx.env,'1',[],ctx.run.created_by,'gateway.dispatch_denied','run',ctx.run.id,{reason_class:reason,gateway_id:gatewayId}).run()
-    throw new StepError('auth',target?.status==='revoked'?'gateway revoked':'The private gateway is revoked or has no current grant for this version, operation and environment',{gateway_id:gatewayId,access_decision:reason})
+    const checkpoint=await stmt(ctx.env,'SELECT id FROM crank_gateway_tasks WHERE id=?',taskId).first()
+    throw new StepError('auth',target?.status==='revoked' || checkpoint?'gateway revoked':'The private gateway is revoked or has no current grant for this version, operation and environment',{gateway_id:gatewayId,access_decision:reason})
   }
-  const taskId=await digest(`${ctx.operationKey}:gateway:${ordinal}:${policy.number}`),requestKey=await digest(canonical({connectorId,version,operation:op.id,environment,input}))
+  const requestKey=await digest(canonical({connectorId,version,operation:op.id,environment,input}))
   const target=await targetFor(ctx.env,ctx.run.workflow_id)
   await stmt(ctx.env,`INSERT INTO crank_gateway_tasks(id,run_id,path,ordinal,gateway_id,grant_id,grant_revision,authority_revision,connector_id,connector_version,operation,destination,operation_key,request_key,input_json,status,created_at,expires_at,retry_request_key,retry_number,budget_started_at)
     SELECT ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'queued',?,?,?,?,? WHERE EXISTS(SELECT 1 FROM crank_wf_runs WHERE id=? AND status='running' AND lease_id=?) ON CONFLICT(id) DO NOTHING`,taskId,ctx.run.id,ctx.path,ordinal,gatewayId,grant.id,grant.revision,grant.authority_revision,connectorId,version,op.id,op.gateway!.destination,ctx.operationKey,requestKey,await sealText(target,canonical(input)),now(),new Date(Date.now()+15*60000).toISOString(),policy.requestKey,policy.number,policy.startedAt,ctx.run.id,ctx.run.lease_id).run()
   const task=await stmt(ctx.env,'SELECT * FROM crank_gateway_tasks WHERE id=?',taskId).first<Task>()
-  if (!task || task.request_key!==requestKey || task.gateway_id!==gatewayId || task.grant_id!==grant.id) throw new StepError('authority','Gateway checkpoint identity or authority changed; inspect this run before starting fresh work')
-  if(task.grant_revision!==grant.revision || task.authority_revision!==grant.authority_revision)throw new StepError('auth','gateway revoked',{gateway_id:gatewayId,access_decision:'authority_revision_changed'})
+  if (!task || task.request_key!==requestKey || task.gateway_id!==gatewayId) throw new StepError('authority','Gateway checkpoint identity or authority changed; inspect this run before starting fresh work')
+  if(task.grant_id!==grant.id || task.grant_revision!==grant.revision || task.authority_revision!==grant.authority_revision)throw new StepError('auth','gateway revoked',{gateway_id:gatewayId,access_decision:'authority_revision_changed'})
   await checkTask(ctx.env,task)
   if (task.expires_at<=now()) throw new StepError('provider','The private gateway task exceeded its deadline; inspect the gateway and start fresh work deliberately',{gateway_id:gatewayId})
   if (task.status==='failed') {
