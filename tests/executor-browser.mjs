@@ -1,0 +1,34 @@
+/** WORK-005 installed UI against the real owner-deployed Linux service. */
+import assert from 'node:assert/strict';
+import {spawn,execFileSync} from 'node:child_process';
+import {mkdtemp,mkdir,readFile,rm} from 'node:fs/promises';
+import {createWriteStream} from 'node:fs';
+import {tmpdir} from 'node:os';
+import {join,dirname} from 'node:path';
+import {chromium} from '@playwright/test';
+import {linuxExecutor} from './executor-fixture.mjs';
+
+const evidence=process.env.CRANK_EVIDENCE;assert.ok(evidence,'Set CRANK_EVIDENCE');await mkdir(evidence,{recursive:true});
+const privateDir=await mkdtemp(join(tmpdir(),'crank-code-browser-')),devLog=join(privateDir,'dev.log'),executor=await linuxExecutor();
+const wait=ms=>new Promise(r=>setTimeout(r,ms));let browser,dev;
+async function stopOwned(child){if(!child?.pid)return;const tree=execFileSync('ps',['-axo','pid=,ppid='],{encoding:'utf8'}).trim().split('\n').map(line=>line.trim().split(/\s+/).map(Number)),owned=new Set([child.pid]);for(let n=0;n<20;n++)for(const [pid,parent] of tree)if(owned.has(parent))owned.add(pid);child.kill('SIGTERM');await wait(1000);for(const pid of [...owned].reverse())try{process.kill(pid,'SIGTERM')}catch{}}
+try{
+ dev=spawn('rer',['dev','--foreground'],{env:{...process.env,PATH:dirname(process.execPath)+':'+process.env.PATH},stdio:['ignore','pipe','pipe']});const stream=createWriteStream(devLog,{mode:0o600});dev.stdout.pipe(stream,{end:false});dev.stderr.pipe(stream,{end:false});dev.once('close',()=>stream.end());
+ let open;for(const end=Date.now()+600000;Date.now()<end;){const text=await readFile(devLog,'utf8').catch(()=> '');open=/RER_OPEN\s+(https?:\/\/\S+)/.exec(text)?.[1];if(open)break;if(dev.exitCode!==null)throw Error('rer dev startup failed; private log retained until cleanup');await wait(1000)}assert.ok(open,'rer dev readiness');
+ browser=await chromium.launch({headless:true,args:['--use-mock-keychain','--password-store=basic']});const context=await browser.newContext(),page=await context.newPage();await page.goto(open);await page.waitForURL(url=>['/app','/setup'].includes(url.pathname),{timeout:60000});if(new URL(page.url()).pathname==='/setup'){await page.getByRole('checkbox').check();await page.getByRole('button',{name:'Finish setup',exact:true}).click();await page.waitForURL('**/app')}
+ const origin=new URL(open).origin,executorOrigin=`http://127.0.0.1.nip.io:${new URL(executor.origin).port}`;
+ const send=async(path,body,expected=200)=>{const r=await context.request.fetch(origin+'/api/crank/'+path,{method:body===undefined?'GET':'POST',headers:{origin},...(body===undefined?{}:{data:body})});const value=await r.json();assert.equal(r.status(),expected,`${path}: ${value.error??'unexpected status'}`);return value};
+ const account=await send('connections',{app:'http',label:'Harbour Workshop — owner-operated isolated Linux code host',auth_kind:'bearer',domains:['127.0.0.1.nip.io'],secret:{token:executor.token}},201);
+ const graph=source=>({trigger:{type:'manual'},steps:[{id:'normalize',name:'Normalize wholesale supplier registration facts',type:'code',connection_id:account.id,executor_url:executorOrigin,language:'python',source,timeout_ms:60000,memory_mb:128,allowed_egress:[],input:{customer:'{{trigger.input.customer}}',state:'{{trigger.input.state}}'}},{id:'retain',type:'map',input:{supplier:'{{steps.normalize.output}}'}}]});
+ const create=async(name,source)=>{const w=await send('workflows',{name,graph:graph(source)},201);await send(`workflows/${w.id}/estimate`,{cost:{components:['orchestration','connectors','models','executors'].map(kind=>({kind,usd_per_run:'0',assumption:'Owner-reviewed local acceptance host; no provider charge'}))}});await send(`workflows/${w.id}/publish`,{},201);return w};
+ const success=await create('Harbour Workshop & Supply — normalize US wholesale supplier facts','def main(input): return {"customer": input["customer"].strip(), "state": input["state"].upper()}');
+ const failure=await create('Harbour Workshop — refused access to host-only supplier data','def main(input): return open("/etc/passwd").read()');
+ const long=await create('Harbour Workshop — long normalization cancelled by operations','def main(input):\n import time\n time.sleep(45)\n return input');
+ const input={customer:'  Harbour Workshop & Supply — southeast wholesale accounts  ',state:'tx'},started=await send(`workflows/${success.id}/run`,{input},201),bad=await send(`workflows/${failure.id}/run`,{input},201),cancel=await send(`workflows/${long.id}/run`,{input},201);
+ const shot=async(width,label)=>{await page.screenshot({path:join(evidence,`${width}-executor-${label}.png`),fullPage:true});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),width+'/'+label+' overflow')};
+ for(const width of [1440,390]){await page.setViewportSize({width,height:1000});await page.goto(origin+`/app/workflows/${success.id}?step=normalize`);await page.getByText('Code executor',{exact:true}).first().waitFor();await shot(width,'definition');await page.goto(origin+'/app/workflow-runs/'+started.id);await page.getByRole('heading',{name:'Executor tasks'}).waitFor();await shot(width,'waiting')}
+ await page.goto(origin+'/app/workflow-runs/'+cancel.id);await page.getByRole('button',{name:'Cancel run',exact:true}).click();await page.waitForURL('**/app/workflow-runs/'+cancel.id);assert.equal((await send('workflow-runs/'+cancel.id)).status,'cancelled');
+ let done,failed;for(const end=Date.now()+150000;Date.now()<end;){done=await send('workflow-runs/'+started.id);failed=await send('workflow-runs/'+bad.id);if(done.status==='succeeded'&&failed.status==='failed')break;assert.ok(!['failed','paused'].includes(done.status),JSON.stringify(done.error));await wait(1000)}assert.equal(done.status,'succeeded',JSON.stringify(done.error));assert.equal(failed.status,'failed');assert.equal(done.steps.find(s=>s.step_id==='retain').output.supplier.state,'TX');assert.equal((await send('workflow-runs/'+cancel.id)).executor_tasks[0].status,'cancelled');
+ for(const width of [1440,390]){await page.setViewportSize({width,height:1000});for(const [id,label] of [[started.id,'succeeded'],[bad.id,'failed'],[cancel.id,'cancelled']]){await page.goto(origin+'/app/workflow-runs/'+id);for(const summary of await page.locator('details > summary').all())if(await summary.innerText()==='Input and output')await summary.click();await shot(width,label)}await page.goto(origin+'/app/data/flows');if(!(await page.getByText('Code executor',{exact:false}).count())){await page.goto(origin+'/app/data')}await shot(width,'inventory')}
+ console.log('WORK-005 installed UI PASS: real Python execution, host-file refusal, owner cancellation and definition/run/inventory states at 1440 and 390.');
+}finally{await browser?.close();await stopOwned(dev);await executor.close();await rm(privateDir,{recursive:true,force:true})}
