@@ -101,7 +101,7 @@ test('PLATFORM-001: SDK and MCP draft lifecycle, granted execution/progress, pag
  }finally{await h.close()}
 });
 
-test('PLATFORM-001: concurrent and restarted draft retries retain one identity/snapshot/audit, reject changed keys and restore without local receipts',async()=>{
+test('PLATFORM-001: concurrent and restarted draft/publication/rollback retries retain identities and audit without changing later state or restoring authority',async()=>{
  const h=await harness('http://127.0.0.1:9');let restored;
  try{
   const sdk=client(h), input={name:'Harbor Workshop — durable draft write',graph};
@@ -117,16 +117,60 @@ test('PLATFORM-001: concurrent and restarted draft retries retain one identity/s
   assert.equal(retry.description,'Later owner revision');assert.equal(retry.idempotency.replayed,true);assert.equal(retry.idempotency.draft_id,saves[0].idempotency.draft_id);
   await assert.rejects(()=>sdk.updateDraft(id,{description:'Changed key payload'},{idempotencyKey:'draft-one'}),e=>e.status===409);
   const audit=(await h.get('audit')).filter(a=>a.subject_id===id);assert.equal(audit.filter(a=>a.action==='workflow.create').length,1);assert.equal(audit.filter(a=>a.action==='workflow.draft').length,2);
+  await h.post(`workflows/${id}/estimate`,costs);
+  let losePublication=true;
+  const lossy=new CrankClient({baseUrl:h.origin,cookie:h.owner,fetch:async(url,init)=>{
+   const response=await h.mf.dispatchFetch(url,init);
+   if(losePublication){losePublication=false;await response.text();throw Error('Simulated loss after committed publication')}
+   return response;
+  }});
+  const publications=await Promise.allSettled([lossy.publishDraft(id,{}, {idempotencyKey:'publication-one'}),
+   ...Array.from({length:3},()=>sdk.publishDraft(id,{}, {idempotencyKey:'publication-one'}))]);
+  assert.equal(publications[0].status,'rejected');assert.equal(publications[0].reason.code,'network_error');
+  const published=publications.slice(1).map(r=>{assert.equal(r.status,'fulfilled',r.reason?.message);return r.value});
+  assert.equal(new Set(published.map(r=>r.version.id)).size,1);
+  const first=published[0];assert.equal(first.workflow.versions.length,1);
+  const rpc=mcp(h),mcpRetry=await call(rpc,'publish_workflow',{workflow_id:id,idempotency_key:'publication-one'});
+  assert.equal(mcpRetry.structuredContent.value.version.id,first.version.id);
+  await sdk.updateDraft(id,{graph:{trigger:{type:'schedule',at:'09:00',timezone:'America/New_York'},steps:[{id:'receipt',type:'map',input:{supplier:'Northshore Fabrication',amount:'782.25'}}]}});
+  await h.post(`workflows/${id}/estimate`,costs);
+  const second=await sdk.publishDraft(id,{}, {idempotencyKey:'publication-two'});assert.notEqual(second.version.id,first.version.id);
+  await h.post(`workflows/${id}/pause`);
+  await h.restart();
+  const oldRetry=await sdk.publishDraft(id,{}, {idempotencyKey:'publication-one'});
+  assert.equal(oldRetry.version.id,first.version.id);assert.equal(oldRetry.workflow.published_version_id,second.version.id);
+  assert.equal(oldRetry.workflow.status,'paused');assert.equal(oldRetry.workflow.versions.length,2);
+  assert.equal((await h.get(`workflows/${id}/trigger`)).schedule.version_id,second.version.id);
+  await assert.rejects(()=>sdk.publishDraft(id,{changed:true},{idempotencyKey:'publication-one'}),e=>e.status===409&&e.code==='conflict');
+  const rollbacks=await Promise.all(Array.from({length:4},()=>sdk.rollbackWorkflow(id,first.version.number,{idempotencyKey:'rollback-one'})));
+  assert.equal(new Set(rollbacks.map(r=>r.version.id)).size,1);
+  const rollback=rollbacks[0];assert.equal(rollback.workflow.versions.length,3);assert.equal(rollback.version.authority.rollback_of,first.version.number);
+  assert.deepEqual((await h.get(`workflows/${id}/versions/${rollback.version.number}`)).graph,graph);
+  assert.equal((await h.get(`workflows/${id}/trigger`)).schedule,null);
+  await h.post(`workflows/${id}/pause`);await h.restart();
+  const rolledRetry=await sdk.rollbackWorkflow(id,first.version.number,{idempotencyKey:'rollback-one'});
+  assert.equal(rolledRetry.version.id,rollback.version.id);assert.equal(rolledRetry.workflow.status,'paused');
+  await assert.rejects(()=>sdk.rollbackWorkflow(id,second.version.number,{idempotencyKey:'rollback-one'}),e=>e.status===409);
+  const publicationAudit=(await h.get('audit')).filter(a=>a.subject_id===id&&a.action==='workflow.publish');
+  assert.equal(publicationAudit.length,3);assert.deepEqual(new Set(publicationAudit.map(a=>a.version_id)),new Set([first.version.id,second.version.id,rollback.version.id]));
   const actor=await h.post('tokens',{label:'Different preparer credential',scope:'agent'},h.owner,201);
   const agent=client(h,{token:actor.token}), own=await agent.createDraft(input,{idempotencyKey:'create-one'});assert.notEqual(own.id,id);
+  await assert.rejects(()=>agent.publishDraft(id,{}, {idempotencyKey:'publication-one'}),e=>e.status===403);
   await h.post(`tokens/${actor.id}/revoke`);await assert.rejects(()=>agent.createDraft(input,{idempotencyKey:'create-one'}),e=>e.status===401);
+  await assert.rejects(()=>agent.publishDraft(id,{}, {idempotencyKey:'publication-one'}),e=>e.status===401);
   const exported=await archive(h),items=exported.trim().split('\n').map(JSON.parse).flatMap(line=>line.items??[]);
-  assert.ok(!items.some(item=>item.kind==='row'&&item.table==='crank_workflow_idempotency'));assert.ok(!exported.includes('create-one'));assert.ok(!exported.includes('draft-one'));
+  assert.ok(!items.some(item=>item.kind==='row'&&item.table==='crank_workflow_idempotency'));assert.ok(!exported.includes('create-one'));assert.ok(!exported.includes('draft-one'));assert.ok(!exported.includes('publication-one'));assert.ok(!exported.includes('rollback-one'));
   restored=await harness('http://127.0.0.1:9');await restored.post('data/restore',{archive:exported,confirm:'RESTORE'});
-  assert.equal((await restored.get(`workflows/${id}`)).status,'draft');assert.equal((await restored.get(`workflows/${id}`)).draft_versions.length,3);
+  assert.equal((await restored.get(`workflows/${id}`)).status,'paused');assert.equal((await restored.get(`workflows/${id}`)).draft_versions.length,4);
+  await assert.rejects(()=>client(restored).publishDraft(id,{}, {idempotencyKey:'publication-one'}),e=>e.status===409);
   const rows=text=>text.trim().split('\n').map(JSON.parse).flatMap(line=>line.items??[]).filter(item=>item.kind==='row').map(({table,row})=>JSON.stringify({table,row})).sort();
   const before=rows(exported),after=rows(await archive(restored));assert.deepEqual(after.filter(item=>before.includes(item)),before);
   assert.deepEqual(after.filter(item=>!before.includes(item)).map(item=>JSON.parse(item).row.action),['data.restore']);
-  await restored.restart();await restored.tick();assert.equal((await restored.get(`workflows/${id}`)).status,'draft');
+  await restored.restart();await restored.tick();assert.equal((await restored.get(`workflows/${id}`)).status,'paused');
+  await restored.post(`workflows/${id}/estimate`,costs);
+  const restoreReview=(await restored.get(`workflows/${id}`)).restore;
+  const adopted=await client(restored).publishDraft(id,{restore_snapshot:restoreReview.snapshot,restore_decisions:{}},{idempotencyKey:'publication-one'});
+  assert.notEqual(adopted.version.id,first.version.id);assert.equal(adopted.workflow.versions.length,4);
+
  }finally{await restored?.close();await h.close()}
 });

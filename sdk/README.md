@@ -77,7 +77,13 @@ All existing checks still apply, including an owner-reviewed USD estimate,
 connection bindings, sensitive-data attestations and restored-workflow adoption.
 Prepare these through the native owner interface before publishing. The optional
 second argument to `publishDraft(id, input)` forwards the native publication
-JSON object, including any required adoption review. No implicit publication,
+JSON object, including any required adoption review. Its third argument accepts
+`{idempotencyKey, signal}`; `rollbackWorkflow(id, versionNumber, options)` uses
+the same options. Exact retries retain the original publication version and audit
+while returning current workflow state, so a later edit, publication or pause is
+never undone. Publish and rollback have separate key namespaces, and every retry
+still requires current publishing rights. Receipts stay installation-local and
+are omitted from archives. No implicit publication,
 cost estimate, approval, retry or permission escalation happens in the SDK.
 
 ## Granted task progress

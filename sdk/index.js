@@ -33,6 +33,9 @@ export class CrankClient {
   async publishDraft(workflowId, input = {}, options = {}) {
     return this.#request('POST', `workflows/${segment(workflowId)}/publish`, { ...options, body: input });
   }
+  async rollbackWorkflow(workflowId, version, options = {}) {
+    return this.#request('POST', `workflows/${segment(workflowId)}/rollback`, { ...options, body: { version } });
+  }
   async listWorkflows(query = {}, options = {}) {
     return this.#request('GET', 'workflows', { ...options, query });
   }

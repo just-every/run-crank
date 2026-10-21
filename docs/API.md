@@ -391,7 +391,7 @@ grant. The SDK and MCP add no external recipient or execution class: the same
 published destinations, input/file limits, audit, sealing, erasure, recovery
 and inactive archive rules apply.
 
-Workflow create, draft save and granted task starts support `Idempotency-Key`. The optional
+Workflow create, draft save, publication, rollback and granted task starts support `Idempotency-Key`. The optional
 header is 1–200 visible ASCII characters, scoped to the current credential
 (session or token), operation and target workflow. Canonical JSON comparison
 ignores object-key order; the same key/body yields one workflow/save, snapshot
@@ -415,6 +415,20 @@ with 409, so a retry cannot resurrect effects. Archives omit task receipts and g
 The SDK accepts `startTask(input, {idempotencyKey, signal})`; MCP `start_task`
 accepts `idempotency_key`. Clients never retry automatically.
 
+Publish and rollback use separate operation namespaces and the same credential,
+workflow, key and canonical-body rules. They atomically retain the receipt with
+one immutable version, activation, trigger setup and publish audit. Concurrent
+and restarted retries return `idempotency:{replayed,workflow_id,version_id}`,
+the original `version` and current `workflow`; they never republish a newer draft,
+replace a later version, resume a pause, reset a schedule or repeat restore adoption.
+Current publish authority and workflow scope still apply to every retry. Publication
+receipts share the draft receipt's local hash/ID-only custody and operator erasure;
+restoring an archive still requires the native owner's adoption review. The SDK
+accepts `publishDraft(id, input, {idempotencyKey, signal})` and
+`rollbackWorkflow(id, versionNumber, {idempotencyKey, signal})`. MCP
+`publish_workflow` accepts `idempotency_key`. Other writes keep their existing
+semantics; neither client retries automatically.
+
 ### MCP client connection
 
 Connect a Streamable HTTP MCP client to `/api/crank/v1/mcp`, using the same
@@ -430,7 +444,7 @@ checks and authentication apply to every request. The transport follows the
 Tools are `create_draft`, `update_draft`, `validate_draft`, `publish_workflow`,
 `get_workflow`, `list_workflows`, `list_runs`, `get_run`, `list_connections`,
 `start_task` and `get_task`. Discover their argument schemas with `tools/list`.
-Create/update/start-task take `input` and optional `idempotency_key`; workflow tools take
+Create/update/publish/start-task take `input` and optional `idempotency_key`; workflow tools take
 `workflow_id`, run/task reads take `run_id`. `start_task` takes `input` containing
 `task_id` and `actions`. `list_runs` returns the normal `{runs,next}` page;
 pass `next` as `before` on the next call. Tool responses include text JSON and

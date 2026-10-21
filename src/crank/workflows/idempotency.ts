@@ -2,10 +2,10 @@ import { guardedBatch } from '../access'
 import { canonical, digest, id, now, requireValue, stmt, type Actor, type CrankEnv } from '../model'
 
 export interface WorkflowReceipt {
-  request_digest: string; workflow_id: string; draft_id: string; attempt_id: string
+  request_digest: string; workflow_id: string; draft_id: string | null; version_id: string | null; attempt_id: string
 }
 export interface WorkflowCommand {
-  scope: string; key: string; operation: 'create' | 'draft'; target: string
+  scope: string; key: string; operation: 'create' | 'draft' | 'publish' | 'rollback'; target: string
   request: string; attempt: string; existing: WorkflowReceipt | null
 }
 
@@ -22,13 +22,13 @@ export async function workflowCommand(env: CrankEnv, actor: Actor, key: string |
   const command: WorkflowCommand = { scope, key: keyHash, operation, target, request, attempt: id(), existing: null }
   // Replays pass the same in-transaction authority fence as a new write, even if
   // authorization was revoked after HTTP admission.
-  const [result] = await guardedBatch(env, actor, 'prepare', [commandReceipt(env, command)])
+  const [result] = await guardedBatch(env, actor, operation === 'publish' || operation === 'rollback' ? 'publish' : 'prepare', [commandReceipt(env, command)])
   command.existing = receiptResult(result, command)
   return command
 }
 
 export function commandReceipt(env: CrankEnv, command: WorkflowCommand) {
-  return stmt(env, `SELECT request_digest,workflow_id,draft_id,attempt_id FROM crank_workflow_idempotency
+  return stmt(env, `SELECT request_digest,workflow_id,draft_id,version_id,attempt_id FROM crank_workflow_idempotency
     WHERE scope_hash=? AND operation=? AND target_id=? AND key_hash=?`, command.scope, command.operation, command.target, command.key)
 }
 
@@ -45,10 +45,10 @@ export function committedReceipt(results: D1Result[], command: WorkflowCommand |
   return receipt
 }
 
-export function claimCommand(env: CrankEnv, actor: Actor, command: WorkflowCommand, workflowId: string, draftId: string) {
-  return stmt(env, `INSERT INTO crank_workflow_idempotency(scope_hash,operation,target_id,key_hash,request_digest,workflow_id,draft_id,attempt_id,actor_id,created_at)
-    VALUES(?,?,?,?,?,?,?,?,?,?) ON CONFLICT(scope_hash,operation,target_id,key_hash) DO NOTHING`,
-  command.scope, command.operation, command.target, command.key, command.request, workflowId, draftId, command.attempt, actor.id, now())
+export function claimCommand(env: CrankEnv, actor: Actor, command: WorkflowCommand, workflowId: string, draftId: string | null, versionId: string | null = null) {
+  return stmt(env, `INSERT INTO crank_workflow_idempotency(scope_hash,operation,target_id,key_hash,request_digest,workflow_id,draft_id,version_id,attempt_id,actor_id,created_at)
+    VALUES(?,?,?,?,?,?,?,?,?,?,?) ${versionId ? '' : 'ON CONFLICT(scope_hash,operation,target_id,key_hash) DO NOTHING'}`,
+  command.scope, command.operation, command.target, command.key, command.request, workflowId, draftId, versionId, command.attempt, actor.id, now())
 }
 
 /** D1 batches are serial transactions. Only the request whose nonce won the

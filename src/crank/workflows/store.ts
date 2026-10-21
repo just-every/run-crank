@@ -125,24 +125,53 @@ export async function duplicateWorkflow(env: CrankEnv, actor: Actor, workflowId:
   return createWorkflow(env, actor, { name: `${current.name} (copy)`.slice(0, 200), description: current.description, folder: current.folder, graph: JSON.parse(current.draft_json), settings: JSON.parse(current.settings_json) })
 }
 
-/** TEAM-004: publishing freezes the draft as an immutable version whose recorded authority is
- * exactly its declared steps on its bound connections, for every triggered run. */
-/** WORK-008 rollback: publish an earlier version's exact graph as a new version whose change
- * record names the version it restores. The draft is left as it was. */
-export async function rollbackWorkflow(env: CrankEnv, actor: Actor, workflowId: string, input: Record<string, unknown>) {
-  requirePublish(actor)
-  workflowScope(actor, workflowId)
-  requireValue(Number.isInteger(input.version), 'Choose the version number to roll back to')
-  const source = await stmt(env, "SELECT id,number,graph_json,retry_policy_json FROM crank_workflow_versions WHERE workflow_id=? AND number=? AND mode='production'", workflowId, input.version).first<{ id: string; number: number; graph_json: string; retry_policy_json: string }>()
-  requireValue(source, 'Version not found', 404)
-  const current = await getWorkflow(env, workflowId)
-  const live = current.published_version_id ? await stmt(env, 'SELECT number FROM crank_workflow_versions WHERE id=?', current.published_version_id).first<{ number: number }>() : null
-  requireValue(live?.number !== source.number, `Version ${source.number} is already the published version`, 409)
-  return publishWorkflow(env, actor, workflowId, {}, { graph: JSON.parse(source.graph_json), rollback_of: source.number, estimateVersionId: source.id, retryPolicy: JSON.parse(source.retry_policy_json) })
+/** Retrying publication reads the original version without changing current state. */
+async function publicationReceipt(env: CrankEnv, receipt: WorkflowReceipt, replayed: boolean) {
+  const version = await stmt(env, 'SELECT id,number,declared_json,graph_json FROM crank_workflow_versions WHERE id=? AND workflow_id=?', receipt.version_id, receipt.workflow_id).first<{ id: string; number: number; declared_json: string; graph_json: string }>()
+  requireValue(version, 'The original publication history is unavailable; this key cannot publish again', 409)
+  const { graph, warnings } = checked(JSON.parse(version.graph_json))
+  if (graph.trigger.type === 'webhook' && !(await listHooks(env, receipt.workflow_id)).some(hook => hook.active)) warnings.push('Create a webhook URL for this workflow (POST /api/crank/workflows/:id/hooks) and give it to the sender')
+  return { workflow: await presentWorkflow(env, await getWorkflow(env, receipt.workflow_id)),
+    version: { id: version.id, number: version.number, authority: JSON.parse(version.declared_json) }, warnings,
+    idempotency: { replayed, workflow_id: receipt.workflow_id, version_id: receipt.version_id } }
 }
-export async function publishWorkflow(env: CrankEnv, actor: Actor, workflowId: string, input: Record<string, unknown> = {}, rollback?: { graph: unknown; rollback_of: number; estimateVersionId: string; retryPolicy: Record<string, unknown> }) {
+
+/** Both entry points retain native authority and use separate operation namespaces. */
+export async function rollbackWorkflow(env: CrankEnv, actor: Actor, workflowId: string, input: Record<string, unknown>, key?: string | null) {
+  return publicationCommand(env, actor, workflowId, input, key, 'rollback')
+}
+export async function publishWorkflow(env: CrankEnv, actor: Actor, workflowId: string, input: Record<string, unknown> = {}, key?: string | null) {
+  return publicationCommand(env, actor, workflowId, input, key, 'publish')
+}
+async function publicationCommand(env: CrankEnv, actor: Actor, workflowId: string, input: Record<string, unknown>, key: string | null | undefined, operation: 'publish' | 'rollback') {
   requirePublish(actor)
   workflowScope(actor, workflowId)
+  const command = await workflowCommand(env, actor, key, operation, workflowId, input)
+  if (command?.existing) return publicationReceipt(env, command.existing, true)
+  let rollback: { graph: unknown; rollback_of: number; estimateVersionId: string; retryPolicy: Record<string, unknown> } | undefined
+  if (operation === 'rollback') {
+    requireValue(Number.isInteger(input.version), 'Choose the version number to roll back to')
+    const source = await stmt(env, "SELECT id,number,graph_json,retry_policy_json FROM crank_workflow_versions WHERE workflow_id=? AND number=? AND mode='production'", workflowId, input.version).first<{ id: string; number: number; graph_json: string; retry_policy_json: string }>()
+    requireValue(source, 'Version not found', 404)
+    const current = await getWorkflow(env, workflowId)
+    const live = current.published_version_id ? await stmt(env, 'SELECT number FROM crank_workflow_versions WHERE id=?', current.published_version_id).first<{ number: number }>() : null
+    requireValue(live?.number !== source.number, `Version ${source.number} is already the published version`, 409)
+    rollback = { graph: JSON.parse(source.graph_json), rollback_of: source.number, estimateVersionId: source.id, retryPolicy: JSON.parse(source.retry_policy_json) }
+  }
+  try {
+    return await publishVersion(env, actor, workflowId, operation === 'rollback' ? {} : input, rollback, command)
+  } catch (error) {
+    // A losing claim aborts the entire transaction before any activation, wait,
+    // schedule, usage, adoption or audit write. Read back only this known race.
+    if (!command || !/UNIQUE constraint failed: crank_workflow_idempotency\./.test(String(error))) throw error
+    const retry = await workflowCommand(env, actor, key, operation, workflowId, input)
+    requireValue(retry?.existing, 'Publication could not be confirmed', 503)
+    return publicationReceipt(env, retry.existing, true)
+  }
+}
+
+/** TEAM-004: publish an immutable graph and all of its authority atomically. */
+async function publishVersion(env: CrankEnv, actor: Actor, workflowId: string, input: Record<string, unknown>, rollback: { graph: unknown; rollback_of: number; estimateVersionId: string; retryPolicy: Record<string, unknown> } | undefined, command: WorkflowCommand | null) {
   const current = await getWorkflow(env, workflowId)
   requireValue(!actor.team || !pendingRestore(current), 'Only the native owner may adopt a restored workflow', 403)
   await requireAttested(env, workflowId)
@@ -159,6 +188,7 @@ export async function publishWorkflow(env: CrankEnv, actor: Actor, workflowId: s
   const adoption = await adoptionStatements(env, actor, current, input)
   const guard = `attested:${versionId}`
   const statements = [
+    ...(command ? [claimCommand(env, actor, command, workflowId, null, versionId)] : []),
     attestedGuard(env, guard, workflowId), stmt(env, 'DELETE FROM crank_authority_guards WHERE id=?', guard),
     stmt(env, `UPDATE crank_wf_runs SET continuation_authority=continuation_authority|2 WHERE workflow_id=? AND version_id=?
       AND status IN ('waiting','awaiting_approval') AND COALESCE(json_extract((SELECT graph_json FROM crank_workflow_versions WHERE id=version_id),'$.settings.waiting_runs'),'continue')='continue'`, workflowId, current.published_version_id),
@@ -176,7 +206,8 @@ export async function publishWorkflow(env: CrankEnv, actor: Actor, workflowId: s
   await guardedBatch(env, actor, 'publish', statements)
   const hooks = await listHooks(env, workflowId)
   if (graph.trigger.type === 'webhook' && !hooks.some(hook => hook.active)) warnings.push('Create a webhook URL for this workflow (POST /api/crank/workflows/:id/hooks) and give it to the sender')
-  return { workflow: await presentWorkflow(env, await getWorkflow(env, workflowId)), version: { id: versionId, number, authority }, warnings }
+  return { workflow: await presentWorkflow(env, await getWorkflow(env, workflowId)), version: { id: versionId, number, authority }, warnings,
+    ...(command ? { idempotency: { replayed: false, workflow_id: workflowId, version_id: versionId } } : {}) }
 }
 async function triggerSetup(env: CrankEnv, workflowId: string, versionId: string, graph: Graph) {
   const trigger = graph.trigger as Record<string, any>, time = Date.now()

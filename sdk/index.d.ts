@@ -65,6 +65,7 @@ export interface Publication {
   workflow: Workflow;
   version: { id: string; number: number; authority: JsonObject };
   warnings: string[];
+  idempotency?: { replayed: boolean; workflow_id: string; version_id: string };
 }
 export interface Run {
   id: string;
@@ -116,7 +117,8 @@ export class CrankClient {
   readDraft(workflowId: string, draftId: string, options?: RequestOptions): Promise<SavedDraft>;
   updateDraft(workflowId: string, input: Partial<DraftInput>, options?: DraftWriteOptions): Promise<Workflow>;
   validateDraft(workflowId: string, input?: { graph?: Graph }, options?: RequestOptions): Promise<Validation>;
-  publishDraft(workflowId: string, input?: JsonObject, options?: RequestOptions): Promise<Publication>;
+  publishDraft(workflowId: string, input?: JsonObject, options?: DraftWriteOptions): Promise<Publication>;
+  rollbackWorkflow(workflowId: string, version: number, options?: DraftWriteOptions): Promise<Publication>;
   listWorkflows(query?: { q?: string; folder?: string }, options?: RequestOptions): Promise<WorkflowSummary[]>;
   listRuns(query?: RunQuery, options?: RequestOptions): Promise<RunPage>;
   iterateRuns(query?: RunQuery, options?: RequestOptions): AsyncGenerator<Run, void, unknown>;
