@@ -1,5 +1,5 @@
 import { requireValue } from '../model'
-import { boundedJson, keys, object, parseDefinition, string, strings, type CustomDefinition, type CustomInput, type CustomOperation } from './definition'
+import { boundedJson, keys, object, parseDefinition, string, strings, type CustomDefinition, type CustomInput, type CustomOperation, type CustomResource } from './definition'
 
 type Json = Record<string, unknown>
 const methods = ['get', 'post', 'put', 'patch', 'delete', 'head', 'options']
@@ -70,7 +70,7 @@ export function proposeOpenApi(value: unknown): CustomDefinition {
     for (const parameter of [...readParameters(pathItem.parameters), ...readParameters(op.parameters)]) parameters.set(`${parameter.in}:${parameter.name}`, parameter)
     const inputs: Record<string, CustomInput> = {}
     for (const parameter of parameters.values()) {
-      keys(parameter, ['name', 'in', 'required', 'schema', 'style', 'explode', 'allowReserved', ...annotations], 'Parameter')
+      keys(parameter, ['name', 'in', 'required', 'schema', 'style', 'explode', 'allowReserved', 'x-crank-resource', ...annotations], 'Parameter')
       const name = string(parameter.name, 'Parameter name', 100)
       requireValue(parameter.in === 'path' || parameter.in === 'query', 'Header and cookie parameters require a reviewed manual declaration')
       requireValue(parameter.required === undefined || typeof parameter.required === 'boolean', 'Parameter required must be boolean')
@@ -79,7 +79,7 @@ export function proposeOpenApi(value: unknown): CustomDefinition {
       requireValue(parameter.explode === undefined || typeof parameter.explode === 'boolean', 'Parameter explode must be boolean')
       requireValue(parameter.allowReserved === undefined || parameter.allowReserved === false, 'Reserved query serialization is unsupported')
       requireValue(!Object.hasOwn(inputs, name), 'Inputs with the same name in different locations are unsupported')
-      inputs[name] = { type: primitive(parameter.schema), required: parameter.required === true, location: parameter.in }
+      inputs[name] = { type: primitive(parameter.schema), required: parameter.required === true, location: parameter.in, ...(parameter['x-crank-resource']===undefined?{}:{resource:parameter['x-crank-resource'] as CustomResource}) }
     }
     if (op.requestBody !== undefined) {
       const body = resolve(op.requestBody, 'Request body')

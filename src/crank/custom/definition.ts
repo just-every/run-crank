@@ -1,6 +1,7 @@
 import { requireValue } from '../model'
 
-export type CustomInput = { type: 'string' | 'number' | 'integer' | 'boolean'; required: boolean; location?: 'path' | 'query' | 'body'; encoding?: 'odata-string' }
+export type CustomResource = { operation: string; items_path: string; value_path: string; label_path: string; parents?: Record<string, string> }
+export type CustomInput = { type: 'string' | 'number' | 'integer' | 'boolean'; required: boolean; location?: 'path' | 'query' | 'body'; encoding?: 'odata-string'; resource?: CustomResource }
 export type CustomOperation = {
   id: string; name: string; kind: 'action' | 'search' | 'trigger'
   method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'HEAD' | 'OPTIONS'
@@ -85,6 +86,17 @@ function endpoint(value: unknown): string {
   } else requireValue(result.startsWith('/') && !result.startsWith('//'), 'Operation path must be an HTTPS URL or absolute path')
   return result
 }
+function resource(value: unknown): CustomResource {
+  const raw = object(value, 'Resource picker')
+  keys(raw, ['operation', 'items_path', 'value_path', 'label_path', 'parents'], 'Resource picker')
+  const result: CustomResource = { operation: identifier(raw.operation, 'Resource list operation'), items_path: dataPath(raw.items_path, 'Resource items path'), value_path: dataPath(raw.value_path, 'Resource value path'), label_path: dataPath(raw.label_path, 'Resource label path') }
+  if (raw.parents !== undefined) {
+    const parents = object(raw.parents, 'Resource parents')
+    requireValue(Object.keys(parents).length <= 100, 'Declare at most 100 resource parent bindings')
+    result.parents = Object.fromEntries(Object.entries(parents).map(([name, sibling]) => [identifier(name, 'Resource list input'), identifier(sibling, 'Resource parent input')]))
+  }
+  return result
+}
 function operation(value: unknown): CustomOperation {
   const raw = object(value, 'Operation')
   keys(raw, ['id', 'name', 'kind', 'method', 'path', 'scopes', 'inputs', 'pagination', 'gateway'], 'Operation')
@@ -95,12 +107,13 @@ function operation(value: unknown): CustomOperation {
   for (const [name, value] of Object.entries(inputs)) {
     identifier(name, 'Input name')
     const input = object(value, 'Input')
-    keys(input, ['type', 'required', 'location', 'encoding'], 'Input')
+    keys(input, ['type', 'required', 'location', 'encoding', 'resource'], 'Input')
     requireValue(['string', 'number', 'integer', 'boolean'].includes(String(input.type)), 'Unsupported input type')
     requireValue(typeof input.required === 'boolean', 'Input required must be boolean')
     requireValue(input.location === undefined || ['path', 'query', 'body'].includes(String(input.location)), 'Unsupported input location')
     requireValue(input.encoding === undefined || input.encoding === 'odata-string' && input.type === 'string' && input.location === 'path', 'OData string encoding requires a string path input')
-    parsed[name] = { type: input.type as CustomInput['type'], required: input.required, location: input.location as CustomInput['location'] ?? 'query', ...(input.encoding ? {encoding:input.encoding as 'odata-string'} : {}) }
+    requireValue(input.resource === undefined || input.type === 'string', 'Resource picker inputs must be strings')
+    parsed[name] = { type: input.type as CustomInput['type'], required: input.required, location: input.location as CustomInput['location'] ?? 'query', ...(input.encoding ? {encoding:input.encoding as 'odata-string'} : {}), ...(input.resource === undefined ? {} : { resource: resource(input.resource) }) }
   }
   const path = endpoint(raw.path), placeholders = [...path.matchAll(/\{([^{}]+)\}/g)].map(match => match[1])
   requireValue(!/[{}]/.test(path.replace(/\{[^{}]+\}/g, '')), 'Operation path has malformed placeholders')
@@ -125,6 +138,33 @@ function operation(value: unknown): CustomOperation {
   return result
 }
 
+function checkResources(operations: CustomOperation[]): void {
+  const byId = new Map(operations.map(op => [op.id, op]))
+  for (const op of operations) {
+    for (const input of Object.values(op.inputs)) {
+      if (!input.resource) continue
+      const list = byId.get(input.resource.operation)
+      requireValue(list && ['GET', 'HEAD'].includes(list.method) && ['action', 'search'].includes(list.kind), 'Resource pickers must reference a read action or search in this connector version')
+      requireValue(list.scopes.every(scope=>op.scopes.includes(scope)), 'Resource inputs require the scopes of their list operation')
+      const parents = input.resource.parents ?? {}
+      for (const [key, sibling] of Object.entries(parents)) {
+        requireValue(Object.hasOwn(list.inputs, key) && Object.hasOwn(op.inputs, sibling), 'Resource parent bindings must name list inputs and sibling operation inputs')
+        requireValue(list.inputs[key].type === op.inputs[sibling].type, 'Resource parent bindings must preserve input types')
+      }
+      requireValue(Object.entries(list.inputs).every(([name, spec]) => !spec.required || Object.hasOwn(parents, name)), 'Bind every required resource list input to a sibling input')
+    }
+    const active = new Set<string>(), checked = new Set<string>()
+    const visit = (name: string): void => {
+      requireValue(!active.has(name), 'Resource parent bindings must not contain cycles')
+      if (checked.has(name)) return
+      active.add(name)
+      for (const parent of Object.values(op.inputs[name].resource?.parents ?? {})) visit(parent)
+      active.delete(name); checked.add(name)
+    }
+    Object.keys(op.inputs).forEach(visit)
+  }
+}
+
 /** Parse declarations only. Installation, scope consent and runtime gates belong to their routes. */
 export function parseDefinition(value: unknown): CustomDefinition {
   boundedJson(value)
@@ -133,6 +173,7 @@ export function parseDefinition(value: unknown): CustomDefinition {
   requireValue(Array.isArray(raw.operations) && raw.operations.length > 0 && raw.operations.length <= 100, 'Declare from 1 to 100 operations')
   const operations = raw.operations.map(operation)
   requireValue(new Set(operations.map(op => op.id)).size === operations.length, 'Operation ids must be unique')
+  checkResources(operations)
   const auth = object(raw.auth, 'Auth declaration')
   keys(auth, ['kind', 'scopes'], 'Auth declaration')
   requireValue(['none', 'api_key', 'oauth2'].includes(String(auth.kind)), 'Unsupported auth kind')

@@ -374,8 +374,8 @@ test('EXEC-002: executor loss during a retry wait retains the original request b
 
 test('Custom connector review, agent OpenAPI proposal and sandbox gates retain exact versions, scope refusals and signed duplicate-event proof', async () => {
   const {customDefinition,installDefinition,draftTest,customEventProof}=await import('./custom-fixture.mjs');
-  const id='harbour-public-connector',body={id:'stock-24',quantity:24};let requests=0;
-  fake.routes.set('custom.example',()=>{requests++;return jsonResponse(body)});
+  const id='harbour-public-connector',body={id:'stock-24',quantity:24},matches=[{id:'stock-2',quantity:12},{id:'stock-1',quantity:24}];let requests=0,searchRows=matches,searchFailure=false;
+  fake.routes.set('custom.example',({url})=>{requests++;if(url.pathname==='/search'){assert.equal(url.searchParams.get('query'),'oak');return searchFailure?jsonResponse({error:'invalid provider query'},400):jsonResponse(searchRows)}return jsonResponse(body)});
   const agent=await h.post('tokens',{label:'Connector preparation agent',scope:'agent'},h.owner,201);
   const openapi={openapi:'3.0.3',info:{title:'Harbour public stock API',version:'1'},servers:[{url:'https://custom.example'}],'x-crank-id':id,'x-crank-disclosure':customDefinition(id).disclosure,components:{securitySchemes:{stock:{type:'oauth2',flows:{clientCredentials:{tokenUrl:'https://custom.example/token',scopes:{'records.read':'Read stock','scope.refused':'Read private notes'}}}}}},paths:{'/record':{get:{operationId:'record',summary:'Read stock',security:[{stock:['records.read']}],'x-crank-kind':'action',responses:{200:{description:'Current stock'}}}},'/notes':{get:{operationId:'notes',security:[{stock:['scope.refused']}],responses:{200:{description:'Private notes'}}}}}};
   const proposed=await h.post('custom-connectors/propose',{openapi},'',200,{authorization:'Bearer '+agent.token});
@@ -407,16 +407,22 @@ test('Custom connector review, agent OpenAPI proposal and sandbox gates retain e
     const denied=await draftTest(h,'Harbour revoked '+recipe,[recipeStep],{},{[credential.id]:credential.id});assert.equal(denied.run.status,'failed');assert.equal(called,1);
     await h.post('custom-connectors/propose',{...recipeInput,tenant_origin:'https://127.0.0.1',disclosure:{...recipeInput.disclosure,recipient:'https://127.0.0.1'}},h.owner,422);
   }
-  const installed=await installDefinition(h,customDefinition('harbour-sandbox-gates'));
+  const definition=customDefinition('harbour-sandbox-gates'),searchOperation={id:'find_stock',name:'Find stock',kind:'search',method:'GET',path:'https://custom.example/search',scopes:['records.read'],inputs:{query:{type:'string',required:true,location:'query'}}};
+  definition.operations.push(searchOperation);
+  for(const operation of definition.operations.filter(op=>['scope_probe','refused'].includes(op.id))) Object.assign(operation,{...searchOperation,id:operation.id,scopes:operation.scopes});
+  const installed=await installDefinition(h,definition);
   const account=await connection(h,{app:'http',label:'Harbour stock sandbox',auth_kind:'bearer',purpose:'test',domains:['custom.example'],scopes:['records.read','scope.probe'],secret:{token:'synthetic-crank-6'}});
   const step={id:'stock',type:'custom.request',connector_id:installed.id,connector_version:1,operation:'record',connection_id:account.id,input:{}};
+  const search={...step,id:'lookup',operation:'find_stock',input:{query:'{{trigger.input.query}}'},sort:{field:'id',direction:'asc'}};
   const pending=await h.post('workflows',{name:'Stock production gate',graph:{trigger:{type:'manual'},steps:[step]}},h.owner,201);
   await h.post(`workflows/${pending.id}/publish`,{},h.owner,422);
   const read=await draftTest(h,'Stock readback',[step],{},{[account.id]:account.id});assert.equal(read.run.status,'succeeded');
+  const searched=await draftTest(h,'Custom search sandbox readback',[{...search,multi_match:'all'}],{query:'oak'},{[account.id]:account.id});assert.equal(searched.run.status,'succeeded');assert.deepEqual(stepOf(searched.run,'lookup').output.records,[matches[1],matches[0]]);
+  const refusedBefore=requests,refusedSearch=await draftTest(h,'Refused search scope',[{...search,operation:'refused'}],{query:'oak'},{[account.id]:account.id});assert.equal(refusedSearch.run.status,'failed');assert.equal(stepOf(refusedSearch.run,'lookup').error.category,'auth');assert.equal(requests,refusedBefore,'A refused search scope prevents provider dispatch');
   const event=await customEventProof(h,installed);
   await h.post(`custom-connectors/${installed.id}/versions/1/revoke-scopes`,{scopes:['scope.probe']});
-  const before=requests,revoked=await draftTest(h,'Revoked custom scope',[{...step,operation:'scope_probe'}],{},{[account.id]:account.id});assert.equal(revoked.run.status,'failed');assert.equal(requests,before);
-  const receipt={readbacks:[{run_id:read.run.id,step_id:'stock',path:'body',equals:body}],duplicate_run_id:event.run.id,revoked_run_id:revoked.run.id};
+  const before=requests,revoked=await draftTest(h,'Revoked custom search scope',[{...search,operation:'scope_probe'}],{query:'oak'},{[account.id]:account.id});assert.equal(revoked.run.status,'failed');assert.equal(stepOf(revoked.run,'lookup').error.custom_scope,true);assert.equal(requests,before);
+  const receipt={readbacks:[{run_id:read.run.id,step_id:'stock',path:'body',equals:body},{run_id:searched.run.id,step_id:'lookup',path:'records',equals:[matches[1],matches[0]]}],duplicate_run_id:event.run.id,revoked_run_id:revoked.run.id};
   await h.post(`custom-connectors/${installed.id}/versions/1/sandbox`,{...receipt,readbacks:[{...receipt.readbacks[0],equals:{id:'wrong'}}]},h.owner,422);
   await h.post(`custom-connectors/${installed.id}/versions/1/sandbox`,{...receipt,duplicate_run_id:read.run.id},h.owner,422);
   const unknown=await draftTest(h,'Unknown operation cannot impersonate scope revocation',[{...step,operation:'unknown_operation'}],{},{[account.id]:account.id});
@@ -425,6 +431,24 @@ test('Custom connector review, agent OpenAPI proposal and sandbox gates retain e
   await h.post(`workflows/${pending.id}/estimate`,{cost:{components:['orchestration','connectors','models','executors'].map(kind=>({kind,usd_per_run:'0',assumption:'Owner test sandbox; no network charges'}))}});
   await h.post(`workflows/${pending.id}/publish`,{},h.owner,201);
   assert.deepEqual(stepOf(await startRun(h,pending,{}),'stock').output.body,body);
+  const afterSearch={id:'after',type:'map',input:{outcome:'{{steps.lookup.outcome}}'}},searchFlow=(name,settings,tail=[afterSearch])=>publish(h,name,{trigger:{type:'manual'},steps:[{...search,...settings},...tail]});
+  const [missingContinue,missingHalt,firstMatch,stopMultiple,allMatches]=await Promise.all([
+    searchFlow('Custom search missing continues',{no_match:'continue'}),searchFlow('Custom search missing halts',{no_match:'halt'}),
+    searchFlow('Custom search first is sorted',{multi_match:'first'}),searchFlow('Custom search multiple stops',{multi_match:'stop'}),
+    searchFlow('Custom search all feeds a loop',{multi_match:'all'},[{id:'each',type:'loop',max_items:10,concurrency:2,order:'input',empty:'allow',item_errors:'stop',input:{items:'{{steps.lookup.records}}'},result:'{{steps.seen.id}}',steps:[{id:'seen',type:'map',input:{id:'{{item.id}}'}}]}]),
+  ]);
+  searchRows=[];
+  const continued=await startRun(h,missingContinue,{query:'oak'});assert.equal(continued.status,'succeeded');assert.equal(stepOf(continued,'lookup').output.outcome,'not found');assert.equal(stepOf(continued,'after').output.outcome,'not found');
+  const halted=await startRun(h,missingHalt,{query:'oak'});assert.equal(halted.status,'stopped_by_search');assert.equal(stepOf(halted,'lookup').output.outcome,'not found');assert.equal(stepOf(halted,'after'),undefined);
+  searchRows=matches;
+  for(const rows of [matches,[...matches].reverse()]) {searchRows=rows;const first=await startRun(h,firstMatch,{query:'oak'});assert.equal(first.status,'succeeded');assert.deepEqual(stepOf(first,'lookup').output.record,matches[1]);assert.equal(stepOf(first,'lookup').output.count,2)}
+  const multiple=await startRun(h,stopMultiple,{query:'oak'});assert.equal(multiple.status,'stopped_by_search');assert.equal(stepOf(multiple,'lookup').output.outcome,'multiple matches');assert.equal(stepOf(multiple,'after'),undefined);
+  searchRows=matches;
+  const all=await startRun(h,allMatches,{query:'oak'});assert.equal(all.status,'succeeded');assert.deepEqual(stepOf(all,'lookup').output.records,[matches[1],matches[0]]);assert.deepEqual(stepOf(all,'each').output.results,['stock-1','stock-2']);
+  searchFailure=true;
+  const failed=await startRun(h,missingContinue,{query:'oak'});assert.equal(failed.status,'failed');assert.equal(failed.error.category,'provider');assert.equal(stepOf(failed,'lookup').output?.outcome,undefined);assert.equal(stepOf(failed,'after'),undefined,'Provider failure never follows the not-found continuation');
+  searchFailure=false;
+  for(const query of ['   ',42]) {const beforeInvalid=requests,invalid=await startRun(h,missingContinue,{query});assert.equal(invalid.status,'failed');assert.equal(invalid.error.category,'validation');assert.equal(requests,beforeInvalid,'Empty or wrongly typed search input prevents provider dispatch')}
   const v2=await installDefinition(h,{...customDefinition(installed.id),version:2});assert.equal(v2.status,'sandbox');
   const versions=await h.get('custom-connectors');assert.equal(versions.find(v=>v.id===installed.id&&v.version===1).status,'ready');
   let failures=0;fake.routes.set('custom.example',()=>++failures===1?jsonResponse({error:'sandbox read quota'},429,{'retry-after':'31'}):jsonResponse(body));
@@ -440,6 +464,9 @@ test('Custom connector review, agent OpenAPI proposal and sandbox gates retain e
   await h.post(`custom-connectors/${installed.id}/versions/1/review`,{reviewed_digest:current.digest,disclosure_confirmed:true,granted_scopes:current.granted_scopes});
   await h.post(`custom-connectors/${installed.id}/versions/1/sandbox`,receipt,h.owner,422);
   assert.equal((await h.get('custom-connectors')).find(v=>v.id===installed.id&&v.version===1).status,'sandbox','Re-review requires fresh readback and duplicate-event proof');
+  await h.post(`custom-connectors/${installed.id}/versions/1/revoke-scopes`,{scopes:['records.read']});
+  const deniedBefore=fake.to('custom.example').length,deniedSearch=await draftTest(h,'Revoked stock search',[search],{query:'oak'},{[account.id]:account.id});assert.equal(deniedSearch.run.status,'failed');assert.equal(stepOf(deniedSearch.run,'lookup').error.custom_scope,true);assert.equal(fake.to('custom.example').length,deniedBefore);
+  await (await import('./custom-picker-fixture.mjs')).proveCustomPickers(h,account,agent,fake);
   const decisions=await h.get('audit');assert.ok(decisions.some(d=>d.action==='custom.owner_denied'&&d.detail.session_kind==='agent'));
 });
 

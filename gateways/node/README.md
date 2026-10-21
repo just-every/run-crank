@@ -150,7 +150,7 @@ This runtime supports the bounded SQLite, file, remote SQL and storage doors
 described here. It does not execute shell commands, arbitrary task SQL or
 task-supplied network URLs.
 
-## Remote SQL adapters (live database proof pending)
+## Remote SQL adapters
 
 The optional `postgres-query`, `mysql-query` and `sqlserver-query` doors use
 parameterized official drivers and a single-SELECT SQL syntax gate. Configure
@@ -187,10 +187,18 @@ Each driver streams rows into the same 64 KiB/maxRows output limit. Driver and
 query deadlines are five seconds, under the existing owned subprocess deadline.
 Missing packages, unsupported read-only controls, failed TLS/authentication and
 remote errors are explicit failures; there is no alternate writable adapter.
-Live PostgreSQL/MySQL/SQL Server acceptance has not been established by the
-SQLite/file journey.
+`tests/database-gateway-journey.mjs` runs the actual Worker and CLI against
+independent PostgreSQL and MySQL containers, with restricted logins and real
+permission/read-only checks, bound inputs, byte/row/deadline refusal, revocation
+and credential-free restore. It starts and removes only its own isolated
+containers. This does not establish SQL Server or a buyer deployment.
 
-## Read-only SFTP and S3-compatible lines (live provider proof pending)
+`tests/gateway-streaming-journey.mjs` uses a real incrementally written 64 MiB
+UTF-8 source and real Worker/CLI pages, continues a saved cursor after restart
+and refuses a same-size tail mutation. It makes no throughput claim. Scale
+results belong to an exact-candidate heavy-slot run, separately from push Verify.
+
+## Read-only SFTP and S3-compatible lines
 
 Storage operations use the same connector binding fields as `read_lines` above.
 The owner fixes one remote path or bucket/object in the private manifest. Tasks
@@ -287,3 +295,18 @@ connects to temporary network-edge SFTP/S3 protocol fixtures, including paginati
 across Worker restart, mutation, fingerprint and request-signature rejection,
 source/page bounds and UTF-8 validation. This establishes local protocol behavior;
 live customer SFTP/S3 provider acceptance remains unproven.
+
+`tests/storage-provider-journey.mjs` runs the actual Worker and gateway CLI
+against isolated OpenSSH and RustFS S3-compatible containers. It proves exact
+pages and continuation after Worker restart, source-change refusal, invalid
+credentials and host-pin refusal, and credential-free export. The separate
+`tests/storage-gateway-journey.mjs` checks protocol-edge UTF-8, byte and redirect
+refusals. The provider journey requires Docker and gateway dependencies, removes
+only its own containers before PASS, and runs outside push Verify:
+
+```sh
+CRANK_DOCKER=docker node tests/storage-provider-journey.mjs
+```
+
+These isolated-provider results do not establish ServiceNow/SAP, SQL Server or
+buyer IdP interoperability.

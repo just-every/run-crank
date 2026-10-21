@@ -46,7 +46,7 @@ async function publicRead(step:Step,ctx:StepContext,op:CustomOperation) {
     } else query[name]=value
   }
   checkEgress(path)
-  const result=await httpRequest.execute({...step,type:'http',input:{},...(op.pagination?{pagination:{kind:'cursor',items_path:op.pagination.items_path,cursor_path:op.pagination.cursor_path,param:op.pagination.cursor_param,max_pages:op.pagination.max_pages,max_items:op.pagination.max_items,max_bytes:1024*1024}}:{})},
+  const result=await httpRequest.execute({id:step.id,type:'http',connection_id:step.connection_id,timeout_ms:step.timeout_ms,retry_policy:step.retry_policy,input:{},...(op.pagination?{pagination:{kind:'cursor',items_path:op.pagination.items_path,cursor_path:op.pagination.cursor_path,param:op.pagination.cursor_param,max_pages:op.pagination.max_pages,max_items:op.pagination.max_items,max_bytes:1024*1024}}:{})},
     {...ctx,input:{url:path,method:op.method,query}})
   if(result.status!=='succeeded' || !isObject(result.output)) throw new StepError('provider','Custom request did not return a completed read')
   return op.pagination?{items:result.output.items,pages:result.output.pages,complete:result.output.complete}:result.output.body
@@ -54,6 +54,8 @@ async function publicRead(step:Step,ctx:StepContext,op:CustomOperation) {
 export const customRequest:StepType={
   mutating:false,connection:'optional',
   validate(step) {
+    if(step.pagination!==undefined)throw new StepError('validation','Custom pagination belongs to the reviewed connector version, not the workflow step')
+    if(step.timeout_ms!==undefined && (!Number.isInteger(step.timeout_ms) || Number(step.timeout_ms)<100 || Number(step.timeout_ms)>30000))throw new StepError('validation','Custom request timeout_ms must be 100 to 30000')
     for(const key of ['connector_id','operation']) if(typeof step[key]!=='string' || !/^[a-zA-Z][a-zA-Z0-9_.-]{0,99}$/.test(step[key] as string)) throw new StepError('validation',`Custom ${step.id}: declare a literal ${key}`)
     if(!Number.isSafeInteger(step.connector_version) || Number(step.connector_version)<1) throw new StepError('validation',`Custom ${step.id}: pin connector_version`)
     if(step.gateway_id!==undefined && (typeof step.gateway_id!=='string' || typeof step.environment!=='string' || !/^[a-z][a-z0-9_-]{0,59}$/.test(step.environment))) throw new StepError('validation',`Custom ${step.id}: pin gateway_id and environment`)

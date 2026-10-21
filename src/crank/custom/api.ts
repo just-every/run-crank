@@ -9,6 +9,7 @@ import { parseDefinition } from './definition'
 import { enroll, enrollment, gatewayActor, grantGateway, listGateways, revokeGateway } from './gateways'
 import { gatewayResult, pollGateway, wakeGatewayTask } from './gateway-tasks'
 import { proposeOpenApi } from './openapi'
+import { loadPicker, readPicker, selectPicker } from './pickers'
 import { acceptSandbox } from './sandbox'
 import { customVersion, installCustom, listCustom, presentCustom, revokeCustom, reviewCustom, revokeCustomScopes } from './store'
 
@@ -45,6 +46,12 @@ export async function customApi(request:Request,env:CrankEnv):Promise<Response|n
       throw error
     }
     if(request.method==='GET') {
+      const picker=/^\/api\/crank\/custom-connectors\/pickers\/([^/]+)$/.exec(path)
+      if(picker) {
+        const query=new URL(request.url).searchParams
+        requireValue([...query.keys()].every(key=>query.getAll(key).length===1),'Picker query fields must be unique',422)
+        return json(await readPicker(env,actor,decodeURIComponent(picker[1]),Object.fromEntries(query)))
+      }
       if(path==='/api/crank/custom-connectors')return json(await listCustom(env))
       if(path==='/api/crank/gateways')return json(await listGateways(env))
       const version=/^\/api\/crank\/custom-connectors\/([^/]+)\/versions\/(\d+)$/.exec(path)
@@ -53,6 +60,8 @@ export async function customApi(request:Request,env:CrankEnv):Promise<Response|n
     }
     requireValue(request.method==='POST','Method not allowed',405)
     const input=await body(request,512*1024)
+    if(path==='/api/crank/custom-connectors/pickers')return json(await loadPicker(env,actor,input))
+    if(path==='/api/crank/custom-connectors/selection')return json(await selectPicker(env,actor,input))
     if(path==='/api/crank/custom-connectors')return json(await installCustom(env,actor,input),201)
     if(path==='/api/crank/gateways')return json(await enrollment(env,actor,input),201)
     const gateway=/^\/api\/crank\/gateways\/([^/]+)\/(grants|revoke)$/.exec(path)

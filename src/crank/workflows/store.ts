@@ -90,12 +90,14 @@ async function createWorkflowDraft(env: CrankEnv, actor: Actor, input: Record<st
   const receipt = committedReceipt(results, command)
   return savedWorkflow(env, receipt?.workflow_id ?? workflowId, receipt, receipt ? receipt.attempt_id !== command!.attempt : false)
 }
-export async function updateDraft(env: CrankEnv, actor: Actor, workflowId: string, input: Record<string, unknown>, idempotencyKey?: string | null) {
+export async function updateDraft(env: CrankEnv, actor: Actor, workflowId: string, input: Record<string, unknown>, idempotencyKey?: string | null, expectedDraftJson?: string, extraAudit?:{action:string;detail:Record<string,unknown>}) {
   requirePrepare(actor)
   workflowScope(actor, workflowId)
   const command = await workflowCommand(env, actor, idempotencyKey, 'draft', workflowId, input)
   if (command?.existing) return savedWorkflow(env, workflowId, command.existing, true)
   const current = await getWorkflow(env, workflowId)
+  requireValue(expectedDraftJson===undefined || current.draft_json===expectedDraftJson, 'The draft changed; load its current resources again',409)
+  const draftGuard=expectedDraftJson===undefined?null:id()
   const graph = input.graph === undefined ? JSON.parse(current.draft_json) : checked(input.graph).graph
   checked(graph)
   const draftId = id(), at = now(), condition = commandCondition(command)
@@ -104,14 +106,21 @@ export async function updateDraft(env: CrankEnv, actor: Actor, workflowId: strin
   const changed = [['name', current.name], ['description', current.description], ['folder', current.folder], ['graph', null], ['settings', null]]
     .filter(([field, before]) => field === 'graph' ? canonical(graph) !== canonical(JSON.parse(current.draft_json)) : field === 'settings' ? isObject(input.settings) : input[field as string] !== undefined && input[field as string] !== before)
     .map(([field]) => field)
-  const results = await guardedBatch(env, actor, 'prepare', [
+  let results:D1Result[]
+  try { results = await guardedBatch(env, actor, 'prepare', [
+    ...(draftGuard ? [stmt(env,'INSERT INTO crank_authority_guards(id,ok) SELECT ?,CASE WHEN EXISTS(SELECT 1 FROM crank_workflows WHERE id=? AND draft_json=?) THEN 1 ELSE 0 END',draftGuard,workflowId,expectedDraftJson)] : []),
     ...(command ? [claimCommand(env, actor, command, workflowId, draftId)] : []),
     stmt(env, `UPDATE crank_workflows SET name=?,description=?,folder=?,draft_json=?,draft_updated_at=?,settings_json=? WHERE id=? AND ${condition.sql}`,
       metadata.name, metadata.description, metadata.folder, JSON.stringify(graph), at, JSON.stringify(metadata.settings), workflowId, ...condition.args),
     await savedDraft(env, actor, workflowId, draftId, current.published_version_id, graph, metadata, at, command),
     auditStatementWhen(env, condition.sql, condition.args, actor.id, 'workflow.draft', 'workflow', workflowId, { draft_digest: await digest(JSON.stringify(graph)), changed }, current.published_version_id),
+    ...(extraAudit?[auditStatementWhen(env,condition.sql,condition.args,actor.id,extraAudit.action,'workflow',workflowId,extraAudit.detail)]:[]),
     ...(command ? [commandReceipt(env, command)] : []),
-  ])
+    ...(draftGuard ? [stmt(env,'DELETE FROM crank_authority_guards WHERE id=?',draftGuard)] : []),
+  ]) } catch(error) {
+    if(expectedDraftJson!==undefined && (await getWorkflow(env,workflowId)).draft_json!==expectedDraftJson)throw new CrankError(409,'The draft changed; load its current resources again')
+    throw error
+  }
   const receipt = committedReceipt(results, command)
   return savedWorkflow(env, workflowId, receipt, receipt ? receipt.attempt_id !== command!.attempt : false)
 }

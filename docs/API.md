@@ -612,6 +612,26 @@ trigger with `custom_connector_id`, `custom_connector_version`,
 `custom_operation`, `signing_connection_id` and `signature`. All current custom
 workflow tests and publication require the native owner.
 
+A string input can declare `resource:{operation,items_path,value_path,label_path,parents?}`
+(or OpenAPI parameter `x-crank-resource`). The source is a reviewed GET/HEAD
+operation in the same immutable version; its scopes must be included in the
+consumer, required source inputs bind to sibling typed fields, and dependency
+cycles are refused. The editor offers **Load current Name** and an explicit
+custom literal. Loading runs an audited owner draft test and does not edit the
+draft or publish it. A failed lookup links its actual failed run; retry is an
+explicit owner action.
+
+`POST /custom-connectors/pickers` takes `{workflow_id,step_path,input_name}` and
+returns its actual read run. `GET /custom-connectors/pickers/:runId` with the same
+address checks the current draft, connection consent and original private grant
+before returning at most 500 unique ID/name choices; it performs no network
+request. `POST /custom-connectors/selection` takes that address, `draft_digest`,
+`value` and optional `source_run_id`. It atomically saves a literal and clears
+transitive dependent resource choices, refuses stale concurrent edits and never
+publishes. Source-backed selection must still match the retained current
+choices. A custom literal uses the same typed-input validation. Agents cannot
+load or select owner resources.
+
 Every installed version starts in `sandbox`. Run explicit workflow draft tests
 through `POST /workflows/:id/test`. A test listener can use
 `custom_sandbox:true`, but its graph may contain only map/filter/transform/respond
@@ -650,8 +670,8 @@ Owner `POST /gateways/:id/grants` explicitly names
 `{environment,connector_id,connector_version,operations,destinations}`.
 A private workflow step also pins `gateway_id` and `environment`; its connector
 operation names the local gateway operation and private destination label.
-The process must match all of those bindings. Current real local doors are
-read-only SQLite and streamed UTF-8 file pages: 64 MiB source, 64 KiB page,
+The process must match all of those bindings. Current local adapters cover read-only SQLite, PostgreSQL, MySQL, SQL Server,
+SFTP/S3 and streamed UTF-8 file pages: 64 MiB source, 64 KiB page,
 1 MiB aggregate workflow output, declared page/item limits and a five-second
 local process deadline. Source-bound cursors refuse changed files; partial
 pipelines release no output to later steps. Tasks wait without holding an
@@ -668,6 +688,7 @@ Cron covers races and revocation. Run history shows each private page's status.
 
 These are native-owner defaults adopted pending ct approval. External provider
 sandboxes, buyer IdP interoperability, full enterprise recipes, write operations,
-updated-record detection, find-or-create and account resource pickers remain gaps.
+updated-record detection, find-or-create and automatic schema/field refresh remain gaps.
+Resource choices use explicit owner reads, rather than automatic background refresh.
 
 Enterprise GET proposals use the same `POST /api/crank/custom-connectors/propose` door with the reviewed recipe request documented in `docs/enterprise-connectors.md`. SFTP/S3 gateway manifests and their source-bound cursor protocol are documented in `gateways/node/README.md`. Connector re-review rotates consent generation: existing published snapshots and sandbox receipts cannot confer authority on the new review.

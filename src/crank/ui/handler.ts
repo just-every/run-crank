@@ -1,3 +1,5 @@
+import { customPickerPanel } from './custom-picker'
+import { findNode, flatten, nodes } from './editor/model'
 import { customConnectionsPanel, proposalReview } from './custom-connectors'
 import { customApi } from '../custom/api'
 import { followupApi } from '../agents/followups/api'
@@ -16,7 +18,7 @@ import { importDoor } from '../import-door'
 import { dataApi } from '../data'
 import { encryptionPanel, retentionPanels, retentionPreview, sensitivePanel } from './retention-view'
 import { authorize, requireOwner, requireWriteOrigin } from '../access'
-import { type CrankEnv } from '../model'
+import { canonical, digest, type CrankEnv } from '../model'
 import { authResponse } from '../../auth.server'
 import { document, esc } from './document'
 import { flowsView, runsView } from './flows'
@@ -64,7 +66,22 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
     }
     const editorPage = async (id:string,params:URLSearchParams,preview?:unknown) => {
       const [data,state,waiting] = await Promise.all([workflowData(read,id,params,actor),read('/api/crank/state'),read('/api/crank/workflow-runs?status=awaiting_approval&limit=100')])
-      const view = editorView({...data,preview,tokens:state.tokens ?? [],people:state.people ?? [],approvals:state.runs.filter((r:any)=>r.state==='pending').length+waiting.runs.length})
+      let customPicker=''
+      const selected=findNode(data.workflow.draft,params.get('step')??'')??flatten(nodes(data.workflow.draft)).at(-1)
+      if(actor.role==='owner' && ['native','dev'].includes(actor.kind) && selected?.step?.type==='custom.request') {
+        const connector=await read(`/api/crank/custom-connectors/${encodeURIComponent(String(selected.step.connector_id))}/versions/${Number(selected.step.connector_version)}`)
+        const operation=connector.definition.operations.find((op:any)=>op.id===selected.step!.operation)
+        if(operation && Object.values(operation.inputs).some((input:any)=>input.resource)) {
+          let result:any,error:string|undefined
+          if(params.get('picker_run') && params.get('picker_input')) {
+            const query=new URLSearchParams({workflow_id:id,step_path:selected.path,input_name:params.get('picker_input')!})
+            const response=await call(`/api/crank/custom-connectors/pickers/${encodeURIComponent(params.get('picker_run')!)}?${query}`),value:any=await response.json()
+            if(response.ok)result=value;else error=value.error??'Resource read was refused; load current names again.'
+          }
+          customPicker=customPickerPanel({workflowId:id,stepPath:selected.path,operation,values:selected.step.input as Record<string,unknown>??{},draftDigest:await digest(canonical(data.workflow.draft)),result,resultInput:params.get('picker_input')??undefined,error})
+        }
+      }
+      const view = editorView({...data,preview,customPicker,tokens:state.tokens ?? [],people:state.people ?? [],approvals:state.runs.filter((r:any)=>r.state==='pending').length+waiting.runs.length})
       return document(data.workflow.name,view.content,actor,200,view.page)
     }
     if (request.method === 'POST') {
@@ -75,6 +92,14 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
         return new Response(null,{status:303,headers:{location:'/signin','cache-control':'no-store',...(cookie?{'set-cookie':cookie}:{})}})
       }
       const form = await formValues(request)
+      if(url.pathname==='/app/custom-connectors/pickers' || url.pathname==='/app/custom-connectors/selection') {
+        requireOwner(actor)
+        const input=Object.fromEntries(['workflow_id','step_path','input_name','value','draft_digest','source_run_id'].filter(key=>form[key]!==undefined && form[key]!=='').map(key=>[key,form[key]]))
+        const response=await call('/api/crank/custom-connectors/'+url.pathname.split('/').at(-1),input),result:any=await response.json()
+        const back='/app/workflows/'+encodeURIComponent(form.workflow_id??'')+'?step='+encodeURIComponent(form.step_path??'')
+        if(!response.ok)return page('Resource choice refused',`<p class="notice">${esc(result.error)}</p><a href="${esc(back)}">Return to this draft</a>`,{},response.status)
+        return redirect(back+(result.run_id?'&picker_input='+encodeURIComponent(form.input_name??'')+'&picker_run='+encodeURIComponent(result.run_id):''))
+      }
       if(url.pathname==='/app/custom-connectors/propose' || url.pathname==='/app/custom-connectors/install') {
         requireOwner(actor)
         let input:Record<string,unknown>

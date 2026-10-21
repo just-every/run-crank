@@ -34,13 +34,17 @@ function bindGraph(graph: Graph, bindings: Record<string, string>) {
 
 /** WORK-008: freeze the draft and explicit account bindings as a test snapshot.
  * No publish pointer, trigger subscription or production authority is changed. */
-export async function testWorkflow(env: CrankEnv, actor: Actor, workflowId: string, input: Record<string, unknown>) {
+export async function testWorkflow(env: CrankEnv, actor: Actor, workflowId: string, input: Record<string, unknown>, snapshotGraph?: Graph) {
   if (actor.team) requirePrepare(actor)
   else requireOwner(actor)
   workflowScope(actor, workflowId)
   const workflow = await getWorkflow(env, workflowId)
   requireValue(workflow.status !== 'paused' && !pendingRestore(workflow), 'Resume or adopt the workflow before testing its draft', 409)
-  const draft = validateGraph(JSON.parse(workflow.draft_json))
+  const currentDraft = validateGraph(JSON.parse(workflow.draft_json))
+  // Internal callers may freeze a selected read without editing the saved draft.
+  // HTTP test routes pass only the first four arguments, never a request graph.
+  if (snapshotGraph !== undefined) requireOwner(actor)
+  const draft = snapshotGraph === undefined ? currentDraft : validateGraph(structuredClone(snapshotGraph))
   if(customSteps(draft.graph).length || draft.graph.trigger.custom_connector_id)requireOwner(actor)
   const connectionIds = [...new Set(draft.declared.connections)]
   const bindings = input.bindings ?? {}
