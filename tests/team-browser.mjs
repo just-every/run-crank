@@ -129,10 +129,10 @@ try {
     const testRun=await builderSend(`workflows/${workflow.id}/test`,{input:{supplier:'Northshore Fabrication — tax rehearsal'},bindings:{}});
     assert.equal(testRun.mode,'test');assert.equal(testRun.status,'awaiting_approval');assert.equal(testRun.version.published_by,dana.id);
     const ownerPage=page;page=builderPage;await page.setViewportSize({width,height:1000});
-    await page.goto(origin+'/app/workflow-runs/'+testRun.id);await expect(page.getByText('member-authorized draft test',{exact:false})).toBeVisible();
+    await page.goto(origin+'/app/workflow-runs/'+testRun.id);await expect(page.getByText('member-authorized draft test',{exact:false})).toContainText('Dana Reyes');
     await expect(decisionForms(page)).toHaveCount(0);await shot(width,'builder-test-waiting');page=ownerPage;
     const finished=await send(`workflow-runs/${testRun.id}/approve`,{path:'review',digest:testRun.waits[0].proposal_digest});assert.equal(finished.status,'succeeded');
-    page=builderPage;await page.reload();await expect(page.locator('main').getByText('Succeeded',{exact:true}).first()).toBeVisible();await shot(width,'builder-test-succeeded');page=ownerPage;
+    page=builderPage;await page.reload();await expect(page.locator('.detail-primary > .title-row .status[data-tone="good"]')).toBeVisible();await shot(width,'builder-test-succeeded');page=ownerPage;
     const revoked=await builderSend(`workflows/${workflow.id}/test`,{input:{supplier:'Riverside Industrial — revoked test'},bindings:{}});
     await send('team/'+dana.id,{role:'viewer',workflow_ids:[workflow.id],connection_ids:[]});
     await builderSend(`workflows/${workflow.id}/test`,{bindings:{}},403);

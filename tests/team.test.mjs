@@ -130,5 +130,14 @@ test('TEAM-001 / WORK-008: scoped builders freeze draft tests; both account bind
   await new Promise(resolve=>setTimeout(resolve,500));await h.post('team/'+viewer.id,{role:'viewer',workflow_ids:[],connection_ids:[]});release();
   assert.equal((await inFlight).status,403);assert.equal(edge.requests.length,2,'late-commit revocation creates no test effect');
   assert.ok((await h.get('audit')).some(a=>a.action==='workflow.test'&&a.actor_id===builder.id&&a.version_id===tested.version_id));
+  const exported=await h.post('data/export'),receiving=await harness('http://127.0.0.1:9',{edge:edge.edge});
+  try{
+   assert.ok(!exported.trim().split('\n').map(JSON.parse).flatMap(part=>part.items??[]).some(item=>item.table==='crank_team_access'),'builder access authority never travels');
+   await receiving.post('data/restore',{archive:exported,confirm:'RESTORE'});
+   const restored=await receiving.get('workflow-runs/'+tested.id);assert.equal(restored.mode,'test');assert.deepEqual(restored.steps,tested.steps);assert.equal(restored.version.declared.test_team_revision,tested.version.declared.test_team_revision);
+   assert.equal((await receiving.get('workflows/'+workflow.id)).status,'paused');
+   await receiving.tick();assert.equal(edge.requests.length,2,'portable test provenance never grants receiving execution authority');
+  }finally{await receiving.close()}
+
  }finally{await h.close()}
 });
