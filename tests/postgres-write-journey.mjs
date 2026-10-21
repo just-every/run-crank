@@ -24,7 +24,7 @@ const privateValues = () => [...database.secrets, state?.private_key, enrollment
 const noCredentials = text => { for (const value of privateValues()) assert(!text.includes(value), 'private gateway/database credentials must remain on the customer host'); };
 
 async function cli(args, expected = 0) {
-  const result = await command(process.execPath, ['gateways/node/cli.mjs', ...args], { cwd: root, timeout: 14000, signal: abort.signal, expected });
+  let result;try{result=await command(process.execPath,['gateways/node/cli.mjs',...args],{cwd:root,timeout:14000,signal:abort.signal,expected})}catch(error){throw new Error('Gateway '+args[0]+' failed: '+sanitized(error.message))}
   noCredentials(result.stdout + result.stderr); return result;
 }
 const work = (expected = 0) => cli(['work', '--state', statePath, '--manifest', manifestPath, '--once'], expected);
