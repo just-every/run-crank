@@ -273,7 +273,8 @@ permission/read-only checks, bound inputs, byte/row/deadline refusal, revocation
 and credential-free restore. It starts and removes only its own isolated
 containers. `tests/sqlserver-gateway-journey.mjs` separately runs the actual
 Worker and CLI against SQL Server 2022 on Linux x86, with a restricted login,
-server-confirmed READ_ONLY database, typed bindings, row/byte bounds, exact grants,
+server-confirmed READ_ONLY database, typed bindings, row/byte/deadline bounds,
+session cleanup, exact grants,
 environment/refusal and credential-free export assertions. It removes its own
 container and private files. These isolated servers do not establish a buyer
 deployment.

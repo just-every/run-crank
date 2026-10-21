@@ -120,6 +120,11 @@ try {
   await database.readOnly(false);
   try { assert.equal((await runTask()).error?.category, 'operation_refused', 'the adapter must refuse an actually writable database'); }
   finally { await database.readOnly(true); }
+  const slowStarted = Date.now();
+  assert.equal((await runTask({ ...operation, query: 'SELECT dbo.[synthetic-crank-419](@name) AS delayed' })).error?.category,
+    'timeout', 'the real SQL Server driver must cancel a read exceeding the gateway deadline');
+  assert(Date.now() - slowStarted < 12000, 'the owned CLI and server session must finish within their outer bound');
+  // runTask independently observes no remaining restricted-login sessions.
   assert.deepEqual((await runTask()).output, readback, 'bounded failures must leave the real database and next CLI invocation usable');
 
   await manifest();
@@ -148,7 +153,7 @@ try {
   assert.equal(archive.status, 200);
   for (const text of [archive.text, JSON.stringify(await h.get('state')), JSON.stringify(audit), JSON.stringify(histories), JSON.stringify(await h.get('gateways'))]) credentialFree(text);
   assert.equal(bridgeErrors.length, 0, sanitized(bridgeErrors[0]?.message));
-  console.log(`sqlserver-gateway-journey: real SQL Server image=${database.provider.imageId}; restricted login, READ_ONLY database, named credentials, signed outbound gateway, typed readback, row/byte bounds, exact destination/version grants, cross-environment refusal, revocation and credential-free export PASS`);
+  console.log(`sqlserver-gateway-journey: real SQL Server image=${database.provider.imageId}; restricted login, READ_ONLY database, named credentials, signed outbound gateway, typed readback, row/byte/deadline bounds and session cleanup, exact destination/version grants, cross-environment refusal, revocation and credential-free export PASS`);
 } finally {
   process.removeListener('SIGTERM', interrupt); process.removeListener('SIGINT', interrupt);
   try {

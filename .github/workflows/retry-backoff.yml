@@ -1,12 +1,19 @@
 name: Long retry journey
 on:
   workflow_dispatch:
+    inputs:
+      journey:
+        description: Manual journey selection (scheduled runs always run all)
+        type: choice
+        options: [all, private-recipes]
+        default: all
   schedule:
     - cron: '37 3 * * *'
 permissions:
   contents: read
 jobs:
   retry-backoff:
+    if: github.event_name != 'workflow_dispatch' || inputs.journey != 'private-recipes'
     runs-on: ubuntu-24.04
     timeout-minutes: 55
     steps:

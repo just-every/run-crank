@@ -81,6 +81,16 @@ export function sqlserverFixture(signal) {
         GRANT SELECT ON OBJECT::stock TO ${identifier(provider.user)};
         DENY INSERT, UPDATE, DELETE ON OBJECT::stock TO ${identifier(provider.user)};
         DENY CREATE TABLE TO ${identifier(provider.user)};`);
+      // Real read-only work that exceeds the gateway's deadline. A T-SQL scalar
+      // function cannot WAITFOR, so this isolated server evaluates its clock for
+      // ten seconds unless the actual driver cancels it first.
+      await query(`CREATE FUNCTION dbo.[synthetic-crank-419](@name nvarchar(100)) RETURNS int WITH INLINE=OFF AS
+        BEGIN
+          DECLARE @until datetime2=DATEADD(second,10,SYSDATETIME()), @value int=LEN(@name);
+          WHILE SYSDATETIME()<@until BEGIN SET @value=(@value+1)%1000000; END;
+          RETURN @value;
+        END;`);
+      await query(`GRANT EXECUTE ON OBJECT::dbo.[synthetic-crank-419] TO ${identifier(provider.user)};`);
       // Prove login permissions separately while the database is still writable.
       assert.deepEqual(await query("SELECT IS_SRVROLEMEMBER('sysadmin') AS sysadmin, HAS_PERMS_BY_NAME(DB_NAME(), 'DATABASE', 'UPDATE') AS can_write;", { reader: true }),
         [{ sysadmin: 0, can_write: 0 }]);
