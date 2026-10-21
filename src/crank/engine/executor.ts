@@ -290,7 +290,7 @@ export async function executeRun(env: CrankEnv, runId: string, time = Date.now()
   ) THEN 'queued' ELSE ? END,finished_at=?,error_json=?,lease_id=NULL,lease_expires_at=NULL WHERE id=? AND lease_id=?`, status, status, terminal ? now() : null, error ? await sealText(await targetFor(env, run.workflow_id), JSON.stringify(error)) : null, runId, lease).run()
   const settled = (await getWfRun(env, runId))!
   // Page payloads are continuation state, not a second permanent copy of run data.
-  await stmt(env,`UPDATE crank_gateway_tasks SET input_json='{}',output_json=NULL WHERE run_id=? AND (EXISTS(SELECT 1 FROM crank_wf_steps s WHERE s.run_id=crank_gateway_tasks.run_id AND s.path=crank_gateway_tasks.path AND s.status='succeeded') OR ?=1)`,runId,terminal?1:0).run()
+  await stmt(env,`UPDATE crank_gateway_tasks SET input_json='{}',output_json=NULL WHERE run_id=? AND (EXISTS(SELECT 1 FROM crank_wf_steps s WHERE s.run_id=crank_gateway_tasks.run_id AND s.path=crank_gateway_tasks.path AND s.status='succeeded') OR ?=1)`,runId,terminal && !(outcome.kind==='failed' && outcome.error.category==='uncertain')?1:0).run()
   await afterSettle(env, settled)
   await flushUsageNotices(env)
   return settled

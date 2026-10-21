@@ -7,7 +7,7 @@ import type { Gateway } from './gateways'
  * authorizes the host to attempt a missing write again. */
 export async function recoverGatewayTask(env:CrankEnv,gateway:Gateway,taskId:string) {
   const condition=`gateway_id=? AND status IN ('dispatched','failed') AND ${taskAuthority}
-    AND EXISTS(SELECT 1 FROM crank_wf_runs r WHERE r.id=crank_gateway_tasks.run_id AND r.status IN ('waiting','uncertain'))
+    AND EXISTS(SELECT 1 FROM crank_wf_runs r WHERE r.id=crank_gateway_tasks.run_id AND (r.status='waiting' OR r.status='failed' AND EXISTS(SELECT 1 FROM crank_wf_steps s WHERE s.run_id=r.id AND s.path=crank_gateway_tasks.path AND s.status='uncertain')))
     AND EXISTS(SELECT 1 FROM crank_custom_versions c,json_each(c.definition_json,'$.operations') op
       WHERE c.id=crank_gateway_tasks.connector_id AND c.version=crank_gateway_tasks.connector_version
       AND json_extract(op.value,'$.id')=crank_gateway_tasks.operation AND json_extract(op.value,'$.method')='POST')`

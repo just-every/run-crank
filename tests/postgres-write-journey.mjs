@@ -161,6 +161,14 @@ try {
     assert.equal(await count(), 3, 'wrong version, operation or concrete database must not execute a write');
   }
   await save(operations);
+  await database.sql(`CREATE FUNCTION public.slow_write() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN PERFORM pg_sleep(10); RETURN NEW; END $$;
+    CREATE TRIGGER slow_write BEFORE UPDATE ON public.write_stock FOR EACH ROW EXECUTE FUNCTION public.slow_write();`);
+  const unknown=await prepare('stock_update');await work();const unknownRun=await finished(unknown,'uncertain');
+  assert.equal(unknownRun.attempts.length,1,'An unknown private write is never retried automatically');
+  const unknownTask=deliveries.at(-1).task;await database.sql('DROP TRIGGER slow_write ON public.write_stock; DROP FUNCTION public.slow_write();');
+  assert.equal(await count(),3,'The timed-out transaction rolled back its business effect and receipt');
+  await recover(unknownTask);await work();await finished(unknown,'failed');
+  assert.equal(results.at(-1).error?.category,'operation_refused');assert.equal(await count(),3,'Receipt-only recovery cannot turn an uncertain write into a fresh effect');
   const absent = await prepare('stock_update');
   const claim = pollPayload(await gatewayPost(h, state, `gateways/${gatewayId}/poll`, { environment: 'production' }));
   assert.ok(claim.task); await recover(claim.task); await work();
