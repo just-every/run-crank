@@ -81,3 +81,54 @@ test('TEAM-001: product scopes fence direct reads, lists, publication, review an
   const page=await h.send('/app/access',undefined,h.owner);assert.equal(page.status,200);assert.ok(page.text.includes('/api/crank/team/'+viewer.id));
  }finally{await h.close()}
 });
+
+test('TEAM-001 / WORK-008: scoped builders freeze draft tests; both account bindings, late commits and continued dispatch obey live authority',async()=>{
+ const edge=fakeEdge();edge.routes.set('ledger.example',()=>jsonResponse({id:'sandbox-invoice'},201));
+ const h=await harness('http://127.0.0.1:9',{edge:edge.edge});
+ try{
+  const builder=await invite(h,'Riley Chen'),viewer=await invite(h,'Sam Patel');
+  const account=await connection(h,{app:'http',label:'Harbour production ledger',auth_kind:'bearer',domains:['ledger.example'],secret:{token:fakeSecret('production')}});
+  const sandbox=await connection(h,{app:'http',label:'Harbour test ledger',auth_kind:'bearer',domains:['ledger.example'],secret:{token:fakeSecret('sandbox')}});
+  await h.post(`connections/${sandbox.id}/purpose`,{purpose:'test'});
+  const graph={trigger:{type:'manual'},steps:[{id:'invoice',type:'http',connection_id:account.id,input:{url:'https://ledger.example/invoices',method:'POST',body:{customer:'{{trigger.input.customer}}'}}}]};
+  const workflow=await publish(h,'Harbour Workshop — builder invoice rehearsal',graph),other=await publish(h,'Unshared department workflow',graph);
+  const scope=(role='builder',connections=[account.id,sandbox.id])=>h.post('team/'+builder.id,{role,workflow_ids:[workflow.id],connection_ids:connections});
+  await scope();await h.post('team/'+viewer.id,{role:'viewer',workflow_ids:[workflow.id],connection_ids:[]});
+  const request={input:{customer:'Northshore Mechanical — sandbox sample'},bindings:{[account.id]:sandbox.id}};
+  await h.post(`workflows/${other.id}/test`,request,builder.cookie,403);
+  await h.post(`workflows/${workflow.id}/test`,request,viewer.cookie,403);
+  for(const ids of [[account.id],[sandbox.id]]){
+   await scope('builder',ids);await h.post(`workflows/${workflow.id}/test`,request,builder.cookie,403);
+  }
+  assert.equal(edge.requests.length,0,'neither a hidden original nor a hidden replacement account can be used');
+  await scope();const tested=await h.post(`workflows/${workflow.id}/test`,request,builder.cookie,201);
+  assert.equal(tested.status,'succeeded');assert.equal(tested.mode,'test');assert.equal(tested.version.published_by,builder.id);
+  assert.equal(tested.version.authority,'member-authorized draft test');assert.equal(tested.steps[0].output.body.id,'sandbox-invoice');
+  assert.equal(edge.requests.length,1);assert.equal(JSON.parse(edge.requests[0].body).customer,request.input.customer);
+  assert.equal((await h.get('workflows/'+workflow.id)).published_version_id,workflow.published.version.id,'a builder test never publishes its snapshot');
+  assert.equal((await h.get(`workflows/${workflow.id}/today`)).runs,0,'test work remains outside production usage');
+  await h.post(`workflows/${workflow.id}/run`,{input:{}},builder.cookie,403);
+  const live={...request,bindings:{[account.id]:account.id}};
+  const waiting=await h.post(`workflows/${workflow.id}/test`,live,builder.cookie,201);
+  assert.equal(waiting.status,'awaiting_approval');assert.equal(edge.requests.length,1,'production-account rehearsal still requires exact-effect approval');
+  await h.post(`workflow-runs/${waiting.id}/approve`,{path:'invoice',digest:waiting.waits[0].proposal_digest},builder.cookie,403);
+  await h.restart();const completed=await h.post(`workflow-runs/${waiting.id}/approve`,{path:'invoice',digest:waiting.waits[0].proposal_digest});
+  assert.equal(completed.status,'succeeded');assert.equal(edge.requests.length,2,'unchanged builder authority survives restart');
+  for(const change of ['role','connection','deactivation']){
+   await scope();const pending=await h.post(`workflows/${workflow.id}/test`,live,builder.cookie,201);
+   if(change==='deactivation')assert.equal((await h.send('/auth/operator/status',{operatorId:builder.id,status:'inactive'},h.owner)).status,200);
+   else await scope(change==='role'?'viewer':'builder',change==='connection'?[]:[account.id,sandbox.id]);
+   if(change!=='deactivation')await scope(); // Regranting never resurrects an old test revision.
+   await h.restart();const stopped=await h.post(`workflow-runs/${pending.id}/approve`,{path:'invoice',digest:pending.waits[0].proposal_digest});
+   assert.equal(stopped.status,'paused',change);assert.equal(stopped.error.category,'authority');assert.equal(edge.requests.length,2,change+' stops the next dispatch');
+  }
+  // A separately active builder loses scope after HTTP admission but before its test commits.
+  await h.post('team/'+viewer.id,{role:'builder',workflow_ids:[workflow.id],connection_ids:[account.id,sandbox.id]});
+  let release;const ready=new Promise(resolve=>release=resolve),encoder=new TextEncoder();
+  const stream=new ReadableStream({async start(controller){controller.enqueue(encoder.encode('{"bindings":'));await ready;controller.enqueue(encoder.encode(JSON.stringify(request.bindings)+'}'));controller.close()}});
+  const inFlight=h.mf.dispatchFetch(h.origin+`/api/crank/workflows/${workflow.id}/test`,{method:'POST',body:stream,duplex:'half',redirect:'manual',headers:{origin:h.origin,cookie:viewer.cookie,'content-type':'application/json'}});
+  await new Promise(resolve=>setTimeout(resolve,500));await h.post('team/'+viewer.id,{role:'viewer',workflow_ids:[],connection_ids:[]});release();
+  assert.equal((await inFlight).status,403);assert.equal(edge.requests.length,2,'late-commit revocation creates no test effect');
+  assert.ok((await h.get('audit')).some(a=>a.action==='workflow.test'&&a.actor_id===builder.id&&a.version_id===tested.version_id));
+ }finally{await h.close()}
+});

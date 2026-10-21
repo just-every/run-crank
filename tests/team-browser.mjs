@@ -122,17 +122,34 @@ try {
     const policies=await send('team');const saved=policies.find(p=>p.operator_id===dana.id);
     assert.equal(saved.role,'builder');assert.deepEqual(saved.workflow_ids,[workflow.id]);assert.deepEqual(saved.connection_ids,[connection.id]);
     await shot(width,'scope-saved');
+    const builderSend=async(path,body,expected=201)=>{
+      const response=await builderContext.request.post(origin+'/api/crank/'+path,{headers:{origin},data:body});
+      const result=await response.json();assert.equal(response.status(),expected,result.error);return result;
+    };
+    const testRun=await builderSend(`workflows/${workflow.id}/test`,{input:{supplier:'Northshore Fabrication — tax rehearsal'},bindings:{}});
+    assert.equal(testRun.mode,'test');assert.equal(testRun.status,'awaiting_approval');assert.equal(testRun.version.published_by,dana.id);
     const ownerPage=page;page=builderPage;await page.setViewportSize({width,height:1000});
+    await page.goto(origin+'/app/workflow-runs/'+testRun.id);await expect(page.getByText('member-authorized draft test',{exact:false})).toBeVisible();
+    await expect(decisionForms(page)).toHaveCount(0);await shot(width,'builder-test-waiting');page=ownerPage;
+    const finished=await send(`workflow-runs/${testRun.id}/approve`,{path:'review',digest:testRun.waits[0].proposal_digest});assert.equal(finished.status,'succeeded');
+    page=builderPage;await page.reload();await expect(page.locator('main').getByText('Succeeded',{exact:true}).first()).toBeVisible();await shot(width,'builder-test-succeeded');page=ownerPage;
+    const revoked=await builderSend(`workflows/${workflow.id}/test`,{input:{supplier:'Riverside Industrial — revoked test'},bindings:{}});
+    await send('team/'+dana.id,{role:'viewer',workflow_ids:[workflow.id],connection_ids:[]});
+    await builderSend(`workflows/${workflow.id}/test`,{bindings:{}},403);
+    await send('team/'+dana.id,{role:'builder',workflow_ids:[workflow.id],connection_ids:[connection.id]});
+    const stopped=await send(`workflow-runs/${revoked.id}/approve`,{path:'review',digest:revoked.waits[0].proposal_digest});assert.equal(stopped.status,'paused');assert.equal(stopped.error.category,'authority');
+    page=builderPage;await page.goto(origin+'/app/workflow-runs/'+revoked.id);await expect(page.getByText(/Start a fresh test after resolving the change/)).toBeVisible();await shot(width,'builder-test-revoked');
+
     await page.goto(origin+'/app/workflows/'+workflow.id);await expect(page.getByText(workflow.name,{exact:true}).first()).toBeVisible();await expect(page.locator(`input[name="path"][value="/api/crank/workflows/${workflow.id}/run"]`)).toHaveCount(0);await shot(width,'workflow');await page.goto(origin+'/app/account');await expect(page.locator('main dd').filter({hasText:/Builder/})).toBeVisible();await shot(width,'account');page=ownerPage;
     await page.goto(origin+'/app/access');
     const transfer=page.locator('form').filter({has:page.locator('input[name="path"][value="/api/crank/team/transfer"]')});
     await transfer.locator('select[name="workflow_id"]').selectOption(workflow.id);await transfer.locator('select[name="new_owner_id"]').selectOption(morgan.id);
     await transfer.getByRole('button',{name:'Transfer ownership'}).click();await page.waitForURL('**/app/access');
     assert.equal((await send('workflows/'+workflow.id)).owner.id,morgan.id);await shot(width,'transferred');
-    report.push({clause:'TEAM-001',width,states:['scope-selection','scope-saved','workflow','account','transferred'],status:'pass'});
+    report.push({clause:'TEAM-001',width,states:['scope-selection','scope-saved','builder-test-waiting','builder-test-succeeded','builder-test-revoked','workflow','account','transferred'],status:'pass'});
   }
   await writeFile(join(evidence,'team-browser.json'),JSON.stringify(report,null,2));
-  console.log('TEAM-001: scoped role selection, saved policy and owner handover passed at 1440 and 390.');
+  console.log('TEAM-001: scoped role selection, builder draft-test completion/revocation and owner handover passed at 1440 and 390.');
 } finally {
   await browser?.close();
   for (const child of children.reverse()) await stopOwned(child);
