@@ -82,7 +82,7 @@ export async function workflowApi(request: Request, env: CrankEnv): Promise<Resp
     if (actor.grantId) {
       if (request.method === 'POST' && path === '/api/crank/agent-tasks') {
         requireWriteOrigin(request, env, actor)
-        return json(await startTask(env, actor, await body(request, 256 * 1024)), 201)
+        return json(await startTask(env, actor, await body(request, 256 * 1024), request.headers.get('Idempotency-Key')), 201)
       }
       const proposal = /^\/api\/crank\/agent-tasks\/([^/]+)\/proposal$/.exec(path)
       if (request.method === 'POST' && proposal) {

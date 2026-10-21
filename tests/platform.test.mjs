@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {harness} from './harness.mjs';
-import {fakeEdge,jsonResponse} from './kit.mjs';
+import {fakeEdge,jsonResponse,settled} from './kit.mjs';
 import {CrankClient,CrankApiError} from '../sdk/index.js';
 import {archive} from './restore-journey.mjs';
 
@@ -43,25 +43,52 @@ test('PLATFORM-001: SDK and MCP draft lifecycle, granted execution/progress, pag
   const published=await sdk.publishDraft(draft.id);assert.ok(published.version.id);
   const current=await sdk.readWorkflow(draft.id), grant=await issue(h,current), exec=client(h,{token:grant.credential}), agentRpc=mcp(h,{token:grant.credential});
   const input={task_id:'sdk-receipt',actions:[{step_id:'receipt',input:{body:{to:'operations@harbor.example',amount:'25.00'}}}]};
-  const run=await exec.startTask(input);assert.equal(run.status,'succeeded');assert.equal((await exec.readTask(run.id)).id,run.id);
-  const second=await call(agentRpc,'start_task',{input:{...input,task_id:'mcp-receipt'}});assert.equal(second.structuredContent.value.status,'succeeded');
+  let loseResponse=true;
+  const lossy=new CrankClient({baseUrl:h.origin,token:grant.credential,fetch:async(url,init)=>{
+   const response=await h.mf.dispatchFetch(url,init);
+   if(loseResponse){loseResponse=false;await response.text();throw Error('Simulated response loss after committed task')}
+   return response;
+  }});
+  const starts=await Promise.allSettled([lossy.startTask(input,{idempotencyKey:'receipt-one'}),...Array.from({length:3},()=>exec.startTask(input,{idempotencyKey:'receipt-one'}))]);
+  assert.equal(starts[0].status,'rejected');assert.equal(starts[0].reason.code,'network_error');
+  const ids=starts.slice(1).map(result=>{assert.equal(result.status,'fulfilled');return result.value.id});assert.equal(new Set(ids).size,1);
+  const run=await settled(h,ids[0]);assert.equal(run.status,'succeeded');assert.equal(edge.requests.length,1);
+  await h.restart();
+  const retry=await exec.startTask({actions:input.actions,task_id:input.task_id},{idempotencyKey:'receipt-one'});
+  assert.equal(retry.id,run.id);assert.equal(retry.version_id,run.version_id);assert.equal(retry.status,'succeeded');assert.equal(edge.requests.length,1);
+  await assert.rejects(()=>exec.startTask({...input,task_id:'changed'},{idempotencyKey:'receipt-one'}),e=>e.status===409&&e.code==='conflict');
+  assert.equal((await h.get('audit')).filter(a=>a.action==='grant.task'&&a.subject_id===run.id).length,1);
+  const exported=await archive(h);assert.ok(!exported.includes('receipt-one'));assert.ok(!exported.trim().split('\n').map(JSON.parse).flatMap(line=>line.items??[]).some(item=>item.table==='crank_task_idempotency'));
+  assert.equal((await exec.readTask(run.id)).id,run.id);
+  const second=await call(agentRpc,'start_task',{input:{...input,task_id:'mcp-receipt'},idempotency_key:'mcp-task'});assert.equal(second.structuredContent.value.status,'succeeded');
+  const secondRetry=await call(agentRpc,'start_task',{input:{...input,task_id:'mcp-receipt'},idempotency_key:'mcp-task'});assert.equal(secondRetry.structuredContent.value.id,second.structuredContent.value.id);assert.equal(edge.requests.length,2);
   assert.equal((await call(agentRpc,'get_task',{run_id:second.structuredContent.value.id})).structuredContent.value.grant_id,grant.id);
   const count=edge.requests.length;
   await assert.rejects(()=>exec.startTask({task_id:'foreign',actions:[{step_id:'foreign',input:{}}]}),e=>e.status===422&&e.code==='invalid_operation');
   assert.equal((await call(agentRpc,'create_draft',{input:{name:'Escalate',graph}})).isError,true);
   assert.equal((await call(agentRpc,'list_connections')).isError,true);
-  const held=await call(agentRpc,'start_task',{input:{task_id:'outside-limit',actions:[{step_id:'receipt',input:{body:{to:'outsider@example.test',amount:'100.01'}}}]}});
+  const heldInput={task_id:'outside-limit',actions:[{step_id:'receipt',input:{body:{to:'outsider@example.test',amount:'100.01'}}}]};
+  const held=await call(agentRpc,'start_task',{input:heldInput,idempotency_key:'needs-review'});
   assert.equal(held.structuredContent.value.status,'awaiting_approval');assert.equal(edge.requests.length,count,'grant limit cannot bypass exact human approval');
   const waiting=held.structuredContent.value;
+  const pendingRetry=await exec.startTask(heldInput,{idempotencyKey:'needs-review'});assert.equal(pendingRetry.id,waiting.id);assert.equal(pendingRetry.status,'awaiting_approval');assert.equal(pendingRetry.waits[0].proposal_digest,waiting.waits[0].proposal_digest);assert.equal(edge.requests.length,count);
   assert.equal((await h.post(`workflow-runs/${waiting.id}/reject`,{path:waiting.waits[0].path,digest:waiting.waits[0].proposal_digest})).status,'rejected');
   assert.equal(edge.requests.length,count);
+  const rejectedRetry=await exec.startTask(heldInput,{idempotencyKey:'needs-review'});assert.equal(rejectedRetry.id,waiting.id);assert.equal(rejectedRetry.status,'rejected');assert.equal(edge.requests.length,count);
   const seen=[];for await(const r of sdk.iterateRuns({workflow:draft.id,limit:1}))seen.push(r.id);
   assert.deepEqual(new Set(seen),new Set([run.id,second.structuredContent.value.id,waiting.id]));assert.equal(seen.length,3);
   const page=await call(rpc,'list_runs',{workflow:draft.id,limit:1});assert.ok(page.structuredContent.value.next);
   const next=await call(rpc,'list_runs',{workflow:draft.id,limit:1,before:page.structuredContent.value.next});assert.notEqual(next.structuredContent.value.runs[0].id,page.structuredContent.value.runs[0].id);
   const audit=await h.get('audit');for(const action of ['workflow.create','workflow.publish','grant.task','run.reject'])assert.ok(audit.some(a=>a.action===action),action);
   assert.equal((await h.send('/api/crank/v1/workflows')).value.code,'unauthenticated');
-  await h.post(`grants/${grant.id}/revoke`);await assert.rejects(()=>exec.readTask(run.id),e=>e.status===401);
+  const independent=await issue(h,current), other=client(h,{token:independent.credential});
+  const separate=await other.startTask(input,{idempotencyKey:'receipt-one'});assert.notEqual(separate.id,run.id);assert.equal(edge.requests.length,count+1);
+  await h.post(`workflows/${draft.id}/pause`);
+  await h.post('data/erase',{workflow_run_id:run.id,confirm:'ERASE'});
+  await h.post(`workflows/${draft.id}/resume`);
+  await assert.rejects(()=>exec.startTask(input,{idempotencyKey:'receipt-one'}),e=>e.status===409);assert.equal(edge.requests.length,count+1);
+  await h.post(`grants/${grant.id}/revoke`);await assert.rejects(()=>exec.readTask(waiting.id),e=>e.status===401);
+  await assert.rejects(()=>exec.startTask(heldInput,{idempotencyKey:'needs-review'}),e=>e.status===401);
  }finally{await h.close()}
 });
 

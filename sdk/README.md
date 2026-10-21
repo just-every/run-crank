@@ -87,10 +87,11 @@ const executor = createCrankClient({
   baseUrl: 'https://crank.example',
   token: process.env.CRANK_EXECUTION_CREDENTIAL,
 });
+const idempotencyKey = crypto.randomUUID(); // persist with this exact input
 const task = await executor.startTask({
   task_id: 'source-ticket-1042',
   actions: [{ step_id: 'record', input: { name: 'Harbour Workshop' } }],
-});
+}, { idempotencyKey });
 const progress = await executor.readTask(task.id);
 console.log(progress.status, progress.steps, progress.waits);
 ```
@@ -103,7 +104,7 @@ returns that grant's task only. Call it again deliberately to observe progress;
 there is no background polling. A task's workflow status and HTTP success do not
 establish independently verified business completion. Use `business_outcome`
 and the native retained evidence. A network error leaves the outcome unknown;
-inspect the task history before dispatching additional effects.
+retry deliberately with the same key and exact JSON input to recover the original task, or inspect task history before dispatching additional effects. Concurrent/restarted retries retain one run/version/effect and return current progress; changed input conflicts. Keys are scoped to the execution grant, and task_id alone does not deduplicate. A revoked grant cannot replay a key; erased task history conflicts instead of launching again. Optional keys do not bypass approvals.
 
 ## Reads and pagination
 

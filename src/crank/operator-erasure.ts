@@ -32,6 +32,7 @@ export async function eraseOperator(env: CrankEnv, actor: Actor, operatorId: str
     stmt(env, 'DELETE FROM crank_agent_followup_authorizations WHERE recipient_id=? OR owner_id=?',person.id,person.id),
     stmt(env, 'DELETE FROM crank_team_access WHERE operator_id=?', person.id),
     stmt(env, 'DELETE FROM crank_workflow_idempotency WHERE actor_id=?', person.id),
+    stmt(env, 'DELETE FROM crank_task_idempotency WHERE actor_id=?', person.id),
     stmt(env, "UPDATE crank_audit SET subject_id=? WHERE subject_kind='operator' AND subject_id=?", label, person.id),
     stmt(env, 'UPDATE oa_auth_audit SET actor_id=CASE WHEN actor_id=?1 THEN ?2 ELSE actor_id END,value=CASE WHEN value IN (?1,?3) THEN ?2 ELSE value END WHERE actor_id=?1 OR value IN (?1,?3)', person.id, label, person.email),
     stmt(env, 'UPDATE oa_sessions SET revoked_at=? WHERE operator_id=? AND revoked_at IS NULL', at, person.id),

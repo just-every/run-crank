@@ -391,7 +391,7 @@ grant. The SDK and MCP add no external recipient or execution class: the same
 published destinations, input/file limits, audit, sealing, erasure, recovery
 and inactive archive rules apply.
 
-Only workflow create and draft save add `Idempotency-Key` support. The optional
+Workflow create, draft save and granted task starts support `Idempotency-Key`. The optional
 header is 1–200 visible ASCII characters, scoped to the current credential
 (session or token), operation and target workflow. Canonical JSON comparison
 ignores object-key order; the same key/body yields one workflow/save, snapshot
@@ -403,6 +403,17 @@ cannot revert newer edits. A new session/token is a separate key namespace.
 Receipts retain only hashes and IDs, are installation-local, do not travel in
 archives, and are removed during operator erasure. Other write endpoints keep
 their documented existing behavior.
+
+Task starts scope the key to the execution grant. Identical canonical JSON retries
+create one immutable task version, run, estimate and audit record atomically; only
+the winning start dispatches. A replay reads current progress without executing
+again, including while awaiting approval or after rejection. The current grant
+must still authorize the request. `task_id` is a source label, not a unique key.
+Changed reuse returns 409. Task receipts follow the same hash/ID-only local custody
+and operator erasure policy; history erasure leaves a receipt that refuses reuse
+with 409, so a retry cannot resurrect effects. Archives omit task receipts and grants.
+The SDK accepts `startTask(input, {idempotencyKey, signal})`; MCP `start_task`
+accepts `idempotency_key`. Clients never retry automatically.
 
 ### MCP client connection
 
@@ -419,7 +430,7 @@ checks and authentication apply to every request. The transport follows the
 Tools are `create_draft`, `update_draft`, `validate_draft`, `publish_workflow`,
 `get_workflow`, `list_workflows`, `list_runs`, `get_run`, `list_connections`,
 `start_task` and `get_task`. Discover their argument schemas with `tools/list`.
-Create/update take `input` and optional `idempotency_key`; workflow tools take
+Create/update/start-task take `input` and optional `idempotency_key`; workflow tools take
 `workflow_id`, run/task reads take `run_id`. `start_task` takes `input` containing
 `task_id` and `actions`. `list_runs` returns the normal `{runs,next}` page;
 pass `next` as `before` on the next call. Tool responses include text JSON and

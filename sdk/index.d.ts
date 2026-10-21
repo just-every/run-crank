@@ -121,7 +121,7 @@ export class CrankClient {
   listRuns(query?: RunQuery, options?: RequestOptions): Promise<RunPage>;
   iterateRuns(query?: RunQuery, options?: RequestOptions): AsyncGenerator<Run, void, unknown>;
   readRun(runId: string, options?: RequestOptions): Promise<RunDetail>;
-  startTask(input: TaskInput, options?: RequestOptions): Promise<RunDetail>;
+  startTask(input: TaskInput, options?: DraftWriteOptions): Promise<RunDetail>;
   readTask(runId: string, options?: RequestOptions): Promise<RunDetail>;
 }
 export function createCrankClient(options: ClientOptions): CrankClient;

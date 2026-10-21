@@ -14,7 +14,7 @@ export const tools: Tool[] = [
   tool('list_runs', 'Read a page of workflow runs. Pass next as before for the next page.', 'GET', a => '/workflow-runs?' + new URLSearchParams(Object.entries(a).map(([k, v]) => [k, String(v)])), { workflow: string, before: string, limit: { type: 'integer', minimum: 1, maximum: 100 }, status: string }),
   tool('get_run', 'Inspect an existing workflow run with the caller’s authority.', 'GET', a => '/workflow-runs/' + part(a, 'run_id'), { run_id: string }, ['run_id']),
   tool('list_connections', 'Read connection metadata, never credentials.', 'GET', () => '/connections'),
-  tool('start_task', 'Start granted work with a separate execution credential; normal grant limits and exact approval apply.', 'POST', () => '/agent-tasks', { input: object }, ['input'], a => a.input),
+  tool('start_task', 'Start granted work with a separate execution credential; normal grant limits and exact approval apply.', 'POST', () => '/agent-tasks', { input: object, idempotency_key: string }, ['input'], a => a.input),
   tool('get_task', 'Read progress for this execution credential’s task.', 'GET', a => '/agent-tasks/' + part(a, 'run_id'), { run_id: string }, ['run_id']),
 ]
 

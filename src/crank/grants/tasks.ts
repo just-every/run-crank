@@ -5,9 +5,10 @@ import { executeRun } from '../engine/executor'
 import { runDetail } from '../workflows/runs'
 import { isObject } from '../engine/values'
 import { canonical, digest, id, now, requireValue, stmt, text, type Actor, type CrankEnv } from '../model'
-import { auditStatement } from '../ops/audit'
+import { auditStatementWhen } from '../ops/audit'
 import { assertGrantStart } from './authority'
 import { grantLeaves } from './policy'
+import { claimTask, readTaskReceipt, requireTaskHistory, taskCommand, taskCondition, taskReceipt } from './task-idempotency'
 import { indexStatement, sealText, targetFor } from '../ops/payload-seal'
 
 export function taskInput(original: Record<string, unknown>, proposed: Record<string, unknown>) {
@@ -19,11 +20,16 @@ export function taskInput(original: Record<string, unknown>, proposed: Record<st
 
 /** A task chooses and orders the owner's tools. It cannot replace a tool's account,
  * transport, retry/readback settings or graph policy. Inputs remain reviewable. */
-export async function startTask(env: CrankEnv, actor: Actor, input: Record<string, unknown>) {
+export async function startTask(env: CrankEnv, actor: Actor, input: Record<string, unknown>, idempotencyKey?: string | null) {
   requireValue(actor.grantId, 'Use an owner-issued execution credential', 403)
   const grant = await stmt(env, 'SELECT workflow_id,version_id FROM crank_grants WHERE id=?', actor.grantId).first<{workflow_id: string; version_id: string}>()
   requireValue(grant, 'Grant not found', 403)
   await assertGrantStart(env, actor, grant.workflow_id)
+  const command = await taskCommand(env, actor, idempotencyKey, input)
+  if (command?.existing) {
+    await requireTaskHistory(env, command.existing.run_id)
+    return runDetail(env, actor, command.existing.run_id)
+  }
   const workflow = await getWorkflow(env, grant.workflow_id)
   const source = await stmt(env, 'SELECT * FROM crank_workflow_versions WHERE id=?', grant.version_id).first<VersionRow>()
   requireValue(source, 'Grant source version is unavailable', 409)
@@ -45,20 +51,31 @@ export async function startTask(env: CrankEnv, actor: Actor, input: Record<strin
   })
   const graph = { ...sourceGraph, trigger: { type: 'manual' }, steps }, checked = validateGraph(graph)
   const graphJson = canonical(checked.graph), versionId = id(), runId = id(), at = now()
-  const target = await targetFor(env,workflow.id), payload = canonical({tools}), index = await indexStatement(env,target,runId,[payload])
+  const condition = taskCondition(command)
+  const target = await targetFor(env,workflow.id), payload = canonical({tools}), index = await indexStatement(env,target,runId,[payload],condition.sql,condition.args)
   const declared = { ...JSON.parse(source.declared_json), steps: checked.declared.steps, connections: checked.declared.connections, grant_id: actor.grantId, source_version_id: source.id }
   // A subset uses the owner's entire source per-run estimate, conservatively;
   // no agent may quote itself a smaller USD estimate or change retry budgets.
-  await guardedBatch(env, actor, 'read', [
+  const results = await guardedBatch(env, actor, 'read', [
+    ...(command ? [claimTask(env, actor, command, workflow.id, runId)] : []),
     stmt(env, `INSERT INTO crank_workflow_versions(id,workflow_id,number,graph_json,graph_digest,declared_json,published_by,published_at,retry_policy_json,grant_source_version_id)
-      VALUES(?,?,(SELECT COALESCE(MAX(number),0)+1 FROM crank_workflow_versions WHERE workflow_id=?),?,?,?,?,?,?,?)`, versionId, workflow.id, workflow.id, graphJson, await digest(graphJson), canonical(declared), source.published_by, at, source.retry_policy_json, source.id),
+      SELECT ?,?,(SELECT COALESCE(MAX(number),0)+1 FROM crank_workflow_versions WHERE workflow_id=?),?,?,?,?,?,?,? WHERE ${condition.sql}`, versionId, workflow.id, workflow.id, graphJson, await digest(graphJson), canonical(declared), source.published_by, at, source.retry_policy_json, source.id, ...condition.args),
     stmt(env, `INSERT INTO crank_usage_version_estimates(version_id,workflow_id,cost_json,estimate_units,quoted_by,quoted_at)
-      SELECT ?,workflow_id,cost_json,estimate_units,quoted_by,quoted_at FROM crank_usage_version_estimates WHERE version_id=?`, versionId, source.id),
+      SELECT ?,workflow_id,cost_json,estimate_units,quoted_by,quoted_at FROM crank_usage_version_estimates WHERE version_id=? AND ${condition.sql}`, versionId, source.id, ...condition.args),
     stmt(env, `INSERT INTO crank_wf_runs(id,workflow_id,version_id,trigger_kind,source_id,trigger_json,status,received_at,created_by,grant_id,payload_key,payload_index)
-      VALUES(?,?,?,'agent',?,?,'queued',?,?,?,?,?)`, runId, workflow.id, versionId, text(input.task_id, 'task_id'), await sealText(target,payload), at, actor.id, actor.grantId,target.key?.id ?? null,target.key ? target.fieldsJson : null),
+      SELECT ?,?,?,'agent',?,?,'queued',?,?,?,?,? WHERE ${condition.sql}`, runId, workflow.id, versionId, text(input.task_id, 'task_id'), await sealText(target,payload), at, actor.id, actor.grantId,target.key?.id ?? null,target.key ? target.fieldsJson : null, ...condition.args),
     ...(index ? [index] : []),
-    auditStatement(env, actor.id, 'grant.task', 'run', runId, { grant_id: actor.grantId, tools: steps.map(step => step.id) }, versionId),
+    auditStatementWhen(env, condition.sql, condition.args, actor.id, 'grant.task', 'run', runId, { grant_id: actor.grantId, tools: steps.map(step => step.id) }, versionId),
+    ...(command ? [taskReceipt(env, command)] : []),
   ])
+  if (command) {
+    const receipt = readTaskReceipt(results[results.length - 1], command)
+    requireValue(receipt, 'Task start could not be confirmed', 503)
+    if (receipt.attempt_id !== command.attempt) {
+      await requireTaskHistory(env, receipt.run_id)
+      return runDetail(env, actor, receipt.run_id)
+    }
+  }
   await executeRun(env, runId)
   return runDetail(env, actor, runId)
 }

@@ -1,4 +1,4 @@
-/** TEAM-002 real rer dev + live public HTTP echo; run via heavy-slot. */
+/** TEAM-002 PLATFORM-001 real rer dev + live public HTTP echo; run via heavy-slot. */
 import assert from 'node:assert/strict';
 import {spawn,execFileSync} from 'node:child_process';
 import {mkdtemp,mkdir,readFile,rm} from 'node:fs/promises';
@@ -30,7 +30,7 @@ try {
  await page.goto(open);await page.waitForURL(u=>['/app','/setup'].includes(u.pathname),{timeout:60000});
  if(new URL(page.url()).pathname==='/setup'){await page.getByRole('checkbox').check();await page.getByRole('button',{name:'Finish setup',exact:true}).click();await page.waitForURL('**/app')}
  const origin=new URL(open).origin;
- const send=async(path,body,status=200,credential)=>{const r=await context.request.fetch(origin+'/api/crank/'+path,{method:body===undefined?'GET':'POST',headers:{origin,...(credential?{authorization:'Bearer '+credential}:{})},...(body===undefined?{}:{data:body})});const v=await r.json();assert.equal(r.status(),status,`${path}: ${JSON.stringify(v)}`);return v};
+ const send=async(path,body,status=200,credential,idempotencyKey)=>{const r=await context.request.fetch(origin+'/api/crank/'+path,{method:body===undefined?'GET':'POST',headers:{origin,...(credential?{authorization:'Bearer '+credential}:{}),...(idempotencyKey?{'Idempotency-Key':idempotencyKey}:{})},...(body===undefined?{}:{data:body})});const v=await r.json();assert.equal(r.status(),status,`${path}: ${JSON.stringify(v)}`);return v};
  const shot=async(width,state)=>{await page.screenshot({path:join(evidence,`${width}-${state}.png`),fullPage:true});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`${width}/${state} overflow`)};
  for(const width of [1440,390]){
   await page.setViewportSize({width,height:1000});
@@ -46,7 +46,10 @@ try {
   await panel.getByRole('button',{name:'Issue standing grant'}).click();await page.waitForLoadState('networkidle');const credential=await page.getByLabel('Credential',{exact:true}).inputValue();assert.match(credential,/^crg_/);await shot(width,'credential-created');
   const grant=(await send('grants')).find(g=>g.workflow_id===workflow.id);assert.ok(grant);assert.equal(grant.credential,undefined);
   const task=async(amount,extra=[])=>send('agent-tasks',{task_id:crypto.randomUUID(),actions:[...extra,{step_id:'refund',input:{body:{...tool.input.body,amount}}}]},201,credential);
-  const within=await task('75.00');assert.equal(within.status,'succeeded',JSON.stringify(within.error));await page.goto(origin+'/app/workflow-runs/'+within.id);await shot(width,'within-grant');
+  const keyedInput={task_id:'supplier-receipt-'+width,actions:[{step_id:'refund',input:{body:{...tool.input.body,amount:'75.00'}}}]},key='supplier-receipt-'+width;
+  const within=await send('agent-tasks',keyedInput,201,credential,key);
+  const recovered=await send('agent-tasks',keyedInput,201,credential,key);assert.equal(recovered.id,within.id);assert.equal(recovered.version_id,within.version_id);
+  await send('agent-tasks',{...keyedInput,task_id:'changed-source'},409,credential,key);assert.equal(within.status,'succeeded',JSON.stringify(within.error));await page.goto(origin+'/app/workflow-runs/'+within.id);await shot(width,'within-grant');
   assert.equal(within.steps[0].output.body.json.amount,'75.00','live public HTTP receiver echoes the actual submitted amount');
   const approved=await task('125.00');await page.goto(origin+'/app/approvals');await shot(width,'approval-inbox');await page.goto(origin+'/app/workflow-runs/'+approved.id);await shot(width,'exact-review');await page.getByRole('button',{name:'Approve',exact:true}).click();await page.waitForLoadState('networkidle');assert.equal((await send('agent-tasks/'+approved.id,undefined,200,credential)).status,'succeeded');await shot(width,'approved');
   const rejected=await task('225.00');await page.goto(origin+'/app/workflow-runs/'+rejected.id);await page.getByRole('button',{name:'Reject',exact:true}).click();await page.waitForLoadState('networkidle');assert.equal((await send('agent-tasks/'+rejected.id,undefined,200,credential)).status,'rejected');await shot(width,'rejected');
@@ -63,7 +66,7 @@ try {
   const interrupted=await inFlight;assert.equal(interrupted.status,'paused');assert.equal(interrupted.steps.find(s=>s.step_id==='slow').status,'uncertain');assert.equal(interrupted.steps.find(s=>s.step_id==='refund'),undefined);
   await page.goto(origin+'/app/workflow-runs/'+interrupted.id);await shot(width,'revoked-in-flight-uncertain');
   await send('agent-tasks',{task_id:'revoked',actions:[{step_id:'refund',input:{body:tool.input.body}}]},401,credential);await page.goto(origin+'/app/workflow-runs/'+parked.id);assert.match(await page.locator('body').innerText(),/grant revoked/i);await shot(width,'revoked-task-paused');
-  console.log(`TEAM-002 ${width}: owner issuance, live HTTP response, exact approval/rejection, stale-review refusal, timeout escalation and revocation passed`);
+  console.log(`TEAM-002 PLATFORM-001 ${width}: keyed task recovery/conflict,  owner issuance, live HTTP response, exact approval/rejection, stale-review refusal, timeout escalation and revocation passed`);
  }
  await context.close();
 }catch(error){if(page){await page.screenshot({path:join(evidence,'journey-error.png'),fullPage:true});console.error((await page.locator('body').innerText()).slice(0,800))}console.error(String(error.message).replace(/https?:\/\/\S+/g,'[redacted URL]'));process.exitCode=1}
