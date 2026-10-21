@@ -67,4 +67,7 @@ jobs:
       - run: npm install --global pnpm@10.12.4
       - run: pnpm install --frozen-lockfile
       - run: sudo apt-get update && sudo apt-get install -y bubblewrap
-      - run: node tests/executor-linux.mjs
+      # This disposable VM enables the kernel feature required by the Linux executor.
+      - run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+      # Root stages fixtures; every executor job runs as the separate nobody user.
+      - run: sudo "$(command -v node)" tests/executor-linux.mjs
