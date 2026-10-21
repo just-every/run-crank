@@ -1,4 +1,5 @@
 import { guardedBatch, requireOwner } from '../access'
+import { gatewayScopeId, validateConnectionScopes } from '../custom/use-scope'
 import { randomToken } from '../connections/vault'
 import { body, digest, id, json, now, requireValue, stmt, text, type Actor, type CrankEnv } from '../model'
 import { auditStatement } from '../ops/audit'
@@ -16,10 +17,13 @@ type ServiceActor = Actor & {
 const columns = 'id,label,environment,workflow_ids_json,connection_ids_json,owner_id,owner_version,created_at,expires_at,status,ended_at,end_reason'
 const currentScope = `EXISTS(SELECT 1 FROM oa_operators o WHERE o.id=s.owner_id AND o.status='active' AND o.role='owner' AND o.version=s.owner_version)
   AND NOT EXISTS(SELECT 1 FROM json_each(s.workflow_ids_json) j LEFT JOIN crank_workflows w ON w.id=j.value WHERE w.id IS NULL OR w.environment!=s.environment)
-  AND NOT EXISTS(SELECT 1 FROM json_each(s.connection_ids_json) j LEFT JOIN crank_connections c ON c.id=j.value WHERE c.id IS NULL OR c.environment!=s.environment OR c.status!='active')
+  AND NOT EXISTS(SELECT 1 FROM json_each(s.connection_ids_json) j WHERE
+    NOT EXISTS(SELECT 1 FROM crank_connections c WHERE c.id=j.value AND c.environment=s.environment AND c.status='active')
+    AND NOT EXISTS(SELECT 1 FROM crank_gateways g JOIN oa_operators o ON o.id=g.owner_id WHERE 'gateway:'||g.id=j.value
+      AND g.environment=s.environment AND g.status='active' AND o.status='active' AND o.role='owner' AND o.version=g.owner_version))
   AND NOT EXISTS(SELECT 1 FROM json_each(s.workflow_ids_json) j JOIN crank_workflows w ON w.id=j.value,json_tree(w.draft_json) t
     WHERE (t.key='connection_id' AND (t.type!='text' OR t.atom NOT IN (SELECT value FROM json_each(s.connection_ids_json))))
-      OR (t.key='gateway_id' AND NOT EXISTS(SELECT 1 FROM crank_gateways g WHERE g.id=t.atom AND g.environment=s.environment AND g.status='active'))
+      OR (t.key='gateway_id' AND (t.type!='text' OR 'gateway:'||t.atom NOT IN (SELECT value FROM json_each(s.connection_ids_json))))
       OR (t.key='environment' AND t.atom!=s.environment))`
 const present = ({ workflow_ids_json, connection_ids_json, ...row }: ServiceRow) => ({
   ...row, workflow_ids: JSON.parse(workflow_ids_json), connection_ids: JSON.parse(connection_ids_json), scope: 'preparation:read',
@@ -87,7 +91,10 @@ export async function admitServiceAccountRequest(request: Request, env: CrankEnv
       if (!value || typeof value !== 'object') return
       for (const [key, item] of Object.entries(value)) {
         if (key === 'environment') requireValue(item === service.serviceEnvironment, 'Gateway environment is outside service account scope', 403)
-        if (key === 'gateway_id') requireValue(await stmt(env, "SELECT id FROM crank_gateways WHERE id=? AND environment=? AND status='active'", item, service.serviceEnvironment).first(), 'Gateway is outside service account environment', 403)
+        if (key === 'gateway_id') {
+          requireValue(typeof item === 'string' && service.serviceConnectionIds.includes(gatewayScopeId(item)), 'Gateway is outside service account connection scope', 403)
+          requireValue(await stmt(env, "SELECT id FROM crank_gateways WHERE id=? AND environment=? AND status='active'", item, service.serviceEnvironment).first(), 'Gateway is outside service account environment', 403)
+        }
         await visit(item)
       }
     }
@@ -107,9 +114,10 @@ export async function admitServiceAccountRequest(request: Request, env: CrankEnv
 }
 
 async function scopeIds(env: CrankEnv, value: unknown, table: 'crank_workflows' | 'crank_connections', environment: string) {
+  if (table === 'crank_connections') return validateConnectionScopes(env, value, environment)
   requireValue(Array.isArray(value) && value.length <= 500 && value.every(item => typeof item === 'string' && item.length > 0), 'Scope must contain record ids', 422)
   const ids = [...new Set(value as string[])].sort()
-  const rows = await stmt(env, `SELECT id FROM ${table} WHERE id IN (SELECT value FROM json_each(?)) AND environment=?${table === 'crank_connections' ? " AND status='active'" : ''}`, JSON.stringify(ids), environment).all()
+  const rows = await stmt(env, `SELECT id FROM ${table} WHERE id IN (SELECT value FROM json_each(?)) AND environment=?`, JSON.stringify(ids), environment).all()
   requireValue(rows.results.length === ids.length, 'Scope contains an unknown or unavailable record in this environment', 422)
   return ids
 }

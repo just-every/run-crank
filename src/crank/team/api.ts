@@ -1,6 +1,7 @@
 import { authorize, guardedBatch, requireOwner, requireWriteOrigin } from '../access'
 import { body, CrankError, id, json, now, requireValue, stmt, type CrankEnv } from '../model'
 import { auditStatement } from '../ops/audit'
+import { validateConnectionScopes } from '../custom/use-scope'
 
 export async function teamApi(request: Request, env: CrankEnv): Promise<Response | null> {
   const path = new URL(request.url).pathname
@@ -37,7 +38,7 @@ export async function teamApi(request: Request, env: CrankEnv): Promise<Response
       }
       return values
     }
-    const workflowIds = await scope(input.workflow_ids ?? [], 'crank_workflows'), connectionIds = await scope(input.connection_ids ?? [], 'crank_connections')
+    const workflowIds = await scope(input.workflow_ids ?? [], 'crank_workflows'), connectionIds = await validateConnectionScopes(env, input.connection_ids ?? [])
     const revision = id(), at = now()
     await guardedBatch(env, actor, 'owner', [
       stmt(env, `INSERT INTO crank_team_access(operator_id,role,workflow_ids_json,connection_ids_json,revision,changed_by,changed_at) VALUES(?,?,?,?,?,?,?)

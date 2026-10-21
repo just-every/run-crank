@@ -45,9 +45,15 @@ try {
   {const path=`/api/crank/gateways/${state.gateway.id}/poll`,input={environment:'staging'};await send(path,input,403,signedGatewayHeaders(state,path,input))}
   const step={id:'stock',name:'Read warehouse stock from the private database',type:'custom.request',retry_policy:{read_attempts:1},connector_id:id,connector_version:1,operation:'record',gateway_id:state.gateway.id,environment:'production',input:{name:'Oak workbench'}},file={...step,id:'file',name:'Resume the warehouse stock file pipeline',operation:'file',input:{}};
   const workflow=await h.post('workflows',{name:'Harbour Workshop — private database and file checkpoint acceptance',graph:{trigger:{type:'manual'},steps:[step,file]}},h.owner,201);
+  await send('/auth/invite',{email:'warehouse-builder@example.test',displayName:'Harbour warehouse builder',role:'member'},202);
+  const joined=await runtime.h.send('/auth/confirm',{token:new URL(runtime.mailLink()).searchParams.get('token')});assert.equal(joined.status,303,joined.text);
+  await page.goto(origin+'/app/access');await page.getByText('Manage access for Harbour warehouse builder',{exact:true}).click();
+  const builderForm=page.locator('form').filter({has:page.getByRole('button',{name:'Save access for Harbour warehouse builder',exact:true})});
+  await builderForm.getByLabel('Product role',{exact:true}).selectOption('builder');await builderForm.locator(`[name="workflow_${workflow.id}"]`).check();await builderForm.locator(`[name="connection_gateway:${state.gateway.id}"]`).check();
+  await shots('gateway-team-use-scope');await page.getByRole('button',{name:'Save access for Harbour warehouse builder',exact:true}).click();await shots('gateway-team-use-granted');
   await page.goto(origin+'/app/connections');await page.getByText('Create a scoped service account',{exact:true}).click();
   await page.getByLabel('Service account name',{exact:true}).fill('Harbour Workshop — inventory preparation service');
-  await page.locator(`[name="service_workflow_${workflow.id}"]`).check();await shots('service-account-scope');await page.getByRole('button',{name:'Create service account',exact:true}).click();
+  await page.locator(`[name="service_workflow_${workflow.id}"]`).check();await page.locator(`[name="service_connection_gateway:${state.gateway.id}"]`).check();await shots('service-account-scope');await page.getByRole('button',{name:'Create service account',exact:true}).click();
   const serviceToken=await page.getByLabel('Credential',{exact:true}).inputValue();await shots('service-account-issued');
   assert.equal((await send('/api/crank/workflows/'+workflow.id,undefined,200,{authorization:'Bearer '+serviceToken})).id,workflow.id);
   await send('/api/crank/workflows/'+workflow.id+'/run',{},403,{authorization:'Bearer '+serviceToken});

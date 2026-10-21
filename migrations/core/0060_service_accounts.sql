@@ -45,9 +45,15 @@ BEGIN UPDATE crank_service_accounts SET status='suspended',ended_at=strftime('%Y
  AND EXISTS(SELECT 1 FROM json_tree(NEW.draft_json) t WHERE
   (t.key='connection_id' AND (t.type!='text' OR t.atom NOT IN (SELECT value FROM json_each(connection_ids_json))))
   OR (t.key='environment' AND t.atom!=environment)
-  OR (t.key='gateway_id' AND NOT EXISTS(SELECT 1 FROM crank_gateways g WHERE g.id=t.atom AND g.environment=crank_service_accounts.environment AND g.status='active'))); END;
+  OR (t.key='gateway_id' AND (t.type!='text' OR 'gateway:'||t.atom NOT IN (SELECT value FROM json_each(connection_ids_json))))); END;
 CREATE TRIGGER crank_service_connection_ended AFTER UPDATE OF environment,status ON crank_connections
 WHEN NEW.environment!=OLD.environment OR NEW.status!='active'
 BEGIN UPDATE crank_service_accounts SET status='suspended',ended_at=strftime('%Y-%m-%dT%H:%M:%fZ','now'),end_reason='connection scope ended' WHERE status='active' AND EXISTS(SELECT 1 FROM json_each(connection_ids_json) WHERE value=NEW.id); UPDATE crank_team_authority SET revision=revision+1 WHERE singleton=1; END;
 CREATE TRIGGER crank_service_connection_deleted AFTER DELETE ON crank_connections
 BEGIN UPDATE crank_service_accounts SET status='suspended',ended_at=strftime('%Y-%m-%dT%H:%M:%fZ','now'),end_reason='connection scope ended' WHERE status='active' AND EXISTS(SELECT 1 FROM json_each(connection_ids_json) WHERE value=OLD.id); END;
+
+CREATE TRIGGER crank_service_gateway_ended AFTER UPDATE OF environment,status,owner_id,owner_version ON crank_gateways
+WHEN NEW.environment!=OLD.environment OR NEW.status!='active' OR NEW.owner_id!=OLD.owner_id OR NEW.owner_version!=OLD.owner_version
+BEGIN UPDATE crank_service_accounts SET status='suspended',ended_at=strftime('%Y-%m-%dT%H:%M:%fZ','now'),end_reason='gateway scope ended' WHERE status='active' AND EXISTS(SELECT 1 FROM json_each(connection_ids_json) WHERE value='gateway:'||NEW.id); END;
+CREATE TRIGGER crank_service_gateway_deleted AFTER DELETE ON crank_gateways
+BEGIN UPDATE crank_service_accounts SET status='suspended',ended_at=strftime('%Y-%m-%dT%H:%M:%fZ','now'),end_reason='gateway scope ended' WHERE status='active' AND EXISTS(SELECT 1 FROM json_each(connection_ids_json) WHERE value='gateway:'||OLD.id); END;

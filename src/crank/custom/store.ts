@@ -5,6 +5,7 @@ import type { Step } from '../engine/types'
 import { canonical, digest, id, now, requireValue, stmt, type Actor, type CrankEnv } from '../model'
 import { auditStatement } from '../ops/audit'
 import { parseDefinition, type CustomDefinition, type CustomOperation } from './definition'
+import { requireCustomUse } from './use-scope'
 
 export interface CustomVersion {
   id:string; version:number; definition_json:string; definition_digest:string; scopes_json:string
@@ -69,7 +70,7 @@ export function customSteps(graph:Graph):Step[] {
   return walk(graph.steps)
 }
 export async function checkCustomPublication(env:CrankEnv,graph:Graph,actor:Actor) {
-  if(customSteps(graph).length || graph.trigger.custom_connector_id)requireOwner(actor)
+  requireCustomUse(actor,graph)
   for (const step of customSteps(graph)) allowedOperation(await customVersion(env,String(step.connector_id),Number(step.connector_version)),String(step.operation),false)
 }
 

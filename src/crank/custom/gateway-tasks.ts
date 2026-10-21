@@ -10,12 +10,13 @@ import { openText, sealText, targetFor } from '../ops/payload-seal'
 import type { CustomOperation } from './definition'
 import { allowedOperation, customVersion } from './store'
 import type { Gateway } from './gateways'
+import { frozenCustomActorSql } from './use-scope'
 
 export class GatewayWait extends Error { constructor(readonly taskId:string){super('Waiting for the enrolled private gateway')} }
 interface Task {id:string;run_id:string;workflow_id:string;path:string;ordinal:number;gateway_id:string;grant_id:string;grant_revision:number;authority_revision:number;connector_id:string;connector_version:number;operation:string;destination:string;operation_key:string;request_key:string;input_json:string;status:string;output_json:string|null;output_digest:string|null;error_json:string|null;expires_at:string;retry_request_key:string;retry_number:number;budget_started_at:string;attempt_id:string|null}
 // Repeated inside every claim/result transaction. A signing identity alone is
 // never a private-network proxy and cannot revive paused/restored/cancelled work.
-const liveTask=`EXISTS(SELECT 1 FROM crank_gateway_grants a JOIN crank_gateways g ON g.id=a.gateway_id JOIN oa_operators o ON o.id=g.owner_id
+const taskAuthority=`EXISTS(SELECT 1 FROM crank_gateway_grants a JOIN crank_gateways g ON g.id=a.gateway_id JOIN oa_operators o ON o.id=g.owner_id
   JOIN crank_custom_versions c ON c.id=a.connector_id AND c.version=a.connector_version
   JOIN crank_wf_runs r ON r.id=crank_gateway_tasks.run_id JOIN crank_workflows w ON w.id=r.workflow_id
   JOIN crank_workflow_versions v ON v.id=r.version_id
@@ -26,19 +27,23 @@ const liveTask=`EXISTS(SELECT 1 FROM crank_gateway_grants a JOIN crank_gateways 
   AND a.status='active' AND g.status='active' AND o.status='active' AND o.role='owner' AND o.version=g.owner_version
   AND EXISTS(SELECT 1 FROM json_each(v.declared_json,'$.custom_bindings') b WHERE json_extract(b.value,'$.id')=c.id AND json_extract(b.value,'$.version')=c.version AND json_extract(b.value,'$.definition_digest')=c.definition_digest AND json_extract(b.value,'$.consent_generation')=c.consent_generation)
   AND c.status IN ('sandbox','ready') AND (r.mode='test' OR c.status='ready')
-  AND r.status IN ('queued','running','waiting') AND w.status!='paused' AND w.owner_id!='restore:awaiting-adoption'
-  AND (r.mode='test' AND r.test_owner_version=o.version AND r.created_by=o.id OR r.mode='production' AND w.status='published' AND (w.published_version_id=r.version_id OR (r.continuation_authority&2)!=0))
+  AND w.status!='paused' AND w.owner_id!='restore:awaiting-adoption'
+  AND (${frozenCustomActorSql()})
+  AND EXISTS(SELECT 1 FROM json_each(v.declared_json,'$.gateways') WHERE value=crank_gateway_tasks.gateway_id)
+  AND (r.mode='test' AND v.mode='test' AND v.retired_at IS NULL OR r.mode='production' AND v.mode='production' AND w.status='published' AND (w.published_version_id=r.version_id OR (r.continuation_authority&2)!=0))
   AND EXISTS(SELECT 1 FROM json_each(a.operations_json) WHERE value=crank_gateway_tasks.operation)
   AND EXISTS(SELECT 1 FROM json_each(a.destinations_json) WHERE json_extract(value,'$.label')=crank_gateway_tasks.destination)
   AND EXISTS(SELECT 1 FROM json_each(c.definition_json,'$.operations') op WHERE json_extract(op.value,'$.id')=crank_gateway_tasks.operation
     AND NOT EXISTS(SELECT 1 FROM json_each(op.value,'$.scopes') s WHERE s.value NOT IN (SELECT value FROM json_each(c.scopes_json))))
   AND crank_gateway_tasks.expires_at>?)`
+const liveTask=`${taskAuthority} AND EXISTS(SELECT 1 FROM crank_wf_runs WHERE id=crank_gateway_tasks.run_id AND status IN ('queued','running','waiting'))`
 
 async function checkTask(env:CrankEnv,task:Task) {
   await assertDispatchAuthority(env,task.run_id)
   allowedOperation(await customVersion(env,task.connector_id,task.connector_version),task.operation,true)
 }
 export async function gatewayAttempt(ctx:StepContext,step:Record<string,unknown>,op:CustomOperation,input:Record<string,unknown>,ordinal:number,policy:AttemptPolicy) {
+  await assertDispatchAuthority(ctx.env,ctx.run.id)
   const gatewayId=String(step.gateway_id),environment=String(step.environment),connectorId=String(step.connector_id),version=Number(step.connector_version)
   const grant=await stmt(ctx.env,`SELECT a.id,a.revision,(SELECT revision FROM crank_team_authority WHERE singleton=1) AS authority_revision FROM crank_gateway_grants a JOIN crank_gateways g ON g.id=a.gateway_id JOIN oa_operators o ON o.id=g.owner_id
     WHERE a.gateway_id=? AND g.environment=? AND g.origin=? AND g.status='active' AND o.status='active' AND o.role='owner' AND o.version=g.owner_version
@@ -57,6 +62,7 @@ export async function gatewayAttempt(ctx:StepContext,step:Record<string,unknown>
   const task=await stmt(ctx.env,'SELECT * FROM crank_gateway_tasks WHERE id=?',taskId).first<Task>()
   if (!task || task.request_key!==requestKey || task.gateway_id!==gatewayId || task.grant_id!==grant.id) throw new StepError('authority','Gateway checkpoint identity or authority changed; inspect this run before starting fresh work')
   if(task.grant_revision!==grant.revision || task.authority_revision!==grant.authority_revision)throw new StepError('auth','gateway revoked',{gateway_id:gatewayId,access_decision:'authority_revision_changed'})
+  await checkTask(ctx.env,task)
   if (task.expires_at<=now()) throw new StepError('provider','The private gateway task exceeded its deadline; inspect the gateway and start fresh work deliberately',{gateway_id:gatewayId})
   if (task.status==='failed') {
     const detail=JSON.parse(task.error_json??'{}'),transient=['execution_failed','timeout'].includes(detail.gateway_error_category)
@@ -89,12 +95,17 @@ export async function pollGateway(env:CrankEnv,gateway:Gateway) {
   ])
   const definition=JSON.parse((await customVersion(env,candidate.connector_id,candidate.connector_version)).definition_json)
   const operation=definition.operations.find((op:CustomOperation)=>op.id===candidate.operation) as CustomOperation
+  const taskInput=JSON.parse((await openText(env,candidate.workflow_id,candidate.input_json))!)
+  // Authority can end during admission or payload opening; do not return a job
+  // whose guarded attempt insert was refused after its initial claim.
+  if (!await stmt(env, `SELECT id FROM crank_gateway_tasks WHERE id=? AND status='dispatched' AND attempt_id=? AND ${liveTask}`, candidate.id, attemptId, now()).first()) return {task:null}
   return {task:{id:candidate.id,connector_id:candidate.connector_id,connector_version:candidate.connector_version,operation:operation.gateway!.operation,connector_operation:operation.id,destination:candidate.destination,grant_id:candidate.grant_id,grant_revision:candidate.grant_revision,authority_revision:candidate.authority_revision,environment:gateway.environment,gateway_id:gateway.id,installation:env.AUTH_ORIGIN,
-    operation_key:candidate.operation_key,input:JSON.parse((await openText(env,candidate.workflow_id,candidate.input_json))!)}}
+    operation_key:candidate.operation_key,input:taskInput}}
 }
 export async function gatewayResult(env:CrankEnv,gateway:Gateway,taskId:string,input:Record<string,unknown>) {
   const task=await stmt(env,'SELECT t.*,r.workflow_id FROM crank_gateway_tasks t JOIN crank_wf_runs r ON r.id=t.run_id WHERE t.id=? AND t.gateway_id=?',taskId,gateway.id).first<Task>()
   requireValue(task,'Gateway task not found',404)
+  requireValue(await stmt(env,`SELECT id FROM crank_gateway_tasks WHERE id=? AND ${taskAuthority}`,taskId,now()).first(),'The gateway task no longer has dispatch authority',403)
   await checkTask(env,task)
   requireValue((Object.hasOwn(input,'output')?1:0)+(Object.hasOwn(input,'error')?1:0)===1,'Supply exactly one output or error')
   const failed=input.error!==undefined
@@ -105,9 +116,9 @@ export async function gatewayResult(env:CrankEnv,gateway:Gateway,taskId:string,i
   requireValue(new TextEncoder().encode(value).length<=65536,'Gateway output exceeds 64 KiB',413)
   const outputDigest=await digest(value)
   if (['succeeded','failed'].includes(task.status)) {
-    requireValue(await stmt(env,"SELECT id FROM crank_gateway_grants WHERE id=? AND gateway_id=? AND status='active'",task.grant_id,gateway.id).first(),'The gateway grant was revoked',403)
     requireValue(task.output_digest===outputDigest,'The completed gateway task has a different result',409)
-    await stmt(env,'UPDATE crank_gateway_tasks SET duplicate_results=duplicate_results+1 WHERE id=?',taskId).run()
+    const replay=await stmt(env,`UPDATE crank_gateway_tasks SET duplicate_results=duplicate_results+1 WHERE id=? AND ${taskAuthority} RETURNING id`,taskId,now()).first()
+    requireValue(replay,'The gateway task no longer has dispatch authority',403)
     return {id:taskId,status:task.status,replayed:true}
   }
   const output=failed?null:await sealText(await targetFor(env,task.workflow_id),value),completedAt=now()

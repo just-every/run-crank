@@ -1,6 +1,7 @@
 import { environmentName } from '../custom/gateways'
 import { customBindings } from '../custom/bindings'
 import { checkCustomPublication } from '../custom/store'
+import { customGatewayIds, validateConnectionScopes } from '../custom/use-scope'
 import { checkCustomTriggerPublication } from '../custom/triggers'
 import { workflowScope, connectionScope } from '../team/policy'
 import { publishUsageStatements, readWorkflowEstimate } from '../ops/usage'
@@ -201,6 +202,8 @@ async function publishVersion(env: CrankEnv, actor: Actor, workflowId: string, i
   const { graph, declared, warnings } = checked(rollback ? rollback.graph : JSON.parse(current.draft_json))
   await checkCustomPublication(env,graph,actor)
   await checkCustomTriggerPublication(env,graph)
+  const gateways = customGatewayIds(graph)
+  await validateConnectionScopes(env, gateways.map(gatewayId => 'gateway:' + gatewayId), (current as WorkflowRow & {environment:string}).environment)
   for (const connectionId of declared.connections) {
     connectionScope(actor, connectionId)
     const connection = await getConnection(env, connectionId).catch(() => null)
@@ -209,7 +212,7 @@ async function publishVersion(env: CrankEnv, actor: Actor, workflowId: string, i
   }
   const previous = await stmt(env, 'SELECT MAX(number) AS n FROM crank_workflow_versions WHERE workflow_id=?', workflowId).first<{ n: number | null }>()
   const versionId = id(), at = now(), number = (previous?.n ?? 0) + 1, graphJson = canonical(graph)
-  const authority = { custom_bindings: await customBindings(env,graph), publisher: actor.id, published_at: at, workflow_settings: JSON.parse(current.settings_json), steps: declared.steps, connections: declared.connections, bindings: await snapshotBindings(env, declared.connections), trigger: graph.trigger.type, ...(rollback ? { rollback_of: rollback.rollback_of } : {}) }
+  const authority = { custom_bindings: await customBindings(env,graph), gateways, publisher: actor.id, publisher_version: actor.version, publisher_team_revision: actor.team?.revision ?? null, published_at: at, workflow_settings: JSON.parse(current.settings_json), steps: declared.steps, connections: declared.connections, bindings: await snapshotBindings(env, declared.connections), trigger: graph.trigger.type, ...(rollback ? { rollback_of: rollback.rollback_of } : {}) }
   const adoption = await adoptionStatements(env, actor, current, input)
   const guard = `attested:${versionId}`
   const statements = [
