@@ -13,7 +13,7 @@ const development = withDevAi<Bindings, typeof worker>(worker, { bindings: runti
 const dev = withDevIdentity<Bindings, typeof worker>(development, { bindings: runtimeBindings, config: authConfig, personas: devPersonas })
 
 // The dev layer answers its one-click sign-in and its hand-off page itself; they get the look
-// (/look.css) that auth.server.ts gives the deployed sign-in pages, once.
+// (/fonts/fonts.css) that auth.server.ts gives the deployed sign-in pages, once.
 const look = fontLinks.find(link => link.rel === 'stylesheet')!.href
 export default {
   ...dev,

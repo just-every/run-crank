@@ -1,10 +1,10 @@
-/* Crank's look beside its theme. public/rer-theme.css holds only what Base's theme grammar
-   allows (the --rer-* tokens and the faces), so everything else every document wears is here:
-   the page font, Crank's own tokens and Base's shared pages in the app's shell. Linked with
-   the theme through src/base/font-head.ts (the root document, /setup, sign-in and its
-   confirmation, the app's documents, and the development sign-in and hand-off pages through
-   src/server.dev.ts), the edition identity's stylesheet (the Lobby and Base's Run, contract
-   and not-found pages) and the run site (src/site/pages.tsx). */
+/* Crank's look beyond its theme. /rer-theme.css holds only what Base's theme grammar allows
+   (the --rer-* tokens and the faces; the installer reads it), so everything else every document
+   wears is here: the page font, Crank's own tokens and Base's shared pages in the app's shell.
+   Base links this file before the theme in the root document, /setup, sign-in and the app's
+   documents (src/base/font-head.ts), the Lobby and the Run pages (the edition identity's fonts)
+   and the hosted demo's gate; the run site and the development sign-in and hand-off pages
+   (src/server.dev.ts) link it too. */
 
 /* The page font, form controls included. */
 :root { font-family: var(--font-body); }

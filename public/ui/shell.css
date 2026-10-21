@@ -1,5 +1,5 @@
 /* The app's frame and shared controls: top bar, rail, page heading, panels, buttons,
-   fields, chips, lists and tables. Tokens are defined once, in /rer-theme.css and /look.css. */
+   fields, chips, lists and tables. Tokens are defined once, in /rer-theme.css and /fonts/fonts.css. */
 *, *::before, *::after { box-sizing: border-box; }
 body.crank-app { margin: 0; min-height: 100vh; overflow-x: clip; background: var(--app-ground); color: var(--ink); font: 400 15px/1.45 var(--font-body); -webkit-font-smoothing: antialiased; }
 .crank-app :where(h1, h2, h3, h4, p, dl, dd, pre, ol, ul) { margin: 0; }

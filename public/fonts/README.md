@@ -10,6 +10,8 @@ The variable WOFF2 subsets come from Fontsource's distributions
 
 `/rer-theme.css` declares the faces and a metric-matched `Figtree Fallback`
 on Arial, so text does not jump when the web font arrives, and the installer
-serves them too; `/look.css` sets the page font. Every page links both once
+serves them too. `fonts.css` sets the page font and carries Crank's own tokens
+and Base's shared pages in the app's shell, which the theme grammar keeps out
+of `/rer-theme.css`. Every page links `/fonts/fonts.css` once, before the theme,
 and preloads only the Latin Figtree file. No page requests a third-party font
 service.

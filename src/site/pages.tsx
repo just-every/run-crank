@@ -4,7 +4,6 @@
 import type { ReactElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { contractPageHtml } from '../base/contract-page'
-import { fontLinks } from '../base/font-head'
 import { runPageHtml, siteNotFoundHtml, type RunData, type SiteBuild, type SiteContext } from '../base/run-site'
 import { identity } from '../identity'
 import { DocsArticle } from './docs/DocsArticle'
@@ -39,7 +38,8 @@ export function sitePages({ styles, contract }: SiteContext): SiteBuild {
         <link rel="icon" href="/favicon.ico" sizes="32x32" />
         <link rel="icon" type="image/svg+xml" href="/brand/favicon-32.svg" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-        {fontLinks.map(link => <link key={link.href} {...link} />)}
+        <link rel="preload" href="/fonts/figtree/figtree-latin-wght-normal.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
+        <link rel="stylesheet" href="/fonts/fonts.css" />
         <link rel="stylesheet" href={identity.theme} />
         {styles.map(href => <link key={href} rel="stylesheet" href={href} />)}
       </head>
@@ -56,6 +56,6 @@ export function sitePages({ styles, contract }: SiteContext): SiteBuild {
       ...docsPages.map(page => ({ path: `/docs/${page.slug}`, html: document(...head(page.slug), <DocsArticle slug={page.slug} />, COPY) })),
       { path: '/404', html: siteNotFoundHtml(identity, data, contract) },
     ],
-    assets: ['rer-theme.css', 'look.css', 'fonts', 'brand', 'site', 'fixtures', 'favicon.ico', 'apple-touch-icon.png'],
+    assets: ['rer-theme.css', 'fonts', 'brand', 'site', 'fixtures', 'favicon.ico', 'apple-touch-icon.png'],
   }
 }

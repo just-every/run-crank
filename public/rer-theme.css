@@ -2,8 +2,8 @@
    confirmation, /setup, the development hand-off page, the Lobby and Base's Run, contract and
    not-found pages read. The installer reads this file with Base's theme grammar (only :root
    --rer-* tokens with literal values, and @font-face rules) and checks its colour pairs, so
-   Crank's own tokens and Base's shared pages in the app's shell are in public/look.css, linked
-   beside this file. Crank's look (design desk, 17 Oct 2026): pale sky paper, navy ink from the
+   Crank's own tokens and Base's shared pages in the app's shell are in public/fonts/fonts.css,
+   linked before it. Crank's look (design desk, 17 Oct 2026): pale sky paper, navy ink from the
    mark, the mark's brass yellow and crank orange as accents, a clear blue for section labels and
    links, Figtree throughout and JetBrains Mono for code. */
 :root {
