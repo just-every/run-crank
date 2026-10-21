@@ -112,6 +112,10 @@ test('TEAM-001 / WORK-008: scoped builders freeze draft tests; both account bind
   const waiting=await h.post(`workflows/${workflow.id}/test`,live,builder.cookie,201);
   assert.equal(waiting.status,'awaiting_approval');assert.equal(edge.requests.length,1,'production-account rehearsal still requires exact-effect approval');
   await h.post(`workflow-runs/${waiting.id}/approve`,{path:'invoice',digest:waiting.waits[0].proposal_digest},builder.cookie,403);
+  const testReviewer=await invite(h,'Taylor Brooks');await h.post('team/'+testReviewer.id,{role:'approver',workflow_ids:[workflow.id],connection_ids:[account.id,sandbox.id]});
+  await h.post(`workflow-runs/${waiting.id}/approve`,{path:'invoice',digest:waiting.waits[0].proposal_digest},testReviewer.cookie,403);
+  assert.equal((await h.get('workflow-runs/'+waiting.id,testReviewer.cookie)).waits[0].can_review,false);assert.equal(edge.requests.length,1,'a scoped approver cannot confirm a production-account test effect');
+
   await h.restart();const completed=await h.post(`workflow-runs/${waiting.id}/approve`,{path:'invoice',digest:waiting.waits[0].proposal_digest});
   assert.equal(completed.status,'succeeded');assert.equal(edge.requests.length,2,'unchanged builder authority survives restart');
   const repairWorkflow=await publish(h,'Builder rehearsal — repair one invalid amount',{trigger:{type:'manual'},steps:[{id:'rows',type:'loop',max_items:2,concurrency:1,order:'input',empty:'error',item_errors:'continue',input:{items:[{amount:'bad'}]},result:'{{steps.amount}}',steps:[{id:'amount',type:'transform',fn:'number.parse',input:{value:'{{item.amount}}'}}]}]});

@@ -5,6 +5,7 @@ import { requireValue, stmt, type Actor, type CrankEnv } from '../model'
 import { auditStatementWhen } from '../ops/audit'
 import { assertGrantAuthority, grantFence } from './authority'
 import type { GrantPolicy } from './policy'
+import { openText } from '../ops/payload-seal'
 
 type ApprovalPolicy = GrantPolicy['approval']
 
@@ -31,6 +32,14 @@ export async function assertReviewer(env: CrankEnv, actor: Actor, runId: string,
     requireValue(actor.team.role === 'approver' && !actor.tokenId && !actor.grantId && actor.kind !== 'review', 'A named scoped approver is required', 403)
     requireValue(run.created_by !== actor.id, 'You cannot approve your own run', 403)
     await versionConnectionScope(env, actor, run.version_id)
+    // WORK-008's synthetic live-effect confirmation is an owner decision.
+    // Explicit approval-step payloads remain governed by their named reviewers;
+    // mapped values cannot turn an ordinary approval into this trusted boundary.
+    if (run.mode === 'test') {
+      const confirmation = await stmt(env, `SELECT w.proposal_json FROM crank_waits w JOIN crank_wf_steps s
+        ON s.run_id=w.run_id AND s.path=w.path WHERE w.run_id=? AND w.path=? AND w.kind='approval' AND s.type!='approval'`, runId, path).first<{proposal_json:string}>()
+      if (confirmation && JSON.parse((await openText(env,run.workflow_id,confirmation.proposal_json))!).test === true) requireOwner(actor)
+    }
     if (!run.grant_id) return
   }
   if (!run.grant_id) { requireOwner(actor); return }
