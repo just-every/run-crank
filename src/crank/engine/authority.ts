@@ -7,7 +7,7 @@ import { StepError } from './errors'
 export async function assertDispatchAuthority(env: CrankEnv, runId: string) {
   await assertGrantAuthority(env, runId)
   const state = await stmt(env, `SELECT w.status,w.published_version_id,r.mode,r.grant_id,v.mode AS version_mode,
-    EXISTS(SELECT 1 FROM oa_operators o WHERE o.id=r.created_by AND o.status='active' AND o.version=r.test_owner_version AND (
+    EXISTS(SELECT 1 FROM oa_operators o WHERE o.id=v.published_by AND o.status='active' AND o.version=r.test_owner_version AND (
       (o.role='owner' AND json_extract(v.declared_json,'$.test_team_revision') IS NULL) OR
       EXISTS(SELECT 1 FROM crank_team_access t WHERE t.operator_id=o.id AND t.role IN ('admin','builder')
         AND t.revision=json_extract(v.declared_json,'$.test_team_revision')

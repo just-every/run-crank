@@ -114,6 +114,15 @@ test('TEAM-001 / WORK-008: scoped builders freeze draft tests; both account bind
   await h.post(`workflow-runs/${waiting.id}/approve`,{path:'invoice',digest:waiting.waits[0].proposal_digest},builder.cookie,403);
   await h.restart();const completed=await h.post(`workflow-runs/${waiting.id}/approve`,{path:'invoice',digest:waiting.waits[0].proposal_digest});
   assert.equal(completed.status,'succeeded');assert.equal(edge.requests.length,2,'unchanged builder authority survives restart');
+  const repairWorkflow=await publish(h,'Builder rehearsal — repair one invalid amount',{trigger:{type:'manual'},steps:[{id:'rows',type:'loop',max_items:2,concurrency:1,order:'input',empty:'error',item_errors:'continue',input:{items:[{amount:'bad'}]},result:'{{steps.amount}}',steps:[{id:'amount',type:'transform',fn:'number.parse',input:{value:'{{item.amount}}'}}]}]});
+  await h.post('team/'+builder.id,{role:'builder',workflow_ids:[workflow.id,repairWorkflow.id],connection_ids:[account.id,sandbox.id]});
+  const failedTest=await h.post(`workflows/${repairWorkflow.id}/test`,{bindings:{}},builder.cookie,201);
+  const preview=await h.get(`workflow-runs/${failedTest.id}/replay`);
+  const repaired=await h.post(`workflow-runs/${failedTest.id}/replay`,{paths:['rows/items/0/amount'],digest:preview.digest,corrections:{'rows/items/0/amount':{value:'782.25'}}});
+  assert.equal(repaired.status,'succeeded','an owner can repair a builder test under its unchanged original test authority');assert.equal(repaired.repair_of,failedTest.id);assert.equal(repaired.steps.find(step=>step.path==='rows/items/0/amount').output,782.25);
+  const revokedTest=await h.post(`workflows/${repairWorkflow.id}/test`,{bindings:{}},builder.cookie,201),revokedPreview=await h.get(`workflow-runs/${revokedTest.id}/replay`);
+  await scope();const revokedRepair=await h.post(`workflow-runs/${revokedTest.id}/replay`,{paths:['rows/items/0/amount'],digest:revokedPreview.digest,corrections:{'rows/items/0/amount':{value:'500.00'}}});
+  assert.equal(revokedRepair.status,'paused','owner repair cannot replace a revoked test initiator’s authority');assert.equal(revokedRepair.error.category,'authority');
   for(const change of ['role','connection','deactivation']){
    await scope();const pending=await h.post(`workflows/${workflow.id}/test`,live,builder.cookie,201);
    if(change==='deactivation')assert.equal((await h.send('/auth/operator/status',{operatorId:builder.id,status:'inactive'},h.owner)).status,200);

@@ -140,13 +140,20 @@ try {
     const stopped=await send(`workflow-runs/${revoked.id}/approve`,{path:'review',digest:revoked.waits[0].proposal_digest});assert.equal(stopped.status,'paused');assert.equal(stopped.error.category,'authority');
     page=builderPage;await page.goto(origin+'/app/workflow-runs/'+revoked.id);await expect(page.getByText(/Start a fresh test after resolving the change/)).toBeVisible();await shot(width,'builder-test-revoked');
 
+    const repairWorkflow=await send('workflows',{name:'Harbour Workshop — builder rehearsal amount repair '+width,graph:{trigger:{type:'manual'},steps:[{id:'rows',type:'loop',max_items:2,concurrency:1,order:'input',empty:'error',item_errors:'continue',input:{items:[{amount:'bad'}]},result:'{{steps.amount}}',steps:[{id:'amount',type:'transform',fn:'number.parse',input:{value:'{{item.amount}}'}}]}]}},201);
+    await send('team/'+dana.id,{role:'builder',workflow_ids:[workflow.id,repairWorkflow.id],connection_ids:[connection.id]});
+    const failed=await builderSend(`workflows/${repairWorkflow.id}/test`,{bindings:{}}),repairPreview=await send(`workflow-runs/${failed.id}/replay`);
+    const repaired=await send(`workflow-runs/${failed.id}/replay`,{paths:['rows/items/0/amount'],digest:repairPreview.digest,corrections:{'rows/items/0/amount':{value:'782.25'}}});
+    assert.equal(repaired.status,'succeeded');assert.equal(repaired.repair_of,failed.id);assert.equal(repaired.steps.find(step=>step.path==='rows/items/0/amount').output,782.25);
+    await page.goto(origin+'/app/workflow-runs/'+repaired.id);await expect(page.locator('.detail-primary > .title-row .status[data-tone="good"]')).toBeVisible();await expect(page.locator(`a[href="/app/workflow-runs/${failed.id}"]`)).toBeVisible();await shot(width,'builder-test-repaired');
+    await send('team/'+dana.id,{role:'builder',workflow_ids:[workflow.id],connection_ids:[connection.id]});
     await page.goto(origin+'/app/workflows/'+workflow.id);await expect(page.getByText(workflow.name,{exact:true}).first()).toBeVisible();await expect(page.locator(`input[name="path"][value="/api/crank/workflows/${workflow.id}/run"]`)).toHaveCount(0);await shot(width,'workflow');await page.goto(origin+'/app/account');await expect(page.locator('main dd').filter({hasText:/Builder/})).toBeVisible();await shot(width,'account');page=ownerPage;
     await page.goto(origin+'/app/access');
     const transfer=page.locator('form').filter({has:page.locator('input[name="path"][value="/api/crank/team/transfer"]')});
     await transfer.locator('select[name="workflow_id"]').selectOption(workflow.id);await transfer.locator('select[name="new_owner_id"]').selectOption(morgan.id);
     await transfer.getByRole('button',{name:'Transfer ownership'}).click();await page.waitForURL('**/app/access');
     assert.equal((await send('workflows/'+workflow.id)).owner.id,morgan.id);await shot(width,'transferred');
-    report.push({clause:'TEAM-001',width,states:['scope-selection','scope-saved','builder-test-waiting','builder-test-succeeded','builder-test-revoked','workflow','account','transferred'],status:'pass'});
+    report.push({clause:'TEAM-001',width,states:['scope-selection','scope-saved','builder-test-waiting','builder-test-succeeded','builder-test-revoked','builder-test-repaired','workflow','account','transferred'],status:'pass'});
   }
   await writeFile(join(evidence,'team-browser.json'),JSON.stringify(report,null,2));
   console.log('TEAM-001: scoped role selection, builder draft-test completion/revocation and owner handover passed at 1440 and 390.');
