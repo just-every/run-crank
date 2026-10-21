@@ -39,7 +39,7 @@ function sandboxForm(connector: any): string {
   return `<details><summary>Submit sandbox evidence for version ${esc(connector.version)}</summary><form class="form-row" method="post" action="/app/action">
     ${hidden('path', endpoint(connector.id, connector.version) + '/sandbox')}${hidden('return_to', back.return_to)}
     <label>Readback cases (JSON)<textarea name="readbacks" required rows="6" spellcheck="false" aria-describedby="${esc(id)}"></textarea></label>
-    <p id="${esc(id)}" class="form-help">Provide an array of cases with run_id, step_id, path and equals for every executable read operation. Use successful draft test runs; path names the output field to compare with equals.</p>
+    <p id="${esc(id)}" class="form-help">Provide an array of cases with run_id, step_id, path and equals for every executable operation. Use successful draft test runs; path names the output field to compare with equals.</p>
     <div class="grid grid-2"><label>Failed revoked-scope test run ID<input name="revoked_run_id" required maxlength="100"></label>
     <label>Completed duplicate-event run ID<input name="duplicate_run_id" required maxlength="100"></label></div>
     <p class="form-help">The revoked-scope run must show dispatch refused. The duplicate case must show the same signed webhook event or authenticated gateway result received twice with one result retained.</p>
@@ -58,14 +58,14 @@ function connectorRow(connector: any, owner: boolean): string {
 }
 
 function grantForm(gateway: any, connectors: any[]): string {
-  const eligible = connectors.filter(c => ['sandbox', 'ready'].includes(c.status) && c.definition.operations.some((op: any) => op.gateway && ['GET', 'HEAD'].includes(op.method)))
-  if (!eligible.length) return '<p class="muted">Install a connector with a private read operation before granting this gateway access.</p>'
-  return `<details><summary>Grant private read access</summary><form class="form-row" method="post" action="/app/action">
+  const eligible = connectors.filter(c => ['sandbox', 'ready'].includes(c.status) && c.definition.operations.some((op: any) => op.gateway && ['GET', 'HEAD', 'POST'].includes(op.method)))
+  if (!eligible.length) return '<p class="muted">Install a connector with a private typed operation before granting this gateway access.</p>'
+  return `<details><summary>Grant private access</summary><form class="form-row" method="post" action="/app/action">
     ${hidden('path', `/api/crank/gateways/${encodeURIComponent(String(gateway.id))}/grants`)}${hidden('return_to', back.return_to)}${hidden('environment', gateway.environment)}
     <label>Exact connector version<select name="connector_binding" required><option value="">Choose connector and version</option>${eligible.map(c => `<option value="${esc(JSON.stringify([c.id, c.version]))}">${esc(c.definition.name)} · ${esc(c.id)} · version ${esc(c.version)}</option>`).join('')}</select></label>
     <label>Allowed operation IDs (JSON array)<textarea name="operations" required rows="3" spellcheck="false"></textarea></label>
     <label>Private destinations (JSON array)<textarea name="destinations" required rows="3" spellcheck="false"></textarea></label>
-    <p class="form-help">Use only named GET or HEAD gateway operations of the selected version and their concrete destinations (database host, port and database; SFTP host, port and path_prefix; S3 endpoint, bucket and prefix). This grant is bound to environment ${esc(gateway.environment)}.</p>
+    <p class="form-help">Use only named GET, HEAD or typed POST gateway operations of the selected version and their concrete destinations (database host, port and database; SFTP host, port and path_prefix; S3 endpoint, bucket and prefix). This grant is bound to environment ${esc(gateway.environment)}.</p>
     <button class="btn btn-secondary">Grant gateway access</button></form></details>`
 }
 
@@ -84,7 +84,7 @@ export function customConnectionsPanel(connectors: any[], gateways: { gateways: 
   return `<section class="panel"><h2>Custom connectors</h2><p class="muted">Versions retain their reviewed operations and scopes. Production use requires sandbox evidence for the exact version and current scope grant.</p>
     ${connectors.length ? `<ul class="list">${connectors.map(c => connectorRow(c, owner)).join('')}</ul>` : '<p class="muted">No custom connector versions installed.</p>'}
     ${owner ? `<details><summary>Propose a connector from OpenAPI</summary>${proposalForm()}</details>` : ''}</section>
-    <section class="panel"><h2>Private gateways</h2><p class="muted">Gateways receive only the private read operations and concrete destinations you grant in one environment.</p>
+    <section class="panel"><h2>Private gateways</h2><p class="muted">Gateways receive only the typed private operations and concrete destinations you grant in one environment.</p>
     ${gateways.gateways.length ? `<ul class="list">${gateways.gateways.map(g => gatewayRow(g, gateways.grants, connectors, owner)).join('')}</ul>` : '<p class="muted">No gateways enrolled.</p>'}
     ${owner ? `<details><summary>Enroll a gateway</summary><form class="form-row" method="post" action="/app/action">${hidden('path', '/api/crank/gateways')}${hidden('return_to', back.return_to)}
       <div class="grid grid-2"><label>Gateway label<input name="label" required maxlength="200"></label><label>Environment<input name="environment" required maxlength="60" pattern="[a-z][a-z0-9_-]*" placeholder="production"></label></div>

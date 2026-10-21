@@ -6,7 +6,7 @@ const refused = () => fail('operation_refused', 'Operation destination is outsid
 const only = (object, keys) => isObject(object) && Object.keys(object).length === keys.length && keys.every(key => Object.hasOwn(object, key));
 export function deriveDestination(op, manifestPath) {
   const c = op.connection;
-  if (['postgres-query', 'mysql-query', 'sqlserver-query'].includes(op.type)) {
+  if (['postgres-command', 'postgres-query', 'mysql-query', 'sqlserver-query'].includes(op.type)) {
     return { type: 'database', host: normalizedHost(c[op.type === 'sqlserver-query' ? 'server' : 'host']), port: c.port, database: c.database };
   }
   if (op.type === 'sftp-lines') return { type: 'sftp', host: normalizedHost(c.host), port: c.port, path_prefix: posix.normalize(op.path) };

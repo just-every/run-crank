@@ -34,6 +34,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: npm ci --prefix gateways/node --ignore-scripts
       - run: node tests/database-gateway-journey.mjs
+      - run: node tests/postgres-write-journey.mjs
       - run: node tests/sqlserver-gateway-journey.mjs
       - run: node tests/storage-provider-journey.mjs
       - run: node tests/gateway-streaming-journey.mjs

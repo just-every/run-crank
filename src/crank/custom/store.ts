@@ -62,7 +62,7 @@ export function allowedOperation(row:CustomVersion,operationId:string,test:boole
   if (!op) throw new StepError('auth','This operation was omitted or is not installed',{custom_scope:true})
   const scopes=JSON.parse(row.scopes_json) as string[]
   if (!op.scopes.every(scope=>scopes.includes(scope))) throw new StepError('auth','A required custom connector scope was revoked',{custom_scope:true})
-  if (!['GET','HEAD'].includes(op.method) || op.kind==='trigger') throw new StepError('validation','This custom runtime supports read-only actions and searches; writes and triggers require their own sandbox implementation')
+  if ((!['GET','HEAD'].includes(op.method) && !(op.gateway && op.method==='POST' && op.kind==='action' && !op.pagination)) || op.kind==='trigger') throw new StepError('validation','This custom runtime supports reads and granted typed private POST actions; other writes require their own sandbox implementation')
   return op
 }
 export function customSteps(graph:Graph):Step[] {

@@ -15,13 +15,13 @@ async function proofRun(env:CrankEnv,actor:Actor,runId:string) {
   return {...row,graph:JSON.parse(row.graph_json) as Graph,run}
 }
 /** Reusable acceptance is evidence from actual public workflow/test/webhook doors,
- * never a caller-supplied "passed" flag. Every executable read operation needs a
+ * never a caller-supplied "passed" flag. Every executable operation needs a
  * completed readback; duplicate delivery and revoked scope must also be observed. */
 export async function acceptSandbox(env:CrankEnv,actor:Actor,connectorId:string,version:number,input:Record<string,unknown>) {
   requireOwner(actor)
   const row=await customVersion(env,connectorId,version),definition=JSON.parse(row.definition_json) as CustomDefinition
   requireValue(['sandbox','ready'].includes(row.status),'Review this connector on this installation first',403)
-  requireValue(Array.isArray(input.readbacks) && input.readbacks.length>0 && input.readbacks.length<=100,'Supply completed readback cases for every executable read operation')
+  requireValue(Array.isArray(input.readbacks) && input.readbacks.length>0 && input.readbacks.length<=100,'Supply completed readback cases for every executable operation')
   const covered=new Set<string>(),cases:{run_id:string;step_id:string;operation:string}[]=[]
   for(const value of input.readbacks) {
     requireValue(isObject(value) && Object.hasOwn(value,'equals'),'Each readback needs run_id, step_id, path and equals')
@@ -37,8 +37,8 @@ export async function acceptSandbox(env:CrankEnv,actor:Actor,connectorId:string,
     requireValue(found.found && canonical(found.value)===canonical(value.equals),'Sandbox readback does not match the expected provider result',422)
     covered.add(operation.id);cases.push({run_id:runId,step_id:stepId,operation:operation.id})
   }
-  const executable=definition.operations.filter(op=>op.kind!=='trigger' && ['GET','HEAD'].includes(op.method) && op.scopes.every(scope=>(JSON.parse(row.scopes_json) as string[]).includes(scope)))
-  requireValue(executable.length>0 && executable.every(op=>covered.has(op.id)),'Every currently scoped read operation needs its own readback case',422)
+  const executable=definition.operations.filter(op=>op.kind!=='trigger' && (['GET','HEAD'].includes(op.method) || op.gateway && op.method==='POST') && op.scopes.every(scope=>(JSON.parse(row.scopes_json) as string[]).includes(scope)))
+  requireValue(executable.length>0 && executable.every(op=>covered.has(op.id)),'Every currently scoped operation needs its own readback case',422)
   const revokedId=text(input.revoked_run_id,'revoked_run_id',100),revoked=await proofRun(env,actor,revokedId)
   requireValue(revoked.mode==='test' && revoked.status==='failed','The revoked-scope case must be an actually failed draft test',422)
   const review=await stmt(env,`SELECT json_extract(detail_json,'$.prior_generation') AS prior_generation FROM crank_audit WHERE subject_kind='custom_connector' AND subject_id=? AND action='custom.review' AND json_extract(detail_json,'$.version')=? AND json_extract(detail_json,'$.generation')=? AND at>=? ORDER BY at DESC LIMIT 1`,connectorId,version,row.consent_generation,revoked.received_at).first<{prior_generation:string|null}>()

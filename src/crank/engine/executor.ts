@@ -1,3 +1,4 @@
+import { allowedOperation, customVersion } from '../custom/store'
 import { GatewayWait } from '../custom/gateway-tasks'
 import { ExecutorWait } from '../executors/step'
 import { grantProposal } from '../grants/policy'
@@ -100,15 +101,11 @@ class Execution {
     // safe to repeat after interruption. Never reclassify a retained write.
     const method = isObject(step.input) ? String(step.input.method ?? 'GET').toUpperCase() : 'GET'
     const priorMethod = record?.input_json ? String(JSON.parse(record.input_json).method ?? 'GET').toUpperCase() : method
-    const mutating = type.mutating && !(step.type === 'http' && ['GET', 'HEAD'].includes(method) && ['GET', 'HEAD'].includes(priorMethod))
+    let mutating = type.mutating && !(step.type === 'http' && ['GET', 'HEAD'].includes(method) && ['GET', 'HEAD'].includes(priorMethod))
     const output = (r: StepRecord) => r.output_json ? JSON.parse(r.output_json) : null
     if (record?.status === 'succeeded' || record?.status === 'skipped' || (record?.status === 'failed' && step.on_error === 'continue')) { this.scope.steps[step.id] = output(record); return { kind: 'completed' } }
     if (record?.status === 'stopped') { const value = output(record); return value?.rejected ? { kind: 'rejected', reason: value.reason } : { kind: 'stopped', reason: value?.reason ?? 'filter' } }
     if (record?.status === 'failed' || record?.status === 'uncertain') return { kind: 'failed', error: record.error_json ? JSON.parse(record.error_json) : { category: 'uncertain' } }
-    if (record?.status === 'running' && mutating && !type.reconciles) {
-      await this.save(step, path, 'uncertain', { error: { category: 'uncertain', message: 'Interrupted during a remote write; check the destination before replaying' } })
-      return { kind: 'failed', error: { category: 'uncertain', message: 'Interrupted during a remote write' } }
-    }
     const wait = this.waits.get(path)
     if (record?.status === 'waiting' && wait && !wait.resolved_at) return { kind: 'waiting', approval: wait.kind === 'approval' }
     let input: Record<string, unknown> = {}
@@ -120,6 +117,14 @@ class Execution {
       const replay = record ? undefined : this.replays.get(path)
       input = record?.input_json ? JSON.parse(record.input_json) : replay?.input_json ? JSON.parse(replay.input_json) : (resolve(step.input ?? {}, this.scope) ?? {}) as Record<string, unknown>
       ctx.input = input
+      if(step.type==='custom.request') {
+        const operation=allowedOperation(await customVersion(this.env,String(step.connector_id),Number(step.connector_version)),String(step.operation),this.run.mode==='test')
+        mutating=!['GET','HEAD'].includes(operation.method)
+      }
+      if (record?.status === 'running' && mutating && !type.reconciles) {
+        await this.save(step, path, 'uncertain', { error: { category: 'uncertain', message: 'Interrupted during a remote write; check the destination before replaying' } })
+        return { kind: 'failed', error: { category: 'uncertain', message: 'Interrupted during a remote write' } }
+      }
       let result: StepResult
       if (record?.status === 'waiting' && wait?.resolved_at && type.resume) {
         result = await type.resume(step, { ...ctx, wait })

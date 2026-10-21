@@ -1,5 +1,6 @@
 import { validateRemoteDatabase, executeRemoteDatabase } from './remote-databases.mjs';
 import { validateStorage, executeStorage } from './storage.mjs';
+import { validatePostgresCommand, executePostgresCommand } from './postgres-command.mjs';
 import { open, constants } from 'node:fs/promises';
 import { resolve, dirname } from 'node:path';
 import { fileLines } from './file-lines.mjs';
@@ -46,7 +47,9 @@ export function validateManifest(manifest) {
         fail('configuration', 'Invalid parameter schema.');
       }
     }
-    if (['postgres-query','mysql-query','sqlserver-query'].includes(op.type)) {
+    if (op.type === 'postgres-command') {
+      validatePostgresCommand(withCredentials(manifest, op));
+    } else if (['postgres-query','mysql-query','sqlserver-query'].includes(op.type)) {
       validateRemoteDatabase(withCredentials(manifest, op));
     } else if (['sftp-lines', 's3-lines'].includes(op.type)) {
       validateStorage(withCredentials(manifest, op));
@@ -118,6 +121,7 @@ export async function executeTask(manifest, manifestPath, task, authority) {
   if (!text(task.operation_key)) fail('invalid_input', 'Task operation key is required.');
   validateInput(op, task.input);
   const base = dirname(resolve(manifestPath));
+  if (op.type === 'postgres-command') return bounded(await executePostgresCommand(op, task.input, task));
   if(['postgres-query','mysql-query','sqlserver-query'].includes(op.type))return bounded(await executeRemoteDatabase(op,task.input));
   if (['sftp-lines', 's3-lines'].includes(op.type)) return bounded(await executeStorage(op, task.input));
   return bounded(await (op.type === 'sqlite-query' ? sqliteQuery(op, task.input, base) : fileLines(op, task.input, base)));

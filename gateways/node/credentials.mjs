@@ -1,7 +1,7 @@
 import { fail, isObject } from './errors.mjs';
 
 const fields = {
-  'postgres-query': ['user', 'password'], 'mysql-query': ['user', 'password'], 'sqlserver-query': ['user', 'password'],
+  'postgres-command': ['user', 'password'], 'postgres-query': ['user', 'password'], 'mysql-query': ['user', 'password'], 'sqlserver-query': ['user', 'password'],
   'sftp-lines': ['username', 'password', 'privateKey', 'passphrase'],
   's3-lines': ['accessKeyId', 'secretAccessKey', 'sessionToken'],
 };

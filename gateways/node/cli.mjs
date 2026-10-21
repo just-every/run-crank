@@ -8,11 +8,11 @@ import { checkedOrigin, checkedState, post, saveState } from './transport.mjs';
 import { createIdentity, nonce, verifyPoll } from './identity.mjs';
 
 const usage = 'Usage: node gateways/node/cli.mjs enroll --origin URL --code CODE --environment ENV --state PATH --manifest PATH\n' +
-  '       node gateways/node/cli.mjs work --state PATH --manifest PATH [--once]';
+  '       node gateways/node/cli.mjs work --state PATH --manifest PATH [--once]\n       node gateways/node/cli.mjs recover --state PATH --manifest PATH --task-id ID';
 function argumentsFor(argv) {
   const command = argv.shift();
-  if (!['enroll', 'work'].includes(command)) throw new GatewayError('configuration', usage);
-  const allowed = command === 'enroll' ? ['origin', 'code', 'environment', 'state', 'manifest'] : ['state', 'manifest', 'once'];
+  if (!['enroll', 'work', 'recover'].includes(command)) throw new GatewayError('configuration', usage);
+  const allowed = command === 'enroll' ? ['origin', 'code', 'environment', 'state', 'manifest'] : command==='recover'?['state','manifest','task-id']:['state', 'manifest', 'once'];
   const options = {};
   while (argv.length) {
     const flag = argv.shift();
@@ -95,7 +95,12 @@ try {
   const { command, options } = argumentsFor(process.argv.slice(2));
   const manifest = validateManifest(await readPrivateJson(options.manifest));
   if (command === 'enroll') await enroll(options);
-  else await work(options, manifest);
+  else if(command==='recover') {
+    if(!/^[A-Za-z0-9_-]{1,256}$/.test(options['task-id'])) throw new GatewayError('configuration','Use the exact private task ID from the run.');
+    const state=checkedState(await readPrivateJson(options.state));
+    await post(state.origin,`/api/crank/gateways/${encodeURIComponent(state.gateway.id)}/tasks/${encodeURIComponent(options['task-id'])}/recover`,{environment:state.gateway.environment},state);
+    process.stdout.write('Receipt reconciliation requested; the next poll may only read the existing host receipt.\n');
+  } else await work(options, manifest);
 } catch (error) {
   process.stderr.write(`${error instanceof GatewayError ? error.message : 'Gateway failed; inspect private local configuration.'}\n`);
   process.exitCode = 1;

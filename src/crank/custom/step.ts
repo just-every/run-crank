@@ -52,7 +52,7 @@ async function publicRead(step:Step,ctx:StepContext,op:CustomOperation) {
   return op.pagination?{items:result.output.items,pages:result.output.pages,complete:result.output.complete}:result.output.body
 }
 export const customRequest:StepType={
-  mutating:false,connection:'optional',
+  mutating:true,reconciles:true,connection:'optional',
   validate(step) {
     if(step.pagination!==undefined)throw new StepError('validation','Custom pagination belongs to the reviewed connector version, not the workflow step')
     if(step.timeout_ms!==undefined && (!Number.isInteger(step.timeout_ms) || Number(step.timeout_ms)<100 || Number(step.timeout_ms)>30000))throw new StepError('validation','Custom request timeout_ms must be 100 to 30000')

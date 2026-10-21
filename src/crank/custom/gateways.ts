@@ -73,7 +73,7 @@ export async function grantGateway(env:CrankEnv,actor:Actor,gatewayId:string,inp
   requireValue(gateway,'Enroll a current gateway in this environment first',403)
   const row=await customVersion(env,connectorId,version),definition=JSON.parse(row.definition_json) as CustomDefinition
   requireValue(['sandbox','ready'].includes(row.status),'Review this connector on this installation first',403)
-  requireValue(Array.isArray(input.operations) && input.operations.length>0 && input.operations.every(name=>typeof name==='string' && definition.operations.some(op=>op.id===name && op.gateway && ['GET','HEAD'].includes(op.method))),'Grant only named read operations of this exact connector version')
+  requireValue(Array.isArray(input.operations) && input.operations.length>0 && input.operations.every(name=>typeof name==='string' && definition.operations.some(op=>op.id===name && op.gateway && (['GET','HEAD'].includes(op.method) || op.method==='POST' && op.kind==='action' && !op.pagination))),'Grant only named typed operations of this exact connector version')
   const operations=[...new Set(input.operations as string[])],labels=[...new Set(definition.operations.filter(op=>operations.includes(op.id)).map(op=>op.gateway!.destination))]
   const destinations=gatewayDestinations(input.destinations,labels)
   const grantId=id()

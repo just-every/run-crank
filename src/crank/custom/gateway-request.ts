@@ -10,7 +10,7 @@ import { gatewayAttempt } from './gateway-tasks'
 export async function gatewayPage(ctx:StepContext,step:Record<string,unknown>,op:CustomOperation,input:Record<string,unknown>,ordinal:number) {
   const url=new URL(`/api/crank/gateways/${encodeURIComponent(String(step.gateway_id))}/operations/${encodeURIComponent(op.id)}/pages/${ordinal}`,ctx.env.AUTH_ORIGIN)
   const body=new TextEncoder().encode(canonical({connector_id:step.connector_id,connector_version:step.connector_version,environment:step.environment,input}))
-  const result=await retryRequest(ctx,{method:'GET',url,body,idempotent:true,deferred:true},async policy=>{
+  const result=await retryRequest(ctx,{method:op.method,url,body,idempotent:false,deferred:true},async policy=>{
     const output=await gatewayAttempt(ctx,step,op,input,ordinal,policy)
     return {status:200,headers:new Headers({'content-type':'application/json'}),bytes:new TextEncoder().encode(canonical(output)),url:url.href,redirects:0}
   })

@@ -13,10 +13,10 @@ import type { Gateway } from './gateways'
 import { frozenCustomActorSql } from './use-scope'
 
 export class GatewayWait extends Error { constructor(readonly taskId:string){super('Waiting for the enrolled private gateway')} }
-interface Task {id:string;run_id:string;workflow_id:string;path:string;ordinal:number;gateway_id:string;grant_id:string;grant_revision:number;authority_revision:number;connector_id:string;connector_version:number;operation:string;destination:string;operation_key:string;request_key:string;input_json:string;status:string;output_json:string|null;output_digest:string|null;error_json:string|null;expires_at:string;retry_request_key:string;retry_number:number;budget_started_at:string;attempt_id:string|null}
+interface Task {id:string;run_id:string;workflow_id:string;path:string;ordinal:number;gateway_id:string;grant_id:string;grant_revision:number;authority_revision:number;connector_id:string;connector_version:number;operation:string;destination:string;operation_key:string;request_key:string;input_json:string;status:string;output_json:string|null;output_digest:string|null;error_json:string|null;expires_at:string;retry_request_key:string;retry_number:number;budget_started_at:string;attempt_id:string|null;recovery_only:number}
 // Repeated inside every claim/result transaction. A signing identity alone is
 // never a private-network proxy and cannot revive paused/restored/cancelled work.
-const taskAuthority=`EXISTS(SELECT 1 FROM crank_gateway_grants a JOIN crank_gateways g ON g.id=a.gateway_id JOIN oa_operators o ON o.id=g.owner_id
+export const taskAuthority=`EXISTS(SELECT 1 FROM crank_gateway_grants a JOIN crank_gateways g ON g.id=a.gateway_id JOIN oa_operators o ON o.id=g.owner_id
   JOIN crank_custom_versions c ON c.id=a.connector_id AND c.version=a.connector_version
   JOIN crank_wf_runs r ON r.id=crank_gateway_tasks.run_id JOIN crank_workflows w ON w.id=r.workflow_id
   JOIN crank_workflow_versions v ON v.id=r.version_id
@@ -65,10 +65,11 @@ export async function gatewayAttempt(ctx:StepContext,step:Record<string,unknown>
   if (!task || task.request_key!==requestKey || task.gateway_id!==gatewayId) throw new StepError('authority','Gateway checkpoint identity or authority changed; inspect this run before starting fresh work')
   if(task.grant_id!==grant.id || task.grant_revision!==grant.revision || task.authority_revision!==grant.authority_revision)throw new StepError('auth','gateway revoked',{gateway_id:gatewayId,access_decision:'authority_revision_changed'})
   await checkTask(ctx.env,task)
-  if (task.expires_at<=now()) throw new StepError('provider','The private gateway task exceeded its deadline; inspect the gateway and start fresh work deliberately',{gateway_id:gatewayId})
+  if (task.expires_at<=now()) throw new StepError(op.method==='POST'?'uncertain':'provider',op.method==='POST'?'The private write outcome is unknown; inspect the destination before any replay':'The private gateway task exceeded its deadline; inspect the gateway and start fresh work deliberately',{gateway_id:gatewayId,...(op.method==='POST'?{uncertain:true}: {})})
   if (task.status==='failed') {
     const detail=JSON.parse(task.error_json??'{}'),transient=['execution_failed','timeout'].includes(detail.gateway_error_category)
-    throw new StepError(transient?'network':'provider','The private gateway refused this bounded operation',{gateway_id:gatewayId,...detail})
+    const uncertain=op.method==='POST' && !['invalid_input','operation_refused'].includes(detail.gateway_error_category)
+    throw new StepError(uncertain?'uncertain':transient?'network':'provider','The private gateway refused this bounded operation',{gateway_id:gatewayId,...detail,...(uncertain?{uncertain:true}: {})})
   }
   if (task.status!=='succeeded') throw new GatewayWait(task.id)
   return JSON.parse((await openText(ctx.env,ctx.run.workflow_id,task.output_json))!) as unknown
@@ -88,20 +89,20 @@ export async function pollGateway(env:CrankEnv,gateway:Gateway) {
     AND (SELECT COUNT(*) FROM crank_gateway_tasks t WHERE t.gateway_id=crank_gateway_tasks.gateway_id AND t.status='dispatched' AND t.expires_at>?)<? RETURNING id`,now(),claim,candidate.id,now(),now(),HTTP_REQUEST_LIMIT.concurrency).first()
   if(!claimed) await stmt(env,'UPDATE crank_request_admissions SET finished_at=? WHERE id=?',Date.now(),claim).run()
   if (!claimed) return {task:null}
+  const definition=JSON.parse((await customVersion(env,candidate.connector_id,candidate.connector_version)).definition_json)
+  const operation=definition.operations.find((op:CustomOperation)=>op.id===candidate.operation) as CustomOperation
   const attemptId=id(),attemptAt=now()
   await env.DB.batch([
     stmt(env,`INSERT INTO crank_wf_attempts(id,run_id,path,number,method,destination_origin,started_at,request_key,retry_number,budget_started_at,slice_started_at)
-      SELECT ?,run_id,path,COALESCE((SELECT MAX(number)+1 FROM crank_wf_attempts a WHERE a.run_id=crank_gateway_tasks.run_id AND a.path=crank_gateway_tasks.path),1),'GET',?,?,retry_request_key,retry_number,budget_started_at,?
-      FROM crank_gateway_tasks WHERE id=? AND status='dispatched' AND ${liveTask}`,attemptId,env.AUTH_ORIGIN,attemptAt,attemptAt,candidate.id,now()),
+      SELECT ?,run_id,path,COALESCE((SELECT MAX(number)+1 FROM crank_wf_attempts a WHERE a.run_id=crank_gateway_tasks.run_id AND a.path=crank_gateway_tasks.path),1),?,?,?,retry_request_key,retry_number,budget_started_at,?
+      FROM crank_gateway_tasks WHERE id=? AND status='dispatched' AND ${liveTask}`,attemptId,operation.method,env.AUTH_ORIGIN,attemptAt,attemptAt,candidate.id,now()),
     stmt(env,'UPDATE crank_gateway_tasks SET attempt_id=? WHERE id=? AND EXISTS(SELECT 1 FROM crank_wf_attempts WHERE id=?)',attemptId,candidate.id,attemptId),
   ])
-  const definition=JSON.parse((await customVersion(env,candidate.connector_id,candidate.connector_version)).definition_json)
-  const operation=definition.operations.find((op:CustomOperation)=>op.id===candidate.operation) as CustomOperation
   const taskInput=JSON.parse((await openText(env,candidate.workflow_id,candidate.input_json))!)
   // Authority can end during admission or payload opening; do not return a job
   // whose guarded attempt insert was refused after its initial claim.
   if (!await stmt(env, `SELECT id FROM crank_gateway_tasks WHERE id=? AND status='dispatched' AND attempt_id=? AND ${liveTask}`, candidate.id, attemptId, now()).first()) return {task:null}
-  return {task:{id:candidate.id,connector_id:candidate.connector_id,connector_version:candidate.connector_version,operation:operation.gateway!.operation,connector_operation:operation.id,destination:candidate.destination,grant_id:candidate.grant_id,grant_revision:candidate.grant_revision,authority_revision:candidate.authority_revision,environment:gateway.environment,gateway_id:gateway.id,installation:env.AUTH_ORIGIN,
+  return {task:{id:candidate.id,connector_id:candidate.connector_id,connector_version:candidate.connector_version,operation:operation.gateway!.operation,method:operation.method,recovery_only:!!candidate.recovery_only,connector_operation:operation.id,destination:candidate.destination,grant_id:candidate.grant_id,grant_revision:candidate.grant_revision,authority_revision:candidate.authority_revision,environment:gateway.environment,gateway_id:gateway.id,installation:env.AUTH_ORIGIN,
     operation_key:candidate.operation_key,input:taskInput}}
 }
 export async function gatewayResult(env:CrankEnv,gateway:Gateway,taskId:string,input:Record<string,unknown>) {

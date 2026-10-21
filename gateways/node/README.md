@@ -69,8 +69,9 @@ change and a new exact-version owner grant before it can execute. A local
 `connector_operation` optionally narrows the connector operation ID that can
 select this binding. Otherwise the installation's signed connector-operation
 mapping selects this exact local operation key. `operation_key` must be present
-and nonempty; the server owns task identity and leases. These local operations
-are read-only. A manifest alone grants no authority: every task also needs the
+and nonempty; the server owns task identity and leases. SQLite, file, SQL query
+and storage operations are read-only. The explicit PostgreSQL command below
+is the write door. A manifest alone grants no authority: every task also needs the
 installation's signed, active grant at the task's exact grant revision and
 current TEAM authority revision.
 
@@ -375,6 +376,110 @@ connects to temporary network-edge SFTP/S3 protocol fixtures, including paginati
 across Worker restart, mutation, fingerprint and request-signature rejection,
 source/page bounds and UTF-8 validation. This establishes local protocol behavior;
 live customer SFTP/S3 provider acceptance remains unproven.
+
+## Explicit PostgreSQL commands
+
+`postgres-command` performs one configured INSERT or UPDATE and returns one
+business row as `{ "rows": [...] }`. It requires `write:true`, an exact local
+`connector_operation`, a named host credential, and an owner grant for that exact
+POST connector operation, version and concrete database destination. The signed
+task must declare `method:"POST"`. Native workflow write approval is required.
+The customer controls the destination and credential permissions. No task can
+provide SQL, a table, a column, a predicate or a connection setting.
+
+For example, inside `operations`:
+
+```json
+{
+  "stock_write": {
+    "type": "postgres-command", "write": true,
+    "connector_id": "synthetic-crank-1", "connector_version": 1,
+    "connector_operation": "stock_update", "destination": "synthetic-crank-2",
+    "credential": "synthetic-crank-13",
+    "connection": {
+      "host": "synthetic-crank-11.internal", "port": 5432,
+      "database": "synthetic-crank-12", "ssl": true
+    },
+    "receipt_table": "public.crank_receipts",
+    "parameters": {
+      "name": { "type": "string", "maxLength": 100 },
+      "quantity": { "type": "integer", "min": 0, "max": 100000 }
+    },
+    "command": {
+      "action": "update", "table": "public.stock",
+      "values": { "quantity": "quantity" }, "key": { "name": "name" },
+      "returning": ["name", "quantity"]
+    }
+  }
+}
+```
+
+Use `action:"insert"` with all key columns also in `values`, bound to the same
+parameters. UPDATE cannot change key columns. A business key must identify
+exactly one row and its columns must be returned. Missing or ambiguous readback
+rolls the transaction back. Use ordinary tables with a unique business key;
+partitioned/inherited UPDATE targets are not supported. Identifiers are simple
+ASCII SQL names and tables are explicitly schema-qualified. Values are always
+positional parameters. At most 32 columns, eight key columns and 32 returned
+columns are allowed. All inputs are required; strings need an explicit
+`maxLength` up to 4096 and numeric inputs need finite `min` and `max` bounds.
+The business readback is limited to one row and 64 KiB. Output-bound failure
+rolls the write back. Remote connections require verified TLS and use the same
+checked, pinned DNS socket policy as read adapters.
+
+Before enabling the operation, the database administrator provisions the receipt
+table and a dedicated restricted login. The gateway never creates schema or
+falls back when this table is missing. For the example, provision:
+
+```sql
+CREATE TABLE public.crank_receipts (
+  operation_key text PRIMARY KEY,
+  binding_digest text NOT NULL,
+  input_digest text NOT NULL,
+  output_json jsonb
+);
+REVOKE ALL ON public.crank_receipts FROM PUBLIC;
+GRANT USAGE ON SCHEMA public TO "synthetic-crank-14";
+GRANT SELECT, INSERT, UPDATE ON public.crank_receipts TO "synthetic-crank-14";
+GRANT SELECT ON public.stock TO "synthetic-crank-14";
+GRANT UPDATE (quantity) ON public.stock TO "synthetic-crank-14";
+```
+
+For INSERT grant only the required INSERT columns and any required sequence
+usage. Keep the login free of DDL, delete, superuser and unrelated table rights.
+Restrict direct access to receipts to trusted administrators and this gateway;
+their integrity is part of the customer's operation guarantee. Do not prune,
+edit or restore receipts independently of business effects while an operation
+key can be replayed. Keep both in the same database and recovery lifecycle.
+
+Each transaction locks the exact operation key, checks its receipt, performs the
+write, rereads the selected business fields, saves that original readback, and
+commits both together. The digest binds canonical inputs and the installation,
+environment, exact connector/version/operation, database destination and local
+command/schema. Changed inputs or binding under the same key are refused.
+An ordinary same-key dispatch returns the committed original readback without
+repeating the effect, even if business data has since changed. An absent receipt
+permits only an ordinary approved first dispatch to write.
+
+If a gateway result is lost, recovery is deliberate and readback-only:
+
+```sh
+node gateways/node/cli.mjs recover --state /private/synthetic-crank-10.json \
+  --manifest /private/synthetic-crank-6.json --task-id synthetic-crank-29
+node gateways/node/cli.mjs work --state /private/synthetic-crank-10.json \
+  --manifest /private/synthetic-crank-6.json --once
+```
+
+Recovery requires the same current authority, frozen task, inputs and operation
+key. The signed task has `recovery_only:true`; the adapter can only return an
+existing matching durable receipt. If the first transaction never committed,
+recovery refuses instead of issuing a fresh write. There is no automatic write
+retry. A timeout or interrupted COMMIT can leave the write committed; inspect
+or recover its exact task rather than starting a new workflow to guess.
+`tests/postgres-write-journey.mjs` exercises this door with the real Worker,
+gateway CLI and isolated Linux PostgreSQL provider. It requires Docker and the
+existing gateway dependencies, runs separately from push Verify, and removes
+its owned containers.
 
 `tests/storage-provider-journey.mjs` runs the actual Worker and gateway CLI
 against isolated OpenSSH and RustFS S3-compatible containers. It proves exact

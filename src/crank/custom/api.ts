@@ -1,3 +1,4 @@
+import { recoverGatewayTask } from './gateway-recovery'
 import { authenticateGateway, signedGatewayJob, verifyEnrollment } from './gateway-identity'
 import { proposeEnterpriseRecipe } from './enterprise-recipes'
 import { authorize, guardedBatch, requireOwner, requirePrepare, requireWriteOrigin } from '../access'
@@ -23,12 +24,19 @@ export async function customApi(request:Request,env:CrankEnv,nativeBrowser=false
       await verifyEnrollment(request,input,await signed.text())
       return json(await enroll(env,input),201)
     }
-    const service=/^\/api\/crank\/gateways\/([^/]+)\/(poll|tasks\/([^/]+)\/result)$/.exec(path)
+    const service=/^\/api\/crank\/gateways\/([^/]+)\/(poll|tasks\/([^/]+)\/(result|recover))$/.exec(path)
     if(service) {
       requireValue(request.method==='POST','Method not allowed',405)
       const signed=request.clone(),input=await body(request,96*1024),gateway=await authenticateGateway(request,env,decodeURIComponent(service[1]),input,await signed.text())
       if(service[2]==='poll')return json(await signedGatewayJob(env,gateway,request,await pollGateway(env,gateway)))
-      const taskId=decodeURIComponent(service[3]),result=await gatewayResult(env,gateway,taskId,input)
+      const taskId=decodeURIComponent(service[3])
+      if(service[4]==='recover') {
+        requireValue(Object.keys(input).every(key=>key==='environment'),'Receipt recovery accepts only its bound environment',422)
+        const result=await recoverGatewayTask(env,gateway,taskId)
+        await executeRun(env,result.run_id)
+        return json(result)
+      }
+      const result=await gatewayResult(env,gateway,taskId,input)
       const runId=await wakeGatewayTask(env,gateway.id,taskId)
       if(runId)await executeRun(env,runId)
       return json(result)
@@ -44,7 +52,7 @@ export async function customApi(request:Request,env:CrankEnv,nativeBrowser=false
         requireValue(!op.path.slice(0,op.path.indexOf('/',8)).includes('{') && url.protocol==='https:','Custom public operations require a literal HTTPS recipient')
       }
       await guardedBatch(env,actor,'prepare',[auditStatement(env,actor.id,'custom.propose','custom_connector',definition.id,{version:definition.version,operations:definition.operations.map(op=>op.id)})])
-      return json({definition,digest:await digest(canonical(definition)),requires_owner_review:true,runtime:'Read-only actions/searches and signed webhook delivery; unsupported operations are refused'})
+      return json({definition,digest:await digest(canonical(definition)),requires_owner_review:true,runtime:'Read actions/searches, granted typed private POST actions and signed webhook delivery; unsupported operations are refused'})
     }
     const revoke=/^\/api\/crank\/gateways\/(?:grants\/)?([^/]+)\/revoke$/.exec(path)
     if(revoke && request.method==='POST') {

@@ -47,7 +47,7 @@ export function manifestDestinations(manifest,path) {
   const found=new Map();
   for(const op of Object.values(manifest.operations)) {
     const c=op.connection??{};let spec;
-    if(['postgres-query','mysql-query','sqlserver-query'].includes(op.type))spec={type:'database',host:c.host??c.server,port:c.port??({'postgres-query':5432,'mysql-query':3306,'sqlserver-query':1433}[op.type]),database:c.database};
+    if(['postgres-command','postgres-query','mysql-query','sqlserver-query'].includes(op.type))spec={type:'database',host:c.host??c.server,port:c.port??({'postgres-command':5432,'postgres-query':5432,'mysql-query':3306,'sqlserver-query':1433}[op.type]),database:c.database};
     else if(op.type==='sftp-lines')spec={type:'sftp',host:c.host,port:c.port??22,path_prefix:op.path};
     else if(op.type==='s3-lines')spec={type:'s3',endpoint:c.endpoint,bucket:op.bucket,prefix:op.key};
     else spec={type:'local',path:resolve(path,'..',op.database??op.path)};
