@@ -54,12 +54,13 @@ test('WORK-005 DATA-001 DATA-002: cancellation reports remote confirmation, task
   const unconfirmed=await h.post(`workflow-runs/${uncertain.id}/cancel`);assert.equal(unconfirmed.executor_tasks[0].status,'cancel_unconfirmed');const attempts=cancelled;await h.tick(Date.now());assert.equal(cancelled,attempts,'no early cancellation retry');await Promise.all([h.tick(Date.now()+61000),h.tick(Date.now()+61000)]);const exhausted=cancelled;await h.tick(Date.now()+180000);assert.equal(cancelled,exhausted,'cancellation attempts remain bounded across concurrent Cron passes');assert.equal((await h.get('workflow-runs/'+uncertain.id)).executor_tasks[0].status,'cancel_unconfirmed');refuseCancellation=false;
   const exported=await archive(h);const items=exported.trim().split('\n').map(JSON.parse).flatMap(p=>p.items??[]),refs=items.filter(i=>i.kind==='row'&&i.table==='crank_executor_tasks');assert.equal(refs.length,3);assert.ok(refs.every(i=>i.row.active===0));
   const archivedRequests=edge.requests.length;
-  receiving=await harness('https://unused.example',{edge:edge.edge});await receiving.post('data/restore',{archive:exported,confirm:'RESTORE'});await receiving.restart();await receiving.tick(Date.now()+86400000);
+  receiving=await harness('https://unused.example',{edge:edge.edge});await receiving.post('data/restore',{archive:exported,confirm:'RESTORE'});
   assert.equal(edge.requests.length,archivedRequests,'restored task references never contact the source executor');assert.equal((await receiving.get('workflow-runs/'+pending.id)).status,'paused');
   const portableRows=text=>text.trim().split('\n').map(JSON.parse).flatMap(part=>part.items??[]).filter(item=>item.kind==='row').map(({table,row})=>JSON.stringify({table,row})).sort();
   const original=portableRows(exported),received=portableRows(await archive(receiving)),added=received.filter(row=>!original.includes(row));
   assert.deepEqual(added.map(row=>[JSON.parse(row).table,JSON.parse(row).row.action]),[['crank_audit','data.restore']]);
   assert.deepEqual(received.filter(row=>!added.includes(row)),original,'every portable record, including complete task references and counters, survives inactive restore');
+  await receiving.restart();await receiving.tick(Date.now()+86400000);assert.equal(edge.requests.length,archivedRequests,'restart and Cron cannot activate restored executor tasks');
   await h.post(`workflow-runs/${pending.id}/cancel`);await h.post(`workflows/${w.id}/pause`);await h.post('data/erase',{workflow_run_id:run.id,confirm:'ERASE'});
   assert.equal((await h.db.prepare('SELECT COUNT(*) AS n FROM crank_executor_tasks WHERE run_id=?').bind(run.id).first()).n,0,'erasure removes local remote-task references');
  }finally{await receiving?.close();await h.close()}
