@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url';
 import { harness } from './harness.mjs';
 import { customDefinition, draftTest, installDefinition } from './custom-fixture.mjs';
 import { stepOf } from './kit.mjs';
-import { freshGatewayOwner, gatewayPost, manifestDestinations, namedManifest, pollPayload } from './gateway-fixture.mjs';
+import { freshGatewayOwner,nativeGatewayEnrollment, gatewayPost, manifestDestinations, namedManifest, pollPayload } from './gateway-fixture.mjs';
 import { command, fixture, registerPrivate, sanitized } from './database-gateway-fixture.mjs';
 import { sqlserverFixture } from './sqlserver-gateway-fixture.mjs';
 
@@ -76,7 +76,7 @@ try {
   }
   await manifest();
   await freshGatewayOwner(h);
-  const enrollment = await h.post('gateways', { label: fixture(417), environment: 'production' }, h.owner, 201);
+  const enrollment = await nativeGatewayEnrollment(h, { label: fixture(417), environment: 'production' }, 201);
   enrollmentCode = enrollment.code; registerPrivate(enrollmentCode); gatewayId = enrollment.gateway.id;
   await cli(['enroll', '--origin', h.origin, '--code', enrollmentCode, '--environment', 'production', '--state', statePath, '--manifest', manifestPath]);
   state = JSON.parse(await readFile(statePath, 'utf8')); registerPrivate(state.private_key);

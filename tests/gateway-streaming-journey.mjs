@@ -1,4 +1,4 @@
-import {freshGatewayOwner,gatewayPost,signedGatewayHeaders,pollPayload,namedManifest,manifestDestinations} from './gateway-fixture.mjs';
+import {freshGatewayOwner,nativeGatewayEnrollment,gatewayPost,signedGatewayHeaders,pollPayload,namedManifest,manifestDestinations} from './gateway-fixture.mjs';
 // Standalone scale journey, outside push Verify. From the checkout root:
 // node tests/gateway-streaming-journey.mjs
 // Uses the existing real Worker harness and dependency-free local-file gateway.
@@ -117,7 +117,7 @@ try {
   await writeFile(manifestPath, JSON.stringify({ version: 1, operations: { lines: { type: 'file-lines', connector_id: fixture(5), connector_version: 1,
     destination: fixture(7), path: sourcePath, pageLines: 2, parameters: { cursor: { type: 'string', optional: true, maxLength: 512 } } } } }), { mode: 0o600 });
   await freshGatewayOwner(h);
-  const enrollment = await h.post('gateways', { label: fixture(8), environment: 'production' }, h.owner, 201);
+  const enrollment = await nativeGatewayEnrollment(h, { label: fixture(8), environment: 'production' }, 201);
   gatewayId = enrollment.gateway.id; privateValues.push(enrollment.code);
   await cli(['enroll', '--origin', h.origin, '--code', enrollment.code, '--environment', 'production', '--state', statePath, '--manifest', manifestPath]);
   const state = JSON.parse(await readFile(statePath, 'utf8')); privateValues.push(state.private_key);

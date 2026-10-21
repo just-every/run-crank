@@ -14,7 +14,7 @@ import { loadPicker, readPicker, selectPicker } from './pickers'
 import { acceptSandbox } from './sandbox'
 import { customVersion, installCustom, listCustom, presentCustom, revokeCustom, reviewCustom, revokeCustomScopes } from './store'
 
-export async function customApi(request:Request,env:CrankEnv):Promise<Response|null> {
+export async function customApi(request:Request,env:CrankEnv,nativeBrowser=false):Promise<Response|null> {
   const path=new URL(request.url).pathname
   if(!/^\/api\/crank\/(custom-connectors|gateways)(\/|$)/.test(path))return null
   try {
@@ -73,7 +73,10 @@ export async function customApi(request:Request,env:CrankEnv):Promise<Response|n
     if(path==='/api/crank/custom-connectors/pickers')return json(await loadPicker(env,actor,input))
     if(path==='/api/crank/custom-connectors/selection')return json(await selectPicker(env,actor,input))
     if(path==='/api/crank/custom-connectors')return json(await installCustom(env,actor,input),201)
-    if(path==='/api/crank/gateways')return json(await enrollment(env,actor,input),201)
+    if(path==='/api/crank/gateways') {
+      requireValue(nativeBrowser,'Enroll gateways from Connections in the native owner browser session',403)
+      return json(await enrollment(env,actor,input),201)
+    }
     const gateway=/^\/api\/crank\/gateways\/([^/]+)\/(grants|revoke)$/.exec(path)
     if(gateway)return json(gateway[2]==='grants'?await grantGateway(env,actor,decodeURIComponent(gateway[1]),input):await revokeGateway(env,actor,decodeURIComponent(gateway[1])),gateway[2]==='grants'?201:200)
     const action=/^\/api\/crank\/custom-connectors\/([^/]+)\/versions\/(\d+)\/(sandbox|revoke-scopes|revoke|review)$/.exec(path)

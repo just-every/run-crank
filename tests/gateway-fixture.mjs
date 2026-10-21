@@ -2,6 +2,18 @@ import assert from 'node:assert/strict';
 import {createHash,createPrivateKey,randomBytes,sign} from 'node:crypto';
 import {resolve} from 'node:path';
 
+export async function nativeGatewayEnrollment(h,input,status=201) {
+  const setup=await h.mf.dispatchFetch(h.origin+'/setup',{method:'POST',redirect:'manual',headers:{origin:h.origin,cookie:h.owner,'content-type':'application/x-www-form-urlencoded'},body:'confirm=yes'});
+  assert.equal(setup.status,303,'The native owner completes the first-run form');
+  const response=await h.mf.dispatchFetch(h.origin+'/app/action',{method:'POST',redirect:'manual',headers:{origin:h.origin,cookie:h.owner,'content-type':'application/x-www-form-urlencoded'},body:new URLSearchParams({path:'/api/crank/gateways',return_to:'/app/connections',...input}).toString()});
+  const html=await response.text();
+  assert.equal(response.status,status===201?200:status,'Native gateway enrollment form was refused');
+  if(status!==201)return;
+  const code=/aria-label="Enrollment code" value="([A-Za-z0-9_-]+)"/.exec(html)?.[1];assert.ok(code,'The native owner sees the enrollment code once');
+  const gateway=(await h.get('gateways')).gateways.find(row=>row.label===input.label && row.environment===input.environment && row.status==='enrolling');assert.ok(gateway);
+  return {gateway,code,expires_at:/expires ([0-9TZ:.\-]+)/.exec(html)?.[1]};
+}
+
 export async function freshGatewayOwner(h) {
   const request=await h.send('/auth/step-up',{action:'credentials:mint',returnTo:'/app/connections'},h.owner);
   assert.equal(request.status,202,request.text);

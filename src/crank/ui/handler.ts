@@ -1,5 +1,5 @@
 import { serviceAccountsPanel } from './service-accounts'
-const gatewayConfirmation=()=>`<section class="panel"><h2>Confirm gateway enrollment</h2><p>Use your native owner session. Email yourself a confirmation link, open it in this browser, then enroll within five minutes.</p><form method="post" action="/auth/step-up"><input type="hidden" name="action" value="credentials:mint"><input type="hidden" name="returnTo" value="/app/connections"><button class="btn btn-secondary">Email me a confirmation link</button></form><a href="/app/connections">Return to connections</a></section>`
+const gatewayConfirmation=()=>`<section class="panel"><h2>Confirm connection access</h2><p>Use your native owner session. Email yourself a confirmation link, open it in this browser, then create the gateway code or service account within five minutes.</p><form method="post" action="/auth/step-up"><input type="hidden" name="action" value="credentials:mint"><input type="hidden" name="returnTo" value="/app/connections"><button class="btn btn-secondary">Email me a confirmation link</button></form><a href="/app/connections">Return to connections</a></section>`
 import { customPickerPanel } from './custom-picker'
 import { findNode, flatten, nodes } from './editor/model'
 import { customConnectionsPanel, proposalReview } from './custom-connectors'
@@ -39,8 +39,8 @@ import { skillsView, skillView } from './skills'
 const redirect = (location:string) => new Response(null,{status:303,headers:{location,'cache-control':'no-store'}})
 // A form may name where to return after its action: a path inside the app, nothing else.
 const safeReturn = (value:unknown) => typeof value==='string' && /^\/app(\/[A-Za-z0-9/_.-]*)?(\?[A-Za-z0-9=&%_.-]*)?$/.test(value) ? value : null
-export async function productApi(request:Request,env:CrankEnv):Promise<Response|null> {
-  return await customApi(request,env) ?? await followupApi(request,env) ?? await teamApi(request,env) ?? await versionedApi(request,env) ?? await importDoor(request,env) ?? await importApi(request,env) ?? await dataApi(request,env) ?? await workflowApi(request,env) ?? await crankApi(request,env)
+export async function productApi(request:Request,env:CrankEnv,nativeBrowser=false):Promise<Response|null> {
+  return await customApi(request,env,nativeBrowser) ?? await followupApi(request,env) ?? await teamApi(request,env) ?? await versionedApi(request,env) ?? await importDoor(request,env) ?? await importApi(request,env) ?? await dataApi(request,env) ?? await workflowApi(request,env) ?? await crankApi(request,env)
 }
 async function formValues(request:Request) {
   if (!request.headers.get('content-type')?.startsWith('application/x-www-form-urlencoded')) throw new Error('Use a form submission.')
@@ -59,7 +59,7 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
       const headers = new Headers(request.headers); headers.delete('content-length'); headers.set('content-type','application/json')
       if (path.startsWith('/api/operator/import/')) headers.set('X-Import-Source','n8n')
       const forwarded = new Request(url.origin+path,{method:input===undefined?'GET':'POST',headers,...(input===undefined?{}:{body:JSON.stringify(input)})})
-      return (path.startsWith('/auth/') ? await authResponse(forwarded,env) : await productApi(forwarded,env))!
+      return (path.startsWith('/auth/') ? await authResponse(forwarded,env) : await productApi(forwarded,env,true))!
     }
     const read = async (path:string) => { const response = await call(path), value:any = await response.json(); if(!response.ok) throw Object.assign(new Error(value.error ?? 'Unavailable'),{status:response.status}); return value }
     const page = async (title:string,content:string,options:any={},status=200) => {

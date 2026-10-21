@@ -1,4 +1,4 @@
-import {freshGatewayOwner,gatewayPost,signedGatewayHeaders,pollPayload,namedManifest,manifestDestinations} from './gateway-fixture.mjs';
+import {freshGatewayOwner,nativeGatewayEnrollment,gatewayPost,signedGatewayHeaders,pollPayload,namedManifest,manifestDestinations} from './gateway-fixture.mjs';
 // Standalone REAL provider interoperability proof, outside push Verify.
 // Requires root dependencies and `npm ci --prefix gateways/node --ignore-scripts`.
 // Run from root: CRANK_DOCKER=docker node tests/storage-provider-journey.mjs
@@ -120,7 +120,7 @@ try {
   await installDefinition(h, definition, ['files.read']);
   await writeFile(manifestPath, JSON.stringify(namedManifest({ version: 1, operations })), { mode: 0o600 });
   await freshGatewayOwner(h);
-  const enrollment = await h.post('gateways', { label: fixture(37), environment: 'production' }, h.owner, 201);
+  const enrollment = await nativeGatewayEnrollment(h, { label: fixture(37), environment: 'production' }, 201);
   enrollmentCode = enrollment.code; registerPrivate(enrollmentCode); gatewayId = enrollment.gateway.id;
   await cli(['enroll', '--origin', h.origin, '--code', enrollmentCode, '--environment', 'production', '--state', statePath, '--manifest', manifestPath]);
   state = JSON.parse(await readFile(statePath, 'utf8')); registerPrivate(state.private_key);

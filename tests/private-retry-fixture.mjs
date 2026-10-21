@@ -7,7 +7,7 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {DatabaseSync} from 'node:sqlite';
 import {customDefinition,installDefinition,draftTest} from './custom-fixture.mjs';
-import {freshGatewayOwner,manifestDestinations} from './gateway-fixture.mjs';
+import {freshGatewayOwner,nativeGatewayEnrollment,manifestDestinations} from './gateway-fixture.mjs';
 
 /** A real private source starts unavailable, then the customer's database becomes
  * readable. No driver, gateway result or Crank endpoint is mocked. */
@@ -33,7 +33,7 @@ export async function privateRetryFixture(h,{retry_policy}={}) {
     await installDefinition(h,definition,['records.read']);
     const manifest={version:1,operations:{stock:{type:'sqlite-query',connector_id:definition.id,connector_version:1,destination:'inventory-db',database:'stock.sqlite',parameters:{name:{type:'string'}},query:'SELECT name,quantity FROM stock WHERE name=:name',maxRows:10}}};
     await writeFile(manifestPath,JSON.stringify(manifest),{mode:0o600});await freshGatewayOwner(h);
-    const enrollment=await h.post('gateways',{label:'Harbour private source outage recovery',environment:'production'},h.owner,201);
+    const enrollment=await nativeGatewayEnrollment(h,{label:'Harbour private source outage recovery',environment:'production'},201);
     await cli(['enroll','--origin',h.origin,'--code',enrollment.code,'--environment','production','--state',statePath,'--manifest',manifestPath]);
     const state=JSON.parse(await readFile(statePath,'utf8'));
     await h.post(`gateways/${state.gateway.id}/grants`,{environment:'production',connector_id:definition.id,connector_version:1,operations:['record'],destinations:manifestDestinations(manifest,manifestPath)},h.owner,201);

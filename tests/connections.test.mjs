@@ -1,4 +1,4 @@
-import {freshGatewayOwner,gatewayPost,signedGatewayHeaders,pollPayload,namedManifest,manifestDestinations} from './gateway-fixture.mjs';
+import {freshGatewayOwner,nativeGatewayEnrollment,gatewayPost,signedGatewayHeaders,pollPayload,namedManifest,manifestDestinations} from './gateway-fixture.mjs';
 import { before, after, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHmac } from 'node:crypto';
@@ -492,9 +492,9 @@ test('Enrolled private gateway reads a real database, checkpoints file pages acr
 
   const unencrypted=join(dir,'unencrypted.json');await writeFile(unencrypted,JSON.stringify(namedManifest({version:1,operations:{stock:{...manifest.operations.stock,type:'postgres-query',read_only_credentials:true,connection:{host:'warehouse.synthetic.example',port:5432,database:'synthetic-crank-11',user:'synthetic-crank-12',password:'synthetic-crank-13',ssl:false},query:'SELECT name FROM stock WHERE name=$1',parameter_order:['name']}}})),{mode:0o600});
   await assert.rejects(cli(process.execPath,['gateways/node/cli.mjs','enroll','--origin',h.origin,'--code','synthetic-crank-14','--environment','production','--state',join(dir,'unencrypted-state.json'),'--manifest',unencrypted],{timeout:20000}),e=>/verified TLS/.test(e.stderr),'Credentials cannot leave the gateway over an unverified database connection');
-  await h.post('gateways',{label:'Unconfirmed enrollment',environment:'production'},h.owner,403);
+  await nativeGatewayEnrollment(h,{label:'Unconfirmed enrollment',environment:'production'},403);
   await freshGatewayOwner(h);
-  const expiredCode=await h.post('gateways',{label:'Expired warehouse enrollment',environment:'production'},h.owner,201);
+  const expiredCode=await nativeGatewayEnrollment(h,{label:'Expired warehouse enrollment',environment:'production'},201);
   const {createHash,randomBytes}=await import('node:crypto');
   const persisted=await h.db.prepare('SELECT code_hash,code_expires_at FROM crank_gateways WHERE id=?').bind(expiredCode.gateway.id).first();
   assert.equal(persisted.code_hash,createHash('sha256').update(expiredCode.code).digest('hex'));assert.equal(Buffer.from(expiredCode.code,'base64url').byteLength,32);
@@ -503,7 +503,9 @@ test('Enrolled private gateway reads a real database, checkpoints file pages acr
   assert.equal((await h.get('gateways')).gateways.find(g=>g.id===expiredCode.gateway.id).status,'revoked');
   const prepared=await h.post('tokens',{label:'Gateway preparation credential cannot enroll',scope:'agent'},h.owner,201);
   await h.post('gateways',{label:'Refused API enrollment',environment:'production'},'',403,{authorization:'Bearer '+prepared.token});
-  const enrollment=await h.post('gateways',{label:'Harbour workshop private inventory',environment:'production'},h.owner,201),base=`gateways/${enrollment.gateway.id}`;
+  await h.post('gateways',{label:'API cannot enroll even after email confirmation',environment:'production'},h.owner,403);
+  await h.post('v1/gateways',{label:'Versioned API cannot enroll',environment:'production'},h.owner,403);
+  const enrollment=await nativeGatewayEnrollment(h,{label:'Harbour workshop private inventory',environment:'production'},201),base=`gateways/${enrollment.gateway.id}`;
   await h.post('gateways/enroll',{code:enrollment.code,environment:'staging'},h.owner,403);
   await cli(process.execPath,['gateways/node/cli.mjs','enroll','--origin',h.origin,'--code',enrollment.code,'--environment','production','--state',statePath,'--manifest',manifestPath],{timeout:20000});
   await h.post('gateways/enroll',{code:enrollment.code,environment:'production'},h.owner,403);

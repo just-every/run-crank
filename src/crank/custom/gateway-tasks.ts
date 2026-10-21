@@ -13,7 +13,7 @@ import type { Gateway } from './gateways'
 
 export class GatewayWait extends Error { constructor(readonly taskId:string){super('Waiting for the enrolled private gateway')} }
 interface Task {id:string;run_id:string;workflow_id:string;path:string;ordinal:number;gateway_id:string;grant_id:string;grant_revision:number;authority_revision:number;connector_id:string;connector_version:number;operation:string;destination:string;operation_key:string;request_key:string;input_json:string;status:string;output_json:string|null;output_digest:string|null;error_json:string|null;expires_at:string;retry_request_key:string;retry_number:number;budget_started_at:string;attempt_id:string|null}
-// Repeated inside every claim/result transaction. A service credential alone is
+// Repeated inside every claim/result transaction. A signing identity alone is
 // never a private-network proxy and cannot revive paused/restored/cancelled work.
 const liveTask=`EXISTS(SELECT 1 FROM crank_gateway_grants a JOIN crank_gateways g ON g.id=a.gateway_id JOIN oa_operators o ON o.id=g.owner_id
   JOIN crank_custom_versions c ON c.id=a.connector_id AND c.version=a.connector_version

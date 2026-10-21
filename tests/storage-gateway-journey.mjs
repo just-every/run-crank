@@ -1,4 +1,4 @@
-import {freshGatewayOwner,gatewayPost,signedGatewayHeaders,pollPayload,namedManifest,manifestDestinations} from './gateway-fixture.mjs';
+import {freshGatewayOwner,nativeGatewayEnrollment,gatewayPost,signedGatewayHeaders,pollPayload,namedManifest,manifestDestinations} from './gateway-fixture.mjs';
 // Standalone public CLI journey. Only the remote network edges are fixtures.
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
@@ -259,7 +259,7 @@ try {
   });
   await installDefinition(h, definition, ['files.read']);
   await freshGatewayOwner(h);
-  const enrollment = await h.post('gateways', { label: fixture(37), environment: 'production' }, h.owner, 201);
+  const enrollment = await nativeGatewayEnrollment(h, { label: fixture(37), environment: 'production' }, 201);
   gatewayId = enrollment.gateway.id;
   await cli(['enroll', '--origin', h.origin, '--code', enrollment.code, '--environment', 'production', '--state', statePath, '--manifest', manifestPath]);
   await h.post(`gateways/${gatewayId}/grants`, { environment: 'production', connector_id: common.connector_id, connector_version: 1,

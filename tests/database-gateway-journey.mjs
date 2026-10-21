@@ -1,4 +1,4 @@
-import {freshGatewayOwner,gatewayPost,signedGatewayHeaders,pollPayload,namedManifest,manifestDestinations} from './gateway-fixture.mjs';
+import {freshGatewayOwner,nativeGatewayEnrollment,gatewayPost,signedGatewayHeaders,pollPayload,namedManifest,manifestDestinations} from './gateway-fixture.mjs';
 // Standalone real-provider journey. Requires Docker, root project dependencies,
 // and `npm ci --prefix gateways/node --ignore-scripts`. Does not enter push Verify.
 // Run: CRANK_DOCKER=docker node tests/database-gateway-journey.mjs
@@ -87,7 +87,7 @@ try {
   await installDefinition(h, definition, ['records.read']);
   await writeFile(manifestPath, JSON.stringify(namedManifest({ version: 1, operations })), { mode: 0o600 });
   await freshGatewayOwner(h);
-  const enrollment = await h.post('gateways', { label: fixture(53), environment: 'production' }, h.owner, 201);
+  const enrollment = await nativeGatewayEnrollment(h, { label: fixture(53), environment: 'production' }, 201);
   enrollmentCode = enrollment.code; registerPrivate(enrollmentCode);
   gatewayId = enrollment.gateway.id;
   await cli(['enroll', '--origin', h.origin, '--code', enrollment.code, '--environment', 'production', '--state', statePath, '--manifest', manifestPath]);
