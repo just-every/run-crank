@@ -37,6 +37,7 @@ export function namedManifest(manifest) {
   const result=structuredClone(manifest);result.credentials??={};
   for(const [name,operation]of Object.entries(result.operations)) {
     if(!operation.connection)continue;
+    operation.connection={...operation.connection}; // Each operation owns its destination after credentials are removed.
     const secret={};
     for(const field of ['user','username','password','privateKey','passphrase','accessKeyId','secretAccessKey','sessionToken'])if(operation.connection[field]!==undefined){secret[field]=operation.connection[field];delete operation.connection[field]}
     if(Object.keys(secret).length){operation.credential=name;result.credentials[name]=secret}

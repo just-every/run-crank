@@ -1,3 +1,4 @@
+import {privateWriteBrowser} from './private-write-browser.mjs';
 /** Installed owner journey: review, private gateway, checkpointed results and revocation at both widths. */
 import assert from 'node:assert/strict';
 import {execFile} from 'node:child_process';
@@ -81,9 +82,10 @@ try {
   await shots('gateway-revoked-scope-run',()=>page.goto(origin+'/app/workflow-runs/'+revoked.run.id));
   await shots('custom-pinned-editor',()=>page.goto(origin+`/app/workflows/${proof.workflow.id}?step=stock`));
   const cost={components:['orchestration','connectors','models','executors'].map(kind=>({kind,usd_per_run:'0',assumption:'Owner-local SQLite and file acceptance; no provider service charge'}))};await h.post(`workflows/${proof.workflow.id}/estimate`,{cost});await h.post(`workflows/${proof.workflow.id}/publish`,{},h.owner,201);
+  await privateWriteBrowser({h,page,shots,origin,state,manifest,work,id});
   const address={workflow_id:workflow.id,step_path:'stock',input_name:'name'},cached=await h.post('custom-connectors/pickers',address);await work();
   const cachedPath='/api/crank/custom-connectors/pickers/'+cached.run_id+'?'+new URLSearchParams(address);assert.equal((await send(cachedPath)).status,'succeeded');
-  const originalGrant=(await h.get('gateways')).grants.find(g=>g.gateway_id===state.gateway.id&&g.status==='active');assert.ok(originalGrant);
+  const originalGrant=(await h.get('gateways')).grants.find(g=>g.gateway_id===state.gateway.id&&g.connector_id===id&&g.status==='active');assert.ok(originalGrant);
   await h.post(`gateways/grants/${originalGrant.id}/revoke`);await h.post(`gateways/${state.gateway.id}/grants`,{environment:'production',connector_id:id,connector_version:1,operations:['record','file','scope_probe','stock_names'],destinations:manifestDestinations(JSON.parse(await readFile(manifest,'utf8')),manifest)},h.owner,201);
   await send(cachedPath,undefined,403);
   const production=await h.post(`workflows/${proof.workflow.id}/run`,{input:{}},h.owner,201);assert.equal(production.status,'waiting');
