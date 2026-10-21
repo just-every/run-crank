@@ -4,7 +4,8 @@
 connector proposals. It uses the existing definition schema and egress validator;
 it does not install a connector, obtain credentials, grant consent or make a
 provider request. Real ServiceNow and SAP provider sandbox proof is pending.
-These recipes do not establish completion of CONN-011.
+These recipes belong to CONN-020, the enterprise/agent/SSO clause split from
+CONN-011 by ct on 21 October 2026. They do not establish completion of CONN-020.
 
 ## Export and integration
 

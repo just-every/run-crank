@@ -271,7 +271,12 @@ remote errors are explicit failures; there is no alternate writable adapter.
 independent PostgreSQL and MySQL containers, with restricted logins and real
 permission/read-only checks, bound inputs, byte/row/deadline refusal, revocation
 and credential-free restore. It starts and removes only its own isolated
-containers. This does not establish SQL Server or a buyer deployment.
+containers. `tests/sqlserver-gateway-journey.mjs` separately runs the actual
+Worker and CLI against SQL Server 2022 on Linux x86, with a restricted login,
+server-confirmed READ_ONLY database, typed bindings, row/byte bounds, exact grants,
+environment/refusal and credential-free export assertions. It removes its own
+container and private files. These isolated servers do not establish a buyer
+deployment.
 
 `tests/gateway-streaming-journey.mjs` uses a real incrementally written 64 MiB
 UTF-8 source and real Worker/CLI pages, continues a saved cursor after restart
@@ -494,5 +499,5 @@ only its own containers before PASS, and runs outside push Verify:
 CRANK_DOCKER=docker node tests/storage-provider-journey.mjs
 ```
 
-These isolated-provider results do not establish ServiceNow/SAP, SQL Server or
-buyer IdP interoperability.
+These isolated-provider results do not establish ServiceNow/SAP or buyer IdP
+interoperability; those receipts belong to CONN-020.
