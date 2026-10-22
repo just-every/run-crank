@@ -26,7 +26,10 @@ export async function retryRequest(ctx: RequestContext, request: { method: strin
   }
   const previous = await stmt(ctx.env, 'SELECT id,retry_number,budget_started_at,slice_started_at,retry_at,http_status,error_category,retry_parked_at,retry_resumed_at FROM crank_wf_attempts WHERE run_id=? AND path=? AND request_key=? ORDER BY number DESC LIMIT 1', ctx.run.id, ctx.path, requestKey)
     .first<{ id: string; retry_number: number; budget_started_at: string; slice_started_at: string | null; retry_at: string | null; http_status: number | null; error_category: string | null; retry_parked_at: string | null; retry_resumed_at: string | null }>()
-  const unfinished = previous && (previous.http_status === null || transient(previous.http_status) || ['rate_limit', 'network'].includes(previous.error_category ?? ''))
+  // A gateway records its physical result before the executor consumes it.
+  // Even a completed success still belongs to that deferred attempt until its
+  // response checkpoint is saved; restarting at attempt one replays stale tasks.
+  const unfinished = previous && (request.deferred || previous.http_status === null || transient(previous.http_status) || ['rate_limit', 'network'].includes(previous.error_category ?? ''))
   const startedAt = unfinished ? previous.budget_started_at : now()
   let sliceStartedAt = unfinished ? previous.retry_resumed_at ?? previous.slice_started_at ?? previous.budget_started_at : startedAt
   // A deferred gateway response is consumed once after its worker wakes the run.
