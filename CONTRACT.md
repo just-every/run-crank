@@ -1018,7 +1018,7 @@ Every capability the homepage states, in page order, for the owner-approved stru
 
 ## Status
 
-The status table cites the current bounded implementation and its public-door tests and journeys. Ct’s 21 October split keeps private gateways and pipelines in CONN-011 and enterprise/agent/SSO work in CONN-020.
+Judged from the code and tests at commit `119e652e284fd128af6e3ce718411494a9447fd6` (22 October 2026). Ct’s 21 October split keeps private gateways and pipelines in CONN-011 and enterprise/agent/SSO work in CONN-020.
 
 | Clauses | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
