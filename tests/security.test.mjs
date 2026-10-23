@@ -56,3 +56,20 @@ test('SEC-002: workflow and import doors retain hostile HTML/prompt text literal
   assert.ok(!JSON.stringify(await h.get('workflow-runs/'+result.id)).includes(secret),'stored run output never discloses connection authority');
  }finally{await h.close()}
 });
+
+test('Anonymous import requests are refused before any of their body is read',async()=>{
+ const h=await harness('https://security-receiver.example');
+ try{
+  for(const [action,status] of [['uploads',401],['unknown-action',404]]){
+   let release;const gate=new Promise(r=>release=r),encoder=new TextEncoder();
+   const body=new ReadableStream({async start(c){c.enqueue(encoder.encode('{"name":"'+'x'.repeat(200*1024)));await gate;try{c.enqueue(encoder.encode('"}'));c.close()}catch{}}});
+   const pending=h.mf.dispatchFetch(h.origin+'/api/operator/import/'+action,{method:'POST',body,duplex:'half',redirect:'manual',headers:{host:new URL(h.origin).host,origin:h.origin,'content-type':'application/json','X-Import-Source':'n8n'}});
+   const answered=await Promise.race([pending,new Promise(r=>setTimeout(()=>r(null),3000))]);
+   // The refusal is read in full before the held body is released.
+   const refusal=answered&&{status:answered.status,text:await answered.text()};
+   release();if(!answered)await pending.then(r=>r.text()).catch(()=>{});
+   assert.ok(refusal,`${action}: no answer while the body was still arriving`);
+   assert.equal(refusal.status,status,`${action}: ${refusal.text}`);
+  }
+ }finally{await h.close()}
+});
