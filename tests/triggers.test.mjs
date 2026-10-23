@@ -103,6 +103,20 @@ test('A webhook header credential admits deliveries but is never kept in run his
   assert.ok(!JSON.stringify(await runs(h, w)).includes(secret));
 });
 
+test('Webhook responses with workflow-chosen content render sandboxed, without script or app-origin authority', async () => {
+  const markup = '<p>Order delayed</p><script>globalThis.crankInjected=1</script>';
+  const status = await publish(h, 'Order status page', { trigger: { type: 'webhook', methods: ['GET'], response: { mode: 'sync', timeout_ms: 5000 } }, steps: [
+    { id: 'reply', type: 'respond', input: { headers: { 'content-type': 'text/html', 'content-security-policy': "script-src 'unsafe-inline'" }, body: '{{trigger.query.message}}' } }] });
+  const banner = await publish(h, 'Static banner', { trigger: { type: 'webhook', response: { mode: 'immediate', body: markup, headers: { 'content-type': 'text/html' } } }, steps: [] });
+  const pages = [await deliver(h, await hookUrl(h, status) + '?message=' + encodeURIComponent(markup)), await deliver(h, await hookUrl(h, banner), { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' })];
+  for (const page of pages) {
+    assert.equal(page.status, 200, page.text); assert.equal(page.text, markup, 'the workflow still chooses the body'); assert.match(page.headers.get('content-type'), /text\/html/);
+    const policy = page.headers.get('content-security-policy') ?? '';
+    assert.match(policy, /(^|;)\s*sandbox\s*(;|$)/); assert.doesNotMatch(policy, /allow-|unsafe-inline/);
+    assert.equal(page.headers.get('x-content-type-options'), 'nosniff');
+  }
+});
+
 const rss = items => `<?xml version="1.0"?><rss version="2.0"><channel><title>Harbour news</title>${items.map(i => `<item><guid>${i.guid}</guid><title>${i.title}</title><link>https://news.example/${i.guid}</link><pubDate>Fri, 16 Oct 2026 12:00:00 GMT</pubDate></item>`).join('')}</channel></rss>`;
 test('BASE-003: interrupted poll admission retries unseen items after restart and closes the abandoned attempt without duplicate work', async () => {
   const edge = fakeEdge();
