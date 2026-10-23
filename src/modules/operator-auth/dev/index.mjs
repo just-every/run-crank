@@ -47,7 +47,7 @@ export function withDevIdentity(worker, { bindings = env => env, config: authCon
         return new URL(request.url).pathname === '/auth/dev/enter' || new URL(request.url).pathname === '/__dev/personas' || new URL(request.url).pathname === '/auth/local/cli-session' ? rejectedResponse(request, devNotFound()) : worker.fetch(request, original, execution);
       }
       const gate = devGate({ key: env.RER_DEV_KEY, origin: env.AUTH_ORIGIN, local: env.AUTH_LOCAL === 'true' });
-      registerDevAdmission(gate && env.RER_DEV_IDENTITY !== 'off' ? r => gate.admits(r) : null);
+      registerDevAdmission(gate && env.RER_DEV_IDENTITY !== 'off' ? r => gate.admitsSession(r) : null);
       const path = new URL(request.url).pathname;
       if (path === '/__dev/key') return gate ? gate.exchange(request, authConfig(env).branding) : devNotFound();
       if (path === '/signin' && gate && env.RER_DEV_IDENTITY !== 'off' && ['GET', 'HEAD'].includes(request.method)) {
@@ -58,7 +58,8 @@ export function withDevIdentity(worker, { bindings = env => env, config: authCon
           ...person, displayName: (await context.store.byEmail(person.email))?.displayName ?? declared.find(p => p.as === person.as)?.displayName ?? person.email,
           href: `/auth/dev/enter?as=${encodeURIComponent(person.as)}&returnTo=${encodeURIComponent(returnTo)}`,
         })));
-        return decorateLabel(await oneClickPage({ branding: context.config.branding, people, method: request.method }), env.RER_DEMO === '1' ? 'Demo' : 'Dev');
+        const providers = context.auth.providers ? (await context.auth.providers.list()).filter(provider => provider.visible) : [];
+        return decorateLabel(await oneClickPage({ branding: context.config.branding, people, providers, returnTo, method: request.method }), env.RER_DEMO === '1' ? 'Demo' : 'Dev');
       }
       if (path === '/auth/dev/enter' || path === '/__dev/personas' || path === '/auth/local/cli-session') {
         if (!gate || env.RER_DEV_IDENTITY === 'off' || (path !== '/auth/local/cli-session' && !await gate.admits(request))) return rejectedResponse(request, devNotFound());

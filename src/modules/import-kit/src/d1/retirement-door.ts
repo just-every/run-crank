@@ -6,9 +6,10 @@ import { loadPlans } from './plans.ts';
 import { targetIdentity } from './erasure-index.ts';
 import { canonicalJson } from '../provenance/identity.ts';
 
-// Record content only, children before parents. Plans, approvals, namespaces
-// and scopes are bookkeeping (see retirement-tally.ts) and keep import history.
-const ORDER = ['ik_door_chunks', 'ik_door_plan_chunks', 'ik_door_uploads'];
+// Record content only, children before parents. Plans, approvals, namespaces,
+// scopes and archive headers are bookkeeping (see retirement-tally.ts) and keep
+// import history; an archive's bytes are content and go whole.
+const ORDER = ['ik_door_chunks', 'ik_door_plan_chunks', 'ik_door_archive_chunks', 'ik_door_uploads'];
 
 // Namespaces linked to a destination: its first-upload binding, or a plan
 // applied by a kit job (old applied doors use their real job link, including
@@ -28,6 +29,7 @@ function where(name: string, mapped: boolean) {
   const scoped = inScope(mapped);
   return name === 'ik_door_chunks' ? `upload_id IN (SELECT id FROM ik_door_uploads WHERE ${scoped})`
     : name === 'ik_door_plan_chunks' ? `plan_id IN (SELECT id FROM ik_door_plans WHERE ${scoped})`
+    : name === 'ik_door_archive_chunks' ? `archive_id IN (SELECT id FROM ik_door_archives WHERE ${scoped})`
     : scoped;
 }
 

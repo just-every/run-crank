@@ -1,14 +1,15 @@
 import type { D1Database } from '../d1/types.ts';
 import type { DoorRequest, ImportDoorRuntimeOptions } from './types.ts';
-import { DoorError, type DoorAction } from './protocol.ts';
+import { DoorError, GRANT_ONLY_ACTIONS, type DoorAction } from './protocol.ts';
 import { authorized, erasedSince } from './store.ts';
 import { sizeLimitError } from './limits.ts';
 import { requestDatabase } from '../d1/budget.ts';
 import { uploads } from './uploads.ts';
 import { plan } from './planning.ts';
 import { apply, status, reconcile, undo } from './jobs.ts';
+import { archive, restoreCheck } from './archive.ts';
 
-const routes = {uploads,plan,apply,status,reconcile,undo};
+const routes = {uploads,plan,apply,status,reconcile,undo,archive,'restore-check':restoreCheck};
 const headers = {'Cache-Control':'no-store','Content-Type':'application/json','X-Content-Type-Options':'nosniff'};
 async function readInput(request: Request): Promise<Record<string,unknown>> {
   if (request.headers.get('Content-Type')?.split(';')[0] !== 'application/json' || !request.body) throw new DoorError('json_body_required',400);
@@ -55,7 +56,7 @@ export function createDoorHandler(prefix: string, database: D1Database,
       const budgeted = requestDatabase(database);
       if (!await available(budgeted)) return Response.json({error:'not_found'},{status:404,headers});
       const action = url.pathname.slice(prefix.length) as DoorAction;
-      if (!Object.hasOwn(routes,action)) return Response.json({error:'not_found'},{status:404,headers});
+      if (!Object.hasOwn(routes,action) || (prefix !== '/api/rer/import/' && GRANT_ONLY_ACTIONS.includes(action))) return Response.json({error:'not_found'},{status:404,headers});
       if (request.method!=='POST') return Response.json({error:'method_not_allowed'},{status:405,headers:{...headers,Allow:'POST'}});
       if (url.search || url.hash) throw new DoorError('query_transport_forbidden',400);
       admitted = await admit(request,action,budgeted);

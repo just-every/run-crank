@@ -1,5 +1,5 @@
 import type { Database, OperatorAuth } from '../operator-auth/index.mjs';
-export function createDependencies<R extends string>(options: { db: Database; origin: string; name: string; provider?: string; local?: boolean; auth: OperatorAuth<R>; claimOwner?:(token:string)=>Promise<Response|null>; clock?: () => number; fetch?: typeof fetch; provides?:string[]; interfaces?: {interface:string;optional?:boolean;provider?:string;paths:string[]}[] }): {document():Promise<unknown>;handle(request:Request):Promise<Response|null>};
+export function createDependencies<R extends string>(options: { db: Database; INSTALLATION_KEY?: string; INSTALLATION_KEY_PREVIOUS?: string; origin: string; name: string; provider?: string; local?: boolean; auth: OperatorAuth<R>; claimOwner?:(token:string)=>Promise<Response|null>; clock?: () => number; fetch?: typeof fetch; provides?:string[]; interfaces?: {interface:string;optional?:boolean;provider?:string;paths:string[]}[] }): {document():Promise<unknown>;handle(request:Request):Promise<Response|null>};
 export const INTERFACE:string;
 export const CALLBACK:string;
 export const PATHS:string[];

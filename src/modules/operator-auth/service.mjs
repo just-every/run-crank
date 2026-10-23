@@ -1,5 +1,6 @@
 // Composed identity over Base's OA accounts, or an explicitly paired native
 // accounts/proof adapter. Native composition never constructs the OA store.
+import { scheduledPolicies } from './scheduled/index.mjs';
 import { fencedCredentials } from './accounts/credentials.mjs';
 import { providerControl } from './accounts/provider-control.mjs';
 import { linkedProviders } from '../dependencies/auth.mjs';
@@ -76,6 +77,7 @@ export function createOperatorAuth(options) {
   const external = legacyAdmission({ admission, config });
   return Object.freeze({
     ...admin,
+    ...(options.scheduledPolicies ? { scheduledPolicies: scheduledPolicies({ definitions: options.scheduledPolicies, store, config, clock, authenticate, requireFreshProof, rolePolicy }) } : {}),
     ...providerControl({ store, accounts, authenticate, config, clock }),
     ...fencedCredentials({store,authenticate,requireFreshProof,config,clock,hash}),
     ...ownerSignIn({ config, store, clock, sessions, limit }),

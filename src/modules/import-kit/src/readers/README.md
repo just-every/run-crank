@@ -98,7 +98,11 @@ the field pointer and its kind. The original bytes are then withheld
 (`reason: 'credentials-removed'`). A record still repeating a removed value
 fails with `CREDENTIAL_IN_SOURCE_DATA`; forms it cannot remove still fail as
 above. A field holding `[removed]`, the marker rer's vendor exports leave, is
-reported as removed before upload.
+reported as removed before upload. A URL's `removed@` user name and a
+`=removed` parameter, rer's URL markers, are removed and withhold the original
+too (refuse mode refuses them), but are not live values: `readFileSourceRemovals`
+answers the bundle with `liveCredentialsRemoved`, true only when a live value
+went.
 
 All requests, including redirects/retries, count toward `maxRequests` (default
 1000). Rate limits (429, or 403/503 with Retry-After) allow `maxRetries` (default 3)

@@ -7,6 +7,7 @@ import { guard, sql } from './database.ts';
 import { claimColumns, exactRows, selectKeys, selectedCounts } from './sets.ts';
 import { provenanceSet } from './provenance-set.ts';
 import { reversalState } from './undo-state.ts';
+import { validateReversalJournal } from './reversal-journal.ts';
 export { custodyGuards } from './original-storage.ts';
 // Only the current preflight: inventory already emits exact guards for every
 // memoized row. Replaced before each publication and never shared by requests.
@@ -116,13 +117,8 @@ export async function inventoryGuards(job: ImportJob, plan: ImportPlan, context:
   guards.push(...exactRows('ik_batches', ['job_id','action','position','end_position','fence'], batches, sql("job_id=? AND action='apply'", job.id)));
   if (reversal.policy === 'preserve-conflicts' && ['undoing','undone','rolling_back','rolled_back'].includes(job.state)) {
     const reversedBatches=snapshot?snapshot.rows('ik_batches','job_id',[job.id]).filter(row=>row.action!=='apply').sort((a,b)=>a.position-b.position):(await db.prepare("SELECT * FROM ik_batches WHERE job_id=? AND action<>'apply' ORDER BY position").bind(job.id).all()).results;
-    const action = ['undoing','undone'].includes(job.state) ? 'undo' : 'rollback';
-    let expectedFence = fence + 1; // The separately durable reversal intent.
-    for (const batch of reversedBatches) {
-      if (batch.action !== action || batch.position !== expectedFence || batch.end_position !== expectedFence + 1 || batch.fence !== expectedFence + 1) throw new Error('IMPORT_JOURNAL_MISMATCH');
-      expectedFence++;
-    }
-    if (job.fence !== expectedFence || (reversal.cursor > 0 && !reversedBatches.length) || (['undone','rolled_back'].includes(job.state) && !reversedBatches.length)) throw new Error('IMPORT_JOURNAL_MISMATCH');
+    validateReversalJournal(job, reversedBatches, fence, reversal.conversion);
+    if ((reversal.cursor > 0 && !reversedBatches.length) || (['undone','rolled_back'].includes(job.state) && !reversedBatches.length)) throw new Error('IMPORT_JOURNAL_MISMATCH');
     guards.push(...exactRows('ik_batches', ['job_id','action','position','end_position','fence'], reversedBatches, sql("job_id=? AND action<>'apply'", job.id)));
   }
 

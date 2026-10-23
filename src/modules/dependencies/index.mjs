@@ -1,6 +1,7 @@
 import { nativeDependencyAuthority } from './native.mjs';
 import { approveSetup, approveOwner, approvalFence, callbacksFor } from './approval.mjs';
 import { dependencyStore } from './store.mjs';
+import { openDependencyKey } from './sealing.mjs';
 import { publicKey, assertion, digest } from './crypto.mjs';
 import { isLoopbackHost } from '../operator-auth/loopback.mjs';
 import { CALLBACK, INTERFACE, PATHS, NETWORK, insist, originOf, providerMetadata } from './protocol.mjs';
@@ -8,17 +9,17 @@ import { readJson } from '../operator-auth/identity/oidc/network.mjs';
 import { readInput } from '../operator-auth/input.mjs';
 import { ownerFence, pinStatement } from './authority.mjs';
 export { INTERFACE, CALLBACK, PATHS } from './protocol.mjs';
-export function createDependencies({db,origin,name,provider,interfaces=[{interface:INTERFACE,provider,paths:PATHS}],provides=[],local=false,auth,claimOwner,clock=Date.now,fetch:fetcher=globalThis.fetch}) {
+export function createDependencies({db,origin,name,provider,interfaces=[{interface:INTERFACE,provider,paths:PATHS}],provides=[],local=false,INSTALLATION_KEY,INSTALLATION_KEY_PREVIOUS,auth,claimOwner,clock=Date.now,fetch:fetcher=globalThis.fetch}) {
  originOf(origin,local);insist(!local || isLoopbackHost(new URL(origin).hostname));insist(Array.isArray(provides) && new Set(provides).size===provides.length && provides.every(value=>/^[a-z][a-z0-9-]*@[1-9][0-9]*$/.test(value)));
  insist(Array.isArray(interfaces) && new Set(interfaces.map(d=>d.interface)).size===interfaces.length && interfaces.every(d=>/^[a-z][a-z0-9-]*@[1-9][0-9]*$/.test(d.interface) && Array.isArray(d.paths) && new Set(d.paths).size===d.paths.length && d.paths.every(p=>typeof p==='string' && /^\/[A-Za-z0-9_~/-]+$/.test(p) && !p.startsWith('//'))));
- const store=dependencyStore(db);
+ const store=dependencyStore(db,{INSTALLATION_KEY,INSTALLATION_KEY_PREVIOUS});
  const native=auth?.native?nativeDependencyAuthority(auth.accounts.dependencies):null;
  async function owner(request,action) {
   const actor=await auth.requireStepUp(request,action), current=await auth.accounts.owner();
   insist(actor.operator.id===current?.id,'owner_required',403);return actor;
  }
  async function document() {
-  const installation=await store.installation(interfaces[0]?.interface??INTERFACE);
+  const installation=await store.identity();
   const linked=await Promise.all(interfaces.map(d=>store.link(d.interface)));
   return {name,version:1,origin,sector_id:installation.sector_id,dependencies:interfaces.map((d,i)=>({provider:linked[i]?.issuer??d.provider??null,interface:d.interface,optional:d.optional??true,cardinality:1,paths:d.paths.map(p=>origin+p),jwks_uri:origin+'/.well-known/rer-link/jwks/'+d.interface})),provides,
    claim:interfaces.some(d=>d.interface===INTERFACE) && (native?await native.unclaimed():!await db.prepare('SELECT 1 FROM oa_operators LIMIT 1').first()),callback:origin+CALLBACK,jwks_uri:origin+'/.well-known/rer-link/jwks'};
@@ -48,7 +49,7 @@ export function createDependencies({db,origin,name,provider,interfaces=[{interfa
   const unchanged=old?{sql:'EXISTS(SELECT 1 FROM rer_dependency_link WHERE interface=? AND issuer=? AND client_id=? AND metadata=? AND needs_relink=? AND linked_at=?)',args:[contract,old.issuer,old.client_id,JSON.stringify(old.metadata),old.needs_relink,old.linked_at]}:{sql:'NOT EXISTS(SELECT 1 FROM rer_dependency_link WHERE interface=?)',args:[contract]};
   const approval=await approvalFence(pending,contract,expected,callbacks,clock(),pendingPin,native);
   await db.batch([
-   db.prepare(`UPDATE rer_dependency_codes SET created_at=CASE WHEN EXISTS(SELECT 1 FROM rer_dependency_keys WHERE interface=? AND json_extract(private_key,'$.kid')=?) AND ${unchanged.sql} AND ${approval.sql} THEN created_at ELSE -1 END WHERE digest=?`).bind(contract,installation.key.kid,...unchanged.args,...approval.args,codeDigest),
+   db.prepare(`UPDATE rer_dependency_codes SET created_at=CASE WHEN EXISTS(SELECT 1 FROM rer_dependency_keys WHERE interface=? AND private_key=?) AND ${unchanged.sql} AND ${approval.sql} THEN created_at ELSE -1 END WHERE digest=?`).bind(contract,installation.sealedKey,...unchanged.args,...approval.args,codeDigest),
    db.prepare(`INSERT INTO rer_dependency_link(interface,issuer,client_id,metadata,needs_relink,linked_at) VALUES(?,?,?,?,0,?) ON CONFLICT(interface) DO UPDATE SET issuer=excluded.issuer,client_id=excluded.client_id,metadata=excluded.metadata,needs_relink=0,linked_at=MAX(rer_dependency_link.linked_at+1,excluded.linked_at)`).bind(contract,expected,result.client_id,JSON.stringify(metadata),clock()),
    ...(native?await native.linkedStatements({pending,contract,old,issuer:expected,now:clock()}):[
    ...(contract===INTERFACE?[db.prepare("INSERT INTO oa_auth_audit(id,actor_id,action,value,created_at) SELECT ?,claim_id,'idpSignIn','true',? FROM oa_bootstrap WHERE EXISTS(SELECT 1 FROM oa_auth_settings WHERE singleton=1 AND first_setup=1 AND idp_sign_in=0) AND EXISTS(SELECT 1 FROM oa_setup_links WHERE interface='oidc-provider@1' AND attempt_id=? AND completed=0 AND owner_id=claim_id)").bind(crypto.randomUUID(),clock(),pending.attempt_id)]:[]),
@@ -85,7 +86,7 @@ export function createDependencies({db,origin,name,provider,interfaces=[{interfa
    db.prepare("INSERT INTO oa_auth_audit VALUES(?,?,'provider:unlink',?,?)").bind(crypto.randomUUID(),actor.operator.id,contract,clock())]:[]),
   ]);
   // Local removal is already complete. The provider may be offline.
-  if(link && key) {try {await readJson(fetcher,link.metadata.link.deregister,NETWORK,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({client_id:link.client_id,origin,interface:contract,client_assertion_type:'urn:ietf:params:oauth:client-assertion-type:jwt-bearer',client_assertion:await assertion(JSON.parse(key.private_key),{iss:link.client_id,sub:link.client_id,aud:link.metadata.link.deregister,iat:Math.floor(clock()/1000),exp:Math.floor(clock()/1000)+60,jti:crypto.randomUUID()})})});}catch{}}
+  if(link && key) {try {await readJson(fetcher,link.metadata.link.deregister,NETWORK,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({client_id:link.client_id,origin,interface:contract,client_assertion_type:'urn:ietf:params:oauth:client-assertion-type:jwt-bearer',client_assertion:await assertion((await openDependencyKey({INSTALLATION_KEY,INSTALLATION_KEY_PREVIOUS},contract,key.private_key)).key,{iss:link.client_id,sub:link.client_id,aud:link.metadata.link.deregister,iat:Math.floor(clock()/1000),exp:Math.floor(clock()/1000)+60,jti:crypto.randomUUID()})})});}catch{}}
   return Response.json({unlinked:true});
  }
  return {document,async handle(request) {

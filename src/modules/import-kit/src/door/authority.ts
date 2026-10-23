@@ -9,6 +9,8 @@ import { reserveReturn } from '../d1/budget.ts';
 const actions: Record<DoorAction, ImportAction[]> = {
   uploads: [], plan: ['plan', 'read'], apply: ['create', 'apply', 'read'],
   status: ['read'], reconcile: ['read'], undo: ['read', 'undo', 'rollback'],
+  // Parsing a bundle for its counts is a plan: no native write.
+  archive: ['plan'], 'restore-check': ['plan'],
 };
 /** Statements the door runs after a kit call returns (lineage recovery and the
  * final authority check), kept out of the kit's self-sized batches. */

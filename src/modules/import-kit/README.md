@@ -376,7 +376,8 @@ limits and byte custody.
 ## Cloudflare D1 Workers
 
 The additive asynchronous [D1 port](./src/d1/README.md) is available through
-`src/d1/index.ts`. It supports native SQL effects, reviewed jobs, durable bounded
+`@runeditrun/rer/modules/import-kit/d1` in a supplying rer release after 0.2.77
+(or `src/d1/index.ts` when working in Base source). It supports native SQL effects, reviewed jobs, durable bounded
 resume, original custody and conflict-safe undo in the same D1 batch as its
 journal. Products supply native snapshot predicates and current-session SQL
 permission predicates. Use its D1-specific API and numbered schema migration;
@@ -387,6 +388,23 @@ and omitted-policy jobs remain strict. The adapter supplies exact native
 ownership/dependency snapshots; retained edits keep their original attribution.
 See [D1 evolution 0001 and adoption instructions](./src/d1/README.md#adopting-preserved-conflict-undo-evolution-0001)
 before updating a deployed D1 schema or adapter.
+
+Existing strict D1 jobs switch policy only through the public reviewed
+`previewD1PreservedUndo` / `convertD1ReversalPolicy` flow. Eligible jobs are
+`completed` or `undoing`; conversion checks current undo authority, the job's
+binding and the exact reviewed snapshot, then atomically appends its conversion
+record and journal evidence with the new policy binding. It leaves provenance,
+originals, claims and history unchanged. See the
+[conversion decision table and migration requirements](./src/d1/README.md#reviewed-conversion-of-existing-strict-jobs).
+Use `readD1ImportUndoReport().outcome` (`pending`, `undone` or `compensated`) for
+the product result: the engine's terminal `job.state` remains `undone`, including
+compensated work.
+
+Current rer 0.2.77 lacks these APIs. Adoption through the package uses
+`@runeditrun/rer/modules/import-kit/d1` from a supplying release, the additive
+conversion migration, a complete native adapter and proof through the seed's own
+public door. Updating Base alone does not adopt or release the capability in a
+seed.
 
 ### Erasing fields in retained shared records
 

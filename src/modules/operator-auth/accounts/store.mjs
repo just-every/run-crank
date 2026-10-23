@@ -1,3 +1,4 @@
+import { policyActorFence } from '../scheduled/fence.mjs';
 import { providerPinFence, recordProviderPin } from './provider-pin.mjs';
 // D1 batches are transactions. All decisions that grant a session or mutate
 // operator authority are repeated inside the same database transaction.
@@ -42,6 +43,8 @@ export class AuthStore {
   // Snapshot authorization fence: both actor session and operator authority must
   // still be valid when the SQL mutation executes, not merely when JS checked it.
   actorFence(actor, now) {
+    const policy = policyActorFence(actor);
+    if (policy) return policy;
     const pin = providerPinFence(actor.providerPin);
     return { sql: `${pin.sql} AND EXISTS(SELECT 1 FROM oa_sessions a JOIN oa_operators ao ON ao.id=a.operator_id
       WHERE a.token_hash=? AND a.revoked_at IS NULL AND a.expires_at>? AND ao.status='active'

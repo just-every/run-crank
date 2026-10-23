@@ -24,11 +24,15 @@ hash plus only same-origin style/font permissions, and still rejects external
 origins, scripts, images and unsafe inline attributes. Mail stays self-contained.
 
 A consumer that configures `branding.productName` or a seed theme
-(`branding.theme`, its served `rer-theme.css`) declares the same values as
-`adapter.branding: { productName, theme }`. Mail and confirmation must then
+(`branding.theme`, its served `rer-theme.css`) or an installation mark
+(`branding.mark`, for example `/brand/mark.svg`) declares the same values as
+`adapter.branding: { productName, theme, mark }`. Mail and confirmation must then
 carry that name, and a themed confirmation must hold exactly that one theme
 stylesheet link and the CSP `style-src 'self' 'sha256-…'; font-src 'self';
-img-src 'self'`; every other resource rule above still applies.
+img-src 'self'`. A declared mark requires exactly that image, with product-name
+alt text, 32×32 dimensions and asynchronous decoding beside the text name;
+without a theme its CSP adds only `img-src 'self'`. Every other resource rule
+above still applies, and mail stays image-free.
 
 The Base conformance registration is executable at
 [`../tests/conformance.test.ts`](../tests/conformance.test.ts), and its D1/Worker

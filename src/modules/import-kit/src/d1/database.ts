@@ -1,4 +1,5 @@
 import { d1StreamOriginSchema } from './stream-origin.ts';
+import { d1ReversalPolicyConversionSchema } from './reversal-conversion-schema.ts';
 import { d1PreparationSchema } from './preparation-schema.ts';
 import { d1PreparationStepsSchema } from './preparation-steps-schema.ts';
 import { stageNativeTransaction } from './native-staging.ts';
@@ -58,6 +59,8 @@ export async function initializeD1ImportStorage(database: D1Database): Promise<v
   await database.batch(d1RetirementSchema.map(sql => database.prepare(sql)));
   await database.batch(d1CustodyStateReplaceSchema.map(sql => database.prepare(sql)));
   await database.batch(d1ErasureProgressSchema.map(sql => database.prepare(sql)));
+  const conversionInstalled = columns.results.some(c => c.name === 'reversal_conversion_hash');
+  await database.batch(d1ReversalPolicyConversionSchema.slice(conversionInstalled ? 1 : 0).map(sql => database.prepare(sql)));
 }
 export const sql = (sql: string, ...params: any[]): D1Sql => ({ sql, params });
 export const prepare = (db: D1Database, query: D1Sql): D1Statement => db.prepare(query.sql).bind(...(query.params ?? []));

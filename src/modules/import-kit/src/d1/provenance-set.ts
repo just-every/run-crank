@@ -42,7 +42,7 @@ export async function provenanceSet(raws: any[], context: D1ImportContext, guard
   raws = all;
   const owners = [...initialOwners, ...await ownerRows(raws.map(r => r.job_id).filter(id => !initialOwners.some(o => o.id === id)))];
   const codec = context.storage.targets.planCodec, ownerMap = new Map(owners.map(r => [r.id, r]));
-  const plans = snapshot ? new Map(owners.map(owner => [owner.id, snapshot.plans.get(owner.id)!])) : referenced ? await loadReferencedPlans(owners, raws, db, codec) : await loadPlans(owners, db, codec);
+  const plans = snapshot ? new Map(owners.map(owner => [owner.id, snapshot.plans.get(owner.id)!])) : referenced ? await loadReferencedPlans(owners, raws, db, codec) : await loadPlans(owners, db, codec, undefined, !!guards && context.maxBatchBytes === undefined);
   // Preserved jobs with no reversal report yet: one existence read for all of them.
   const reported = referenced ? await reportedJobs(db, owners.filter(o => o.reversal_policy === 'preserve-conflicts' && o.reversal_cursor === 0).map(o => o.id)) : undefined;
   for (const owner of owners) {

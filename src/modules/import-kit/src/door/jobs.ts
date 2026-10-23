@@ -10,6 +10,7 @@ import { assertion, authorized, fenced, lineage, loadSnapshot, planRow, snapshot
 import { text } from './uploads.ts';
 import { approvalCaption, failedPlan, recordApplyFailure, requireNewPlan } from './failures.ts';
 import { sizeLimitError } from './limits.ts';
+import { D1RequestLimitError } from '../d1/budget.ts';
 
 /** Whether this kit job holds the plan the owner reviewed. A person's erasure
  * re-fingerprints the job's plan and keeps the reviewed fingerprint inside it. */
@@ -68,6 +69,10 @@ export async function apply(request: DoorRequest, input: Record<string,unknown>)
     // 410 (snapshot_withdrawn or erased_during_request) answers instead.
     try { return await applyD1ImportBatches(job.id,context); }
     catch (error) {
+      // A large job created in this request can leave too little of its budget
+      // for a first batch: that batch refused before writing, so the queued job
+      // answers and the next apply continues it.
+      if (!row.job_id && error instanceof D1RequestLimitError) return job;
       // A kit size or request limit refuses before its batch writes anything: it
       // answers the named 413 and is not an apply failure.
       if (sizeLimitError(error)) throw error;
@@ -106,6 +111,8 @@ export async function undo(request: DoorRequest, input: Record<string,unknown>) 
     await transact(request.options.database,request.authority,[
       assertion(sql('NOT EXISTS(SELECT 1 FROM ik_jobs WHERE destination=? AND principal_id=? AND operation_key=?)',request.options.destination,request.options.ownerPrincipalId,'door:'+id)),
       sql('UPDATE ik_door_namespaces SET pending_id=NULL WHERE installation_id=? AND namespace=? AND pending_id=?',request.access.installationId,request.access.namespace,id),
+      // A large job's creation staged in part is private custody, never a job: it goes too.
+      sql('DELETE FROM ik_d1_staging WHERE destination=? AND principal_id=? AND operation_key=?',request.options.destination,request.options.ownerPrincipalId,'door:'+id),
       sql('DELETE FROM ik_door_plan_chunks WHERE plan_id=?',id),sql('DELETE FROM ik_door_approvals WHERE plan_id=?',id),sql('DELETE FROM ik_door_plans WHERE id=? AND job_id IS NULL',id),
     ]);
     return {planId:id,state:'cancelled'};

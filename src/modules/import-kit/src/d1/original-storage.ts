@@ -25,15 +25,17 @@ export function originalStorage(plan: ImportPlan, id: string, version: number) {
   });
   return { rows, chunks };
 }
-export function custodyGuards(plan: ImportPlan, id: string): D1Sql[] {
+/** `encoded` is the plan's stored form when it is not a loaded snapshot (creation). */
+export function custodyGuards(plan: ImportPlan, id: string, encoded = storedPlanSnapshot(plan, id)): D1Sql[] {
   const version = originalVersions.get(plan) ?? 3, { rows, chunks } = originalStorage(plan, id, version);
   const guards = [guard(sql('EXISTS(SELECT 1 FROM ik_original_sets WHERE job_id=? AND version=?)', id, version))];
   if (version === 3) {
-    const encoded = storedPlanSnapshot(plan, id);
-    return [...guards,
-      ...exactRows('ik_originals', ['job_id','kind','original_key','name','sha256','size','bytes'], rows, sql('job_id=?', id), PACKED_JSON_BYTES),
-      ...(encoded.chunks.length ? [guard(sql('(SELECT COUNT(*) FROM ik_d1_original_chunks WHERE job_id=?)=?', id, chunks.length)), ...copyGuards(originalCopies(encoded, chunks))]
-        : exactRows('ik_d1_original_chunks', ['job_id','kind','original_key','ordinal','bytes'], chunks, sql('job_id=?', id), PACKED_JSON_BYTES))];
+    const metadata = exactRows('ik_originals', ['job_id','kind','original_key','name','sha256','size','bytes'], rows, sql('job_id=?', id), PACKED_JSON_BYTES);
+    const count = guard(sql('(SELECT COUNT(*) FROM ik_d1_original_chunks WHERE job_id=?)=?', id, chunks.length));
+    // Canonical chunks hold each original literally: compare positions, never
+    // bytes. A compressed plan does not, so its original chunks compare exactly.
+    if (encoded.chunks.length && !encoded.compressed) return [...guards, ...metadata, count, ...copyGuards(originalCopies(encoded, chunks))];
+    return [...guards, ...metadata, ...exactRows('ik_d1_original_chunks', ['job_id','kind','original_key','ordinal','bytes'], chunks, sql('job_id=?', id), PACKED_JSON_BYTES)];
   }
   for (const [table, expected, columns] of [
     ['ik_originals', rows, ['job_id','kind','original_key','name','sha256','size']],

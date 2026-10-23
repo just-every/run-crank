@@ -17,6 +17,10 @@ function inspectOriginal(bytes: Uint8Array, policy?: PaginationCursorPolicy): vo
   }
   assertNoCredentials(value, policy);
 }
+/** Original bytes already decoded, hashed and inspected, by artifact: the check
+ * is a pure function of these exact values, so an unchanged artifact is not
+ * decoded and scanned again each time its custody is guarded. */
+const inspected = new WeakMap<SourceArtifact, { base64: string; size: number; sha256: string; policy?: PaginationCursorPolicy }>();
 export function validateArtifactOriginal(artifact: SourceArtifact, policy?: PaginationCursorPolicy): void {
   if (!artifact.original) return;
   if (artifact.original.status === 'unavailable') {
@@ -26,9 +30,12 @@ export function validateArtifactOriginal(artifact: SourceArtifact, policy?: Pagi
     return;
   }
   if (artifact.original.status !== 'available' || typeof artifact.original.base64 !== 'string' || Object.keys(artifact.original).some(k => !['status', 'base64'].includes(k))) throw new Error('INVALID_ORIGINAL');
-  const bytes = Buffer.from(artifact.original.base64, 'base64');
-  if (bytes.toString('base64') !== artifact.original.base64 || bytes.length !== artifact.size || sha256(bytes) !== artifact.sha256) throw new Error('ORIGINAL_HASH_SIZE_MISMATCH');
+  const seen = inspected.get(artifact), base64 = artifact.original.base64;
+  if (seen && seen.base64 === base64 && seen.size === artifact.size && seen.sha256 === artifact.sha256 && seen.policy === policy) return;
+  const bytes = Buffer.from(base64, 'base64');
+  if (bytes.toString('base64') !== base64 || bytes.length !== artifact.size || sha256(bytes) !== artifact.sha256) throw new Error('ORIGINAL_HASH_SIZE_MISMATCH');
   inspectOriginal(bytes, policy);
+  inspected.set(artifact, { base64, size: artifact.size, sha256: artifact.sha256, policy });
 }
 export function originalsFor(plan: ImportPlan, jobId: string): RetainedOriginal[] {
   const result: RetainedOriginal[] = [], seen = new Set<string>();

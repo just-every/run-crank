@@ -1,7 +1,7 @@
 import { Buffer } from 'node:buffer';
 import type { Json, PaginationCursorPolicy, ParsedRecord, ReaderLimits, SourceBundle, SourceCredentialPolicy, SourceLocation } from '../types.ts';
 import { assertNoCredentials, canonicalJson, sha256 } from '../provenance/identity.ts';
-import { CredentialError, credentialFieldText, paginationPolicy, reflectedCredentialMatcher, removeCredentials, type RemovedCredential } from '../provenance/credentials.ts';
+import { CredentialError, credentialFieldText, liveCredentialRemoved, paginationPolicy, reflectedCredentialMatcher, removeCredentials, withholdsOriginal, type RemovedCredential } from '../provenance/credentials.ts';
 import { reflectedNumberCredentialMatcher } from '../provenance/numeric-credentials.ts';
 import { fail } from './errors.ts';
 
@@ -51,6 +51,8 @@ export class RecordCollector {
   readonly paginationCursorPolicy?: PaginationCursorPolicy;
   /** A record lost a credential value, so the source's original bytes are withheld. */
   credentialsRemoved = false;
+  /** A record lost a live credential value, not only an exporter's marker. */
+  liveCredentialsRemoved = false;
   constructor(namespace: string, limits: Required<ReaderLimits>, secrets: readonly string[] = [], paginationCursorPolicy?: PaginationCursorPolicy) {
     paginationPolicy(paginationCursorPolicy);
     this.paginationCursorPolicy = paginationCursorPolicy;
@@ -74,7 +76,8 @@ export class RecordCollector {
         record = { ...record, payload: clean.value };
         secrets = [...secrets, ...removal.secrets, ...clean.secrets];
         removed = clean.removed;
-        if (removed.some(item => !item.beforeUpload)) this.credentialsRemoved = true;
+        if (removed.some(withholdsOriginal)) this.credentialsRemoved = true;
+        if (removed.some(liveCredentialRemoved)) this.liveCredentialsRemoved = true;
       }
       const encoded = safeValue(record, secrets, location, this.paginationCursorPolicy);
       if (Buffer.byteLength(encoded) > this.limits.maxRecordBytes) fail('SOURCE_RECORD_BYTE_LIMIT', location);

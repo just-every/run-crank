@@ -54,10 +54,17 @@ export async function uploads(request: DoorRequest, input: Record<string, unknow
   ]);
   return progress(request,await uploadRow(request,id));
 }
+/** Upload chunks are 64 KiB each: a read returns a bounded page, never a whole bundle. */
+const UPLOAD_READ_ROWS = 24;
 export async function bundleBytes(request: DoorRequest, row: UploadRow): Promise<Uint8Array> {
-  const chunks = await request.options.database.prepare('SELECT * FROM ik_door_chunks WHERE upload_id=? ORDER BY ordinal').bind(row.id).all();
-  if (chunks.results.length !== row.total_chunks) throw new DoorError('upload_incomplete', 409);
-  const values = chunks.results.map((c, i) => {
+  const chunks: Record<string, any>[] = [];
+  for (;;) {
+    const page = await request.options.database.prepare(`SELECT * FROM ik_door_chunks WHERE upload_id=? ORDER BY ordinal LIMIT ${UPLOAD_READ_ROWS} OFFSET ?`).bind(row.id, chunks.length).all();
+    chunks.push(...page.results);
+    if (page.results.length < UPLOAD_READ_ROWS) break;
+  }
+  if (chunks.length !== row.total_chunks) throw new DoorError('upload_incomplete', 409);
+  const values = chunks.map((c, i) => {
     const bytes = Buffer.from(c.base64, 'base64');
     if (c.ordinal !== i || bytes.length !== c.size || sha256(bytes) !== c.sha256) throw new DoorError('upload_custody_mismatch', 409);
     return bytes;

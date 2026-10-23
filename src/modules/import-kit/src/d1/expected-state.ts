@@ -14,6 +14,7 @@ const keys: Record<string, string[]> = {
   ik_d1_plan_chunks: ['job_id','ordinal'], ik_d1_reversal_reports: ['job_id','effect_id'],
   ik_d1_indexed_jobs: ['job_id'], ik_d1_plan_index: ['job_id','ordinal','target_identity'],
   ik_d1_stream_pages: ['stream_id','ordinal'], ik_d1_streams: ['id'],
+  ik_d1_policy_conversions: ['job_id'],
 };
 export interface ExpectedSnapshot { table: string; columns: string[]; rows: Row[]; selection?: { key: string; values: string[] } }
 export interface ExpectedChange { table: string; apply(rows: Map<string, Row>, state: ExpectedState): void }

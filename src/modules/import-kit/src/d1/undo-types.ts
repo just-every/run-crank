@@ -85,4 +85,26 @@ export interface D1UndoReport {
   total: number;
   nextOffset: number | null;
   dispositions: D1UndoDisposition[];
+  conversion?: D1ReversalPolicyConversion;
+  /** Engine state is a progress checkpoint; retained effects mean compensated. */
+  outcome: 'pending' | 'undone' | 'compensated';
+}
+export interface D1ReversalPolicyConversion {
+  jobId: string;
+  jobFingerprint: string;
+  from: 'strict';
+  to: 'preserve-conflicts';
+  state: 'completed' | 'undoing';
+  fence: number;
+  actorDigest: string;
+  recordedAt: string;
+  reviewedFingerprint: string;
+  policyHash: string;
+  previouslyReversed: number;
+}
+export interface D1PreservedUndoPreview {
+  job: ImportJob;
+  policy: D1ReversalPolicy;
+  reviewedFingerprint: string;
+  dispositions: D1UndoDisposition[];
 }

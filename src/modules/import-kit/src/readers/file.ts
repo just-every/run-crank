@@ -4,10 +4,17 @@ import type { FileSourceInput, Json, ParsedRecord, ReaderLimits, SourceBundle, S
 import { consumeBytes, utf8Decoder } from './bytes.ts';
 import { fail } from './errors.ts';
 import { limitsFor, RecordCollector, readerCredentialPolicy, readerPaginationPolicy, safeValue, textId } from './records.ts';
-import { removeCredentials } from '../provenance/credentials.ts';
+import { liveCredentialRemoved, removeCredentials, withholdsOriginal } from '../provenance/credentials.ts';
 
 /** JSON arrays are visited per element; an object/scalar is one input. NDJSON uses physical rows. */
 export async function readFileSource(input: FileSourceInput, limits?: ReaderLimits): Promise<SourceBundle> {
+  return (await readFileSourceRemovals(input, limits)).source;
+}
+
+/** readFileSource, also saying whether remove mode took out a live credential
+ * value, as opposed to only an exporter's markers (whose original bytes are
+ * withheld too, but hold no credential). */
+export async function readFileSourceRemovals(input: FileSourceInput, limits?: ReaderLimits): Promise<{ source: SourceBundle; liveCredentialsRemoved: boolean }> {
   const policy = readerPaginationPolicy(input.paginationCursorPolicy);
   const remove = readerCredentialPolicy(input.credentials) === 'remove';
   const bounded = limitsFor(limits);
@@ -17,7 +24,7 @@ export async function readFileSource(input: FileSourceInput, limits?: ReaderLimi
   const collector = new RecordCollector(input.namespace, bounded, [], policy);
   const location = { artifact: input.name };
   const decoder = utf8Decoder(location);
-  let withheld = false;
+  let withheld = false, live = false;
   const parse = (value: Json, index: number, at: SourceLocation): void => {
     // Removing credentials: the source value must hold none once its plain ones
     // go, and its records may repeat none of them. The parser sees the value as
@@ -25,7 +32,8 @@ export async function readFileSource(input: FileSourceInput, limits?: ReaderLimi
     // A value too deeply encoded to inspect is refused by name, as refuse mode does.
     let clean: ReturnType<typeof removeCredentials> | undefined;
     try { clean = remove ? removeCredentials(value, policy) : undefined; } catch { fail('INVALID_OR_CREDENTIAL_SOURCE_DATA', at); }
-    if (clean?.removed.some(item => !item.beforeUpload)) withheld = true;
+    if (clean?.removed.some(withholdsOriginal)) withheld = true;
+    if (clean?.removed.some(liveCredentialRemoved)) live = true;
     const encoded = safeValue(clean ? clean.value : value, [], at, policy);
     if (Buffer.byteLength(encoded) > bounded.maxRecordBytes) fail('SOURCE_RECORD_BYTE_LIMIT', at);
     let result: ParsedRecord | ParsedRecord[];
@@ -62,5 +70,5 @@ export async function readFileSource(input: FileSourceInput, limits?: ReaderLimi
   // Original bytes that held a removed credential value are never retained.
   collector.bundle.artifacts.push({ name: input.name, ...artifact, ...(withheld || collector.credentialsRemoved ? { original: { status: 'unavailable' as const, reason: 'credentials-removed' as const } } : {}) });
   for (const record of collector.bundle.records) record.artifactHash = artifact.sha256;
-  return collector.bundle;
+  return { source: collector.bundle, liveCredentialsRemoved: live || collector.liveCredentialsRemoved };
 }
