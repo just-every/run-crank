@@ -46,6 +46,9 @@ export async function tableStateJourney() {
     assert.equal((await startRun(h,privateFlow,{})).status,'paused');assert.equal((await h.get(`tables/${table.id}/records/received_count`)).value,12);
     await h.post(`workflows/${w.id}/test`,{bindings:{}},h.owner,422);
     assert.equal((await h.get(`tables/${table.id}/records/received_count`)).value,12);
+    await change({key:'retired_count',operation:'upsert',value:1});await h.post(`tables/${table.id}/pause`);
+    await h.post(`tables/${table.id}/records/retired_count/erase`,{confirm:'ERASE'});
+    const review=await h.get('tables/'+table.id);await h.post(`tables/${table.id}/adopt`,{digest:review.digest,confirm:'ADOPT_OPERATIONAL_STATE'});
     const exported=await archive(h),sourceSnapshot=await h.get('tables/'+table.id);
     restored=await harness('http://127.0.0.1:9');
     const invalid=await rewritten(exported,(name,row)=>{if(name==='crank_state_records')row.value_json=JSON.stringify('unsupported customer record')});
@@ -58,6 +61,7 @@ export async function tableStateJourney() {
     await restored.restart();await restored.tick(Date.now()+86400000);assert.deepEqual((await restored.get('tables/'+table.id)).records,received.records);
     await restored.post(`tables/${table.id}/adopt`,{digest:received.digest,confirm:'ADOPT_OPERATIONAL_STATE'});
     await restored.post(`tables/${table.id}/records`,{...mutation,operation_id},restored.owner,409);
+    await restored.post(`tables/${table.id}/records`,{key:'retired_count',operation:'upsert',value:0,operation_id:uuid()},restored.owner,409); // The populated erased-key fence survives receiving adoption.
     // Erasure spends keys/operation receipts and journals every deleted row.
     await h.post(`tables/${table.id}/pause`);
     const erased=await h.post(`tables/${table.id}/records/received_count/erase`,{confirm:'ERASE'});assert.equal(erased.phase,'complete');

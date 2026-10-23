@@ -35,6 +35,11 @@ export async function subflowsJourney() {
     assert.equal(bad.status, 'failed'); assert.match(bad.error.message, /input.address must be string/);
     const oversized = await startRun(h, a, { address: '€'.repeat(23000) });
     assert.equal(oversized.status, 'failed'); assert.match(oversized.error.message, /within 64 KiB/);
+    const replacement = await h.post('subflows', { name: 'Bounded literal replacement', definition: { inputs: { value: 'string', replacement: 'string' }, outputs: { value: 'string' }, steps: [{ id: 'replace', fn: 'text.replace', input: { value: '{{trigger.input.value}}', find: 'X', replace: '{{trigger.input.replacement}}' } }], result: { value: '{{steps.replace}}' } } }, h.owner, 201);
+    const replacementFlow = await publish(h, 'Literal replacement bound', { trigger: { type: 'manual' }, steps: [{ id: 'replace', type: 'subflow', subflow_id: replacement.subflow_id, subflow_version: 1, input: { value: '{{trigger.input.value}}', replacement: '{{trigger.input.replacement}}' } }] });
+    assert.deepEqual(stepOf(await startRun(h, replacementFlow, { value: 'XX', replacement: '€' }), 'replace').output, { value: '€€' });
+    const expansion = await startRun(h, replacementFlow, { value: 'X'.repeat(1000), replacement: '€'.repeat(1000) });
+    assert.equal(expansion.status, 'failed'); assert.match(expansion.error.message, /replacement output exceeds 64 KiB/);
     const invalidOutput = { ...definition(false), outputs: { normalized: 'number' } };
     const third = await h.post(versionPath, { definition: invalidOutput }, h.owner, 201);
     const badCaller = await publish(h, 'Output type refusal', graph(third.version));

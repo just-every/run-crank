@@ -2,6 +2,7 @@ import { guardedBatch, requireOwner } from '../access'
 import { assertDispatchAuthority } from '../engine/authority'
 import { StepError } from '../engine/errors'
 import { resolve, type Scope } from '../engine/mapping'
+import { text as transformText } from '../engine/transforms/args'
 import { runTransform } from '../engine/transforms'
 import type { StepContext, StepType } from '../engine/types'
 import { isObject } from '../engine/values'
@@ -104,6 +105,11 @@ export const subflow: StepType = {
         const input = resolve(operation.input, scope)
         if (!isObject(input) || operation.fn === 'text.replace' && input.pattern === true) throw new Error('Subflow: only literal replacement is supported')
         if (!PURE_SUBFLOW_FUNCTIONS.includes(operation.fn)) throw new Error('Subflow: unsupported transformation')
+        if (operation.fn === 'text.replace') {
+          const parts = transformText(input).split(transformText(input, 'find')), replacement = transformText(input, 'replace'), encoder = new TextEncoder()
+          const bytes = parts.reduce((total, part) => total + encoder.encode(part).byteLength, 0) + Math.max(0, parts.length - 1) * encoder.encode(replacement).byteLength
+          if (bytes > 65536) throw new Error('Subflow: replacement output exceeds 64 KiB')
+        }
         const output = runTransform(operation.fn, input)
         if (new TextEncoder().encode(JSON.stringify(output)).byteLength > 65536) throw new Error('Subflow: intermediate output exceeds 64 KiB')
         scope.steps[operation.id] = output
