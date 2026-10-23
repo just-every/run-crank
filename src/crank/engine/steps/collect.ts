@@ -1,3 +1,4 @@
+import { businessCalendar } from '../calendar'
 import { addTime, requireUnit, requireZone } from '../dates'
 import { parseDecimal, round, toText } from '../decimal'
 import { StepError } from '../errors'
@@ -6,6 +7,15 @@ import { isObject } from '../values'
 
 type Field = { type: 'text' | 'number' | 'usd' | 'date' | 'choice' | 'checkbox'; required?: boolean; choices?: string[] }
 const types = ['text', 'number', 'usd', 'date', 'choice', 'checkbox']
+const timeoutLimits = { years: 1, months: 12, weeks: 53, days: 366, hours: 8784, minutes: 527040, seconds: 31622400, business_days: 366 }
+function validateTimeout(step: Step) {
+  if (step.timeout === undefined) return
+  const timeout = step.timeout
+  if (!isObject(timeout) || !Number.isSafeInteger(timeout.amount) || Number(timeout.amount) <= 0) throw new StepError('validation', 'Collect timeout needs a positive whole amount and unit')
+  const unit = requireUnit(timeout.unit)
+  if (Number(timeout.amount) > timeoutLimits[unit]) throw new StepError('validation', 'Collect timeout must fall within the next 366 days')
+  if (unit === 'business_days' && new Set(businessCalendar(step.calendar).weekend).size === 7) throw new StepError('validation', 'Collect timeout calendar has no working day')
+}
 export function collectFields(step: Step): Record<string, Field> { return step.fields as Record<string, Field> }
 
 /** Pure typed answers: no coercion of currency or dates, and no unknown fields.
@@ -58,12 +68,10 @@ export const collect: StepType = {
     }
     if (step.assignee !== undefined && step.assignee !== 'owner') throw new StepError('validation', 'Collect currently requires the native owner; person, role and external-link assignments are not implemented')
     if (step.on_timeout !== undefined && !['stop', 'continue'].includes(String(step.on_timeout))) throw new StepError('validation', 'Collect on_timeout must be stop or continue')
-    if (step.timeout !== undefined) {
-      if (!isObject(step.timeout) || !Number.isInteger(step.timeout.amount) || Number(step.timeout.amount) <= 0) throw new StepError('validation', 'Collect timeout needs a positive whole amount and unit')
-      requireUnit(step.timeout.unit)
-    }
+    validateTimeout(step)
   },
   async execute(step, ctx) {
+    validateTimeout(step)
     for (const name of Object.keys(ctx.input)) if (!Object.hasOwn(collectFields(step), name)) throw new StepError('validation', `${name} is not a field of this question`)
     const initial: Record<string, unknown> = {}
     for (const [name, field] of Object.entries(collectFields(step))) initial[name] = ctx.input[name] ?? (field.type === 'number' ? 0 : field.type === 'checkbox' ? false : '')

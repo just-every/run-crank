@@ -21,6 +21,9 @@ export async function collectJourney() {
     const setup=await h.mf.dispatchFetch(h.origin+'/setup',{method:'POST',redirect:'manual',headers:{origin:h.origin,cookie:h.owner,'content-type':'application/x-www-form-urlencoded'},body:'confirm=yes'});assert.equal(setup.status,303);
     const fields = { po: { type: 'text', required: true }, amount: { type: 'usd', required: true }, quantity: { type: 'number' }, due_date: { type: 'date' }, department: { type: 'choice', choices: ['sales', 'operations'] }, confirmed: { type: 'checkbox' } };
     const question = { id: 'ask', type: 'collect', fields, timeout: { amount: 30, unit: 'business_days' }, calendar: 'us_federal', on_timeout: 'continue', instructions: 'Supply the PO number and USD amount' };
+    for (const invalid of [{ ...question, timeout: { amount: 1e12, unit: 'business_days' } }, { ...question, calendar: { weekend: [0,1,2,3,4,5,6] } }]) {
+      await h.post('workflows', { name: 'Impossible question deadline', graph: { trigger: { type: 'manual' }, steps: [invalid] } }, h.owner, 422);
+    }
     const w = await publish(h, 'Purchasing facts', { trigger: { type: 'manual' }, steps: [question, { id: 'record', type: 'http', input: { method: 'POST', url: 'https://purchasing.example/orders', body: { po: '{{steps.ask.answers.po}}', amount: '{{steps.ask.answers.amount}}' } } }] });
     await h.post('data/classes', { workflow_id: w.id, data_class: 'customer', identifier_fields: ['po'] });
     const employee = await person(h, 'sales'), manager = await person(h, 'manager');
