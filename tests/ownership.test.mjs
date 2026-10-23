@@ -22,7 +22,14 @@ test('BASE-001/BASE-004: an owned installation publishes and finishes every ship
     const {preparePublicCustom}=await import('./custom-fixture.mjs');
     fake.routes.set('custom.example',()=>jsonResponse({id:'stock-24',quantity:24}));
     const custom=await preparePublicCustom(h,{id:'owned-stock'});
-    const graph = ownershipGraph(slack.id,executor.id);graph.steps.unshift(custom.step);
+    const component = await h.post('subflows', { name: 'Owned pure component', definition: { inputs: { value: 'string' }, outputs: { value: 'string' }, steps: [{ id: 'trim', fn: 'text.trim', input: { value: '{{trigger.input.value}}' } }], result: { value: '{{steps.trim}}' } } }, h.owner, 201);
+    const table = await h.post('tables', { name: 'Owned operational counter', confirm: 'OPERATIONAL_NUMBERS_ONLY' }, h.owner, 201);
+    await h.post(`tables/${table.id}/records`, { operation_id: crypto.randomUUID(), key: 'count', operation: 'upsert', value: 0 });
+    const graph = ownershipGraph(slack.id,executor.id);graph.steps.unshift(custom.step,
+      { id: 'component', type: 'subflow', subflow_id: component.subflow_id, subflow_version: 1, input: { value: ' Owned installation ' } },
+      { id: 'counter', type: 'table.atomic', table_id: table.id, input: { key: 'count', operation: 'increment', by: 1 } },
+      { id: 'lookup_count', type: 'table.lookup', table_id: table.id, input: { key: 'count' } });
+    graph.steps.splice(-1, 0, { id: 'question', type: 'collect', fields: { reference: { type: 'text', required: true } } });
     const workflow = await publish(h, 'Harbor wholesale · owned installation', graph);
     const initial = await startRun(h, workflow, ownershipInput);
     assert.equal(initial.status, 'waiting', JSON.stringify(initial.error));
@@ -42,12 +49,19 @@ test('BASE-001/BASE-004: an owned installation publishes and finishes every ship
     assert.equal(review.status, 'awaiting_approval');
     const wait = review.waits.find(w => w.kind === 'approval');
     await h.post(`workflow-runs/${initial.id}/approve`, { path: wait.path, digest: wait.proposal_digest });
+    const question = await h.get('workflow-runs/' + initial.id);
+    assert.equal(question.status, 'awaiting_approval');
+    const questionWait = question.waits.find(w => !w.resolved_at);
+    await h.post(`workflow-runs/${initial.id}/approve`, { path: questionWait.path, digest: questionWait.proposal_digest, edits: { reference: 'Owned receipt' } });
     const done = await h.get('workflow-runs/' + initial.id);
     assert.equal(done.status, 'succeeded', JSON.stringify(done.error));
     assert.deepEqual(done.response.body, { customer: ownershipInput.customer.trim(), receipt: 'receipt-1042', invoice: 'invoice-harbor-1042' });
     assert.equal(stepOf(done, 'rep_name').output.record.id, 'U000001');
     assert.equal(stepOf(done, 'find_note').output.count, 1);
     assert.equal(stepOf(done, 'quote').output.size, new TextEncoder().encode('Harbor Workshop quote: $521.00').length);
+    assert.equal(stepOf(done, 'component').output.value, 'Owned installation');
+    assert.equal(stepOf(done, 'lookup_count').output.record.value, 1);
+    assert.equal(stepOf(done, 'question').output.answers.reference, 'Owned receipt');
     assert.equal(fake.to('ledger.example').length, 1, 'restart and approval do not repeat the invoice');
     // Discover the live registry rather than pinning a version-specific list.
     // Execution itself above goes exclusively through HTTP and Worker Cron.

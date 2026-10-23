@@ -1,3 +1,4 @@
+import { validateSubflowDefinition } from './workflows/subflow-definition.mjs';
 const unfinished = ['queued', 'running', 'waiting', 'awaiting_approval', 'paused'];
 const distant = '9999-12-31T00:00:00.000Z';
 const encode = value => JSON.stringify(value);
@@ -24,6 +25,9 @@ export function fenceRow(table, row) {
 
 /** Every value importRow may write. Base refuses any other change to a staged row. */
 export const importSafety = {
+  crank_state_tables: { active: [0] },
+  crank_state_operations: { active: [0] },
+  crank_subflow_versions: { active: [0] },
   crank_notice_deliveries: { active: [0], lease_id: [null], lease_expires_at: [null] },
   crank_gateways: {status:['revoked'],code_hash:[null],code_expires_at:[null],credential_hash:[null],public_key:[null],fingerprint:[null]},
   crank_gateway_grants: {status:['revoked']},
@@ -49,6 +53,8 @@ export const importSafety = {
  * bounded value, so an unfenced unfinished run keeps only its previous status and
  * a failed delivery keeps its outcome with its single replay marked used. */
 export function importRow(table, row) {
+  if (table === 'crank_state_tables' || table === 'crank_state_operations') return {...row,active:0};
+  if (table === 'crank_subflow_versions') return {...row,active:0};
   if (table === 'crank_notice_deliveries') return {...row,active:0,lease_id:null,lease_expires_at:null};
   if(table==='crank_gateways')return {...Object.fromEntries(Object.entries(row).map(([key,value])=>[key,['code_hash','code_expires_at','credential_hash','public_key','fingerprint'].includes(key)?null:value])),status:'revoked'};
   if(table==='crank_gateway_grants')return {...row,status:'revoked'};
@@ -82,6 +88,25 @@ export async function validateRestore({ read }) {
     const hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(row.definition_json));
     if(Array.from(new Uint8Array(hash),byte=>byte.toString(16).padStart(2,'0')).join('')!==row.definition_digest)return false;
   }
+  const stateTables = new Set((await rows('crank_state_tables')).map(row=>row.id));
+  const stateRecords = new Set();
+  for (const row of await rows('crank_state_records')) {
+    let value; try { value=JSON.parse(row.value_json); } catch { return false; }
+    if(!stateTables.has(row.table_id) || !/^[a-z][a-z0-9_]{0,59}$/.test(row.record_key) || !(Number.isSafeInteger(value) || Array.isArray(value)&&value.length<=1000&&value.every(Number.isSafeInteger)))return false;
+    stateRecords.add(row.id);
+  }
+  for(const row of await rows('crank_state_operations'))if(!stateRecords.has(row.record_id))return false;
+  const subflows = new Map((await rows('crank_subflow_versions')).map(row => [row.id, row]));
+  const subflowRefs = steps => Array.isArray(steps) && steps.every(step => step && typeof step==='object' &&
+    (step.type!=='subflow' || subflows.has(step.subflow_id+':'+step.subflow_version)) &&
+    (!['table.atomic','table.lookup'].includes(step.type) || stateTables.has(step.table_id)) &&
+    (step.type!=='loop' || subflowRefs(step.steps)) &&
+    (step.type!=='paths' || (Array.isArray(step.branches) && step.branches.every(branch=>subflowRefs(branch.steps)) && (!step.fallback || subflowRefs(step.fallback.steps)) && (!step.always || subflowRefs(step.always.steps)))));
+  for (const row of subflows.values()) {
+    try { validateSubflowDefinition(JSON.parse(row.definition_json)); } catch { return false; }
+    const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(row.definition_json));
+    if (Array.from(new Uint8Array(hash), byte => byte.toString(16).padStart(2, '0')).join('') !== row.definition_digest || row.id !== row.subflow_id + ':' + row.version) return false;
+  }
   const workflows = new Map((await rows('crank_workflows')).map(row => [row.id, row]));
   const versions = new Map((await rows('crank_workflow_versions')).map(row => [row.id, row]));
   for (const workflow of workflows.values()) {
@@ -89,6 +114,7 @@ export async function validateRestore({ read }) {
     if (!graph.trigger || !Array.isArray(graph.steps) || workflow.published_version_id && versions.get(workflow.published_version_id)?.workflow_id !== workflow.id) return false;
   }
   for (const version of versions.values()) {
+    if (!subflowRefs(JSON.parse(version.graph_json).steps)) return false;
     if (!workflows.has(version.workflow_id) || version.grant_source_version_id && versions.get(version.grant_source_version_id)?.workflow_id !== version.workflow_id) return false;
     const policy = JSON.parse(version.retry_policy_json);
     if (!policy || typeof policy !== 'object' || Array.isArray(policy) || Object.keys(policy).some(key => !['read_attempts','base_delay_ms','write_base_delay_ms','idempotent_write_attempts','elapsed_ms','jitter_ms','max_wait_ms','run_parked_ms'].includes(key) || !Number.isSafeInteger(policy[key]) || policy[key] < 0)) return false;

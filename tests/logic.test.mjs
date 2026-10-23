@@ -4,6 +4,8 @@ import { harness } from './harness.mjs';
 import { archive } from './restore-journey.mjs';
 import { estimateHold, connection, deliver, fakeEdge, fakeSecret, hookUrl, jsonResponse, publish, runs, settled, startRun, stepOf, until } from './kit.mjs';
 
+import { tableStateJourney } from './table-state-journey.mjs';
+import { subflowsJourney } from './subflows-journey.mjs';
 import { collectJourney } from './collect-journey.mjs';
 import { runNoticesJourney } from './run-notices-journey.mjs';
 
@@ -424,3 +426,7 @@ test('WORK-008: draft edits are listed with author, time and change; one-action 
 test('EXEC-003: run notices retain channel outcomes and safely recover definite non-delivery', async () => { await runNoticesJourney(); });
 
 test('WORK-009: typed native questions survive restart, answer once and preserve calendar, timeout and inactive custody', async () => { await collectJourney(); });
+
+test('WORK-006: callers pin immutable typed pure subflows and independently upgrade, roll back and restore inactive', async () => { await subflowsJourney(); });
+
+test('WORK-007: owner-only operational tables serialize ten runs and list pops with receipts and inactive erasure-safe restore', async () => { await tableStateJourney(); });

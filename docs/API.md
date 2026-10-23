@@ -752,3 +752,40 @@ branch. Default timeout behavior stops; it never fabricates an answer. An earlie
 standing-grant review deadline remains earlier. Paused/restored workflows do not
 resume implicitly. Values use the existing sealed wait/step records, immediate
 blind index, retention and erasure; restored archives carry no answer authority.
+
+
+### Pinned pure subflows (WORK-006 partial)
+
+The native owner creates a definition with `POST /api/crank/subflows` and
+`{name,definition:{inputs:{address:"string"},outputs:{normalized:"string"},steps:[{id:"trim",fn:"text.trim",input:{value:"{{trigger.input.address}}"}}],result:{normalized:"{{steps.trim}}"}}`.
+`POST /subflows/:id/versions` creates the next immutable version. `GET /subflows`
+and `GET /subflows/:id/versions/:n` are owner-only. Inputs/outputs are required,
+exact top-level typed fields (`string,number,boolean,object,array,null`); values,
+intermediate results and definitions are bounded to 64 KiB, with at most 30 fields
+and 20 operations. Functions are trim, case, literal replace and HTML stripping;
+no connection, code, recursive invocation or grant is accepted.
+
+A workflow step pins `{type:"subflow",subflow_id,subflow_version,input}`. Its owner
+publishes normally after reviewing the referenced definition. Upgrading one
+caller changes only its draft/publication; ordinary workflow rollback restores
+its earlier pin. Results are the typed output object, and the parent step trace
+identifies its immutable definition. This is one bounded pure parent-step
+invocation, not a separate child-run capability.
+
+Owner `POST /subflows/:id/versions/:n/revoke` stops further use. Restored versions
+start inactive. `POST .../review` with `{definition_digest,confirm:"REVIEW_PURE_SUBFLOW"}`
+reviews that exact definition without publishing/resuming a caller. Native owner
+registry/use is a conservative default pending ct. Recipes/community installation,
+provider binding and independent child histories/cancellation are not implemented.
+
+### Operational workflow tables (partial WORK-007)
+
+Native owner session and same-origin mutation protection are required. These tables hold non-sensitive operational safe integers or lists of up to 1000 safe integers, with at most 100 keyed records per table. General records, customer/financial/health data, strings/objects, intake forms and record-trigger events are not implemented. Data remains until explicit owner erasure.
+
+- `POST /api/crank/tables` with `name` and `confirm: "OPERATIONAL_NUMBERS_ONLY"`; `GET /api/crank/tables` lists tables; `GET /api/crank/tables/:id` returns records and a review digest.
+- `POST /api/crank/tables/:id/records` takes a fresh UUIDv4 `operation_id` retained for retries, a lower-case identifier `key`, and `operation`: `upsert` (`value`), `increment`/`decrement` (`by`, default 1), `append` (`value`), `pop_first` or `pop_last`. A matching retry returns the original receipt; changed reuse is refused. Counters return the new number; pops return the removed number or `list empty`.
+- `GET /api/crank/tables/:id/records/:key` reads one record. Native production steps `table.atomic` and `table.lookup` select a fixed `table_id`; exact-key lookup supports `no_match` halt/continue and the shared found/not-found shape. Find-or-create is refused. Only current native-owner publication in an unclassified workflow may invoke this state; no grants, sensitive flows or draft tests can use it.
+- `POST /api/crank/tables/:id/pause` fences writes. An inactive/restored table requires `POST /adopt` with its exact `digest` and `confirm: "ADOPT_OPERATIONAL_STATE"`; this never publishes a caller or reactivates old operation receipts.
+- On a paused table, `POST /records/:key/erase` with `confirm: "ERASE"` removes its state and receipts through the erasure journal. Opaque operation/key tombstones remain to prevent recreation and replay. Existing calling-run histories have their separate run erasure controls.
+
+Operational state erasure retains append-only actor/time/opaque record and operation references, with no state values; existing operator erasure governs actor attribution.

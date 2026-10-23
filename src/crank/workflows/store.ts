@@ -1,3 +1,4 @@
+import { subflowPublication } from './subflows'
 import { environmentName } from '../custom/gateways'
 import { customBindings } from '../custom/bindings'
 import { checkCustomPublication } from '../custom/store'
@@ -200,6 +201,7 @@ async function publishVersion(env: CrankEnv, actor: Actor, workflowId: string, i
   requireValue(!actor.team || !pendingRestore(current), 'Only the native owner may adopt a restored workflow', 403)
   await requireAttested(env, workflowId)
   const { graph, declared, warnings } = checked(rollback ? rollback.graph : JSON.parse(current.draft_json))
+  const subflows = await subflowPublication(env, actor, graph)
   await checkCustomPublication(env,graph,actor)
   await checkCustomTriggerPublication(env,graph)
   const gateways = customGatewayIds(graph)
@@ -212,11 +214,13 @@ async function publishVersion(env: CrankEnv, actor: Actor, workflowId: string, i
   }
   const previous = await stmt(env, 'SELECT MAX(number) AS n FROM crank_workflow_versions WHERE workflow_id=?', workflowId).first<{ n: number | null }>()
   const versionId = id(), at = now(), number = (previous?.n ?? 0) + 1, graphJson = canonical(graph)
-  const authority = { custom_bindings: await customBindings(env,graph), gateways, publisher: actor.id, publisher_version: actor.version, publisher_team_revision: actor.team?.revision ?? null, published_at: at, workflow_settings: JSON.parse(current.settings_json), steps: declared.steps, connections: declared.connections, bindings: await snapshotBindings(env, declared.connections), trigger: graph.trigger.type, ...(rollback ? { rollback_of: rollback.rollback_of } : {}) }
+  const authority = { subflows, custom_bindings: await customBindings(env,graph), gateways, publisher: actor.id, publisher_version: actor.version, publisher_team_revision: actor.team?.revision ?? null, published_at: at, workflow_settings: JSON.parse(current.settings_json), steps: declared.steps, connections: declared.connections, bindings: await snapshotBindings(env, declared.connections), trigger: graph.trigger.type, ...(rollback ? { rollback_of: rollback.rollback_of } : {}) }
   const adoption = await adoptionStatements(env, actor, current, input)
   const guard = `attested:${versionId}`
   const statements = [
     ...(command ? [claimCommand(env, actor, command, workflowId, null, versionId)] : []),
+    ...(subflows.length ? [stmt(env, `INSERT INTO crank_authority_guards(id,ok) SELECT ?,CASE WHEN NOT EXISTS(SELECT 1 FROM json_each(?) r LEFT JOIN crank_subflow_versions s
+      ON s.subflow_id=json_extract(r.value,'$.subflow_id') AND s.version=json_extract(r.value,'$.version') WHERE s.id IS NULL OR s.active!=1 OR s.definition_digest!=json_extract(r.value,'$.definition_digest')) THEN 1 ELSE 0 END`, 'subflow:'+versionId, JSON.stringify(subflows)), stmt(env, 'DELETE FROM crank_authority_guards WHERE id=?', 'subflow:'+versionId)] : []),
     attestedGuard(env, guard, workflowId), stmt(env, 'DELETE FROM crank_authority_guards WHERE id=?', guard),
     stmt(env, `UPDATE crank_wf_runs SET continuation_authority=continuation_authority|2 WHERE workflow_id=? AND version_id=?
       AND status IN ('waiting','awaiting_approval') AND COALESCE(json_extract((SELECT graph_json FROM crank_workflow_versions WHERE id=version_id),'$.settings.waiting_runs'),'continue')='continue'`, workflowId, current.published_version_id),

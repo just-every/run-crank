@@ -5,7 +5,7 @@ on:
       journey:
         description: Manual journey selection (scheduled runs always run all)
         type: choice
-        options: [all, private-recipes, notices]
+        options: [all, private-recipes, notices, native-proof]
         default: all
   schedule:
     - cron: '37 3 * * *'
@@ -29,7 +29,7 @@ jobs:
       - run: node --test tests/retry-backoff-journey.mjs
 
   private-recipes:
-    if: github.event_name != 'workflow_dispatch' || inputs.journey != 'notices'
+    if: github.event_name != 'workflow_dispatch' || inputs.journey == 'all' || inputs.journey == 'private-recipes'
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
@@ -48,7 +48,7 @@ jobs:
       - run: node tests/gateway-streaming-journey.mjs
 
   notices:
-    if: github.event_name != 'workflow_dispatch' || inputs.journey == 'all' || inputs.journey == 'notices'
+    if: github.event_name != 'workflow_dispatch' || inputs.journey == 'all' || inputs.journey == 'notices' || inputs.journey == 'native-proof'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
@@ -60,3 +60,17 @@ jobs:
       - run: npm install --global pnpm@10.12.4
       - run: pnpm install --frozen-lockfile
       - run: node tests/run-notices-journey.mjs
+
+  operational-tables:
+    if: github.event_name != 'workflow_dispatch' || inputs.journey == 'all' || inputs.journey == 'native-proof'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: '22.20.0'
+          package-manager-cache: false
+      - run: npm install --global pnpm@10.12.4
+      - run: pnpm install --frozen-lockfile
+      - run: node tests/table-state-journey.mjs

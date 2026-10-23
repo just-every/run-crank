@@ -241,3 +241,15 @@ not copies of run payloads. Run erasure removes deliveries and their attempts.
 CONN-002 automatic-renewal timestamps and value-free renewal audit are portable
 connection history; rotating-token refresh leases are excluded. Credentials
 remain excluded and restored connections still need explicit reconnecting.
+
+
+WORK-006 pure subflow versions are immutable portable definitions, with their
+original schema, transformation list and digest. Export/import force eligibility
+off. Owner digest review is separate from caller publication and cannot restore
+execution authority. Runtime input/output/trace stays in the ordinary calling
+run's DATA-003 custody and DATA-002 erasure. Published component references and
+definition digests are checked during staging before an archive commits.
+
+Operational tables, records, mutation receipts and value-free replay fences are portable. Tables and old operation receipts normalize inactive. The receiving native owner reviews the complete table digest and explicitly adopts it; ordinary workflow publication is still required, and an imported operation receipt never authorizes replay. Paused record erasure uses the shared journal so later journals block old records. Only non-sensitive integer/list state is supported; general record/form custody remains unimplemented.
+
+Operational state erasure retains append-only actor/time/opaque record and operation references, with no state values; existing operator erasure governs actor attribution.

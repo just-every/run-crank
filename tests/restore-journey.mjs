@@ -15,7 +15,7 @@ const inventory = text => {
   return rows.map(({ table, row }) => JSON.stringify({ table, row })).sort();
 };
 // Make a checksummed but semantically invalid archive through the documented format.
-async function rewritten(text, change) {
+export async function rewritten(text, change) {
   const lines = text.trim().split('\n').map(JSON.parse), manifest = lines[0];
   const parts = await Promise.all(lines.slice(1, -1).map(part => makePart(part.index, part.items.map(item => {
     if (item.kind === 'row') change(item.table, item.row);

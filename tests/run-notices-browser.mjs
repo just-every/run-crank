@@ -37,7 +37,12 @@ try {
   };
   for (const width of [1440, 390]) {
     await page.setViewportSize({ width, height: 1000 });
+    const component = await send('subflows', { name: `Address normalization · ${width}`, definition: { inputs: { address: 'string' }, outputs: { normalized: 'string' }, steps: [{ id: 'trim', fn: 'text.trim', input: { value: '{{trigger.input.address}}' } }], result: { normalized: '{{steps.trim}}' } } }, 201);
+    const table = await send('tables', { name: `Operational count · ${width}`, confirm: 'OPERATIONAL_NUMBERS_ONLY' }, 201);
+    await send(`tables/${table.id}/records`, { operation_id: crypto.randomUUID(), key: 'count', operation: 'upsert', value: 0 });
     for (const [kind, steps] of [
+      ['subflow', [{ id: 'normalize', type: 'subflow', subflow_id: component.subflow_id, subflow_version: 1, input: { address: ' 17   Bay Road ' } }, { id: 'review', type: 'approval', input: { normalized: '{{steps.normalize.normalized}}' } }]],
+      ['table', [{ id: 'increment', type: 'table.atomic', table_id: table.id, input: { key: 'count', operation: 'increment', by: 1 } }, { id: 'review', type: 'approval', input: { counter: '{{steps.increment.value}}' } }]],
       ['failure', [{ id: 'check', type: 'transform', fn: 'number.divide', input: { a: 1, b: 0 } }]],
       ['approval', [{ id: 'review', type: 'approval', input: { amount: '19.99' } }]],
       ['collect', [{ id: 'ask', type: 'collect', fields: { po: { type: 'text', required: true }, amount: { type: 'usd', required: true } } }, { id: 'record', type: 'map', input: { po: '{{steps.ask.answers.po}}', amount: '{{steps.ask.answers.amount}}' } }]],
@@ -65,6 +70,20 @@ try {
         await page.mouse.move(0, 0); await control.focus(); await expect(tip).toBeVisible({ timeout: 100 });
         await page.screenshot({ path: join(evidence, `${width}-${kind}-${label.replaceAll(' ', '-')}-tooltip.png`), fullPage: true });
         await control.blur();
+      }
+      if (kind === 'table') {
+        const detail = await send(`workflow-runs/${run.id}`); assert.equal(detail.steps.find(s => s.path === 'increment').output.value, 1);
+        assert.equal((await send(`tables/${table.id}/records/count`)).value, 1);
+        await page.locator('details').filter({ has: page.getByText('Input and output', { exact: true }) }).first().locator('summary').click();
+        await page.screenshot({ path: join(evidence, `${width}-atomic-table-result.png`), fullPage: true });
+      }
+      if (kind === 'subflow') {
+        const detail = await send(`workflow-runs/${run.id}`);
+        assert.deepEqual(detail.steps.find(s => s.path === 'normalize').output, { normalized: '17 Bay Road' });
+        assert.equal(detail.steps.find(s => s.path === 'normalize').trace.version, 1);
+        await page.locator('details').filter({ has: page.getByText('Input and output', { exact: true }) }).first().locator('summary').click();
+        await expect(page.locator('pre').filter({ hasText: '17 Bay Road' }).first()).toBeVisible();
+        await page.screenshot({ path: join(evidence, `${width}-subflow-result.png`), fullPage: true });
       }
       if (kind === 'collect') {
         await send(`workflow-runs/${run.id}/approve`, { path: 'ask', digest: run.waits[0].proposal_digest, edits: { po: 'PO-1042', amount: '95.555' } }, 422);

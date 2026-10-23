@@ -1,3 +1,5 @@
+import { tableApi } from '../tables/api'
+import { subflowApi } from './subflows'
 import { reviseProposal } from '../grants/proposals'
 import { issueGrant, readGrants, revokeGrant } from '../grants/store'
 import { startTask, readTask } from '../grants/tasks'
@@ -35,7 +37,7 @@ import { previewReplay, replaySteps } from './replay'
 import { cancelRun, decideApproval, previewWorkflow, resumeRun, runDetail, runsToday, searchRuns, startRun } from './runs'
 import { createWorkflow, duplicateWorkflow, getWorkflow, listWorkflows, presentWorkflow, publishWorkflow, rollbackWorkflow, setWorkflowState, unpublishWorkflow, updateDraft, versionGraph } from './store'
 
-const PREFIXES = ['/api/crank/grants', '/api/crank/agent-tasks', '/api/crank/skills', '/api/crank/usage', '/api/crank/historical', '/api/crank/workflows', '/api/crank/workflow-runs', '/api/crank/connections', '/api/crank/oauth', '/api/crank/hooks', '/api/crank/holds', '/api/crank/queues', '/api/crank/catalog', '/api/crank/coverage', '/api/crank/settings', '/api/crank/audit', '/api/crank/notices', '/api/crank/reports']
+const PREFIXES = ['/api/crank/tables', '/api/crank/subflows', '/api/crank/grants', '/api/crank/agent-tasks', '/api/crank/skills', '/api/crank/usage', '/api/crank/historical', '/api/crank/workflows', '/api/crank/workflow-runs', '/api/crank/connections', '/api/crank/oauth', '/api/crank/hooks', '/api/crank/holds', '/api/crank/queues', '/api/crank/catalog', '/api/crank/coverage', '/api/crank/settings', '/api/crank/audit', '/api/crank/notices', '/api/crank/reports']
 const match = (path: string, pattern: RegExp) => pattern.exec(path)?.slice(1).map(decodeURIComponent) ?? null
 
 async function testConnection(env: CrankEnv, actor: Actor, connectionId: string, input: Record<string, unknown>) {
@@ -96,6 +98,14 @@ export async function workflowApi(request: Request, env: CrankEnv): Promise<Resp
     }
     requireValue(!path.startsWith('/api/crank/agent-tasks'), 'Agent tasks require a separate execution credential',403)
     requireValue(actor.kind !== 'trigger', 'Trigger tokens only admit events', 403)
+    if (path === '/api/crank/tables' || path.startsWith('/api/crank/tables/')) {
+      if (request.method !== 'GET') requireWriteOrigin(request, env, actor)
+      return await tableApi(request, env, actor)
+    }
+    if (path === '/api/crank/subflows' || path.startsWith('/api/crank/subflows/')) {
+      if (request.method !== 'GET') requireWriteOrigin(request, env, actor)
+      return await subflowApi(request, env, actor)
+    }
     const usage = await usageApi(request, env, actor)
     if (usage) return usage
     let m: string[] | null
