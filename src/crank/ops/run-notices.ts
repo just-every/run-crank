@@ -68,7 +68,7 @@ export async function noticeDeliveries(env: CrankEnv, runId?: string | null) {
 async function dispatch(env: CrankEnv, delivery: Delivery): Promise<Outcome> {
   const owner = await stmt(env, `SELECT o.email FROM crank_workflows w JOIN oa_operators o ON o.id=w.owner_id
     JOIN crank_wf_runs r ON r.workflow_id=w.id WHERE w.id=? AND r.id=? AND w.owner_id=? AND o.status='active' AND o.email=(SELECT recipient FROM crank_notices WHERE dedupe_key=?) AND r.mode='production'
-    AND (?!='approval' OR EXISTS(SELECT 1 FROM crank_waits a WHERE a.run_id=r.id AND a.kind='approval' AND a.resolved_at IS NULL))`, delivery.workflow_id, delivery.run_id, delivery.owner_id, delivery.notice_key, delivery.kind).first<{ email: string }>()
+    AND (? NOT IN ('approval','collect') OR EXISTS(SELECT 1 FROM crank_waits a WHERE a.run_id=r.id AND a.kind='approval' AND a.resolved_at IS NULL))`, delivery.workflow_id, delivery.run_id, delivery.owner_id, delivery.notice_key, delivery.kind).first<{ email: string }>()
   if (!owner) return { state: 'cancelled', failure: 'notice_no_longer_authorized_or_needed' }
   const link = new URL('/app/workflow-runs/' + encodeURIComponent(delivery.run_id), env.AUTH_ORIGIN).href
   const body = `Crank: ${delivery.kind.replace(/_/g, ' ')}. Failure/decision category: ${delivery.category}. Accountable owner: ${delivery.owner_id}. Next action: open the run, inspect the retained error or proposed action, and make an authorized decision.\n\nOpen: ${link}`

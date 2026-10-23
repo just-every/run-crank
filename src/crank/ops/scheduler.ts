@@ -15,6 +15,7 @@ import { RESTORED_OWNER } from '../restore-policy.mjs'
 import { runPoll, type PollRow } from '../triggers/poll'
 import { runSchedule } from '../triggers/schedule'
 import { notify } from './notices'
+import { collectDeadlines } from './collect-deadlines'
 import { flushRunNotices } from './run-notices'
 import { flushLogStreams } from './log-stream'
 import { releaseRetryWaits } from '../connectors/retry-wait'
@@ -36,6 +37,7 @@ async function runSchedulerPass(env: CrankEnv, time: number) {
   await cancelExecutorTasks(env,undefined,time)
   summary.released += await releaseExecutorTasks(env,at)
   summary.released += await releaseGatewayTasks(env,at)
+  await collectDeadlines(env, time)
   await checkApprovalDeadlines(env, time)
   summary.recovered = await recoverExpiredExecutions(env, at)
   summary.released += await releaseRetryWaits(env, at)

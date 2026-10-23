@@ -173,7 +173,7 @@ class Execution {
         this.scope.steps[step.id] = result.output
         return { kind: 'completed' }
       case 'waiting':
-        await insertWait(this.env, this.run, path, result.wait.kind === 'approval' ? await approvalSpec(this.env, this.run, result.wait.proposal, result.wait.reason ?? 'approval step') : result.wait)
+        await insertWait(this.env, this.run, path, result.wait.kind === 'approval' ? await approvalSpec(this.env, this.run, result.wait.proposal, result.wait.reason ?? 'approval step', step.type === 'collect' ? result.wait.expiresAt : null) : result.wait)
         await this.save(step, path, 'waiting', { input })
         return { kind: 'waiting', approval: result.wait.kind === 'approval' }
       case 'stopped':

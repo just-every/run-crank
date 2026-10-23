@@ -40,6 +40,7 @@ try {
     for (const [kind, steps] of [
       ['failure', [{ id: 'check', type: 'transform', fn: 'number.divide', input: { a: 1, b: 0 } }]],
       ['approval', [{ id: 'review', type: 'approval', input: { amount: '19.99' } }]],
+      ['collect', [{ id: 'ask', type: 'collect', fields: { po: { type: 'text', required: true }, amount: { type: 'usd', required: true } } }, { id: 'record', type: 'map', input: { po: '{{steps.ask.answers.po}}', amount: '{{steps.ask.answers.amount}}' } }]],
     ]) {
       const w = await send('workflows', { name: `Notice history · ${kind} · ${width}`, graph: { trigger: { type: 'manual' }, steps } }, 201);
       await send(`workflows/${w.id}/estimate`, { cost: { components: ['orchestration', 'connectors', 'models', 'executors'].map(kind => ({ kind, usd_per_run: '0', assumption: 'Owner-reviewed local browser proof with native steps only' })) } });
@@ -64,6 +65,16 @@ try {
         await page.mouse.move(0, 0); await control.focus(); await expect(tip).toBeVisible({ timeout: 100 });
         await page.screenshot({ path: join(evidence, `${width}-${kind}-${label.replaceAll(' ', '-')}-tooltip.png`), fullPage: true });
         await control.blur();
+      }
+      if (kind === 'collect') {
+        await send(`workflow-runs/${run.id}/approve`, { path: 'ask', digest: run.waits[0].proposal_digest, edits: { po: 'PO-1042', amount: '95.555' } }, 422);
+        await page.locator('[name=decision_edit_po]').fill('PO-1042');
+        await page.locator('[name=decision_edit_amount]').fill('95.50');
+        await page.getByRole('button', { name: 'Submit answers', exact: true }).click();
+        await expect(page.getByRole('button', { name: 'Submit answers', exact: true })).toHaveCount(0);
+        const finished = await send(`workflow-runs/${run.id}`);
+        assert.equal(finished.status, 'succeeded'); assert.deepEqual(finished.steps.find(s => s.path === 'record').output, { po: 'PO-1042', amount: '95.50' });
+        await page.screenshot({ path: join(evidence, `${width}-collect-answered.png`), fullPage: true });
       }
       report.push({ width, kind, status: run.status, notice: 'development suppression and retained attempt visible', tooltips: '300ms hover / immediate focus', overflow: false });
     }

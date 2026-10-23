@@ -40,7 +40,7 @@ export async function afterSettle(env: CrankEnv, run: RunRow) {
 
 async function approvalNotice(env: CrankEnv, run: RunRow) {
   const workflow = await stmt(env, 'SELECT id,name FROM crank_workflows WHERE id=?', run.workflow_id).first<{ id: string; name: string }>()
-  const waits = await stmt(env, "SELECT id,path,reason FROM crank_waits WHERE run_id=? AND kind='approval' AND resolved_at IS NULL", run.id).all<{ id: string; path: string; reason: string | null }>()
-  for (const wait of waits.results) await notifyRun(env, { runId: run.id, category: 'approval', key: `approval:${wait.id}`, workflowId: run.workflow_id, kind: 'approval', subject: `Approval needed: ${workflow?.name ?? 'workflow run'}`,
+  const waits = await stmt(env, "SELECT w.id,w.path,w.reason,s.type FROM crank_waits w JOIN crank_wf_steps s ON s.run_id=w.run_id AND s.path=w.path WHERE w.run_id=? AND w.kind='approval' AND w.resolved_at IS NULL", run.id).all<{ id: string; path: string; reason: string | null; type: string }>()
+  for (const wait of waits.results) await notifyRun(env, { runId: run.id, category: wait.type === 'collect' ? 'information' : 'approval', key: `approval:${wait.id}`, workflowId: run.workflow_id, kind: wait.type === 'collect' ? 'collect' : 'approval', subject: `${wait.type === 'collect' ? 'Information' : 'Approval'} needed: ${workflow?.name ?? 'workflow run'}`,
     text: `A run of "${workflow?.name ?? run.workflow_id}" is waiting for your decision at step ${wait.path} (${wait.reason ?? 'approval'}). Review the exact proposed action, then approve, edit allowed fields or reject.`, link: `/api/crank/workflow-runs/${run.id}` })
 }

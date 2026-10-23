@@ -1,3 +1,6 @@
+import { collectAnswers, collectFields } from '../engine/steps/collect'
+import { collectDeadlines } from '../ops/collect-deadlines'
+import { guardedBatch } from '../access'
 import { cancelExecutorTasks } from '../executors/scheduler'
 import { workflowScope, versionConnectionScope } from '../team/policy'
 import { grantFence } from '../grants/authority'
@@ -89,7 +92,7 @@ export async function runDetail(env: CrankEnv, actor: Actor, runId: string) {
     revisions: openRevisions.map(r => ({ path: r.path, revision: r.revision, corrected: !!r.corrected, created_by: r.created_by, created_at: r.created_at, prior_operation_key: r.prior_operation_key, operation_key: r.operation_key,
       ...(payload ? { prior_input: parse(r.prior_input_json), prior_error: parse(r.prior_error_json), input: parse(r.input_json) } : {}) })),
     attempts: attempts.results.map(a => ({ id: a.id, path: a.path, number: a.number, method: a.method, started_at: a.started_at, finished_at: a.finished_at, http_status: a.http_status, error_category: a.error_category, retry_number: a.retry_number, budget_started_at: a.budget_started_at, slice_started_at: a.slice_started_at, retry_at: a.retry_at, retry_reason: a.retry_reason, retry_parked_at: a.retry_parked_at, retry_released_at: a.retry_released_at, retry_resumed_at: a.retry_resumed_at, ...(payload ? { destination_origin: a.destination_origin } : {}) })),
-    waits: openWaits.map(w => ({ ...w, editable: payload || reviewable.has(w.path!) ? (()=>{const step=version ? stepAt(JSON.parse(version.graph_json),w.path!) : null;return step?.type==='approval' && Array.isArray(step.editable) ? step.editable : []})() : [], can_review: reviewable.has(w.path!), reason: payload || reviewable.has(w.path!) ? w.reason : null, proposal: payload || reviewable.has(w.path!) ? parse(w.proposal_json) : 'restricted', resolution: payload ? parse(w.resolution_json) : w.resolution_json ? { approved: parse(w.resolution_json).approved, cancelled: parse(w.resolution_json).cancelled } : null, proposal_json: undefined, resolution_json: undefined })),
+    waits: openWaits.map(w => ({ ...w, editable: payload || reviewable.has(w.path!) ? (()=>{const step=version ? stepAt(JSON.parse(version.graph_json),w.path!) : null;return step?.type === 'collect' ? Object.keys(collectFields(step)) : step?.type==='approval' && Array.isArray(step.editable) ? step.editable : []})() : [], question: version ? stepAt(JSON.parse(version.graph_json),w.path!)?.type === 'collect' : false, can_review: reviewable.has(w.path!), reason: payload || reviewable.has(w.path!) ? w.reason : null, proposal: payload || reviewable.has(w.path!) ? parse(w.proposal_json) : 'restricted', resolution: payload ? parse(w.resolution_json) : w.resolution_json ? { approved: parse(w.resolution_json).approved, cancelled: parse(w.resolution_json).cancelled } : null, proposal_json: undefined, resolution_json: undefined })),
   }
 }
 
@@ -124,21 +127,28 @@ function stepAt(graph: Graph, path: string): Step | null {
 export async function decideApproval(env: CrankEnv, actor: Actor, runId: string, decision: 'approve' | 'reject', input: Record<string, unknown>) {
   const path = String(input.path ?? '')
   await assertReviewer(env, actor, runId, path)
-  const wait = await stmt(env, "SELECT * FROM crank_waits WHERE run_id=? AND path=? AND kind='approval'", runId, path).first<{ proposal_json: string; proposal_digest: string; resolved_at: string | null }>()
+  await collectDeadlines(env, Date.now(), runId)
+  const wait = await stmt(env, "SELECT w.*,(SELECT type FROM crank_wf_steps s WHERE s.run_id=w.run_id AND s.path=w.path) AS step_type FROM crank_waits w WHERE run_id=? AND path=? AND kind='approval'", runId, path).first<{ proposal_json: string; proposal_digest: string; resolved_at: string | null; step_type: string }>()
   requireValue(wait, 'No approval is waiting at that step', 404)
+  if (wait.resolved_at && wait.step_type === 'collect') {
+    requireOwner(actor)
+    await guardedBatch(env, actor, 'owner', [auditStatement(env, actor.id, 'collect.answer_ignored', 'run', runId, { path })])
+    return { ...await runDetail(env, actor, runId), answer_ignored: true }
+  }
   requireValue(!wait.resolved_at, 'This approval was already decided', 409)
   requireValue(input.digest === wait.proposal_digest, 'The proposal changed; review it again', 409)
   const run = await stmt(env, 'SELECT version_id,workflow_id,grant_id FROM crank_wf_runs WHERE id=?', runId).first<{ version_id: string; workflow_id: string; grant_id: string | null }>()
   const graph = JSON.parse((await stmt(env, 'SELECT graph_json FROM crank_workflow_versions WHERE id=?', run!.version_id).first<{ graph_json: string }>())!.graph_json) as Graph
   const step = stepAt(graph, path)
   requireValue(step, 'That step is not in this run’s version', 404)
+  if (step.type === 'collect') requireOwner(actor)
   if (input.defer === true) requireValue(await stmt(env,'SELECT 1 FROM crank_wf_runs WHERE id=? AND grant_id IS NOT NULL',runId).first(),'Deferred review applies only to granted tasks',422)
   const original = JSON.parse((await openText(env, run!.workflow_id, wait.proposal_json))!) as Record<string, unknown>, reason = typeof input.reason === 'string' ? input.reason.slice(0, 1000) : null
   let resolution: Record<string, unknown>
   if (decision === 'approve') {
-    const edits = isObject(input.edits) ? input.edits : {}, editable: string[] = step.type === 'approval' && Array.isArray(step.editable) ? step.editable as string[] : []
+    const edits = isObject(input.edits) ? input.edits : {}, editable: string[] = step.type === 'collect' ? Object.keys(collectFields(step)) : step.type === 'approval' && Array.isArray(step.editable) ? step.editable as string[] : []
     for (const field of Object.keys(edits)) requireValue(editable.includes(field), `${field} is not editable`, 422)
-    const proposal = { ...original, ...edits }
+    const proposal = step.type === 'collect' ? (() => { try { return collectAnswers(step, { ...original, ...edits }) } catch (error) { if (error instanceof StepError) throw new CrankError(422, error.message); throw error } })() : { ...original, ...edits }
     if (step.type === 'approval') {
       try { checkCaps(step, proposal) } catch (error) { if (error instanceof StepError) throw new CrankError(422, error.message); throw error }
     }
@@ -149,9 +159,14 @@ export async function decideApproval(env: CrankEnv, actor: Actor, runId: string,
   const executionFence=run!.grant_id ? grantFence(env,run!.grant_id,run!.workflow_id,run!.version_id) : {sql:'1',args:[]}
   const selfFence = actor.team ? {sql:'EXISTS(SELECT 1 FROM crank_wf_runs WHERE id=? AND created_by!=?)',args:[runId,actor.id]} : {sql:'1',args:[]}
   const guard={sql:`(${sessionFence.sql}) AND (${executionFence.sql}) AND (${selfFence.sql})`,args:[...sessionFence.args,...executionFence.args,...selfFence.args]}
-  requireValue(await resolveWait(env, runId, path, resolution, actor.id, { digest: wait.proposal_digest,guard,
-    audit: auditStatementWhen(env,"changes()=1",[],actor.id,decision==='approve'?'run.approve':'run.reject','run',runId,{path,edited:resolution.edited??false,reason},run!.version_id)
-  }), 'The proposal or reviewer authority changed; read the current decision again',409)
+  const resolved = await resolveWait(env, runId, path, resolution, actor.id, { digest: wait.proposal_digest,guard,
+    audit: auditStatementWhen(env,"changes()=1",[],actor.id,step.type === 'collect' ? 'collect.answer' : decision==='approve'?'run.approve':'run.reject','run',runId,{path,edited:resolution.edited??false,reason},run!.version_id)
+  })
+  if (!resolved && step.type === 'collect' && await stmt(env, 'SELECT 1 FROM crank_waits WHERE run_id=? AND path=? AND resolved_at IS NOT NULL', runId, path).first()) {
+    await guardedBatch(env, actor, 'owner', [auditStatement(env, actor.id, 'collect.answer_ignored', 'run', runId, { path })])
+    return { ...await runDetail(env, actor, runId), answer_ignored: true }
+  }
+  requireValue(resolved, 'The proposal or reviewer authority changed; read the current decision again',409)
   if (input.defer === true) {
     requireValue(run && await stmt(env,'SELECT 1 FROM crank_wf_runs WHERE id=? AND grant_id IS NOT NULL',runId).first(),'Deferred review applies only to granted tasks',422)
     return runDetail(env,actor,runId)

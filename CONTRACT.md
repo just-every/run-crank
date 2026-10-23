@@ -176,6 +176,8 @@ DATA-001 applies before this capability ships: include its collected human data 
 
 AGENT-004 inheritance: every added human question/fact kind inherits all AGENT-004 obligations and acceptance before shipping, including proof of owner-named native contact authority, calendar/cadence limits, unanswered escalation, revocation and deactivation fencing, exactly one authorized human continuation, late/duplicate refusal, takeover/cancellation, audited contacts, and complete inactive portability/erasure through named public-door journeys. Routing grants no workflow access or approval rights.
 
+**Delivered native slice (c33, owner-only answer default pending ct):** A collect step declares text, finite JSON number, USD decimal string (canonical cents; no rounding of extra precision), actual YYYY-MM-DD date, explicit choice or checkbox fields. The native owner answers through the existing digest-bound decision form; no role, person or external email-link assignment is implied. The existing owner-authorized native-inbox follow-up retains business calendars, cadence, escalation and revocable contact authority without granting read/answer rights to a contact. One typed answer resumes the original step; duplicate or resolved-late submissions are audited without another continuation. A declared calendar timeout produces a separate timeout outcome, never an answer or approval. Question values use the existing per-class sealed run/wait inventory, immediate blind indexing, retention and run erasure; archived waits restore without receiving authority. File fields, role/external assignments, rich typed form controls and the complete provider journey remain unbuilt; WORK-009 is partial.
+
 **Acceptance evidence:** Publish a workflow with a collect-data step requesting a PO number and a USD amount from a sales role; trigger it late on a Friday, restart the service over the weekend and observe the Monday reminder and then the escalation to the configured manager; answer through the emailed link, verify the run resumes the exact step and the provider readback shows the answered values; submit the same link again and verify one continuation; let a second request pass its deadline and verify the timeout branch runs. Export and restore these collected human data, compare their full portable records and assert inactive receiving state under DATA-001.
 
 #### WORK-010 — Digest steps that collect across runs.
@@ -1029,8 +1031,8 @@ Judged from the code and tests at commit `119e652e284fd128af6e3ce718411494a9447f
 | Clauses | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
 | Published | 8 | 4 | 0 | 12 |
-| Target and push further | 20 | 21 | 33 | 74 |
-| All | 28 | 25 | 33 | 86 |
+| Target and push further | 20 | 22 | 32 | 74 |
+| All | 28 | 26 | 32 | 86 |
 
 BASE-003 was completed on 20 October 2026 with the named emitted-service and public-door recovery journeys below.
 
@@ -1046,7 +1048,7 @@ MIG-006, BASE-004 and BASE-005 were added on 17 October 2026 so every homepage c
 | `WORK-006` | Reusable subflows and recipes | target | missing |  | No delivered product workflow. |
 | `WORK-007` | Workflow tables and intake forms | target | missing |  | No delivered product workflow. |
 | `WORK-008` | Versions, testing and controlled deployment | target | done | `src/crank/workflows/store.ts`; `src/crank/workflows/testing.ts`; `src/crank/workflows/drafts.ts`; `src/crank/workflows/comparison.ts`; `src/crank/engine/test-authority.ts`; `src/crank/engine/authority.ts`; `migrations/core/0037_draft_tests.sql`; `tests/logic.test.mjs`; `tests/deployment.test.mjs`; `tests/version-comparison.test.mjs`; `tests/ops.test.mjs` (WORK-008: immutable snapshots, explicit bindings, live confirmation, test history/audit, production exclusions, in-flight version retention, promotion, rollback and inactive restore) | |
-| `WORK-009` | Collect-data human steps | target | missing |  | No delivered product workflow. |
+| `WORK-009` | Collect-data human steps | target | partial | `src/crank/engine/steps/collect.ts`; `src/crank/ops/collect-deadlines.ts`; `tests/logic.test.mjs` (WORK-009: typed native questions survive restart, answer once and preserve calendar, timeout and inactive custody); `tests/collect-journey.mjs`; `tests/run-notices-browser.mjs` (collect answer forms at 1440/390) | File fields, role/person/external-link assignment, rich typed controls, Slack/Teams/Nook/mobile-push contacts and full authorized-provider journey remain; native owner-only answer default awaits ct approval. |
 | `WORK-010` | Digest steps that collect across runs | target | missing |  | No delivered product workflow. |
 | `WORK-011` | Search steps: found, not found, several found, and find or create | target | partial | `src/crank/engine/search.ts`; `src/crank/connectors/slack.ts`; `tests/connections.test.mjs` | Only Slack searches exist; no WORK-007 tables, CONN-011 connectors or migration; HubSpot acceptance needs an account. |
 | `WORK-012` | Built-in no-code transforms | target | partial | `src/crank/engine/transforms/index.ts`; `tests/logic.test.mjs` | Lookup backed by WORK-007 tables; preview on WORK-014 real samples (manual sample only); MIG-001, MIG-002 and MIG-003 mappings. |

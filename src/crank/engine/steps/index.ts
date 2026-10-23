@@ -1,3 +1,4 @@
+import { collect } from './collect'
 import { customRequest } from '../../custom/step'
 import { code } from '../../executors/step'
 import { fileFetch } from '../../connectors/files'
@@ -10,6 +11,6 @@ import { join } from './join'
 
 /** Every step a published version may declare; `paths` groups are handled by the executor. */
 export const STEP_TYPES: Record<string, StepType> = {
-  'custom.request':customRequest, code, filter, transform, map, respond, delay, wait_for_callback: waitForCallback, approval, join,
+  collect, 'custom.request':customRequest, code, filter, transform, map, respond, delay, wait_for_callback: waitForCallback, approval, join,
   http: httpRequest, 'file.fetch': fileFetch, ...slackSteps,
 }

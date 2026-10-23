@@ -726,3 +726,29 @@ leave the original write uncertain without another mutation. Multiple matches
 name `match_count` and `decision_required`. An unsuccessful, malformed or invalid
 readback also preserves uncertainty. This is an immediate HTTP recovery slice;
 it is not an authorized compensation or a complete financial connector.
+
+
+### Native collected information (WORK-009 partial)
+
+A workflow may declare `{id:"ask",type:"collect",fields:{po:{type:"text",required:true},amount:{type:"usd",required:true}}}`.
+Available field types are `text` (trimmed, 2,000 characters), `number` (finite JSON
+number), `usd` (decimal string, at most two fractional digits, canonical cents),
+`date` (actual YYYY-MM-DD), `choice` (distinct `choices`) and `checkbox` (boolean).
+There are at most 30 fields. Unknown fields, extra USD precision and invalid dates
+are refused. File fields and non-owner assignments are not implemented.
+
+The existing owner decision form says **Submit answers**. The same owner-only
+`POST /workflow-runs/:id/approve` with `{path,digest,edits}` validates and records
+one answer; output is `{answered,timed_out,answers,answered_by,answered_at}`.
+`steps.ask.answers.po` maps into later steps. Late/resolved duplicate answers are
+ignored with an audit. Native contacts can use the existing explicit follow-up
+calendar/cadence/escalation door; receiving a contact grants no read or answer
+right. Native owner-only answering is a conservative default pending ct approval,
+not completion of the role/external-assignee requirement.
+
+Optional `timeout:{amount,unit}`, `calendar`, `timezone` and `on_timeout:"continue"`
+produce `{answered:false,timed_out:true,answers:null}` for a published timeout
+branch. Default timeout behavior stops; it never fabricates an answer. An earlier
+standing-grant review deadline remains earlier. Paused/restored workflows do not
+resume implicitly. Values use the existing sealed wait/step records, immediate
+blind index, retention and erasure; restored archives carry no answer authority.

@@ -6,6 +6,7 @@ import { auditStatementWhen } from '../ops/audit'
 import { assertGrantAuthority, grantFence } from './authority'
 import type { GrantPolicy } from './policy'
 import { openText } from '../ops/payload-seal'
+import { isObject } from '../engine/values'
 
 type ApprovalPolicy = GrantPolicy['approval']
 
@@ -17,16 +18,27 @@ export async function approvalPolicy(env: CrankEnv, run: RunRow): Promise<Approv
   return (JSON.parse(grant.policy_json) as GrantPolicy).approval
 }
 
-export async function approvalSpec(env: CrankEnv, run: RunRow, proposal: unknown, reason: string): Promise<WaitSpec> {
+export async function approvalSpec(env: CrankEnv, run: RunRow, proposal: unknown, reason: string, declaredExpiry?: string | null): Promise<WaitSpec> {
   const policy = await approvalPolicy(env, run)
-  return { kind: 'approval', proposal, reason,
-    ...(policy ? { expiresAt: new Date(Date.now() + policy.timeout_seconds * 1000).toISOString() } : {}) }
+  const expiries = [declaredExpiry, policy ? new Date(Date.now() + policy.timeout_seconds * 1000).toISOString() : null].filter((value): value is string => typeof value === 'string').sort()
+  return { kind: 'approval', proposal, reason, ...(expiries.length ? { expiresAt: expiries[0] } : {}) }
 }
 
 /** Delegation applies only to this grant's decision, never to owner administration. */
 export async function assertReviewer(env: CrankEnv, actor: Actor, runId: string, path: string): Promise<void> {
   const run = await stmt(env, 'SELECT * FROM crank_wf_runs WHERE id=?', runId).first<RunRow>()
   requireValue(run, 'Run not found', 404)
+  // Authority comes from the immutable graph, including the brief interval
+  // between inserting a wait and saving its step checkpoint.
+  if (actor.role !== 'owner' || !['native', 'dev'].includes(actor.kind)) {
+    const version = await stmt(env, 'SELECT graph_json FROM crank_workflow_versions WHERE id=?', run.version_id).first<{ graph_json: string }>()
+    const leaf = path.split('/').at(-1)
+    const collects = (steps: unknown): boolean => Array.isArray(steps) && steps.some(step => isObject(step) && (
+      step.id === leaf && step.type === 'collect' || collects(step.steps) ||
+      Array.isArray(step.branches) && step.branches.some(branch => isObject(branch) && collects(branch.steps)) ||
+      isObject(step.fallback) && collects(step.fallback.steps) || isObject(step.always) && collects(step.always.steps)))
+    if (version && collects(JSON.parse(version.graph_json).steps)) requireOwner(actor)
+  }
   if (actor.team) {
     workflowScope(actor, run.workflow_id)
     requireValue(actor.team.role === 'approver' && !actor.tokenId && !actor.grantId && actor.kind !== 'review', 'A named scoped approver is required', 403)
