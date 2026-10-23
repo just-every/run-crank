@@ -91,6 +91,9 @@ try {
         await page.locator('[name=decision_edit_amount]').fill('95.50');
         await page.getByRole('button', { name: 'Submit answers', exact: true }).click();
         await expect(page.getByRole('button', { name: 'Submit answers', exact: true })).toHaveCount(0);
+        await expect(page.locator('#step-ask pre')).toContainText('PO-1042');
+        await expect(page.locator('#step-ask pre')).toContainText('95.50');
+        await expect(page.locator('#step-ask')).toContainText('Answered');
         const finished = await send(`workflow-runs/${run.id}`);
         assert.equal(finished.status, 'succeeded'); assert.deepEqual(finished.steps.find(s => s.path === 'record').output, { po: 'PO-1042', amount: '95.50' });
         await page.screenshot({ path: join(evidence, `${width}-collect-answered.png`), fullPage: true });

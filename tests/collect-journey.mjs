@@ -18,6 +18,7 @@ export async function collectJourney() {
   fake.routes.set('purchasing.example', async ({ body }) => { effects.push(JSON.parse(body)); return jsonResponse({ id: 'synthetic-crank-po', ...effects.at(-1) }); });
   const h = await harness('http://127.0.0.1:9', { edge: fake.edge }); let restored;
   try {
+    const setup=await h.mf.dispatchFetch(h.origin+'/setup',{method:'POST',redirect:'manual',headers:{origin:h.origin,cookie:h.owner,'content-type':'application/x-www-form-urlencoded'},body:'confirm=yes'});assert.equal(setup.status,303);
     const fields = { po: { type: 'text', required: true }, amount: { type: 'usd', required: true }, quantity: { type: 'number' }, due_date: { type: 'date' }, department: { type: 'choice', choices: ['sales', 'operations'] }, confirmed: { type: 'checkbox' } };
     const question = { id: 'ask', type: 'collect', fields, timeout: { amount: 30, unit: 'business_days' }, calendar: 'us_federal', on_timeout: 'continue', instructions: 'Supply the PO number and USD amount' };
     const w = await publish(h, 'Purchasing facts', { trigger: { type: 'manual' }, steps: [question, { id: 'record', type: 'http', input: { method: 'POST', url: 'https://purchasing.example/orders', body: { po: '{{steps.ask.answers.po}}', amount: '{{steps.ask.answers.amount}}' } } }] });
@@ -54,6 +55,8 @@ export async function collectJourney() {
     assert.deepEqual(collected.answers, { ...valid, po: 'PO-1042', amount: '95.50' });
     assert.equal(collected.answered_by, (await h.get('state')).actor.id); assert.ok(collected.answered_at);
     assert.deepEqual(effects, [{ po: 'PO-1042', amount: '95.50' }]);
+    const answeredPage=await h.send('/app/workflow-runs/'+r.id,undefined,h.owner);
+    assert.equal(answeredPage.status,200);assert.match(answeredPage.text, /Answered/);assert.match(answeredPage.text, /PO-1042/);assert.match(answeredPage.text, /95.50/);
     const subject = await h.post('data/subject', { subject: 'PO-1042' });
     assert.ok(subject.workflow_runs.some(item => item.id === r.id), 'collected identifiers join the existing blind index before continuation');
     const again = await h.post(`workflow-runs/${r.id}/approve`, answer({ ...valid, po: 'late change' }));
@@ -72,6 +75,7 @@ export async function collectJourney() {
     const expired = await h.get('workflow-runs/' + waiting.id);
     assert.equal(expired.status, 'succeeded'); assert.equal(stepOf(expired, 'ask').output.timed_out, true);
     assert.deepEqual(stepOf(expired, 'route').output.matched, ['timeout']);
+    const timedPage=await h.send('/app/workflow-runs/'+waiting.id,undefined,h.owner);assert.equal(timedPage.status,200);assert.match(timedPage.text,/Timed out/);
     const late = await h.post(`workflow-runs/${waiting.id}/approve`, { path: 'ask', digest: waiting.waits[0].proposal_digest, edits: valid });
     assert.equal(late.answer_ignored, true); assert.equal(effects.length, 1);
     // A newly pending collected question and completed sealed answer are portable,
