@@ -359,9 +359,9 @@ Each item below is one clause’s acceptance evidence. The named journey must be
   Current evidence: `RUN-LOCALLY.md`; `src/site/run.json`; `deploy.json`; `tests/runtime.mjs`. Remaining: No supported own-server production path (a supervised workerd service with on-disk data, Cron and HTTPS); `rer dev` stops after 12 idle hours and is not a production service; live owner-account deploy is not proven by the cited tests.
 
 - **BOUND-001 — US-first product and provider responsibilities. Status: partial.** Configure a US business workflow with USD sales-tax lines and an ACH/1099 handoff, inspect provider responsibilities and consent, and attempt a regulated operation without the required agreement/scope; verify a named setup requirement and retained obligation, then complete it through an authorized sandbox/provider connection.
-  Current evidence: none; this is build work.
+  Current partial evidence: USD cents/tax-code arrays and US business dates in `tests/logic.test.mjs` (WORK-012/WORK-002: no-code transforms, exact USD math, business days and line items write exact payloads or nothing), plus owner USD forecasts under OPS-002. Provider-responsibility consent, ACH/1099/W-2 handoff, agreement/scope refusal with retained obligations and authorized sandbox completion remain unbuilt/unproved.
 
-**85 clauses: 27 done, 25 partial, 33 missing.** Status details and product behavior are in the contract’s final table. Completion requires the whole journey, including negative cases and observable end states; a cited partial implementation alone cannot promote an item.
+**86 clauses: 28 done, 28 partial, 30 missing.** Status details and product behavior are in the contract’s final table. Completion requires the whole journey, including negative cases and observable end states; a cited partial implementation alone cannot promote an item.
 
 ## Push further: agents that own the outcome
 

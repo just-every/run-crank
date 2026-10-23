@@ -31,7 +31,7 @@ export async function tableStateJourney() {
     assert.equal((await h.get(`tables/${table.id}/records/received_count`)).value,10,'ten concurrently admitted runs add exactly ten');
     assert.deepEqual(completed.map(run=>stepOf(run,'count').output.value).sort((a,b)=>a-b),[1,2,3,4,5,6,7,8,9,10]);
     const operation_id=uuid(),mutation={key:'received_count',operation:'increment',by:2};
-    const first=await change(mutation,operation_id);assert.deepEqual(await change(mutation,operation_id),first);
+    const first=await change(mutation,operation_id);await h.restart();assert.deepEqual(await change(mutation,operation_id),first);
     assert.equal((await h.get(`tables/${table.id}/records/received_count`)).value,12);
     await h.post(`tables/${table.id}/records`,{...mutation,by:3,operation_id},h.owner,409);
     await change({key:'queue',operation:'upsert',value:[11,22,33]});
