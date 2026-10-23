@@ -1,5 +1,6 @@
 import { paginate, validatePagination } from './pagination'
 import { retryRequest } from './retry'
+import { RetryWait } from './retry-wait'
 import { sendRequest, type Prepared } from './request-transport'
 import { multipart } from './multipart'
 import { evaluate, validateGroups, type Groups } from '../engine/conditions'
@@ -62,8 +63,16 @@ async function readback(ctx: StepContext, step: Record<string, unknown>, connect
   const spec = step.readback as Record<string, unknown>
   const resolved = resolve({ url: spec.url, equals: spec.equals }, ctx.scope) as { url: string; equals: unknown }
   const { response } = await sendRetried(ctx, step, { url: checkEgress(String(resolved.url)), method: 'GET', headers: new Headers({ accept: 'application/json' }), body: null, timeout }, connectionId)
-  if (response.status < 200 || response.status > 299) return null
-  const body = parseBody(response), found = lookup(body, String(spec.path ?? 'id'))
+  if (response.status < 200 || response.status > 299) throw new StepError('uncertain', 'The write response was lost and provider readback did not succeed; reconcile before replaying', { uncertain: true, readback_http_status: response.status })
+  const body = parseBody(response)
+  if (typeof spec.records_path === 'string') {
+    const collection = spec.records_path === '' ? body : lookup(body, spec.records_path).value
+    if (!Array.isArray(collection) || collection.length > 1000) throw new StepError('uncertain', 'Provider readback did not return the declared bounded record list', { uncertain: true })
+    const matches = collection.filter(record => { const value = lookup(record, String(spec.path ?? 'id')); return value.found && canonical(value.value) === canonical(resolved.equals) })
+    if (matches.length > 1) throw new StepError('uncertain', 'Provider readback found multiple matching effects; an accountable owner must reconcile them before continuing', { uncertain: true, match_count: matches.length, decision_required: true, operation_key: ctx.operationKey })
+    return matches.length === 1 ? { response, body: matches[0] } : null
+  }
+  const found = lookup(body, String(spec.path ?? 'id'))
   return found.found && canonical(found.value) === canonical(resolved.equals) ? { response, body } : null
 }
 
@@ -80,6 +89,7 @@ export const httpRequest: StepType = {
     if (step.timeout_ms !== undefined && (!Number.isInteger(step.timeout_ms) || (step.timeout_ms as number) < 100 || (step.timeout_ms as number) > 30000)) throw new StepError('validation', `HTTP ${step.id}: timeout_ms must be 100 to 30000`)
     validatePagination(step)
     if (step.readback !== undefined && (!isObject(step.readback) || step.readback.url === undefined)) throw new StepError('validation', `HTTP ${step.id}: readback needs a url, path and equals`)
+    if (isObject(step.readback) && step.readback.records_path !== undefined && (typeof step.readback.records_path !== 'string' || step.readback.records_path.length > 200 || typeof step.readback.path !== 'string' || !Object.hasOwn(step.readback, 'equals'))) throw new StepError('validation', `HTTP ${step.id}: list readback needs records_path, path and equals`)
   },
   async execute(step, ctx) {
     const input = ctx.input, method = String(input.method ?? 'GET').toUpperCase(), mutating = !['GET', 'HEAD'].includes(method)
@@ -98,19 +108,25 @@ export const httpRequest: StepType = {
     const timeout = Number(step.timeout_ms ?? 15000), connectionId = typeof step.connection_id === 'string' ? step.connection_id : undefined
     const prepared: Prepared = { url, method, headers, body: encoded.body, timeout, ...(step.body_kind === 'multipart' ? { bodyIdentity: await digest(canonical({ kind: 'multipart', body: input.body })) } : {}) }
 
-    let response: BoundedResponse, reconciled = false, attempts = 0, budgetExhausted = false
+    let reconciledBody: unknown, response: BoundedResponse, reconciled = false, attempts = 0, budgetExhausted = false
     try {
       const result = await sendRetried(ctx, step, prepared, connectionId)
       response = result.response; attempts = result.attempts; budgetExhausted = result.exhausted ?? false
     } catch (error) {
       if (!mutating || !(error instanceof StepError) || error.category !== 'network') throw error
       if (isObject(step.readback)) {
-        const found = await readback(ctx, step, connectionId, timeout)
-        if (found) { response = found.response; reconciled = true; attempts = (await stmt(ctx.env, 'SELECT COUNT(*) AS n FROM crank_wf_attempts WHERE run_id=? AND path=?', ctx.run.id, ctx.path).first<{n:number}>())!.n }
-        else throw new StepError('uncertain', `HTTP ${step.id}: the response was lost and readback found no record; not retried`, { uncertain: true })
+        let found: Awaited<ReturnType<typeof readback>>
+        try { found = await readback(ctx, step, connectionId, timeout) }
+        catch (readError) {
+          if (readError instanceof RetryWait || readError instanceof StepError && readError.category === 'uncertain') throw readError
+          // A failure to read is not evidence that the initial write failed.
+          throw new StepError('uncertain', `HTTP ${step.id}: the write response was lost and readback could not be confirmed; reconcile before replaying`, { uncertain: true, readback_error_category: readError instanceof StepError ? readError.category : 'provider' })
+        }
+        if (found) { response = found.response; reconciledBody = found.body; reconciled = true; attempts = (await stmt(ctx.env, 'SELECT COUNT(*) AS n FROM crank_wf_attempts WHERE run_id=? AND path=?', ctx.run.id, ctx.path).first<{n:number}>())!.n }
+        else throw new StepError('uncertain', `HTTP ${step.id}: the response was lost and readback found no record; not retried`, { uncertain: true, match_count: 0 })
       } else throw new StepError('uncertain', `HTTP ${step.id}: the response was lost; not retried automatically`, { uncertain: true })
     }
-    const body = parseBody(response!)
+    const body = reconciled ? reconciledBody : parseBody(response!)
     const result = { status: response!.status, headers: outputHeaders(response!.headers), body, reconciled, attempts }
     const ok = statusMatches(response!.status, isObject(step.success) ? step.success.status : undefined)
       && (!isObject(step.success) || step.success.when === undefined || evaluate(step.success.when as Groups, { ...ctx.scope, response: result } as any, ctx.zone, ctx.now).pass)

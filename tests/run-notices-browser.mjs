@@ -47,10 +47,10 @@ try {
       const run = await send(`workflows/${w.id}/run`, { input: {} }, 201);
       await page.goto(origin + '/app/workflow-runs/' + run.id);
       await expect(page.getByRole('heading', { name: 'Notice delivery', exact: true })).toBeVisible();
-      await expect(page.getByText('mail_not_configured', { exact: false }).first()).toBeVisible();
+      await expect(page.getByText('development_mail_not_sent', { exact: false }).first()).toBeVisible();
       const details = page.locator('details').filter({ has: page.getByText('Delivery attempts', { exact: true }) }).first();
       await details.locator('summary').click();
-      await expect(details).toContainText('retry');
+      await expect(details).toContainText('suppressed');
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `${width}/${kind}: overflow`);
       await page.screenshot({ path: join(evidence, `${width}-notice-${kind}.png`), fullPage: true });
       // Search is icon-only at every width, account becomes icon-only on mobile.
@@ -65,11 +65,14 @@ try {
         await page.screenshot({ path: join(evidence, `${width}-${kind}-${label.replaceAll(' ', '-')}-tooltip.png`), fullPage: true });
         await control.blur();
       }
-      report.push({ width, kind, status: run.status, notice: 'durable retry history visible', tooltips: '300ms hover / immediate focus', overflow: false });
+      report.push({ width, kind, status: run.status, notice: 'development suppression and retained attempt visible', tooltips: '300ms hover / immediate focus', overflow: false });
     }
   }
   await writeFile(join(evidence, 'browser-results.json'), JSON.stringify(report, null, 2));
   console.log('EXEC-003 installed notice history and tooltips PASS at 1440/390');
+} catch (error) {
+  const diagnostic = (await readFile(log, 'utf8').catch(() => '')).split('\n').filter(line => !/RER_|token|secret|credential/i.test(line)).map(line => line.replace(/https?:\/\/\S+|\S+@\S+/g, '[private destination]')).slice(-12).join('\n');
+  console.error(diagnostic); throw error;
 } finally {
   await browser?.close();
   // Stop only descendants recorded under the process this journey started.

@@ -128,6 +128,7 @@ export async function workflowApi(request: Request, env: CrankEnv): Promise<Resp
       if ((m = match(path, /^\/api\/crank\/holds\/([^/]+)$/))) return json(await getHold(env, m[0]))
       if (path === '/api/crank/queues') return json((await stmt(env, `SELECT q.name,q.spacing_seconds,q.last_release_at,COUNT(i.seq) AS depth,MIN(i.arrived_at) AS oldest_arrived_at FROM crank_delay_queues q
         LEFT JOIN crank_queue_items i ON i.queue=q.name AND i.released_at IS NULL GROUP BY q.name ORDER BY q.name`).all<any>()).results.map(q => ({ ...q, next_release_at: q.depth ? new Date(Math.max(Date.now(), q.last_release_at ? Date.parse(q.last_release_at) + q.spacing_seconds * 1000 : 0)).toISOString() : null })))
+      if ((m = match(path, /^\/api\/crank\/connections\/([^/]+)\/history$/))) { requireOwner(actor); await getConnection(env, m[0]); return json(await readAudit(env, 'connection', m[0])) }
       if (path === '/api/crank/connections') return json(await listConnections(env, actor))
       if (path === '/api/crank/catalog') return json({ apps: CATALOG })
       if (path === '/api/crank/oauth/callback') return json(await finishOauth(env, actor, url.searchParams), 201)

@@ -3,6 +3,8 @@ import { before, after, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHmac } from 'node:crypto';
 import { harness } from './harness.mjs';
+import { effectReadbackJourney } from './effect-readback-journey.mjs';
+import { oauthRenewalJourney } from './oauth-renewal-journey.mjs';
 import { connection, deliver, fakeEdge, fakeSecret, jsonResponse, publish, runs, startRun, stepOf, until } from './kit.mjs';
 
 const fake = fakeEdge();
@@ -81,6 +83,7 @@ test('HTTP-002/EXEC-005: requests use stored connections, map responses, route b
   assert.match(refusedFile.error.message, /file fetch failed/);
   assert.ok(!fake.requests.some(r => ['evil.example', '10.1.2.3', '192.168.1.10'].includes(r.url.hostname)), 'no request past a refusal');
   assert.ok(!fake.to('crm.example').some(r => r.url.pathname === '/files'));
+  await effectReadbackJourney();
 });
 
 test('CONN-002: OAuth consent, refresh and accounts per step; secrets never leave the server; restores require reconnecting', async () => {
@@ -131,6 +134,7 @@ test('CONN-002: OAuth consent, refresh and accounts per step; secrets never leav
     const flows = await other.get('workflows');
     assert.ok(flows.length > 0 && flows.every(f => f.status === 'paused' || f.status === 'draft'), 'restored workflows do not dispatch');
   } finally { await other.close() }
+  await oauthRenewalJourney();
 });
 
 const slackSign = (secret, body, t = Math.floor(Date.now() / 1000)) => ({ 'x-slack-request-timestamp': String(t), 'x-slack-signature': 'v0=' + createHmac('sha256', secret).update(`v0:${t}:${body}`).digest('hex'), 'content-type': 'application/json' });

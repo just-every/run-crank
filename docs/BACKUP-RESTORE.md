@@ -236,3 +236,8 @@ Export and import force `crank_notice_deliveries.active=0` and clear send leases
 Cron cannot send restored notices. `crank_notice_routes` is installation-local
 owner consent and is excluded. Notice records contain references/category/outcome,
 not copies of run payloads. Run erasure removes deliveries and their attempts.
+
+
+CONN-002 automatic-renewal timestamps and value-free renewal audit are portable
+connection history; rotating-token refresh leases are excluded. Credentials
+remain excluded and restored connections still need explicit reconnecting.

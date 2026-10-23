@@ -702,3 +702,27 @@ inactive; routes do not travel. Run erasure removes its delivery/attempt rows.
 
 Teams/Nook, failure calendar escalation/resolution, compensation and the full
 failure-route acceptance remain unfinished. This slice does not claim EXEC-003 DONE.
+
+
+### Automatic OAuth renewal history (CONN-002)
+
+`GET /api/crank/connections/:id/history` is an owner-only connection audit.
+Public connection state includes `previous_expires_at`, `renewed_at` and
+`expires_at`; the `connection.token_renewed` audit records the automatic actor,
+previous/new expiry and granted scope names, never credential values. Scheduled
+runs do not need a signed-in browser to renew an expired token. Concurrent callers
+share one rotating-token exchange. Revocation/rotation wins over a late exchange;
+new scopes require fresh consent. An unconfirmed or interrupted refresh requires
+reconnection. Refresh leases never travel in archives. Admission remains per
+connection; no account label or credential becomes provider-verified identity.
+
+### Structured effect readback (EXEC-006)
+
+An HTTP step's existing `readback` may use
+`{url, records_path:"items", path:"business_key", equals:"{{trigger.input.order}}"}`.
+The response list is bounded to 1,000 records. One exact match supplies that
+record as `steps.<step>.body` with `reconciled:true`; zero or several matches
+leave the original write uncertain without another mutation. Multiple matches
+name `match_count` and `decision_required`. An unsuccessful, malformed or invalid
+readback also preserves uncertainty. This is an immediate HTTP recovery slice;
+it is not an authorized compensation or a complete financial connector.

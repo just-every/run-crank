@@ -155,7 +155,7 @@ class Execution {
         return { kind: 'paused', reason: error.message, connectionId: String(error.detail.connection_id ?? ''), authority: error.category === 'authority' }
       }
       const failure = error instanceof StepError ? error.toJSON() : { category: 'provider', message: `Step ${step.id} failed unexpectedly` }
-      if (step.on_error === 'continue') {
+      if (step.on_error === 'continue' && failure.category !== 'uncertain' && !(failure as any).uncertain) {
         const value = { ok: false, error: { category: failure.category, message: failure.message }, ...(error instanceof StepError ? error.detail : {}) }
         await this.save(step, path, 'failed', { input, output: value, error: failure })
         this.scope.steps[step.id] = value

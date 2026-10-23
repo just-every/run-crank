@@ -2,9 +2,9 @@ import { guardedBatch, requireOwner } from '../access'
 import { boundedFetch, utf8 } from '../engine/egress'
 import { StepError } from '../engine/errors'
 import { isObject } from '../engine/values'
-import { digest, now, requireValue, stmt, text, type Actor, type CrankEnv } from '../model'
+import { digest, id, now, requireValue, stmt, text, type Actor, type CrankEnv } from '../model'
 import { auditStatement } from '../ops/audit'
-import { createConnection, getConnection, rotateConnection, storeSecret, type ConnectionRow, type Secret } from './store'
+import { credential, createConnection, getConnection, rotateConnection, storeSecret, type ConnectionRow, type Secret } from './store'
 import { open, randomToken, seal } from './vault'
 
 /** Provider OAuth 2.0 authorization-code endpoints, from each provider's documentation. */
@@ -64,7 +64,7 @@ async function tokenRequest(app: string, form: Record<string, string>) {
   const response = await boundedFetch(provider.token, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded', accept: 'application/json' }, body: new URLSearchParams(form).toString(), timeoutMs: 15000, maxBytes: 65536 })
   let body: unknown
   try { body = JSON.parse(utf8(response.bytes)) } catch { throw new StepError('auth', `${app} returned an unreadable token response`) }
-  if (response.status !== 200 || !isObject(body) || body.ok === false || typeof body.access_token !== 'string') throw new StepError('auth', `${app} refused the token request${isObject(body) && typeof body.error === 'string' ? ` (${body.error.slice(0, 80)})` : ''}`)
+  if (response.status !== 200 || !isObject(body) || body.ok === false || typeof body.access_token !== 'string') throw new StepError('auth', `${app} refused the token request; reconnect the account`)
   const expires = typeof body.expires_in === 'number' ? new Date(Date.now() + body.expires_in * 1000).toISOString() : null
   const granted = typeof body.scope === 'string' ? body.scope.split(/[ ,]+/).filter(Boolean) : null
   const team = isObject(body.team) && typeof body.team.name === 'string' ? body.team.name : typeof body.hub_domain === 'string' ? body.hub_domain : ''
@@ -97,13 +97,57 @@ export async function finishOauth(env: CrankEnv, actor: Actor, params: URLSearch
     : createConnection(env, actor, input, { scopes, account: token.team, expiresAt: token.expires })
 }
 
-/** Refreshes an OAuth access token shortly before expiry and keeps the rotated pair. */
-export async function freshToken(env: CrankEnv, row: ConnectionRow, secret: Secret): Promise<Secret> {
-  if (row.auth_kind !== 'oauth2' || !secret.expires_at || Date.parse(secret.expires_at) - Date.now() > 60000) return secret
-  if (!secret.refresh_token) throw new StepError('auth', `The ${row.app} token expired and has no refresh token; reconnect it`, { connection_id: row.id, reconnect: true })
-  const client = await oauthApp(env, row.app)
-  const token = await tokenRequest(row.app, { grant_type: 'refresh_token', refresh_token: secret.refresh_token, client_id: client.client_id, client_secret: client.client_secret })
-  const next = { ...secret, ...token.secret, refresh_token: token.secret.refresh_token ?? secret.refresh_token }
-  await storeSecret(env, row, next, token.expires)
-  return next
+/** Refresh custody is separate from request capacity. Exactly one caller may use
+ * a rotating refresh token; waiters re-read the winning sealed credential. A stale
+ * claim whose credential never changed is uncertain, so it requires reconnecting. */
+export async function freshToken(env: CrankEnv, initialRow: ConnectionRow, initialSecret: Secret): Promise<Secret> {
+  const fresh = (secret: Secret) => !secret.expires_at || Date.parse(secret.expires_at) - Date.now() > 60000
+  if (initialRow.auth_kind !== 'oauth2' || fresh(initialSecret)) return initialSecret
+  const deadline = Date.now() + 20000
+  for (;;) {
+    const { row, secret } = await credential(env, initialRow.id)
+    if (fresh(secret)) return secret
+    if (!secret.refresh_token) throw new StepError('auth', `The ${row.app} token expired and has no refresh token; reconnect it`, { connection_id: row.id, reconnect: true })
+    const at = now(), lease = id(), fingerprint = await digest(row.secret_ciphertext!)
+    const prior = await stmt(env, 'SELECT lease_id,credential_digest,expires_at FROM crank_oauth_refresh_leases WHERE connection_id=?', row.id).first<{ lease_id: string; credential_digest: string; expires_at: string }>()
+    if (prior && prior.expires_at <= at) {
+      // A committed rotation/renewal already reconciles the old claim. Otherwise
+      // the provider may have consumed the refresh token before the interruption.
+      if (fingerprint !== prior.credential_digest) {
+        await stmt(env, 'DELETE FROM crank_oauth_refresh_leases WHERE connection_id=? AND lease_id=?', row.id, prior.lease_id).run()
+        continue
+      }
+      await stmt(env, `UPDATE crank_connections SET status='needs_reconnect' WHERE id=? AND status='active' AND secret_ciphertext=?
+        AND EXISTS(SELECT 1 FROM crank_oauth_refresh_leases WHERE connection_id=? AND lease_id=? AND expires_at<=?)`, row.id, row.secret_ciphertext, row.id, prior.lease_id, at).run()
+      throw new StepError('connection', 'Token renewal was interrupted; reconnect before another provider operation', { connection_id: row.id, reconnect: true })
+    }
+    const claim = await stmt(env, `INSERT INTO crank_oauth_refresh_leases(connection_id,lease_id,credential_digest,started_at,expires_at)
+      VALUES(?,?,?,?,?) ON CONFLICT DO NOTHING`, row.id, lease, fingerprint, at, new Date(Date.now() + 30000).toISOString()).run()
+    if (claim.meta.changes !== 1) {
+      if (Date.now() >= deadline) throw new StepError('connection', 'Token renewal is still in progress; resume after it finishes', { connection_id: row.id })
+      await new Promise(resolve => setTimeout(resolve, 100)); continue
+    }
+    try {
+      // The row may have changed between the first read and the lease claim.
+      const current = await credential(env, row.id)
+      if (fresh(current.secret)) return current.secret
+      if (current.row.secret_ciphertext !== row.secret_ciphertext) continue
+      const client = await oauthApp(env, row.app)
+      let token: Awaited<ReturnType<typeof tokenRequest>>
+      try { token = await tokenRequest(row.app, { grant_type: 'refresh_token', refresh_token: secret.refresh_token, client_id: client.client_id, client_secret: client.client_secret }) }
+      catch {
+        await stmt(env, "UPDATE crank_connections SET status='needs_reconnect' WHERE id=? AND status='active' AND secret_ciphertext=?", row.id, row.secret_ciphertext).run()
+        throw new StepError('connection', 'Token renewal could not be confirmed; reconnect before another provider operation', { connection_id: row.id, reconnect: true })
+      }
+      const scopes: string[] = JSON.parse(row.scopes_json)
+      if (token.granted && token.granted.some(scope => !scopes.includes(scope))) {
+        await stmt(env, "UPDATE crank_connections SET status='needs_reconnect' WHERE id=? AND status='active' AND secret_ciphertext=?", row.id, row.secret_ciphertext).run()
+        throw new StepError('connection', 'The provider returned new scopes during renewal; fresh owner consent is required', { connection_id: row.id, reconnect: true })
+      }
+      const next: Secret = { ...secret, ...token.secret, refresh_token: token.secret.refresh_token ?? secret.refresh_token }
+      if (!token.expires) delete next.expires_at
+      await storeSecret(env, row, next, token.expires, token.granted)
+      return next
+    } finally { await stmt(env, 'DELETE FROM crank_oauth_refresh_leases WHERE connection_id=? AND lease_id=?', row.id, lease).run() }
+  }
 }

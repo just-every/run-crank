@@ -3,13 +3,14 @@ import { guardedBatch, requireOwner } from '../access'
 import { StepError } from '../engine/errors'
 import { isObject } from '../engine/values'
 import { CrankError, id, now, requireValue, stmt, text, type Actor, type CrankEnv } from '../model'
-import { auditStatement } from '../ops/audit'
+import { auditStatement, auditStatementWhen } from '../ops/audit'
 import { notify } from '../ops/notices'
 import { APPS, SECRET_FIELDS, type AuthKind } from './apps'
 import { open, seal } from './vault'
 
 export interface ConnectionRow {
   id: string; app: string; label: string; auth_kind: AuthKind; account_name: string; domains_json: string; scopes_json: string
+  renewed_at: string | null; previous_expires_at: string | null
   environment:string
   purpose: 'production' | 'test'
   secret_iv: string | null; secret_ciphertext: string | null; expires_at: string | null
@@ -19,7 +20,7 @@ export type Secret = Record<string, string>
 
 /** Public view: never any credential material. */
 export function present(row: ConnectionRow) {
-  return { id: row.id, app: row.app, environment:row.environment, purpose: row.purpose, label: row.label, auth_kind: row.auth_kind, account_name: row.account_name, domains: JSON.parse(row.domains_json), scopes: JSON.parse(row.scopes_json), status: row.status, expires_at: row.expires_at, created_by: row.created_by, created_at: row.created_at, rotated_at: row.rotated_at, revoked_at: row.revoked_at, consented_at: row.consented_at }
+  return { id: row.id, app: row.app, environment:row.environment, purpose: row.purpose, label: row.label, auth_kind: row.auth_kind, account_name: row.account_name, domains: JSON.parse(row.domains_json), scopes: JSON.parse(row.scopes_json), status: row.status, expires_at: row.expires_at, renewed_at: row.renewed_at, previous_expires_at: row.previous_expires_at, created_by: row.created_by, created_at: row.created_at, rotated_at: row.rotated_at, revoked_at: row.revoked_at, consented_at: row.consented_at }
 }
 const binding = (row: { id: string; app: string }) => `crank-connection:${row.id}:${row.app}`
 
@@ -113,9 +114,14 @@ export async function credential(env: CrankEnv, connectionId: string): Promise<{
   try { return { row, secret: await open<Secret>(env, binding(row), row.secret_iv, row.secret_ciphertext) } }
   catch (error) { throw new StepError('connection', error instanceof CrankError ? error.message : 'The connection credential is unreadable', { connection_id: connectionId, reconnect: true }) }
 }
-export async function storeSecret(env: CrankEnv, row: ConnectionRow, secret: Secret, expiresAt: string | null) {
-  const sealed = await seal(env, binding(row), secret)
-  await stmt(env, "UPDATE crank_connections SET secret_iv=?,secret_ciphertext=?,expires_at=?,rotated_at=? WHERE id=? AND status='active'", sealed.iv, sealed.ciphertext, expiresAt, now(), row.id).run()
+export async function storeSecret(env: CrankEnv, row: ConnectionRow, secret: Secret, expiresAt: string | null, scopes?: string[] | null) {
+  const sealed = await seal(env, binding(row), secret), at = now()
+  const result = await env.DB.batch([
+    stmt(env, `UPDATE crank_connections SET secret_iv=?,secret_ciphertext=?,previous_expires_at=expires_at,expires_at=?,rotated_at=?,renewed_at=?,scopes_json=?
+      WHERE id=? AND status='active' AND secret_iv=? AND secret_ciphertext=?`, sealed.iv, sealed.ciphertext, expiresAt, at, at, JSON.stringify(scopes ?? JSON.parse(row.scopes_json)), row.id, row.secret_iv, row.secret_ciphertext),
+    auditStatementWhen(env, 'changes()=1', [], 'system:oauth', 'connection.token_renewed', 'connection', row.id, { previous_expires_at: row.expires_at, expires_at: expiresAt, scopes: scopes ?? JSON.parse(row.scopes_json) }),
+  ])
+  if (result[0].meta.changes !== 1) throw new StepError('connection', 'The connection was revoked or changed during token renewal; no provider operation was sent', { connection_id: row.id, reconnect: true })
 }
 export function connectionDomains(row: ConnectionRow): string[] { return JSON.parse(row.domains_json) }
 export const REDACTED = '[redacted]'
