@@ -52,16 +52,26 @@ const rolePolicy: RolePolicy = input => defaultRolePolicy(input) && (input.actor
 // SEC-003: each accepted access decision enters Crank's audit with the deciding owner and
 // the person's operator id, never their email address.
 const ACCESS_ACTIONS: Record<string, string> = { '/auth/invite': 'access.invite', '/auth/operator/status': 'access.status', '/auth/operator/role': 'access.role' }
+// The decision as Base's operator handler reads it: a JSON object or form fields.
+async function decision(request: Request): Promise<Record<string, string> | null> {
+ const type = request.headers.get('content-type')?.split(';')[0]
+ if (type === 'application/json') return request.json().catch(() => null) as Promise<Record<string, string> | null>
+ if (type === 'application/x-www-form-urlencoded') return Object.fromEntries(new URLSearchParams(await request.text()))
+ return null
+}
 async function auditedAuth(request: Request, env: Bindings): Promise<Response | null> {
- const action = request.method === 'POST' && request.headers.get('content-type')?.startsWith('application/json') ? ACCESS_ACTIONS[new URL(request.url).pathname] : undefined
+ const action = request.method === 'POST' ? ACCESS_ACTIONS[new URL(request.url).pathname] : undefined
  const copy = action ? request.clone() : null
+ // The decider is read before the decision applies: changing one's own role or status ends that session.
+ const session = copy ? await operatorAuth(env).getSession(copy.clone() as Request) : null
  const response = await createAuthHandler(operatorAuth(env))(request)
- if (!copy || !response || response.status >= 300) return response
- const [session, input] = await Promise.all([operatorAuth(env).getSession(copy.clone() as Request), copy.json() as Promise<Record<string, string>>])
+ if (!copy || !session || !response || response.status >= 300) return response
+ const input = await decision(copy as Request)
+ if (!input) return response
  const subject = action === 'access.invite'
   ? (await env.DB.prepare('SELECT id FROM oa_operators WHERE email=?').bind(normalizeEmail(input.email)).first<{ id: string }>())?.id
   : input.operatorId
- if (session && subject) await auditStatement(env as CrankEnv, session.operator.id, action!, 'operator', subject, action === 'access.status' ? { status: input.status } : { role: input.role ?? 'member' }).run()
+ if (subject) await auditStatement(env as CrankEnv, session.operator.id, action!, 'operator', subject, action === 'access.status' ? { status: input.status } : { role: input.role ?? 'member' }).run()
  return response
 }
 export function operatorAuth(env: Bindings) {
