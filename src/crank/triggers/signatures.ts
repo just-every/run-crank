@@ -55,7 +55,7 @@ export async function verifySignature(config: Record<string, unknown>, secret: s
         if (!same(url.searchParams.get('bodySHA256')!, hex(await crypto.subtle.digest('SHA-256', request.body)))) refuse('The Twilio body hash does not match')
       } else if (request.form) {
         signed += [...request.form.keys()].sort().map(key => key + request.form!.getAll(key).join('')).join('')
-      }
+      } else if (request.body.length) refuse('A Twilio body must be form-encoded or covered by bodySHA256')
       if (!same(header('x-twilio-signature') ?? '', b64(await hmac('sha1', secret, signed)))) refuse('The Twilio signature does not match')
       return
     }

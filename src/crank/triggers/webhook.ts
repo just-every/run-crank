@@ -66,7 +66,8 @@ export async function receiveHook(request: Request, env: CrankEnv, secret: strin
     // Authenticity is checked on the raw bytes before anything is parsed or stored.
     if (trigger.signature) {
       const { secret: signing } = await credential(env, trigger.signing_connection_id)
-      const form = request.headers.get('content-type')?.startsWith('application/x-www-form-urlencoded') ? new URLSearchParams(new TextDecoder().decode(bytes)) : null
+      // Form fields are signed only when the body is parsed as that same form.
+      const form = request.headers.get('content-type')?.split(';')[0].trim().toLowerCase() === 'application/x-www-form-urlencoded' ? new URLSearchParams(new TextDecoder().decode(bytes)) : null
       await verifySignature(trigger.signature, signing.secret, { body: bytes, headers: request.headers, url: request.url, form })
     }
     if (trigger.header_auth) {

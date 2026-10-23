@@ -1,6 +1,6 @@
 import { before, after, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createHmac } from 'node:crypto';
+import { createHash, createHmac } from 'node:crypto';
 import { harness } from './harness.mjs';
 import { estimateHold, connection, deliver, fakeEdge, fakeSecret, hookUrl, jsonResponse, publish, runs, settled, stepOf, until } from './kit.mjs';
 
@@ -65,6 +65,28 @@ test('TRIG-001: raw GET and multipart files are mappable, and a synchronous resp
     { id: 'reply', type: 'respond', input: { status: 201, body: { greeting: '{{steps.upper}}' } } }] });
   const answer = await deliver(h, await hookUrl(h, sync), { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: 'Ada' }) });
   assert.equal(answer.status, 201); assert.deepEqual(answer.value, { greeting: 'ADA' });
+});
+
+test('Twilio-signed webhooks authenticate the delivered body, so a reused signature cannot carry other content', async () => {
+  const secret = fakeSecret('twilio-auth');
+  const signing = await connection(h, { app: 'webhook', label: 'Twilio auth token', auth_kind: 'signing_secret', secret: { secret } });
+  const w = await publish(h, 'Inbound texts', { trigger: { type: 'webhook', signature: { preset: 'twilio' }, signing_connection_id: signing.id }, steps: [{ id: 'text', type: 'map', input: { body: '{{trigger.body.Body}}' } }] });
+  const url = await hookUrl(h, w) + '?site=harbour', sign = text => createHmac('sha1', secret).update(text).digest('base64');
+  const fields = { Body: 'Confirmed', From: '+15550001111' }, concatenated = Object.keys(fields).sort().map(k => k + fields[k]).join('');
+  const genuine = await deliver(h, url, form(new URLSearchParams(fields).toString(), { 'x-twilio-signature': sign(url + concatenated) }));
+  assert.equal(genuine.status, 200, genuine.text);
+  const json = JSON.stringify({ Body: 'Refund approved', From: '+15550002222' });
+  const hashed = url + '&bodySHA256=' + createHash('sha256').update(json).digest('hex');
+  const covered = await deliver(h, hashed, { method: 'POST', headers: { 'content-type': 'application/json', 'x-twilio-signature': sign(hashed) }, body: json });
+  assert.equal(covered.status, 200, 'a JSON body covered by bodySHA256 is accepted');
+  const polled = await deliver(h, url + '&MessageSid=SM1', { headers: { 'x-twilio-signature': sign(url + '&MessageSid=SM1') } });
+  assert.equal(polled.status, 200, 'a signed GET carries everything in its URL');
+  const accepted = (await runs(h, w)).length;
+  for (const [target, signature] of [[url + concatenated, sign(url + concatenated)], [url + '&MessageSid=SM1', sign(url + '&MessageSid=SM1')]]) {
+    const forged = await deliver(h, target, { method: 'POST', headers: { 'content-type': 'application/json', 'x-twilio-signature': signature }, body: JSON.stringify({ Body: 'Cancel every order', From: '+15550003333' }) });
+    assert.equal(forged.status, 401, forged.text);
+  }
+  assert.equal((await runs(h, w)).length, accepted, 'an unsigned body starts no run');
 });
 
 const rss = items => `<?xml version="1.0"?><rss version="2.0"><channel><title>Harbour news</title>${items.map(i => `<item><guid>${i.guid}</guid><title>${i.title}</title><link>https://news.example/${i.guid}</link><pubDate>Fri, 16 Oct 2026 12:00:00 GMT</pubDate></item>`).join('')}</channel></rss>`;
