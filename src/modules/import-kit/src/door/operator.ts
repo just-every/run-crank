@@ -2,7 +2,7 @@ import type { DoorRequest, ImportOperatorOptions } from './types.ts';
 import { DoorError } from './protocol.ts';
 import { createDoorHandler, runtimeOptions } from './handler.ts';
 import { authorized, doorFence, erasures, schemaCurrent, sql } from './store.ts';
-export { importDoorSchema, importDoorApplyFailureMigration, importDoorScopesMigration } from './schema.ts';
+export { importDoorSchema, importDoorApplyFailureMigration, importDoorScopesMigration, importDoorArchiveMigration } from './schema.ts';
 export { writeImportDoorSettings, readImportDoorHistory } from './authority.ts';
 export type { ImportOperatorOptions } from './types.ts';
 

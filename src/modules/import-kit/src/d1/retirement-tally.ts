@@ -13,8 +13,9 @@ const SKIPPED = new Set(['ik_d1_assertions', 'ik_d1_custody_states', 'ik_d1_cust
   'ik_door_namespaces', // Head and pending plan ids per namespace: lineage pointers only.
   'ik_door_scopes', // Namespace-to-destination binding: keeps a namespace from moving to another destination.
   'ik_door_apply_failures', // Plan id and allowlisted reason code of a failed apply: audit fact, no record content.
+  'ik_door_archives', // Archive id, tool, time, file name, hash, size and kind counts: custody receipt; its bytes are withdrawn.
 ]);
-// Door record content (uploaded chunks, upload headers, snapshot bodies) is
+// Door record content (uploaded chunks, upload headers, snapshot bodies, archive bytes) is
 // scoped and withdrawn whole; see retirement-door.ts.
 const COUNTERS = new Set(['revision', 'layout_revision', 'progress_revision', 'seal']);
 

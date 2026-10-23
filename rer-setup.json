@@ -49,6 +49,16 @@
       "group": "owner"
     },
     {
+      "name": "INSTALLATION_KEY",
+      "label": "Installation key",
+      "kind": "secret",
+      "required": true,
+      "ownerVisible": false,
+      "input": "managed",
+      "generate": "hex",
+      "group": "owner"
+    },
+    {
       "name": "SETUP_TOKEN",
       "label": "Setup token",
       "kind": "secret",

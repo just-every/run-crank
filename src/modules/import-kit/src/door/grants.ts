@@ -10,7 +10,7 @@ function fail(): never { throw new DoorError('invalid_grant'); }
 const object = (value: unknown): value is Record<string, unknown> => value !== null && typeof value === 'object' && !Array.isArray(value);
 const requiredKeys = ['v', 'iss', 'aud', 'installationId', 'email', 'jti', 'iat', 'exp', 'action', 'namespace', 'maxBytes', 'maxChunks', 'maxRecords'];
 const optionalKeys = ['fingerprint', 'approvalRecordId', 'approvedAt', 'catchup'];
-const actions: readonly string[] = ['uploads', 'plan', 'apply', 'status', 'reconcile', 'undo'];
+const actions: readonly string[] = ['uploads', 'plan', 'apply', 'status', 'reconcile', 'undo', 'archive', 'restore-check'];
 
 function decode(segment: string): Uint8Array<ArrayBuffer> {
   if (!/^[A-Za-z0-9_-]+$/.test(segment)) fail();

@@ -17,7 +17,9 @@ export function retainOriginals(plan: ImportPlan, id: string, encoded: StoredPla
   const { rows, chunks } = originalStorage(plan, id, 3);
   return [sql('INSERT INTO ik_original_sets(job_id,version) VALUES(?,3)', id),
     ...insertJsonRows('ik_originals', ['job_id','kind','original_key','name','sha256','size','bytes'], rows),
-    ...(encoded.chunks.length ? retainCopies(originalCopies(encoded, chunks)) : insertJsonRows('ik_d1_original_chunks', ['job_id','kind','original_key','ordinal','bytes'], chunks)),
+    // Canonical chunks already hold each original: copy it in SQL. A compressed
+    // plan does not, so its original chunks are bound once, here.
+    ...(encoded.chunks.length && !encoded.compressed ? retainCopies(originalCopies(encoded, chunks)) : insertJsonRows('ik_d1_original_chunks', ['job_id','kind','original_key','ordinal','bytes'], chunks)),
     // INSERT SELECT must not silently publish fewer rows if a source chunk
     // disappears. A failing CHECK rolls the whole creation transaction back.
     guard(sql('(SELECT COUNT(*) FROM ik_d1_original_chunks WHERE job_id=?)=?', id, chunks.length))];
@@ -30,7 +32,7 @@ export async function readOriginals(plan: ImportPlan, id: string, context: D1Imp
   if (version?.invalid_names) throw new Error('ORIGINAL_CUSTODY_MISMATCH');
   // JSON encoding preserves embedded NULs across SQLite text drivers, including Node 22.
   const results = snapshot ? snapshot.rows('ik_originals', 'job_id', [id]) : (await db.prepare('SELECT *,json_quote(name) AS name_json FROM ik_originals WHERE job_id=?').bind(id).all()).results;
-  const chunks = snapshot ? snapshot.rows('ik_d1_original_chunks', 'job_id', [id]).sort((a, b) => a.ordinal - b.ordinal) : (await db.prepare('SELECT * FROM ik_d1_original_chunks WHERE job_id=? ORDER BY kind,original_key,ordinal').bind(id).all()).results;
+  const chunks = snapshot ? snapshot.rows('ik_d1_original_chunks', 'job_id', [id]).sort((a, b) => a.ordinal - b.ordinal) : await originalChunks(db, id);
   if (![1,2,3,4].includes(version?.version) || results.length !== expected.length) throw new Error('ORIGINAL_CUSTODY_MISMATCH');
   if (version!.version === 4 && expected.some(o => o.original.status !== 'unavailable')) throw new Error('ORIGINAL_CUSTODY_MISMATCH');
   const encoded = originalStorage(plan, id, version!.version);
@@ -51,6 +53,17 @@ export async function readOriginals(plan: ImportPlan, id: string, context: D1Imp
   }
   originalVersions.set(plan, version!.version);
   return expected;
+}
+/** Original chunks are at most 128 KiB of base64 each; one read returns a
+ * bounded page of them, never a whole multi-megabyte original. */
+const ORIGINAL_READ_ROWS = 16;
+async function originalChunks(db: D1ImportContext['storage']['database'], id: string): Promise<any[]> {
+  const rows: any[] = [];
+  for (;;) {
+    const { results } = await db.prepare(`SELECT * FROM ik_d1_original_chunks WHERE job_id=? ORDER BY kind,original_key,ordinal LIMIT ${ORIGINAL_READ_ROWS} OFFSET ?`).bind(id, rows.length).all();
+    rows.push(...results);
+    if (results.length < ORIGINAL_READ_ROWS) return rows;
+  }
 }
 export async function readD1ImportOriginals(id: string, context: D1ImportContext): Promise<RetainedOriginal[]> {
   context = requestContext(context);

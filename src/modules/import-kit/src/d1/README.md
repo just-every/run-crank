@@ -17,13 +17,16 @@ For seed integration, follow [the door adoption guide](../door/ADOPTING.md)
 first. The D1 primitives below back that shared pipeline; do not mount separate
 job creation/apply routes beside it. Keep native readers and target adapters.
 
-Import `src/d1/index.ts` in Workers with `nodejs_compat`. This entry point does
+Import `@runeditrun/rer/modules/import-kit/d1` from a supplying rer release
+after 0.2.77 in TypeScript Workers with `nodejs_compat` (or `src/d1/index.ts`
+when working in Base source). The package carries TypeScript source for the
+Worker bundler and includes the shared D1 transport. This entry point does
 not import `node:sqlite` or the optional file/API readers. Products that need the
 readers can explicitly import `src/readers/index.ts`. The synchronous Node API and its guarantees remain
 unchanged. D1 uses the same reviewed plans, source identities, retained originals,
 provenance and inert-effect policy through an asynchronous native SQL port.
 
-Copy the shared [D1 transport](../../../d1-transport/index.mjs) and its
+When copying Base source directly, copy the shared [D1 transport](../../../d1-transport/index.mjs) and its
 [types](../../../d1-transport/index.d.mts), preserving their sibling location
 beside the import-kit directory.
 The D1 entry uses this shared transport automatically. It accounts for actual
@@ -38,6 +41,10 @@ Apply `d1Schema`, `d1ErasureSchema`, `d1StreamOriginSchema`,
 `initializeD1ImportStorage(database)` during setup. The schema includes the common
 kit tables and D1 ownership/assertion tables. Do not mix the synchronous engine
 and D1 engine for the same jobs: each engine owns its checkpoint protocol.
+For reviewed reversal-policy conversion, also apply the additive
+`d1ReversalPolicyConversionSchema` after these existing schemas in a new
+product-owned numbered migration. `initializeD1ImportStorage` installs it
+automatically. Do not rewrite an applied migration.
 
 Apply stream-origin backfill and legacy receipt conversion in one transaction.
 Origins record actual page, parent and job bindings and remain immutable until
@@ -316,6 +323,40 @@ never the concurrency fence. Erasure integrations must delete both new chunk
 tables along with existing job custody. These tables retain audit data through
 undo and rollback.
 
+### Large plans: staged creation and revision fences
+
+A stored plan larger than `LARGE_PLAN_BYTES` (4 MiB) is never sent whole in one
+request. Without a transport policy (`maxBatchBytes` omitted, as the import door
+runs), `createD1ImportJob` stages it: the plan's chunks go into the existing
+private staging tables (`d1StagingSchema`) in batches of at most
+`STAGED_BATCH_BYTES` (4 MiB) on the wire, behind the hash-only privacy index
+that erasure and retirement already reach. Every batch asserts current
+authority, the stage's binding and its exact revision before and after. One
+small final transaction then publishes the job: it copies the staged chunks and
+index inside D1, copies each original from those chunks by position (a
+canonical plan holds it literally, so its bytes travel once), compares every
+copy with its staged source there, checks tombstones and releases the creation
+capture. Only identities, positions and metadata cross the transport. A partly
+staged creation is never a job: the next call resumes from the rows already
+staged (verified by reading them back), or discards a generation that no longer
+matches, and `cancelD1ImportStaging`, erasure and retirement remove it. Every
+remaining batch is admitted against the request budget before the first write.
+`preflightD1ImportJob` sizes the same staged requests.
+
+After creation, an unbounded load of a large plan reads its
+`ik_d1_custody_revisions` revision before any chunk, then verifies the chunks
+against the envelope digest and fingerprint as before. Its guards fence that
+revision and the exact `plan_json` envelope instead of resending every chunk:
+every chunk insert, update or delete and every `plan_json` update advances the
+revision, so the guard holds exactly when the verified chunks are unchanged.
+Originals keep their position comparisons. Smaller plans, and every bounded
+(`maxBatchBytes`) path, keep exact byte guards. Original chunk and plan chunk
+reads are paged.
+
+Creation retains a normalized plan with the target adapter's `planCodec`, as
+streams and erasure re-retention do. A plan holding original bytes (an
+available artifact or an attachment) stays canonical, so its originals are
+copied from and compared by position with its chunks.
 
 ## Erasing normalized personal records
 
@@ -621,8 +662,10 @@ that same parent; new operations still honor source and target tombstones.
 Large child pages use digest-checked compressed encoding inside the existing exact
 chunk manifests. The manifest and every compressed byte remain publication
 preconditions. Compression does not replace snapshot fencing or source identity.
-Existing eager create retains its pure admission and one atomic original-custody
-publication; private normalized stream staging is a separate operation.
+Eager create keeps its pure admission and one atomic original-custody
+publication; a large plan stages that publication's input first (see "Large
+plans: staged creation and revision fences"). Private normalized stream staging
+is a separate operation.
 
 
 A native adapter may provide a versioned `planCodec` with pure `encode(plan)` and
@@ -675,7 +718,11 @@ evaluates current authority inside the initial and final atomic transactions.
 The returned `D1CreatePreflight` contains `mutationStatements`,
 `totalExecutions`, `maxSqlBytes`, `maxBoundBytes` and `maxParameters`. It uses the
 production serialization, chunking and guard packing, reserving initial authority,
-operation-key lookup, job return and chunked-plan return reads. The 36-byte
+operation-key lookup, job return and chunked-plan return reads. For a large
+plan without a transport policy it admits every staged batch, the publication
+and the prior-generation lookup instead, assuming nothing is staged yet. Pass
+the adapter's `planCodec` (or a full context) so it sizes the codec-retained
+plan production creates. The 36-byte
 placeholder UUID has exactly the encoded size of the production-generated UUID.
 Invalid plans/bindings and `IMPORT_D1_REQUEST_LIMIT`,
 `IMPORT_D1_STATEMENT_LIMIT`, `IMPORT_D1_VALUE_LIMIT` throw before any product
@@ -726,7 +773,9 @@ The synchronous SQLite engine is unchanged and does not use these D1 columns.
 New jobs may select `context.reversalPolicy = 'preserve-conflicts'` at creation.
 Omission creates a strict job. Later calls may omit the option to use the durable
 policy, or pass the same value; a different explicit value rejects with
-`REVERSAL_POLICY_CONFLICT`. The policy and its binding are fenced alongside the
+`REVERSAL_POLICY_CONFLICT`. Only the explicit reviewed conversion described
+below can change an eligible existing strict job's policy; no ordinary call
+switches it automatically. The policy and its binding are fenced alongside the
 job, original custody and plan. Creation admission measures these statements,
 all exact custody guards, initial authorization, and the actual return reads.
 
@@ -814,6 +863,83 @@ The native dependency snapshot and integrity closure are complete per batch,
 so adapters must use bounded set queries; `batchSize` bounds mutations rather
 than promising constant-memory reads of an arbitrarily large native graph.
 
+### Reviewed conversion of existing strict jobs
+
+The public D1 entry exports two operations:
+
+```ts
+const preview = await previewD1PreservedUndo(jobId, context);
+// { job, policy, reviewedFingerprint, dispositions }
+
+// Show the exact preview for review before submitting its fingerprint.
+const job = await convertD1ReversalPolicy(jobId, context, {
+  to: 'preserve-conflicts',
+  reviewedFingerprint: preview.reviewedFingerprint,
+}); // ImportJob
+```
+
+`previewD1PreservedUndo` requires current `undo` authorization and the existing
+job binding. It executes SELECT-only SQL and checks the complete native and
+dependency snapshot supplied by `targets.preparePreservedUndo`, including its
+guards. It does not change policy, start reversal or store an approval.
+
+`convertD1ReversalPolicy` accepts only a strict job in `completed` or `undoing`
+state, including one stopped by `NATIVE_EDIT_CONFLICT`. It requires the same
+current undo authority and binding as an undo, and the exact
+`reviewedFingerprint` returned for the reviewed snapshot. Conversion atomically
+commits the new policy and its binding, an append-only conversion journal record
+with the policy hash, and baseline report dispositions for effects already
+reversed by strict undo. It does not repeat those native reversals or rewrite
+provenance, originals, source claims or history. Refusal leaves no partial
+conversion state; there is no automatic policy switch or silent re-conversion.
+An earlier strict reversal must still have its exact restored before-image or
+absence. A recreated or superseding target makes that baseline unfenceable;
+conversion refuses rather than misreporting retained later work as reversed.
+
+| Job or review condition | Conversion result |
+| --- | --- |
+| Strict `completed` or `undoing`, current undo authority and binding, exact reviewed snapshot, complete fenceable adapter observations | Converts atomically to `preserve-conflicts`. |
+| Already converted | `IMPORT_CONVERSION_ALREADY_CONVERTED`; no new conversion. |
+| Any other state or an ineligible policy | `IMPORT_CONVERSION_UNAVAILABLE`, with the state/policy reason. |
+| Superseded job | `IMPORT_CONVERSION_UNAVAILABLE`, with the superseded reason. |
+| Missing or incomplete adapter guards, an unfenceable later reversal, or a conversion that would release predecessor history | `IMPORT_CONVERSION_UNAVAILABLE`, with the unfenceable reason. |
+| The reviewed fingerprint no longer matches the complete snapshot | `IMPORT_CONVERSION_REVIEW_CHANGED`; obtain and review a fresh preview. |
+| Missing or revoked undo authority, or a different job binding | The ordinary authorization/binding refusal; conversion grants no additional authority. |
+
+Conversion-specific refusals are typed `D1ReversalPolicyConversionError`; inspect
+its `code` and the reason distinguishing state, superseded and unfenceable jobs.
+An already preserved job cannot use this operation to obtain another conversion.
+
+Later preserved reversal rechecks the complete current native/dependency
+snapshot in every batch. Converted jobs cannot release predecessor history to
+make reversal proceed. No later work, money or signed document may be detached
+or deleted to satisfy conversion. A seed implementing reviewed compensation
+must still supply an approval-bound adapter that fences every reversal batch to
+its own approved snapshot; reviewing conversion does not replace that product
+approval contract.
+
+`readD1ImportUndoReport(jobId, context)` exposes optional `conversion` evidence
+and an `outcome` of `pending`, `undone` or `compensated`. The engine checkpoint
+still ends at `job.state === 'undone'`. Consumers must use the report's `outcome`
+for the product result and must never present `compensated` as `undone`.
+
+Existing installations must apply `d1ReversalPolicyConversionSchema` after the
+existing D1 schemas in a new product-owned numbered migration before using
+these operations. `initializeD1ImportStorage` installs it automatically. The
+earlier preserved-undo evolution alone does not install conversion storage.
+Existing plan/apply/read/undo calls continue to work on that earlier schema;
+the new conversion and preview operations refuse with the `schema` reason until
+their additive migration is installed. Updating kit source does not silently
+adopt conversion or require an edit to an existing seed migration.
+
+Current rer 0.2.77 lacks this API. A seed adopts a reviewed vendored Base revision
+containing the capability, or a future rer release that supplies it, and proves
+its migration, current authority, conversion and later reversal through its own
+public door. Base's tests do not prove that adoption. Until then, existing strict
+jobs retain their policy and the seed's compensation-unavailable refusal remains
+in force. Adoption, seed release and deployment are separate from this Base
+source change.
+
 `tests/d1-preserved-scale.test.ts` exercises 34,000 distinct effects in real
 SQLite and local workerd D1. It measures complete public resume, report,
 original-read and native-export calls, reopens durable databases, and injects
@@ -838,8 +964,10 @@ against that protected snapshot and every original byte against its exact plan
 positions. Only after all guards pass does the engine release and delete the
 snapshot, in the same D1 batch. A malformed plan/original INSERT trigger therefore
 rolls back job, originals and snapshots together. No staging survives successful
-creation, and no custody crosses transactions. This avoids a second full plan
+creation, and no public custody crosses transactions. This avoids a second full plan
 copy in D1's serialized batch request while retaining exact byte comparisons.
+A large plan's chunks reach that transaction from private staging instead of
+its own request; the same guards then compare them inside D1.
 
 ## Bounded private stream custody
 

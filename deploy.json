@@ -26,6 +26,15 @@
       "environment": "SESSION_SECRET"
     },
     {
+      "binding": "INSTALLATION_KEY",
+      "environment": "INSTALLATION_KEY"
+    },
+    {
+      "binding": "INSTALLATION_KEY_PREVIOUS",
+      "environment": "INSTALLATION_KEY_PREVIOUS",
+      "optional": true
+    },
+    {
       "binding": "SETUP_TOKEN",
       "environment": "SETUP_TOKEN"
     },

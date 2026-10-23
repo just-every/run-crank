@@ -9,7 +9,7 @@ const DEFAULTS = ':where(:root){--rer-done:#1e8458;--rer-partial:#e9a23b;--rer-m
   + 'h2,h3,dl,dd,ul{margin:0;padding:0}ul{list-style:none}.glyph{flex:none;display:block}'
   + '.ink-done{color:var(--rer-done-ink)}.ink-partial{color:var(--rer-partial-ink)}.ink-missing{color:var(--rer-missing-ink)}'
 
-const HEADER = '.bar{max-width:1440px;padding:24px 56px 0;align-items:stretch}.bar::after{content:"";position:absolute;left:56px;right:56px;bottom:0;height:1px;background:var(--site-line);z-index:-1}'
+const HEADER = '.bar{max-width:1440px;padding:24px 56px 0;align-items:stretch;row-gap:0}.bar::after{content:"";position:absolute;left:56px;right:56px;bottom:0;height:1px;background:var(--site-line);z-index:-1}'
   + '.bar .brand{padding-bottom:12px;font-weight:var(--rer-wordmark-weight,600)}.bar nav{align-items:stretch}.bar nav a{display:flex;align-items:center;padding-bottom:10px;border-bottom:2px solid transparent}'
   + '.bar nav a[aria-current=page]{border-bottom-color:var(--site-accent);font-weight:600}'
 

@@ -23,11 +23,20 @@ export async function planRow(request: DoorRequest, id: string): Promise<DoorPla
 }
 /** A saved plan's snapshot. A person's erasure withdraws every chunk of it:
  * the plan, its approval and its kit job stay, the reviewed records do not. */
+/** Snapshot rows are at most 32,000 characters; a read returns a bounded page
+ * of them, never a whole multi-megabyte snapshot in one D1 result. */
+const SNAPSHOT_READ_ROWS = 48;
 export async function loadSnapshot(request: DoorRequest, row: DoorPlanRow): Promise<DoorSnapshot> {
-  const chunks = await request.options.database.prepare('SELECT ordinal,body FROM ik_door_plan_chunks WHERE plan_id=? ORDER BY ordinal').bind(row.id).all();
-  if (!chunks.results.length) throw new DoorError('snapshot_withdrawn', 410, {planId: row.id});
-  if (chunks.results.some((c, i) => c.ordinal !== i)) throw new DoorError('plan_custody_mismatch', 409);
-  const snapshot = JSON.parse(chunks.results.map(c => c.body).join('')) as DoorSnapshot;
+  const chunks: {ordinal: unknown; body: string}[] = [];
+  for (;;) {
+    const page = await request.options.database.prepare(`SELECT ordinal,body FROM ik_door_plan_chunks WHERE plan_id=? ORDER BY ordinal LIMIT ${SNAPSHOT_READ_ROWS} OFFSET ?`).bind(row.id, chunks.length).all<{ordinal: unknown; body: string}>();
+    chunks.push(...page.results);
+    if (page.results.length < SNAPSHOT_READ_ROWS) break;
+  }
+  if (!chunks.length) throw new DoorError('snapshot_withdrawn', 410, {planId: row.id});
+  // A torn read across pages fails the ordinals or the snapshot hash below.
+  if (chunks.some((c, i) => c.ordinal !== i)) throw new DoorError('plan_custody_mismatch', 409);
+  const snapshot = JSON.parse(chunks.map(c => c.body).join('')) as DoorSnapshot;
   if (sha256(canonicalJson(snapshot)) !== row.snapshot_hash || snapshot.id !== row.id || snapshot.namespace !== row.namespace || snapshot.bundleSha256 !== row.bundle_sha256
     || snapshot.previous !== row.previous_id || snapshot.plan.fingerprint !== row.fingerprint
     || planFingerprint(snapshot.plan) !== row.fingerprint

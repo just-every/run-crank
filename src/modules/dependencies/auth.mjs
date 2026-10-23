@@ -10,17 +10,17 @@ export function linkedProviders(options) {
  if(config.dependencies && (staticProviders?.ids.includes('auth') || staticProviders?.callbackPaths?.['/auth/oidc/auth/callback'])) throw new Error('dependency_provider_conflict');
  async function current() {
   if (!config.dependencies) return staticProviders;
-  const store=dependencyStore(db),link=await store.link();
+  const store=dependencyStore(db,config),link=await store.link();
   if(!link || link.needs_relink) return staticProviders;
-  const row=await store.first("SELECT private_key FROM rer_dependency_keys WHERE interface='oidc-provider@1'");
-  if(!row?.private_key) return null;
+  const row=await store.readKey();
+  if(!row) return null;
   const unclaimed=native?()=>native.unclaimed():async()=>!await db.prepare('SELECT 1 FROM oa_operators LIMIT 1').first();
   return createOidcProviders({...options, enabled:async()=>await options.enabled() || await unclaimed(), claim:async(request,token,expectedPin)=>{
    if(!await unclaimed())return null;
    if(native)return native.claimOwner?native.claimOwner({request,token,expectedPin}):null;
    return createIdpOwnerClaimHandler({expectedPin,db,authConfig:config,clientIp:()=>options.clientIp(request),clock:options.clock,fetch:options.fetch})(new Request(config.origin+'/auth/owner-claim',{method:'POST',headers:{Host:new URL(config.origin).host,Origin:config.origin,'Content-Type':'application/json'},body:JSON.stringify({token})}));
   }, claimScope: unclaimed, config:{origin:config.origin,local:config.local,signInPath:config.branding.signInPath,transactionSecret:config.OIDC_TRANSACTION_SECRET ?? config.SESSION_SECRET+'-oidc',providers:[{
-   id:'auth',preset:'auth',issuer:link.issuer,clientId:link.client_id,privateKey:JSON.parse(row.private_key),
+   id:'auth',preset:'auth',issuer:link.issuer,clientId:link.client_id,privateKey:row.key,
   }]}});
  }
  if(!config.dependencies) return staticProviders;

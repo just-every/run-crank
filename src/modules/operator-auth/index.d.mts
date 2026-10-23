@@ -5,8 +5,8 @@ export interface Session<R extends string = Role> { issuer?: string; subject?: s
 export interface CompletedSession<R extends string = Role> { session: Pick<Session<R>, 'id' | 'kind' | 'createdAt' | 'expiresAt'>; operator: Operator<R>; cookie: string; returnTo: string }
 export interface MailMessage { deliveryId: string; from: string; to: string[]; subject: string; text: string; html: string; headers: Record<string, string> }
 export interface MailSender { send(message: MailMessage): Promise<{ status: 'accepted' | 'rejected' | 'rate_limited' | 'uncertain' | 'development'; provider: string; providerMessageId: string | null; code?: string }> }
-export interface AuthBranding { productName?: string; accentColor?: string; signInPath?: string; /** Same-origin path of the seed's served rer-theme.css. */ theme?: string }
-export interface AuthPresentation { readonly productName: string; readonly accentColor: string; readonly signInPath: string; readonly theme?: string }
+export interface AuthBranding { productName?: string; accentColor?: string; signInPath?: string; /** Same-origin root-relative image pathname served by the installation. */ mark?: string; /** Same-origin path of the seed's served rer-theme.css. */ theme?: string }
+export interface AuthPresentation { readonly productName: string; readonly accentColor: string; readonly signInPath: string; readonly mark?: string; readonly theme?: string }
 export interface LinkPreview { kind: 'magic' | 'invite' | 'step_up' | 'owner'; expiresInMinutes: number }
 /** A step-up confirmation proves the session's operator again; it issues no new session. */
 export interface StepUpConfirmed { stepUp: StepUpAction; returnTo: string; cookie?: undefined }
@@ -43,7 +43,7 @@ export interface AuthConfig {
   dependencies?: boolean;
   /** Name: 1-80 characters; accent: #rrggbb; signInPath: same-origin absolute path. */
   branding?: AuthBranding;
-  origin: string; OWNER_EMAIL: string; SESSION_SECRET: string; SETUP_TOKEN?: string; MAIL_FROM?: string;
+  origin: string; OWNER_EMAIL: string; SESSION_SECRET: string; INSTALLATION_KEY?: string; INSTALLATION_KEY_PREVIOUS?: string; SETUP_TOKEN?: string; MAIL_FROM?: string;
   /** Local HTTP is allowed only for literal localhost, 127.0.0.1 or [::1] with matching Host. */
   local?: boolean; allowList?: string[]; sessionSeconds?: number; linkSeconds?: number;
   /** Invitation lifetime in seconds, up to seven days (the default); independent of sign-in/step-up links. */
@@ -90,7 +90,10 @@ export interface AuthHooks<R extends string = Role> {
   /** After an email-link or provider sign-in completes. Return a returnTo to redirect; throw to refuse (the new session is revoked). */
   afterConfirm?(input: { request: Request; operator: Operator<R>; session: CompletedSession<R>['session']; method: 'email' | 'oidc'; returnTo: string }): void | { returnTo?: string } | Promise<void | { returnTo?: string }>;
 }
+export type { ScheduledPolicy, ScheduledPolicyDoor, PolicyApproval, PolicyRun } from './scheduled/index.mjs';
 export interface AuthOptions<R extends string = Role> {
+  /** OA store only: trusted source, re-read at approval/run/action time. */
+  scheduledPolicies?: () => import('./scheduled/index.mjs').ScheduledPolicy[];
   db: Database; config: AuthConfig; mailSender?: MailSender; clientIp: (request: Request) => string | Promise<string>; rolePolicy?: RolePolicy; clock?: () => number;
   hooks?: AuthHooks<R>;
   /** The runtime's fetch for provider discovery, JWKS and token calls (it must honour redirect: 'manual' and AbortSignal). */
@@ -142,6 +145,7 @@ export interface IdentityProviders {
 }
 export interface DomainRule { domain: string; providerId: string; createdAt: number }
 export interface OperatorAuth<R extends string = Role> {
+  readonly scheduledPolicies?: import('./scheduled/index.mjs').ScheduledPolicyDoor;
   /** Key-gated local development or an isolated hosted demo; unavailable in production. */
   readonly oneClick?: {
     people(request: Request): Promise<Array<{ email: string; displayName: string; role: R; href: string }> | null>;
@@ -225,7 +229,10 @@ export interface DevGateInput { key: string | undefined; origin: string; local: 
 export interface DevGate {
   /** `rer_dev_gate_<port>`: one gate cookie per local origin. */
   readonly cookieName: string;
+  /** Gated surfaces: the key header, or the cookie on a request not marked `Sec-Fetch-Site: cross-site`. */
   admits(request: Request): Promise<boolean>;
+  /** Dev session admission: the key header or the cookie, including a top-level GET from another site. */
+  admitsSession(request: Request): Promise<boolean>;
   setCookie(): Promise<string>;
   /** Handles GET/POST /__dev/key; null for every other path. */
   exchange(request: Request, branding?: AuthBranding): Promise<Response | null>;

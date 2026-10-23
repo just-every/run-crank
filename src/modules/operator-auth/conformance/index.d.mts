@@ -29,8 +29,8 @@ export interface OperatorAuthConformanceRuntime {
 export interface OperatorAuthConformanceAdapter {
   /** Verify the consumer's same-origin font links and their bounded CSP permissions. */
   confirmationFonts?: boolean;
-  /** The consumer's configured branding: its product name and served rer-theme.css path, when it declares them. */
-  branding?: { productName?: string; theme?: string };
+  /** The consumer's configured product name, served mark and rer-theme.css paths, when declared. */
+  branding?: { productName?: string; mark?: string; theme?: string };
   /** Set only when the runtime also implements the provider-key-free admission seam case. */
   oidcIssuer?: string;
   /** Must create disposable real workerd/D1 state and mount the consumer's actual auth and private API routes. */

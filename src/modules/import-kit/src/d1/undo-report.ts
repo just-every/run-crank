@@ -17,5 +17,6 @@ export async function readD1ImportUndoReport(id: string, context: D1ImportContex
   await readOriginals(plan, id, context);
   await readAtomic(context, [...boundary(job, plan), ...custodyGuards(plan, id), ...await inventoryGuards(job, plan, context)], nativeStagingScope(job, plan));
   const state = reversalState(job);
-  return { job, policy: state.policy, cursor: state.cursor, total: state.dispositions.length, nextOffset: offset + limit < state.dispositions.length ? offset + limit : null, dispositions: state.dispositions.slice(offset, offset + limit) };
+  const outcome = !['undone','rolled_back'].includes(job.state) ? 'pending' : state.dispositions.some(d => d.disposition === 'retained') ? 'compensated' : 'undone';
+  return { job, policy: state.policy, cursor: state.cursor, total: state.dispositions.length, nextOffset: offset + limit < state.dispositions.length ? offset + limit : null, dispositions: state.dispositions.slice(offset, offset + limit), outcome, ...(state.conversion ? { conversion: state.conversion } : {}) };
 }

@@ -5,7 +5,7 @@ import { DoorError } from './grants.ts';
 export type * from './types.ts';
 export type { DoorAction, DoorGrant, RerGrant } from './grants.ts';
 export { verifyImportGrant, verifyRerGrant, DoorError } from './grants.ts';
-export { importDoorSchema, importDoorApplyFailureMigration, importDoorScopesMigration } from './schema.ts';
+export { importDoorSchema, importDoorApplyFailureMigration, importDoorScopesMigration, importDoorArchiveMigration } from './schema.ts';
 export { writeImportDoorSettings, readImportDoorHistory, enableDoorAtFirstClaim } from './authority.ts';
 export { createImportOperatorHandler } from './operator.ts';
 

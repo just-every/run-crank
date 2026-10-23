@@ -20,7 +20,7 @@ const auth = createOperatorAuth({
     SESSION_SECRET, SETUP_TOKEN,
     MAIL_FROM: env.MAIL_FROM,
     // Optional; omit for neutral workspace wording and /signin recovery.
-    branding: { productName: 'Example', accentColor: '#334155', signInPath: '/signin' },
+    branding: { productName: 'Example', accentColor: '#334155', signInPath: '/signin', mark: '/brand/mark.svg' },
     // Optional explicit address list further restricts active operators.
     // allowList: ['owner@example.com', 'staff@example.com'],
   },
@@ -171,6 +171,16 @@ Optional `config.branding` fields are independently defaulted and validated:
 | `productName` | `your workspace` | At most 80 UTF-16 code units before trimming, with at least one visible letter, number, punctuation or symbol; rejects C0/C1 controls, U+2028/U+2029 and default-ignorable code points, except contextual script joiners and emoji presentation described below |
 | `accentColor` | `#334155` | Exactly six hexadecimal digits after `#` |
 | `signInPath` | `/signin` | Same-origin absolute path, at most 2048 characters; no scheme, network-path reference, backslash or control characters, including encoded variants |
+| `mark` | Omitted | Same-origin root-relative image pathname, 2–2048 characters from ASCII letters, digits, `/`, `.`, `_`, `~` and `-`; no doubled slashes or `.`/`..` path segments, schemes, encodings, query strings, fragments, whitespace, quotes or angle brackets |
+| `theme` | Omitted | Same-origin CSS pathname ending in `.css`; `/` followed by 1–200 ASCII letters, digits, `.`, `_`, `~`, `/` or `-` before the extension; no doubled slashes or `/.` |
+
+Serve `mark` from the installation, for example `public/brand/mark.svg` at
+`/brand/mark.svg` (SVG or PNG). The shared sign-in, one-click owner entry and
+confirmation header shows it as a 32×32 image beside the product name, which
+stays as text. The local dev key exchange header uses 40×40. Both set
+`alt` to the product name and `decoding="async"`, and permit only same-origin
+images through CSP. An explicit mark takes precedence over a theme's
+`--rer-logo`; omitting `mark` preserves the existing HTML and theme behaviour.
 
 Product names preserve letters and combining marks in every script. ZWNJ
 (U+200C) is allowed after a letter (including its combining marks) when a letter
@@ -192,16 +202,17 @@ allowed; malformed encodings in the configured value are rejected. Encoded
 percent data is preserved, and nested encoded separators and controls are still
 rejected. Invalid branding throws
 `AuthError('invalid_configuration', 503)`. Branding is copied and frozen at
-construction. `auth.presentation` exposes only the three normalized branding
-fields; it never exposes configuration secrets. `previewLink` returns only
+construction. `auth.presentation` exposes the normalized branding fields,
+including `mark` and `theme` only when supplied; it never exposes configuration secrets. `previewLink` returns only
 `{kind, expiresInMinutes}` for an authorized link, otherwise null. Names are
 HTML-escaped in documents and mail. The accent chooses black or white button
 text for contrast, with a visible keyboard focus ring in light and dark schemes.
 
 The module's confirmation HTML responses contain exactly one inline stylesheet. Their
-CSP adds only its exact UTF-8 SHA-256 `style-src` hash to the existing restrictive
-policy. No scripts, external resources, style attributes, CSS URLs or imports
-are included in the document. JSON errors, redirects and other responses retain
+CSP adds its exact UTF-8 SHA-256 `style-src` hash to the existing restrictive
+policy, plus same-origin image, stylesheet and font permissions when needed by
+the declared mark, icons or theme. No scripts, remote resources, style attributes
+or CSS imports are included in the document. JSON errors, redirects and other responses retain
 the original CSP. Do not add a broad inline-style allowance to an adopting seed.
 
 An application can compose its same-origin brand font head onto this document,
@@ -491,14 +502,21 @@ local reverse proxy makes remote requests look local (forwarded requests carry
 a loopback URL and Host, and `CF-Connecting-IP` is whatever the caller sent), so
 the gate is the key, not the network. `devGate({key, origin, local})` returns
 null unless the key is present and the origin is an explicit loopback origin in
-local mode. `admits(request)` accepts the `rer_dev_gate_<port>` cookie (an HMAC of the
+local mode. `admitsSession(request)` accepts the `rer_dev_gate_<port>` cookie (an HMAC of the
 key, so a reset key refuses old cookies) or the key in `x-rer-dev-key` (the rer
-CLI and test harnesses). `exchange(request, branding)` serves `GET /__dev/key` and trades
+CLI and test harnesses); the dev layer registers it as the dev session check.
+`admits(request)`, which guards dev sign-in, personas and the one-click sign-in
+page, accepts the same but refuses a cookie-only request marked
+`Sec-Fetch-Site: cross-site`. `exchange(request, branding)` serves `GET /__dev/key` and trades
 the key from the URL fragment, through a same-origin POST, for a host-only
-`HttpOnly; SameSite=Strict; Path=/` cookie. Given the seed's `branding`
-(`productName`, `theme`), the page between `rer dev` and the app shows the seed's own
-mark, the `--rer-logo` its theme declares, as an `<img>` with the product name as its
-alt text; a seed whose theme declares no logo shows the product name as text.
+`HttpOnly; SameSite=Lax; Path=/` cookie. Lax matches the session cookie: a
+browser sends it on the top-level GET an OAuth provider redirects back to the
+app, so a local dev session survives a connector's callback as a deployed
+session does, while cross-site POSTs and subresource requests carry neither. Given the seed's `branding`
+(`productName`, optional `mark` and `theme`), the page between `rer dev` and the
+app shows the explicit mark, or the `--rer-logo` its theme declares, as an
+`<img>` with the product name as its alt text. With neither mark declaration,
+it shows the product name as text alone.
 
 `dev/` is the dev layer: **server-only and local-only**. Import it only from a
 local-only Worker entry (a Vite-serve or local `wrangler dev` entry), never
@@ -603,7 +621,9 @@ address; anything else is ignored; never submitted for the visitor), so a link
 from the platform's Open app or a seed's own page can pass the claimed owner.
 
 Wire `config.branding` with the seed's `productName`, `accentColor` and
-`signInPath`; the defaults are `your workspace`, `#334155` and `/signin`. Keep
+`signInPath`; the defaults are `your workspace`, `#334155` and `/signin`. Pass
+the seed's served mark path as optional `mark: '/brand/mark.svg'`, and its
+served token stylesheet as optional `theme: '/rer-theme.css'`. Keep
 `MAIL_FROM` in auth config and provide a real `mailSender` that implements
 `send(message)`. The Base example builds it with `createMailSender` from
 [the mail module](../mail/README.md), using mail config fields `provider`, `mode`, `apiKey` and
@@ -680,3 +700,10 @@ route configuration, CI and release; Base checks do not establish integrated
 adoption or deployment.
 
 The application-side dependency, owner-setting and logout protocol is documented in [dependencies](../dependencies/README.md). Existing stores default to provider sign-in off, and provider admission requires the app-owned setting.
+
+## Owner-approved schedules
+
+OA accounts offer a bounded, hash-pinned scheduled policy door, separate from
+human sessions. Read [SCHEDULED-POLICY.md](SCHEDULED-POLICY.md) for the design,
+additive migration, declaration, owner approval/revocation flow and audit contract.
+The reference `/app/policies` screen and Worker scheduled handler show adoption.

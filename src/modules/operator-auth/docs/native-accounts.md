@@ -208,7 +208,10 @@ trust/configuration change also changes the transaction fingerprint.
 
 Apply **only** `identity/oidc/schema/oidc.sql` for shared identity storage, and
 `modules/dependencies/schema/dependencies.sql` followed by
-`modules/dependencies/schema/approval-attempt.sql` if dependency linking is enabled.
+`modules/dependencies/schema/approval-attempt.sql` and
+`modules/dependencies/schema/keys-sealed.sql` if dependency linking is enabled.
+Existing adopters append `keys-sealed.sql` as a new numbered migration; it
+records completion of legacy sealing and nonsecret installation key versions.
 Existing native adopters add `approval-attempt.sql` as a new numbered migration;
 it invalidates old approvals, which must be renewed through local owner proof.
 Their `oa_oidc_*`, `oa_identity_providers` and provider-health names are identity

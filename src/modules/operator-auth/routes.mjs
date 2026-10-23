@@ -60,12 +60,14 @@ export function createAuthHandler(auth) {
           return person ? { ...operator, signInUrl: person.href } : operator;
         }));
       }
+      if (auth.scheduledPolicies && path === '/auth/policies' && request.method === 'GET') return json(await auth.scheduledPolicies.list(request));
+      if (auth.scheduledPolicies && path === '/auth/policy-runs' && request.method === 'GET') return json(await auth.scheduledPolicies.runs(request));
       if (path === '/auth/sessions' && request.method === 'GET') return json(await auth.listSessions(request, readParameters(url.searchParams).operatorId));
       if (path === '/auth/domain-rules' && request.method === 'GET') return json(await auth.listDomainRules(request));
       if (path === '/auth/settings/identity' && request.method === 'GET') {const value=await auth.identitySettings(request);return /text\/html/.test(request.headers.get('accept')??'')?await identitySettingsPage(value,auth.presentation):json(value);}
       if (path === '/auth/providers' && request.method === 'GET') return json(await auth.listProviders(request));
       const posts = new Set(['/auth/bootstrap', '/auth/magic-link', '/auth/confirm', '/auth/signout', '/auth/invite', '/auth/invite/cancel', '/auth/review-session',
-        '/auth/operator/status', '/auth/operator/role', '/auth/session/revoke', '/auth/step-up', '/auth/domain-rules', '/auth/providers/unlink', '/auth/providers/relink', '/auth/settings/identity', '/auth/setup-complete', OWNER_SIGNIN_PATH, '/auth/email', '/auth/display-name']);
+        '/auth/policy/approve', '/auth/policy/revoke', '/auth/operator/status', '/auth/operator/role', '/auth/session/revoke', '/auth/step-up', '/auth/domain-rules', '/auth/providers/unlink', '/auth/providers/relink', '/auth/settings/identity', '/auth/setup-complete', OWNER_SIGNIN_PATH, '/auth/email', '/auth/display-name']);
       if (!posts.has(path)) return json({ error: 'not_found' }, 404);
       if (request.method !== 'POST') return json({ error: 'method_not_allowed' }, 405);
       const query = readParameters(url.searchParams);
@@ -74,7 +76,10 @@ export function createAuthHandler(auth) {
       if (Object.hasOwn(query, 'token')) throw new AuthError('invalid_input');
       form = formPost(request) && ['/auth/magic-link', '/auth/step-up'].includes(path);
       const input = await readInput(request);
+      if (path.startsWith('/auth/policy/') && !auth.scheduledPolicies) return json({ error: 'not_found' }, 404);
       switch (path) {
+        case '/auth/policy/approve': return json(await auth.scheduledPolicies.approve(request, input));
+        case '/auth/policy/revoke': await auth.scheduledPolicies.revoke(request, input); return json({ revoked: true });
         case '/auth/settings/identity': {const value=await auth.setIdentitySettings(request,formPost(request)?{idpSignIn:input.idpSignIn==='true'}:input);return formPost(request)?seeOther('/auth/settings/identity'):json(value);}
         case '/auth/setup-complete': return json(await auth.completeLocalSetup(request));
         case '/auth/bootstrap': { const value = await auth.bootstrap(request, input); return seeOther(value.returnTo, value.cookie); }

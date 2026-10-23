@@ -1,3 +1,4 @@
+import { writeOperatorStatus } from './status.mjs';
 import { AuthError, deny } from '../errors.mjs';
 import { normalizeEmail, safeReturnTo } from '../policy.mjs';
 import { requirePost } from '../http.mjs';
@@ -72,16 +73,7 @@ export function administration(context) {
       const target = await targetFor(operatorId);
       const actor = await actorFor(request, status === 'active' ? 'operators:reactivate' : 'operators:deactivate', target);
       if (target.status === 'invited') deny('invitation_required', 409);
-      const fence = store.actorFence(actor, clock());
-      try {
-        const result = await store.run(`UPDATE oa_operators SET status=? WHERE id=? AND version=? AND ${fence.sql}`, [status, target.id, target.version, ...fence.args]);
-        if (result.meta.changes < 1) deny('authority_changed', 409);
-      } catch (e) {
-        if (String(e).includes('last_owner')) deny('last_owner', 409);
-        if (String(e).includes('invitation_required')) deny('invitation_required', 409);
-        throw e;
-      }
-      return store.operator(target.id);
+      return writeOperatorStatus(store, actor, target, status, clock());
     },
     async setRole(request, operatorId, role) {
       if (!DEFAULT_ROLES.includes(role)) throw new AuthError('invalid_role');

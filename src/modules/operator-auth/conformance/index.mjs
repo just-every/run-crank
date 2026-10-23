@@ -1,4 +1,5 @@
 import { checkConfirmation, checkMail } from './presentation.mjs';
+import { configureBranding } from '../branding.mjs';
 const BASE_CONFIG = Object.freeze({
   origin: 'https://auth.conformance.test',
   OWNER_EMAIL: 'owner@example.test',
@@ -83,11 +84,12 @@ export function registerOperatorAuthConformance({ test, adapter }) {
     throw new TypeError('confirmationFonts must be boolean.');
   }
   const { branding = {} } = adapter;
-  if (typeof branding !== 'object' || Object.keys(branding).some(key => !['productName', 'theme'].includes(key))
+  if (typeof branding !== 'object' || Object.keys(branding).some(key => !['productName', 'theme', 'mark'].includes(key))
     || (branding.productName !== undefined && typeof branding.productName !== 'string')
     || (branding.theme !== undefined && !/^\/(?!\/)[A-Za-z0-9._~/-]+\.css$/.test(branding.theme))) {
-    throw new TypeError('branding declares only the consumer\'s productName and same-origin theme stylesheet.');
+    throw new TypeError('branding declares only the consumer\'s productName, mark and same-origin theme stylesheet.');
   }
+  if (branding.mark !== undefined) configureBranding({ mark: branding.mark });
 
   async function scenario(name, options, run) {
     test(name, async () => {
@@ -156,7 +158,7 @@ export function registerOperatorAuthConformance({ test, adapter }) {
         const path = `${link.pathname}${link.search}`;
         const preview = await runtime.call(path);
         const headers = [...preview.headers];
-        await checkConfirmation(preview, { kind, productName, token, confirmationFonts: adapter.confirmationFonts === true, theme: branding.theme });
+        await checkConfirmation(preview, { kind, productName, token, confirmationFonts: adapter.confirmationFonts === true, theme: branding.theme, mark: branding.mark });
         const head = await runtime.call(path, { method: 'HEAD' });
         assertStatus(head, 200);
         equal(await head.text(), '', 'HEAD has no body');
@@ -164,7 +166,7 @@ export function registerOperatorAuthConformance({ test, adapter }) {
           equal(head.headers.get(name), headers.find(([key]) => key === name)?.[1], 'HEAD presentation headers');
         }
         assertStatus(await runtime.call('/auth/confirm', post({ token })), 303);
-        await checkConfirmation(await runtime.call(path), { productName, confirmationFonts: adapter.confirmationFonts === true, theme: branding.theme });
+        await checkConfirmation(await runtime.call(path), { productName, confirmationFonts: adapter.confirmationFonts === true, theme: branding.theme, mark: branding.mark });
       }
   });
 

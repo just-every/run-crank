@@ -1,5 +1,5 @@
 // Shared black-box presentation checks run against each consumer's actual Worker.
-export async function checkConfirmation(response, { kind, productName, minutes = 15, token, signInPath = '/signin', confirmationFonts = false, theme }) {
+export async function checkConfirmation(response, { kind, productName, minutes = 15, token, signInPath = '/signin', confirmationFonts = false, theme, mark }) {
   const valid = !!kind;
   expect(response.status === (valid ? 200 : 400), 'confirmation status');
   expect(response.headers.get('set-cookie') === null, 'preview must be cookie-free');
@@ -11,7 +11,7 @@ export async function checkConfirmation(response, { kind, productName, minutes =
   const hash = btoa(String.fromCharCode(...new Uint8Array(digest)));
   const fontsPolicy = confirmationFonts ? " 'self'; font-src 'self'" : '';
   // A declared seed theme is one same-origin stylesheet whose fonts and logo the app serves.
-  const sources = theme ? `style-src 'self' 'sha256-${hash}'; font-src 'self'; img-src 'self'` : `style-src 'sha256-${hash}'${fontsPolicy}`;
+  const sources = theme ? `style-src 'self' 'sha256-${hash}'; font-src 'self'; img-src 'self'` : `style-src 'sha256-${hash}'${fontsPolicy}${mark ? "; img-src 'self'" : ''}`;
   expect(response.headers.get('content-security-policy') === `default-src 'none'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'; ${sources}`, 'only approved stylesheet and font CSP sources');
   const themeLink = theme && `<link rel="stylesheet" href="${escape(theme)}">`;
   const allLinks = [...html.matchAll(/<link\b[^>]*>/gi)].map(match => match[0]);
@@ -31,7 +31,12 @@ export async function checkConfirmation(response, { kind, productName, minutes =
     expect(resources.filter(attrs => attrs.rel === 'stylesheet' && /\.css$/i.test(attrs.href) && Object.keys(attrs).length === 2).length === 1, 'one same-origin font stylesheet');
     expect(resources.filter(attrs => attrs.rel === 'preload' && attrs.as === 'font' && /^font\//.test(attrs.type ?? '') && attrs.crossorigin === 'anonymous' && /\.(woff2?|ttf|otf)$/i.test(attrs.href)).length === 1, 'one reusable primary font preload');
   } else expect(links.length === 0, 'standalone confirmation remains self-contained');
-  expect(!/<script|<img|\bon[a-z]+\s*=|style=|url\s*\(|@import|https?:\/\//i.test(html.replace(/<link\b[^>]*>/gi, '')), 'no other resources or inline attributes');
+  const image = mark ? `<img src="${escape(mark)}" alt="${escape(productName)}" width="32" height="32" decoding="async">` : '';
+  if (mark) {
+    expect(html.includes(image), 'the declared mark with product alt text and header dimensions');
+    expect(html.includes(`<span data-rer-name>${escape(productName)}</span>`), 'product name remains text beside the mark');
+  }
+  expect(!/<script|<img|\bon[a-z]+\s*=|style=|url\s*\(|@import|https?:\/\//i.test(html.replace(/<link\b[^>]*>/gi, '').replace(image, '')), 'no other resources or inline attributes');
   expect(html.includes(escape(productName)), 'escaped product name');
   if (valid) {
     expect(html.includes(`<h1>${kind === 'invite' ? 'Accept your invitation to' : 'Confirm sign-in to'} ${escape(productName)}</h1>`), 'plain confirmation heading');

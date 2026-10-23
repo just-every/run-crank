@@ -44,11 +44,20 @@ export async function plan(request: DoorRequest, input: Record<string, unknown>)
 async function planUpload(request: DoorRequest, input: Record<string, unknown>, upload: UploadRow) {
   const current = await lineage(request);
   // A plan whose apply failed, or whose import was undone or rolled back, has
-  // left the lineage: the same bundle plans afresh instead of reusing it.
-  const existing = await request.options.database.prepare(`SELECT p.* FROM ik_door_plans p WHERE installation_id=? AND namespace=? AND bundle_sha256=?
+  // left the lineage: the same bundle plans afresh instead of reusing it. A
+  // catch-up compares the bundle with the applied head, so it never reuses an
+  // applied plan (the head or one before it): an unchanged source plans a
+  // zero-change catch-up against the head, while an unapplied catch-up plan of
+  // the same bundle is still reused.
+  const catchup = input.catchup === true;
+  const existing = await request.options.database.prepare(`WITH RECURSIVE applied(id) AS (
+      SELECT head_id FROM ik_door_namespaces WHERE ? AND installation_id=? AND namespace=? AND head_id IS NOT NULL
+      UNION SELECT p.previous_id FROM ik_door_plans p JOIN applied a ON p.id=a.id WHERE p.previous_id IS NOT NULL)
+    SELECT p.* FROM ik_door_plans p WHERE installation_id=? AND namespace=? AND bundle_sha256=?
     AND NOT EXISTS(SELECT 1 FROM ik_door_apply_failures f WHERE f.plan_id=p.id)
-    AND NOT EXISTS(SELECT 1 FROM ik_jobs j WHERE j.operation_key='door:'||p.id AND j.state IN ('undone','rolled_back'))`)
-    .bind(request.access.installationId,request.access.namespace,upload.bundle_sha256).first<DoorPlanRow>();
+    AND NOT EXISTS(SELECT 1 FROM ik_jobs j WHERE j.operation_key='door:'||p.id AND j.state IN ('undone','rolled_back'))
+    AND p.id NOT IN (SELECT id FROM applied)`)
+    .bind(catchup?1:0,request.access.installationId,request.access.namespace,request.access.installationId,request.access.namespace,upload.bundle_sha256).first<DoorPlanRow>();
   if (existing) {
     if (!existing.complete) throw new DoorError('plan_staging_interrupted_cancel_and_replan',409,{planId:existing.id});
     const snapshot = await loadSnapshot(request,existing);
@@ -187,7 +196,7 @@ async function retainedSource(request: DoorRequest, upload: UploadRow): Promise<
 }
 /** The kit never stages an erased record, and neither does the door: an upload
  * holding one can never be planned, so it goes too. The epoch fences a later erasure. */
-async function refuseErased(request: DoorRequest, upload: UploadRow, plan: ImportPlan): Promise<void> {
+export async function refuseErased(request: DoorRequest, upload: UploadRow, plan: ImportPlan): Promise<void> {
   const db = request.options.database;
   for (const clear of erasedSourcePredicates(plan)) if ((await statement(db, sql(`SELECT ${clear.sql} AS clear`, ...clear.params ?? [])).first())?.clear !== 1) {
     await forget(request, upload);

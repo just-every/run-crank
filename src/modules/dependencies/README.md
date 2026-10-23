@@ -32,7 +32,77 @@ adapter adds OIDC discovery, sessions, domain policy and owner claims.
 same-origin `paths` as absolute URLs, and a per-interface `jwks_uri`.
 `GET /.well-known/rer-link/jwks/INTERFACE` publishes an ES256 public JWK only.
 The unqualified JWKS URL selects the identity interface. The application retains
-its private key in the server database. Sector/install identity survives re-link,
+its private key in the server database as an AES-256-GCM envelope
+`{version:1,kid,iv,ciphertext}`. The 96-bit random IV and 128-bit tag authenticate the
+AAD `rer-at-rest-v1|rer_dependency_keys|<interface>|1|<kid>`, binding the table,
+interface, envelope version and installation key ID. HKDF-SHA-256 derives a
+dedicated encryption key from
+`INSTALLATION_KEY` with the `rer-at-rest-v1:dependency-key` domain. The envelope's
+`kid` identifies that installation secret; it is separate from the signing JWK's ID.
+`INSTALLATION_KEY` requires the generated 256-bit key's 64 lowercase hex
+characters; passphrases and other formats are refused. `rer setup` generates the
+secret in the private settings file; hosted deploys
+keep their own generated secret in `.rer/deploy/<environment>.secrets.env`
+(mode 0600), exactly like `SESSION_SECRET`. Neither secret enters archives.
+Pass both installation bindings to `createDependencies` and `AuthConfig`.
+
+Legacy plaintext is accepted only before the installation records sealed
+custody; a read upgrades the requested interface, and full rekey upgrades every
+row in one D1 batch. After the last legacy key is upgraded, the durable
+`keys_sealed` marker prevents plaintext from being reintroduced. The non-secret
+`key_ids` history distinguishes retired versions from damaged envelopes. An
+optional `INSTALLATION_KEY_PREVIOUS` permits reads across rotation; old rows
+are re-sealed under the current key. Missing keys, malformed envelopes, wrong
+keys and changed interface AAD fail closed with `installation_key_missing` or
+`installation_key_unavailable` (503), without treating ciphertext as plaintext.
+Rotate hosted custody with `rer deploy --rotate-secret INSTALLATION_KEY`:
+rer retains both values privately, publishes both bindings in one Worker version,
+re-seals every row, checks that every row opens with only the current key, then
+retires the previous Worker binding. Routine rotation uses only the current/previous
+pair; older retired keys require explicit reopen. By default, every retired
+private value stays in the same 0600, Git-ignored file as `SESSION_SECRET`, in
+`INSTALLATION_KEY_RETIRED=<kid>:<value>[,<kid>:<value>...]`; none is routinely
+bound to the Worker. An interrupted operation resumes with the same pair. Back
+up this private custody securely and retain it when moving checkouts.
+
+Retain each retired key until no D1 Time Travel recovery point or exported backup
+predates the completed rotation that retired it or otherwise needs that key.
+After any rotation or reopen has finished, edit
+`.rer/deploy/<environment>.secrets.env` and remove only its `<kid>:<value>` entry
+from `INSTALLATION_KEY_RETIRED`, keeping valid comma separators; remove the
+assignment if no entries remain. Preserve the current key, all other entries
+and the file's owned 0600 permissions. There is no per-key removal command;
+reopening a removed ID refuses before provider writes unless its custody is restored.
+
+Restoring D1 backups or Time Travel from before a rotation may require an older
+key. `rer deploy --reopen-installation-key KID` explicitly publishes the current
+key and that retained retired key as `INSTALLATION_KEY_PREVIOUS`, re-seals and
+verifies every row under the current key, then removes the previous binding.
+CLI-side reopen rekey uses every validated retired key in private custody, so a
+mid-rotation snapshot containing rows under multiple retired keys can be reopened
+with either retained ID. Only the selected pair is published to the Worker.
+Reopen/rekey reports the D1 `key_ids` tail and whether each history ID is in
+custody before opening rows, including when the tail check refuses the restore.
+It retains retired custody and resumes the same pair after interruption. Missing
+retired custody refuses with `installation_key_unavailable`; recover the private
+file before reopening. A whole pre-rotation D1 restore also restores `key_ids`:
+if its tail is absent from configured custody, reads refuse with
+`installation_key_unavailable` before inspecting envelopes. When that custody
+check succeeds, a historically known envelope key ID whose key is no longer
+configured yields `installation_key_version_unknown` (for example, a row-only
+restore that retains the current installation history);
+wrong configuration, malformed ciphertext and unrecognised key IDs yield
+`installation_key_unavailable`. Neither failure generates a replacement key.
+
+Base before #367 cannot open sealed keys. Keep sealing-capable code or roll
+forward after restoring D1. Current Base refuses sealed envelopes on its
+plaintext signing path with `installation_key_sealed_rollback`; old binaries
+cannot acquire that check retroactively.
+Session rotation never changes this key.
+
+This protects signing keys in a D1 dump or backup obtained without the Worker
+secret. It does not protect them from a compromised Worker or someone holding
+both the database and the installation secret. Sector/install identity survives re-link,
 provider moves and export/import. Keys are isolated per interface.
 
 Provider origins and metadata endpoints require HTTPS. Under `rer dev` (the

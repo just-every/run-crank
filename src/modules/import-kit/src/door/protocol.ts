@@ -1,4 +1,6 @@
-export type DoorAction = 'uploads' | 'plan' | 'apply' | 'status' | 'reconcile' | 'undo';
+export type DoorAction = 'uploads' | 'plan' | 'apply' | 'status' | 'reconcile' | 'undo' | 'archive' | 'restore-check';
+/** Grant-only actions: the owner-session mount answers them 404. */
+export const GRANT_ONLY_ACTIONS: readonly DoorAction[] = ['archive', 'restore-check'];
 
 export interface DoorGrant {
   v: 1;
