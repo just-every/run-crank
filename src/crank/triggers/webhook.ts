@@ -75,6 +75,8 @@ export async function receiveHook(request: Request, env: CrankEnv, secret: strin
       if (!constantEqual(request.headers.get(trigger.header_auth.header) ?? '', expected.secret)) throw new StepError('auth', 'The header credential is missing or wrong')
     }
     const inbound = await parseInbound(env, workflow.id, request, bytes, trigger.raw === true)
+    // The header credential authenticated this delivery; no event, hold or run keeps a copy.
+    if (trigger.header_auth) delete inbound.headers[String(trigger.header_auth.header).toLowerCase()]
     let key: string, envelope: { event_id: string; input: unknown } | null = null
     if (trigger.envelope === true) {
       const body = inbound.body as any

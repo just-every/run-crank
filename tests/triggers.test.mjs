@@ -89,6 +89,20 @@ test('Twilio-signed webhooks authenticate the delivered body, so a reused signat
   assert.equal((await runs(h, w)).length, accepted, 'an unsigned body starts no run');
 });
 
+test('A webhook header credential admits deliveries but is never kept in run history', async () => {
+  const secret = fakeSecret('hook-header');
+  const signing = await connection(h, { app: 'webhook', label: 'Partner header secret', auth_kind: 'signing_secret', secret: { secret } });
+  const w = await publish(h, 'Partner orders', { trigger: { type: 'webhook', header_auth: { header: 'X-Hook-Secret', connection_id: signing.id } }, steps: [{ id: 'order', type: 'map', input: { ref: '{{trigger.body.ref}}', partner: '{{trigger.headers.x-partner}}' } }] });
+  const url = await hookUrl(h, w), order = { method: 'POST', body: JSON.stringify({ ref: 'A1' }) };
+  assert.equal((await deliver(h, url, { ...order, headers: { 'content-type': 'application/json' } })).status, 401);
+  const delivered = await deliver(h, url, { ...order, headers: { 'content-type': 'application/json', 'x-hook-secret': secret, 'x-partner': 'Northline' } });
+  assert.equal(delivered.status, 200, delivered.text);
+  const run = await settled(h, delivered.value.run_id);
+  assert.deepEqual(stepOf(run, 'order').output, { ref: 'A1', partner: 'Northline' }, 'other delivery headers stay mappable');
+  assert.ok(!JSON.stringify(run).includes(secret), 'the run keeps no copy of the header credential');
+  assert.ok(!JSON.stringify(await runs(h, w)).includes(secret));
+});
+
 const rss = items => `<?xml version="1.0"?><rss version="2.0"><channel><title>Harbour news</title>${items.map(i => `<item><guid>${i.guid}</guid><title>${i.title}</title><link>https://news.example/${i.guid}</link><pubDate>Fri, 16 Oct 2026 12:00:00 GMT</pubDate></item>`).join('')}</channel></rss>`;
 test('BASE-003: interrupted poll admission retries unseen items after restart and closes the abandoned attempt without duplicate work', async () => {
   const edge = fakeEdge();
