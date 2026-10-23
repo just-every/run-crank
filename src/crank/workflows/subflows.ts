@@ -105,7 +105,7 @@ export const subflow: StepType = {
         if (!isObject(input) || operation.fn === 'text.replace' && input.pattern === true) throw new Error('Subflow: only literal replacement is supported')
         if (!PURE_SUBFLOW_FUNCTIONS.includes(operation.fn)) throw new Error('Subflow: unsupported transformation')
         const output = runTransform(operation.fn, input)
-        if (JSON.stringify(output).length > 65536) throw new Error('Subflow: intermediate output exceeds 64 KiB')
+        if (new TextEncoder().encode(JSON.stringify(output)).byteLength > 65536) throw new Error('Subflow: intermediate output exceeds 64 KiB')
         scope.steps[operation.id] = output
       }
       const output = resolve(definition.result, scope)

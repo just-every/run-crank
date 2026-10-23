@@ -33,6 +33,8 @@ export async function subflowsJourney() {
     assert.equal((await h.get('workflows/' + b.id)).versions[0].number, 1);
     const bad = await startRun(h, a, { address: 12 });
     assert.equal(bad.status, 'failed'); assert.match(bad.error.message, /input.address must be string/);
+    const oversized = await startRun(h, a, { address: '€'.repeat(23000) });
+    assert.equal(oversized.status, 'failed'); assert.match(oversized.error.message, /within 64 KiB/);
     const invalidOutput = { ...definition(false), outputs: { normalized: 'number' } };
     const third = await h.post(versionPath, { definition: invalidOutput }, h.owner, 201);
     const badCaller = await publish(h, 'Output type refusal', graph(third.version));

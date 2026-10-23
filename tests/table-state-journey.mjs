@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { pathToFileURL } from 'node:url';
 import { harness } from './harness.mjs';
-import { archive } from './restore-journey.mjs';
+import { archive, rewritten } from './restore-journey.mjs';
 import { publish, startRun, stepOf } from './kit.mjs';
 
 export async function tableStateJourney() {
@@ -11,6 +11,9 @@ export async function tableStateJourney() {
     await h.post('tables',{name:'Operational counters',confirm:'OPERATIONAL_NUMBERS_ONLY'},'',401);
     const table=await h.post('tables',{name:'Operational counters',confirm:'OPERATIONAL_NUMBERS_ONLY'},h.owner,201);
     const change=(input,operation_id=uuid())=>h.post(`tables/${table.id}/records`,{...input,operation_id});
+    await h.get(`tables/${table.id}/records/received_count`,'',401);
+    const preparation=await h.post('tokens',{label:'Table preparation refusal',scope:'agent'},h.owner,201);
+    await h.get('tables/'+table.id,'',403,{authorization:'Bearer '+preparation.token});
     const seeded=await change({key:'received_count',operation:'upsert',value:0});
     await change({key:'received_count',operation:'upsert',value:0});
     assert.equal((await h.get('tables/'+table.id)).records.length,1,'keyed upsert never creates a second logical record');
@@ -44,7 +47,13 @@ export async function tableStateJourney() {
     await h.post(`workflows/${w.id}/test`,{bindings:{}},h.owner,422);
     assert.equal((await h.get(`tables/${table.id}/records/received_count`)).value,12);
     const exported=await archive(h),sourceSnapshot=await h.get('tables/'+table.id);
-    restored=await harness('http://127.0.0.1:9');await restored.post('data/restore',{archive:exported,confirm:'RESTORE'});
+    restored=await harness('http://127.0.0.1:9');
+    const invalid=await rewritten(exported,(name,row)=>{if(name==='crank_state_records')row.value_json=JSON.stringify('unsupported customer record')});
+    await restored.post('data/restore',{archive:invalid,confirm:'RESTORE'},restored.owner,400);
+    assert.deepEqual(await restored.get('tables'),[],'invalid operational values leave no partial product state');
+    await restored.post('data/restore',{archive:exported,confirm:'RESTORE'});
+    const stateInventory=text=>text.trim().split('\n').map(JSON.parse).flatMap(part=>part.items??[]).filter(item=>item.kind==='row'&&item.table.startsWith('crank_state_')).map(({table,row})=>JSON.stringify({table,row:{...row,...(['crank_state_tables','crank_state_operations'].includes(table)?{active:0}:{})}})).sort();
+    assert.deepEqual(stateInventory(await archive(restored)),stateInventory(exported),'all state records, receipts and replay fences survive inactive restore');
     const received=await restored.get('tables/'+table.id);assert.equal(received.table.active,0);assert.deepEqual(received.records,sourceSnapshot.records);
     await restored.restart();await restored.tick(Date.now()+86400000);assert.deepEqual((await restored.get('tables/'+table.id)).records,received.records);
     await restored.post(`tables/${table.id}/adopt`,{digest:received.digest,confirm:'ADOPT_OPERATIONAL_STATE'});
