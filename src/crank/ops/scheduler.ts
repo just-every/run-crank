@@ -15,6 +15,7 @@ import { RESTORED_OWNER } from '../restore-policy.mjs'
 import { runPoll, type PollRow } from '../triggers/poll'
 import { runSchedule } from '../triggers/schedule'
 import { notify } from './notices'
+import { flushRunNotices } from './run-notices'
 import { flushLogStreams } from './log-stream'
 import { releaseRetryWaits } from '../connectors/retry-wait'
 import { retentionPass } from './retention'
@@ -51,6 +52,7 @@ async function runSchedulerPass(env: CrankEnv, time: number) {
   const queued = await queueCandidates(env, 50)
   for (const run of queued) { await executeRun(env, run.id, time); summary.executed++ }
   await followupPass(env, time)
+  await flushRunNotices(env, time)
   await flushUsageNotices(env)
   await flushLogStreams(env, time)
   summary.sealed = await payloadPass(env, time)

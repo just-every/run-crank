@@ -30,6 +30,8 @@ export async function dataFlows(env: CrankEnv) {
   for (const c of connections) add({ id: `connection:${c.id}`, kind: 'connection', label: c.label, state: c.status,
     recipients: c.domains.map((d: string) => `${d} (including subdomains)`), purpose: `${c.app} API access, connection verification and credential refresh when applicable`,
     fields: ['credential authentication', 'verification account identity', 'workflow-selected fields listed in the workflow entries'], credentials: credential(c.id) })
+  const noticeRoutes = await stmt(env, 'SELECT workflow_id,connection_id,enabled FROM crank_notice_routes ORDER BY workflow_id').all<{ workflow_id: string; connection_id: string; enabled: number }>()
+  for (const route of noticeRoutes.results) add({ id: `notice:${route.workflow_id}`, kind: 'notice', label: 'Owner-authorized Slack operational notices', state: route.enabled ? 'enabled' : 'disabled', recipients: ['https://slack.com'], purpose: 'Failure and approval notices to the exact owner-consented conversation; no approval or continuation authority', fields: ['conversation ID', 'notice kind and category', 'owner reference', 'authenticated run link'], credentials: credential(route.connection_id) })
   const apps = await stmt(env, 'SELECT app FROM crank_oauth_apps ORDER BY app').all<{ app: string }>()
   for (const { app } of apps.results) {
     const p = PROVIDERS[app]

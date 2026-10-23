@@ -229,3 +229,10 @@ The workflow/approval-flow DATA-001 fence remains in force, so restart and Cron
 cannot dispatch restored work. Erasure removes run-linked usage details, while its
 receipt discloses that value-free scope/month debit totals remain; erasure cannot
 replenish an allowance.
+
+
+EXEC-003 run-notice delivery and attempt rows are portable operational history.
+Export and import force `crank_notice_deliveries.active=0` and clear send leases;
+Cron cannot send restored notices. `crank_notice_routes` is installation-local
+owner consent and is excluded. Notice records contain references/category/outcome,
+not copies of run payloads. Run erasure removes deliveries and their attempts.

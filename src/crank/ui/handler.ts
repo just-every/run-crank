@@ -274,7 +274,7 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
       const compareId = url.searchParams.get('older') || url.searchParams.get('compare'), comparison = compareId ? await read('/api/crank/workflow-runs/'+encodeURIComponent(compareId)) : null
       if(comparison && comparison.workflow_id !== run.workflow_id) throw Object.assign(new Error('Compare runs of the same workflow'),{status:422})
       const prior = await read('/api/crank/workflow-runs?'+new URLSearchParams({workflow:run.workflow_id,limit:'50'}))
-      return page('Workflow run',workflowRunView(run,workflow,graph,live,await read('/api/crank/connections'),actor,state.people ?? [],comparison,prior.runs),{state,crumbs:[['Runs','/app/runs']]})
+      return page('Workflow run',workflowRunView(run,workflow,graph,live,await read('/api/crank/connections'),actor,state.people ?? [],comparison,prior.runs,owner ? await read('/api/crank/notices/deliveries?run_id='+encodeURIComponent(run.id)) : []),{state,crumbs:[['Runs','/app/runs']]})
     }
     if(url.pathname==='/app/approvals') {
       const waiting = await read('/api/crank/workflow-runs?status=awaiting_approval&limit=100')

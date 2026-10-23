@@ -672,3 +672,33 @@ Under **Connections → Create a scoped service account**, or `POST /api/crank/s
 These rules implement ct's 21 October gateway ruling. SQL Server and other real-provider journeys require their exact-candidate receipts before DONE. Agent-built connectors, ServiceNow/SAP test instances and buyer Auth/IdP interoperability belong to CONN-020. Writes, watched-field triggers, find-or-create and automatic schema/field refresh remain unimplemented; resource reads remain explicit owner actions.
 
 Enterprise GET proposals use the same `POST /api/crank/custom-connectors/propose` door with the reviewed recipe request documented in `docs/enterprise-connectors.md`. SFTP/S3 gateway manifests and their source-bound cursor protocol are documented in `gateways/node/README.md`. Connector re-review rotates consent generation: existing published snapshots and sandbox receipts cannot confer authority on the new review.
+
+
+### Run failure and approval notices (EXEC-003)
+
+The native owner explicitly authorizes each workflow's Slack destination with
+`POST /api/crank/notices/slack` and
+`{workflow_id, connection_id, channel_id, confirm:"SEND_OPERATIONAL_NOTICES"}`.
+The connection must be active, production Slack with `chat:write`; `channel_id`
+is an exact Slack conversation ID. `{workflow_id, enabled:false}` revokes it.
+Changing consent cancels pending notices under the old revision; it never moves
+old notices to the new destination. No Slack notice is sent without this consent.
+
+`GET /api/crank/notices/deliveries?run_id=ID` is owner-only delivery history,
+also shown on the run's page. Failure/approval notices contain kind/category,
+accountable owner reference, due action and an ordinary authenticated run link.
+Slack gets no workflow payload, error text, mentions or approval authority.
+The Data page discloses the recipient, purpose, fields, credential and unverified
+provider-controlled region/retention. Email continues to use the workflow owner.
+
+Dispatch records intent and a claimed attempt before contacting either provider.
+Acceptance means provider acceptance, never mailbox receipt or a human read.
+Definite rejection/throttling retries on the first minute-Cron tick at or after
+1, 2, 4 and 8 minutes (five attempts total). A lost response, unknown outcome or
+interrupted claim becomes uncertain and is never automatically resent. Development
+mail is labelled suppressed. Revoked/changed consent, inactive owners and answered
+approvals cancel pending delivery. Delivery/attempt history travels in archives
+inactive; routes do not travel. Run erasure removes its delivery/attempt rows.
+
+Teams/Nook, failure calendar escalation/resolution, compensation and the full
+failure-route acceptance remain unfinished. This slice does not claim EXEC-003 DONE.

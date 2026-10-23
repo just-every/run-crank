@@ -4,6 +4,7 @@ import { auditStatement } from './ops/audit'
 
 /** Every Crank column that records which person acted or created something. */
 const ATTRIBUTION: [table: string, column: string][] = [
+  ['crank_notice_deliveries','owner_id'], ['crank_notice_routes','owner_id'],
   ['crank_agent_followups','created_by'], ['crank_agent_followup_recipients','recipient_id'], ['crank_agent_followup_contacts','recipient_id'], ['crank_agent_followup_people','changed_by'],
   ['crank_skills', 'created_by'], ['crank_team_access', 'changed_by'],
   ['crank_usage_workflow_estimates', 'quoted_by'], ['crank_usage_version_estimates', 'quoted_by'], ['crank_usage_budgets', 'updated_by'], ['crank_usage_allowances', 'created_by'],

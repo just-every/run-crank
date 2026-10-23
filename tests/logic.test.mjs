@@ -4,6 +4,8 @@ import { harness } from './harness.mjs';
 import { archive } from './restore-journey.mjs';
 import { estimateHold, connection, deliver, fakeEdge, fakeSecret, hookUrl, jsonResponse, publish, runs, settled, startRun, stepOf, until } from './kit.mjs';
 
+import { runNoticesJourney } from './run-notices-journey.mjs';
+
 const fake = fakeEdge();
 let h;
 before(async () => {
@@ -417,3 +419,5 @@ test('WORK-008: draft edits are listed with author, time and change; one-action 
   const audit = await h.get(`audit?kind=workflow&id=${workflow.id}`);
   assert.ok(audit.some(a => a.action === 'workflow.publish' && a.detail.rollback_of === 1 && a.actor_id === owner && a.version_id === rolled.version.id), 'WORK-008: the rollback is in the audit');
 });
+
+test('EXEC-003: run notices retain channel outcomes and safely recover definite non-delivery', async () => { await runNoticesJourney(); });

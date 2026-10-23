@@ -24,6 +24,7 @@ export function fenceRow(table, row) {
 
 /** Every value importRow may write. Base refuses any other change to a staged row. */
 export const importSafety = {
+  crank_notice_deliveries: { active: [0], lease_id: [null], lease_expires_at: [null] },
   crank_gateways: {status:['revoked'],code_hash:[null],code_expires_at:[null],credential_hash:[null],public_key:[null],fingerprint:[null]},
   crank_gateway_grants: {status:['revoked']},
   crank_custom_versions: {status:['needs_review'],sandbox_json:[null]},
@@ -48,6 +49,7 @@ export const importSafety = {
  * bounded value, so an unfenced unfinished run keeps only its previous status and
  * a failed delivery keeps its outcome with its single replay marked used. */
 export function importRow(table, row) {
+  if (table === 'crank_notice_deliveries') return {...row,active:0,lease_id:null,lease_expires_at:null};
   if(table==='crank_gateways')return {...Object.fromEntries(Object.entries(row).map(([key,value])=>[key,['code_hash','code_expires_at','credential_hash','public_key','fingerprint'].includes(key)?null:value])),status:'revoked'};
   if(table==='crank_gateway_grants')return {...row,status:'revoked'};
   if (table === 'crank_custom_versions') return {...row,status:'needs_review',sandbox_json:null};

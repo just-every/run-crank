@@ -20,6 +20,7 @@ import { coverageReport } from '../ops/coverage'
 import { latencyReport, operationsReport, operationsCsv, configureOperations, createObligation, verifyObligation } from '../ops/report'
 import { listLogSinks, configureLogSink, removeLogSink, flushLogStreams } from '../ops/log-stream'
 import { updateSettings, workspaceSettings } from '../ops/settings'
+import { configureNoticeRoute, noticeDeliveries } from '../ops/run-notices'
 import { getHold } from '../triggers/admission'
 import { decideHold } from '../triggers/hold-decisions'
 import { quoteHold } from '../ops/hold-cost'
@@ -131,6 +132,7 @@ export async function workflowApi(request: Request, env: CrankEnv): Promise<Resp
       if (path === '/api/crank/catalog') return json({ apps: CATALOG })
       if (path === '/api/crank/oauth/callback') return json(await finishOauth(env, actor, url.searchParams), 201)
       if (path === '/api/crank/settings') return json(await workspaceSettings(env))
+      if (path === '/api/crank/notices/deliveries') { requireOwner(actor); return json(await noticeDeliveries(env, url.searchParams.get('run_id'))) }
       if (path === '/api/crank/notices') { requireOwner(actor); return json((await stmt(env, 'SELECT * FROM crank_notices ORDER BY created_at DESC LIMIT 200').all()).results) }
       if (path === '/api/crank/reports/operations') {
         requireOwner(actor)
@@ -192,6 +194,7 @@ export async function workflowApi(request: Request, env: CrankEnv): Promise<Resp
     if ((m = match(path, /^\/api\/crank\/oauth\/apps\/([^/]+)$/))) return json(await setOauthApp(env, actor, m[0], input))
     if (path === '/api/crank/oauth/start') return json(await startOauth(env, actor, input), 201)
     if (path === '/api/crank/coverage') return json(coverageReport(input))
+    if (path === '/api/crank/notices/slack') return json(await configureNoticeRoute(env, actor, input))
     if (path === '/api/crank/settings') return json(await updateSettings(env, actor, input))
     return json({ error: 'Route not found' }, 404)
   } catch (error) {
