@@ -30,7 +30,7 @@ export async function sendRequest(ctx: StepContext, prepared: Prepared, connecti
     try {
       const remaining = policy.deadline - Date.now()
       if (remaining <= 0) throw new StepError('provider', 'The request elapsed-time budget ended before dispatch', { exhausted: true })
-      const response = await boundedFetch(url.href, { method: prepared.method, headers, body: prepared.body, timeoutMs: Math.min(prepared.timeout, remaining), maxBytes: prepared.maxBytes ?? 2 * 1024 * 1024, follow: prepared.follow ?? (prepared.method === 'GET' || prepared.method === 'HEAD' ? 3 : 0) })
+      const response = await boundedFetch(url.href, { method: prepared.method, headers, body: prepared.body, timeoutMs: Math.min(prepared.timeout, remaining), maxBytes: prepared.maxBytes ?? 2 * 1024 * 1024, follow: prepared.follow ?? (prepared.method === 'GET' || prepared.method === 'HEAD' ? 3 : 0), sameOrigin: Boolean(connectionId) })
       await stmt(ctx.env, 'UPDATE crank_wf_attempts SET finished_at=?,http_status=? WHERE id=?', now(), response.status, attemptId).run()
       await reportedResponse(ctx.env, ctx.run.id, attemptId, new URL(response.url).origin, response.headers)
       await flushUsageNotices(ctx.env)

@@ -650,3 +650,26 @@ test('Private gateway read retries retain admission, inputs and budget across re
     const admissions=await isolated.db.prepare('SELECT COUNT(*) AS n FROM crank_request_admissions WHERE finished_at IS NULL AND expires_at>?').bind(Date.now()).first();assert.equal(admissions.n,0,'Completed attempts release their physical account slots');
   } finally {await source?.close();await isolated.close()}
 });
+
+test('Connection credentials are never resent past a redirect that leaves the API origin, from workflow steps or URL polls', async () => {
+  const token = fakeSecret('trusted-bearer'), key = fakeSecret('trusted-key');
+  fake.routes.set('api.trusted.example', ({ url }) => url.pathname === '/away' ? new Response(null, { status: 302, headers: { location: 'http://collector.example/capture' } })
+    : url.pathname === '/plain' ? new Response(null, { status: 302, headers: { location: 'http://api.trusted.example/records' } })
+    : url.pathname === '/renamed' ? new Response(null, { status: 301, headers: { location: '/records' } })
+    : jsonResponse([{ id: 'r1' }]));
+  fake.routes.set('collector.example', () => jsonResponse([{ id: 'captured' }]));
+  const bearer = await connection(h, { app: 'http', label: 'Trusted bearer API', auth_kind: 'bearer', domains: ['api.trusted.example'], secret: { token } });
+  const keyed = await connection(h, { app: 'http', label: 'Trusted key API', auth_kind: 'api_key', domains: ['api.trusted.example'], secret: { key, header: 'x-trusted-key' } });
+  const read = (account, path) => publish(h, 'Trusted read ' + path, { trigger: { type: 'manual' }, steps: [{ id: 'read', type: 'http', connection_id: account.id, input: { url: 'https://api.trusted.example' + path } }] });
+  const within = await startRun(h, await read(bearer, '/renamed'), {});
+  assert.equal(within.status, 'succeeded', 'a redirect inside the API origin is still followed');
+  for (const account of [bearer, keyed]) for (const path of ['/away', '/plain']) {
+    const run = await startRun(h, await read(account, path), {});
+    assert.equal(run.status, 'failed', `${account.label} ${path}`); assert.equal(run.error.category, 'egress');
+  }
+  const poll = await publish(h, 'Trusted poll', { trigger: { type: 'url_poll', url: 'https://api.trusted.example/away', items_path: '', connection_id: keyed.id, interval_minutes: 1, backfill: 'existing' }, steps: [] });
+  await h.tick(Date.now() + 10 * 60000);
+  assert.equal((await h.get(`workflows/${poll.id}/trigger`)).poll.last_status, 'error');
+  assert.equal((await runs(h, poll)).length, 0);
+  assert.deepEqual(fake.requests.filter(r => r.url.host === 'collector.example' || r.url.protocol === 'http:' && r.url.host === 'api.trusted.example').map(r => r.url.href), [], 'no credentialed request leaves the API origin or its HTTPS scheme');
+});

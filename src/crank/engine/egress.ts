@@ -23,9 +23,11 @@ export function checkEgress(raw: string): URL {
 export interface BoundedResponse { status: number; headers: Headers; bytes: Uint8Array<ArrayBuffer>; url: string; redirects: number }
 
 /** One request with a deadline and a byte bound. Redirects are followed only when
- * `follow` is set, re-checking every hop; otherwise a 3xx is returned as is. */
-export async function boundedFetch(raw: string, init: RequestInit & { timeoutMs?: number; maxBytes?: number; follow?: number } = {}): Promise<BoundedResponse> {
-  const { timeoutMs = 15000, maxBytes = 1024 * 1024, follow = 0, ...request } = init
+ * `follow` is set, re-checking every hop; otherwise a 3xx is returned as is. A request
+ * carrying connection credentials sets `sameOrigin`: its headers are never resent to
+ * another origin, including the same host over plain HTTP. */
+export async function boundedFetch(raw: string, init: RequestInit & { timeoutMs?: number; maxBytes?: number; follow?: number; sameOrigin?: boolean } = {}): Promise<BoundedResponse> {
+  const { timeoutMs = 15000, maxBytes = 1024 * 1024, follow = 0, sameOrigin = false, ...request } = init
   let url = checkEgress(raw).href, redirects = 0
   const controller = new AbortController(), timer = setTimeout(() => controller.abort(), timeoutMs)
   try {
@@ -37,6 +39,7 @@ export async function boundedFetch(raw: string, init: RequestInit & { timeoutMs?
         await response.body?.cancel()
         const next = new URL(response.headers.get('location')!, url).href
         checkEgress(next)
+        if (sameOrigin && new URL(next).origin !== new URL(url).origin) throw new StepError('egress', 'A redirect left the API origin; connection credentials are not sent there')
         url = next; redirects++
         if (request.method && !['GET', 'HEAD'].includes(request.method.toUpperCase())) throw new StepError('egress', 'Redirects are not followed for writes')
         continue

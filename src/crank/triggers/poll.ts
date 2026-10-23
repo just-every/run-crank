@@ -31,7 +31,7 @@ function classify(response: BoundedResponse, what: string) {
 async function get(env: CrankEnv, url: URL, headers: Headers, connectionId: string | undefined) {
   const request = new Headers(headers), target = new URL(url)
   if (connectionId) await authorizeRequest(env, connectionId, target, request, null)
-  try { return await boundedFetch(target.href, { method: 'GET', headers: request, timeoutMs: 15000, maxBytes: 2 * 1024 * 1024, follow: 3 }) }
+  try { return await boundedFetch(target.href, { method: 'GET', headers: request, timeoutMs: 15000, maxBytes: 2 * 1024 * 1024, follow: 3, sameOrigin: Boolean(connectionId) }) }
   catch (error) {
     if (error instanceof StepError && error.category === 'network') throw new PollFailure(error.message, 'outage')
     throw error
