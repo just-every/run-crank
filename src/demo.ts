@@ -1,18 +1,26 @@
 import type { CrankEnv } from './crank/model'
 import { canonical, digest, type Actor } from './crank/model'
 import { mintToken } from './crank/tokens'
+import { setFlowStatus } from './crank/flows'
+import { quoteWorkflow } from './crank/ops/usage'
 import { seedWorkflowDemo } from './demo-workflow'
+import { demoUsageCost } from './demo-usage'
 
 /** Real workspace records. Fixed IDs preserve visitor edits if startup repeats. */
 export async function seedDemo(env: CrankEnv, { ownerEmail, now }: { ownerEmail: string; now: Date }) {
   const owner = await env.DB.prepare('SELECT id,version FROM oa_operators WHERE email=? AND role=\'owner\'').bind(ownerEmail).first<{ id: string; version: number }>()
   if (!owner) throw new Error('Demo owner is not ready')
+  const session = await env.DB.prepare("SELECT id,kind FROM oa_sessions WHERE operator_id=? AND kind IN ('native','dev') AND revoked_at IS NULL AND expires_at>? ORDER BY created_at DESC LIMIT 1").bind(owner.id, now.getTime()).first<{ id: string; kind: 'native' | 'dev' }>()
+  if (!session) throw new Error('Demo owner session is not ready')
+  const actor: Actor = { id: owner.id, name: 'Maya Chen', role: 'owner', kind: session.kind, version: owner.version, sessionId: session.id, local: env.AUTH_LOCAL === 'true' }
   const at = (hours: number) => new Date(now.getTime() - hours * 3600000).toISOString()
   const origin = env.CRANK_TARGET_ORIGIN
   if (!origin) throw new Error('Demo destination is not configured')
   const statements = [env.DB.prepare("UPDATE oa_operators SET display_name='Maya Chen' WHERE id=?").bind(owner.id), env.DB.prepare('INSERT INTO oa_first_run(singleton,completed_by,completed_at) VALUES(1,?,?) ON CONFLICT DO NOTHING').bind(owner.id, now.getTime())]
   const people = [ ['dana', 'Dana Reyes', 'admin'], ['oliver', 'Oliver Hughes', 'member'], ['amelia', 'Amelia Grant', 'admin'] ]
   for (const [key, name, role] of people) statements.push(env.DB.prepare("INSERT INTO oa_operators(id,email,display_name,role,status,version,created_at) VALUES(?,?,?,?,'active',1,?) ON CONFLICT DO NOTHING").bind(`demo-${key}`, `${key}@bluelake.example`, name, role, now.getTime() - 7 * 86400000))
+  await env.DB.batch(statements)
+  const history: D1PreparedStatement[] = []
   // Each source numbers its own events, so each flow's newest event has its own number.
   const flows = [
     ['support', 'Customer follow-up', 'Support desk', 'Operations inbox', 'active', 1045],
@@ -26,7 +34,11 @@ export async function seedDemo(env: CrankEnv, { ownerEmail, now }: { ownerEmail:
   const tasks = ['Arrange an installation callback', 'Confirm packing and shipping', 'Review insurance and payment details', 'Reimburse the site visit', 'Schedule a return pickup', 'Schedule the project handover']
   for (const [index, [key, name, source, destination, status, newest]] of flows.entries()) {
     const flowId = `demo-flow-${key}`, target = `${origin}/${key}/events`
-    statements.push(env.DB.prepare('INSERT INTO crank_flows(id,name,source_app,destination_app,target_url,revision,created_by,created_at,status) VALUES(?,?,?,?,?,1,?,?,?) ON CONFLICT DO NOTHING').bind(flowId, name, source, destination, target, owner.id, at(168 + index), status))
+    if (!await env.DB.prepare('SELECT 1 FROM crank_flows WHERE id=?').bind(flowId).first()) {
+      await env.DB.prepare("INSERT INTO crank_flows(id,name,source_app,destination_app,target_url,revision,created_by,created_at,status) VALUES(?,?,?,?,?,1,?,?,'draft')").bind(flowId, name, source, destination, target, owner.id, at(168 + index)).run()
+      await quoteWorkflow(env, actor, flowId, { cost: demoUsageCost })
+      if (status === 'active') await setFlowStatus(env, actor, flowId, 'active')
+    }
     // Completed/rejected history remains useful when a flow is paused for revision.
     for (let n = 0; n < 4; n++) {
       const eventId = `${key}-${newest - n}`, runId = `run-${eventId}`
@@ -36,17 +48,14 @@ export async function seedDemo(env: CrankEnv, { ownerEmail, now }: { ownerEmail:
       const actionDigest = await digest(actionJson), state = n === 0 && status === 'active' ? 'pending' : n === 3 ? 'rejected' : 'succeeded'
       const created = at(2 + n * 12 + index), finished = at(1.5 + n * 12 + index)
       const outcome = state === 'succeeded' ? JSON.stringify({ status: 'succeeded', code: 'destination_confirmed', uncertain: false, http_status: 200, destination_id: `demo-delivery-${runId}` }) : null
-      statements.push(env.DB.prepare('INSERT INTO crank_runs(id,flow_id,event_id,input_json,input_digest,target_url,flow_revision,source_app,destination_app,action_json,action_digest,state,created_by,created_at,updated_at,outcome_json) VALUES(?,?,?,?,?,?,1,?,?,?,?,?,?,?,?,?) ON CONFLICT DO NOTHING').bind(runId, flowId, eventId, inputJson, inputDigest, target, source, destination, actionJson, actionDigest, state, owner.id, created, finished, outcome))
-      if (state !== 'pending') statements.push(env.DB.prepare('INSERT INTO crank_approvals(id,run_id,actor_id,session_id,decision,input_digest,action_digest,action_json,created_at) VALUES(?,?,?,?,?,?,?,?,?) ON CONFLICT DO NOTHING').bind(`demo-approval-${key}-${n}`, runId, owner.id, 'demo-history', state === 'rejected' ? 'reject' : 'approve', inputDigest, actionDigest, actionJson, finished))
-      if (state === 'succeeded') statements.push(env.DB.prepare('INSERT INTO crank_attempts(id,run_id,number,started_at,finished_at,outcome_json) VALUES(?,?,1,?,?,?) ON CONFLICT DO NOTHING').bind(`demo-attempt-${key}-${n}`, runId, finished, finished, outcome))
+      history.push(env.DB.prepare('INSERT INTO crank_runs(id,flow_id,event_id,input_json,input_digest,target_url,flow_revision,source_app,destination_app,action_json,action_digest,state,created_by,created_at,updated_at,outcome_json) VALUES(?,?,?,?,?,?,1,?,?,?,?,?,?,?,?,?) ON CONFLICT DO NOTHING').bind(runId, flowId, eventId, inputJson, inputDigest, target, source, destination, actionJson, actionDigest, state, owner.id, created, finished, outcome))
+      if (state !== 'pending') history.push(env.DB.prepare('INSERT INTO crank_approvals(id,run_id,actor_id,session_id,decision,input_digest,action_digest,action_json,created_at) VALUES(?,?,?,?,?,?,?,?,?) ON CONFLICT DO NOTHING').bind(`demo-approval-${key}-${n}`, runId, owner.id, 'demo-history', state === 'rejected' ? 'reject' : 'approve', inputDigest, actionDigest, actionJson, finished))
+      if (state === 'succeeded') history.push(env.DB.prepare('INSERT INTO crank_attempts(id,run_id,number,started_at,finished_at,outcome_json) VALUES(?,?,1,?,?,?) ON CONFLICT DO NOTHING').bind(`demo-attempt-${key}-${n}`, runId, finished, finished, outcome))
     }
   }
-  await env.DB.batch(statements)
+  await env.DB.batch(history)
   // Use the same credential issuance rules as the Access page. Raw secrets are
   // discarded; a visitor creates a new credential to connect their own agent.
-  const session = await env.DB.prepare("SELECT id,kind FROM oa_sessions WHERE operator_id=? AND kind IN ('native','dev') AND revoked_at IS NULL AND expires_at>? ORDER BY created_at DESC LIMIT 1").bind(owner.id, now.getTime()).first<{ id: string; kind: 'native' | 'dev' }>()
-  if (!session) throw new Error('Demo owner session is not ready')
-  const actor: Actor = { id: owner.id, name: 'Maya Chen', role: 'owner', kind: session.kind, version: owner.version, sessionId: session.id, local: env.AUTH_LOCAL === 'true' }
   for (const credential of [
     { label: 'Operations assistant', scope: 'agent' },
     { label: 'Support desk events', scope: 'trigger', flow_id: 'demo-flow-support' },

@@ -2,6 +2,8 @@ import { createConnection, listConnections } from '../crank/connections/store'
 import { startOfDay } from '../crank/engine/dates'
 import { validateGraph } from '../crank/engine/graph'
 import { canonical, digest, type Actor, type CrankEnv } from '../crank/model'
+import { publishUsageStatements, quoteWorkflow } from '../crank/ops/usage'
+import { demoUsageCost } from '../demo-usage'
 import { createHook, listHooks } from '../crank/triggers/webhook'
 import { demoGraph, type DemoConnections } from './graph'
 import { earlierStatements, STORIES, storyStatements, V2_PUBLISHED_AGO } from './runs'
@@ -42,10 +44,23 @@ export async function seedWorkflowDemo(env: CrankEnv, actor: Actor, now: Date) {
   const start = end - dayStart > 3600000 ? dayStart + Math.min(6 * 3600000, (end - dayStart) / 3) : end - 12 * 3600000
   await env.DB.batch([
     env.DB.prepare(`UPDATE crank_connections SET created_at=?1,consented_at=?1 WHERE id IN (?2,?3,?4,?5)`).bind(connected, c.stripe, c.google, c.slack, c.quickbooks),
-    env.DB.prepare(`INSERT INTO crank_workflows(id,name,description,folder,owner_id,draft_json,draft_updated_at,status,published_version_id,settings_json,created_by,created_at) VALUES(?,?,?,?,?,?,?,'published',?,'{}',?,?) ON CONFLICT DO NOTHING`)
-      .bind(WORKFLOW, 'Stripe paid to books', 'When a Stripe payment succeeds, log it, notify the team, and create a QuickBooks invoice.', 'Finance', actor.id, JSON.stringify(v2), v2At, ids.v2, actor.id, v1At),
-    await version(env, ids.v1, 1, v1, actor.id, v1At, v2At),
-    await version(env, ids.v2, 2, v2, actor.id, v2At, null),
+    env.DB.prepare(`INSERT INTO crank_workflows(id,name,description,folder,owner_id,draft_json,draft_updated_at,status,settings_json,created_by,created_at) VALUES(?,?,?,?,?,?,?,'draft','{}',?,?)`)
+      .bind(WORKFLOW, 'Stripe paid to books', 'When a Stripe payment succeeds, log it, notify the team, and create a QuickBooks invoice.', 'Finance', actor.id, JSON.stringify(v1), v1At, actor.id, v1At),
+  ])
+  // Each historical version receives the same immutable owner estimate as a
+  // normal publication, before any production run can reserve its usage.
+  for (const [versionId, number, graph, published, retired] of [
+    [ids.v1, 1, v1, v1At, v2At], [ids.v2, 2, v2, v2At, null],
+  ] as const) {
+    await env.DB.prepare('UPDATE crank_workflows SET draft_json=?,draft_updated_at=? WHERE id=?').bind(JSON.stringify(graph), published, WORKFLOW).run()
+    await quoteWorkflow(env, actor, WORKFLOW, { cost: demoUsageCost })
+    await env.DB.batch([
+      await version(env, versionId, number, graph, actor.id, published, retired),
+      ...await publishUsageStatements(env, WORKFLOW, versionId, canonical(graph)),
+    ])
+  }
+  await env.DB.batch([
+    env.DB.prepare("UPDATE crank_workflows SET status='published',published_version_id=? WHERE id=?").bind(ids.v2, WORKFLOW),
     env.DB.prepare("INSERT INTO crank_audit(id,at,actor_id,action,subject_kind,subject_id,version_id,detail_json) VALUES(?,?,?,'workflow.publish','workflow',?,?,'{}'),(?,?,?,'workflow.publish','workflow',?,?,'{}') ON CONFLICT DO NOTHING")
       .bind(`${WORKFLOW}-audit-v1`, v1At, actor.id, WORKFLOW, ids.v1, `${WORKFLOW}-audit-v2`, v2At, actor.id, WORKFLOW, ids.v2),
     ...earlierStatements(env, ids, RUNS_TODAY - STORIES.length, start, end),
