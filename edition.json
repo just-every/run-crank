@@ -1,4 +1,104 @@
 {
   "schemaVersion": 1,
-  "id": "just-every/run-crank"
+  "id": "just-every/run-crank",
+  "toolchain": {
+    "id": "runeditrun/edition-authoring",
+    "version": "1.1.0"
+  },
+  "components": [
+    {
+      "id": "just-every/run-crank",
+      "role": "edition",
+      "source": {
+        "kind": "local",
+        "paths": [
+          ".github",
+          ".gitignore",
+          ".node-version",
+          "ACCEPTANCE.md",
+          "AGENTS.md",
+          "CHANGELOG.md",
+          "CLAUDE.md",
+          "CONTRACT.md",
+          "DEMO.md",
+          "HOMEPAGE-VARIANTS.md",
+          "LICENSE",
+          "ONBOARDING.md",
+          "OPERATIONS.json",
+          "OPERATIONS.md",
+          "README.md",
+          "RELEASE.json",
+          "RUN-LOCALLY.md",
+          "SEED-COMMAND-CONTRACT.md",
+          "VERIFY-WORKFLOW.md",
+          "base-copies.json",
+          "composition.lock.json",
+          "deploy-demo.json",
+          "deploy-site.json",
+          "deploy.json",
+          "docs",
+          "examples",
+          "executors",
+          "gateways",
+          "management",
+          "migrations",
+          "package.json",
+          "packaging.json",
+          "pnpm-lock.yaml",
+          "public",
+          "rer-project.json",
+          "rer-setup.json",
+          "scripts",
+          "sdk",
+          "seed.json",
+          "src",
+          "test-budget.json",
+          "tests",
+          "tsconfig.json",
+          "vite.config.ts",
+          "vite.site.config.ts",
+          "wrangler.jsonc"
+        ],
+        "origin": {
+          "repository": "runeditrun/base",
+          "revision": "4280971d7c0295b8a88c3e1179048efcbbe14f30",
+          "path": ".",
+          "paths": [
+            "modules/delivery-producer/setup-manifest.mjs",
+            "default-seed/src/core/platform/auth/mail.server.mjs",
+            "default-seed/src/core/platform/auth/config.server.ts",
+            "default-seed/src/server.dev.ts",
+            "default-seed/scripts/installer/local.mjs",
+            "default-seed/rer-setup.json"
+          ]
+        },
+        "mappings": [
+          {
+            "path": "scripts/delivery/base/setup-manifest.mjs",
+            "originPath": "modules/delivery-producer/setup-manifest.mjs"
+          },
+          {
+            "path": "src/mail.server.mjs",
+            "originPath": "default-seed/src/core/platform/auth/mail.server.mjs"
+          },
+          {
+            "path": "src/auth.server.ts",
+            "originPath": "default-seed/src/core/platform/auth/config.server.ts"
+          },
+          {
+            "path": "src/server.dev.ts",
+            "originPath": "default-seed/src/server.dev.ts"
+          },
+          {
+            "path": "scripts/installer/local.mjs",
+            "originPath": "default-seed/scripts/installer/local.mjs"
+          },
+          {
+            "path": "rer-setup.json",
+            "originPath": "default-seed/rer-setup.json"
+          }
+        ]
+      }
+    }
+  ]
 }

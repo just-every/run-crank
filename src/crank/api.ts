@@ -4,7 +4,7 @@ import { deliverRun, recoverExpiredRuns, rejectRun } from './delivery'
 import { createFlow, getFlow, setFlowStatus } from './flows'
 import { CrankError, body, json, presentRun, publicActor, requireValue, stmt, type Actor, type CrankEnv, type Flow, type Run } from './model'
 import { getRun, prepareRun } from './runs'
-import { mintToken, revokeToken, tokenColumns } from './tokens'
+import { mintToken, revokeToken, credentialColumns } from './tokens'
 import { quoteWorkflow, readWorkflowEstimate, flushUsageNotices } from './ops/usage'
 import { StepError } from './engine/errors'
 
@@ -18,7 +18,7 @@ async function state(env: CrankEnv, actor: Actor): Promise<Response> {
     stmt(env, 'SELECT * FROM crank_runs ORDER BY created_at DESC,id LIMIT 200').all<Run>(),
     stmt(env, 'SELECT * FROM crank_approvals WHERE run_id IN (SELECT id FROM crank_runs ORDER BY created_at DESC,id LIMIT 200) ORDER BY created_at DESC,id').all(),
     stmt(env, 'SELECT * FROM crank_attempts WHERE run_id IN (SELECT id FROM crank_runs ORDER BY created_at DESC,id LIMIT 200) ORDER BY started_at DESC,id').all(),
-    canManage ? stmt(env, `SELECT ${tokenColumns} FROM crank_tokens ORDER BY created_at DESC,id`).all() : Promise.resolve({ results: [] }),
+    canManage ? stmt(env, `SELECT ${credentialColumns} FROM crank_tokens ORDER BY created_at DESC,id`).all() : Promise.resolve({ results: [] }),
     // Names only, so decisions and versions read "Maya Chen" rather than an operator ID.
     stmt(env, 'SELECT id,display_name AS name FROM oa_operators ORDER BY created_at,id').all<{ id: string; name: string }>(),
   ])

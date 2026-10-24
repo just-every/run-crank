@@ -3,5 +3,25 @@
   "projectId": "just-every/run-crank",
   "name": "Crank",
   "sourceRepository": "https://github.com/just-every/run-crank",
-  "license": "MIT"
+  "license": "MIT",
+  "deployment": {
+    "target": "cloudflare-workers",
+    "artifactFile": "rer-worker-artifact.json"
+  },
+  "operations": {
+    "setup": "pnpm install --frozen-lockfile && pnpm exec rer install",
+    "build": "pnpm run build",
+    "verify": "pnpm exec rer check --profile first-party && pnpm check:deployment-spec && pnpm run verify",
+    "artifact": "node scripts/delivery/base/cli.mjs artifact --config packaging.json",
+    "recovery": "Follow OPERATIONS.md and docs/OPERATIONS.md. Pause workflow triggers and outbound work; retain the exact source and private settings, export installation data with rer export, restore with rer import into fresh empty resources, then run owner setup and compare a new export before resuming. Preserve applied migration names and exact SQL bytes. Restored workflows stay inactive until the owner reconnects providers and reviews publication."
+  },
+  "verification": {
+    "migrationDirectories": [
+      "migrations/core"
+    ]
+  },
+  "setup": {
+    "path": "rer-setup.json",
+    "sha256": "7b732167c116658045bb28764772f976f91de884269987b24d3df1ac5459cf58"
+  }
 }

@@ -3,7 +3,7 @@ import { getFlow } from './flows'
 import { auditStatement, auditStatementWhen } from './ops/audit'
 import { digest, id, now, requireValue, stmt, text, type Actor, type CrankEnv } from './model'
 
-export const tokenColumns = 'id,label,scope,flow_id,created_by,created_at,revoked_at'
+export const credentialColumns = 'id,label,scope,flow_id,created_by,created_at,revoked_at'
 export async function mintToken(env: CrankEnv, actor: Actor, input: Record<string, unknown>) {
   requireOwner(actor)
   const scope = input.scope
@@ -23,5 +23,5 @@ export async function revokeToken(env: CrankEnv, actor: Actor, tokenId: string) 
   const result = await guardedBatch(env, actor, 'owner', [stmt(env, 'UPDATE crank_tokens SET revoked_at=COALESCE(revoked_at,?) WHERE id=?', now(), tokenId),
     auditStatementWhen(env, 'EXISTS(SELECT 1 FROM crank_tokens WHERE id=?)', [tokenId], actor.id, 'credential.revoke', 'credential', tokenId)])
   requireValue(result[0].meta.changes === 1, 'Token not found', 404)
-  return stmt(env, `SELECT ${tokenColumns} FROM crank_tokens WHERE id=?`, tokenId).first()
+  return stmt(env, `SELECT ${credentialColumns} FROM crank_tokens WHERE id=?`, tokenId).first()
 }

@@ -1,0 +1,38 @@
+name: Managed release
+on:
+  workflow_dispatch:
+    inputs:
+      installation_id:
+        description: RER installation identifier
+        required: true
+        type: string
+      broker_url:
+        description: RER management origin
+        required: true
+        type: string
+      environment:
+        description: Target environment
+        required: true
+        default: preview
+        type: choice
+        options: [preview, production]
+      verification_profile:
+        description: Verification scope declared by immutable project source
+        required: true
+        default: full
+        type: choice
+        options: [full]
+permissions:
+  contents: read
+  actions: read
+  id-token: write
+jobs:
+  release:
+    uses: 'runeditrun/delivery/.github/workflows/trusted-build.yml@34cf6c23b5cb86eff0068049bc39feeb38c8ffa9'
+    with:
+      installation_id: ${{ inputs.installation_id }}
+      broker_url: ${{ inputs.broker_url }}
+      environment: ${{ inputs.environment }}
+      verification_profile: ${{ inputs.verification_profile }}
+      artifact_file: 'rer-worker-artifact.json'
+      build_profile: 'project'

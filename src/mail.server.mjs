@@ -9,13 +9,14 @@ export function operatorMail(env) {
 
   return {
     async send(message) {
-      if (!['resend', 'sendgrid', 'cloudflare'].includes(env.MAIL_PROVIDER)) {
+      if (!['rer', 'resend', 'sendgrid', 'cloudflare'].includes(env.MAIL_PROVIDER)) {
         throw new Error('unsupported_mail_provider')
       }
       return createMailSender({
         provider: env.MAIL_PROVIDER,
         mode: 'production',
         apiKey: env.MAIL_API_KEY,
+        ...(env.MAIL_PROVIDER === 'rer' ? { relayUrl: env.MAIL_RELAY_URL } : {}),
         ...(env.MAIL_PROVIDER === 'cloudflare' ? { accountId: env.MAIL_ACCOUNT_ID } : {}),
       }).send(message)
     },

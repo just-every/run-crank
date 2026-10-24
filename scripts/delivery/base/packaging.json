@@ -1,0 +1,85 @@
+{
+  "schema": 1,
+  "project": {
+    "schema": 1,
+    "projectId": "just-every/run-crank",
+    "name": "Crank",
+    "sourceRepository": "https://github.com/just-every/run-crank",
+    "license": "MIT",
+    "deployment": {
+      "target": "cloudflare-workers",
+      "artifactFile": "rer-worker-artifact.json"
+    },
+    "operations": {
+      "setup": "pnpm install --frozen-lockfile && pnpm exec rer install",
+      "build": "pnpm run build",
+      "verify": "pnpm exec rer check --profile first-party && pnpm check:deployment-spec && pnpm run verify",
+      "artifact": "node scripts/delivery/base/cli.mjs artifact --config packaging.json",
+      "recovery": "Follow OPERATIONS.md and docs/OPERATIONS.md. Pause workflow triggers and outbound work; retain the exact source and private settings, export installation data with rer export, restore with rer import into fresh empty resources, then run owner setup and compare a new export before resuming. Preserve applied migration names and exact SQL bytes. Restored workflows stay inactive until the owner reconnects providers and reviews publication."
+    },
+    "verification": {
+      "migrationDirectories": [
+        "migrations/core"
+      ]
+    }
+  },
+  "managed": {
+    "workflowRef": "runeditrun/delivery/.github/workflows/trusted-build.yml@34cf6c23b5cb86eff0068049bc39feeb38c8ffa9",
+    "artifactFile": "rer-worker-artifact.json",
+    "buildProfile": "project",
+    "verificationProfiles": [
+      "full"
+    ]
+  },
+  "setup": {
+    "manifestFile": "rer-setup.json"
+  },
+  "artifact": {
+    "specInputs": {
+      "publicVariableNames": [
+        "AUTH_ORIGIN",
+        "AUTH_LOCAL",
+        "MAIL_PROVIDER",
+        "MAIL_FROM",
+        "MAIL_RELAY_URL",
+        "MAIL_ACCOUNT_ID",
+        "IDENTITY_PROVIDER"
+      ],
+      "secretNames": [
+        "OWNER_EMAIL",
+        "SESSION_SECRET",
+        "INSTALLATION_KEY",
+        "SETUP_TOKEN",
+        "MAIL_API_KEY"
+      ],
+      "optionalSecretNames": [
+        "INSTALLATION_KEY_PREVIOUS"
+      ],
+      "healthPath": "/health",
+      "recovery": "Follow OPERATIONS.md and docs/OPERATIONS.md. Pause workflow triggers and outbound work; retain the exact source and private settings, export installation data with rer export, restore with rer import into fresh empty resources, then run owner setup and compare a new export before resuming. Preserve applied migration names and exact SQL bytes. Restored workflows stay inactive until the owner reconnects providers and reviews publication.",
+      "providerEffects": [
+        "outbound-mail",
+        "outbound-webhooks",
+        "ai"
+      ],
+      "mail": {
+        "providers": [
+          "rer",
+          "resend",
+          "sendgrid",
+          "cloudflare"
+        ]
+      },
+      "surfaces": {
+        "app": {
+          "path": "/signin",
+          "originVariable": "AUTH_ORIGIN",
+          "signIn": {
+            "path": "/signin",
+            "loginHint": false
+          }
+        }
+      }
+    }
+  }
+}

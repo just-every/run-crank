@@ -63,3 +63,22 @@ instructions under `node_modules/@runeditrun/rer/modules/deploy-kit`; account sc
 resource ownership, migrations, receipt and health checks are defined there.
 Local validation does not prove hosted acceptance, provider delivery or remote
 health.
+
+## Hosted installation packaging
+
+The seed-owned `packaging.json` declares the existing Worker, DB binding,
+unchanged migration sources, recovery policy and setup manifest. Build with
+`pnpm run build`, then regenerate the committed import projection with
+`pnpm delivery:spec`. `pnpm check:deployment-spec` checks that projection
+against the real build and policy during hosted verification.
+
+`node scripts/delivery/base/cli.mjs package --config packaging.json --output rer-package`
+produces the descriptor, dispatch-only Managed workflow and schema-2 artifact.
+`node scripts/delivery/base/cli.mjs artifact --config packaging.json` produces
+the later delivery artifact. Both output directories are disposable and ignored.
+
+Local development keeps its private outbox. Hosted sign-in requires configured
+mail: Managed hosting assigns the RER relay URL, sender and private installation
+credential. Assisted hosting offers RER, Resend, SendGrid and Cloudflare with
+the selected provider's sender and private credentials; Cloudflare also needs
+its account ID. No local check establishes live provider delivery.

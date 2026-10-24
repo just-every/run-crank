@@ -74,6 +74,130 @@
       "required": false,
       "help": "Optional Auth install. Leave empty to use email links.",
       "default": ""
+    },
+    {
+      "name": "MAIL_PROVIDER",
+      "label": "Mail provider",
+      "kind": "select",
+      "required": true,
+      "default": "development",
+      "options": [
+        {
+          "value": "development",
+          "label": "Local development outbox"
+        },
+        {
+          "value": "rer",
+          "label": "RER managed mail"
+        },
+        {
+          "value": "resend",
+          "label": "Resend"
+        },
+        {
+          "value": "sendgrid",
+          "label": "SendGrid"
+        },
+        {
+          "value": "cloudflare",
+          "label": "Cloudflare Email Sending"
+        }
+      ],
+      "help": "Local development sends no external mail. Hosted sign-in requires a configured provider and verified sender. Managed hosting assigns its relay settings."
+    },
+    {
+      "name": "MAIL_FROM",
+      "label": "Sender address",
+      "kind": "text",
+      "required": false,
+      "presentations": [
+        {
+          "when": {
+            "field": "MAIL_PROVIDER",
+            "equals": "rer"
+          },
+          "required": true
+        },
+        {
+          "when": {
+            "field": "MAIL_PROVIDER",
+            "equals": "resend"
+          },
+          "required": true
+        },
+        {
+          "when": {
+            "field": "MAIL_PROVIDER",
+            "equals": "sendgrid"
+          },
+          "required": true
+        },
+        {
+          "when": {
+            "field": "MAIL_PROVIDER",
+            "equals": "cloudflare"
+          },
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "MAIL_RELAY_URL",
+      "label": "Managed mail relay URL",
+      "kind": "url",
+      "required": true,
+      "when": {
+        "field": "MAIL_PROVIDER",
+        "equals": "rer"
+      }
+    },
+    {
+      "name": "MAIL_API_KEY",
+      "label": "Mail API key",
+      "kind": "secret",
+      "input": "entered",
+      "ownerVisible": true,
+      "required": false,
+      "presentations": [
+        {
+          "when": {
+            "field": "MAIL_PROVIDER",
+            "equals": "rer"
+          },
+          "required": true
+        },
+        {
+          "when": {
+            "field": "MAIL_PROVIDER",
+            "equals": "resend"
+          },
+          "required": true
+        },
+        {
+          "when": {
+            "field": "MAIL_PROVIDER",
+            "equals": "sendgrid"
+          },
+          "required": true
+        },
+        {
+          "when": {
+            "field": "MAIL_PROVIDER",
+            "equals": "cloudflare"
+          },
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "MAIL_ACCOUNT_ID",
+      "label": "Cloudflare account ID",
+      "kind": "text",
+      "required": true,
+      "when": {
+        "field": "MAIL_PROVIDER",
+        "equals": "cloudflare"
+      }
     }
   ],
   "steps": [
