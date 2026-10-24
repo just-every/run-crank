@@ -9,10 +9,10 @@ or importing a workflow does not send anything to its destination.
 To start from nothing, run:
 
 ```sh
-npx -y @runeditrun/rer dev just-every/run-crank
+curl -fsSL https://runeditrun.com/install.sh | sh -s -- dev just-every/run-crank
 ```
 
-From your Crank checkout, `rer dev` alone starts it again.
+Git is required; rer brings Node and pnpm. Already have Node 22 or later? `npx -y @runeditrun/rer dev just-every/run-crank` does the same. The line installs `rer` and gets Crank into a `run-crank` folder. If the installer prints a line that puts `rer` on your PATH, run that line too. To start it again later, run the same line from the same folder, or `cd run-crank && rer dev`.
 
 The first start can take several minutes. Keep the terminal open, open the
 private **RER_OPEN** link it prints, and complete **Finish setup**. Treat that

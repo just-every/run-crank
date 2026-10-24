@@ -2,6 +2,19 @@ import run from '../../run.json'
 import { AppTile, Check, Icon, Mark, SectionHead } from '../parts'
 import { business, imported, importTotals, type Imported } from '../week'
 
+// The one start line every Run Edit Run page shows (the installer, then rer dev), and the alternative for people who already have Node.
+const START = `curl -fsSL https://runeditrun.com/install.sh | sh -s -- ${run.clone.slice('npx -y @runeditrun/rer '.length)}`
+const ALTERNATIVE = `Already have Node 22 or later? ${run.clone}`
+
+/** A command that wraps only between words, keeping the installer's `install.sh | sh` together. */
+function words(line: string) {
+  return line.split(/(\S*install\.sh \| sh|\S+)/).map((part, index) => {
+    const pipe = /^(.*\/)(install\.sh \| sh)$/.exec(part)
+    if (pipe) return <span key={index}><span className="t-word">{pipe[1]}</span><wbr /><span className="t-word">{pipe[2]}</span></span>
+    return part.trim() ? <span key={index} className="t-word">{part}</span> : part
+  })
+}
+
 /** The machine object perched on the terminal: a faceless brass gear with a wooden-and-brass crank handle. */
 const Vignette = () => <svg className="vignette" viewBox="0 0 120 110" aria-hidden="true">
   <defs>
@@ -42,7 +55,6 @@ function ImportRow({ row }: { row: Imported }) {
 /** Monday morning: the Zapier export moves in, each workflow checked against its past runs. */
 export function MoveIn() {
   // The clone URL may break after the host, never inside the repository name.
-  const { origin, pathname } = new URL(run.repository)
   return <section id="move-in" className="sec move-in" aria-labelledby="move-in-title">
     <div className="site-wrap move-in-row">
       <div className="move-in-copy">
@@ -51,8 +63,8 @@ export function MoveIn() {
           <Vignette />
           <div className="terminal-bar" aria-hidden="true"><span /><span /><span /></div>
           <pre><code>
-            <span className="t-line"><span className="prompt" aria-hidden="true">$ </span>git clone {origin}/<wbr /><span className="t-url">{pathname.slice(1)}.git crank</span></span>
-            <span className="t-line"><span className="prompt" aria-hidden="true">$ </span>cd crank && rer dev</span>
+            <span className="t-line"><span className="prompt" aria-hidden="true">$ </span>{words(START)}</span>
+            <span className="t-line t-comment"><span aria-hidden="true"># </span>{words(ALTERNATIVE)}</span>
             <span className="t-line t-ok"><span aria-hidden="true">✓ </span>Crank is running</span>
           </code></pre>
         </div>

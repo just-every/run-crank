@@ -71,7 +71,8 @@ SOFTWARE.`;
     assert.ok(documents.has('/docs'),'the homepage has a path to documentation')
     const home=documents.get('/'),homeText=home.replace(/<[^>]+>/g,'').replaceAll('&amp;','&')
     assert.match(home, /<a\s+href="https:\/\/github\.com\/just-every\/run-crank\/blob\/main\/LICENSE"[^>]*>MIT licensed<\/a>/);
-    assert.match(homeText,/git clone https:\/\/github\.com\/just-every\/run-crank\.git crank\s*\$?\s*cd crank && rer dev/,'the homepage shows the commands that start Crank')
+    assert.match(homeText,/curl -fsSL https:\/\/runeditrun\.com\/install\.sh \| sh -s -- dev just-every\/run-crank/,'the homepage shows the line that starts Crank')
+    assert.match(homeText,/npx -y @runeditrun\/rer dev just-every\/run-crank/,'the homepage shows the npx alternative')
     assert.doesNotMatch(home,/localhost|127\.0\.0\.1|\bRER_[A-Z]/,'the homepage shows no local addresses or rer output')
     const run=documents.get('/run'),runText=run.replace(/<[^>]+>/g,'').replaceAll('&amp;','&')
     assert.match(runText,/@runeditrun\/rer dev just-every\/run-crank/);assert.match(runText,/rer dev/)

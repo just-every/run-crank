@@ -8,7 +8,8 @@
 .terminal-bar span:nth-child(2) { background: #febc2e; }
 .terminal-bar span:nth-child(3) { background: #28c840; }
 .terminal pre { padding: 12px 18px 18px; font: 12.5px/2 var(--font-mono); white-space: pre-wrap; }
-.t-url { white-space: nowrap; }
+.t-word { white-space: nowrap; }
+.t-comment { color: #a3adc2; }
 .t-line { display: block; }
 .prompt { color: #f2b829; }
 .t-ok { color: #5ee08f; }
