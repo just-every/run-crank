@@ -433,17 +433,17 @@
     "MAIL_PROVIDER": "",
     "MAIL_FROM": "",
     "MAIL_RELAY_URL": "",
-    "MAIL_ACCOUNT_ID": ""
+    "MAIL_ACCOUNT_ID": "",
+    "OWNER_EMAIL": ""
   },
   "secretNames": [
-    "OWNER_EMAIL",
     "SESSION_SECRET",
     "INSTALLATION_KEY",
-    "SETUP_TOKEN",
-    "MAIL_API_KEY"
+    "SETUP_TOKEN"
   ],
   "optionalSecretNames": [
-    "INSTALLATION_KEY_PREVIOUS"
+    "INSTALLATION_KEY_PREVIOUS",
+    "MAIL_API_KEY"
   ],
   "schedules": [
     "* * * * *"

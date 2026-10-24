@@ -43,17 +43,19 @@
         "MAIL_FROM",
         "MAIL_RELAY_URL",
         "MAIL_ACCOUNT_ID",
-        "IDENTITY_PROVIDER"
+        "IDENTITY_PROVIDER",
+        "OWNER_EMAIL",
+        "APP_NAME",
+        "PRIMARY_COLOR"
       ],
       "secretNames": [
-        "OWNER_EMAIL",
         "SESSION_SECRET",
         "INSTALLATION_KEY",
-        "SETUP_TOKEN",
-        "MAIL_API_KEY"
+        "SETUP_TOKEN"
       ],
       "optionalSecretNames": [
-        "INSTALLATION_KEY_PREVIOUS"
+        "INSTALLATION_KEY_PREVIOUS",
+        "MAIL_API_KEY"
       ],
       "healthPath": "/health",
       "recovery": "Follow OPERATIONS.md and docs/OPERATIONS.md. Pause workflow triggers and outbound work; retain the exact source and private settings, export installation data with rer export, restore with rer import into fresh empty resources, then run owner setup and compare a new export before resuming. Preserve applied migration names and exact SQL bytes. Restored workflows stay inactive until the owner reconnects providers and reviews publication.",
