@@ -58,6 +58,16 @@ try {
       await send(`workflows/${w.id}/publish`, {}, 201);
       const run = await send(`workflows/${w.id}/run`, { input: {} }, 201);
       await page.goto(origin + '/app/workflow-runs/' + run.id);
+      if (kind === 'subflow') {
+        const queued = await send(`workflow-runs/${run.id}`), child = queued.children[0];
+        assert.equal(queued.status,'waiting');
+        assert.equal(child.status,'queued');
+        await page.screenshot({path:join(evidence,`${width}-subflow-child-queued.png`),fullPage:true});
+        const childHistory = await send(`./subflows/calls/${child.id}/run`,{});
+        assert.equal(childHistory.status,'succeeded');
+        assert.equal(childHistory.run_id,run.id);
+        await page.reload();
+      }
       await expect(page.getByRole('heading', { name: 'Notice delivery', exact: true })).toBeVisible();
       await expect(page.getByText('development_mail_not_sent', { exact: false }).first()).toBeVisible();
       const details = page.locator('details').filter({ has: page.getByText('Delivery attempts', { exact: true }) }).first();
@@ -84,15 +94,9 @@ try {
         await page.screenshot({ path: join(evidence, `${width}-atomic-table-result.png`), fullPage: true });
       }
       if (kind === 'subflow') {
-        const queued = await send(`workflow-runs/${run.id}`), child = queued.children[0];
-        assert.equal(child.status,'queued');
-        await page.screenshot({path:join(evidence,`${width}-subflow-child-queued.png`),fullPage:true});
-        const childHistory = await send(`./subflows/calls/${child.id}/run`,{});
-        assert.equal(childHistory.status,'succeeded');
-        assert.equal(childHistory.run_id,run.id);
-        await page.reload();
         const detail = await send(`workflow-runs/${run.id}`);
-        assert.equal(detail.children[0].id,child.id);
+        assert.equal(detail.children.length,1);
+        assert.equal(detail.children[0].status,'succeeded');
         assert.deepEqual(detail.steps.find(s => s.path === 'normalize').output, { normalized: '17 Bay Road' });
         assert.equal(detail.steps.find(s => s.path === 'normalize').trace.version, 1);
         await page.locator('details').filter({ has: page.getByText('Input and output', { exact: true }) }).first().locator('summary').click();
