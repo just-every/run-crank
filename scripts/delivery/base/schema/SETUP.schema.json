@@ -149,6 +149,28 @@
           "enum": ["owner", "developer"],
           "description": "Public fields only: owner or developer. When absent, inherit the group's audience, or owner without a group audience. An explicit owner value inside a developer group is invalid. This metadata does not change local installer or rer setup visibility; secret visibility uses ownerVisible and input."
         },
+        "businessField": {
+          "enum": [
+            "owner_email",
+            "legal_name",
+            "timezone",
+            "currency",
+            "jurisdiction",
+            "mail_sender",
+            "display_name",
+            "owner_name",
+            "brand_color",
+            "logo_ref",
+            "entity_type",
+            "state_of_organization",
+            "fiscal_year_start",
+            "books_start_date",
+            "tax_method",
+            "country",
+            "state"
+          ],
+          "description": "Optional public-field hint identifying the business profile value represented by this input. Secrets cannot declare this hint. It does not supply an answer or change validation."
+        },
         "required": {
           "type": "boolean"
         },
@@ -242,7 +264,10 @@
             "required": [
               "required",
               "ownerVisible"
-            ]
+            ],
+            "not": {
+              "required": ["businessField"]
+            }
           }
         },
         {

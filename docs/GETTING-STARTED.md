@@ -55,6 +55,24 @@ Manual preparation lets you try the approval step before connecting a source.
 A source app uses a flow-specific trigger credential to submit events; it cannot
 approve delivery. An agent can prepare flows and runs for you to inspect.
 
+## Put Crank online
+
+For your own Cloudflare account, edit `deploy.json` before deployment. Set
+`vars.MAIL_PROVIDER` to your provider and replace `vars.MAIL_FROM` with a real
+sender on that provider's verified domain, then commit `deploy.json`. Exporting
+`MAIL_FROM` in your shell does not replace the fixed sender in that file.
+Resend and SendGrid need a private `MAIL_API_KEY`; Cloudflare also needs its
+account ID. RER mail needs the installation relay URL and private credential
+assigned by Managed hosting. Never commit private values.
+
+Required private deployment inputs are `CLOUDFLARE_API_TOKEN`, `OWNER_EMAIL`,
+`SESSION_SECRET`, `INSTALLATION_KEY`, `SETUP_TOKEN` and `MAIL_API_KEY`.
+`CLOUDFLARE_ACCOUNT_ID` selects your account. Keep private values outside Git;
+files named `.env` and their variants are ignored. Follow the deployment section
+of [Operations](../OPERATIONS.md#deployment), run `rer deploy --dry-run` to check
+your configuration locally, then use `rer deploy` only when you intend to deploy.
+A successful local check does not establish hosted operation or mail delivery.
+
 ## What to do next
 
 - [Flows and runs](FLOWS-AND-RUNS.md): pause a flow, reject a run and use one manual replay.

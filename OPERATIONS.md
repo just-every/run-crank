@@ -64,6 +64,16 @@ resource ownership, migrations, receipt and health checks are defined there.
 Local validation does not prove hosted acceptance, provider delivery or remote
 health.
 
+The sender is fixed in `deploy.json`: edit `vars.MAIL_PROVIDER` and
+`vars.MAIL_FROM`, then commit that declaration. A shell `MAIL_FROM` value does
+not replace `vars.MAIL_FROM`. Set a real sender on the selected provider's
+verified domain. Required private inputs are `CLOUDFLARE_API_TOKEN`,
+`OWNER_EMAIL`, `SESSION_SECRET`, `INSTALLATION_KEY`, `SETUP_TOKEN` and
+`MAIL_API_KEY`; `CLOUDFLARE_ACCOUNT_ID` selects the account. The previous
+installation key is optional. Keep private values outside the repository.
+The hosted artifact declares `MAIL_FROM` as a public deployment input in
+`packaging.json`.
+
 ## Hosted installation packaging
 
 The seed-owned `packaging.json` declares the existing Worker, DB binding,

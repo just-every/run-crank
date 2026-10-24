@@ -14,6 +14,7 @@ import { createOidcProviders } from '../identity/oidc/index.mjs';
 import { isLocalCli } from '../local-cli.mjs';
 import { nativeDependencyAuthority } from '../../dependencies/native.mjs';
 import { linkedProviders } from '../../dependencies/auth.mjs';
+import { providerSetup } from './provider-setup.mjs';
 
 const ACCOUNT_METHODS = ['findById', 'getSession', 'signOut', 'policyVersion', 'identityEnabled', 'requiredProvider', 'bindAndIssueSession'];
 const PROOF_METHODS = ['limits', 'token', 'preview', 'consumeLink', 'revokeLink', 'stepUpPreview', 'stepUpChallenge', 'consumeStepUp', 'revokeStepUp', 'steppedUp'];
@@ -146,11 +147,12 @@ export function createNativeAuth({ accounts, proofs, db, config, clock, hooks, m
     async admitVerifiedPassword(request, id, { returnTo } = {}) {
       requirePost(request, config); return localSession(request, id, 'password', returnTo);
     },
-    async identitySettings(request) { await owner(request); return { idpSignIn: await enabled() }; },
+    async identitySettings(request) { await owner(request); return { idpSignIn: await enabled(), providerSetup: await providerSetup(db, config) }; },
     async setIdentitySettings(request, { idpSignIn }) {
       const actor = await owner(request, true);
       if (typeof idpSignIn !== 'boolean') deny('invalid_input', 400);
       if (!accounts.setIdentitySettings) unavailable();
+      if (idpSignIn && !(await providerSetup(db, config)).canEnable) deny('provider_unlinked', 409);
       if (!await accounts.setIdentitySettings({ actor, idpSignIn, now: clock() })) deny('authority_changed', 409);
       return { idpSignIn };
     },

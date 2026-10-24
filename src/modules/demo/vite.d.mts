@@ -1,2 +1,7 @@
-/** Under `rer demo`, resolves the Worker's `cloudflare:sockets` imports to demo mode's guarded connect. */
-export function demoSockets(): { name: string; apply: 'serve'; enforce: 'pre'; config(): object | undefined; resolveId(id: string): string | undefined };
+/** Supplies public demo navigation metadata and guards local demo sockets. */
+export function demoSockets(): {
+  name: string;
+  enforce: 'pre';
+  config(config: { root?: string }, environment: { command: string }): Promise<object>;
+  resolveId(id: string): string | undefined;
+};

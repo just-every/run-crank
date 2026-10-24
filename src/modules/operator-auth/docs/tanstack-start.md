@@ -3,7 +3,7 @@
 Keep auth, D1, mail construction and Worker bindings in server-owned modules.
 The client-importable server-function wrapper may be a normal `.ts` file, but
 load true server modules dynamically inside each handler, following
-[`TANSTACK-START-MIGRATION.md`](../../../TANSTACK-START-MIGRATION.md). A route's
+[`TANSTACK-START-MIGRATION.md`](https://github.com/runeditrun/base/blob/main/TANSTACK-START-MIGRATION.md). A route's
 parent session check protects its document; every child server function that
 reads or changes private data must check the session again before its first
 private operation.

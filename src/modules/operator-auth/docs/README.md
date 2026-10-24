@@ -13,8 +13,8 @@ credential cleanup data. See the [migration and cancellation contract](../README
 
 Use the standard Worker secrets `OWNER_EMAIL`, `SESSION_SECRET`, and
 `SETUP_TOKEN`. Generate independent random values of at least 32 bytes for the
-two secrets; retain only `OWNER_EMAIL` after first-owner setup and remove
-`SETUP_TOKEN` after bootstrap. `SESSION_SECRET` must remain stable for sessions.
+two secrets; retain `OWNER_EMAIL` and the stable `SESSION_SECRET` after
+first-owner setup, and remove `SETUP_TOKEN` after bootstrap.
 They belong in server bindings, never `VITE_*`, rendered HTML, loaders, browser
 storage, logs or responses. Bootstrap creates only the configured owner and its
 session. It runs without mail and does not populate product tables. Invoke the
@@ -36,9 +36,10 @@ attempt; the auth core does not retry it.
 
 `OWNER_EMAIL` is the first owner. The default roles are `owner`, `admin`, and
 `member`. Configure `allowList` only as an additional admission restriction; it
-does not grant access. Use the exported `rolePolicy` for deterministic product
-policy variations while preserving the module's active-session, allow-list,
-version-fence and last-owner checks.
+does not grant access. Pass a deterministic `rolePolicy` option to
+`createOperatorAuth` for product policy variations; `defaultRolePolicy` is the
+exported default. Preserve the module's active-session, allow-list, version-fence
+and last-owner checks.
 
 Follow one of these integration recipes:
 

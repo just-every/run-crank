@@ -1,6 +1,7 @@
 // The /contract page's style, after run-site.ts's BASE (rer-consolidation
-// evidence/br-contract SPEC.md sections 3 to 6). The status tokens are Base's
-// defaults at zero specificity, so a seed's rer-theme.css :root wins over them.
+// evidence/br-contract SPEC.md sections 3 to 6), whose header it keeps as every
+// page does. The status tokens are Base's defaults at zero specificity, so a
+// seed's rer-theme.css :root wins over them.
 // This file is copied unchanged to src/base by both maintained exporters.
 const DEFAULTS = ':where(:root){--rer-done:#1e8458;--rer-partial:#e9a23b;--rer-missing:#d03f57;--rer-done-ink:#17744c;--rer-partial-ink:#8a5a00;--rer-missing-ink:#b02a43;'
   + '--rer-on-done:#fff;--rer-on-partial:var(--rer-text,#172033);--rer-on-missing:#fff}'
@@ -8,10 +9,6 @@ const DEFAULTS = ':where(:root){--rer-done:#1e8458;--rer-partial:#e9a23b;--rer-m
   + '[hidden]{display:none!important}.vh{position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}'
   + 'h2,h3,dl,dd,ul{margin:0;padding:0}ul{list-style:none}.glyph{flex:none;display:block}'
   + '.ink-done{color:var(--rer-done-ink)}.ink-partial{color:var(--rer-partial-ink)}.ink-missing{color:var(--rer-missing-ink)}'
-
-const HEADER = '.bar{max-width:1440px;padding:24px 56px 0;align-items:stretch;row-gap:0}.bar::after{content:"";position:absolute;left:56px;right:56px;bottom:0;height:1px;background:var(--site-line);z-index:-1}'
-  + '.bar .brand{padding-bottom:12px;font-weight:var(--rer-wordmark-weight,600)}.bar nav{align-items:stretch}.bar nav a{display:flex;align-items:center;padding-bottom:10px;border-bottom:2px solid transparent}'
-  + '.bar nav a[aria-current=page]{border-bottom-color:var(--site-accent);font-weight:600}'
 
 const PAGE = 'main{max-width:1440px;margin:0 auto;padding:0 56px}'
   + '.eyebrow{margin-top:28px;font:600 13px/1.2 var(--rer-font-body,inherit);letter-spacing:.14em;text-transform:uppercase;color:var(--site-body)}'
@@ -65,7 +62,7 @@ const PAGE = 'main{max-width:1440px;margin:0 auto;padding:0 56px}'
   + 'td{padding:7px 8px;vertical-align:top;border-top:1px solid var(--site-line)}.title{overflow-wrap:break-word}.ev{overflow-wrap:anywhere}'
   + '.group th{padding:10px 8px;text-align:left;font-size:13.5px;font-weight:400;background:var(--contract-tint);border-top:1px solid var(--site-line)}'
   + '.group-name{font-weight:600;color:var(--site-ink);margin-right:8px}.group-counts{color:var(--site-body)}'
-  + '.id a{font:500 13px/1.45 var(--site-mono);white-space:nowrap}.kind{display:block;font-size:12.5px;line-height:1.35;color:var(--site-body);white-space:nowrap}.st{display:inline-flex;align-items:center;gap:8px;font-weight:500}'
+  + '.id a{font:500 13px/1.45 var(--site-mono);white-space:nowrap}.kind{display:block;font-size:13px;line-height:1.35;color:var(--site-body);white-space:nowrap}.st{display:inline-flex;align-items:center;gap:8px;font-weight:500}'
   + '.path{display:block;font:13px/1.35 var(--site-mono);color:var(--site-ink)}.gap{display:block;color:var(--site-body);font-size:13.5px;line-height:1.4}.path+.gap{margin-top:2px}'
   + '.empty td{padding:22px 8px;color:var(--site-body)}.clear{margin-left:10px;min-height:32px}'
   // How statuses are judged, and the footer.
@@ -80,8 +77,8 @@ const PAGE = 'main{max-width:1440px;margin:0 auto;padding:0 56px}'
 const TABLET = '@media(min-width:761px) and (max-width:1280px){.split{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.split .line{white-space:normal}.split .line>span:not(.sep){display:inline-block}}'
   + '@media(min-width:761px) and (max-width:1200px){.layout{grid-template-columns:1fr}.areas{position:static;max-height:none;overflow:visible}}'
 
-const PHONE = '@media(max-width:760px){.bar{padding:18px 16px 0}.bar::after{left:16px;right:16px}.bar .brand{padding-bottom:12px}main{padding:0 16px}'
-  + '.eyebrow{font-size:12px;margin-top:24px}main h1{font-size:30px;line-height:1.1}.lead{font-size:16px}'
+const PHONE = '@media(max-width:760px){main{padding:0 16px}'
+  + '.eyebrow{margin-top:24px}main h1{font-size:30px;line-height:1.1}.lead{font-size:16px}'
   + '.hero{grid-template-columns:1fr;gap:16px;margin-top:22px}.figure{gap:16px}.big{font-size:72px}.of{font-size:22px}'
   + '.meter{height:30px}.seg{font-size:14px;font-weight:700}.hero-foot{flex-direction:column;gap:12px}.legend{font-size:15px;gap:8px 18px}.legend li{gap:8px}.legend .glyph{width:22px;height:22px}'
   + '.judged{text-align:left}.layout{grid-template-columns:1fr;gap:16px;margin-top:22px}.card{padding:18px 16px}'
@@ -101,4 +98,4 @@ const PHONE = '@media(max-width:760px){.bar{padding:18px 16px 0}.bar::after{left
 
 const PRINT = '@media print{.search,.chips,.live,.empty{display:none!important}tbody.area[hidden]{display:table-row-group!important}tr.clause[hidden]{display:table-row!important}.areas{position:static;max-height:none;overflow:visible}}'
 
-export const CONTRACT_STYLE = DEFAULTS + HEADER + PAGE + TABLET + PHONE + PRINT
+export const CONTRACT_STYLE = DEFAULTS + PAGE + TABLET + PHONE + PRINT

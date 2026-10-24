@@ -24,7 +24,7 @@ const SUPPORTED = new Set([
   '$schema', '$id', '$ref', '$defs', 'title', 'description',
   'type', 'enum', 'const', 'required', 'properties', 'additionalProperties',
   'propertyNames', 'items', 'minItems', 'maxItems', 'minLength', 'pattern', 'format',
-  'allOf', 'if', 'then', 'uniqueItems'
+  'allOf', 'if', 'then', 'not', 'uniqueItems'
 ]);
 
 // The supported keywords whose value holds subschemas, and how they hold them:
@@ -37,7 +37,8 @@ const SUBSCHEMAS = {
   items: 'schema',
   allOf: 'list',
   if: 'schema',
-  then: 'schema'
+  then: 'schema',
+  not: 'schema'
 };
 
 const SUPPORTED_FORMATS = new Set(['date']);
@@ -137,6 +138,9 @@ export function validate(schema, data, { root = schema, path = '$', label = '' }
   }
   if (Object.hasOwn(schema, 'const') && data !== schema.const) {
     fail(`expected ${JSON.stringify(schema.const)}`);
+  }
+  if (schema.not && validate(schema.not, data, { root, path }).length === 0) {
+    fail('must not match excluded schema');
   }
 
   if (actual === 'string') {

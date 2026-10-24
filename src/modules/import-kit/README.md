@@ -260,7 +260,9 @@ paths, and after stored-plan, custody and inventory reads before replay's atomic
 boundary. Pure preflight confers no authority; transactions still check current
 authority and the original reviewed fingerprint.
 
-The cap follows the second 8 October 2026 ruling. Historical boundary probes on
+The cap follows the second 8 October 2026 ruling. The following historical local
+observations are unverified here; no corresponding benchmark receipts are
+retained in this repository. Historical boundary probes on
 Node 26.8.1 showed that fresh input reaches V8's 536,870,888-character string
 bound or the module runner's 4 GiB heap limit before exhausting the 1,000-request
 D1 budget. At the earlier encoding boundary, one `JSON.stringify` output buffer
@@ -268,7 +270,7 @@ can abort at 256 MiB; `canonicalJson` therefore escapes strings longer than 1 Mi
 in slices without splitting surrogate pairs. The byte cap is about 56% of V8's
 string bound, with room for the fingerprint overhead.
 
-Fresh 9 October checks of this guard implementation, on Node 26.8.1 with
+The recorded 9 October 2026 checks of this guard implementation, on Node 26.8.1 with
 `--max-old-space-size=4096`, measured:
 
 - A 55,570,000-byte original: 56 actual create executions, equal to preflight,
@@ -284,9 +286,9 @@ Fresh 9 October checks of this guard implementation, on Node 26.8.1 with
   is not a 4 GiB total-memory promise, especially with buffers, input copies and
   the native runtime. Allocate process capacity accordingly.
 
-The twenty distinct 10 MiB original-custody lifecycle case retains exact bytes
-through undo. It does **not** prove every twenty-file maximum-content CSV import
-fits. A representative valid twenty-table CSV shape (105 rows/table, two fields,
+The historical twenty distinct 10 MiB original-custody lifecycle report recorded
+exact bytes through undo. It does **not** prove every twenty-file maximum-content
+CSV import fits. A representative valid twenty-table CSV shape (105 rows/table, two fields,
 10 MiB/file, cells <=100,000 characters) requires 910,382,498 canonical plan
 content bytes: originals alone contribute 279,620,320 base64 bytes, and parsed
 source is retained both in the source and entries before effects are counted.
@@ -400,8 +402,8 @@ Use `readD1ImportUndoReport().outcome` (`pending`, `undone` or `compensated`) fo
 the product result: the engine's terminal `job.state` remains `undone`, including
 compensated work.
 
-Current rer 0.2.77 lacks these APIs. Adoption through the package uses
-`@runeditrun/rer/modules/import-kit/d1` from a supplying release, the additive
+Historically, rer 0.2.77 lacked these APIs. Adoption through the package requires
+a pinned supplying release, `@runeditrun/rer/modules/import-kit/d1`, the additive
 conversion migration, a complete native adapter and proof through the seed's own
 public door. Updating Base alone does not adopt or release the capability in a
 seed.
@@ -432,8 +434,9 @@ both paths when the source and mapped values use different nesting. The default
 seed demonstrates `['details', 'reactions', '*', 'users', '*']`, resolving
 references from the native person ID and their optional `details.sourceUserId`.
 
-Each distinct path must match at least one exact leaf; an unmatched path refuses
-with `IMPORT_REDACTION_PATH_UNMATCHED` before native, custody, journal or checkpoint
+Each distinct path with a required selector must match at least one exact leaf;
+a path whose selectors are all `optional: true` may match nothing. An unmatched
+required path refuses with `IMPORT_REDACTION_PATH_UNMATCHED` before native, custody, journal or checkpoint
 writes. Multiple values for the same path share its count, so an absent alternate
 identifier is allowed when another value matches. A different matching path cannot
 hide a typo. Successful results include `fieldMatches: [{ path, matches }]`, never
@@ -441,10 +444,12 @@ selected values. Counts cover each logical retained source payload, effect value
 native value and stored reversal before-image; repeated custody copies count
 separately. `readD1ImportFieldMatches(fields, context)` provides read-only discovery
 for optional references as `{ fieldMatches, snapshot }`. Carry `snapshot` in
-`related.snapshot` and omit fields whose paths have no matches. The snapshot
-fences the discovery against custody/native changes before publication and
-cancels incomplete private preparations even when fields are empty. Erasure
-rechecks every supplied selector; a snapshot never permits a zero-match path.
+`related.snapshot` and preserve the selector set when using a scoped redaction
+adapter, whose snapshot depends on those selectors. Mark references that may be
+absent as `optional: true`. The snapshot fences discovery against custody/native
+changes before publication and cancels incomplete private preparations even when
+fields are empty. Erasure rechecks every supplied selector; a snapshot never
+permits a required path to match nothing.
 
 The kit rebinds payload/effect hashes, source claims, entry decisions, active and
 historical provenance, before-images and plan/reversal fingerprints. Peer source

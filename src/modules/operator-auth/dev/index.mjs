@@ -9,11 +9,13 @@ import { AuthError } from '../errors.mjs';
 import { hashToken, opaqueToken } from '../crypto.mjs';
 import { readCookie, sessionCookie, isLoopbackHost } from '../http.mjs';
 import { safeReturnTo } from '../policy.mjs';
-import { isActiveOperator, defaultRolePolicy } from '../accounts/roles.mjs';
+import { isActiveOperator, emailAllowed, defaultRolePolicy } from '../accounts/roles.mjs';
 import { devGate, devNotFound } from '../dev-gate.mjs';
 import { registerDevAdmission } from '../dev-admission.mjs';
 import { definePersonas } from './personas.mjs';
 import { cliSession } from './cli-session.mjs';
+import { signInRefusal } from './refusal.mjs';
+import { representation } from '../representation.mjs';
 import { decorateLabel } from '../../demo/label.mjs';
 import { oneClickPage } from '../signin/one-click.mjs';
 
@@ -68,7 +70,13 @@ export function withDevIdentity(worker, { bindings = env => env, config: authCon
           const response = path === '/auth/local/cli-session' ? await cliSession(request, context, headers) : path === '/__dev/personas' ? Response.json(await context.list(request), { headers }) : await enter(request, gate, context);
           return rejectedResponse(request, response);
         } catch (error) {
-          if (error instanceof AuthError) return rejectedResponse(request, Response.json({ error: error.code }, { status: error.status, headers }));
+          if (error instanceof AuthError) {
+            if (path === '/auth/dev/enter' && representation(request) === 'html') return rejectedResponse(request, await signInRefusal(request, context.config.branding, {
+              status: error.status,
+              message: 'This account can no longer use this sign-in link. Choose an available account, or ask an owner or administrator to restore its access.',
+            }));
+            return rejectedResponse(request, Response.json({ error: error.code }, { status: error.status, headers }));
+          }
           throw error;
         }
       }
@@ -109,8 +117,15 @@ function identity(env, authConfig, declared) {
       return { ...actor, hash: await hash(readCookie(request, config)) };
     },
     async list(request) {
-      const personas = (await everyone()).map(({ as, email, role }) => ({ as, email, ...(role ? { role } : {}) }));
       const people = await auth.oneClick.people(request);
+      const personas = (await Promise.all((await everyone()).map(async ({ as, email, role }) => {
+        // Existing identities keep their real admission state. A declaration
+        // must never bring back an inactive account or an expired invitation.
+        const operator = email && await store.byEmail(email);
+        const person = people?.find(person => person.email === email);
+        if (email && (!emailAllowed(email, config.allowList) || (operator && !person))) return null;
+        return { as, email, ...(role ? { role: person?.role ?? role } : {}) };
+      }))).filter(Boolean);
       return [...personas, ...(people ?? []).filter(person => !personas.some(p => p.email === person.email))
         .map(person => ({ as: person.email, email: person.email, role: person.role })), { as: 'signed-out' }];
     },
@@ -159,7 +174,10 @@ async function enter(request, gate, { config, store, hash, current, everyone, ow
     operator = await store.byEmail(persona.email);
   }
   if (!operator) return text(409, 'The owner that rer setup claimed is not in this database. Run rer setup.');
-  if (!isActiveOperator(operator, config.allowList)) return text(403, `${as} is not an active operator in this app.`);
+  if (!isActiveOperator(operator, config.allowList)) return signInRefusal(request, config.branding, {
+    status: 403,
+    message: 'This account is inactive or no longer allowed to sign in to this app. Choose another account, or ask an owner or administrator to restore its access.',
+  });
   const domain = operator.email.slice(operator.email.lastIndexOf('@') + 1);
   if (operator.role !== 'owner' && await store.domainRule(domain)) return text(403, 'Sign-in refused');
   if (existing?.kind !== 'dev' || existing.operator.id !== operator.id) {

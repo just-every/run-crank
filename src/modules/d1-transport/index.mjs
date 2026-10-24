@@ -26,7 +26,7 @@ function parameters(sql) {
  * and decoded in SQLite. Stored values and transaction boundaries are unchanged.
  * Values whose encoding exceeds D1's bind ceiling remain native; rpcBytes then
  * accounts for their effect on the ENTIRE call, never just that parameter. */
-export function wireSql(statement) {
+function encodeSql(statement) {
   const { sql, params = [] } = statement;
   if (!params.some(value => typeof value === 'string' && wide.test(value))) return { sql, params };
   const tokens = parameters(sql), values = [...params], replacements = new Set();
@@ -57,33 +57,78 @@ export function wireSql(statement) {
   return result;
 }
 
+// Weak keys retain work only while the caller retains a statement. Snapshots
+// validate replaced arrays and in-place changes; mutable binding objects bypass
+// reuse because their JSON representation can change without changing identity.
+const representations = new WeakMap();
+const primitive = value => value === null || !['object', 'function'].includes(typeof value);
+function representation(statement) {
+  const { sql, params = [] } = statement;
+  if (typeof sql !== 'string' || !Array.isArray(params) || !params.every(primitive)) return { sql, params };
+  const prior = representations.get(statement);
+  if (prior && prior.sql === sql && prior.params.length === params.length && params.every((value, index) => Object.is(value, prior.params[index]))) return prior;
+  const current = { sql, params: [...params] };
+  representations.set(statement, current);
+  return current;
+}
+const encoded = record => record.encoded ??= encodeSql(record);
+function publicQuery(record, statement) {
+  const query = encoded(record);
+  // Public callers may mutate returned SQL and bindings. Never expose cached
+  // encoded state; retain the native parameter alias when no encoding occurred.
+  const result = { sql: query.sql, params: query.params === record.params ? statement.params ?? [] : [...query.params] };
+  if (result.params.every(primitive)) representations.set(result, { sql: result.sql, params: [...result.params], rawSize: record.encodedSize });
+  return result;
+}
+export function wireSql(statement) { return publicQuery(representation(statement), statement); }
+
 /** A conservative size of D1's JSON request plus RPC envelope. A single wide
  * character makes workerd serialize every UTF-16 code unit in the call at two
  * bytes. UTF-8 also matters independently for provider payload limits. */
-export function rpcSize(statements) {
-  let utf8 = 2, units = 2, hasWide = false;
+function contribution(statement) {
+  let utf8 = 0, units = 0, hasWide = false;
   const add = text => { utf8 += bytes(text); units += text.length; hasWide ||= wide.test(text); };
-  for (const statement of statements) {
-    add('{"sql":' + JSON.stringify(statement.sql) + ',"params":[');
-    for (const value of statement.params ?? []) {
-      if (value instanceof ArrayBuffer || ArrayBuffer.isView(value)) {
-        // D1 sends binary bindings as numeric arrays. Four bytes per element is
-        // conservative and avoids constructing a second large byte array.
-        const size = 3 + value.byteLength * 4; utf8 += size; units += size;
-      } else add(JSON.stringify(value) + ',');
-    }
-    add(']},');
+  add('{"sql":' + JSON.stringify(statement.sql) + ',"params":[');
+  for (const value of statement.params ?? []) {
+    if (value instanceof ArrayBuffer || ArrayBuffer.isView(value)) {
+      // D1 sends binary bindings as numeric arrays. Four bytes per element is
+      // conservative and avoids constructing a second large byte array.
+      const size = 3 + value.byteLength * 4; utf8 += size; units += size;
+    } else add(JSON.stringify(value) + ',');
+  }
+  add(']},');
+  return { utf8, units, hasWide };
+}
+function combined(records, encode = false) {
+  let utf8 = 2, units = 2, hasWide = false;
+  for (const record of records) {
+    let size;
+    if (encode) {
+      const query = encoded(record);
+      size = record.encodedSize ??= query.params === record.params ? record.rawSize ??= contribution(record) : contribution(query);
+    } else size = record.rawSize ??= contribution(record);
+    utf8 += size.utf8; units += size.units; hasWide ||= size.hasWide;
   }
   return { utf8, units, hasWide };
 }
+export function rpcSize(statements) { return combined(statements.map(representation)); }
 export const rpcSizeBytes = ({ utf8, units, hasWide }) => 4096 + Math.max(utf8, units * (hasWide ? 2 : 1));
 export const rpcBytes = statements => rpcSizeBytes(rpcSize(statements));
 
-export function wireBatch(statements) {
-  const encoded = statements.map(wireSql);
+function selectBatch(statements) {
+  const records = statements.map(representation), queries = records.map(encoded);
+  const nativeBytes = rpcSizeBytes(combined(records)), encodedBytes = rpcSizeBytes(combined(records, true));
   // Dense CJK may be smaller as native two-byte text than as six-byte escapes.
-  // Choose for the whole call: one native wide value affects every statement.
-  return rpcBytes(statements) < rpcBytes(encoded) ? statements : encoded;
+  // One wide value affects the complete call; ties retain encoded selection.
+  return nativeBytes < encodedBytes ? { queries: statements, bytes: nativeBytes, encoded: false, records } : { queries, bytes: encodedBytes, encoded: true, records };
+}
+export function wireBatch(statements) {
+  const selection = selectBatch(statements);
+  return selection.encoded ? selection.records.map((record, index) => publicQuery(record, statements[index])) : statements;
+}
+function sameQuery(left, right) {
+  const a = left.params ?? [], b = right.params ?? [];
+  return left.sql === right.sql && a.length === b.length && a.every((value, index) => primitive(value) && Object.is(value, b[index]));
 }
 
 /** Adapt only D1's prepare/batch boundary; native statements supplied by a
@@ -91,7 +136,7 @@ export function wireBatch(statements) {
 export function wireDatabase(db) {
   const statements = new WeakMap();
   const prepare = (sql, params = []) => {
-    const original = { sql, params }, query = wireBatch([original])[0];
+    const original = { sql, params }, selection = selectBatch([original]), query = selection.queries[0];
     const native = params.length ? db.prepare(query.sql).bind(...query.params) : db.prepare(sql);
     const wrapped = new Proxy(native, { get(target, key) {
       if (key === 'bind') return (...values) => prepare(sql, values);
@@ -102,19 +147,21 @@ export function wireDatabase(db) {
       };
       return typeof value === 'function' ? value.bind(target) : value;
     } });
-    statements.set(wrapped, { native, query, original });
+    statements.set(wrapped, { native, query: { sql: query.sql, params: [...query.params] }, original });
     return wrapped;
   };
   return new Proxy(db, { get(target, key) {
     if (key === 'prepare') return prepare;
     if (key === 'batch') return members => {
       const known = members.map(member => statements.get(member));
-      const queries = wireBatch(known.filter(Boolean).map(member => member.original));
-      if (rpcBytes(queries) > RPC_LIMIT) throw new Error('D1_RPC_TRANSPORT_LIMIT');
+      const selection = selectBatch(known.filter(Boolean).map(member => member.original));
+      const queries = selection.queries;
+      if (selection.bytes > RPC_LIMIT) throw new Error('D1_RPC_TRANSPORT_LIMIT');
       let index = 0;
       return db.batch(members.map((member, i) => {
         if (!known[i]) return member;
         const query = queries[index++];
+        if (sameQuery(query, known[i].query)) return known[i].native;
         return query.params?.length ? db.prepare(query.sql).bind(...query.params) : db.prepare(query.sql);
       }));
     };

@@ -36,3 +36,17 @@ export async function pageResponse({ branding, title, heading, content, status =
   if (referrer) headers['Referrer-Policy'] = referrer;
   return new Response(method === 'HEAD' ? null : html, { status, headers });
 }
+
+// Refusals on private document routes use the same frame as sign-in. The API
+// adapter keeps its typed JSON response for callers that did not ask for HTML.
+export function settingsRefusalPage(request, branding, code, status) {
+  const ownerOnly = code === 'owner_required';
+  const unauthenticated = code === 'unauthenticated';
+  const heading = ownerOnly ? 'Only the owner can change sign-in settings' : unauthenticated ? 'Sign in to view these settings' : 'Settings could not be changed';
+  const message = ownerOnly ? 'Your account can use the app. Ask the installation owner to manage identity providers.'
+    : unauthenticated ? 'Your session has ended or you are signed out. Sign in, then open settings again.'
+    : 'The request was refused and no settings were saved. Return to the app, reload settings and try again.';
+  const href = unauthenticated ? branding.signInPath : '/app';
+  return pageResponse({ branding, heading, status, method: request.method,
+    content: `<p>${message}</p><a class="action" href="${escapeHtml(href)}">${unauthenticated ? 'Sign in' : 'Back to app'}</a>` });
+}

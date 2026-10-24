@@ -35,7 +35,7 @@ without a theme its CSP adds only `img-src 'self'`. Every other resource rule
 above still applies, and mail stays image-free.
 
 The Base conformance registration is executable at
-[`../tests/conformance.test.ts`](../tests/conformance.test.ts), and its D1/Worker
+[`../tests/conformance.test.ts`](https://github.com/runeditrun/base/blob/main/modules/operator-auth/tests/conformance.test.ts), and its D1/Worker
 adapter lives in this directory's `tests/worker.mjs` and `tests/runtime.mjs`.
 An adopting seed should map these methods to its actual Hono/Worker dispatcher
 and native private API, then import and call the exported registration from its

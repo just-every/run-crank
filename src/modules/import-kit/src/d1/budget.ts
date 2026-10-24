@@ -57,33 +57,55 @@ function conjunction(predicates: string[], start = 0, end = predicates.length): 
 }
 /** Adjacent assertions can share one CHECK without changing transactional order.
  * Native statements remain between their original pre/postconditions. */
-export function packGuards(statements: D1Sql[], readOnly = false): D1Sql[] {
-  const prefix = readOnly ? 'SELECT CASE WHEN (' : 'INSERT INTO ik_d1_assertions(ok) SELECT CASE WHEN (';
-  const suffix = readOnly ? ') THEN 1 ELSE 0 END AS ok' : ') THEN 1 ELSE 0 END';
-  const result: D1Sql[] = []; const seen = new Map<string, D1Sql[]>(); let predicates: string[] = [], params: any[] = [], bytes = 0;
-  const flush = () => {
-    if (predicates.length) {
-      // A flat AND list becomes a left-deep SQLite expression tree. Keep the
-      // added depth logarithmic without changing predicates or binding order.
-      const text=conjunction(predicates),packed = readOnly ? { sql: `${prefix}${text}${suffix}`, params } : guard({sql:text,params});
-      checkSql(packed); result.push(packed);
-    }
-    predicates = []; params = []; bytes = 0;
-  };
-  for (const statement of statements) {
-    checkSql(statement);
-    const predicate = guardPredicate(statement);
-    if (!predicate) {
-      if (readOnly) throw new Error('IMPORT_READ_GUARD_REQUIRED');
-      flush(); seen.clear(); result.push(statement); continue;
-    }
-    const prior = seen.get(statement.sql) ?? [];
-    if (prior.some(s => (s.params?.length ?? 0) === (statement.params?.length ?? 0) && (s.params ?? []).every((p, i) => p === statement.params![i]))) continue;
-    prior.push(statement); seen.set(statement.sql, prior);
-    const p = predicate.params ?? [], text = `(${predicate.sql})`;
-    const nextBytes = Buffer.byteLength(text);
-    if (predicates.length && (params.length + p.length > 100 || bytes + nextBytes > 90000 || params.reduce((n, p) => n + valueBytes(p), 0) + p.reduce((n, p) => n + valueBytes(p), 0) > 1500000 || predicates.length >= 50)) flush();
-    predicates.push(text); params.push(...p); bytes += nextBytes;
+/** Append-only state for the exact same packing algorithm. Count-only forks
+ * retain the open guard run, never copy or rebuild the already packed prefix. */
+export class GuardPacking {
+  private seen = new Map<string, D1Sql[]>();
+  private predicates: string[] = [];
+  private params: any[] = [];
+  private bytes = 0;
+  private values = 0;
+  private completed = 0;
+  private output: D1Sql[] | undefined;
+  private readOnly: boolean;
+  constructor(readOnly = false, collect = false) { this.readOnly = readOnly; if (collect) this.output = []; }
+  fork(): GuardPacking {
+    const next = new GuardPacking(this.readOnly);
+    next.seen = new Map([...this.seen].map(([key, value]) => [key, [...value]]));
+    next.predicates = [...this.predicates]; next.params = [...this.params];
+    next.bytes = this.bytes; next.values = this.values; next.completed = this.completed;
+    return next;
   }
-  flush(); return result;
+  private flush(): void {
+    if (this.predicates.length) {
+      const text = conjunction(this.predicates), packed = this.readOnly
+        ? { sql: `SELECT CASE WHEN (${text}) THEN 1 ELSE 0 END AS ok`, params: this.params }
+        : guard({ sql: text, params: this.params });
+      checkSql(packed); this.output?.push(packed); this.completed++;
+    }
+    this.predicates = []; this.params = []; this.bytes = this.values = 0;
+  }
+  append(statements: D1Sql[]): this {
+    for (const statement of statements) {
+      checkSql(statement);
+      const predicate = guardPredicate(statement);
+      if (!predicate) {
+        if (this.readOnly) throw new Error('IMPORT_READ_GUARD_REQUIRED');
+        this.flush(); this.seen.clear(); this.output?.push(statement); this.completed++; continue;
+      }
+      const prior = this.seen.get(statement.sql) ?? [];
+      if (prior.some(s => (s.params?.length ?? 0) === (statement.params?.length ?? 0) && (s.params ?? []).every((p, i) => p === statement.params![i]))) continue;
+      prior.push(statement); this.seen.set(statement.sql, prior);
+      const params = predicate.params ?? [], text = `(${predicate.sql})`;
+      const bytes = Buffer.byteLength(text), values = params.reduce((n, p) => n + valueBytes(p), 0);
+      if (this.predicates.length && (this.params.length + params.length > 100 || this.bytes + bytes > 90000 || this.values + values > 1500000 || this.predicates.length >= 50)) this.flush();
+      this.predicates.push(text); this.params.push(...params); this.bytes += bytes; this.values += values;
+    }
+    return this;
+  }
+  count(tail: D1Sql[] = []): number { const next = this.fork().append(tail); next.flush(); return next.completed; }
+  finish(): D1Sql[] { this.flush(); return this.output!; }
+}
+export function packGuards(statements: D1Sql[], readOnly = false): D1Sql[] {
+  return new GuardPacking(readOnly, true).append(statements).finish();
 }

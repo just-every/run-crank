@@ -56,8 +56,9 @@ export function checkRunData(run: RunData): RunData {
   return run
 }
 
-// Shared by the three pages: tokens from the seed's rer-theme.css, readable
-// neutrals when it cannot load, the header and the floor art.
+// Shared by the pages: tokens from the seed's rer-theme.css, readable neutrals
+// when it cannot load, the one header (at the page gutter on every page, with
+// the seed's wordmark weight) and the floor art.
 const BASE = '*,*::before,*::after{box-sizing:border-box}html{-webkit-text-size-adjust:100%}'
   + 'body{--art:max(26vh,150px);--site-ink:var(--rer-text,#172033);--site-body:var(--rer-muted,#475569);--site-accent:var(--rer-accent,var(--rer-brand-accent,var(--rer-text,#172033)));--site-accent-ink:var(--rer-accent-text,var(--rer-brand-accent-text,var(--rer-surface,#fff)));'
   + '--site-line:color-mix(in srgb,var(--rer-border,#64748b) 28%,transparent);--site-mono:var(--rer-font-mono,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);'
@@ -65,10 +66,11 @@ const BASE = '*,*::before,*::after{box-sizing:border-box}html{-webkit-text-size-
   + 'h1,h2,p,ol{margin:0;padding:0}ol{list-style:none}a{color:inherit;text-decoration:none}'
   + 'a:focus-visible,button:focus-visible{outline:3px solid var(--rer-focus,var(--site-ink));outline-offset:3px;border-radius:8px}'
   + '.art{position:absolute;left:0;right:0;bottom:0;height:var(--art);pointer-events:none;z-index:0}.art img{width:100%;height:100%;display:block;object-fit:cover;object-position:center bottom}'
-  + '.bar,main{position:relative;z-index:1}.bar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 16px;max-width:1360px;margin:0 auto;padding:26px 56px 0}'
-  + '.brand{display:inline-flex;align-items:center;gap:12px;font:600 28px/1 var(--rer-font-heading,var(--rer-font-body,inherit));letter-spacing:var(--rer-wordmark-tracking,-.02em);color:var(--site-ink)}.brand img{width:40px;height:40px}'
+  + '.bar,main{position:relative;z-index:1}.bar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 16px;max-width:1440px;margin:0 auto;padding:26px 56px 0}'
+  + '.brand{display:inline-flex;align-items:center;gap:12px;font:600 28px/1 var(--rer-font-heading,var(--rer-font-body,inherit));font-weight:var(--rer-wordmark-weight,600);letter-spacing:var(--rer-wordmark-tracking,-.02em);color:var(--site-ink)}.brand img{width:40px;height:40px}'
   // The brand takes only its narrowest width when deciding whether the nav still fits beside it, so a long name wraps the nav onto its own row instead of pushing it past the viewport.
-  + '.bar .brand{flex:1 1 0;max-width:max-content}.bar nav{display:flex;flex-wrap:wrap;gap:36px;font-weight:500;font-size:16px}.bar nav a:hover{text-decoration:underline;text-underline-offset:4px}'
+  + '.bar .brand{flex:1 1 0;max-width:max-content}.bar nav{display:flex;flex-wrap:wrap;gap:36px;font-weight:500;font-size:16px}'
+  + '.bar nav a:hover,.bar nav a[aria-current=page]{text-decoration:underline;text-underline-offset:4px}.bar nav a[aria-current=page]{text-decoration-color:var(--site-accent);text-decoration-thickness:2px}'
   + 'h1{font:600 64px/1.08 var(--rer-font-heading,var(--rer-font-body,inherit));letter-spacing:-.03em;color:var(--site-ink);text-wrap:balance}'
   + '.sub{margin-top:24px;color:var(--site-body);font-size:21px;text-wrap:pretty}'
   + '@media(max-width:760px){body{font-size:16px;--art:180px}.bar{padding:18px 16px 0}.brand{font-size:23px;gap:9px}.brand img{width:32px;height:32px}.bar nav{gap:22px;font-size:15px}.bar nav a{min-height:24px}h1{font-size:38px;line-height:1.12}.sub{font-size:16.5px;margin-top:16px}}'
@@ -108,15 +110,24 @@ const RUN = 'body{--art:max(20vh,150px);overflow-x:visible}main{max-width:1360px
 const COPY_SCRIPT = "document.addEventListener('click',async event=>{const button=event.target.closest('.copy');if(!button)return;try{await navigator.clipboard.writeText(button.dataset.copy);const label=button.querySelector('span');label.textContent='Copied';setTimeout(()=>{label.textContent='Copy'},1600)}catch{}})"
 const ARROW = '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10h12M11 5l5 5-5 5"/></svg>'
 
-export function document(identity: EditionIdentity, title: string, description: string, style: string, body: string, script = ''): string {
+/**
+ * A seed's approved homepage header, so every page of its run site wears the one header: `html` as the homepage
+ * renders it (marking the current page as that header does) and `styles`, the stylesheets that style it (the
+ * `styles` sitePages receives). Without one, the pages carry Base's header, the one Base's own homepage carries.
+ */
+export interface HomepageHeader { html: string; styles: string[] }
+
+export function document(identity: EditionIdentity, title: string, description: string, style: string, body: string, script = '', styles: string[] = []): string {
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escape(title)}</title><meta name="description" content="${escape(description)}">`
-    + `${iconHead}${identity.fonts ? `<link rel="stylesheet" href="${escape(identity.fonts)}">` : ''}<link rel="stylesheet" href="${escape(identity.theme)}"><style>${identity.accentColor ? `:root{--rer-brand-accent:${identity.accentColor};--rer-brand-accent-text:${ink(identity.accentColor)}}` : ''}${BASE}${style}</style></head>`
+    + `${iconHead}${identity.fonts ? `<link rel="stylesheet" href="${escape(identity.fonts)}">` : ''}<link rel="stylesheet" href="${escape(identity.theme)}"><style>${identity.accentColor ? `:root{--rer-brand-accent:${identity.accentColor};--rer-brand-accent-text:${ink(identity.accentColor)}}` : ''}${BASE}${style}</style>`
+    + `${styles.map(href => `<link rel="stylesheet" href="${escape(href)}">`).join('')}</head>`
     + `<body>${identity.band ? `<div class="art" aria-hidden="true"><img src="${escape(identity.band)}" alt=""></div>` : ''}${body}${script ? `<script>${script}</script>` : ''}</body></html>`
 }
 /** Docs, Contract and Source: Docs when the site has /docs, Contract when the seed has a CONTRACT.md. */
 export function siteLinks(run: RunData, contract: SeedContract | undefined, current?: 'contract'): string {
   return `${run.docs ? '<a href="/docs">Docs</a>' : ''}${contract ? `<a href="/contract"${current === 'contract' ? ' aria-current="page"' : ''}>Contract</a>` : ''}<a href="${escape(run.repository)}">Source</a>`
 }
+/** Base's header: the same on its homepage, Run, Contract and not-found pages. */
 export function header(identity: EditionIdentity, run: RunData, contract?: SeedContract, current?: 'contract'): string {
   return `<header class="bar"><a class="brand" href="/"><img src="${escape(identity.mark)}" alt="" width="40" height="40"><span>${escape(identity.product)}</span></a>`
     + `<nav aria-label="Site">${siteLinks(run, contract, current)}</nav></header>`
@@ -132,19 +143,19 @@ const pipelines = (line: string) => escape(line).replace(/[^\s/]+(?: \| \S+)+/g,
 const codeBlock = (lines: string[], label: string) => `<div class="code"><pre aria-label="${escape(label)}"><code>${lines.map(pipelines).join('\n')}</code></pre>`
   + `<button class="copy" type="button" data-copy="${escape(lines.join('\n'))}"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="5" y="5" width="8.5" height="8.5" rx="2"/><path d="M3 10.5V4a1.5 1.5 0 0 1 1.5-1.5H10"/></svg><span>Copy</span></button></div>`
 
-/** The Run page at /run. `contract`, the seed's parsed CONTRACT.md, links /contract from the header. */
-export function runPageHtml(identity: EditionIdentity, run: RunData, contract?: SeedContract): string {
+/** The Run page at /run. `contract`, the seed's parsed CONTRACT.md, links /contract from Base's header; `homepage` replaces that header. */
+export function runPageHtml(identity: EditionIdentity, run: RunData, contract?: SeedContract, homepage?: HomepageHeader): string {
   checkIdentity(identity); checkRunData(run)
   const name = escape(run.name), source = escape(run.repository.replace(/^https:\/\//, ''))
   const hosted = run.hosted.map(option => `<li class="step option"><div class="body"><h2>${escape(option.title)}</h2><p>${escape(option.body)}</p><p class="go"><a href="${escape(option.href)}">${escape(option.action)}</a></p></div></li>`).join('')
-  const body = `${header(identity, run, contract)}<main><div class="intro"><h1>Run ${name} on your computer.</h1><p class="sub">100% free and open source. Two lines, and ${name} opens in your browser.</p></div>`
+  const body = `${homepage?.html ?? header(identity, run, contract)}<main><div class="intro"><h1>Run ${name} on your computer.</h1><p class="sub">100% free and open source. Two lines, and ${name} opens in your browser.</p></div>`
     + `<ol class="steps"><li class="step"><span class="num" aria-hidden="true">1</span><div class="body"><h2>Install rer</h2>${codeBlock([installRer], 'Install rer')}`
     + `<p class="note">It installs rer for you alone, with its own Node if you have no Node 22 or later. The installer does not edit your shell files itself. If it ends with a line to run, run it before step 2: it puts rer on your PATH now and appends the same setting to your shell's startup file (for example ~/.zshrc) for new terminals.</p></div></li>`
     + `<li class="step"><span class="num" aria-hidden="true">2</span><div class="body"><h2>Start ${name}</h2>${codeBlock([rerStart(run)], `Start ${run.name}`)}`
     + `<p class="note">rer gets ${name}, installs everything, makes you the owner and prints a link that opens ${name} signed in. To start it again later: ${inlineCode(`cd ${run.folder} && rer dev`)}</p>`
     + `<p class="alt">Already have Node 22 or later? ${inlineStart(run)} does both steps in one line.</p></div></li>${hosted}</ol>`
     + `<footer class="facts"><p>${escape(run.requirements)}</p><p>Source: <a href="${escape(run.repository)}">${source}</a> · ${escape(run.licence)} license</p></footer></main>`
-  return document(identity, `Run ${run.name}`, `Run ${run.name} on your computer. 100% free and open source.`, RUN, body, COPY_SCRIPT)
+  return document(identity, `Run ${run.name}`, `Run ${run.name} on your computer. 100% free and open source.`, RUN, body, COPY_SCRIPT, homepage?.styles)
 }
 
 /** Base's composed homepage for a seed without an approved one: its primary action is Run <Seed>. */
@@ -156,10 +167,10 @@ export function siteHomeHtml(identity: EditionIdentity, run: RunData, contract?:
 }
 
 /** 404.html: the static host serves it for every path the site does not have. */
-export function siteNotFoundHtml(identity: EditionIdentity, run: RunData, contract?: SeedContract): string {
+export function siteNotFoundHtml(identity: EditionIdentity, run: RunData, contract?: SeedContract, homepage?: HomepageHeader): string {
   checkIdentity(identity); checkRunData(run)
-  const body = `${header(identity, run, contract)}<main><div class="hero"><h1>Page not found</h1><p class="sub">This page is not part of the ${escape(identity.product)} site.</p><div class="actions"><a class="link" href="/">Go to the homepage</a></div></div></main>`
-  return document(identity, `Not found · ${identity.product}`, identity.tagline, HOME, body)
+  const body = `${homepage?.html ?? header(identity, run, contract)}<main><div class="hero"><h1>Page not found</h1><p class="sub">This page is not part of the ${escape(identity.product)} site.</p><div class="actions"><a class="link" href="/">Go to the homepage</a></div></div></main>`
+  return document(identity, `Not found · ${identity.product}`, identity.tagline, HOME, body, '', homepage?.styles)
 }
 
 /** What a seed's site entry returns: each page by path, and the public files they use. */

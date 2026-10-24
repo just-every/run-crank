@@ -16,6 +16,7 @@ import { guardErasedSources } from './erasure-claims.ts';
 import { readOriginals } from './originals.ts';
 import { retiredError } from './retirement.ts';
 import { attachReversal, loadReversalState, reversalGuards, reversalState } from './undo-state.ts';
+import { verifiedPlanFingerprint } from './verified-plan.ts';
 
 export function decode(row: any): ImportJob {
   return { id: row.id, fingerprint: row.fingerprint, destination: row.destination, namespace: row.namespace, mappingVersion: row.mapping_version, principalId: row.principal_id, state: row.state, checkpoint: row.checkpoint, total: row.total, fence: row.fence, error: row.error };
@@ -33,7 +34,7 @@ export async function stored(id: string, context: D1ImportContext, action: Impor
   planReads.set(job, planChunkReads(row.plan_json, fenced));
   if (job.destination !== context.destination || job.namespace !== context.namespace || job.mappingVersion !== context.mappingVersion || job.principalId !== context.authorization.principalId) throw new Error('JOB_BINDING_MISMATCH');
   if (context.reviewedFingerprint !== undefined && context.reviewedFingerprint !== job.fingerprint) throw new Error('REVIEW_FINGERPRINT_MISMATCH');
-  if (planFingerprint(plan) !== job.fingerprint || plan.fingerprint !== job.fingerprint || plan.destination !== job.destination || plan.namespace !== job.namespace || plan.mappingVersion !== job.mappingVersion || plan.principalId !== job.principalId || plan.entries.length !== job.total) throw new Error('STORED_PLAN_CHANGED');
+  if ((verifiedPlanFingerprint(plan) ?? planFingerprint(plan)) !== job.fingerprint || plan.fingerprint !== job.fingerprint || plan.destination !== job.destination || plan.namespace !== job.namespace || plan.mappingVersion !== job.mappingVersion || plan.principalId !== job.principalId || plan.entries.length !== job.total) throw new Error('STORED_PLAN_CHANGED');
   job.erasedRecords = plan.entries.filter(entry => entry.erased).length;
   attachReversal(job, await loadReversalState(row, plan, context));
   await captureJobLayout(job, row, context, action);

@@ -6,6 +6,7 @@ import type { D1PlanCodec } from './types.ts';
 import { planFingerprint } from '../plan/index.ts';
 import { canonicalHash, canonicalSize, canonicalChunks, cloneJson } from '../provenance/canonical-stream.ts';
 import { canonicalJson, sha256 } from '../provenance/identity.ts';
+import { ownDecodedPlan, reusedExpansion, retainVerifiedExpansion, type PlanReadScope } from './verified-plan.ts';
 
 function validateRoundTrip(plan: ImportPlan, payload: Json, codec: D1PlanCodec): void {
   const roundtrip = codec.decode(cloneJson(payload));
@@ -25,7 +26,7 @@ export function expandCompressedPlan(body: string, codec?: D1PlanCodec): ImportP
 }
 /** Custody loading already parses the envelope to distinguish storage formats.
  * Reuse that object, still comparing its complete canonical bytes with body. */
-export function expandCompressedEnvelope(body: string, value: any, codec?: D1PlanCodec): ImportPlan {
+export function expandCompressedEnvelope(body: string, value: any, codec?: D1PlanCodec, scope?: PlanReadScope): ImportPlan {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('STORED_PLAN_CHANGED');
   if (canonicalHash(value) !== sha256(body)) throw new Error('STORED_PLAN_CHANGED');
   if (![2,3].includes(value.d1Plan) || !Number.isSafeInteger(value.size) || value.size < 0) throw new Error('STORED_PLAN_CHANGED');
@@ -35,12 +36,18 @@ export function expandCompressedEnvelope(body: string, value: any, codec?: D1Pla
   if (value.compression !== undefined && value.compression !== 'brotli') throw new Error('STORED_PLAN_CHANGED');
   if (value.d1Plan === 3 && (!Number.isSafeInteger(value.expandedSize) || value.expandedSize < 0)) throw new Error('STORED_PLAN_CHANGED');
   if (value.d1Plan === 3 && value.dictionary === 2 && (!Number.isSafeInteger(value.payloadSize) || value.payloadSize < 0)) throw new Error('STORED_PLAN_CHANGED');
+  // loadPlans has freshly checked the complete manifest and chunk bytes. Only
+  // this exact request/body/codec can reuse its already verified expansion.
+  const prior = scope && reusedExpansion(scope, body, codec);
+  if (prior) return prior;
   const payload = decodePayload(value, codec);
   const payloadHash = value.d1Plan === 3 ? canonicalHash(payload) : undefined;
-  const plan = (value.d1Plan === 3 ? codec!.decode(payload) : payload) as ImportPlan;
+  const decoded = (value.d1Plan === 3 ? codec!.decode(payload) : payload) as ImportPlan;
+  const plan = scope ? ownDecodedPlan(decoded) : decoded;
   if (value.d1Plan === 3 && canonicalHash(codec!.encode(plan)) !== payloadHash) throw new Error('STORED_PLAN_CHANGED');
   if (value.d1Plan === 3 && plan.fingerprint !== value.fingerprint) throw new Error('STORED_PLAN_CHANGED');
   if (value.d1Plan === 3 && canonicalSize(plan) !== value.expandedSize) throw new Error('STORED_PLAN_CHANGED');
+  if (scope) return retainVerifiedExpansion(scope, body, plan, codec);
   if (planFingerprint(plan) !== plan.fingerprint) throw new Error('STORED_PLAN_CHANGED');
   return plan;
 }

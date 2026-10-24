@@ -7,7 +7,7 @@ import { canonicalJson, sha256, attachmentHash } from '../provenance/identity.ts
 import { validateEffect } from '../plan/index.ts';
 import { effectIdentity } from '../storage/provenance.ts';
 import type { D1ImportContext, D1Sql } from './types.ts';
-import { atomic, atomicCount, authorize, guard, limits, sql, fitsBatch } from './database.ts';
+import { atomic, atomicCount, atomicPrefix, authorize, guard, limits, sql, fitsBatch } from './database.ts';
 import { stored, boundary, storedReads } from './jobs.ts';
 import { custodyGuards, validatedProvenance, inventoryGuards, reusedSourceGuards } from './integrity.ts';
 import { supersedeTarget } from './history.ts';
@@ -27,7 +27,9 @@ export async function applyD1ImportBatches(jobOrId: ImportJob | string, context:
       if (job.state === 'completed') { await atomic(context, 'apply', [...boundary(job, plan, 'apply'), ...custodyGuards(plan, id), ...await inventoryGuards(job, plan, context)], 0, nativeStagingScope(job, plan)); return job; }
       if (!['queued', 'applying', 'failed'].includes(job.state)) throw new Error('IMPORT_ALREADY_REVERSING');
       const statements: D1Sql[] = [...boundary(job, plan, 'apply'), ...custodyGuards(plan, id), ...await inventoryGuards(job, plan, context)], entries: PlanEntry[] = [], returnReads = storedReads(job);
-      let effects = 0, scope = nativeStagingScope(job, plan), planned = cost(context, publication(job, 0, statements, scope), returnReads);
+      let effects = 0, scope = nativeStagingScope(job, plan);
+      let prefix = atomicPrefix(context, 'apply', statements, scope);
+      let planned = prefix ? prefix.count(progress(job, 0), returnReads) : cost(context, publication(job, 0, statements, scope), returnReads);
       for (const entry of plan.entries.slice(job.checkpoint, job.checkpoint + batchSize)) {
         if (entries.length && effects + entry.effects.length > 1000) break;
         if (entry.effects.length > 1000) throw new Error('SOURCE_EFFECT_LIMIT');
@@ -35,13 +37,15 @@ export async function applyD1ImportBatches(jobOrId: ImportJob | string, context:
         // request, as atomic will send it, is counted again once the entry is built.
         const reserve = 40 + entry.effects.length * 16;
         if (remaining(context) - planned < reserve) { if (!entries.length) { if (count > 0) return job; throw new D1RequestLimitError(); } break; }
-        const candidate = [...statements], nextScope = { ...scope, nativeGuards:[...scope.nativeGuards], postGuards:[...scope.postGuards], targets:[...scope.targets] };
+        const candidate: D1Sql[] = [], nextScope = { ...scope, nativeGuards:[...scope.nativeGuards], postGuards:[...scope.postGuards], targets:[...scope.targets] };
         await publishEntry(id, entry, job.checkpoint + entries.length, context, candidate, nextScope);
-        const next = publication(job, entries.length + 1, candidate, nextScope), spent = cost(context, next, returnReads);
+        const nextPrefix = prefix?.extend(candidate);
+        const next = nextPrefix ? undefined : publication(job, entries.length + 1, [...statements, ...candidate], nextScope);
+        const spent = nextPrefix ? nextPrefix.count(progress(job, entries.length + 1), returnReads) : cost(context, next!, returnReads);
         if (spent > remaining(context)) { if (entries.length) break; if (count > 0) return job; throw new D1RequestLimitError(); }
-        const fits = fitsBatch(context, 'apply', next.statements, next.scope);
+        const fits = nextPrefix ? true : fitsBatch(context, 'apply', next!.statements, next!.scope);
         if (!fits && entries.length) break;
-        statements.splice(0, statements.length, ...candidate);
+        statements.push(...candidate); prefix = nextPrefix;
         scope = nextScope; entries.push(entry); effects += entry.effects.length; planned = spent;
         if (!fits) break;
       }

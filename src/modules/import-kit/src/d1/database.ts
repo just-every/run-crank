@@ -99,7 +99,7 @@ export async function atomic(context: D1ImportContext, action: ImportAction, sta
   }
   await context.storage.database.batch(packed.map(s => prepare(context.storage.database, s)));
 }
-function postConditions(context:Pick<D1ImportContext,'maxBatchBytes'>,statements:D1Sql[],scope?:NativeStagingScope,action:ImportAction='read'):D1Sql[]{
+export function postConditions(context:Pick<D1ImportContext,'maxBatchBytes'>,statements:D1Sql[],scope?:NativeStagingScope,action:ImportAction='read'):D1Sql[]{
   const stream = scope ? [...jobLayoutGuards(scope.job), ...streamBoundary(scope.job.id, action)] : [];
   if(context.maxBatchBytes===undefined)return [...stream,...statements.flatMap(statement=>statement.finalChecks??[])];
   const readOnly=statements.every(s=>guardPredicate(s));
@@ -132,6 +132,7 @@ function atomicPreparation(context:Parameters<typeof authority>[0]&Pick<D1Import
   const packed=[...atomicStatements(context,action,statements),...readonlyChecks(post),...(post.length?[finalAuthority(context,action)]:[])];
   return {post,packed,count:packed.length+returnReads};
 }
+export { atomicPrefix } from './atomic-prefix.ts';
 /** SELECT-only fence: inspect every packed scalar before publishing snapshots.
  * Mutations continue to use atomic() and SQL CHECK rollback, never this path. */
 export async function readAtomic(context: D1ImportContext, guards: D1Sql[], scope?: NativeStagingScope, action: ImportAction = 'read'): Promise<void> {

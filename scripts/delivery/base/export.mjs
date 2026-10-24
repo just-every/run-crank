@@ -15,7 +15,7 @@ export async function exportProducer({root = process.cwd(), config, output = 'sc
   const files = (await readdir(source)).filter(name => name.endsWith('.mjs')).sort();
   const generators = (await readdir(join(source,'generators'))).filter(name => name.endsWith('.mjs')).sort();
   const schemaSource = fileURLToPath(new URL('../../schema/', import.meta.url));
-  const schemaFiles = ['SETUP.schema.json','json-schema.mjs','setup-validation.mjs','dependencies.mjs'];
+  const schemaFiles = ['SETUP.schema.json','json-schema.mjs','setup-validation.mjs','dependencies.mjs','business-field-inputs.mjs'];
   await mkdir(destination.directory, {recursive:true});
   try {
     for (const name of [...files, ...generators.map(name => `generators/${name}`)]) {

@@ -155,7 +155,7 @@ export interface OperatorAuth<R extends string = Role> {
   authenticateCredential(request:Request):Promise<{id:string;personId:string;fence:number;kind:SessionKind}|null>;
   authorizeDependencySetup(request: Request, input: { token?: string }): Promise<boolean>;
   completeLocalSetup(request:Request):Promise<{complete:boolean}>;
-  identitySettings(request:Request):Promise<{idpSignIn:boolean}>;
+  identitySettings(request:Request):Promise<{idpSignIn:boolean;providerSetup:{canEnable:boolean;providers:Array<{id:string;label:string;state:'linked'|'configured'|'unlinked'|'needs-relink'}>}}>;
   setIdentitySettings(request:Request,input:{idpSignIn:boolean}):Promise<{idpSignIn:boolean}>;
   requireEditorOwner(request:Request):Promise<Session<R>>;
   credentialFence(request:Request):Promise<{personId:string;fence:number;kind:SessionKind}>;

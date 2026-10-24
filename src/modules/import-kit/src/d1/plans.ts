@@ -2,6 +2,7 @@ import { retainedSql } from './retained-values.ts';
 import { changedLazy, putRow } from './expected-state.ts';
 import { compressedPlan, storedStreamPage } from './stream-plan.ts';
 import { expandCompressedEnvelope } from './compressed-plan.ts';
+import { planReadScope } from './verified-plan.ts';
 import { Buffer } from 'node:buffer';
 import { createHash } from 'node:crypto';
 import type { ImportPlan } from '../types.ts';
@@ -79,6 +80,7 @@ export async function loadPlans(rows: any[], db: D1Database, codec?: D1PlanCodec
     }
   }
   for (const row of rows) {
+    const scope = planReadScope(db, row.id, row.plan_json, codec);
     const parsed = JSON.parse(row.plan_json), parts = chunks.filter(c => c.job_id === row.id);
     let plan: ImportPlan, compressed = false;
     if (parsed?.d1Plan === 1) {
@@ -86,11 +88,11 @@ export async function loadPlans(rows: any[], db: D1Database, codec?: D1PlanCodec
       const body = parts.map(c => c.body).join('');
       if (Buffer.byteLength(body) !== parsed.size || sha256(body) !== parsed.sha256) throw new Error('STORED_PLAN_CHANGED');
       const payload = JSON.parse(body);
-      if ([2,3].includes(payload?.d1Plan)) { if (parsed.entries !== undefined) throw new Error('STORED_PLAN_CHANGED'); plan = expandCompressedEnvelope(body,payload,codec); compressed = true; }
+      if ([2,3].includes(payload?.d1Plan)) { if (parsed.entries !== undefined) throw new Error('STORED_PLAN_CHANGED'); plan = expandCompressedEnvelope(body,payload,codec,scope); compressed = true; }
       else { if (canonicalHash(payload) !== parsed.sha256) throw new Error('STORED_PLAN_CHANGED'); plan = payload; }
       // The entry locator a referenced read trusts must describe these exact chunks.
       if (parsed.entries !== undefined && canonicalJson(entryLocator(plan, parts)) !== canonicalJson(parsed.entries)) throw new Error('STORED_PLAN_CHANGED');
-    } else plan = [2,3].includes(parsed?.d1Plan) ? expandCompressedEnvelope(row.plan_json,parsed,codec) : parsed;
+    } else plan = [2,3].includes(parsed?.d1Plan) ? expandCompressedEnvelope(row.plan_json,parsed,codec,scope) : parsed;
     const captured = fences.get(row.id);
     snapshots.set(plan, { body: row.plan_json, chunks: parts, ...(row.custody_revision === undefined ? {} : {revision: row.custody_revision}), ...(compressed ? {compressed} : {}), ...(captured === undefined ? {} : {fence: captured}) }); result.set(row.id, plan);
   }

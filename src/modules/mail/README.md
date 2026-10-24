@@ -43,6 +43,7 @@ modules/mail/src/adapters/sendgrid/index.mjs
 modules/mail/src/adapters/sendgrid/serialize.mjs
 modules/mail/src/adapters/rer/contract.mjs
 modules/mail/src/adapters/rer/index.mjs
+modules/mail/src/adapters/rer/list-headers.mjs
 modules/mail/src/adapters/messaging/contract.mjs
 modules/mail/src/adapters/messaging/event-schema.mjs
 modules/mail/src/adapters/messaging/index.mjs
@@ -118,14 +119,14 @@ These are for developing the module itself or documentation. A seed may keep any
 - `modules/mail/README.md` and every `README.md` under `modules/mail/src/`
 
 The provider is explicit: `sendgrid`, `resend`, `cloudflare`, `rer`, `messaging`, or `development`.
-`mode` is required (`production`, `development`, or `test`). Remote providers require `apiKey`; Cloudflare additionally requires a 32-hex `accountId`. A remote provider in test/development mode still makes a real provider request unless the caller explicitly supplies a test fetch. Missing credentials, validation errors, or provider failure never select another provider. Config and messages reject unknown fields so requested features cannot silently disappear.
+`mode` is required (`production`, `development`, or `test`). SendGrid, Resend, Cloudflare and RER require `apiKey`; Cloudflare additionally requires a 32-hex `accountId`. Messaging instead requires its signed-link configuration (`serviceOrigin`, `installId`, `kid` and `signingKey`) and rejects `apiKey` and `accountId`. A remote provider in test/development mode still makes a real provider request unless the caller explicitly supplies a test fetch. Missing credentials, validation errors, or provider failure never select another provider. Config and messages reject unknown fields so requested features cannot silently disappear.
 
 `createMailSender(config, dependencies?)` returns `{send(message)}`. Dependencies are optional standard `fetch`, `clock: () => epochMilliseconds`, and `timeoutMilliseconds` (a positive safe integer bounding each remote attempt; the default is 15,000). Production normally uses global fetch. Direct provider endpoints are fixed; `rer` uses its assigned relay URL. No retry or automatic replay exists. The sender snapshots configuration at construction and the message at submission.
 
 ### Managed mail through RER
 
 Seeds opt into Managed mail with `mail: {providers: ["rer"]}` in their candidate
-deployment spec. The [delivery producer](../delivery-producer/README.md#managed-mail)
+deployment spec. The [delivery producer](https://github.com/runeditrun/base/blob/main/modules/delivery-producer/README.md#managed-mail)
 can generate the matching setup fields. RER assigns public `MAIL_PROVIDER`,
 `MAIL_FROM`, `MAIL_RELAY_URL` and private `MAIL_API_KEY`; Managed owners do not
 enter them. Wire those settings into the shared sender:
@@ -202,7 +203,7 @@ adapter makes no retries and never reads or logs provider error bodies.
 
 ## Message and results
 
-Required fields: `deliveryId` (nonempty, at most 512 characters), `from`, nonempty `to: string[]`, `subject: string` (SendGrid requires nonempty; other providers allow empty), and at least one nonempty `text` or `html`. Addresses accept a mailbox or `Display Name <mailbox>`; the conservative mailbox grammar rejects controls, multiple addresses inside one string and malformed domains. Use arrays for recipients.
+Required fields: `deliveryId` (nonempty, at most 512 characters), `from`, nonempty `to: string[]`, `subject: string` (SendGrid requires nonempty; RER requires nonblank and at most 200 characters; other providers allow empty), and at least one nonempty `text` or `html`. Addresses accept a mailbox or `Display Name <mailbox>`; the conservative mailbox grammar rejects controls, multiple addresses inside one string and malformed domains. Use arrays for recipients.
 
 Optional `cc`, `bcc`, `replyTo`, and string-valued `headers` preserve envelope and threading. `In-Reply-To` and ordered `References` can be supplied as headers. SendGrid and Resend also accept `Message-ID`; Cloudflare generates it and rejects a caller-supplied value; `rer` rejects it and assigns one from an optional `messageKey`. CR/LF/control characters, duplicate header names ignoring case, reserved envelope/MIME/security headers and invalid header names fail before a request. Provider-specific header restrictions are also enforced.
 
