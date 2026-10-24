@@ -108,6 +108,7 @@ export async function subflowsJourney() {
     await h.post(versionPath + '/1/revoke'); await h.tick();
     assert.equal((await h.get('./subflows/calls/' + revokedChild.children[0].id)).status,'paused');
     assert.equal((await h.get('workflow-runs/' + revokedChild.id)).status,'paused');
+    assert.ok((await h.get('./notices/deliveries?run_id=' + revokedChild.id)).some(row=>row.kind==='run_paused'),'child revocation reaches the normal owner notice');
     await h.post(versionPath + '/1/review', {definition_digest:first.definition_digest,confirm:'REVIEW_PURE_SUBFLOW'});
     await h.post('./subflows/calls/' + revokedChild.children[0].id + '/resume',{definition_digest:'stale',confirm:'RESUME_PURE_CHILD'},h.owner,409);
     await h.post('./subflows/calls/' + revokedChild.children[0].id + '/resume',{definition_digest:first.definition_digest,confirm:'RESUME_PURE_CHILD'});
@@ -116,6 +117,7 @@ export async function subflowsJourney() {
     const invalidChild = await startRun(h, childFlow, {address:12});
     await h.tick();
     assert.equal((await h.get('workflow-runs/' + invalidChild.id)).status,'failed');
+    assert.ok((await h.get('./notices/deliveries?run_id=' + invalidChild.id)).some(row=>row.kind==='run_failed'),'child failure reaches the normal owner notice');
     assert.equal((await h.get('./subflows/calls/' + invalidChild.children[0].id)).status,'failed');
     assert.ok(!(await h.get('workflow-runs/' + invalidChild.id)).steps.some(step=>step.step_id==='result'));
     const draftChild = await h.post('workflows/' + childFlow.id + '/test',{input},h.owner,201);

@@ -66,11 +66,12 @@ export async function runPureChild(env: CrankEnv, callId: string) {
   const guard = `EXISTS(SELECT 1 FROM crank_subflow_calls c JOIN crank_wf_runs r ON r.id=c.run_id WHERE c.id=? AND c.status='running' AND c.lease_id=? AND c.lease_expires_at>? AND r.status='waiting')`
   const args = [call.id,lease,finished]
   const index = await indexStatement(env,target,run.id,[plain],guard,args)
+  // Requeue every outcome through the ordinary executor settlement and notices.
   await env.DB.batch([
     stmt(env, `UPDATE crank_wf_steps SET status=?,output_json=?,trace_json=?,error_json=?,finished_at=? WHERE run_id=? AND path=? AND ${guard}`,status==='paused'?'waiting':status,await sealText(target,plain),await sealText(target,trace ? canonical(trace) : canonical({child_id:call.id})),await sealText(target,failure ? canonical(failure) : null),status==='paused'?null:finished,run.id,call.path,...args),
     ...(index ? [index] : []),
-    stmt(env, `UPDATE crank_wf_runs SET status=?,error_json=?,finished_at=? WHERE id=? AND ${guard}`,status==='succeeded'?'queued':status,await sealText(target,failure ? canonical(failure) : null),status==='failed'?finished:null,run.id,...args),
-    stmt(env, `UPDATE crank_subflow_calls SET status=?,lease_id=NULL,lease_expires_at=NULL,finished_at=? WHERE id=? AND status='running' AND lease_id=? AND EXISTS(SELECT 1 FROM crank_wf_runs r JOIN crank_wf_steps s ON s.run_id=r.id WHERE r.id=crank_subflow_calls.run_id AND s.path=crank_subflow_calls.path AND s.operation_key=crank_subflow_calls.operation_key AND r.status=?)`,status,status==='paused'?null:finished,call.id,lease,status==='succeeded'?'queued':status),
+    stmt(env, `UPDATE crank_wf_runs SET status=?,error_json=?,finished_at=? WHERE id=? AND ${guard}`,'queued',await sealText(target,failure ? canonical(failure) : null),null,run.id,...args),
+    stmt(env, `UPDATE crank_subflow_calls SET status=?,lease_id=NULL,lease_expires_at=NULL,finished_at=? WHERE id=? AND status='running' AND lease_id=? AND EXISTS(SELECT 1 FROM crank_wf_runs r JOIN crank_wf_steps s ON s.run_id=r.id WHERE r.id=crank_subflow_calls.run_id AND s.path=crank_subflow_calls.path AND s.operation_key=crank_subflow_calls.operation_key AND r.status=?)`,status,status==='paused'?null:finished,call.id,lease,'queued'),
   ])
 }
 export async function runPureChildren(env: CrankEnv, time = Date.now()) {
