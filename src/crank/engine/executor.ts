@@ -1,3 +1,4 @@
+import { SubflowWait } from '../workflows/subflow-calls'
 import { allowedOperation, customVersion } from '../custom/store'
 import { GatewayWait } from '../custom/gateway-tasks'
 import { ExecutorWait } from '../executors/step'
@@ -138,6 +139,10 @@ class Execution {
       }
       return await this.settle(step, path, input, result)
     } catch (error) {
+      if (error instanceof SubflowWait) {
+        await this.save(step,path,'waiting',{input,trace:{child_id:error.callId}})
+        return {kind:'waiting',approval:false}
+      }
       if (error instanceof GatewayWait) {
         await this.save(step,path,'waiting',{input,trace:{gateway_task_id:error.taskId}})
         return {kind:'waiting',approval:false}

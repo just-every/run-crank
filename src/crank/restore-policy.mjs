@@ -1,3 +1,4 @@
+import { validatePureRecipe } from './workflows/recipe-definition.mjs';
 import { validateSubflowDefinition } from './workflows/subflow-definition.mjs';
 const unfinished = ['queued', 'running', 'waiting', 'awaiting_approval', 'paused'];
 const distant = '9999-12-31T00:00:00.000Z';
@@ -28,6 +29,7 @@ export const importSafety = {
   crank_state_tables: { active: [0] },
   crank_state_operations: { active: [0] },
   crank_subflow_versions: { active: [0] },
+  crank_subflow_calls: {status:['interrupted'],lease_id:[null],lease_expires_at:[null]},
   crank_notice_deliveries: { active: [0], lease_id: [null], lease_expires_at: [null] },
   crank_gateways: {status:['revoked'],code_hash:[null],code_expires_at:[null],credential_hash:[null],public_key:[null],fingerprint:[null]},
   crank_gateway_grants: {status:['revoked']},
@@ -54,6 +56,7 @@ export const importSafety = {
  * a failed delivery keeps its outcome with its single replay marked used. */
 export function importRow(table, row) {
   if (table === 'crank_state_tables' || table === 'crank_state_operations') return {...row,active:0};
+  if (table === 'crank_subflow_calls') return {...row,...(['queued','running'].includes(row.status) ? {status:'interrupted'} : {}),lease_id:null,lease_expires_at:null};
   if (table === 'crank_subflow_versions') return {...row,active:0};
   if (table === 'crank_notice_deliveries') return {...row,active:0,lease_id:null,lease_expires_at:null};
   if(table==='crank_gateways')return {...Object.fromEntries(Object.entries(row).map(([key,value])=>[key,['code_hash','code_expires_at','credential_hash','public_key','fingerprint'].includes(key)?null:value])),status:'revoked'};
@@ -103,9 +106,18 @@ export async function validateRestore({ read }) {
     (step.type!=='loop' || subflowRefs(step.steps)) &&
     (step.type!=='paths' || (Array.isArray(step.branches) && step.branches.every(branch=>subflowRefs(branch.steps)) && (!step.fallback || subflowRefs(step.fallback.steps)) && (!step.always || subflowRefs(step.always.steps)))));
   for (const row of subflows.values()) {
-    try { validateSubflowDefinition(JSON.parse(row.definition_json)); } catch { return false; }
+    try {
+      validateSubflowDefinition(JSON.parse(row.definition_json));
+      if (row.recipe_json) {
+        const recipe = JSON.parse(row.recipe_json); validatePureRecipe(recipe);
+        if (JSON.stringify(recipe.definition) !== JSON.stringify(JSON.parse(row.definition_json))) return false;
+      }
+    } catch { return false; }
     const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(row.definition_json));
     if (Array.from(new Uint8Array(hash), byte => byte.toString(16).padStart(2, '0')).join('') !== row.definition_digest || row.id !== row.subflow_id + ':' + row.version) return false;
+  }
+  for (const row of await rows('crank_subflow_calls')) {
+    if (!subflows.has(row.subflow_version_id) || !(await rows('crank_wf_runs')).some(run=>run.id===row.run_id) || !(await rows('crank_wf_steps')).some(step=>step.run_id===row.run_id && step.path===row.path && step.type==='subflow' && step.operation_key===row.operation_key)) return false;
   }
   const workflows = new Map((await rows('crank_workflows')).map(row => [row.id, row]));
   const versions = new Map((await rows('crank_workflow_versions')).map(row => [row.id, row]));

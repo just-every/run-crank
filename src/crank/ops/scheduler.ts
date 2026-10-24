@@ -1,3 +1,4 @@
+import { runPureChildren } from '../workflows/subflow-calls'
 import { expireEnrollmentCodes } from '../custom/gateways'
 import { releaseGatewayTasks } from '../custom/gateway-tasks'
 import { cancelExecutorTasks, releaseExecutorTasks } from '../executors/scheduler'
@@ -51,6 +52,7 @@ async function runSchedulerPass(env: CrankEnv, time: number) {
   const schedules = await stmt(env, 'SELECT * FROM crank_schedules WHERE next_due_at<=? ORDER BY next_due_at LIMIT 25', at).all<{ workflow_id: string; version_id: string; next_due_at: string }>()
   for (const schedule of schedules.results) summary.schedules += await runSchedule(env, schedule, time)
   summary.holds = await holdUpkeep(env, time)
+  await runPureChildren(env,time)
   const queued = await queueCandidates(env, 50)
   for (const run of queued) { await executeRun(env, run.id, time); summary.executed++ }
   await followupPass(env, time)

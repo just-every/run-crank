@@ -774,9 +774,48 @@ invocation, not a separate child-run capability.
 
 Owner `POST /subflows/:id/versions/:n/revoke` stops further use. Restored versions
 start inactive. `POST .../review` with `{definition_digest,confirm:"REVIEW_PURE_SUBFLOW"}`
-reviews that exact definition without publishing/resuming a caller. Native owner
-registry/use is a conservative default pending ct. Recipes/community installation,
-provider binding and independent child histories/cancellation are not implemented.
+reviews that exact definition without publishing or resuming a caller. Native owner pure registry and use were approved by ct on 23 October at 09:30Z.
+
+`POST /api/crank/subflows/install` accepts `recipe`, its canonical SHA-256
+`recipe_digest`, and `confirm: "INSTALL_PURE_RECIPE"`. A recipe declares only
+`format: "crank.pure-recipe.v1"`, `name`, an explicit `release` identifier,
+`definition`, empty `connector_requirements`, and one to three synthetic
+`samples` with typed `input` and expected `output`. The complete manifest is at
+most 64 KiB. Every sample runs through the same bounded pure evaluator before
+installation. The community source is unverified; the owner reviews the exact
+bytes. Extra credentials, actions, nested function mappings or nonempty connector requirements are refused.
+
+Installation retains the immutable manifest in the returned version's `recipe`
+field and leaves that version inactive. Ordinary definition review and caller
+publication remain separate actions. An explicit `subflow_id` installs a chosen
+release as that registry's next local version; no caller adopts it automatically.
+Read the full manifest back from the ordinary version door. Recipe manifests and
+all definition versions travel in archives, with eligibility reset to inactive.
+Use synthetic examples only: manifests are portable configuration, and must not
+contain real customer values or secrets.
+
+A step with `mode: "child"` queues the same pure definition separately. Its
+parent returns waiting with a `children` list and the stable `child_id` in its
+step trace. `GET /api/crank/subflows/calls/:child_id` returns a separate metadata
+history and parent-history link. Inputs and results live only in the parent's
+sealed checkpoint; this history introduces no second payload copy. Cron executes
+queued children and then continues the parent. Native owners may also
+the `run` POST action on that child history endpoint; duplicate dispatch retains the same history.
+These children require native-owner production publication; draft tests and
+execution grants cannot queue them. Arbitrary child workflows remain unbuilt.
+
+the `cancel` POST action on that child history endpoint cancels the child and stops its parent;
+cancelling the parent also cancels unfinished children. Completed effects are
+never undone. Current publication and definition review are checked before every
+pure operation. Revocation pauses execution. After reviewing the definition,
+the `resume` POST action on that child history endpoint requires its `definition_digest` and
+`confirm: "RESUME_PURE_CHILD"`. This grants no workflow publication or adoption.
+Unfinished archived children restore interrupted with cleared leases; run and
+definition adoption are required before explicit receiving-owner continuation.
+Child metadata follows parent run erasure and its restore fences.
+
+Lead-to-invoice recipes, buyer account binding and provider recipe journeys
+remain unproved and require Google OAuth and a QuickBooks Online sandbox.
 
 ### Operational workflow tables (partial WORK-007)
 

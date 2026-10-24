@@ -420,6 +420,18 @@
       "name": "0069_import_door_archives.sql",
       "sha256": "86e130d5118c7b4dd581f74d3d9b9081e9bab73c2eb9480c03df286826a9e240",
       "sql": "CREATE TABLE IF NOT EXISTS ik_door_archives (\n    id TEXT PRIMARY KEY, installation_id TEXT NOT NULL, namespace TEXT NOT NULL,\n    upload_id TEXT NOT NULL, tool TEXT NOT NULL, taken_at TEXT NOT NULL, name TEXT NOT NULL,\n    bundle_sha256 TEXT NOT NULL, total_bytes INTEGER NOT NULL, total_chunks INTEGER NOT NULL,\n    counts_json TEXT NOT NULL, UNIQUE(installation_id,namespace,upload_id));\nCREATE TABLE IF NOT EXISTS ik_door_archive_chunks (\n    archive_id TEXT NOT NULL REFERENCES ik_door_archives(id), ordinal INTEGER NOT NULL,\n    sha256 TEXT NOT NULL, size INTEGER NOT NULL, base64 TEXT NOT NULL,\n    PRIMARY KEY(archive_id,ordinal));\n"
+    },
+    {
+      "binding": "DB",
+      "name": "0070_pure_recipes.sql",
+      "sha256": "bb81d737a67a9923456ca3de5f101bd87408252e847e31569ac5cb9148b21fde",
+      "sql": "ALTER TABLE crank_subflow_versions ADD COLUMN recipe_json TEXT;\nCREATE TRIGGER crank_recipe_immutable BEFORE UPDATE OF recipe_json ON crank_subflow_versions\nBEGIN SELECT RAISE(ABORT,'recipe_versions_are_immutable'); END;\n"
+    },
+    {
+      "binding": "DB",
+      "name": "0071_pure_subflow_calls.sql",
+      "sha256": "e9677222d51c6fe8a2fe248d4d5590341bf81527a8297286d3464f6e3196b3c5",
+      "sql": "CREATE TABLE crank_subflow_calls (\n id TEXT PRIMARY KEY, run_id TEXT NOT NULL, path TEXT NOT NULL,\n operation_key TEXT NOT NULL UNIQUE, subflow_version_id TEXT NOT NULL,\n status TEXT NOT NULL CHECK(status IN ('queued','running','succeeded','failed','paused','cancelled','interrupted')),\n lease_id TEXT, lease_expires_at TEXT, created_at TEXT NOT NULL,\n started_at TEXT, finished_at TEXT,\n UNIQUE(run_id,path,operation_key)\n);\nCREATE INDEX crank_subflow_call_queue ON crank_subflow_calls(status,created_at);\n"
     }
   ],
   "compatibilityDate": "2026-09-08",

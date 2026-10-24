@@ -83,6 +83,7 @@ export async function runDetail(env: CrankEnv, actor: Actor, runId: string) {
     gateway_tasks: payload ? (await stmt(env,'SELECT id,path,ordinal,status,created_at,dispatched_at,completed_at,expires_at FROM crank_gateway_tasks WHERE run_id=? ORDER BY path,ordinal',runId).all()).results : [],
     executor_tasks: (await stmt(env,'SELECT id,path,status,next_poll_at,active FROM crank_executor_tasks WHERE run_id=?',runId).all()).results,
     escalations: (await stmt(env,'SELECT path,escalated_at,recipient_ids_json FROM crank_grant_escalations WHERE run_id=?',runId).all()).results,
+    children: (await stmt(env,'SELECT id,path,subflow_version_id,status,created_at,started_at,finished_at FROM crank_subflow_calls WHERE run_id=? ORDER BY created_at,id',runId).all()).results,
     repair_of: run.repair_of ?? null, repair_paths: payload && run.repair_paths_json ? JSON.parse(run.repair_paths_json) : null,
     repairs: (await stmt(env, 'SELECT id,status FROM crank_wf_runs WHERE repair_of=? ORDER BY received_at,id', runId).all<{ id: string; status: string }>()).results,
     version: version ? { number: version.number, published_by: version.published_by, published_at: version.published_at, authority: run.grant_id ? 'owner-issued standing grant' : version.mode === 'test' ? JSON.parse(version.declared_json).test_team_revision ? 'member-authorized draft test' : 'owner-authorized draft test' : 'published workflow', retry_policy: JSON.parse(version.retry_policy_json), declared: payload ? JSON.parse(version.declared_json) : undefined } : null,
@@ -193,6 +194,7 @@ export async function cancelRun(env: CrankEnv, actor: Actor, runId: string) {
     stmt(env, "UPDATE crank_wf_steps SET status='stopped',finished_at=? WHERE run_id=? AND type='code' AND status IN ('running','waiting') AND EXISTS(SELECT 1 FROM crank_wf_runs WHERE id=? AND status='cancelled')",at,runId,runId),
     stmt(env, `UPDATE crank_waits SET resolved_at=?,resolution_json='{"cancelled":true}',decided_by=? WHERE run_id=? AND resolved_at IS NULL AND EXISTS(SELECT 1 FROM crank_wf_runs WHERE id=? AND status='cancelled' AND finished_at=?)`, at, actor.id, runId, runId, at),
     stmt(env, 'DELETE FROM crank_queue_items WHERE run_id=? AND released_at IS NULL AND EXISTS(SELECT 1 FROM crank_wf_runs WHERE id=? AND status=\'cancelled\')', runId, runId),
+    stmt(env,"UPDATE crank_subflow_calls SET status='cancelled',lease_id=NULL,lease_expires_at=NULL,finished_at=? WHERE run_id=? AND status IN ('queued','running','paused','interrupted') AND EXISTS(SELECT 1 FROM crank_wf_runs WHERE id=? AND status='cancelled')",at,runId,runId),
     auditStatement(env, actor.id, 'run.cancel', 'run', runId),
   ])
   requireValue(result[0].results.length > 0, 'This run cannot be cancelled now', 409)
