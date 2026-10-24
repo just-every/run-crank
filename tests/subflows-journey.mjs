@@ -120,6 +120,12 @@ export async function subflowsJourney() {
     assert.ok((await h.get('./notices/deliveries?run_id=' + invalidChild.id)).some(row=>row.kind==='run_failed'),'child failure reaches the normal owner notice');
     assert.equal((await h.get('./subflows/calls/' + invalidChild.children[0].id)).status,'failed');
     assert.ok(!(await h.get('workflow-runs/' + invalidChild.id)).steps.some(step=>step.step_id==='result'));
+    const handledFlow = await publish(h, 'Handled pure child failure', {trigger:{type:'manual'},steps:[{...graph(1).steps[0],mode:'child',on_error:'continue'},{id:'after',type:'map',input:{ok:'{{steps.normalize.ok}}',category:'{{steps.normalize.error.category}}'}}]});
+    const handled = await startRun(h,handledFlow,{address:12}); await h.tick();
+    const handledResult = await h.get('workflow-runs/' + handled.id);
+    assert.equal(handledResult.status,'succeeded');
+    assert.deepEqual(stepOf(handledResult,'after').output,{ok:false,category:'validation'},'continued child failures retain the ordinary structured error outcome');
+    assert.deepEqual(await h.get('./notices/deliveries?run_id=' + handled.id),[],'a handled child error does not invent a failed parent notice');
     const draftChild = await h.post('workflows/' + childFlow.id + '/test',{input},h.owner,201);
     assert.equal(draftChild.status,'paused');
     assert.deepEqual(draftChild.children,[],'draft test cannot queue production child work');

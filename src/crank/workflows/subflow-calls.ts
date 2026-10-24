@@ -62,7 +62,7 @@ export async function runPureChild(env: CrankEnv, callId: string) {
     status = cause.category === 'authority' || cause.category === 'connection' ? 'paused' : 'failed'
     failure = cause.toJSON()
   }
-  const target = await targetFor(env,run.workflow_id), finished = now(), plain = output === undefined ? null : canonical(output)
+  const target = await targetFor(env,run.workflow_id), finished = now(), plain = output === undefined ? status === 'failed' ? canonical({ok:false,error:failure}) : null : canonical(output)
   const guard = `EXISTS(SELECT 1 FROM crank_subflow_calls c JOIN crank_wf_runs r ON r.id=c.run_id WHERE c.id=? AND c.status='running' AND c.lease_id=? AND c.lease_expires_at>? AND r.status='waiting')`
   const args = [call.id,lease,finished]
   const index = await indexStatement(env,target,run.id,[plain],guard,args)
