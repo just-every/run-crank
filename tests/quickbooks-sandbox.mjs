@@ -69,7 +69,7 @@ assert.equal(customer.DisplayName, name); assert.equal(item.Name, name);
 
 const creates = new Map(), lostIds = new Map();
 let voids = 0, failures = 0;
-const h = await harness('http://127.0.0.1:9', { edge: async request => {
+const h = await harness('http://127.0.0.1:9', { bindings: { SESSION_SECRET: randomUUID() + randomUUID() }, edge: async request => {
   const url = new URL(request.url);
   if (url.hostname === 'synthetic-crank-downstream.example') {
     failures++;

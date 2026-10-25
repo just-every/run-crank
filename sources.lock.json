@@ -4346,7 +4346,7 @@
       "executable": false
     },
     "tests/gusto-sandbox.mjs": {
-      "sha256": "d2722975239eff96b539c6143808bf808d3bfdc3dfdacfb241ff8a8eb585ffe9",
+      "sha256": "ae3d114be2f44641ea511ac12685585f133ce97d415baf715aae6e3d90bea7b7",
       "executable": false
     },
     "tests/harness.mjs": {
@@ -4434,7 +4434,7 @@
       "executable": false
     },
     "tests/quickbooks-sandbox.mjs": {
-      "sha256": "6289ba6840beb3162c87a1e24cb2bf233b280d3818f9e3c8b520cbce9eb15acd",
+      "sha256": "f7777fcbfa6716d6ffcd5fde9de611322eb56f5edb0f19d4d7c1a8ebd136294a",
       "executable": false
     },
     "tests/request-limits.test.mjs": {

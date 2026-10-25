@@ -45,7 +45,7 @@ async function provision(contractorOnly) {
   return company;
 }
 
-const h = await harness('http://127.0.0.1:9');
+const h = await harness('http://127.0.0.1:9', { bindings: { SESSION_SECRET: randomUUID() + randomUUID() } });
 const taxLines = [{ amount: '1.25', currency: 'USD', tax_code: 'synthetic-crank-1', jurisdiction: 'US-CA' }];
 const scopes = ['contractors:manage', 'contractors:read', 'employees:manage', 'employees:read', 'payrolls:run', 'payrolls:read', 'contractor_forms:read', 'employee_forms:read'];
 const workerAgreement = 'Synthetic Demo data-transfer acceptance authorized by sx-crank-c-i810; no production or payment authority';
