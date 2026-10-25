@@ -58,6 +58,10 @@ export async function createConnection(env: CrankEnv, actor: Actor, input: Recor
   requireValue(definition, `Unknown app ${app}`)
   const kind = text(input.auth_kind, 'auth_kind', 40) as AuthKind
   requireValue(definition.kinds.includes(kind), `${definition.name} connections accept ${definition.kinds.join(', ')}`)
+  if (app === 'gusto' && kind === 'oauth2') {
+    requireValue(input.environment === 'sandbox', 'Gusto managed OAuth credentials are only available for sandbox companies')
+    requireValue(/^[A-Za-z0-9_-]+$/.test(text(granted.account ?? input.account_name, 'account_name', 100)), 'Bind Gusto managed credentials to one company identifier')
+  }
   const secret = validateSecret(kind, input.secret), row = { id: id(), app }
   const sealed = await seal(env, binding(row), secret), at = now()
   requireValue(input.purpose === undefined || ['production', 'test'].includes(String(input.purpose)), 'purpose must be production or test')

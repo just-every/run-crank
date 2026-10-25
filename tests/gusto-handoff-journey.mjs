@@ -1,5 +1,8 @@
 import assert from 'node:assert/strict';
+import { gustoRenewalJourney } from './gusto-renewal-journey.mjs';
 import { harness } from './harness.mjs';
+import { gustoPaymentReconciliationJourney } from './gusto-payment-reconciliation.mjs';
+import { gustoReconciliationJourney } from './gusto-reconciliation-journey.mjs';
 import { gustoAuthorityJourney, gustoOwnerVersionFence } from './gusto-authority-journey.mjs';
 import { connection, fakeEdge, fakeSecret, jsonResponse, publish, startRun, stepOf } from './kit.mjs';
 
@@ -9,21 +12,26 @@ async function sandboxPublish(h, name, graph) {
   await h.post(`workflows/${w.id}/publish`, {}, h.owner, 201); return w;
 }
 export async function gustoHandoffJourney({ inspect } = {}) {
+  await gustoRenewalJourney();
   const fake = fakeEdge(), token = fakeSecret('synthetic-crank-1'), company = 'synthetic-crank-2';
-  const workers = new Map(), payments = new Map();
+  const workers = new Map(), workerKinds = new Map(), payments = new Map();
   let sequence = 10, failReadback = false;
   fake.routes.set('api.gusto-demo.com', ({ method, url, headers, body }) => {
     assert.equal(headers.authorization, 'Bearer ' + token);
     const path = url.pathname;
     if (method === 'POST' && /\/(contractors|employees)$/.test(path)) {
       const record = { uuid: 'synthetic-crank-' + sequence++, company_uuid: company, ...JSON.parse(body) };
-      workers.set(record.uuid, record); return jsonResponse(record, 201);
+      workers.set(record.uuid, record); workerKinds.set(record.uuid, path.split('/').at(-1)); return jsonResponse(record, 201);
     }
     if (method === 'POST' && path.endsWith('/contractor_payments')) {
       const record = { uuid: 'synthetic-crank-' + sequence++, status: 'Funded', ...JSON.parse(body) };
       payments.set(record.uuid, record); return jsonResponse(record);
     }
-    if (path.endsWith('/receipt')) return jsonResponse({ contractor_payment_uuid: path.split('/').at(-2), ach_trace_number: 'synthetic-crank-3', wage: '90071992547409.91' });
+    if (method==='GET' && /\/companies\/[^/]+\/(contractors|employees)$/.test(path)) {
+      const list=[...workers.values()].filter(w=>workerKinds.get(w.uuid)===path.split('/').at(-1));
+      return jsonResponse(list,200,{'x-page':'1','x-total-pages':'1','x-total-count':String(list.length),'x-per-page':'100'});
+    }
+    if (path.endsWith('/receipt')) return jsonResponse({ contractor_payment_uuid: path.split('/').at(-2), company_uuid: company, ach_trace_number: 'synthetic-crank-3', wage: payments.get(path.split('/').at(-2))?.wage });
     if (path.endsWith('/forms')) return jsonResponse([{ uuid: 'synthetic-crank-4', name: path.includes('/employees/') ? 'W-2' : '1099-NEC', year: 2026 }]);
     const id = path.split('/').at(-1);
     if (failReadback) return jsonResponse({ error: 'synthetic-crank-5' }, 403);
@@ -35,6 +43,7 @@ export async function gustoHandoffJourney({ inspect } = {}) {
     const bound = await connection(h, { app: 'gusto', label: 'Synthetic Gusto sandbox', auth_kind: 'bearer', environment: 'sandbox', purpose: 'test', account_name: company, secret: { token }, scopes });
     const input = { connection_id: bound.id, company_id: company }, consent = async (operation, extra = {}) => h.post('regulated-operations/consent', {
       definition_digest: (await h.get(`regulated-operations?connection_id=${bound.id}&company_id=${company}`)).operations.find(o=>o.operation===operation).operation_definition_digest,
+      credential_authority_generation: (await h.get(`regulated-operations?connection_id=${bound.id}&company_id=${company}`)).operations.find(o=>o.operation===operation).credential_authority_generation,
       ...input, operation, consent: true, agreement_reference: 'synthetic-crank-6', ...extra,
     });
     const disclosure = () => h.get(`regulated-operations?connection_id=${bound.id}&company_id=${company}`);
@@ -44,6 +53,7 @@ export async function gustoHandoffJourney({ inspect } = {}) {
     const initial = await disclosure();
     assert.equal(initial.operations.find(o => o.operation === 'contractor_1099_handoff').authorized, false);
     assert.ok(initial.responsibilities.provider && initial.responsibilities.owner && initial.responsibilities.crank);
+    assert.ok(initial.responsibilities.agreement_reference && initial.responsibilities.operation_consent && initial.responsibilities.onboarding && initial.responsibilities.bank_authorization);
     const taxLines = [{ jurisdiction: 'synthetic-crank-7', amount: '0.01', currency: 'USD', tax_code: 'synthetic-crank-8' }];
     const workflow = await sandboxPublish(h, 'Synthetic contractor handoff', { trigger: { type: 'manual' }, steps: [{ id: 'handoff', type: 'gusto.contractor_1099_handoff', connection_id: bound.id,
       input: { company_id: company, currency: 'USD', tax_lines: taxLines, ach_reference: 'synthetic-crank-9', data: { type: 'Individual', wage_type: 'Fixed', first_name: 'Synthetic', last_name: 'Contractor', start_date: '2026-10-26', file_new_hire_report: false } } }] });
@@ -67,9 +77,15 @@ export async function gustoHandoffJourney({ inspect } = {}) {
 
     await gustoAuthorityJourney({h,fake,bound,company,token,scopes,workflow,consent,sandboxPublish});
 
+    await gustoReconciliationJourney({h,fake,bound,company,consent,sandboxPublish,inspect});
+
     const employeeWorkflow = await sandboxPublish(h, 'Synthetic employee handoff', { trigger: { type: 'manual' }, steps: [{ id: 'employee', type: 'gusto.employee_w2_handoff', connection_id: bound.id,
       input: { company_id: company, currency: 'USD', tax_lines: taxLines, data: { first_name: 'Synthetic', last_name: 'Employee', self_onboarding: false } } }] });
     await consent('employee_w2_handoff');
+    for(const data of [{first_name:'Synthetic',last_name:'Employee',self_onboarding:true},{first_name:'Synthetic',last_name:'Employee',file_new_hire_report:true}]) {
+      const unsafe=await sandboxPublish(h,'Synthetic refused filing or invitation',{trigger:{type:'manual'},steps:[{id:'employee',type:'gusto.employee_w2_handoff',connection_id:bound.id,input:{company_id:company,currency:'USD',data}}]});
+      const count=fake.requests.length;assert.equal((await startRun(h,unsafe,{})).status,'paused');assert.equal(fake.requests.length,count);
+    }
     const employeeRun = await startRun(h, employeeWorkflow, {}), employee = stepOf(employeeRun, 'employee').output;
     assert.equal(employeeRun.status, 'succeeded'); assert.equal(employee.handoff, 'W-2'); assert.deepEqual(employee.tax_lines, taxLines);
     for (const [type, field, id] of [['contractor_forms', 'contractor_id', contractor.provider_id], ['employee_forms', 'employee_id', employee.provider_id]]) {
@@ -85,6 +101,7 @@ export async function gustoHandoffJourney({ inspect } = {}) {
     assert.equal(paid.status, 'succeeded', JSON.stringify(paid.error));
     assert.equal(paidOutput.provider_record.wage, '90071992547409.91'); assert.deepEqual(paidOutput.tax_lines, taxLines);
     assert.equal(paidOutput.ach_reference, 'synthetic-crank-9'); assert.equal(paidOutput.provider_record.receipt.ach_trace_number, 'synthetic-crank-3');
+    await gustoPaymentReconciliationJourney({h,fake,bound,company,consent,sandboxPublish,contractorId:contractor.provider_id});
     const posted = fake.requests.find(r => r.method === 'POST' && r.url.pathname.endsWith('/contractor_payments'));
     assert.equal(JSON.parse(posted.body).wage, '90071992547409.91');
     await consent('payment_readback');

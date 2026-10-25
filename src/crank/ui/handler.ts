@@ -187,7 +187,7 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
         if(form.daily_limit!==undefined) input.daily_limit=Number(form.daily_limit)
       }
       if (/\/workflow-runs\/[^/]+\/approve$/.test(path)) {const edits=decisionEdits(form);if(edits) input.edits=edits}
-      if (path === '/api/crank/regulated-operations/consent') input.consent = form.consent === 'true'
+      if (path === '/api/crank/regulated-operations/consent') { input.consent = form.consent === 'true'; input.credential_authority_generation = Number(form.credential_authority_generation) }
       for(const key of Object.keys(input)) if(key.startsWith('decision_edit_') || key.startsWith('decision_kind_')) delete input[key]
       if(path==='/api/crank/grants') {
         requireOwner(actor)

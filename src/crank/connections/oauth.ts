@@ -8,8 +8,11 @@ import { credential, createConnection, getConnection, rotateConnection, storeSec
 import { open, randomToken, seal } from './vault'
 
 /** Provider OAuth 2.0 authorization-code endpoints, from each provider's documentation. */
-interface Provider { authorize: string; token: string; separator: ' ' | ','; pkce: boolean; extra?: Record<string, string>; tokenAuth: 'body' | 'basic' }
+interface Provider { authorize: string; token: string; separator: ' ' | ','; pkce: boolean; extra?: Record<string, string>; tokenAuth: 'body' | 'basic'; tokenEncoding?: 'json'; managedOnly?: boolean }
 export const PROVIDERS: Record<string, Provider> = {
+  // Company-scoped Demo credentials are supplied through the native connection door.
+  // https://docs.gusto.com/embedded-payroll/docs/authentication-and-authorization
+  gusto: { authorize: 'https://api.gusto-demo.com/oauth/authorize', token: 'https://api.gusto-demo.com/oauth/token', separator: ' ', pkce: false, tokenAuth: 'body', tokenEncoding: 'json', managedOnly: true },
   quickbooks: { authorize: 'https://appcenter.intuit.com/connect/oauth2', token: 'https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer', separator: ' ', pkce: false, tokenAuth: 'basic' },
   // https://api.slack.com/authentication/oauth-v2
   slack: { authorize: 'https://slack.com/oauth/v2/authorize', token: 'https://slack.com/api/oauth.v2.access', separator: ',', pkce: false, tokenAuth: 'body' },
@@ -44,6 +47,7 @@ export async function startOauth(env: CrankEnv, actor: Actor, input: Record<stri
   requireOwner(actor)
   const app = text(input.app, 'app', 40), provider = PROVIDERS[app]
   requireValue(provider, `No OAuth flow for ${app}`)
+  requireValue(!provider.managedOnly, 'Gusto managed renewal is sandbox only; add the company access and refresh tokens through Connections')
   const scopes = Array.isArray(input.scopes) ? input.scopes.map(scope => text(scope, 'scope', 200)) : []
   requireValue(scopes.length > 0, 'Choose the scopes to request')
   const client = await oauthApp(env, app), state = randomToken(), verifier = randomToken(48), at = Date.now()
@@ -64,7 +68,9 @@ async function tokenRequest(app: string, form: Record<string, string>) {
   const provider = PROVIDERS[app]
   const headers = new Headers({ 'content-type': 'application/x-www-form-urlencoded', accept: 'application/json' }), fields = { ...form }
   if (provider.tokenAuth === 'basic') { headers.set('authorization', 'Basic ' + btoa(`${fields.client_id}:${fields.client_secret}`)); delete fields.client_id; delete fields.client_secret }
-  const response = await boundedFetch(provider.token, { method: 'POST', headers, body: new URLSearchParams(fields).toString(), timeoutMs: 15000, maxBytes: 65536 })
+  if (provider.tokenEncoding === 'json') headers.set('content-type', 'application/json')
+  const payload = provider.tokenEncoding === 'json' ? JSON.stringify(fields) : new URLSearchParams(fields).toString()
+  const response = await boundedFetch(provider.token, { method: 'POST', headers, body: payload, timeoutMs: 15000, maxBytes: 65536 })
   let body: unknown
   try { body = JSON.parse(utf8(response.bytes)) } catch { throw new StepError('auth', `${app} returned an unreadable token response`) }
   if (response.status !== 200 || !isObject(body) || body.ok === false || typeof body.access_token !== 'string') throw new StepError('auth', `${app} refused the token request; reconnect the account`)
@@ -107,6 +113,8 @@ export async function finishOauth(env: CrankEnv, actor: Actor, params: URLSearch
  * a rotating refresh token; waiters re-read the winning sealed credential. A stale
  * claim whose credential never changed is uncertain, so it requires reconnecting. */
 export async function freshToken(env: CrankEnv, initialRow: ConnectionRow, initialSecret: Secret): Promise<Secret> {
+  if (initialRow.app === 'gusto' && initialRow.auth_kind === 'oauth2' && initialRow.environment !== 'sandbox')
+    throw new StepError('connection', 'Gusto managed token renewal is only available for sandbox companies', { connection_id: initialRow.id, reconnect: true })
   const fresh = (secret: Secret) => !secret.expires_at || Date.parse(secret.expires_at) - Date.now() > 60000
   if (initialRow.auth_kind !== 'oauth2' || fresh(initialSecret)) return initialSecret
   const deadline = Date.now() + 20000

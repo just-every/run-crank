@@ -126,7 +126,7 @@
       "executable": false
     },
     ".github/workflows/verify.yml": {
-      "sha256": "7a5296516d6d4b30cb210a1bf78b23128ce221aea6d300f27f0d42b37e67dbd6",
+      "sha256": "48389266c026e5afebb82c243c29a70add12a3fb83217b187ad5e9e378cd5554",
       "executable": false
     },
     ".gitignore": {
@@ -1366,7 +1366,7 @@
       "executable": false
     },
     "src/crank/connections/apps.ts": {
-      "sha256": "4ca8c1059fe01371653eb753882bb4bb03f2d0ffa44378b4daba15be5635525d",
+      "sha256": "7ae35870ebb85f90a747dd103e31f2fb334146bd5573f1890712b8f8bf2fe157",
       "executable": false
     },
     "src/crank/connections/auth.ts": {
@@ -1378,11 +1378,11 @@
       "executable": false
     },
     "src/crank/connections/oauth.ts": {
-      "sha256": "5cefade2e950e62d741e090ab1183b396f6ff6dd949947bb8c2dd7853cf39fa8",
+      "sha256": "960b84454693df2ed9720e664798607b9289d4d369be4654e8daf762a10f90fc",
       "executable": false
     },
     "src/crank/connections/store.ts": {
-      "sha256": "8628eeee2f8b75919e18d3e99a2217328ce69b2b94a404ee8cfa5b7121e1f443",
+      "sha256": "c6647555ae74f602f3159cca6760234210eea543d2828bb0af0e27b7e5cc2002",
       "executable": false
     },
     "src/crank/connections/vault.ts": {
@@ -1873,6 +1873,14 @@
       "sha256": "004441297a52bc50bb83c782c8857a3b904d91aa4866ca37a59d3fa69ed0c3c4",
       "executable": false
     },
+    "src/crank/providers/gusto-reconciliation.ts": {
+      "sha256": "2b864f83595aedb2e9666e5da168fd98e063792f24d60d3e7fe81450bad30e21",
+      "executable": false
+    },
+    "src/crank/providers/gusto-version.ts": {
+      "sha256": "650f938ed1870eb7529d94dfde723799eb6f48ea1de5a9bc83c2e48488731900",
+      "executable": false
+    },
     "src/crank/providers/gusto.ts": {
       "sha256": "8bda4828479ab3770a439d4b56392827508d53f4536f3f0d70b8ee1b8456f278",
       "executable": false
@@ -1886,7 +1894,7 @@
       "executable": false
     },
     "src/crank/providers/regulated-authority.ts": {
-      "sha256": "c87e7f3dc4384d116b9852e4f202a5eed53224c6be775fd81c813c5e53f180ba",
+      "sha256": "cac82a7abe60c1cb66f7a136db2341d00edd436076954c275e28e84bd0c91b2c",
       "executable": false
     },
     "src/crank/restore-policy.d.mts": {
@@ -2086,7 +2094,7 @@
       "executable": false
     },
     "src/crank/ui/handler.ts": {
-      "sha256": "abe4c3c4738af093b1dfcd4952feb46a7e8cf4f638bc4a958ae9817f5e884295",
+      "sha256": "b43ffcf645b17df0783209e7dc7d48e7d38c5b6e25658f3cef88ecde26817678",
       "executable": false
     },
     "src/crank/ui/icons.ts": {
@@ -2110,11 +2118,11 @@
       "executable": false
     },
     "src/crank/ui/provider-consent.ts": {
-      "sha256": "2e29f7cf53fbf6e37afe726f21a8f7d241b8e927b4b154c7a3b703621aaf4940",
+      "sha256": "80ae0243d8060681ef153de0b6a475ddf2ab21921867a07af36f51e54aae98fa",
       "executable": false
     },
     "src/crank/ui/reconciliation.ts": {
-      "sha256": "5465120a3452d4b34470e21071fa2880dbadc9d3a450f363fa61dfe7aae6bd40",
+      "sha256": "aba05af917b3c4987678fb5aaa4ae1dad2c4f8a5fb20dc16515609b9ce1bc457",
       "executable": false
     },
     "src/crank/ui/recovery.ts": {
@@ -2198,7 +2206,7 @@
       "executable": false
     },
     "src/crank/workflows/reconciliation.ts": {
-      "sha256": "8fe1bb0bbc894f452bdf5719027644766ed44121d8b9d35ed14728840386f036",
+      "sha256": "bc96aabec7ec230b6239db03c11d1cfb5d61075abdda7782af08b7f31dabf9b4",
       "executable": false
     },
     "src/crank/workflows/repair.ts": {
@@ -4298,11 +4306,11 @@
       "executable": false
     },
     "tests/financial-browser.mjs": {
-      "sha256": "e1a49e7fcd4b0ed1b904143a66b3231c94b4339f817cd3cc9c9cbbb2375bcd73",
+      "sha256": "c278a3f9db25b534be8c6398220e4421cbe8508195f4e1dec03823518e654939",
       "executable": false
     },
     "tests/financial-ownership.mjs": {
-      "sha256": "a4be902f1d5f8440033925fd164053994802caeaafdf8b9185509ba5b2a7b926",
+      "sha256": "a310deec39544d3a35772192962920ff6ad46e15083b9cfc9aed9aca2d3571e3",
       "executable": false
     },
     "tests/followups-browser.mjs": {
@@ -4334,11 +4342,23 @@
       "executable": false
     },
     "tests/gusto-authority-journey.mjs": {
-      "sha256": "4837fb57600be49d1e41bb61049143555c7da59024da4de72643071a123ed8f6",
+      "sha256": "006c7769690beaeeb3c9933a24956580857a2249496bd54cd0eee8116d20fa3d",
       "executable": false
     },
     "tests/gusto-handoff-journey.mjs": {
-      "sha256": "a3d7092d6389a313ead55248d26514b0237819f94ffe06bc7cfcb56cd1a0dc6a",
+      "sha256": "45bd08403fdff10e102a9c6da70c4ef97eace78b98d19b3670453ba13572b29d",
+      "executable": false
+    },
+    "tests/gusto-payment-reconciliation.mjs": {
+      "sha256": "d4f7f0da96a00c3e0e315766198cdabd5be1f3acd5ad6f21e70c09e512590629",
+      "executable": false
+    },
+    "tests/gusto-reconciliation-journey.mjs": {
+      "sha256": "5a1dcc6ce8066284794b76b914d829080f5ab761debc5c7895399f5103be84e5",
+      "executable": false
+    },
+    "tests/gusto-renewal-journey.mjs": {
+      "sha256": "6839f97478483bd9c7ba9b5541563a7e5a27aff3d6891e57ce67a40cad441e40",
       "executable": false
     },
     "tests/gusto-sandbox-fixture.mjs": {
@@ -4346,11 +4366,11 @@
       "executable": false
     },
     "tests/gusto-sandbox.mjs": {
-      "sha256": "ae3d114be2f44641ea511ac12685585f133ce97d415baf715aae6e3d90bea7b7",
+      "sha256": "e677202f069ff765f0de21523c1569abb077872d8bc7eb2dee25ff664c403070",
       "executable": false
     },
     "tests/harness.mjs": {
-      "sha256": "d296f665b51b75deebc0994910cfdcfac149923782fb9221d5d384f9c5c78db8",
+      "sha256": "d5e4d0d9fb8109076322cabffd741fe97cc71683baecc0d8ccc448c51b5e3e38",
       "executable": false
     },
     "tests/historical.test.mjs": {

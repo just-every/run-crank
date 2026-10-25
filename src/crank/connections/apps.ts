@@ -6,7 +6,7 @@ export interface AppDefinition {
   test?: { method: string; url: string }
 }
 export const APPS: Record<string, AppDefinition> = {
-  gusto: { name: 'Gusto company token', kinds: ['bearer'], domains: ['api.gusto-demo.com', 'api.gusto.com'] },
+  gusto: { name: 'Gusto company credentials', kinds: ['bearer', 'oauth2'], domains: ['api.gusto-demo.com', 'api.gusto.com'] },
   quickbooks: { name: 'QuickBooks sandbox', kinds: ['oauth2'], domains: ['sandbox-quickbooks.api.intuit.com'] },
   http: { name: 'HTTP API', kinds: ['bearer', 'basic', 'api_key', 'hmac', 'oauth2_client_credentials'], domains: 'declared' },
   webhook: { name: 'Webhook signing secret', kinds: ['signing_secret'], domains: [] },

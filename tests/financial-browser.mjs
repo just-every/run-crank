@@ -50,9 +50,45 @@ try {
    if(state==='multiple')await expect(page.getByLabel('Provider record').locator('option')).toHaveCount(2);
    await shot(width,state);
   }});
-  await gustoHandoffJourney({inspect:async({h,bound,company,run,state})=>{
+  await gustoHandoffJourney({inspect:async({h,bound,company,run,state,preview})=>{
    await attach(h,width);
+   if(state==='gusto-uncertain'){
+    await page.goto(h.origin+`/app/workflow-runs/${run.id}?reconcile=handoff`);
+    await expect(page.locator('.detail-primary .title-row .status')).toHaveText('Uncertain');
+    await expect(page.locator('.timeline-item[data-state="uncertain"]')).toHaveCount(1);
+    await expect(page.locator('.timeline-item[data-state="succeeded"]')).toHaveCount(run.steps.filter(step=>step.status==='succeeded').length);
+    const record=page.getByLabel('Provider record');await expect(record.locator('option')).toHaveCount(preview.matches.length);
+    await record.selectOption(preview.matches[0].Id);
+    await page.getByLabel('Reason for this choice').fill('Confirmed the original Gusto worker after the lost acknowledgement; retain completed checkpoints and continue once');
+    await shot(width,'gusto-uncertain');
+    await page.getByRole('button',{name:'Use record and continue',exact:true}).click();await page.waitForLoadState('networkidle');
+    await expect(page.locator('.detail-primary .title-row .status')).toHaveText('Success');
+    await expect(page.getByText('Read back, not repeated',{exact:true})).toBeVisible();return true;
+   }
+   if(state==='gusto-reconciled'){
+    await page.goto(h.origin+`/app/workflow-runs/${run.id}`);
+    await expect(page.locator('.detail-primary .title-row .status')).toHaveText('Success');
+    await expect(page.getByText('Read back, not repeated',{exact:true})).toBeVisible();
+    await expect(page.locator('.timeline-item[data-state="succeeded"]')).toHaveCount(run.steps.length);
+    await expect(page.locator('.timeline-item[data-state="uncertain"]')).toHaveCount(0);
+    await shot(width,'gusto-reconciled');return;
+   }
    if(state==='consent'){
+    await page.goto(h.origin+`/app/workflow-runs/${run.id}`);
+    await expect(page.locator('.detail-primary .title-row .status')).toHaveText('Paused');
+    const requirements=page.locator('.detail-primary > .notice');
+    await expect(requirements).toContainText(/agreement reference/i);
+    await expect(requirements).toContainText(/owner consent/i);
+    await expect(requirements).toContainText('contractor_1099_handoff');
+    const obligation=page.locator('.timeline-item[data-state="waiting"]');
+    await expect(obligation).toHaveCount(1);
+    await expect(obligation.locator('.timeline-head .status')).toHaveText('Waiting');
+    await obligation.getByText('Input and output',{exact:true}).click();
+    const retained=JSON.parse(await obligation.locator('pre').first().innerText());
+    const held=run.steps.find(step=>step.status==='waiting').input;
+    assert.equal(retained.currency,held.currency);assert.deepEqual(retained.tax_lines,held.tax_lines);assert.equal(retained.ach_reference,held.ach_reference);
+    await expect(page.getByRole('button',{name:'Resume run',exact:true})).toBeVisible();
+    await shot(width,'paused-gusto');
     await page.goto(h.origin+'/app/account');await shot(width,'account-provider-settings');
     await page.getByRole('link',{name:'Review Gusto responsibilities and operation consent',exact:true}).click();
     await page.getByLabel('Gusto company identifier').fill(company);await page.getByRole('button',{name:'Inspect requirements',exact:true}).click();
@@ -63,6 +99,6 @@ try {
    }
    await page.goto(h.origin+`/app/workflow-runs/${run.id}`);await expect(page.getByText('Success',{exact:true}).first()).toBeVisible();await shot(width,state);
   }});
-  console.log(`Financial owner journeys ${width}: provider consent, owner readback choice, continuation, compensation and shared tooltips passed`);
+  console.log(`Financial owner journeys ${width}: retained Gusto obligation, provider consent, owner readback choice, continuation, compensation and shared tooltips passed`);
  }
 }finally{await context?.close();await browser.close();if(server){server.closeAllConnections();await new Promise(done=>server.close(done))}}
