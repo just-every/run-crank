@@ -2046,7 +2046,7 @@
       "executable": false
     },
     "src/crank/ui/editor/model.ts": {
-      "sha256": "89ddeea527a7e19de8bc041a581b770e0d79532a4eb2d23a5de8f0d285b38dc5",
+      "sha256": "3e28de264ebb1c7310dd91415724dac6ae26fd91a5d8aaf06bfec32931d74a92",
       "executable": false
     },
     "src/crank/ui/editor/restore.ts": {
@@ -2110,11 +2110,11 @@
       "executable": false
     },
     "src/crank/ui/provider-consent.ts": {
-      "sha256": "7c6e2e681bc8d1b6c370e72af62310b6f91388a02b34dc039049bd9955f25876",
+      "sha256": "b36b0e50dae288e66782bd1a80e1e187741c12413a349316875cec6d56ff2ece",
       "executable": false
     },
     "src/crank/ui/reconciliation.ts": {
-      "sha256": "109b98b47d31ce09896ff903e26e9a7c461664a20efb217495ccc56edef0d3ea",
+      "sha256": "5465120a3452d4b34470e21071fa2880dbadc9d3a450f363fa61dfe7aae6bd40",
       "executable": false
     },
     "src/crank/ui/recovery.ts": {
