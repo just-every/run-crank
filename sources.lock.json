@@ -138,7 +138,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "b6cd328ce5dadecd4041cb91b88dc26099476cb4d5d58c12130f799fd99409ef",
+      "sha256": "4a93d281e1b8c8fc22d5027f1bcc6844b65ece13a0c4d1f8568a32d800aadfc6",
       "executable": false
     },
     "AGENTS.md": {
@@ -162,7 +162,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "cf932f0e6dbd907d728f7cc840b9d9bdb39e1208dd17f2421c4b336e442e8800",
+      "sha256": "1efb7f0fcd8393cab24f9fb26e52b80de6cd3f75e1c75c221a3b80271e1f0f39",
       "executable": false
     },
     "DEMO.md": {
@@ -2118,7 +2118,7 @@
       "executable": false
     },
     "src/crank/ui/provider-consent.ts": {
-      "sha256": "80ae0243d8060681ef153de0b6a475ddf2ab21921867a07af36f51e54aae98fa",
+      "sha256": "af6e61bd1a0e7e41f75fab23626cb645cf24d0c2e7c6202874ec030a570d542b",
       "executable": false
     },
     "src/crank/ui/reconciliation.ts": {
