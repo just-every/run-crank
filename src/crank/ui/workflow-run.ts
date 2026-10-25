@@ -1,4 +1,5 @@
 import { decisionFields } from './decision-fields'
+import { reconciliationView } from './reconciliation'
 import { retryHistory } from './retry-history'
 import { attemptTime, runComparison, stepDebug } from './run-debug'
 import type { Graph } from '../engine/graph'
@@ -18,7 +19,7 @@ export function approvalForm(runId: string, wait: any, returnTo: string) {
 }
 
 /** A workflow run: `graph` is its own version's, `live` the published version (for a rename it made). */
-export function workflowRunView(run: RunDetail, workflow: any, graph: Graph | undefined, live: { graph: Graph; number: number } | null, connections: Connection[], actor: any, people: { id: string; name: string }[], comparison: RunDetail | null = null, prior: any[] = [], notices: any[] = []) {
+export function workflowRunView(run: RunDetail, workflow: any, graph: Graph | undefined, live: { graph: Graph; number: number } | null, connections: Connection[], actor: any, people: { id: string; name: string }[], comparison: RunDetail | null = null, prior: any[] = [], notices: any[] = [], reconciliation: any = null) {
   const owner = actor.role === 'owner', back = `/app/workflow-runs/${run.id}`
   const memberName = (id: unknown) => id === actor.id ? actor.name : actor.team && !people.some(person => person.id === id) ? 'Person’s name unavailable' : personName(people, id)
   const ordered = graph ? flatten(nodes(graph)).filter(n => !n.trigger) : []
@@ -44,7 +45,7 @@ export function workflowRunView(run: RunDetail, workflow: any, graph: Graph | un
     <h3>Steps</h3><ol class="timeline">${steps.map(item).join('')}</ol>${controls ? `<div class="actions">${controls}</div>` : ''}</section>
     <div class="detail-side"><section class="panel"><h2>Run</h2><dl class="facts"><dt>Workflow</dt><dd><a href="/app/workflows/${esc(run.workflow_id)}">${esc(workflow?.name ?? run.workflow_id)}</a></dd><dt>Version</dt><dd>${esc(run.version?.number ?? '—')}</dd><dt>Authority</dt><dd>${esc(run.version?.authority ?? 'Published workflow')}${run.version?.published_by ? ` · ${esc(memberName(run.version.published_by))}` : ''}</dd><dt>Source event</dt><dd>${esc(run.source_id ?? '—')}</dd><dt>Source time</dt><dd>${run.source_time ? timestamp(run.source_time) : '—'}</dd><dt>Trigger</dt><dd>${esc(triggerWords(run.trigger_kind, graph, connections))}</dd><dt>Business outcome</dt><dd>${run.business_outcome === 'owner_verified' ? 'Business complete · owner verified the declared obligations.' : 'Not independently verified; step success records execution only.'}</dd><dt>Business key</dt><dd class="mono">${esc(run.business_key ?? '—')}</dd><dt>Received</dt><dd>${timestamp(run.received_at)}</dd><dt>Duration</dt><dd>${duration(run.received_at, run.finished_at)}</dd><dt>Run ID</dt><dd><code>${esc(run.id)}</code></dd></dl></section>
     ${owner && notices.length ? `<section class="panel"><h2>Notice delivery</h2><p class="muted">Provider acceptance does not confirm the owner read a notice. Uncertain sends need reconciliation before resending.</p><ul class="list">${notices.map(n => `<li class="history-item"><strong>${esc(n.channel)} · ${esc(n.state === 'delivered' ? 'Provider accepted' : n.state === 'suppressed' ? 'Development mail suppressed' : n.state)}</strong>${n.active ? '' : ' · inactive restore'}<p>${esc(n.kind.replace(/_/g,' '))} · ${n.attempts} attempt(s)${n.failure ? ` · ${esc(n.failure)}` : ''}</p>${n.history.length ? `<details><summary>Delivery attempts</summary><ol>${n.history.map((a:any) => `<li>${timestamp(a.started_at)} · ${esc(a.outcome)}${a.failure ? ` · ${esc(a.failure)}` : ''}</li>`).join('')}</ol></details>` : ''}</li>`).join('')}</ul></section>` : ''}
-    ${decisions ? `<section class="panel">${decisions}</section>` : ''}
+    ${reconciliationView(run,reconciliation,owner)}${decisions ? `<section class="panel">${decisions}</section>` : ''}
     <section class="panel"><h2>Trigger payload</h2>${run.trigger !== undefined ? `<pre>${json(run.trigger)}</pre>` : '<p class="muted">Restricted for your role.</p>'}</section></div></div>${run.attempts?.length ? `<section class="panel"><h2>HTTP attempts</h2><ul>${run.attempts.map(a => `<li><code>${esc(a.path)}</code> · attempt ${a.number} · ${esc(a.method)} ${esc(a.destination_origin ?? '')} · ${attemptTime(a.started_at)} · ${a.finished_at ? attemptTime(a.finished_at) : 'Response not recorded'} · ${esc(a.http_status ?? a.error_category ?? 'Outcome unknown')}${retryHistory(a, run.status)}</li>`).join('')}</ul></section>` : ''}${runComparison(run, comparison, prior)}`
 }
 

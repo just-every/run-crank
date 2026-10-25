@@ -34,6 +34,8 @@ export interface StepContext {
   input: Record<string, unknown>
   requests: { next: number }
   retryPolicy?: Record<string, unknown>
+  /** Native regulated operations recheck their exact consent at physical dispatch. */
+  beforeRequest?: () => Promise<void>
   /** Earlier completed decision for this step, when resuming after a wait. */
   wait?: WaitRow
   respond(response: { status: number; headers: Record<string, string>; body: unknown }): Promise<void>

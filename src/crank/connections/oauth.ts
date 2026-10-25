@@ -10,6 +10,7 @@ import { open, randomToken, seal } from './vault'
 /** Provider OAuth 2.0 authorization-code endpoints, from each provider's documentation. */
 interface Provider { authorize: string; token: string; separator: ' ' | ','; pkce: boolean; extra?: Record<string, string>; tokenAuth: 'body' | 'basic' }
 export const PROVIDERS: Record<string, Provider> = {
+  quickbooks: { authorize: 'https://appcenter.intuit.com/connect/oauth2', token: 'https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer', separator: ' ', pkce: false, tokenAuth: 'basic' },
   // https://api.slack.com/authentication/oauth-v2
   slack: { authorize: 'https://slack.com/oauth/v2/authorize', token: 'https://slack.com/api/oauth.v2.access', separator: ',', pkce: false, tokenAuth: 'body' },
   // https://developers.hubspot.com/docs/api/oauth-quickstart-guide
@@ -61,7 +62,9 @@ export async function startOauth(env: CrankEnv, actor: Actor, input: Record<stri
 
 async function tokenRequest(app: string, form: Record<string, string>) {
   const provider = PROVIDERS[app]
-  const response = await boundedFetch(provider.token, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded', accept: 'application/json' }, body: new URLSearchParams(form).toString(), timeoutMs: 15000, maxBytes: 65536 })
+  const headers = new Headers({ 'content-type': 'application/x-www-form-urlencoded', accept: 'application/json' }), fields = { ...form }
+  if (provider.tokenAuth === 'basic') { headers.set('authorization', 'Basic ' + btoa(`${fields.client_id}:${fields.client_secret}`)); delete fields.client_id; delete fields.client_secret }
+  const response = await boundedFetch(provider.token, { method: 'POST', headers, body: new URLSearchParams(fields).toString(), timeoutMs: 15000, maxBytes: 65536 })
   let body: unknown
   try { body = JSON.parse(utf8(response.bytes)) } catch { throw new StepError('auth', `${app} returned an unreadable token response`) }
   if (response.status !== 200 || !isObject(body) || body.ok === false || typeof body.access_token !== 'string') throw new StepError('auth', `${app} refused the token request; reconnect the account`)
@@ -89,12 +92,15 @@ export async function finishOauth(env: CrankEnv, actor: Actor, params: URLSearch
   const client = await oauthApp(env, row.app)
   const form: Record<string, string> = { grant_type: 'authorization_code', code, redirect_uri: redirectUri(env), client_id: client.client_id, client_secret: client.client_secret }
   if (PROVIDERS[row.app].pkce) form.code_verifier = verifier
+  const realm = row.app === 'quickbooks' ? params.get('realmId') : null
+  if (row.app === 'quickbooks') requireValue(realm && /^[0-9]{1,30}$/.test(realm), 'QuickBooks returned no sandbox company realmId')
+  if (row.app === 'quickbooks' && row.connection_id) requireValue((await getConnection(env, row.connection_id)).account_name === realm, 'Reconnect the original QuickBooks company; use a new connection for another company', 409)
   const token = await tokenRequest(row.app, form)
   const scopes = token.granted ?? JSON.parse(row.scopes_json)
   const input = { app: row.app, label: row.label, auth_kind: 'oauth2', secret: token.secret }
   return row.connection_id
     ? rotateConnection(env, actor, row.connection_id, input, { scopes, expiresAt: token.expires })
-    : createConnection(env, actor, input, { scopes, account: token.team, expiresAt: token.expires })
+    : createConnection(env, actor, input, { scopes, account: realm ?? token.team, expiresAt: token.expires })
 }
 
 /** Refresh custody is separate from request capacity. Exactly one caller may use

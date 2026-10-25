@@ -105,7 +105,7 @@ export async function runsToday(env: CrankEnv, workflowId: string) {
   return { since, timezone: zone, runs: row?.runs ?? 0, failed: row?.failed ?? 0, awaiting_approval: row?.awaiting_approval ?? 0 }
 }
 
-function stepAt(graph: Graph, path: string): Step | null {
+export function stepAt(graph: Graph, path: string): Step | null {
   const parts = path.split('/')
   let steps = graph.steps
   for (let i = 0; i < parts.length; i++) {

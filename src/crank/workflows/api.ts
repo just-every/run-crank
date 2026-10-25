@@ -1,4 +1,6 @@
+import { consentRegulatedOperation, readRegulatedOperations } from '../providers/regulated-authority'
 import { tableApi } from '../tables/api'
+import { previewReconciliation, reconcileEffect } from './reconciliation'
 import { subflowApi } from './subflows'
 import { reviseProposal } from '../grants/proposals'
 import { issueGrant, readGrants, revokeGrant } from '../grants/store'
@@ -37,7 +39,7 @@ import { previewReplay, replaySteps } from './replay'
 import { cancelRun, decideApproval, previewWorkflow, resumeRun, runDetail, runsToday, searchRuns, startRun } from './runs'
 import { createWorkflow, duplicateWorkflow, getWorkflow, listWorkflows, presentWorkflow, publishWorkflow, rollbackWorkflow, setWorkflowState, unpublishWorkflow, updateDraft, versionGraph } from './store'
 
-const PREFIXES = ['/api/crank/tables', '/api/crank/subflows', '/api/crank/grants', '/api/crank/agent-tasks', '/api/crank/skills', '/api/crank/usage', '/api/crank/historical', '/api/crank/workflows', '/api/crank/workflow-runs', '/api/crank/connections', '/api/crank/oauth', '/api/crank/hooks', '/api/crank/holds', '/api/crank/queues', '/api/crank/catalog', '/api/crank/coverage', '/api/crank/settings', '/api/crank/audit', '/api/crank/notices', '/api/crank/reports']
+const PREFIXES = ['/api/crank/regulated-operations', '/api/crank/tables', '/api/crank/subflows', '/api/crank/grants', '/api/crank/agent-tasks', '/api/crank/skills', '/api/crank/usage', '/api/crank/historical', '/api/crank/workflows', '/api/crank/workflow-runs', '/api/crank/connections', '/api/crank/oauth', '/api/crank/hooks', '/api/crank/holds', '/api/crank/queues', '/api/crank/catalog', '/api/crank/coverage', '/api/crank/settings', '/api/crank/audit', '/api/crank/notices', '/api/crank/reports']
 const match = (path: string, pattern: RegExp) => pattern.exec(path)?.slice(1).map(decodeURIComponent) ?? null
 
 async function testConnection(env: CrankEnv, actor: Actor, connectionId: string, input: Record<string, unknown>) {
@@ -132,9 +134,11 @@ export async function workflowApi(request: Request, env: CrankEnv): Promise<Resp
       if ((m = match(path, /^\/api\/crank\/workflows\/([^/]+)\/versions\/(\d+)$/))) return json(await versionGraph(env, m[0], Number(m[1])))
       if ((m = match(path, /^\/api\/crank\/workflows\/([^/]+)\/today$/))) return json(await runsToday(env, m[0]))
       if ((m = match(path, /^\/api\/crank\/workflows\/([^/]+)\/holds$/))) return json((await stmt(env, 'SELECT * FROM crank_holds WHERE workflow_id=? ORDER BY created_at DESC', m[0]).all()).results)
+      if (path === '/api/crank/regulated-operations') return json(await readRegulatedOperations(env, actor, Object.fromEntries(url.searchParams)))
       if (path === '/api/crank/workflow-runs') return json(await searchRuns(env, actor, url.searchParams))
       if ((m = match(path, /^\/api\/crank\/workflow-runs\/([^/]+)$/))) return json(await runDetail(env, actor, m[0]))
       if ((m = match(path, /^\/api\/crank\/workflow-runs\/([^/]+)\/replay$/))) return json(await previewReplay(env, actor, m[0]))
+      if ((m = match(path, /^\/api\/crank\/workflow-runs\/([^/]+)\/reconcile$/))) return json(await previewReconciliation(env, actor, m[0], url.searchParams.get('path') ?? ''))
       if ((m = match(path, /^\/api\/crank\/holds\/([^/]+)$/))) return json(await getHold(env, m[0]))
       if (path === '/api/crank/queues') return json((await stmt(env, `SELECT q.name,q.spacing_seconds,q.last_release_at,COUNT(i.seq) AS depth,MIN(i.arrived_at) AS oldest_arrived_at FROM crank_delay_queues q
         LEFT JOIN crank_queue_items i ON i.queue=q.name AND i.released_at IS NULL GROUP BY q.name ORDER BY q.name`).all<any>()).results.map(q => ({ ...q, next_release_at: q.depth ? new Date(Math.max(Date.now(), q.last_release_at ? Date.parse(q.last_release_at) + q.spacing_seconds * 1000 : 0)).toISOString() : null })))
@@ -190,7 +194,9 @@ export async function workflowApi(request: Request, env: CrankEnv): Promise<Resp
     if ((m = match(path, /^\/api\/crank\/hooks\/([^/]+)\/revoke$/))) return json(await revokeHook(env, actor, m[0]))
     if ((m = match(path, /^\/api\/crank\/holds\/([^/]+)\/estimate$/))) return json(await quoteHold(env, actor, m[0], input))
     if ((m = match(path, /^\/api\/crank\/holds\/([^/]+)\/(release|discard)$/))) return json(await decideHold(env, actor, m[0], m[1] as 'release' | 'discard', input))
+    if (path === '/api/crank/regulated-operations/consent') return json(await consentRegulatedOperation(env, actor, input))
     if ((m = match(path, /^\/api\/crank\/workflow-runs\/([^/]+)\/replay$/))) return json(await replaySteps(env, actor, m[0], input))
+    if ((m = match(path, /^\/api\/crank\/workflow-runs\/([^/]+)\/reconcile$/))) return json(await reconcileEffect(env, actor, m[0], input))
     if ((m = match(path, /^\/api\/crank\/workflow-runs\/([^/]+)\/(approve|reject|resume|cancel)$/))) {
       if (m[1] === 'approve' || m[1] === 'reject') return json(await decideApproval(env, actor, m[0], m[1], input))
       return json(m[1] === 'resume' ? await resumeRun(env, actor, m[0]) : await cancelRun(env, actor, m[0]))

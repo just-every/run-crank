@@ -31,6 +31,7 @@ import { appliedView, importView, previewView, refusalView } from './move-in-vie
 import { erasurePanels, subjectPreview } from './erasure-view'
 import { applyReviewed, DoorRefusal, undoPlan, uploadAndPlan } from './move-in'
 import { connectionsView } from './connections'
+import { providerConsentView } from './provider-consent'
 import { dataFlowsPanel } from './data-flows'
 import { approvalsView, workflowRunView } from './workflow-run'
 import { editorView } from './editor'
@@ -186,6 +187,7 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
         if(form.daily_limit!==undefined) input.daily_limit=Number(form.daily_limit)
       }
       if (/\/workflow-runs\/[^/]+\/approve$/.test(path)) {const edits=decisionEdits(form);if(edits) input.edits=edits}
+      if (path === '/api/crank/regulated-operations/consent') input.consent = form.consent === 'true'
       for(const key of Object.keys(input)) if(key.startsWith('decision_edit_') || key.startsWith('decision_kind_')) delete input[key]
       if(path==='/api/crank/grants') {
         requireOwner(actor)
@@ -274,7 +276,8 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
       const compareId = url.searchParams.get('older') || url.searchParams.get('compare'), comparison = compareId ? await read('/api/crank/workflow-runs/'+encodeURIComponent(compareId)) : null
       if(comparison && comparison.workflow_id !== run.workflow_id) throw Object.assign(new Error('Compare runs of the same workflow'),{status:422})
       const prior = await read('/api/crank/workflow-runs?'+new URLSearchParams({workflow:run.workflow_id,limit:'50'}))
-      return page('Workflow run',workflowRunView(run,workflow,graph,live,await read('/api/crank/connections'),actor,state.people ?? [],comparison,prior.runs,owner ? await read('/api/crank/notices/deliveries?run_id='+encodeURIComponent(run.id)) : []),{state,crumbs:[['Runs','/app/runs']]})
+      const reconciliation = owner && url.searchParams.get('reconcile') ? await read('/api/crank/workflow-runs/'+run.id+'/reconcile?'+new URLSearchParams({path:url.searchParams.get('reconcile')!})) : null
+      return page('Workflow run',workflowRunView(run,workflow,graph,live,await read('/api/crank/connections'),actor,state.people ?? [],comparison,prior.runs,owner ? await read('/api/crank/notices/deliveries?run_id='+encodeURIComponent(run.id)) : [],reconciliation),{state,crumbs:[['Runs','/app/runs']]})
     }
     if(url.pathname==='/app/approvals') {
       const waiting = await read('/api/crank/workflow-runs?status=awaiting_approval&limit=100')
@@ -290,6 +293,11 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
     }
     if(url.pathname==='/app/inbox') return page('Inbox',inboxPanel(await read('/api/crank/inbox')),{state,intro:'In-app requests addressed to you. The original workflow controls access and every decision.'})
     requireOwner(actor)
+    if(url.pathname==='/app/settings/provider-consent') {
+      const connections=await read('/api/crank/connections')
+      const disclosure=url.searchParams.get('connection_id') && url.searchParams.get('company_id') ? await read('/api/crank/regulated-operations?'+url.searchParams) : null
+      return page('Provider consent',providerConsentView(connections,disclosure),{state,section:'Account',crumbs:[['Account','/app/account']]})
+    }
     if(url.pathname==='/app/followups') {
       const [people,waiting,workflows,followups]=await Promise.all([read('/auth/operators'),read('/api/crank/workflow-runs?status=awaiting_approval&limit=100'),read('/api/crank/workflows'),read('/api/crank/followups')])
       const runs=await Promise.all(waiting.runs.map(async (run:any)=>({...await read('/api/crank/workflow-runs/'+encodeURIComponent(run.id)),workflow_name:workflows.find((w:any)=>w.id===run.workflow_id)?.name})))
