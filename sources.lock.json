@@ -138,7 +138,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "219706c5ab7f67c6ffd98b1e66852d5049932877386f8359e17b5799d2212868",
+      "sha256": "f52f3da9c10be2e3088b3c509d9145404706f8db6aeb5a71a01d70fa797539e8",
       "executable": false
     },
     "AGENTS.md": {
@@ -162,7 +162,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "85641917cad6928107bea3c5c25d08c97f826a08716ab78865b11aaed51939f5",
+      "sha256": "e096b07f878df28c4f43abc11105f67d553af32c6cc14a1eb69528408d89a990",
       "executable": false
     },
     "DEMO.md": {
@@ -186,7 +186,7 @@
       "executable": false
     },
     "docs/API.md": {
-      "sha256": "7687a1185c10fbc1318d8406a3c03f2a1d2d0f647e361f3a9c92912dd9277a02",
+      "sha256": "52dbd94b2da38f7018b6635008e476bec7eb162c94b242fb3fce69a909f8e1dd",
       "executable": false
     },
     "docs/BACKUP-RESTORE.md": {
@@ -1874,7 +1874,7 @@
       "executable": false
     },
     "src/crank/providers/gusto.ts": {
-      "sha256": "b7f7c7f1ee47b1ace429ea8d9518b3d71da83bf6b2e734683ece46bc62ad329b",
+      "sha256": "8bda4828479ab3770a439d4b56392827508d53f4536f3f0d70b8ee1b8456f278",
       "executable": false
     },
     "src/crank/providers/quickbooks-compensation.ts": {
@@ -1886,7 +1886,7 @@
       "executable": false
     },
     "src/crank/providers/regulated-authority.ts": {
-      "sha256": "94f06048315cd49c0fbbb97bfe0ad34ae5946dddd6c707185e4656ba573395f4",
+      "sha256": "c87e7f3dc4384d116b9852e4f202a5eed53224c6be775fd81c813c5e53f180ba",
       "executable": false
     },
     "src/crank/restore-policy.d.mts": {
@@ -2110,7 +2110,7 @@
       "executable": false
     },
     "src/crank/ui/provider-consent.ts": {
-      "sha256": "b36b0e50dae288e66782bd1a80e1e187741c12413a349316875cec6d56ff2ece",
+      "sha256": "2e29f7cf53fbf6e37afe726f21a8f7d241b8e927b4b154c7a3b703621aaf4940",
       "executable": false
     },
     "src/crank/ui/reconciliation.ts": {
@@ -4298,11 +4298,11 @@
       "executable": false
     },
     "tests/financial-browser.mjs": {
-      "sha256": "6a20ed5b1da1d1b16d4fab2da5078d33ee1746c0df77178dd637f57378d8ea7c",
+      "sha256": "e1a49e7fcd4b0ed1b904143a66b3231c94b4339f817cd3cc9c9cbbb2375bcd73",
       "executable": false
     },
     "tests/financial-ownership.mjs": {
-      "sha256": "72fd57d39e7cf9cd189896a1091310abdc5f19101ecc07a659468935a25666eb",
+      "sha256": "a4be902f1d5f8440033925fd164053994802caeaafdf8b9185509ba5b2a7b926",
       "executable": false
     },
     "tests/followups-browser.mjs": {
@@ -4333,12 +4333,20 @@
       "sha256": "c6977345338c3536b5c24b0f7d1fd323e9f42432ae73d54dca38ab781fda4e08",
       "executable": false
     },
+    "tests/gusto-authority-journey.mjs": {
+      "sha256": "304aefef3bf9d662ec68a6697f02efa05e18896e9e0738262ec995fdf5d96fdd",
+      "executable": false
+    },
     "tests/gusto-handoff-journey.mjs": {
-      "sha256": "f675448de2c90a0c7f16c5f8f6fd51206da9e395e0f287905856f7056ca199f7",
+      "sha256": "a3d7092d6389a313ead55248d26514b0237819f94ffe06bc7cfcb56cd1a0dc6a",
+      "executable": false
+    },
+    "tests/gusto-sandbox-fixture.mjs": {
+      "sha256": "2bd9eb669bbddee6b742e4696246c148b6b049eb94c8d108bc408a1db84deb2f",
       "executable": false
     },
     "tests/gusto-sandbox.mjs": {
-      "sha256": "70466311bd91820a699c4f4d1010069b9a7fab359b92df5c3b2acfdd1c8f3070",
+      "sha256": "d2722975239eff96b539c6143808bf808d3bfdc3dfdacfb241ff8a8eb585ffe9",
       "executable": false
     },
     "tests/harness.mjs": {

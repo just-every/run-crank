@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { harness } from './harness.mjs';
+import { gustoAuthorityJourney, gustoOwnerVersionFence } from './gusto-authority-journey.mjs';
 import { connection, fakeEdge, fakeSecret, jsonResponse, publish, startRun, stepOf } from './kit.mjs';
 
 /** Native public-door flow; only the third-party Gusto API is faked. */
@@ -32,7 +33,8 @@ export async function gustoHandoffJourney({ inspect } = {}) {
   try {
     const scopes = ['contractors:manage', 'contractors:read', 'employees:manage', 'employees:read', 'payrolls:run', 'payrolls:read', 'contractor_forms:read', 'employee_forms:read'];
     const bound = await connection(h, { app: 'gusto', label: 'Synthetic Gusto sandbox', auth_kind: 'bearer', environment: 'sandbox', purpose: 'test', account_name: company, secret: { token }, scopes });
-    const input = { connection_id: bound.id, company_id: company }, consent = (operation, extra = {}) => h.post('regulated-operations/consent', {
+    const input = { connection_id: bound.id, company_id: company }, consent = async (operation, extra = {}) => h.post('regulated-operations/consent', {
+      definition_digest: (await h.get(`regulated-operations?connection_id=${bound.id}&company_id=${company}`)).operations.find(o=>o.operation===operation).operation_definition_digest,
       ...input, operation, consent: true, agreement_reference: 'synthetic-crank-6', ...extra,
     });
     const disclosure = () => h.get(`regulated-operations?connection_id=${bound.id}&company_id=${company}`);
@@ -62,6 +64,8 @@ export async function gustoHandoffJourney({ inspect } = {}) {
     if (inspect) await inspect({ h, bound, company, run: completed, state: 'handoff-complete' });
     assert.equal(contractor.provider_record.company_uuid, company); assert.equal(contractor.provider_readback, true);
     assert.equal((await disclosure()).operations.find(o => o.operation === 'contractor_payment').authorized, false, 'worker consent never authorizes payment');
+
+    await gustoAuthorityJourney({h,fake,bound,company,token,scopes,workflow,consent,sandboxPublish});
 
     const employeeWorkflow = await sandboxPublish(h, 'Synthetic employee handoff', { trigger: { type: 'manual' }, steps: [{ id: 'employee', type: 'gusto.employee_w2_handoff', connection_id: bound.id,
       input: { company_id: company, currency: 'USD', tax_lines: taxLines, data: { first_name: 'Synthetic', last_name: 'Employee', self_onboarding: false } } }] });
@@ -116,6 +120,7 @@ export async function gustoHandoffJourney({ inspect } = {}) {
       assert.ok((await restored.get(disclosurePath)).operations.every(operation => !operation.authorized), 'restored consent never grants the receiving installation execution authority');
       assert.equal(stepOf(await restored.get('workflow-runs/' + paid.id), 'pay').output.ach_reference, 'synthetic-crank-9');
     } finally { await restored.close(); }
+    await gustoOwnerVersionFence({h,bound,company,workflow,fake});
 
   } finally { await h.close(); }
 }

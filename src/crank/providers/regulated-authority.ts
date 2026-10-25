@@ -13,11 +13,16 @@ export const GUSTO_OPERATIONS = {
   employee_forms: { name: 'Read employee tax forms', scopes: ['employee_forms:read', 'employees:read'], effect: 'Reads provider forms; availability is not proof of filing or acceptance.' },
   payment_readback: { name: 'Read a contractor payment', scopes: ['payrolls:read', 'contractors:read'], effect: 'Reads provider payment status and ACH receipt references; submission is not settlement.' },
 } as const
+export const GUSTO_CONNECTOR_VERSION = '1'
+export const GUSTO_API_VERSION = '2026-06-15'
+async function operationDefinition(operation: GustoOperation) {
+  return digest(canonical({ connector_version: GUSTO_CONNECTOR_VERSION, api_version: GUSTO_API_VERSION, operation, ...GUSTO_OPERATIONS[operation] }))
+}
 export type GustoOperation = keyof typeof GUSTO_OPERATIONS
 export const GUSTO_RESPONSIBILITIES = {
   provider: 'Gusto validates payroll and tax data, applies its agreements and onboarding requirements, and performs authorized payment processing and tax filing under those agreements.',
   owner: 'The owner confirms worker classification, USD amounts, tax lines and ACH references, obtains worker permissions, completes provider agreements, and authorizes each operation and production publication.',
-  crank: 'Crank transfers the declared data and retains provider responses and unfinished obligations. Recording an agreement reference does not sign an agreement or authorize another operation.',
+  crank: 'Crank transfers the declared data and retains provider responses and unfinished obligations. The agreement reference is owner-attested. Recording it does not execute or verify an agreement, complete provider onboarding, authorize a bank account, or authorize another operation.',
 }
 
 export function gustoOperation(value: unknown): GustoOperation {
@@ -31,16 +36,21 @@ export function gustoCompany(value: unknown): string {
 }
 
 /** A restored archive cannot confer authority on a new installation or credential.
- * Token renewal/rotation deliberately requires fresh operation consent. */
-async function binding(env: CrankEnv, row: ConnectionRow, company: string, operation: GustoOperation) {
-  return digest(canonical({ installation: env.SESSION_SECRET, connection: row.id, app: row.app,
-    environment: row.environment, purpose: row.purpose, account: row.account_name, status: row.status,
-    consented_at: row.consented_at, rotated_at: row.rotated_at, secret_iv: row.secret_iv,
-    scopes: row.scopes_json, company, operation }))
+ * Credential replacement requires fresh operation consent; unchanged token renewal preserves it. */
+async function credentialAuthority(env: CrankEnv, connectionId: string) {
+  const row = await stmt(env, "SELECT COUNT(*) AS generation FROM crank_audit WHERE subject_kind='connection' AND subject_id=? AND action IN ('connection.create','connection.rotate','connection.reconnect','connection.revoke','connection.purpose')", connectionId).first<{ generation: number }>()
+  return row!.generation
 }
+async function binding(env: CrankEnv, row: ConnectionRow, company: string, operation: GustoOperation) {
+  return digest(canonical({ installation: env.SESSION_SECRET, operation_definition_digest: await operationDefinition(operation),
+    credential_authority_generation: await credentialAuthority(env, row.id), connection: row.id, app: row.app,
+    environment: row.environment, purpose: row.purpose, account: row.account_name, status: row.status,
+    consented_at: row.consented_at, scopes: [...new Set(JSON.parse(row.scopes_json) as string[])].sort(), company, operation }))
+}
+
 interface ConsentDetail {
   connection_id: string; company_id: string; operation: GustoOperation; consent: boolean
-  agreement_reference: string | null; binding: string; owner_version: number
+  agreement_reference: string | null; binding: string; owner_version: number; connector_version: string; operation_definition_digest: string; credential_authority_generation: number
 }
 async function operationState(env: CrankEnv, row: ConnectionRow, company: string, operation: GustoOperation) {
   const subject = await digest(canonical([row.id, company, operation]))
@@ -56,9 +66,9 @@ async function operationState(env: CrankEnv, row: ConnectionRow, company: string
   if (row.status !== 'active') requirements.push('Reconnect the Gusto connection')
   if (row.account_name && row.account_name !== company) requirements.push('Use the company bound to this Gusto connection account')
   for (const scope of GUSTO_OPERATIONS[operation].scopes) if (!scopes.includes(scope)) requirements.push(`Provider scope required: ${scope}`)
-  if (!current || !detail?.agreement_reference) requirements.push('Record the completed Gusto agreement reference for this company and operation')
+  if (!current || !detail?.agreement_reference) requirements.push('Record the owner-attested completed Gusto agreement reference for this company and operation')
   if (!current || !detail?.consent) requirements.push(`Native owner consent required: ${operation}`)
-  return { operation, ...GUSTO_OPERATIONS[operation], authorized: requirements.length === 0, requirements,
+  return { operation, ...GUSTO_OPERATIONS[operation], connector_version: GUSTO_CONNECTOR_VERSION, operation_definition_digest: await operationDefinition(operation), credential_authority_generation: await credentialAuthority(env,row.id), authorized: requirements.length === 0, requirements,
     consent: current && detail?.consent === true, agreement_reference: current ? detail?.agreement_reference ?? null : null,
     consented_by: current ? record!.actor_id : null, consented_at: current ? record!.at : null }
 }
@@ -79,9 +89,10 @@ export async function consentRegulatedOperation(env: CrankEnv, actor: Actor, inp
   requireValue(typeof input.consent === 'boolean', 'consent must explicitly be true or false')
   if (input.consent) requireValue(!row.account_name || row.account_name === company, 'company_id must match this Gusto connection account', 403)
   const agreement = input.consent ? text(input.agreement_reference, 'agreement_reference', 500) : null
+  if (input.consent) requireValue(input.definition_digest === await operationDefinition(operation), 'The Gusto operation definition changed; inspect its current responsibilities and consent again', 409)
   if (input.consent) requireValue(row.status === 'active', 'Reconnect Gusto before authorizing an operation')
   const detail: ConsentDetail = { connection_id: row.id, company_id: company, operation, consent: input.consent,
-    agreement_reference: agreement, owner_version: actor.version, binding: await binding(env, row, company, operation) }
+    agreement_reference: agreement, owner_version: actor.version, connector_version: GUSTO_CONNECTOR_VERSION, operation_definition_digest: await operationDefinition(operation), credential_authority_generation: await credentialAuthority(env,row.id), binding: await binding(env, row, company, operation) }
   await guardedBatch(env, actor, 'owner', [auditStatement(env, actor.id, 'regulated_operation.consent', 'regulated_operation', await digest(canonical([row.id, company, operation])), { ...detail })])
   return operationState(env, await getConnection(env, row.id), company, operation)
 }

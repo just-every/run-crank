@@ -58,7 +58,7 @@ try {
     await page.getByLabel('Gusto company identifier').fill(company);await page.getByRole('button',{name:'Inspect requirements',exact:true}).click();
     const disclosure=page.locator('details').filter({has:page.locator('summary').filter({hasText:'Send contractor data for 1099 preparation'})});await disclosure.locator('summary').click();
     await shot(width,'provider-consent-required');
-    await disclosure.getByLabel('Completed provider agreement reference').fill('synthetic-crank-6');await disclosure.getByRole('checkbox').check();await disclosure.getByRole('button',{name:'Authorize operation',exact:true}).click();await page.waitForLoadState('networkidle');
+    await disclosure.getByLabel('Owner-attested completed agreement reference').fill('synthetic-crank-6');await disclosure.getByRole('checkbox').check();await disclosure.getByRole('button',{name:'Authorize operation',exact:true}).click();await page.waitForLoadState('networkidle');
     await expect(page.locator('summary').filter({hasText:'Send contractor data for 1099 preparation · Authorized'})).toBeVisible();await shot(width,'provider-authorized');return true;
    }
    await page.goto(h.origin+`/app/workflow-runs/${run.id}`);await expect(page.getByText('Success',{exact:true}).first()).toBeVisible();await shot(width,state);

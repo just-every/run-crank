@@ -2,7 +2,7 @@ import { httpRequest } from '../connectors/http-step'
 import { StepError } from '../engine/errors'
 import type { Step, StepContext, StepType } from '../engine/types'
 import { isObject } from '../engine/values'
-import { GUSTO_OPERATIONS, gustoCompany, requireGustoAuthority, type GustoOperation } from './regulated-authority'
+import { GUSTO_API_VERSION, GUSTO_OPERATIONS, gustoCompany, requireGustoAuthority, type GustoOperation } from './regulated-authority'
 
 // Official API version and endpoints: https://docs.gusto.com/embedded-payroll/reference/post-v1-employees
 // https://docs.gusto.com/embedded-payroll/reference/post-v1-companies-company_uuid-contractors
@@ -38,9 +38,11 @@ async function request(step: Step, ctx: StepContext, base: string, path: string,
   let result
   try {
     result = await httpRequest.execute({ id: step.id, type: 'http', connection_id: step.connection_id, body_kind: 'json', timeout_ms: step.timeout_ms },
-      { ...ctx, beforeRequest: async () => { await requireGustoAuthority(ctx.env, String(step.connection_id), gustoCompany(ctx.input.company_id), step.type.slice('gusto.'.length) as GustoOperation) }, input: { method, url: base + '/v1/' + path, headers: { 'X-Gusto-API-Version': '2026-06-15', accept: 'application/json' }, ...(data ? { body: data } : {}) } })
+      { ...ctx, beforeRequest: async () => { await requireGustoAuthority(ctx.env, String(step.connection_id), gustoCompany(ctx.input.company_id), step.type.slice('gusto.'.length) as GustoOperation) }, input: { method, url: base + '/v1/' + path, headers: { 'X-Gusto-API-Version': GUSTO_API_VERSION, accept: 'application/json' }, ...(data ? { body: data } : {}) } })
   } catch (error) {
-    if (error instanceof StepError && Number(error.detail.status) === 422 && step.type === 'gusto.contractor_payment') {
+    const providerErrors = error instanceof StepError && isObject(error.detail.body) && Array.isArray(error.detail.body.errors) ? error.detail.body.errors : []
+    const missingOnboarding = providerErrors.some(issue => isObject(issue) && typeof issue.message === 'string' && /must be (?:fully set up|onboarded)/i.test(issue.message))
+    if (error instanceof StepError && Number(error.detail.status) === 422 && step.type === 'gusto.contractor_payment' && missingOnboarding) {
       throw new StepError('authority', 'Gusto setup required: complete company onboarding and contractor onboarding, including provider agreements, signed forms and verified bank details, before ACH payment', { connection_id: step.connection_id, setup_requirements: ['gusto_company_onboarding', 'gusto_contractor_onboarding'], obligation_retained: true })
     }
     if (error instanceof StepError && [401, 403].includes(Number(error.detail.status))) {
