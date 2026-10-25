@@ -1,4 +1,4 @@
-import { graphExport, loopExport } from './n8n-graph-fixture.mjs';
+import { graphExport, loopExport, switchExport, dateExport } from './n8n-graph-fixture.mjs';
 import {before,after,test} from 'node:test';
 import assert from 'node:assert/strict';
 import {createServer} from 'node:http';
@@ -219,7 +219,7 @@ test('MIG-001 native graph review, exact apply, restart, branch outcomes and pro
  const execution=await harness(declared,{edge:async request=>{if(new URL(request.url).origin!==declared)return undefined;const headers=new Headers(request.headers);headers.delete('content-length');return fetch(target+new URL(request.url).pathname,{method:request.method,headers,body:await request.arrayBuffer()})}});try{
   const good=graphExport(declared,'synthetic-crank-5'),badType=graphExport(declared,'synthetic-crank-6');badType.name='Synthetic strict condition refusal';Object.assign(badType.nodes[1].parameters.assignments.assignments[0],{type:'string',value:'8'});
   const loop=loopExport(declared),filtered=graphExport(declared,'synthetic-crank-filter');filtered.name='Synthetic native filter';filtered.nodes[2].type='n8n-nodes-base.filter';filtered.connections.n2.main.splice(1,1);filtered.nodes.splice(5,1);
-  const p=await doorImport(execution,JSON.stringify([good,badType,loop,filtered])),w=(await execution.get('workflows')).find(w=>w.name===good.name);
+  const p=await doorImport(execution,JSON.stringify([good,badType,loop,filtered,dateExport(declared),switchExport(declared),{...switchExport(declared,'synthetic-crank-parallel'),name:'Synthetic parallel Switch',nodes:switchExport(declared).nodes.map(n=>n.type==='n8n-nodes-base.switch'?{...n,parameters:{...n.parameters,options:{...n.parameters.options,allMatchingOutputs:true}}}:n)}])),w=(await execution.get('workflows')).find(w=>w.name===good.name);
   await execution.post('workflows/'+w.id+'/publish',{},execution.owner,201);const hook=await execution.post('workflows/'+w.id+'/hooks',{},execution.owner,201);
   for(const amount of [8,2]){
    const before=requests.length,message='synthetic-crank-'+amount;
@@ -247,6 +247,7 @@ test('MIG-001 native graph review, exact apply, restart, branch outcomes and pro
   }
   const beforeFailure=requests.length;mode='reject';
   try{await deliver(execution,lh.url,{method:'POST',headers:{'content-type':'application'+'/'+'json'},body:JSON.stringify({messages:['synthetic-crank-17','synthetic-crank-18']})});assert.equal((await settled(execution,(await execution.get('workflow-runs?workflow='+lw.id)).runs[0].id)).status,'failed');assert.equal(requests.length,beforeFailure+1,'serial source loop stops before the second item after failure')}finally{mode='ok'}
+  const beforeTypeFailure=requests.length;await deliver(execution,lh.url,{method:'POST',headers:{'content-type':'application'+'/'+'json'},body:JSON.stringify({messages:[{value:'synthetic-crank-20'}]})});const typedRun=await settled(execution,(await execution.get('workflow-runs?workflow='+lw.id)).runs[0].id);assert.equal(typedRun.status,'failed');assert.equal(typedRun.error.category,'type_mismatch');assert.equal(requests.length,beforeTypeFailure);
   const countBefore=requests.length;
   await deliver(execution,lh.url,{method:'POST',headers:{'content-type':'application'+'/'+'json'},body:JSON.stringify({messages:Array(1001).fill('synthetic-crank-12')})});
   assert.equal((await settled(execution,(await execution.get('workflow-runs?workflow='+lw.id)).runs[0].id)).status,'failed');assert.equal(requests.length,countBefore);
@@ -266,6 +267,17 @@ test('MIG-001 native graph review, exact apply, restart, branch outcomes and pro
   const fw=(await execution.get('workflows')).find(w=>w.name===filtered.name);
   await execution.post('workflows/'+fw.id+'/publish',{},execution.owner,201);const fh=await execution.post('workflows/'+fw.id+'/hooks',{},execution.owner,201);
   for(const amount of [9,1]){const before=requests.length;await deliver(execution,fh.url,{method:'POST',headers:{'content-type':'application'+'/'+'json'},body:JSON.stringify({amount,message:'synthetic-crank-15'})});let run=await settled(execution,(await execution.get('workflow-runs?workflow='+fw.id)).runs[0].id);if(run.status==='waiting'){await execution.tick();run=await settled(execution,run.id)}assert.equal(run.status,amount>5?'succeeded':'stopped_by_filter');assert.equal(requests.length,before+(amount>5?1:0))}
+  for(const parallel of [false,true]){
+   const sw=(await execution.get('workflows')).find(w=>w.name===(parallel?'Synthetic parallel Switch':'Synthetic native Switch'));
+   await execution.post('workflows/'+sw.id+'/publish',{},execution.owner,201);const sh=await execution.post('workflows/'+sw.id+'/hooks',{},execution.owner,201);
+   for(const amount of [9,1]){const before=requests.length;await deliver(execution,sh.url,{method:'POST',headers:{'content-type':'application'+'/'+'json'},body:JSON.stringify({amount,message:'synthetic-crank-19'})});const run=await settled(execution,(await execution.get('workflow-runs?workflow='+sw.id)).runs[0].id);assert.equal(run.status,'succeeded',JSON.stringify(run));assert.equal(requests.length,before+(parallel&&amount>5?2:1));assert.ok(run.steps.some(s=>s.step_id===(amount>5?'n3':'n5')));for(const request of requests.slice(before))assert.deepEqual(JSON.parse(request.text),{amount,message:'synthetic-crank-19'})}
+  }
+  const invalidSwitch=await harness(declared);try{
+   for(const change of [v=>v.nodes[2].parameters.mode='expression',v=>v.nodes[2].parameters.options.looseTypeValidation=true,v=>v.nodes[2].parameters.options.fallbackOutput=0,v=>v.nodes[2].parameters.rules.values[0].conditions.conditions[0].rightValue='={{ $json.amount }}']){const bad=switchExport(declared);change(bad);const rejected=await doorPlan(invalidSwitch,JSON.stringify(bad));assert.equal(rejected.status,200,rejected.text);assert.equal(rejected.value.rejected.length,1);await door(invalidSwitch,'undo',{planId:rejected.value.planId})}
+  }finally{await invalidSwitch.close()}
+  const dw=(await execution.get('workflows')).find(w=>w.name==='Synthetic native date formatting');
+  await execution.post('workflows/'+dw.id+'/publish',{},execution.owner,201);const dh=await execution.post('workflows/'+dw.id+'/hooks',{},execution.owner,201);
+  for(const [date,expected] of [['2026-07-01T01:30:00Z','2026-06-30'],[null,null],['invalid',undefined]]){const before=requests.length;await deliver(execution,dh.url,{method:'POST',headers:{'content-type':'application'+'/'+'json'},body:JSON.stringify({date})});const run=await settled(execution,(await execution.get('workflow-runs?workflow='+dw.id)).runs[0].id);assert.equal(run.status,expected===undefined?'failed':'succeeded',JSON.stringify(run));assert.equal(requests.length,before+(expected===undefined?0:1));if(expected!==undefined)assert.deepEqual(JSON.parse(requests.at(-1).text),{date:expected})}
   const undo=await door(execution,'undo',{planId:p.planId});assert.ok(undo.status>=400||undo.value.job?.state!=='undone');assert.ok(await execution.get('workflows/'+w.id));
  }finally{await execution.close()}
 });

@@ -50,6 +50,12 @@ function reconcile(args: Args) {
 }
 
 export const utilityTransforms: Record<string, Transform> = {
+  'utility.assert_type': args => {
+    const type = choice(args, 'type', ['string', 'number', 'boolean', 'object', 'array'] as const), value = args.value
+    const valid = type === 'array' ? Array.isArray(value) : type === 'object' ? isObject(value) : typeof value === type && (type !== 'number' || Number.isFinite(value))
+    if (!valid) throw new StepError('type_mismatch', `Expected a ${type} value; no source coercion was applied`)
+    return value
+  },
   'utility.lookup': args => {
     const table = args.table
     if (!isObject(table)) throw new StepError('validation', 'lookup table must map keys to values')

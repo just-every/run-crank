@@ -10,7 +10,7 @@ export const dateTransforms: Record<string, Transform> = {
     const ms = instant(args), tz = zone(args)
     return { iso: new Date(ms).toISOString(), local: formatDate(ms, 'iso', tz), date: formatDate(ms, 'date', tz), unix: Math.floor(ms / 1000), timezone: tz }
   },
-  'date.format': args => formatDate(instant(args), typeof args.pattern === 'string' ? args.pattern : 'iso', zone(args)),
+  'date.format': args => args.nullable === true && (args.value === null || args.value === undefined) ? args.value : formatDate(instant(args), typeof args.pattern === 'string' ? args.pattern : 'iso', zone(args)),
   'date.add': args => formatDate(addTime(instant(args), integer(args, 'amount'), requireUnit(args.unit), zone(args), args.calendar), typeof args.pattern === 'string' ? args.pattern : 'iso', zone(args)),
   'date.subtract': args => formatDate(addTime(instant(args), -integer(args, 'amount'), requireUnit(args.unit), zone(args), args.calendar), typeof args.pattern === 'string' ? args.pattern : 'iso', zone(args)),
   'date.compare': args => {

@@ -29,3 +29,22 @@ export function loopExport(target,id='synthetic-crank-loop') {
   node('n5','httpRequest',4.2,{method:'POST',url:target+'/graph-events',sendBody:true,specifyBody:'json',jsonBody:'={{ $json }}',options:{}}),
  ],connections:{n0:{main:[[edge('n1')]]},n1:{main:[[edge('n2')]]},n2:{main:[[edge('n3')]]},n3:{main:[[],[edge('n4')]]},n4:{main:[[edge('n5')]]},n5:{main:[[edge('n3')]]}}};
 }
+
+export function switchExport(target,id='synthetic-crank-switch') {
+ const source=graphExport(target,id);source.name='Synthetic native Switch';
+ source.nodes[2].type='n8n-nodes-base.switch';source.nodes[2].typeVersion=3.2;
+ const conditions=source.nodes[2].parameters.conditions;
+ source.nodes[2].parameters={mode:'rules',rules:{values:[{conditions:structuredClone(conditions),renameOutput:true,outputKey:'Above five'},{conditions:structuredClone(conditions),renameOutput:true,outputKey:'Also above five'}]},options:{fallbackOutput:'extra',allMatchingOutputs:false}};
+ source.nodes[2].parameters.rules.values[1].conditions.conditions[0].rightValue=7;
+ source.nodes.splice(3,1);source.connections.n2.main=[[{node:'n4',type:'main',index:0}],[{node:'n5',type:'main',index:0}],[{node:'n6',type:'main',index:0}]];delete source.connections.n3;
+ const fallback=structuredClone(source.nodes.at(-1));fallback.id=fallback.name='n6';fallback.position=[1100,300];source.nodes.push(fallback);
+ return source;
+}
+
+export function dateExport(target,id='synthetic-crank-date') {
+ const source=graphExport(target,id);source.name='Synthetic native date formatting';source.settings.timezone='America'+'/'+'Chicago';
+ source.nodes=source.nodes.slice(0,2).concat(source.nodes[4]);
+ source.nodes[1].type='n8n-nodes-base.dateTime';source.nodes[1].typeVersion=2;source.nodes[1].parameters={operation:'formatDate',date:'={{ $json.body.date }}',format:'yyyy-MM-dd',outputFieldName:'date',options:{timezone:true,includeInputFields:false}};
+ source.connections={n0:{main:[[{node:'n1',type:'main',index:0}]]},n1:{main:[[{node:'n4',type:'main',index:0}]]}};
+ return source;
+}

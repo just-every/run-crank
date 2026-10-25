@@ -107,7 +107,9 @@ The compiler supports one POST Webhook (versions 1, 2, 2.1) or Manual Trigger
 (version 1), replacement Set assignments (versions 3 through 3.4), strict IF and Filter
 conditions (versions 2 through 2.2), interval Wait (version 1.1), and JSON POST
 HTTP Request (versions 4 through 4.3). Set fields are explicit simple names with
-matching literal types or declarative data paths. IF supports the listed native
+matching literal types or declarative data paths. Native Set values are checked
+against their declared type at execution; mismatches stop before downstream work
+without implicit source coercion. IF supports the listed native
 text comparisons, numeric comparisons and true or false tests, an AND or OR
 combinator and one destination on each output. Imported strict conditions carry an
 explicit scalar type guard: a numeric string cannot silently become a number or
@@ -181,6 +183,24 @@ disposition records remaining work; it does not satisfy eventual code conversion
 Strict Filter nodes preserve the preceding item when conditions pass and end as
 `stopped by filter` otherwise. Text comparisons preserve whitespace. Loose
 coercion and unmapped operators block conversion.
+
+Switch versions 3 through 3.5 accept strict `mode: "rules"`, the same condition
+groups, and one destination per output. `allMatchingOutputs` preserves first-match
+or all-match routing. `fallbackOutput: "extra"` maps the extra fallback branch;
+omitted or `"none"` stops an unmatched item. Output labels remain branch names.
+Expression mode, loose coercion, a fallback reusing a rule output and shared
+joins remain explicit manual conversions. Strict binary conditions currently need
+a literal right operand of the declared scalar type.
+
+Date & Time version 2 maps `operation: "formatDate"` with replacement output,
+`options.timezone: true`, and an explicit IANA `settings.timezone`. Supported
+calendar formats are `yyyy-MM-dd`, `MM/dd/yyyy`, `yyyy/MM/dd`, `MMMM dd yyyy`
+and `MM-dd-yyyy`, including those exact patterns under `format: "custom"`.
+The source date can be a literal or a declarative data path. Null stays null;
+an invalid date fails before a downstream request. Input-format overrides,
+input-zone inference, retaining other input fields, Unix formats and other date
+operations require manual conversion. These rules preserve the declared zone
+instead of guessing the source installation's default.
 
 MIG-001 stays partial. General loops, registry subflow bindings, isolated code and
 fresh credential conversion, complete search, transform and condition mappings, live resource and

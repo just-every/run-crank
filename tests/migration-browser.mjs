@@ -26,7 +26,7 @@ try {
  await page.goto(origin+'/setup');if(new URL(page.url()).pathname==='/setup'){await page.getByRole('checkbox').check();await page.getByRole('button',{name:'Finish setup',exact:true}).click();await page.waitForURL('**/app')}
  const send=async(path,body,status=200)=>{const r=await context.request.fetch(origin+'/api/crank/'+path,{method:body===undefined?'GET':'POST',headers:{origin},...(body===undefined?{}:{data:body})});const v=await r.json();assert.equal(r.status(),status,path+': '+(v.error??'unexpected status'));return v};
  const shot=async(width,state)=>{await page.screenshot({path:join(evidence,`${width}-${state}.png`),fullPage:true});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`${width} ${state} overflow`)};
- const {loopExport}=await import('./n8n-graph-fixture.mjs');
+ const {loopExport,switchExport,dateExport}=await import('./n8n-graph-fixture.mjs');
  for(const width of [1440,390]){
   await page.setViewportSize({width,height:1000});await page.goto(origin+'/app/import');await shot(width,'move-in');
   const search=page.getByRole('link',{name:'Search runs',exact:true});await search.focus();assert.equal(await page.locator('#search-tooltip').isVisible(),true);await page.locator('h1').click();await search.hover();await page.waitForTimeout(350);assert.equal(await page.locator('#search-tooltip').isVisible(),true);await shot(width,'search-tooltip');
@@ -42,6 +42,7 @@ try {
   const w=(await send('workflows')).find(w=>w.name===source.name);assert.ok(w);assert.equal(w.status,'draft');const detail=await send('workflows/'+w.id);assert.equal(detail.versions.length,0);assert.equal(detail.hooks.length,0);assert.equal(detail.draft.settings.n8n_layout.length,source.nodes.length);
   await page.goto(origin+'/app/workflows/'+w.id);await shot(width,'inactive-native-graph');
   await page.goto(origin+'/app/import');await page.getByRole('button',{name:'Undo unused import',exact:true}).click();await page.waitForURL('**/app/import');assert.equal((await send('workflows')).length,0);await shot(width,'undone-graph');
+  for(const extra of [switchExport('http://127.0.0.1:9051','synthetic-crank-switch-'+width),dateExport('http://127.0.0.1:9051','synthetic-crank-date-'+width)]){await page.getByLabel('Workflow export JSON').fill(JSON.stringify(extra));await page.getByRole('button',{name:'Upload and plan',exact:true}).click();await page.waitForLoadState('networkidle');assert.equal(await page.getByRole('button',{name:'Approve this plan',exact:true}).count(),1);await page.getByText(/Supported fields/).click();await shot(width,extra.name.includes('Switch')?'switch-review':'date-review');await page.getByRole('button',{name:'Cancel plan',exact:true}).click();await page.waitForURL('**/app/import')}
   console.log(`MIG-001 ${width}: mapping coverage, safe cancellation, inactive apply, native draft, undo and shell tooltip passed`);
  }
 
