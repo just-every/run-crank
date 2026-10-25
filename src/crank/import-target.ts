@@ -1,3 +1,4 @@
+import { importWorkflowTargets } from './import-workflow-target'
 import type { D1Sql, D1TargetAdapter } from '../modules/import-kit/src/d1/types.ts'
 import type { Json, TargetRow } from '../modules/import-kit/src/types.ts'
 
@@ -25,7 +26,7 @@ export function validateImportTargetUrl(env: ImportTargetEnv, value: unknown): s
 
 const sql = (sql: string, ...params: unknown[]): D1Sql => ({ sql, params })
 function scope(destination: string, kind: string) {
-  if (destination !== IMPORT_DESTINATION || kind !== 'flow') throw new Error('IMPORT_TARGET_SCOPE_INVALID')
+  if (destination !== IMPORT_DESTINATION || !['flow', 'workflow'].includes(kind)) throw new Error('IMPORT_TARGET_SCOPE_INVALID')
 }
 type FlowValue = { name: string; source_app: string; destination_app: string; target_url: string; created_by: string; status: string; revision: number }
 function value(input: Json): FlowValue {
@@ -46,6 +47,7 @@ function nativeRow(row: Record<string, any>): TargetRow {
 export const importFlowTargets: D1TargetAdapter = {
   async read(db, destination, kind, id) {
     scope(destination, kind)
+    if (kind === 'workflow') return importWorkflowTargets.read(db, destination, kind, id)
     const row = await db.prepare('SELECT f.*,s.kit_revision FROM crank_flows f LEFT JOIN crank_import_flow_state s ON s.flow_id=f.id WHERE f.id=?').bind(id).first()
     if (!row) return undefined
     // A collision with a native flow cannot be treated as an importable absence.
@@ -54,6 +56,7 @@ export const importFlowTargets: D1TargetAdapter = {
   },
   matches(row, destination, kind, id) {
     scope(destination, kind)
+    if (kind === 'workflow') return importWorkflowTargets.matches(row, destination, kind, id)
     if (!row) return sql('NOT EXISTS(SELECT 1 FROM crank_flows WHERE id=?) AND NOT EXISTS(SELECT 1 FROM crank_import_flow_state WHERE flow_id=?)', id, id)
     const v = row.value as unknown as FlowValue
     return sql(`EXISTS(SELECT 1 FROM crank_flows f JOIN crank_import_flow_state s ON s.flow_id=f.id
@@ -64,10 +67,11 @@ export const importFlowTargets: D1TargetAdapter = {
   },
   matchesCount(count, destination) {
     scope(destination, 'flow')
-    return sql('(SELECT COUNT(*) FROM crank_flows f JOIN crank_import_flow_state s ON s.flow_id=f.id)=?', count)
+    return sql('((SELECT COUNT(*) FROM crank_flows f JOIN crank_import_flow_state s ON s.flow_id=f.id)+(SELECT COUNT(*) FROM crank_import_workflow_state))=?', count)
   },
   write(row) {
     scope(row.destination, row.targetKind)
+    if (row.targetKind === 'workflow') return importWorkflowTargets.write(row)
     const v = value(row.value)
     // Catch-up replaces an already-imported draft in place; the kit has already
     // fenced its expected revision and full before-image in this batch.
@@ -79,11 +83,12 @@ export const importFlowTargets: D1TargetAdapter = {
   },
   remove(destination, kind, id) {
     scope(destination, kind)
+    if (kind === 'workflow') return importWorkflowTargets.remove(destination, kind, id)
     return [sql('DELETE FROM crank_flows WHERE id=?', id), sql('DELETE FROM crank_import_flow_state WHERE flow_id=?', id)]
   },
   async list(db, destination) {
     scope(destination, 'flow')
     const { results } = await db.prepare('SELECT f.*,s.kit_revision FROM crank_flows f JOIN crank_import_flow_state s ON s.flow_id=f.id ORDER BY f.id').all()
-    return results.map(nativeRow)
+    return [...results.map(nativeRow), ...await importWorkflowTargets.list(db, destination)]
   },
 }

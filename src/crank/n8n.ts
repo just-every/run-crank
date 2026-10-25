@@ -1,3 +1,4 @@
+import { n8nGraph } from './n8n-graph'
 import { canonicalJson, sha256 } from '../modules/import-kit/src/provenance/identity.ts'
 import type { ImportDoorSource } from '../modules/import-kit/src/door/types.ts'
 import type { Json } from '../modules/import-kit/src/types.ts'
@@ -93,9 +94,19 @@ function workflow(value: Json, index: number, env: ImportTargetEnv): N8nWorkflow
 export function n8nSource(env: ImportTargetEnv, ownerId: string): ImportDoorSource {
   return {
     parse(value, index) {
+      const root = object(value)
+      if (Array.isArray(root.nodes) && root.nodes.length > 2) {
+        // Refuse credential material before retention; graph expressions are only parsed as data.
+        const credentials = (v: Json): void => { if (v && typeof v === 'object') for (const [key, item] of Object.entries(v)) { if (/credential|password|secret|authorization|cookie|api.?key|access.?token|refresh.?token/i.test(key)) throw new Error('N8N_CREDENTIALS_FORBIDDEN'); credentials(item) } }
+        credentials(value)
+        n8nGraph(value, root.id === undefined ? `workflow-${index + 1}` : text(root.id), env, ownerId)
+        return { kind: 'n8n-workflow', sourceId: root.id === undefined ? `workflow-${index + 1}` : text(root.id), payload: value }
+      }
       return { kind: 'n8n-workflow', sourceId: workflow(value, index, env).sourceId, payload: value }
     },
-    mapping: { version: N8N_MAPPING_VERSION, map(record) {
+    mapping: { version: 'crank-n8n-native-graph-v2', map(record) {
+      const root = object(record.payload)
+      if (Array.isArray(root.nodes) && root.nodes.length > 2) return n8nGraph(record.payload, record.sourceId, env, ownerId)
       const flow = workflow(record.payload, 0, env)
       return { effects: [{ targetKind: 'flow', targetId: `import-${sha256(canonicalJson(['n8n', record.sourceId]))}`, value: {
         name: flow.name, source_app: 'n8n', destination_app: 'HTTP inbox', target_url: flow.targetUrl, created_by: ownerId, status: 'draft', revision: 1,

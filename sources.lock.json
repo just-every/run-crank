@@ -138,7 +138,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "30379c68a6002ad332ac8144ff1c0c0dcd2861a6526f2059c605c71733134a95",
+      "sha256": "695913f5922cff5bce1585676785e0b816feffd1388421764e250a9c4be0cb00",
       "executable": false
     },
     "AGENTS.md": {
@@ -162,7 +162,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "369af596d0db82ea0bd4daa95cd2981ae7d3988fd8044fbf36ad3ea5bf1683d3",
+      "sha256": "46180166cb161c8f5f27d0c2934e58e33c1dc479dd8a00d9106e8f44191f7505",
       "executable": false
     },
     "DEMO.md": {
@@ -214,7 +214,7 @@
       "executable": false
     },
     "docs/IMPORTING.md": {
-      "sha256": "9f6ccd2055d3d5e420e0d4958a0d8b5d305b6bb15b6d88324362056038421ec1",
+      "sha256": "a67c3d6db66964c1c5eeff7e2437eaf60f09375fb6d68562f21dfeade00ad585",
       "executable": false
     },
     "docs/OPERATIONS.md": {
@@ -655,6 +655,10 @@
     },
     "migrations/core/0071_pure_subflow_calls.sql": {
       "sha256": "e9677222d51c6fe8a2fe248d4d5590341bf81527a8297286d3464f6e3196b3c5",
+      "executable": false
+    },
+    "migrations/core/0072_import_workflow_state.sql": {
+      "sha256": "77106683e5784fd59887f93d5b956e19160ad1c2f7d66f052bf8ad13b0b9c717",
       "executable": false
     },
     "ONBOARDING.md": {
@@ -1714,7 +1718,11 @@
       "executable": false
     },
     "src/crank/import-target.ts": {
-      "sha256": "b7c1f894a43cb8c604c646aa69d7d1ee0047fd8033c65d45fd6cfcc9523b1f00",
+      "sha256": "348073cd18acd7a09c381158a40e54b27371c94c89bf8d25e6b9ed1db4ac29a1",
+      "executable": false
+    },
+    "src/crank/import-workflow-target.ts": {
+      "sha256": "681f6e0e630f182db9cba1f9babb0869a744e9e50cc86672069af290c362891e",
       "executable": false
     },
     "src/crank/imports.ts": {
@@ -1737,8 +1745,12 @@
       "sha256": "b4d1cdd0f4a1cd18b7508263bcdc663febcc3a850904fc236db9d13f38174538",
       "executable": false
     },
+    "src/crank/n8n-graph.ts": {
+      "sha256": "a824f3aec14a035c7268b5403159d29e6a0035e126804c5ec6ac0e3310ab0101",
+      "executable": false
+    },
     "src/crank/n8n.ts": {
-      "sha256": "fa688aa0dfc01eda183265288c7bdcb82425436f2537d46d0d9419069abf6ab3",
+      "sha256": "8053943f46994cb98193a0846781382a9c9b9bb9526c4aa9c255e4de8d1fbdaf",
       "executable": false
     },
     "src/crank/operator-erasure.ts": {
@@ -2066,11 +2078,11 @@
       "executable": false
     },
     "src/crank/ui/move-in-view.ts": {
-      "sha256": "a4b78509c53df6b03a62a87f588a9dcfe4a6053458f32cf877deea512db08fe1",
+      "sha256": "2564f7478fa4a0767fb751b9168dce84cc302a4adf6ada4f391cfa5bddfa678b",
       "executable": false
     },
     "src/crank/ui/move-in.ts": {
-      "sha256": "9be17f20d4d3a967471585fe4076671842f54f6b2771be8eb55a6708c67f1302",
+      "sha256": "83c96a689ab6ef6966c50f0d3b30e2d4803457dbdb3087f6737639cdf9fb0e59",
       "executable": false
     },
     "src/crank/ui/navigation.ts": {
@@ -4146,7 +4158,7 @@
       "executable": false
     },
     "test-budget.json": {
-      "sha256": "01607d49f1fa5ce3ddc327f8f6245a76442e28a364b091d8479d0a5af569a1a3",
+      "sha256": "ee6ce43f08a0d0d8f099a0e3e72a1f4559a8f377aec3e8b8d67915e2e3291568",
       "executable": false
     },
     "tests/app.test.mjs": {
@@ -4166,7 +4178,7 @@
       "executable": false
     },
     "tests/crank.test.mjs": {
-      "sha256": "f1d839045cfb938b07660af0833fe223c34f77054a18f3aea602f54a9a2c4552",
+      "sha256": "49d85da256cae512c2a382d4668ec7f7f719b8d5b3754f496397de71e594d003",
       "executable": false
     },
     "tests/custom-browser-runtime.mjs": {
@@ -4307,6 +4319,14 @@
     },
     "tests/logic.test.mjs": {
       "sha256": "7f3a72f1b19ec87489d348802daf78f26bf4e9a5bfa590f43e38e8e8b498afe9",
+      "executable": false
+    },
+    "tests/migration-browser.mjs": {
+      "sha256": "390939f33dd7549b992883e3ad1efa35547cc4d76639f7d092f065f69033f2c8",
+      "executable": false
+    },
+    "tests/n8n-graph-fixture.mjs": {
+      "sha256": "90ac67adaee25a12b674f46003cf494dfb62a8fe9f626aa82ace0c35d58ffbdd",
       "executable": false
     },
     "tests/oauth-renewal-journey.mjs": {

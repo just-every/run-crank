@@ -1,9 +1,10 @@
+import { graphExport } from './n8n-graph-fixture.mjs';
 import {before,after,test} from 'node:test';
 import assert from 'node:assert/strict';
 import {createServer} from 'node:http';
 import {readFile} from 'node:fs/promises';
 import {harness,freePort} from './harness.mjs';
-import {publish,door,doorPlan,doorImport,checkDoor} from './kit.mjs';
+import {publish,door,doorPlan,doorImport,checkDoor,deliver,settled} from './kit.mjs';
 import {restoreJourney} from './restore-journey.mjs';
 
 // Fake only the external receiver/network edge. Workerd, D1, auth and imports
@@ -12,6 +13,7 @@ let h, receiver, target, mode='ok'; const effects=new Map(),requests=[];
 before(async()=>{
  const port=await freePort();target=`http://127.0.0.1:${port}`;
  receiver=createServer(async(req,res)=>{let text='';for await(const b of req)text+=b;const key=req.headers['idempotency-key'];requests.push({key,text});
+  if(req.url==='/graph-events'){res.writeHead(200,{'content-type':'application/json'});res.end(JSON.stringify({received:true}));return;}
   if(mode==='reject'){res.writeHead(503);res.end();return;}
   if(effects.has(key))assert.equal(effects.get(key),text);else effects.set(key,text);
   if(mode==='lost'){res.destroy();return;}
@@ -186,6 +188,47 @@ test('MIG-001 door refuses expressions and credential exports without echoing th
  const plan=catchup.value,flow=(await h.get()).flows.find(x=>x.name==='Receive an event and forward it (renamed)');assert.ok(flow,'catch-up replaced the unused draft in place');assert.equal(flow.status,'draft');
  await h.post(`flows/${flow.id}/activate`);await h.run(flow,'imported-event');
  const undone=await door(h,'undo',{planId:plan.planId});assert.ok(undone.status>=400 || undone.value.job?.state!=='undone',undone.text);assert.ok((await h.get()).flows.some(x=>x.id===flow.id),'a used import is never removed');
+});
+
+test('MIG-001 native graph review, exact apply, restart, branch outcomes and protected undo',async()=>{
+ const local=await harness(target);try{
+  const input=graphExport(target),unsupported=structuredClone(input);
+  unsupported.nodes.push({id:'child',name:'child',type:'n8n-nodes-base.executeWorkflow',typeVersion:1,position:[100,200],parameters:{workflowId:'synthetic-crank-child'}});
+  unsupported.nodes.push({id:'custom',name:'custom',type:'synthetic-crank-custom',typeVersion:1,position:[100,300],parameters:{code:'={{ globalThis.crankInjected = 1 }}'}});
+  unsupported.nodes[1].parameters.unhandledSetting=true;
+  const rejected=await doorPlan(local,JSON.stringify(unsupported));assert.equal(rejected.status,200,rejected.text);assert.equal(rejected.value.rejected.length,1);
+  assert.ok(rejected.value.diagnostics.some(d=>d.field==='nodes.1.parameters.unhandledSetting'));
+  assert.ok(rejected.value.diagnostics.some(d=>d.field==='nodes.6'));assert.ok(rejected.value.diagnostics.some(d=>d.field==='nodes.7'));
+  assert.equal((await local.get('workflows')).length,0);
+  assert.equal((await door(local,'undo',{planId:rejected.value.planId})).value.state,'cancelled');
+  const plan=await doorPlan(local,JSON.stringify(input));assert.equal(plan.status,200,plan.text);assert.equal(plan.value.rejected.length,0);
+  assert.equal((await local.get('workflows')).length,0,'review creates no draft');
+  assert.ok((await door(local,'apply',{planId:plan.value.planId,reviewedFingerprint:'0'.repeat(64)})).status>=400);
+  const body={planId:plan.value.planId,reviewedFingerprint:plan.value.fingerprint};
+  for(let i=0;i<2;i++)assert.equal((await door(local,'apply',body)).value.job.state,'completed');
+  const [listed]=await local.get('workflows'),workflow=await local.get('workflows/'+listed.id);
+  assert.equal(workflow.status,'draft');assert.equal(workflow.published_version_id,null);assert.equal(workflow.versions.length,0);assert.equal(workflow.hooks.length,0);
+  assert.deepEqual(workflow.draft.settings.n8n_layout.map(n=>n.position),input.nodes.map(n=>n.position));assert.deepEqual(workflow.draft.settings.n8n_connections,input.connections);
+  await local.restart();assert.deepEqual((await local.get('workflows/'+listed.id)).draft,workflow.draft);
+  assert.ok((await local.get('imports')).some(e=>e.planId===plan.value.planId));const report=await door(local,'reconcile',{planId:plan.value.planId});assert.equal(report.value.ok,true,report.text);
+  assert.equal((await door(local,'undo',{planId:plan.value.planId})).value.job.state,'undone');assert.equal((await local.get('workflows')).length,0);
+  const driftPlan=await doorImport(local,JSON.stringify(input));const [drift]=await local.get('workflows');await local.post('workflows/'+drift.id+'/draft',{name:'Owner changed draft'});
+  const driftUndo=await door(local,'undo',{planId:driftPlan.planId});assert.ok(driftUndo.status>=400||driftUndo.value.job?.state!=='undone');assert.equal((await local.get('workflows/'+drift.id)).name,'Owner changed draft');
+ }finally{await local.close()}
+ const declared='https://receiver.example';
+ const execution=await harness(declared,{edge:async request=>{if(new URL(request.url).origin!==declared)return undefined;const headers=new Headers(request.headers);headers.delete('content-length');return fetch(target+new URL(request.url).pathname,{method:request.method,headers,body:await request.arrayBuffer()})}});try{
+  const p=await doorImport(execution,JSON.stringify(graphExport(declared,'synthetic-crank-5'))),[w]=await execution.get('workflows');
+  await execution.post('workflows/'+w.id+'/publish',{},execution.owner,201);const hook=await execution.post('workflows/'+w.id+'/hooks',{},execution.owner,201);
+  for(const amount of [8,2]){
+   const before=requests.length,message='synthetic-crank-'+amount;
+   const sent=await deliver(execution,hook.url,{method:'POST',headers:{'content-type':'application/json','x-event-id':message},body:JSON.stringify({amount,message})});assert.equal(sent.status,200,sent.text);
+   const list=(await execution.get('workflow-runs?workflow='+w.id)).runs;let run=await execution.get('workflow-runs/'+list[0].id);
+   run=await settled(execution,run.id);if(run.status==='waiting'){await execution.tick();run=await settled(execution,run.id)}
+   assert.equal(run.status,'succeeded',JSON.stringify(run));assert.equal(requests.length,before+1);assert.deepEqual(JSON.parse(requests.at(-1).text),{amount,message});
+   assert.ok(run.steps.some(s=>s.step_id===(amount>5?'n4':'n5')));
+  }
+  const undo=await door(execution,'undo',{planId:p.planId});assert.ok(undo.status>=400||undo.value.job?.state!=='undone');assert.ok(await execution.get('workflows/'+w.id));
+ }finally{await execution.close()}
 });
 
 test('BASE-003 DATA-001: complete portable inventory, inactive restore, explicit per-run adoption and atomic refusal',async()=>{

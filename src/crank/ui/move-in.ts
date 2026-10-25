@@ -34,6 +34,7 @@ async function upload(call: Call, source: string, catchup: boolean) {
 async function until(call: Call, action: string, input: unknown, state: string) {
   for (let batch = 0; batch < 100; batch++) {
     const result = await door(call, action, input)
+    if (action === 'undo' && result.state === 'cancelled') return result
     if (result.job?.state === state) return result.job
   }
   throw new DoorRefusal(409, { error: `${action} did not finish; open Move in to continue` })

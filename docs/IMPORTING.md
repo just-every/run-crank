@@ -95,6 +95,62 @@ places the request body in the output's `body` field. These primary sources were
 consulted on 15 October 2026. This supports the documented-shape mapping; it
 does not establish compatibility with every n8n release or node option.
 
+## Native multi-step graphs
+
+Exports with more than two nodes use the bounded native graph compiler. The original
+strict two-node format above continues to create the same approval flow. Native
+graph imports create inactive workflow drafts with no published version, inbound
+hook, connection or execution authority. Explicit native publication authorizes
+future execution under the ordinary workflow policy; importing does not.
+
+The compiler supports one POST Webhook (versions 1, 2, 2.1) or Manual Trigger
+(version 1), replacement Set assignments (versions 3 through 3.4), strict IF
+conditions (versions 2 through 2.2), interval Wait (version 1.1), and JSON POST
+HTTP Request (versions 4 through 4.3). Set fields are explicit simple names with
+matching literal types or declarative data paths. IF supports the listed native
+text comparisons, numeric comparisons and true or false tests, an AND or OR
+combinator and one destination on each output. Shared joins, cycles, fan-out,
+loose type coercion and every unrecognized setting require manual conversion.
+A Wait preserves the preceding data and uses Crank's ordinary durable delay.
+
+Only an exact whole-value expression shaped like `={{ $json.body.amount }}` is
+translated to a native data reference. It may only select simple property names
+from the current item; `={{ $json }}` selects the whole item. It never runs code.
+Literal JSON values are wrapped as native literals so source text cannot become
+an executable native mapping. HTTP bodies accept such a data reference or a
+literal JSON document. Parsing and planning make no outbound requests. Native
+HTTP execution retains HTTP-002's ordinary egress restrictions, including its
+refusal of loopback targets even in local mode.
+
+The preview lists each recognized field and each manual conversion. An unsupported
+node or setting rejects the whole workflow's mapping, with no partial graph
+effects. The screen withholds approval until those conversions are resolved;
+Cancel plan discards its pending review so a corrected export can be uploaded.
+Credential-bearing exports are refused before retention, including references;
+they do not yet have a credential-rebinding preview. Original coordinates,
+source node identities and edges remain in the native draft's graph settings.
+
+The native adapter keeps import revisions separately from workflow authority.
+Duplicate apply, restart and journal readback preserve the same draft and
+provenance. Undo fences the complete imported graph, metadata and timestamps,
+and refuses native edits, hooks, publication or recorded use. Native edits are
+never overwritten by catch-up or undo. Archives include the provenance sidecar;
+restoration remains subject to the existing inactive-restore and owner-adoption
+fences.
+
+`tests/crank.test.mjs` proves both IF outcomes against an actual owned local HTTP
+receiver, reached through a test-only address bridge at the network edge. No
+receiver response or native execution is faked. `tests/n8n-graph-fixture.mjs`
+constructs the documented source shape; it is engineering proof, not a live
+customer export, n8n execution capture or provider receipt.
+
+MIG-001 stays partial. Loops, pinned subflows, code and credential-reference
+conversion, complete search, transform and condition mappings, live resource and
+watched-field mappings, real samples, fresh authorized bindings, source comparison
+and cutover, plus multimodal OpenAI and Anthropic operations and agent tools
+remain required. A manual disposition is not a replacement for their eventual
+supported mapping. No source or provider authorization is assumed.
+
 ## Destination and review
 
 `CRANK_TARGET_ORIGIN` declares the single permitted destination origin. In
