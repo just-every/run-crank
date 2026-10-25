@@ -13,9 +13,11 @@ export function importView(entries:any[], settings:{enabled:boolean;revokedKids:
 export function previewView(plan:any) {
   const s = plan.summary, d = plan.differences
   const rejected = plan.rejected.map((r:any)=>`<li>${esc(r.sourceId)}: ${esc(r.reason)}</li>`)
-  const notes = plan.diagnostics.map((n:any)=>`<li><span class="mono">${esc(n.code)}</span> ${esc(n.sourceId ?? '')} ${esc(n.field ?? n.location?.pointer ?? '')} ${esc(n.message ?? '')}</li>`)
+  const supported = plan.diagnostics.filter((n:any)=>String(n.message ?? '').startsWith('Supported '))
+  const notes = plan.diagnostics.filter((n:any)=>!supported.includes(n)).map((n:any)=>`<li><span class="mono">${esc(n.code)}</span> ${esc(n.sourceId ?? '')} ${esc(n.field ?? n.location?.pointer ?? '')} ${esc(n.message ?? '')}</li>`)
+  const mapped = supported.map((n:any)=>`<li>${esc(n.field ?? '')}: ${esc(n.message)}</li>`)
   return `<section class="panel"><h2>Review before importing</h2><p>${esc(s.sourceRecords)} workflows in the upload: ${esc(s.created)} new, ${esc(s.updated)} replaced, ${esc(s.unchanged)} unchanged, ${esc(s.gone)} gone from the source.</p>
-  ${rejected.length?`<h3>Rejected</h3>${list(rejected)}`:''}${notes.length?`<h3>Mapping coverage</h3>${list(notes)}`:''}
+  ${rejected.length?`<h3>Rejected</h3>${list(rejected)}`:''}${notes.length?`<h3>Manual conversions</h3>${list(notes)}`:''}${mapped.length?`<details><summary>Supported fields (${esc(mapped.length)})</summary>${list(mapped)}</details>`:''}
   ${d.additions.length?`<h3>New drafts</h3>${list(d.additions.map((id:string)=>`<li class="mono">${esc(id)}</li>`))}`:''}
   <p class="notice">All imports remain inactive drafts. Review native workflow steps and explicitly publish them; two-node flows require activation and human approval. The original n8n webhook URL is not retained as a live endpoint.</p>
   ${rejected.length?`<p class="notice">Resolve every manual conversion and upload the complete graph again.</p><form method="post" action="/app/import/undo">${hidden('planId',plan.planId)}<button class="btn btn-secondary">Cancel plan</button></form></section>`:`<form method="post" action="/app/import/apply">${hidden('planId',plan.planId)}${hidden('reviewedFingerprint',plan.fingerprint)}<p class="mono flow-id">Plan ${esc(plan.fingerprint)}</p><div class="actions"><button class="btn btn-primary">Approve this plan</button><button class="btn btn-secondary" formaction="/app/import/undo" formnovalidate>Cancel plan</button></div></form></section>`}`

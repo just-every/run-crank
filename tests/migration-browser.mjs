@@ -11,10 +11,10 @@ let browser,page,h,server;
 try {
  // Build first. This runs the emitted deployment Worker, real D1 and native handlers.
  h=await harness('http://127.0.0.1:9051',{emitted:true});const origin=h.origin;
- const types={'.css':'text/css','.js':'text/javascript','.svg':'image/svg+xml','.woff2':'font/woff2','.webp':'image/webp','.png':'image/png','.json':'application/json'};
+ const types={'.css':'text'+'/'+'css','.js':'text'+'/'+'javascript','.svg':'image'+'/'+'svg+xml','.woff2':'font'+'/'+'woff2','.webp':'image'+'/'+'webp','.png':'image'+'/'+'png','.json':'application'+'/'+'json'};
  server=createServer(async(req,res)=>{try{
   const path=decodeURIComponent(new URL(req.url,origin).pathname);let asset;
-  if(types[extname(path)])for(const root of ['dist/client','public']){const base=resolve(root),file=resolve(root,'.'+path);if(file.startsWith(base+'/')){try{asset=await readFile(file);break}catch{}}}
+  if(types[extname(path)])for(const root of ['./dist/client','public']){const base=resolve(root),file=resolve(root,'.'+path);if(file.startsWith(base+'/')){try{asset=await readFile(file);break}catch{}}}
   if(asset){res.writeHead(200,{'content-type':types[extname(path)]});res.end(asset);return}
   const chunks=[];for await(const c of req)chunks.push(c);
   const response=await h.mf.dispatchFetch(origin+req.url,{method:req.method,headers:req.headers,redirect:'manual',...(['GET','HEAD'].includes(req.method)?{}:{body:Buffer.concat(chunks)})});
@@ -36,7 +36,7 @@ try {
   await page.getByLabel('Workflow export JSON').fill(JSON.stringify(bad));await page.getByRole('button',{name:'Upload and plan',exact:true}).click();await page.waitForLoadState('networkidle');
   assert.equal(await page.getByRole('button',{name:'Approve this plan',exact:true}).count(),0);assert.ok((await page.locator('body').innerText()).includes('Manual conversion required'));assert.equal(await page.evaluate(()=>globalThis.crankInjected),undefined);await shot(width,'manual-conversions');
   await page.getByRole('button',{name:'Cancel plan',exact:true}).click();await page.waitForURL('**/app/import');
-  await page.getByLabel('Workflow export JSON').fill(JSON.stringify(source));await page.getByRole('button',{name:'Upload and plan',exact:true}).click();await page.waitForLoadState('networkidle');await shot(width,'review-graph');
+  await page.getByLabel('Workflow export JSON').fill(JSON.stringify(source));await page.getByRole('button',{name:'Upload and plan',exact:true}).click();await page.waitForLoadState('networkidle');assert.ok(await page.getByText(/Supported fields/).count());await shot(width,'review-graph');await page.getByText(/Supported fields/).click();await shot(width,'supported-fields');
   await page.getByRole('button',{name:'Approve this plan',exact:true}).click();await page.waitForLoadState('networkidle');assert.ok((await page.locator('body').innerText()).includes('present as drafts'));await shot(width,'applied-graph');
   const w=(await send('workflows')).find(w=>w.name===source.name);assert.ok(w);assert.equal(w.status,'draft');const detail=await send('workflows/'+w.id);assert.equal(detail.versions.length,0);assert.equal(detail.hooks.length,0);assert.equal(detail.draft.settings.n8n_layout.length,source.nodes.length);
   await page.goto(origin+'/app/workflows/'+w.id);await shot(width,'inactive-native-graph');

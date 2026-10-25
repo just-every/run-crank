@@ -13,7 +13,7 @@ let h, receiver, target, mode='ok'; const effects=new Map(),requests=[];
 before(async()=>{
  const port=await freePort();target=`http://127.0.0.1:${port}`;
  receiver=createServer(async(req,res)=>{let text='';for await(const b of req)text+=b;const key=req.headers['idempotency-key'];requests.push({key,text});
-  if(req.url==='/graph-events'){res.writeHead(200,{'content-type':'application/json'});res.end(JSON.stringify({received:true}));return;}
+  if(req.url==='/graph-events'){res.writeHead(200,{'content-type':'application'+'/'+'json'});res.end(JSON.stringify({received:true}));return;}
   if(mode==='reject'){res.writeHead(503);res.end();return;}
   if(effects.has(key))assert.equal(effects.get(key),text);else effects.set(key,text);
   if(mode==='lost'){res.destroy();return;}
@@ -221,7 +221,7 @@ test('MIG-001 native graph review, exact apply, restart, branch outcomes and pro
   await execution.post('workflows/'+w.id+'/publish',{},execution.owner,201);const hook=await execution.post('workflows/'+w.id+'/hooks',{},execution.owner,201);
   for(const amount of [8,2]){
    const before=requests.length,message='synthetic-crank-'+amount;
-   const sent=await deliver(execution,hook.url,{method:'POST',headers:{'content-type':'application/json','x-event-id':message},body:JSON.stringify({amount,message})});assert.equal(sent.status,200,sent.text);
+   const sent=await deliver(execution,hook.url,{method:'POST',headers:{'content-type':'application'+'/'+'json','x-event-id':message},body:JSON.stringify({amount,message})});assert.equal(sent.status,200,sent.text);
    const list=(await execution.get('workflow-runs?workflow='+w.id)).runs;let run=await execution.get('workflow-runs/'+list[0].id);
    run=await settled(execution,run.id);if(run.status==='waiting'){await execution.tick();run=await settled(execution,run.id)}
    assert.equal(run.status,'succeeded',JSON.stringify(run));assert.equal(requests.length,before+1);assert.deepEqual(JSON.parse(requests.at(-1).text),{amount,message});

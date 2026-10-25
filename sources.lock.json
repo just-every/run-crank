@@ -2078,7 +2078,7 @@
       "executable": false
     },
     "src/crank/ui/move-in-view.ts": {
-      "sha256": "2564f7478fa4a0767fb751b9168dce84cc302a4adf6ada4f391cfa5bddfa678b",
+      "sha256": "d95c6b6b4540ad0cf62d5ee7c40c906be7b5b263b57572a6ce60da73b8bf816a",
       "executable": false
     },
     "src/crank/ui/move-in.ts": {
@@ -4178,7 +4178,7 @@
       "executable": false
     },
     "tests/crank.test.mjs": {
-      "sha256": "49d85da256cae512c2a382d4668ec7f7f719b8d5b3754f496397de71e594d003",
+      "sha256": "0c4ae077f90d0a7713f9dd07dc650b220ac47003faf47ab397e7e797e1527838",
       "executable": false
     },
     "tests/custom-browser-runtime.mjs": {
@@ -4322,7 +4322,7 @@
       "executable": false
     },
     "tests/migration-browser.mjs": {
-      "sha256": "390939f33dd7549b992883e3ad1efa35547cc4d76639f7d092f065f69033f2c8",
+      "sha256": "cdca6640c08dc859c2f83d65fdf457aed68e33c27b954b3bdc3c21163b842f5a",
       "executable": false
     },
     "tests/n8n-graph-fixture.mjs": {
