@@ -104,14 +104,14 @@ hook, connection or execution authority. Explicit native publication authorizes
 future execution under the ordinary workflow policy; importing does not.
 
 The compiler supports one POST Webhook (versions 1, 2, 2.1) or Manual Trigger
-(version 1), replacement Set assignments (versions 3 through 3.4), strict IF
+(version 1), replacement Set assignments (versions 3 through 3.4), strict IF and Filter
 conditions (versions 2 through 2.2), interval Wait (version 1.1), and JSON POST
 HTTP Request (versions 4 through 4.3). Set fields are explicit simple names with
 matching literal types or declarative data paths. IF supports the listed native
 text comparisons, numeric comparisons and true or false tests, an AND or OR
 combinator and one destination on each output. Imported strict conditions carry an
 explicit scalar type guard: a numeric string cannot silently become a number or
-select a branch. Such a mismatch fails before any downstream request. Shared joins, cycles, fan-out,
+select a branch. Such a mismatch fails before any downstream request. General shared joins, cycles, fan-out,
 loose type coercion and every unrecognized setting require manual conversion.
 A Wait preserves the preceding data and uses Crank's ordinary durable delay.
 
@@ -128,8 +128,12 @@ The preview lists each recognized field and each manual conversion. An unsupport
 node or setting rejects the whole workflow's mapping, with no partial graph
 effects. The screen withholds approval until those conversions are resolved;
 Cancel plan discards its pending review so a corrected export can be uploaded.
-Credential-bearing exports are refused before retention, including references;
-they do not yet have a credential-rebinding preview. Original coordinates,
+Secret-bearing objects are refused before retention. In native graph exports, a
+node credential reference may contain only bounded `id` and `name` fields. Each
+reference blocks the graph with a fresh-account-binding disposition; no
+connection, credential or execution authority is created. Embedded workflow JSON
+receives the same credential inspection. The strict legacy two-node importer
+continues to refuse all credential objects. Original coordinates,
 source node identities and edges remain in the native draft's graph settings.
 
 The native adapter keeps import revisions separately from workflow authority.
@@ -146,8 +150,40 @@ receiver response or native execution is faked. `tests/n8n-graph-fixture.mjs`
 constructs the documented source shape; it is engineering proof, not a live
 customer export, n8n execution capture or provider receipt.
 
-MIG-001 stays partial. Loops, pinned subflows, code and credential-reference
-conversion, complete search, transform and condition mappings, live resource and
+### Serial loops and embedded subflows
+
+Split Out version 1 supports one simple array field, `include: "noOtherFields"`,
+and an explicit `options.destinationFieldName` equal to that field. Naming the
+destination preserves object items under the field instead of flattening them.
+It must connect directly to Split In Batches version 3 with `batchSize: 1`, empty
+options, an unused done output (output 0), and one loop-body destination on
+output 1. The linear body may contain Set, JSON HTTP and embedded subflow calls,
+and must return to the batch node. Native execution processes at most 1000 items
+in input order, allows an empty array and stops on the first failed item.
+Malformed or oversized arrays fail before any body request. Reset, larger
+batches, done-output work and other topologies require manual conversion.
+
+Execute Workflow versions 1 through 1.3 support `source: "parameter"`, a literal
+`workflowJson`, `mode: "once"` and synchronous completion. Its snapshot needs
+one Execute Workflow Trigger version 1 with empty parameters and a linear body
+of Set, JSON HTTP or nested embedded calls. The caller supplies one current
+item. Child steps are inlined with distinct native identities; snapshot digests
+and layout are retained in `n8n_subflow_pins`. Nesting is limited to four levels.
+The reviewed import fingerprint binds the whole snapshot. Database IDs, dynamic
+sources, asynchronous calls, declared child-input schemas and arbitrary child
+graphs require manual conversion. This does not create a reusable native registry
+release or fetch a source workflow.
+
+Code, Function and Function Item nodes always receive a blocking conversion:
+source code never runs during planning or native execution. Convert them to
+reviewed native transforms or explicitly provision an isolated executor. A manual
+disposition records remaining work; it does not satisfy eventual code conversion.
+Strict Filter nodes preserve the preceding item when conditions pass and end as
+`stopped by filter` otherwise. Text comparisons preserve whitespace. Loose
+coercion and unmapped operators block conversion.
+
+MIG-001 stays partial. General loops, registry subflow bindings, isolated code and
+fresh credential conversion, complete search, transform and condition mappings, live resource and
 watched-field mappings, real samples, fresh authorized bindings, source comparison
 and cutover, plus multimodal OpenAI and Anthropic operations and agent tools
 remain required. A manual disposition is not a replacement for their eventual

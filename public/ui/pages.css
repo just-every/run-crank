@@ -70,3 +70,6 @@
   .flow-row .inline-disclosure { padding-left: 0; }
   .timeline-head .status { margin-left: 0; }
 }
+
+/* Nested source field paths remain readable in narrow import reviews. */
+.import-review .list li { overflow-wrap: anywhere; }

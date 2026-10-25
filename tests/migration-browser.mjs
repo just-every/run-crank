@@ -26,15 +26,16 @@ try {
  await page.goto(origin+'/setup');if(new URL(page.url()).pathname==='/setup'){await page.getByRole('checkbox').check();await page.getByRole('button',{name:'Finish setup',exact:true}).click();await page.waitForURL('**/app')}
  const send=async(path,body,status=200)=>{const r=await context.request.fetch(origin+'/api/crank/'+path,{method:body===undefined?'GET':'POST',headers:{origin},...(body===undefined?{}:{data:body})});const v=await r.json();assert.equal(r.status(),status,path+': '+(v.error??'unexpected status'));return v};
  const shot=async(width,state)=>{await page.screenshot({path:join(evidence,`${width}-${state}.png`),fullPage:true});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`${width} ${state} overflow`)};
- const {graphExport}=await import('./n8n-graph-fixture.mjs');
+ const {loopExport}=await import('./n8n-graph-fixture.mjs');
  for(const width of [1440,390]){
   await page.setViewportSize({width,height:1000});await page.goto(origin+'/app/import');await shot(width,'move-in');
   const search=page.getByRole('link',{name:'Search runs',exact:true});await search.focus();assert.equal(await page.locator('#search-tooltip').isVisible(),true);await page.locator('h1').click();await search.hover();await page.waitForTimeout(350);assert.equal(await page.locator('#search-tooltip').isVisible(),true);await shot(width,'search-tooltip');
-  const source=graphExport('http://127.0.0.1:9051','synthetic-crank-'+width),bad=structuredClone(source);
+  const source=loopExport('http://127.0.0.1:9051','synthetic-crank-'+width),bad=structuredClone(source);
   bad.nodes.push({id:'subflow',name:'Subflow',type:'n8n-nodes-base.executeWorkflow',typeVersion:1,position:[300,300],parameters:{workflowId:'synthetic-crank-child'}});
+  bad.nodes[5].credentials={httpHeaderAuth:{id:'synthetic-crank-16',name:'Reference only'}};
   bad.nodes.push({id:'custom',name:'Custom',type:'synthetic-crank-custom',typeVersion:1,position:[300,500],parameters:{code:'={{ globalThis.crankInjected = 1 }}'}});
   await page.getByLabel('Workflow export JSON').fill(JSON.stringify(bad));await page.getByRole('button',{name:'Upload and plan',exact:true}).click();await page.waitForLoadState('networkidle');
-  assert.equal(await page.getByRole('button',{name:'Approve this plan',exact:true}).count(),0);assert.ok((await page.locator('body').innerText()).includes('Manual conversion required'));assert.equal(await page.evaluate(()=>globalThis.crankInjected),undefined);await shot(width,'manual-conversions');
+  assert.equal(await page.getByRole('button',{name:'Approve this plan',exact:true}).count(),0);assert.ok((await page.locator('body').innerText()).includes('Manual conversion required'));assert.ok((await page.locator('body').innerText()).includes('fresh native account binding required'));assert.equal(await page.evaluate(()=>globalThis.crankInjected),undefined);await shot(width,'manual-conversions');
   await page.getByRole('button',{name:'Cancel plan',exact:true}).click();await page.waitForURL('**/app/import');
   await page.getByLabel('Workflow export JSON').fill(JSON.stringify(source));await page.getByRole('button',{name:'Upload and plan',exact:true}).click();await page.waitForLoadState('networkidle');assert.ok(await page.getByText(/Supported fields/).count());await shot(width,'review-graph');await page.getByText(/Supported fields/).click();await shot(width,'supported-fields');
   await page.getByRole('button',{name:'Approve this plan',exact:true}).click();await page.waitForLoadState('networkidle');assert.ok((await page.locator('body').innerText()).includes('present as drafts'));await shot(width,'applied-graph');

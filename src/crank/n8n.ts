@@ -97,14 +97,22 @@ export function n8nSource(env: ImportTargetEnv, ownerId: string): ImportDoorSour
       const root = object(value)
       if (Array.isArray(root.nodes) && root.nodes.length > 2) {
         // Refuse credential material before retention; graph expressions are only parsed as data.
-        const credentials = (v: Json): void => { if (v && typeof v === 'object') for (const [key, item] of Object.entries(v)) { if (/credential|password|secret|authorization|cookie|api.?key|access.?token|refresh.?token/i.test(key)) throw new Error('N8N_CREDENTIALS_FORBIDDEN'); credentials(item) } }
+        const credentials = (v: Json, path: string[] = []): void => { if (v && typeof v === 'object') for (const [key, item] of Object.entries(v)) {
+          if (key === 'credentials' && path.length === 2 && path[0] === 'nodes') {
+            for (const reference of Object.values(object(item))) { const ref = object(reference); keys(ref, ['id', 'name']); for (const value of Object.values(ref)) text(value) }
+            continue
+          }
+          if (/credential|password|secret|authorization|cookie|api.?key|access.?token|refresh.?token/i.test(key)) throw new Error('N8N_CREDENTIALS_FORBIDDEN')
+          if(key==='workflowJson'&&typeof item==='string'&&!item.startsWith('=')){let embedded:Json;try{embedded=JSON.parse(item)}catch{throw new Error('N8N_SUBFLOW_JSON_INVALID')}credentials(embedded)}
+          credentials(item, [...path, key])
+        } }
         credentials(value)
         n8nGraph(value, root.id === undefined ? `workflow-${index + 1}` : text(root.id), env, ownerId)
         return { kind: 'n8n-workflow', sourceId: root.id === undefined ? `workflow-${index + 1}` : text(root.id), payload: value }
       }
       return { kind: 'n8n-workflow', sourceId: workflow(value, index, env).sourceId, payload: value }
     },
-    mapping: { version: 'crank-n8n-native-graph-v2', map(record) {
+    mapping: { version: 'crank-n8n-native-graph-v3', map(record) {
       const root = object(record.payload)
       if (Array.isArray(root.nodes) && root.nodes.length > 2) return n8nGraph(record.payload, record.sourceId, env, ownerId)
       const flow = workflow(record.payload, 0, env)

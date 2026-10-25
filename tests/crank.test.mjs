@@ -1,4 +1,4 @@
-import { graphExport } from './n8n-graph-fixture.mjs';
+import { graphExport, loopExport } from './n8n-graph-fixture.mjs';
 import {before,after,test} from 'node:test';
 import assert from 'node:assert/strict';
 import {createServer} from 'node:http';
@@ -13,7 +13,7 @@ let h, receiver, target, mode='ok'; const effects=new Map(),requests=[];
 before(async()=>{
  const port=await freePort();target=`http://127.0.0.1:${port}`;
  receiver=createServer(async(req,res)=>{let text='';for await(const b of req)text+=b;const key=req.headers['idempotency-key'];requests.push({key,text});
-  if(req.url==='/graph-events'){res.writeHead(200,{'content-type':'application'+'/'+'json'});res.end(JSON.stringify({received:true}));return;}
+  if(req.url==='/graph-events'){if(mode==='reject'){res.writeHead(400);res.end();return}res.writeHead(200,{'content-type':'application'+'/'+'json'});res.end(JSON.stringify({received:true}));return;}
   if(mode==='reject'){res.writeHead(503);res.end();return;}
   if(effects.has(key))assert.equal(effects.get(key),text);else effects.set(key,text);
   if(mode==='lost'){res.destroy();return;}
@@ -218,7 +218,8 @@ test('MIG-001 native graph review, exact apply, restart, branch outcomes and pro
  const declared='https://receiver.example';
  const execution=await harness(declared,{edge:async request=>{if(new URL(request.url).origin!==declared)return undefined;const headers=new Headers(request.headers);headers.delete('content-length');return fetch(target+new URL(request.url).pathname,{method:request.method,headers,body:await request.arrayBuffer()})}});try{
   const good=graphExport(declared,'synthetic-crank-5'),badType=graphExport(declared,'synthetic-crank-6');badType.name='Synthetic strict condition refusal';Object.assign(badType.nodes[1].parameters.assignments.assignments[0],{type:'string',value:'8'});
-  const p=await doorImport(execution,JSON.stringify([good,badType])),w=(await execution.get('workflows')).find(w=>w.name===good.name);
+  const loop=loopExport(declared),filtered=graphExport(declared,'synthetic-crank-filter');filtered.name='Synthetic native filter';filtered.nodes[2].type='n8n-nodes-base.filter';filtered.connections.n2.main.splice(1,1);filtered.nodes.splice(5,1);
+  const p=await doorImport(execution,JSON.stringify([good,badType,loop,filtered])),w=(await execution.get('workflows')).find(w=>w.name===good.name);
   await execution.post('workflows/'+w.id+'/publish',{},execution.owner,201);const hook=await execution.post('workflows/'+w.id+'/hooks',{},execution.owner,201);
   for(const amount of [8,2]){
    const before=requests.length,message='synthetic-crank-'+amount;
@@ -231,6 +232,40 @@ test('MIG-001 native graph review, exact apply, restart, branch outcomes and pro
   const strict=(await execution.get('workflows')).find(w=>w.name===badType.name);await execution.post('workflows/'+strict.id+'/publish',{},execution.owner,201);const strictHook=await execution.post('workflows/'+strict.id+'/hooks',{},execution.owner,201),count=requests.length;
   await deliver(execution,strictHook.url,{method:'POST',headers:{'content-type':'application'+'/'+'json'},body:JSON.stringify({message:'synthetic-crank-7'})});
   const strictRun=await settled(execution,(await execution.get('workflow-runs?workflow='+strict.id)).runs[0].id);assert.equal(strictRun.status,'failed');assert.equal(strictRun.error.category,'type_mismatch');assert.equal(requests.length,count,'strict source types never silently coerce into an outbound branch');
+  // Native loops and immutable embedded children run against the same actual receiver.
+  const lw=(await execution.get('workflows')).find(w=>w.name===loop.name),ld=await execution.get('workflows/'+lw.id);
+  assert.equal(ld.draft.steps[1].type,'loop');assert.equal(ld.draft.steps[1].concurrency,1);
+  assert.equal(ld.draft.steps[1].max_items,1000);
+  assert.equal(ld.draft.settings.n8n_subflow_pins.length,1);assert.match(ld.draft.settings.n8n_subflow_pins[0].digest,/^[a-f0-9]{64}$/);
+  await execution.restart();assert.deepEqual((await execution.get('workflows/'+lw.id)).draft,ld.draft);
+  await execution.post('workflows/'+lw.id+'/publish',{},execution.owner,201);const lh=await execution.post('workflows/'+lw.id+'/hooks',{},execution.owner,201);
+  for(const messages of [['synthetic-crank-10','synthetic-crank-11'],[]]){
+   const before=requests.length;
+   await deliver(execution,lh.url,{method:'POST',headers:{'content-type':'application'+'/'+'json'},body:JSON.stringify({messages})});
+   const run=await settled(execution,(await execution.get('workflow-runs?workflow='+lw.id)).runs[0].id);
+   assert.equal(run.status,'succeeded',JSON.stringify(run));assert.deepEqual(requests.slice(before).map(r=>JSON.parse(r.text)),messages.map(message=>({message})));
+  }
+  const beforeFailure=requests.length;mode='reject';
+  try{await deliver(execution,lh.url,{method:'POST',headers:{'content-type':'application'+'/'+'json'},body:JSON.stringify({messages:['synthetic-crank-17','synthetic-crank-18']})});assert.equal((await settled(execution,(await execution.get('workflow-runs?workflow='+lw.id)).runs[0].id)).status,'failed');assert.equal(requests.length,beforeFailure+1,'serial source loop stops before the second item after failure')}finally{mode='ok'}
+  const countBefore=requests.length;
+  await deliver(execution,lh.url,{method:'POST',headers:{'content-type':'application'+'/'+'json'},body:JSON.stringify({messages:Array(1001).fill('synthetic-crank-12')})});
+  assert.equal((await settled(execution,(await execution.get('workflow-runs?workflow='+lw.id)).runs[0].id)).status,'failed');assert.equal(requests.length,countBefore);
+  for(const mutate of [
+   v=>v.nodes[3].parameters.batchSize=2,
+   v=>v.nodes[3].parameters.options.reset=true,
+   v=>v.connections.n3.main[0]=[{node:'n5',type:'main',index:0}],
+   v=>v.nodes[4].parameters={source:'database',workflowId:'synthetic-crank-13'},
+   v=>{v.nodes[4].type='n8n-nodes-base.code';v.nodes[4].parameters={jsCode:'globalThis.crankInjected = 1'}},
+   v=>v.nodes[5].credentials={httpHeaderAuth:{id:'synthetic-crank-14',name:'Reference only'}},
+  ]){
+   const bad=loopExport(declared,'synthetic-crank-'+crypto.randomUUID());mutate(bad);
+   const isolated=await harness(declared);try{const rejected=await doorPlan(isolated,JSON.stringify(bad));assert.equal(rejected.status,200,rejected.text);assert.equal(rejected.value.rejected.length,1);
+   assert.ok(rejected.value.diagnostics.some(d=>d.message?.includes('Manual conversion')));await door(isolated,'undo',{planId:rejected.value.planId});}finally{await isolated.close()}
+  }
+  // Filter preserves its input on a passing condition and stops all downstream work otherwise.
+  const fw=(await execution.get('workflows')).find(w=>w.name===filtered.name);
+  await execution.post('workflows/'+fw.id+'/publish',{},execution.owner,201);const fh=await execution.post('workflows/'+fw.id+'/hooks',{},execution.owner,201);
+  for(const amount of [9,1]){const before=requests.length;await deliver(execution,fh.url,{method:'POST',headers:{'content-type':'application'+'/'+'json'},body:JSON.stringify({amount,message:'synthetic-crank-15'})});let run=await settled(execution,(await execution.get('workflow-runs?workflow='+fw.id)).runs[0].id);if(run.status==='waiting'){await execution.tick();run=await settled(execution,run.id)}assert.equal(run.status,amount>5?'succeeded':'stopped_by_filter');assert.equal(requests.length,before+(amount>5?1:0))}
   const undo=await door(execution,'undo',{planId:p.planId});assert.ok(undo.status>=400||undo.value.job?.state!=='undone');assert.ok(await execution.get('workflows/'+w.id));
  }finally{await execution.close()}
 });
