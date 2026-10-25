@@ -4366,7 +4366,7 @@
       "executable": false
     },
     "tests/gusto-sandbox.mjs": {
-      "sha256": "e677202f069ff765f0de21523c1569abb077872d8bc7eb2dee25ff664c403070",
+      "sha256": "6d813dff1352dd53de354c4617561023bbdd8129c6559e4cf7cace303606cc47",
       "executable": false
     },
     "tests/harness.mjs": {

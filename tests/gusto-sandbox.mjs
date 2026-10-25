@@ -4,6 +4,7 @@
  */
 import assert from 'node:assert/strict';
 import { randomUUID, randomInt } from 'node:crypto';
+import { execFileSync } from 'node:child_process';
 import { harness } from './harness.mjs';
 import { stepOf, startRun } from './kit.mjs';
 import { prepareSandbox } from './gusto-sandbox-fixture.mjs';
@@ -13,6 +14,8 @@ const checkDate = process.env.CRANK_SANDBOX_CHECK_DATE;
 assert.ok(typeof checkDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(checkDate), 'Set CRANK_SANDBOX_CHECK_DATE to the explicitly approved Demo ACH check date');
 assert.equal(new Date(checkDate + 'T00:00:00Z').toISOString().slice(0, 10), checkDate, 'Use a valid Demo calendar date');
 assert.ok(process.env.GUSTO_CLIENT_ID && process.env.GUSTO_CLIENT_SECRET, 'Inject the held Gusto app credentials');
+console.log(JSON.stringify({ event: 'gusto_sandbox_invocation', code_sha: execFileSync('git', ['rev-parse', 'HEAD'], {encoding:'utf8'}).trim(),
+  command: 'node tests/gusto-sandbox.mjs', check_date: checkDate, credential_source: 'authorized local injector', provider_origin: base }));
 
 async function provider(path, data, token, method = data === undefined ? 'GET' : 'POST') {
   const response = await fetch(base + path, { method, headers: { 'content-type': 'application/json', accept: 'application/json',
