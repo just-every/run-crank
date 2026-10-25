@@ -70,7 +70,9 @@
     "0066_subflows.sql",
     "0067_operational_tables.sql",
     "0068_dependencies_sealed.sql",
-    "0069_import_door_archives.sql"
+    "0069_import_door_archives.sql",
+    "0070_pure_recipes.sql",
+    "0071_pure_subflow_calls.sql"
   ],
   "breaking": false,
   "agentUpdateInstructions": "Review the hosted setup fields and deployment specification. Preserve migration bytes and reconnect external providers after restoring inactive workflows."
