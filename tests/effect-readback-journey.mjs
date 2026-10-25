@@ -72,7 +72,18 @@ export async function quickbooksReconciliationJourney({ inspect } = {}) {
   fake.routes.set('downstream.example', () => jsonResponse({ refused: true }, 400));
   const h = await harness('http://127.0.0.1:9', { edge: fake.edge });
   try {
-    const c = await h.post('connections', { app: 'quickbooks', label: 'Harbour QuickBooks sandbox', account_name: '1234', scopes: ['com.intuit.quickbooks.accounting'], auth_kind: 'oauth2', secret: { access_token: 'synthetic-crank-4' } }, h.owner, 201);
+    fake.routes.set('oauth.platform.intuit.com', ({ headers, body }) => {
+      assert.equal(headers.authorization, 'Basic ' + Buffer.from('synthetic-crank-5:synthetic-crank-6').toString('base64'));
+      assert.equal(new URLSearchParams(body).has('client_secret'), false);
+      return jsonResponse({ access_token: 'synthetic-crank-4', refresh_token: 'synthetic-crank-7', expires_in: 3600 });
+    });
+    await h.post('oauth/apps/quickbooks', { client_id: 'synthetic-crank-5', client_secret: 'synthetic-crank-6' });
+    const oauth = await h.post('oauth/start', { app: 'quickbooks', label: 'Harbour QuickBooks sandbox', scopes: ['com.intuit.quickbooks.accounting'] }, h.owner, 201);
+    const state = new URL(oauth.authorize_url).searchParams.get('state');
+    const callback = 'oauth/callback?' + new URLSearchParams({ state, code: 'synthetic-crank-8', realmId: '1234' });
+    const c = await h.get(callback, h.owner, 201);
+    assert.equal(c.account_name, '1234');
+    await h.get(callback, h.owner, 400);
     const step = { id: 'invoice', name: 'Create workshop invoice', type: 'quickbooks.create_invoice', connection_id: c.id, timeout_ms: 200, input: { realm_id: '1234', business_key: invoice.DocNumber, payload: { CustomerRef: invoice.CustomerRef, Line: [{ Amount: 19.99, DetailType: 'SalesItemLineDetail', SalesItemLineDetail: { ItemRef: { value: '1' } } }] } } };
     const flow = await publish(h, 'Harbour invoice with delivery failure', { trigger: { type: 'manual' }, steps: [step, { id: 'later', type: 'http', input: { method: 'GET', url: 'https://downstream.example/fail' } }] });
     let run = await startRun(h, flow, {});

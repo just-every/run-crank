@@ -105,5 +105,17 @@ export async function gustoHandoffJourney({ inspect } = {}) {
     assert.equal(uncertain.status, 'uncertain', 'accepted handoff with unconfirmed readback cannot become a repeatable failure');
     assert.equal(stepOf(uncertain, 'handoff').error.category, 'uncertain');
     assert.ok(!JSON.stringify(await h.get('workflow-runs/' + paid.id)).includes(token), 'credentials stay out of retained handoffs');
+    const archive = await h.send('/api/crank/data/export', {}, h.owner);
+    assert.equal(archive.status, 200); assert.ok(!archive.text.includes(token));
+    const restored = await harness('http://127.0.0.1:9', { edge: fake.edge });
+    try {
+      await restored.post('data/restore', { archive: archive.text, confirm: 'RESTORE' });
+      const disclosurePath = `regulated-operations?connection_id=${bound.id}&company_id=${company}`;
+      assert.ok((await restored.get(disclosurePath)).operations.every(operation => !operation.authorized));
+      await restored.post(`connections/${bound.id}/rotate`, { secret: { token }, scopes });
+      assert.ok((await restored.get(disclosurePath)).operations.every(operation => !operation.authorized), 'restored consent never grants the receiving installation execution authority');
+      assert.equal(stepOf(await restored.get('workflow-runs/' + paid.id), 'pay').output.ach_reference, 'synthetic-crank-9');
+    } finally { await restored.close(); }
+
   } finally { await h.close(); }
 }

@@ -61,7 +61,7 @@ try {
     await disclosure.getByLabel('Completed provider agreement reference').fill('synthetic-crank-6');await disclosure.getByRole('checkbox').check();await disclosure.getByRole('button',{name:'Authorize operation',exact:true}).click();await page.waitForLoadState('networkidle');
     await expect(page.locator('summary').filter({hasText:'Send contractor data for 1099 preparation · Authorized'})).toBeVisible();await shot(width,'provider-authorized');return true;
    }
-   await page.goto(h.origin+`/app/workflow-runs/${run.id}`);await expect(page.getByText('Completed',{exact:true}).first()).toBeVisible();await shot(width,state);
+   await page.goto(h.origin+`/app/workflow-runs/${run.id}`);await expect(page.getByText('Success',{exact:true}).first()).toBeVisible();await shot(width,state);
   }});
   console.log(`Financial owner journeys ${width}: provider consent, owner readback choice, continuation, compensation and shared tooltips passed`);
  }

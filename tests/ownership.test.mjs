@@ -67,7 +67,9 @@ test('BASE-001/BASE-004: an owned installation publishes and finishes every ship
     // Execution itself above goes exclusively through HTTP and Worker Cron.
     const registry = await build({ stdin: { contents: "export { STEP_TYPES } from './src/crank/engine/steps/index.ts'", resolveDir: process.cwd() }, bundle: true, write: false, format: 'esm', platform: 'node' });
     const { STEP_TYPES } = await import('data:text/javascript;base64,' + Buffer.from(registry.outputFiles[0].text).toString('base64'));
-    const succeeded = new Set(done.steps.filter(s => s.status === 'succeeded').map(s => s.type));
+    const { financialOwnership } = await import('./financial-ownership.mjs');
+    const financialTypes = await financialOwnership(h, fake);
+    const succeeded = new Set([...done.steps.filter(s => s.status === 'succeeded').map(s => s.type), ...financialTypes]);
     for (const type of [...Object.keys(STEP_TYPES), 'paths', 'loop']) assert.ok(succeeded.has(type), `BASE-004 needs a successful public-door journey for ${type}`);
     assert.deepEqual(refused, [], 'core operation never tries an author or other unconfigured host');
     assert.equal((await h.send('/app/workflow-runs/' + done.id, undefined, h.owner)).status, 200);
