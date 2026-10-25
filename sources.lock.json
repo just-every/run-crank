@@ -1878,7 +1878,7 @@
       "executable": false
     },
     "src/crank/providers/quickbooks-compensation.ts": {
-      "sha256": "526e8280ef578bd4e09b2f5c478629464bd94eb26569dbad14bb914d047bb0b9",
+      "sha256": "076fcd3302a3faee1b24c362d837e25e6f3b23c3b7493c644a4b2ff0e0edc680",
       "executable": false
     },
     "src/crank/providers/quickbooks.ts": {
@@ -4250,7 +4250,7 @@
       "executable": false
     },
     "tests/effect-readback-journey.mjs": {
-      "sha256": "555a19f3481955960854cc18e74417deb4c6d4319ac4eae732b31ead1d90b594",
+      "sha256": "d54c0b8d394c7a42404ce858cf37810dbc276f114fec527eb2315b43fd36ca87",
       "executable": false
     },
     "tests/email-link.mjs": {

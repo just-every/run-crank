@@ -49,7 +49,7 @@ export async function effectReadbackJourney() {
 /** Native financial reconciliation, owner continuation and independent compensation. */
 export async function quickbooksReconciliationJourney({ inspect } = {}) {
   const fake = fakeEdge(), pending = new Set(), seenVoidKeys = new Set();
-  let mode = 'zero', creates = 0, voids = 0;
+  let mode = 'zero', creates = 0, voids = 0, loseCompensation = false;
   const invoice = { Id: 'synthetic-crank-1', SyncToken: '0', DocNumber: 'synthetic-crank-1', CustomerRef: { value: 'synthetic-crank-2' }, TotalAmt: 19.99, CurrencyRef: { value: 'USD' } };
   fake.routes.set('sandbox-quickbooks.api.intuit.com', ({ method, url, body }) => {
     if (method === 'GET' && url.pathname.endsWith('/query')) {
@@ -60,6 +60,10 @@ export async function quickbooksReconciliationJourney({ inspect } = {}) {
       const key = url.searchParams.get('requestid');
       if (!seenVoidKeys.has(key)) { voids++; seenVoidKeys.add(key); }
       assert.equal(JSON.parse(body).Id, invoice.Id);
+      if (loseCompensation) {
+        const response = new Promise(resolve => setTimeout(() => resolve(jsonResponse({ Invoice: { ...invoice, TotalAmt: 0 } })), 500));
+        pending.add(response); response.finally(() => pending.delete(response)); return response;
+      }
       return jsonResponse({ Invoice: { ...invoice, TotalAmt: 0 } });
     }
     if (method === 'POST') {
@@ -67,6 +71,7 @@ export async function quickbooksReconciliationJourney({ inspect } = {}) {
       const promise = new Promise(resolve => setTimeout(() => resolve(jsonResponse({ Invoice: invoice })), 500));
       pending.add(promise); promise.finally(() => pending.delete(promise)); return promise;
     }
+    if (loseCompensation) throw new Error('synthetic-crank-network-unavailable');
     return jsonResponse({ Invoice: { ...invoice, TotalAmt: 0 } });
   });
   fake.routes.set('downstream.example', () => jsonResponse({ refused: true }, 400));
@@ -110,7 +115,7 @@ export async function quickbooksReconciliationJourney({ inspect } = {}) {
     assert.equal(stepOf(run, 'later').status, 'failed'); assert.equal(creates, 1);
     await h.post(`workflow-runs/${run.id}/reconcile`, { path: 'invoice', digest: preview.digest, remote_id: invoice.Id, reason: 'Repeated decision' }, h.owner, 409);
     if (inspect) await inspect({ h, run, state: 'continued' });
-    const compensation = await publish(h, 'Harbour separately authorized invoice void', { trigger: { type: 'manual' }, steps: [{ id: 'void_invoice', type: 'quickbooks.void_invoice', connection_id: c.id, input: { source_run_id: run.id, source_path: 'invoice' } }] });
+    const compensation = await publish(h, 'Harbour separately authorized invoice void', { trigger: { type: 'manual' }, steps: [{ id: 'void_invoice', type: 'quickbooks.void_invoice', connection_id: c.id, timeout_ms: 200, input: { source_run_id: run.id, source_path: 'invoice' } }] });
     let cancel = await startRun(h, compensation, {});
     assert.equal(cancel.status, 'awaiting_approval'); assert.equal(voids, 0);
     const decide = (r, choice) => h.post(`workflow-runs/${r.id}/${choice}`, { path: 'void_invoice', digest: r.waits[0].proposal_digest, reason: 'Compensate the failed downstream delivery' });
@@ -122,6 +127,14 @@ export async function quickbooksReconciliationJourney({ inspect } = {}) {
     assert.equal(cancel.status, 'succeeded'); assert.equal(voids, 1); assert.equal(creates, 1);
     assert.equal(stepOf(cancel, 'void_invoice').output.compensation_of, run.id);
     if (inspect) await inspect({ h, run: cancel, state: 'compensated' });
+    loseCompensation = true;
+    let unknownCompensation = await startRun(h, compensation, {});
+    unknownCompensation = await decide(unknownCompensation, 'approve');
+    assert.equal(unknownCompensation.status, 'uncertain', 'unavailable compensation readback cannot license another void');
+    await h.restart();
+    assert.deepEqual((await h.get(`workflow-runs/${unknownCompensation.id}/replay`)).eligible, []);
+    assert.equal(voids, 1, 'every compensation run retains the original effect’s stable compensation identity');
+    loseCompensation = false;
     const refund = await publish(h, 'Harbour refund readback', { trigger: { type: 'manual' }, steps: [{ ...step, type: 'quickbooks.create_refund_receipt' }] });
     const recovered = await startRun(h, refund, {});
     assert.equal(recovered.status, 'succeeded'); assert.equal(stepOf(recovered, 'invoice').output.body.RefundReceipt.Id, invoice.Id); assert.equal(creates, 2);

@@ -33,7 +33,8 @@ async function voidInvoice(step: Step, ctx: StepContext) {
     const uncertain = new StepError('uncertain', 'The invoice void outcome is unknown; check QuickBooks before any further compensation', { uncertain: true })
     const read = new URL(value.base + '/invoice/' + encodeURIComponent(value.invoice.Id)), headers = new Headers({ accept: 'application/json' })
     await authorizeRequest(ctx.env, String(step.connection_id), read, headers, null)
-    const response = await boundedFetch(read.href, { headers, follow: 0 })
+    let response
+    try { response = await boundedFetch(read.href, { headers, follow: 0 }) } catch { throw uncertain }
     let invoice: any
     try { invoice = JSON.parse(utf8(response.bytes)).Invoice } catch { throw uncertain }
     if (response.status !== 200 || invoice?.Id !== value.invoice.Id || Number(invoice.TotalAmt) !== 0) throw uncertain
