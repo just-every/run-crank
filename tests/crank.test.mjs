@@ -217,7 +217,8 @@ test('MIG-001 native graph review, exact apply, restart, branch outcomes and pro
  }finally{await local.close()}
  const declared='https://receiver.example';
  const execution=await harness(declared,{edge:async request=>{if(new URL(request.url).origin!==declared)return undefined;const headers=new Headers(request.headers);headers.delete('content-length');return fetch(target+new URL(request.url).pathname,{method:request.method,headers,body:await request.arrayBuffer()})}});try{
-  const p=await doorImport(execution,JSON.stringify(graphExport(declared,'synthetic-crank-5'))),[w]=await execution.get('workflows');
+  const good=graphExport(declared,'synthetic-crank-5'),badType=graphExport(declared,'synthetic-crank-6');badType.name='Synthetic strict condition refusal';Object.assign(badType.nodes[1].parameters.assignments.assignments[0],{type:'string',value:'8'});
+  const p=await doorImport(execution,JSON.stringify([good,badType])),w=(await execution.get('workflows')).find(w=>w.name===good.name);
   await execution.post('workflows/'+w.id+'/publish',{},execution.owner,201);const hook=await execution.post('workflows/'+w.id+'/hooks',{},execution.owner,201);
   for(const amount of [8,2]){
    const before=requests.length,message='synthetic-crank-'+amount;
@@ -227,6 +228,9 @@ test('MIG-001 native graph review, exact apply, restart, branch outcomes and pro
    assert.equal(run.status,'succeeded',JSON.stringify(run));assert.equal(requests.length,before+1);assert.deepEqual(JSON.parse(requests.at(-1).text),{amount,message});
    assert.ok(run.steps.some(s=>s.step_id===(amount>5?'n4':'n5')));
   }
+  const strict=(await execution.get('workflows')).find(w=>w.name===badType.name);await execution.post('workflows/'+strict.id+'/publish',{},execution.owner,201);const strictHook=await execution.post('workflows/'+strict.id+'/hooks',{},execution.owner,201),count=requests.length;
+  await deliver(execution,strictHook.url,{method:'POST',headers:{'content-type':'application'+'/'+'json'},body:JSON.stringify({message:'synthetic-crank-7'})});
+  const strictRun=await settled(execution,(await execution.get('workflow-runs?workflow='+strict.id)).runs[0].id);assert.equal(strictRun.status,'failed');assert.equal(strictRun.error.category,'type_mismatch');assert.equal(requests.length,count,'strict source types never silently coerce into an outbound branch');
   const undo=await door(execution,'undo',{planId:p.planId});assert.ok(undo.status>=400||undo.value.job?.state!=='undone');assert.ok(await execution.get('workflows/'+w.id));
  }finally{await execution.close()}
 });

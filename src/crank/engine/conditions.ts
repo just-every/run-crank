@@ -15,7 +15,7 @@ export const OPERATORS = [
 ]
 export interface Rule {
   field: string; op: string; value?: unknown; case_sensitive?: boolean; keep_whitespace?: boolean
-  precision?: 'instant' | 'day'; timezone?: string; calendar?: unknown; inner?: Rule; compare?: string
+  value_type?: 'string' | 'number' | 'boolean'; precision?: 'instant' | 'day'; timezone?: string; calendar?: unknown; inner?: Rule; compare?: string
 }
 export type Groups = Rule[][]
 export interface RuleTrace { field: string; op: string; kind: ValueKind; left: unknown; right?: unknown; result: boolean | 'type_mismatch'; message?: string }
@@ -39,6 +39,7 @@ export function validateGroups(groups: unknown, label: string): Groups {
 }
 function validateRule(rule: unknown, label: string) {
   if (!isObject(rule) || typeof rule.field !== 'string' || typeof rule.op !== 'string') throw new StepError('validation', `${label}: name a field and an operator`)
+  if (rule.value_type !== undefined && !['string', 'number', 'boolean'].includes(String(rule.value_type))) throw new StepError('validation', `${label}: value_type must be string, number or boolean`)
   if (!OPERATORS.includes(rule.op)) throw new StepError('validation', `${label}: unknown operator ${rule.op}`)
   const operandless = ['boolean.is_true', 'boolean.is_false', 'exists', 'not_exists', 'is_empty', 'not_empty', 'list.any', 'list.every']
   if (!operandless.includes(rule.op) && rule.value === undefined) throw new StepError('validation', `${label}: ${rule.op} needs an operand`)
@@ -93,6 +94,7 @@ function evaluateRule(rule: Rule, root: unknown, scope: Scope, zone: string, now
 }
 
 function test(rule: Rule, left: unknown, kind: ValueKind, right: unknown, scope: Scope, defaultZone: string, now: number): boolean {
+  if (rule.value_type !== undefined && (typeof left !== rule.value_type || (right !== undefined && !rule.op.startsWith('boolean.') && typeof right !== rule.value_type))) throw new Mismatch(`expected ${rule.value_type} operands without coercion`)
   const [family, op] = rule.op.includes('.') ? rule.op.split('.') as [string, string] : ['exists', rule.op]
   if (family === 'exists') {
     if (op === 'exists') return kind !== 'missing' && kind !== 'null'

@@ -109,7 +109,9 @@ conditions (versions 2 through 2.2), interval Wait (version 1.1), and JSON POST
 HTTP Request (versions 4 through 4.3). Set fields are explicit simple names with
 matching literal types or declarative data paths. IF supports the listed native
 text comparisons, numeric comparisons and true or false tests, an AND or OR
-combinator and one destination on each output. Shared joins, cycles, fan-out,
+combinator and one destination on each output. Imported strict conditions carry an
+explicit scalar type guard: a numeric string cannot silently become a number or
+select a branch. Such a mismatch fails before any downstream request. Shared joins, cycles, fan-out,
 loose type coercion and every unrecognized setting require manual conversion.
 A Wait preserves the preceding data and uses Crank's ordinary durable delay.
 

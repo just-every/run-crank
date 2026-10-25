@@ -214,7 +214,7 @@
       "executable": false
     },
     "docs/IMPORTING.md": {
-      "sha256": "a67c3d6db66964c1c5eeff7e2437eaf60f09375fb6d68562f21dfeade00ad585",
+      "sha256": "24e2787ebb22399546b711c99753f17890ad3526f81ecab963beeff649d5e7bd",
       "executable": false
     },
     "docs/OPERATIONS.md": {
@@ -1542,7 +1542,7 @@
       "executable": false
     },
     "src/crank/engine/conditions.ts": {
-      "sha256": "d6a271b956c7db9782fa10f4c62b7c459e392fcbac7bab40139f3013e9483ce8",
+      "sha256": "881c01e435c5317083a10ac365fdc614ad981ff842abd186d2d72beab7edc903",
       "executable": false
     },
     "src/crank/engine/dates.ts": {
@@ -1746,7 +1746,7 @@
       "executable": false
     },
     "src/crank/n8n-graph.ts": {
-      "sha256": "a824f3aec14a035c7268b5403159d29e6a0035e126804c5ec6ac0e3310ab0101",
+      "sha256": "d2a51218d089c6e8511d5fc11ba85376c679bb34333c4cb815cc90c70bf1ad29",
       "executable": false
     },
     "src/crank/n8n.ts": {
@@ -4178,7 +4178,7 @@
       "executable": false
     },
     "tests/crank.test.mjs": {
-      "sha256": "0c4ae077f90d0a7713f9dd07dc650b220ac47003faf47ab397e7e797e1527838",
+      "sha256": "3338446592f042653a2bad2c57c60df9422a12940526aa0e87b78fc91d236f5d",
       "executable": false
     },
     "tests/custom-browser-runtime.mjs": {
