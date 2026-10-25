@@ -47,5 +47,7 @@ try {
   worker.kill('SIGTERM')
   await new Promise(resolve => worker.exitCode !== null ? resolve() : worker.once('exit', resolve))
   await rm(persist, { recursive: true, force: true })
+  // wrangler dev keeps its scratch (.wrangler/tmp) beside the config it runs, which here is the emitted Worker; the artifact producer refuses that folder in dist/server, so leave the build output as rer build wrote it.
+  await rm('dist/server/.wrangler', { recursive: true, force: true })
 }
 await emittedRecovery()
