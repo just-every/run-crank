@@ -3,6 +3,7 @@ import { boundedFetch, utf8 } from '../engine/egress'
 import { StepError } from '../engine/errors'
 import { getWfRun, loadRecords } from '../engine/records'
 import type { Step, StepContext, StepType } from '../engine/types'
+import { isObject } from '../engine/values'
 import { digest } from '../model'
 import { authorizeRequest } from '../connections/auth'
 import { quickbooksAccount } from './quickbooks'
@@ -23,15 +24,19 @@ async function voidInvoice(step: Step, ctx: StepContext) {
   url.searchParams.set('operation', 'void'); url.searchParams.set('requestid', (await digest(value.operation_key)).slice(0, 50))
   try {
     const result = await httpRequest.execute({ ...step }, { ...ctx, input: { method: 'POST', url: url.href, body: { Id: value.invoice.Id, SyncToken: value.invoice.SyncToken } } })
+    const invoice = result.status === 'succeeded' && isObject(result.output) && isObject(result.output.body) ? result.output.body.Invoice : null
+    if (!isObject(invoice) || invoice.Id !== value.invoice.Id || Number(invoice.TotalAmt) !== 0) throw new StepError('uncertain', 'QuickBooks did not confirm the invoice void outcome', { uncertain: true })
     return result.status === 'succeeded' ? { ...result, output: { ...(result.output as object), compensation_of: value.source_run_id, source_path: value.source_path, compensation_operation_key: value.operation_key } } : result
   } catch (error) {
-    if (!(error instanceof StepError) || !error.detail.uncertain) throw error
+    if (!(error instanceof StepError)) throw error
+    if (!error.detail.uncertain && !(error.category === 'provider' && (!error.detail.status || Number(error.detail.status) >= 500))) throw error
+    const uncertain = new StepError('uncertain', 'The invoice void outcome is unknown; check QuickBooks before any further compensation', { uncertain: true })
     const read = new URL(value.base + '/invoice/' + encodeURIComponent(value.invoice.Id)), headers = new Headers({ accept: 'application/json' })
     await authorizeRequest(ctx.env, String(step.connection_id), read, headers, null)
     const response = await boundedFetch(read.href, { headers, follow: 0 })
     let invoice: any
-    try { invoice = JSON.parse(utf8(response.bytes)).Invoice } catch { throw error }
-    if (response.status !== 200 || invoice?.Id !== value.invoice.Id || Number(invoice.TotalAmt) !== 0) throw error
+    try { invoice = JSON.parse(utf8(response.bytes)).Invoice } catch { throw uncertain }
+    if (response.status !== 200 || invoice?.Id !== value.invoice.Id || Number(invoice.TotalAmt) !== 0) throw uncertain
     return { status: 'succeeded' as const, output: { status: 200, body: { Invoice: invoice }, reconciled: true, compensation_of: value.source_run_id, source_path: value.source_path, compensation_operation_key: value.operation_key } }
   }
 }
