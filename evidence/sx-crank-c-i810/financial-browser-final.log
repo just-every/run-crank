@@ -1,0 +1,45 @@
+heavy-slot: committed d37805cb7ab6efa817cfd04ce21907bc0bc7b6ae; routing to m1-runner (bundle)
+REMOTE_JOB 20261025T232312141617Z-heavy-slot-efcfcbb8 stream=[local path redacted] exit=[local path redacted]
+QUEUED ticket=10955 job=20261025T232312141617Z-heavy-slot-efcfcbb8
+ADMITTED slot=7 cap=7 load=6.40
+RESOLVED_SHA d37805cb7ab6efa817cfd04ce21907bc0bc7b6ae
+NODE v22.20.0; source=.node-version; TZ=UTC; provider credentials absent
+PACKAGE_MANAGER pnpm@10.12.4
+Lockfile is up to date, resolution step is skipped
+Progress: resolved 1, reused 0, downloaded 0, added 0
+Packages: +153
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Progress: resolved 153, reused 153, downloaded 0, added 152
+Progress: resolved 153, reused 153, downloaded 0, added 153, done
+
+dependencies:
++ @tanstack/react-router 1.170.41
++ @tanstack/react-start 1.168.60
++ hono 4.13.7
++ marked 18.0.14
++ react 19.2.8
++ react-dom 19.2.8
+
+devDependencies:
++ @cloudflare/vite-plugin 1.54.5
++ @cloudflare/workers-types 5.20260908.1
++ @playwright/test 1.63.0
++ @runeditrun/rer 0.2.80
++ @types/node 22.18.6
++ @types/react 19.2.18
++ @types/react-dom 19.2.7
++ @vitejs/plugin-react 6.1.1
++ esbuild 0.28.1
++ miniflare 5.20260907.0-alpha
++ typescript 5.9.3
++ vite 8.2.2
++ wrangler 4.129.1
+
+Done in 4.9s using pnpm v10.12.4
+PLAYWRIGHT Version 1.63.0; shared cache [local path redacted]
+PLAYWRIGHT_INSTALL 1.63.0 chromium under runner Node v22.20.0; stall limit 300s without growth
+COMMAND_START nice=10
+Financial owner journeys 1440: retained Gusto obligation, provider consent, owner readback choice, continuation, compensation and shared tooltips passed
+Financial owner journeys 390: retained Gusto obligation, provider consent, owner readback choice, continuation, compensation and shared tooltips passed
+RESULT exit=0 wall_seconds=92.123 command_seconds=76.528 retained=False
+LOCAL_LOG [local path redacted]

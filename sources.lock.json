@@ -233,6 +233,110 @@
       "sha256": "559f16c4634bb95cf5062b777e69bb55cfa8aedb7507689099a61b30ed89feea",
       "executable": false
     },
+    "evidence/sx-crank-c-i810/financial-browser-final.log": {
+      "sha256": "26b769c4f464ee4a6846addb32d918c8a3330f2b656698a3cf06a85448e48c1a",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i810/gusto-sandbox-4e1b18a.txt": {
+      "sha256": "ab36aec4642c70441b604f5e7543a8db718461449645fb33a317ae4bdce85a00",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i810/screens-current/1440-account-provider-settings.png": {
+      "sha256": "a6e414c5596bd05300ac315510ae49ef06bbe1195d4e816e23fe2036427792f9",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i810/screens-current/1440-compensated.png": {
+      "sha256": "620d6811910b91795e2370c5219f9ba109b13c433d4d7e76c1b9199b92d64bd1",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i810/screens-current/1440-compensation-review.png": {
+      "sha256": "5f6c249f824aa08a9e95a156bd0aec203d69c7606f585e71b3d7af300f817b0a",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i810/screens-current/1440-continued.png": {
+      "sha256": "b987f3dfa637abbe3db94732b3aa36b3fdae9ead5bde3d91f21a4122e3356e8d",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i810/screens-current/1440-gusto-reconciled.png": {
+      "sha256": "0299fbd700661556e181fd61a5923300c21fa11ea92591d45258e4a8c34f4469",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i810/screens-current/1440-gusto-uncertain.png": {
+      "sha256": "eade79f393a6afa99cdb67ccf7de5dbc7d6be64e122bcd53b16ed68be8ace87d",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i810/screens-current/1440-handoff-complete.png": {
+      "sha256": "3d849e8252d91cc8a1f767be267a662af8c96717d29eae7faee0361553b5d26d",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i810/screens-current/1440-multiple.png": {
+      "sha256": "07ec007216250ec8286cbc31e165cfbdcdb19eb44c34b604be443a60dbca6a99",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i810/screens-current/1440-owner-continued.png": {
+      "sha256": "b987f3dfa637abbe3db94732b3aa36b3fdae9ead5bde3d91f21a4122e3356e8d",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i810/screens-current/1440-paused-gusto.png": {
+      "sha256": "7591cb1b7828e78c7ad989b14522a5aafeb3ecda5366108c756b78361623bd23",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i810/screens-current/1440-provider-authorized.png": {
+      "sha256": "abb54ff17231dceddaab0df9d942e4e5c5476b55fb9b7aae91104e24f59b7125",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i810/screens-current/1440-provider-consent-required.png": {
+      "sha256": "48d4234b193b388ef7fdaec0109d960144b9a70e750dd0d927337fe53ed43781",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i810/screens-current/390-account-provider-settings.png": {
+      "sha256": "4c6606f27a7c0b6200967a5eaadaf4e8011c8cae68b571bc503dae8481c206cd",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i810/screens-current/390-compensated.png": {
+      "sha256": "ce90173f5352725851b2a5d1596e6c97f5f7830d2841a9c73d0f7c02e6498a4c",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i810/screens-current/390-compensation-review.png": {
+      "sha256": "ab59c2e20435326500f99ddd3bd6a1998f082b6773c99d8a50f9fef7f0d7f978",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i810/screens-current/390-continued.png": {
+      "sha256": "f6ae637223e5727cd8d8e7588e52015228ecff154c8cb5b7b8b7bbdac7f883e6",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i810/screens-current/390-gusto-reconciled.png": {
+      "sha256": "40c1ea739bf29176972b6bdf4258c977eb43bfb90dd8317945abeb8d278801a9",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i810/screens-current/390-gusto-uncertain.png": {
+      "sha256": "1d390b9c0d1d798477bcf99878e987aab40b9b711bf3a1620ae776c1d0610206",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i810/screens-current/390-handoff-complete.png": {
+      "sha256": "cfca8ca515bc5be7679fc576c2beac74f9d71c2b99cab8ba1c5056af0abad4fc",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i810/screens-current/390-multiple.png": {
+      "sha256": "149f8bfbc77b32cdb40eda7110fdeb695cff011be8cb7333f26e4ddeb22000d7",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i810/screens-current/390-owner-continued.png": {
+      "sha256": "f6ae637223e5727cd8d8e7588e52015228ecff154c8cb5b7b8b7bbdac7f883e6",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i810/screens-current/390-paused-gusto.png": {
+      "sha256": "5cce2030b74a8cc7430e582e57139aa1a2c58a4b8ba1bd83dcc593c0415a23d3",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i810/screens-current/390-provider-authorized.png": {
+      "sha256": "4284468a704b7998ec7c6824c00400c664a4f4bf27f5d4d2a5933cc4576d5f38",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i810/screens-current/390-provider-consent-required.png": {
+      "sha256": "41edfdefca04e300e852a1faf661d79451059a5211241f38339241b7ceaadc68",
+      "executable": false
+    },
     "examples/inbox/server.mjs": {
       "sha256": "d3da1e6172fdfd858486a9ddc9ac72702e3b58af2069ba3ffd75f6777d06ec0a",
       "executable": false
