@@ -100,6 +100,10 @@ PUT, GET; JSON, form, multipart, XML or raw; optional Stripe, Shopify, GitHub,
 Calendly, Typeform, Twilio or custom HMAC signatures), `/hooks/resume/TOKEN`
 for callback waits, and `/hooks/slack/CONNECTION_ID` for signed Slack events.
 
+URL polling commits a successful watermark only after a complete page set. Cursor and Link-header sources must stop advertising a next page; page-number sources must return an empty terminal page, included in `pagination.max_pages` (1 to 10). Page numbers begin at `pagination.start` (default 1). Repeated pages, invalid cursors, exhausted page bounds and provider failures admit no items from that attempt, retain the previous successful watermark and produce a visible poll error with an owner notice. Narrow the query or increase the bound before retrying an oversized source. Overlapping source IDs are admitted once. These URL-source guarantees do not supply native email or CRM polling or renewable subscriptions.
+
+Signed Slack events commit their source identity together with a queued run or held item. A failed transaction leaves no deduplication claim, so the provider can retry after an outage. Concurrent deliveries and older distinct source events retain one run per event identity; new receipts bind the source identity to canonical contents and refuse conflicting retries. Pre-upgrade event identities remain duplicate fences without claiming a historical contents comparison. Admission rechecks the published version, both managed connections and the signing credential revision. Paused events remain held with their source times. Existing run history and inactive archive rules apply.
+
 ## Historical runs (TRIG-002)
 
 Publish a graph whose mappings use the source record at `trigger.<field>`.

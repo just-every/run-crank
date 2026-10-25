@@ -71,6 +71,13 @@ export function validateTrigger(trigger: Record<string, unknown>) {
       if ((trigger.items_path === undefined) === (trigger.xpath === undefined) && trigger.items_path !== '') fail('choose items_path (JSON) or xpath (XML/HTML)')
       if (trigger.dedup !== undefined && typeof trigger.dedup !== 'string') fail('dedup must be a field path or $digest')
       if (trigger.pagination !== undefined && (!isObject(trigger.pagination) || !['cursor', 'page', 'link'].includes(trigger.pagination.kind as string))) fail('pagination.kind must be cursor, page or link')
+      if (isObject(trigger.pagination)) {
+        const pagination = trigger.pagination
+        if (pagination.max_pages !== undefined && (!Number.isInteger(pagination.max_pages) || (pagination.max_pages as number) < 1 || (pagination.max_pages as number) > 10)) fail('pagination.max_pages must be 1 to 10')
+        if (pagination.start !== undefined && (pagination.kind !== 'page' || !Number.isSafeInteger(pagination.start) || (pagination.start as number) < 1 || (pagination.start as number) > Number.MAX_SAFE_INTEGER - 10)) fail('pagination.start must be a positive safe page number')
+        if (pagination.kind === 'cursor' && (typeof pagination.cursor_path !== 'string' || !pagination.cursor_path.trim())) fail('cursor pagination needs cursor_path')
+        if (pagination.param !== undefined && (typeof pagination.param !== 'string' || !pagination.param.trim())) fail('pagination.param must be a nonempty query parameter name')
+      }
       for (const field of ['headers', 'query'] as const) {
         const values = trigger[field]
         if (values === undefined) continue

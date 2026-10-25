@@ -173,6 +173,94 @@ test('BASE-003: interrupted poll admission retries unseen items after restart an
   } finally { await isolated.close(); }
 });
 
+test('TRIG-003: incomplete poll pages retain the successful watermark and recover overlapping records once after restart', async () => {
+  const edge = fakeEdge(), isolated = await harness('http://127.0.0.1:9', { edge: edge.edge });
+  try {
+    for (const kind of ['cursor', 'page', 'link']) {
+      let mode = 'seed';
+      const effects = [], effectHost = `effects-${kind}.example`;
+      edge.routes.set(effectHost, ({ body }) => { effects.push(JSON.parse(body).id); return jsonResponse({ received: true }); });
+      const requests = [], host = `complete-${kind}.example`;
+      edge.routes.set(host, ({ url }) => {
+        requests.push(new URL(url));
+        const page = Number(url.searchParams.get(kind === 'cursor' ? 'cursor' : 'page') ?? 3);
+        if (mode === 'outage' && page === 4) return jsonResponse({ error: 'unavailable' }, 503);
+        const last = mode === 'seed' || (mode === 'recovered' && page === 4);
+        const items = mode === 'seed' ? [{ id: 'synthetic-crank-1' }]
+          : page === 3 ? [{ id: 'synthetic-crank-1' }, { id: 'synthetic-crank-2' }]
+          : page === 4 ? [{ id: 'synthetic-crank-2' }, { id: 'synthetic-crank-3' }]
+          : [];
+        if (kind === 'page') return jsonResponse({ items: mode === 'recovered' ? (page === 3 ? [{ id: 'synthetic-crank-1' }, { id: 'synthetic-crank-2' }, { id: 'synthetic-crank-3' }] : []) : last ? [] : items });
+        const next = new URL(url); next.searchParams.set('page', String(page + 1));
+        if (mode === 'invalid') return jsonResponse({ items, next: {} }, 200, kind === 'link' ? { link: 'invalid continuation' } : {});
+        if (mode === 'cycle') return jsonResponse({ items, next: String(page) }, 200, kind === 'link' ? { link: `<${url.href}>; rel="next"` } : {});
+        return jsonResponse({ items, next: last ? null : String(page + 1) }, 200,
+          kind === 'link' && !last ? { link: `<${next.href}>; rel="next"` } : {});
+      });
+      const pagination = { kind, max_pages: 2, ...(kind === 'cursor' ? { cursor_path: 'next' } : kind === 'page' ? { start: 3 } : {}) };
+      // Cursor and link sources use a non-default initial location too.
+      const url = `https://${host}/records${kind === 'cursor' ? '?cursor=3' : kind === 'link' ? '?page=3' : ''}`;
+      const workflow = await publish(isolated, `Complete ${kind} source`, {
+        trigger: { type: 'url_poll', url, items_path: 'items', interval_minutes: 1, backfill: 'existing', query: { since: '{{poll.since}}' }, pagination },
+        steps: [{ id: 'record', type: 'map', input: { id: '{{trigger.id}}' } },
+          { id: 'effect', type: 'http', input: { method: 'POST', url: `https://${effectHost}/records`, body: { id: '{{trigger.id}}' } } }],
+      });
+      for (const max_pages of [0, -1, 1.5, 11, 'two']) {
+        const invalid = await isolated.send('/api/crank/workflows', { name: 'Invalid poll bound', graph: {
+          trigger: { type: 'url_poll', url, items_path: 'items', pagination: { ...pagination, max_pages } }, steps: [],
+        } }, isolated.owner);
+        assert.equal(invalid.status, 422);
+        assert.match(invalid.text, /max_pages/);
+      }
+      const start = Date.parse((await isolated.get(`workflows/${workflow.id}/trigger`)).poll.next_due_at);
+      await isolated.tick(start);
+      const seeded = await isolated.get(`workflows/${workflow.id}/trigger`);
+      assert.equal(seeded.poll.last_status, 'ok');
+      const watermark = seeded.poll.last_started_at, count = (await runs(isolated, workflow)).length;
+      mode = 'overflow'; requests.length = 0;
+      const notices = isolated.mail.length;
+      await isolated.tick(start + MINUTE);
+      const incomplete = await isolated.get(`workflows/${workflow.id}/trigger`);
+      assert.equal(incomplete.poll.last_status, 'error', `${kind}: unread pages cannot be a successful poll`);
+      assert.match(incomplete.poll.last_error, /page limit/i);
+      assert.equal(requests.length, 2, 'the reader stays within its configured request bound');
+      assert.ok(requests.every(request => request.searchParams.get('since') === watermark));
+      assert.equal((await runs(isolated, workflow)).length, count, 'no incomplete page set is admitted');
+      assert.equal(effects.length, count, 'incomplete reads produce no business effects');
+      assert.ok(isolated.mail.slice(notices).some(message => /trigger poll failed/.test(message.subject)));
+      if (kind !== 'page') {
+        mode = 'invalid';
+        await isolated.tick(start + 2 * MINUTE);
+        const invalid = await isolated.get(`workflows/${workflow.id}/trigger`);
+        assert.equal(invalid.poll.last_status, 'error', 'malformed continuation never becomes completion');
+        assert.equal((await runs(isolated, workflow)).length, count);
+        mode = 'cycle'; requests.length = 0;
+        await isolated.tick(start + 3 * MINUTE);
+        assert.match((await isolated.get(`workflows/${workflow.id}/trigger`)).poll.last_error, /repeated a page/);
+        assert.equal(requests.length, 1, 'a cyclic page is refused before another request');
+        assert.equal((await runs(isolated, workflow)).length, count);
+      }
+      await isolated.restart(); mode = 'outage'; requests.length = 0;
+      await isolated.tick(start + 4 * MINUTE);
+      assert.equal((await isolated.get(`workflows/${workflow.id}/trigger`)).poll.last_cause, 'outage');
+      assert.ok(requests.every(request => request.searchParams.get('since') === watermark));
+      assert.equal((await runs(isolated, workflow)).length, count);
+      mode = 'recovered';
+      await isolated.restart(); await isolated.tick(start + 5 * MINUTE);
+      const recovered = await isolated.get(`workflows/${workflow.id}/trigger`);
+      assert.equal(recovered.poll.last_status, 'ok');
+      const completed = await Promise.all((await runs(isolated, workflow)).map(run => isolated.get('workflow-runs/' + run.id)));
+      assert.deepEqual(completed.map(run => stepOf(run, 'record').output.id).sort(), ['synthetic-crank-1', 'synthetic-crank-2', 'synthetic-crank-3']);
+      assert.ok(completed.every(run => run.status === 'succeeded'));
+      assert.deepEqual([...effects].sort(), ['synthetic-crank-1', 'synthetic-crank-2', 'synthetic-crank-3']);
+      await isolated.restart(); await isolated.tick(start + 6 * MINUTE);
+      assert.equal((await runs(isolated, workflow)).length, 3, 'overlap and restart create no duplicate actions');
+      assert.equal(effects.length, 3, 'each business effect was sent exactly once');
+      await isolated.post(`workflows/${workflow.id}/pause`);
+    }
+  } finally { await isolated.close(); }
+});
+
 test('TRIG-007/TRIG-004: feeds start one run per new item, name their source and report poll latency', async () => {
   let items = [{ guid: 'a', title: 'Opening hours' }, { guid: 'b', title: 'New range' }];
   fake.routes.set('news.example', ({ url }) => url.pathname === '/rss.xml' ? new Response(rss(items), { headers: { 'content-type': 'application/rss+xml' } })

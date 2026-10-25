@@ -48,7 +48,7 @@ function config(input: unknown): HistoricalSource {
   return source as unknown as HistoricalSource
 }
 
-function nextLink(header: string | null): string | undefined {
+export function nextLink(header: string | null): string | undefined {
   if (!header) return undefined
   let next: string | undefined
   for (const part of header.split(/,(?=\s*<)/)) {

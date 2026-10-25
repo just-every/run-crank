@@ -10,6 +10,7 @@ import { canonical, digest, id, stmt, type CrankEnv } from '../model'
 import { notify } from '../ops/notices'
 import { admit, hold, burstThreshold, type TriggerEvent, type WorkflowRow } from './admission'
 import { parseFeed } from './feeds'
+import { nextLink } from './historical-source'
 import { parseXml, toJson, xpath } from './xml'
 
 export interface PollRow {
@@ -66,7 +67,12 @@ async function urlItems(env: CrankEnv, trigger: Record<string, any>, poll: PollS
   for (const [key, value] of Object.entries(trigger.headers ?? {})) { const text = mapped(value, poll); if (text !== null) headers.set(key, text) }
   const pagination = trigger.pagination as Record<string, any> | undefined, items: unknown[] = []
   let url = base, page = Number(pagination?.start ?? 1)
-  for (let n = 0; n < Math.min(Number(pagination?.max_pages ?? MAX_PAGES), MAX_PAGES); n++) {
+  const maxPages = Number(pagination?.max_pages ?? MAX_PAGES), visited = new Set<string>()
+  if (!Number.isInteger(maxPages) || maxPages < 1 || maxPages > MAX_PAGES) throw new PollFailure('Pagination max_pages must be 1 to 10', 'invalid response')
+  if (pagination?.kind === 'page') url.searchParams.set(String(pagination.param ?? 'page'), String(page))
+  for (let n = 0; n < maxPages; n++) {
+    if (visited.has(url.href)) throw new PollFailure('Pagination repeated a page; the successful watermark was retained', 'invalid response')
+    visited.add(url.href)
     const response = await get(env, url, headers, trigger.connection_id)
     classify(response, base.origin)
     let body: unknown, found: unknown[]
@@ -91,16 +97,20 @@ async function urlItems(env: CrankEnv, trigger: Record<string, any>, poll: PollS
     if (pagination.kind === 'cursor') {
       const cursor = lookup(body, String(pagination.cursor_path)).value
       if (cursor === undefined || cursor === null || cursor === '') break
+      if (!(typeof cursor === 'string' && cursor.trim()) && !(typeof cursor === 'number' && Number.isSafeInteger(cursor))) throw new PollFailure('The source returned an invalid pagination cursor', 'invalid response')
       next.searchParams.set(String(pagination.param ?? 'cursor'), String(cursor))
     } else if (pagination.kind === 'page') {
       if (!found.length) break
       next.searchParams.set(String(pagination.param ?? 'page'), String(++page))
     } else {
-      const link = /<([^>]+)>\s*;\s*rel="?next"?/i.exec(response.headers.get('link') ?? '')
-      if (!link) break
-      next.href = new URL(link[1], url).href
+      const link = nextLink(response.headers.get('link'))
+      if (link === undefined) break
+      next.href = new URL(link, url).href
       if (next.origin !== base.origin) throw new PollFailure('A pagination link left the API origin', 'invalid response')
     }
+    // Never advance the successful watermark past records we did not read.
+    // No record is admitted until every page has been fetched successfully.
+    if (n + 1 === maxPages) throw new PollFailure('Pagination reached its page limit before completion; narrow the source query or increase max_pages up to 10', 'invalid response')
     url = next
   }
   const dedup = String(trigger.dedup ?? 'id')

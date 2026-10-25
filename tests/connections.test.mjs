@@ -5,7 +5,7 @@ import { createHmac } from 'node:crypto';
 import { harness } from './harness.mjs';
 import { effectReadbackJourney } from './effect-readback-journey.mjs';
 import { oauthRenewalJourney } from './oauth-renewal-journey.mjs';
-import { connection, deliver, fakeEdge, fakeSecret, jsonResponse, publish, runs, startRun, stepOf, until } from './kit.mjs';
+import { connection, deliver, fakeEdge, fakeSecret, jsonResponse, publish, runs, settled, startRun, stepOf, until } from './kit.mjs';
 
 const fake = fakeEdge();
 let h;
@@ -185,15 +185,81 @@ test('CONN-004: Slack posts by channel name and user email, applies search outco
 
   const secret = fakeSecret('signing');
   const signing = await connection(h, { app: 'webhook', label: 'Slack signing secret', auth_kind: 'signing_secret', secret: { secret } });
-  const listener = await publish(h, 'Channel listener', { trigger: { type: 'slack_event', connection_id: slack.id, signing_connection_id: signing.id, event: 'message', channel: 'C01' }, steps: [{ id: 'said', type: 'map', input: { text: '{{trigger.event.text}}' } }] });
+  const listenerEffectsBefore = posts.length;
+  const listener = await publish(h, 'Channel listener', { trigger: { type: 'slack_event', connection_id: slack.id, signing_connection_id: signing.id, event: 'message', channel: 'C01' }, steps: [{ id: 'said', type: 'map', input: { text: '{{trigger.event.text}}' } }, { id: 'forward', type: 'slack.send_channel_message', connection_id: slack.id, input: { channel: '#sales', text: '{{trigger.event_id}}' } }] });
   const hookPath = `${h.origin}/hooks/slack/${slack.id}`;
   const challenge = JSON.stringify({ type: 'url_verification', challenge: 'c-123' });
   assert.deepEqual((await deliver(h, hookPath, { method: 'POST', headers: slackSign(secret, challenge), body: challenge })).value, { challenge: 'c-123' });
-  const event = (id, extra) => JSON.stringify({ type: 'event_callback', event_id: id, event_time: Math.floor(Date.now() / 1000), team_id: 'T1', event: { type: 'message', channel: 'C01', user: 'U02', text: 'hello', ...extra } });
+  const eventTime = Math.floor(Date.now() / 1000);
+  const event = (id, extra, at = eventTime) => JSON.stringify({ type: 'event_callback', event_id: id, event_time: at, team_id: 'T1', event: { type: 'message', channel: 'C01', user: 'U02', text: 'hello', ...extra } });
   for (const body of [event('Ev1'), event('Ev1'), event('Ev2', { bot_id: 'B1' }), event('Ev3', { channel: 'C02' })]) assert.equal((await deliver(h, hookPath, { method: 'POST', headers: slackSign(secret, body), body })).status, 200);
   assert.equal((await deliver(h, hookPath, { method: 'POST', headers: slackSign(fakeSecret('wrong'), event('Ev4')), body: event('Ev4') })).status, 401);
-  const heard = await until(async () => { const list = await runs(h, listener); return list.length && list.every(r => r.status === 'succeeded') ? list : null }, 'listener run');
+  const heard = await until(async () => { const list = await runs(h, listener); return list.length && list.every(r => r.status === 'succeeded') ? list : null }, 'listener run').catch(async error => { const details = await Promise.all((await runs(h, listener)).map(run => h.get('workflow-runs/' + run.id))); throw new Error(error.message + ': ' + JSON.stringify(details.map(run => ({ status: run.status, error: run.error, steps: run.steps }))), { cause: error }); });
   assert.equal(heard.length, 1, 'one run per event ID; bot messages and other channels start nothing');
+  const sendEvent = body => deliver(h, hookPath, { method: 'POST', headers: slackSign(secret, body), body });
+  await h.db.prepare('UPDATE crank_trigger_events SET payload_digest=? WHERE workflow_id=? AND dedup_key=?').bind('Ev1', listener.id, 'slack:Ev1').run();
+  assert.equal((await sendEvent(event('Ev1'))).status, 200, 'pre-upgrade source identities remain duplicate fences');
+  assert.equal((await runs(h, listener)).length, 1);
+  // TRIG-003: source event order does not drop an older, previously unseen event.
+  const concurrent = event('synthetic-crank-concurrent', { text: 'newer' });
+  const delivered = await Promise.all([sendEvent(concurrent), sendEvent(concurrent)]);
+  assert.ok(delivered.every(response => response.status === 200));
+  const older = event('synthetic-crank-older', { text: 'older' }, eventTime - 60);
+  assert.equal((await sendEvent(older)).status, 200);
+  await until(async () => (await runs(h, listener)).length === 3, 'both distinct source events');
+  const newerRun = (await runs(h, listener)).find(run => run.source_id === 'slack:synthetic-crank-concurrent');
+  assert.equal((await settled(h, newerRun.id)).status, 'succeeded');
+  await h.tick(); // The normal Cron door drains work queued behind workflow concurrency.
+  assert.equal((await sendEvent(event('synthetic-crank-concurrent', { text: 'conflicting body' }))).status, 409, 'a new receipt binds its source identity to the admitted contents');
+  const oldRun = (await runs(h, listener)).find(run => run.source_id === 'slack:synthetic-crank-older');
+  const retained = await settled(h, oldRun.id).catch(async error => { throw new Error(error.message + ': ' + JSON.stringify(await h.get('workflow-runs/' + oldRun.id)), { cause: error }); });
+  assert.equal(retained.source_time, new Date((eventTime - 60) * 1000).toISOString());
+  assert.equal(stepOf(retained, 'said').output.text, 'older');
+
+  const interrupted = event('synthetic-crank-interrupted');
+  await h.db.exec(`CREATE TRIGGER interrupt_slack_run BEFORE INSERT ON crank_wf_runs WHEN NEW.workflow_id='${listener.id}' BEGIN SELECT RAISE(ABORT,'injected app admission interruption'); END;`);
+  try { assert.equal((await sendEvent(interrupted)).status, 500); }
+  finally { await h.db.exec('DROP TRIGGER interrupt_slack_run'); }
+  assert.equal((await h.db.prepare('SELECT COUNT(*) AS n FROM crank_trigger_events WHERE workflow_id=? AND dedup_key=?').bind(listener.id, 'slack:synthetic-crank-interrupted').first()).n, 0, 'failed admission retains no claim that could suppress a provider retry');
+  await h.restart();
+  assert.equal((await sendEvent(interrupted)).status, 200);
+  await until(async () => (await runs(h, listener)).length === 4, 'retried interrupted event');
+  const retriedRun = (await runs(h, listener)).find(run => run.source_id === 'slack:synthetic-crank-interrupted');
+  assert.equal((await settled(h, retriedRun.id)).status, 'succeeded');
+  await h.restart();
+  assert.equal((await sendEvent(interrupted)).status, 200);
+  assert.equal((await runs(h, listener)).length, 4, 'restart and redelivery never repeat committed work');
+  await until(async () => posts.length === listenerEffectsBefore + 4, 'one Slack effect for each admitted event');
+  assert.deepEqual(posts.slice(listenerEffectsBefore).map(post => post.text).sort(), ['Ev1', 'synthetic-crank-concurrent', 'synthetic-crank-interrupted', 'synthetic-crank-older'].sort());
+
+  await h.post(`workflows/${listener.id}/pause`);
+  const paused = event('synthetic-crank-paused');
+  await h.db.exec(`CREATE TRIGGER interrupt_slack_hold BEFORE INSERT ON crank_hold_items BEGIN SELECT RAISE(ABORT,'injected app hold interruption'); END;`);
+  try { assert.equal((await sendEvent(paused)).status, 500); }
+  finally { await h.db.exec('DROP TRIGGER interrupt_slack_hold'); }
+  assert.equal((await h.get(`workflows/${listener.id}/holds`)).length, 0, 'failed hold and its event claim roll back together');
+  await h.restart();
+  assert.equal((await sendEvent(paused)).status, 200);
+  assert.equal((await sendEvent(paused)).status, 200);
+  const [hold] = await h.get(`workflows/${listener.id}/holds`);
+  const held = await h.get('holds/' + hold.id);
+  assert.equal(held.counts.held, 1);
+  assert.equal(held.items[0].source_time, new Date(eventTime * 1000).toISOString());
+  assert.equal((await runs(h, listener)).length, 4);
+  await h.post(`workflows/${listener.id}/resume`);
+
+  // An authority change inside admission cannot leave a run or event claim.
+  const raced = event('synthetic-crank-revoked');
+  await h.db.exec(`CREATE TRIGGER revoke_slack_during_admission AFTER INSERT ON crank_trigger_events WHEN NEW.dedup_key='slack:synthetic-crank-revoked' BEGIN UPDATE crank_connections SET status='revoked' WHERE id='${slack.id}'; END;`);
+  try { assert.equal((await sendEvent(raced)).status, 409); }
+  finally { await h.db.exec('DROP TRIGGER revoke_slack_during_admission'); }
+  assert.equal((await runs(h, listener)).length, 4);
+  assert.equal((await h.db.prepare('SELECT COUNT(*) AS n FROM crank_trigger_events WHERE workflow_id=? AND dedup_key=?').bind(listener.id, 'slack:synthetic-crank-revoked').first()).n, 0);
+  await h.post(`connections/${slack.id}/revoke`);
+  assert.equal((await sendEvent(raced)).status, 409, 'a still-valid signing secret never revives a revoked managed connection');
+  assert.equal((await runs(h, listener)).length, 4);
+  assert.equal(posts.length, listenerEffectsBefore + 4, 'failed admissions, holds and revoked deliveries produce no extra provider effect');
+
 });
 
 test('CONN-001: the catalog lists exact native operations and the coverage report classifies an inventory honestly', async () => {

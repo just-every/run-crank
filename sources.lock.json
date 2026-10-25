@@ -138,7 +138,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "695913f5922cff5bce1585676785e0b816feffd1388421764e250a9c4be0cb00",
+      "sha256": "3fd049bb05f30b294608d7f4755e66dcc861621674b8b61dfa6ea542c3e420f9",
       "executable": false
     },
     "AGENTS.md": {
@@ -162,7 +162,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "46180166cb161c8f5f27d0c2934e58e33c1dc479dd8a00d9106e8f44191f7505",
+      "sha256": "03d1c6cf0036eff35cb60fcc9a808c21db092fae74cee79eb3f24cd8d6ef2bba",
       "executable": false
     },
     "DEMO.md": {
@@ -186,7 +186,7 @@
       "executable": false
     },
     "docs/API.md": {
-      "sha256": "0f57cd390bed9ea6b164d36c3e1317313d0ecc3a193c8e663bf8b14d51eec162",
+      "sha256": "b3ec39e0dffb4b9664ba255724bb2a22e33f80ed834fb22377347af28ea72969",
       "executable": false
     },
     "docs/BACKUP-RESTORE.md": {
@@ -1926,7 +1926,7 @@
       "executable": false
     },
     "src/crank/triggers/definition.ts": {
-      "sha256": "38991ee5b42d59bafa2177a8e4b8aa9e1d3fb2ea6b5246088004918d441e8253",
+      "sha256": "e687a51a5491e296c0fab7ea6539728ec5e5bbc09b2188940aa4e4004ac9640b",
       "executable": false
     },
     "src/crank/triggers/feeds.ts": {
@@ -1942,7 +1942,7 @@
       "executable": false
     },
     "src/crank/triggers/historical-source.ts": {
-      "sha256": "902ba8abfb5e6cd891eb197a9779ea58b2f9eeeebdf1e0c9d05838592b432b2e",
+      "sha256": "c6745e9f899a1953e0132f0d42a98d24ac28c6c4fce5678d36a9c5c6378290d2",
       "executable": false
     },
     "src/crank/triggers/historical.ts": {
@@ -1958,7 +1958,7 @@
       "executable": false
     },
     "src/crank/triggers/poll.ts": {
-      "sha256": "657ccfcc77e4a4378a72bb68a73fa21b928ba647ef4f0597e107b4240bfabc3b",
+      "sha256": "90c5aa3d4d51d68b700c50fcbf9b8080648ca143232c8279d4ff046d273544fc",
       "executable": false
     },
     "src/crank/triggers/public.ts": {
@@ -1978,11 +1978,11 @@
       "executable": false
     },
     "src/crank/triggers/slack-events.ts": {
-      "sha256": "5d2b837f2fd46d788baf679919e6474a32a1e28e4594cb4c13e69ee5e4b50805",
+      "sha256": "251ee9333c10bf524e7473ed7adf6d1a2ea96d392b6faeffc3078236600ae3f0",
       "executable": false
     },
     "src/crank/triggers/webhook-admission.ts": {
-      "sha256": "936a6808cfc86446fa00c9f34c03cfaad0332a335c2e899763a149fde33a33fb",
+      "sha256": "abb688f1c4a2ee2f9945d31fd80a8054ec7134cb5ce57af82d69a4d661fcd74b",
       "executable": false
     },
     "src/crank/triggers/webhook.ts": {
@@ -4158,7 +4158,7 @@
       "executable": false
     },
     "test-budget.json": {
-      "sha256": "ee6ce43f08a0d0d8f099a0e3e72a1f4559a8f377aec3e8b8d67915e2e3291568",
+      "sha256": "fc7b4205b5338b270651590f60b62e5877795167b2ae07ece96c5d64a718cc14",
       "executable": false
     },
     "tests/app.test.mjs": {
@@ -4174,7 +4174,7 @@
       "executable": false
     },
     "tests/connections.test.mjs": {
-      "sha256": "0b5d374a5a1b5cb33ae8a2565d318eb3d6ab700eae964232e1422c74e17195cb",
+      "sha256": "6e3d4df2905460b3999b1c02598b7bab2e2067af1de4fb31c16476b4caaf3121",
       "executable": false
     },
     "tests/crank.test.mjs": {
@@ -4478,7 +4478,7 @@
       "executable": false
     },
     "tests/triggers.test.mjs": {
-      "sha256": "5cee33b56f4c3e4429d16c9f7c6b039db8b035861e93640349c03c247df5f252",
+      "sha256": "c82aebd218b887e02ea7401f08857d23625067311b16543d43133f42ea0a5ff6",
       "executable": false
     },
     "tests/usage.test.mjs": {
