@@ -74,6 +74,10 @@ export async function gustoAuthorityJourney({h,fake,bound,company,token,scopes,w
 
 export async function gustoOwnerVersionFence({h,bound,company,workflow,fake}) {
   const owner=(await h.get('state')).actor.id,email=(await h.send('/auth/session',undefined,h.owner)).value.operator.email;
+  const original=(await h.get('workflows/'+workflow.id)).draft;
+  const frozen=await h.post('workflows',{name:'Synthetic native owner authority continuation',environment:'sandbox',graph:{trigger:{type:'manual'},steps:[{id:'wait',type:'delay',mode:'for',input:{amount:1,unit:'minutes'}},...original.steps]}},h.owner,201);
+  await h.post(`workflows/${frozen.id}/publish`,{},h.owner,201);
+  const parked=await startRun(h,frozen,{});assert.equal(parked.status,'waiting');
   const confirm=async(address,cookie)=>{
     const href=h.mail.findLast(m=>m.to.includes(address)).html.match(/href="([^"]*\/auth\/confirm\?token=[^"]+)"/)[1].replaceAll('&amp;','&');
     const response=await h.send('/auth/confirm',{token:new URL(href,h.origin).searchParams.get('token')},cookie);assert.equal(response.status,303,response.text);return response.cookie;
@@ -87,7 +91,13 @@ export async function gustoOwnerVersionFence({h,bound,company,workflow,fake}) {
   const path=`regulated-operations?connection_id=${bound.id}&company_id=${company}`;
   assert.ok((await h.get(path,second)).operations.every(o=>!o.authorized),'the consenting native owner identity and version remain current prerequisites');
   await h.post('regulated-operations/consent',{connection_id:bound.id,company_id:company,operation:'contractor_1099_handoff',consent:true,agreement_reference:'synthetic-crank-6'},h.owner,401);
+  await stepUp(secondEmail,second);
+  assert.equal((await h.send('/auth/operator/role',{operatorId:owner,role:'owner'},second)).status,200);
+  assert.ok((await h.get(path,second)).operations.every(o=>!o.authorized),'a later native owner regrant cannot revive the earlier consent version');
   const count=fake.requests.length;
+  await h.tick(Date.parse(parked.waits[0].due_at)+1);
+  assert.equal((await h.get('workflow-runs/'+parked.id,second)).status,'paused','a frozen waiting continuation still checks current native owner consent');
+  assert.equal(fake.requests.length,count);
   const response=await h.post(`workflows/${workflow.id}/run`,{input:{}},second,201);
   assert.equal(response.status,'paused');assert.equal(fake.requests.length,count);
 }

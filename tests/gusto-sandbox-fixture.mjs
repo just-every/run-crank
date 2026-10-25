@@ -81,9 +81,9 @@ export async function prepareSandbox({ provider, company, contractorId }) {
   const signatories = await call(companyPath + '/signatories');
   assert.ok(Array.isArray(signatories));
   let signatory = signatories[0];
-  if (!signatory) signatory = await call(companyPath + '/signatories', { first_name: 'Synthetic', last_name: 'Crank Admin', title: 'Owner', phone: '4155550100',
+  if (!signatory) signatory = await call(companyPath + '/signatories', { first_name: 'Test', last_name: 'Signatory', title: 'Owner', phone: '4155550100',
     birthday: '1980-01-01', email: 'synthetic-crank-signatory@example.com', ssn: '123451776', home_address: address });
-  assert.equal(signatory.first_name, 'Synthetic'); assert.equal(signatory.last_name, 'Crank Admin');
+  assert.equal(signatory.first_name, 'Test'); assert.equal(signatory.last_name, 'Signatory');
   const forms = await call(companyPath + '/forms');
   assert.ok(Array.isArray(forms));
   for (const form of forms.filter(f => f.requires_signing)) {
@@ -92,7 +92,7 @@ export async function prepareSandbox({ provider, company, contractorId }) {
         method: 'PUT', path: companyPath + '/signatories/' + signatory.uuid, form_id: form.uuid });
       continue;
     }
-    await call('/v1/forms/' + form.uuid + '/sign', { signature_text: 'Synthetic Crank Admin', agree: true, signed_by_ip_address: '192.168.0.1' }, 'PUT');
+    await call('/v1/forms/' + form.uuid + '/sign', { signature_text: 'Test Signatory', agree: true, signed_by_ip_address: '192.168.0.1' }, 'PUT');
   }
   let onboarding = await call(companyPath + '/onboarding_status');
   const incomplete = onboarding.onboarding_steps.filter(s => s.required && !s.completed);

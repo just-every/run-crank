@@ -138,7 +138,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "f52f3da9c10be2e3088b3c509d9145404706f8db6aeb5a71a01d70fa797539e8",
+      "sha256": "b6cd328ce5dadecd4041cb91b88dc26099476cb4d5d58c12130f799fd99409ef",
       "executable": false
     },
     "AGENTS.md": {
@@ -162,7 +162,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "e096b07f878df28c4f43abc11105f67d553af32c6cc14a1eb69528408d89a990",
+      "sha256": "cf932f0e6dbd907d728f7cc840b9d9bdb39e1208dd17f2421c4b336e442e8800",
       "executable": false
     },
     "DEMO.md": {
@@ -4334,7 +4334,7 @@
       "executable": false
     },
     "tests/gusto-authority-journey.mjs": {
-      "sha256": "304aefef3bf9d662ec68a6697f02efa05e18896e9e0738262ec995fdf5d96fdd",
+      "sha256": "4837fb57600be49d1e41bb61049143555c7da59024da4de72643071a123ed8f6",
       "executable": false
     },
     "tests/gusto-handoff-journey.mjs": {
@@ -4342,7 +4342,7 @@
       "executable": false
     },
     "tests/gusto-sandbox-fixture.mjs": {
-      "sha256": "2bd9eb669bbddee6b742e4696246c148b6b049eb94c8d108bc408a1db84deb2f",
+      "sha256": "67463988114c783f549f17e5eb11e47dc3d90e92b94591298fce82d0aced587c",
       "executable": false
     },
     "tests/gusto-sandbox.mjs": {
@@ -4431,6 +4431,10 @@
     },
     "tests/publish-authority.test.mjs": {
       "sha256": "45ccf9f2c2a04ad92329fab1ca5de8a01faca3b31563cd90b324ba11aa313c21",
+      "executable": false
+    },
+    "tests/quickbooks-sandbox.mjs": {
+      "sha256": "6289ba6840beb3162c87a1e24cb2bf233b280d3818f9e3c8b520cbce9eb15acd",
       "executable": false
     },
     "tests/request-limits.test.mjs": {
