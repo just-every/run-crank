@@ -49,6 +49,11 @@ export function n8nGraph(value: Json, sourceId: string, env: ImportTargetEnv, ow
   const seen=new Set<number>(), layout=nodes.map((n,i)=>({id:context.prefix+'n'+i,source_id:n.id,name:n.name,position:n.position})), trigger:Obj={type:'manual'}
   const mapped = (v:any, previous:string, at:string):any => {
     if(typeof v==='string'&&(v.startsWith('=')||v.includes('{{'))){const m=/^=\{\{ \$json((?:\.[A-Za-z_][A-Za-z0-9_]*)*) \}\}$/.exec(v);if(!m){gap(at,'expression has no safe native equivalent');return null} coverage.push({field:at,reason:'Supported declarative data path'});return {$ref:previous+m[1]}}
+    const inspectLiteral=(value:any,path:string)=>{
+      if(typeof value==='string'&&(value.startsWith('=')||value.includes('{{')))gap(path,'nested source expression needs an explicit native conversion')
+      else if(value&&typeof value==='object')for(const [key,item]of Object.entries(value))inspectLiteral(item,path+'.'+key)
+    }
+    if(v&&typeof v==='object')inspectLiteral(v,at)
     return {$literal:v}
   }
   const conditions=(value:any,previous:string,at:string,id:string,result:Step[]):any[][]=>{

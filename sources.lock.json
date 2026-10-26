@@ -214,7 +214,7 @@
       "executable": false
     },
     "docs/IMPORTING.md": {
-      "sha256": "798530f8e87f524771c1109d8efbe5a847b04864d5c6dd0a93de885d038b2c5e",
+      "sha256": "e43a0b16d8929648829b70cd1b364dcbf2b8b08c9f6dd9e4a1f842bb39f842c8",
       "executable": false
     },
     "docs/OPERATIONS.md": {
@@ -2706,7 +2706,7 @@
       "executable": false
     },
     "src/crank/n8n-graph.ts": {
-      "sha256": "49c9848b1c8132bbb5c16b83ad032aa5f7d9cb01eafc1b7c80b4dab0f5e541af",
+      "sha256": "c3677225f0fafb79362df8bdf0cff5e5bbdaaefc75aea5abc8de4341d387ef08",
       "executable": false
     },
     "src/crank/n8n-http.ts": {
@@ -5474,7 +5474,7 @@
       "executable": false
     },
     "tests/n8n-binding-journey.mjs": {
-      "sha256": "428a79c0cd2d006d45674a92024dafd4fe4ba153d642d3f7b94002d3a987ce19",
+      "sha256": "1b77676fd0e0d4f3c9c0d42ae40354195d199e4b39a2407b98c1455a68311bb1",
       "executable": false
     },
     "tests/n8n-code-journey.mjs": {

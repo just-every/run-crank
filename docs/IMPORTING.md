@@ -300,7 +300,8 @@ no request and leave the workflow inactive. Publication and every dispatch enfor
 the live connection, domain and owner authority; revocation stops further work.
 HTTP versions 4 through 4.3 map GET, HEAD, POST, PUT, PATCH and DELETE, explicit JSON
 bodies, and named header and query parameters. Parameter names are literal and
-unique; values may use declarative item paths. Inline credentials, dynamic names,
+unique; values may use declarative item paths. Nested expressions inside literal
+objects or arrays are named manual conversions rather than forwarded as data. Inline credentials, dynamic names,
 unknown response options, scalar or null JSON bodies and unmapped body formats
 require manual conversion. A dynamically resolved scalar or null JSON body stops
 with a named validation error before dispatch, rather than becoming an absent body.
