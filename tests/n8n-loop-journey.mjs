@@ -57,7 +57,8 @@ export async function doneLoopJourney(declared) {
     value=>value.connections.n6.main[0].push({node:'n8',type:'main',index:0}),
     value=>value.connections.n5.main[0]=[{node:'n5',type:'main',index:0}],
    ].entries()){
-    const invalid=doneLoopExport(declared,'synthetic-crank-'+(50+index));mutate(invalid);const rejected=await doorPlan(completion,JSON.stringify(invalid));assert.equal(rejected.status,200,rejected.text);assert.equal(rejected.value.rejected.length,1);await door(completion,'undo',{planId:rejected.value.planId});
+    const invalid=doneLoopExport(declared,'synthetic-crank-'+(50+index));mutate(invalid);const isolated=await harness(declared);
+    try{const rejected=await doorPlan(isolated,JSON.stringify(invalid));assert.equal(rejected.status,200,rejected.text);assert.equal(rejected.value.rejected.length,1);await door(isolated,'undo',{planId:rejected.value.planId});}finally{await isolated.close()}
    }
   }finally{await completion.close();completionReceiver.closeAllConnections();await new Promise(resolve=>completionReceiver.close(resolve))}
 }

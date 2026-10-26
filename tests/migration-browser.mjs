@@ -33,6 +33,7 @@ try {
  for(const width of [1440,390]){
   await page.setViewportSize({width,height:1000});await page.goto(origin+'/app/import');await shot(width,'move-in');
   const search=page.getByRole('link',{name:'Search runs',exact:true});await search.focus();assert.equal(await page.locator('#search-tooltip').isVisible(),true);await page.locator('h1').click();await search.hover();await page.waitForTimeout(350);assert.equal(await page.locator('#search-tooltip').isVisible(),true);await shot(width,'search-tooltip');
+  const account=page.locator('.person.control-tooltip');await account.focus();assert.equal(await page.locator('#account-tooltip').isVisible(),true);await page.locator('h1').click();await account.hover();await page.waitForTimeout(350);assert.equal(await page.locator('#account-tooltip').isVisible(),true);await shot(width,'account-tooltip');
   const source=loopExport(declared,'synthetic-crank-'+width),bad=structuredClone(source);
   bad.nodes.push({id:'subflow',name:'Subflow',type:'n8n-nodes-base.executeWorkflow',typeVersion:1,position:[300,300],parameters:{workflowId:'synthetic-crank-child'}});
   bad.nodes[5].credentials={httpHeaderAuth:{id:'synthetic-crank-16',name:'Reference only'}};
@@ -49,26 +50,25 @@ try {
   console.log(`MIG-001 ${width}: mapping coverage, safe cancellation, inactive apply, native draft, undo and shell tooltip passed`);
  }
 
- for(const width of [1440,390]){
-  await page.setViewportSize({width,height:1000});await page.goto(origin+'/app/import');
-  const source=doneLoopExport(declared,'synthetic-crank-'+(width+1));source.name+=' '+width;
-  await page.getByLabel('Workflow export JSON').fill(JSON.stringify(source));await page.getByRole('button',{name:'Upload and plan',exact:true}).click();await page.waitForLoadState('networkidle');
-  assert.equal(await page.getByRole('button',{name:'Approve this plan',exact:true}).count(),1);await page.getByText(/Supported fields/).click();assert.ok((await page.locator('body').innerText()).includes('distinct linear done path'));await shot(width,'done-review');
-  await page.getByRole('button',{name:'Approve this plan',exact:true}).click();await page.waitForLoadState('networkidle');
-  const workflow=(await send('workflows')).find(row=>row.name===source.name),inactive=await send('workflows/'+workflow.id);
-  assert.equal(inactive.status,'draft');assert.equal(inactive.versions.length,0);assert.equal(inactive.hooks.length,0);
-  await page.goto(origin+'/app/workflows/'+workflow.id);await shot(width,'done-inactive-native');
-  await send(`workflows/${workflow.id}/estimate`,{cost:{components:['orchestration','connectors','models','executors'].map(kind=>({kind,usd_per_run:'0',assumption:'Owner browser acceptance against the actual owned receiver'}))}});
-  await send(`workflows/${workflow.id}/publish`,{},201);const hook=await send(`workflows/${workflow.id}/hooks`,{},201),before=effects.length;
-  const delivered=await context.request.post(hook.url,{data:{messages:['synthetic-crank-70','synthetic-crank-71']}});assert.equal(delivered.status(),200);
-  const runs=await send('workflow-runs?workflow='+workflow.id);let run;
-  for(let attempt=0;attempt<100;attempt++){run=await send('workflow-runs/'+runs.runs[0].id);if(!['queued','running'].includes(run.status))break;await page.waitForTimeout(50)}
-  assert.equal(run.status,'succeeded',JSON.stringify(run.error));assert.deepEqual(effects.slice(before).map(row=>row.path),['/body','/body','/done-first','/done-first','/done-last','/done-last']);
-  assert.deepEqual(effects.slice(before+2,before+4).map(row=>row.input.processed),['synthetic-crank-70','synthetic-crank-71']);
-  for(const id of ['n5','n7','n9'])assert.ok(run.steps.some(step=>step.step_id===id&&step.status==='succeeded'));
-  await page.goto(origin+'/app/workflow-runs/'+run.id);await shot(width,'done-completed-run');
-  console.log(`MIG-001 ${width}: reviewed done-output conversion, inactive native draft, actual ordered body and completion receiver effects and retained checkpoints passed`);
- }
+ await page.setViewportSize({width:1440,height:1000});await page.goto(origin+'/app/import');
+ const source=doneLoopExport(declared,'synthetic-crank-72');
+ const shots=async state=>{for(const width of [1440,390]){await page.setViewportSize({width,height:1000});await shot(width,state)}};
+ await page.getByLabel('Workflow export JSON').fill(JSON.stringify(source));await page.getByRole('button',{name:'Upload and plan',exact:true}).click();await page.waitForLoadState('networkidle');
+ assert.equal(await page.getByRole('button',{name:'Approve this plan',exact:true}).count(),1);await page.getByText(/Supported fields/).click();assert.ok((await page.locator('body').innerText()).includes('distinct linear done path'));await shots('done-review');
+ await page.getByRole('button',{name:'Approve this plan',exact:true}).click();await page.waitForLoadState('networkidle');
+ const workflow=(await send('workflows')).find(row=>row.name===source.name),inactive=await send('workflows/'+workflow.id);
+ assert.equal(inactive.status,'draft');assert.equal(inactive.versions.length,0);assert.equal(inactive.hooks.length,0);
+ await page.goto(origin+'/app/workflows/'+workflow.id);await shots('done-inactive-native');
+ await send(`workflows/${workflow.id}/estimate`,{cost:{components:['orchestration','connectors','models','executors'].map(kind=>({kind,usd_per_run:'0',assumption:'Owner browser acceptance against the actual owned receiver'}))}});
+ await send(`workflows/${workflow.id}/publish`,{},201);const hook=await send(`workflows/${workflow.id}/hooks`,{},201),before=effects.length;
+ const delivered=await context.request.post(hook.url,{data:{messages:['synthetic-crank-70','synthetic-crank-71']}});assert.equal(delivered.status(),200);const admission=await delivered.json();assert.equal(admission.accepted,true);
+ let run;
+ for(let attempt=0;attempt<100;attempt++){run=await send('workflow-runs/'+admission.run_id);if(!['queued','running'].includes(run.status))break;await page.waitForTimeout(50)}
+ assert.equal(run.status,'succeeded',JSON.stringify(run.error));assert.deepEqual(effects.slice(before).map(row=>row.path),['/body','/body','/done-first','/done-first','/done-last','/done-last']);
+ assert.deepEqual(effects.slice(before+2,before+4).map(row=>row.input.processed),['synthetic-crank-70','synthetic-crank-71']);
+ for(const id of ['n5','n7','n9'])assert.ok(run.steps.some(step=>step.step_id===id&&step.status==='succeeded'));
+ await page.goto(origin+'/app/workflow-runs/'+run.id);await shots('done-completed-run');
+ console.log('MIG-001 1440 and 390: reviewed done-output conversion, inactive native draft, ordered actual receiver effects and retained checkpoints passed');
 
  await context.close();
 }catch(error){if(page){await page.screenshot({path:join(evidence,'journey-error.png'),fullPage:true});console.error((await page.locator('body').innerText()).slice(0,800))}console.error(String(error.message).replace(/https?:\/\/\S+/g,'[redacted URL]'));process.exitCode=1}
