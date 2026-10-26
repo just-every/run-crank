@@ -70,8 +70,8 @@ export async function invoiceOutcomeJourney({inspect,modeOnly}={}) {
   repair=false;record=null;seenKeys.clear();
   const waiting=await objective.start();assert.equal(waiting.status,'awaiting_approval');await h.post(`grants/${objective.grant.id}/revoke`);const frozen=await h.get('workflow-runs/'+waiting.id);
   const saved=await archive(h);restored=await harness(receiver,{edge:fake.edge});await restored.post('data/restore',{archive:saved,confirm:'RESTORE'});
-  const entries=text=>text.trim().split('\n').map(JSON.parse).flatMap(p=>p.items??[]).filter(i=>i.kind==='row'&&['crank_wf_steps','crank_waits','crank_wf_step_revisions'].includes(i.table)).map(i=>JSON.stringify(i)).sort();
-  assert.deepEqual(entries(await archive(restored)),entries(saved),'Every reconciliation input, output, proposal and decision survives inactive restoration');
+  const entries=text=>text.trim().split('\n').map(JSON.parse).flatMap(p=>p.items??[]).filter(i=>i.kind==='row').map(i=>JSON.stringify(i)).sort();
+  assert.deepEqual(entries(await archive(restored)),entries(saved),'All portable records, including reconciliation evidence, attempts and decisions, survive inactive restoration');
   const imported=await restored.get('workflow-runs/'+frozen.id);assert.equal(imported.status,'paused');const count=posts,noticeCount=notices.length;
   await restored.restart();await restored.tick(Date.now()+86400000);await restored.post(`workflow-runs/${imported.id}/resume`,{},restored.owner,409);
   assert.equal(posts,count);assert.equal(notices.length,noticeCount);assert.ok((await restored.get('connections')).every(c=>c.status==='needs_reconnect'));
