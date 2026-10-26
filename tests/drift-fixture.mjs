@@ -58,6 +58,8 @@ export async function driftFixture() {
     const readback = await h.post(`drift/incidents/${permissionIncident.id}/recheck`);
     assert.equal(readback.http_status, 200);
     assert.equal(readback.run.status, 'paused', 'the restored permission exposes the independently held field rename');
+    assert.equal(readback.run.steps.find(step=>step.step_id==='crm').status,'succeeded','the old permission refusal must not remain cached');
+    assert.match(readback.run.error.message,/field no longer exists/);
     const held = [readback.run];
     for (let i = 22; i <= 23; i++) {
       const run = await startRun(h, workflow, { key: 'synthetic-crank-' + i });

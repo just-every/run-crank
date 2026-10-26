@@ -47,6 +47,8 @@ export async function recheckDriftPermission(env: CrankEnv, actor: Actor, incide
     stmt(env, `INSERT INTO crank_wf_step_revisions(run_id,path,revision,prior_input_json,prior_error_json,prior_operation_key,input_json,operation_key,corrected,created_by,created_at)
       SELECT run_id,path,COALESCE((SELECT MAX(revision) FROM crank_wf_step_revisions WHERE run_id=s.run_id AND path=s.path),0)+1,
       input_json,error_json,operation_key,input_json,operation_key,0,?,? FROM crank_wf_steps s WHERE run_id=? AND path=? AND status IN ('waiting','failed')`, actor.id, at, run.id, incident.path),
+    stmt(env, 'DELETE FROM crank_request_checkpoint_chunks WHERE run_id=? AND path=? AND operation_key=?',run.id,incident.path,checkpoint.operation_key),
+    stmt(env, 'DELETE FROM crank_request_checkpoints WHERE run_id=? AND path=? AND operation_key=?',run.id,incident.path,checkpoint.operation_key),
     stmt(env, "DELETE FROM crank_wf_steps WHERE run_id=? AND path=? AND status IN ('waiting','failed')", run.id, incident.path),
     stmt(env, "UPDATE crank_drift_incidents SET state='repaired' WHERE id=?", incidentId),
     stmt(env, "UPDATE crank_wf_runs SET status='queued',error_json=NULL,finished_at=NULL WHERE id=?", run.id),
