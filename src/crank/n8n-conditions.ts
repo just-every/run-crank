@@ -5,7 +5,7 @@ type Obj = Record<string, any>
 type Mapper = (value: any, previous: string, at: string) => any
 type Fields = (value: Obj, allowed: string[], at: string) => void
 export interface N8nCondition { type: string; operation: string; rightType: string; singleValue: boolean }
-export interface N8nConditionSet { combinator: 'and' | 'or'; caseSensitive: boolean; version: number; conditions: N8nCondition[] }
+export interface N8nConditionSet { combinator: 'and' | 'or'; caseSensitive: boolean; version: number; strict: boolean; conditions: N8nCondition[] }
 
 export const N8N_CONDITION_OPERATIONS: Record<string, readonly string[]> = {
   string: ['exists', 'notExists', 'empty', 'notEmpty', 'equals', 'notEquals', 'contains', 'notContains', 'startsWith', 'notStartsWith', 'endsWith', 'notEndsWith', 'regex', 'notRegex'],
@@ -30,7 +30,7 @@ export function compileN8nConditionSets(values: unknown[], previous: string, at:
     const options = object(source.options ?? {})
     fields(options, ['caseSensitive', 'leftValue', 'typeValidation', 'version'], path + '.options')
     if (options.caseSensitive !== undefined && typeof options.caseSensitive !== 'boolean') throw Error('condition case sensitivity must be boolean')
-    if (options.typeValidation !== undefined && options.typeValidation !== 'strict') throw Error('loose condition conversion requires manual mapping')
+    if (options.typeValidation !== undefined && !['strict', 'loose'].includes(options.typeValidation)) throw Error('unsupported condition type validation')
     if (options.leftValue !== undefined && typeof options.leftValue !== 'string') throw Error('condition option leftValue must be text metadata')
     if (options.version !== undefined && ![1, 2, 3, 4].includes(options.version)) throw Error('unsupported condition version')
     if (!Array.isArray(source.conditions) || source.conditions.length > 50 || !['and', 'or'].includes(source.combinator)) throw Error('unsupported condition group')
@@ -47,6 +47,7 @@ export function compileN8nConditionSets(values: unknown[], previous: string, at:
       if (operator.singleValue !== undefined && typeof operator.singleValue !== 'boolean') throw Error('condition singleValue must be boolean')
       const rightType = operator.rightType ?? type
       if (!['string', 'number', 'boolean', 'array', 'object', 'any'].includes(rightType)) throw Error('unsupported condition operand type override')
+      if(options.typeValidation==='loose'&&(type==='object'||rightType==='object'))throw Error('loose object parsing requires manual conversion')
       if (operator.singleValue === true && !unary(operation)) throw Error('binary conditions cannot skip operand validation')
       operands['c' + index] = {
         ...(Object.hasOwn(condition, 'leftValue') ? { left: mapped(condition.leftValue, previous, conditionPath + '.leftValue') } : {}),
@@ -54,7 +55,7 @@ export function compileN8nConditionSets(values: unknown[], previous: string, at:
       }
       return { type, operation, rightType, singleValue: operator.singleValue === true }
     })
-    return { combinator: source.combinator, caseSensitive: options.caseSensitive ?? false, version: options.version ?? 1, conditions }
+    return { combinator: source.combinator, caseSensitive: options.caseSensitive ?? false, version: options.version ?? 1, strict: options.typeValidation!=='loose', conditions }
   })
   const stepId = id + '_conditions'
   return {

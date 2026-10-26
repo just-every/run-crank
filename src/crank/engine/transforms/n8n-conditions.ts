@@ -2,13 +2,8 @@ import { N8N_CONDITION_OPERATIONS, type N8nCondition, type N8nConditionSet } fro
 import { StepError } from '../errors'
 import { isObject } from '../values'
 import type { Args } from './args'
+import { normalizeN8nConditionValue } from './n8n-condition-values'
 
-function strict(value: unknown, type: string): unknown {
-  if (value === undefined || value === null || type === 'any') return value
-  const valid = type === 'array' ? Array.isArray(value) : type === 'object' ? isObject(value) : typeof value === type
-  if (!valid) throw new StepError('type_mismatch', 'Condition requires ' + type + ' operands without coercion')
-  return value
-}
 
 function regex(pattern: string, subject: string, ignoreCase: boolean): boolean {
   const literal = /^\/(.*?)\/([gimusy]*)$/.exec(pattern)
@@ -19,8 +14,8 @@ function regex(pattern: string, subject: string, ignoreCase: boolean): boolean {
 }
 
 function test(condition: N8nCondition, input: unknown, set: N8nConditionSet): boolean {
-  const operands = isObject(input) ? input : {}, left = strict(operands.left, condition.type)
-  const right = condition.singleValue ? undefined : strict(operands.right, condition.rightType)
+  const operands = isObject(input) ? input : {}, left = normalizeN8nConditionValue(operands.left, condition.type, set.strict, set.version)
+  const right = condition.singleValue ? undefined : normalizeN8nConditionValue(operands.right, condition.rightType, set.strict, set.version)
   const { type, operation } = condition, exists = left !== undefined && left !== null && !Number.isNaN(left)
   if (operation === 'exists') return exists
   if (operation === 'notExists') return !exists
@@ -97,7 +92,7 @@ export function n8nConditions(args: Args): boolean[] {
   if (!Array.isArray(args.sets) || !args.sets.length || args.sets.length > 25 || !isObject(args.inputs) || typeof args.all_matching !== 'boolean') throw new StepError('validation', 'Invalid condition groups')
   const inputs = args.inputs, sets = args.sets as N8nConditionSet[]
   for (const set of sets) {
-    if (!isObject(set) || !['and', 'or'].includes(set.combinator) || typeof set.caseSensitive !== 'boolean' || ![1, 2, 3, 4].includes(set.version) || !Array.isArray(set.conditions) || set.conditions.length > 50) throw new StepError('validation', 'Invalid condition group')
+    if (!isObject(set) || !['and', 'or'].includes(set.combinator) || typeof set.caseSensitive !== 'boolean' || typeof set.strict !== 'boolean' || ![1, 2, 3, 4].includes(set.version) || !Array.isArray(set.conditions) || set.conditions.length > 50) throw new StepError('validation', 'Invalid condition group')
     for (const condition of set.conditions) {
       if (!isObject(condition) || !Object.hasOwn(N8N_CONDITION_OPERATIONS, condition.type) || !N8N_CONDITION_OPERATIONS[condition.type].includes(condition.operation) || typeof condition.singleValue !== 'boolean') throw new StepError('validation', 'Unsupported condition operator')
     }
@@ -110,4 +105,16 @@ export function n8nConditions(args: Args): boolean[] {
     if (results[group] && !args.all_matching) break
   }
   return results
+}
+
+/** Source Switch parameter validation converts numeric values before indexing outputs.
+ * https://github.com/n8n-io/n8n/blob/master/packages/workflow/src/type-validation.ts */
+export function n8nSwitchIndex(args: Args): number {
+  const count=args.outputs
+  if(!Number.isSafeInteger(count)||Number(count)<1||Number(count)>25)throw new StepError('validation','Switch requires bounded literal outputs')
+  let index:number
+  try { index=args.value===null||args.value===undefined?NaN:Number(args.value) }
+  catch { throw new StepError('type_mismatch','Switch output must resolve to a numeric index') }
+  if(!Number.isInteger(index)||index<0||index>=Number(count))throw new StepError('validation','Switch output index is outside the configured outputs')
+  return index
 }

@@ -58,6 +58,15 @@ export function switchExport(target,id='synthetic-crank-switch') {
  return source;
 }
 
+/** Numeric output paths are data, never executable source expressions. */
+export function expressionSwitchExport(target,id='synthetic-crank-expression') {
+ const source=switchExport(target,id);source.name='Synthetic expression Switch';
+ source.nodes.splice(1,1);source.nodes[1].parameters={mode:'expression',numberOutputs:3,output:'={{ $json.body.index }}'};
+ source.connections.n0={main:[[{node:'n2',type:'main',index:0}]]};delete source.connections.n1;
+ source.nodes.slice(2).forEach((node,output)=>node.parameters.url=target+'/case'+output);
+ return source;
+}
+
 export function reusedFallbackSwitchExport(target,id='synthetic-crank-switch-reused') {
  const source=switchExport(target,id);source.nodes.pop();source.connections.n2.main.pop();
  source.nodes[2].parameters.options={fallbackOutput:0,allMatchingOutputs:true};return source;

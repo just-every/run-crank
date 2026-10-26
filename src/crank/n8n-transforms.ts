@@ -1,5 +1,5 @@
 import type { Step } from './engine/types'
-import { n8nStreamField } from './engine/transforms/n8n-stream'
+import { n8nAggregateFields, n8nStreamField } from './engine/transforms/n8n-stream'
 
 type Obj = Record<string, any>
 export interface N8nTransformContext {
@@ -25,6 +25,11 @@ const boolean = (value: unknown, fallback = false) => {
 function fieldList(value: unknown): string[] {
   if (typeof value !== 'string' || !value.trim()) throw Error('n8n duplicate comparison requires a literal field list')
   return value.split(',').map(field => n8nStreamField(field.trim()))
+}
+function aggregateSelection(value: unknown): string[] {
+  const fields = typeof value === 'string' ? value.split(',').map(field => field.trim()).filter(Boolean) : value ?? []
+  if (!Array.isArray(fields) || fields.length > 25) throw Error('Aggregate requires at most 25 literal selected fields')
+  return fields.map(n8nStreamField)
 }
 
 /** Whole-stream mappings: call with a path to retained JSON items, never a single item.
@@ -72,13 +77,40 @@ export function n8nTransform(context: N8nTransformContext): N8nTransformResult |
       break
     }
     case 'n8n-nodes-base.aggregate': {
-      fields(p, ['aggregate', 'destinationFieldName', 'include', 'options'], path)
-      const options = object(p.options ?? {}); fields(options, ['includeBinaries'], path + '.options')
-      const field = n8nStreamField(p.destinationFieldName ?? 'data')
-      if (node.typeVersion !== 1 || p.aggregate !== 'aggregateAllItemData' || (p.include ?? 'allFields') !== 'allFields'
-        || boolean(options.includeBinaries) || field.includes('.') || field.includes('['))
-        throw Error('Aggregate supports version 1, all JSON item data and a simple output field without binaries')
-      operation = 'aggregate'; settings = { field }
+      fields(p, ['aggregate', 'fieldsToAggregate', 'destinationFieldName', 'include', 'fieldsToInclude', 'fieldsToExclude', 'options'], path)
+      const options = object(p.options ?? {})
+      fields(options, ['includeBinaries', 'keepOnlyUnique', 'disableDotNotation', 'mergeLists', 'keepMissing'], path + '.options')
+      if (node.typeVersion !== 1 || boolean(options.includeBinaries) || boolean(options.keepOnlyUnique))
+        throw Error('Aggregate requires version 1 and JSON fields without binaries')
+      const mode = p.aggregate ?? 'aggregateIndividualFields', include = p.include ?? 'allFields'
+      const included = aggregateSelection(p.fieldsToInclude), excluded = aggregateSelection(p.fieldsToExclude)
+      if (mode === 'aggregateAllItemData') {
+        const field = n8nStreamField(p.destinationFieldName ?? 'data')
+        if (!['allFields', 'specifiedFields', 'allFieldsExcept'].includes(include) || field.includes('.') || field.includes('[')
+          || p.fieldsToAggregate !== undefined || boolean(options.disableDotNotation) || boolean(options.mergeLists) || boolean(options.keepMissing)
+          || (include !== 'specifiedFields' && included.length) || (include !== 'allFieldsExcept' && excluded.length))
+          throw Error('Aggregate all item data requires active literal field selectors and a simple output field')
+        operation = 'aggregate'; settings = { field, include, fields: include === 'specifiedFields' ? included : excluded }
+      } else if (mode === 'aggregateIndividualFields') {
+        if ((p.destinationFieldName !== undefined && p.destinationFieldName !== 'data') || include !== 'allFields' || included.length || excluded.length)
+          throw Error('Inactive Aggregate all item data settings require manual conversion')
+        const ui = object(p.fieldsToAggregate ?? {}); fields(ui, ['fieldToAggregate'], path + '.fieldsToAggregate')
+        if (!Array.isArray(ui.fieldToAggregate)) throw Error('Aggregate requires individual fields')
+        const literal = boolean(options.disableDotNotation)
+        const identities = new Set<string>()
+        const aggregateFields = ui.fieldToAggregate.map((raw: unknown, index: number) => {
+          const entry = object(raw); fields(entry, ['fieldToAggregate', 'renameField', 'outputFieldName'], path + '.fieldsToAggregate.fieldToAggregate.' + index)
+          const field = n8nStreamField(entry.fieldToAggregate), rename = boolean(entry.renameField)
+          if (entry.outputFieldName !== undefined && typeof entry.outputFieldName !== 'string') throw Error('Aggregate output fields must be literal names')
+          const output = entry.outputFieldName ?? '', identity = rename ? output : field
+          if (identities.has(identity)) throw Error('Aggregate output field is used more than once')
+          identities.add(identity)
+          // The source uses a nonempty outputFieldName even when renameField is false.
+          return { field, output: output || (!literal && field.includes('.') ? field.split('.').at(-1)! : field) }
+        })
+        operation = 'aggregateFields'; settings = { fields: n8nAggregateFields(aggregateFields, literal), literal,
+          mergeLists: boolean(options.mergeLists), keepMissing: boolean(options.keepMissing) }
+      } else throw Error('Aggregate mode has no reviewed native mapping')
       break
     }
     default: return undefined

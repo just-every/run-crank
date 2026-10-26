@@ -19,17 +19,39 @@ export function transformStreamExport(target,id='synthetic-crank-400') {
  return {workflow:source,conversions:{n2:{kind:'item-stream',reviewed:true,max_source_items:10,max_stage_items:10}}};
 }
 
+function aggregateStreamExport(target,parameters,id) {
+ const source=transformStreamExport(target,id),edge=node=>({node,type:'main',index:0});
+ source.workflow.name='Synthetic aggregate '+id;source.workflow.nodes=source.workflow.nodes.filter(node=>['n0','n1','n2','n7','n8'].includes(node.id));
+ source.workflow.nodes.find(node=>node.id==='n7').parameters=parameters;
+ source.workflow.connections=Object.fromEntries(source.workflow.nodes.slice(0,-1).map((node,index)=>[node.name,{main:[[edge(source.workflow.nodes[index+1].name)]]}]));return source;
+}
+
 /** Complete-stream operations must settle before an actual native HTTP write. */
 export async function transformStreamJourney() {
  const target='https://receiver.example',writes=[];
  const h=await harness(target,{edge:async request=>{if(new URL(request.url).origin!==target)return undefined;writes.push(await request.json());return Response.json({received:true})}});
  try {
+  const aggregateCases=[
+   {parameters:{aggregate:'aggregateAllItemData',destinationFieldName:'orders',include:'specifiedFields',fieldsToInclude:' customer, extra.missing, , ',options:{}},
+    messages:[{customer:'synthetic-crank-440',amount:1},{amount:2},{'extra.missing':3},{extra:{missing:4}},{}],output:{orders:[{customer:'synthetic-crank-440'},{'extra.missing':3}]}},
+   {parameters:{aggregate:'aggregateAllItemData',destinationFieldName:'orders',include:'allFieldsExcept',fieldsToExclude:['amount','amount.x'],options:{}},
+    messages:[{customer:'synthetic-crank-441',amount:1},{amount:2},{},{'amount.x':3},{amount:4,extra:{amount:5}}],output:{orders:[{customer:'synthetic-crank-441'},{extra:{amount:5}}]}},
+   {parameters:{aggregate:'aggregateAllItemData',destinationFieldName:'orders',include:'specifiedFields',fieldsToInclude:' , ',options:{}},
+    messages:[{customer:'synthetic-crank-442'},{}],output:{orders:[{customer:'synthetic-crank-442'},{}]}},
+   {parameters:{fieldsToAggregate:{fieldToAggregate:[{fieldToAggregate:'profile.customer'},{fieldToAggregate:'amount',renameField:true,outputFieldName:'summary.amounts'},{fieldToAggregate:'tags'},{fieldToAggregate:'missing'},{fieldToAggregate:'list.0',renameField:true,outputFieldName:'first'}]},options:{}},
+    messages:[{profile:{customer:'synthetic-crank-443'},amount:0,tags:['synthetic-crank-444',null,[null,'synthetic-crank-445']],list:['synthetic-crank-446']},{profile:null,amount:null,tags:null,list:[]},{},{profile:{customer:''},amount:false,tags:[null],list:['synthetic-crank-447']}],
+    output:{customer:['synthetic-crank-443',''],summary:{amounts:[0,false]},tags:[['synthetic-crank-444',[null,'synthetic-crank-445']],[]],missing:[],first:['synthetic-crank-446','synthetic-crank-447']}},
+   {parameters:{aggregate:'aggregateIndividualFields',fieldsToAggregate:{fieldToAggregate:[{fieldToAggregate:'tags',renameField:true,outputFieldName:'list'},{fieldToAggregate:'value',renameField:true,outputFieldName:'summary.values'}]},options:{mergeLists:true,keepMissing:true}},
+    messages:[{tags:['synthetic-crank-448',null,['synthetic-crank-449']],value:0},{tags:null,value:null},{},{tags:[],value:false}],output:{list:['synthetic-crank-448',null,['synthetic-crank-449'],null,null],summary:{values:[0,null,null,false]}}},
+   {parameters:{aggregate:'aggregateIndividualFields',fieldsToAggregate:{fieldToAggregate:[{fieldToAggregate:'profile.customer'},{fieldToAggregate:'tags',renameField:true,outputFieldName:'result.list'}]},options:{disableDotNotation:true,mergeLists:true}},
+    messages:[{'profile.customer':'synthetic-crank-450',profile:{customer:'synthetic-crank-451'},tags:['synthetic-crank-452',null]},{profile:{customer:'synthetic-crank-453'},tags:null},{}],output:{'profile.customer':['synthetic-crank-450'],'result.list':['synthetic-crank-452']}},
+  ].map((row,index)=>({...row,envelope:aggregateStreamExport(target,row.parameters,'synthetic-crank-'+(460+index))}));
   const envelope=transformStreamExport(target),variants=['allOtherFields','selectedOtherFields'].map((include,index)=>{
    const value=transformStreamExport(target,'synthetic-crank-'+(420+index));value.workflow.name='Synthetic split '+include;
    value.workflow.nodes[1].parameters.assignments.assignments.push({id:'synthetic-crank-422',name:'region',type:'string',value:'={{ $json.body.region }}'},{id:'synthetic-crank-423',name:'unselected',type:'string',value:'synthetic-crank-424'});
    value.workflow.nodes[2].parameters={fieldToSplitOut:'messages',include,...(include==='selectedOtherFields'?{fieldsToInclude:'region'}:{}),options:{destinationFieldName:'record'}};
    value.workflow.nodes[3].parameters.assignments.assignments[0].value='={{ $json.record.customer }}';value.workflow.nodes[3].parameters.assignments.assignments[1].value='={{ $json.record.amount }}';value.workflow.nodes[3].parameters.assignments.assignments.push({id:'synthetic-crank-425',name:'region',type:'string',value:'={{ $json.region }}'});return value;
-  }),plan=await doorPlan(h,JSON.stringify([envelope,...variants]));assert.equal(plan.status,200,plan.text);assert.equal(plan.value.rejected.length,0,JSON.stringify(plan.value));assert.equal(writes.length,0);
+  }),plan=await doorPlan(h,JSON.stringify([envelope,...variants,...aggregateCases.map(row=>row.envelope)]));assert.equal(plan.status,200,plan.text);assert.equal(plan.value.rejected.length,0,JSON.stringify(plan.value));assert.equal(writes.length,0);
   for(let count=0;count<2;count++)assert.equal((await door(h,'apply',{planId:plan.value.planId,reviewedFingerprint:plan.value.fingerprint})).value.job.state,'completed');
   const workflows=await h.get('workflows'),workflow=workflows.find(row=>row.name===envelope.workflow.name),draft=await h.get('workflows/'+workflow.id);assert.equal(draft.status,'draft');assert.equal(draft.versions.length,0);assert.equal(draft.hooks.length,0);
   await h.restart();assert.deepEqual((await h.get('workflows/'+workflow.id)).draft,draft.draft);await h.post('workflows/'+workflow.id+'/publish',{},h.owner,201);const hook=await h.post('workflows/'+workflow.id+'/hooks',{},h.owner,201);
@@ -45,7 +67,19 @@ export async function transformStreamJourney() {
    assert.deepEqual(writes.at(-1),{orders:[{customer:'Alpha',amount:2,region:'TX'},{customer:'Beta',amount:5,region:'TX'},{customer:'Gamma',amount:1,region:'TX'}]});
    const split=run.steps.find(row=>row.step_id==='n2_source');assert.deepEqual(split.output,messages.map(record=>({region:'TX',...(variant.workflow.nodes[2].parameters.include==='allOtherFields'?{unselected:'synthetic-crank-424'}:{}),record})),'Split Out must retain exactly the chosen fields and destination shape');
   }
-  for(const mutation of [source=>source.workflow.nodes[4].parameters.type='random',source=>source.workflow.nodes[5].parameters.operation='removeItemsSeenInPreviousExecutions',source=>source.workflow.nodes[7].parameters.options.includeBinaries=true]){
+  for(const scenario of aggregateCases){
+   const workflow=workflows.find(row=>row.name===scenario.envelope.workflow.name);await h.post('workflows/'+workflow.id+'/publish',{},h.owner,201);const hook=await h.post('workflows/'+workflow.id+'/hooks',{},h.owner,201);
+   const send=async messages=>{const sent=await deliver(h,hook.url,{method:'POST',headers:{'content-type':'application'+'/'+'json'},body:JSON.stringify({messages})});assert.equal(sent.status,200,sent.text);return settled(h,sent.value.run_id)};
+   const run=await send(scenario.messages);assert.equal(run.status,'succeeded',JSON.stringify(run.error));assert.deepEqual(writes.at(-1),scenario.output,'Aggregate must retain exact source field, null, list and projection semantics');
+   const before=writes.length;assert.equal((await send([])).status,'succeeded');assert.equal(writes.length,before,'empty inputs cannot manufacture an individual or filtered aggregate');
+   if(scenario.parameters.include==='specifiedFields'&&scenario.parameters.fieldsToInclude.trim()){
+    const filtered=await send([{amount:1}]);assert.equal(filtered.status,'succeeded');assert.deepEqual(writes.at(-1),{orders:[]},'nonempty input filtered to no records still emits one aggregate');
+   }
+  }
+  for(const mutation of [source=>source.workflow.nodes[4].parameters.type='random',source=>source.workflow.nodes[5].parameters.operation='removeItemsSeenInPreviousExecutions',source=>source.workflow.nodes[7].parameters.options.includeBinaries=true,
+   source=>source.workflow.nodes[7].parameters.fieldsToInclude='customer',
+   source=>source.workflow.nodes[7].parameters={aggregate:'aggregateIndividualFields',fieldsToAggregate:{fieldToAggregate:[{fieldToAggregate:'customer',renameField:true,outputFieldName:'summary'},{fieldToAggregate:'amount',renameField:true,outputFieldName:'summary.amount'}]},options:{}},
+  ]){
    const isolated=await harness(target);try{const source=transformStreamExport(target);mutation(source);const rejected=await doorPlan(isolated,JSON.stringify(source));assert.equal(rejected.status,200,rejected.text);assert.equal(rejected.value.rejected.length,1);assert.ok(rejected.value.diagnostics.some(row=>row.message?.includes('Manual conversion')))}finally{await isolated.close()}
   }
  } finally {await h.close()}

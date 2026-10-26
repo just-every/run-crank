@@ -77,6 +77,53 @@ function dedupe(items: Row[], settings: Row): Row[] {
   return items.filter((_, index) => !removed.has(index))
 }
 
+/** Reviewed Aggregate v1 JSON semantics:
+ * https://github.com/n8n-io/n8n/blob/master/packages/nodes-base/nodes/Transform/Aggregate/Aggregate.node.ts
+ * Array-index output paths and overlapping destinations require manual conversion. */
+export function n8nAggregateFields(value: unknown, literal: boolean): { field: string; output: string }[] {
+  if (!Array.isArray(value) || !value.length || value.length > 25) return fail('n8n aggregation requires 1 to 25 individual fields')
+  const outputs: string[] = []
+  return value.map(raw => {
+    if (!isObject(raw)) return fail('n8n aggregation requires reviewed individual field settings')
+    const field = n8nStreamField(raw.field), output = n8nStreamField(raw.output)
+    if ((!literal && (output.includes('[') || output.split('.').some(part => /^\d+$/.test(part))))
+      || outputs.some(other => other === output || (!literal && (other.startsWith(output + '.') || output.startsWith(other + '.')))))
+      return fail('n8n aggregation array-index outputs or overlapping field paths require manual conversion')
+    outputs.push(output)
+    return { field, output }
+  })
+}
+
+function aggregateFields(items: Row[], settings: Row): Row[] {
+  const literal = settings.literal === true, fields = n8nAggregateFields(settings.fields, literal)
+  if (!items.length) return []
+  const result: Row = {}
+  for (const { field, output } of fields) {
+    const values: unknown[] = []
+    for (const item of items) {
+      let value: unknown = item
+      // lodash get prefers an exact own key, then follows object or array keys.
+      const parts = literal || Object.hasOwn(item, field) ? [field] : field.replace(/\[(\d+)\]/g, '.$1').split('.')
+      for (const part of parts) value = value !== null && typeof value === 'object' && Object.hasOwn(value, part)
+        ? (value as Row)[part] : undefined
+      if (settings.keepMissing !== true) {
+        if (Array.isArray(value)) value = value.filter(entry => entry !== null)
+        else if (value === null || value === undefined) continue
+      }
+      if (Array.isArray(value) && settings.mergeLists === true) for (const entry of value) values.push(entry)
+      else values.push(value ?? null)
+    }
+    const parts = literal ? [output] : output.split('.'), leaf = parts.pop()!
+    let target = result
+    for (const part of parts) {
+      if (!Object.hasOwn(target, part)) target[part] = {}
+      target = target[part] as Row
+    }
+    target[leaf] = values
+  }
+  return [result]
+}
+
 /** Bounded JSON item streams; native mappings admit only the reviewed settings.
  * Empty streams propagate because n8n does not invoke a downstream node without items.
  * Official node implementations: https://github.com/n8n-io/n8n/tree/master/packages/nodes-base/nodes/Transform
@@ -125,9 +172,21 @@ export const n8nStream: Transform = args => {
     case 'aggregate': {
       const field = n8nStreamField(settings.field)
       if (field.includes('.') || field.includes('[')) return fail('n8n aggregation requires a simple output field')
-      result = items.length ? [{ [field]: items }] : []
+      const include = settings.include ?? 'allFields', fields = settings.fields ?? []
+      if (!['allFields', 'specifiedFields', 'allFieldsExcept'].includes(String(include)) || !Array.isArray(fields) || fields.length > 25
+        || (include === 'allFields' && fields.length)) return fail('n8n aggregation requires reviewed field selectors')
+      fields.forEach(n8nStreamField)
+      // Source selectors match literal top-level keys and omit empty projections.
+      const selected = !fields.length ? items : items.flatMap(item => {
+        const row = Object.fromEntries(Object.entries(item).filter(([key]) => include === 'specifiedFields' ? fields.includes(key) : !fields.includes(key)))
+        return Object.keys(row).length ? [row] : []
+      })
+      result = items.length ? [{ [field]: selected }] : []
       break
     }
+    case 'aggregateFields':
+      result = aggregateFields(items, settings)
+      break
     default: return fail('n8n stream operation has no reviewed native mapping')
   }
   return checked(result)

@@ -212,9 +212,13 @@ include all other fields or selected literal fields. Missing values produce no
 items, object values expand in property order, and scalar values produce one item.
 Nested or multiple split fields and binary inputs remain manual conversions. Set and HTTP operate per item;
 Limit version 1, simple Sort version 1, current-input Remove Duplicates versions
-1, 1.1 and 2, and all-item JSON Aggregate version 1 operate on the complete preceding
+1, 1.1 and 2, and JSON Aggregate version 1 operate on the complete preceding
 stream. Sorting preserves source field directions and case handling. Duplicate
-removal keeps the first original record. History-based duplicate removal, random
+removal keeps the first original record. Aggregate supports individual fields with
+renaming, nested paths, one-level list merging and explicit missing-value retention,
+or all-data aggregation with literal top-level included or excluded fields. Empty
+field projections are omitted from the aggregate, while a nonempty input projected
+to nothing still yields one empty aggregate. History-based duplicate removal, random
 sorting, object comparison values, binary aggregation, branched streams and nested
 batch loops remain explicit conversions. Item and byte bounds apply before the
 next write, and an empty stream never creates an aggregate record.
@@ -235,21 +239,26 @@ Source code never runs during parsing or planning. An owner can supply an explic
 reviewed native replacement for a provisioned executor as described below. A
 manual disposition records remaining work; it does not satisfy eventual conversion.
 Strict Filter nodes preserve the preceding item when conditions pass and end as
-`stopped by filter` otherwise. Text comparisons preserve whitespace. Loose
-coercion and unmapped operators block conversion.
+`stopped by filter` otherwise. Text comparisons preserve whitespace. Unmapped operators and loose object parsing block conversion.
 
 Switch versions 3 through 3.5 accept strict `mode: "rules"`, the same condition
 groups, and one destination per output. `allMatchingOutputs` preserves first-match
 or all-match routing. `fallbackOutput: "extra"` maps the extra fallback branch;
 omitted or `"none"` stops an unmatched item. Output labels remain branch names.
 A numeric fallback output reuses the named rule output only when no rule matches.
-Expression mode, loose coercion and shared joins remain explicit manual conversions. Strict conditions accept literal operands and declarative current-item paths on
+Shared joins remain explicit manual conversions.
+Expression mode accepts 1 to 25 literal outputs and an output index expressed as a
+literal or the same declarative current-item data path. Source numeric conversion
+occurs before range checking; null, missing, fractional and out-of-range indexes
+fail before any receiver request. Arbitrary JavaScript expressions remain manual.
+Strict conditions accept literal operands and declarative current-item paths on
 both sides. String negated prefix and suffix, regular expressions, boolean equality,
 array membership and length, object emptiness and typed existence operators preserve
 source null handling and whitespace. AND and OR groups short circuit, as do exclusive
 Switch outputs. Case handling follows the source condition version, including the
-version 4 regular-expression flag behavior. Loose type conversion and DateTime
-condition parsing remain explicit manual conversions.
+version 4 regular-expression flag behavior. Loose conversion is supported for numbers, text, booleans and arrays, including
+source-version boolean truthiness and version 3 empty-number handling. Loose object
+syntax and DateTime condition parsing remain explicit manual conversions.
 
 Date & Time version 2 maps `operation: "formatDate"` with replacement output,
 `options.timezone: true`, and an explicit IANA `settings.timezone`. Supported

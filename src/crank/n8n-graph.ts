@@ -201,11 +201,22 @@ export function n8nGraph(value: Json, sourceId: string, env: ImportTargetEnv, ow
           break
         }
         case 'n8n-nodes-base.switch': {
-          fields(p,['mode','rules','options'],at+'.parameters')
+          if(p.mode==='expression') {
+            fields(p,['mode','numberOutputs','output','options'],at+'.parameters')
+            const count=p.numberOutputs??4
+            if(![3,3.1,3.2,3.3,3.4,3.5].includes(n.typeVersion)||!Number.isSafeInteger(count)||count<1||count>25||Object.keys(obj(p.options??{})).length||out.length>count||out.some(branch=>branch.length>1))throw Error('Switch expression mode requires 1 to 25 literal outputs and a single destination per output')
+            const selected=id+'_output'
+            result.push({id:selected,name:'Source output index',type:'transform',fn:'n8n.switch_index',input:{value:mapped(p.output,previous,at+'.parameters.output'),outputs:count}} as Step)
+            result.push({...step,id,type:'paths',mode:'exclusive',branches:Array.from({length:count},(_,output)=>({id:'case'+output,when:[[{field:'steps.'+selected,op:'number.eq',value:output,value_type:'number'}]],steps:out[output]?.length?compile(out[output][0],previous,depth+1,stop,stream):[]}))} as Step)
+            coverage.push({field:at+'.parameters.output',reason:'Supported literal or declarative output index with source numeric conversion and range failure; source expression code is never executed'})
+            return result
+          }
+          fields(p,['mode','rules','options','looseTypeValidation'],at+'.parameters')
           const options=obj(p.options??{});fields(options,['fallbackOutput','allMatchingOutputs','looseTypeValidation','renameFallbackOutput'],at+'.parameters.options')
-          if(![3,3.1,3.2,3.3,3.4,3.5].includes(n.typeVersion)||(p.mode??'rules')!=='rules'||options.looseTypeValidation===true||(options.allMatchingOutputs!==undefined&&typeof options.allMatchingOutputs!=='boolean'))throw Error('Switch needs strict rule mode and a declared matching-output policy')
+          if(![3,3.1,3.2,3.3,3.4,3.5].includes(n.typeVersion)||(p.mode??'rules')!=='rules'||(p.looseTypeValidation!==undefined&&typeof p.looseTypeValidation!=='boolean')||(options.looseTypeValidation!==undefined&&typeof options.looseTypeValidation!=='boolean')||(options.allMatchingOutputs!==undefined&&typeof options.allMatchingOutputs!=='boolean'))throw Error('Switch needs rule mode and a declared matching-output policy')
           const rules=obj(p.rules);fields(rules,['values'],at+'.parameters.rules')
           if(!Array.isArray(rules.values)||!rules.values.length||rules.values.length>25)throw Error('Switch requires 1 to 25 rule outputs')
+          const loose=p.looseTypeValidation??options.looseTypeValidation;if(loose!==undefined&&rules.values.some((rule:any)=>loose!==(obj(obj(obj(rule).conditions).options??{}).typeValidation==='loose')))throw Error('Switch condition type validation metadata must match its source setting')
           const fallback=options.fallbackOutput??'none'
           if(!['none','extra'].includes(fallback)&&(!Number.isSafeInteger(fallback)||fallback<0||fallback>=rules.values.length))throw Error('Switch fallback must name an existing rule output or an extra output')
           if(out.length>rules.values.length+(fallback==='extra'?1:0)||out.some(b=>b.length>1))throw Error('Switch outputs need one destination per branch')
@@ -217,7 +228,8 @@ export function n8nGraph(value: Json, sourceId: string, env: ImportTargetEnv, ow
         }
         case 'n8n-nodes-base.filter':
         case 'n8n-nodes-base.if': {
-          fields(p,['conditions','options'],at+'.parameters');if(![2,2.1,2.2].includes(n.typeVersion)||Object.keys(obj(p.options??{})).length)throw Error('unsupported IF version or options')
+          fields(p,['conditions','options','looseTypeValidation'],at+'.parameters');const options=obj(p.options??{});fields(options,['looseTypeValidation'],at+'.parameters.options');if(![2,2.1,2.2].includes(n.typeVersion)||(p.looseTypeValidation!==undefined&&typeof p.looseTypeValidation!=='boolean')||(options.looseTypeValidation!==undefined&&typeof options.looseTypeValidation!=='boolean'))throw Error('unsupported IF version or options')
+          const loose=p.looseTypeValidation??options.looseTypeValidation;if(loose!==undefined&&loose!==(obj(obj(p.conditions).options??{}).typeValidation==='loose'))throw Error('condition type validation metadata must match the source conversion setting')
           const when=conditions(p.conditions,previous,at+'.conditions',id,result)
           if(n.type==='n8n-nodes-base.filter'){result.push({...step,id,type:'filter',when} as Step);break}
           if(out.length>2||out.some(b=>b.length>1))throw Error('IF outputs need one destination per branch')

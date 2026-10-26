@@ -214,7 +214,7 @@
       "executable": false
     },
     "docs/IMPORTING.md": {
-      "sha256": "e43a0b16d8929648829b70cd1b364dcbf2b8b08c9f6dd9e4a1f842bb39f842c8",
+      "sha256": "e4c64d4e6d19498c585c94026cd6644e3ed243a34c948017d2cb872369a65e7e",
       "executable": false
     },
     "docs/OPERATIONS.md": {
@@ -2550,11 +2550,15 @@
       "executable": false
     },
     "src/crank/engine/transforms/index.ts": {
-      "sha256": "44d3e92aeacfd7129de1c368015012ad89bbdb9c1b22b6ce8427f1f8ea96a5fd",
+      "sha256": "2d8301dc1ad3ca59cd442882dc41263bf2463d56a17adab60110af041899e4ad",
+      "executable": false
+    },
+    "src/crank/engine/transforms/n8n-condition-values.ts": {
+      "sha256": "15a173ddcec9b0025ba7062b17416bdc88a42d1a272a33cb8b146472a69915b7",
       "executable": false
     },
     "src/crank/engine/transforms/n8n-conditions.ts": {
-      "sha256": "7ea13ba852b6302aa32bd056c2080242715836c0c37ddeb6e69feb87b46020c4",
+      "sha256": "44b34038735d1eb5f3d3cc6a29bd55e4d8cdf683760cbf5a553bd309703e6666",
       "executable": false
     },
     "src/crank/engine/transforms/n8n-items.ts": {
@@ -2566,7 +2570,7 @@
       "executable": false
     },
     "src/crank/engine/transforms/n8n-stream.ts": {
-      "sha256": "de0ad50d2a0101a8170374e01d3540c5c41e20c6e09fe5bff2b92d62638f218d",
+      "sha256": "03e2abdfdaf7f65af83ad9d8e9ef02b4669549bc9a65c516bbef10716833a7c2",
       "executable": false
     },
     "src/crank/engine/transforms/numbers.ts": {
@@ -2698,7 +2702,7 @@
       "executable": false
     },
     "src/crank/n8n-conditions.ts": {
-      "sha256": "aef282f4d97a1c45a0b2584d5643e5b9ddaaaee378e2667b5707e87c2a49b843",
+      "sha256": "d973b99e30d8c7e234dc342ff557b4cbd2d2090a97cfcada415b4bc1d432593d",
       "executable": false
     },
     "src/crank/n8n-conversions.ts": {
@@ -2706,7 +2710,7 @@
       "executable": false
     },
     "src/crank/n8n-graph.ts": {
-      "sha256": "c3677225f0fafb79362df8bdf0cff5e5bbdaaefc75aea5abc8de4341d387ef08",
+      "sha256": "6751498221fea636091648d998e1efb2b5e7d1ebb5fbbc2585645143df70f0bf",
       "executable": false
     },
     "src/crank/n8n-http.ts": {
@@ -2718,7 +2722,7 @@
       "executable": false
     },
     "src/crank/n8n-transforms.ts": {
-      "sha256": "3cfef7a72486f1ed7b0bfcabe5f23e74ef4c3cd6b2fc79bbf1b6b1ee958b7fe4",
+      "sha256": "960ca9b39760f946bb60f7b101dc8866c2b77e899241bc052fd9805548d2e6ff",
       "executable": false
     },
     "src/crank/n8n.ts": {
@@ -5466,7 +5470,7 @@
       "executable": false
     },
     "tests/migration-browser.mjs": {
-      "sha256": "399501ef15088aada3330b0236bc312a27ccb9cdde57c689f00b58fdb35c7226",
+      "sha256": "481ec6252b79c092e79b83f42f30501aa6fc114cabb6f1cbd31621951741e0df",
       "executable": false
     },
     "tests/n8n-batch-journey.mjs": {
@@ -5482,7 +5486,7 @@
       "executable": false
     },
     "tests/n8n-conditions-journey.mjs": {
-      "sha256": "6b27259a8dfa2403824fd6a7a4d728c10461d221cb16c8f1f92c740e905559c2",
+      "sha256": "d50473e8b698d48a33764683f3905a3fe52d1d4e15a065ddee6e55cd9cb5c07b",
       "executable": false
     },
     "tests/n8n-conversion-journey.mjs": {
@@ -5490,7 +5494,7 @@
       "executable": false
     },
     "tests/n8n-graph-fixture.mjs": {
-      "sha256": "aecd085c09fc7f766e480297eff892985666be8735cec90a607701692ff4e05f",
+      "sha256": "1860112501402e421d31b1900583655fb41cbf042dcc3c74655a307588ee15e3",
       "executable": false
     },
     "tests/n8n-loop-journey.mjs": {
@@ -5502,7 +5506,7 @@
       "executable": false
     },
     "tests/n8n-stream-journey.mjs": {
-      "sha256": "18e635cd0a6cb6a6d91429c25122835d6f46d374c5b1bb643b025ba30dffe59e",
+      "sha256": "fda8ded857b2edb747b433c387029cbb48c5b91f9b75133917a3b0570a530638",
       "executable": false
     },
     "tests/oauth-renewal-journey.mjs": {
