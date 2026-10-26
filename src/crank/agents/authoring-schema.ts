@@ -1,6 +1,7 @@
 import { hostAllowed } from '../connections/apps'
 import { getConnection } from '../connections/store'
 import { validateGraph, type Graph } from '../engine/graph'
+import { checkEgress } from '../engine/egress'
 import { isObject } from '../engine/values'
 import { canonical, requireValue, text, type CrankEnv } from '../model'
 
@@ -36,8 +37,7 @@ export async function scopeOf(env: CrankEnv, input: Record<string, unknown>): Pr
   const [crm, qb] = await Promise.all([getConnection(env, scope.crm_connection_id), getConnection(env, scope.quickbooks_connection_id)])
   requireValue(['http', 'hubspot'].includes(crm.app) && crm.status === 'active', 'Choose an active owned CRM API connection', 422)
   requireValue(qb.app === 'quickbooks' && qb.status === 'active' && qb.account_name === scope.realm_id && JSON.parse(qb.scopes_json).includes('com.intuit.quickbooks.accounting'), 'Choose the connected QuickBooks company with accounting scope', 422)
-  let url: URL
-  try { url = new URL(scope.lead_url.replace(/\{\{trigger\.input\.[a-zA-Z0-9_.]+\}\}/g, 'sample')) } catch { throw new Error('Invalid CRM URL') }
+  const url = checkEgress(scope.lead_url.replace(/\{\{trigger\.input\.[a-zA-Z0-9_.]+\}\}/g, 'sample'))
   requireValue(url.protocol === 'https:' && !url.username && !url.password && !url.hash && hostAllowed(url.hostname, JSON.parse(crm.domains_json)), 'CRM URL must stay within the chosen account domains', 422)
   requireValue(!/authorization|token|secret|password|api.?key/i.test(url.search) && !scope.lead_url.replace(/\{\{trigger\.input\.[a-zA-Z0-9_.]+\}\}/g, '').includes('{{'), 'CRM URL may map only submitted sample fields and must exclude credentials', 422)
   return scope

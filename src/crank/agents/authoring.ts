@@ -12,10 +12,12 @@ import { exact, samplesOf, scopeOf, scopedGraph } from './authoring-schema'
 export async function generateAuthoring(env: CrankEnv, actor: Actor, input: Record<string, unknown>) {
   requireOwner(actor)
   exact(input, ['prompt', 'crm_connection_id', 'quickbooks_connection_id', 'lead_url', 'realm_id', 'customer_id', 'item_id', 'amount_usd', 'samples'], 'Authoring request')
-  const scope = await scopeOf(env, input), samples = samplesOf(input.samples), prompt = text(input.prompt, 'prompt', 8000)
+  const scope = await scopeOf(env, input), samples = samplesOf(input.samples)
+  requireValue(typeof input.prompt === 'string' && input.prompt.trim() && input.prompt.length <= 8000 && !/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(input.prompt), 'Describe the business result in at most 8000 characters', 422)
+  const prompt = input.prompt.trim()
   const proposal = await generateProposal(env, prompt, scope, samples)
   const workflow = await createWorkflow(env, actor, { name: proposal.name, environment: 'sandbox', graph: proposal.graph, settings: { authoring: { created_by: actor.id } } })
-  const record: AuthoringRecord = { scope, samples, questions: proposal.questions, model: proposal.model, costs: proposal.costs, tested: null }
+  const record: AuthoringRecord = { revision: 0, scope, samples, questions: proposal.questions, model: proposal.model, costs: proposal.costs, tested: null }
   await guardedBatch(env, actor, 'owner', [
     await draftSnapshot(env, actor, workflow.id, null, proposal.graph, { authoring: record }),
     auditStatement(env, actor.id, 'authoring.generate', 'workflow', workflow.id, { model: record.model, sample_count: samples.length }),
@@ -72,4 +74,3 @@ export async function promoteAuthoring(env: CrankEnv, actor: Actor, workflowId: 
   await publishWorkflow(env, actor, workflowId, { authoring_digest: input.digest, authoring_confirm: true })
   return readAuthoring(env, actor, workflowId)
 }
-

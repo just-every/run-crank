@@ -182,6 +182,12 @@ test('AI-002: native model proposals stay within scope, sandbox tests fence exac
     assert.equal(proposal.promoted, true);
     const workflow = await h.get('workflows/' + proposal.workflow_id);
     assert.equal(workflow.status, 'published');
+    const beforePurposeChange = invoices.length;
+    await h.post('connections/' + qbo.id + '/purpose', { purpose: 'production' });
+    const blocked = await startRun(h, workflow, { id: 'lead-3' });
+    assert.equal(blocked.status, 'paused');
+    assert.equal(invoices.length, beforePurposeChange, 'The authoring executor fence still refuses production effects after promotion');
+    await h.post('connections/' + qbo.id + '/purpose', { purpose: 'test' });
     const audit = await h.get('audit');
     assert.ok(audit.some(a => a.action === 'authoring.promote' && a.version_id === workflow.published_version_id));
     await h.restart();

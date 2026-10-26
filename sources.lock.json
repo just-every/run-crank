@@ -2126,11 +2126,11 @@
       "executable": false
     },
     "src/crank/agents/authoring-promotion.ts": {
-      "sha256": "d848f3db846873ac931f9d3d405e48acf079c0a402d6b2cd10e524ef6bde84e2",
+      "sha256": "11faa3673fa7f365a8941225a7d4869ac82e06b351eb280422a7671236a90753",
       "executable": false
     },
     "src/crank/agents/authoring-record.ts": {
-      "sha256": "eea2c840249e8d6fb2daf9348479530591a889469b8ca25195382270a7752119",
+      "sha256": "fb52c15bdf686ac653fd5288d01c659f04560f578476394b6922d6bacc8ad3e9",
       "executable": false
     },
     "src/crank/agents/authoring-safety.ts": {
@@ -2138,11 +2138,11 @@
       "executable": false
     },
     "src/crank/agents/authoring-schema.ts": {
-      "sha256": "c13b3a1ccbef4ae3919b2ec4b1d443f0a209a3a4866c5c33c47844ecf0243812",
+      "sha256": "985f3095778a777e69a384d9715d2222e9d5a2a4a5193b8090d6b138abf60a50",
       "executable": false
     },
     "src/crank/agents/authoring.ts": {
-      "sha256": "8176cab561e85f36729c0ef833d24049347b7d9f11f6fc92b7dc10bb169cd0a0",
+      "sha256": "5efdcd4f60ed5a37e4ffd313a65174fd009fe392721bd00e1b7dfa07421fc942",
       "executable": false
     },
     "src/crank/agents/cases.ts": {
@@ -5522,7 +5522,7 @@
       "executable": false
     },
     "tests/skills.test.mjs": {
-      "sha256": "ccc1e8b0b162d32d77e83e4ffa5794c3d76ec9e1bfd3f4c75238152847422749",
+      "sha256": "908976d33f7981f31146df84cb2ff8440b0ed2800cb1c1e3a537e18b25634561",
       "executable": false
     },
     "tests/sqlserver-gateway-fixture.mjs": {
