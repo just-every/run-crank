@@ -58,7 +58,7 @@ export function itemStreamPipeline(steps: Step[], items: string, initial = 'item
         {id:collected,type:'transform',fn:'n8n.items',input:{kind:'code-results',value:ref('steps.'+each+'.results'),max_items:maxItems}})
       stream='steps.'+collected;previous=stream;continue
     }
-    if(source.type==='transform'&&['n8n.stream','n8n.filter_stream'].includes(source.fn??'')) {
+    if(source.type==='transform'&&(source.fn==='n8n.stream'||source.fn==='n8n.filter_stream')) {
       result.push({...source,input:{...(source.input as Record<string,unknown>),items:ref(stream),max_items:maxItems}})
       stream='steps.'+source.id;previous=stream;continue
     }

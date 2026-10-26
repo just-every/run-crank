@@ -112,7 +112,7 @@ export function n8nGraph(value: Json, sourceId: string, env: ImportTargetEnv, ow
           fields(lp,['batchSize','options'],'nodes.'+loopIndex+'.parameters');seen.add(loopIndex)
           const itemId=id+'_item',body=compile(lo[1][0],'steps.'+itemId,depth+1,loopIndex,true),last=regions.body.at(-1)!,connected=regions.done.length>0
           const batchSize=lp.batchSize??1,batched=batchSize>1
-          const streaming=batched||Boolean(conversions[n.id])||body.slice(0,-1).some(step=>step.type==='http')||body.some(step=>(step.type==='transform'&&['n8n.stream','n8n.filter_stream'].includes(step.fn??''))||step.n8n_items===true)
+          const streaming=batched||Boolean(conversions[n.id])||body.slice(0,-1).some(step=>step.type==='http')||body.some(step=>(step.type==='transform'&&(step.fn==='n8n.stream'||step.fn==='n8n.filter_stream'))||step.n8n_items===true)
           const bounds=streaming?reviewedStreamBounds(conversions[n.id]):null
           const initial=id+'_initial',pipeline=streaming?itemStreamPipeline(body,batched?'item':'steps.'+initial,'steps.'+itemId,bounds!.stage):null
           const normalized=id+'_returned',final=body.at(-1),output=connected?'steps.'+normalized:tails.get(last)
