@@ -17,9 +17,9 @@ export async function assertDispatchAuthority(env: CrankEnv, runId: string) {
     )) AS test_member_current,
     (COALESCE(json_array_length(json_extract(v.declared_json,'$.custom_bindings')),0)=0 OR (${frozenCustomActorSql()})) AS custom_actor_current,
     r.version_id,r.continuation_authority,v.retired_at,r.error_json,
-    (SELECT json_object('id',j.value,'label',c.label,'cross_environment',CASE WHEN c.environment!=w.environment THEN 1 ELSE 0 END) FROM json_each(v.declared_json,'$.connections') j
+    (SELECT json_object('id',j.value,'label',c.label,'cross_environment',CASE WHEN c.environment!=CASE WHEN r.mode='test' AND json_extract(v.declared_json,'$.test_environment')='sandbox' THEN 'sandbox' ELSE w.environment END THEN 1 ELSE 0 END) FROM json_each(v.declared_json,'$.connections') j
      LEFT JOIN crank_connections c ON c.id=j.value
-     WHERE c.id IS NULL OR c.environment!=w.environment OR c.status!='active' OR (c.auth_kind!='oauth2' AND c.expires_at IS NOT NULL AND c.expires_at<=?) LIMIT 1) AS broken
+     WHERE c.id IS NULL OR (r.mode='test' AND json_extract(v.declared_json,'$.test_environment')='sandbox' AND c.purpose!='test') OR c.environment!=CASE WHEN r.mode='test' AND json_extract(v.declared_json,'$.test_environment')='sandbox' THEN 'sandbox' ELSE w.environment END OR c.status!='active' OR (c.auth_kind!='oauth2' AND c.expires_at IS NOT NULL AND c.expires_at<=?) LIMIT 1) AS broken
     ,(SELECT json_object('id',j.value,'cross_environment',CASE WHEN g.environment!=w.environment THEN 1 ELSE 0 END)
       FROM json_each(v.declared_json,'$.gateways') j LEFT JOIN crank_gateways g ON g.id=j.value LEFT JOIN oa_operators o ON o.id=g.owner_id
       WHERE g.id IS NULL OR g.environment!=w.environment OR g.status!='active' OR o.id IS NULL OR o.status!='active' OR o.role!='owner' OR o.version!=g.owner_version LIMIT 1) AS broken_gateway

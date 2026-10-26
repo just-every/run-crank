@@ -21,9 +21,9 @@ try {
   console.log(JSON.stringify({ journey: 'drift-sandbox', code_sha: execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(),
     realm_id: provider.realm, controlled_source: 'actual owned HTTP receiver', sandbox: true }));
   const make = async purpose => {
-    const http = await connection(h, { app: 'http', label: 'Owned CRM original permission ' + purpose, auth_kind: 'bearer', environment: 'sandbox', purpose,
+    const http = await connection(h, { app: 'http', label: 'Owned CRM original permission ' + purpose, auth_kind: 'bearer', environment: purpose==='test'?'sandbox':'production', purpose,
       domains: ['synthetic-crank-owned.example'], scopes: ['records.read'], secret: { token: purpose === 'test' ? 'synthetic-crank-102' : 'synthetic-crank-101' } });
-    const qbo = await connection(h, { app: 'quickbooks', label: 'Authorized real sandbox company ' + purpose, auth_kind: 'oauth2', environment: 'sandbox', purpose,
+    const qbo = await connection(h, { app: 'quickbooks', label: 'Authorized real sandbox company ' + purpose, auth_kind: 'oauth2', environment: purpose==='test'?'sandbox':'production', purpose,
       account_name: provider.realm, scopes: ['com.intuit.quickbooks.accounting'], secret: { access_token: provider.token } });
     return { http, qbo };
   };
@@ -37,7 +37,7 @@ try {
       payload: { CustomerRef: { value: '{{steps.mapping.customer}}' }, Line: [{ Amount: '{{steps.mapping.amount}}', DetailType: 'SalesItemLineDetail', SalesItemLineDetail: { ItemRef: { value: provider.item.Id } } }] } } },
     { id: 'notify', type: 'http', connection_id: production.http.id, input: { method: 'POST', url: source.publicOrigin + '/notify', body: { invoice_id: '{{steps.invoice.body.Invoice.Id}}' } } },
   ] };
-  const workflow = await h.post('workflows', { name: 'Owned source drift with real sandbox invoices', environment: 'sandbox', graph }, h.owner, 201);
+  const workflow = await h.post('workflows', { name: 'Owned source drift with real sandbox invoices', environment:'production', graph }, h.owner, 201);
   await h.post(`workflows/${workflow.id}/publish`, {}, h.owner, 201);
   for (let index = 0; index < 20; index++) {
     const run = await startRun(h, workflow, { key: 'synthetic-crank-' + index });

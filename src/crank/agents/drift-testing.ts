@@ -26,7 +26,7 @@ async function sandboxGraph(env: CrankEnv, actor: Actor, graph: Graph, input: un
     requireValue(target.status === 'active' && target.app === original.app && target.purpose === 'test' && target.environment === 'sandbox',
       'Every drift test binding must be an active test-purpose sandbox connection for the same app', 422)
   }
-  requireValue(!source.graph.steps.some(step => ['table.atomic', 'table.lookup', 'custom.request', 'executor.run', 'subflow.call'].includes(step.type)),
+  requireValue(!source.graph.steps.some(step => ['table.atomic', 'table.lookup', 'custom.request', 'code', 'subflow'].includes(step.type)),
     'This repair requires isolated native sandbox connections; operational state and external executors are not replayed', 422)
   requireCustomUse(actor, source.graph)
   const bind = (value: Record<string, unknown>, key: string) => { if (typeof value[key] === 'string') value[key] = input[value[key] as string] }
@@ -54,7 +54,7 @@ export async function testDrift(env: CrankEnv, actor: Actor, proposalId: string,
   const proposed = await proposedDriftGraph(env, proposal), bound = await sandboxGraph(env, actor, proposed.graph, input.bindings)
   const versionId = id(), at = now(), graphJson = canonical(bound.graph)
   const previous = await stmt(env, 'SELECT MAX(number) AS n FROM crank_workflow_versions WHERE workflow_id=?', proposal.workflow_id).first<{ n: number | null }>()
-  const authority = { custom_bindings: await customBindings(env, bound.graph), gateways: [], test: true, tested_at: at,
+  const authority = { custom_bindings: await customBindings(env, bound.graph), gateways: [], test: true, test_environment: 'sandbox', tested_at: at,
     test_team_revision: null, workflow_settings: JSON.parse(workflow.settings_json), steps: bound.declared.steps, connections: bound.declared.connections,
     bindings: Object.entries(bound.bindings).map(([from, to]) => ({ from, to, purpose: 'test' })), connection_schemas: await snapshotBindings(env, bound.declared.connections),
     sample_source: 'retained authorized production run', drift_proposal_id: proposalId, repaired_graph_digest: proposal.graph_digest }

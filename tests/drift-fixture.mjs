@@ -27,9 +27,9 @@ export async function driftFixture() {
   try {
     const make = async purpose => {
       const token = purpose === 'test' ? 'synthetic-crank-102' : 'synthetic-crank-101';
-      const http = await connection(h, { app: 'http', label: 'Authorized CRM ' + purpose, auth_kind: 'bearer', purpose, environment: 'sandbox',
+      const http = await connection(h, { app: 'http', label: 'Authorized CRM ' + purpose, auth_kind: 'bearer', purpose, environment: purpose==='test'?'sandbox':'production',
         domains: ['drift-crm.example', 'drift-receiver.example'], secret: { token } });
-      const qbo = await connection(h, { app: 'quickbooks', label: 'Authorized company ' + purpose, auth_kind: 'oauth2', purpose, environment: 'sandbox',
+      const qbo = await connection(h, { app: 'quickbooks', label: 'Authorized company ' + purpose, auth_kind: 'oauth2', purpose, environment: purpose==='test'?'sandbox':'production',
         account_name: '1234', scopes: ['com.intuit.quickbooks.accounting'], secret: { access_token: token, expires_at: new Date(Date.now() + 3600000).toISOString() } });
       return { http, qbo };
     };
@@ -42,7 +42,7 @@ export async function driftFixture() {
         payload: { CustomerRef: { value: '{{steps.mapping.customer}}' }, Line: [{ Amount: '{{steps.mapping.amount}}', DetailType: 'SalesItemLineDetail', SalesItemLineDetail: { ItemRef: { value: '1' } } }] } } },
       { id: 'notify', type: 'http', connection_id: production.http.id, input: { method: 'POST', url: 'https://drift-receiver.example/notify', body: { invoice_id: '{{steps.invoice.body.Invoice.Id}}' } } },
     ] };
-    const workflow = await h.post('workflows', { name: 'CRM amount drift to invoice and notify', environment: 'sandbox', graph }, h.owner, 201);
+    const workflow = await h.post('workflows', { name: 'CRM amount drift to invoice and notify', environment:'production', graph }, h.owner, 201);
     await h.post(`workflows/${workflow.id}/publish`, {}, h.owner, 201);
     for (let i = 1; i <= 20; i++) assert.equal((await startRun(h, workflow, { key: 'synthetic-crank-' + i })).status, 'succeeded');
     renamed = true; denied = true;

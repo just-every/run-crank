@@ -84,7 +84,7 @@ export async function proposeDrift(env: CrankEnv, actor: Actor, input: Record<st
   requireValue(workflow.published_version_id === incident.version_id && workflow.status === 'published', 'Review drift on the current published version', 409)
   const source = await stmt(env, 'SELECT graph_json FROM crank_workflow_versions WHERE id=?', incident.version_id).first<{ graph_json: string }>()
   const graph = JSON.parse(source!.graph_json) as Graph
-  requireValue(!graph.steps.some(step => ['loop', 'paths', 'subflow.call'].includes(step.type)), 'This repair supports a linear workflow; review nested work explicitly', 422)
+  requireValue(!graph.steps.some(step => ['loop', 'paths', 'subflow'].includes(step.type)), 'This repair supports a linear workflow; review nested work explicitly', 422)
   const kind = input.kind === 'scope' ? 'scope' : 'mapping', scopes = input.scopes ?? []
   let field = '', before = '', after = ''
   if (kind === 'mapping') {
