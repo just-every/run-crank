@@ -32,8 +32,8 @@ export function authoringCreateView(connections: Connection[], values: Values = 
     ${begin('/api/crank/authoring', '/app/authoring')}
     <label>What should happen?<textarea name="prompt" required rows="5" maxlength="20000" placeholder="For US leads, prepare a USD invoice in QuickBooks after checking the lead's country.">${esc(values.prompt ?? '')}</textarea></label>
     <p class="form-help">Crank creates an editable draft using the configured model. Review its questions, mappings, samples, scope and costs before testing and promotion.</p>
-    <div class="grid"><label>CRM connection<select name="crm_connection_id" required><option value="">Choose an authorized CRM account</option>${options(crm, values.crm_connection_id)}</select></label>
-    <label>QuickBooks connection<select name="quickbooks_connection_id" required><option value="">Choose an authorized QuickBooks account</option>${options(books, values.quickbooks_connection_id)}</select></label></div>
+    <div class="grid"><label>CRM connection<select name="crm_connection_id" aria-label="CRM connection" required><option value="">Choose an authorized CRM account</option>${options(crm, values.crm_connection_id)}</select></label>
+    <label>QuickBooks connection<select name="quickbooks_connection_id" aria-label="QuickBooks connection" required><option value="">Choose an authorized QuickBooks account</option>${options(books, values.quickbooks_connection_id)}</select></label></div>
     <details open><summary>Lead source, invoice details and samples</summary>
     <p>Choose invoice boundaries; unresolved business choices appear in the draft.</p>
     ${field('lead_url', 'Authorized lead source URL', 'url')}
