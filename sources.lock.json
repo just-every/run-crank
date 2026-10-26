@@ -541,6 +541,18 @@
       "sha256": "36527b3c9f08262c4ec1a9f5a7c0991490a035ce0f2973cd8f8f3afdf2da978f",
       "executable": false
     },
+    "evidence/sx-crank-c-i812/outcome-screens/1440-uncertain-open.png": {
+      "sha256": "d0cf69dfbe7e6f667c46aad08dd77d0576c05b7c31c11fa374495a09b3a4e842",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i812/outcome-screens/1440-uncertain-readback.png": {
+      "sha256": "0194d738b3f6f60833776d7712b7738fd088a10e66146cab34977e20b49f22b4",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i812/outcome-screens/1440-uncertain-satisfied.png": {
+      "sha256": "57f57fb84449e73213ae544a206938a7f568f77d6a26f9e1a3be4dc140c1bde0",
+      "executable": false
+    },
     "evidence/sx-crank-c-i812/outcome-screens/1440-wrong-open.png": {
       "sha256": "cdeebeb39fdde4a0af7148a14676a47f9c57389cee127bcb0a7e8aae78bd0add",
       "executable": false
@@ -567,6 +579,18 @@
     },
     "evidence/sx-crank-c-i812/outcome-screens/390-restored-inactive.png": {
       "sha256": "6a1103e11dd3077b88da0b528c9b5dbc705abf484a24d52a7399790f6729a993",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i812/outcome-screens/390-uncertain-open.png": {
+      "sha256": "2c673176b106cdc63b2244432f2683c37e8479b680bf1ddeacd9008684e49273",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i812/outcome-screens/390-uncertain-readback.png": {
+      "sha256": "5df00669ddfd1f344d4ed338deaace28332bc69b44c1bea3166f87874c266875",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i812/outcome-screens/390-uncertain-satisfied.png": {
+      "sha256": "50af8f96206b71cd094d5e6434aae8360d37fdf100919c7642cb7bb43af463e5",
       "executable": false
     },
     "evidence/sx-crank-c-i812/outcome-screens/390-wrong-open.png": {
