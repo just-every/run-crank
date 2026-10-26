@@ -1,6 +1,8 @@
 import { requireInvoiceAmount } from './invoice-amount'
 import { credential } from '../connections/store'
 import { authorizeRequest } from '../connections/auth'
+import { retryRequest } from '../connectors/retry'
+import { sendRequest } from '../connectors/request-transport'
 import { httpRequest } from '../connectors/http-step'
 import { boundedFetch, utf8 } from '../engine/egress'
 import { StepError } from '../engine/errors'
@@ -21,14 +23,16 @@ export async function quickbooksAccount(env: CrankEnv, connectionId: string, rea
   return `https://sandbox-quickbooks.api.intuit.com/v3/company/${realm}`
 }
 
-export async function quickbooksRecords(env: CrankEnv, connectionId: string, realm: unknown, entity: 'Invoice' | 'RefundReceipt', businessKey: unknown) {
+export async function quickbooksRecords(env: CrankEnv, connectionId: string, realm: unknown, entity: 'Invoice' | 'RefundReceipt', businessKey: unknown, ctx?: StepContext) {
   const base = await quickbooksAccount(env, connectionId, realm), key = String(businessKey ?? '')
   if (!key || key.length > 21) throw new StepError('validation', 'QuickBooks business_key must have 1 to 21 characters')
   const url = new URL(base + '/query')
   url.searchParams.set('query', `select * from ${entity} where DocNumber = '${key.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}' maxresults 1000`)
   const headers = new Headers({ accept: 'application/json' })
   await authorizeRequest(env, connectionId, url, headers, null)
-  const response = await boundedFetch(url.href, { headers, timeoutMs: 15000, maxBytes: 1048576, follow: 0 })
+  const response = ctx
+    ? (await retryRequest(ctx, {method:'GET',url,body:null,idempotent:false,checkpoint:false}, policy=>sendRequest(ctx,{url,method:'GET',headers,body:null,timeout:15000,maxBytes:1048576,follow:0},connectionId,policy))).response
+    : await boundedFetch(url.href, { headers, timeoutMs: 15000, maxBytes: 1048576, follow: 0 })
   let body: any
   try { body = JSON.parse(utf8(response.bytes)) } catch { throw new StepError('uncertain', 'QuickBooks readback is unreadable', { uncertain: true }) }
   if (response.status !== 200 || !isObject(body.QueryResponse)) throw new StepError('uncertain', 'QuickBooks readback failed; the original write remains uncertain', { uncertain: true, readback_http_status: response.status })

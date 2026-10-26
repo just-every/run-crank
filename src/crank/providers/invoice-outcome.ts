@@ -6,6 +6,7 @@ import { loadRecords } from '../engine/records'
 import type { StepContext, StepResult, StepType } from '../engine/types'
 import { isObject } from '../engine/values'
 import { grantProposal } from '../grants/policy'
+import { RetryWait } from '../connectors/retry-wait'
 import { httpRequest } from '../connectors/http-step'
 import { canonical, digest, now } from '../model'
 import { quickbooksAccount, quickbooksRecords } from './quickbooks'
@@ -25,7 +26,7 @@ export function invoiceOutcomeOutput(record: any, input: Record<string, unknown>
 }
 async function observe(ctx: StepContext) {
   await assertDispatchAuthority(ctx.env, ctx.run.id)
-  return quickbooksRecords(ctx.env, String(ctx.input.connection_id ?? ''), ctx.input.realm_id, 'Invoice', ctx.input.business_key)
+  return quickbooksRecords(ctx.env, String(ctx.input.connection_id ?? ''), ctx.input.realm_id, 'Invoice', ctx.input.business_key, ctx)
 }
 export async function invoiceOutcomeSource(ctx: Pick<StepContext, 'env' | 'run' | 'input'>, connectionId: string) {
   const record = (await loadRecords(ctx.env, ctx.run.id)).get(String(ctx.input.source_path))
@@ -66,6 +67,7 @@ export const invoiceOutcome: StepType = {
     await invoiceOutcomeSource(ctx, String(step.connection_id))
     let records: any[]
     try { records = await observe(ctx) } catch (error) {
+      if (error instanceof RetryWait) throw error
       if (error instanceof StepError && ['authority','connection'].includes(error.category)) throw error
       return held(ctx, 'uncertain', [], 'Provider readback unavailable; check again without repeating the invoice')
     }
