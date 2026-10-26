@@ -58,6 +58,11 @@ export function switchExport(target,id='synthetic-crank-switch') {
  return source;
 }
 
+export function reusedFallbackSwitchExport(target,id='synthetic-crank-switch-reused') {
+ const source=switchExport(target,id);source.nodes.pop();source.connections.n2.main.pop();
+ source.nodes[2].parameters.options={fallbackOutput:0,allMatchingOutputs:true};return source;
+}
+
 export function dateExport(target,id='synthetic-crank-date') {
  const source=graphExport(target,id);source.name='Synthetic native date formatting';source.settings.timezone='America'+'/'+'Chicago';
  source.nodes=source.nodes.slice(0,2).concat(source.nodes[4]);
@@ -95,3 +100,12 @@ export function streamLoopExport(target,id='synthetic-crank-90') {
 export function streamLoopEnvelope(target,id='synthetic-crank-90',bounds={max_source_items:10,max_stage_items:20}) {
  return {workflow:streamLoopExport(target,id),conversions:{n2:{kind:'item-stream-loop',reviewed:true,...bounds}}};
 }
+
+/** Original source executes only after an explicit native sandbox choice. */
+export function originalCodeExport(mode='runOnceForAllItems',id='synthetic-crank-700',target) {
+ const source=conversionExport('code',id);source.name='Synthetic original n8n '+mode;
+ source.nodes[1].parameters={mode,language:'javaScript',jsCode:mode==='runOnceForAllItems'?'return $input.all().map(item => ({json:{normalized:item.json.address.trim()}}));':"if ($json.address === '') return null; return {json:{normalized:$json.address.trim()}};"};
+ if(target){source.nodes.push({id:'n2',name:'n2',type:'n8n-nodes-base.httpRequest',typeVersion:4.2,position:[440,0],parameters:{method:'POST',url:target+'/code',sendBody:true,specifyBody:'json',jsonBody:'={{ $json }}',options:{}}});source.connections.n1={main:[[{node:'n2',type:'main',index:0}]]}}
+ return source;
+}
+export const originalCodeChoice=connection_id=>({kind:'n8n-code',reviewed:true,connection_id,executor_url:'https://executor.example',timeout_ms:2000,memory_mb:1024,allowed_egress:[],output_schema:{type:'object',properties:{items:{type:'array',items:{type:'object',properties:{json:{type:'object',properties:{normalized:{type:'string'}},required:['normalized'],additionalProperties:false}},required:['json'],additionalProperties:false}}},required:['items'],additionalProperties:false}});

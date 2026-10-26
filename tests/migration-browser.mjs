@@ -34,7 +34,7 @@ try {
  const send=async(path,body,status=200)=>{const r=await context.request.fetch(origin+'/api/crank/'+path,{method:body===undefined?'GET':'POST',headers:{origin},...(body===undefined?{}:{data:body})});const v=await r.json();assert.equal(r.status(),status,path+': '+(v.error??'unexpected status'));return v};
  const importDoor=async(action,body)=>{const response=await context.request.post(origin+'/api/operator/import/'+action,{headers:{origin,'X-Import-Source':'n8n'},data:body});const value=await response.json();assert.equal(response.status(),200,action+': '+(value.error??'unexpected import status'));return value};
  const shot=async(width,state)=>{await page.screenshot({path:join(evidence,`${width}-${state}.png`),fullPage:true});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`${width} ${state} overflow`)};
- const {loopExport,streamLoopEnvelope,switchExport,dateExport,conversionExport,isolatedCodeChoice,graphExport}=await import('./n8n-graph-fixture.mjs');
+ const {loopExport,streamLoopEnvelope,switchExport,dateExport,conversionExport,isolatedCodeChoice,graphExport,originalCodeExport,originalCodeChoice}=await import('./n8n-graph-fixture.mjs');
  const {transformStreamExport}=await import('./n8n-stream-journey.mjs');
  const fresh=await send('connections',{app:'http',label:'Synthetic reviewed migration account',auth_kind:'bearer',domains:['receiver.example'],secret:{token:'synthetic-crank-600'}},201);
  const component=await send('subflows',{name:'Synthetic browser registry conversion',definition:{inputs:{address:'string'},outputs:{normalized:'string'},steps:[{id:'trim',fn:'text.trim',input:{value:'{{trigger.input.address}}'}}],result:{normalized:'{{steps.trim}}'}}},201);
@@ -84,10 +84,11 @@ try {
   const transformed=transformStreamExport(declared,'synthetic-crank-stream-'+width),bound=graphExport(declared,'synthetic-crank-bound-'+width);
   bound.name='Synthetic freshly bound HTTP draft';bound.nodes=bound.nodes.slice(0,2).concat(bound.nodes[4]);bound.connections={n0:{main:[[{node:'n1',type:'main',index:0}]]},n1:{main:[[{node:'n4',type:'main',index:0}]]}};
   bound.nodes[2].credentials={httpBearerAuth:{id:'synthetic-crank-source',name:'Source reference only'}};Object.assign(bound.nodes[2].parameters,{authentication:'genericCredentialType',genericAuthType:'httpBearerAuth'});
-  await upload([transformed,{workflow:bound,conversions:{n4:{kind:'http-connection',reviewed:true,connection_id:fresh.id}}}]);
+  const original=originalCodeExport('runOnceForAllItems','synthetic-crank-original-'+width);
+  await upload([transformed,{workflow:bound,conversions:{n4:{kind:'http-connection',reviewed:true,connection_id:fresh.id}}},{workflow:original,conversions:{n1:originalCodeChoice(executor.id)}}]);
   assert.equal(await page.getByRole('button',{name:'Approve this plan',exact:true}).count(),1);await page.locator('.import-review details').evaluateAll(elements=>elements.forEach(element=>element.open=true));await shot(width,'stream-and-account-review');
   const streamPlan=await reviewedPlan();await page.getByRole('button',{name:'Approve this plan',exact:true}).click();await page.waitForLoadState('networkidle');
-  for(const [source,kind]of [[transformed.workflow,'transformed-stream'],[bound,'fresh-account']]){const row=(await send('workflows')).find(row=>row.name===source.name);assert.ok(row);const detail=await send('workflows/'+row.id);assert.equal(detail.status,'draft');assert.equal(detail.versions.length,0);assert.equal(detail.hooks.length,0);await page.goto(origin+'/app/workflows/'+row.id);await shot(width,kind+'-inactive')}
+  for(const [source,kind]of [[transformed.workflow,'transformed-stream'],[bound,'fresh-account'],[original,'original-code']]){const row=(await send('workflows')).find(row=>row.name===source.name);assert.ok(row);const detail=await send('workflows/'+row.id);assert.equal(detail.status,'draft');assert.equal(detail.versions.length,0);assert.equal(detail.hooks.length,0);await page.goto(origin+'/app/workflows/'+row.id);await shot(width,kind+'-inactive');if(kind==='original-code'){await page.locator('.canvas .step-card').filter({hasText:'Code executor'}).click();await page.waitForLoadState('networkidle');await page.locator('.inspector details').filter({has:page.getByText('Source',{exact:true})}).getByText('Source',{exact:true}).click();await shot(width,'original-code-inspector')}}
   await page.goto(origin+'/app/import');await page.locator('form[action="/app/import/undo"]').filter({has:page.locator('input[name="planId"][value="'+streamPlan.planId+'"]')}).getByRole('button').click();await page.waitForURL('**/app/import');assert.equal((await send('workflows')).length,0);await shot(width,'stream-and-account-undone');
   console.log(`MIG-001 ${width}: mapping coverage, safe cancellation, inactive apply, native draft, undo and shell tooltip passed`);
  }
@@ -115,6 +116,7 @@ try {
  assert.deepEqual(effects.slice(before+6,before+10).map(row=>row.input),['synthetic-crank-70','synthetic-crank-71'].flatMap(processed=>[1,2].map(part=>({processed,part,phase:'synthetic-crank-32'}))));
  for(const id of ['n5','n10','n11','n12','n7','n9'])assert.ok(run.steps.some(step=>step.step_id===id&&step.status==='succeeded'));
  await page.goto(origin+'/app/workflow-runs/'+run.id);await shots('done-completed-run');
+ await page.goto(origin+'/app/workflows/'+workflow.id);await page.locator('.canvas .step-card').filter({hasText:'n11'}).last().click();await page.locator('.inspector').getByRole('link',{name:'Data',exact:true}).click();assert.ok((await page.locator('.inspector').innerText()).includes('synthetic-crank-'));await shots('batch-item-inspector');
  console.log('MIG-001 1440 and 390: reviewed multi-item batches with source node barriers, inactive native draft, ordered actual receiver effects and retained checkpoints passed');
 
  // The same retained plan now contains completed work and an owner-edited

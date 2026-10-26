@@ -51,7 +51,7 @@ export async function n8nConditionsJourney() {
    const workflow=workflows.find(row=>row.name===item.source.name);assert.ok(workflow);
    await h.post('workflows/'+workflow.id+'/publish',{},h.owner,201);const hook=await h.post('workflows/'+workflow.id+'/hooks',{},h.owner,201),before=writes.length;
    const sent=await deliver(h,hook.url,{method:'POST',headers:{'content-type':'application'+'/'+'json'},body:JSON.stringify(item.body)});assert.equal(sent.status,200,sent.text);
-   const run=await settled(h,sent.value.run_id);assert.equal(run.status,item.status,JSON.stringify({index,error:run.error}));assert.equal(writes.length,before+item.writes);
+   const run=await settled(h,sent.value.run_id);assert.equal(run.status,item.status,JSON.stringify({index,error:run.error}));assert.equal(writes.length,before+item.writes);const evaluated=run.steps.find(row=>row.type==='transform'&&row.input?.inputs&&row.input?.sets);assert.ok(evaluated?.input?.inputs,'source operands must remain inspectable beside the stopping rule');
    if(item.writes&&index<tests.length)assert.deepEqual(writes.at(-1).body,item.body);
   }
   for(const change of [source=>source.nodes[1].parameters.conditions.options.typeValidation='loose',source=>source.nodes[1].parameters.conditions.conditions[0].operator.type='dateTime',source=>source.nodes[1].parameters.conditions.options.unknown=true]){

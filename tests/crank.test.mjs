@@ -1,3 +1,4 @@
+import {originalCodeJourney} from './n8n-code-journey.mjs';
 import {n8nBindingJourney} from './n8n-binding-journey.mjs';
 import {transformStreamJourney} from './n8n-stream-journey.mjs';
 import {n8nConditionsJourney} from './n8n-conditions-journey.mjs';
@@ -5,7 +6,7 @@ import {batchLoopJourney} from './n8n-batch-journey.mjs';
 import {doneLoopJourney} from './n8n-loop-journey.mjs';
 import {streamLoopJourney} from './n8n-loop-stream-journey.mjs';
 import {conversionJourney} from './n8n-conversion-journey.mjs';
-import { graphExport, loopExport, switchExport, dateExport } from './n8n-graph-fixture.mjs';
+import { graphExport, loopExport, switchExport, reusedFallbackSwitchExport, dateExport } from './n8n-graph-fixture.mjs';
 import {before,after,test} from 'node:test';
 import assert from 'node:assert/strict';
 import {createServer} from 'node:http';
@@ -198,6 +199,8 @@ test('MIG-001 door refuses expressions and credential exports without echoing th
  const undone=await door(h,'undo',{planId:plan.planId});assert.ok(undone.status>=400 || undone.value.job?.state!=='undone',undone.text);assert.ok((await h.get()).flows.some(x=>x.id===flow.id),'a used import is never removed');
 });
 
+test('Native n8n original code keeps reviewed sandbox identity through restart and schema refusal', originalCodeJourney);
+
 test('Native n8n stream transforms process the complete bounded stream before receiver writes', transformStreamJourney);
 
 test('Native n8n fresh account binding keeps source references inactive and enforces revocation', n8nBindingJourney);
@@ -236,7 +239,7 @@ test('MIG-001 native graph review, exact apply, restart, branch outcomes and pro
  const execution=await harness(declared,{edge:async request=>{if(new URL(request.url).origin!==declared)return undefined;const headers=new Headers(request.headers);headers.delete('content-length');return fetch(target+new URL(request.url).pathname,{method:request.method,headers,body:await request.arrayBuffer()})}});try{
   const good=graphExport(declared,'synthetic-crank-5'),badType=graphExport(declared,'synthetic-crank-6');badType.name='Synthetic strict condition refusal';Object.assign(badType.nodes[1].parameters.assignments.assignments[0],{type:'string',value:'8'});
   const loop=loopExport(declared),filtered=graphExport(declared,'synthetic-crank-filter');filtered.name='Synthetic native filter';filtered.nodes[2].type='n8n-nodes-base.filter';filtered.connections.n2.main.splice(1,1);filtered.nodes.splice(5,1);
-  const p=await doorImport(execution,JSON.stringify([good,badType,loop,filtered,dateExport(declared),switchExport(declared),{...switchExport(declared,'synthetic-crank-parallel'),name:'Synthetic parallel Switch',nodes:switchExport(declared).nodes.map(n=>n.type==='n8n-nodes-base.switch'?{...n,parameters:{...n.parameters,options:{...n.parameters.options,allMatchingOutputs:true}}}:n)}])),w=(await execution.get('workflows')).find(w=>w.name===good.name);
+  const p=await doorImport(execution,JSON.stringify([good,badType,loop,filtered,dateExport(declared),switchExport(declared),{...reusedFallbackSwitchExport(declared,'synthetic-crank-parallel'),name:'Synthetic parallel Switch'}])),w=(await execution.get('workflows')).find(w=>w.name===good.name);
   await execution.post('workflows/'+w.id+'/publish',{},execution.owner,201);const hook=await execution.post('workflows/'+w.id+'/hooks',{},execution.owner,201);
   for(const amount of [8,2]){
    const before=requests.length,message='synthetic-crank-'+amount;
@@ -287,10 +290,10 @@ test('MIG-001 native graph review, exact apply, restart, branch outcomes and pro
   for(const parallel of [false,true]){
    const sw=(await execution.get('workflows')).find(w=>w.name===(parallel?'Synthetic parallel Switch':'Synthetic native Switch'));
    await execution.post('workflows/'+sw.id+'/publish',{},execution.owner,201);const sh=await execution.post('workflows/'+sw.id+'/hooks',{},execution.owner,201);
-   for(const amount of [9,1]){const before=requests.length;await deliver(execution,sh.url,{method:'POST',headers:{'content-type':'application'+'/'+'json'},body:JSON.stringify({amount,message:'synthetic-crank-19'})});const run=await settled(execution,(await execution.get('workflow-runs?workflow='+sw.id)).runs[0].id);assert.equal(run.status,'succeeded',JSON.stringify(run));assert.equal(requests.length,before+(parallel&&amount>5?2:1));assert.ok(run.steps.some(s=>s.step_id===(amount>5?'n3':'n5')));for(const request of requests.slice(before))assert.deepEqual(JSON.parse(request.text),{amount,message:'synthetic-crank-19'})}
+   for(const amount of [9,1]){const before=requests.length;await deliver(execution,sh.url,{method:'POST',headers:{'content-type':'application'+'/'+'json'},body:JSON.stringify({amount,message:'synthetic-crank-19'})});const run=await settled(execution,(await execution.get('workflow-runs?workflow='+sw.id)).runs[0].id);assert.equal(run.status,'succeeded',JSON.stringify(run));assert.equal(requests.length,before+(parallel&&amount>5?2:1));assert.ok(run.steps.some(s=>s.step_id===(amount>5||parallel?'n3':'n5')));for(const request of requests.slice(before))assert.deepEqual(JSON.parse(request.text),{amount,message:'synthetic-crank-19'})}
   }
   const invalidSwitch=await harness(declared);try{
-   for(const change of [v=>v.nodes[2].parameters.mode='expression',v=>v.nodes[2].parameters.options.looseTypeValidation=true,v=>v.nodes[2].parameters.options.fallbackOutput=0]){const bad=switchExport(declared);change(bad);const rejected=await doorPlan(invalidSwitch,JSON.stringify(bad));assert.equal(rejected.status,200,rejected.text);assert.equal(rejected.value.rejected.length,1);await door(invalidSwitch,'undo',{planId:rejected.value.planId})}
+   for(const change of [v=>v.nodes[2].parameters.mode='expression',v=>v.nodes[2].parameters.options.looseTypeValidation=true,v=>v.nodes[2].parameters.options.fallbackOutput=99]){const bad=switchExport(declared);change(bad);const rejected=await doorPlan(invalidSwitch,JSON.stringify(bad));assert.equal(rejected.status,200,rejected.text);assert.equal(rejected.value.rejected.length,1);await door(invalidSwitch,'undo',{planId:rejected.value.planId})}
   }finally{await invalidSwitch.close()}
   const dw=(await execution.get('workflows')).find(w=>w.name==='Synthetic native date formatting');
   await execution.post('workflows/'+dw.id+'/publish',{},execution.owner,201);const dh=await execution.post('workflows/'+dw.id+'/hooks',{},execution.owner,201);

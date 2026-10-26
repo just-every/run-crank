@@ -1,5 +1,6 @@
 import type { Json } from '../modules/import-kit/src/types'
 import { canonicalJson, sha256 } from '../modules/import-kit/src/provenance/identity'
+import { compileN8nCode } from './n8n-code'
 import type { Step } from './engine/types'
 
 type Obj = Record<string, any>
@@ -58,6 +59,13 @@ export function inspectGraphCredentials(value: Json, path: string[] = []): void 
 export function conversionStep(choice: Obj, node: Obj, step: Obj & { id: string }, map: (value: any, field: string) => any): Step {
   if (choice.kind === 'manual') throw Error('owner retained a manual conversion disposition')
   if (choice.reviewed !== true) throw Error('conversion requires explicit owner review')
+  if(choice.kind==='n8n-code') {
+    keys(choice,['kind','reviewed','connection_id','executor_url','timeout_ms','memory_mb','allowed_egress','output_schema'])
+    if(!Array.isArray(choice.allowed_egress)||choice.allowed_egress.length||choice.output_schema===undefined)throw Error('n8n code requires no egress and an explicit output schema')
+    object(choice.output_schema)
+    const compiled=compileN8nCode(node)
+    return {...step,type:'code',language:'javascript',source:compiled.source,n8n_items:true,n8n_code_mode:compiled.mode,connection_id:text(choice.connection_id),executor_url:text(choice.executor_url,2048),timeout_ms:choice.timeout_ms,memory_mb:choice.memory_mb,allowed_egress:[],output_schema:choice.output_schema,input:{}} as Step
+  }
   const input: Obj = {}
   for (const [name, value] of Object.entries(object(choice.input))) {
     if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(name) || ['__proto__', 'constructor', 'prototype'].includes(name)) throw Error('conversion input needs simple field names')

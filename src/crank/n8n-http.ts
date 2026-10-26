@@ -35,11 +35,12 @@ export function n8nHttp(node: Obj, id: string, previous: string, at: string, env
     if ((spec ?? 'keypair') !== 'keypair') throw Error('HTTP parameters require explicit named fields')
     const value = object(raw); fields(value, ['parameters'], at + '.parameters.' + name)
     if (!Array.isArray(value.parameters) || value.parameters.length > 50) throw Error('HTTP parameter list must be bounded')
-    const result: Obj = {}
+    const result: Obj = {},names=new Set<string>()
     for (const [index, item] of value.parameters.entries()) {
       const field = object(item); fields(field, ['name','value'], at + '.parameters.' + name + '.' + index)
       if (typeof field.name !== 'string' || !/^[A-Za-z0-9_.-]{1,160}$/.test(field.name) || privateName.test(field.name) || ['__proto__','constructor','prototype'].includes(field.name) || Object.hasOwn(result,field.name))
         throw Error('HTTP parameter names must be unique literals; credentials belong in a fresh connection')
+      const identity=name==='Headers'?field.name.toLowerCase():field.name;if(names.has(identity))throw Error('HTTP parameter names must be unique');names.add(identity)
       result[field.name] = mapped(field.value, previous, at + '.parameters.' + name + '.' + index + '.value')
     }
     return result
@@ -47,7 +48,9 @@ export function n8nHttp(node: Obj, id: string, previous: string, at: string, env
   const input: Obj = { method, url: { $literal: validateImportTargetUrl(env, p.url) }, headers: parameters('Headers'), query: parameters('Query') }
   if (p.sendBody === true) {
     if (['GET','HEAD'].includes(method) || (p.contentType ?? 'json') !== 'json' || p.specifyBody !== 'json') throw Error('HTTP body requires JSON on a body-capable method')
-    input.body = mapped(typeof p.jsonBody === 'string' && !p.jsonBody.startsWith('=') ? JSON.parse(p.jsonBody) : p.jsonBody, previous, at + '.parameters.jsonBody')
+    const value=typeof p.jsonBody==='string'&&!p.jsonBody.startsWith('=')?JSON.parse(p.jsonBody):p.jsonBody
+    if(!(typeof value==='string'&&value.startsWith('='))&&(!value||typeof value!=='object'))throw Error('JSON scalar and null request bodies need explicit conversion')
+    input.body={$fn:'n8n.json_body',args:{value:mapped(value,previous,at+'.parameters.jsonBody')}}
   } else if (p.jsonBody !== undefined || p.specifyBody !== undefined || p.contentType !== undefined) throw Error('Inactive HTTP body settings need manual conversion')
   return { id, name: node.name, type: 'http', body_kind: 'json', ...(connection ? { connection_id: connection } : {}), input }
 }

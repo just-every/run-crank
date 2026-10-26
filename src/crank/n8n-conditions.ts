@@ -58,7 +58,7 @@ export function compileN8nConditionSets(values: unknown[], previous: string, at:
   })
   const stepId = id + '_conditions'
   return {
-    step: { id: stepId, type: 'map', input: { $fn: 'n8n.conditions', args: { sets: { $literal: sets }, inputs, all_matching: allMatching } } } as Step,
+    step: { id: stepId, name: 'Source conditions', type: 'transform', fn: 'n8n.conditions', input: { sets: { $literal: sets }, inputs, all_matching: allMatching } } as Step,
     when: sets.map((_, index) => [[{ field: 'steps.' + stepId + '[' + index + ']', op: 'boolean.is_true', value_type: 'boolean' }]]),
   }
 }

@@ -1,13 +1,13 @@
 import type { Step } from './engine/types'
 
 type Node = Record<string, any>
-export const linearN8nNodes = new Set(['n8n-nodes-base.set', 'n8n-nodes-base.httpRequest', 'n8n-nodes-base.executeWorkflow', 'n8n-nodes-base.limit', 'n8n-nodes-base.sort', 'n8n-nodes-base.removeDuplicates', 'n8n-nodes-base.aggregate'])
+export const linearN8nNodes = new Set(['n8n-nodes-base.set', 'n8n-nodes-base.httpRequest', 'n8n-nodes-base.executeWorkflow', 'n8n-nodes-base.code', 'n8n-nodes-base.limit', 'n8n-nodes-base.sort', 'n8n-nodes-base.removeDuplicates', 'n8n-nodes-base.aggregate'])
 
 /** Topology only. Source expressions and node settings remain the graph compiler's responsibility. */
 export function serialLoopRegions(nodes: Node[], edges: Map<number, number[][]>, batch: number) {
   const node = nodes[batch], parameters = node?.parameters ?? {}, outputs = edges.get(batch) ?? [], options = parameters.options ?? {}
   if (node?.type !== 'n8n-nodes-base.splitInBatches' || node.typeVersion !== 3 || !Number.isSafeInteger(parameters.batchSize ?? 1) || (parameters.batchSize ?? 1) < 1 || (parameters.batchSize ?? 1) > 1000
-    || typeof options !== 'object' || Array.isArray(options) || Object.keys(options).length
+    || !options || typeof options !== 'object' || Array.isArray(options) || Object.keys(options).some(key=>key!=='reset') || (options.reset!==undefined&&options.reset!==false)
     || outputs.length !== 2 || outputs[0].length > 1 || outputs[1].length !== 1)
     throw Error('loop requires version 3, a literal batch size from 1 to 1000, no reset and at most one distinct done path')
   const body: number[] = [], done: number[] = []
@@ -51,6 +51,13 @@ export function itemStreamPipeline(steps: Step[], items: string, initial = 'item
   const result: Step[] = []
   let stream = items, previous = initial
   for (const source of steps) {
+    if(source.type==='code'&&source.n8n_items===true) {
+      const batches=source.id+'_code_input',each=source.id+'_code',collected=source.id+'_items'
+      result.push({id:batches,type:'transform',fn:'n8n.items',input:{kind:'code-batch',value:ref(stream),max_items:maxItems}},
+        {id:each,name:source.name,type:'loop',input:{items:ref('steps.'+batches)},max_items:1,concurrency:1,order:'input',empty:'allow',item_errors:'stop',steps:[{...source,input:{$ref:'item'}}],result:ref('steps.'+source.id)},
+        {id:collected,type:'transform',fn:'n8n.items',input:{kind:'code-results',value:ref('steps.'+each+'.results'),max_items:maxItems}})
+      stream='steps.'+collected;previous=stream;continue
+    }
     if(source.type==='transform'&&source.fn==='n8n.stream') {
       result.push({...source,input:{...(source.input as Record<string,unknown>),items:ref(stream),max_items:maxItems}})
       stream='steps.'+source.id;previous=stream;continue

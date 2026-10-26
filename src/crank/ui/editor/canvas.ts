@@ -23,7 +23,7 @@ function card(node: Node, ctx: CanvasContext) {
   const mark = state === 'succeeded' ? 'check' : state === 'failed' || state === 'uncertain' ? 'warning' : state === 'stopped' || state === 'skipped' ? 'stop' : 'clock'
   const foot = state ? `<span class="step-foot"><span class="state" data-state="${esc(state)}"${repaired ? ` title="A run of an earlier version failed here; version ${ctx.changedIn} reads the renamed field and its runs succeed"` : ''}>${icon(mark, 'icon state-mark')}${esc(repaired ? 'Repaired' : reconciled ? 'Read back' : STEP_STATE[state] ?? state)}</span>${at ? clock(at) : ''}</span>` : '<span class="step-foot"><span class="state">No runs yet</span></span>'
   const href = `/app/workflows/${encodeURIComponent(ctx.workflowId)}?step=${encodeURIComponent(node.path)}${ctx.query}`
-  return `<a class="step-card${ctx.selected === node.path ? ' is-selected' : ''}" href="${esc(href)}"${ctx.selected === node.path ? ' aria-current="true"' : ''}><span class="step-head">${tile(app)}<span class="step-text"><strong>${esc(app.title)}</strong><span>${esc(summaryOf(node))}</span></span></span>${node.branches ? '' : foot}</a>`
+  return `<a class="step-card${ctx.selected === node.path ? ' is-selected' : ''}" href="${esc(href)}"${ctx.selected === node.path ? ' aria-current="true"' : ''}><span class="step-head">${tile(app)}<span class="step-text"><strong>${esc(app.title)}</strong><span>${esc(summaryOf(node))}</span></span></span>${node.branches && node.step?.type !== 'loop' ? '' : foot}</a>`
 }
 
 function column(list: Node[], ctx: CanvasContext): string {

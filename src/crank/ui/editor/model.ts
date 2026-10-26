@@ -17,7 +17,9 @@ export function nodes(graph: Graph): Node[] {
     const path = prefix + step.id
     return step.type === 'paths'
       ? { path, step, branches: branchesOf(step).map(branch => ({ id: branch.id, name: branch.name, kind: branch.kind, nodes: walk(branch.steps, `${path}/${branch.id}/`) })) }
-      : { path, step }
+      : step.type === 'loop'
+        ? {path,step,branches:[{id:'items',name:'Each item',kind:'loop',nodes:walk(step.steps as Step[],`${path}/items/*/`)}]}
+        : { path, step }
   })
   return [{ path: 'trigger', step: null, trigger: graph.trigger }, ...walk(graph.steps, '')]
 }
@@ -124,7 +126,13 @@ export function mappingText(value: unknown): string {
 
 /** The newest record of a step across the newest runs, for its card's last-run status. */
 export function lastRecord(runs: RunDetail[], path: string) {
-  for (const run of runs) { const record = run.steps.find(s => s.path === path); if (record) return { run, record } }
+  const parts=path.split('/')
+  const matches=(candidate:string)=>{const actual=candidate.split('/');return actual.length===parts.length&&parts.every((part,index)=>part==='*'?/^\d+$/.test(actual[index]):part===actual[index])}
+  for (const run of runs) {
+    const candidates=run.steps.filter(step=>matches(step.path))
+    const record=candidates.sort((a,b)=>(b.finished_at??b.started_at).localeCompare(a.finished_at??a.started_at))[0]
+    if(record)return {run,record}
+  }
   return null
 }
 export function triggerRecord(runs: RunDetail[]) { return runs[0] ?? null }

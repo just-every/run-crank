@@ -155,15 +155,12 @@ customer export, n8n execution capture or provider receipt.
 
 ### Serial loops and embedded subflows
 
-Split Out version 1 supports one simple array field, `include: "noOtherFields"`,
-and an explicit `options.destinationFieldName` equal to that field. Naming the
-destination preserves object items under the field instead of flattening them.
-It must connect directly to Split In Batches version 3 with `batchSize: 1`, empty
-options, and one loop-body destination on output 1. The linear body may contain Set, JSON HTTP and embedded subflow calls,
-and must return to the batch node. Native execution processes at most 1000 items
-in input order, allows an empty array and stops on the first failed item.
-Malformed or oversized arrays fail before any body request. Reset, larger
-batches and other loop topologies require manual conversion.
+Split Out versions 1 and 1.1 feed a version 3 Split in Batches loop or a
+reviewed linear item stream. The supported source fields, output shape and larger
+batch choices are described below. A single-item batch needs no extra cardinality
+choice when its body has no intermediate expansion. Serial execution preserves
+input order and stops on the first failure. Oversized streams fail before a body
+request. Reset and other loop topologies require manual conversion.
 
 Done output 0 can lead to a distinct linear Set, JSON HTTP or supported embedded
 pure-subflow chain. Without an explicit stream choice, its loop body ends with
@@ -196,9 +193,31 @@ remain separate operations. Execution is serial and stops at the first failure;
 it does not reproduce n8n's concurrent requests within one HTTP node. Empty
 intermediate output stops later stages, remaining source batches and completion.
 Primitive or binary responses fail before downstream mapping. Registry calls,
-code, branches and nested batches inside this stream still require their own
-conversion. `tests/n8n-loop-stream-journey.mjs` (`streamLoopJourney`) proves the
+unreviewed code, branches and nested batches inside this stream still require their
+own conversion. `tests/n8n-loop-stream-journey.mjs` (`streamLoopJourney`) proves the
 reviewed bounds, actual receiver effects, stage barriers and retained replay.
+
+A reviewed `item-stream-loop` choice also accepts a literal batch size from 1 to
+1000. Source nodes process every item in the current batch before the following
+source node starts. The final short batch is retained, duplicate inputs remain
+distinct, and the done chain consumes the ordered returned items. Source and stage
+bounds still participate in the native invocation budget. An empty body stream
+stops the remaining batches and done work; a failed item stops the next stage.
+Restart and selected replay retain completed requests.
+
+For a Split Out feeding a linear chain directly, use the same bound fields with
+`kind: "item-stream"`. The source names one simple JSON field. Split Out versions 1 and 1.1 preserve
+an explicit destination name or the source default object expansion, and can
+include all other fields or selected literal fields. Missing values produce no
+items, object values expand in property order, and scalar values produce one item.
+Nested or multiple split fields and binary inputs remain manual conversions. Set and HTTP operate per item;
+Limit version 1, simple Sort version 1, current-input Remove Duplicates versions
+1, 1.1 and 2, and all-item JSON Aggregate version 1 operate on the complete preceding
+stream. Sorting preserves source field directions and case handling. Duplicate
+removal keeps the first original record. History-based duplicate removal, random
+sorting, object comparison values, binary aggregation, branched streams and nested
+batch loops remain explicit conversions. Item and byte bounds apply before the
+next write, and an empty stream never creates an aggregate record.
 
 Execute Workflow versions 1 through 1.3 support `source: "parameter"`, a literal
 `workflowJson`, `mode: "once"` and synchronous completion. Its snapshot needs
@@ -223,9 +242,14 @@ Switch versions 3 through 3.5 accept strict `mode: "rules"`, the same condition
 groups, and one destination per output. `allMatchingOutputs` preserves first-match
 or all-match routing. `fallbackOutput: "extra"` maps the extra fallback branch;
 omitted or `"none"` stops an unmatched item. Output labels remain branch names.
-Expression mode, loose coercion, a fallback reusing a rule output and shared
-joins remain explicit manual conversions. Strict binary conditions currently need
-a literal right operand of the declared scalar type.
+A numeric fallback output reuses the named rule output only when no rule matches.
+Expression mode, loose coercion and shared joins remain explicit manual conversions. Strict conditions accept literal operands and declarative current-item paths on
+both sides. String negated prefix and suffix, regular expressions, boolean equality,
+array membership and length, object emptiness and typed existence operators preserve
+source null handling and whitespace. AND and OR groups short circuit, as do exclusive
+Switch outputs. Case handling follows the source condition version, including the
+version 4 regular-expression flag behavior. Loose type conversion and DateTime
+condition parsing remain explicit manual conversions.
 
 Date & Time version 2 maps `operation: "formatDate"` with replacement output,
 `options.timezone: true`, and an explicit IANA `settings.timezone`. Supported
@@ -268,6 +292,20 @@ changing a choice requires a new upload and review. The native draft preserves
 choice digests and source-node dispositions in its graph settings. Rejected
 plans retain their source and manual diagnostics without creating a draft.
 
+For a JSON HTTP Request, a choice of
+`{"kind":"http-connection","reviewed":true,"connection_id":"fresh-native-id"}`
+binds an account already entered through Crank's native Connections screen. The
+source credential reference is retained only as provenance. Review and apply send
+no request and leave the workflow inactive. Publication and every dispatch enforce
+the live connection, domain and owner authority; revocation stops further work.
+HTTP versions 4 through 4.3 map GET, HEAD, POST, PUT, PATCH and DELETE, explicit JSON
+bodies, and named header and query parameters. Parameter names are literal and
+unique; values may use declarative item paths. Inline credentials, dynamic names,
+unknown response options, scalar or null JSON bodies and unmapped body formats
+require manual conversion. A dynamically resolved scalar or null JSON body stops
+with a named validation error before dispatch, rather than becoming an absent body.
+Source provider references do not establish native provider-operation parity.
+
 `registry-subflow` compiles a synchronous Execute Workflow call to a native pure
 registry step with an exact ID, positive version, reviewed definition digest and
 explicit mapped input. Database workflow IDs stay source evidence and are never
@@ -277,6 +315,27 @@ registry version. Execution checks it again and enforces current registry review
 and owner publication. Installing a later version does not upgrade this pin;
 revoking the pinned release blocks further work. Unknown source modes, dynamic
 selectors and asynchronous calls remain manual conversions.
+
+To execute a supported original Code node rather than supply a rewritten program,
+use `kind: "n8n-code"` with the same reviewed connection, executor URL, resource
+bounds, empty egress list and output schema fields below, omitting `source` and
+`input`. The native wrapper derives its program from the fingerprint-bound original.
+Code versions 1 and 2 support JavaScript, all-items mode with `$input.all()`,
+`$input.first()`, `$input.last()` and `$input.item`, and each-item mode with
+`$input.item` and `$json`. Each-item execution is serial; null suppresses the item.
+The sandbox input and declared output schema use
+`{"items":[{"json":{"normalized":"example"}}]}`. Returned items are normalized to
+the native JSON stream before any following node. Empty streams never submit a
+code task. The native executor retains its task identity and output checkpoint
+through restart; an invalid result prevents downstream writes.
+
+This wrapper is a bounded runtime adapter, not complete n8n runtime compatibility.
+Source workflow lookup, environment access, imports, network APIs, binary data,
+lineage metadata and legacy Function nodes remain explicit conversions. Conservative
+source screening also refuses unsupported API tokens in comments and string literals.
+The source program is only constructed and invoked inside the isolated executor;
+parsing and planning never execute it. `tests/executor-linux.mjs` executes both code
+modes through the real import door and Linux sandbox.
 
 For a Code version 1 or 2, Function version 1 or Function Item version 1, the
 alternative choice is:
