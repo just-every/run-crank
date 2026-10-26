@@ -1,0 +1,3 @@
+MIG-001 1440: mapping coverage, safe cancellation, inactive apply, native draft, undo and shell tooltip passed
+MIG-001 390: mapping coverage, safe cancellation, inactive apply, native draft, undo and shell tooltip passed
+MIG-001 1440 and 390: reviewed done-output conversion, inactive native draft, ordered actual receiver effects and retained checkpoints passed

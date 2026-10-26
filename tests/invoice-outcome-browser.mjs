@@ -6,7 +6,7 @@ import {chromium,expect} from '@playwright/test';
 import {invoiceOutcomeJourney} from './invoice-outcome-journey.mjs';
 const evidence=process.env.CRANK_EVIDENCE;assert.ok(evidence,'Set CRANK_EVIDENCE');await mkdir(evidence,{recursive:true});
 const browser=await chromium.launch({headless:true,args:['--use-mock-keychain','--password-store=basic']});let context,server,active,page;
-const types={'.css':'text/css','.js':'text/javascript','.svg':'image/svg+xml','.woff2':'font/woff2','.png':'image/png'};
+const types={'.css':'text/css','.js':'text/javascript','.svg':'image/svg+xml','.woff2':'font/woff2','.png':'image/png','.webp':'image'+'/'+'webp'};
 async function attach(h,width){
  if(active===h)return;await context?.close();if(server){server.closeAllConnections();await new Promise(r=>server.close(r))}active=h;
  server=createServer(async(req,res)=>{try{const path=new URL(req.url,h.origin).pathname;if(types[extname(path)])for(const root of ['public','dist/client']){const dir=resolve(root),file=resolve(dir,'.'+decodeURIComponent(path));if(!file.startsWith(dir+'/'))continue;const data=await readFile(file).catch(()=>null);if(data){res.writeHead(200,{'content-type':types[extname(path)]});res.end(data);return}}
