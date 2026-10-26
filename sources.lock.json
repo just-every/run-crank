@@ -5522,7 +5522,7 @@
       "executable": false
     },
     "tests/skills.test.mjs": {
-      "sha256": "21d75752fa174732c7ee862e266ad14026257d98d3f0e7abc57705d26d3f8b48",
+      "sha256": "13ff9ed9bb82f97f2abc556f77a5abf78f76146a1db1acb5f17323bcea99abb0",
       "executable": false
     },
     "tests/sqlserver-gateway-fixture.mjs": {

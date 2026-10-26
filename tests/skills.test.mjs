@@ -125,16 +125,19 @@ test('AGENT-003 BASE-001 DATA-001: proposals and evidence restore portably with 
 
 
 test('AI-002: native model proposals stay within scope, sandbox tests fence exact human promotion and portable drafts retain provenance', async () => {
-  const fake = fakeEdge(), invoices = [];
+  const fake = fakeEdge(), invoices = [], modelUrl = 'https://authoring-model.example/v1';
   let refuse = false;
-  fake.routes.set('authoring-model.example', ({ body }) => jsonResponse(authoringModelReply(JSON.parse(body), { refusal: refuse ? 'Sending email exceeds the approved tools.' : null })));
+  fake.routes.set('authoring-model.example', ({ body }) => {
+    for (const secret of ['synthetic-crank-10', 'synthetic-crank-11', 'synthetic-crank-30']) assert.ok(!body.includes(secret), 'No model or app credential enters the model prompt');
+    return jsonResponse(authoringModelReply(JSON.parse(body), { refusal: refuse ? 'Sending email exceeds the approved tools.' : null }));
+  });
   fake.routes.set('crm-authoring.example', ({ url }) => jsonResponse({ id: url.pathname.split('/').at(-1), country: 'US' }));
   fake.routes.set('sandbox-quickbooks.api.intuit.com', ({ body, method }) => {
     if (method === 'GET') return jsonResponse({ QueryResponse: { Invoice: invoices } });
     const invoice = { ...JSON.parse(body), Id: String(invoices.length + 1) }; invoices.push(invoice);
     return jsonResponse({ Invoice: invoice });
   });
-  const h = await harness('http://127.0.0.1:9', { edge: fake.edge, bindings: { AI_ENABLED: 'true', AI_MODEL: 'configured-authoring-model', AI_BASE_URL: 'https://authoring-model.example/v1', AI_API_KEY: 'synthetic-crank-30' } });
+  const h = await harness('http://127.0.0.1:9', { edge: fake.edge, bindings: { AI_ENABLED: 'true', AI_MODEL: 'configured-authoring-model', AI_BASE_URL: modelUrl, AI_API_KEY: 'synthetic-crank-30' } });
   let restored;
   try {
     const { request, crm, qbo } = await setupAuthoring(h);
@@ -155,6 +158,9 @@ test('AI-002: native model proposals stay within scope, sandbox tests fence exac
     assert.ok(proposal.schemas.authorized.operations.some(operation => operation.type === 'quickbooks.create_invoice'));
     assert.equal(proposal.grant_proposal.rules.find(rule => rule.type === 'quickbooks.create_invoice').max_usd, request.amount_usd);
     assert.equal((await h.get('grants')).length, 0);
+    const inventoryView = await h.get('data/flows');
+    assert.deepEqual(inventoryView.flows.find(flow => flow.kind === 'authoring').recipients, [new URL(modelUrl).origin]);
+    assert.ok(!JSON.stringify(inventoryView).includes('synthetic-crank-30'));
     const widened = structuredClone(proposal.graph); widened.steps[0].input.method = 'POST';
     await h.post(base + '/revise', { graph: widened }, h.owner, 422);
     await h.post('workflows/' + proposal.workflow_id + '/draft', { graph: widened }, h.owner, 422);
@@ -217,5 +223,6 @@ test('AI-002: native model proposals stay within scope, sandbox tests fence exac
     await restored.post(base + '/test', { bindings }, restored.owner, 409);
     await restored.post(base + '/promote', { digest: proposal.digest, confirm: true }, restored.owner, 422);
     assert.equal(fake.requests.length, beforeRestore);
+    assert.ok(fake.requests.every(request => ['authoring-model.example', 'crm-authoring.example', 'sandbox-quickbooks.api.intuit.com'].includes(request.url.hostname)), 'The owner-selected model, CRM and accounting endpoints need no author network');
   } finally { await restored?.close(); await h.close(); }
 });
