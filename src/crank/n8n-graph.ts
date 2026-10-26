@@ -4,8 +4,10 @@ import { requireZone } from './engine/dates'
 import { validateGraph } from './engine/graph'
 import type { Step } from './engine/types'
 import { validateImportTargetUrl, type ImportTargetEnv } from './import-target'
-import { itemStreamPipeline, reviewedStreamBounds, serialLoopRegions } from './n8n-loop'
+import { n8nTransform, n8nStreamNodeTypes } from './n8n-transforms'
+import { linearN8nNodes, itemStreamPipeline, reviewedStreamBounds, serialLoopRegions } from './n8n-loop'
 import { conversionDisposition, conversionStep, migrationEnvelope } from './n8n-conversions'
+import { compileN8nConditionSets } from './n8n-conditions'
 
 type Obj = Record<string, any>
 const obj = (v: any): Obj => { if (!v || typeof v !== 'object' || Array.isArray(v)) throw Error('object required'); return v }
@@ -47,20 +49,24 @@ export function n8nGraph(value: Json, sourceId: string, env: ImportTargetEnv, ow
     if(typeof v==='string'&&(v.startsWith('=')||v.includes('{{'))){const m=/^=\{\{ \$json((?:\.[A-Za-z_][A-Za-z0-9_]*)*) \}\}$/.exec(v);if(!m){gap(at,'expression has no safe native equivalent');return null} coverage.push({field:at,reason:'Supported declarative data path'});return {$ref:previous+m[1]}}
     return {$literal:v}
   }
-  const conditions=(value:any,previous:string,at:string):any[][]=>{
-    const c=obj(value);fields(c,['options','conditions','combinator'],at);const opts=obj(c.options??{});fields(opts,['caseSensitive','leftValue','typeValidation','version'],at+'.options');if(opts.caseSensitive!==undefined&&typeof opts.caseSensitive!=='boolean')throw Error('condition case sensitivity must be boolean');if(opts.typeValidation!==undefined&&opts.typeValidation!=='strict')throw Error('loose IF conversion requires manual mapping')
-          if(!Array.isArray(c.conditions)||!c.conditions.length||!['and','or'].includes(c.combinator))throw Error('unsupported condition group')
-          const rules=c.conditions.map((raw:any,r:number)=>{const x=obj(raw);fields(x,['id','leftValue','rightValue','operator'],at+'.'+r);const op=obj(x.operator);fields(op,['type','operation','singleValue'],at+'.'+r+'.operator');const names:Obj={string:{equals:'text.equals',notEquals:'text.not_equals',contains:'text.contains',notContains:'text.not_contains',startsWith:'text.starts_with',endsWith:'text.ends_with'},number:{gt:'number.gt',gte:'number.gte',lt:'number.lt',lte:'number.lte',equals:'number.eq',notEquals:'number.ne'},boolean:{true:'boolean.is_true',false:'boolean.is_false'}};const native=names[op.type]?.[op.operation],left=mapped(x.leftValue,previous,at+'.'+r+'.leftValue');if(!native||!left?.$ref)throw Error('unsupported condition operator or left operand');if(!['true','false'].includes(op.operation)&&typeof x.rightValue!==op.type)throw Error('strict conditions require a literal operand of the declared type');return {field:left.$ref,op:native,value_type:op.type,...(x.rightValue===undefined?{}:{value:mapped(x.rightValue,previous,at+'.'+r+'.rightValue')}),case_sensitive:opts.caseSensitive??true,keep_whitespace:true}})
-    return c.combinator==='and'?[rules]:rules.map((r:any)=>[r])
+  const conditions=(value:any,previous:string,at:string,id:string,result:Step[]):any[][]=>{
+    const compiled=compileN8nConditionSets([value],previous,at,id,mapped,fields)
+    result.push(compiled.step)
+    return compiled.when[0]
   }
   const pins: Obj[] = []
   const tails = new Map<number,string>()
-  const compile=(index:number,previous:string,depth=0,stop=-1):Step[]=>{
+  const compile=(index:number,previous:string,depth=0,stop=-1,stream=false):Step[]=>{
     if(index===stop)return []
     if(depth>100||seen.has(index)){gap('nodes.'+index,'cycle or shared join needs explicit native conversion');return []}seen.add(index)
     const n=nodes[index],p=obj(n.parameters??{}),at='nodes.'+index,id=context.prefix+'n'+index,out=edges.get(index)??[],result:Step[]=[],step:Obj & {id:string}={id,name:n.name}
     try {
-      switch(n.type){
+      if(n8nStreamNodeTypes.has(n.type)) {
+        if(!stream)throw Error('whole-stream transform requires a reviewed item-stream conversion')
+        if(out.length>1||out.some(branch=>branch.length>1))throw Error('whole-stream transform requires source output zero and one destination')
+        const mappedTransform=n8nTransform({node:n,id,previous,at,fields,mapped})!
+        result.push(...mappedTransform.steps);previous=mappedTransform.output
+      } else switch(n.type){
         case 'n8n-nodes-base.webhook':
           fields(p,['httpMethod','path','authentication','responseMode','options'],at+'.parameters')
           if(![1,2,2.1].includes(n.typeVersion)||p.httpMethod!=='POST'||(p.authentication??'none')!=='none'||(p.responseMode??'onReceived')!=='onReceived'||Object.keys(obj(p.options??{})).length)throw Error('unsupported webhook settings')
@@ -81,24 +87,35 @@ export function n8nGraph(value: Json, sourceId: string, env: ImportTargetEnv, ow
           fields(p,['fieldToSplitOut','include','options'],at+'.parameters')
           const options=obj(p.options??{});fields(options,['destinationFieldName'],at+'.parameters.options')
           if(options.destinationFieldName!==p.fieldToSplitOut||n.typeVersion!==1||(p.include??'noOtherFields')!=='noOtherFields'||!/^[_A-Za-z][_A-Za-z0-9]*$/.test(p.fieldToSplitOut)||['__proto__','constructor','prototype'].includes(p.fieldToSplitOut)||out.length!==1||out[0].length!==1)throw Error('split requires one simple array field and a serial batch loop')
+          if(nodes[out[0][0]]?.type!=='n8n-nodes-base.splitInBatches') {
+            const bounds=reviewedStreamBounds(conversions[n.id]),visited=new Set<number>();let cursor=out[0][0]
+            for(;;){if(visited.has(cursor)||!linearN8nNodes.has(nodes[cursor]?.type))throw Error('standalone item stream needs a linear mapped chain without cycles');visited.add(cursor);const next=edges.get(cursor)??[];if(next.length>1||next.some(branch=>branch.length>1))throw Error('standalone item stream requires source output zero and one destination');if(!next[0]?.length)break;cursor=next[0][0]}
+            const items=id+'_source',compiled=compile(out[0][0],'item',depth+1,-1,true),pipeline=itemStreamPipeline(compiled,'steps.'+items,'item',bounds.stage)
+            result.push({...step,id:items,type:'transform',fn:'n8n.items',input:{kind:'split',value:{$ref:previous+'.'+p.fieldToSplitOut},field:p.fieldToSplitOut,batch_size:1,max_items:bounds.source}},...pipeline.steps)
+            dispositions.push(conversionDisposition(n,conversions[n.id],true));coverage.push({field:at,reason:'Supported owner-reviewed linear item stream with whole-stream transforms, source and stage bounds, node barriers and retained checkpoints'})
+            tails.set(index,pipeline.output);return result
+          }
           const loopIndex=out[0][0],loopNode=nodes[loopIndex],lp=obj(loopNode.parameters??{}),lo=edges.get(loopIndex)??[],regions=serialLoopRegions(nodes,edges,loopIndex)
           fields(lp,['batchSize','options'],'nodes.'+loopIndex+'.parameters');seen.add(loopIndex)
-          const itemId=id+'_item',body=compile(lo[1][0],'steps.'+itemId,depth+1,loopIndex),last=regions.body.at(-1)!,connected=regions.done.length>0
-          const streaming=Boolean(conversions[n.id])||body.slice(0,-1).some(step=>step.type==='http')
+          const itemId=id+'_item',body=compile(lo[1][0],'steps.'+itemId,depth+1,loopIndex,true),last=regions.body.at(-1)!,connected=regions.done.length>0
+          const batchSize=lp.batchSize??1,batched=batchSize>1
+          const streaming=batched||Boolean(conversions[n.id])||body.slice(0,-1).some(step=>step.type==='http')||body.some(step=>step.type==='transform'&&step.fn==='n8n.stream')
           const bounds=streaming?reviewedStreamBounds(conversions[n.id]):null
-          const initial=id+'_initial',pipeline=streaming?itemStreamPipeline(body,'steps.'+initial,'steps.'+itemId,bounds!.stage):null
+          const initial=id+'_initial',pipeline=streaming?itemStreamPipeline(body,batched?'item':'steps.'+initial,'steps.'+itemId,bounds!.stage):null
           const normalized=id+'_returned',final=body.at(-1),output=connected?'steps.'+normalized:tails.get(last)
-          const children:Step[]=[{id:itemId,type:'map',input:{[p.fieldToSplitOut]:{$ref:'item'}}}]
-          if(pipeline)children.push({id:initial,type:'transform',fn:'n8n.items',input:{kind:'item',value:{$ref:'steps.'+itemId}}},...pipeline.steps)
+          const children:Step[]=batched?[]:[{id:itemId,type:'map',input:{[p.fieldToSplitOut]:{$ref:'item'}}}]
+          if(pipeline){if(!batched)children.push({id:initial,type:'transform',fn:'n8n.items',input:{kind:'item',value:{$ref:'steps.'+itemId}}});children.push(...pipeline.steps)}
           else {
             children.push(...body)
             if(connected)children.push({id:normalized,type:'transform',fn:'n8n.items',input:{kind:final?.type==='http'?'http':'item',value:{$ref:final?.type==='http'?'steps.'+final.id:tails.get(last)}}})
           }
-          result.push({...step,id,type:'loop',input:{items:{$ref:previous+'.'+p.fieldToSplitOut}},max_items:bounds?.source??1000,concurrency:1,order:'input',empty:'allow',item_errors:'stop',
+          const batches=id+'_batches'
+          if(batched)result.push({id:batches,type:'transform',fn:'n8n.items',input:{kind:'batches',value:{$ref:previous+'.'+p.fieldToSplitOut},field:p.fieldToSplitOut,batch_size:batchSize,max_items:bounds!.source}})
+          result.push({...step,id,type:'loop',input:{items:{$ref:batched?'steps.'+batches:previous+'.'+p.fieldToSplitOut}},max_items:bounds?.source??1000,concurrency:1,order:'input',empty:'allow',item_errors:'stop',
             ...(connected||streaming?{empty_result:'stop'}:{}),steps:children,result:{$ref:pipeline?.output??output}} as Step)
           let tail='steps.'+id+'.results'
-          if(connected){const collected=id+'_processed';result.push({id:collected,type:'transform',fn:'n8n.items',input:{kind:'flatten',value:{$ref:tail},...(bounds?{max_items:bounds.stage}:{})}});const done=itemStreamPipeline(compile(regions.done[0],'item',depth+1), 'steps.'+collected,'item',bounds?.stage??1000);result.push(...done.steps);tail=done.output}
-          if(streaming){dispositions.push(conversionDisposition(n,conversions[n.id],true));coverage.push({field:at,reason:'Supported owner-reviewed linear item stream: source bound '+bounds!.source+', per-stage bound '+bounds!.stage+'; serial first-failure stop, node barriers, exact JSON expansion and native invocation budget'})}
+          if(connected){const collected=id+'_processed';result.push({id:collected,type:'transform',fn:'n8n.items',input:{kind:'flatten',value:{$ref:tail},...(bounds?{max_items:bounds.stage}:{})}});const done=itemStreamPipeline(compile(regions.done[0],'item',depth+1,-1,true), 'steps.'+collected,'item',bounds?.stage??1000);result.push(...done.steps);tail=done.output}
+          if(streaming){dispositions.push(conversionDisposition(n,conversions[n.id],true));coverage.push({field:at,reason:'Supported owner-reviewed linear item stream: source bound '+bounds!.source+', per-stage bound '+bounds!.stage+'; serial first-failure stop, batch size '+batchSize+', node barriers, exact JSON expansion and native invocation budget'})}
           coverage.push({field:at,reason:connected?'Supported serial loop and distinct linear done path: ordered returned items, node barriers, empty streams produce no requests; '+(bounds?'reviewed source and stage bounds':'1000-item bound'):'Supported serial loop: '+(bounds?'reviewed source and stage bounds':'at most 1000 items')+'; empty input allowed; first failure stops; unused done output'})
           tails.set(index,tail);return result
         }
@@ -167,18 +184,19 @@ export function n8nGraph(value: Json, sourceId: string, env: ImportTargetEnv, ow
           const fallback=options.fallbackOutput??'none'
           if(!['none','extra'].includes(fallback))throw Error('Switch fallback must be absent or an extra output; routing fallback to an existing output needs manual conversion')
           if(out.length>rules.values.length+(fallback==='extra'?1:0)||out.some(b=>b.length>1))throw Error('Switch outputs need one destination per branch')
-          const walk=(i:number)=>out[i]?.length?compile(out[i][0],previous,depth+1,stop):[]
-          const branches=rules.values.map((value:any,r:number)=>{const rule=obj(value);fields(rule,['conditions','renameOutput','outputKey'],at+'.rules.'+r);if(rule.renameOutput!==undefined&&typeof rule.renameOutput!=='boolean')throw Error('Switch output label setting must be boolean');return {id:'case'+r,...(rule.outputKey?{name:label(rule.outputKey)}:{}),when:conditions(rule.conditions,previous,at+'.rules.'+r+'.conditions'),steps:walk(r)}})
+          const walk=(i:number)=>out[i]?.length?compile(out[i][0],previous,depth+1,stop,stream):[]
+          const compiled=compileN8nConditionSets(rules.values.map((value:any)=>obj(value).conditions),previous,at+'.rules',id,mapped,fields,options.allMatchingOutputs===true);result.push(compiled.step)
+          const branches=rules.values.map((value:any,r:number)=>{const rule=obj(value);fields(rule,['conditions','renameOutput','outputKey'],at+'.rules.'+r);if(rule.renameOutput!==undefined&&typeof rule.renameOutput!=='boolean')throw Error('Switch output label setting must be boolean');return {id:'case'+r,...(rule.outputKey?{name:label(rule.outputKey)}:{}),when:compiled.when[r],steps:walk(r)}})
           result.push({...step,id,type:'paths',mode:options.allMatchingOutputs===true?'parallel':'exclusive',branches,...(fallback==='extra'?{fallback:{steps:walk(rules.values.length)}}:{})} as Step)
           return result
         }
         case 'n8n-nodes-base.filter':
         case 'n8n-nodes-base.if': {
           fields(p,['conditions','options'],at+'.parameters');if(![2,2.1,2.2].includes(n.typeVersion)||Object.keys(obj(p.options??{})).length)throw Error('unsupported IF version or options')
-          const when=conditions(p.conditions,previous,at+'.conditions')
+          const when=conditions(p.conditions,previous,at+'.conditions',id,result)
           if(n.type==='n8n-nodes-base.filter'){result.push({...step,id,type:'filter',when} as Step);break}
           if(out.length>2||out.some(b=>b.length>1))throw Error('IF outputs need one destination per branch')
-          const walk=(i:number)=>out[i]?.length?compile(out[i][0],previous,depth+1,stop):[]
+          const walk=(i:number)=>out[i]?.length?compile(out[i][0],previous,depth+1,stop,stream):[]
           result.push({...step,id,type:'paths',mode:'exclusive',branches:[{id:'yes',when,steps:walk(0)}],fallback:{steps:walk(1)}} as Step);return result
         }
         default: gap(at,'node type '+String(n.type)+' has no committed mapping');fields(p,[],at+'.parameters')
@@ -187,7 +205,7 @@ export function n8nGraph(value: Json, sourceId: string, env: ImportTargetEnv, ow
     if(conversions[n.id]&&!['n8n-nodes-base.splitOut','n8n-nodes-base.code','n8n-nodes-base.function','n8n-nodes-base.functionItem','n8n-nodes-base.executeWorkflow'].includes(n.type))gap('conversions.'+n.id,'choice does not apply to this source node')
     if(out.length>1||out.some(b=>b.length>1))gap(at+'.connections','fan-out needs an explicit native branch')
     tails.set(index,previous)
-    for(const branch of out)for(const next of branch){result.push(...compile(next,previous,depth+1,stop));tails.set(index,tails.get(next)??previous)}
+    for(const branch of out)for(const next of branch){result.push(...compile(next,previous,depth+1,stop,stream));tails.set(index,tails.get(next)??previous)}
     return result
   }
   const steps=starts.length===1?compile(starts[0],'trigger'):[]

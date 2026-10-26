@@ -83,7 +83,7 @@ try {
  }
 
  await page.setViewportSize({width:1440,height:1000});await page.goto(origin+'/app/import');
- const sourceEnvelope=streamLoopEnvelope(declared,'synthetic-crank-72'),source=sourceEnvelope.workflow;
+ const sourceEnvelope=streamLoopEnvelope(declared,'synthetic-crank-72'),source=sourceEnvelope.workflow;source.nodes[3].parameters.batchSize=2;
  const driftSources=[conversionExport('registry','synthetic-crank-84'),conversionExport('code','synthetic-crank-85')],driftBundle=driftSources.map((workflow,index)=>({workflow,conversions:{n1:index?codeChoice:registryChoice}}));
  const shots=async state=>{for(const width of [1440,390]){await page.setViewportSize({width,height:1000});await shot(width,state)}};
  // Stage the protected-undo fixtures together while every imported target is an
@@ -101,11 +101,11 @@ try {
  const delivered=await context.request.post(hook.url,{data:{messages:['synthetic-crank-70','synthetic-crank-71']}});assert.equal(delivered.status(),200);const admission=await delivered.json();assert.equal(admission.accepted,true);
  let run;
  for(let attempt=0;attempt<100;attempt++){run=await send('workflow-runs/'+admission.run_id);if(!['queued','running'].includes(run.status))break;await page.waitForTimeout(50)}
- assert.equal(run.status,'succeeded',JSON.stringify(run.error));assert.deepEqual(effects.slice(before).map(row=>row.path),['/body','/body-next','/body-next','/body','/body-next','/body-next',...Array(4).fill('/done-first'),...Array(4).fill('/done-last')]);
+ assert.equal(run.status,'succeeded',JSON.stringify(run.error));assert.deepEqual(effects.slice(before).map(row=>row.path),['/body','/body','/body-next','/body-next','/body-next','/body-next',...Array(4).fill('/done-first'),...Array(4).fill('/done-last')]);
  assert.deepEqual(effects.slice(before+6,before+10).map(row=>row.input),['synthetic-crank-70','synthetic-crank-71'].flatMap(processed=>[1,2].map(part=>({processed,part,phase:'synthetic-crank-32'}))));
  for(const id of ['n5','n10','n11','n12','n7','n9'])assert.ok(run.steps.some(step=>step.step_id===id&&step.status==='succeeded'));
  await page.goto(origin+'/app/workflow-runs/'+run.id);await shots('done-completed-run');
- console.log('MIG-001 1440 and 390: reviewed bounded body item streams, inactive native draft, ordered actual receiver effects and retained checkpoints passed');
+ console.log('MIG-001 1440 and 390: reviewed multi-item batches with source node barriers, inactive native draft, ordered actual receiver effects and retained checkpoints passed');
 
  // The same retained plan now contains completed work and an owner-edited
  // conversion. Its exact undo must preserve both fences and the companion graph.

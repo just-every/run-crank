@@ -1,3 +1,5 @@
+import {n8nConditionsJourney} from './n8n-conditions-journey.mjs';
+import {batchLoopJourney} from './n8n-batch-journey.mjs';
 import {doneLoopJourney} from './n8n-loop-journey.mjs';
 import {streamLoopJourney} from './n8n-loop-stream-journey.mjs';
 import {conversionJourney} from './n8n-conversion-journey.mjs';
@@ -194,6 +196,10 @@ test('MIG-001 door refuses expressions and credential exports without echoing th
  const undone=await door(h,'undo',{planId:plan.planId});assert.ok(undone.status>=400 || undone.value.job?.state!=='undone',undone.text);assert.ok((await h.get()).flows.some(x=>x.id===flow.id),'a used import is never removed');
 });
 
+test('Native n8n condition operators preserve source types and short circuit receiver dispatch', n8nConditionsJourney);
+
+test('Native n8n multi-item batches retain node barriers and replay only failed receiver work', batchLoopJourney);
+
 test('MIG-001 native graph review, exact apply, restart, branch outcomes and protected undo',async()=>{
  await conversionJourney();
  const local=await harness(target);try{
@@ -278,7 +284,7 @@ test('MIG-001 native graph review, exact apply, restart, branch outcomes and pro
    for(const amount of [9,1]){const before=requests.length;await deliver(execution,sh.url,{method:'POST',headers:{'content-type':'application'+'/'+'json'},body:JSON.stringify({amount,message:'synthetic-crank-19'})});const run=await settled(execution,(await execution.get('workflow-runs?workflow='+sw.id)).runs[0].id);assert.equal(run.status,'succeeded',JSON.stringify(run));assert.equal(requests.length,before+(parallel&&amount>5?2:1));assert.ok(run.steps.some(s=>s.step_id===(amount>5?'n3':'n5')));for(const request of requests.slice(before))assert.deepEqual(JSON.parse(request.text),{amount,message:'synthetic-crank-19'})}
   }
   const invalidSwitch=await harness(declared);try{
-   for(const change of [v=>v.nodes[2].parameters.mode='expression',v=>v.nodes[2].parameters.options.looseTypeValidation=true,v=>v.nodes[2].parameters.options.fallbackOutput=0,v=>v.nodes[2].parameters.rules.values[0].conditions.conditions[0].rightValue='={{ $json.amount }}']){const bad=switchExport(declared);change(bad);const rejected=await doorPlan(invalidSwitch,JSON.stringify(bad));assert.equal(rejected.status,200,rejected.text);assert.equal(rejected.value.rejected.length,1);await door(invalidSwitch,'undo',{planId:rejected.value.planId})}
+   for(const change of [v=>v.nodes[2].parameters.mode='expression',v=>v.nodes[2].parameters.options.looseTypeValidation=true,v=>v.nodes[2].parameters.options.fallbackOutput=0]){const bad=switchExport(declared);change(bad);const rejected=await doorPlan(invalidSwitch,JSON.stringify(bad));assert.equal(rejected.status,200,rejected.text);assert.equal(rejected.value.rejected.length,1);await door(invalidSwitch,'undo',{planId:rejected.value.planId})}
   }finally{await invalidSwitch.close()}
   const dw=(await execution.get('workflows')).find(w=>w.name==='Synthetic native date formatting');
   await execution.post('workflows/'+dw.id+'/publish',{},execution.owner,201);const dh=await execution.post('workflows/'+dw.id+'/hooks',{},execution.owner,201);

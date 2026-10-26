@@ -1,19 +1,19 @@
 import type { Step } from './engine/types'
 
 type Node = Record<string, any>
-const linear = new Set(['n8n-nodes-base.set', 'n8n-nodes-base.httpRequest', 'n8n-nodes-base.executeWorkflow'])
+export const linearN8nNodes = new Set(['n8n-nodes-base.set', 'n8n-nodes-base.httpRequest', 'n8n-nodes-base.executeWorkflow', 'n8n-nodes-base.limit', 'n8n-nodes-base.sort', 'n8n-nodes-base.removeDuplicates', 'n8n-nodes-base.aggregate'])
 
 /** Topology only. Source expressions and node settings remain the graph compiler's responsibility. */
 export function serialLoopRegions(nodes: Node[], edges: Map<number, number[][]>, batch: number) {
   const node = nodes[batch], parameters = node?.parameters ?? {}, outputs = edges.get(batch) ?? [], options = parameters.options ?? {}
-  if (node?.type !== 'n8n-nodes-base.splitInBatches' || node.typeVersion !== 3 || (parameters.batchSize ?? 1) !== 1
+  if (node?.type !== 'n8n-nodes-base.splitInBatches' || node.typeVersion !== 3 || !Number.isSafeInteger(parameters.batchSize ?? 1) || (parameters.batchSize ?? 1) < 1 || (parameters.batchSize ?? 1) > 1000
     || typeof options !== 'object' || Array.isArray(options) || Object.keys(options).length
     || outputs.length !== 2 || outputs[0].length > 1 || outputs[1].length !== 1)
-    throw Error('loop requires version 3, batch size 1, no reset and at most one distinct done path')
+    throw Error('loop requires version 3, a literal batch size from 1 to 1000, no reset and at most one distinct done path')
   const body: number[] = [], done: number[] = []
   let cursor = outputs[1][0]
   while (cursor !== batch) {
-    if (body.includes(cursor) || !linear.has(nodes[cursor]?.type)) throw Error('loop body needs a linear mapped path returning to the batch node')
+    if (body.includes(cursor) || !linearN8nNodes.has(nodes[cursor]?.type)) throw Error('loop body needs a linear mapped path returning to the batch node')
     body.push(cursor)
     const next = edges.get(cursor) ?? []
     if (next.length !== 1 || next[0].length !== 1) throw Error('loop body must return to the batch node')
@@ -23,7 +23,7 @@ export function serialLoopRegions(nodes: Node[], edges: Map<number, number[][]>,
     cursor = outputs[0][0]
     for (;;) {
       if (cursor === batch || body.includes(cursor) || done.includes(cursor)) throw Error('done path must be distinct from the loop body and contain no cycle')
-      if (!linear.has(nodes[cursor]?.type)) throw Error('done path needs a linear Set, JSON HTTP or embedded synchronous subflow chain')
+      if (!linearN8nNodes.has(nodes[cursor]?.type)) throw Error('done path needs a linear Set, JSON HTTP or embedded synchronous subflow chain')
       done.push(cursor)
       const next = edges.get(cursor) ?? []
       if (next.length > 1 || next.some(branch => branch.length > 1)) throw Error('done path cannot fan out or reuse another branch')
@@ -51,6 +51,10 @@ export function itemStreamPipeline(steps: Step[], items: string, initial = 'item
   const result: Step[] = []
   let stream = items, previous = initial
   for (const source of steps) {
+    if(source.type==='transform'&&source.fn==='n8n.stream') {
+      result.push({...source,input:{...(source.input as Record<string,unknown>),items:ref(stream),max_items:maxItems}})
+      stream='steps.'+source.id;previous=stream;continue
+    }
     if (!['map', 'http'].includes(source.type)) throw Error('done path has no committed item-stream conversion for this native operation')
     const each = source.id + '_each', collected = source.id + '_items'
     const step = { ...source, input: replaceCurrent(source.input ?? {}, previous) }
@@ -69,7 +73,7 @@ export function itemStreamPipeline(steps: Step[], items: string, initial = 'item
 /** Additional item expansion needs explicit reviewed bounds. These participate
  * in source identity and the native graph's aggregate invocation calculation. */
 export function reviewedStreamBounds(choice: Node | undefined) {
-  if (!choice || choice.kind !== 'item-stream-loop' || choice.reviewed !== true)
+  if (!choice || !['item-stream-loop','item-stream'].includes(choice.kind) || choice.reviewed !== true)
     throw Error('intermediate HTTP item expansion requires an owner-reviewed item-stream-loop conversion and explicit bounds')
   if (Object.keys(choice).some(key => !['kind', 'reviewed', 'max_source_items', 'max_stage_items'].includes(key))
     || ![choice.max_source_items, choice.max_stage_items].every(value => Number.isSafeInteger(value) && value >= 1 && value <= 1000))

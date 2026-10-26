@@ -18,7 +18,18 @@ export const n8nItems: Transform = args => {
     throw new StepError('validation', 'n8n file or binary response items require an explicit file conversion')
   }
   let items: unknown[]
-  if (kind === 'flatten') {
+  if (kind === 'batches' || kind === 'split') {
+    const field = args.field, size = args.batch_size
+    if (typeof field !== 'string' || !/^[_A-Za-z][_A-Za-z0-9]*$/.test(field) || ['__proto__', 'constructor', 'prototype'].includes(field)
+      || !Number.isSafeInteger(size) || Number(size) < 1 || Number(size) > 1000 || !Array.isArray(value))
+      throw new StepError('validation', 'n8n batches require an explicit field, array and literal batch size')
+    if (value.length > Number(maxItems) || new TextEncoder().encode(JSON.stringify(value)).length > 1024 * 1024)
+      throw new StepError('validation', 'n8n source items exceed the reviewed item or byte bound')
+    if(kind==='split')return value.map(item=>({[field]:item}))
+    const batches = []
+    for (let index = 0; index < value.length; index += Number(size)) batches.push(value.slice(index, index + Number(size)).map(item => ({ [field]: item })))
+    return batches
+  } else if (kind === 'flatten') {
     if (!Array.isArray(value) || value.some(group => !Array.isArray(group))) throw new StepError('validation', 'n8n processed results must be retained item lists')
     items = value.flat(1)
   } else if (kind === 'item') items = [value]
