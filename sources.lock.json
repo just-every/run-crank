@@ -5474,7 +5474,7 @@
       "executable": false
     },
     "tests/n8n-binding-journey.mjs": {
-      "sha256": "1b77676fd0e0d4f3c9c0d42ae40354195d199e4b39a2407b98c1455a68311bb1",
+      "sha256": "2d53792fe29fb57ef4165298e1371756430aad12f8e3be2b7d693023f754a03b",
       "executable": false
     },
     "tests/n8n-code-journey.mjs": {

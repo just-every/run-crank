@@ -6,7 +6,7 @@ import {graphExport} from './n8n-graph-fixture.mjs';
 
 /** Fresh credentials enter the native connection door, never the retained export. */
 export async function n8nBindingJourney() {
- const declared='https://receiver.example',requests=[];let h;
+ const declared='https://receiver.example',requests=[];let h,event=510;
  const receiver=createServer(async(req,res)=>{let body='';for await(const chunk of req)body+=chunk;requests.push({method:req.method,url:req.url,headers:req.headers,body});res.writeHead(200,{'content-type':'application'+'/'+'json'});res.end(JSON.stringify({received:true}))});
  await new Promise(resolve=>receiver.listen(0,'127.0.0.1',resolve));const target='http://127.0.0.1:'+receiver.address().port;
  try {
@@ -19,7 +19,7 @@ export async function n8nBindingJourney() {
   for(let index=0;index<2;index++)assert.equal((await door(h,'apply',{planId:plan.value.planId,reviewedFingerprint:plan.value.fingerprint})).value.job.state,'completed');
   const [workflow]=await h.get('workflows'),draft=await h.get('workflows/'+workflow.id);assert.equal(draft.status,'draft');assert.equal(draft.versions.length,0);assert.equal(draft.hooks.length,0);assert.equal(draft.draft.steps[1].connection_id,connection.id);assert.deepEqual(draft.draft.settings.n8n_conversions.n4,choice);assert.ok(!JSON.stringify(draft).includes('synthetic-crank-500"'), 'credential value must not become graph or history data');
   await h.restart();assert.deepEqual((await h.get('workflows/'+workflow.id)).draft,draft.draft);await h.post('workflows/'+workflow.id+'/publish',{},h.owner,201);const hook=await h.post('workflows/'+workflow.id+'/hooks',{},h.owner,201);
-  const send=async()=>{const sent=await deliver(h,hook.url,{method:'POST',headers:{'content-type':'application'+'/'+'json'},body:JSON.stringify({amount:8,message:'synthetic-crank-501'})});assert.equal(sent.status,200,sent.text);return settled(h,sent.value.run_id)};
+  const send=async()=>{const sent=await deliver(h,hook.url,{method:'POST',headers:{'content-type':'application'+'/'+'json'},body:JSON.stringify({amount:8,message:'synthetic-crank-501',event_id:'synthetic-crank-'+event++})});assert.equal(sent.status,200,sent.text);return settled(h,sent.value.run_id)};
   const run=await send();assert.equal(run.status,'succeeded',JSON.stringify(run.error));assert.equal(requests.length,1);assert.equal(requests[0].method,'PATCH');assert.equal(requests[0].url,'/graph-events?revision=8');assert.equal(requests[0].headers.authorization,'Bearer synthetic-crank-500');assert.equal(requests[0].headers['x-customer'],'synthetic-crank-501');assert.deepEqual(JSON.parse(requests[0].body),{amount:8,message:'synthetic-crank-501'});assert.ok(!JSON.stringify(run).includes('Bearer synthetic-crank-500'));
   await h.post('connections/'+connection.id+'/revoke');const revoked=await send();assert.ok(['paused','failed'].includes(revoked.status));assert.equal(requests.length,1,'revocation after native binding must stop further dispatch');
   const undo=await door(h,'undo',{planId:plan.value.planId});assert.ok(undo.status>=400||undo.value.job?.state!=='undone','account binding must not weaken used-import protection');
