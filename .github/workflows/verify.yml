@@ -52,6 +52,14 @@ jobs:
         run: pnpm exec node tests/financial-browser.mjs
         env:
           CRANK_EVIDENCE: artifacts/decisions/financial
+      - name: Invoice outcome owner browser journey
+        run: pnpm exec node tests/invoice-outcome-browser.mjs
+        env:
+          CRANK_EVIDENCE: artifacts/decisions/outcomes
+      - name: Provider drift owner browser journey
+        run: pnpm exec node tests/drift-browser.mjs
+        env:
+          CRANK_EVIDENCE: artifacts/decisions/drift
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         with:

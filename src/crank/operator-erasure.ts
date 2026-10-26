@@ -8,7 +8,7 @@ const ATTRIBUTION: [table: string, column: string][] = [
   ['crank_subflow_versions','created_by'],
   ['crank_notice_deliveries','owner_id'], ['crank_notice_routes','owner_id'],
   ['crank_agent_followups','created_by'], ['crank_agent_followup_recipients','recipient_id'], ['crank_agent_followup_contacts','recipient_id'], ['crank_agent_followup_people','changed_by'],
-  ['crank_skills', 'created_by'], ['crank_team_access', 'changed_by'],
+  ['crank_drift_proposals','created_by'], ['crank_skills', 'created_by'], ['crank_team_access', 'changed_by'],
   ['crank_usage_workflow_estimates', 'quoted_by'], ['crank_usage_version_estimates', 'quoted_by'], ['crank_usage_budgets', 'updated_by'], ['crank_usage_allowances', 'created_by'],
   ['crank_audit', 'actor_id'], ['crank_approvals', 'actor_id'], ['crank_waits', 'decided_by'], ['crank_hold_items', 'decided_by'],
   ['crank_flows', 'created_by'], ['crank_runs', 'created_by'], ['crank_workflows', 'owner_id'], ['crank_workflows', 'created_by'],

@@ -1,3 +1,5 @@
+import { driftApi } from '../agents/drift-api'
+import { driftListView, driftReviewView } from './drift'
 import { gatewayScopeId } from '../custom/use-scope'
 import { serviceAccountsPanel } from './service-accounts'
 const gatewayConfirmation=()=>`<section class="panel"><h2>Confirm connection access</h2><p>Use your native owner session. Email yourself a confirmation link, open it in this browser, then create the gateway code or service account within five minutes.</p><form method="post" action="/auth/step-up"><input type="hidden" name="action" value="credentials:mint"><input type="hidden" name="returnTo" value="/app/connections"><button class="btn btn-secondary">Email me a confirmation link</button></form><a href="/app/connections">Return to connections</a></section>`
@@ -42,7 +44,7 @@ const redirect = (location:string) => new Response(null,{status:303,headers:{loc
 // A form may name where to return after its action: a path inside the app, nothing else.
 const safeReturn = (value:unknown) => typeof value==='string' && /^\/app(\/[A-Za-z0-9/_.-]*)?(\?[A-Za-z0-9=&%_.-]*)?$/.test(value) ? value : null
 export async function productApi(request:Request,env:CrankEnv,nativeBrowser=false):Promise<Response|null> {
-  return await customApi(request,env,nativeBrowser) ?? await followupApi(request,env) ?? await teamApi(request,env) ?? await versionedApi(request,env) ?? await importDoor(request,env) ?? await importApi(request,env) ?? await dataApi(request,env) ?? await workflowApi(request,env) ?? await crankApi(request,env)
+  return await driftApi(request,env) ?? await customApi(request,env,nativeBrowser) ?? await followupApi(request,env) ?? await teamApi(request,env) ?? await versionedApi(request,env) ?? await importDoor(request,env) ?? await importApi(request,env) ?? await dataApi(request,env) ?? await workflowApi(request,env) ?? await crankApi(request,env)
 }
 async function formValues(request:Request) {
   if (!request.headers.get('content-type')?.startsWith('application/x-www-form-urlencoded')) throw new Error('Use a form submission.')
@@ -169,6 +171,12 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
           for(const key of ['operations','destinations','readbacks','granted_scopes'])if(form[key])input[key]=JSON.parse(form[key])
         } catch{return page('Invalid connector selection','<p class="notice">Review the JSON selections and connector version.</p><a href="/app/connections">Return to connections</a>',{},400)}
       }
+      if(path.startsWith('/api/crank/drift')) {
+        requireOwner(actor)
+        if(path.endsWith('/test')) { input.bindings=Object.fromEntries(Object.entries(form).filter(([key])=>key.startsWith('binding_')).map(([key,value])=>[key.slice(8),value])); for(const key of Object.keys(input))if(key.startsWith('binding_'))delete input[key] }
+        if(form.business_meaning_confirmed) input.business_meaning_confirmed=form.business_meaning_confirmed==='true'
+        try { for(const key of ['bindings','scopes']) if(form[key]) input[key]=JSON.parse(form[key]) } catch { return page('Invalid repair choices','<p>Review the account bindings and scopes.</p>',{},422) }
+      }
       if(form.team_scope_form==='true') {
         for(const key of Object.keys(input)) if(key==='team_scope_form' || key.startsWith('workflow_') || key.startsWith('connection_')) delete input[key]
         input.workflow_ids=Object.keys(form).filter(key=>key.startsWith('workflow_') && form[key]==='true').map(key=>key.slice('workflow_'.length))
@@ -238,6 +246,7 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
         return page('Credential created',`<section class="panel"><p>Shown once. Save this in a private file for your agent. Crank stores only its hash.</p><label>Credential<input type="${scopedService?'text':'password'}" ${scopedService?'autocomplete="off" ':''}value="${esc(result.token)}" readonly aria-label="Credential"></label><p class="muted">${scopedService?'Select and copy this one-time credential into a private file. It can only read and prepare its named workflows.':'You can select and copy the hidden value. Do not share it in chat or commit it. Local dev credentials additionally need the local gate described in the README.'}</p><a class="btn btn-secondary" href="/app/access">Return to access</a></section>`)
       }
       if (result.held && (result.hold_id || result.holdId)) return redirect('/app/holds/' + encodeURIComponent(result.hold_id || result.holdId))
+      if(path==='/api/crank/drift') return redirect('/app/drift/'+encodeURIComponent(result.proposal.id))
       if(path==='/api/crank/skills') return redirect('/app/skills/'+encodeURIComponent(result.id))
       if(back) return redirect(back)
       if(path.startsWith('/api/crank/imports')) return redirect('/app/import')
@@ -293,6 +302,9 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
     }
     if(url.pathname==='/app/inbox') return page('Inbox',inboxPanel(await read('/api/crank/inbox')),{state,intro:'In-app requests addressed to you. The original workflow controls access and every decision.'})
     requireOwner(actor)
+    const driftWorkflow=/^\/app\/workflows\/([^/]+)\/drift$/.exec(url.pathname), driftReview=/^\/app\/drift\/([^/]+)$/.exec(url.pathname)
+    if(driftWorkflow) { const workflow=await read('/api/crank/workflows/'+driftWorkflow[1]); return page('Provider drift',driftListView(workflow,await read('/api/crank/drift')),{state,crumbs:[['Workflow','/app/workflows/'+workflow.id]]}) }
+    if(driftReview) return page('Review mapping repair',driftReviewView(await read('/api/crank/drift/'+driftReview[1]),await read('/api/crank/connections')),{state})
     if(url.pathname==='/app/settings/provider-consent') {
       const connections=await read('/api/crank/connections')
       const disclosure=url.searchParams.get('connection_id') && url.searchParams.get('company_id') ? await read('/api/crank/regulated-operations?'+url.searchParams) : null

@@ -39,6 +39,13 @@ export async function eraseWorkflowRun(env: CrankEnv, actor: Actor | null, porta
     edges: [
       ...['crank_subflow_calls', 'crank_notice_deliveries', 'crank_gateway_tasks', 'crank_custom_hook_checks', 'crank_executor_tasks', 'crank_grant_escalations', 'crank_grant_admissions', 'crank_skill_cases', 'crank_wf_steps', 'crank_blind_index', 'crank_wf_step_revisions', 'crank_waits', 'crank_wf_attempts', 'crank_obligations', 'crank_callback_events', 'crank_queue_items', 'crank_hold_items', 'crank_historical_items', 'crank_ops_events', 'crank_request_admissions', 'crank_request_checkpoints', 'crank_request_checkpoint_chunks', 'crank_usage_observations', 'crank_usage_provider_charges', 'crank_usage_reporting_errors', 'crank_usage_reservations', 'crank_step_admissions']
         .map(table => ({ table, from: 'crank_wf_runs', on: { run_id: 'id' } })),
+      {table:'crank_drift_incidents',from:'crank_wf_runs',on:{run_id:'id'}},
+      {table:'crank_drift_proposals',from:'crank_drift_incidents',on:{incident_id:'id'}},
+      {table:'crank_drift_cases',from:'crank_drift_proposals',on:{proposal_id:'id'}},
+      {table:'crank_drift_cases',from:'crank_wf_runs',on:{source_run_id:'id'}},
+      {table:'crank_drift_cases',from:'crank_wf_runs',on:{test_run_id:'id'}},
+      {table:'crank_drift_continuations',from:'crank_drift_proposals',on:{proposal_id:'id'}},
+      {table:'crank_drift_continuations',from:'crank_wf_runs',on:{run_id:'id'}},
       { table: 'crank_notice_attempts', from: 'crank_notice_deliveries', on: {delivery_id:'id'} },
       { table: 'crank_agent_followups', from: 'crank_wf_runs', on: {run_id:'id'} },
       ...['crank_agent_followup_recipients','crank_agent_followup_contacts','crank_agent_followup_authorizations'].map(table=>({table,from:'crank_agent_followups',on:{followup_id:'id'}})),

@@ -1,3 +1,4 @@
+import { assertDriftWriteAllowed } from '../agents/drift-step'
 import { reportedResponse, assertReportedBudget } from '../ops/usage-transport'
 import { flushUsageNotices } from '../ops/usage'
 import { authorizeRequest } from '../connections/auth'
@@ -21,6 +22,7 @@ export async function sendRequest(ctx: StepContext, prepared: Prepared, connecti
     await assertDispatchAuthority(ctx.env, ctx.run.id)
     await assertReportedBudget(ctx.env, ctx.run.id)
     if (connectionId) await authorizeRequest(ctx.env, connectionId, url, headers, prepared.body)
+    if (!['GET','HEAD'].includes(prepared.method)) await assertDriftWriteAllowed(ctx.env,ctx.run.id)
     await ctx.beforeRequest?.()
     const attemptId = id()
     const admitted = await stmt(ctx.env, `INSERT INTO crank_wf_attempts(id,run_id,path,number,method,destination_origin,started_at,request_key,retry_number,budget_started_at,slice_started_at)

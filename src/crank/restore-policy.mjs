@@ -63,6 +63,8 @@ export function importRow(table, row) {
   if(table==='crank_gateway_grants')return {...row,status:'revoked'};
   if (table === 'crank_custom_versions') return {...row,status:'needs_review',sandbox_json:null};
   if (table === 'crank_executor_tasks') return {...row,active:0};
+  if (table === 'crank_drift_incidents') return {...row,state:'inactive'};
+  if (table === 'crank_drift_proposals') return {...row,status:'inactive',test_bindings_json:'{}'};
   if (table === 'crank_agent_followups') return {...row,status:'inactive'};
   if (table === 'crank_usage_budgets' || table === 'crank_usage_allowances' || table === 'crank_usage_notices') return { ...row, active: 0 };
   if (table === 'crank_flows') return { ...row, status: 'draft' };
@@ -204,6 +206,12 @@ export async function validateRestore({ read }) {
     const skill = skills.get(sample.skill_id), run = runs.get(sample.run_id);
     if (!skill || !run || run.workflow_id !== skill.workflow_id || run.version_id !== skill.version_id) return false;
   }
+  const driftIncidents=new Map((await rows('crank_drift_incidents')).map(row=>[row.id,row]));
+  const driftProposals=new Map((await rows('crank_drift_proposals')).map(row=>[row.id,row]));
+  for(const incident of driftIncidents.values()) if(runs.get(incident.run_id)?.workflow_id!==incident.workflow_id || versions.get(incident.version_id)?.workflow_id!==incident.workflow_id)return false;
+  for(const proposal of driftProposals.values()) if(driftIncidents.get(proposal.incident_id)?.workflow_id!==proposal.workflow_id || versions.get(proposal.version_id)?.workflow_id!==proposal.workflow_id || proposal.approved_version_id && versions.get(proposal.approved_version_id)?.workflow_id!==proposal.workflow_id)return false;
+  for(const sample of await rows('crank_drift_cases')) if(!driftProposals.has(sample.proposal_id) || !runs.has(sample.source_run_id) || sample.test_run_id && !runs.has(sample.test_run_id))return false;
+  for(const continuation of await rows('crank_drift_continuations')) if(!driftProposals.has(continuation.proposal_id) || !runs.has(continuation.run_id) || !versions.has(continuation.source_version_id) || !versions.has(continuation.repaired_version_id))return false;
   const followups = new Map((await rows('crank_agent_followups')).map(row=>[row.id,row]));
   const waits = await rows('crank_waits');
   for (const followup of followups.values()) if (!runs.has(followup.run_id) || !waits.some(wait=>wait.run_id===followup.run_id && wait.path===followup.path && wait.kind==='approval')) return false;

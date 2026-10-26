@@ -63,7 +63,8 @@ export async function invoiceOutcomeJourney({inspect,modeOnly}={}) {
   const postsBefore=posts;const refused=await h.post(`workflow-runs/${denied.id}/approve`,{path:'verify_invoice',digest:denied.waits[0].proposal_digest});
   assert.equal(refused.status,'paused');assert.equal(posts,postsBefore);assert.equal(stepOf(refused,'notify'),undefined);
   await inspect?.({h,run:refused,state:'outside-grant',objective});
-  const waiting=await objective.start();await h.post(`grants/${objective.grant.id}/revoke`);const frozen=await h.get('workflow-runs/'+waiting.id);
+  repair=false;record=null;seenKeys.clear();
+  const waiting=await objective.start();assert.equal(waiting.status,'awaiting_approval');await h.post(`grants/${objective.grant.id}/revoke`);const frozen=await h.get('workflow-runs/'+waiting.id);
   const saved=await archive(h);restored=await harness(receiver,{edge:fake.edge});await restored.post('data/restore',{archive:saved,confirm:'RESTORE'});
   const entries=text=>text.trim().split('\n').map(JSON.parse).flatMap(p=>p.items??[]).filter(i=>i.kind==='row'&&['crank_wf_steps','crank_waits','crank_wf_step_revisions'].includes(i.table)).map(i=>JSON.stringify(i)).sort();
   assert.deepEqual(entries(await archive(restored)),entries(saved),'Every reconciliation input, output, proposal and decision survives inactive restoration');

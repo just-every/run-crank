@@ -23,7 +23,7 @@ function scopeFields(workflows: Workflow[]) {
     <label>Team (for team scope)<input name="team" maxlength="100"></label></div>`
 }
 
-function costInputs(total: Estimate['total']) {
+export function costInputs(total: Estimate['total']) {
   return kinds.map(kind => {
       const component = total?.components.find(c => c.kind === kind)
       return `<fieldset><legend>${names[kind]}</legend><div class="grid"><label>USD per run<input name="estimate_${kind}_usd_per_run" ${decimal} value="${esc(component?.usd_per_run ?? '')}" required></label><label>Owner assumption<input name="estimate_${kind}_assumption" maxlength="500" value="${esc(component?.assumption ?? '')}" required></label></div></fieldset>`

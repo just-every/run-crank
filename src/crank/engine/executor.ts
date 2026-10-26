@@ -1,3 +1,4 @@
+import { assertDriftWriteAllowed, recordDriftFailure } from '../agents/drift-step'
 import { SubflowWait } from '../workflows/subflow-calls'
 import { allowedOperation, customVersion } from '../custom/store'
 import { GatewayWait } from '../custom/gateway-tasks'
@@ -134,6 +135,7 @@ class Execution {
         const boundary = await this.cap(step, path, input, wait, mutating)
         if (boundary) return boundary
         if (typeof step.connection_id === 'string') await credential(this.env, step.connection_id)
+        if (mutating) await assertDriftWriteAllowed(this.env, this.run.id)
         if (mutating) await this.save(step, path, 'running', { input })
         result = await type.execute(step, ctx)
       }
@@ -154,6 +156,10 @@ class Execution {
       if (error instanceof RetryWait) {
         await this.save(step, path, 'waiting', { input, trace: { retry_attempt_id: error.attemptId, retry_at: error.dueAt } })
         return { kind: 'waiting', approval: false }
+      }
+      if (this.run.mode !== 'test' && this.graph.steps.some(s=>s.type==='drift.map') && await recordDriftFailure(this.env,this.run.id,path,error)) {
+        await this.save(step,path,'waiting',{input,error:error instanceof StepError ? error.toJSON() : undefined})
+        return {kind:'paused',reason:'Provider permission changed; inspect the retained drift incident before continuing',authority:true}
       }
       if (error instanceof StepError && (error.category === 'connection' || error.category === 'authority')) {
         await this.save(step, path, 'waiting', { input })
