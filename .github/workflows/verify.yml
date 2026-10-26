@@ -30,7 +30,7 @@ jobs:
 
   decisions:
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 15
     env:
       CI: 'true'
       WRANGLER_SEND_METRICS: 'false'
@@ -52,19 +52,42 @@ jobs:
         run: pnpm exec node tests/financial-browser.mjs
         env:
           CRANK_EVIDENCE: artifacts/decisions/financial
-      - name: Invoice outcome owner browser journey
-        run: pnpm exec node tests/invoice-outcome-browser.mjs
-        env:
-          CRANK_EVIDENCE: artifacts/decisions/outcomes
-      - name: Provider drift owner browser journey
-        run: pnpm exec node tests/drift-browser.mjs
-        env:
-          CRANK_EVIDENCE: artifacts/decisions/drift
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         with:
           name: decision-browser-evidence
           path: artifacts/decisions
+          if-no-files-found: ignore
+
+  agent-journeys:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        journey: [invoice-outcome, drift]
+    env:
+      CI: 'true'
+      WRANGLER_SEND_METRICS: 'false'
+      CRANK_EVIDENCE: artifacts/${{ matrix.journey }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22.20.0'
+          package-manager-cache: false
+      - run: npm install --global pnpm@10.12.4
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - name: Owner browser journey
+        run: pnpm exec node tests/${{ matrix.journey }}-browser.mjs
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: agent-browser-evidence-${{ matrix.journey }}
+          path: artifacts/${{ matrix.journey }}
           if-no-files-found: ignore
 
   linux-executor:
