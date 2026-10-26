@@ -18,7 +18,7 @@ export type StepResult =
   | { status: 'succeeded'; output: unknown; trace?: unknown }
   | { status: 'waiting'; wait: WaitSpec }
   | { status: 'stopped'; reason: 'filter' | 'search'; trace?: unknown; output?: unknown }
-  | { status: 'paused'; reason: string; connectionId?: string }
+  | { status: 'paused'; reason: string; connectionId?: string; output?: unknown; trace?: unknown }
   | { status: 'rejected'; reason: string }
 
 export interface RunRow {

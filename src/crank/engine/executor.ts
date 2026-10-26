@@ -188,6 +188,7 @@ class Execution {
         await this.save(step, path, 'stopped', { input, output: { rejected: true, reason: result.reason } })
         return { kind: 'rejected', reason: result.reason }
       case 'paused':
+        await this.save(step, path, 'waiting', { input, output: result.output, trace: result.trace })
         return { kind: 'paused', reason: result.reason, connectionId: result.connectionId }
     }
   }

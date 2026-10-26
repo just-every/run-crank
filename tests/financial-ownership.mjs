@@ -3,7 +3,7 @@ import {connection,jsonResponse,publish,startRun} from './kit.mjs';
 
 /** Add the financial classes to the owned installation, with provider edges only. */
 export async function financialOwnership(h,fake) {
- const invoice={Id:'synthetic-crank-20',SyncToken:'0',CustomerRef:{value:'synthetic-crank-21'},TotalAmt:19.99};
+ const invoice={Id:'synthetic-crank-20',SyncToken:'0',DocNumber:'synthetic-crank-23',CurrencyRef:{value:'USD'},CustomerRef:{value:'synthetic-crank-21'},TotalAmt:19.99};
  fake.routes.set('sandbox-quickbooks.api.intuit.com',({url,method})=>method==='GET'?jsonResponse({QueryResponse:{Invoice:[invoice]}}):jsonResponse(url.pathname.endsWith('/refundreceipt')?{RefundReceipt:invoice}:{Invoice:{...invoice,...(url.searchParams.get('operation')==='void'?{TotalAmt:0}:{})}}));
  fake.routes.set('financial-failure.example',()=>jsonResponse({refused:true},400));
  const qbo=await connection(h,{app:'quickbooks',label:'Owned QuickBooks sandbox',account_name:'1234',auth_kind:'oauth2',scopes:['com.intuit.quickbooks.accounting'],secret:{access_token:'synthetic-crank-22'}});
@@ -13,6 +13,12 @@ export async function financialOwnership(h,fake) {
  const compensation=await publish(h,'Owned separate compensation authority',{trigger:{type:'manual'},steps:[{id:'void_invoice',type:'quickbooks.void_invoice',connection_id:qbo.id,input:{source_run_id:original.id,source_path:'invoice'}}]});
  const waiting=await startRun(h,compensation,{});assert.equal(waiting.status,'awaiting_approval');
  const compensated=await h.post(`workflow-runs/${waiting.id}/approve`,{path:'void_invoice',digest:waiting.waits[0].proposal_digest});assert.equal(compensated.status,'succeeded');
+ fake.routes.set('synthetic-crank-crm.example',()=>jsonResponse({id:'synthetic-crank-31',customer_id:invoice.CustomerRef.value,amount_usd:'19.99'}));
+ const outcomeFlow=await publish(h,'Owned independently verified invoice',{trigger:{type:'manual'},steps:[
+  {id:'lead',type:'http',input:{method:'GET',url:'https://synthetic-crank-crm.example/lead'}},
+  {id:'invoice',type:'quickbooks.create_invoice',connection_id:qbo.id,input},
+  {id:'outcome',type:'quickbooks.invoice_outcome',connection_id:qbo.id,input:{realm_id:'1234',business_key:input.business_key,source_path:'invoice',lead_path:'lead',lead_id:'synthetic-crank-31',customer_id:invoice.CustomerRef.value,amount_usd:'19.99',due_at:'2026-10-30T12:00:00Z',remaining_cost_usd:'0.01'}}]});
+ const outcome=await startRun(h,outcomeFlow,{});assert.equal(outcome.status,'succeeded',JSON.stringify(outcome.error));
  const company='synthetic-crank-24',workers=new Map();let sequence=30;
  fake.routes.set('api.gusto-demo.com',({url,method,body})=>{
   if(method==='POST'){
@@ -35,5 +41,5 @@ export async function financialOwnership(h,fake) {
  ]}},h.owner,201);
  await h.post(`workflows/${workflow.id}/publish`,{},h.owner,201);
  const complete=await startRun(h,workflow,{});assert.equal(complete.status,'succeeded',JSON.stringify(complete.error));
- return [...original.steps,...compensated.steps,...complete.steps].filter(s=>s.status==='succeeded').map(s=>s.type);
+ return [...original.steps,...compensated.steps,...complete.steps,...outcome.steps].filter(s=>s.status==='succeeded').map(s=>s.type);
 }

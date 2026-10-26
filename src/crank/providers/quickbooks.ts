@@ -20,24 +20,26 @@ export async function quickbooksAccount(env: CrankEnv, connectionId: string, rea
   return `https://sandbox-quickbooks.api.intuit.com/v3/company/${realm}`
 }
 
-export async function quickbooksReadback(env: CrankEnv, step: Step, input: Record<string, unknown>) {
-  if (!qboCreate(step.type)) throw new StepError('validation', 'This step has no native financial readback')
-  const base = await quickbooksAccount(env, String(step.connection_id), input.realm_id), entity = entityOf(step.type)
-  const key = String(input.business_key ?? '')
+export async function quickbooksRecords(env: CrankEnv, connectionId: string, realm: unknown, entity: 'Invoice' | 'RefundReceipt', businessKey: unknown) {
+  const base = await quickbooksAccount(env, connectionId, realm), key = String(businessKey ?? '')
   if (!key || key.length > 21) throw new StepError('validation', 'QuickBooks business_key must have 1 to 21 characters')
   const url = new URL(base + '/query')
   url.searchParams.set('query', `select * from ${entity} where DocNumber = '${key.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}' maxresults 1000`)
   const headers = new Headers({ accept: 'application/json' })
-  await authorizeRequest(env, String(step.connection_id), url, headers, null)
+  await authorizeRequest(env, connectionId, url, headers, null)
   const response = await boundedFetch(url.href, { headers, timeoutMs: 15000, maxBytes: 1048576, follow: 0 })
   let body: any
   try { body = JSON.parse(utf8(response.bytes)) } catch { throw new StepError('uncertain', 'QuickBooks readback is unreadable', { uncertain: true }) }
   if (response.status !== 200 || !isObject(body.QueryResponse)) throw new StepError('uncertain', 'QuickBooks readback failed; the original write remains uncertain', { uncertain: true, readback_http_status: response.status })
   const records = body.QueryResponse[entity] ?? []
   if (!Array.isArray(records) || records.length >= 1000) throw new StepError('uncertain', 'QuickBooks readback is not a complete bounded record list', { uncertain: true })
-  const payload = isObject(input.payload) ? input.payload : {}
-  const customer = isObject(payload.CustomerRef) ? payload.CustomerRef.value : undefined
-  return records.filter((record: any) => record.DocNumber === key && typeof record.Id === 'string' && record.CustomerRef?.value === customer && (!record.CurrencyRef || record.CurrencyRef.value === 'USD'))
+  return records.filter((record: any) => record.DocNumber === key && typeof record.Id === 'string')
+}
+export async function quickbooksReadback(env: CrankEnv, step: Step, input: Record<string, unknown>) {
+  if (!qboCreate(step.type)) throw new StepError('validation', 'This step has no native financial readback')
+  const records = await quickbooksRecords(env, String(step.connection_id), input.realm_id, entityOf(step.type), input.business_key)
+  const payload = isObject(input.payload) ? input.payload : {}, customer = isObject(payload.CustomerRef) ? payload.CustomerRef.value : undefined
+  return records.filter((record: any) => record.CustomerRef?.value === customer && (!record.CurrencyRef || record.CurrencyRef.value === 'USD'))
 }
 
 const create: StepType = {
