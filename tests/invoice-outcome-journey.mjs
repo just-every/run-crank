@@ -58,6 +58,8 @@ export async function invoiceOutcomeJourney({inspect,modeOnly}={}) {
    const count=posts;await h.post(`workflow-runs/${run.id}/approve`,{path:'verify_invoice',digest:run.waits[0].proposal_digest},h.owner,409);await h.tick();assert.equal(posts,count);assert.equal(notices.length,noticeCount+1);
    await inspect?.({h,run,state:mode+'-satisfied',objective});
   }
+  const beforeInvalid=posts,invalid=await objective.start({invoice:{payload:{...objective.steps[1].input.payload,Line:[{...objective.steps[1].input.payload.Line[0],Amount:29.99}]}}});
+  assert.equal(invalid.status,'failed');assert.equal(posts,beforeInvalid);assert.equal(stepOf(invalid,'notify'),undefined);
   // A deliberate scope violation remains reviewable and never repairs under that grant.
   const denied=await objective.start({verify_invoice:{customer_id:'synthetic-crank-99'}});assert.equal(denied.status,'awaiting_approval');
   const postsBefore=posts;const refused=await h.post(`workflow-runs/${denied.id}/approve`,{path:'verify_invoice',digest:denied.waits[0].proposal_digest});

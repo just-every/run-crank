@@ -1,5 +1,6 @@
+import { invoiceAmountMatches } from './invoice-amount'
 import { assertDispatchAuthority } from '../engine/authority'
-import { add, compare, parseDecimal } from '../engine/decimal'
+import { compare, parseDecimal } from '../engine/decimal'
 import { StepError } from '../engine/errors'
 import { loadRecords } from '../engine/records'
 import type { StepContext, StepResult, StepType } from '../engine/types'
@@ -34,9 +35,7 @@ export async function invoiceOutcomeSource(ctx: Pick<StepContext, 'env' | 'run' 
   const lead = (await loadRecords(ctx.env, ctx.run.id)).get(String(ctx.input.lead_path)), facts = lead?.output_json ? JSON.parse(lead.output_json).body : null
   if (lead?.status !== 'succeeded' || facts?.id !== ctx.input.lead_id || facts?.customer_id !== ctx.input.customer_id || !equalMoney(facts?.amount_usd, ctx.input.amount_usd))
     throw new StepError('authority', 'Outcome criteria must match the authorized CRM lead checkpoint')
-  const total = Array.isArray(payload?.Line) ? payload.Line.reduce((sum: any, line: any) => { const amount = parseDecimal(line.Amount); if (!amount) throw new StepError('validation', 'Invoice line is not an exact amount'); return add(sum, amount) }, {units: 0n, scale: 0}) : null
-  if (input.realm_id !== ctx.input.realm_id || input.business_key !== ctx.input.business_key || payload?.CustomerRef?.value !== ctx.input.customer_id || !Array.isArray(payload.Line)
-    || !total || !parseDecimal(ctx.input.amount_usd) || compare(total, parseDecimal(ctx.input.amount_usd)!) !== 0)
+  if (input.realm_id !== ctx.input.realm_id || input.business_key !== ctx.input.business_key || payload?.CustomerRef?.value !== ctx.input.customer_id || !invoiceAmountMatches(payload,ctx.input.amount_usd))
     throw new StepError('authority', 'Repair criteria must match the original granted invoice customer, amount and business key')
   // The immutable source graph, rather than a submitted account identifier, binds the write.
   const version = await ctx.env.DB.prepare('SELECT graph_json FROM crank_workflow_versions WHERE id=?').bind(ctx.run.version_id).first<{graph_json: string}>()

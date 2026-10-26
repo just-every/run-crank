@@ -1,3 +1,4 @@
+import { requireInvoiceAmount } from './invoice-amount'
 import { credential } from '../connections/store'
 import { authorizeRequest } from '../connections/auth'
 import { httpRequest } from '../connectors/http-step'
@@ -51,6 +52,7 @@ const create: StepType = {
     const input = ctx.input, base = await quickbooksAccount(ctx.env, String(step.connection_id), input.realm_id)
     if (typeof input.business_key !== 'string' || !input.business_key || input.business_key.length > 21 || !isObject(input.payload) || !isObject(input.payload.CustomerRef) || !Array.isArray(input.payload.Line)) throw new StepError('validation', 'QuickBooks requires a business key, customer reference and line items')
     if (isObject(input.payload.CurrencyRef) && input.payload.CurrencyRef.value !== 'USD') throw new StepError('validation', 'This QuickBooks handoff preserves USD only')
+    if (input.amount_usd !== undefined) requireInvoiceAmount(input.payload,input.amount_usd)
     const entity = entityOf(step.type), url = new URL(base + '/' + entity.toLowerCase())
     url.searchParams.set('requestid', (await digest(ctx.operationKey)).slice(0, 50))
     try {
