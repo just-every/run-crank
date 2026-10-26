@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { harness } from './harness.mjs';
-import { archive } from './restore-journey.mjs';
+import { archive, inventory } from './restore-journey.mjs';
 import { driftCost, driftFixture } from './drift-fixture.mjs';
 import { driftRepairJourney } from './drift-journey.mjs';
 
@@ -14,6 +14,10 @@ test('Drift repairs restore inactive and erased retained evidence cannot authori
     const backup = await archive(h), restored = await harness('http://127.0.0.1:9', { edge: fake.edge });
     try {
       await restored.post('data/restore', { archive: backup, confirm: 'RESTORE' });
+      const original = inventory(backup), imported = inventory(await archive(restored));
+      const added = imported.filter(row => !original.includes(row));
+      assert.deepEqual(added.map(row => [JSON.parse(row).table, JSON.parse(row).row.action]), [['crank_audit', 'data.restore']]);
+      assert.deepEqual(imported.filter(row => row !== added[0]), original, 'All drift reconciliation records survive inactive restoration');
       const inactive = await restored.get('drift/' + proposal.proposal.id);
       assert.equal(inactive.proposal.status, 'inactive');
       assert.equal(inactive.incident.state, 'inactive');

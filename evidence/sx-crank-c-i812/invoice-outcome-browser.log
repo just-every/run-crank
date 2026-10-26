@@ -1,0 +1,14 @@
+invoice-outcome browser width=1440 state=missing-open run=80c0cad2-635b-462e-a775-470382804909
+invoice-outcome browser width=1440 state=missing-satisfied run=80c0cad2-635b-462e-a775-470382804909
+invoice-outcome browser width=1440 state=wrong-open run=4e8dc2da-dfad-4ab8-8b0b-45bdd5934db8
+invoice-outcome browser width=1440 state=wrong-satisfied run=4e8dc2da-dfad-4ab8-8b0b-45bdd5934db8
+invoice-outcome browser width=1440 state=invalid-amount run=b4ecea1d-a8f6-451b-ab82-c56089157c7f
+invoice-outcome browser width=1440 state=outside-grant run=e4d3eefb-0225-4f78-94c6-6a5e59d87dab
+invoice-outcome browser width=1440 state=restored-inactive run=2d5099ca-5372-45d7-b08a-832a4ef41e9c
+invoice-outcome browser width=390 state=missing-open run=882516c7-2e4b-4045-9f33-7184bac13018
+invoice-outcome browser width=390 state=missing-satisfied run=882516c7-2e4b-4045-9f33-7184bac13018
+invoice-outcome browser width=390 state=wrong-open run=60a45a36-b663-41ed-b020-3b5f55c76c55
+invoice-outcome browser width=390 state=wrong-satisfied run=60a45a36-b663-41ed-b020-3b5f55c76c55
+invoice-outcome browser width=390 state=invalid-amount run=54e31b55-696b-4e53-9b58-84dc1f3a9daf
+invoice-outcome browser width=390 state=outside-grant run=71a0f907-ba94-4803-b3f4-eff4eca9b964
+invoice-outcome browser width=390 state=restored-inactive run=b4af68d1-2615-4b1a-a03e-62a59f873a36
