@@ -78,7 +78,7 @@ export async function invoiceOutcomeJourney({inspect,modeOnly}={}) {
   assert.equal(posts,count);assert.equal(notices.length,noticeCount);assert.ok((await restored.get('connections')).every(c=>c.status==='needs_reconnect'));
   assert.equal((await restored.get('grants')).length,0);assert.ok(!saved.includes(objective.grant.credential));
   await inspect?.({h:restored,run:await restored.get('workflow-runs/'+imported.id),state:'restored-inactive',objective});
-  const inventory=await h.get('data/flows');assert.ok(inventory.flows.some(f=>f.kind==='quickbooks.invoice_outcome'&&f.recipients.includes('https://sandbox-quickbooks.api.intuit.com')&&f.region.toLowerCase().includes('provider-controlled')));
+  const dataFlows=await h.get('data/flows');assert.ok(dataFlows.flows.some(f=>f.kind==='quickbooks.invoice_outcome'&&f.recipients.includes('https://sandbox-quickbooks.api.intuit.com')&&f.region.toLowerCase().includes('provider-controlled')));
   return {types:['quickbooks.invoice_outcome'],effects};
  }finally{await restored?.close();await h?.close();server.closeAllConnections();await new Promise(done=>server.close(done))}
 }
