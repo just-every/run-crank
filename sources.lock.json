@@ -4561,8 +4561,12 @@
       "sha256": "45ccf9f2c2a04ad92329fab1ca5de8a01faca3b31563cd90b324ba11aa313c21",
       "executable": false
     },
+    "tests/quickbooks-sandbox-auth.mjs": {
+      "sha256": "a43465d54b299221409b91c01b8226d3ccf4d2c1e7bc321f8c546c5f3042e381",
+      "executable": false
+    },
     "tests/quickbooks-sandbox.mjs": {
-      "sha256": "f7777fcbfa6716d6ffcd5fde9de611322eb56f5edb0f19d4d7c1a8ebd136294a",
+      "sha256": "c30e2993dd2a60ae6012b147d3b35b392c6718ed0582b28ba63026ef9ebe2588",
       "executable": false
     },
     "tests/request-limits.test.mjs": {
