@@ -134,8 +134,13 @@ try {
   assert.equal(creates.get('Invoice'), 1); assert.equal(invoice?.Id, lostIds.get('Invoice')); assert.equal(failures, 1);
   assert.equal((await query('Invoice', `DocNumber = '${invoiceStep.input.business_key}'`)).length, 1);
   assert.equal((await api('/invoice/' + invoice.Id)).Invoice.TotalAmt, 19.99);
+  const reconciliationAudit = (await h.get(`audit?kind=run&id=${run.id}`)).filter(row => row.action === 'effect.reconcile');
+  assert.equal(reconciliationAudit.length, 1, 'A repeated owner choice cannot create another reconciliation audit');
+  assert.equal(reconciliationAudit[0].version_id, run.version_id);
+  assert.equal(reconciliationAudit[0].actor_id, stepOf(run, 'invoice').trace.reconciliation.owner);
+  assert.equal(reconciliationAudit[0].detail.remote_id, invoice.Id);
   console.log(JSON.stringify({ native_run: run.id, workflow_id: source.id, version_id: run.version_id, connection_id: connection.id,
-    operation_key: stepOf(run, 'invoice').operation_key, reconciliation: stepOf(run, 'invoice').trace.reconciliation, status: run.status }));
+    operation_key: stepOf(run, 'invoice').operation_key, reconciliation: stepOf(run, 'invoice').trace.reconciliation, audit: reconciliationAudit, status: run.status }));
   await h.restart();
   assert.equal(stepOf(await h.get('workflow-runs/' + run.id), 'invoice').output.body.Invoice.Id, invoice.Id);
   const compensation = await sandboxPublish(h, 'Synthetic separately approved invoice void', { trigger: { type: 'manual' }, steps: [
@@ -145,6 +150,7 @@ try {
   assert.equal(reversal.status, 'awaiting_approval'); assert.equal(voids, 0);
   const rejected = await h.post(`workflow-runs/${reversal.id}/reject`, { path: 'void_invoice', digest: reversal.waits[0].proposal_digest, reason: 'Reject this compensation; verify no provider effect' });
   assert.equal(rejected.status, 'rejected'); assert.equal(voids, 0);
+  assert.equal((await h.get(`audit?kind=run&id=${rejected.id}`)).filter(row => row.action === 'run.reject').length, 1);
   reversal = await startRun(h, compensation, {});
   assert.equal((await api('/invoice/' + invoice.Id)).Invoice.TotalAmt, 19.99);
   await h.restart(); reversal = await h.get('workflow-runs/' + reversal.id);
@@ -154,8 +160,11 @@ try {
   assert.equal(stepOf(reversal, 'void_invoice').output.compensation_of, run.id);
   const voided = (await api('/invoice/' + invoice.Id)).Invoice;
   assert.equal(voided.Id, invoice.Id); assert.equal(voided.TotalAmt, 0);
+  const approvalAudit = (await h.get(`audit?kind=run&id=${reversal.id}`)).filter(row => row.action === 'run.approve');
+  assert.equal(approvalAudit.length, 1); assert.equal(approvalAudit[0].version_id, reversal.version_id);
+  assert.equal(approvalAudit[0].actor_id, reconciliationAudit[0].actor_id);
   console.log(JSON.stringify({ compensation_run: reversal.id, source_run: run.id, workflow_id: compensation.id, version_id: reversal.version_id,
-    approval_digest: reversal.waits[0].proposal_digest, operation_key: stepOf(reversal, 'void_invoice').output.compensation_operation_key, status: reversal.status }));
+    approval_digest: reversal.waits[0].proposal_digest, operation_key: stepOf(reversal, 'void_invoice').output.compensation_operation_key, audit: approvalAudit, status: reversal.status }));
   console.log(`quickbooks invoice_id=${invoice.Id} state=voided real_readback=true approval_required=true`);
 
   const refundStep = native('refund', 'quickbooks.create_refund_receipt', { DepositToAccountRef: { value: bankAccounts[0].Id }, PaymentRefNum: 'synthetic-crank-1' });

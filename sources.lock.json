@@ -4566,7 +4566,7 @@
       "executable": false
     },
     "tests/quickbooks-sandbox.mjs": {
-      "sha256": "c30e2993dd2a60ae6012b147d3b35b392c6718ed0582b28ba63026ef9ebe2588",
+      "sha256": "38c10b5c8d874daff3ea815680617aadfed3269469ba3c80eb3077fb3c5fd481",
       "executable": false
     },
     "tests/request-limits.test.mjs": {
