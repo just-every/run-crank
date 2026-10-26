@@ -126,7 +126,7 @@
       "executable": false
     },
     ".github/workflows/verify.yml": {
-      "sha256": "7ea34556e152df215301df2a1972e26aa3b4edcb5fbf43bbb71645ad6290905a",
+      "sha256": "cbe55cfdb738022c3f2c21819ca26a826d75e08f6daf8c68eb19a8832b04a443",
       "executable": false
     },
     ".gitignore": {
@@ -1530,7 +1530,7 @@
       "executable": false
     },
     "package.json": {
-      "sha256": "8b15d409ed54bc3cf746af5eaa569f88af6ac9068f71e8f9e3b919745fc46366",
+      "sha256": "f40b5dc5cfe28d51f13546c357c7408ad7565dbd8ff50b32e90bdc96710de090",
       "executable": false
     },
     "packaging.json": {
@@ -1843,6 +1843,14 @@
     },
     "scripts/build-deployment-spec.mjs": {
       "sha256": "765b035fb0a6cecc2a07b2109f2dc36d110c1740021622c91b0bd7d64444268d",
+      "executable": false
+    },
+    "scripts/ci/chromium-probe.mjs": {
+      "sha256": "b660d6603c7038f2846a37836c10061b7c7b678d041b6075c461251e12264adc",
+      "executable": false
+    },
+    "scripts/ci/verify-app.mjs": {
+      "sha256": "769073c5734350a7e65b523a4fc8be6571ea15a9c83291a9f307e35624ee6f3b",
       "executable": false
     },
     "scripts/crank.mjs": {

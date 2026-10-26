@@ -66,8 +66,43 @@ jobs:
           fi
           echo "skip=$skip" >> "$GITHUB_OUTPUT"
 
-  shards:
+  build:
     needs: plan
+    if: needs.plan.outputs.skip != 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      CI: 'true'
+      WRANGLER_SEND_METRICS: 'false'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22.20.0'
+          package-manager-cache: false
+      - run: npm install --global pnpm@10.12.4
+      - run: pnpm install --frozen-lockfile
+      - name: Check first-party contract
+        run: pnpm exec rer check --profile first-party
+      - name: Check edition source lock freshness
+        run: node scripts/edition-authoring/cli.mjs check
+      - name: Build application and run site once
+        run: |
+          pnpm run build
+          pnpm exec rer build --site
+          printf '%s\n' "$GITHUB_SHA" > dist/.ci-sha
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: verify-build
+          path: dist
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 1
+
+  shards:
+    needs: [plan, build]
     if: needs.plan.outputs.skip != 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
@@ -79,6 +114,7 @@ jobs:
       CI: 'true'
       WRANGLER_SEND_METRICS: 'false'
       CRANK_TEST_SHARD: ${{ matrix.shard }}/4
+      CRANK_CI_PREBUILT: 'true'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1; action runtime Node 24
         with:
@@ -98,63 +134,31 @@ jobs:
             timeout 420 pnpm exec playwright install-deps chromium
             node scripts/ci/chromium-probe.mjs
           }
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: verify-build
+          path: dist
       - run: npm ci --prefix gateways/node --ignore-scripts
       - run: pnpm run verify
 
-  decisions:
-    needs: plan
-    if: needs.plan.outputs.skip != 'true'
-    runs-on: ubuntu-24.04
-    timeout-minutes: 15
-    env:
-      CI: 'true'
-      WRANGLER_SEND_METRICS: 'false'
-      CRANK_EVIDENCE: artifacts/decisions
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: '22.20.0'
-          package-manager-cache: false
-      - run: npm install --global pnpm@10.12.4
-      - run: pnpm install --frozen-lockfile
-      - name: Install Chromium
-        run: |
-          set -euo pipefail
-          pnpm exec playwright install chromium
-          # Hosted ubuntu-24.04 already carries Chromium's libraries. Use apt only when a real launch fails.
-          node scripts/ci/chromium-probe.mjs || {
-            timeout 420 pnpm exec playwright install-deps chromium
-            node scripts/ci/chromium-probe.mjs
-          }
-      - run: pnpm exec node tests/decision-browser.mjs
-      - run: pnpm exec node tests/executor-schema-browser.mjs
-      - name: Financial owner browser journeys
-        run: pnpm exec node tests/financial-browser.mjs
-        env:
-          CRANK_EVIDENCE: artifacts/decisions/financial
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        if: always()
-        with:
-          name: decision-browser-evidence
-          path: artifacts/decisions
-          if-no-files-found: ignore
-
   agent-journeys:
-    needs: plan
+    needs: [plan, build]
     if: needs.plan.outputs.skip != 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
-        journey: [invoice-outcome, drift, mcp-client, migration, authoring]
+        include:
+          # Last green test steps: decisions 250s + invoice-outcome 62s.
+          - group: decisions
+            journeys: invoice-outcome
+          # Last green test steps: 40s + 15s + 43s + 26s = 124s.
+          - group: agents
+            journeys: drift mcp-client migration authoring
     env:
       CI: 'true'
       WRANGLER_SEND_METRICS: 'false'
-      CRANK_EVIDENCE: artifacts/${{ matrix.journey }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -174,16 +178,39 @@ jobs:
             timeout 420 pnpm exec playwright install-deps chromium
             node scripts/ci/chromium-probe.mjs
           }
-      - name: Build installed browser journeys
-        if: ${{ matrix.journey == 'mcp-client' || matrix.journey == 'migration' }}
-        run: pnpm exec vite build
-      - name: Owner browser journey
-        run: pnpm exec node tests/${{ matrix.journey }}-browser.mjs
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: verify-build
+          path: dist
+      - name: Owner browser journeys
+        env:
+          JOURNEYS: ${{ matrix.journeys }}
+        run: |
+          failed=0
+          for journey in $JOURNEYS; do
+            CRANK_EVIDENCE="artifacts/$journey" pnpm exec node "tests/$journey-browser.mjs" || failed=1
+          done
+          exit "$failed"
+      - name: Owner decisions
+        if: ${{ !cancelled() && matrix.group == 'decisions' }}
+        env:
+          CRANK_EVIDENCE: artifacts/decisions
+        run: pnpm exec node tests/decision-browser.mjs
+      - name: Executor schema browser journey
+        if: ${{ !cancelled() && matrix.group == 'decisions' }}
+        env:
+          CRANK_EVIDENCE: artifacts/decisions
+        run: pnpm exec node tests/executor-schema-browser.mjs
+      - name: Financial owner browser journeys
+        if: ${{ !cancelled() && matrix.group == 'decisions' }}
+        env:
+          CRANK_EVIDENCE: artifacts/decisions/financial
+        run: pnpm exec node tests/financial-browser.mjs
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         with:
-          name: agent-browser-evidence-${{ matrix.journey }}
-          path: artifacts/${{ matrix.journey }}
+          name: agent-browser-evidence-${{ matrix.group }}
+          path: artifacts
           if-no-files-found: ignore
 
   linux-executor:
@@ -208,7 +235,7 @@ jobs:
       - run: sudo "$(command -v node)" tests/executor-linux.mjs
 
   verify:
-    needs: [plan, shards, decisions, agent-journeys, linux-executor]
+    needs: [plan, build, shards, agent-journeys, linux-executor]
     if: ${{ always() }}
     runs-on: ubuntu-24.04
     timeout-minutes: 1
