@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { gustoRetryJourney } from './gusto-retry-journey.mjs';
 import { gustoRenewalJourney } from './gusto-renewal-journey.mjs';
 import { harness } from './harness.mjs';
 import { gustoPaymentReconciliationJourney } from './gusto-payment-reconciliation.mjs';
@@ -13,6 +14,7 @@ async function sandboxPublish(h, name, graph) {
 }
 export async function gustoHandoffJourney({ inspect } = {}) {
   await gustoRenewalJourney();
+  await gustoRetryJourney();
   const fake = fakeEdge(), token = fakeSecret('synthetic-crank-1'), company = 'synthetic-crank-2';
   const workers = new Map(), workerKinds = new Map(), payments = new Map();
   let sequence = 10, failReadback = false;

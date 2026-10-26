@@ -42,6 +42,33 @@ export async function gustoAuthorityJourney({h,fake,bound,company,token,scopes,w
   assert.equal((await startRun(h,mismatched,{})).status,'paused');assert.equal(fake.requests.length,beforeSecond);
 
   const disclosure=async()=> (await h.get(`regulated-operations?connection_id=${bound.id}&company_id=${company}`)).operations.find(o=>o.operation==='contractor_1099_handoff');
+  const beforeGeneration=(await h.get('connections')).find(c=>c.id===bound.id),beforeAuthority=await disclosure();
+  await h.post(`connections/${bound.id}/purpose`,{purpose:beforeGeneration.purpose});
+  assert.deepEqual((await h.get('connections')).find(c=>c.id===bound.id),beforeGeneration,'the public same-purpose action changes no connection field');
+  const generationOnly=await disclosure();assert.equal(generationOnly.credential_authority_generation,beforeAuthority.credential_authority_generation+1);
+  assert.equal(generationOnly.authorized,false,'generation alone invalidates consent even when all connection fields are identical');
+  const beforeGenerationDispatch=fake.requests.length;
+  assert.equal((await startRun(h,workflow,{})).status,'paused');assert.equal(fake.requests.length,beforeGenerationDispatch);
+  await consent('contractor_1099_handoff');
+
+  // Real SQLite injects an authority audit at guarded transaction admission,
+  // after the handler constructed its snapshot and before its conditional INSERT.
+  // No SQL result or application implementation is substituted.
+  const reviewedAtAdmission=await disclosure(),priorAdmissionDecisions=(await h.get('audit')).filter(a=>a.action==='regulated_operation.consent').map(a=>a.id).sort();
+  assert.match(bound.id,/^[a-f0-9-]+$/);assert.match(audit.actor_id,/^[a-f0-9-]+$/);
+  await h.db.prepare(`CREATE TRIGGER synthetic_crank_consent_admission AFTER INSERT ON crank_authority_guards BEGIN
+    INSERT INTO crank_audit(id,at,actor_id,action,subject_kind,subject_id,version_id,detail_json)
+    VALUES ('synthetic-crank-snapshot-race','2026-10-25T00:00:00.000Z','${audit.actor_id}','connection.purpose','connection','${bound.id}',NULL,'{"purpose":"test"}'); END`).run();
+  try {
+    await h.post('regulated-operations/consent',{connection_id:bound.id,company_id:company,operation:'contractor_1099_handoff',consent:true,agreement_reference:'synthetic-crank-6',definition_digest:reviewedAtAdmission.operation_definition_digest,credential_authority_generation:reviewedAtAdmission.credential_authority_generation},h.owner,409);
+  } finally {await h.db.prepare('DROP TRIGGER synthetic_crank_consent_admission').run()}
+  const afterAdmission=await disclosure();assert.equal(afterAdmission.credential_authority_generation,reviewedAtAdmission.credential_authority_generation+1);
+  assert.equal(afterAdmission.authorized,false);
+  assert.deepEqual((await h.get('audit')).filter(a=>a.action==='regulated_operation.consent').map(a=>a.id).sort(),priorAdmissionDecisions,'the post-snapshot authority change commits no authorizing decision');
+  assert.ok((await h.get('audit')).some(a=>a.id==='synthetic-crank-snapshot-race'),'the real storage admission hook ran before the guarded consent INSERT');
+  const beforeAdmissionDispatch=fake.requests.length;
+  assert.equal((await startRun(h,workflow,{})).status,'paused');assert.equal(fake.requests.length,beforeAdmissionDispatch);
+  await consent('contractor_1099_handoff');
   const rotate=async(replacementScopes=scopes,replacementToken=token)=>h.post(`connections/${bound.id}/rotate`,{secret:{token:replacementToken},scopes:replacementScopes});
   const transitions=[
     {name:'withdrawal',change:()=>consent('contractor_1099_handoff',{consent:false})},

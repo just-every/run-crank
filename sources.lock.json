@@ -4342,11 +4342,11 @@
       "executable": false
     },
     "tests/gusto-authority-journey.mjs": {
-      "sha256": "006c7769690beaeeb3c9933a24956580857a2249496bd54cd0eee8116d20fa3d",
+      "sha256": "1174081dc68c763d516516ee838609e541cecbb1f7354673c377043931feebc5",
       "executable": false
     },
     "tests/gusto-handoff-journey.mjs": {
-      "sha256": "45bd08403fdff10e102a9c6da70c4ef97eace78b98d19b3670453ba13572b29d",
+      "sha256": "14c20bdc854f473c893a3f31e63d7e973a887b2dcbb3e5ef7053c9a2784f5488",
       "executable": false
     },
     "tests/gusto-payment-reconciliation.mjs": {
@@ -4359,6 +4359,10 @@
     },
     "tests/gusto-renewal-journey.mjs": {
       "sha256": "6839f97478483bd9c7ba9b5541563a7e5a27aff3d6891e57ce67a40cad441e40",
+      "executable": false
+    },
+    "tests/gusto-retry-journey.mjs": {
+      "sha256": "bd16a762522da8b00548c54033ff870e29d7d4b6ebb67831f4e33f759edb38f5",
       "executable": false
     },
     "tests/gusto-sandbox-fixture.mjs": {
