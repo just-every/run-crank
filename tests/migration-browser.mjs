@@ -34,7 +34,9 @@ try {
  const send=async(path,body,status=200)=>{const r=await context.request.fetch(origin+'/api/crank/'+path,{method:body===undefined?'GET':'POST',headers:{origin},...(body===undefined?{}:{data:body})});const v=await r.json();assert.equal(r.status(),status,path+': '+(v.error??'unexpected status'));return v};
  const importDoor=async(action,body)=>{const response=await context.request.post(origin+'/api/operator/import/'+action,{headers:{origin,'X-Import-Source':'n8n'},data:body});const value=await response.json();assert.equal(response.status(),200,action+': '+(value.error??'unexpected import status'));return value};
  const shot=async(width,state)=>{await page.screenshot({path:join(evidence,`${width}-${state}.png`),fullPage:true});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`${width} ${state} overflow`)};
- const {loopExport,streamLoopEnvelope,switchExport,dateExport,conversionExport,isolatedCodeChoice}=await import('./n8n-graph-fixture.mjs');
+ const {loopExport,streamLoopEnvelope,switchExport,dateExport,conversionExport,isolatedCodeChoice,graphExport}=await import('./n8n-graph-fixture.mjs');
+ const {transformStreamExport}=await import('./n8n-stream-journey.mjs');
+ const fresh=await send('connections',{app:'http',label:'Synthetic reviewed migration account',auth_kind:'bearer',domains:['receiver.example'],secret:{token:'synthetic-crank-600'}},201);
  const component=await send('subflows',{name:'Synthetic browser registry conversion',definition:{inputs:{address:'string'},outputs:{normalized:'string'},steps:[{id:'trim',fn:'text.trim',input:{value:'{{trigger.input.address}}'}}],result:{normalized:'{{steps.trim}}'}}},201);
  const executor=await send('connections',{app:'http',label:'Synthetic browser native executor',auth_kind:'bearer',domains:['executor.example'],secret:{token:fakeSecret('browser-migration-executor')}},201);
  const registryChoice={kind:'registry-subflow',reviewed:true,subflow_id:component.subflow_id,subflow_version:component.version,definition_digest:component.definition_digest,input:{address:'={{ $json.address }}'}};
@@ -79,6 +81,14 @@ try {
   for(const [workflow,choice,kind]of [[registrySource,registryChoice,'registry'],[codeSource,codeChoice,'code']]){const row=(await send('workflows')).find(row=>row.name===workflow.name);assert.ok(row,'resolved source must create its native draft');verifyConversion(await send('workflows/'+row.id),workflow,choice);await page.goto(origin+'/app/workflows/'+row.id+'?step=n1');await shot(width,'envelope-'+kind+'-native')}
   assert.equal(effects.length,0,'conversion review and inactive apply must make no receiver requests');
   await page.goto(origin+'/app/import');await page.locator('form[action="/app/import/undo"]').filter({has:page.locator('input[name="planId"][value="'+reviewed.planId+'"]')}).getByRole('button').click();await page.waitForURL('**/app/import');assert.equal((await send('workflows')).length,0,'exact unused conversion drafts must undo together');await shot(width,'envelope-undone');
+  const transformed=transformStreamExport(declared,'synthetic-crank-stream-'+width),bound=graphExport(declared,'synthetic-crank-bound-'+width);
+  bound.name='Synthetic freshly bound HTTP draft';bound.nodes=bound.nodes.slice(0,2).concat(bound.nodes[4]);bound.connections={n0:{main:[[{node:'n1',type:'main',index:0}]]},n1:{main:[[{node:'n4',type:'main',index:0}]]}};
+  bound.nodes[2].credentials={httpBearerAuth:{id:'synthetic-crank-source',name:'Source reference only'}};Object.assign(bound.nodes[2].parameters,{authentication:'genericCredentialType',genericAuthType:'httpBearerAuth'});
+  await upload([transformed,{workflow:bound,conversions:{n4:{kind:'http-connection',reviewed:true,connection_id:fresh.id}}}]);
+  assert.equal(await page.getByRole('button',{name:'Approve this plan',exact:true}).count(),1);await page.locator('.import-review details').evaluateAll(elements=>elements.forEach(element=>element.open=true));await shot(width,'stream-and-account-review');
+  const streamPlan=await reviewedPlan();await page.getByRole('button',{name:'Approve this plan',exact:true}).click();await page.waitForLoadState('networkidle');
+  for(const [source,kind]of [[transformed.workflow,'transformed-stream'],[bound,'fresh-account']]){const row=(await send('workflows')).find(row=>row.name===source.name);assert.ok(row);const detail=await send('workflows/'+row.id);assert.equal(detail.status,'draft');assert.equal(detail.versions.length,0);assert.equal(detail.hooks.length,0);await page.goto(origin+'/app/workflows/'+row.id);await shot(width,kind+'-inactive')}
+  await page.goto(origin+'/app/import');await page.locator('form[action="/app/import/undo"]').filter({has:page.locator('input[name="planId"][value="'+streamPlan.planId+'"]')}).getByRole('button').click();await page.waitForURL('**/app/import');assert.equal((await send('workflows')).length,0);await shot(width,'stream-and-account-undone');
   console.log(`MIG-001 ${width}: mapping coverage, safe cancellation, inactive apply, native draft, undo and shell tooltip passed`);
  }
 

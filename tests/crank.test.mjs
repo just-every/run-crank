@@ -1,3 +1,5 @@
+import {n8nBindingJourney} from './n8n-binding-journey.mjs';
+import {transformStreamJourney} from './n8n-stream-journey.mjs';
 import {n8nConditionsJourney} from './n8n-conditions-journey.mjs';
 import {batchLoopJourney} from './n8n-batch-journey.mjs';
 import {doneLoopJourney} from './n8n-loop-journey.mjs';
@@ -195,6 +197,10 @@ test('MIG-001 door refuses expressions and credential exports without echoing th
  await h.post(`flows/${flow.id}/activate`);await h.run(flow,'imported-event');
  const undone=await door(h,'undo',{planId:plan.planId});assert.ok(undone.status>=400 || undone.value.job?.state!=='undone',undone.text);assert.ok((await h.get()).flows.some(x=>x.id===flow.id),'a used import is never removed');
 });
+
+test('Native n8n stream transforms process the complete bounded stream before receiver writes', transformStreamJourney);
+
+test('Native n8n fresh account binding keeps source references inactive and enforces revocation', n8nBindingJourney);
 
 test('Native n8n condition operators preserve source types and short circuit receiver dispatch', n8nConditionsJourney);
 

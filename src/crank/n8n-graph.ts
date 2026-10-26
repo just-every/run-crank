@@ -3,10 +3,11 @@ import type { Json, MappingResult } from '../modules/import-kit/src/types.ts'
 import { requireZone } from './engine/dates'
 import { validateGraph } from './engine/graph'
 import type { Step } from './engine/types'
-import { validateImportTargetUrl, type ImportTargetEnv } from './import-target'
+import { type ImportTargetEnv } from './import-target'
 import { n8nTransform, n8nStreamNodeTypes } from './n8n-transforms'
 import { linearN8nNodes, itemStreamPipeline, reviewedStreamBounds, serialLoopRegions } from './n8n-loop'
 import { conversionDisposition, conversionStep, migrationEnvelope } from './n8n-conversions'
+import { n8nHttp, reviewedHttpBinding } from './n8n-http'
 import { compileN8nConditionSets } from './n8n-conditions'
 
 type Obj = Record<string, any>
@@ -29,7 +30,8 @@ export function n8nGraph(value: Json, sourceId: string, env: ImportTargetEnv, ow
   if(settings.timezone!==undefined)try{requireZone(settings.timezone)}catch{gap('settings.timezone','invalid workflow timezone')}
   const names = new Map<string,number>(), ids = new Set<string>()
   nodes.forEach((n,i)=>{ label(n.id); label(n.name); if(names.has(n.name)||ids.has(n.id)) gap('nodes.'+i,'duplicate identity'); names.set(n.name,i);ids.add(n.id)
-    if(n.credentials)for(const key of Object.keys(obj(n.credentials)))gap('nodes.'+i+'.credentials.'+key,'fresh native account binding required; source credential reference grants no authority')
+    const httpBinding=n.type==='n8n-nodes-base.httpRequest'&&conversions[n.id]?.kind==='http-connection'&&conversions[n.id]?.reviewed===true
+    if(n.credentials&&!httpBinding)for(const key of Object.keys(obj(n.credentials)))gap('nodes.'+i+'.credentials.'+key,'fresh native account binding required; source credential reference grants no authority')
     fields(n,['id','name','type','typeVersion','position','parameters','webhookId','credentials'],'nodes.'+i)
     if(!Array.isArray(n.position)||n.position.length!==2||n.position.some((x:any)=>typeof x!=='number'||!Number.isFinite(x))) gap('nodes.'+i+'.position','invalid layout')
   })
@@ -171,10 +173,11 @@ export function n8nGraph(value: Json, sourceId: string, env: ImportTargetEnv, ow
         case 'n8n-nodes-base.wait':
           fields(p,['resume','amount','unit'],at+'.parameters');if(n.typeVersion!==1.1||(p.resume??'timeInterval')!=='timeInterval'||!Number.isInteger(p.amount)||p.amount<0||!['seconds','minutes','hours','days'].includes(p.unit))throw Error('unsupported delay')
           Object.assign(step,{type:'delay',mode:'for',input:{amount:p.amount,unit:p.unit}});result.push(step as Step);break
-        case 'n8n-nodes-base.httpRequest':
-          fields(p,['method','url','authentication','sendBody','contentType','specifyBody','jsonBody','sendHeaders','sendQuery','options'],at+'.parameters')
-          if(![4,4.1,4.2,4.3].includes(n.typeVersion)||p.method!=='POST'||p.sendBody!==true||(p.authentication??'none')!=='none'||(p.contentType??'json')!=='json'||p.specifyBody!=='json'||(p.sendHeaders!==undefined&&p.sendHeaders!==false)||(p.sendQuery!==undefined&&p.sendQuery!==false)||Object.keys(obj(p.options??{})).length)throw Error('unsupported HTTP settings')
-          Object.assign(step,{type:'http',body_kind:'json',input:{method:'POST',url:{$literal:validateImportTargetUrl(env,p.url)},body:mapped(typeof p.jsonBody==='string'&&!p.jsonBody.startsWith('=')?JSON.parse(p.jsonBody):p.jsonBody,previous,at+'.parameters.jsonBody')}});previous='steps.'+id+'.body';result.push(step as Step);break
+        case 'n8n-nodes-base.httpRequest': {
+          result.push(n8nHttp(n,id,previous,at,env,conversions[n.id],fields,mapped));previous='steps.'+id+'.body'
+          if(reviewedHttpBinding(n,conversions[n.id])){dispositions.push(conversionDisposition(n,conversions[n.id],true));coverage.push({field:at+'.credentials',reason:'Supported explicit fresh native connection binding; original credential references confer no authority and live connection scope is rechecked on dispatch'})}
+          break
+        }
         case 'n8n-nodes-base.switch': {
           fields(p,['mode','rules','options'],at+'.parameters')
           const options=obj(p.options??{});fields(options,['fallbackOutput','allMatchingOutputs','looseTypeValidation','renameFallbackOutput'],at+'.parameters.options')
@@ -202,7 +205,7 @@ export function n8nGraph(value: Json, sourceId: string, env: ImportTargetEnv, ow
         default: gap(at,'node type '+String(n.type)+' has no committed mapping');fields(p,[],at+'.parameters')
       }
     }catch(error){gap(at,(error as Error).message);if(conversions[n.id]||['n8n-nodes-base.code','n8n-nodes-base.function','n8n-nodes-base.functionItem','n8n-nodes-base.executeWorkflow'].includes(n.type))dispositions.push(conversionDisposition(n,conversions[n.id],false))}
-    if(conversions[n.id]&&!['n8n-nodes-base.splitOut','n8n-nodes-base.code','n8n-nodes-base.function','n8n-nodes-base.functionItem','n8n-nodes-base.executeWorkflow'].includes(n.type))gap('conversions.'+n.id,'choice does not apply to this source node')
+    if(conversions[n.id]&&!['n8n-nodes-base.httpRequest','n8n-nodes-base.splitOut','n8n-nodes-base.code','n8n-nodes-base.function','n8n-nodes-base.functionItem','n8n-nodes-base.executeWorkflow'].includes(n.type))gap('conversions.'+n.id,'choice does not apply to this source node')
     if(out.length>1||out.some(b=>b.length>1))gap(at+'.connections','fan-out needs an explicit native branch')
     tails.set(index,previous)
     for(const branch of out)for(const next of branch){result.push(...compile(next,previous,depth+1,stop,stream));tails.set(index,tails.get(next)??previous)}
