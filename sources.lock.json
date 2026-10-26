@@ -138,7 +138,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "42fde40ab6857f274f3633290bba2f67a8f95a7ec17e95c777757df53055f020",
+      "sha256": "e4c5290126fb142f5f25d329d1588d5e640589b001f1923b8e7a604a92cb40ed",
       "executable": false
     },
     "AGENTS.md": {
@@ -162,7 +162,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "fe6db1d9b2e7f4b8fea614100294f050813a439765339ef05491ad962e59014b",
+      "sha256": "a9a51171f4f8289eade38a5e3414b1c83379507806da4fa5a3c098868981248d",
       "executable": false
     },
     "DEMO.md": {
@@ -726,7 +726,7 @@
       "executable": false
     },
     "evidence/sx-crank-c-i881/client-browser.log": {
-      "sha256": "5aceb26f4263f53be711fc9b486d3b06d24e514c88a636258937a3d194f19b05",
+      "sha256": "c5662b35520b7c9f56d1b0ce2b2883e91489a13eb30e829d69558724568758fd",
       "executable": false
     },
     "evidence/sx-crank-c-i881/mcp-slack-live.log": {
@@ -734,67 +734,75 @@
       "executable": false
     },
     "evidence/sx-crank-c-i881/mcp/1440-access.png": {
-      "sha256": "5aa5365804a77b00f34cc9e3732cf88c9cb718689d83532a033a5b4de172114f",
+      "sha256": "7ac8f3d115e7e53cd6d7f2c5529986e624dd458871c1c5ba4603f1d5670713e5",
       "executable": false
     },
     "evidence/sx-crank-c-i881/mcp/1440-calendar-readback.png": {
-      "sha256": "f0fb2afdf39dd6b63c48076add8f4873fa552bcddc25874533bdcca64bd46dd1",
+      "sha256": "a140e0b3a8ac8a4dabe2914f820b341c2aa68b00425b4b46891340ee915b2419",
       "executable": false
     },
     "evidence/sx-crank-c-i881/mcp/1440-client-approval.png": {
-      "sha256": "82777512105d6e0c70d3b368967df413ccfae8c46f93f44933971bfb5a7c9b8f",
+      "sha256": "3cb039c0c48301b6b120d1f4794ba777b3d9604c3b2a44001f09be037817b5f7",
       "executable": false
     },
     "evidence/sx-crank-c-i881/mcp/1440-client-created.png": {
-      "sha256": "7ce2deb02e4571d758fe6c9942cf64d144dca31963b0971f5f7b2cd68dc601d6",
+      "sha256": "a03157973f727bac22fd5e336fdd6222506b59a3294a457eea8013a63bdeb9f0",
       "executable": false
     },
     "evidence/sx-crank-c-i881/mcp/1440-client-history.png": {
-      "sha256": "cfa8863e88bfa113777d4bc8e403ccd77f604301ff6a8be85f29a1a6942bb107",
+      "sha256": "e43754a177426329c81d8e3d43536dd86a0749529224d7dc9ae3f54a24b0059b",
       "executable": false
     },
     "evidence/sx-crank-c-i881/mcp/1440-client-revoked.png": {
-      "sha256": "91874878fa92b6717b40df1b6ad91b927db6c99eeba31844549b61bb359a16da",
+      "sha256": "6ae3006a9d882705a827b24231e8c64bece9d2d215ceae9f6c2f1e3b5705580a",
       "executable": false
     },
     "evidence/sx-crank-c-i881/mcp/1440-client-servers.png": {
-      "sha256": "dd871edd9a4d1efbeece94be832f2f9b5589cd5e37609e007b5cb08b548990d8",
+      "sha256": "6e5596acd9646aed68549bb1bdfaaf2bf62032b216ccb49528807e038cdf0def",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i881/mcp/1440-refused-call-run.png": {
+      "sha256": "33867045763cc04f3e30a884904dbcfd314eee5e0530aa2c555c94064d5a9505",
       "executable": false
     },
     "evidence/sx-crank-c-i881/mcp/1440-review-client-tools.png": {
-      "sha256": "61db4e06bcbd2f9e84ba0603428c06c09e72d60c5c4c32c0878203459dd4b884",
+      "sha256": "5290920338b7f2d593831639e4cabe0732b5284d1af38ef9f80641c998112bfd",
       "executable": false
     },
     "evidence/sx-crank-c-i881/mcp/390-access.png": {
-      "sha256": "87a215877911102c9f4e8e7f0c2d3f4fc184dd696a87d54d47dcc1836e13e47d",
+      "sha256": "45483ab808d001e693f3b4c0c985736da2116f4c4f4639ee431c9af8b9aa61a5",
       "executable": false
     },
     "evidence/sx-crank-c-i881/mcp/390-calendar-readback.png": {
-      "sha256": "24be06cc492c96ed37a9d3d3ba5f08db1f74c381ef298c6b609ce5bb9821e1bb",
+      "sha256": "42a72a48470cd5eaf2cf9e00f272b3e2199b8c0c6bdf813f5836f866c59c3bbf",
       "executable": false
     },
     "evidence/sx-crank-c-i881/mcp/390-client-approval.png": {
-      "sha256": "a89a7feb8f62c546105ce5b3263eeeef7438e7b593d69d52515a388316b1a737",
+      "sha256": "c89a6c9c0c5273af5e493fda83497d9ea4e763d46f2de62937f1639b5352f27b",
       "executable": false
     },
     "evidence/sx-crank-c-i881/mcp/390-client-created.png": {
-      "sha256": "437b3ed9687f10aedf6114762017ac39f63aed5bdf4300fa109e474ebbbab3c3",
+      "sha256": "cbb3f9dee194c33847f8ba26cf274e8e33446660cabe3a4db80ce6195ac85434",
       "executable": false
     },
     "evidence/sx-crank-c-i881/mcp/390-client-history.png": {
-      "sha256": "fd254dc66f26afb356930fcdacbd8439c4e420d638fb3b21a13ee5b1f48e5c6c",
+      "sha256": "6d82765a925b64d3316f9ee6471c0572583019c65e795f439c5ab99214ddfacb",
       "executable": false
     },
     "evidence/sx-crank-c-i881/mcp/390-client-revoked.png": {
-      "sha256": "d7c2801ac54eed7bc7f03a930c4ac361c7ca82266eb0ea5e0a37f106404d1562",
+      "sha256": "65d9e4e8e6dab28e2783267cb361ebde29acab8624901b01c1744c914cdc2304",
       "executable": false
     },
     "evidence/sx-crank-c-i881/mcp/390-client-servers.png": {
-      "sha256": "4a14644d589a15df865c41848cda1a0ba12c47eb7c80fc8d1ace443b12239f22",
+      "sha256": "aa112df02c58147795261493392c1a2eff30a20924050641337b4b69ad4c3467",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i881/mcp/390-refused-call-run.png": {
+      "sha256": "d066d07d2068d067fcf940105d42fb9e501aca4b54b7926dc9eebabad3572ac0",
       "executable": false
     },
     "evidence/sx-crank-c-i881/mcp/390-review-client-tools.png": {
-      "sha256": "ef283850e845c1bebf29baf556a7f3b4f3cb56e89d7e3a3182d26eba63847063",
+      "sha256": "913899557cb332c825300d3d06dabb7f8b9c9fd89bb940eb28ddec6e5ed4a9fc",
       "executable": false
     },
     "evidence/sx-crank-c-i881/migration-browser.log": {
@@ -2538,7 +2546,7 @@
       "executable": false
     },
     "src/crank/mcp/clients.ts": {
-      "sha256": "53983a4b9eb0db3138af8ba2b3887954fbc3b38635a792e0706cc1a2062dfdcc",
+      "sha256": "ba50f04a9279cfbef7284a8ab0d2d1da7870cfaa2e50af5b5cf4aa979618f1e7",
       "executable": false
     },
     "src/crank/mcp/tools.ts": {
@@ -5282,7 +5290,7 @@
       "executable": false
     },
     "tests/mcp-client-journey.mjs": {
-      "sha256": "3d7ad38c81b5dcee8ec41ff78e6c8a8ea8c397238d4fe8e2689b2f9abcc8ccac",
+      "sha256": "cff2bce4fe0f3cb8357267255fd39665a65996e5f51643b311cfa133d6f09a7a",
       "executable": false
     },
     "tests/mcp-slack-live.mjs": {

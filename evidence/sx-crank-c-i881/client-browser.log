@@ -1,14 +1,12 @@
-QUEUED ticket=11901 job=20261026T121029165288Z-heavy-slot-5fa7f8f7
-ADMITTED slot=4 cap=7 load=17.33
-RESOLVED_SHA 5274e596ae0b6d3d599abe99f030c76e18002a81
+QUEUED ticket=11915 job=20261026T122838875696Z-heavy-slot-f28a5fa3
+ADMITTED slot=1 cap=7 load=9.88
+RESOLVED_SHA 7240f988392f19d213e1e93f3c3c7036ff5cf15a
 NODE v22.20.0; source=.node-version; TZ=UTC; provider credentials absent
 PACKAGE_MANAGER pnpm@10.12.4
 Lockfile is up to date, resolution step is skipped
 Progress: resolved 1, reused 0, downloaded 0, added 0
 Packages: +153
 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-Progress: resolved 153, reused 153, downloaded 0, added 30
-Progress: resolved 153, reused 153, downloaded 0, added 133
 Progress: resolved 153, reused 153, downloaded 0, added 153, done
 
 dependencies:
@@ -34,11 +32,10 @@ devDependencies:
 + vite 8.2.2
 + wrangler 4.129.1
 
-Done in 8.8s using pnpm v10.12.4
-PLAYWRIGHT_LOCK_WAIT 0s: shared browser install held by job 20261026T121028432845Z-heavy-slot-efcb2df6 (Playwright 1.63.0, installing for 0s)
+Done in 5.1s using pnpm v10.12.4
 PLAYWRIGHT_INSTALL 1.63.0 chromium under runner Node v22.20.0; stall limit 300s without growth
 COMMAND_START nice=10
-(node:288) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(node:40668) ExperimentalWarning: SQLite is an experimental feature and might change at any time
 (Use `node --trace-warnings ...` to show where the warning was created)
 [36mvite v8.2.2 [32mbuilding client environment for production...[36m[39m
 transforming...
@@ -48,31 +45,27 @@ computing gzip size...
 dist/client/.assetsignore               0.02 kB
 dist/client/assets/index-DgoNPDnv.js  311.20 kB │ gzip: 100.86 kB
 
-[32m✓ built in 422ms[39m
+[32m✓ built in 304ms[39m
 [36mvite v8.2.2 [32mbuilding ssr environment for production...[36m[39m
 transforming...
-✓ 843 modules transformed.
+✓ 844 modules transformed.
 rendering chunks...
 computing gzip size...
 dist/server/wrangler.json                                      1.61 kB │ gzip:   0.82 kB
 dist/server/.vite/manifest.json                                2.77 kB │ gzip:   0.60 kB
 dist/server/assets/empty-plugin-adapters-D_0twvAa.js           0.28 kB │ gzip:   0.18 kB
 dist/server/assets/start-D8qDT34V.js                           0.28 kB │ gzip:   0.21 kB
-dist/server/assets/_tanstack-start-manifest_v-DKfcfOW6.js      0.40 kB │ gzip:   0.30 kB
+dist/server/assets/_tanstack-start-manifest_v-DIR5gaRm.js      0.40 kB │ gzip:   0.30 kB
 dist/server/assets/font-head-HgDHZCdz.js                       0.44 kB │ gzip:   0.30 kB
 dist/server/assets/hash-DvqvOXoR.js                            6.07 kB │ gzip:   2.70 kB
 dist/server/assets/router-DJfqgF3-.js                         37.24 kB │ gzip:  10.08 kB
 dist/server/assets/Match-D6OH8U6i.js                         161.09 kB │ gzip:  40.31 kB
 dist/server/assets/access-BuzyG1_h.js                        921.34 kB │ gzip: 238.16 kB
-dist/server/index.js                                       2,372.41 kB │ gzip: 586.78 kB
+dist/server/index.js                                       2,374.17 kB │ gzip: 587.12 kB
 
 [33m[33m[INEFFECTIVE_DYNAMIC_IMPORT] [0msrc/crank/connections/catalog.ts is dynamically imported by src/crank/workflows/snapshot.ts but also statically imported by src/crank/ops/coverage.ts, src/crank/workflows/api.ts, dynamic import will not move module into another chunk.
 [39m
-[32m✓ built in 893ms[39m
+[32m✓ built in 467ms[39m
 PLATFORM-002 1440: owner issuance, selected typed tools, approval, verified Calendar edge, refusal, call history, revocation and shell tooltips passed
 PLATFORM-002 390: owner issuance, selected typed tools, approval, verified Calendar edge, refusal, call history, revocation and shell tooltips passed
-MIG-001 1440: mapping coverage, safe cancellation, inactive apply, native draft, undo and shell tooltip passed
-MIG-001 390: mapping coverage, safe cancellation, inactive apply, native draft, undo and shell tooltip passed
-MIG-001 1440 and 390: reviewed done-output conversion, inactive native draft, ordered actual receiver effects and retained checkpoints passed
-MIG-001 1440 and 390: retained conversion envelopes, owner-reviewed registry and code provenance, inactive native drafts, exact unused undo and native drift refusal passed
-RESULT exit=0 wall_seconds=68.933 command_seconds=52.68 retained=False
+RESULT exit=0 wall_seconds=29.533 command_seconds=18.751 retained=False

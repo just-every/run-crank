@@ -12,7 +12,7 @@ const present = (env: CrankEnv, row: ClientRow) => ({...row,tools:JSON.parse(row
 
 export async function readClients(env: CrankEnv, actor: Actor) {
   requireOwner(actor)
-  const rows = await stmt(env,`SELECT c.id,c.label,c.grant_id,c.owner_id,c.tools_json,c.created_at,c.revoked_at,g.expires_at FROM crank_mcp_clients c JOIN crank_grants g ON g.id=c.grant_id WHERE c.owner_id=? ORDER BY c.created_at DESC,c.id`,actor.id).all<ClientRow>()
+  const rows = await stmt(env,`SELECT c.id,c.label,c.grant_id,c.owner_id,c.tools_json,c.created_at,COALESCE(c.revoked_at,g.revoked_at) AS revoked_at,g.expires_at FROM crank_mcp_clients c JOIN crank_grants g ON g.id=c.grant_id WHERE c.owner_id=? ORDER BY c.created_at DESC,c.id`,actor.id).all<ClientRow>()
   return rows.results.map(row => present(env,row))
 }
 

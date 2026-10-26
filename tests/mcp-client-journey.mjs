@@ -97,7 +97,7 @@ export async function mcpClientJourney({inspect}={}) {
   const allowed=burst.find(r=>r.status===200).value.result.structuredContent.run;
   assert.ok(['succeeded','awaiting_approval'].includes(allowed.status));assert.equal(messages.length-beforeRate,allowed.status==='succeeded'?1:0);
   assert.ok((await h.get('mcp-clients/'+limited.id+'/calls')).some(c=>c.status==='refused'&&c.reason==='Rate exceeds the client grant'));
-  await h.post('mcp-clients/'+limited.id+'/revoke');
+  await h.post('grants/'+limited.grant_id+'/revoke');assert.ok((await h.get('mcp-clients')).find(c=>c.id===limited.id).revoked_at);
   const before=fake.requests.length;await h.post('mcp-clients/'+client.id+'/revoke');const denied=await call('send_channel_message',{channel:f.slackChannel,text:'synthetic-crank-15'});assert.equal(denied.status,401);assert.equal(fake.requests.length,before);
   await h.post('workflows/'+f.workflow.id+'/pause');await h.post('data/erase',{workflow_run_id:refusedRun.id,confirm:'ERASE'});
   await h.get('workflow-runs/'+refusedRun.id,h.owner,404);assert.ok((await h.get('mcp-clients/'+client.id+'/calls')).some(c=>c.id===refusedRecord.id&&c.status==='refused'));
