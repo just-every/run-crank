@@ -52,6 +52,20 @@ function test(condition: N8nCondition, input: unknown, set: N8nConditionSet): bo
       case 'lte': return a <= b
     }
   }
+  if(type==='dateTime') {
+    if(operation==='empty')return !exists
+    if(operation==='notEmpty')return exists
+    if(left===null||left===undefined||right===null||right===undefined)return false
+    const a=left as number,b=right as number
+    switch(operation) {
+      case 'equals':return a===b
+      case 'notEquals':return a!==b
+      case 'after':return a>b
+      case 'before':return a<b
+      case 'afterOrEquals':return a>=b
+      case 'beforeOrEquals':return a<=b
+    }
+  }
   if (type === 'boolean') {
     switch (operation) {
       case 'empty': return !exists

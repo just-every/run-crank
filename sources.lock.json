@@ -214,7 +214,7 @@
       "executable": false
     },
     "docs/IMPORTING.md": {
-      "sha256": "cc5e075c3d7a63480e7ba8077e36a315f13ea5e5ee3d7a60c1df2b05c0d0de7e",
+      "sha256": "a31ea91eb585acda83bf236373bc2264c7c379808630327ad361367f2557a559",
       "executable": false
     },
     "docs/OPERATIONS.md": {
@@ -2554,11 +2554,15 @@
       "executable": false
     },
     "src/crank/engine/transforms/n8n-condition-values.ts": {
-      "sha256": "15a173ddcec9b0025ba7062b17416bdc88a42d1a272a33cb8b146472a69915b7",
+      "sha256": "43a1098dbca7976235be5e8f3c6c0f91f3df3a06b948954341b91530708f92a8",
       "executable": false
     },
     "src/crank/engine/transforms/n8n-conditions.ts": {
-      "sha256": "44b34038735d1eb5f3d3cc6a29bd55e4d8cdf683760cbf5a553bd309703e6666",
+      "sha256": "0074ee41ea6749ad6bdd673197bce52f3f4511baff631403cf71f361bc924c83",
+      "executable": false
+    },
+    "src/crank/engine/transforms/n8n-date-value.ts": {
+      "sha256": "d9819fcac99e2b6e906ae651b48a116a629843b33cec68c67171e0bda3145841",
       "executable": false
     },
     "src/crank/engine/transforms/n8n-filter-stream.ts": {
@@ -2706,7 +2710,7 @@
       "executable": false
     },
     "src/crank/n8n-conditions.ts": {
-      "sha256": "8c5a5c458d9e6cb4c8168514e26f6c0bf08aabca6853c75b592056537d1b4d4d",
+      "sha256": "6233fba39be391627c5dce722fa38602a9fa9e4ec53dff9c02a7d1cd03e61379",
       "executable": false
     },
     "src/crank/n8n-conversions.ts": {
@@ -5490,7 +5494,7 @@
       "executable": false
     },
     "tests/n8n-conditions-journey.mjs": {
-      "sha256": "4da6c879e5d83d60ad0aad191403d08e6c1cbdb4af82fe43f314b195863d45cf",
+      "sha256": "84dcb2f87a4847d64d32470f3aafac969b4d217d369a3f3cb667aa3874bc3618",
       "executable": false
     },
     "tests/n8n-conversion-journey.mjs": {

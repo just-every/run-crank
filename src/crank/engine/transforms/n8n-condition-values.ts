@@ -1,4 +1,5 @@
 import { StepError } from '../errors'
+import { n8nDateValue } from './n8n-date-value'
 
 const mismatch = (): never => { throw new StepError('type_mismatch', 'Condition operand cannot be converted to its declared type') }
 
@@ -6,6 +7,7 @@ const mismatch = (): never => { throw new StepError('type_mismatch', 'Condition 
  * values and any-typed operands pass through before all conversion rules. */
 export function normalizeN8nConditionValue(value: unknown, type: string, strict = false, version = 1): unknown {
   if (type === 'any' || value === null || value === undefined) return value
+  if(type==='dateTime')return n8nDateValue(value)
   if (type === 'boolean' && !strict) {
     if (version >= 2) {
       try {

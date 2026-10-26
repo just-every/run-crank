@@ -263,7 +263,11 @@ source null handling and whitespace. AND and OR groups short circuit, as do excl
 Switch outputs. Case handling follows the source condition version, including the
 version 4 regular-expression flag behavior. Loose conversion is supported for numbers, text, booleans and arrays, including
 source-version boolean truthiness and version 3 empty-number handling. Loose object
-syntax and DateTime condition parsing remain explicit manual conversions.
+syntax remains an explicit manual conversion. DateTime conditions accept ISO
+timestamps with an explicit UTC or numeric offset and compare absolute instants.
+Missing or null timestamps preserve source empty and comparison behavior; malformed
+or local timestamps fail before dispatch. Local-date inference, non-ISO source
+formats and source DateTime runtime objects need an explicit manual conversion.
 
 Date & Time version 2 maps `operation: "formatDate"` with replacement output,
 `options.timezone: true`, and an explicit IANA `settings.timezone`. Supported

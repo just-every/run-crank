@@ -38,6 +38,16 @@ export async function n8nConditionsJourney() {
    {rule:condition('array','contains',undefined,'synthetic-crank-302',{rightType:'any'}),value:"['synthetic-crank-302']",pass:true,loose:true},
    {rule:condition('array','empty'),value:'synthetic-crank-invalid',failure:true,loose:true},
    {rule:condition('string','equals',undefined,'={{ $json.body.expected }}'),value:'harbour',expected:'HARBOUR',pass:true},
+   {rule:condition('dateTime','equals',undefined,'2026-10-27T00:00:00+10:00'),value:'2026-10-26T14:00:00Z',pass:true},
+   {rule:condition('dateTime','after',undefined,'2026-10-26T14:00:00Z'),value:'2026-10-26T14:00:00.001Z',pass:true},
+   {rule:condition('dateTime','before',undefined,'1970-01-01T00:00:00Z'),value:'1969-12-31T23:59:59.999Z',pass:true},
+   {rule:condition('dateTime','afterOrEquals',undefined,'1970-01-01T00:00:00Z'),value:'1970-01-01T00:00:00Z',pass:true},
+   {rule:condition('dateTime','beforeOrEquals',undefined,'1970-01-01T00:00:00Z'),value:'1970-01-01T00:00:00Z',pass:true},
+   {rule:condition('dateTime','notEquals',undefined,'2026-10-26T14:00:00Z'),value:null,pass:false},
+   {rule:condition('dateTime','empty'),value:null,pass:true},
+   {rule:condition('dateTime','notEmpty'),value:'1970-01-01T00:00:00Z',pass:true},
+   {rule:condition('dateTime','after',undefined,'1970-01-01T00:00:00Z'),value:'2026-02-30T00:00:00Z',failure:true},
+   {rule:condition('dateTime','after',undefined,'1970-01-01T00:00:00Z'),value:'2026-10-27T10:00:00',failure:true},
   ];
   const sources=tests.map((item,index)=>{
    const source=graphExport(target,'synthetic-crank-'+(310+index));source.name='Synthetic condition '+index;
@@ -62,7 +72,7 @@ export async function n8nConditionsJourney() {
    const selected=value===null?NaN:Number(value),valid=Number.isInteger(selected)&&selected>=0&&selected<3;
    cases.push({source,body:{index:value},status:valid?'succeeded':'failed',writes:valid?1:0,expression:true,...(valid?{path:'/case'+selected}:{})});
   }
-  for(const change of [source=>{source.nodes[1].parameters.conditions.options.typeValidation='loose';source.nodes[1].parameters.conditions.conditions[0].operator.type='object'},source=>source.nodes[1].parameters.conditions.conditions[0].operator.type='dateTime',source=>source.nodes[1].parameters.conditions.options.unknown=true]){
+  for(const change of [source=>{source.nodes[1].parameters.conditions.options.typeValidation='loose';source.nodes[1].parameters.conditions.conditions[0].operator.type='object'},source=>source.nodes[1].parameters.conditions.conditions[0].operator.type='dateTime',source=>source.nodes[1].parameters.conditions.options.unknown=true,source=>source.nodes[1].parameters.conditions.conditions[0]=condition('dateTime','after','2026-10-27T10:00:00','1970-01-01T00:00:00Z')]){
    const source=structuredClone(sources[0]);source.id='synthetic-crank-'+crypto.randomUUID();change(source);const result=await doorPlan(h,JSON.stringify(source));assert.equal(result.status,200,result.text);assert.equal(result.value.rejected.length,1,'unknown or inexact source semantics must refuse review');assert.ok(result.value.diagnostics.some(row=>row.message?.includes('Manual conversion')));await door(h,'undo',{planId:result.value.planId});
   }
   for(let offset=0;offset<cases.length;offset+=20){
