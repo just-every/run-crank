@@ -158,12 +158,26 @@ Split Out version 1 supports one simple array field, `include: "noOtherFields"`,
 and an explicit `options.destinationFieldName` equal to that field. Naming the
 destination preserves object items under the field instead of flattening them.
 It must connect directly to Split In Batches version 3 with `batchSize: 1`, empty
-options, an unused done output (output 0), and one loop-body destination on
-output 1. The linear body may contain Set, JSON HTTP and embedded subflow calls,
+options, and one loop-body destination on output 1. The linear body may contain Set, JSON HTTP and embedded subflow calls,
 and must return to the batch node. Native execution processes at most 1000 items
 in input order, allows an empty array and stops on the first failed item.
 Malformed or oversized arrays fail before any body request. Reset, larger
-batches, done-output work and other topologies require manual conversion.
+batches and other loop topologies require manual conversion.
+
+Done output 0 can lead to a distinct linear Set, JSON HTTP or supported embedded
+pure-subflow chain. Its loop body ends with one JSON HTTP node; an intermediate
+HTTP node that can change item cardinality needs a general item-stream conversion
+and receives a named manual disposition. Completion consumes the body responses
+in order, expands returned JSON object arrays and preserves duplicate items.
+Every completion node finishes its incoming item list before the next node starts.
+An empty input or empty returned body stream produces no completion requests;
+an empty back edge also stops remaining body iterations, while retaining earlier
+successful checkpoints. Completion replay preserves those checkpoints and their
+operation identities. Binary response conversion remains manual work. These
+semantics follow the source's [batch node](https://github.com/n8n-io/n8n/blob/master/packages/nodes-base/nodes/SplitInBatches/v3/SplitInBatchesV3.node.ts)
+and [HTTP node](https://github.com/n8n-io/n8n/blob/master/packages/nodes-base/nodes/HttpRequest/V3/HttpRequestV3.node.ts).
+`tests/n8n-loop-journey.mjs` (`doneLoopJourney`) exercises the reviewed import,
+ordered actual receiver effects, empty streams, failures, restart and replay.
 
 Execute Workflow versions 1 through 1.3 support `source: "parameter"`, a literal
 `workflowJson`, `mode: "once"` and synchronous completion. Its snapshot needs

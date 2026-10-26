@@ -27,7 +27,8 @@ export async function doneLoopJourney(declared) {
    assert.equal((await door(completion,'undo',{planId:plan.value.planId})).value.job.state,'undone');
    await doorImport(completion,JSON.stringify(source));const [imported]=await completion.get('workflows');
    await completion.post('workflows/'+imported.id+'/publish',{},completion.owner,201);const hook=await completion.post('workflows/'+imported.id+'/hooks',{},completion.owner,201);
-   const send=async messages=>{await deliver(completion,hook.url,{method:'POST',headers:{'content-type':'application'+'/'+'json'},body:JSON.stringify({messages})});return settled(completion,(await completion.get('workflow-runs?workflow='+imported.id)).runs[0].id)};
+   let event=80;
+   const send=async messages=>{await deliver(completion,hook.url,{method:'POST',headers:{'content-type':'application'+'/'+'json','x-event-id':'synthetic-crank-'+event++},body:JSON.stringify({messages})});return settled(completion,(await completion.get('workflow-runs?workflow='+imported.id)).runs[0].id)};
    for(const scenario of [{mode:'object',messages:['synthetic-crank-40','synthetic-crank-41']},{mode:'array',messages:['synthetic-crank-40','synthetic-crank-40']},{mode:'object',messages:[]}]){
     completed.length=0;completionMode=scenario.mode;const run=await send(scenario.messages);assert.equal(run.status,'succeeded',JSON.stringify(run.error));
     const processed=scenario.messages.flatMap(message=>scenario.mode==='array'?[{processed:message,part:1},{processed:message,part:2}]:[{processed:message,part:0}]);

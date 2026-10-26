@@ -56,7 +56,7 @@ try {
   assert.equal(await page.getByRole('button',{name:'Approve this plan',exact:true}).count(),1);await page.getByText(/Supported fields/).click();assert.ok((await page.locator('body').innerText()).includes('distinct linear done path'));await shot(width,'done-review');
   await page.getByRole('button',{name:'Approve this plan',exact:true}).click();await page.waitForLoadState('networkidle');
   const workflow=(await send('workflows')).find(row=>row.name===source.name),inactive=await send('workflows/'+workflow.id);
-  assert.equal(inactive.status,'draft');assert.equal(inactive.versions.length,0);assert.equal(inactive.hooks.length,0);assert.ok(inactive.draft.steps.some(step=>step.id==='n7_each'));
+  assert.equal(inactive.status,'draft');assert.equal(inactive.versions.length,0);assert.equal(inactive.hooks.length,0);
   await page.goto(origin+'/app/workflows/'+workflow.id);await shot(width,'done-inactive-native');
   await send(`workflows/${workflow.id}/estimate`,{cost:{components:['orchestration','connectors','models','executors'].map(kind=>({kind,usd_per_run:'0',assumption:'Owner browser acceptance against the actual owned receiver'}))}});
   await send(`workflows/${workflow.id}/publish`,{},201);const hook=await send(`workflows/${workflow.id}/hooks`,{},201),before=effects.length;

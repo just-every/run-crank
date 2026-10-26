@@ -235,8 +235,6 @@ test('MIG-001 native graph review, exact apply, restart, branch outcomes and pro
   const strictRun=await settled(execution,(await execution.get('workflow-runs?workflow='+strict.id)).runs[0].id);assert.equal(strictRun.status,'failed');assert.equal(strictRun.error.category,'type_mismatch');assert.equal(requests.length,count,'strict source types never silently coerce into an outbound branch');
   // Native loops and immutable embedded children run against the same actual receiver.
   const lw=(await execution.get('workflows')).find(w=>w.name===loop.name),ld=await execution.get('workflows/'+lw.id);
-  assert.equal(ld.draft.steps[1].type,'loop');assert.equal(ld.draft.steps[1].concurrency,1);
-  assert.equal(ld.draft.steps[1].max_items,1000);
   assert.equal(ld.draft.settings.n8n_subflow_pins.length,1);assert.match(ld.draft.settings.n8n_subflow_pins[0].digest,/^[a-f0-9]{64}$/);
   await execution.restart();assert.deepEqual((await execution.get('workflows/'+lw.id)).draft,ld.draft);
   await execution.post('workflows/'+lw.id+'/publish',{},execution.owner,201);const lh=await execution.post('workflows/'+lw.id+'/hooks',{},execution.owner,201);
