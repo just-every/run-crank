@@ -12,7 +12,7 @@ const refuse = (): never => { throw Error('N8N_CODE_RUNTIME_API_REQUIRES_NATIVE_
 /** Conservative source review; the isolated executor remains the security boundary.
  * Tokens in comments and strings also cause refusal rather than hiding runtime access. */
 function inspect(source: string, each: boolean) {
-  if (/\b(?:import|export|require|process|global|globalThis|window|self|module|exports|eval|Function|AsyncFunction|WebAssembly|fetch|XMLHttpRequest|WebSocket|EventSource|Request|Response|navigator|Deno|Bun|Buffer|console|helpers|getNodeParameter|getWorkflowStaticData|getBinaryData|setBinaryData|getBinaryDataAsync|setBinaryDataAsync|DateTime|luxon|jmespath|this|constructor|__proto__|prototype)\b/.test(source)) refuse()
+  if (/\b(?:import|export|require|process|global|globalThis|window|self|module|exports|eval|Function|AsyncFunction|WebAssembly|fetch|XMLHttpRequest|WebSocket|EventSource|Request|Response|navigator|Deno|Bun|Buffer|console|helpers|getNodeParameter|getWorkflowStaticData|getBinaryData|setBinaryData|getBinaryDataAsync|setBinaryDataAsync|DateTime|luxon|jmespath|binary|pairedItem|pairedItemMatching|this|constructor|__proto__|prototype)\b/.test(source)) refuse()
   if (/\\u(?:[\da-fA-F]{4}|\{[\da-fA-F]+\})/.test(source)) refuse()
   for (const match of source.matchAll(/\$(?:[A-Za-z_$][\w$]*)?/g)) {
     if (match[0] === '$' && source[match.index! + 1] === '{') continue

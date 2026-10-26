@@ -11,7 +11,7 @@ export async function originalCodeJourney() {
  const h=await harness(target,{edge:async request=>{if(new URL(request.url).hostname==='executor.example')return executor.edge(request);if(new URL(request.url).origin===target){writes.push(await request.json());return Response.json({received:true})}return undefined}});
  try {
   const account=await connection(h,{app:'http',label:'Synthetic reviewed original-code sandbox',auth_kind:'bearer',domains:['executor.example'],secret:{token:executor.token}}),choice=originalCodeChoice(account.id);
-  for(const source of ['return process.env;','return $node.other.json;','return $input["all"]();','return $input.all(1);']){
+  for(const source of ['return process.env;','return $node.other.json;','return $input["all"]();','return $input.all(1);','return $input.item.binary;','return $input.item.pairedItem;']){
    const workflow=originalCodeExport();workflow.nodes[1].parameters.jsCode=source;const plan=await doorPlan(h,JSON.stringify({workflow,conversions:{n1:choice}}));assert.equal(plan.status,200,plan.text);assert.equal(plan.value.rejected.length,1);await door(h,'undo',{planId:plan.value.planId});
   }
   const sources=['runOnceForAllItems','runOnceForEachItem'].map((mode,index)=>originalCodeExport(mode,'synthetic-crank-'+(700+index),target));
