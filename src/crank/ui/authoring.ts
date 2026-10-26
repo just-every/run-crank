@@ -21,7 +21,7 @@ const begin = (path: string, back: string) => `<form method="post" action="/app/
 const errorNotice = (error?: string) => error ? `<p class="notice" role="alert">${esc(error)}</p>` : ''
 const connectionName = (c: Connection) => `${c.label}${c.account_name ? ' · ' + c.account_name : ''}`
 const options = (connections: Connection[], selected?: string) => connections.map(c => `<option value="${esc(c.id)}"${selected === c.id ? ' selected' : ''}>${esc(connectionName(c))} · ${esc(c.purpose)}</option>`).join('')
-const inspection = (label: string, value: unknown) => `<label>${esc(label)}<textarea rows="6" readonly spellcheck="false">${json(value)}</textarea></label>`
+const inspection = (label: string, value: unknown) => `<label>${esc(label)}<textarea rows="6" aria-label="${esc(label)}" readonly spellcheck="false">${json(value)}</textarea></label>`
 
 export function authoringCreateView(connections: Connection[], values: Values = {}, error?: string) {
   const crm = connections.filter(c => ['http', 'hubspot'].includes(c.app) && c.status === 'active')
@@ -30,7 +30,7 @@ export function authoringCreateView(connections: Connection[], values: Values = 
   return `<p class="back-link"><a href="/app/skills">← Skills</a></p>${errorNotice(error)}
     <section class="panel"><h2>Describe the business result</h2>
     ${begin('/api/crank/authoring', '/app/authoring')}
-    <label>What should happen?<textarea name="prompt" required rows="5" maxlength="20000" placeholder="For US leads, prepare a USD invoice in QuickBooks after checking the lead's country.">${esc(values.prompt ?? '')}</textarea></label>
+    <label>What should happen?<textarea name="prompt" aria-label="What should happen?" required rows="5" maxlength="20000" placeholder="For US leads, prepare a USD invoice in QuickBooks after checking the lead's country.">${esc(values.prompt ?? '')}</textarea></label>
     <p class="form-help">Crank creates an editable draft using the configured model. Review its questions, mappings, samples, scope and costs before testing and promotion.</p>
     <div class="grid"><label>CRM connection<select name="crm_connection_id" aria-label="CRM connection" required><option value="">Choose an authorized CRM account</option>${options(crm, values.crm_connection_id)}</select></label>
     <label>QuickBooks connection<select name="quickbooks_connection_id" aria-label="QuickBooks connection" required><option value="">Choose an authorized QuickBooks account</option>${options(books, values.quickbooks_connection_id)}</select></label></div>
@@ -38,7 +38,7 @@ export function authoringCreateView(connections: Connection[], values: Values = 
     <p>Choose invoice boundaries; unresolved business choices appear in the draft.</p>
     ${field('lead_url', 'Authorized lead source URL', 'url')}
     <div class="grid">${field('realm_id', 'QuickBooks company ID')}${field('customer_id', 'QuickBooks customer ID')}${field('item_id', 'QuickBooks item ID')}${field('amount_usd', 'Invoice amount (USD)')}</div>
-    <label>Sample inputs (JSON array)<textarea name="samples" rows="6" spellcheck="false">${esc(values.samples ?? '[]')}</textarea></label></details>
+    <label>Sample inputs (JSON array)<textarea name="samples" aria-label="Sample inputs (JSON array)" rows="6" spellcheck="false">${esc(values.samples ?? '[]')}</textarea></label></details>
     <button class="btn btn-primary"${crm.length && books.length ? '' : ' disabled'}>Generate draft</button>
     <p class="form-help">Authoring grants no new access and sends no production invoice. Sandbox tests require explicitly selected test accounts.</p></form>
     ${crm.length && books.length ? '' : '<p class="notice">An active CRM connection and QuickBooks connection are required. <a href="/app/connections">Inspect connections</a>.</p>'}</section>`
@@ -80,9 +80,9 @@ export function authoringView(data: AuthoringDetail, connections: Connection[], 
     <section class="panel"><h2>Graph, mappings and test samples</h2>
     <ol class="list">${data.graph.steps.map((step: any) => `<li><strong>${esc(step.name ?? step.id)}</strong><p><code>${esc(step.type)}</code>${step.connection_id ? ' · ' + esc(connections.find(c => c.id === step.connection_id)?.label ?? step.connection_id) : ''}</p></li>`).join('')}</ol>
     ${begin(path + '/revise', back)}
-    <label>Workflow graph (JSON)<textarea name="graph" rows="18" required spellcheck="false">${values.graph !== undefined ? esc(values.graph) : json(data.graph)}</textarea></label>
-    <label>Sample inputs (JSON array)<textarea name="samples" rows="8" required spellcheck="false">${values.samples !== undefined ? esc(values.samples) : json(data.samples)}</textarea></label>
-    <h3>Business questions</h3>${data.questions.map(q => `<label>${esc(q.question)}<textarea name="answer_${esc(q.id)}" rows="2" maxlength="5000">${esc(values['answer_' + q.id] ?? q.answer ?? '')}</textarea></label>`).join('') || '<p>No unresolved business questions were proposed.</p>'}
+    <label>Workflow graph (JSON)<textarea name="graph" aria-label="Workflow graph (JSON)" rows="18" required spellcheck="false">${values.graph !== undefined ? esc(values.graph) : json(data.graph)}</textarea></label>
+    <label>Sample inputs (JSON array)<textarea name="samples" aria-label="Sample inputs (JSON array)" rows="8" required spellcheck="false">${values.samples !== undefined ? esc(values.samples) : json(data.samples)}</textarea></label>
+    <h3>Business questions</h3>${data.questions.map(q => `<label>${esc(q.question)}<textarea name="answer_${esc(q.id)}" aria-label="${esc(q.question)}" rows="2" maxlength="5000">${esc(values['answer_' + q.id] ?? q.answer ?? '')}</textarea></label>`).join('') || '<p>No unresolved business questions were proposed.</p>'}
     <p class="form-help">Blank answers stay unresolved. Saving edits invalidates previous tests; scope widening is refused.</p>
     <button class="btn btn-primary">Save draft changes</button></form></section>
     <section class="panel"><h2>Sandbox test</h2><p>Tests run the saved graph and samples against explicitly bound test accounts. Save edits before testing.</p>
