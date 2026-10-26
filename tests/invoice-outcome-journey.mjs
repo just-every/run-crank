@@ -31,7 +31,7 @@ export async function invoiceOutcomeJourney({inspect,modeOnly}={}) {
   if(method==='GET')return jsonResponse({QueryResponse:{Invoice:record?[record]:[]}});
   posts++;const input=JSON.parse(body),key=url.searchParams.get('requestid');assert.ok(key);
   if(input.sparse){assert.equal(input.Id,record.Id);assert.equal(input.SyncToken,record.SyncToken);record={...record,...input,SyncToken:'1',TotalAmt:19.99};effects++;return jsonResponse({Invoice:record})}
-  if(repair){if(!seenKeys.has(key)){record={...input,Id:'synthetic-crank-54',SyncToken:'0',TotalAmt:19.99};seenKeys.set(key,record);effects++}return jsonResponse({Invoice:seenKeys.get(key)})}
+  if(repair){if(!seenKeys.has(key)){record={...input,Id:'synthetic-crank-54',SyncToken:'0',TotalAmt:19.99};seenKeys.set(key,record);effects++}if(mode==='uncertain')throw new Error('synthetic-crank-connection-closed');return jsonResponse({Invoice:seenKeys.get(key)})}
   const acknowledgement={...input,Id:'synthetic-crank-54',SyncToken:'0',TotalAmt:19.99};
   if(mode==='wrong'){record={...acknowledgement,CustomerRef:{value:'synthetic-crank-55'}};seenKeys.set(key,record);effects++}
   return jsonResponse({Invoice:acknowledgement});
@@ -40,11 +40,11 @@ export async function invoiceOutcomeJourney({inspect,modeOnly}={}) {
  try {
   h=await harness(receiver,{edge:fake.edge});
   const objective=await outcomeObjective(h,{realm:'1234',customer:facts.customer_id,item:'synthetic-crank-56',receiver:declared});
-  for(mode of modeOnly?[modeOnly]:['missing','wrong']) {
+  for(mode of modeOnly?[modeOnly]:['missing','wrong','uncertain']) {
    record=null;repair=false;seenKeys.clear();const before=posts,noticeCount=notices.length;
    let run=await objective.start();assert.equal(run.status,'awaiting_approval',JSON.stringify(run.error));
    assert.equal(stepOf(run,'invoice').status,'succeeded');assert.equal(run.waits[0].proposal.outcome_repair,true);
-   assert.equal(run.waits[0].proposal.records.length,mode==='missing'?0:1);assert.equal(notices.length,noticeCount);
+   assert.equal(run.waits[0].proposal.records.length,mode==='wrong'?1:0);assert.equal(notices.length,noticeCount);
    await inspect?.({h,run,state:mode+'-open',objective});
    await h.restart();run=await h.get('workflow-runs/'+run.id);assert.equal(run.status,'awaiting_approval');assert.equal(posts,before+1);
    await h.post(`workflow-runs/${run.id}/approve`,{path:'verify_invoice',digest:'synthetic-crank-stale'},h.owner,409);
@@ -53,6 +53,14 @@ export async function invoiceOutcomeJourney({inspect,modeOnly}={}) {
    repair=true;
    const changed=await inspect?.({h,run,state:'approve-'+mode,objective});
    run=changed??await h.post(`workflow-runs/${run.id}/approve`,{path:'verify_invoice',digest:run.waits[0].proposal_digest,reason:'Repair the exact granted invoice and require fresh provider evidence'});
+   if(mode==='uncertain'){
+    assert.equal(run.status,'uncertain');assert.equal(stepOf(run,'verify_invoice').status,'uncertain');assert.equal(notices.length,noticeCount);
+    await h.restart();const preview=await h.get(`workflow-runs/${run.id}/reconcile?path=verify_invoice`);assert.equal(preview.matches.length,1);
+    const decision={path:'verify_invoice',digest:preview.digest,remote_id:record.Id,reason:'Independent provider readback confirms the lost repair response; continue without repeating it'};
+    await h.post(`workflow-runs/${run.id}/reconcile`,{...decision,digest:'synthetic-crank-stale'},h.owner,409);
+    run=await inspect?.({h,run,state:'uncertain-readback',objective})??await h.post(`workflow-runs/${run.id}/reconcile`,decision);
+    assert.equal(stepOf(run,'verify_invoice').output.reconciled,true);assert.equal(posts,before+2);
+   }
    assert.equal(run.status,'succeeded',JSON.stringify(run.error));assert.equal(stepOf(run,'verify_invoice').output.obligation.state,'satisfied');
    assert.equal(stepOf(run,'verify_invoice').output.obligation.verification_source,'provider_readback');assert.equal(record.CustomerRef.value,facts.customer_id);
    assert.equal(posts,before+2);assert.equal(notices.length,noticeCount+1);assert.equal(stepOf(run,'invoice').operation_key,run.id+':invoice');
