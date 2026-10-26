@@ -46,6 +46,8 @@ export async function n8nConditionsJourney() {
    {rule:condition('dateTime','notEquals',undefined,'2026-10-26T14:00:00Z'),value:null,pass:false},
    {rule:condition('dateTime','empty'),value:null,pass:true},
    {rule:condition('dateTime','notEmpty'),value:'1970-01-01T00:00:00Z',pass:true},
+   {rule:condition('dateTime','equals',undefined,'0001-01-01T00:00:00Z'),value:'0001-01-01T10:00:00+10',pass:true},
+   {rule:condition('dateTime','equals',undefined,'0000-02-29T00:00:00Z'),value:'0000-02-29T01:00:00+0100',pass:true},
    {rule:condition('dateTime','after',undefined,'1970-01-01T00:00:00Z'),value:'2026-02-30T00:00:00Z',failure:true},
    {rule:condition('dateTime','after',undefined,'1970-01-01T00:00:00Z'),value:'2026-10-27T10:00:00',failure:true},
   ];
