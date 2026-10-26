@@ -5506,7 +5506,7 @@
       "executable": false
     },
     "tests/n8n-stream-journey.mjs": {
-      "sha256": "ba4b3174ce4940256023a2fb778ddfe1545fdff0278aceabe2e3f1b66fb50065",
+      "sha256": "1729e5b859af0f27dc70a1fb03b38465dc376ed17f03ea2a9dfcf8c6cf063df1",
       "executable": false
     },
     "tests/oauth-renewal-journey.mjs": {

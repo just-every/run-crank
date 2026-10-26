@@ -72,7 +72,7 @@ export async function transformStreamJourney() {
    const send=async messages=>{const sent=await deliver(h,hook.url,{method:'POST',headers:{'content-type':'application'+'/'+'json'},body:JSON.stringify({messages})});assert.equal(sent.status,200,sent.text);return settled(h,sent.value.run_id)};
    const run=await send(scenario.messages);assert.equal(run.status,'succeeded',JSON.stringify(run.error));assert.deepEqual(writes.at(-1),scenario.output,'Aggregate must retain exact source field, null, list and projection semantics');
    const before=writes.length;assert.equal((await send([])).status,'succeeded');assert.equal(writes.length,before,'empty inputs cannot manufacture an individual or filtered aggregate');
-   if(scenario.parameters.include==='specifiedFields'&&scenario.parameters.fieldsToInclude.trim()){
+   if(scenario.parameters.include==='specifiedFields'&&scenario.parameters.fieldsToInclude.split(',').some(field=>field.trim())){
     const filtered=await send([{synthetic_crank_unselected:1}]);assert.equal(filtered.status,'succeeded');assert.deepEqual(writes.at(-1),{orders:[]},'nonempty input filtered to no records still emits one aggregate');
    }
   }
