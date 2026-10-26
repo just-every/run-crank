@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {createServer} from 'node:http';
 import {harness} from './harness.mjs';
 import {connection,fakeEdge,jsonResponse,publish,stepOf} from './kit.mjs';
-import {archive} from './restore-journey.mjs';
+import {archive,inventory} from './restore-journey.mjs';
 
 export async function outcomeObjective(h,{realm,customer,item,receiver,businessKey='synthetic-crank-51',lead='synthetic-crank-50',amount='19.99',token='synthetic-crank-52'}) {
  const account=await connection(h,{app:'quickbooks',label:'Harbour outcome sandbox',account_name:realm,environment:'sandbox',purpose:'test',auth_kind:'oauth2',scopes:['com.intuit.quickbooks.accounting'],secret:{access_token:token}});
@@ -70,8 +70,9 @@ export async function invoiceOutcomeJourney({inspect,modeOnly}={}) {
   repair=false;record=null;seenKeys.clear();
   const waiting=await objective.start();assert.equal(waiting.status,'awaiting_approval');await h.post(`grants/${objective.grant.id}/revoke`);const frozen=await h.get('workflow-runs/'+waiting.id);
   const saved=await archive(h);restored=await harness(receiver,{edge:fake.edge});await restored.post('data/restore',{archive:saved,confirm:'RESTORE'});
-  const entries=text=>text.trim().split('\n').map(JSON.parse).flatMap(p=>p.items??[]).filter(i=>i.kind==='row').map(i=>JSON.stringify(i)).sort();
-  assert.deepEqual(entries(await archive(restored)),entries(saved),'All portable records, including reconciliation evidence, attempts and decisions, survive inactive restoration');
+  const original=inventory(saved),reexported=inventory(await archive(restored)),added=reexported.filter(row=>!original.includes(row));
+  assert.deepEqual(added.map(row=>[JSON.parse(row).table,JSON.parse(row).row.action]),[['crank_audit','data.restore']],'The receiving audit adds only its restore record');
+  assert.deepEqual(reexported.filter(row=>row!==added[0]),original,'All portable records, including reconciliation evidence, attempts and decisions, survive inactive restoration');
   const imported=await restored.get('workflow-runs/'+frozen.id);assert.equal(imported.status,'paused');const count=posts,noticeCount=notices.length;
   await restored.restart();await restored.tick(Date.now()+86400000);await restored.post(`workflow-runs/${imported.id}/resume`,{},restored.owner,409);
   assert.equal(posts,count);assert.equal(notices.length,noticeCount);assert.ok((await restored.get('connections')).every(c=>c.status==='needs_reconnect'));

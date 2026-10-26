@@ -10,7 +10,7 @@ export const archive = async h => {
   assert.equal(response.status, 200, response.text);
   return response.text;
 };
-const inventory = text => {
+export const inventory = text => {
   const rows = text.trim().split('\n').map(JSON.parse).flatMap(line => line.items ?? []).filter(item => item.kind === 'row');
   return rows.map(({ table, row }) => JSON.stringify({ table, row })).sort();
 };
