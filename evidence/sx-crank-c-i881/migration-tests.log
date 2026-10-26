@@ -1,0 +1,74 @@
+QUEUED ticket=11896 job=20261026T120446667030Z-heavy-slot-78a07a22
+ADMITTED slot=6 cap=7 load=14.97
+RESOLVED_SHA 88d2a27455d7ab83b94afcaf7045d71e12b6b36e
+NODE v22.20.0; source=.node-version; TZ=UTC; provider credentials absent
+PACKAGE_MANAGER pnpm@10.12.4
+Lockfile is up to date, resolution step is skipped
+Progress: resolved 1, reused 0, downloaded 0, added 0
+Packages: +153
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Progress: resolved 153, reused 153, downloaded 0, added 0
+Progress: resolved 153, reused 153, downloaded 0, added 138
+Progress: resolved 153, reused 153, downloaded 0, added 153, done
+
+dependencies:
++ @tanstack/react-router 1.170.41
++ @tanstack/react-start 1.168.60
++ hono 4.13.7
++ marked 18.0.14
++ react 19.2.8
++ react-dom 19.2.8
+
+devDependencies:
++ @cloudflare/vite-plugin 1.54.5
++ @cloudflare/workers-types 5.20260908.1
++ @playwright/test 1.63.0
++ @runeditrun/rer 0.2.80
++ @types/node 22.18.6
++ @types/react 19.2.18
++ @types/react-dom 19.2.7
++ @vitejs/plugin-react 6.1.1
++ esbuild 0.28.1
++ miniflare 5.20260907.0-alpha
++ typescript 5.9.3
++ vite 8.2.2
++ wrangler 4.129.1
+
+Done in 8.3s using pnpm v10.12.4
+PLAYWRIGHT_INSTALL 1.63.0 chromium under runner Node v22.20.0; stall limit 300s without growth
+COMMAND_START nice=10
+TAP version 13
+# Subtest: MIG-001 move-in door: owner upload, plan without writes, reviewed apply, reconcile, undo and history
+ok 1 - MIG-001 move-in door: owner upload, plan without writes, reviewed apply, reconcile, undo and history
+  ---
+  duration_ms: 16157.286166
+  type: 'test'
+  ...
+# Subtest: MIG-001 door refuses expressions and credential exports without echoing them, and keeps used drafts on undo
+ok 2 - MIG-001 door refuses expressions and credential exports without echoing them, and keeps used drafts on undo
+  ---
+  duration_ms: 453.943084
+  type: 'test'
+  ...
+# Subtest: MIG-001 native graph review, exact apply, restart, branch outcomes and protected undo
+ok 3 - MIG-001 native graph review, exact apply, restart, branch outcomes and protected undo
+  ---
+  duration_ms: 52731.04225
+  type: 'test'
+  ...
+# Subtest: WORK-006: callers pin immutable typed pure subflows and independently upgrade, roll back and restore inactive
+ok 4 - WORK-006: callers pin immutable typed pure subflows and independently upgrade, roll back and restore inactive
+  ---
+  duration_ms: 26366.7525
+  type: 'test'
+  ...
+1..4
+# tests 4
+# suites 0
+# pass 4
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 97382.102084
+RESULT exit=0 wall_seconds=114.184 command_seconds=97.535 retained=False

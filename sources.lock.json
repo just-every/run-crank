@@ -138,7 +138,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "484ed47d776c6aa325878679c095f58e98da113680379b3704cec4f78c50f3e2",
+      "sha256": "42fde40ab6857f274f3633290bba2f67a8f95a7ec17e95c777757df53055f020",
       "executable": false
     },
     "AGENTS.md": {
@@ -162,7 +162,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "caae43c866b966459b3f8317b467c5ebdb168685ce67dc77d4e4bdda109b5185",
+      "sha256": "fe6db1d9b2e7f4b8fea614100294f050813a439765339ef05491ad962e59014b",
       "executable": false
     },
     "DEMO.md": {
@@ -186,7 +186,7 @@
       "executable": false
     },
     "docs/API.md": {
-      "sha256": "af5f185b28f68a2f24dc541df277768ad818bc2d83f9593a61f2cd8fb8851f21",
+      "sha256": "5858dd2be20c36600e45c2459ca5d17a460ac244656182ac87a9901ea6b41351",
       "executable": false
     },
     "docs/BACKUP-RESTORE.md": {
@@ -723,6 +723,258 @@
     },
     "evidence/sx-crank-c-i812/outcome-screens/390-wrong-satisfied.png": {
       "sha256": "c8839556aa54c711f2547723814c745ab014c156e7af049077ce0bbf238c6b18",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i881/client-browser.log": {
+      "sha256": "5aceb26f4263f53be711fc9b486d3b06d24e514c88a636258937a3d194f19b05",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i881/mcp-slack-live.log": {
+      "sha256": "27f5b1c62f226d67a4e1900a6aba53cb89dabf2d9de0904b683627ea0c6a923d",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i881/mcp/1440-access.png": {
+      "sha256": "5aa5365804a77b00f34cc9e3732cf88c9cb718689d83532a033a5b4de172114f",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i881/mcp/1440-calendar-readback.png": {
+      "sha256": "f0fb2afdf39dd6b63c48076add8f4873fa552bcddc25874533bdcca64bd46dd1",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i881/mcp/1440-client-approval.png": {
+      "sha256": "82777512105d6e0c70d3b368967df413ccfae8c46f93f44933971bfb5a7c9b8f",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i881/mcp/1440-client-created.png": {
+      "sha256": "7ce2deb02e4571d758fe6c9942cf64d144dca31963b0971f5f7b2cd68dc601d6",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i881/mcp/1440-client-history.png": {
+      "sha256": "cfa8863e88bfa113777d4bc8e403ccd77f604301ff6a8be85f29a1a6942bb107",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i881/mcp/1440-client-revoked.png": {
+      "sha256": "91874878fa92b6717b40df1b6ad91b927db6c99eeba31844549b61bb359a16da",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i881/mcp/1440-client-servers.png": {
+      "sha256": "dd871edd9a4d1efbeece94be832f2f9b5589cd5e37609e007b5cb08b548990d8",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i881/mcp/1440-review-client-tools.png": {
+      "sha256": "61db4e06bcbd2f9e84ba0603428c06c09e72d60c5c4c32c0878203459dd4b884",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i881/mcp/390-access.png": {
+      "sha256": "87a215877911102c9f4e8e7f0c2d3f4fc184dd696a87d54d47dcc1836e13e47d",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i881/mcp/390-calendar-readback.png": {
+      "sha256": "24be06cc492c96ed37a9d3d3ba5f08db1f74c381ef298c6b609ce5bb9821e1bb",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i881/mcp/390-client-approval.png": {
+      "sha256": "a89a7feb8f62c546105ce5b3263eeeef7438e7b593d69d52515a388316b1a737",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i881/mcp/390-client-created.png": {
+      "sha256": "437b3ed9687f10aedf6114762017ac39f63aed5bdf4300fa109e474ebbbab3c3",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i881/mcp/390-client-history.png": {
+      "sha256": "fd254dc66f26afb356930fcdacbd8439c4e420d638fb3b21a13ee5b1f48e5c6c",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i881/mcp/390-client-revoked.png": {
+      "sha256": "d7c2801ac54eed7bc7f03a930c4ac361c7ca82266eb0ea5e0a37f106404d1562",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i881/mcp/390-client-servers.png": {
+      "sha256": "4a14644d589a15df865c41848cda1a0ba12c47eb7c80fc8d1ace443b12239f22",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i881/mcp/390-review-client-tools.png": {
+      "sha256": "ef283850e845c1bebf29baf556a7f3b4f3cb56e89d7e3a3182d26eba63847063",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i881/migration-browser.log": {
+      "sha256": "4dcdb5561a7f6c0adb89f4e395f506c298156cac86f873a1ebceb02de167874d",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i881/migration-tests.log": {
+      "sha256": "3bd2a27f2f6d96495e0e67541c0a17b39779c9bd01e068f10561d5e23e3a7a61",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i881/migration/1440-account-tooltip.png": {
+      "sha256": "7eab6b9c83c6c0370339f82caeddf5b460a7aa1c7550d45130a30df68174ec12",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i881/migration/1440-applied-graph.png": {
+      "sha256": "4fedb60901543afc5e5f1374972a695cd65dea10d59264ebb7e97f42f274d70c",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i881/migration/1440-date-review.png": {
+      "sha256": "1e40165414d3aa2a8a80abe1937230d9af2d971749c36af30e70e03c6211eb33",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i881/migration/1440-done-completed-run.png": {
+      "sha256": "478764a1469a27e5758ab1da7832d4df7de7b531443b7b8d15a9bc56c92356f4",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i881/migration/1440-done-inactive-native.png": {
+      "sha256": "ac9e1f5c06635b80ab26053f0c17b7d63e6711d19844b05fd04ed4feaf2f445a",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i881/migration/1440-done-review.png": {
+      "sha256": "6bc900a63d1bcef9fecc6e843bb2a31e08137210248221d143cdf23fbe72d94e",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i881/migration/1440-envelope-applied-inactive.png": {
+      "sha256": "dce272542099cc355affa2d6d7a23ec1223e5e7acfcc9c7473ebdac760a694f7",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i881/migration/1440-envelope-code-native.png": {
+      "sha256": "c35cbb5671ece6e15b275bf92d96e8e31035e71391219753211ad2d32b28ee3e",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i881/migration/1440-envelope-drift-undo-refused.png": {
+      "sha256": "05377f1c3c26a4787c760e2fb576c1997c1fd9ebd85470a1f2fc5ed4cc3f49a7",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i881/migration/1440-envelope-registry-native.png": {
+      "sha256": "4fc74ccc1a1132e417a2f8d06419a86921a1196f2bac292066fb7dd238bc44d1",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i881/migration/1440-envelope-resolved-review.png": {
+      "sha256": "254e74ea20abf570376f77b05b89269e687da29d7b2630bbf45ed619adfc206c",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i881/migration/1440-envelope-undone.png": {
+      "sha256": "3aa4d913f7a754f929f22c97763a1196f1cde5780f1195bea77e1728d1dfc944",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i881/migration/1440-envelope-unresolved.png": {
+      "sha256": "2af59f28a997939b33141b42d29a39c354b832c76b38bef948984512fe4c434d",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i881/migration/1440-inactive-native-graph.png": {
+      "sha256": "55bf9093d2c4561d0fd7ddb301491f364a2fc922897e3a3a8808fbd7e11c2204",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i881/migration/1440-manual-conversions.png": {
+      "sha256": "e282795b901c298807de3551eb265d1826e7f2cd03278aeb50a90e5d175c0c63",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i881/migration/1440-move-in.png": {
+      "sha256": "8fea9c8bcc5b34be55bd4c75b15558e3e5624417feb989a5f7e1c3b9d7f959ac",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i881/migration/1440-review-graph.png": {
+      "sha256": "9514eb6c756ac3142503f31a711288264d5390652f6ad9aa94677a4503233346",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i881/migration/1440-search-tooltip.png": {
+      "sha256": "28099f2cc48fd1cd57c4ccae323abb2f59fc7d128675bbc57cf25c5d39d83348",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i881/migration/1440-supported-fields.png": {
+      "sha256": "b086a01c116b217be4bf21efea8b5e3cff30299c2047eb1b9640d5f9f9c26363",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i881/migration/1440-switch-review.png": {
+      "sha256": "4bf95b862cef7912f9f21b3a19d6bfa17c67a4e669b7e09c2adbdbf8611af4e8",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i881/migration/1440-undone-graph.png": {
+      "sha256": "d4452051ad84ddefcd6f8c41545b2d06d5e9636a5d99564ea7d82153ba020f8a",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i881/migration/390-account-tooltip.png": {
+      "sha256": "0d75a06a417373a6760bc0d87b16579265203e01e6f1fb6aaf45b907fd8bc479",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i881/migration/390-applied-graph.png": {
+      "sha256": "06260cc22a4ab0031f3622b28def4f0f50bc55423d3ac80add5a425fc99a4ca2",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i881/migration/390-date-review.png": {
+      "sha256": "b5c1e844fe8d24c57ff555a98565418527cc5940f6df33b702a463fbdafe4303",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i881/migration/390-done-completed-run.png": {
+      "sha256": "e38b610241a8bd2c98ab4e6a055d7965a269e9a60cb01e63542150dedb30de8c",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i881/migration/390-done-inactive-native.png": {
+      "sha256": "c3fb5b73f9d4008e19aa096936dc4c5c7221ba7985b39f8b92bb25a32faf592c",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i881/migration/390-done-review.png": {
+      "sha256": "c1b14c7a3fae6fc1303db0311d94be6d679b781d539a2fada84b818361589f68",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i881/migration/390-envelope-applied-inactive.png": {
+      "sha256": "f4d1116f2d45409d083bf10d3f9c3bae8538e5e36a5f308a5eb0311f39a6cd69",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i881/migration/390-envelope-code-native.png": {
+      "sha256": "6210392a147e5533711f21707c684cb13c3bb868b923c59b2518eb9292f15070",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i881/migration/390-envelope-drift-undo-refused.png": {
+      "sha256": "7f06fdb4e400b55bafde9dd8633e098dbba4711e67287a9d4720775dcb0c6041",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i881/migration/390-envelope-registry-native.png": {
+      "sha256": "a36282cb3b12692a5ff15d0adf657f33e245c52de5b02a800549e911f33953e8",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i881/migration/390-envelope-resolved-review.png": {
+      "sha256": "348e949248110074047f867fc4ccd7be74beb73190ded97bc0e200440e8a361a",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i881/migration/390-envelope-undone.png": {
+      "sha256": "25fefa22a978587573999232817897c4089b790110be16303811e0ff1a28cb2a",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i881/migration/390-envelope-unresolved.png": {
+      "sha256": "58ee3e740a3b5aad9faed9700da2f4c141c30cc6aeb82e545d326c8f9a8ad94a",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i881/migration/390-inactive-native-graph.png": {
+      "sha256": "8c992fc9b09add7dbb54132b1311a62f550dd077c3dc2dddbbf9d8f1085a4e49",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i881/migration/390-manual-conversions.png": {
+      "sha256": "230576005420505cbc4e633c532b8c6fbc5c249fe2ea512f03fa9a54fb4fc6b0",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i881/migration/390-move-in.png": {
+      "sha256": "4eb5e13fed2109611b9c31438667809e7b15b9634aab37e6f22b45dbf55958bb",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i881/migration/390-review-graph.png": {
+      "sha256": "6cca169ec9d760cef3f7b6ae5034cb42cecb4d8a1c6587d0a29ba55b8da965b9",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i881/migration/390-search-tooltip.png": {
+      "sha256": "da07b499b018163527ed8e507208c9847d330ff1a16ff6fd980bfcbaecd975e9",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i881/migration/390-supported-fields.png": {
+      "sha256": "e035588abe51d4566e10df307b0d873c6c05660ebc25bc12610fb791219fce1d",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i881/migration/390-switch-review.png": {
+      "sha256": "5ff91d070dbf087c42a34d5966dc5884395ee920113313d6ffb46b0064f43345",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i881/migration/390-undone-graph.png": {
+      "sha256": "d2005587b080e636a44ca40a0e43b40106179dbfccf95d795026974ac9a4f156",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i881/native-tests.log": {
+      "sha256": "f85884b893ba42ef4a466c816c165b14a219856958cd9eac94d6dcb70aefb411",
       "executable": false
     },
     "examples/inbox/server.mjs": {
@@ -2273,8 +2525,12 @@
       "sha256": "21793a75cb5192df3f5c8b9d843008eba83c5d223c554ffeff0f7c14d769a167",
       "executable": false
     },
+    "src/crank/mcp/call-history.ts": {
+      "sha256": "dde6109b3cfeec6e17273666a9f205ab5e9280dd867f174b5219c98bda9e5385",
+      "executable": false
+    },
     "src/crank/mcp/client-api.ts": {
-      "sha256": "efbd0d1963d657fed4aa53865454cd3b7835072ebb0c0f08d99507dca305e583",
+      "sha256": "652412524f001d9d51f88d07ae714be65607e37c4d5507f28d382cd7d240a912",
       "executable": false
     },
     "src/crank/mcp/client-tools.ts": {
@@ -5022,11 +5278,11 @@
       "executable": false
     },
     "tests/mcp-client-browser.mjs": {
-      "sha256": "e4ce9f747746ce8c17a058461ba43435e39d7b2f107f9a4a004d315fbc8c8158",
+      "sha256": "656052b0a9d8d8177cd3d75d62a69615e1f5ae34ac04466bcf96304f4d47e6bd",
       "executable": false
     },
     "tests/mcp-client-journey.mjs": {
-      "sha256": "ae4fb5d08cf9fbfc431930ab1a437a06db0852afbbee8b87bcafda51ce278c62",
+      "sha256": "3d7ad38c81b5dcee8ec41ff78e6c8a8ea8c397238d4fe8e2689b2f9abcc8ccac",
       "executable": false
     },
     "tests/mcp-slack-live.mjs": {

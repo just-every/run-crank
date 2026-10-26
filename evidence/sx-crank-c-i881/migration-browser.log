@@ -1,0 +1,73 @@
+QUEUED ticket=11905 job=20261026T121430304764Z-heavy-slot-0fff16be
+ADMITTED slot=2 cap=7 load=10.16
+RESOLVED_SHA b6d037f4721f65659c7cd4d6bfd067a3bd2f1f0a
+NODE v22.20.0; source=.node-version; TZ=UTC; provider credentials absent
+PACKAGE_MANAGER pnpm@10.12.4
+Lockfile is up to date, resolution step is skipped
+Progress: resolved 1, reused 0, downloaded 0, added 0
+Packages: +153
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Progress: resolved 153, reused 153, downloaded 0, added 153, done
+
+dependencies:
++ @tanstack/react-router 1.170.41
++ @tanstack/react-start 1.168.60
++ hono 4.13.7
++ marked 18.0.14
++ react 19.2.8
++ react-dom 19.2.8
+
+devDependencies:
++ @cloudflare/vite-plugin 1.54.5
++ @cloudflare/workers-types 5.20260908.1
++ @playwright/test 1.63.0
++ @runeditrun/rer 0.2.80
++ @types/node 22.18.6
++ @types/react 19.2.18
++ @types/react-dom 19.2.7
++ @vitejs/plugin-react 6.1.1
++ esbuild 0.28.1
++ miniflare 5.20260907.0-alpha
++ typescript 5.9.3
++ vite 8.2.2
++ wrangler 4.129.1
+
+Done in 4.9s using pnpm v10.12.4
+PLAYWRIGHT_INSTALL 1.63.0 chromium under runner Node v22.20.0; stall limit 300s without growth
+COMMAND_START nice=10
+(node:3784) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+[36mvite v8.2.2 [32mbuilding client environment for production...[36m[39m
+transforming...
+✓ 135 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/client/.assetsignore               0.02 kB
+dist/client/assets/index-DgoNPDnv.js  311.20 kB │ gzip: 100.86 kB
+
+[32m✓ built in 270ms[39m
+[36mvite v8.2.2 [32mbuilding ssr environment for production...[36m[39m
+transforming...
+✓ 843 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/server/wrangler.json                                      1.61 kB │ gzip:   0.82 kB
+dist/server/.vite/manifest.json                                2.77 kB │ gzip:   0.60 kB
+dist/server/assets/empty-plugin-adapters-D_0twvAa.js           0.28 kB │ gzip:   0.18 kB
+dist/server/assets/start-D8qDT34V.js                           0.28 kB │ gzip:   0.21 kB
+dist/server/assets/_tanstack-start-manifest_v-D4hjgw10.js      0.40 kB │ gzip:   0.30 kB
+dist/server/assets/font-head-HgDHZCdz.js                       0.44 kB │ gzip:   0.30 kB
+dist/server/assets/hash-DvqvOXoR.js                            6.07 kB │ gzip:   2.70 kB
+dist/server/assets/router-DJfqgF3-.js                         37.24 kB │ gzip:  10.08 kB
+dist/server/assets/Match-D6OH8U6i.js                         161.09 kB │ gzip:  40.31 kB
+dist/server/assets/access-BuzyG1_h.js                        921.34 kB │ gzip: 238.16 kB
+dist/server/index.js                                       2,372.46 kB │ gzip: 586.79 kB
+
+[33m[33m[INEFFECTIVE_DYNAMIC_IMPORT] [0msrc/crank/connections/catalog.ts is dynamically imported by src/crank/workflows/snapshot.ts but also statically imported by src/crank/ops/coverage.ts, src/crank/workflows/api.ts, dynamic import will not move module into another chunk.
+[39m
+[32m✓ built in 398ms[39m
+MIG-001 1440: mapping coverage, safe cancellation, inactive apply, native draft, undo and shell tooltip passed
+MIG-001 390: mapping coverage, safe cancellation, inactive apply, native draft, undo and shell tooltip passed
+MIG-001 1440 and 390: reviewed done-output conversion, inactive native draft, ordered actual receiver effects and retained checkpoints passed
+MIG-001 1440 and 390: retained conversion envelopes, owner-reviewed registry and code provenance, inactive native drafts, exact unused undo and native drift refusal passed
+RESULT exit=0 wall_seconds=42.807 command_seconds=32.823 retained=False

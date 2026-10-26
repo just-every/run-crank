@@ -6,9 +6,10 @@ import { body, CrankError, id, json, now, requireValue, stmt, type CrankEnv } fr
 import { auditStatement } from '../ops/audit'
 import { authorizeClient, createClient, readClients, revokeClient } from './clients'
 import { toolInput } from './client-tools'
+import { refusedCall } from './call-history'
 
 const protocol = '2025-06-18'
-const rpcError = (id: unknown, message: string, status = 400, code = -32000) => json({jsonrpc:'2.0',id:id ?? null,error:{code,message}},status)
+const rpcError = (id: unknown, message: string, status = 400, code = -32000, data?: Record<string,unknown>) => json({jsonrpc:'2.0',id:id ?? null,error:{code,message,...(data?{data}:{})}},status)
 
 export async function clientApi(request: Request, env: CrankEnv): Promise<Response | null> {
   const path = new URL(request.url).pathname, remote = /^\/api\/crank\/v1\/mcp\/([^/]+)$/.exec(path)
@@ -20,7 +21,7 @@ export async function clientApi(request: Request, env: CrankEnv): Promise<Respon
       if (path.endsWith('/calls')) {
         const client = path.split('/')[4]
         requireValue(await stmt(env,'SELECT id FROM crank_mcp_clients WHERE id=? AND owner_id=?',client,actor.id).first(),'Client not found',404)
-        return json((await stmt(env,'SELECT c.id,c.tool,c.run_id,COALESCE(r.status,c.status) AS status,c.reason,c.created_at FROM crank_mcp_calls c LEFT JOIN crank_wf_runs r ON r.id=c.run_id WHERE c.client_id=? ORDER BY c.created_at DESC,c.id LIMIT 100',client).all()).results)
+        return json((await stmt(env,"SELECT c.id,c.tool,c.run_id,CASE WHEN c.status='refused' THEN c.status ELSE COALESCE(r.status,c.status) END AS status,c.reason,c.created_at FROM crank_mcp_calls c LEFT JOIN crank_wf_runs r ON r.id=c.run_id WHERE c.client_id=? ORDER BY c.created_at DESC,c.id LIMIT 100",client).all()).results)
       }
       return json(await readClients(env,actor))
     }
@@ -56,11 +57,8 @@ async function clientMcp(request: Request, env: CrankEnv, clientId: string): Pro
     const name = typeof params?.name === 'string' && /^[A-Za-z][A-Za-z0-9_-]{0,63}$/.test(params.name) ? params.name : 'invalid_tool'
     const callId = id(), tool = tools.find(t=>t.name===name), at = now()
     const refuse = async (reason: string, status: number) => {
-      await env.DB.batch([
-        stmt(env,'INSERT INTO crank_mcp_calls(id,client_id,tool,status,reason,created_at) VALUES(?,?,?,\'refused\',?,?)',callId,clientId,name,reason,at),
-        auditStatement(env,actor.id,'mcp.call.refused','mcp_client',clientId,{call_id:callId,tool:name,reason},row.version_id),
-      ])
-      return rpcError(rpcId,reason,status)
+      const runId = await refusedCall(env,actor,{id:callId,clientId,tool:name,workflowId:row.workflow_id,versionId:row.version_id,at,arguments:params?.arguments??{},reason,status})
+      return rpcError(rpcId,reason,status,-32000,{run_id:runId})
     }
     if (!tool) return refuse('Tool is not enabled for this client',403)
     const source = await stmt(env,'SELECT graph_json FROM crank_workflow_versions WHERE id=?',row.version_id).first<{graph_json:string}>()

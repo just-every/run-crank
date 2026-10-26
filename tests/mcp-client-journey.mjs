@@ -61,9 +61,9 @@ export async function mcpClientJourney({inspect}={}) {
   const event=await call('create_calendar_event',{summary:'synthetic-crank-6',...eventTime});
   assert.equal(event.status,200,JSON.stringify(event.value));const eventRun=event.value.result.structuredContent.run;
   assert.equal(eventRun.status,'succeeded');assert.ok(events.has(stepOf(eventRun,'event').output.event_id));
-  const count=fake.requests.length;
+  const count=fake.requests.length;let foreignRunId;
   for(const [name,args] of [['find_hubspot_contact',{email:'synthetic-crank-7@example.test'}],['send_channel_message',{channel:'synthetic-crank-8',text:'synthetic-crank-9'}],['create_calendar_event',{calendar_id:'synthetic-crank-10',summary:'synthetic-crank-6',...eventTime}],['send_channel_message',{channel:f.slackChannel,text:42}]]){
-   const refused=await call(name,args);assert.ok([403,422].includes(refused.status),JSON.stringify(refused.value));
+   const refused=await call(name,args);assert.ok([403,422].includes(refused.status),JSON.stringify(refused.value));if(args.channel==='synthetic-crank-8')foreignRunId=refused.value.error.data.run_id;
   }
   assert.equal(fake.requests.length,count,'disabled tools, fixed overrides, typed arguments and foreign recipients have no provider effect');
   const generic=await h.send('/api/crank/agent-tasks',{task_id:'synthetic-crank-11',actions:[]},'',{authorization:'Bearer '+client.credential});assert.equal(generic.status,401,'client secret cannot bypass tool restrictions at another door');
@@ -75,6 +75,10 @@ export async function mcpClientJourney({inspect}={}) {
   await h.post(`workflow-runs/${waiting.id}/approve`,{path:waiting.waits[0].path,digest:waiting.waits[0].proposal_digest});assert.equal(messages.length,2);
   await h.restart();const restart=await rpc('tools'+'/'+'list');assert.equal(restart.status,200);
   const calls=await h.get('mcp-clients/'+client.id+'/calls');assert.equal(calls.filter(c=>c.status==='refused').length,4);assert.ok(calls.some(c=>c.run_id===eventRun.id));
+  const refusedRecord=calls.find(c=>c.run_id===foreignRunId),refusedRun=await h.get('workflow-runs/'+refusedRecord.run_id);
+  assert.equal(refusedRun.status,'failed');assert.equal(refusedRun.trigger.mcp.arguments.channel,'synthetic-crank-8');assert.equal(refusedRun.response.refused,true);assert.equal(refusedRun.steps.length,0);
+  assert.ok((await h.get('workflow-runs?workflow='+f.workflow.id)).runs.some(r=>r.id===refusedRun.id));
+  assert.deepEqual((await h.get('workflow-runs/'+refusedRun.id+'/replay')).eligible,[]);await h.post('workflow-runs/'+refusedRun.id+'/resume',{},h.owner,409);assert.equal(messages.length,2);
   const audits=await h.get('audit');assert.equal(audits.filter(a=>a.action==='mcp.call.refused').length,4);assert.ok(audits.some(a=>a.action==='mcp.call'&&a.detail.client_id===client.id&&a.subject_id===eventRun.id));
   assert.ok(!JSON.stringify([calls,audits,await h.get('mcp-clients')]).includes(client.credential));
   const flows=await h.get('data'+'/'+'flows');assert.ok(flows.flows.some(flow=>flow.kind==='google_calendar.create_event'&&flow.recipients.includes('https://www.googleapis.com')));
@@ -95,6 +99,8 @@ export async function mcpClientJourney({inspect}={}) {
   assert.ok((await h.get('mcp-clients/'+limited.id+'/calls')).some(c=>c.status==='refused'&&c.reason==='Rate exceeds the client grant'));
   await h.post('mcp-clients/'+limited.id+'/revoke');
   const before=fake.requests.length;await h.post('mcp-clients/'+client.id+'/revoke');const denied=await call('send_channel_message',{channel:f.slackChannel,text:'synthetic-crank-15'});assert.equal(denied.status,401);assert.equal(fake.requests.length,before);
+  await h.post('workflows/'+f.workflow.id+'/pause');await h.post('data/erase',{workflow_run_id:refusedRun.id,confirm:'ERASE'});
+  await h.get('workflow-runs/'+refusedRun.id,h.owner,404);assert.ok((await h.get('mcp-clients/'+client.id+'/calls')).some(c=>c.id===refusedRecord.id&&c.status==='refused'));
   await inspect?.({...f,state:'revoked',run:eventRun});
  }finally{await restored?.close();await h.close()}
 }

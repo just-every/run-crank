@@ -929,8 +929,10 @@ controls. Tool aliases share their underlying step's client rate limit. An
 optional `Idempotency-Key` retains the task identity on an identical retry.
 
 Every admitted call links to normal run inputs, outputs, provider IDs and
-approvals. Refusal records keep value-free reasons and the requested tool name;
-they do not retain rejected input values. Per-client secrets and bindings remain
+approvals. Refused calls create terminal ordinary runs containing the attempted inputs and
+refusal outcome, under the same payload retention and erasure controls. Their
+client index and audit retain value-free reasons and tool identity. A refusal
+has no executable checkpoint and cannot be resumed or replayed. Per-client secrets and bindings remain
 installation-local and are excluded from archives. Portable run history confers
 no execution authority. A new publication, grant expiry or revocation fences the
 next dispatch. Revoke the client from its Settings screen or through

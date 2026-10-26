@@ -27,6 +27,7 @@ try{
   const call=async(tool,args)=>{const r=await context.request.post(clientUrl,{headers:{accept:'application'+'/'+'json, text'+'/'+'event-stream',authorization:'Bearer '+secret,'mcp-protocol-version':'2025-06-18'},data:{jsonrpc:'2.0',id:crypto.randomUUID(),method:'tools'+'/'+'call',params:{name:tool,arguments:args}}});return {status:r.status(),value:await r.json()}};
   const event=await call('create_calendar_event',{summary:'Harbor appointment · '+width,...eventTime});assert.equal(event.status,200);const run=event.value.result.structuredContent.run;assert.equal(run.status,'succeeded');
   const disabled=await call('find_hubspot_contact',{});assert.equal(disabled.status,403);
+  const refused=(await h.get('mcp-clients/'+new URL(clientUrl).pathname.split('/').at(-1)+'/calls')).find(c=>c.status==='refused');await page.goto(h.origin+'/app/workflow-runs/'+refused.run_id);await shot(width,'refused-call-run');
   const held=await call('review_channel_message',{text:'Harbor appointment confirmed · '+width});assert.equal(held.status,200);const waiting=held.value.result.structuredContent.run;assert.equal(waiting.status,'awaiting_approval');
   await page.goto(h.origin+'/app/workflow-runs/'+waiting.id);await shot(width,'client-approval');
   await h.post('workflow-runs/'+waiting.id+'/approve',{path:waiting.waits[0].path,digest:waiting.waits[0].proposal_digest});
