@@ -54,7 +54,7 @@ export async function invoiceOutcomeJourney({inspect,modeOnly}={}) {
    const changed=await inspect?.({h,run,state:'approve-'+mode,objective});
    run=changed??await h.post(`workflow-runs/${run.id}/approve`,{path:'verify_invoice',digest:run.waits[0].proposal_digest,reason:'Repair the exact granted invoice and require fresh provider evidence'});
    if(mode==='uncertain'){
-    assert.equal(run.status,'uncertain');assert.equal(stepOf(run,'verify_invoice').status,'uncertain');assert.equal(notices.length,noticeCount);
+    assert.equal(run.status,'uncertain',JSON.stringify(run.error));assert.equal(stepOf(run,'verify_invoice').status,'uncertain');assert.equal(notices.length,noticeCount);
     await h.restart();const preview=await h.get(`workflow-runs/${run.id}/reconcile?path=verify_invoice`);assert.equal(preview.matches.length,1);
     const decision={path:'verify_invoice',digest:preview.digest,remote_id:record.Id,reason:'Independent provider readback confirms the lost repair response; continue without repeating it'};
     await h.post(`workflow-runs/${run.id}/reconcile`,{...decision,digest:'synthetic-crank-stale'},h.owner,409);
