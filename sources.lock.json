@@ -809,6 +809,38 @@
       "sha256": "4dcdb5561a7f6c0adb89f4e395f506c298156cac86f873a1ebceb02de167874d",
       "executable": false
     },
+    "evidence/sx-crank-c-i881/migration-stream/1440-done-completed-run.png": {
+      "sha256": "6567b465b72f20b9b45f7a3dd3be781838befb5f1b75ddc35ce6da28e610144a",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i881/migration-stream/1440-done-inactive-native.png": {
+      "sha256": "86eee80313b5a9b4f57366b83111a7ee41a2c54fb0bf8252ac40c6cf673d2d76",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i881/migration-stream/1440-done-review.png": {
+      "sha256": "c205d6ce185741878a01bc7f301bd1f7aceb537b19fa1a132acff33aeb4b67bf",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i881/migration-stream/1440-envelope-drift-undo-refused.png": {
+      "sha256": "05377f1c3c26a4787c760e2fb576c1997c1fd9ebd85470a1f2fc5ed4cc3f49a7",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i881/migration-stream/390-done-completed-run.png": {
+      "sha256": "bb11fe8e16d0ca497f38412d73e2b7566ae13102435f0bb3ad3874246eef706d",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i881/migration-stream/390-done-inactive-native.png": {
+      "sha256": "84d0b1d2d6780e7946a5ff92c327d065bf4d9f932c8086a8819440256cbbf983",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i881/migration-stream/390-done-review.png": {
+      "sha256": "e2dcc9bf5b7474d4a6a17a8157d8b71cade1c17ae12819e59ca3886308c678de",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i881/migration-stream/390-envelope-drift-undo-refused.png": {
+      "sha256": "7f06fdb4e400b55bafde9dd8633e098dbba4711e67287a9d4720775dcb0c6041",
+      "executable": false
+    },
     "evidence/sx-crank-c-i881/migration-tests.log": {
       "sha256": "3bd2a27f2f6d96495e0e67541c0a17b39779c9bd01e068f10561d5e23e3a7a61",
       "executable": false
@@ -983,6 +1015,14 @@
     },
     "evidence/sx-crank-c-i881/native-tests.log": {
       "sha256": "f85884b893ba42ef4a466c816c165b14a219856958cd9eac94d6dcb70aefb411",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i881/stream-browser.log": {
+      "sha256": "110d7167695ce3dafd2e2e001f2502d4ba4a420f5e9d1bd21a83ca0c41959054",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i881/stream-native-tests.log": {
+      "sha256": "15fac895bea2a4d21820d3693d04268e759ed4efe39e679f501fcc860976861e",
       "executable": false
     },
     "examples/inbox/server.mjs": {
