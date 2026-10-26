@@ -31,7 +31,7 @@ try {
   const graph = { trigger: { type: 'manual' }, steps: [
     { id: 'accepted', type: 'http', connection_id: production.http.id, input: { method: 'POST', url: source.publicOrigin + '/accept', body: { source: '{{trigger.input.key}}' } } },
     { id: 'crm', type: 'http', connection_id: production.http.id, input: { method: 'GET', url: source.publicOrigin + '/record?key={{trigger.input.key}}' } },
-    { id: 'mapping', type: 'drift.map', input: { record: '{{steps.crm.body}}' }, fields: { amount: { source: 'amount', type: 'number' }, customer: { source: 'customer', type: 'string' } } },
+    { id: 'mapping', type: 'drift.map', input: { record: '{{steps.crm.body}}',provider_schema:'{{steps.crm.body.api_schema}}',changelog:'{{steps.crm.body.api_changes}}' }, fields: { amount: { source: 'amount', type: 'number' }, customer: { source: 'customer', type: 'string' } } },
     { id: 'invoice', type: 'quickbooks.create_invoice', connection_id: production.qbo.id, input: { realm_id: provider.realm,
       business_key: { $fn: 'text.truncate', args: { value: '{{run.id}}', length: 21 } },
       payload: { CustomerRef: { value: '{{steps.mapping.customer}}' }, Line: [{ Amount: '{{steps.mapping.amount}}', DetailType: 'SalesItemLineDetail', SalesItemLineDetail: { ItemRef: { value: provider.item.Id } } }] } } },

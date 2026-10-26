@@ -1,6 +1,6 @@
 import { guardedBatch, requireOwner } from '../access'
 import { validateGraph, type Graph } from '../engine/graph'
-import { getWfRun } from '../engine/records'
+import { getWfRun, loadRecords } from '../engine/records'
 import { canonical, digest, id, now, requireValue, stmt, text, type Actor, type CrankEnv } from '../model'
 import { auditStatement } from '../ops/audit'
 import { getWorkflow } from '../workflows/store'
@@ -67,8 +67,10 @@ export async function readDrift(env: CrankEnv, actor: Actor, proposalId: string)
     }>()).results
   // Values and provider errors remain behind the normal sealed run-detail door.
   const results = cases.map(({ source_run_id, test_run_id, source_digest, result, payload_expired_at }) => ({ source_run_id, test_run_id, source_digest, result, expired: !!payload_expired_at }))
+  const observed = (await loadRecords(env, incident.run_id)).get(incident.path), observation = observed?.input_json ? JSON.parse(observed.input_json) : {}
+  const providerEvidence = { schema: observation.provider_schema ?? null, changelog: observation.changelog ?? [], source_run_id: incident.run_id, source_path: incident.path }
   const detail = { proposal, incident: { ...incident, schema: JSON.parse(incident.schema_json) }, before: original, after: graph,
-    changed_fields: proposal.kind === 'mapping' ? [{ step_id: proposal.step_id, field: proposal.field, before: proposal.source_before, after: proposal.source_after }] : [],
+    provider_evidence: providerEvidence, changed_fields: proposal.kind === 'mapping' ? [{ step_id: proposal.step_id, field: proposal.field, before: proposal.source_before, after: proposal.source_after }] : [],
     new_scopes: JSON.parse(proposal.requested_scopes_json), business_meaning: 'Unchanged declared output name and type; the owner must confirm source-field equivalence',
     cases: results, required_cases: 20, workflow_status: workflow.status, current_version_id: workflow.published_version_id,
     continuations: (await stmt(env, 'SELECT * FROM crank_drift_continuations WHERE proposal_id=? ORDER BY run_id', proposalId).all()).results }

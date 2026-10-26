@@ -15,6 +15,8 @@ export async function driftRepairJourney({ inspect } = {}) {
     assert.equal(refused.proposal.status, 'rejected');
     assert.deepEqual((await h.get('connections')).find(connection => connection.id === fixture.production.http.id).scopes, []);
     let proposal = fixture.proposal;
+    assert.deepEqual(proposal.provider_evidence.changelog,[{from:'amount',to:'amount_total',type:'number'}]);
+    assert.equal(proposal.provider_evidence.schema.amount_total,'number');
     await inspect?.({ h, workflow, proposal, state: 'proposal' });
     await h.post(`drift/${proposal.proposal.id}/test`, { digest: proposal.digest, bindings: { ...bindings, [fixture.production.http.id]: fixture.production.http.id } }, h.owner, 422);
     proposal = await h.post(`drift/${proposal.proposal.id}/test`, { digest: proposal.digest, bindings });

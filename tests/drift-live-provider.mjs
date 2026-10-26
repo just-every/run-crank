@@ -14,7 +14,7 @@ export async function driftLiveProvider(customer) {
     if (path === '/record') {
       counts[purpose].reads++;
       if (state.denied) { response.writeHead(403); response.end(JSON.stringify({ error: 'Original records.read permission was revoked' })); return; }
-      response.end(JSON.stringify({ [state.renamed ? 'amount_total' : 'amount']: 19.99, customer })); return;
+      response.end(JSON.stringify({ [state.renamed ? 'amount_total' : 'amount']: 19.99, customer, api_schema:{[state.renamed?'amount_total':'amount']:'number',customer:'string'},api_changes:state.renamed?[{from:'amount',to:'amount_total',type:'number'}]:[] })); return;
     }
     const chunks = [];
     for await (const chunk of request) chunks.push(chunk);

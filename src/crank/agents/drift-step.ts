@@ -67,22 +67,20 @@ export const driftMap: StepType = {
   async execute(step, ctx) {
     const fields = driftFields(step), output: Record<string, unknown> = {}, mismatches: string[] = []
     if (!isObject(ctx.input.record)) throw new StepError('validation', 'Drift mapping record must be an object')
+    const providerSchema = ctx.input.provider_schema, changelog = ctx.input.changelog
+    if (providerSchema !== undefined && (!isObject(providerSchema) || Object.keys(providerSchema).length > 200 || Object.entries(providerSchema).some(([key,type])=>!safeField(key)||!types.includes(String(type)))))
+      throw new StepError('validation','Provider schema must declare bounded field names and types')
+    if (changelog !== undefined && (!Array.isArray(changelog) || changelog.length > 100 || changelog.some(change=>!isObject(change)||!safeField(change.from)||!safeField(change.to)||!types.includes(String(change.type))||Object.keys(change).some(key=>!['from','to','type'].includes(key)))))
+      throw new StepError('validation','Provider changelog must contain bounded typed field changes; it cannot grant scopes or meaning')
     for (const [name, field] of Object.entries(fields)) {
       const found = lookup(ctx.input.record, field.source)
-      if (!found.found || valueType(found.value) !== field.type) {
+      if (!found.found || valueType(found.value) !== field.type || isObject(providerSchema) && providerSchema[field.source] !== field.type) {
         mismatches.push(field.source)
         if (ctx.run.mode !== 'test') await recordDriftIncident(ctx.env, ctx.run.id, ctx.path, 'schema', field.source, field.type, schemaOf(ctx.input.record))
       } else output[name] = found.value
     }
     if (mismatches.length) throw new StepError(ctx.run.mode === 'test' ? 'validation' : 'authority',
       'Provider field no longer exists or changed type: ' + mismatches.join(', '), { drift: true, fields: mismatches })
-    return { status: 'succeeded', output, trace: { schema: schemaOf(ctx.input.record), fields } }
+    return { status: 'succeeded', output, trace: { schema: schemaOf(ctx.input.record), provider_schema: providerSchema ?? null, changelog: changelog ?? [], fields } }
   },
-}
-
-export const DRIFT_PORTABLE_TABLES = ['crank_drift_incidents', 'crank_drift_proposals', 'crank_drift_cases', 'crank_drift_continuations'] as const
-export function normalizeRestoredDrift<T extends Record<string, unknown>>(table: string, row: T): T {
-  if (table === 'crank_drift_incidents') return { ...row, state: 'inactive' }
-  if (table === 'crank_drift_proposals') return { ...row, status: 'inactive', test_bindings_json: '{}' }
-  return row
 }

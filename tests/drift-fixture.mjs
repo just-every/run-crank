@@ -10,7 +10,7 @@ export async function driftFixture() {
   let renamed = false, denied = false;
   const account = headers => headers.authorization === 'Bearer synthetic-crank-102' ? 'test' : 'production';
   fake.routes.set('drift-crm.example', ({ headers }) => denied ? jsonResponse({ error: 'permission revoked' }, 403)
-    : jsonResponse({ [renamed ? 'amount_total' : 'amount']: 19.99, customer: 'synthetic-crank-customer' }));
+    : jsonResponse({ [renamed ? 'amount_total' : 'amount']: 19.99, customer: 'synthetic-crank-customer', api_schema:{[renamed?'amount_total':'amount']:'number',customer:'string'},api_changes:renamed?[{from:'amount',to:'amount_total',type:'number'}]:[] }));
   fake.routes.set('drift-receiver.example', ({ url, headers }) => {
     counts[account(headers)][url.pathname === '/accept' ? 'accept' : 'notify']++;
     return jsonResponse({ Id: 'synthetic-crank-receipt' });
@@ -37,7 +37,7 @@ export async function driftFixture() {
     const graph = { trigger: { type: 'manual' }, steps: [
       { id: 'accepted', type: 'http', connection_id: production.http.id, input: { method: 'POST', url: 'https://drift-receiver.example/accept', body: { key: '{{trigger.input.key}}' } } },
       { id: 'crm', type: 'http', connection_id: production.http.id, input: { method: 'GET', url: 'https://drift-crm.example/record?key={{trigger.input.key}}' } },
-      { id: 'mapping', type: 'drift.map', input: { record: '{{steps.crm.body}}' }, fields: { amount: { source: 'amount', type: 'number' }, customer: { source: 'customer', type: 'string' } } },
+      { id: 'mapping', type: 'drift.map', input: { record: '{{steps.crm.body}}',provider_schema:'{{steps.crm.body.api_schema}}',changelog:'{{steps.crm.body.api_changes}}' }, fields: { amount: { source: 'amount', type: 'number' }, customer: { source: 'customer', type: 'string' } } },
       { id: 'invoice', type: 'quickbooks.create_invoice', connection_id: production.qbo.id, input: { realm_id: '1234', business_key: '{{trigger.input.key}}',
         payload: { CustomerRef: { value: '{{steps.mapping.customer}}' }, Line: [{ Amount: '{{steps.mapping.amount}}', DetailType: 'SalesItemLineDetail', SalesItemLineDetail: { ItemRef: { value: '1' } } }] } } },
       { id: 'notify', type: 'http', connection_id: production.http.id, input: { method: 'POST', url: 'https://drift-receiver.example/notify', body: { invoice_id: '{{steps.invoice.body.Invoice.Id}}' } } },
