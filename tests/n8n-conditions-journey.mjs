@@ -6,7 +6,8 @@ import {graphExport,switchExport,expressionSwitchExport} from './n8n-graph-fixtu
 /** Evaluate migrated conditions through review, publication and receiver dispatch. */
 export async function n8nConditionsJourney() {
  const target='https://receiver.example',writes=[],targets=[];
- const h=await harness(target,{edge:async request=>{if(new URL(request.url).origin!==target)return undefined;writes.push(await request.json());targets.push(new URL(request.url).pathname);return Response.json({received:true})}});
+ const edge=async request=>{if(new URL(request.url).origin!==target)return undefined;writes.push(await request.json());targets.push(new URL(request.url).pathname);return Response.json({received:true})};
+ let h=await harness(target,{edge});
  try {
   const condition=(type,operation,leftValue='={{ $json.body.value }}',rightValue,extra={})=>({id:'synthetic-crank-300',leftValue,...(rightValue===undefined?{}:{rightValue}),operator:{type,operation,...extra}});
   const tests=[
@@ -64,15 +65,18 @@ export async function n8nConditionsJourney() {
   for(const change of [source=>{source.nodes[1].parameters.conditions.options.typeValidation='loose';source.nodes[1].parameters.conditions.conditions[0].operator.type='object'},source=>source.nodes[1].parameters.conditions.conditions[0].operator.type='dateTime',source=>source.nodes[1].parameters.conditions.options.unknown=true]){
    const source=structuredClone(sources[0]);source.id='synthetic-crank-'+crypto.randomUUID();change(source);const result=await doorPlan(h,JSON.stringify(source));assert.equal(result.status,200,result.text);assert.equal(result.value.rejected.length,1,'unknown or inexact source semantics must refuse review');assert.ok(result.value.diagnostics.some(row=>row.message?.includes('Manual conversion')));await door(h,'undo',{planId:result.value.planId});
   }
-  await doorImport(h,JSON.stringify(cases.map(item=>item.source)));
+  for(let offset=0;offset<cases.length;offset+=20){
+  if(offset){await h.close();h=await harness(target,{edge})}
+  const group=cases.slice(offset,offset+20);await doorImport(h,JSON.stringify(group.map(item=>item.source)));
   const workflows=await h.get('workflows');
-  for(const [index,item]of cases.entries()){
+  for(const [localIndex,item]of group.entries()){
+   const index=offset+localIndex;
    const workflow=workflows.find(row=>row.name===item.source.name);assert.ok(workflow);
    await h.post('workflows/'+workflow.id+'/publish',{},h.owner,201);const hook=await h.post('workflows/'+workflow.id+'/hooks',{},h.owner,201),before=writes.length;
    const sent=await deliver(h,hook.url,{method:'POST',headers:{'content-type':'application'+'/'+'json'},body:JSON.stringify(item.body)});assert.equal(sent.status,200,sent.text);
    const run=await settled(h,sent.value.run_id);assert.equal(run.status,item.status,JSON.stringify({index,error:run.error}));assert.equal(writes.length,before+item.writes);const evaluated=run.steps.find(row=>row.type==='transform'&&(item.expression?row.input?.outputs===3:row.input?.inputs&&row.input?.sets));assert.ok(evaluated,'source operands must remain inspectable beside the stopping rule');if(item.path)assert.equal(targets.at(-1),item.path);
    if(item.writes&&index<tests.length)assert.deepEqual(writes.at(-1).body,item.body);
   }
-
+  }
  } finally {await h.close()}
 }

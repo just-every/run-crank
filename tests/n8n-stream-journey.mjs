@@ -73,7 +73,7 @@ export async function transformStreamJourney() {
    const run=await send(scenario.messages);assert.equal(run.status,'succeeded',JSON.stringify(run.error));assert.deepEqual(writes.at(-1),scenario.output,'Aggregate must retain exact source field, null, list and projection semantics');
    const before=writes.length;assert.equal((await send([])).status,'succeeded');assert.equal(writes.length,before,'empty inputs cannot manufacture an individual or filtered aggregate');
    if(scenario.parameters.include==='specifiedFields'&&scenario.parameters.fieldsToInclude.trim()){
-    const filtered=await send([{amount:1}]);assert.equal(filtered.status,'succeeded');assert.deepEqual(writes.at(-1),{orders:[]},'nonempty input filtered to no records still emits one aggregate');
+    const filtered=await send([{synthetic_crank_unselected:1}]);assert.equal(filtered.status,'succeeded');assert.deepEqual(writes.at(-1),{orders:[]},'nonempty input filtered to no records still emits one aggregate');
    }
   }
   for(const mutation of [source=>source.workflow.nodes[4].parameters.type='random',source=>source.workflow.nodes[5].parameters.operation='removeItemsSeenInPreviousExecutions',source=>source.workflow.nodes[7].parameters.options.includeBinaries=true,

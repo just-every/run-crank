@@ -5486,7 +5486,7 @@
       "executable": false
     },
     "tests/n8n-conditions-journey.mjs": {
-      "sha256": "d50473e8b698d48a33764683f3905a3fe52d1d4e15a065ddee6e55cd9cb5c07b",
+      "sha256": "4da6c879e5d83d60ad0aad191403d08e6c1cbdb4af82fe43f314b195863d45cf",
       "executable": false
     },
     "tests/n8n-conversion-journey.mjs": {
@@ -5506,7 +5506,7 @@
       "executable": false
     },
     "tests/n8n-stream-journey.mjs": {
-      "sha256": "fda8ded857b2edb747b433c387029cbb48c5b91f9b75133917a3b0570a530638",
+      "sha256": "ba4b3174ce4940256023a2fb778ddfe1545fdff0278aceabe2e3f1b66fb50065",
       "executable": false
     },
     "tests/oauth-renewal-journey.mjs": {
