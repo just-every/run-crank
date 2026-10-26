@@ -26,7 +26,7 @@ async function observe(ctx: StepContext) {
   await assertDispatchAuthority(ctx.env, ctx.run.id)
   return quickbooksRecords(ctx.env, String(ctx.input.connection_id ?? ''), ctx.input.realm_id, 'Invoice', ctx.input.business_key)
 }
-async function source(ctx: StepContext, connectionId: string) {
+export async function invoiceOutcomeSource(ctx: Pick<StepContext, 'env' | 'run' | 'input'>, connectionId: string) {
   const record = (await loadRecords(ctx.env, ctx.run.id)).get(String(ctx.input.source_path))
   if (!record || record.status !== 'succeeded' || record.type !== 'quickbooks.create_invoice' || !record.input_json)
     throw new StepError('authority', 'Outcome repair needs this run’s completed native invoice checkpoint')
@@ -40,7 +40,7 @@ async function source(ctx: StepContext, connectionId: string) {
     throw new StepError('authority', 'Repair criteria must match the original granted invoice customer, amount and business key')
   // The immutable source graph, rather than a submitted account identifier, binds the write.
   const version = await ctx.env.DB.prepare('SELECT graph_json FROM crank_workflow_versions WHERE id=?').bind(ctx.run.version_id).first<{graph_json: string}>()
-  const find = (steps: any[]): any => steps.flatMap(s => [s, ...(Array.isArray(s.steps) ? s.steps : []), ...(s.branches ?? []).flatMap((b: any) => b.steps ?? [])]).find(s => s.id === record.step_id)
+  const find = (steps: any[]): any => { for (const s of steps) { if (s.id === record.step_id) return s; const nested = find([...(s.steps ?? []), ...(s.branches ?? []).flatMap((b: any) => b.steps ?? []), ...(s.fallback?.steps ?? []), ...(s.always?.steps ?? [])]); if (nested) return nested } }
   const declared = version && find(JSON.parse(version.graph_json).steps)
   if (declared?.connection_id !== connectionId) throw new StepError('authority', 'Repair cannot change the original invoice connection')
   return { record, input, payload }
@@ -64,7 +64,7 @@ export const invoiceOutcome: StepType = {
     const ctx = { ...original, input: { ...original.input, connection_id: step.connection_id } }
     if (!parseDecimal(ctx.input.amount_usd) || parseDecimal(ctx.input.amount_usd)!.units < 0n || !parseDecimal(ctx.input.remaining_cost_usd) || parseDecimal(ctx.input.remaining_cost_usd)!.units < 0n || !Number.isFinite(Date.parse(String(ctx.input.due_at))))
       throw new StepError('validation', 'Outcome criteria need exact USD amounts and an ISO due time')
-    await source(ctx, String(step.connection_id))
+    await invoiceOutcomeSource(ctx, String(step.connection_id))
     let records: any[]
     try { records = await observe(ctx) } catch (error) {
       if (error instanceof StepError && ['authority','connection'].includes(error.category)) throw error
@@ -72,7 +72,7 @@ export const invoiceOutcome: StepType = {
     }
     if (records.length === 1 && invoiceMeetsOutcome(records[0], ctx.input)) return { status: 'succeeded', output: invoiceOutcomeOutput(records[0], ctx.input) }
     if (records.length > 1) return held(ctx, 'uncertain', records, 'Multiple provider invoices match; reconcile them with the provider before continuing')
-    await source(ctx, String(step.connection_id))
+    await invoiceOutcomeSource(ctx, String(step.connection_id))
     await withinGrant(step, original)
     return { status: 'waiting', wait: { kind: 'approval', reason: records.length ? 'Invoice belongs to the wrong customer or amount; review the exact granted repair' : 'Invoice is missing despite successful requests; review the exact granted repair',
       proposal: { outcome_repair: true, state: 'due', input: original.input, records, observation_digest: await digest(canonical(records)), repair: records.length ? 'Update this exact invoice under its current provider version' : 'Recover the original invoice using its original provider request identity',
@@ -86,7 +86,7 @@ export const invoiceOutcome: StepType = {
     const ctx = { ...original, input: { ...original.input, connection_id: step.connection_id } }, records = await observe(ctx)
     if (records.length === 1 && invoiceMeetsOutcome(records[0], ctx.input)) return { status: 'succeeded', output: invoiceOutcomeOutput(records[0], ctx.input) }
     if (await digest(canonical(records)) !== reviewed.observation_digest) return held(ctx, 'blocked', records, 'Provider records changed after review; reconcile with the provider before continuing')
-    const prior = await source(ctx, String(step.connection_id)), base = await quickbooksAccount(ctx.env, String(step.connection_id), ctx.input.realm_id)
+    const prior = await invoiceOutcomeSource(ctx, String(step.connection_id)), base = await quickbooksAccount(ctx.env, String(step.connection_id), ctx.input.realm_id)
     const url = new URL(base + '/invoice'), record = records[0]
     if (record && (typeof record.Id !== 'string' || typeof record.SyncToken !== 'string')) return held(ctx, 'uncertain', records, 'Provider invoice lacks a version; no update was sent')
     url.searchParams.set('requestid', (await digest(record ? original.operationKey + ':repair' : prior.record.operation_key)).slice(0, 50))

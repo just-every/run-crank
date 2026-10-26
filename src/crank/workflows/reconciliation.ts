@@ -5,7 +5,8 @@ import { getWfRun, loadRecords } from '../engine/records'
 import { canonical, digest, id, now, requireValue, stmt, text, type Actor, type CrankEnv } from '../model'
 import { auditStatementWhen } from '../ops/audit'
 import { indexStatement, sealText, targetFor } from '../ops/payload-seal'
-import { qboCreate, quickbooksOutput, quickbooksReadback } from '../providers/quickbooks'
+import { qboCreate, quickbooksOutput, quickbooksReadback, quickbooksRecords } from '../providers/quickbooks'
+import { invoiceMeetsOutcome, invoiceOutcomeOutput, invoiceOutcomeSource } from '../providers/invoice-outcome'
 import { gustoReadback, gustoReconciledOutput, gustoWrite } from '../providers/gusto-reconciliation'
 import { gustoAuthorityFence, type GustoOperation } from '../providers/regulated-authority'
 import { runDetail, stepAt } from './runs'
@@ -17,9 +18,10 @@ async function state(env: CrankEnv, actor: Actor, runId: string, path: string) {
   await assertDispatchAuthority(env, runId)
   const version = await stmt(env, 'SELECT graph_json FROM crank_workflow_versions WHERE id=?', run.version_id).first<{ graph_json: string }>()
   const step = stepAt(JSON.parse(version!.graph_json), path)
-  requireValue(step && (qboCreate(step.type) || gustoWrite(step.type)), 'This write has no native financial readback', 422)
+  requireValue(step && (qboCreate(step.type) || step.type === 'quickbooks.invoice_outcome' || gustoWrite(step.type)), 'This write has no native financial readback', 422)
   const input = JSON.parse(record.input_json!)
-  const matches = qboCreate(step.type) ? await quickbooksReadback(env, step, input) : await gustoReadback(env, runId, step, input)
+  if (step.type === 'quickbooks.invoice_outcome') await invoiceOutcomeSource({env,run,input}, String(step.connection_id))
+  const matches = step.type === 'quickbooks.invoice_outcome' ? (await quickbooksRecords(env, String(step.connection_id), input.realm_id, 'Invoice', input.business_key)).filter((record: any) => invoiceMeetsOutcome(record,input)) : qboCreate(step.type) ? await quickbooksReadback(env, step, input) : await gustoReadback(env, runId, step, input)
   const authority = gustoWrite(step.type) ? await digest(canonical((await gustoAuthorityFence(env, String(step.connection_id), input.company_id, step.type.slice(6) as GustoOperation)).args)) : null
   const preview = { authority_digest: authority, run_id: runId, version_id: run.version_id, path, operation_key: record.operation_key, matches }
   return { run, record, step, preview, digest: await digest(canonical(preview)) }
@@ -39,7 +41,7 @@ export async function reconcileEffect(env: CrankEnv, actor: Actor, runId: string
   requireValue(match, 'Choose a record present in this readback; no effect was retried', 422)
   const reason = text(input.reason, 'reason', 1000), at = now(), decisionId = id(), target = await targetFor(env, current.run.workflow_id)
   const originalInput = JSON.parse(current.record.input_json!)
-  const output = JSON.stringify(qboCreate(current.step.type) ? quickbooksOutput(current.step.type, match) : gustoReconciledOutput(current.step.type, originalInput, match))
+  const output = JSON.stringify(current.step.type === 'quickbooks.invoice_outcome' ? {...invoiceOutcomeOutput(match, originalInput),reconciled:true} : qboCreate(current.step.type) ? quickbooksOutput(current.step.type, match) : gustoReconciledOutput(current.step.type, originalInput, match))
   const fence = gustoWrite(current.step.type) ? await gustoAuthorityFence(env, String(current.step.connection_id), originalInput.company_id, current.step.type.slice(6) as GustoOperation) : { sql: '1', args: [] }
   await assertDispatchAuthority(env, runId)
   const trace = await sealText(target, JSON.stringify({ reconciliation: { id: decisionId, owner: actor.id, at, reason, provider_id: match.Id, operation_key: current.record.operation_key, prior_error: JSON.parse(current.record.error_json ?? 'null') } }))
