@@ -172,7 +172,7 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
         requireOwner(actor)
         const id = authoringEstimate ? form.authoring_id : authoringAction?.[1] ? decodeURIComponent(authoringAction[1]) : null
         const connections = await read('/api/crank/connections')
-        const review = async (error:string,status:number) => page(id ? 'Review generated workflow' : 'Create workflow', id ? authoringView(await read('/api/crank/authoring/' + encodeURIComponent(id)),connections,form,error) : authoringCreateView(connections,form,error), {section:'Skills',crumbs:[['Skills','/app/skills']]}, status)
+        const review = async (error:string,status:number) => page(id ? 'Review generated workflow' : 'Create workflow', id ? authoringView(await read('/api/crank/authoring/' + encodeURIComponent(id)),connections,form,error) : authoringCreateView(connections,form,error,(await read('/api/crank/data/flows')).flows.find((flow:any)=>flow.kind==='authoring')), {section:'Skills',crumbs:[['Skills','/app/skills']]}, status)
         let input:Record<string,unknown>
         try { input = authoringInput(path,form) }
         catch(error:any) { return review(error.message,422) }
@@ -320,7 +320,10 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
     }
     if(url.pathname==='/app/inbox') return page('Inbox',inboxPanel(await read('/api/crank/inbox')),{state,intro:'In-app requests addressed to you. The original workflow controls access and every decision.'})
     requireOwner(actor)
-    if(url.pathname==='/app/authoring') return page('Create workflow',authoringCreateView(await read('/api/crank/connections')),{state,section:'Skills',crumbs:[['Skills','/app/skills']],intro:'Describe a business result, review the draft, then test and approve its exact version.'})
+    if(url.pathname==='/app/authoring') {
+      const [connections,disclosures] = await Promise.all([read('/api/crank/connections'),read('/api/crank/data/flows')])
+      return page('Create workflow',authoringCreateView(connections,{},undefined,disclosures.flows.find((flow:any)=>flow.kind==='authoring')),{state,section:'Skills',crumbs:[['Skills','/app/skills']],intro:'Describe a business result, review the draft, then test and approve its exact version.'})
+    }
     const authoringDetail = /^\/app\/authoring\/([^/]+)$/.exec(url.pathname)
     if(authoringDetail) {
       const [proposal,connections] = await Promise.all([read('/api/crank/authoring/' + encodeURIComponent(decodeURIComponent(authoringDetail[1]))),read('/api/crank/connections')])

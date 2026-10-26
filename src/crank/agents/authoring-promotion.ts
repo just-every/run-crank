@@ -4,6 +4,7 @@ import { canonical, digest, id, requireValue, stmt, type Actor, type CrankEnv } 
 import { auditStatement } from '../ops/audit'
 import { authoringDigest, authoringRecord, authoringState } from './authoring-record'
 import { scopedGraph } from './authoring-schema'
+import { authoringTestScope } from './authoring-safety'
 
 export async function authoringPublication(env: CrankEnv, actor: Actor, workflowId: string, graph: Graph, input: Record<string, unknown>, versionId: string) {
   const retained = await authoringRecord(env, workflowId)
@@ -13,6 +14,7 @@ export async function authoringPublication(env: CrankEnv, actor: Actor, workflow
   requireOwner(actor)
   const state = await authoringState(env, workflowId), record = state.record
   scopedGraph(graph, record.scope)
+  await authoringTestScope(env, workflowId, graph, { [record.scope.crm_connection_id]: record.scope.crm_connection_id, [record.scope.quickbooks_connection_id]: record.scope.quickbooks_connection_id })
   const hash = await authoringDigest(graph, record)
   requireValue(input.authoring_confirm === true && input.authoring_digest === hash, 'Use the reviewed authoring promotion door for this exact proposal', 409)
   requireValue(record.questions.every(q => q.answer?.trim()) && record.tested?.digest === hash && record.tested.run_ids.length === record.samples.length, 'Resolve every question and successfully test the current proposal before promotion', 409)

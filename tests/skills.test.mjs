@@ -152,6 +152,9 @@ test('AI-002: native model proposals stay within scope, sandbox tests fence exac
     assert.equal(proposal.model.model, 'configured-authoring-model');
     assert.ok(proposal.questions.length > 0);
     assert.ok(proposal.disclosures.every(d => d.recipient && d.fields && d.retention));
+    assert.ok(proposal.schemas.authorized.operations.some(operation => operation.type === 'quickbooks.create_invoice'));
+    assert.equal(proposal.grant_proposal.rules.find(rule => rule.type === 'quickbooks.create_invoice').max_usd, request.amount_usd);
+    assert.equal((await h.get('grants')).length, 0);
     const widened = structuredClone(proposal.graph); widened.steps[0].input.method = 'POST';
     await h.post(base + '/revise', { graph: widened }, h.owner, 422);
     await h.post('workflows/' + proposal.workflow_id + '/draft', { graph: widened }, h.owner, 422);
@@ -190,6 +193,10 @@ test('AI-002: native model proposals stay within scope, sandbox tests fence exac
     await h.post('connections/' + qbo.id + '/purpose', { purpose: 'test' });
     const audit = await h.get('audit');
     assert.ok(audit.some(a => a.action === 'authoring.promote' && a.version_id === workflow.published_version_id));
+    proposal = await h.post(base + '/revise', { samples: [{ id: 'lead-4' }] });
+    assert.equal(proposal.promoted, false);
+    assert.equal(proposal.tested.passed, false);
+    assert.equal((await h.get('workflows/' + proposal.workflow_id)).published_version_id, workflow.published_version_id);
     await h.restart();
     assert.equal((await h.get(base)).digest, proposal.digest);
     const archiveText = await archive(h);

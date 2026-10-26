@@ -24,7 +24,7 @@ const connectionName = (c: Connection) => `${c.label}${c.account_name ? ' · ' +
 const options = (connections: Connection[], selected?: string) => connections.map(c => `<option value="${esc(c.id)}"${selected === c.id ? ' selected' : ''}>${esc(connectionName(c))} · ${esc(c.purpose)}</option>`).join('')
 const inspection = (label: string, value: unknown) => `<label>${esc(label)}<textarea rows="6" aria-label="${esc(label)}" readonly spellcheck="false">${json(value)}</textarea></label>`
 
-export function authoringCreateView(connections: Connection[], values: Values = {}, error?: string) {
+export function authoringCreateView(connections: Connection[], values: Values = {}, error?: string, disclosure?: unknown) {
   const crm = connections.filter(c => ['http', 'hubspot'].includes(c.app) && c.status === 'active')
   const books = connections.filter(c => c.app === 'quickbooks' && c.status === 'active')
   const field = (name: string, label: string, type = 'text') => `<label>${label}<input type="${type}" name="${name}" value="${esc(values[name] ?? '')}" maxlength="2000" required></label>`
@@ -42,6 +42,7 @@ export function authoringCreateView(connections: Connection[], values: Values = 
     <label>Sample inputs (JSON array)<textarea name="samples" aria-label="Sample inputs (JSON array)" rows="6" spellcheck="false">${esc(values.samples ?? '[]')}</textarea></label></details>
     <button class="btn btn-primary"${crm.length && books.length ? '' : ' disabled'}>Generate draft</button>
     <p class="form-help">Authoring grants no new access and sends no production invoice. Sandbox tests require explicitly selected test accounts.</p></form>
+    <details><summary>What reaches the model</summary>${disclosure ? inspection('Model recipient and data use', disclosure) : '<p>Configure and enable an installation model before generation. No model request is made while it is disabled.</p>'}<p>Use authorized sandbox samples and exclude credentials. Generating a draft sends the prompt, submitted samples and selected connector definitions to this provider.</p></details>
     ${crm.length && books.length ? '' : '<p class="notice">An active CRM connection and QuickBooks connection are required. <a href="/app/connections">Inspect connections</a>.</p>'}</section>`
 }
 

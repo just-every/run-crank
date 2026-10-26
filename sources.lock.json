@@ -2126,7 +2126,7 @@
       "executable": false
     },
     "src/crank/agents/authoring-promotion.ts": {
-      "sha256": "11faa3673fa7f365a8941225a7d4869ac82e06b351eb280422a7671236a90753",
+      "sha256": "4ee4c8e0fdae314c9d87c68cb1b6bf17413e71cd36a613ab6cc3a9e4e907f192",
       "executable": false
     },
     "src/crank/agents/authoring-record.ts": {
@@ -2142,7 +2142,7 @@
       "executable": false
     },
     "src/crank/agents/authoring.ts": {
-      "sha256": "a402b85a8c289df8b0b721c5272168e1a1532995a8d0274d6b0e73122acbaf48",
+      "sha256": "9d1ff87178c9f47ee49c65134c955cdc6a3717ed39c9778d68e2247296973019",
       "executable": false
     },
     "src/crank/agents/cases.ts": {
@@ -2914,7 +2914,7 @@
       "executable": false
     },
     "src/crank/ui/authoring.ts": {
-      "sha256": "e36bc38f5bc1475297a23fc1bed5f3c030bd67d980bedb9d7e92ebff5bbaf553",
+      "sha256": "7ec9dd025269d28bedc2dbb8e634abf79bd025f36c8d0e30eeb3a387f7b64965",
       "executable": false
     },
     "src/crank/ui/connections.ts": {
@@ -2998,7 +2998,7 @@
       "executable": false
     },
     "src/crank/ui/handler.ts": {
-      "sha256": "35fd70ed6e43002ec79f4917a91510dcf74d03127e0d4689fcf7b2c191a15bab",
+      "sha256": "68e70388b7602f139526359a789bf8c25ef10df9c42d60d5e6728c5bafdcb00a",
       "executable": false
     },
     "src/crank/ui/icons.ts": {
@@ -5522,7 +5522,7 @@
       "executable": false
     },
     "tests/skills.test.mjs": {
-      "sha256": "8193259ff1197071f6ea0952c9f165577db06413b444506fffe45bb31691ae7b",
+      "sha256": "21d75752fa174732c7ee862e266ad14026257d98d3f0e7abc57705d26d3f8b48",
       "executable": false
     },
     "tests/sqlserver-gateway-fixture.mjs": {

@@ -28,10 +28,10 @@ export async function readAuthoring(env: CrankEnv, actor: Actor, workflowId: str
   requireOwner(actor)
   const state = await authoringState(env, workflowId), { record, graph, workflow } = state
   const hash = await authoringDigest(graph, record)
-  const promotion = workflow.published_version_id ? await stmt(env, "SELECT id FROM crank_audit WHERE action='authoring.promote' AND subject_id=? AND version_id=?", workflowId, workflow.published_version_id).first() : null
+  const promotion = workflow.published_version_id ? await stmt(env, "SELECT detail_json FROM crank_audit WHERE action='authoring.promote' AND subject_id=? AND version_id=?", workflowId, workflow.published_version_id).first<{detail_json: string}>() : null
   return { workflow_id: workflowId, graph, samples: record.samples, questions: record.questions, scope: record.scope, model: record.model,
     costs: { ...record.costs, execution: await readWorkflowEstimate(env, workflowId) }, digest: hash,
-    tested: { passed: record.tested?.digest === hash, digest: record.tested?.digest ?? null, run_ids: record.tested?.run_ids ?? [] }, promoted: !!promotion,
+    tested: { passed: record.tested?.digest === hash, digest: record.tested?.digest ?? null, run_ids: record.tested?.run_ids ?? [] }, promoted: !!promotion && JSON.parse(promotion.detail_json).digest === hash,
     schemas: { authorized: record.schemas, sample_fields: [...new Set(record.samples.flatMap(sample => Object.keys(sample)))], source: 'Owner submitted samples; CRM records are read only during explicit tests' },
     grant_proposal: { status: 'Proposal only; no execution authority issued', workflow_id: workflowId, version_id: workflow.published_version_id,
       rules: graph.steps.map(step => ({ step_id: step.id, type: step.type, connection_id: step.connection_id ?? null,
