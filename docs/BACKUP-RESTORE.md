@@ -253,3 +253,17 @@ definition digests are checked during staging before an archive commits.
 Operational tables, records, mutation receipts and value-free replay fences are portable. Tables and old operation receipts normalize inactive. The receiving native owner reviews the complete table digest and explicitly adopts it; ordinary workflow publication is still required, and an imported operation receipt never authorizes replay. Paused record erasure uses the shared journal so later journals block old records. Only non-sensitive integer/list state is supported; general record/form custody remains unimplemented.
 
 Operational state erasure retains append-only actor/time/opaque record and operation references, with no state values; existing operator erasure governs actor attribution.
+
+Independent invoice obligations use the existing sealed run input, output,
+reconciliation trace and approval proposal and decision records. The complete
+criteria, provider evidence and original operation identities travel in the
+archive. Receiving workflows remain inactive; credentials and standing grants
+do not travel. Importing an obligation never sends a repair or notification.
+
+Provider drift incidents, minimal versioned proposals, retained test-case links
+and checkpoint continuation links are portable. Incidents and proposals restore
+inactive and sandbox bindings are cleared. They cannot authorize deployment or
+release a restored run. Case expiry or erasure invalidates approval; the normal
+run erasure journal covers incident, proposal, test and continuation links.
+Provider schema and changelog values remain in the source run's existing sealed
+payload custody, rather than an extra unprotected sample store.

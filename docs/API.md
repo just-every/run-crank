@@ -842,3 +842,64 @@ Native steps `quickbooks.create_invoice` and `quickbooks.create_refund_receipt` 
 A separately published `quickbooks.void_invoice` step takes `source_run_id` and `source_path` naming a completed native invoice in a failed run, on the same connection. It always asks for exact human approval, retains its own audit and outcome, and uses a compensation identity derived from the original effect. A void does not reverse a payment or refund.
 
 Gusto native steps are listed in the catalog. Connections bind the company UUID in `account_name`, use the `sandbox` environment for demo APIs, and retain provider-granted scopes. Under Account → Provider settings, the owner reviews responsibilities and records an agreement reference with separate consent for each company and operation. The API doors are `GET /api/crank/regulated-operations` with `connection_id` and `company_id`, and `POST /api/crank/regulated-operations/consent` with those fields, `operation`, boolean `consent` and `agreement_reference`. No agreement is signed by this operation. Missing agreement, consent, provider scopes or onboarding holds the existing obligation. Worker data handoffs preserve declared USD tax lines and ACH references and read the created worker back; they neither file tax forms nor send onboarding invitations. Provider payment acceptance and funded receipt readback remain distinct from settlement. CT adopted this consent policy with riders on 25 October 2026. Consent binds the reviewed immutable definition digest, credential authority generation and native owner version. Read the current operation definition first and supply its `operation_definition_digest` as `definition_digest` when consenting; a stale definition is refused. Every physical request rechecks authority after admission. Same-company renewal with unchanged effective scopes preserves consent; replacement, withdrawal, owner changes and inactive restore invalidate it. The completed Demo ACH receipt and worker handoffs are recorded in ACCEPTANCE.md.
+
+## Independent invoice obligations
+
+`quickbooks.invoice_outcome` checks the authorized CRM lead checkpoint and the
+completed native invoice intent, then independently queries the connected
+QuickBooks sandbox. Its input names `lead_path`, `source_path`, `lead_id`,
+`realm_id`, `business_key`, `customer_id`, `amount_usd`, `due_at` and
+`remaining_cost_usd`. The source lead supplies `id`, `customer_id` and
+`amount_usd`. The provider record must match the document number, customer,
+USD currency and exact amount. HTTP success alone cannot satisfy it.
+
+A missing or incorrect invoice opens an exact native approval. Repair requires
+an unchanged standing grant and original CRM and invoice evidence. A missing
+invoice retains the original provider request identity; an incorrect invoice
+update binds its current provider ID and version. Acknowledged repairs still
+need a fresh correct readback. Ambiguous or unavailable readback remains open.
+The run screen shows due, blocked, uncertain and satisfied states with the
+remaining owner estimate and provider evidence. Notification acceptance remains
+a separate subsequent checkpoint. This does not change operations reporting's
+separately labelled owner attestation.
+
+When a native invoice supplies `amount_usd`, Crank validates its exact line,
+discount and tax total before dispatch. Conflicting quantity and price inputs
+or percentage discounts without an exact bounded total are refused. A grant's
+amount cannot be supplied as an unrelated label beside a larger invoice.
+
+## Provider drift and reviewed mapping repair
+
+The workflow run links to its Provider drift screen. A `drift.map` step declares
+typed business fields with their provider source paths and takes an authorized
+`record`. Optional `provider_schema` and typed `changelog` inputs let it compare
+current provider documentation with the retained data shape. Documentation is
+untrusted evidence and supplies no permission or business equivalence.
+
+Native owner doors under `/api/crank/drift` list incidents and prepare minimal
+mapping proposals. `POST /api/crank/drift` takes `incident_id` and `source_after`,
+or `kind: "scope"` with explicitly requested `scopes`. Scope proposals can be
+rejected; this door never grants them. Every open incident fences affected
+production writes, including physical retries after admission waits.
+
+`POST /api/crank/drift/incidents/:id/recheck` retries only the original failed
+bound GET or HEAD. Actual provider success under the unchanged original scopes
+can resolve that permission incident. It cannot speculate with a write.
+
+`POST /api/crank/drift/:id/test` takes the current `digest` and explicit
+`bindings` from each original connection to a current test-purpose sandbox
+connection. It replays the latest 20 retained production trigger envelopes in
+native test mode and retains each source and test run. Reads and writes use the
+selected sandbox accounts; the production write fence stays closed. This
+initial repair supports linear native mapping workflows; operational state,
+custom connector execution, subflows and external code need isolated repair
+support before they can use it.
+
+`POST /api/crank/drift/:id/approve` requires the current reviewed digest, all
+20 passing retained cases, `business_meaning_confirmed: true` and the normal
+four-component owner cost quotation. It publishes only the tested mapping and
+continues eligible held native runs from their existing completed checkpoints.
+The original version and every continuation remain inspectable. Standing-grant
+runs need fresh exact-version authority; uncertain writes still require
+reconciliation. `POST /api/crank/drift/:id/rollback` restores the previous mapping
+and reinstates the write fence. The UI exposes the same tests and decisions.
