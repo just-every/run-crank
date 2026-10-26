@@ -304,7 +304,7 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
     requireOwner(actor)
     const driftWorkflow=/^\/app\/workflows\/([^/]+)\/drift$/.exec(url.pathname), driftReview=/^\/app\/drift\/([^/]+)$/.exec(url.pathname)
     if(driftWorkflow) { const workflow=await read('/api/crank/workflows/'+driftWorkflow[1]); return page('Provider drift',driftListView(workflow,await read('/api/crank/drift')),{state,crumbs:[['Workflow','/app/workflows/'+workflow.id]]}) }
-    if(driftReview) return page('Review mapping repair',driftReviewView(await read('/api/crank/drift/'+driftReview[1]),await read('/api/crank/connections')),{state})
+    if(driftReview) { const review=await read('/api/crank/drift/'+driftReview[1]); return page(review.proposal.kind==='scope'?'Review requested scopes':'Review mapping repair',driftReviewView(review,await read('/api/crank/connections')),{state}) }
     if(url.pathname==='/app/settings/provider-consent') {
       const connections=await read('/api/crank/connections')
       const disclosure=url.searchParams.get('connection_id') && url.searchParams.get('company_id') ? await read('/api/crank/regulated-operations?'+url.searchParams) : null
