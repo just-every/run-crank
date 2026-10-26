@@ -39,7 +39,7 @@ export async function driftRepairJourney({ inspect } = {}) {
     assert.equal((await h.get('workflows/' + workflow.id)).status, 'published');
     for (const original of held) {
       const resumed = await h.get('workflow-runs/' + original.id);
-      assert.equal(resumed.status, 'succeeded');
+      assert.equal(resumed.status, 'succeeded',JSON.stringify({error:resumed.error,steps:resumed.steps.map(s=>({path:s.path,status:s.status,error:s.error}))}));
       assert.equal(resumed.version_id, approved.proposal.approved_version_id);
       for (const completed of original.steps.filter(step => step.status === 'succeeded')) {
         const retained = resumed.steps.find(step => step.path === completed.path);
