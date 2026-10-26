@@ -9,9 +9,9 @@ import {quickbooksLiveFixture} from './quickbooks-live-fixture.mjs';
 const fixture=await quickbooksLiveFixture(),notices=[];
 const facts={id:'synthetic-crank-80',customer_id:fixture.customer.Id,amount_usd:'19.99'};
 const server=createServer(async(req,res)=>{res.setHeader('content-type','application/json');if(req.url==='/lead'){res.end(JSON.stringify(facts));return}const chunks=[];for await(const c of req)chunks.push(c);notices.push(JSON.parse(Buffer.concat(chunks)));res.end(JSON.stringify({id:'synthetic-crank-'+(90+notices.length),accepted:true}))});
-await new Promise(r=>server.listen(0,'127.0.0.1',r));const receiver='http://127.0.0.1:'+server.address().port;
+await new Promise(r=>server.listen(0,'127.0.0.1',r));const receiver='http://127.0.0.1:'+server.address().port,declared='https://synthetic-crank-owned.example';
 let scenario='missing',fault=true,writes=0;
-const h=await harness(receiver,{edge:async request=>{if(new URL(request.url).origin!==fixture.origin)return;
+const h=await harness(receiver,{edge:async request=>{const url=new URL(request.url);if(url.origin===declared){const headers=Object.fromEntries(request.headers);delete headers['content-length'];return fetch(receiver+url.pathname,{method:request.method,headers,...(!['GET','HEAD'].includes(request.method)?{body:await request.text()}:{})})}if(url.origin!==fixture.origin)return;
  if(request.method==='POST'&&fault){fault=false;const input=await request.json();
   if(scenario==='missing'){console.log('injected_fault=success_acknowledgement_without_remote_invoice');return Response.json({Invoice:{...input,Id:'synthetic-crank-81',SyncToken:'0',TotalAmt:19.99}})}
   writes++;console.log('injected_fault=wrong_customer_on_original_sandbox_create');return fixture.forward(request,{body:JSON.stringify({...input,CustomerRef:{value:fixture.wrongCustomer.Id}})});
@@ -20,7 +20,7 @@ const h=await harness(receiver,{edge:async request=>{if(new URL(request.url).ori
 }});
 try{console.log(JSON.stringify({journey:'invoice-outcome-sandbox',code_sha:execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim(),realm_id:fixture.realm,sandbox:true}));
  for(scenario of ['missing','wrong']){fault=true;const before=writes,beforeNotice=notices.length,key='synthetic-crank-'+randomUUID().slice(0,5);
- const objective=await outcomeObjective(h,{realm:fixture.realm,customer:fixture.customer.Id,item:fixture.item.Id,receiver,businessKey:key,lead:facts.id,token:fixture.token});
+ const objective=await outcomeObjective(h,{realm:fixture.realm,customer:fixture.customer.Id,item:fixture.item.Id,receiver:declared,businessKey:key,lead:facts.id,token:fixture.token});
  let run=await objective.start();assert.equal(run.status,'awaiting_approval',JSON.stringify(run.error));assert.equal(stepOf(run,'invoice').status,'succeeded');assert.equal(notices.length,beforeNotice);
  assert.equal(run.waits[0].proposal.records.length,scenario==='missing'?0:1);if(scenario==='wrong')assert.equal(run.waits[0].proposal.records[0].CustomerRef.value,fixture.wrongCustomer.Id);
  console.log(JSON.stringify({state:'obligation_open',scenario,run_id:run.id,workflow_id:objective.workflow.id,version_id:run.version_id,grant_id:objective.grant.id,connection_id:objective.account.id,invoice_checkpoint:stepOf(run,'invoice').operation_key,provider_records:run.waits[0].proposal.records.map(r=>({Id:r.Id,CustomerRef:r.CustomerRef,TotalAmt:r.TotalAmt})),notices:0}));
