@@ -138,7 +138,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "d1ace05f7fdb454b8e955929039d80c3be9c17b4e425456fb764bcc4351d7497",
+      "sha256": "edcf56a5c9973e60c390ff5550bbd8a73a12798d82b3a815680ca3757eb875fa",
       "executable": false
     },
     "AGENTS.md": {
@@ -162,7 +162,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "b37b97af2440b9d8122cd7c8ea0b0a545b99365c3bd259b1bfdf7fe445438926",
+      "sha256": "6966522122259313085815a6770c5e3e9e47d08588232c8db32e527a741754c1",
       "executable": false
     },
     "DEMO.md": {
@@ -514,91 +514,215 @@
       "executable": false
     },
     "evidence/sx-crank-c-i812/invoice-outcome-browser.log": {
-      "sha256": "1c12ce80500c89729abfa384f8b11c9805c89bc5f805d7e81351e442f329829a",
+      "sha256": "f623d0c6901f0ef7887b33d9d19be9edbcdad1224265582e3eb1626cbb0c146c",
       "executable": false
     },
     "evidence/sx-crank-c-i812/invoice-outcome-sandbox.log": {
       "sha256": "10a5ff8a9b93656695d79afbcf9bf013f9100aaac4c038439132e8f12374dc8a",
       "executable": false
     },
+    "evidence/sx-crank-c-i812/migration-browser.log": {
+      "sha256": "09c3a18f94d73c3af9d6bc54f62a481703556848a0f4f1a43491acebb73826c5",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i812/migration-screens/1440-account-tooltip.png": {
+      "sha256": "7f590cd5d4ac54b80069c8081d4139d4b50bed28b13ba611990ed2ce790fd0bb",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i812/migration-screens/1440-applied-graph.png": {
+      "sha256": "8bbbdd62be21df8262cc5db21ea8dd6b8566a8ec9178a05a8354268d3d8daffd",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i812/migration-screens/1440-date-review.png": {
+      "sha256": "34bc52a8607d4356c5cdfb5ae5d7f6022f6ddc84ad1872a7f642c18a341a7845",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i812/migration-screens/1440-done-completed-run.png": {
+      "sha256": "a36ada3d272cd24cf3eba51f07998055c4be8f8f57c50bb08d1a72a87759cd76",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i812/migration-screens/1440-done-inactive-native.png": {
+      "sha256": "6cd17c7e163c574376baab0bafac72884588daf3275bb3db367ab9a402080651",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i812/migration-screens/1440-done-review.png": {
+      "sha256": "266e40df4906050e3394068132f43b61ee59a6304490de4dd33ccd570c5f0b72",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i812/migration-screens/1440-inactive-native-graph.png": {
+      "sha256": "891aeff145183dc75031dd68374b9733e2122e8df7fcfc01b53ec39c359d8c27",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i812/migration-screens/1440-manual-conversions.png": {
+      "sha256": "1b376ec0bd22800f29d2073b019168a00a3007bd934a4de77b88b44414349736",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i812/migration-screens/1440-move-in.png": {
+      "sha256": "2a7b3b0f664c3563efb366a70aa77ae9bb6bd4b83399584d42236876de138bd2",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i812/migration-screens/1440-review-graph.png": {
+      "sha256": "c751dc53480391d7a738ca43f4077c0baeede940246325604f1263e33c201174",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i812/migration-screens/1440-search-tooltip.png": {
+      "sha256": "b258a0600211303905a6511275bca10b16a6a8203aeb511d3af32b0b66f7b737",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i812/migration-screens/1440-supported-fields.png": {
+      "sha256": "f9b5d217478af7aa3e4162fddc3d0733c5e14ff423721e7c5ca08da2e2bee0c0",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i812/migration-screens/1440-switch-review.png": {
+      "sha256": "b7794987c226c962dec4bb49cfae89ccddc9a3f4fe65b7834278cc01a17f90b7",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i812/migration-screens/1440-undone-graph.png": {
+      "sha256": "35d11b38e4017199969b31e39a308c9e4c84583e57930e583848055685673c2f",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i812/migration-screens/390-account-tooltip.png": {
+      "sha256": "aac6ff75e646c544a36188672837182e2d25ad59fdf4392494f9f1b1f21c7a59",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i812/migration-screens/390-applied-graph.png": {
+      "sha256": "b8e889bafe3abc8160fa8e721fb8baab7d22b8b2058c9df9cdf533fa20461a4a",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i812/migration-screens/390-date-review.png": {
+      "sha256": "ed5b3ab7dff84714acd914e91b192651d5bc2e3e252d3982157dfeacd533d882",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i812/migration-screens/390-done-completed-run.png": {
+      "sha256": "b85280c11a308617c83026bd539cfed126f9c9b518f94fc55616baa7fa05e5a9",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i812/migration-screens/390-done-inactive-native.png": {
+      "sha256": "675246cfc54699f6b11ea9fab38e0bb2c5b9671ab3ee65b6e6fcd97343366b9c",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i812/migration-screens/390-done-review.png": {
+      "sha256": "4678d7372f6c7ed42352b3018104fe92fea8e19b03c5424d76234d2c546723e1",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i812/migration-screens/390-inactive-native-graph.png": {
+      "sha256": "0d537b851db536f7f38f252240dde3a168d0f9a0eeb28277c9e87cbae1c60a01",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i812/migration-screens/390-manual-conversions.png": {
+      "sha256": "7b1ed1094b8186f637a653d4352ee0453c967eb53e65ce981bee8b7d8215d488",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i812/migration-screens/390-move-in.png": {
+      "sha256": "ca6c857dd3a46587b681ec8c336624f64e8aded1bec4aa2222df82a17a6e2356",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i812/migration-screens/390-review-graph.png": {
+      "sha256": "3d40abb2184f1ff9bf0a4d02ce47ec1d40d3af946e4da61d523498144c895d34",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i812/migration-screens/390-search-tooltip.png": {
+      "sha256": "9169e75c5429bd50180f40bdea361674d8b3bbf53e21b8691dff807fc6387a4d",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i812/migration-screens/390-supported-fields.png": {
+      "sha256": "0afc9c110c6d8eb332477794755b468ad6ddfbb076513ba0f432d46f1d51d2e3",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i812/migration-screens/390-switch-review.png": {
+      "sha256": "48520a1570d14b1fad23b52db0b29d8856297fda00e9e12248a39c6eb07e2393",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i812/migration-screens/390-undone-graph.png": {
+      "sha256": "26e1c81bc8eef427261c9663466b82f268bb561facb7ca0c8b3ea28d2960a9c9",
+      "executable": false
+    },
     "evidence/sx-crank-c-i812/outcome-screens/1440-invalid-amount.png": {
-      "sha256": "e46a5dcbc3d07255be821713150020d6d1e12118c8115c3953ecab9826398c2f",
+      "sha256": "7006982b39136e9469c68787dff006e2a1a7067e433f104bd06c8ed2497d14a5",
       "executable": false
     },
     "evidence/sx-crank-c-i812/outcome-screens/1440-missing-open.png": {
-      "sha256": "56f0bb5d5439ff4e9b13ba9828364253b46ae728463bd6fafb4bb245dde70934",
+      "sha256": "162f3258553ede9fbb71b4ca924cec7a222f8861d9b0df92680c3c532d85c507",
       "executable": false
     },
     "evidence/sx-crank-c-i812/outcome-screens/1440-missing-satisfied.png": {
-      "sha256": "ddce5b990061d5cd81f06e2e246ef158dccb51db86c7165e09334167c1952dd9",
+      "sha256": "43014d71b320471fa9e1ed8864c0ac64f53470ef4e592be1df3d4e6ad50c2b5a",
       "executable": false
     },
     "evidence/sx-crank-c-i812/outcome-screens/1440-outside-grant.png": {
-      "sha256": "0fa1429659fa6f1f75e1b8e8b3ea792d5814229a3cc267079dec6df35e1fd801",
+      "sha256": "07137d396c9c93113cf0193c34202e23a99fa2b6891304062e7b79564b19583c",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i812/outcome-screens/1440-provider-changed.png": {
+      "sha256": "8c995fc804b74c71aaf75ee53184d3b4b10d22c52d512c584d2d16cd7a789cbd",
       "executable": false
     },
     "evidence/sx-crank-c-i812/outcome-screens/1440-restored-inactive.png": {
-      "sha256": "36527b3c9f08262c4ec1a9f5a7c0991490a035ce0f2973cd8f8f3afdf2da978f",
+      "sha256": "5bbb76a635b640370a794c9134af481acad46e8f5e9e0b6467ecf41414a62ad2",
       "executable": false
     },
     "evidence/sx-crank-c-i812/outcome-screens/1440-uncertain-open.png": {
-      "sha256": "d0cf69dfbe7e6f667c46aad08dd77d0576c05b7c31c11fa374495a09b3a4e842",
+      "sha256": "2234f36f37606fb5de1bda24fabe039b20713b51ce34dc428268c9fdd0546f08",
       "executable": false
     },
     "evidence/sx-crank-c-i812/outcome-screens/1440-uncertain-readback.png": {
-      "sha256": "0194d738b3f6f60833776d7712b7738fd088a10e66146cab34977e20b49f22b4",
+      "sha256": "8b9398f0d2b3635b63e919d26afceb1ca998f5e6cebb49f7b563371b9126820b",
       "executable": false
     },
     "evidence/sx-crank-c-i812/outcome-screens/1440-uncertain-satisfied.png": {
-      "sha256": "57f57fb84449e73213ae544a206938a7f568f77d6a26f9e1a3be4dc140c1bde0",
+      "sha256": "e4a92c1807ab8add6fc96ad665c832a51d53abc87842e849f636ba6e8e269fa1",
       "executable": false
     },
     "evidence/sx-crank-c-i812/outcome-screens/1440-wrong-open.png": {
-      "sha256": "cdeebeb39fdde4a0af7148a14676a47f9c57389cee127bcb0a7e8aae78bd0add",
+      "sha256": "d47a0df53a1826b82afcdbf6618c4d1fa8ac3e4674eb593bc1817186f10f74a1",
       "executable": false
     },
     "evidence/sx-crank-c-i812/outcome-screens/1440-wrong-satisfied.png": {
-      "sha256": "bb8c7aee696306ca134a10f9292705d259aa45f6091fc2945cb223357fca0259",
+      "sha256": "5e2537d267a0aec8759d65c4304222904741d2b57f66b1229edd33957ef28fda",
       "executable": false
     },
     "evidence/sx-crank-c-i812/outcome-screens/390-invalid-amount.png": {
-      "sha256": "5ad2e2565eab7c0a4127b53f1ba3bf5a9fcc1179d0109a71a02c0026cb251a0f",
+      "sha256": "096b5b98dd1735db48b7ed193004d069ad090a600cec3d533c7cafd0ad198fe3",
       "executable": false
     },
     "evidence/sx-crank-c-i812/outcome-screens/390-missing-open.png": {
-      "sha256": "57c78133f3e0877eba9d7894935f9a22277cf2ebdc44197afeda8b9219a23daa",
+      "sha256": "345b680d19133f4483a5116df05f2f32d803a21655f5df560819bb4075a8e3dc",
       "executable": false
     },
     "evidence/sx-crank-c-i812/outcome-screens/390-missing-satisfied.png": {
-      "sha256": "a677d1edbe48e99b2fd6de72cb0acd46953b16452b47a13201ea930adb0197dc",
+      "sha256": "06123b98af495cc3d87d21d78dd37f8bf6c8e77d49664c86725d83f83a38b9d4",
       "executable": false
     },
     "evidence/sx-crank-c-i812/outcome-screens/390-outside-grant.png": {
-      "sha256": "d88181269fa8a1ed3e4e1221db7c452573c9d89b62ab81cca24cba80390d9ee2",
+      "sha256": "36ae5fde894d8e812c7363f0f4b6ff3c9eb37412b6e733f5152dc383567e91e1",
+      "executable": false
+    },
+    "evidence/sx-crank-c-i812/outcome-screens/390-provider-changed.png": {
+      "sha256": "5146bfa14f364797dfc74e787250642d2a669a42d2248eba7ed3431de5133daf",
       "executable": false
     },
     "evidence/sx-crank-c-i812/outcome-screens/390-restored-inactive.png": {
-      "sha256": "6a1103e11dd3077b88da0b528c9b5dbc705abf484a24d52a7399790f6729a993",
+      "sha256": "e522fd290052b092b03d5a5a961243f8263f1426073c6e5e383dd2b2df186e8a",
       "executable": false
     },
     "evidence/sx-crank-c-i812/outcome-screens/390-uncertain-open.png": {
-      "sha256": "2c673176b106cdc63b2244432f2683c37e8479b680bf1ddeacd9008684e49273",
+      "sha256": "0fafc5f20650fdacc885eec63773c0d6a4ce31663d7e720aeaa8c67074e86573",
       "executable": false
     },
     "evidence/sx-crank-c-i812/outcome-screens/390-uncertain-readback.png": {
-      "sha256": "5df00669ddfd1f344d4ed338deaace28332bc69b44c1bea3166f87874c266875",
+      "sha256": "55d216cff2fe3ab342babb79b96ee5c723a58150a5c4818dfe8db6bf18ce9f13",
       "executable": false
     },
     "evidence/sx-crank-c-i812/outcome-screens/390-uncertain-satisfied.png": {
-      "sha256": "50af8f96206b71cd094d5e6434aae8360d37fdf100919c7642cb7bb43af463e5",
+      "sha256": "ce50631cfced29c0d306d62a34a173e036eee1cacd188cc70f3bc34fdb92e348",
       "executable": false
     },
     "evidence/sx-crank-c-i812/outcome-screens/390-wrong-open.png": {
-      "sha256": "b610b9b75dfbca8a9bb0aafce091223e6ef8c4b39782b63b861c647ad34d9c5c",
+      "sha256": "3a9cbe3d9634c5ca2079a567bb81352bd9f617179f64077ec6f25a1bb680f232",
       "executable": false
     },
     "evidence/sx-crank-c-i812/outcome-screens/390-wrong-satisfied.png": {
-      "sha256": "282cacbcce3728ac0f9684e2427a17f043fac8f7db26cc851412be9114eccdae",
+      "sha256": "7cdd535d7c06acec4cfad51ba681d4fc22ed1c3c7e19216624fc3a18f59d8b48",
       "executable": false
     },
     "examples/inbox/server.mjs": {
@@ -4678,7 +4802,7 @@
       "executable": false
     },
     "tests/drift-browser.mjs": {
-      "sha256": "9b3d52a895188b5f1fbd0dd4a1581fc718a48a8755f5d87f8d9c93ef4798ff02",
+      "sha256": "325bd06853608644c9407d51430dd22d5f8fc7e3e6de071dc0747c78ab220c9f",
       "executable": false
     },
     "tests/drift-fixture.mjs": {
@@ -4838,7 +4962,7 @@
       "executable": false
     },
     "tests/invoice-outcome-browser.mjs": {
-      "sha256": "63c34b2f01bcd8ef15daef3bdaf9fb01f45a3658d7e6e3fb0889eb108ba8517a",
+      "sha256": "b683d77d71a3ecc6bf283a6d3813fba34bf6929f27805fa03b9a0f2e9450ee96",
       "executable": false
     },
     "tests/invoice-outcome-journey.mjs": {
