@@ -1,3 +1,6 @@
+import { authoringPublication } from '../agents/authoring-promotion'
+import { authoringRecord, authoringState } from '../agents/authoring-record'
+import { scopedGraph } from '../agents/authoring-schema'
 import { subflowPublication } from './subflows'
 import { environmentName } from '../custom/gateways'
 import { customBindings } from '../custom/bindings'
@@ -103,6 +106,13 @@ export async function updateDraft(env: CrankEnv, actor: Actor, workflowId: strin
   const draftGuard=expectedDraftJson===undefined?null:id()
   const graph = input.graph === undefined ? JSON.parse(current.draft_json) : checked(input.graph).graph
   checked(graph)
+  const authored = await authoringRecord(env, workflowId)
+  if (authored || JSON.parse(current.settings_json).authoring) {
+    requireOwner(actor)
+    const state = await authoringState(env, workflowId)
+    scopedGraph(graph, state.record.scope)
+    if (isObject(input.settings)) input.settings = { ...input.settings, authoring: JSON.parse(current.settings_json).authoring ?? { created_by: current.created_by } }
+  }
   const draftId = id(), at = now(), condition = commandCondition(command)
   const metadata = { name: input.name === undefined ? current.name : text(input.name, 'name'), description: input.description === undefined ? current.description : description(input.description),
     folder: input.folder === undefined ? current.folder : folder(input.folder), settings: isObject(input.settings) ? input.settings : JSON.parse(current.settings_json) }
@@ -214,10 +224,12 @@ async function publishVersion(env: CrankEnv, actor: Actor, workflowId: string, i
   }
   const previous = await stmt(env, 'SELECT MAX(number) AS n FROM crank_workflow_versions WHERE workflow_id=?', workflowId).first<{ n: number | null }>()
   const versionId = id(), at = now(), number = (previous?.n ?? 0) + 1, graphJson = canonical(graph)
-  const authority = { subflows, custom_bindings: await customBindings(env,graph), gateways, publisher: actor.id, publisher_version: actor.version, publisher_team_revision: actor.team?.revision ?? null, published_at: at, workflow_settings: JSON.parse(current.settings_json), steps: declared.steps, connections: declared.connections, bindings: await snapshotBindings(env, declared.connections), trigger: graph.trigger.type, ...(rollback ? { rollback_of: rollback.rollback_of } : {}) }
+  const authoring = await authoringPublication(env, actor, workflowId, graph, input, versionId)
+  const authority = { ...(authoring.length ? { authoring: true } : {}), subflows, custom_bindings: await customBindings(env,graph), gateways, publisher: actor.id, publisher_version: actor.version, publisher_team_revision: actor.team?.revision ?? null, published_at: at, workflow_settings: JSON.parse(current.settings_json), steps: declared.steps, connections: declared.connections, bindings: await snapshotBindings(env, declared.connections), trigger: graph.trigger.type, ...(rollback ? { rollback_of: rollback.rollback_of } : {}) }
   const adoption = await adoptionStatements(env, actor, current, input)
   const guard = `attested:${versionId}`
   const statements = [
+    ...authoring,
     ...(command ? [claimCommand(env, actor, command, workflowId, null, versionId)] : []),
     ...(subflows.length ? [stmt(env, `INSERT INTO crank_authority_guards(id,ok) SELECT ?,CASE WHEN NOT EXISTS(SELECT 1 FROM json_each(?) r LEFT JOIN crank_subflow_versions s
       ON s.subflow_id=json_extract(r.value,'$.subflow_id') AND s.version=json_extract(r.value,'$.version') WHERE s.id IS NULL OR s.active!=1 OR s.definition_digest!=json_extract(r.value,'$.definition_digest')) THEN 1 ELSE 0 END`, 'subflow:'+versionId, JSON.stringify(subflows)), stmt(env, 'DELETE FROM crank_authority_guards WHERE id=?', 'subflow:'+versionId)] : []),

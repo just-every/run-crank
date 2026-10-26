@@ -3,6 +3,7 @@ import { PROVIDERS } from './connections/oauth'
 import { graphDataFlows } from './data-flow-graphs'
 import { stmt, type CrankEnv } from './model'
 import { retentionPolicy } from './ops/retention'
+import { aiConfig } from '../modules/ai/index.mjs'
 
 import { type DataFlow, recipient, queryFields, providerFlow } from './data-flow-types'
 
@@ -20,6 +21,12 @@ export async function dataFlows(env: CrankEnv) {
     return c ? `${c.label}: ${c.auth_kind} (${c.status}); credential values stay server-side` : 'No stored connection; only declared noncredential request fields'
   }
   const mailLocal = env.RER_DEMO === '1' || env.AUTH_LOCAL === 'true' && env.MAIL_PROVIDER === 'development'
+  const model = aiConfig(env as unknown as Record<string, unknown>)
+  const transport = model.direct ?? model.models
+  if (model.enabled && transport?.baseUrl) add({ id: 'authoring-model', kind: 'authoring', label: 'Workflow proposal model', state: 'owner initiated only',
+    recipients: [recipient(transport.baseUrl)], purpose: 'Propose an inactive editable workflow within owner-selected connector scope; no app credential or execution authority is sent',
+    fields: ['business prompt', 'owner-selected connector schemas', 'owner-submitted samples', 'allowed account identifiers and mappings'],
+    credentials: 'Installation AI_API_KEY or MODELS_KEY; credentials remain server-side' })
   const mailHosts = { resend: 'https://api.resend.com', sendgrid: 'https://api.sendgrid.com', cloudflare: 'https://api.cloudflare.com' }
   add({ id: 'mail', kind: 'mail', label: 'Installation mail', state: mailLocal ? 'suppressed' : env.MAIL_PROVIDER && env.MAIL_PROVIDER !== 'development' ? 'configured' : 'unconfigured',
     recipients: mailLocal ? [] : env.MAIL_PROVIDER && env.MAIL_PROVIDER in mailHosts ? [mailHosts[env.MAIL_PROVIDER as keyof typeof mailHosts]] : [],

@@ -19,7 +19,8 @@ const editorPath = (id: string) => '/app/workflows/' + encodeURIComponent(id)
 
 export function skillsView(proposals: SkillSummary[], workflows: Workflow[]) {
   const names = new Map(workflows.map(w => [w.id, w.name]))
-  return `<section class="panel"><div class="panel-head"><h2>Normalization proposals</h2><span class="muted">Reusable transforms from retained exceptions and manual corrections.</span></div>
+  return `<section class="panel"><h2>Create a workflow from a description</h2><p>Describe the result you want, inspect the generated graph and samples, and review unresolved questions before a sandbox test and human promotion.</p><a class="btn btn-primary" href="/app/authoring">Describe a workflow</a></section>
+    <section class="panel"><div class="panel-head"><h2>Normalization proposals</h2><span class="muted">Reusable transforms from retained exceptions and manual corrections.</span></div>
     <ul class="list">${proposals.map(p => `<li class="history-item"><h3><a href="${esc(detailPath(p.id))}">${esc(names.get(p.workflow_id) ?? p.workflow_id)} · ${esc(p.field)}</a></h3><p>Step <code>${esc(p.step_id)}</code> · proposed ${timestamp(p.proposed_at)}</p></li>`).join('') || '<li>No proposals yet. Select retained runs below to propose a normalization.</li>'}</ul></section>
     <section class="panel"><h2>Propose a normalization</h2><p>Select 3–50 retained runs from one workflow version, including at least two manual corrections and one passing counterexample. Crank checks an existing transform pipeline against every selected case.</p>
     <p><a href="/app/runs">Find retained runs and copy their run IDs</a></p>

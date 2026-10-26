@@ -5,7 +5,7 @@ import { subflowApi } from './subflows'
 import { reviseProposal } from '../grants/proposals'
 import { issueGrant, readGrants, revokeGrant } from '../grants/store'
 import { startTask, readTask } from '../grants/tasks'
-import { listSkills, readSkill, proposeSkill, approveSkill } from '../agents/skills'
+import { generateAuthoring, readAuthoring, reviseAuthoring, testAuthoring, promoteAuthoring, listSkills, readSkill, proposeSkill, approveSkill } from '../agents/skills'
 import { usageApi } from '../ops/usage-api'
 import { isBudgetExceeded } from '../ops/usage'
 import { authorize, guardedBatch, requireOwner, requireWriteOrigin } from '../access'
@@ -39,7 +39,7 @@ import { previewReplay, replaySteps } from './replay'
 import { cancelRun, decideApproval, previewWorkflow, resumeRun, runDetail, runsToday, searchRuns, startRun } from './runs'
 import { createWorkflow, duplicateWorkflow, getWorkflow, listWorkflows, presentWorkflow, publishWorkflow, rollbackWorkflow, setWorkflowState, unpublishWorkflow, updateDraft, versionGraph } from './store'
 
-const PREFIXES = ['/api/crank/regulated-operations', '/api/crank/tables', '/api/crank/subflows', '/api/crank/grants', '/api/crank/agent-tasks', '/api/crank/skills', '/api/crank/usage', '/api/crank/historical', '/api/crank/workflows', '/api/crank/workflow-runs', '/api/crank/connections', '/api/crank/oauth', '/api/crank/hooks', '/api/crank/holds', '/api/crank/queues', '/api/crank/catalog', '/api/crank/coverage', '/api/crank/settings', '/api/crank/audit', '/api/crank/notices', '/api/crank/reports']
+const PREFIXES = ['/api/crank/authoring', '/api/crank/regulated-operations', '/api/crank/tables', '/api/crank/subflows', '/api/crank/grants', '/api/crank/agent-tasks', '/api/crank/skills', '/api/crank/usage', '/api/crank/historical', '/api/crank/workflows', '/api/crank/workflow-runs', '/api/crank/connections', '/api/crank/oauth', '/api/crank/hooks', '/api/crank/holds', '/api/crank/queues', '/api/crank/catalog', '/api/crank/coverage', '/api/crank/settings', '/api/crank/audit', '/api/crank/notices', '/api/crank/reports']
 const match = (path: string, pattern: RegExp) => pattern.exec(path)?.slice(1).map(decodeURIComponent) ?? null
 
 async function testConnection(env: CrankEnv, actor: Actor, connectionId: string, input: Record<string, unknown>) {
@@ -122,6 +122,7 @@ export async function workflowApi(request: Request, env: CrankEnv): Promise<Resp
       return json(await readAudit(env, url.searchParams.get('kind') ?? undefined, url.searchParams.get('id') ?? undefined))
     }
     if (request.method === 'GET') {
+      if ((m = match(path, /^\/api\/crank\/authoring\/([^/]+)$/))) return json(await readAuthoring(env, actor, m[0]))
       if (path === '/api/crank/grants') return json(await readGrants(env, actor))
       if (path === '/api/crank/skills') return json(await listSkills(env, actor))
       if ((m = match(path, /^\/api\/crank\/skills\/([^/]+)$/))) return json(await readSkill(env, actor, m[0]))
@@ -161,6 +162,11 @@ export async function workflowApi(request: Request, env: CrankEnv): Promise<Resp
     requireValue(request.method === 'POST', 'Method not allowed', 405)
     requireWriteOrigin(request, env, actor)
     const input = request.body ? await body(request, 256 * 1024) : {}
+    if (path === '/api/crank/authoring') return json(await generateAuthoring(env, actor, input), 201)
+    if ((m = match(path, /^\/api\/crank\/authoring\/([^/]+)\/(revise|test|promote)$/))) {
+      const action = m[1] === 'revise' ? reviseAuthoring : m[1] === 'test' ? testAuthoring : promoteAuthoring
+      return json(await action(env, actor, m[0], input))
+    }
     if (path === '/api/crank/grants') return json(await issueGrant(env, actor, input), 201)
     if ((m = match(path, /^\/api\/crank\/grants\/([^/]+)\/revoke$/))) return json(await revokeGrant(env, actor, m[0]))
     if (path === '/api/crank/skills') return json(await proposeSkill(env, actor, input), 201)

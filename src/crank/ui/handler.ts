@@ -41,6 +41,7 @@ import { approvalsView, workflowRunView } from './workflow-run'
 import { editorView } from './editor'
 import { runGraphs, workflowData } from './workflow-data'
 import { skillsView, skillView } from './skills'
+import { authoringCreateView, authoringInput, authoringPath, authoringView } from './authoring'
 
 const redirect = (location:string) => new Response(null,{status:303,headers:{location,'cache-control':'no-store'}})
 // A form may name where to return after its action: a path inside the app, nothing else.
@@ -165,6 +166,20 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
       }
       if (url.pathname !== '/app/action' || (!/^\/api\/crank\/[A-Za-z0-9/_.%-]+$/.test(form.path ?? '') && !['/auth/invite','/auth/operator/status','/auth/operator/role'].includes(form.path))) return page('Not found','<a href="/app">Return to flows</a>',{},404)
       const path = form.path, back = safeReturn(form.return_to); delete form.path; delete form.return_to
+      const authoringAction = /^\/api\/crank\/authoring(?:\/([^/]+)\/(revise|test|promote))?$/.exec(path)
+      const authoringEstimate = form.authoring_id && path === '/api/crank/workflows/' + encodeURIComponent(form.authoring_id) + '/estimate'
+      if(authoringAction || authoringEstimate) {
+        requireOwner(actor)
+        const id = authoringEstimate ? form.authoring_id : authoringAction?.[1] ? decodeURIComponent(authoringAction[1]) : null
+        const connections = await read('/api/crank/connections')
+        const review = async (error:string,status:number) => page(id ? 'Review generated workflow' : 'Create workflow', id ? authoringView(await read('/api/crank/authoring/' + encodeURIComponent(id)),connections,form,error) : authoringCreateView(connections,form,error), {section:'Skills',crumbs:[['Skills','/app/skills']]}, status)
+        let input:Record<string,unknown>
+        try { input = authoringInput(path,form) }
+        catch(error:any) { return review(error.message,422) }
+        const response = await call(path,input), result:any = await response.json()
+        if(!response.ok) return review(result.error ?? 'This action was refused. Review the retained entries below.',response.status)
+        return redirect(authoringPath(id ?? result.workflow_id))
+      }
       const input:Record<string,unknown> = {...form}
       if(path.startsWith('/api/crank/gateways/') || path.startsWith('/api/crank/custom-connectors/')) {
         requireOwner(actor)
@@ -305,6 +320,12 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
     }
     if(url.pathname==='/app/inbox') return page('Inbox',inboxPanel(await read('/api/crank/inbox')),{state,intro:'In-app requests addressed to you. The original workflow controls access and every decision.'})
     requireOwner(actor)
+    if(url.pathname==='/app/authoring') return page('Create workflow',authoringCreateView(await read('/api/crank/connections')),{state,section:'Skills',crumbs:[['Skills','/app/skills']],intro:'Describe a business result, review the draft, then test and approve its exact version.'})
+    const authoringDetail = /^\/app\/authoring\/([^/]+)$/.exec(url.pathname)
+    if(authoringDetail) {
+      const [proposal,connections] = await Promise.all([read('/api/crank/authoring/' + encodeURIComponent(decodeURIComponent(authoringDetail[1]))),read('/api/crank/connections')])
+      return page('Review generated workflow',authoringView(proposal,connections),{state,section:'Skills',crumbs:[['Skills','/app/skills']]})
+    }
     const driftWorkflow=/^\/app\/workflows\/([^/]+)\/drift$/.exec(url.pathname), driftReview=/^\/app\/drift\/([^/]+)$/.exec(url.pathname)
     if(driftWorkflow) { const workflow=await read('/api/crank/workflows/'+driftWorkflow[1]); return page('Provider drift',driftListView(workflow,await read('/api/crank/drift')),{state,crumbs:[['Workflow','/app/workflows/'+workflow.id]]}) }
     if(driftReview) { const review=await read('/api/crank/drift/'+driftReview[1]); return page(review.proposal.kind==='scope'?'Review requested scopes':'Review mapping repair',driftReviewView(review,await read('/api/crank/connections')),{state}) }

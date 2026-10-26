@@ -70,7 +70,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        journey: [invoice-outcome, drift, mcp-client, migration]
+        journey: [invoice-outcome, drift, mcp-client, migration, authoring]
     env:
       CI: 'true'
       WRANGLER_SEND_METRICS: 'false'

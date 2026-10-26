@@ -33,6 +33,10 @@ export async function startTask(env: CrankEnv, actor: Actor, input: Record<strin
   const workflow = await getWorkflow(env, grant.workflow_id)
   const source = await stmt(env, 'SELECT * FROM crank_workflow_versions WHERE id=?', grant.version_id).first<VersionRow>()
   requireValue(source, 'Grant source version is unavailable', 409)
+  if (JSON.parse(source.declared_json).authoring || JSON.parse(workflow.settings_json).authoring) {
+    const promoted = await stmt(env, "SELECT 1 FROM crank_audit WHERE action='authoring.promote' AND subject_kind='workflow' AND subject_id=? AND version_id=?", workflow.id, source.id).first()
+    requireValue(promoted, 'An authoring proposal needs exact human promotion before an execution grant can use it', 403)
+  }
   const sourceGraph = JSON.parse(source.graph_json) as Graph
   const candidates = new Map(grantLeaves(sourceGraph).map(step => [step.id, step]))
   requireValue(Array.isArray(input.actions) && input.actions.length > 0 && input.actions.length <= candidates.size, 'Choose one or more declared tools, each at most once', 422)

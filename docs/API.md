@@ -949,3 +949,41 @@ retention remain controlled by the provider and unverified by Crank.
 The native provider-edge journeys establish implementation behaviour. Actual
 Google Calendar consent and readback remain pending the owner's console step;
 this feature does not establish PLATFORM-002 completion.
+
+## Natural-language workflow proposals
+
+The native owner opens Skills and chooses **Describe a workflow**. Configure
+`AI_ENABLED=true`, `AI_MODEL`, and either the installation's `AI_API_KEY`
+(with optional `AI_BASE_URL`) or its existing Models service configuration.
+Disabled or unavailable models refuse generation; no substitute graph is used.
+Generation makes one bounded request and reports provider usage with the USD
+charge explicitly unverified when the provider does not report it.
+
+`POST /api/crank/authoring` takes `prompt`, `crm_connection_id`,
+`quickbooks_connection_id`, `lead_url`, `realm_id`, `customer_id`, `item_id`,
+`amount_usd` and a `samples` array. Only the selected connection definitions,
+native operation schemas, submitted samples and bounded invoice scope reach the
+model. Connection secrets never enter the model prompt. This initial scope is
+one manual CRM GET, a US country filter and one USD QuickBooks sandbox invoice.
+Generation never reads app records or executes the proposed workflow.
+
+`GET /api/crank/authoring/WORKFLOW_ID` returns the editable graph, samples,
+unresolved questions, scope, provenance, test result and costs. Use its `revise`
+action with `graph`, `samples` and `answers` keyed by question ID. Transport,
+accounts, customer, amount and tools cannot widen. Blank answers remain
+unresolved. Every edit invalidates previous test evidence.
+
+The `test` action requires explicit `bindings` for both selected accounts. Both
+must be active sandbox accounts declared for testing. Each sample produces an
+ordinary retained native test run. The executor refuses production effects
+even through an approved test wait or a later connection-purpose change.
+
+The `promote` action requires `confirm:true` and the current returned `digest`.
+All questions must be answered, the exact current graph and samples must have
+successful test runs, and owner estimates must be recorded before publication.
+Ordinary publication cannot bypass these checks. Promotion records the deciding
+human and immutable version; it creates no grant and supports only future
+authorized sandbox runs. Drafts and provenance travel in inactive archives;
+connections and execution authority must be re-established by the receiving
+owner. The adopted human-only promotion policy remains subject to ct approval;
+AI-002 remains partial until that decision and all contract evidence are complete.

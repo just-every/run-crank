@@ -2,8 +2,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { harness } from './harness.mjs';
 import { fakeEdge, jsonResponse, startRun, stepOf } from './kit.mjs';
-import { archive } from './restore-journey.mjs';
+import { archive, inventory } from './restore-journey.mjs';
 import { correctionCases } from './skills-fixture.mjs';
+import { authoringModelReply, setupAuthoring } from './authoring-fixture.mjs';
 
 function network() {
   const fake = fakeEdge(), records = [];
@@ -119,5 +120,89 @@ test('AGENT-003 BASE-001 DATA-001: proposals and evidence restore portably with 
     await h.post(`workflows/${workflow.id}/pause`);
     await h.post('data/erase', { workflow_run_id: cases[0].id, confirm: 'ERASE' });
     await h.get('skills/' + skill.id, h.owner, 409);
+  } finally { await restored?.close(); await h.close(); }
+});
+
+
+test('AI-002: native model proposals stay within scope, sandbox tests fence exact human promotion and portable drafts retain provenance', async () => {
+  const fake = fakeEdge(), invoices = [];
+  let refuse = false;
+  fake.routes.set('authoring-model.example', ({ body }) => jsonResponse(authoringModelReply(JSON.parse(body), { refusal: refuse ? 'Sending email exceeds the approved tools.' : null })));
+  fake.routes.set('crm-authoring.example', ({ url }) => jsonResponse({ id: url.pathname.split('/').at(-1), country: 'US' }));
+  fake.routes.set('sandbox-quickbooks.api.intuit.com', ({ body, method }) => {
+    if (method === 'GET') return jsonResponse({ QueryResponse: { Invoice: invoices } });
+    const invoice = { ...JSON.parse(body), Id: String(invoices.length + 1) }; invoices.push(invoice);
+    return jsonResponse({ Invoice: invoice });
+  });
+  const h = await harness('http://127.0.0.1:9', { edge: fake.edge, bindings: { AI_ENABLED: 'true', AI_MODEL: 'configured-authoring-model', AI_BASE_URL: 'https://authoring-model.example/v1', AI_API_KEY: 'synthetic-crank-30' } });
+  let restored;
+  try {
+    const { request, crm, qbo } = await setupAuthoring(h);
+    await h.post('authoring', request, '', 401);
+    const token = await h.post('tokens', { label: 'Assistant without promotion authority', scope: 'agent' }, h.owner, 201);
+    await h.post('authoring', request, '', 403, { authorization: 'Bearer ' + token.token });
+    refuse = true;
+    await h.post('authoring', { ...request, prompt: request.prompt + ' Also email the customer.' }, h.owner, 422);
+    assert.equal((await h.get('workflows')).length, 0);
+    refuse = false;
+    let proposal = await h.post('authoring', request, h.owner, 201);
+    const base = 'authoring/' + proposal.workflow_id, bindings = { [crm.id]: crm.id, [qbo.id]: qbo.id };
+    assert.equal(invoices.length, 0);
+    assert.equal(fake.requests.filter(r => r.url.hostname === 'crm-authoring.example').length, 0);
+    assert.equal(proposal.model.model, 'configured-authoring-model');
+    assert.ok(proposal.questions.length > 0);
+    assert.ok(proposal.disclosures.every(d => d.recipient && d.fields && d.retention));
+    const widened = structuredClone(proposal.graph); widened.steps[0].input.method = 'POST';
+    await h.post(base + '/revise', { graph: widened }, h.owner, 422);
+    await h.post('workflows/' + proposal.workflow_id + '/draft', { graph: widened }, h.owner, 422);
+    assert.deepEqual((await h.get(base)).graph, proposal.graph);
+    await h.post(base + '/promote', { digest: proposal.digest, confirm: true }, h.owner, 409);
+    proposal = await h.post(base + '/revise', { answers: Object.fromEntries(proposal.questions.map(q => [q.id, ''])) });
+    assert.ok(proposal.questions.some(q => !q.answer));
+    proposal = await h.post(base + '/revise', { answers: Object.fromEntries(proposal.questions.map(q => [q.id, 'Confirmed against the owned CRM sample.'])) });
+    await h.post('connections/' + crm.id + '/purpose', { purpose: 'production' });
+    await h.post(base + '/test', { bindings }, h.owner, 422);
+    await h.post('workflows/' + proposal.workflow_id + '/test', { bindings, input: request.samples[0] }, h.owner, 422);
+    assert.equal(invoices.length, 0);
+    await h.post('connections/' + crm.id + '/purpose', { purpose: 'test' });
+    proposal = await h.post(base + '/test', { bindings });
+    assert.equal(proposal.tested.passed, true);
+    assert.equal(invoices.length, 1);
+    assert.equal(invoices[0].CustomerRef.value, request.customer_id);
+    assert.equal(invoices[0].Line[0].Amount, Number(request.amount_usd));
+    const testedDigest = proposal.digest;
+    proposal = await h.post(base + '/revise', { samples: [{ id: 'lead-2' }] });
+    assert.equal(proposal.tested.passed, false);
+    await h.post(base + '/promote', { digest: testedDigest, confirm: true }, h.owner, 409);
+    proposal = await h.post(base + '/test', { bindings });
+    await h.post('workflows/' + proposal.workflow_id + '/publish', {}, h.owner, 409);
+    await h.post('workflows/' + proposal.workflow_id + '/estimate', { cost: { components: ['orchestration', 'connectors', 'models', 'executors'].map(kind => ({ kind, usd_per_run: '0', assumption: 'Owner acceptance journey uses nonbilling network edges' })) } });
+    await h.post(base + '/promote', { digest: proposal.digest, confirm: true }, '', 403, { authorization: 'Bearer ' + token.token });
+    proposal = await h.post(base + '/promote', { digest: proposal.digest, confirm: true });
+    assert.equal(proposal.promoted, true);
+    const workflow = await h.get('workflows/' + proposal.workflow_id);
+    assert.equal(workflow.status, 'published');
+    const audit = await h.get('audit');
+    assert.ok(audit.some(a => a.action === 'authoring.promote' && a.version_id === workflow.published_version_id));
+    await h.restart();
+    assert.equal((await h.get(base)).digest, proposal.digest);
+    const archiveText = await archive(h);
+    assert.ok(archiveText.includes('authoring.generate'));
+    assert.ok(!archiveText.includes('synthetic-crank-30'));
+    restored = await harness('http://127.0.0.1:9', { edge: fake.edge });
+    const beforeRestore = fake.requests.length;
+    await restored.post('data/restore', { archive: archiveText, confirm: 'RESTORE' });
+    const original = inventory(archiveText), received = inventory(await archive(restored));
+    const additions = received.filter(row => !original.includes(row));
+    assert.deepEqual(additions.map(row => [JSON.parse(row).table, JSON.parse(row).row.action]), [['crank_audit', 'data.restore']]);
+    assert.deepEqual(received.filter(row => !additions.includes(row)), original);
+    assert.deepEqual((await restored.get(base)).samples, proposal.samples);
+    assert.equal((await restored.get('workflows/' + proposal.workflow_id)).status, 'paused');
+    assert.ok((await restored.get('connections')).every(c => c.status === 'needs_reconnect'));
+    assert.equal((await restored.get('grants')).length, 0);
+    await restored.restart(); await restored.tick(Date.now() + 86400000);
+    await restored.post(base + '/test', { bindings }, restored.owner, 422);
+    await restored.post(base + '/promote', { digest: proposal.digest, confirm: true }, restored.owner, 422);
+    assert.equal(fake.requests.length, beforeRestore);
   } finally { await restored?.close(); await h.close(); }
 });

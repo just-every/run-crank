@@ -1,4 +1,5 @@
 import { assertDriftWriteAllowed, recordDriftFailure } from '../agents/drift-step'
+import { assertAuthoringStep } from './authoring-authority'
 import { SubflowWait } from '../workflows/subflow-calls'
 import { allowedOperation, customVersion } from '../custom/store'
 import { GatewayWait } from '../custom/gateway-tasks'
@@ -119,6 +120,8 @@ class Execution {
       const replay = record ? undefined : this.replays.get(path)
       input = record?.input_json ? JSON.parse(record.input_json) : replay?.input_json ? JSON.parse(replay.input_json) : (resolve(step.input ?? {}, this.scope) ?? {}) as Record<string, unknown>
       ctx.input = input
+      await assertAuthoringStep(this.env, this.run.id, step, input)
+      ctx.beforeRequest = () => assertAuthoringStep(this.env, this.run.id, step, input)
       if(step.type==='custom.request') {
         const operation=allowedOperation(await customVersion(this.env,String(step.connector_id),Number(step.connector_version)),String(step.operation),this.run.mode==='test')
         mutating=!['GET','HEAD'].includes(operation.method)

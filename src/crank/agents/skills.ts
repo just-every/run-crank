@@ -83,3 +83,5 @@ export async function approveSkill(env: CrankEnv, actor: Actor, skillId: string,
   ])
   return readSkill(env, actor, skillId)
 }
+
+export { generateAuthoring, readAuthoring, reviseAuthoring, testAuthoring, promoteAuthoring } from './authoring'
