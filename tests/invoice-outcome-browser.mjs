@@ -19,6 +19,7 @@ try{for(const width of [1440,390]){
  if(state==='invalid-amount')await expect(page.locator('.detail-primary .title-row .status')).toHaveText('Failed');else await expect(page.getByRole('heading',{name:state.endsWith('satisfied')?/Invoice criteria verified/:/Invoice obligation open/})).toBeVisible();
  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),state+' overflow');
  const search=page.getByRole('link',{name:'Search runs',exact:true});await search.focus();await expect(page.locator('#search-tooltip')).toBeVisible();await page.locator('h1').click();await search.hover();await page.waitForTimeout(350);await expect(page.locator('#search-tooltip')).toBeVisible();
+ const account=page.locator('.person.control-tooltip');await account.focus();await expect(page.locator('#account-tooltip')).toBeVisible();await page.locator('h1').click();await account.hover();await page.waitForTimeout(350);await expect(page.locator('#account-tooltip')).toBeVisible();
  await page.screenshot({path:join(evidence,`${width}-${state}.png`),fullPage:true});console.log(`invoice-outcome browser width=${width} state=${state} run=${run.id}`);
  }});
 }}finally{await context?.close();await browser.close();if(server){server.closeAllConnections();await new Promise(r=>server.close(r))}}

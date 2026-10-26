@@ -22,6 +22,7 @@ try{for(const width of [1440,390]){
  if(state==='approved')await expect(page.getByRole('heading',{name:'Repair deployed',exact:true})).toBeVisible();
  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),state+' overflow');
  const search=page.getByRole('link',{name:'Search runs',exact:true});await search.focus();await expect(page.locator('#search-tooltip')).toBeVisible();await page.locator('h1').click();await search.hover();await page.waitForTimeout(350);await expect(page.locator('#search-tooltip')).toBeVisible();
+ const account=page.locator('.person.control-tooltip');await account.focus();await expect(page.locator('#account-tooltip')).toBeVisible();await page.locator('h1').click();await account.hover();await page.waitForTimeout(350);await expect(page.locator('#account-tooltip')).toBeVisible();
  await page.screenshot({path:join(evidence,`${width}-${state}.png`),fullPage:true});console.log(`drift browser width=${width} state=${state} proposal=${proposal.proposal.id}`);
  if(state==='scope'){await page.getByRole('button',{name:'Reject new scope',exact:true}).click();await page.waitForLoadState('networkidle');return h.get('drift/'+proposal.proposal.id)}
  if(state==='proposal'){for(const [source,target] of Object.entries(bindings))await page.locator('[name="binding_'+source+'"]').selectOption(target);await page.getByRole('button',{name:'Replay retained cases',exact:true}).click();await page.waitForLoadState('networkidle');return h.get('drift/'+proposal.proposal.id)}
