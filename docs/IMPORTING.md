@@ -97,8 +97,9 @@ does not establish compatibility with every n8n release or node option.
 
 ## Native multi-step graphs
 
-Exports with more than two nodes use the bounded native graph compiler. The original
-strict two-node format above continues to create the same approval flow. Native
+Exports outside the original Webhook-to-HTTP pair use the bounded native graph
+compiler, including a two-node trigger followed by Code or Execute Workflow. The
+original strict pair above continues to create the same approval flow. Native
 graph imports create inactive workflow drafts with no published version, inbound
 hook, connection or execution authority. Explicit native publication authorizes
 future execution under the ordinary workflow policy; importing does not.
@@ -185,15 +186,15 @@ one Execute Workflow Trigger version 1 with empty parameters and a linear body
 of Set, JSON HTTP or nested embedded calls. The caller supplies one current
 item. Child steps are inlined with distinct native identities; snapshot digests
 and layout are retained in `n8n_subflow_pins`. Nesting is limited to four levels.
-The reviewed import fingerprint binds the whole snapshot. Database IDs, dynamic
+The reviewed import fingerprint binds the whole snapshot. Unbound database IDs, dynamic
 sources, asynchronous calls, declared child-input schemas and arbitrary child
 graphs require manual conversion. This does not create a reusable native registry
 release or fetch a source workflow.
 
-Code, Function and Function Item nodes always receive a blocking conversion:
-source code never runs during planning or native execution. Convert them to
-reviewed native transforms or explicitly provision an isolated executor. A manual
-disposition records remaining work; it does not satisfy eventual code conversion.
+Unresolved Code, Function and Function Item nodes receive a blocking conversion.
+Source code never runs during parsing or planning. An owner can supply an explicit
+reviewed native replacement for a provisioned executor as described below. A
+manual disposition records remaining work; it does not satisfy eventual conversion.
 Strict Filter nodes preserve the preceding item when conditions pass and end as
 `stopped by filter` otherwise. Text comparisons preserve whitespace. Loose
 coercion and unmapped operators block conversion.
@@ -216,7 +217,93 @@ input-zone inference, retaining other input fields, Unix formats and other date
 operations require manual conversion. These rules preserve the declared zone
 instead of guessing the source installation's default.
 
-MIG-001 stays partial. General loops, registry subflow bindings, isolated code and
+### Retained owner conversion choices
+
+Upload a migration envelope when a workflow needs a native registry binding or
+reviewed code replacement:
+
+```json
+{
+  "workflow": { "id": "synthetic-crank-40", "name": "Original export", "nodes": [], "connections": {} },
+  "conversions": {
+    "source-node-id": {
+      "kind": "registry-subflow",
+      "reviewed": true,
+      "subflow_id": "native-registry-id",
+      "subflow_version": 1,
+      "definition_digest": "<reviewed native definition SHA-256>",
+      "input": { "address": "={{ $json.address }}" }
+    }
+  }
+}
+```
+
+The empty workflow above illustrates the envelope fields; it is not an importable
+workflow. Place the untouched complete export under `workflow` and key each choice
+by its source node ID. Arrays may contain ordinary exports and envelopes. Review
+these choices as part of **Upload and plan**, then approve the exact fingerprint.
+There is no separate mutable choice state or choice header. Both source and
+choices participate in the retained source hash, bundle hash and fingerprint;
+changing a choice requires a new upload and review. The native draft preserves
+choice digests and source-node dispositions in its graph settings. Rejected
+plans retain their source and manual diagnostics without creating a draft.
+
+`registry-subflow` compiles a synchronous Execute Workflow call to a native pure
+registry step with an exact ID, positive version, reviewed definition digest and
+explicit mapped input. Database workflow IDs stay source evidence and are never
+looked up in n8n. Input values accept literals or the same declarative current-item
+paths as graph mapping. Native publication checks the reviewed digest against the
+registry version. Execution checks it again and enforces current registry review
+and owner publication. Installing a later version does not upgrade this pin;
+revoking the pinned release blocks further work. Unknown source modes, dynamic
+selectors and asynchronous calls remain manual conversions.
+
+For a Code version 1 or 2, Function version 1 or Function Item version 1, the
+alternative choice is:
+
+```json
+{
+  "kind": "isolated-code",
+  "reviewed": true,
+  "language": "javascript",
+  "source": "export default function(input) { return {normalized:input.address.trim()} }",
+  "connection_id": "fresh-native-executor-connection",
+  "executor_url": "https://executor.example",
+  "timeout_ms": 2000,
+  "memory_mb": 1024,
+  "allowed_egress": [],
+  "output_schema": {
+    "type": "object",
+    "properties": { "normalized": { "type": "string" } },
+    "required": ["normalized"],
+    "additionalProperties": false
+  },
+  "input": { "address": "={{ $json.address }}" }
+}
+```
+
+This explicitly reviewed source is native executor JavaScript. The original
+`jsCode` or `functionCode` stays source evidence; Crank neither executes it nor
+claims compatibility with `$input`, item arrays or other n8n runtime APIs. The
+owner reviews how the native input and returned JSON replace the source node's
+behavior. A fresh native connection, literal executor origin, timeout, memory
+bound, empty allowed-egress list and supported output schema are required.
+Ordinary native executor validation and publication enforce the connection;
+live revocation stops subsequent dispatch. Returned JSON is checked against the
+schema before downstream steps. Source credential references continue to block
+the entire graph: these choices do not authorize or silently rebind them. A
+choice such as `{ "kind": "manual", "reason": "owner review pending" }`
+preserves a blocking disposition.
+
+The existing MIG-001 public-door journey covers unresolved and resolved choices,
+different choice fingerprints, duplicate apply, restart, exact unused undo,
+publication and use fences, actual native registry execution, version pins and
+revocation. Its remote executor protocol is a network-edge fake with explicit
+results; it establishes import and native orchestration behavior, not execution
+or host isolation. The Linux executor journey additionally imports a reviewed
+code conversion and runs it on the actual sandbox service.
+
+MIG-001 stays partial. General loops, broader registry and code conversions,
 fresh credential conversion, complete search, transform and condition mappings, live resource and
 watched-field mappings, real samples, fresh authorized bindings, source comparison
 and cutover, plus multimodal OpenAI and Anthropic operations and agent tools

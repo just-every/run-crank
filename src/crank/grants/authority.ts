@@ -50,6 +50,11 @@ export async function authorizeGrant(request: Request, original: CrankEnv, beare
     WHERE g.token_hash=? AND g.revoked_at IS NULL AND g.expires_at>?
     AND o.status='active' AND o.role='owner' AND o.version=g.owner_version`, await digest(token), new Date().toISOString()).first<GrantRow & { display_name: string }>()
   requireValue(row, 'Invalid, expired or revoked execution credential', 401)
+  return actorForGrant(request, env, row)
+}
+
+/** Per-client MCP secrets reuse the same live person and local-development boundary. */
+export async function actorForGrant(request: Request, env: CrankEnv, row: GrantRow & { display_name: string }): Promise<GrantActor> {
   if (row.session_kind === 'dev') {
     const gate = devGate({ key: env.RER_DEV_KEY, origin: env.AUTH_ORIGIN, local: env.AUTH_LOCAL === 'true' })
     requireValue(gate && await gate.admits(request), 'Local development gate is required', 401)

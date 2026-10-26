@@ -1,4 +1,5 @@
 import {doneLoopJourney} from './n8n-loop-journey.mjs';
+import {conversionJourney} from './n8n-conversion-journey.mjs';
 import { graphExport, loopExport, switchExport, dateExport } from './n8n-graph-fixture.mjs';
 import {before,after,test} from 'node:test';
 import assert from 'node:assert/strict';
@@ -192,6 +193,7 @@ test('MIG-001 door refuses expressions and credential exports without echoing th
 });
 
 test('MIG-001 native graph review, exact apply, restart, branch outcomes and protected undo',async()=>{
+ await conversionJourney();
  const local=await harness(target);try{
   const input=graphExport(target),unsupported=structuredClone(input);
   unsupported.nodes.push({id:'child',name:'child',type:'n8n-nodes-base.executeWorkflow',typeVersion:1,position:[100,200],parameters:{workflowId:'synthetic-crank-child'}});

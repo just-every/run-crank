@@ -903,3 +903,47 @@ The original version and every continuation remain inspectable. Standing-grant
 runs need fresh exact-version authority; uncertain writes still require
 reconciliation. `POST /api/crank/drift/:id/rollback` restores the previous mapping
 and reinstates the write fence. The UI exposes the same tests and decisions.
+
+
+## Per-client connector tools
+
+Open Access, then **Manage client tool servers**. Choose a published workflow,
+enabled native Slack or Google Calendar steps, structural input schemas, fixed
+parameters and a standing grant. The per-client URL accepts Streamable HTTP MCP
+with a Bearer secret shown once. Client secrets work only at their own endpoint;
+they cannot use the general task or workflow APIs.
+
+The owner creates a server through `POST /api/crank/mcp-clients` with `label`,
+`workflow_id`, `version_id`, `expires_at`, `policy` and `tools`. Each tool names
+`name`, `description`, `step_id`, `inputSchema` and `fixed`. Schemas use the
+structural JSON types supported by code-output schemas, with an object root and
+`additionalProperties: false`; unsupported keywords are rejected. Fixed values
+cannot also be caller arguments. A tool may name `approval_step_id` for a
+stopping approval leaf whose grant permits a `proposal` input.
+
+Disabled tools, extra arguments, wrong types, fixed-parameter overrides,
+ungranted recipients, excessive amounts and request rates are refused before
+provider execution and recorded in the client call history and audit. Calls
+within the client boundary still obey the native workflow's approval and cost
+controls. Tool aliases share their underlying step's client rate limit. An
+optional `Idempotency-Key` retains the task identity on an identical retry.
+
+Every admitted call links to normal run inputs, outputs, provider IDs and
+approvals. Refusal records keep value-free reasons and the requested tool name;
+they do not retain rejected input values. Per-client secrets and bindings remain
+installation-local and are excluded from archives. Portable run history confers
+no execution authority. A new publication, grant expiry or revocation fences the
+next dispatch. Revoke the client from its Settings screen or through
+`POST /api/crank/mcp-clients/CLIENT_ID/revoke`.
+
+Google Calendar uses the existing managed Google OAuth connection with event
+write scope. It requires an exact calendar ID and explicitly zoned start and end
+times. Each event gets a stable operation identity and an independent exact
+readback; an unconfirmed creation is never blindly repeated. Update emails are
+not requested. Google documents that email can still occur for some attendee
+changes, so initial MCP tools should omit attendee inputs. Provider region and
+retention remain controlled by the provider and unverified by Crank.
+
+The native provider-edge journeys establish implementation behaviour. Actual
+Google Calendar consent and readback remain pending the owner's console step;
+this feature does not establish PLATFORM-002 completion.

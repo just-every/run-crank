@@ -5,6 +5,7 @@ import { validateGraph } from './engine/graph'
 import type { Step } from './engine/types'
 import { validateImportTargetUrl, type ImportTargetEnv } from './import-target'
 import { doneItemPipeline, serialLoopRegions } from './n8n-loop'
+import { conversionDisposition, conversionStep, migrationEnvelope } from './n8n-conversions'
 
 type Obj = Record<string, any>
 const obj = (v: any): Obj => { if (!v || typeof v !== 'object' || Array.isArray(v)) throw Error('object required'); return v }
@@ -13,7 +14,7 @@ const label = (v: any) => { if (typeof v !== 'string' || !v || v.length > 160 ||
  * Unsupported settings reject the entire graph, with value-free field diagnostics. */
 export function n8nGraph(value: Json, sourceId: string, env: ImportTargetEnv, ownerId: string, context = { prefix: '', input: 'trigger.input', depth: 0 }): MappingResult {
   if (context.depth > 4) throw Error('N8N_SUBFLOW_DEPTH_LIMIT')
-  const root = obj(value), gaps: {field:string;reason:string}[] = [], coverage: {field:string;reason:string}[] = []
+  const {workflow:root,conversions}=migrationEnvelope(value), gaps: {field:string;reason:string}[] = [], coverage: {field:string;reason:string}[] = [], dispositions: Obj[] = []
   const gap = (field:string, reason:string) => gaps.push({field, reason:'Manual conversion required: '+reason})
   const fields = (v:Obj, allowed:string[], at:string) => { for (const key of Object.keys(v)) if (!allowed.includes(key)) gap(at+'.'+key,'unsupported setting'); else coverage.push({field:at+'.'+key,reason:'Supported setting'}) }
   const nodes: Obj[] = Array.isArray(root.nodes) ? root.nodes.map(obj) : []
@@ -27,7 +28,6 @@ export function n8nGraph(value: Json, sourceId: string, env: ImportTargetEnv, ow
   const names = new Map<string,number>(), ids = new Set<string>()
   nodes.forEach((n,i)=>{ label(n.id); label(n.name); if(names.has(n.name)||ids.has(n.id)) gap('nodes.'+i,'duplicate identity'); names.set(n.name,i);ids.add(n.id)
     if(n.credentials)for(const key of Object.keys(obj(n.credentials)))gap('nodes.'+i+'.credentials.'+key,'fresh native account binding required; source credential reference grants no authority')
-    if(['n8n-nodes-base.code','n8n-nodes-base.function','n8n-nodes-base.functionItem'].includes(n.type))gap('nodes.'+i,'source code is never executed; convert to reviewed native transforms or an explicitly provisioned isolated executor')
     fields(n,['id','name','type','typeVersion','position','parameters','webhookId','credentials'],'nodes.'+i)
     if(!Array.isArray(n.position)||n.position.length!==2||n.position.some((x:any)=>typeof x!=='number'||!Number.isFinite(x))) gap('nodes.'+i+'.position','invalid layout')
   })
@@ -58,7 +58,7 @@ export function n8nGraph(value: Json, sourceId: string, env: ImportTargetEnv, ow
   const compile=(index:number,previous:string,depth=0,stop=-1):Step[]=>{
     if(index===stop)return []
     if(depth>100||seen.has(index)){gap('nodes.'+index,'cycle or shared join needs explicit native conversion');return []}seen.add(index)
-    const n=nodes[index],p=obj(n.parameters??{}),at='nodes.'+index,id=context.prefix+'n'+index,out=edges.get(index)??[],result:Step[]=[],step:Obj={id,name:n.name}
+    const n=nodes[index],p=obj(n.parameters??{}),at='nodes.'+index,id=context.prefix+'n'+index,out=edges.get(index)??[],result:Step[]=[],step:Obj & {id:string}={id,name:n.name}
     try {
       switch(n.type){
         case 'n8n-nodes-base.webhook':
@@ -95,8 +95,21 @@ export function n8nGraph(value: Json, sourceId: string, env: ImportTargetEnv, ow
           tails.set(index,tail);return result
         }
         case 'n8n-nodes-base.executeWorkflow': {
+          if(conversions[n.id]) {
+            fields(p,['source','workflowId','workflowJson','mode','options'],at+'.parameters');const opts=obj(p.options??{});fields(opts,['waitForSubWorkflow'],at+'.parameters.options')
+            if(![1,1.1,1.2,1.3].includes(n.typeVersion)||!['database','parameter'].includes(p.source)||(p.mode??'once')!=='once'||(opts.waitForSubWorkflow!==undefined&&opts.waitForSubWorkflow!==true))throw Error('registry conversion requires a known synchronous single-item source mode')
+            if(p.source==='database') {
+              const ref=p.workflowId
+              if(typeof ref==='string'){if(!ref||ref.startsWith('=')||ref.includes('{{'))throw Error('dynamic source workflow selection requires manual conversion')}
+              else {const selector=obj(ref);fields(selector,['__rl','value','mode','cachedResultName','cachedResultUrl'],at+'.parameters.workflowId');if(selector.__rl!==true||!['id','list'].includes(selector.mode)||typeof selector.value!=='string'||!selector.value||selector.value.startsWith('=')||selector.value.includes('{{'))throw Error('dynamic source workflow selection requires manual conversion')}
+            } else if(typeof p.workflowJson!=='string'||p.workflowJson.startsWith('='))throw Error('embedded source snapshot must be literal')
+            result.push(conversionStep(conversions[n.id],n,step,(value,field)=>mapped(value,previous,'conversions.'+n.id+'.'+field)))
+            dispositions.push(conversionDisposition(n,conversions[n.id],true));previous='steps.'+id
+            coverage.push({field:at,reason:'Owner-reviewed immutable native registry binding; source database reference grants no authority'})
+            break
+          }
           fields(p,['source','workflowJson','mode','options'],at+'.parameters');const opts=obj(p.options??{});fields(opts,['waitForSubWorkflow'],at+'.parameters.options')
-          if(![1,1.1,1.2,1.3].includes(n.typeVersion)||p.source!=='parameter'||typeof p.workflowJson!=='string'||p.workflowJson.startsWith('=')||(p.mode??'once')!=='once'||opts.waitForSubWorkflow===false)throw Error('subflow requires a literal embedded snapshot, one input item and synchronous completion; database IDs need an explicit native binding')
+          if(![1,1.1,1.2,1.3].includes(n.typeVersion)||p.source!=='parameter'||typeof p.workflowJson!=='string'||p.workflowJson.startsWith('=')||(p.mode??'once')!=='once'||(opts.waitForSubWorkflow!==undefined&&opts.waitForSubWorkflow!==true))throw Error('subflow requires a literal embedded snapshot, one input item and synchronous completion; database IDs need an explicit native binding')
           let snapshot: Obj
           try{snapshot=obj(JSON.parse(p.workflowJson))}catch{throw Error('embedded workflow JSON is invalid')}
           if(!Array.isArray(snapshot.nodes)||snapshot.nodes.filter((n:Obj)=>n.type==='n8n-nodes-base.executeWorkflowTrigger').length!==1||snapshot.nodes.some((n:Obj)=>!['n8n-nodes-base.executeWorkflowTrigger','n8n-nodes-base.set','n8n-nodes-base.httpRequest','n8n-nodes-base.executeWorkflow'].includes(n.type)))throw Error('embedded child requires one subflow trigger and a linear mapped body')
@@ -111,8 +124,16 @@ export function n8nGraph(value: Json, sourceId: string, env: ImportTargetEnv, ow
         }
         case 'n8n-nodes-base.code':
         case 'n8n-nodes-base.function':
-        case 'n8n-nodes-base.functionItem':
-          gap(at,'source code is never executed; convert to reviewed native transforms or an explicitly provisioned isolated executor');fields(p,[],at+'.parameters');break
+        case 'n8n-nodes-base.functionItem': {
+          if(!conversions[n.id])throw Error('source code is never executed; supply an owner-reviewed native isolated-code conversion')
+          const code=n.type==='n8n-nodes-base.code'
+          fields(p,code?['jsCode','mode','language']:['functionCode'],at+'.parameters')
+          if(!(code?[1,2]:[1]).includes(n.typeVersion)||(code&&((p.language??'javaScript')!=='javaScript'||!['runOnceForAllItems','runOnceForEachItem'].includes(p.mode??'runOnceForAllItems')))||typeof p[code?'jsCode':'functionCode']!=='string')throw Error('unsupported source code language, version or execution mode')
+          result.push(conversionStep(conversions[n.id],n,step,(value,field)=>mapped(value,previous,'conversions.'+n.id+'.'+field)))
+          dispositions.push(conversionDisposition(n,conversions[n.id],true));previous='steps.'+id+'.output'
+          coverage.push({field:at,reason:'Owner-reviewed native JavaScript replacement; no source runtime API compatibility is assumed'})
+          break
+        }
         case 'n8n-nodes-base.dateTime': {
           fields(p,['operation','date','format','customFormat','outputFieldName','options'],at+'.parameters')
           const options=obj(p.options??{});fields(options,['timezone','includeInputFields'],at+'.parameters.options')
@@ -154,7 +175,8 @@ export function n8nGraph(value: Json, sourceId: string, env: ImportTargetEnv, ow
         }
         default: gap(at,'node type '+String(n.type)+' has no committed mapping');fields(p,[],at+'.parameters')
       }
-    }catch(error){gap(at,(error as Error).message)}
+    }catch(error){gap(at,(error as Error).message);if(conversions[n.id]||['n8n-nodes-base.code','n8n-nodes-base.function','n8n-nodes-base.functionItem','n8n-nodes-base.executeWorkflow'].includes(n.type))dispositions.push(conversionDisposition(n,conversions[n.id],false))}
+    if(conversions[n.id]&&!['n8n-nodes-base.code','n8n-nodes-base.function','n8n-nodes-base.functionItem','n8n-nodes-base.executeWorkflow'].includes(n.type))gap('conversions.'+n.id,'choice does not apply to this source node')
     if(out.length>1||out.some(b=>b.length>1))gap(at+'.connections','fan-out needs an explicit native branch')
     tails.set(index,previous)
     for(const branch of out)for(const next of branch){result.push(...compile(next,previous,depth+1,stop));tails.set(index,tails.get(next)??previous)}
@@ -162,7 +184,7 @@ export function n8nGraph(value: Json, sourceId: string, env: ImportTargetEnv, ow
   }
   const steps=starts.length===1?compile(starts[0],'trigger'):[]
   nodes.forEach((_,i)=>{if(!seen.has(i))gap('nodes.'+i,'unreachable or unsupported trigger node')})
-  const graph={trigger,steps,settings:{...(settings.timezone?{timezone:settings.timezone}:{}),n8n_layout:layout,n8n_connections:connections,n8n_subflow_pins:pins,n8n_output:tails.get(starts[0])??context.input}}
+  const graph={trigger,steps,settings:{...(settings.timezone?{timezone:settings.timezone}:{}),n8n_layout:layout,n8n_connections:connections,n8n_subflow_pins:pins,n8n_conversions:conversions,n8n_conversion_dispositions:dispositions,n8n_output:tails.get(starts[0])??context.input}}
   if(!gaps.length)try{validateGraph(graph)}catch(error){gap('graph',(error as Error).message)}
   if(gaps.length)return {effects:[],rejection:'Resolve every manual conversion before importing this workflow',unmapped:[...coverage,...gaps]}
   return {effects:[{targetKind:'workflow',targetId:'import-graph-'+sha256(canonicalJson(['n8n',sourceId])),value:{name:label(root.name),graph:graph as Json,created_by:ownerId,status:'draft'}}],unmapped:coverage}

@@ -1,3 +1,5 @@
+import { mcpClientsPanel, mcpCredentialView } from './mcp-clients'
+import { clientApi } from '../mcp/client-api'
 import { driftApi } from '../agents/drift-api'
 import { driftListView, driftReviewView } from './drift'
 import { gatewayScopeId } from '../custom/use-scope'
@@ -44,7 +46,7 @@ const redirect = (location:string) => new Response(null,{status:303,headers:{loc
 // A form may name where to return after its action: a path inside the app, nothing else.
 const safeReturn = (value:unknown) => typeof value==='string' && /^\/app(\/[A-Za-z0-9/_.-]*)?(\?[A-Za-z0-9=&%_.-]*)?$/.test(value) ? value : null
 export async function productApi(request:Request,env:CrankEnv,nativeBrowser=false):Promise<Response|null> {
-  return await driftApi(request,env) ?? await customApi(request,env,nativeBrowser) ?? await followupApi(request,env) ?? await teamApi(request,env) ?? await versionedApi(request,env) ?? await importDoor(request,env) ?? await importApi(request,env) ?? await dataApi(request,env) ?? await workflowApi(request,env) ?? await crankApi(request,env)
+  return await clientApi(request,env) ?? await driftApi(request,env) ?? await customApi(request,env,nativeBrowser) ?? await followupApi(request,env) ?? await teamApi(request,env) ?? await versionedApi(request,env) ?? await importDoor(request,env) ?? await importApi(request,env) ?? await dataApi(request,env) ?? await workflowApi(request,env) ?? await crankApi(request,env)
 }
 async function formValues(request:Request) {
   if (!request.headers.get('content-type')?.startsWith('application/x-www-form-urlencoded')) throw new Error('Use a form submission.')
@@ -197,9 +199,9 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
       if (/\/workflow-runs\/[^/]+\/approve$/.test(path)) {const edits=decisionEdits(form);if(edits) input.edits=edits}
       if (path === '/api/crank/regulated-operations/consent') { input.consent = form.consent === 'true'; input.credential_authority_generation = Number(form.credential_authority_generation) }
       for(const key of Object.keys(input)) if(key.startsWith('decision_edit_') || key.startsWith('decision_kind_')) delete input[key]
-      if(path==='/api/crank/grants') {
+      if(path==='/api/crank/grants' || path==='/api/crank/mcp-clients') {
         requireOwner(actor)
-        try { input.policy=JSON.parse(form.policy ?? '') } catch { return page('Invalid grant','<p>The grant policy must be JSON.</p><a href="/app/access">Return to access</a>',{},422) }
+        try { input.policy=JSON.parse(form.policy ?? ''); if(path==='/api/crank/mcp-clients') input.tools=JSON.parse(form.tools ?? '') } catch { return page('Invalid grant','<p>The grant policy must be JSON.</p><a href="/app/access">Return to access</a>',{},422) }
         input.version_id=(await read('/api/crank/workflows/'+encodeURIComponent(form.workflow_id))).published_version_id
       }
       if(form.service_account_scope_form==='true') {
@@ -240,6 +242,7 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
       if(response.status===403 && result.error==='step_up_required')return page('Confirm by email',gatewayConfirmation(),{},403)
       if(!response.ok) return page('Action refused',`<p class="notice">${esc(result.error)}</p><p>No success was reported. Review the latest state before retrying.</p><a href="${back ?? (path.includes('/imports')?'/app/import':'/app')}">Return to workspace</a>`,{},response.status)
       if(result.code && path==='/api/crank/gateways')return page('Gateway enrollment',`<section class="panel"><h2>Enroll your gateway</h2><p>This code is shown once and expires ${esc(result.expires_at)}. Its authority is bound to environment ${esc(result.gateway.environment)}. Use the customer gateway CLI and save its state in a private file.</p><label>Single-use enrollment code<input type="text" autocomplete="off" readonly aria-label="Enrollment code" value="${esc(result.code)}"></label><p>Private database and storage credentials stay in the gateway manifest.</p><a href="/app/connections">Return to connections</a></section>`)
+      if(result.credential && path==='/api/crank/mcp-clients') return page('Client server created',mcpCredentialView(result))
       if(result.credential) result.token=result.credential
       if(result.token) {
         const scopedService=path==='/api/crank/service-accounts'
@@ -305,6 +308,11 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
     const driftWorkflow=/^\/app\/workflows\/([^/]+)\/drift$/.exec(url.pathname), driftReview=/^\/app\/drift\/([^/]+)$/.exec(url.pathname)
     if(driftWorkflow) { const workflow=await read('/api/crank/workflows/'+driftWorkflow[1]); return page('Provider drift',driftListView(workflow,await read('/api/crank/drift')),{state,crumbs:[['Workflow','/app/workflows/'+workflow.id]]}) }
     if(driftReview) { const review=await read('/api/crank/drift/'+driftReview[1]); return page(review.proposal.kind==='scope'?'Review requested scopes':'Review mapping repair',driftReviewView(review,await read('/api/crank/connections')),{state}) }
+    if(url.pathname==='/app/settings/mcp') {
+      const selected=url.searchParams.get('client') ?? undefined
+      const [clients,workflows,calls]=await Promise.all([read('/api/crank/mcp-clients'),read('/api/crank/workflows'),selected?read('/api/crank/mcp-clients/'+encodeURIComponent(selected)+'/calls'):[]])
+      return page('AI clients',mcpClientsPanel(clients,workflows,calls,selected),{state,section:'Access',crumbs:[['Access','/app/access']]})
+    }
     if(url.pathname==='/app/settings/provider-consent') {
       const connections=await read('/api/crank/connections')
       const disclosure=url.searchParams.get('connection_id') && url.searchParams.get('company_id') ? await read('/api/crank/regulated-operations?'+url.searchParams) : null
@@ -328,7 +336,7 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
     }
     const heldPath = /^\/app\/holds\/([^/]+)$/.exec(url.pathname)
     if (heldPath) return page('Held work', usageHoldView(await read('/api/crank/holds/' + encodeURIComponent(heldPath[1]))), {state})
-    if(url.pathname==='/app/access') {const response=await call('/auth/operators'), people=response.ok?await response.json():[]; return page('Access',accessView({...state,people})+teamPanel(await read('/api/crank/team'),people as any[],await read('/api/crank/workflows'),[...await read('/api/crank/connections'),...(actor.role==='owner'?(await read('/api/crank/gateways')).gateways.filter((g:any)=>g.status==='active').map((g:any)=>({...g,id:gatewayScopeId(g.id)})):[])])+grantsPanel(await read('/api/crank/grants'),await read('/api/crank/workflows'),people as any[]),{state,intro:'Credentials for agents and sending apps, and the people who can sign in.'})}
+    if(url.pathname==='/app/access') {const response=await call('/auth/operators'), people=response.ok?await response.json():[]; return page('Access','<section class="panel"><h2>AI clients</h2><a href="/app/settings/mcp">Manage client tool servers</a></section>'+accessView({...state,people})+teamPanel(await read('/api/crank/team'),people as any[],await read('/api/crank/workflows'),[...await read('/api/crank/connections'),...(actor.role==='owner'?(await read('/api/crank/gateways')).gateways.filter((g:any)=>g.status==='active').map((g:any)=>({...g,id:gatewayScopeId(g.id)})):[])])+grantsPanel(await read('/api/crank/grants'),await read('/api/crank/workflows'),people as any[]),{state,intro:'Credentials for agents and sending apps, and the people who can sign in.'})}
     if(url.pathname==='/app/data') { const [retention,workflows,flows] = await Promise.all([read('/api/crank/data/retention'),read('/api/crank/workflows'),read('/api/crank/data/flows')]); return page('Data',dataFlowsPanel(flows)+dataView()+retentionPanels(retention,workflows)+sensitivePanel(retention.sensitive,workflows)+encryptionPanel(retention.sensitive)+erasurePanels((people=>Array.isArray(people)?people:people.operators??[])(await read('/auth/operators'))),{state,intro:'Export, restore and erase. Your data stays on this installation.'}) }
     if(url.pathname==='/app/import') { const jobs=await call('/api/crank/imports'); if(!jobs.ok) throw new Error('Import journal unavailable'); return page('Move in',importView(await jobs.json() as any[],await read('/api/operator/import-settings')),{state,intro:'Bring workflows from another tool as drafts you review first.'}) }
     return page('Not found','<a href="/app">Return to flows</a>',{state},404)

@@ -65,7 +65,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        journey: [invoice-outcome, drift]
+        journey: [invoice-outcome, drift, mcp-client, migration]
     env:
       CI: 'true'
       WRANGLER_SEND_METRICS: 'false'
@@ -81,6 +81,9 @@ jobs:
       - run: npm install --global pnpm@10.12.4
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec playwright install --with-deps chromium
+      - name: Build installed browser journeys
+        if: ${{ matrix.journey == 'mcp-client' || matrix.journey == 'migration' }}
+        run: pnpm exec vite build
       - name: Owner browser journey
         run: pnpm exec node tests/${{ matrix.journey }}-browser.mjs
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

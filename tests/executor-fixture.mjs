@@ -6,6 +6,24 @@ import {fileURLToPath} from 'node:url';
 import {createRequire} from 'node:module';
 import {fakeSecret,until} from './kit.mjs';
 
+/** Fake only the remote executor protocol. No submitted source is evaluated;
+ * callers supply explicit remote results. This proves no host isolation claim. */
+export function executorProtocolEdge() {
+ const token=fakeSecret('migration-executor'),tasks=new Map(),submitted=[];
+ const reply=(value,status=200)=>new Response(JSON.stringify(value),{status,headers:{'content-type':'application/json'}});
+ const edge=async request=>{
+  const url=new URL(request.url);if(url.hostname!=='executor.example')return undefined;
+  if(request.headers.get('authorization')!=='Bearer '+token)return reply({error:'unauthorized'},401);
+  const task_id=url.pathname.split('/')[2];
+  if(request.method==='POST'){
+   const job=await request.json();submitted.push({task_id,job});
+   if(!tasks.has(task_id))tasks.set(task_id,{task_id,status:'running'});
+  }
+  return tasks.has(task_id)?reply(tasks.get(task_id)):reply({error:'not_found'},404);
+ };
+ return {token,edge,tasks,submitted,complete(task_id,output){tasks.set(task_id,{task_id,status:'succeeded',output})}};
+}
+
 /** Deploy the real Linux service outside root's private home, as its own user.
  * Only DNS/socket routing is replaced in the Worker test's network edge. */
 export async function linuxExecutor() {

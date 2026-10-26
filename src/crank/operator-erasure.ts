@@ -30,6 +30,7 @@ export async function eraseOperator(env: CrankEnv, actor: Actor, operatorId: str
   const label = `erased-operator-${crypto.randomUUID()}`, guard = `erase-operator:${person.id}:${label}`, at = Date.now()
   await guardedBatch(env, actor, 'owner', [
     stmt(env, `INSERT INTO crank_authority_guards(id,ok) SELECT ?,CASE WHEN EXISTS(SELECT 1 FROM oa_operators WHERE id=? AND email=? AND role!='owner' AND status='inactive') THEN 1 ELSE 0 END`, guard, person.id, person.email),
+    stmt(env,'DELETE FROM crank_mcp_clients WHERE owner_id=?',person.id),
     stmt(env,'DELETE FROM crank_service_accounts WHERE owner_id=?',person.id),
     ...ATTRIBUTION.map(([table, column]) => stmt(env, `UPDATE ${table} SET ${column}=? WHERE ${column}=?`, label, person.id)),
     stmt(env, "UPDATE crank_audit SET detail_json='{}' WHERE action IN ('followup.create','followup.contact') AND EXISTS(SELECT 1 FROM json_tree(detail_json) j WHERE j.type='text' AND j.value=?)",person.id),

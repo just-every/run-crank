@@ -65,3 +65,14 @@ export function dateExport(target,id='synthetic-crank-date') {
  source.connections={n0:{main:[[{node:'n1',type:'main',index:0}]]},n1:{main:[[{node:'n4',type:'main',index:0}]]}};
  return source;
 }
+
+/** Two-node exports deliberately exercise graph routing without padding nodes. */
+export function conversionExport(kind,id='synthetic-crank-40') {
+ const type=kind==='code'?'code':'executeWorkflow';
+ return {id,name:'Synthetic reviewed '+kind,nodes:[
+  {id:'n0',name:'n0',type:'n8n-nodes-base.manualTrigger',typeVersion:1,parameters:{},position:[0,0]},
+  {id:'n1',name:'n1',type:'n8n-nodes-base.'+type,typeVersion:kind==='code'?2:1.2,position:[220,0],parameters:kind==='code'?{mode:'runOnceForAllItems',jsCode:'throw new Error("synthetic-crank-41 source must not execute")'}:{source:'database',workflowId:'synthetic-crank-42',mode:'once',options:{waitForSubWorkflow:true}}},
+ ],connections:{n0:{main:[[{node:'n1',type:'main',index:0}]]}}};
+}
+
+export const isolatedCodeChoice=connection_id=>({kind:'isolated-code',reviewed:true,language:'javascript',source:'export default function(input) { return {normalized:input.address.trim()} }',connection_id,executor_url:'https://executor.example',timeout_ms:2000,memory_mb:1024,allowed_egress:[],output_schema:{type:'object',properties:{normalized:{type:'string'}},required:['normalized'],additionalProperties:false},input:{address:'={{ $json.address }}'}});

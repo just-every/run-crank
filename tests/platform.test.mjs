@@ -233,3 +233,8 @@ test('PLATFORM-001: lost, concurrent and restarted duplicate requests keep one i
   await restored.restart();await restored.tick();assert.equal(edge.requests.length,1,'receipt-free restoration and fresh duplication stay inactive');
  }finally{await restored?.close();await h.close()}
 });
+
+
+test('Per-client MCP connector tools enforce exact grants, approvals, history, restart and revocation',async()=>{
+ const {mcpClientJourney}=await import('./mcp-client-journey.mjs');await mcpClientJourney();
+});

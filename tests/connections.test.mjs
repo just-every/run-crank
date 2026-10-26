@@ -748,3 +748,8 @@ test('Invoice outcomes stay open after successful requests until granted repair 
   const { invoiceOutcomeJourney } = await import('./invoice-outcome-journey.mjs');
   await invoiceOutcomeJourney();
 });
+
+
+test('Managed Calendar creation reads back the exact event and reconciles response loss without repeating writes',async()=>{
+ const {googleCalendarJourney}=await import('./google-calendar-journey.mjs');await googleCalendarJourney();
+});

@@ -11,6 +11,7 @@ import { quickbooksSteps } from '../../providers/quickbooks'
 import { invoiceOutcome } from '../../providers/invoice-outcome'
 import { quickbooksVoid } from '../../providers/quickbooks-compensation'
 import { slackSteps } from '../../connectors/slack'
+import { googleCalendarSteps } from '../../connectors/google-calendar'
 import type { StepType } from '../types'
 import { filter, map, respond, transform } from './core'
 import { approval, delay, waitForCallback } from './flow'
@@ -19,5 +20,5 @@ import { join } from './join'
 /** Every step a published version may declare; `paths` groups are handled by the executor. */
 export const STEP_TYPES: Record<string, StepType> = {
   'drift.map': driftMap, 'table.atomic': tableAtomic, 'table.lookup': tableLookup, subflow, collect, 'custom.request':customRequest, code, filter, transform, map, respond, delay, wait_for_callback: waitForCallback, approval, join,
-  'quickbooks.invoice_outcome': invoiceOutcome, http: httpRequest, 'file.fetch': fileFetch, ...slackSteps, ...quickbooksSteps, ...gustoSteps, 'quickbooks.void_invoice': quickbooksVoid,
+  'quickbooks.invoice_outcome': invoiceOutcome, http: httpRequest, 'file.fetch': fileFetch, ...slackSteps, ...googleCalendarSteps, ...quickbooksSteps, ...gustoSteps, 'quickbooks.void_invoice': quickbooksVoid,
 }

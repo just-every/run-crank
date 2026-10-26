@@ -29,6 +29,7 @@ export async function graphDataFlows(env: CrankEnv, credential: (id: unknown) =>
         else if (step.type === 'code') emit(path,'code',{source:step.source,language:step.language,input},step.connection_id,[step.executor_url])
         else if (step.type.startsWith('quickbooks.')) emit(path,step.type,input,step.connection_id,['https://sandbox-quickbooks.api.intuit.com'])
         else if (step.type.startsWith('gusto.')) emit(path,step.type,input,step.connection_id,['https://api.gusto-demo.com','https://api.gusto.com'])
+        else if (step.type.startsWith('google_calendar.')) emit(path,step.type,input,step.connection_id,['https://www.googleapis.com'])
         else if (step.type === 'http' || step.type === 'file.fetch' || step.type.startsWith('slack.')) {
           const readback = isObject(step.readback) ? step.readback : {}
           emit(path, step.type, input, step.connection_id, step.type.startsWith('slack.') ? ['https://slack.com'] : [input.url, ...(readback.url ? [readback.url] : [])])

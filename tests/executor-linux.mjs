@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {linuxExecutor} from './executor-fixture.mjs';
 import {harness} from './harness.mjs';
-import {connection,publish,startRun,stepOf,until,fakeSecret} from './kit.mjs';
+import {connection,publish,startRun,stepOf,until,fakeSecret,doorImport,door} from './kit.mjs';
+import {conversionExport,isolatedCodeChoice} from './n8n-graph-fixture.mjs';
 
 const executor=await linuxExecutor();let h;
 const taskId=()=>createHash('sha256').update(crypto.randomUUID()).digest('hex');
@@ -31,5 +32,14 @@ try{
  const w=await publish(h,'Harbour Workshop — real isolated Python normalization',{trigger:{type:'manual'},steps:[{id:'normalize',type:'code',connection_id:account.id,executor_url:'https://executor.example',...job,input:{customer:'{{trigger.input.customer}}'}},{id:'finish',type:'map',input:{customer:'{{steps.normalize.output.customer}}'}}]});
  const run=await startRun(h,w,{customer:'  Harbour Workshop & Supply  '});assert.ok(['waiting','succeeded'].includes(run.status),JSON.stringify(run.error));await h.restart();await h.tick(Date.now()+61000);const done=await h.get('workflow-runs/'+run.id);assert.equal(done.status,'succeeded',JSON.stringify(done.error));assert.deepEqual(stepOf(done,'finish').output,{customer:'Harbour Workshop & Supply'});
  const remote=await executor.call('/tasks/'+done.executor_tasks[0].id);assert.deepEqual(remote.value.output,stepOf(done,'normalize').output.output);assert.ok(!JSON.stringify(done).includes(executor.token));
+ const migration={workflow:conversionExport('code','synthetic-crank-52'),conversions:{n1:isolatedCodeChoice(account.id)}};
+ const imported=await doorImport(h,JSON.stringify(migration)),converted=(await h.get('workflows')).find(item=>item.name===migration.workflow.name);
+ assert.equal((await h.get('workflows/'+converted.id)).draft.steps[0].source,migration.conversions.n1.source);
+ await h.post(`workflows/${converted.id}/publish`,{},h.owner,201);
+ const migratedRun=await startRun(h,converted,{address:' synthetic-crank-53 '});
+ await until(async()=>{const task=(await executor.call('/tasks/'+migratedRun.executor_tasks[0].id)).value;return ['succeeded','failed'].includes(task.status)&&task},'converted JavaScript terminal task',10000);
+ await h.restart();await h.tick(Date.now()+61000);
+ const migratedDone=await h.get('workflow-runs/'+migratedRun.id);assert.equal(migratedDone.status,'succeeded',JSON.stringify(migratedDone.error));assert.deepEqual(stepOf(migratedDone,'n1').output.output,{normalized:'synthetic-crank-53'});
+ const migratedUndo=await door(h,'undo',{planId:imported.planId});assert.ok(migratedUndo.status>=400||migratedUndo.value.job?.state!=='undone');
  console.log('WORK-005 PASS: real Python/JavaScript/TypeScript; isolation, memory/time/network bounds; authenticated durable identities, conflicts, cancellation tombstones, crash reconciliation and published Worker/Cron continuation.');
 }finally{await h?.close();await executor.close()}

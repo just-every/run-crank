@@ -5,6 +5,10 @@ import {mkdir,readFile} from 'node:fs/promises';
 import {join,resolve,extname} from 'node:path';
 import {harness} from './harness.mjs';
 import {chromium} from '@playwright/test';
+import {createHash} from 'node:crypto';
+import {fakeSecret} from './kit.mjs';
+const canonical=value=>value===null||typeof value!=='object'?JSON.stringify(value):Array.isArray(value)?'['+value.map(canonical).join(',')+']':'{'+Object.keys(value).sort().map(key=>JSON.stringify(key)+':'+canonical(value[key])).join(',')+'}';
+const digest=value=>createHash('sha256').update(value).digest('hex');
 const evidence=process.env.CRANK_EVIDENCE;
 assert.ok(evidence,'Set CRANK_EVIDENCE');await mkdir(evidence,{recursive:true});
 let browser,page,h,server,receiver;
@@ -28,8 +32,23 @@ try {
  const cookie=h.owner.indexOf('=');await context.addCookies([{name:h.owner.slice(0,cookie),value:h.owner.slice(cookie+1),url:origin}]);page=await context.newPage();
  await page.goto(origin+'/setup');if(new URL(page.url()).pathname==='/setup'){await page.getByRole('checkbox').check();await page.getByRole('button',{name:'Finish setup',exact:true}).click();await page.waitForURL('**/app')}
  const send=async(path,body,status=200)=>{const r=await context.request.fetch(origin+'/api/crank/'+path,{method:body===undefined?'GET':'POST',headers:{origin},...(body===undefined?{}:{data:body})});const v=await r.json();assert.equal(r.status(),status,path+': '+(v.error??'unexpected status'));return v};
+ const importDoor=async(action,body)=>{const response=await context.request.post(origin+'/api/operator/import/'+action,{headers:{origin,'X-Import-Source':'n8n'},data:body});const value=await response.json();assert.equal(response.status(),200,action+': '+(value.error??'unexpected import status'));return value};
  const shot=async(width,state)=>{await page.screenshot({path:join(evidence,`${width}-${state}.png`),fullPage:true});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`${width} ${state} overflow`)};
- const {loopExport,doneLoopExport,switchExport,dateExport}=await import('./n8n-graph-fixture.mjs');
+ const {loopExport,doneLoopExport,switchExport,dateExport,conversionExport,isolatedCodeChoice}=await import('./n8n-graph-fixture.mjs');
+ const component=await send('subflows',{name:'Synthetic browser registry conversion',definition:{inputs:{address:'string'},outputs:{normalized:'string'},steps:[{id:'trim',fn:'text.trim',input:{value:'{{trigger.input.address}}'}}],result:{normalized:'{{steps.trim}}'}}},201);
+ const executor=await send('connections',{app:'http',label:'Synthetic browser native executor',auth_kind:'bearer',domains:['executor.example'],secret:{token:fakeSecret('browser-migration-executor')}},201);
+ const registryChoice={kind:'registry-subflow',reviewed:true,subflow_id:component.subflow_id,subflow_version:component.version,definition_digest:component.definition_digest,input:{address:'={{ $json.address }}'}};
+ const codeChoice=isolatedCodeChoice(executor.id);
+ const upload=async value=>{await page.goto(origin+'/app/import');await page.getByLabel('Workflow export JSON').fill(JSON.stringify(value));await page.getByRole('button',{name:'Upload and plan',exact:true}).click();await page.waitForLoadState('networkidle')};
+ const reviewedPlan=async()=>({planId:await page.locator('form[action="/app/import/apply"] input[name="planId"]').inputValue(),fingerprint:await page.locator('input[name="reviewedFingerprint"]').inputValue()});
+ const verifyConversion=(detail,workflow,choice)=>{
+  assert.equal(detail.status,'draft','conversion apply must leave native authority inactive');assert.equal(detail.published_version_id,null);assert.equal(detail.versions.length,0);assert.equal(detail.hooks.length,0);
+  assert.deepEqual(detail.draft.settings.n8n_conversions,{n1:choice},'native provenance must retain the owner-reviewed choice');
+  assert.deepEqual(detail.draft.settings.n8n_conversion_dispositions,[{node_id:'n1',kind:choice.kind,resolved:true,source_digest:digest(canonical(workflow.nodes[1])),choice_digest:digest(canonical(choice))}],'retained dispositions must bind the original source node and reviewed choice');
+  const [step]=detail.draft.steps;assert.equal(step.type,choice.kind==='registry-subflow'?'subflow':'code');
+  if(step.type==='subflow'){assert.equal(step.subflow_id,component.subflow_id);assert.equal(step.subflow_version,component.version);assert.equal(step.definition_digest,component.definition_digest)}
+  else {assert.equal(step.source,choice.source);assert.notEqual(step.source,workflow.nodes[1].parameters.jsCode,'the original source program must not become the native executable');assert.equal(step.connection_id,executor.id);assert.equal(step.executor_url,choice.executor_url);assert.deepEqual(step.output_schema,choice.output_schema);assert.deepEqual(step.allowed_egress,[])}
+ };
  for(const width of [1440,390]){
   await page.setViewportSize({width,height:1000});await page.goto(origin+'/app/import');await shot(width,'move-in');
   const search=page.getByRole('link',{name:'Search runs',exact:true});await search.focus();assert.equal(await page.locator('#search-tooltip').isVisible(),true);await page.locator('h1').click();await search.hover();await page.waitForTimeout(350);assert.equal(await page.locator('#search-tooltip').isVisible(),true);await shot(width,'search-tooltip');
@@ -47,14 +66,32 @@ try {
   await page.goto(origin+'/app/workflows/'+w.id);await shot(width,'inactive-native-graph');
   await page.goto(origin+'/app/import');await page.getByRole('button',{name:'Undo unused import',exact:true}).click();await page.waitForURL('**/app/import');assert.equal((await send('workflows')).length,0);await shot(width,'undone-graph');
   for(const extra of [switchExport(declared,'synthetic-crank-switch-'+width),dateExport(declared,'synthetic-crank-date-'+width)]){await page.getByLabel('Workflow export JSON').fill(JSON.stringify(extra));await page.getByRole('button',{name:'Upload and plan',exact:true}).click();await page.waitForLoadState('networkidle');assert.equal(await page.getByRole('button',{name:'Approve this plan',exact:true}).count(),1);await page.getByText(/Supported fields/).click();await shot(width,extra.name.includes('Switch')?'switch-review':'date-review');await page.getByRole('button',{name:'Cancel plan',exact:true}).click();await page.waitForURL('**/app/import')}
+  const registrySource=conversionExport('registry','synthetic-crank-'+(width+80)),codeSource=conversionExport('code','synthetic-crank-'+(width+81));
+  await upload([{workflow:registrySource,conversions:{}},{workflow:codeSource,conversions:{n1:{kind:'manual',reason:'synthetic-crank-82 owner review pending'}}}]);
+  assert.equal(await page.getByRole('button',{name:'Approve this plan',exact:true}).count(),0,'unresolved source conversions must withhold approval');
+  const unresolvedId=await page.locator('.import-review input[name="planId"]').inputValue(),unresolved=await importDoor('status',{planId:unresolvedId});assert.equal(unresolved.job,null,'review must create no import job');assert.equal((await send('workflows')).length,0);await shot(width,'envelope-unresolved');
+  await page.getByRole('button',{name:'Cancel plan',exact:true}).click();await page.waitForURL('**/app/import');
+  const bundle=[{workflow:registrySource,conversions:{n1:registryChoice}},{workflow:codeSource,conversions:{n1:codeChoice}}];await upload(bundle);
+  assert.equal(await page.getByRole('button',{name:'Approve this plan',exact:true}).count(),1,'complete reviewed choices must produce an approvable native mapping');const reviewed=await reviewedPlan();assert.notEqual(reviewed.fingerprint,unresolved.fingerprint,'resolved choices require a distinct review');
+  await page.locator('.import-review details').evaluateAll(elements=>elements.forEach(element=>element.open=true));await shot(width,'envelope-resolved-review');
+  await page.getByRole('button',{name:'Approve this plan',exact:true}).click();await page.waitForLoadState('networkidle');
+  const provenance=await importDoor('reconcile',{planId:reviewed.planId});assert.equal(provenance.ok,true);assert.equal(provenance.fingerprint,reviewed.fingerprint);assert.equal(provenance.bundleSha256,digest(JSON.stringify(bundle)),'the complete envelope bytes must participate in source provenance');assert.ok((await importDoor('status',{planId:reviewed.planId})).approval,'apply must retain the owner approval');await shot(width,'envelope-applied-inactive');
+  for(const [workflow,choice,kind]of [[registrySource,registryChoice,'registry'],[codeSource,codeChoice,'code']]){const row=(await send('workflows')).find(row=>row.name===workflow.name);assert.ok(row,'resolved source must create its native draft');verifyConversion(await send('workflows/'+row.id),workflow,choice);await page.goto(origin+'/app/workflows/'+row.id+'?step=n1');await shot(width,'envelope-'+kind+'-native')}
+  assert.equal(effects.length,0,'conversion review and inactive apply must make no receiver requests');
+  await page.goto(origin+'/app/import');await page.locator('form[action="/app/import/undo"]').filter({has:page.locator('input[name="planId"][value="'+reviewed.planId+'"]')}).getByRole('button').click();await page.waitForURL('**/app/import');assert.equal((await send('workflows')).length,0,'exact unused conversion drafts must undo together');await shot(width,'envelope-undone');
   console.log(`MIG-001 ${width}: mapping coverage, safe cancellation, inactive apply, native draft, undo and shell tooltip passed`);
  }
 
  await page.setViewportSize({width:1440,height:1000});await page.goto(origin+'/app/import');
  const source=doneLoopExport(declared,'synthetic-crank-72');
+ const driftSources=[conversionExport('registry','synthetic-crank-84'),conversionExport('code','synthetic-crank-85')],driftBundle=driftSources.map((workflow,index)=>({workflow,conversions:{n1:index?codeChoice:registryChoice}}));
  const shots=async state=>{for(const width of [1440,390]){await page.setViewportSize({width,height:1000});await shot(width,state)}};
- await page.getByLabel('Workflow export JSON').fill(JSON.stringify(source));await page.getByRole('button',{name:'Upload and plan',exact:true}).click();await page.waitForLoadState('networkidle');
+ // Stage the protected-undo fixtures together while every imported target is an
+ // unused draft. Publication later deliberately fences this retained plan;
+ // planning another import against that used native inventory is not this test.
+ await page.getByLabel('Workflow export JSON').fill(JSON.stringify([source,...driftBundle]));await page.getByRole('button',{name:'Upload and plan',exact:true}).click();await page.waitForLoadState('networkidle');
  assert.equal(await page.getByRole('button',{name:'Approve this plan',exact:true}).count(),1);await page.getByText(/Supported fields/).click();assert.ok((await page.locator('body').innerText()).includes('distinct linear done path'));await shots('done-review');
+ const driftPlan=await reviewedPlan();
  await page.getByRole('button',{name:'Approve this plan',exact:true}).click();await page.waitForLoadState('networkidle');
  const workflow=(await send('workflows')).find(row=>row.name===source.name),inactive=await send('workflows/'+workflow.id);
  assert.equal(inactive.status,'draft');assert.equal(inactive.versions.length,0);assert.equal(inactive.hooks.length,0);
@@ -69,6 +106,15 @@ try {
  for(const id of ['n5','n7','n9'])assert.ok(run.steps.some(step=>step.step_id===id&&step.status==='succeeded'));
  await page.goto(origin+'/app/workflow-runs/'+run.id);await shots('done-completed-run');
  console.log('MIG-001 1440 and 390: reviewed done-output conversion, inactive native draft, ordered actual receiver effects and retained checkpoints passed');
+
+ // The same retained plan now contains completed work and an owner-edited
+ // conversion. Its exact undo must preserve both fences and the companion graph.
+ const driftRows=await send('workflows'),driftCode=driftRows.find(row=>row.name===driftSources[1].name),driftRegistry=driftRows.find(row=>row.name===driftSources[0].name);assert.ok(driftCode&&driftRegistry);
+ verifyConversion(await send('workflows/'+driftCode.id),driftSources[1],codeChoice);verifyConversion(await send('workflows/'+driftRegistry.id),driftSources[0],registryChoice);
+ await send('workflows/'+driftCode.id+'/draft',{name:'Synthetic owner adjusted conversion'});const changed=await send('workflows/'+driftCode.id),preserved=await send('workflows/'+driftRegistry.id);
+ await page.goto(origin+'/app/import');const refusedResponse=page.waitForResponse(response=>new URL(response.url()).pathname==='/app/import/undo'&&response.request().method()==='POST');await page.locator('form[action="/app/import/undo"]').filter({has:page.locator('input[name="planId"][value="'+driftPlan.planId+'"]')}).getByRole('button').click();assert.ok((await refusedResponse).status()>=400,'native drift must refuse the exact conversion undo');await page.waitForLoadState('networkidle');await shots('envelope-drift-undo-refused');
+ const afterRefusal=await send('workflows/'+driftCode.id);assert.equal(afterRefusal.name,changed.name);assert.equal(afterRefusal.updated_at,changed.updated_at);assert.deepEqual(afterRefusal.draft,changed.draft);assert.deepEqual((await send('workflows/'+driftRegistry.id)).draft,preserved.draft,'refused undo must preserve the companion registry graph');assert.equal((await send('workflow-runs/'+run.id)).status,'succeeded','refused retained-plan undo must preserve completed source work');
+ console.log('MIG-001 1440 and 390: retained conversion envelopes, owner-reviewed registry and code provenance, inactive native drafts, exact unused undo and native drift refusal passed');
 
  await context.close();
 }catch(error){if(page){await page.screenshot({path:join(evidence,'journey-error.png'),fullPage:true});console.error((await page.locator('body').innerText()).slice(0,800))}console.error(String(error.message).replace(/https?:\/\/\S+/g,'[redacted URL]'));process.exitCode=1}

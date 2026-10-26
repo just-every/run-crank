@@ -86,6 +86,7 @@ export async function subflowPublication(env: CrankEnv, actor: Actor, graph: {st
       if (step.type === 'subflow') {
         requireOwner(actor)
         const row = await readSubflow(env, String(step.subflow_id), Number(step.subflow_version))
+        requireValue(step.definition_digest === undefined || step.definition_digest === row.definition_digest, 'The reviewed subflow digest does not match the pinned registry version', 409)
         requireValue(row.active === 1, 'Review the pinned subflow version before publishing this caller', 409)
         refs.push({subflow_id:row.subflow_id,version:row.version,definition_digest:row.definition_digest})
       }
@@ -150,9 +151,10 @@ export async function evaluatePureSubflow(definition: Definition, value: Record<
 
 export const subflow: StepType = {
   mutating: false,
-  validate(step) { if (step.mode !== undefined && step.mode !== 'child') throw new StepError('validation', 'Subflow mode must be child or omitted'); if (typeof step.subflow_id !== 'string' || !step.subflow_id || !Number.isSafeInteger(step.subflow_version) || Number(step.subflow_version) < 1) throw new StepError('validation', 'Subflow calls pin subflow_id and a positive subflow_version') },
+  validate(step) { if (step.mode !== undefined && step.mode !== 'child') throw new StepError('validation', 'Subflow mode must be child or omitted'); if (typeof step.subflow_id !== 'string' || !step.subflow_id || !Number.isSafeInteger(step.subflow_version) || Number(step.subflow_version) < 1) throw new StepError('validation', 'Subflow calls pin subflow_id and a positive subflow_version'); if (step.definition_digest !== undefined && (typeof step.definition_digest !== 'string' || !/^[a-f0-9]{64}$/.test(step.definition_digest))) throw new StepError('validation', 'Subflow definition_digest must be the reviewed SHA-256 digest') },
   async execute(step, ctx) {
     const row = await readSubflow(ctx.env, String(step.subflow_id), Number(step.subflow_version))
+    if (step.definition_digest !== undefined && step.definition_digest !== row.definition_digest) throw new StepError('validation', 'The reviewed subflow digest does not match the pinned registry version')
     await callable(ctx, row)
     if (await digest(row.definition_json) !== row.definition_digest) throw new StepError('validation', 'The subflow definition digest does not match')
     const definition = JSON.parse(row.definition_json) as Definition

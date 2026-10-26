@@ -18,6 +18,8 @@ test('BASE-001/BASE-004: an owned installation publishes and finishes every ship
     const setup = await h.mf.dispatchFetch(h.origin + '/setup', { method: 'POST', redirect: 'manual', headers: { origin: h.origin, cookie: h.owner, 'content-type': 'application/x-www-form-urlencoded' }, body: 'confirm=yes' });
     assert.equal(setup.status, 303);
     const slack = await connection(h, { app: 'slack', label: 'Harbor sales team', auth_kind: 'bearer', secret: { token: fakeSecret('slack') } });
+    const calendar=await connection(h,{app:'google',auth_kind:'oauth2',label:'Harbor calendar',scopes:['https://www.googleapis.com/auth/calendar.events'],secret:{access_token:'synthetic-crank-20'}});
+    const calendarEvents=new Map();fake.routes.set('www.googleapis.com',({method,url,body})=>{if(method==='POST'){const event=JSON.parse(body);calendarEvents.set(event.id,event);return jsonResponse(event)}return jsonResponse(calendarEvents.get(url.pathname.split('/').at(-1)))});
     const executor=await connection(h,{app:'http',label:'Owner code executor',auth_kind:'bearer',domains:['executor.example'],secret:{token:fakeSecret('executor')}});
     const {preparePublicCustom}=await import('./custom-fixture.mjs');
     fake.routes.set('custom.example',()=>jsonResponse({id:'stock-24',quantity:24}));
@@ -26,6 +28,7 @@ test('BASE-001/BASE-004: an owned installation publishes and finishes every ship
     const table = await h.post('tables', { name: 'Owned operational counter', confirm: 'OPERATIONAL_NUMBERS_ONLY' }, h.owner, 201);
     await h.post(`tables/${table.id}/records`, { operation_id: crypto.randomUUID(), key: 'count', operation: 'upsert', value: 0 });
     const graph = ownershipGraph(slack.id,executor.id);graph.steps.unshift(custom.step,
+      {id:'calendar_event',type:'google_calendar.create_event',connection_id:calendar.id,input:{calendar_id:'synthetic-crank-21@example.test',summary:'Harbor appointment',start:{dateTime:'2026-11-03T09:00:00+10:00',timeZone:'Australia'+'/'+'Brisbane'},end:{dateTime:'2026-11-03T09:30:00+10:00',timeZone:'Australia'+'/'+'Brisbane'}}},
       { id: 'component', type: 'subflow', subflow_id: component.subflow_id, subflow_version: 1, input: { value: ' Owned installation ' } },
       { id: 'counter', type: 'table.atomic', table_id: table.id, input: { key: 'count', operation: 'increment', by: 1 } },
       { id: 'lookup_count', type: 'table.lookup', table_id: table.id, input: { key: 'count' } });
