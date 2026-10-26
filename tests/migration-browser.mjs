@@ -15,7 +15,7 @@ let browser,page,h,server,receiver;
 try {
  // Build first. This runs the emitted deployment Worker, real D1 and native handlers.
  const declared='https://receiver.example',effects=[];
- receiver=createServer(async(req,res)=>{let text='';for await(const chunk of req)text+=chunk;const input=JSON.parse(text);effects.push({path:req.url,input});res.writeHead(200,{'content-type':'application'+'/'+'json'});res.end(JSON.stringify(req.url==='/body'?{processed:input.message,part:0}:{processed:input.processed,part:input.part}))});
+ receiver=createServer(async(req,res)=>{let text='';for await(const chunk of req)text+=chunk;const input=JSON.parse(text);effects.push({path:req.url,input});res.writeHead(200,{'content-type':'application'+'/'+'json'});res.end(JSON.stringify(req.url==='/body'?[1,2].map(part=>({processed:input.message,part})):{processed:input.processed,part:input.part}))});
  await new Promise(resolve=>receiver.listen(0,'127.0.0.1',resolve));const receiverOrigin='http://127.0.0.1:'+receiver.address().port;
  h=await harness(declared,{emitted:true,edge:async request=>{const url=new URL(request.url);if(url.origin!==declared)return undefined;const headers=new Headers(request.headers);headers.delete('content-length');return fetch(receiverOrigin+url.pathname,{method:request.method,headers,body:await request.arrayBuffer()})}});const origin=h.origin;
  const types={'.css':'text'+'/'+'css','.js':'text'+'/'+'javascript','.svg':'image'+'/'+'svg+xml','.woff2':'font'+'/'+'woff2','.webp':'image'+'/'+'webp','.png':'image'+'/'+'png','.json':'application'+'/'+'json'};
@@ -34,7 +34,7 @@ try {
  const send=async(path,body,status=200)=>{const r=await context.request.fetch(origin+'/api/crank/'+path,{method:body===undefined?'GET':'POST',headers:{origin},...(body===undefined?{}:{data:body})});const v=await r.json();assert.equal(r.status(),status,path+': '+(v.error??'unexpected status'));return v};
  const importDoor=async(action,body)=>{const response=await context.request.post(origin+'/api/operator/import/'+action,{headers:{origin,'X-Import-Source':'n8n'},data:body});const value=await response.json();assert.equal(response.status(),200,action+': '+(value.error??'unexpected import status'));return value};
  const shot=async(width,state)=>{await page.screenshot({path:join(evidence,`${width}-${state}.png`),fullPage:true});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`${width} ${state} overflow`)};
- const {loopExport,doneLoopExport,switchExport,dateExport,conversionExport,isolatedCodeChoice}=await import('./n8n-graph-fixture.mjs');
+ const {loopExport,streamLoopEnvelope,switchExport,dateExport,conversionExport,isolatedCodeChoice}=await import('./n8n-graph-fixture.mjs');
  const component=await send('subflows',{name:'Synthetic browser registry conversion',definition:{inputs:{address:'string'},outputs:{normalized:'string'},steps:[{id:'trim',fn:'text.trim',input:{value:'{{trigger.input.address}}'}}],result:{normalized:'{{steps.trim}}'}}},201);
  const executor=await send('connections',{app:'http',label:'Synthetic browser native executor',auth_kind:'bearer',domains:['executor.example'],secret:{token:fakeSecret('browser-migration-executor')}},201);
  const registryChoice={kind:'registry-subflow',reviewed:true,subflow_id:component.subflow_id,subflow_version:component.version,definition_digest:component.definition_digest,input:{address:'={{ $json.address }}'}};
@@ -83,13 +83,13 @@ try {
  }
 
  await page.setViewportSize({width:1440,height:1000});await page.goto(origin+'/app/import');
- const source=doneLoopExport(declared,'synthetic-crank-72');
+ const sourceEnvelope=streamLoopEnvelope(declared,'synthetic-crank-72'),source=sourceEnvelope.workflow;
  const driftSources=[conversionExport('registry','synthetic-crank-84'),conversionExport('code','synthetic-crank-85')],driftBundle=driftSources.map((workflow,index)=>({workflow,conversions:{n1:index?codeChoice:registryChoice}}));
  const shots=async state=>{for(const width of [1440,390]){await page.setViewportSize({width,height:1000});await shot(width,state)}};
  // Stage the protected-undo fixtures together while every imported target is an
  // unused draft. Publication later deliberately fences this retained plan;
  // planning another import against that used native inventory is not this test.
- await page.getByLabel('Workflow export JSON').fill(JSON.stringify([source,...driftBundle]));await page.getByRole('button',{name:'Upload and plan',exact:true}).click();await page.waitForLoadState('networkidle');
+ await page.getByLabel('Workflow export JSON').fill(JSON.stringify([sourceEnvelope,...driftBundle]));await page.getByRole('button',{name:'Upload and plan',exact:true}).click();await page.waitForLoadState('networkidle');
  assert.equal(await page.getByRole('button',{name:'Approve this plan',exact:true}).count(),1);await page.getByText(/Supported fields/).click();assert.ok((await page.locator('body').innerText()).includes('distinct linear done path'));await shots('done-review');
  const driftPlan=await reviewedPlan();
  await page.getByRole('button',{name:'Approve this plan',exact:true}).click();await page.waitForLoadState('networkidle');
@@ -101,11 +101,11 @@ try {
  const delivered=await context.request.post(hook.url,{data:{messages:['synthetic-crank-70','synthetic-crank-71']}});assert.equal(delivered.status(),200);const admission=await delivered.json();assert.equal(admission.accepted,true);
  let run;
  for(let attempt=0;attempt<100;attempt++){run=await send('workflow-runs/'+admission.run_id);if(!['queued','running'].includes(run.status))break;await page.waitForTimeout(50)}
- assert.equal(run.status,'succeeded',JSON.stringify(run.error));assert.deepEqual(effects.slice(before).map(row=>row.path),['/body','/body','/done-first','/done-first','/done-last','/done-last']);
- assert.deepEqual(effects.slice(before+2,before+4).map(row=>row.input.processed),['synthetic-crank-70','synthetic-crank-71']);
- for(const id of ['n5','n7','n9'])assert.ok(run.steps.some(step=>step.step_id===id&&step.status==='succeeded'));
+ assert.equal(run.status,'succeeded',JSON.stringify(run.error));assert.deepEqual(effects.slice(before).map(row=>row.path),['/body','/body-next','/body-next','/body','/body-next','/body-next',...Array(4).fill('/done-first'),...Array(4).fill('/done-last')]);
+ assert.deepEqual(effects.slice(before+6,before+10).map(row=>row.input),['synthetic-crank-70','synthetic-crank-71'].flatMap(processed=>[1,2].map(part=>({processed,part,phase:'synthetic-crank-32'}))));
+ for(const id of ['n5','n10','n11','n12','n7','n9'])assert.ok(run.steps.some(step=>step.step_id===id&&step.status==='succeeded'));
  await page.goto(origin+'/app/workflow-runs/'+run.id);await shots('done-completed-run');
- console.log('MIG-001 1440 and 390: reviewed done-output conversion, inactive native draft, ordered actual receiver effects and retained checkpoints passed');
+ console.log('MIG-001 1440 and 390: reviewed bounded body item streams, inactive native draft, ordered actual receiver effects and retained checkpoints passed');
 
  // The same retained plan now contains completed work and an owner-edited
  // conversion. Its exact undo must preserve both fences and the companion graph.

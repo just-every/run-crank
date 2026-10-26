@@ -126,7 +126,7 @@
       "executable": false
     },
     ".github/workflows/verify.yml": {
-      "sha256": "8cd9c43330f20a0a894c26ae7e8177f3ddfa645bf3bc5281789277df29de3817",
+      "sha256": "ab4fcb577fcbb12cb4f905f624bd1c0ff151ae99b8a325dff407e459295b2324",
       "executable": false
     },
     ".gitignore": {
@@ -214,7 +214,7 @@
       "executable": false
     },
     "docs/IMPORTING.md": {
-      "sha256": "cf9d8cf346fa6a06d59a43cd7bb81e1f1191346bbda76d3724f7d9fcfe4eb2b7",
+      "sha256": "c7634ab553d76f9ebefbb3dac307f2c8fb7e88c90c806b343607c044657c6ca4",
       "executable": false
     },
     "docs/OPERATIONS.md": {
@@ -1434,7 +1434,7 @@
       "executable": false
     },
     "package.json": {
-      "sha256": "b9297eb2f67428c9a718ae9adc90df8c85ee618112a63a91b30fc655e2297605",
+      "sha256": "8b15d409ed54bc3cf746af5eaa569f88af6ac9068f71e8f9e3b919745fc46366",
       "executable": false
     },
     "packaging.json": {
@@ -2430,7 +2430,7 @@
       "executable": false
     },
     "src/crank/engine/transforms/n8n-items.ts": {
-      "sha256": "27144e65f69e8c50d60a3e9db5fccd6bd1cfd6bb3cb8a2c576e47eb69c2c6e8d",
+      "sha256": "75b7d2552d3c5ff84dfc3b1880fce0eb4f4dda0807feb7650a35ead8f676c4ff",
       "executable": false
     },
     "src/crank/engine/transforms/numbers.ts": {
@@ -2562,15 +2562,15 @@
       "executable": false
     },
     "src/crank/n8n-graph.ts": {
-      "sha256": "f182a2096cb38de18631e8df0d1ddf62ae810e24f765e3e75bf535a841d24e7e",
+      "sha256": "d5588d74245dea453b9cf9fe1674122ae88eba6d39df0d9383753d452c729fc2",
       "executable": false
     },
     "src/crank/n8n-loop.ts": {
-      "sha256": "c0efa56bc95bfbfc05f27acef8852d1a7465647ea35d440a31741dc1ffa6341d",
+      "sha256": "e0d6ed5eb4af894f8ace63a9eade4fe624cb7571723e864f43395bee45de2eeb",
       "executable": false
     },
     "src/crank/n8n.ts": {
-      "sha256": "b4efd7bbad2fd91e3c96123304c808920c600c7cec84e910310b4ec73410d44f",
+      "sha256": "c14cae354267eddfa304094d6eb08ab3ebdc3731c41f901e865db26a0283f1c9",
       "executable": false
     },
     "src/crank/operator-erasure.ts": {
@@ -5054,7 +5054,7 @@
       "executable": false
     },
     "tests/crank.test.mjs": {
-      "sha256": "6526e5d235b3fec0106fe67663929234fe0817a88421348012b818c85cc554f5",
+      "sha256": "210c94de3c19c9e2c2528dc649573c83607e023861e9ed0549aa7357dd8e7f1f",
       "executable": false
     },
     "tests/custom-browser-runtime.mjs": {
@@ -5298,7 +5298,7 @@
       "executable": false
     },
     "tests/migration-browser.mjs": {
-      "sha256": "c31bd7daf1363eb660569960ac38fa1c1a972b6258de2aa05fe20967a3ae06a2",
+      "sha256": "38565d17fe44173746962cbcff1fc11c31742c1ded56b837020147eeb1f2b2dc",
       "executable": false
     },
     "tests/n8n-conversion-journey.mjs": {
@@ -5306,7 +5306,7 @@
       "executable": false
     },
     "tests/n8n-graph-fixture.mjs": {
-      "sha256": "426cc316594d8d35a39a66bcb44a939f64f85276a4d51bae06efc57a666cea4d",
+      "sha256": "c6e2aba4594d21b4b16c5416934c7bf8a204f800f131fa942247dc55d62852d5",
       "executable": false
     },
     "tests/n8n-loop-journey.mjs": {

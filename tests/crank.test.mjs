@@ -1,4 +1,5 @@
 import {doneLoopJourney} from './n8n-loop-journey.mjs';
+import {streamLoopJourney} from './n8n-loop-stream-journey.mjs';
 import {conversionJourney} from './n8n-conversion-journey.mjs';
 import { graphExport, loopExport, switchExport, dateExport } from './n8n-graph-fixture.mjs';
 import {before,after,test} from 'node:test';
@@ -163,7 +164,8 @@ test('MIG-001 move-in door: owner upload, plan without writes, reviewed apply, r
  assert.equal(review.status,200,review.text.slice(0,300));assert.match(review.text,/1 workflows in the upload: 1 new/);assert.equal((await h.get()).flows.length,before,'review writes nothing');
  const field=name=>review.text.match(new RegExp(`name="${name}" value="([^"]+)"`))[1];
  const applied=await screen('/app/import/apply',{planId:field('planId'),reviewedFingerprint:field('reviewedFingerprint')});
- assert.match(applied.text,/Reconciled: 1 of 1 source workflows are present as drafts/);assert.equal((await h.get()).flows.length,before+1);
+ assert.equal(applied.status,200);assert.equal((await h.get()).flows.length,before+1);
+ const reconciled=await door(h,'reconcile',{planId:field('planId')});assert.equal(reconciled.value.ok,true);assert.equal(reconciled.value.counts.sourceRecords,1);assert.equal(reconciled.value.counts.nativeTargets,1);
  assert.match((await h.send('/app/import',undefined,h.owner)).text,/Undo unused import/);
  assert.equal((await screen('/app/import/undo',{planId:field('planId')})).location,'/app/import');assert.equal((await h.get()).flows.length,before);
  const bad=JSON.parse(await source());bad.nodes[1].parameters.jsonBody='={{ $json.body.customer }}';
@@ -253,6 +255,7 @@ test('MIG-001 native graph review, exact apply, restart, branch outcomes and pro
   await deliver(execution,lh.url,{method:'POST',headers:{'content-type':'application'+'/'+'json'},body:JSON.stringify({messages:Array(1001).fill('synthetic-crank-12')})});
   assert.equal((await settled(execution,(await execution.get('workflow-runs?workflow='+lw.id)).runs[0].id)).status,'failed');assert.equal(requests.length,countBefore);
   await doneLoopJourney(declared);
+  await streamLoopJourney(declared);
   for(const mutate of [
    v=>v.nodes[3].parameters.batchSize=2,
    v=>v.nodes[3].parameters.options.reset=true,

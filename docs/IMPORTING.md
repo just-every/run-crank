@@ -166,9 +166,8 @@ Malformed or oversized arrays fail before any body request. Reset, larger
 batches and other loop topologies require manual conversion.
 
 Done output 0 can lead to a distinct linear Set, JSON HTTP or supported embedded
-pure-subflow chain. Its loop body ends with one JSON HTTP node; an intermediate
-HTTP node that can change item cardinality needs a general item-stream conversion
-and receives a named manual disposition. Completion consumes the body responses
+pure-subflow chain. Without an explicit stream choice, its loop body ends with
+one JSON HTTP node. Completion consumes the body responses
 in order, expands returned JSON object arrays and preserves duplicate items.
 Every completion node finishes its incoming item list before the next node starts.
 An empty input or empty returned body stream produces no completion requests;
@@ -179,6 +178,27 @@ semantics follow the source's [batch node](https://github.com/n8n-io/n8n/blob/ma
 and [HTTP node](https://github.com/n8n-io/n8n/blob/master/packages/nodes-base/nodes/HttpRequest/V3/HttpRequestV3.node.ts).
 `tests/n8n-loop-journey.mjs` (`doneLoopJourney`) exercises the reviewed import,
 ordered actual receiver effects, empty streams, failures, restart and replay.
+
+An intermediate HTTP response can expand into multiple JSON objects when the
+owner supplies an `item-stream-loop` choice for the Split Out node in the retained
+conversion envelope. For example, `"conversions": {"n2": {"kind":
+"item-stream-loop", "reviewed": true, "max_source_items": 10,
+"max_stage_items": 20}}` explicitly limits the original source array to ten
+items and each body or completion stage to twenty. Both bounds must be from one
+to 1000, and the resulting native graph must fit its existing aggregate invocation
+budget; planning refuses an excessive budget. The choice and original source
+remain fingerprint-bound and visible in provenance.
+
+The streamed body supports linear Set and JSON HTTP steps, including maps from
+an inlined pure child. Every node processes its complete incoming stream before
+the next begins. HTTP object arrays expand in response order and duplicate records
+remain separate operations. Execution is serial and stops at the first failure;
+it does not reproduce n8n's concurrent requests within one HTTP node. Empty
+intermediate output stops later stages, remaining source batches and completion.
+Primitive or binary responses fail before downstream mapping. Registry calls,
+code, branches and nested batches inside this stream still require their own
+conversion. `tests/n8n-loop-stream-journey.mjs` (`streamLoopJourney`) proves the
+reviewed bounds, actual receiver effects, stage barriers and retained replay.
 
 Execute Workflow versions 1 through 1.3 support `source: "parameter"`, a literal
 `workflowJson`, `mode: "once"` and synchronous completion. Its snapshot needs

@@ -47,21 +47,32 @@ function replaceCurrent(value: unknown, previous: string): unknown {
 
 /** n8n runs each done-path node over the complete preceding stream. Separate
  * native loops preserve that node barrier rather than interleaving whole chains. */
-export function doneItemPipeline(steps: Step[], items: string) {
+export function itemStreamPipeline(steps: Step[], items: string, initial = 'item', maxItems = 1000) {
   const result: Step[] = []
-  let stream = items, previous = 'item'
+  let stream = items, previous = initial
   for (const source of steps) {
     if (!['map', 'http'].includes(source.type)) throw Error('done path has no committed item-stream conversion for this native operation')
     const each = source.id + '_each', collected = source.id + '_items'
     const step = { ...source, input: replaceCurrent(source.input ?? {}, previous) }
-    result.push({ id: each, name: source.name, type: 'loop', input: { items: ref(stream) }, max_items: 1000, concurrency: 1,
+    result.push({ id: each, name: source.name, type: 'loop', input: { items: ref(stream) }, max_items: maxItems, concurrency: 1,
       order: 'input', empty: 'allow', item_errors: 'stop', steps: [step], result: ref('steps.' + source.id) })
     stream = 'steps.' + each + '.results'
     if (source.type === 'http') {
-      result.push({ id: collected, type: 'transform', fn: 'n8n.items', input: { kind: 'responses', value: ref(stream) } })
+      result.push({ id: collected, type: 'transform', fn: 'n8n.items', input: { kind: 'responses', value: ref(stream), max_items: maxItems } })
       stream = 'steps.' + collected
     }
     previous = 'steps.' + source.id + (source.type === 'http' ? '.body' : '')
   }
   return { steps: result, output: stream }
+}
+
+/** Additional item expansion needs explicit reviewed bounds. These participate
+ * in source identity and the native graph's aggregate invocation calculation. */
+export function reviewedStreamBounds(choice: Node | undefined) {
+  if (!choice || choice.kind !== 'item-stream-loop' || choice.reviewed !== true)
+    throw Error('intermediate HTTP item expansion requires an owner-reviewed item-stream-loop conversion and explicit bounds')
+  if (Object.keys(choice).some(key => !['kind', 'reviewed', 'max_source_items', 'max_stage_items'].includes(key))
+    || ![choice.max_source_items, choice.max_stage_items].every(value => Number.isSafeInteger(value) && value >= 1 && value <= 1000))
+    throw Error('item-stream-loop conversion requires source and stage bounds from 1 to 1000 within the native invocation budget')
+  return { source: choice.max_source_items as number, stage: choice.max_stage_items as number }
 }

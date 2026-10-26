@@ -106,7 +106,7 @@ export function n8nSource(env: ImportTargetEnv, ownerId: string): ImportDoorSour
       }
       return { kind: 'n8n-workflow', sourceId: workflow(value, index, env).sourceId, payload: value }
     },
-    mapping: { version: 'crank-n8n-native-graph-v5', map(record) {
+    mapping: { version: 'crank-n8n-native-graph-v6', map(record) {
       const { workflow: root, explicit } = migrationEnvelope(record.payload)
       if (nativeGraph(root, explicit)) return n8nGraph(record.payload, record.sourceId, env, ownerId)
       const flow = workflow(record.payload, 0, env)

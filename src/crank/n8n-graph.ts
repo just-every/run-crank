@@ -4,7 +4,7 @@ import { requireZone } from './engine/dates'
 import { validateGraph } from './engine/graph'
 import type { Step } from './engine/types'
 import { validateImportTargetUrl, type ImportTargetEnv } from './import-target'
-import { doneItemPipeline, serialLoopRegions } from './n8n-loop'
+import { itemStreamPipeline, reviewedStreamBounds, serialLoopRegions } from './n8n-loop'
 import { conversionDisposition, conversionStep, migrationEnvelope } from './n8n-conversions'
 
 type Obj = Record<string, any>
@@ -84,14 +84,22 @@ export function n8nGraph(value: Json, sourceId: string, env: ImportTargetEnv, ow
           const loopIndex=out[0][0],loopNode=nodes[loopIndex],lp=obj(loopNode.parameters??{}),lo=edges.get(loopIndex)??[],regions=serialLoopRegions(nodes,edges,loopIndex)
           fields(lp,['batchSize','options'],'nodes.'+loopIndex+'.parameters');seen.add(loopIndex)
           const itemId=id+'_item',body=compile(lo[1][0],'steps.'+itemId,depth+1,loopIndex),last=regions.body.at(-1)!,connected=regions.done.length>0
-          if(connected&&body.slice(0,-1).some(step=>step.type==='http'))throw Error('done-output conversion needs a terminal HTTP response; intermediate item-expanding HTTP requires a general source item-stream mapping')
+          const streaming=Boolean(conversions[n.id])||body.slice(0,-1).some(step=>step.type==='http')
+          const bounds=streaming?reviewedStreamBounds(conversions[n.id]):null
+          const initial=id+'_initial',pipeline=streaming?itemStreamPipeline(body,'steps.'+initial,'steps.'+itemId,bounds!.stage):null
           const normalized=id+'_returned',final=body.at(-1),output=connected?'steps.'+normalized:tails.get(last)
-          result.push({...step,id,type:'loop',input:{items:{$ref:previous+'.'+p.fieldToSplitOut}},max_items:1000,concurrency:1,order:'input',empty:'allow',item_errors:'stop',
-            ...(connected?{empty_result:'stop'}:{}),steps:[{id:itemId,type:'map',input:{[p.fieldToSplitOut]:{$ref:'item'}}},...body,
-              ...(connected?[{id:normalized,type:'transform',fn:'n8n.items',input:{kind:final?.type==='http'?'http':'item',value:{$ref:final?.type==='http'?'steps.'+final.id:tails.get(last)}}}]:[])],result:{$ref:output}} as Step)
+          const children:Step[]=[{id:itemId,type:'map',input:{[p.fieldToSplitOut]:{$ref:'item'}}}]
+          if(pipeline)children.push({id:initial,type:'transform',fn:'n8n.items',input:{kind:'item',value:{$ref:'steps.'+itemId}}},...pipeline.steps)
+          else {
+            children.push(...body)
+            if(connected)children.push({id:normalized,type:'transform',fn:'n8n.items',input:{kind:final?.type==='http'?'http':'item',value:{$ref:final?.type==='http'?'steps.'+final.id:tails.get(last)}}})
+          }
+          result.push({...step,id,type:'loop',input:{items:{$ref:previous+'.'+p.fieldToSplitOut}},max_items:bounds?.source??1000,concurrency:1,order:'input',empty:'allow',item_errors:'stop',
+            ...(connected||streaming?{empty_result:'stop'}:{}),steps:children,result:{$ref:pipeline?.output??output}} as Step)
           let tail='steps.'+id+'.results'
-          if(connected){const collected=id+'_processed';result.push({id:collected,type:'transform',fn:'n8n.items',input:{kind:'flatten',value:{$ref:tail}}});const done=doneItemPipeline(compile(regions.done[0],'item',depth+1), 'steps.'+collected);result.push(...done.steps);tail=done.output}
-          coverage.push({field:at,reason:connected?'Supported serial loop and distinct linear done path: ordered returned items, node barriers, empty streams produce no requests; 1000-item bound':'Supported serial loop: at most 1000 items; empty input allowed; first failure stops; unused done output'})
+          if(connected){const collected=id+'_processed';result.push({id:collected,type:'transform',fn:'n8n.items',input:{kind:'flatten',value:{$ref:tail},...(bounds?{max_items:bounds.stage}:{})}});const done=itemStreamPipeline(compile(regions.done[0],'item',depth+1), 'steps.'+collected,'item',bounds?.stage??1000);result.push(...done.steps);tail=done.output}
+          if(streaming){dispositions.push(conversionDisposition(n,conversions[n.id],true));coverage.push({field:at,reason:'Owner-reviewed linear item stream: source bound '+bounds!.source+', per-stage bound '+bounds!.stage+'; serial first-failure stop, node barriers, exact JSON expansion and native invocation budget'})}
+          coverage.push({field:at,reason:connected?'Supported serial loop and distinct linear done path: ordered returned items, node barriers, empty streams produce no requests; '+(bounds?'reviewed source and stage bounds':'1000-item bound'):'Supported serial loop: '+(bounds?'reviewed source and stage bounds':'at most 1000 items')+'; empty input allowed; first failure stops; unused done output'})
           tails.set(index,tail);return result
         }
         case 'n8n-nodes-base.executeWorkflow': {
@@ -176,7 +184,7 @@ export function n8nGraph(value: Json, sourceId: string, env: ImportTargetEnv, ow
         default: gap(at,'node type '+String(n.type)+' has no committed mapping');fields(p,[],at+'.parameters')
       }
     }catch(error){gap(at,(error as Error).message);if(conversions[n.id]||['n8n-nodes-base.code','n8n-nodes-base.function','n8n-nodes-base.functionItem','n8n-nodes-base.executeWorkflow'].includes(n.type))dispositions.push(conversionDisposition(n,conversions[n.id],false))}
-    if(conversions[n.id]&&!['n8n-nodes-base.code','n8n-nodes-base.function','n8n-nodes-base.functionItem','n8n-nodes-base.executeWorkflow'].includes(n.type))gap('conversions.'+n.id,'choice does not apply to this source node')
+    if(conversions[n.id]&&!['n8n-nodes-base.splitOut','n8n-nodes-base.code','n8n-nodes-base.function','n8n-nodes-base.functionItem','n8n-nodes-base.executeWorkflow'].includes(n.type))gap('conversions.'+n.id,'choice does not apply to this source node')
     if(out.length>1||out.some(b=>b.length>1))gap(at+'.connections','fan-out needs an explicit native branch')
     tails.set(index,previous)
     for(const branch of out)for(const next of branch){result.push(...compile(next,previous,depth+1,stop));tails.set(index,tails.get(next)??previous)}

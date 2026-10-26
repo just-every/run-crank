@@ -76,3 +76,22 @@ export function conversionExport(kind,id='synthetic-crank-40') {
 }
 
 export const isolatedCodeChoice=connection_id=>({kind:'isolated-code',reviewed:true,language:'javascript',source:'export default function(input) { return {normalized:input.address.trim()} }',connection_id,executor_url:'https://executor.example',timeout_ms:2000,memory_mb:1024,allowed_egress:[],output_schema:{type:'object',properties:{normalized:{type:'string'}},required:['normalized'],additionalProperties:false},input:{address:'={{ $json.address }}'}});
+
+/** An intermediate HTTP item stream must finish each source node before the
+ * next begins; the original completion chain remains distinct and unchanged. */
+export function streamLoopExport(target,id='synthetic-crank-90') {
+ const source=doneLoopExport(target,id),edge=node=>({node,type:'main',index:0});
+ source.name='Synthetic serial body stream with ordered completion';
+ const set=(id,phase)=>({id,name:id,type:'n8n-nodes-base.set',typeVersion:3.4,position:[Number(id.slice(1))*220,400],parameters:{assignments:{assignments:[
+  {id:'synthetic-crank-93',name:'processed',type:'string',value:'={{ $json.processed }}'},
+  {id:'synthetic-crank-94',name:'part',type:'number',value:'={{ $json.part }}'},
+  {id:'synthetic-crank-95',name:'phase',type:'string',value:phase},
+ ]},options:{}}});
+ source.nodes.push(set('n10','synthetic-crank-91'),{id:'n11',name:'n11',type:'n8n-nodes-base.httpRequest',typeVersion:4.2,position:[2420,400],parameters:{method:'POST',url:target+'/body-next',sendBody:true,specifyBody:'json',jsonBody:'={{ $json }}',options:{}}},set('n12','synthetic-crank-92'));
+ source.connections.n5={main:[[edge('n10')]]};source.connections.n10={main:[[edge('n11')]]};source.connections.n11={main:[[edge('n12')]]};source.connections.n12={main:[[edge('n3')]]};
+ return source;
+}
+
+export function streamLoopEnvelope(target,id='synthetic-crank-90',bounds={max_source_items:10,max_stage_items:20}) {
+ return {workflow:streamLoopExport(target,id),conversions:{n2:{kind:'item-stream-loop',reviewed:true,...bounds}}};
+}

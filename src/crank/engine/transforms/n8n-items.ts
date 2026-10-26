@@ -7,6 +7,9 @@ import type { Transform } from './args'
  * A source stream is a list of records, never one record containing the list. */
 export const n8nItems: Transform = args => {
   const kind = args.kind, value = args.value
+  const maxItems = args.max_items ?? 1000
+  if (!Number.isSafeInteger(maxItems) || Number(maxItems) < 1 || Number(maxItems) > 1000)
+    throw new StepError('validation', 'n8n item conversion requires a reviewed item bound from 1 to 1000')
   const responseItems = (response: unknown): unknown[] => {
     if (!isObject(response) || !isObject(response.headers)) throw new StepError('validation', 'n8n HTTP item conversion needs a native response checkpoint')
     const type = String(response.headers['content-type'] ?? '').toLowerCase()
@@ -24,8 +27,8 @@ export const n8nItems: Transform = args => {
     if (!Array.isArray(value)) throw new StepError('validation', 'n8n response collection needs a retained response list')
     items = value.flatMap(responseItems)
   } else throw new StepError('validation', 'Choose an explicit n8n item conversion kind')
-  if (items.length > 1000 || new TextEncoder().encode(JSON.stringify(items)).length > 1024 * 1024)
-    throw new StepError('validation', 'n8n processed items exceed the retained 1000-item or byte bound')
+  if (items.length > Number(maxItems) || new TextEncoder().encode(JSON.stringify(items)).length > 1024 * 1024)
+    throw new StepError('validation', 'n8n processed items exceed the retained item or byte bound')
   if (items.some(item => !isObject(item))) throw new StepError('validation', 'Each n8n processed item must be a JSON object')
   return items
 }
