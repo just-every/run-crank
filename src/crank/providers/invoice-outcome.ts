@@ -60,7 +60,7 @@ export const invoiceOutcome: StepType = {
   mutating: true, connection: 'required', required: ['realm_id', 'business_key', 'source_path', 'lead_path', 'lead_id', 'customer_id', 'amount_usd', 'due_at', 'remaining_cost_usd'],
   validate(step) { if (step.on_error !== undefined) throw new StepError('validation', 'An outcome obligation cannot continue on error') },
   async execute(step, original) {
-    const ctx = { ...original, input: { ...original.input, connection_id: step.connection_id } }
+    const ctx: StepContext = { ...original, input: { ...original.input, connection_id: step.connection_id } }
     if (!parseDecimal(ctx.input.amount_usd) || parseDecimal(ctx.input.amount_usd)!.units < 0n || !parseDecimal(ctx.input.remaining_cost_usd) || parseDecimal(ctx.input.remaining_cost_usd)!.units < 0n || !Number.isFinite(Date.parse(String(ctx.input.due_at))))
       throw new StepError('validation', 'Outcome criteria need exact USD amounts and an ISO due time')
     await invoiceOutcomeSource(ctx, String(step.connection_id))
@@ -82,7 +82,7 @@ export const invoiceOutcome: StepType = {
     if (!decision.approved) return { status: 'rejected', reason: decision.reason ?? 'Outcome repair rejected; business result remains unverified' }
     if (!reviewed.outcome_repair || canonical(reviewed.input) !== canonical(original.input)) throw new StepError('authority', 'Outcome repair changed; a fresh exact review is required')
     await withinGrant(step, original)
-    const ctx = { ...original, input: { ...original.input, connection_id: step.connection_id } }, records = await observe(ctx)
+    const ctx: StepContext = { ...original, input: { ...original.input, connection_id: step.connection_id } }, records = await observe(ctx)
     if (records.length === 1 && invoiceMeetsOutcome(records[0], ctx.input)) return { status: 'succeeded', output: invoiceOutcomeOutput(records[0], ctx.input) }
     if (await digest(canonical(records)) !== reviewed.observation_digest) return held(ctx, 'blocked', records, 'Provider records changed after review; reconcile with the provider before continuing')
     const prior = await invoiceOutcomeSource(ctx, String(step.connection_id)), base = await quickbooksAccount(ctx.env, String(step.connection_id), ctx.input.realm_id)
