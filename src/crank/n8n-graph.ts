@@ -98,7 +98,7 @@ export function n8nGraph(value: Json, sourceId: string, env: ImportTargetEnv, ow
             ...(connected||streaming?{empty_result:'stop'}:{}),steps:children,result:{$ref:pipeline?.output??output}} as Step)
           let tail='steps.'+id+'.results'
           if(connected){const collected=id+'_processed';result.push({id:collected,type:'transform',fn:'n8n.items',input:{kind:'flatten',value:{$ref:tail},...(bounds?{max_items:bounds.stage}:{})}});const done=itemStreamPipeline(compile(regions.done[0],'item',depth+1), 'steps.'+collected,'item',bounds?.stage??1000);result.push(...done.steps);tail=done.output}
-          if(streaming){dispositions.push(conversionDisposition(n,conversions[n.id],true));coverage.push({field:at,reason:'Owner-reviewed linear item stream: source bound '+bounds!.source+', per-stage bound '+bounds!.stage+'; serial first-failure stop, node barriers, exact JSON expansion and native invocation budget'})}
+          if(streaming){dispositions.push(conversionDisposition(n,conversions[n.id],true));coverage.push({field:at,reason:'Supported owner-reviewed linear item stream: source bound '+bounds!.source+', per-stage bound '+bounds!.stage+'; serial first-failure stop, node barriers, exact JSON expansion and native invocation budget'})}
           coverage.push({field:at,reason:connected?'Supported serial loop and distinct linear done path: ordered returned items, node barriers, empty streams produce no requests; '+(bounds?'reviewed source and stage bounds':'1000-item bound'):'Supported serial loop: '+(bounds?'reviewed source and stage bounds':'at most 1000 items')+'; empty input allowed; first failure stops; unused done output'})
           tails.set(index,tail);return result
         }
@@ -113,7 +113,7 @@ export function n8nGraph(value: Json, sourceId: string, env: ImportTargetEnv, ow
             } else if(typeof p.workflowJson!=='string'||p.workflowJson.startsWith('='))throw Error('embedded source snapshot must be literal')
             result.push(conversionStep(conversions[n.id],n,step,(value,field)=>mapped(value,previous,'conversions.'+n.id+'.'+field)))
             dispositions.push(conversionDisposition(n,conversions[n.id],true));previous='steps.'+id
-            coverage.push({field:at,reason:'Owner-reviewed immutable native registry binding; source database reference grants no authority'})
+            coverage.push({field:at,reason:'Supported owner-reviewed immutable native registry binding; source database reference grants no authority'})
             break
           }
           fields(p,['source','workflowJson','mode','options'],at+'.parameters');const opts=obj(p.options??{});fields(opts,['waitForSubWorkflow'],at+'.parameters.options')
@@ -139,7 +139,7 @@ export function n8nGraph(value: Json, sourceId: string, env: ImportTargetEnv, ow
           if(!(code?[1,2]:[1]).includes(n.typeVersion)||(code&&((p.language??'javaScript')!=='javaScript'||!['runOnceForAllItems','runOnceForEachItem'].includes(p.mode??'runOnceForAllItems')))||typeof p[code?'jsCode':'functionCode']!=='string')throw Error('unsupported source code language, version or execution mode')
           result.push(conversionStep(conversions[n.id],n,step,(value,field)=>mapped(value,previous,'conversions.'+n.id+'.'+field)))
           dispositions.push(conversionDisposition(n,conversions[n.id],true));previous='steps.'+id+'.output'
-          coverage.push({field:at,reason:'Owner-reviewed native JavaScript replacement; no source runtime API compatibility is assumed'})
+          coverage.push({field:at,reason:'Supported owner-reviewed native JavaScript replacement; no source runtime API compatibility is assumed'})
           break
         }
         case 'n8n-nodes-base.dateTime': {
