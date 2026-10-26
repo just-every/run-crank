@@ -14,6 +14,7 @@ export interface AuthoringDetail {
   model: { model: string; provider: string; response_id?: string; generated_at?: string }
   tested: { passed: boolean; digest?: string; run_ids: string[] } | null
   digest: string; promoted: boolean; schemas?: unknown; provenance?: unknown; disclosures?: unknown
+  grant_proposal?: unknown
 }
 export const authoringPath = (id: string) => '/app/authoring/' + encodeURIComponent(id)
 const apiPath = (id: string) => '/api/crank/authoring/' + encodeURIComponent(id)
@@ -49,6 +50,7 @@ function scopePanel(data: AuthoringDetail, connections: Connection[]) {
   return `<section class="panel"><h2>Requested scope</h2><p>These are the draft's fixed account and tool boundaries. Changes that widen access are refused. Review any declined change in the error above, then keep or narrow the saved scope.</p>
     <ul class="list">${selected.map(c => c ? `<li><strong>${esc(connectionName(c))}</strong><p>Existing connection scopes: ${esc(c.scopes.length ? c.scopes.join(', ') : 'none declared')} · ${esc(c.environment)}</p></li>` : '<li>The selected connection is unavailable.</li>').join('')}</ul>
     <details><summary>Exact scope and tool boundaries</summary>${inspection('Authorized draft scope', data.scope)}</details>
+    ${data.grant_proposal ? `<details><summary>Proposed execution grant</summary>${inspection('Grant proposal and unresolved authority choices', data.grant_proposal)}<p>No grant has been issued. The owner can separately review execution access in <a href="/app/access">Access</a>.</p></details>` : ''}
     ${data.disclosures !== undefined ? `<details><summary>Outgoing data and provider terms</summary>${inspection('Recipients, purpose, fields, credentials, region and retention', data.disclosures)}</details>` : ''}</section>`
 }
 

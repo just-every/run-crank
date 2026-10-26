@@ -2122,7 +2122,7 @@
       "executable": false
     },
     "src/crank/agents/authoring-model.ts": {
-      "sha256": "06ffb8ed1780ab2d11a8ecbfeda731c79b690926efc859bd75b171e2c588eeda",
+      "sha256": "934dc2e80100ba012c8595c7a695248a1aba8337db069b37448975890ae7ba83",
       "executable": false
     },
     "src/crank/agents/authoring-promotion.ts": {
@@ -2130,7 +2130,7 @@
       "executable": false
     },
     "src/crank/agents/authoring-record.ts": {
-      "sha256": "fb52c15bdf686ac653fd5288d01c659f04560f578476394b6922d6bacc8ad3e9",
+      "sha256": "8cf3da6e153cacce812ac1104faf7800fc002a2ca467105c8ddda3f0ed326e83",
       "executable": false
     },
     "src/crank/agents/authoring-safety.ts": {
@@ -2138,11 +2138,11 @@
       "executable": false
     },
     "src/crank/agents/authoring-schema.ts": {
-      "sha256": "985f3095778a777e69a384d9715d2222e9d5a2a4a5193b8090d6b138abf60a50",
+      "sha256": "c5d41bc88d83dca22aea1abb458f14e8180be82d0b9bafc4cebd0113229bf64a",
       "executable": false
     },
     "src/crank/agents/authoring.ts": {
-      "sha256": "5efdcd4f60ed5a37e4ffd313a65174fd009fe392721bd00e1b7dfa07421fc942",
+      "sha256": "a402b85a8c289df8b0b721c5272168e1a1532995a8d0274d6b0e73122acbaf48",
       "executable": false
     },
     "src/crank/agents/cases.ts": {
@@ -2914,7 +2914,7 @@
       "executable": false
     },
     "src/crank/ui/authoring.ts": {
-      "sha256": "0c0a9f7c110ddaa34d5427abf5422279391987f69f67b9a0b011ab6abc7858a8",
+      "sha256": "e36bc38f5bc1475297a23fc1bed5f3c030bd67d980bedb9d7e92ebff5bbaf553",
       "executable": false
     },
     "src/crank/ui/connections.ts": {
@@ -5106,7 +5106,7 @@
       "executable": false
     },
     "test-budget.json": {
-      "sha256": "4de9de80bd2dc14d6c8173ef8cef9d228b46624b4d432267e83d04aa6b1058b4",
+      "sha256": "061160e9f5406c44ab2932ef626e7e3b263682c64f623da12fd5f777029e8b60",
       "executable": false
     },
     "tests/app.test.mjs": {

@@ -7,6 +7,7 @@ import type { AuthoringScope, Question } from './authoring-schema'
 
 export interface AuthoringRecord {
   revision: number
+  schemas: unknown
   scope: AuthoringScope; samples: Record<string, unknown>[]; questions: Question[]
   model: { model: string; provider: string; response_id: string | null; generated_at: string }
   costs: { generation: { usage: unknown; usd: null; status: string } }

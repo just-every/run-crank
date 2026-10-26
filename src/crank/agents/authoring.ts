@@ -17,7 +17,7 @@ export async function generateAuthoring(env: CrankEnv, actor: Actor, input: Reco
   const prompt = input.prompt.trim()
   const proposal = await generateProposal(env, prompt, scope, samples)
   const workflow = await createWorkflow(env, actor, { name: proposal.name, environment: 'sandbox', graph: proposal.graph, settings: { authoring: { created_by: actor.id } } })
-  const record: AuthoringRecord = { revision: 0, scope, samples, questions: proposal.questions, model: proposal.model, costs: proposal.costs, tested: null }
+  const record: AuthoringRecord = { revision: 0, schemas: proposal.schemas, scope, samples, questions: proposal.questions, model: proposal.model, costs: proposal.costs, tested: null }
   await guardedBatch(env, actor, 'owner', [
     await draftSnapshot(env, actor, workflow.id, null, proposal.graph, { authoring: record }),
     auditStatement(env, actor.id, 'authoring.generate', 'workflow', workflow.id, { model: record.model, sample_count: samples.length }),
@@ -32,7 +32,11 @@ export async function readAuthoring(env: CrankEnv, actor: Actor, workflowId: str
   return { workflow_id: workflowId, graph, samples: record.samples, questions: record.questions, scope: record.scope, model: record.model,
     costs: { ...record.costs, execution: await readWorkflowEstimate(env, workflowId) }, digest: hash,
     tested: { passed: record.tested?.digest === hash, digest: record.tested?.digest ?? null, run_ids: record.tested?.run_ids ?? [] }, promoted: !!promotion,
-    schemas: { sample_fields: [...new Set(record.samples.flatMap(sample => Object.keys(sample)))], graph: 'Native Crank registry validation and bounded authoring schema', source: 'Owner submitted samples; CRM records are read only during explicit tests' },
+    schemas: { authorized: record.schemas, sample_fields: [...new Set(record.samples.flatMap(sample => Object.keys(sample)))], source: 'Owner submitted samples; CRM records are read only during explicit tests' },
+    grant_proposal: { status: 'Proposal only; no execution authority issued', workflow_id: workflowId, version_id: workflow.published_version_id,
+      rules: graph.steps.map(step => ({ step_id: step.id, type: step.type, connection_id: step.connection_id ?? null,
+        fields: Object.keys(step.input ?? {}), ...(step.id === 'invoice' ? { recipient_field: 'payload.CustomerRef.value', recipients: [record.scope.customer_id], amount_field: 'amount_usd', max_usd: record.scope.amount_usd } : {}), max_per_minute: null })),
+      expires_at: null, required_choices: ['Owner must choose expiry, per-tool rates and approval routing before separately issuing any execution grant'], promotion: 'Native human approval of this exact tested version only' },
     provenance: { generated_by: record.model, created_by: workflow.created_by, created_at: workflow.created_at, draft_id: state.row.id },
     disclosures: [
       { recipient: 'Configured model provider', purpose: 'Generate an editable proposal', fields: ['prompt', 'submitted samples', 'connector identifiers', 'invoice scope', 'native graph schema'], credentials: 'Configured AI credential; never included in proposal content', region: 'Provider controlled', retention: 'store:false requested; provider policy applies' },
