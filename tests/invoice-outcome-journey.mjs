@@ -4,12 +4,12 @@ import {harness} from './harness.mjs';
 import {connection,fakeEdge,jsonResponse,publish,stepOf} from './kit.mjs';
 import {archive,inventory} from './restore-journey.mjs';
 
-export async function outcomeObjective(h,{realm,customer,item,receiver,businessKey='synthetic-crank-51',lead='synthetic-crank-50',amount='19.99',token='synthetic-crank-52'}) {
+export async function outcomeObjective(h,{realm,customer,item,receiver,businessKey='synthetic-crank-51',lead='synthetic-crank-50',amount='19.99',token='synthetic-crank-52',repairTimeout}) {
  const account=await connection(h,{app:'quickbooks',label:'Harbour outcome sandbox',account_name:realm,environment:'sandbox',purpose:'test',auth_kind:'oauth2',scopes:['com.intuit.quickbooks.accounting'],secret:{access_token:token}});
  const steps=[
   {id:'lead',name:'Read the CRM lead',type:'http',input:{method:'GET',url:receiver+'/lead'}},
   {id:'invoice',name:'Create the draft invoice',type:'quickbooks.create_invoice',connection_id:account.id,input:{realm_id:realm,business_key:businessKey,amount_usd:amount,payload:{CustomerRef:{value:customer},Line:[{Amount:Number(amount),DetailType:'SalesItemLineDetail',SalesItemLineDetail:{ItemRef:{value:item}}}]}}},
-  {id:'verify_invoice',name:'Verify the invoice outcome',type:'quickbooks.invoice_outcome',connection_id:account.id,input:{realm_id:realm,business_key:businessKey,source_path:'invoice',lead_path:'lead',lead_id:lead,customer_id:customer,amount_usd:amount,due_at:'2026-10-30T12:00:00Z',remaining_cost_usd:'0.01'}},
+  {id:'verify_invoice',name:'Verify the invoice outcome',type:'quickbooks.invoice_outcome',connection_id:account.id,...(repairTimeout?{timeout_ms:repairTimeout}:{}),input:{realm_id:realm,business_key:businessKey,source_path:'invoice',lead_path:'lead',lead_id:lead,customer_id:customer,amount_usd:amount,due_at:'2026-10-30T12:00:00Z',remaining_cost_usd:'0.01'}},
   {id:'notify',name:'Notify finance',type:'http',input:{method:'POST',url:receiver+'/notify',body:{to:'finance@example.test',lead_id:lead,business_key:businessKey,amount_usd:amount}}},
  ];
  const workflow=await h.post('workflows',{name:'Harbour recurring lead to invoice and notify',environment:'sandbox',graph:{trigger:{type:'manual'},steps}},h.owner,201);
@@ -26,12 +26,12 @@ export async function invoiceOutcomeJourney({inspect,modeOnly}={}) {
  await new Promise(done=>server.listen(0,'127.0.0.1',done));const receiver='http://127.0.0.1:'+server.address().port;
  const declared='https://synthetic-crank-owned.example',fake=fakeEdge();
  fake.routes.set('synthetic-crank-owned.example',({method,url,headers,body})=>{const {'content-length':_,...forwarded}=headers;return fetch(receiver+url.pathname+url.search,{method,headers:forwarded,...(!['GET','HEAD'].includes(method)?{body}:{})})});
- let mode='missing',record=null,posts=0,effects=0,repair=false;const seenKeys=new Map();
+ let mode='missing',record=null,posts=0,effects=0,repair=false;const seenKeys=new Map(),pending=new Set();
  fake.routes.set('sandbox-quickbooks.api.intuit.com',({method,url,body})=>{
   if(method==='GET')return jsonResponse({QueryResponse:{Invoice:record?[record]:[]}});
   posts++;const input=JSON.parse(body),key=url.searchParams.get('requestid');assert.ok(key);
   if(input.sparse){assert.equal(input.Id,record.Id);assert.equal(input.SyncToken,record.SyncToken);record={...record,...input,SyncToken:'1',TotalAmt:19.99};effects++;return jsonResponse({Invoice:record})}
-  if(repair){if(!seenKeys.has(key)){record={...input,Id:'synthetic-crank-54',SyncToken:'0',TotalAmt:19.99};seenKeys.set(key,record);effects++}if(mode==='uncertain')throw new Error('synthetic-crank-connection-closed');return jsonResponse({Invoice:seenKeys.get(key)})}
+  if(repair){if(!seenKeys.has(key)){record={...input,Id:'synthetic-crank-54',SyncToken:'0',TotalAmt:19.99};seenKeys.set(key,record);effects++}if(mode==='uncertain'){const response=new Promise(resolve=>setTimeout(()=>resolve(jsonResponse({Invoice:seenKeys.get(key)})),500));pending.add(response);response.finally(()=>pending.delete(response));return response}return jsonResponse({Invoice:seenKeys.get(key)})}
   const acknowledgement={...input,Id:'synthetic-crank-54',SyncToken:'0',TotalAmt:19.99};
   if(mode==='wrong'){record={...acknowledgement,CustomerRef:{value:'synthetic-crank-55'}};seenKeys.set(key,record);effects++}
   return jsonResponse({Invoice:acknowledgement});
@@ -39,7 +39,7 @@ export async function invoiceOutcomeJourney({inspect,modeOnly}={}) {
  let h,restored;
  try {
   h=await harness(receiver,{edge:fake.edge});
-  const objective=await outcomeObjective(h,{realm:'1234',customer:facts.customer_id,item:'synthetic-crank-56',receiver:declared});
+  const objective=await outcomeObjective(h,{realm:'1234',customer:facts.customer_id,item:'synthetic-crank-56',receiver:declared,repairTimeout:200});
   for(mode of modeOnly?[modeOnly]:['missing','wrong','uncertain']) {
    record=null;repair=false;seenKeys.clear();const before=posts,noticeCount=notices.length;
    let run=await objective.start();assert.equal(run.status,'awaiting_approval',JSON.stringify(run.error));
@@ -88,5 +88,5 @@ export async function invoiceOutcomeJourney({inspect,modeOnly}={}) {
   await inspect?.({h:restored,run:await restored.get('workflow-runs/'+imported.id),state:'restored-inactive',objective});
   const dataFlows=await h.get('data/flows');assert.ok(dataFlows.flows.some(f=>f.kind==='quickbooks.invoice_outcome'&&f.recipients.includes('https://sandbox-quickbooks.api.intuit.com')&&f.region.toLowerCase().includes('provider-controlled')));
   return {types:['quickbooks.invoice_outcome'],effects};
- }finally{await restored?.close();await h?.close();server.closeAllConnections();await new Promise(done=>server.close(done))}
+ }finally{await Promise.allSettled([...pending]);await restored?.close();await h?.close();server.closeAllConnections();await new Promise(done=>server.close(done))}
 }
