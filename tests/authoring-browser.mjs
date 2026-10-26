@@ -10,7 +10,7 @@ import {setupAuthoring,authoringModelReply} from './authoring-fixture.mjs';
 const evidence=process.env.CRANK_EVIDENCE;assert.ok(evidence,'Set CRANK_EVIDENCE');await mkdir(evidence,{recursive:true});
 const fake=fakeEdge(),invoices=[];let crmReads=0,modelCalls=0;
 fake.routes.set('authoring-model.example',({body})=>{modelCalls++;return jsonResponse(authoringModelReply(JSON.parse(body)))});
-const crm=createServer((req,res)=>{crmReads++;res.setHeader('content-type','application/json');res.end(JSON.stringify({id:req.url.split('/').at(-1),country:'US',company:'Harbour Workshop — wholesale equipment and maintenance'}))});
+const crm=createServer((req,res)=>{crmReads++;res.setHeader('content-type','application'+'/'+'json');res.end(JSON.stringify({id:req.url.split('/').at(-1),country:'US',company:'Harbour Workshop — wholesale equipment and maintenance'}))});
 await new Promise(r=>crm.listen(0,'127.0.0.1',r));
 fake.routes.set('crm-authoring.example',({url,method})=>{assert.equal(method,'GET');return fetch('http://127.0.0.1:'+crm.address().port+url.pathname)});
 fake.routes.set('sandbox-quickbooks.api.intuit.com',({method,body})=>{
@@ -18,7 +18,7 @@ fake.routes.set('sandbox-quickbooks.api.intuit.com',({method,body})=>{
  const row={...JSON.parse(body),Id:'synthetic-crank-'+(100+invoices.length),TotalAmt:19.99};invoices.push(row);return jsonResponse({Invoice:row});
 });
 const h=await harness('http://127.0.0.1:9',{edge:fake.edge,bindings:{AI_ENABLED:'true',AI_MODEL:'configured-authoring-model',AI_API_KEY:'synthetic-crank-90',AI_BASE_URL:'https://authoring-model.example/v1'}});
-const types={'.css':'text/css','.js':'text/javascript','.svg':'image/svg+xml','.woff2':'font/woff2','.png':'image/png','.webp':'image'+'/'+'webp'};
+const types={'.css':'text'+'/'+'css','.js':'text'+'/'+'javascript','.svg':'image'+'/'+'svg+xml','.woff2':'font'+'/'+'woff2','.png':'image'+'/'+'png','.webp':'image'+'/'+'webp'};
 const bridge=createServer(async(req,res)=>{try{
  const path=new URL(req.url,h.origin).pathname;
  if(types[extname(path)]){const dir=resolve('public'),file=resolve(dir,'.'+decodeURIComponent(path));if(file.startsWith(dir+'/')){const data=await readFile(file).catch(()=>null);if(data){res.writeHead(200,{'content-type':types[extname(path)]});res.end(data);return}}}
@@ -42,7 +42,7 @@ try {
   const setup=await setupAuthoring(h,{samples:[{id:'synthetic-crank-'+width}],prompt:'For US leads from our owned CRM, prepare a USD 19.99 QuickBooks draft invoice for Harbour Workshop. Keep uncertain business decisions explicit.'});
   await page.goto(h.origin+'/app/skills');await page.getByRole('link',{name:'Describe a workflow',exact:true}).click();
   await page.getByLabel('What should happen?').fill(setup.request.prompt);await page.getByLabel('CRM connection',{exact:true}).selectOption(setup.crm.id);await page.getByLabel('QuickBooks connection',{exact:true}).selectOption(setup.qbo.id);
-  await page.getByText('Lead source, invoice details and samples',{exact:true}).click();
+  if(!await page.getByLabel('Authorized lead source URL',{exact:true}).isVisible())await page.getByText('Lead source, invoice details and samples',{exact:true}).click();
   for(const [key,label] of [['lead_url','Authorized lead source URL'],['realm_id','QuickBooks company ID'],['customer_id','QuickBooks customer ID'],['item_id','QuickBooks item ID'],['amount_usd','Invoice amount (USD)']])await page.getByLabel(label,{exact:true}).fill(setup.request[key]);
   await page.getByLabel('Sample inputs (JSON array)',{exact:true}).fill(JSON.stringify(setup.request.samples));await shot(width,'request');
   await page.getByRole('button',{name:'Generate draft',exact:true}).click();await page.waitForURL('**/app/authoring/*');

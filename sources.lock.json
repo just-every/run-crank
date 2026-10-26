@@ -5114,7 +5114,7 @@
       "executable": false
     },
     "tests/authoring-browser.mjs": {
-      "sha256": "dac18586e2ee6275920122853b914da3492c447691de58010a2272a97405e590",
+      "sha256": "4df010bc5875a96f8304c21bce4254a9e4565d7e6c4d38cec69a73770bd00588",
       "executable": false
     },
     "tests/authoring-fixture.mjs": {
@@ -5122,7 +5122,7 @@
       "executable": false
     },
     "tests/authoring-sandbox.mjs": {
-      "sha256": "0bf2fe9209257c8caea41bf0fb35f8c4ead70ef2c6e069dc6c860c2d830357c3",
+      "sha256": "d7bd023f4c164e517c6bf4f40ab990fce5b67ca6a0a602a9274fc878188ca418",
       "executable": false
     },
     "tests/batch.test.mjs": {

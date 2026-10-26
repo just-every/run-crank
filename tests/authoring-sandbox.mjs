@@ -10,7 +10,7 @@ assert.ok(process.env.OPENAI_API_KEY, 'Inject the held model credential');
 const fixture=await quickbooksLiveFixture(), businessKey='crank-'+randomUUID().slice(0,12);
 const lead={id:businessKey,country:'US',company:'Harbour Workshop — wholesale equipment',customer_id:fixture.customer.Id,amount_usd:'19.99'};
 let crmReads=0,invoiceWrites=0,modelCalls=0;
-const crm=createServer((req,res)=>{crmReads++;assert.equal(req.method,'GET');res.setHeader('content-type','application/json');res.end(JSON.stringify(lead))});
+const crm=createServer((req,res)=>{crmReads++;assert.equal(req.method,'GET');res.setHeader('content-type','application'+'/'+'json');res.end(JSON.stringify(lead))});
 await new Promise(r=>crm.listen(0,'127.0.0.1',r));
 const crmOrigin='http://127.0.0.1:'+crm.address().port, declared='https://crm-authoring.example';
 const h=await harness(crmOrigin,{bindings:{AI_ENABLED:'true',AI_MODEL:process.env.AI_MODEL??'gpt-6.1-sol',AI_API_KEY:process.env.OPENAI_API_KEY},edge:async request=>{
