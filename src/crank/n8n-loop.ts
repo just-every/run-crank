@@ -1,7 +1,7 @@
 import type { Step } from './engine/types'
 
 type Node = Record<string, any>
-export const linearN8nNodes = new Set(['n8n-nodes-base.set', 'n8n-nodes-base.httpRequest', 'n8n-nodes-base.executeWorkflow', 'n8n-nodes-base.code', 'n8n-nodes-base.limit', 'n8n-nodes-base.sort', 'n8n-nodes-base.removeDuplicates', 'n8n-nodes-base.aggregate'])
+export const linearN8nNodes = new Set(['n8n-nodes-base.filter', 'n8n-nodes-base.set', 'n8n-nodes-base.httpRequest', 'n8n-nodes-base.executeWorkflow', 'n8n-nodes-base.code', 'n8n-nodes-base.limit', 'n8n-nodes-base.sort', 'n8n-nodes-base.removeDuplicates', 'n8n-nodes-base.aggregate'])
 
 /** Topology only. Source expressions and node settings remain the graph compiler's responsibility. */
 export function serialLoopRegions(nodes: Node[], edges: Map<number, number[][]>, batch: number) {
@@ -58,7 +58,7 @@ export function itemStreamPipeline(steps: Step[], items: string, initial = 'item
         {id:collected,type:'transform',fn:'n8n.items',input:{kind:'code-results',value:ref('steps.'+each+'.results'),max_items:maxItems}})
       stream='steps.'+collected;previous=stream;continue
     }
-    if(source.type==='transform'&&source.fn==='n8n.stream') {
+    if(source.type==='transform'&&['n8n.stream','n8n.filter_stream'].includes(source.fn??'')) {
       result.push({...source,input:{...(source.input as Record<string,unknown>),items:ref(stream),max_items:maxItems}})
       stream='steps.'+source.id;previous=stream;continue
     }

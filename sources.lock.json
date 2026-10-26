@@ -214,7 +214,7 @@
       "executable": false
     },
     "docs/IMPORTING.md": {
-      "sha256": "e4c64d4e6d19498c585c94026cd6644e3ed243a34c948017d2cb872369a65e7e",
+      "sha256": "cc5e075c3d7a63480e7ba8077e36a315f13ea5e5ee3d7a60c1df2b05c0d0de7e",
       "executable": false
     },
     "docs/OPERATIONS.md": {
@@ -2550,7 +2550,7 @@
       "executable": false
     },
     "src/crank/engine/transforms/index.ts": {
-      "sha256": "2d8301dc1ad3ca59cd442882dc41263bf2463d56a17adab60110af041899e4ad",
+      "sha256": "73608cd9c3ee9d8c1570e7ea01192d2e1d3f4f07a97f2d3a03d9408883b30118",
       "executable": false
     },
     "src/crank/engine/transforms/n8n-condition-values.ts": {
@@ -2559,6 +2559,10 @@
     },
     "src/crank/engine/transforms/n8n-conditions.ts": {
       "sha256": "44b34038735d1eb5f3d3cc6a29bd55e4d8cdf683760cbf5a553bd309703e6666",
+      "executable": false
+    },
+    "src/crank/engine/transforms/n8n-filter-stream.ts": {
+      "sha256": "09b54c682492718ad0746ca31b6562b9883e44b5ecfb4d7f9600432d062e73b1",
       "executable": false
     },
     "src/crank/engine/transforms/n8n-items.ts": {
@@ -2702,7 +2706,7 @@
       "executable": false
     },
     "src/crank/n8n-conditions.ts": {
-      "sha256": "d973b99e30d8c7e234dc342ff557b4cbd2d2090a97cfcada415b4bc1d432593d",
+      "sha256": "8c5a5c458d9e6cb4c8168514e26f6c0bf08aabca6853c75b592056537d1b4d4d",
       "executable": false
     },
     "src/crank/n8n-conversions.ts": {
@@ -2710,7 +2714,7 @@
       "executable": false
     },
     "src/crank/n8n-graph.ts": {
-      "sha256": "6751498221fea636091648d998e1efb2b5e7d1ebb5fbbc2585645143df70f0bf",
+      "sha256": "6f1f802429f3adf880af837523d4719923a8c8fe3f04ba8765efff622e5e9da0",
       "executable": false
     },
     "src/crank/n8n-http.ts": {
@@ -2718,7 +2722,7 @@
       "executable": false
     },
     "src/crank/n8n-loop.ts": {
-      "sha256": "e6ea5141feb548d22856ca4d5f65f5c0feef87923daf9ef216cf276585aa744f",
+      "sha256": "df5d3b79bf61d9868762fd0e4bc733fc0498a828a4c7df92ae475280bc75d369",
       "executable": false
     },
     "src/crank/n8n-transforms.ts": {
@@ -5470,11 +5474,11 @@
       "executable": false
     },
     "tests/migration-browser.mjs": {
-      "sha256": "481ec6252b79c092e79b83f42f30501aa6fc114cabb6f1cbd31621951741e0df",
+      "sha256": "647c30162acc44dcd7b3cf7f80356fff327440e17b3e9c59ee06d2d8f1beb940",
       "executable": false
     },
     "tests/n8n-batch-journey.mjs": {
-      "sha256": "ebd4772f9cecc3e4509d082d237a64f4db2d5f4e4ba0d2fe4129f27584d386d8",
+      "sha256": "b61fbcbd7d479132bd93b2ca15e95b9b2ffeab5d337760032b7341d93be5e611",
       "executable": false
     },
     "tests/n8n-binding-journey.mjs": {
@@ -5506,7 +5510,7 @@
       "executable": false
     },
     "tests/n8n-stream-journey.mjs": {
-      "sha256": "1729e5b859af0f27dc70a1fb03b38465dc376ed17f03ea2a9dfcf8c6cf063df1",
+      "sha256": "c35bf5c6537bb31afe5aa9d7e84c16a0bcf871938a868c54e56ff518b35c3f1b",
       "executable": false
     },
     "tests/oauth-renewal-journey.mjs": {

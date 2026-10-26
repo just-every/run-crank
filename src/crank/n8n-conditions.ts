@@ -47,7 +47,7 @@ export function compileN8nConditionSets(values: unknown[], previous: string, at:
       if (operator.singleValue !== undefined && typeof operator.singleValue !== 'boolean') throw Error('condition singleValue must be boolean')
       const rightType = operator.rightType ?? type
       if (!['string', 'number', 'boolean', 'array', 'object', 'any'].includes(rightType)) throw Error('unsupported condition operand type override')
-      if(options.typeValidation==='loose'&&(type==='object'||rightType==='object'))throw Error('loose object parsing requires manual conversion')
+      if(options.typeValidation!=='strict'&&(type==='object'||rightType==='object'))throw Error('loose object parsing requires manual conversion')
       if (operator.singleValue === true && !unary(operation)) throw Error('binary conditions cannot skip operand validation')
       operands['c' + index] = {
         ...(Object.hasOwn(condition, 'leftValue') ? { left: mapped(condition.leftValue, previous, conditionPath + '.leftValue') } : {}),
@@ -55,7 +55,7 @@ export function compileN8nConditionSets(values: unknown[], previous: string, at:
       }
       return { type, operation, rightType, singleValue: operator.singleValue === true }
     })
-    return { combinator: source.combinator, caseSensitive: options.caseSensitive ?? false, version: options.version ?? 1, strict: options.typeValidation!=='loose', conditions }
+    return { combinator: source.combinator, caseSensitive: options.caseSensitive ?? false, version: options.version ?? 1, strict: options.typeValidation==='strict', conditions }
   })
   const stepId = id + '_conditions'
   return {

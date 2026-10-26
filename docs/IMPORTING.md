@@ -210,7 +210,12 @@ For a Split Out feeding a linear chain directly, use the same bound fields with
 an explicit destination name or the source default object expansion, and can
 include all other fields or selected literal fields. Missing values produce no
 items, object values expand in property order, and scalar values produce one item.
-Nested or multiple split fields and binary inputs remain manual conversions. Set and HTTP operate per item;
+Nested or multiple split fields and binary inputs remain manual conversions.
+Filter nodes inside reviewed streams retain matching items in order, including
+duplicates, and stop downstream work when no items remain. Every condition in a
+stage is evaluated before the next node dispatches; a type error stops that stage.
+An empty filtered back edge stops later batches and the done output.
+Set and HTTP operate per item;
 Limit version 1, simple Sort version 1, current-input Remove Duplicates versions
 1, 1.1 and 2, and JSON Aggregate version 1 operate on the complete preceding
 stream. Sorting preserves source field directions and case handling. Duplicate

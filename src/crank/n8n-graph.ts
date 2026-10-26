@@ -112,7 +112,7 @@ export function n8nGraph(value: Json, sourceId: string, env: ImportTargetEnv, ow
           fields(lp,['batchSize','options'],'nodes.'+loopIndex+'.parameters');seen.add(loopIndex)
           const itemId=id+'_item',body=compile(lo[1][0],'steps.'+itemId,depth+1,loopIndex,true),last=regions.body.at(-1)!,connected=regions.done.length>0
           const batchSize=lp.batchSize??1,batched=batchSize>1
-          const streaming=batched||Boolean(conversions[n.id])||body.slice(0,-1).some(step=>step.type==='http')||body.some(step=>(step.type==='transform'&&step.fn==='n8n.stream')||step.n8n_items===true)
+          const streaming=batched||Boolean(conversions[n.id])||body.slice(0,-1).some(step=>step.type==='http')||body.some(step=>(step.type==='transform'&&['n8n.stream','n8n.filter_stream'].includes(step.fn??''))||step.n8n_items===true)
           const bounds=streaming?reviewedStreamBounds(conversions[n.id]):null
           const initial=id+'_initial',pipeline=streaming?itemStreamPipeline(body,batched?'item':'steps.'+initial,'steps.'+itemId,bounds!.stage):null
           const normalized=id+'_returned',final=body.at(-1),output=connected?'steps.'+normalized:tails.get(last)
@@ -230,6 +230,11 @@ export function n8nGraph(value: Json, sourceId: string, env: ImportTargetEnv, ow
         case 'n8n-nodes-base.if': {
           fields(p,['conditions','options','looseTypeValidation'],at+'.parameters');const options=obj(p.options??{});fields(options,['looseTypeValidation'],at+'.parameters.options');if(![2,2.1,2.2].includes(n.typeVersion)||(p.looseTypeValidation!==undefined&&typeof p.looseTypeValidation!=='boolean')||(options.looseTypeValidation!==undefined&&typeof options.looseTypeValidation!=='boolean'))throw Error('unsupported IF version or options')
           const loose=p.looseTypeValidation??options.looseTypeValidation;if(loose!==undefined&&loose!==(obj(obj(p.conditions).options??{}).typeValidation==='loose'))throw Error('condition type validation metadata must match the source conversion setting')
+          if(stream&&n.type==='n8n-nodes-base.filter') {
+            const compiled=compileN8nConditionSets([p.conditions],'item',at+'.conditions',id,mapped,fields)
+            result.push({...step,id,type:'transform',fn:'n8n.filter_stream',input:{items:{$ref:previous},condition:{$literal:compiled.step.input},max_items:1000}} as Step)
+            previous='steps.'+id;break
+          }
           const when=conditions(p.conditions,previous,at+'.conditions',id,result)
           if(n.type==='n8n-nodes-base.filter'){result.push({...step,id,type:'filter',when} as Step);break}
           if(out.length>2||out.some(b=>b.length>1))throw Error('IF outputs need one destination per branch')

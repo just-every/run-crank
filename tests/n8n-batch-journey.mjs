@@ -26,10 +26,15 @@ export async function batchLoopJourney() {
   }});
   const envelope=streamLoopEnvelope(declared,'synthetic-crank-200',{max_source_items:6,max_stage_items:12});envelope.workflow.nodes[3].parameters.batchSize=2;
   const unresolved=await doorPlan(h,JSON.stringify(envelope.workflow));assert.equal(unresolved.status,200);assert.equal(unresolved.value.rejected.length,1,'multi-item batches need retained reviewed stream bounds');await door(h,'undo',{planId:unresolved.value.planId});
-  const plan=await doorPlan(h,JSON.stringify(envelope));assert.equal(plan.status,200,plan.text);assert.equal(plan.value.rejected.length,0,JSON.stringify(plan.value));
+  const filtered=[1,2].map((minimum,index)=>{
+   const source=structuredClone(envelope);source.workflow.id='synthetic-crank-filtered-'+index;source.workflow.name='Synthetic filtered batch '+index;
+   const node={id:'n13',name:'n13',type:'n8n-nodes-base.filter',typeVersion:2.2,position:[2400,400],parameters:{conditions:{options:{typeValidation:'strict',caseSensitive:true,version:2},conditions:[{id:'synthetic-crank-211',leftValue:'={{ $json.part }}',rightValue:minimum,operator:{type:'number',operation:'gt'}}],combinator:'and'},options:{}}};
+   source.workflow.nodes.push(node);source.workflow.connections.n10={main:[[{node:'n13',type:'main',index:0}]]};source.workflow.connections.n13={main:[[{node:'n11',type:'main',index:0}]]};return source;
+  });
+  const plan=await doorPlan(h,JSON.stringify([envelope,...filtered]));assert.equal(plan.status,200,plan.text);assert.equal(plan.value.rejected.length,0,JSON.stringify(plan.value));
   const approval={planId:plan.value.planId,reviewedFingerprint:plan.value.fingerprint};
   for(let count=0;count<2;count++)assert.equal((await door(h,'apply',approval)).value.job.state,'completed');
-  const [workflow]=await h.get('workflows'),draft=await h.get('workflows/'+workflow.id);assert.equal(draft.status,'draft');assert.equal(draft.versions.length,0);assert.equal(draft.hooks.length,0);assert.equal(effects.length,0);
+  const workflows=await h.get('workflows'),workflow=workflows.find(row=>row.name===envelope.workflow.name),draft=await h.get('workflows/'+workflow.id);assert.equal(draft.status,'draft');assert.equal(draft.versions.length,0);assert.equal(draft.hooks.length,0);assert.equal(effects.length,0);
   await h.restart();assert.deepEqual((await h.get('workflows/'+workflow.id)).draft,draft.draft);assert.equal((await door(h,'reconcile',{planId:plan.value.planId})).value.ok,true);
   await h.post('workflows/'+workflow.id+'/publish',{},h.owner,201);const hook=await h.post('workflows/'+workflow.id+'/hooks',{},h.owner,201);
   const send=async messages=>{const sent=await deliver(h,hook.url,{method:'POST',headers:{'content-type':'application'+'/'+'json'},body:JSON.stringify({messages,event_id:'synthetic-crank-'+event++})});assert.equal(sent.status,200,sent.text);return settled(h,sent.value.run_id)};
@@ -56,5 +61,11 @@ export async function batchLoopJourney() {
   run=await h.post('workflow-runs/'+run.id+'/replay',{digest:replay.digest,paths:[failed.path]});run=await settled(h,run.id);verify(run,messages);
   assert.equal(attempts.length,effects.length+1,'selected replay must repeat only the failed request');
   for(const checkpoint of saved){const current=run.steps.find(row=>row.path===checkpoint.path);assert.deepEqual({path:current.path,operation_key:current.operation_key,output:current.output},checkpoint)}
+  for(const [index,source]of filtered.entries()){
+   const workflow=workflows.find(row=>row.name===source.workflow.name);await h.post('workflows/'+workflow.id+'/publish',{},h.owner,201);const hook=await h.post('workflows/'+workflow.id+'/hooks',{},h.owner,201);reset('normal');
+   const sent=await deliver(h,hook.url,{method:'POST',headers:{'content-type':'application'+'/'+'json'},body:JSON.stringify({messages:['synthetic-crank-200','synthetic-crank-201','synthetic-crank-202'],event_id:'synthetic-crank-'+event++})});assert.equal(sent.status,200,sent.text);const run=await settled(h,sent.value.run_id);assert.equal(run.status,'succeeded',JSON.stringify(run.error));
+   if(index===0){assert.deepEqual(effects.filter(row=>row.path==='/body-next').map(row=>row.input),['synthetic-crank-200','synthetic-crank-201','synthetic-crank-202'].map(processed=>({processed,part:2,phase:'synthetic-crank-91'})));assert.deepEqual(effects.filter(row=>row.path==='/done-last').map(row=>row.input),['synthetic-crank-200','synthetic-crank-201','synthetic-crank-202'].map(processed=>({processed,part:2,phase:'synthetic-crank-33'})))}
+   else assert.deepEqual(effects.map(row=>row.path),['/body','/body'],'an empty filtered batch stops the back edge, remaining source batches and completion work');
+  }
  } finally {await h?.close();receiver.closeAllConnections();await new Promise(resolve=>receiver.close(resolve))}
 }

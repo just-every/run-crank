@@ -26,6 +26,13 @@ function aggregateStreamExport(target,parameters,id) {
  source.workflow.connections=Object.fromEntries(source.workflow.nodes.slice(0,-1).map((node,index)=>[node.name,{main:[[edge(source.workflow.nodes[index+1].name)]]}]));return source;
 }
 
+export function filterStreamExport(target,id='synthetic-crank-480') {
+ const source=aggregateStreamExport(target,{aggregate:'aggregateAllItemData',destinationFieldName:'orders',include:'allFields',options:{}},id),edge=node=>({node,type:'main',index:0});
+ source.workflow.name='Synthetic filtered item stream';
+ source.workflow.nodes.splice(3,0,{id:'n3',name:'n3',type:'n8n-nodes-base.filter',typeVersion:2.2,position:[660,0],parameters:{conditions:{options:{typeValidation:'strict',caseSensitive:true,version:2},conditions:[{id:'synthetic-crank-481',leftValue:'={{ $json.amount }}',rightValue:0,operator:{type:'number',operation:'gt'}}],combinator:'and'},options:{}}});
+ source.workflow.connections=Object.fromEntries(source.workflow.nodes.slice(0,-1).map((node,index)=>[node.name,{main:[[edge(source.workflow.nodes[index+1].name)]]}]));return source;
+}
+
 /** Complete-stream operations must settle before an actual native HTTP write. */
 export async function transformStreamJourney() {
  const target='https://receiver.example',writes=[];
@@ -51,7 +58,7 @@ export async function transformStreamJourney() {
    value.workflow.nodes[1].parameters.assignments.assignments.push({id:'synthetic-crank-422',name:'region',type:'string',value:'={{ $json.body.region }}'},{id:'synthetic-crank-423',name:'unselected',type:'string',value:'synthetic-crank-424'});
    value.workflow.nodes[2].parameters={fieldToSplitOut:'messages',include,...(include==='selectedOtherFields'?{fieldsToInclude:'region'}:{}),options:{destinationFieldName:'record'}};
    value.workflow.nodes[3].parameters.assignments.assignments[0].value='={{ $json.record.customer }}';value.workflow.nodes[3].parameters.assignments.assignments[1].value='={{ $json.record.amount }}';value.workflow.nodes[3].parameters.assignments.assignments.push({id:'synthetic-crank-425',name:'region',type:'string',value:'={{ $json.region }}'});return value;
-  }),plan=await doorPlan(h,JSON.stringify([envelope,...variants,...aggregateCases.map(row=>row.envelope)]));assert.equal(plan.status,200,plan.text);assert.equal(plan.value.rejected.length,0,JSON.stringify(plan.value));assert.equal(writes.length,0);
+  }),plan=await doorPlan(h,JSON.stringify([envelope,filterStreamExport(target),...variants,...aggregateCases.map(row=>row.envelope)]));assert.equal(plan.status,200,plan.text);assert.equal(plan.value.rejected.length,0,JSON.stringify(plan.value));assert.equal(writes.length,0);
   for(let count=0;count<2;count++)assert.equal((await door(h,'apply',{planId:plan.value.planId,reviewedFingerprint:plan.value.fingerprint})).value.job.state,'completed');
   const workflows=await h.get('workflows'),workflow=workflows.find(row=>row.name===envelope.workflow.name),draft=await h.get('workflows/'+workflow.id);assert.equal(draft.status,'draft');assert.equal(draft.versions.length,0);assert.equal(draft.hooks.length,0);
   await h.restart();assert.deepEqual((await h.get('workflows/'+workflow.id)).draft,draft.draft);await h.post('workflows/'+workflow.id+'/publish',{},h.owner,201);const hook=await h.post('workflows/'+workflow.id+'/hooks',{},h.owner,201);
@@ -76,6 +83,12 @@ export async function transformStreamJourney() {
     const filtered=await send([{synthetic_crank_unselected:1}]);assert.equal(filtered.status,'succeeded');assert.deepEqual(writes.at(-1),{orders:[]},'nonempty input filtered to no records still emits one aggregate');
    }
   }
+  const filtered=workflows.find(row=>row.name==='Synthetic filtered item stream');await h.post('workflows/'+filtered.id+'/publish',{},h.owner,201);const filterHook=await h.post('workflows/'+filtered.id+'/hooks',{},h.owner,201);
+  const filterSend=async messages=>{const sent=await deliver(h,filterHook.url,{method:'POST',headers:{'content-type':'application'+'/'+'json'},body:JSON.stringify({messages})});assert.equal(sent.status,200,sent.text);return settled(h,sent.value.run_id)};
+  const filteredItems=[{customer:'synthetic-crank-482',amount:2},{customer:'synthetic-crank-483',amount:-1},{customer:'synthetic-crank-482',amount:2}];
+  assert.equal((await filterSend(filteredItems)).status,'succeeded');assert.deepEqual(writes.at(-1),{orders:[filteredItems[0],filteredItems[2]]},'stream filters preserve order and duplicate items before aggregation');
+  const beforeFilter=writes.length;assert.equal((await filterSend([{amount:-1}])).status,'succeeded');assert.equal(writes.length,beforeFilter,'a filtered empty stream must stop all later receiver work');
+  assert.equal((await filterSend([{amount:1},{amount:'synthetic-crank-invalid'}])).status,'failed');assert.equal(writes.length,beforeFilter,'a later condition type failure must stop the entire stage before receiver dispatch');
   for(const mutation of [source=>source.workflow.nodes[4].parameters.type='random',source=>source.workflow.nodes[5].parameters.operation='removeItemsSeenInPreviousExecutions',source=>source.workflow.nodes[7].parameters.options.includeBinaries=true,
    source=>source.workflow.nodes[7].parameters.fieldsToInclude='customer',
    source=>source.workflow.nodes[7].parameters={aggregate:'aggregateIndividualFields',fieldsToAggregate:{fieldToAggregate:[{fieldToAggregate:'customer',renameField:true,outputFieldName:'summary'},{fieldToAggregate:'amount',renameField:true,outputFieldName:'summary.amount'}]},options:{}},
