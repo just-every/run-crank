@@ -36,8 +36,9 @@ export async function invoiceOutcomeJourney({inspect,modeOnly}={}) {
   if(mode==='wrong'){record={...acknowledgement,CustomerRef:{value:'synthetic-crank-55'}};seenKeys.set(key,record);effects++}
   return jsonResponse({Invoice:acknowledgement});
  });
- const h=await harness(receiver,{edge:fake.edge});let restored;
+ let h,restored;
  try {
+  h=await harness(receiver,{edge:fake.edge});
   const objective=await outcomeObjective(h,{realm:'1234',customer:facts.customer_id,item:'synthetic-crank-56',receiver:declared});
   for(mode of modeOnly?[modeOnly]:['missing','wrong']) {
    record=null;repair=false;seenKeys.clear();const before=posts,noticeCount=notices.length;
@@ -60,6 +61,7 @@ export async function invoiceOutcomeJourney({inspect,modeOnly}={}) {
   }
   const beforeInvalid=posts,invalid=await objective.start({invoice:{payload:{...objective.steps[1].input.payload,Line:[{...objective.steps[1].input.payload.Line[0],Amount:29.99}]}}});
   assert.equal(invalid.status,'failed');assert.equal(posts,beforeInvalid);assert.equal(stepOf(invalid,'notify'),undefined);
+  await inspect?.({h,run:invalid,state:'invalid-amount',objective});
   // A deliberate scope violation remains reviewable and never repairs under that grant.
   const denied=await objective.start({verify_invoice:{customer_id:'synthetic-crank-99'}});assert.equal(denied.status,'awaiting_approval');
   const postsBefore=posts;const refused=await h.post(`workflow-runs/${denied.id}/approve`,{path:'verify_invoice',digest:denied.waits[0].proposal_digest});
@@ -77,5 +79,5 @@ export async function invoiceOutcomeJourney({inspect,modeOnly}={}) {
   await inspect?.({h:restored,run:await restored.get('workflow-runs/'+imported.id),state:'restored-inactive',objective});
   const inventory=await h.get('data/flows');assert.ok(inventory.flows.some(f=>f.kind==='quickbooks.invoice_outcome'&&f.recipients.includes('https://sandbox-quickbooks.api.intuit.com')&&f.region.toLowerCase().includes('provider-controlled')));
   return {types:['quickbooks.invoice_outcome'],effects};
- }finally{await restored?.close();await h.close();server.closeAllConnections();await new Promise(done=>server.close(done))}
+ }finally{await restored?.close();await h?.close();server.closeAllConnections();await new Promise(done=>server.close(done))}
 }

@@ -16,7 +16,7 @@ async function attach(h,width){
 try{for(const width of [1440,390]){
  await invoiceOutcomeJourney({inspect:async({h,run,state})=>{await attach(h,width);await page.goto(h.origin+'/app/workflow-runs/'+run.id);
  if(state.startsWith('approve-')){await page.getByRole('button',{name:'Approve',exact:true}).click();await page.waitForLoadState('networkidle');await expect(page.getByRole('heading',{name:/Invoice criteria verified/})).toBeVisible();return h.get('workflow-runs/'+run.id)}
- await expect(page.getByRole('heading',{name:state.endsWith('satisfied')?/Invoice criteria verified/:/Invoice obligation open/})).toBeVisible();
+ if(state==='invalid-amount')await expect(page.locator('.detail-primary .title-row .status')).toHaveText('Failed');else await expect(page.getByRole('heading',{name:state.endsWith('satisfied')?/Invoice criteria verified/:/Invoice obligation open/})).toBeVisible();
  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),state+' overflow');
  const search=page.getByRole('link',{name:'Search runs',exact:true});await search.focus();await expect(page.locator('#search-tooltip')).toBeVisible();await page.locator('h1').click();await search.hover();await page.waitForTimeout(350);await expect(page.locator('#search-tooltip')).toBeVisible();
  await page.screenshot({path:join(evidence,`${width}-${state}.png`),fullPage:true});console.log(`invoice-outcome browser width=${width} state=${state} run=${run.id}`);
