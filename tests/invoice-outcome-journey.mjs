@@ -67,6 +67,13 @@ export async function invoiceOutcomeJourney({inspect,modeOnly}={}) {
    const count=posts;await h.post(`workflow-runs/${run.id}/approve`,{path:'verify_invoice',digest:run.waits[0].proposal_digest},h.owner,409);await h.tick();assert.equal(posts,count);assert.equal(notices.length,noticeCount+1);
    await inspect?.({h,run,state:mode+'-satisfied',objective});
   }
+  mode='wrong';record=null;repair=false;seenKeys.clear();
+  const changed=await objective.start(),beforeChanged=posts,beforeNotice=notices.length;
+  record={...record,SyncToken:'1'};
+  const blocked=await h.post(`workflow-runs/${changed.id}/approve`,{path:'verify_invoice',digest:changed.waits[0].proposal_digest});
+  assert.equal(blocked.status,'paused');assert.equal(stepOf(blocked,'verify_invoice').output.obligation.state,'blocked');
+  assert.equal(posts,beforeChanged);assert.equal(notices.length,beforeNotice);
+  await inspect?.({h,run:blocked,state:'provider-changed',objective});
   const beforeInvalid=posts,invalid=await objective.start({invoice:{payload:{...objective.steps[1].input.payload,Line:[{...objective.steps[1].input.payload.Line[0],Amount:29.99}]}}});
   assert.equal(invalid.status,'failed');assert.equal(posts,beforeInvalid);assert.equal(stepOf(invalid,'notify'),undefined);
   await inspect?.({h,run:invalid,state:'invalid-amount',objective});
