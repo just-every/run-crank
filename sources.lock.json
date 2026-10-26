@@ -138,7 +138,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "edcf56a5c9973e60c390ff5550bbd8a73a12798d82b3a815680ca3757eb875fa",
+      "sha256": "484ed47d776c6aa325878679c095f58e98da113680379b3704cec4f78c50f3e2",
       "executable": false
     },
     "AGENTS.md": {
@@ -162,7 +162,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "6966522122259313085815a6770c5e3e9e47d08588232c8db32e527a741754c1",
+      "sha256": "caae43c866b966459b3f8317b467c5ebdb168685ce67dc77d4e4bdda109b5185",
       "executable": false
     },
     "DEMO.md": {
@@ -5026,11 +5026,11 @@
       "executable": false
     },
     "tests/mcp-client-journey.mjs": {
-      "sha256": "5444471f55617178bb4e424f364aeca1cdffa8f0f4974b849bc9d55ce0b0fbe2",
+      "sha256": "ae4fb5d08cf9fbfc431930ab1a437a06db0852afbbee8b87bcafda51ce278c62",
       "executable": false
     },
     "tests/mcp-slack-live.mjs": {
-      "sha256": "2e2707dade4035fe47302f05c07917fa269a82ca17f1a3eb8e15c6e8977c5711",
+      "sha256": "545f0a66aa4aa0e7dd58b05a4f9cd4037f2018afa51ea78cfd2059c25840105d",
       "executable": false
     },
     "tests/migration-browser.mjs": {

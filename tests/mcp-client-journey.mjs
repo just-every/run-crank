@@ -7,7 +7,7 @@ export const eventTime={start:{dateTime:'2026-11-03T09:00:00+10:00',timeZone:'Au
 const object=properties=>({type:'object',properties,required:Object.keys(properties),additionalProperties:false});
 const string={type:'string'};
 export async function mcpClientFixture({emitted=false,liveSlack=false}={}) {
- const fake=fakeEdge(),events=new Map(),messages=[];
+ const fake=fakeEdge(),events=new Map(),messages=[],liveRequests=[];
  const slackChannel=liveSlack?process.env.SLACK_CHANNEL_ID:'synthetic-crank-1';
  const slackToken=liveSlack?process.env.SLACK_BOT_TOKEN:'synthetic-crank-2';
  assert.ok(slackChannel&&slackToken,'Dedicated Slack inputs are required');
@@ -19,7 +19,7 @@ export async function mcpClientFixture({emitted=false,liveSlack=false}={}) {
   if(method==='POST'){const value=JSON.parse(body);assert.equal(url.searchParams.get('sendUpdates'),'none');events.set(value.id,{...value,status:'confirmed'});return jsonResponse(events.get(value.id))}
   const event=events.get(url.pathname.split('/').at(-1));return jsonResponse(event??{},event?200:404);
  });
- const h=await harness('http://127.0.0.1:9',{emitted,edge:fake.edge});
+ const h=await harness('http://127.0.0.1:9',{emitted,edge:async request=>{if(liveSlack && new URL(request.url).hostname==='slack.com'){liveRequests.push({method:request.method,host:'slack.com'});return undefined}return fake.edge(request)}});
  try{
   const slack=await connection(h,{app:'slack',label:'Harbor operations Slack',auth_kind:'bearer',secret:{token:slackToken}});
   const google=await connection(h,{app:'google',label:'Harbor appointments calendar',auth_kind:'oauth2',scopes:['https://www.googleapis.com/auth/calendar.events'],secret:{access_token:'synthetic-crank-3'}});
@@ -47,7 +47,7 @@ export async function mcpClientFixture({emitted=false,liveSlack=false}={}) {
    return {status:r.status,value:await r.json()};
   };
   const call=(name,args,headers)=>rpc('tools'+'/'+'call',{name,arguments:args},headers);
-  return {h,fake,events,messages,client,workflow,input,rpc,call,slackChannel,slackToken,calendarId};
+  return {h,fake,events,messages,client,workflow,input,rpc,call,slackChannel,slackToken,calendarId,liveRequests};
  }catch(error){await h.close();throw error}
 }
 
