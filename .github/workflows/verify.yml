@@ -8,7 +8,63 @@ permissions:
   contents: read
 
 jobs:
-  verify:
+  plan:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      skip: ${{ steps.reuse.outputs.skip }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - id: reuse
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          REF: ${{ github.ref }}
+          SAME_REPO: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+          PR_HEAD: ${{ github.event.pull_request.head.sha }}
+          WF_REF: ${{ github.workflow_ref }}
+        run: |
+          set -euo pipefail
+          wf="${WF_REF%@*}"; wf="${wf##*/}"
+          # Evidence is only a push run of this workflow from this repository, never this run: a pull request
+          # tests its merge ref, a dispatch may run a subset, and a PR run of this workflow may itself be a skip.
+          # Prints "<status> <conclusion>" of the newest such run on SHA $1, or nothing (any API error: nothing).
+          newest_push() {
+            gh api "repos/$GITHUB_REPOSITORY/actions/workflows/$wf/runs?head_sha=$1&event=push&per_page=100" \
+              --jq "[.workflow_runs[] | select(.head_repository.full_name == \"$GITHUB_REPOSITORY\" and .id != $GITHUB_RUN_ID)] | max_by(.id) | select(. != null) | \"\(.status) \(.conclusion)\"" || true
+          }
+          green() { [ "$(newest_push "$1")" = "completed success" ]; }
+          skip=false
+          # C1: main push of a SHA whose newest push run of this workflow (a branch run) is green.
+          if [ "$EVENT" = push ] && [ "$REF" = refs/heads/main ] && green "$GITHUB_SHA"; then skip=true; fi
+          # C3 (exact): same tree as the parent, and the parent's newest push run is green (e.g. an empty commit).
+          if [ "$skip" = false ] && [ "$EVENT" = push ] && parent=$(git rev-parse -q --verify HEAD~1) \
+             && [ "$(git rev-parse 'HEAD^{tree}')" = "$(git rev-parse 'HEAD~1^{tree}')" ] && green "$parent"; then skip=true; fi
+          # C2: same-repository PR. The lander takes any green same-repo run on the exact SHA as evidence,
+          # pull_request runs included, so this run may pass without shards only when the push run on the
+          # PR head is green: wait for it (at most 25 minutes).
+          # No push run, any other result, or the wait running out: run in full.
+          if [ "$EVENT" = pull_request ] && [ "$SAME_REPO" = true ]; then
+            for _ in $(seq 1 50); do
+              state=$(newest_push "$PR_HEAD")
+              case "$state" in
+                'completed success') skip=true; break ;;
+                ''|completed\ *) break ;;
+                *) sleep 30 ;;
+              esac
+            done
+          fi
+          echo "skip=$skip" >> "$GITHUB_OUTPUT"
+
+  shards:
+    needs: plan
+    if: needs.plan.outputs.skip != 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     strategy:
@@ -34,6 +90,8 @@ jobs:
       - run: pnpm run verify
 
   decisions:
+    needs: plan
+    if: needs.plan.outputs.skip != 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
@@ -65,6 +123,8 @@ jobs:
           if-no-files-found: ignore
 
   agent-journeys:
+    needs: plan
+    if: needs.plan.outputs.skip != 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     strategy:
@@ -99,6 +159,8 @@ jobs:
           if-no-files-found: ignore
 
   linux-executor:
+    needs: plan
+    if: needs.plan.outputs.skip != 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
@@ -116,3 +178,19 @@ jobs:
       - run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
       # Root stages fixtures; every executor job runs as the separate nobody user.
       - run: sudo "$(command -v node)" tests/executor-linux.mjs
+
+  verify:
+    needs: [plan, shards, decisions, agent-journeys, linux-executor]
+    if: ${{ always() }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 1
+    steps:
+      - name: Require the plan and every shard
+        env:
+          PLAN: ${{ needs.plan.result }}
+          SKIP: ${{ needs.plan.outputs.skip }}
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          test "$PLAN" = success
+          if [ "$SKIP" = true ]; then exit 0; fi
+          for result in $RESULTS; do test "$result" = success; done
