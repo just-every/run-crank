@@ -5482,7 +5482,7 @@
       "executable": false
     },
     "tests/n8n-conditions-journey.mjs": {
-      "sha256": "63fd5a2cb81ef2595bc581a166dafc6ec3f52126afb150bb1cc8e45cb94ad088",
+      "sha256": "6b27259a8dfa2403824fd6a7a4d728c10461d221cb16c8f1f92c740e905559c2",
       "executable": false
     },
     "tests/n8n-conversion-journey.mjs": {

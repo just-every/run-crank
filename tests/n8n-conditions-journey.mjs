@@ -45,6 +45,9 @@ export async function n8nConditionsJourney() {
    source.nodes[2].parameters.rules.values[1].conditions.conditions[0]=condition('number','gt','synthetic-crank-invalid',5);
    cases.push({source,body:{amount:8,message:'synthetic-crank-360'},status:allMatching?'failed':'succeeded',writes:allMatching?0:1});
   }
+  for(const change of [source=>source.nodes[1].parameters.conditions.options.typeValidation='loose',source=>source.nodes[1].parameters.conditions.conditions[0].operator.type='dateTime',source=>source.nodes[1].parameters.conditions.options.unknown=true]){
+   const source=structuredClone(sources[0]);source.id='synthetic-crank-'+crypto.randomUUID();change(source);const result=await doorPlan(h,JSON.stringify(source));assert.equal(result.status,200,result.text);assert.equal(result.value.rejected.length,1,'unknown or inexact source semantics must refuse review');assert.ok(result.value.diagnostics.some(row=>row.message?.includes('Manual conversion')));await door(h,'undo',{planId:result.value.planId});
+  }
   await doorImport(h,JSON.stringify(cases.map(item=>item.source)));
   const workflows=await h.get('workflows');
   for(const [index,item]of cases.entries()){
@@ -54,8 +57,6 @@ export async function n8nConditionsJourney() {
    const run=await settled(h,sent.value.run_id);assert.equal(run.status,item.status,JSON.stringify({index,error:run.error}));assert.equal(writes.length,before+item.writes);const evaluated=run.steps.find(row=>row.type==='transform'&&row.input?.inputs&&row.input?.sets);assert.ok(evaluated?.input?.inputs,'source operands must remain inspectable beside the stopping rule');
    if(item.writes&&index<tests.length)assert.deepEqual(writes.at(-1).body,item.body);
   }
-  for(const change of [source=>source.nodes[1].parameters.conditions.options.typeValidation='loose',source=>source.nodes[1].parameters.conditions.conditions[0].operator.type='dateTime',source=>source.nodes[1].parameters.conditions.options.unknown=true]){
-   const source=structuredClone(sources[0]);source.id='synthetic-crank-'+crypto.randomUUID();change(source);const result=await doorPlan(h,JSON.stringify(source));assert.equal(result.status,200,result.text);assert.equal(result.value.rejected.length,1,'unknown or inexact source semantics must refuse review');assert.ok(result.value.diagnostics.some(row=>row.message?.includes('Manual conversion')));await door(h,'undo',{planId:result.value.planId});
-  }
+
  } finally {await h.close()}
 }
