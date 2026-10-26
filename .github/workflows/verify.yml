@@ -92,7 +92,7 @@ jobs:
         if: matrix.browser
         run: |
           pnpm exec playwright install chromium
-          if ! node --input-type=module -e 'import {chromium} from "@playwright/test"; const browser=await chromium.launch({headless:true}); await browser.close()'; then
+          if ! node scripts/ci/chromium-probe.mjs; then
             pnpm exec playwright install-deps chromium
           fi
       - name: Prepare the Linux executor
