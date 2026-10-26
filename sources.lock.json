@@ -386,7 +386,7 @@
       "executable": false
     },
     "evidence/sx-crank-c-i812/drift-browser.log": {
-      "sha256": "0f4712e3af53ba040e33f355ced9bf721b421dfffd5f3ac7bd7e1f35a6fe6f07",
+      "sha256": "9e04e0360937f02ea085c6569e63e46f16e0120a950e030e0728d3a18ccd8cb6",
       "executable": false
     },
     "evidence/sx-crank-c-i812/drift-sandbox.log": {
@@ -394,127 +394,127 @@
       "executable": false
     },
     "evidence/sx-crank-c-i812/drift-screens/1440-approved-incidents.png": {
-      "sha256": "4e532b9f0194e11820fb8e970facc20083f173ed2ff7d8df59ace004903aff1e",
+      "sha256": "a11e6b1bee8d282b712aa7ae0a087ab2c047dbd321c2c35ef1c1cd1db2969713",
       "executable": false
     },
     "evidence/sx-crank-c-i812/drift-screens/1440-approved.png": {
-      "sha256": "8f57bd0b15ddd7cd3298647d1795cba8b8dc4e0016ea14d0c6fe8886a0cb59cf",
+      "sha256": "0aae29f3dd132781fbb1571c46de1e9c29a5e9222685e5884b77be66d3e8bd69",
       "executable": false
     },
-    "evidence/sx-crank-c-i812/drift-screens/1440-continued-04390313.png": {
-      "sha256": "af1387a6a71900b40abdca8940d02cc0a2020342b1270547304d81ebe7c5204b",
+    "evidence/sx-crank-c-i812/drift-screens/1440-continued-4acaf22c.png": {
+      "sha256": "1ad80ea9b08e278726834203f041d37c0cbed53b50218f949e1344f9abc09af6",
       "executable": false
     },
-    "evidence/sx-crank-c-i812/drift-screens/1440-continued-888f333d.png": {
-      "sha256": "af5711df5dc932a25625aa5c00ab492debd1873b6b24d5096f59cff87890e3e6",
+    "evidence/sx-crank-c-i812/drift-screens/1440-continued-abc7a951.png": {
+      "sha256": "3cbce49f2e6c844d615b16f58e29d63bda274a322cd5645970ef28bf70c4d9bd",
       "executable": false
     },
-    "evidence/sx-crank-c-i812/drift-screens/1440-continued-c230f071.png": {
-      "sha256": "085bf565fdd75fe32574db83e78b761de4fd61b4548bbe542f558758d5716ddd",
+    "evidence/sx-crank-c-i812/drift-screens/1440-continued-cf17bb79.png": {
+      "sha256": "d2237257f54dc999889a2084b91c4327333d5c062d495812a451ecf5f7c54983",
       "executable": false
     },
     "evidence/sx-crank-c-i812/drift-screens/1440-proposal-incidents.png": {
-      "sha256": "0c0e22a6395f617969f68c1e0901c3c7c1b18f5f57151835d8ceae1e142f23f9",
+      "sha256": "02b442a2610b96b8640656075cb600adb79965c1787c4149d56f68c57c54d97c",
       "executable": false
     },
     "evidence/sx-crank-c-i812/drift-screens/1440-proposal.png": {
-      "sha256": "a36ebfe29a8b429086e2c7181fa5df78c54992522357518e303aeeeb3bcfc8c0",
+      "sha256": "e3b86134892c8929b8fbb4cb4e41a74f32e5cde6da1ecd7719647b7981d4c70c",
       "executable": false
     },
     "evidence/sx-crank-c-i812/drift-screens/1440-rollback-incidents.png": {
-      "sha256": "4e532b9f0194e11820fb8e970facc20083f173ed2ff7d8df59ace004903aff1e",
+      "sha256": "a11e6b1bee8d282b712aa7ae0a087ab2c047dbd321c2c35ef1c1cd1db2969713",
       "executable": false
     },
     "evidence/sx-crank-c-i812/drift-screens/1440-rollback.png": {
-      "sha256": "8f57bd0b15ddd7cd3298647d1795cba8b8dc4e0016ea14d0c6fe8886a0cb59cf",
+      "sha256": "0aae29f3dd132781fbb1571c46de1e9c29a5e9222685e5884b77be66d3e8bd69",
       "executable": false
     },
     "evidence/sx-crank-c-i812/drift-screens/1440-rolled_back-incidents.png": {
-      "sha256": "0a97815592f3c1a929f81d55683c7e37f0cd3cb4cfd766930ee7206482e057d3",
+      "sha256": "a954853695381089b5825cf0844829c997cbd3ea7dbea39d4195507081c1307e",
       "executable": false
     },
     "evidence/sx-crank-c-i812/drift-screens/1440-rolled_back.png": {
-      "sha256": "d299717b235c11dff26a47e5becf55f01b76a4c7b0e0d821d26c3f61e01d07f4",
+      "sha256": "43288b2d30bd446cec26a71ebbeac14f525b594b881b7b7df33646a1c611d0be",
       "executable": false
     },
     "evidence/sx-crank-c-i812/drift-screens/1440-scope-incidents.png": {
-      "sha256": "8b80b8ab0e762b8745a9d2440b026b047c20e1dacce223e275f6dd21bb5bced6",
+      "sha256": "5749ce52008158c9c3d1564de08d66ae26c4df002bed67d188b17c371bf46907",
       "executable": false
     },
     "evidence/sx-crank-c-i812/drift-screens/1440-scope.png": {
-      "sha256": "0dd63c897c01a67be695cad268c2cf3527417b1e6ec6bdd9b8da4292e8b21f60",
+      "sha256": "77f44b546f8fc37d55143d93bc936dc760030a80ed77f5dd5eaaa04ee55cf7aa",
       "executable": false
     },
     "evidence/sx-crank-c-i812/drift-screens/1440-tested-incidents.png": {
-      "sha256": "20bf1ad08a4f531b66bcb297904c7d17b2fd76d540173c9db28f42f71732dc39",
+      "sha256": "dbe4b41e30c6cd669e7c3d7ae71e2691823aa4e8aa000a0ca6b3fce1c8155bb5",
       "executable": false
     },
     "evidence/sx-crank-c-i812/drift-screens/1440-tested.png": {
-      "sha256": "abcbad20e909ffa58ecff436ad3932279e90f4087558fb05b64a131ed1bc751e",
+      "sha256": "c69768b865b619a592f7e179ecde2a37aca13de2ec04c6a742e37bfaf99e734b",
       "executable": false
     },
     "evidence/sx-crank-c-i812/drift-screens/390-approved-incidents.png": {
-      "sha256": "1d8d86783da07238683ca1d8a664f6dbe6cd609866b37b44e7a3c7acf324baa8",
+      "sha256": "efe93a84e96a4c8976572db0a8360fccef5d6dded6a12d399127430095507e30",
       "executable": false
     },
     "evidence/sx-crank-c-i812/drift-screens/390-approved.png": {
-      "sha256": "a3b1f372b2359bd02817df9eb17d0c418e029f183f917e059d82918bc063146f",
+      "sha256": "516a6a45a177a19d09b6f4964cd7f77a233877412dc0e236401d91c84c357b48",
       "executable": false
     },
-    "evidence/sx-crank-c-i812/drift-screens/390-continued-248690ff.png": {
-      "sha256": "c6295fd93d72e968bf235d7d7976c86a224bbe13ab27afb99833df6a4d95004c",
+    "evidence/sx-crank-c-i812/drift-screens/390-continued-68ac60f8.png": {
+      "sha256": "26ae935ceba473b99ef89e7788744001f980474fefde2c4db0d2223f72f6f3e1",
       "executable": false
     },
-    "evidence/sx-crank-c-i812/drift-screens/390-continued-2ae58291.png": {
-      "sha256": "e1eb4d51696680739497722b01e537af002d0d8c1568fe9b5da865f3b340ec84",
+    "evidence/sx-crank-c-i812/drift-screens/390-continued-c5a8fa84.png": {
+      "sha256": "4b73f0b1849ea91fbb2da165ffa8d5f905d516cbc8d0ba92a2bce1fa53bd96dd",
       "executable": false
     },
-    "evidence/sx-crank-c-i812/drift-screens/390-continued-c4e004e2.png": {
-      "sha256": "d46ee914932f27a51644b3e7901e9abad96072f979193500235e9a743f1b3248",
+    "evidence/sx-crank-c-i812/drift-screens/390-continued-e3755d60.png": {
+      "sha256": "72ab4e783b363275d09aecad731fb6e58aecb26a909e9aaf7f2e438910a47f6c",
       "executable": false
     },
     "evidence/sx-crank-c-i812/drift-screens/390-proposal-incidents.png": {
-      "sha256": "968265398c2a43dce9e38897269f34bd88706895ee0026b9822e20021d4d5b56",
+      "sha256": "6c0a3f101b439b63da9405f886ddb2bcbc5780843c024d91bf18ff0ba5d1a1a5",
       "executable": false
     },
     "evidence/sx-crank-c-i812/drift-screens/390-proposal.png": {
-      "sha256": "4061755478f9e1b6088596c8fb7f5c702c40077ce5c0d38fac7352b08e1bb8af",
+      "sha256": "fae015a050ad72a02e02454fed43f26a04338070a317a56140d43ce7d3f963e2",
       "executable": false
     },
     "evidence/sx-crank-c-i812/drift-screens/390-rollback-incidents.png": {
-      "sha256": "1d8d86783da07238683ca1d8a664f6dbe6cd609866b37b44e7a3c7acf324baa8",
+      "sha256": "efe93a84e96a4c8976572db0a8360fccef5d6dded6a12d399127430095507e30",
       "executable": false
     },
     "evidence/sx-crank-c-i812/drift-screens/390-rollback.png": {
-      "sha256": "a3b1f372b2359bd02817df9eb17d0c418e029f183f917e059d82918bc063146f",
+      "sha256": "516a6a45a177a19d09b6f4964cd7f77a233877412dc0e236401d91c84c357b48",
       "executable": false
     },
     "evidence/sx-crank-c-i812/drift-screens/390-rolled_back-incidents.png": {
-      "sha256": "1b2db596e1755cacbaba4b689977304b2d544c4c244477da0d038b7225f717c0",
+      "sha256": "1186775cd3d7383f0f3359e2c92012dfa2b66dd1e875d7a0230eb6b3f3dda102",
       "executable": false
     },
     "evidence/sx-crank-c-i812/drift-screens/390-rolled_back.png": {
-      "sha256": "e323b83b1f45628776a4ad270630b002021edc562ecf3a50d73a5dc8b9681cdf",
+      "sha256": "cac0a2b3a92c86228ef62a3100475a5a5ce18a7188cbf0b3d8c0375587fe69c4",
       "executable": false
     },
     "evidence/sx-crank-c-i812/drift-screens/390-scope-incidents.png": {
-      "sha256": "7bf04f2ad81ac6445938e27590e73a8ebb74f139bd6b842a206e30bf71d2c784",
+      "sha256": "0dda8e8a66a122f8703bd60ae97c68f38bc3f1f6a8731e2ffd0d15887191772f",
       "executable": false
     },
     "evidence/sx-crank-c-i812/drift-screens/390-scope.png": {
-      "sha256": "5d6e4f9949bb99187ccdc4eded0f45e4a3c0a94ae00aae1e1393799d186d7496",
+      "sha256": "31f770680546c7e4a0598ca79e3a96f781047a9139df06bbe0ea2c3a92ad01a2",
       "executable": false
     },
     "evidence/sx-crank-c-i812/drift-screens/390-tested-incidents.png": {
-      "sha256": "a03df1dd335673297507b0c9b91dcf2fd13c8245422f7cfa3d70a35f6436b71d",
+      "sha256": "ee98049f0eea04ac109823a8244d6a4675e79452595f7235e23e5a2e43ad3895",
       "executable": false
     },
     "evidence/sx-crank-c-i812/drift-screens/390-tested.png": {
-      "sha256": "44cb9802f2e33a5d5fab14cebffea6d0bb2d6f4fe86d90c05f490d71ba4f13f1",
+      "sha256": "7747d7de34c84f59d981ecad08073ebdd884388b0c7350eb095ac4bb6b42d609",
       "executable": false
     },
     "evidence/sx-crank-c-i812/invoice-outcome-browser.log": {
-      "sha256": "f623d0c6901f0ef7887b33d9d19be9edbcdad1224265582e3eb1626cbb0c146c",
+      "sha256": "d3bff705ccead23a2a4e87bf4a03740a54d4d3f373ca47b7bf35c22512c4b2a3",
       "executable": false
     },
     "evidence/sx-crank-c-i812/invoice-outcome-sandbox.log": {
@@ -638,91 +638,91 @@
       "executable": false
     },
     "evidence/sx-crank-c-i812/outcome-screens/1440-invalid-amount.png": {
-      "sha256": "7006982b39136e9469c68787dff006e2a1a7067e433f104bd06c8ed2497d14a5",
+      "sha256": "7bb37971bedddb44f1edcddde97dc057baf328d5ee3d8808868a5e19cf81a41a",
       "executable": false
     },
     "evidence/sx-crank-c-i812/outcome-screens/1440-missing-open.png": {
-      "sha256": "162f3258553ede9fbb71b4ca924cec7a222f8861d9b0df92680c3c532d85c507",
+      "sha256": "cd863145976b2d12d23125ae6f9c2eafcfbea335c4fb068f0399a3ae3351c405",
       "executable": false
     },
     "evidence/sx-crank-c-i812/outcome-screens/1440-missing-satisfied.png": {
-      "sha256": "43014d71b320471fa9e1ed8864c0ac64f53470ef4e592be1df3d4e6ad50c2b5a",
+      "sha256": "11f9364f278dd79af03438b10dd412eb95fca358ad0c144e1165337ac5a49520",
       "executable": false
     },
     "evidence/sx-crank-c-i812/outcome-screens/1440-outside-grant.png": {
-      "sha256": "07137d396c9c93113cf0193c34202e23a99fa2b6891304062e7b79564b19583c",
+      "sha256": "6f3eeb55f4c3d280080043b02b65e58cddaf2323e99ba661a4ad76aef271b696",
       "executable": false
     },
     "evidence/sx-crank-c-i812/outcome-screens/1440-provider-changed.png": {
-      "sha256": "8c995fc804b74c71aaf75ee53184d3b4b10d22c52d512c584d2d16cd7a789cbd",
+      "sha256": "23c97c9055053ab6dd88bb35e6b34c2de35753104914caf7fa87f5eab2ebd4ed",
       "executable": false
     },
     "evidence/sx-crank-c-i812/outcome-screens/1440-restored-inactive.png": {
-      "sha256": "5bbb76a635b640370a794c9134af481acad46e8f5e9e0b6467ecf41414a62ad2",
+      "sha256": "33deeae624863fff57f4329def7ff4a9dfda4248be07a0e68cd0806189d82a6c",
       "executable": false
     },
     "evidence/sx-crank-c-i812/outcome-screens/1440-uncertain-open.png": {
-      "sha256": "2234f36f37606fb5de1bda24fabe039b20713b51ce34dc428268c9fdd0546f08",
+      "sha256": "a7d3e19196716672d2759b32ae3f43545690eeed672f13b700350c06e5f5d37f",
       "executable": false
     },
     "evidence/sx-crank-c-i812/outcome-screens/1440-uncertain-readback.png": {
-      "sha256": "8b9398f0d2b3635b63e919d26afceb1ca998f5e6cebb49f7b563371b9126820b",
+      "sha256": "350adacd78461bbe45740178dbf300b69267b50c71a513d47e177c1a439451d4",
       "executable": false
     },
     "evidence/sx-crank-c-i812/outcome-screens/1440-uncertain-satisfied.png": {
-      "sha256": "e4a92c1807ab8add6fc96ad665c832a51d53abc87842e849f636ba6e8e269fa1",
+      "sha256": "25119111588a7d52ad5a8aaa2cf15f8cee55b926dade8c46f0ac2a1c1034d9eb",
       "executable": false
     },
     "evidence/sx-crank-c-i812/outcome-screens/1440-wrong-open.png": {
-      "sha256": "d47a0df53a1826b82afcdbf6618c4d1fa8ac3e4674eb593bc1817186f10f74a1",
+      "sha256": "6b5cd2e6bac96da3d2bdbf0a25a241088fd7d8128e5c80bfba0e6a4275e8c583",
       "executable": false
     },
     "evidence/sx-crank-c-i812/outcome-screens/1440-wrong-satisfied.png": {
-      "sha256": "5e2537d267a0aec8759d65c4304222904741d2b57f66b1229edd33957ef28fda",
+      "sha256": "10d648e07b9a360b695fa8131217157dcbe5a5f01c9f1574637bde73b7c90548",
       "executable": false
     },
     "evidence/sx-crank-c-i812/outcome-screens/390-invalid-amount.png": {
-      "sha256": "096b5b98dd1735db48b7ed193004d069ad090a600cec3d533c7cafd0ad198fe3",
+      "sha256": "2ef72f228d629557cf0db8a188d1ba6acd923d3b0dcfedaa1bf9965c3fc2d1a8",
       "executable": false
     },
     "evidence/sx-crank-c-i812/outcome-screens/390-missing-open.png": {
-      "sha256": "345b680d19133f4483a5116df05f2f32d803a21655f5df560819bb4075a8e3dc",
+      "sha256": "a3b0b8ae640ac5a5b7b59a4c49b423ebee9e433cf3ba57b3d72bc04114864e59",
       "executable": false
     },
     "evidence/sx-crank-c-i812/outcome-screens/390-missing-satisfied.png": {
-      "sha256": "06123b98af495cc3d87d21d78dd37f8bf6c8e77d49664c86725d83f83a38b9d4",
+      "sha256": "5dcca10eda6835ced74e8e7a3e9949f7b02ddae7324a1183a9756229b6b14ffc",
       "executable": false
     },
     "evidence/sx-crank-c-i812/outcome-screens/390-outside-grant.png": {
-      "sha256": "36ae5fde894d8e812c7363f0f4b6ff3c9eb37412b6e733f5152dc383567e91e1",
+      "sha256": "45691d5394f40a716a89a78c226cf923c687a88681f8d6bd11b6a34d58c6d6b3",
       "executable": false
     },
     "evidence/sx-crank-c-i812/outcome-screens/390-provider-changed.png": {
-      "sha256": "5146bfa14f364797dfc74e787250642d2a669a42d2248eba7ed3431de5133daf",
+      "sha256": "d53cd22a9e02d0bc6c23fa3fd2e8bae85bf3b88a484aa40b4ac0573947f7c371",
       "executable": false
     },
     "evidence/sx-crank-c-i812/outcome-screens/390-restored-inactive.png": {
-      "sha256": "e522fd290052b092b03d5a5a961243f8263f1426073c6e5e383dd2b2df186e8a",
+      "sha256": "bc1ff538cf7b42d2009ece611690ba5da42c1e5445fb4f68d79c9f604677f62c",
       "executable": false
     },
     "evidence/sx-crank-c-i812/outcome-screens/390-uncertain-open.png": {
-      "sha256": "0fafc5f20650fdacc885eec63773c0d6a4ce31663d7e720aeaa8c67074e86573",
+      "sha256": "3932d77417b3b3ea2aeff4112472acc5d8252ffe626719ade8c4ac52eebe90db",
       "executable": false
     },
     "evidence/sx-crank-c-i812/outcome-screens/390-uncertain-readback.png": {
-      "sha256": "55d216cff2fe3ab342babb79b96ee5c723a58150a5c4818dfe8db6bf18ce9f13",
+      "sha256": "abe6dbb93b7c32a35660ac84b73a2e821fe7689c3d82448ae09d2cfb5b807ae8",
       "executable": false
     },
     "evidence/sx-crank-c-i812/outcome-screens/390-uncertain-satisfied.png": {
-      "sha256": "ce50631cfced29c0d306d62a34a173e036eee1cacd188cc70f3bc34fdb92e348",
+      "sha256": "a6988c692688caf025ff1883a87a6101b9db91a12c1e612ed0b0efd8bb03fda9",
       "executable": false
     },
     "evidence/sx-crank-c-i812/outcome-screens/390-wrong-open.png": {
-      "sha256": "3a9cbe3d9634c5ca2079a567bb81352bd9f617179f64077ec6f25a1bb680f232",
+      "sha256": "79d04c97b635913f6c36c2b5b58004b813966fa107a828d6d517fb7a94c85497",
       "executable": false
     },
     "evidence/sx-crank-c-i812/outcome-screens/390-wrong-satisfied.png": {
-      "sha256": "7cdd535d7c06acec4cfad51ba681d4fc22ed1c3c7e19216624fc3a18f59d8b48",
+      "sha256": "c8839556aa54c711f2547723814c745ab014c156e7af049077ce0bbf238c6b18",
       "executable": false
     },
     "examples/inbox/server.mjs": {
