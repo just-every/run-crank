@@ -30,6 +30,23 @@ export function loopExport(target,id='synthetic-crank-loop') {
  ],connections:{n0:{main:[[edge('n1')]]},n1:{main:[[edge('n2')]]},n2:{main:[[edge('n3')]]},n3:{main:[[],[edge('n4')]]},n4:{main:[[edge('n5')]]},n5:{main:[[edge('n3')]]}}};
 }
 
+/** The batch done output consumes processed body records, then each source node
+ * processes the complete stream before the following source node begins. */
+export function doneLoopExport(target,id='synthetic-crank-30') {
+ const source=loopExport(target,id),edge=node=>({node,type:'main',index:0});
+ source.name='Synthetic serial loop with ordered completion';
+ source.nodes[5].parameters.url=target+'/body';
+ const assignment=(name,type,value)=>({id:'synthetic-crank-31',name,type,value});
+ const set=(id,phase)=>({id,name:id,type:'n8n-nodes-base.set',typeVersion:3.4,position:[Number(id.slice(1))*220,200],parameters:{assignments:{assignments:[
+  assignment('processed','string','={{ $json.processed }}'),assignment('part','number','={{ $json.part }}'),assignment('phase','string',phase),
+ ]},options:{}}});
+ const http=(id,path)=>({id,name:id,type:'n8n-nodes-base.httpRequest',typeVersion:4.2,position:[Number(id.slice(1))*220,200],parameters:{method:'POST',url:target+path,sendBody:true,specifyBody:'json',jsonBody:'={{ $json }}',options:{}}});
+ source.nodes.push(set('n6','synthetic-crank-32'),http('n7','/done-first'),set('n8','synthetic-crank-33'),http('n9','/done-last'));
+ source.connections.n3.main[0]=[edge('n6')];
+ source.connections.n6={main:[[edge('n7')]]};source.connections.n7={main:[[edge('n8')]]};source.connections.n8={main:[[edge('n9')]]};
+ return source;
+}
+
 export function switchExport(target,id='synthetic-crank-switch') {
  const source=graphExport(target,id);source.name='Synthetic native Switch';
  source.nodes[2].type='n8n-nodes-base.switch';source.nodes[2].typeVersion=3.2;

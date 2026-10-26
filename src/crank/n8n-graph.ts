@@ -4,6 +4,7 @@ import { requireZone } from './engine/dates'
 import { validateGraph } from './engine/graph'
 import type { Step } from './engine/types'
 import { validateImportTargetUrl, type ImportTargetEnv } from './import-target'
+import { doneItemPipeline, serialLoopRegions } from './n8n-loop'
 
 type Obj = Record<string, any>
 const obj = (v: any): Obj => { if (!v || typeof v !== 'object' || Array.isArray(v)) throw Error('object required'); return v }
@@ -80,16 +81,18 @@ export function n8nGraph(value: Json, sourceId: string, env: ImportTargetEnv, ow
           fields(p,['fieldToSplitOut','include','options'],at+'.parameters')
           const options=obj(p.options??{});fields(options,['destinationFieldName'],at+'.parameters.options')
           if(options.destinationFieldName!==p.fieldToSplitOut||n.typeVersion!==1||(p.include??'noOtherFields')!=='noOtherFields'||!/^[_A-Za-z][_A-Za-z0-9]*$/.test(p.fieldToSplitOut)||['__proto__','constructor','prototype'].includes(p.fieldToSplitOut)||out.length!==1||out[0].length!==1)throw Error('split requires one simple array field and a serial batch loop')
-          const loopIndex=out[0][0],loopNode=nodes[loopIndex],lp=obj(loopNode.parameters??{}),lo=edges.get(loopIndex)??[]
-          if(loopNode.type!=='n8n-nodes-base.splitInBatches'||loopNode.typeVersion!==3||(lp.batchSize??1)!==1||Object.keys(obj(lp.options??{})).length||lo.length!==2||lo[0].length||lo[1].length!==1)throw Error('loop requires version 3, batch size 1, no reset and no done-output work')
+          const loopIndex=out[0][0],loopNode=nodes[loopIndex],lp=obj(loopNode.parameters??{}),lo=edges.get(loopIndex)??[],regions=serialLoopRegions(nodes,edges,loopIndex)
           fields(lp,['batchSize','options'],'nodes.'+loopIndex+'.parameters');seen.add(loopIndex)
-          // Require one linear body and an explicit back edge. Other topology is a manual conversion.
-          let cursor=lo[1][0];const bodyNodes=new Set<number>()
-          while(cursor!==loopIndex){if(bodyNodes.has(cursor)||!nodes[cursor]||!['n8n-nodes-base.set','n8n-nodes-base.httpRequest','n8n-nodes-base.executeWorkflow'].includes(nodes[cursor].type))throw Error('loop body needs a linear mapped path returning to the batch node');bodyNodes.add(cursor);const next=edges.get(cursor)??[];if(next.length!==1||next[0].length!==1)throw Error('loop body must return to the batch node');cursor=next[0][0]}
-          const itemId=id+'_item',body=compile(lo[1][0],'steps.'+itemId,depth+1,loopIndex),last=[...bodyNodes].at(-1)!
-          result.push({...step,id,type:'loop',input:{items:{$ref:previous+'.'+p.fieldToSplitOut}},max_items:1000,concurrency:1,order:'input',empty:'allow',item_errors:'stop',steps:[{id:itemId,type:'map',input:{[p.fieldToSplitOut]:{$ref:'item'}}},...body],result:{$ref:tails.get(last)}} as Step)
-          coverage.push({field:at,reason:'Supported serial loop: at most 1000 items; empty input allowed; first failure stops; done output must be unused'})
-          tails.set(index,'steps.'+id+'.results');return result
+          const itemId=id+'_item',body=compile(lo[1][0],'steps.'+itemId,depth+1,loopIndex),last=regions.body.at(-1)!,connected=regions.done.length>0
+          if(connected&&body.slice(0,-1).some(step=>step.type==='http'))throw Error('done-output conversion needs a terminal HTTP response; intermediate item-expanding HTTP requires a general source item-stream mapping')
+          const normalized=id+'_returned',final=body.at(-1),output=connected?'steps.'+normalized:tails.get(last)
+          result.push({...step,id,type:'loop',input:{items:{$ref:previous+'.'+p.fieldToSplitOut}},max_items:1000,concurrency:1,order:'input',empty:'allow',item_errors:'stop',
+            ...(connected?{empty_result:'stop'}:{}),steps:[{id:itemId,type:'map',input:{[p.fieldToSplitOut]:{$ref:'item'}}},...body,
+              ...(connected?[{id:normalized,type:'transform',fn:'n8n.items',input:{kind:final?.type==='http'?'http':'item',value:{$ref:final?.type==='http'?'steps.'+final.id:tails.get(last)}}}]:[])],result:{$ref:output}} as Step)
+          let tail='steps.'+id+'.results'
+          if(connected){const collected=id+'_processed';result.push({id:collected,type:'transform',fn:'n8n.items',input:{kind:'flatten',value:{$ref:tail}}});const done=doneItemPipeline(compile(regions.done[0],'item',depth+1), 'steps.'+collected);result.push(...done.steps);tail=done.output}
+          coverage.push({field:at,reason:connected?'Supported serial loop and distinct linear done path: ordered returned items, node barriers, empty streams produce no requests; 1000-item bound':'Supported serial loop: at most 1000 items; empty input allowed; first failure stops; unused done output'})
+          tails.set(index,tail);return result
         }
         case 'n8n-nodes-base.executeWorkflow': {
           fields(p,['source','workflowJson','mode','options'],at+'.parameters');const opts=obj(p.options??{});fields(opts,['waitForSubWorkflow'],at+'.parameters.options')

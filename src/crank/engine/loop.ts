@@ -23,6 +23,8 @@ export function validateLoop(step: Step) {
   if (!['stop', 'continue'].includes(String(step.item_errors))) throw new StepError('validation', `Loop ${step.id}: item_errors must be stop or continue`)
   if (!Array.isArray(step.steps) || !step.steps.length) throw new StepError('validation', `Loop ${step.id}: add child steps`)
   if (step.result === undefined) throw new StepError('validation', `Loop ${step.id}: declare the per-item result mapping`)
+  if (step.empty_result !== undefined && (step.empty_result !== 'stop' || step.concurrency !== 1))
+    throw new StepError('validation', `Loop ${step.id}: empty_result stop requires serial execution`)
 }
 
 const encodeSize = (value: unknown) => new TextEncoder().encode(JSON.stringify(value)).length
@@ -48,12 +50,13 @@ export async function executeLoop(step: Step, path: string, host: LoopExecution)
     return { kind: 'failed', error: problem }
   }
   const items: ItemResult[] = new Array(input.items.length), outcomes: (ExecutionOutcome | undefined)[] = new Array(input.items.length)
-  let next = 0, halted = false
+  let next = 0, halted = false, emptyResultAt: number | null = null
   const worker = async () => {
     while (!halted && next < input.items.length) {
       const index = next++, itemPath = `${path}/items/${index}`, old = host.records.get(itemPath)
       if (old && ['succeeded', 'failed', 'stopped'].includes(old.status)) {
         items[index] = JSON.parse(old.output_json!)
+        if (step.empty_result === 'stop' && items[index].status === 'succeeded' && Array.isArray(items[index].output) && items[index].output.length === 0) { emptyResultAt = index; halted = true }
         if (items[index].status === 'failed' && step.item_errors === 'stop') { outcomes[index] = { kind: 'failed', error: items[index].error }; halted = true }
         if (items[index].status === 'rejected') { outcomes[index] = { kind: 'rejected', reason: 'An item approval was rejected' }; halted = true }
         continue
@@ -69,6 +72,9 @@ export async function executeLoop(step: Step, path: string, host: LoopExecution)
       const result: ItemResult = { index, status, ...(outcome.kind === 'completed' ? { output } : {}), ...(outcome.kind === 'failed' ? { error: outcome.error } : {}) }
       items[index] = result; outcomes[index] = outcome
       await host.save(step, itemPath, status === 'paused' ? 'waiting' : status === 'rejected' ? 'stopped' : status, { input: { item: input.items[index] }, output: result, ...(outcome.kind === 'failed' ? { error: outcome.error } : {}) })
+      // An empty source back edge never invokes its batch node again. Keep prior
+      // checkpoints, stop remaining source items and emit no completion stream.
+      if (step.empty_result === 'stop' && outcome.kind === 'completed' && Array.isArray(output) && output.length === 0) { emptyResultAt = index; halted = true }
       // Workers already in flight finish and checkpoint before the run is settled.
       if (['waiting', 'paused', 'rejected'].includes(outcome.kind) || outcome.kind === 'failed' && step.item_errors === 'stop') halted = true
     }
@@ -77,7 +83,8 @@ export async function executeLoop(step: Step, path: string, host: LoopExecution)
   const broken = workers.find((result): result is PromiseRejectedResult => result.status === 'rejected')
   if (broken) throw broken.reason
   const retained = items.filter((item): item is ItemResult => item !== undefined)
-  const output = { items: retained, results: retained.filter(item => item.status === 'succeeded').map(item => item.output), total: input.items.length }
+  const output = { items: retained, results: emptyResultAt === null ? retained.filter(item => item.status === 'succeeded').map(item => item.output) : [], total: input.items.length,
+    ...(emptyResultAt === null ? {} : { empty_result_at: emptyResultAt }) }
   const blocking = outcomes.find(outcome => outcome?.kind === 'failed' && step.item_errors === 'stop')
     ?? outcomes.find(outcome => outcome?.kind === 'rejected')
     ?? outcomes.find(outcome => outcome?.kind === 'paused')

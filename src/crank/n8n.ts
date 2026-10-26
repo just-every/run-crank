@@ -112,7 +112,7 @@ export function n8nSource(env: ImportTargetEnv, ownerId: string): ImportDoorSour
       }
       return { kind: 'n8n-workflow', sourceId: workflow(value, index, env).sourceId, payload: value }
     },
-    mapping: { version: 'crank-n8n-native-graph-v3', map(record) {
+    mapping: { version: 'crank-n8n-native-graph-v4', map(record) {
       const root = object(record.payload)
       if (Array.isArray(root.nodes) && root.nodes.length > 2) return n8nGraph(record.payload, record.sourceId, env, ownerId)
       const flow = workflow(record.payload, 0, env)

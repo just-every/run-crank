@@ -1,3 +1,4 @@
+import {doneLoopJourney} from './n8n-loop-journey.mjs';
 import { graphExport, loopExport, switchExport, dateExport } from './n8n-graph-fixture.mjs';
 import {before,after,test} from 'node:test';
 import assert from 'node:assert/strict';
@@ -251,6 +252,7 @@ test('MIG-001 native graph review, exact apply, restart, branch outcomes and pro
   const countBefore=requests.length;
   await deliver(execution,lh.url,{method:'POST',headers:{'content-type':'application'+'/'+'json'},body:JSON.stringify({messages:Array(1001).fill('synthetic-crank-12')})});
   assert.equal((await settled(execution,(await execution.get('workflow-runs?workflow='+lw.id)).runs[0].id)).status,'failed');assert.equal(requests.length,countBefore);
+  await doneLoopJourney(declared);
   for(const mutate of [
    v=>v.nodes[3].parameters.batchSize=2,
    v=>v.nodes[3].parameters.options.reset=true,
