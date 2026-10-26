@@ -118,8 +118,8 @@ export async function updateDraft(env: CrankEnv, actor: Actor, workflowId: strin
     await savedDraft(env, actor, workflowId, draftId, current.published_version_id, graph, metadata, at, command),
     auditStatementWhen(env, condition.sql, condition.args, actor.id, 'workflow.draft', 'workflow', workflowId, { draft_digest: await digest(JSON.stringify(graph)), changed }, current.published_version_id),
     ...(extraAudit?[auditStatementWhen(env,condition.sql,condition.args,actor.id,extraAudit.action,'workflow',workflowId,extraAudit.detail)]:[]),
-    ...(command ? [commandReceipt(env, command)] : []),
     ...(draftGuard ? [stmt(env,'DELETE FROM crank_authority_guards WHERE id=?',draftGuard)] : []),
+    ...(command ? [commandReceipt(env, command)] : []),
   ]) } catch(error) {
     if(expectedDraftJson!==undefined && (await getWorkflow(env,workflowId)).draft_json!==expectedDraftJson)throw new CrankError(409,'The draft changed; load its current resources again')
     throw error
