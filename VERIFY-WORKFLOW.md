@@ -13,7 +13,8 @@ stay in their existing workflow, scheduled on Monday and Thursday at 03:37 UTC.
 
 The build job runs the production Worker build, run-site build, typecheck,
 first-party check and deployment-spec check once. Shards restore that exact
-run's build artifact. The hosted runtime shard still enters `rer verify`, so
+run's build artifact. The build stamps `dist/.ci-sha`; each Actions shard
+refuses an artifact whose stamp differs from its exact `GITHUB_SHA`. The hosted runtime shard still enters `rer verify`, so
 Base's hosted-output and hydration checks run on the shared production output.
 Browser shards install Chromium and probe launch before installing system
 packages. Only the executor shard prepares bubblewrap.

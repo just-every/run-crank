@@ -93,7 +93,8 @@ jobs:
         run: |
           pnpm exec playwright install chromium
           if ! node scripts/ci/chromium-probe.mjs; then
-            pnpm exec playwright install-deps chromium
+            timeout 420 pnpm exec playwright install-deps chromium
+            node scripts/ci/chromium-probe.mjs
           fi
       - name: Prepare the Linux executor
         if: matrix.name == 'agent-executor'

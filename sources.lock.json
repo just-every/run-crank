@@ -127,7 +127,7 @@
       "executable": false
     },
     ".github/workflows/verify.yml": {
-      "sha256": "049762e12680d91adbb4769f4a796f2c2a37cb7a55618572c1347ea37d2c3a4f",
+      "sha256": "2087a4fc112e83be55ac4ecfa5d8b5ed81a5571a9d2cae8b3e783ccf9b38d45d",
       "executable": false
     },
     ".gitignore": {
@@ -1942,6 +1942,10 @@
       "sha256": "765b035fb0a6cecc2a07b2109f2dc36d110c1740021622c91b0bd7d64444268d",
       "executable": false
     },
+    "scripts/ci/chromium-probe.mjs": {
+      "sha256": "b660d6603c7038f2846a37836c10061b7c7b678d041b6075c461251e12264adc",
+      "executable": false
+    },
     "scripts/crank.mjs": {
       "sha256": "8136bfc3ed8ab00cda4409a234ff3a5e403e3ae0e399b63e23402dc7c79e945d",
       "executable": false
@@ -2135,7 +2139,7 @@
       "executable": false
     },
     "scripts/verify-ci.mjs": {
-      "sha256": "2e056677b24a647bebdcb411790bde833e3f702ecf4d2fff90c723bc5daa05a0",
+      "sha256": "85a5c88e34df65f9516988f9cd368ee7bec007d67c5364bbfeda046bd0810c51",
       "executable": false
     },
     "scripts/verify-plan.mjs": {
@@ -5879,7 +5883,7 @@
       "executable": false
     },
     "VERIFY-WORKFLOW.md": {
-      "sha256": "e48b0009abe6e99b3cf9e9b74ea38371f03b520f3671ec72671de474d348fc1a",
+      "sha256": "61922356069e5b8bef16446bc690e8c578ec7f39326372a9ee159ed1cb706b92",
       "executable": false
     },
     "vite.config.ts": {
