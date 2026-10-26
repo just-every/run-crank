@@ -5313,6 +5313,10 @@
       "sha256": "36355d8c590f771ee4ac483c66b3662da1b74f3a247a78fc97918a5f50d90f38",
       "executable": false
     },
+    "tests/n8n-loop-stream-journey.mjs": {
+      "sha256": "1c4ea5f14f01d9f6c723c8f57327d73264bd09a860f55e1d528982861fafce64",
+      "executable": false
+    },
     "tests/oauth-renewal-journey.mjs": {
       "sha256": "c30092dc621b220cc325b2340b817d9cac9a18cb84db81ab98290e1f8c0a8290",
       "executable": false

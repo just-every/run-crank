@@ -48,7 +48,7 @@ export async function streamLoopJourney(declared) {
   assert.deepEqual(draft.draft.settings.n8n_conversions.n2,choice);assert.deepEqual(draft.draft.settings.n8n_conversion_dispositions.find(item=>item.node_id==='n2'),{node_id:'n2',kind:choice.kind,resolved:true,source_digest:digest(envelope.workflow.nodes[2]),choice_digest:digest(choice)},'native provenance must retain the exact source loop and reviewed bound choice');
   await h.restart();assert.deepEqual((await h.get('workflows/'+workflow.id)).draft,draft.draft);assert.equal((await door(h,'reconcile',{planId:plan.value.planId})).value.ok,true);
   await h.post('workflows/'+workflow.id+'/publish',{},h.owner,201);const hook=await h.post('workflows/'+workflow.id+'/hooks',{},h.owner,201);
-  const send=async messages=>{const delivered=await deliver(h,hook.url,{method:'POST',headers:{'content-type':'application'+'/'+'json','x-event-id':'synthetic-crank-'+event++},body:JSON.stringify({messages})});assert.equal(delivered.status,200,delivered.text);assert.equal(delivered.value.accepted,true,delivered.text);return settled(h,delivered.value.run_id)};
+  const send=async messages=>{const delivered=await deliver(h,hook.url,{method:'POST',headers:{'content-type':'application'+'/'+'json'},body:JSON.stringify({messages,event_id:'synthetic-crank-'+event++})});assert.equal(delivered.status,200,delivered.text);assert.equal(delivered.value.accepted,true,delivered.text);return settled(h,delivered.value.run_id)};
   const reset=value=>{mode=value;attempts.length=0;completed.length=0};
   const verifyCompleted=(run,messages,expanded=false)=>{
    assert.equal(run.status,'succeeded',JSON.stringify(run.error));const expected=messages.flatMap(message=>returnedItems(message,expanded));
