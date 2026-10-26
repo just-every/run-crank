@@ -7,10 +7,10 @@ import {archive} from './restore-journey.mjs';
 export async function outcomeObjective(h,{realm,customer,item,receiver,businessKey='synthetic-crank-51',lead='synthetic-crank-50',amount='19.99',token='synthetic-crank-52'}) {
  const account=await connection(h,{app:'quickbooks',label:'Harbour outcome sandbox',account_name:realm,environment:'sandbox',purpose:'test',auth_kind:'oauth2',scopes:['com.intuit.quickbooks.accounting'],secret:{access_token:token}});
  const steps=[
-  {id:'lead',type:'http',input:{method:'GET',url:receiver+'/lead'}},
-  {id:'invoice',type:'quickbooks.create_invoice',connection_id:account.id,input:{realm_id:realm,business_key:businessKey,amount_usd:amount,payload:{CustomerRef:{value:customer},Line:[{Amount:Number(amount),DetailType:'SalesItemLineDetail',SalesItemLineDetail:{ItemRef:{value:item}}}]}}},
-  {id:'verify_invoice',type:'quickbooks.invoice_outcome',connection_id:account.id,input:{realm_id:realm,business_key:businessKey,source_path:'invoice',lead_path:'lead',lead_id:lead,customer_id:customer,amount_usd:amount,due_at:'2026-10-30T12:00:00Z',remaining_cost_usd:'0.01'}},
-  {id:'notify',type:'http',input:{method:'POST',url:receiver+'/notify',body:{to:'finance@example.test',lead_id:lead,business_key:businessKey,amount_usd:amount}}},
+  {id:'lead',name:'Read the CRM lead',type:'http',input:{method:'GET',url:receiver+'/lead'}},
+  {id:'invoice',name:'Create the draft invoice',type:'quickbooks.create_invoice',connection_id:account.id,input:{realm_id:realm,business_key:businessKey,amount_usd:amount,payload:{CustomerRef:{value:customer},Line:[{Amount:Number(amount),DetailType:'SalesItemLineDetail',SalesItemLineDetail:{ItemRef:{value:item}}}]}}},
+  {id:'verify_invoice',name:'Verify the invoice outcome',type:'quickbooks.invoice_outcome',connection_id:account.id,input:{realm_id:realm,business_key:businessKey,source_path:'invoice',lead_path:'lead',lead_id:lead,customer_id:customer,amount_usd:amount,due_at:'2026-10-30T12:00:00Z',remaining_cost_usd:'0.01'}},
+  {id:'notify',name:'Notify finance',type:'http',input:{method:'POST',url:receiver+'/notify',body:{to:'finance@example.test',lead_id:lead,business_key:businessKey,amount_usd:amount}}},
  ];
  const workflow=await h.post('workflows',{name:'Harbour recurring lead to invoice and notify',environment:'sandbox',graph:{trigger:{type:'manual'},steps}},h.owner,201);
  const published=await h.post(`workflows/${workflow.id}/publish`,{},h.owner,201);
