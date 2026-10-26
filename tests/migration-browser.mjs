@@ -117,7 +117,11 @@ try {
  assert.deepEqual(effects.slice(before+6,before+10).map(row=>row.input),['synthetic-crank-70','synthetic-crank-71'].flatMap(processed=>[1,2].map(part=>({processed,part,phase:'synthetic-crank-32'}))));
  for(const id of ['n5','n10','n11','n12','n7','n9'])assert.ok(run.steps.some(step=>step.step_id===id&&step.status==='succeeded'));
  await page.goto(origin+'/app/workflow-runs/'+run.id);await shots('done-completed-run');
- await page.goto(origin+'/app/workflows/'+workflow.id);await page.locator('.canvas .step-card').filter({hasText:'n11'}).last().click();await page.locator('.inspector').getByRole('link',{name:'Data',exact:true}).click();assert.ok((await page.locator('.inspector').innerText()).includes('synthetic-crank-'));await shots('batch-item-inspector');
+ await page.goto(origin+'/app/workflows/'+workflow.id);
+ await page.locator('.canvas .step-card').filter({has:page.locator('.step-text>strong').filter({hasText:/^Webhooks$/})}).filter({has:page.locator('.step-text>span').filter({hasText:/^n11$/})}).click();
+ await page.locator('.inspector').getByRole('link',{name:'Data',exact:true}).click();
+ const childOutput=JSON.parse(await page.locator('.inspector-block').filter({has:page.getByRole('heading',{name:'Output',exact:true})}).locator('pre').innerText());
+ assert.deepEqual(childOutput.body,{processed:'synthetic-crank-71',part:2},'nested HTTP child inspection must read the latest completed item checkpoint');await shots('batch-item-inspector');
  console.log('MIG-001 1440 and 390: reviewed multi-item batches with source node barriers, inactive native draft, ordered actual receiver effects and retained checkpoints passed');
 
  // The same retained plan now contains completed work and an owner-edited
