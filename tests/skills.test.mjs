@@ -207,7 +207,7 @@ test('AI-002: native model proposals stay within scope, sandbox tests fence exac
     assert.ok((await restored.get('connections')).every(c => c.status === 'needs_reconnect'));
     assert.equal((await restored.get('grants')).length, 0);
     await restored.restart(); await restored.tick(Date.now() + 86400000);
-    await restored.post(base + '/test', { bindings }, restored.owner, 422);
+    await restored.post(base + '/test', { bindings }, restored.owner, 409);
     await restored.post(base + '/promote', { digest: proposal.digest, confirm: true }, restored.owner, 422);
     assert.equal(fake.requests.length, beforeRestore);
   } finally { await restored?.close(); await h.close(); }
