@@ -25,7 +25,7 @@ export function previewView(plan:any) {
 
 export function appliedView(report:any) {
   const c = report.counts
-  return `<section class="panel"><h2>Import applied</h2><p class="notice">${report.ok?`Reconciled: ${esc(c.present)} of ${esc(c.sourceRecords)} source workflows are present as drafts${c.explained?`, ${esc(c.explained)} explained`:''}.`:'Reconciliation found differences. Review the history before activating anything.'}</p><a class="btn btn-primary" href="/app/import">Back to move in</a></section>`
+  return `<section class="panel"><h2>Import applied</h2><p class="notice">${report.ok?`Reconciled: ${esc(c.sourceRecords)} source workflows; ${esc(c.nativeTargets)} native drafts verified.${c.explained?` Mapping explanations retained for ${esc(c.explained)} source workflows.`:''}`:'Reconciliation found differences. Review the history before activating anything.'}</p><a class="btn btn-secondary" href="/app/import">Back to move in</a></section>`
 }
 
 export function refusalView(body:any) {

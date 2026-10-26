@@ -2678,7 +2678,7 @@
       "executable": false
     },
     "src/crank/ui/move-in-view.ts": {
-      "sha256": "a77cef73b8e2339c03faee0748fbeba0a7d3513b625f384941b0f7d9157b887e",
+      "sha256": "ff2ca5696f515b5b7072068d2f54eae1e8409f1786a6f7ab80168fe3ca6587d3",
       "executable": false
     },
     "src/crank/ui/move-in.ts": {
@@ -5034,7 +5034,7 @@
       "executable": false
     },
     "tests/migration-browser.mjs": {
-      "sha256": "c446fee74b77c19f957a34d3f8078db9c2ed33cb2c599b0aa645fe5eb9d36acb",
+      "sha256": "c31bd7daf1363eb660569960ac38fa1c1a972b6258de2aa05fe20967a3ae06a2",
       "executable": false
     },
     "tests/n8n-conversion-journey.mjs": {
