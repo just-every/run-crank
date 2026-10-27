@@ -79,18 +79,19 @@ export const digestSteps={'digest.append':type('append'),'digest.find':type('fin
 export async function digestRetention(env:CrankEnv,time:number) {
   const at=new Date(time).toISOString()
   const due=`SELECT digest_id FROM crank_digest_entries WHERE expires_at<=?1
-    UNION SELECT digest_id FROM crank_digest_operations WHERE expires_at<=?1 AND active=1`
+    UNION SELECT digest_id FROM crank_digest_operations WHERE expires_at<=?1 AND (active=1 OR result_json<>'{}')`
   if(!await stmt(env,`SELECT 1 FROM (${due}) LIMIT 1`,at).first())return
   const guard='digest-expiry:'+id(),store=await portability(env)
   // Recheck holds and eligibility in the same transaction as the checkpoint.
-  // Advancing the revision invalidates any snapshot read before this expiry.
+  // Active revisions invalidate snapshots read before expiry; inactive receiving
+  // definitions have no pending execution and keep their portable identity.
   try {
     await env.DB.batch([
       stmt(env,`INSERT INTO crank_authority_guards(id,ok) SELECT ?,CASE WHEN NOT EXISTS(SELECT 1 FROM crank_legal_holds WHERE released_at IS NULL)
         AND EXISTS(${due.replaceAll('?1','?2')}) THEN 1 ELSE 0 END`,guard,at),
-      stmt(env,`UPDATE crank_digests SET revision=revision+1,mutation_id=NULL WHERE id IN (${due})`,at),
+      stmt(env,`UPDATE crank_digests SET revision=revision+1,mutation_id=NULL WHERE active=1 AND id IN (${due})`,at),
       stmt(env,'DELETE FROM crank_digest_entries WHERE expires_at<=?',at),
-      stmt(env,"UPDATE crank_digest_operations SET result_json='{}',active=0 WHERE expires_at<=? AND active=1",at),
+      stmt(env,"UPDATE crank_digest_operations SET result_json='{}',active=0 WHERE expires_at<=? AND (active=1 OR result_json<>'{}')",at),
       ...await store.redactionStatements!(),
       stmt(env,'DELETE FROM crank_authority_guards WHERE id=?',guard),
     ])
