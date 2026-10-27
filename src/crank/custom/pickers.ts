@@ -4,7 +4,7 @@ import { assertDispatchAuthority } from '../engine/authority'
 import { branchesOf, validateGraph, type Graph } from '../engine/graph'
 import type { Step } from '../engine/types'
 import { isObject, lookup } from '../engine/values'
-import { canonical, digest, requireValue, stmt, text, type Actor, type CrankEnv } from '../model'
+import { canonical, digest, id, requireValue, stmt, text, type Actor, type CrankEnv } from '../model'
 import { auditStatement } from '../ops/audit'
 import { connectionScope, workflowScope } from '../team/policy'
 import { pendingRestore } from '../workflows/restore'
@@ -148,7 +148,7 @@ function optionsFrom(output: unknown, current: Descriptor): Option[] {
 async function connectionConsent(env:CrankEnv,target:Step) {
   if(typeof target.connection_id!=='string')return null
   const row=await getConnection(env,target.connection_id)
-  return digest(canonical({id:row.id,auth_kind:row.auth_kind,account_name:row.account_name,rotated_at:row.rotated_at,consented_at:row.consented_at,domains:row.domains_json,scopes:row.scopes_json}))
+  return digest(canonical({id:row.id,auth_kind:row.auth_kind,account_name:row.account_name,rotated_at:row.rotated_at,consented_at:row.consented_at,domains:row.domains_json,scopes:row.scopes_json,credential_generation:row.secret_iv}))
 }
 async function result(env: CrankEnv, actor: Actor, runId: string, current: Descriptor) {
   const source = await stmt(env, `SELECT r.workflow_id,r.mode,r.version_id,r.created_by,COALESCE(r.finished_at,r.received_at) AS loaded_at,r.test_owner_version,r.payload_expired_at,v.graph_json,v.declared_json
@@ -211,8 +211,32 @@ export async function readPicker(env: CrankEnv, actor: Actor, runId: string, inp
   return publicResult(await result(env, actor, text(runId, 'run_id', 100), await descriptor(env, actor, address(input))))
 }
 
+/** These checks run in the same transaction that saves the selection. */
+async function selectionGuards(env: CrankEnv, current: TargetDescriptor, sourceRunId: unknown, connection: Awaited<ReturnType<typeof getConnection>> | undefined): Promise<D1PreparedStatement[]> {
+  const guard = id(), args: unknown[] = [guard, current.row.id, current.row.version, current.row.definition_digest, current.row.consent_generation, current.row.scopes_json, current.row.status, current.at.workflow_id]
+  let condition = `EXISTS(SELECT 1 FROM crank_custom_versions WHERE id=? AND version=? AND definition_digest=? AND consent_generation=? AND scopes_json=? AND status=?)
+    AND EXISTS(SELECT 1 FROM crank_workflows WHERE id=? AND status!='paused')`
+  if (typeof current.target.connection_id === 'string') {
+    const row = connection!
+    condition += ` AND EXISTS(SELECT 1 FROM crank_connections WHERE id=? AND status='active' AND secret_iv IS ? AND rotated_at IS ? AND consented_at IS ? AND domains_json=? AND scopes_json=? AND expires_at IS ? AND environment=? AND purpose=?)`
+    args.push(row.id, row.secret_iv, row.rotated_at, row.consented_at, row.domains_json, row.scopes_json, row.expires_at, row.environment, row.purpose)
+  }
+  if (typeof current.target.gateway_id === 'string') {
+    condition += ` AND EXISTS(SELECT 1 FROM crank_gateway_grants a JOIN crank_gateways g ON g.id=a.gateway_id JOIN oa_operators o ON o.id=g.owner_id
+      WHERE a.gateway_id=? AND a.connector_id=? AND a.connector_version=? AND a.status='active' AND g.status='active' AND o.status='active' AND o.role='owner' AND o.version=g.owner_version
+      AND EXISTS(SELECT 1 FROM json_each(a.operations_json) WHERE value=?))`
+    args.push(current.target.gateway_id, current.row.id, current.row.version, current.operation.id)
+    if (typeof sourceRunId === 'string') {
+      condition += ` AND NOT EXISTS(SELECT 1 FROM crank_gateway_tasks t LEFT JOIN crank_gateway_grants a ON a.id=t.grant_id WHERE t.run_id=? AND (a.id IS NULL OR a.status!='active'))`
+      args.push(sourceRunId)
+    }
+  }
+  return [stmt(env, `INSERT INTO crank_authority_guards(id,ok) SELECT ?,CASE WHEN ${condition} THEN 1 ELSE 0 END`, ...args), stmt(env, 'DELETE FROM crank_authority_guards WHERE id=?', guard)]
+}
+
 export async function selectPicker(env: CrankEnv, actor: Actor, input: Record<string, unknown>) {
   const current = await targetDescriptor(env, actor, address(input, ['value', 'draft_digest', 'source_run_id']))
+  const connection = typeof current.target.connection_id === 'string' ? await getConnection(env, current.target.connection_id) : undefined
   requireValue(current.spec.resource || current.spec.type === 'string' && Object.values(current.operation.inputs).some(spec => Object.values(spec.resource?.parents ?? {}).includes(current.at.input_name)), 'Only a reviewed resource input or its declared literal parent may be selected', 422)
   requireValue(input.draft_digest === current.draftDigest, 'The draft changed; reload its current picker before selecting', 409)
   await currentConsent(env, actor, current)
@@ -235,6 +259,6 @@ export async function selectPicker(env: CrankEnv, actor: Actor, input: Record<st
   current.target.input = fields
   requireValue(await digest(canonical(JSON.parse((await getWorkflow(env, current.at.workflow_id)).draft_json))) === current.draftDigest, 'The draft changed before this selection; reload it', 409)
   const saved = await updateDraft(env, actor, current.at.workflow_id, { graph: current.graph }, undefined, current.workflow.draft_json,
-    { action:'custom.picker_select',detail:{ step_path: current.at.step_path, input_name: current.at.input_name, source_run_id: input.source_run_id ?? null, custom_literal: input.source_run_id === undefined, cleared: [...cleared].filter(name => name !== current.at.input_name) } })
+    { guards: await selectionGuards(env, current, input.source_run_id, connection), action:'custom.picker_select',detail:{ step_path: current.at.step_path, input_name: current.at.input_name, source_run_id: input.source_run_id ?? null, custom_literal: input.source_run_id === undefined, cleared: [...cleared].filter(name => name !== current.at.input_name) } })
   return { ...saved, cleared_inputs: [...cleared].filter(name => name !== current.at.input_name), draft_digest: await digest(canonical(saved.draft)) }
 }
