@@ -54,8 +54,8 @@ export async function harness(target,{emitted=false,edge,mailEdge,quoteCosts=tru
     };
     const boot=await send('/auth/bootstrap',{token:'synthetic-test-owner-claim-01234567890123456789',displayName:'Harbour owner'});assert.equal(boot.status,303,boot.text);
     const owner=boot.cookie;
-    let starter;
-    const independentStarter=async()=>{
+    let starter, starterPromise;
+    const independentStarter=()=>starterPromise??=(async()=>{
       if(starter)return starter;
       // Use a separate native session for owner invitation so the fixture owner's sensitive-action proof stays untouched.
       assert.equal((await send('/auth/magic-link',{email:'owner@example.test',returnTo:'/app'})).status,202);
@@ -67,7 +67,7 @@ export async function harness(target,{emitted=false,edge,mailEdge,quoteCosts=tru
       assert.equal(invited.status,202,invited.text);
       const token=new URL(mail.at(-1).html.match(/href="([^"]*\/auth\/confirm\?token=[^"]+)"/)[1].replaceAll('&amp;','&'),origin).searchParams.get('token');
       const signed=await send('/auth/confirm',{token});assert.equal(signed.status,303,signed.text);starter=signed.cookie;assert.equal((await send('/auth/signout',{},inviter)).status,204);return starter;
-    };
+    })();
     // Ordinary fixture owners explicitly review zero-cost network test edges before publication.
     // Cost-gate journeys use send() (or quoteCosts:false) so this is never production behavior.
     const zeroCost={components:['orchestration','connectors','models','executors'].map(kind=>({kind,usd_per_run:'0',assumption:'Owner acceptance fixture: local/network test edges do not bill this installation'}))};

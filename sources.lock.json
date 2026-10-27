@@ -5619,7 +5619,7 @@
       "executable": false
     },
     "tests/harness.mjs": {
-      "sha256": "9a435b019d784ec26f1008d70631d6870e66e453d55ab839661765cd48d5fa72",
+      "sha256": "d1fd54d5fe047b7e1ec4de7013f4450eec821008f8189be8da47000838777bf8",
       "executable": false
     },
     "tests/historical.test.mjs": {
@@ -5635,7 +5635,7 @@
       "executable": false
     },
     "tests/invoice-outcome-browser.mjs": {
-      "sha256": "b683d77d71a3ecc6bf283a6d3813fba34bf6929f27805fa03b9a0f2e9450ee96",
+      "sha256": "177d6ad85b85b77ca06a72134307bbed45751056a1ecab03362cb238fb817240",
       "executable": false
     },
     "tests/invoice-outcome-journey.mjs": {
