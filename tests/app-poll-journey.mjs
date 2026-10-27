@@ -106,7 +106,7 @@ export async function comparisonPollJourney({inspect=async()=>{}}={}) {
   const currentRevision=revision;revision=1;properties={...properties,amount:100};await poll();await counts([3,2]);revision=currentRevision;
   // Typed mismatch refuses the complete poll and retains its baseline for a retry.
   revision++;properties={...properties,amount:'200'};await poll();await counts([3,2]);
-  for(const w of workflows){const state=await h.get(`workflows/${w.id}/trigger`);assert.equal(state.poll.last_status,'error');assert.match(state.poll.last_error,/changed_to: type mismatch.*amount/)}
+  for(const w of workflows){const state=await h.get(`workflows/${w.id}/trigger`);assert.equal(state.poll.last_status,'error');assert.match(state.poll.last_error,/changed_to: type mismatch.*amount/);assert.ok(!state.poll.last_error.includes('200'),'poll diagnostics never copy the mismatched customer value')}
   properties={...properties,amount:200};await poll();await counts([4,3]);
   // Values observed on nonmatching changes also consume first-value identity.
   revision++;properties={...properties,Status:'Pending',amount:250};await poll();await counts([4,3]);
@@ -147,4 +147,19 @@ export async function comparisonPollJourney({inspect=async()=>{}}={}) {
   await h.post(`workflows/${w.id}/publish`,{},h.owner,201);revision++;properties={...properties,amount:999};await poll({restart:true});assert.equal((await runs(h,w)).length,before-1,'erased records never reappear through a later poll');
   await h.post(`connections/${c.id}/revoke`);revision++;properties={...properties,amount:1000};const prior=await Promise.all(workflows.map(async w=>(await runs(h,w)).length));await poll();await counts(prior);
  }finally{await restored?.close();await h.close()}
+}
+
+/** Relative transition operands share the workflow and workspace calendar. */
+export async function transitionTimezoneJourney() {
+ const edge=fakeEdge(),h=await harness('http://127.0.0.1:9',{edge:edge.edge,clock:'2026-10-28T01:00:00Z'});
+ const chicago=['America','Chicago'].join('/');let revision=0,Status='Pending',due='2026-10-27T18:00:00Z';
+ edge.routes.set('api.hubapi.com',()=>jsonResponse({results:[{id:'synthetic-crank-60',updatedAt:new Date(Date.parse('2026-10-27T12:00:00Z')+revision*60000).toISOString(),properties:{Status,due}}]}));
+ try {
+  await h.post('settings',{timezone:chicago});const c=await connection(h,{app:'hubspot',auth_kind:'bearer',label:'Calendar transitions',secret:{token:'synthetic-crank-61'}}),workflows=[];
+  for(const mode of ['workspace','workflow','rule'])workflows.push(await publish(h,'Transition timezone '+mode,{trigger:{type:'app_poll',provider:'hubspot',resource:'deals',event:'updated',connection_id:c.id,backfill:'from_now',interval_minutes:1,watched_fields:['Status','due'],changed_to:[[{field:'Status',op:'text.equals',value:'Approved'},{field:'due',op:'date.equals',value:{relative:'today'},precision:'day',...(mode==='rule'?{timezone:chicago}:{})}]]},steps:[],...(mode==='workspace'?{}:{settings:{timezone:'UTC'}})}));
+  let time=Date.parse((await h.get(`workflows/${workflows[0].id}/trigger`)).poll.next_due_at);await h.tick(time);
+  const counts=async expected=>assert.deepEqual(await Promise.all(workflows.map(async w=>(await runs(h,w)).length)),expected);
+  await counts([0,0,0]);Status='Approved';revision++;await h.tick(time+=60000);await counts([1,0,1]);
+  due='2026-10-28T18:00:00Z';revision++;await h.restart();await h.tick(time+=60000);await counts([1,1,1]);
+ }finally{await h.close()}
 }

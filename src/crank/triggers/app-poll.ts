@@ -13,22 +13,22 @@ import type { TriggerEvent } from './admission'
 import type { PollRow } from './poll'
 
 /** Literal maps retain exact equality; typed groups share WORK-013 evaluation. */
-function matches(condition: unknown, fields: Record<string, unknown> | null, direction: string, time: number) {
+function matches(condition: unknown, fields: Record<string, unknown> | null, direction: string, time: number, zone: string) {
   if (condition === undefined) return true
   if (fields === null) return false
   if (!Array.isArray(condition)) return Object.entries(condition as Record<string, unknown>).every(([field, value]) => canonical(fields[field]) === canonical(value))
   const names = [...new Set((condition as Groups).flat().map(rule => rule.field))]
   const groups = (condition as Groups).map(group => group.map(rule => ({ ...rule, field: `run.watched_values[${names.indexOf(rule.field)}]` })))
-  const result = evaluate(groups, { trigger: fields, steps: {}, run: { watched_values: names.map(name => fields[name]) } }, 'UTC', time)
-  if (result.mismatch) throw new StepError('validation', `${direction}: type mismatch for ${names[Number(/\[(\d+)\]/.exec(result.mismatch.field)?.[1])]}: ${result.mismatch.message}`)
+  const result = evaluate(groups, { trigger: fields, steps: {}, run: { watched_values: names.map(name => fields[name]) } }, zone, time)
+  if (result.mismatch) throw new StepError('validation', `${direction}: type mismatch for ${names[Number(/\[(\d+)\]/.exec(result.mismatch.field)?.[1])]} (${groups[result.mismatch.group][result.mismatch.rule].op})`)
   return result.pass
 }
 
 /** Read every bounded page before changing snapshots or admitting work. */
-export async function appItems(env: CrankEnv, poll: PollRow, trigger: Record<string, any>, started: string) {
+export async function appItems(env: CrankEnv, poll: PollRow, trigger: Record<string, any>, started: string, zone: string) {
   const records = await appRecords(env, trigger)
   await credential(env, trigger.connection_id)
-  const reseeding = !poll.seeded && !!await stmt(env, 'SELECT 1 FROM crank_app_snapshots WHERE workflow_id=? AND version_id!=? LIMIT 1', poll.workflow_id, poll.version_id).first()
+  const reseeding = !poll.seeded && !!await stmt(env, "SELECT 1 FROM crank_workflow_versions WHERE workflow_id=? AND id!=? AND mode='production' AND json_extract(graph_json,'$.trigger.type')='app_poll' LIMIT 1", poll.workflow_id, poll.version_id).first()
   const events: TriggerEvent[] = [], snapshots: D1PreparedStatement[] = [], target = await targetFor(env, poll.workflow_id)
   const { keys, retained, erased, pending, indexed } = await appState(env, poll.workflow_id, poll.version_id, records)
   for (const record of records) {
@@ -40,7 +40,10 @@ export async function appItems(env: CrankEnv, poll: PollRow, trigger: Record<str
     let previous: Record<string, unknown> | null = opened ? JSON.parse(opened) : null, previousAt = prior?.changed_at ?? null
     const observed = new Set<string>()
     for (const observation of appTimeline(record, previous, previousAt, trigger.watched_fields)) {
-    if (previousAt && observation.at && Date.parse(previousAt) >= Date.parse(observation.at)) continue
+    if (previousAt && observation.at && Date.parse(previousAt) >= Date.parse(observation.at)) {
+      if (previousAt === observation.at) snapshots.push(stmt(env, 'UPDATE crank_app_snapshots SET observed_at=? WHERE workflow_id=? AND version_id=? AND record_id=? AND changed_at=?', started, poll.workflow_id, poll.version_id, recordKey, previousAt))
+      continue
+    }
     const raw = observation.fields
     const fields = trigger.any_field ? raw : Object.fromEntries((trigger.watched_fields ?? []).filter((f: string) => Object.hasOwn(raw, f)).map((f: string) => [f, raw[f]]))
     const names = [...new Set([...Object.keys(fields), ...Object.keys(previous ?? {}), ...(trigger.watched_fields ?? [])])] as string[]
@@ -48,6 +51,7 @@ export async function appItems(env: CrankEnv, poll: PollRow, trigger: Record<str
     const valueKey = (values: Record<string, unknown>, field: string) => digest(canonical([Object.hasOwn(values, field), values[field] ?? null]))
     const changed = names.filter(f => !previous || Object.hasOwn(previous, f) !== Object.hasOwn(fields, f) || canonical(previous[f]) !== canonical(fields[f]))
     if (!observation.at && previous && !changed.length) {
+      snapshots.push(stmt(env, 'UPDATE crank_app_snapshots SET observed_at=? WHERE workflow_id=? AND version_id=? AND record_id=? AND changed_at=?', started, poll.workflow_id, poll.version_id, recordKey, previousAt))
       if (pending.has(recordKey)) snapshots.push(stmt(env, 'DELETE FROM crank_app_pending_rows WHERE workflow_id=? AND version_id=? AND record_id=?', poll.workflow_id, poll.version_id, recordKey))
       continue
     }
@@ -73,7 +77,7 @@ export async function appItems(env: CrankEnv, poll: PollRow, trigger: Record<str
       snapshots.push(stmt(env, 'INSERT OR IGNORE INTO crank_app_field_values(workflow_id,record_id,field,value_digest,first_seen_at) VALUES(?,?,?,?,?)', poll.workflow_id, recordKey, field, hash, started))
     }
     const novel = (await Promise.all(changed.map(async field => !seen.has(canonical([field, await valueKey(fields, field)]))))).some(Boolean)
-    const to = matches(trigger.changed_to, fields, 'changed_to', Date.parse(started)), from = matches(trigger.changed_from, previous, 'changed_from', Date.parse(started))
+    const to = matches(trigger.changed_to, fields, 'changed_to', Date.parse(started), zone), from = matches(trigger.changed_from, previous, 'changed_from', Date.parse(started), zone)
     const matched = to && from
     const shouldRun = trigger.event === 'new' ? !prior : changed.length > 0 && matched && (trigger.identity !== 'first_value' || novel)
     if (shouldRun && !reseeding) {
@@ -84,7 +88,7 @@ export async function appItems(env: CrankEnv, poll: PollRow, trigger: Record<str
     }
     for (const receipt of receipts) observed.add(canonical([receipt.field, receipt.hash]))
     previous = fields; previousAt = at
-    snapshots.push(stmt(env, `INSERT INTO crank_app_snapshots(workflow_id,version_id,record_id,fields_json,changed_at) VALUES(?,?,?,?,?) ON CONFLICT(workflow_id,version_id,record_id) DO UPDATE SET fields_json=excluded.fields_json,changed_at=excluded.changed_at WHERE crank_app_snapshots.changed_at<excluded.changed_at`, poll.workflow_id, poll.version_id, recordKey, await sealText(target, JSON.stringify(fields)), at))
+    snapshots.push(stmt(env, `INSERT INTO crank_app_snapshots(workflow_id,version_id,record_id,fields_json,changed_at,observed_at) VALUES(?,?,?,?,?,?) ON CONFLICT(workflow_id,version_id,record_id) DO UPDATE SET fields_json=excluded.fields_json,changed_at=excluded.changed_at,observed_at=excluded.observed_at WHERE crank_app_snapshots.changed_at<excluded.changed_at`, poll.workflow_id, poll.version_id, recordKey, await sealText(target, JSON.stringify(fields)), at, started))
     }
   }
   return { events, snapshots }

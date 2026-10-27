@@ -10,7 +10,7 @@ export interface AppSubjectRecord extends Identity { blocked: string | null }
 interface RetainedRecord { row: Identity; subjectDigest: string; texts: string[]; identifiers: Set<string> }
 interface AppSubjectState {
   subjects: [string, string, string][]
-  snapshots: [string, string, string, string, string][]
+  snapshots: [string, string, string, string, string, string | null][]
   values: [string, string, string, string, string][]
   pending: [string, string, string, string, string][]
   workflows: [string, string, string, string][]
@@ -26,7 +26,7 @@ const array = (columns: string, source: string, order: string) => `(SELECT json_
 // request-local; the public preview contains only its digest and opaque record keys.
 const STATE_SQL = `SELECT json_object(
   'subjects',json(${array('workflow_id,record_id,record_subject_digest', 'crank_app_subjects', 'workflow_id,record_id')}),
-  'snapshots',json(${array('workflow_id,version_id,record_id,fields_json,changed_at', 'crank_app_snapshots', 'workflow_id,version_id,record_id')}),
+  'snapshots',json(${array('workflow_id,version_id,record_id,fields_json,changed_at,observed_at', 'crank_app_snapshots', 'workflow_id,version_id,record_id')}),
   'values',json(${array('workflow_id,record_id,field,value_digest,first_seen_at', 'crank_app_field_values', 'workflow_id,record_id,field,value_digest')}),
   'pending',json(${array('workflow_id,version_id,record_id,value_digest,stable_since', 'crank_app_pending_rows', 'workflow_id,version_id,record_id')}),
   'workflows',json(${array('id,status,data_class,identifier_fields_json', `(SELECT * FROM crank_workflows WHERE id IN (${appWorkflows}))`, 'id')}),

@@ -598,8 +598,8 @@ test('TRIG-001: envelope identity, transactional admission and revocation preser
   } finally { await isolated.close(); }
 });
 
-import {crmPollJourney,subscriptionPollJourney,comparisonPollJourney} from './app-poll-journey.mjs';
-test('Native CRM polls seed watched properties and recover complete overlapping pages without duplicate effects', async()=>{await crmPollJourney();await comparisonPollJourney();const {appHistoryJourney}=await import('./app-history-journey.mjs');await appHistoryJourney()});
+import {crmPollJourney,subscriptionPollJourney,comparisonPollJourney,transitionTimezoneJourney} from './app-poll-journey.mjs';
+test('Native CRM polls seed watched properties and recover complete overlapping pages without duplicate effects', async()=>{await crmPollJourney();await comparisonPollJourney();const {appHistoryJourney}=await import('./app-history-journey.mjs');await appHistoryJourney();await transitionTimezoneJourney()});
 test('Sheet changes wait for complete stable rows and preserve per-record identities across restart and restore', async()=>{const {sheetPollJourney}=await import('./sheet-poll-journey.mjs');await sheetPollJourney();await sheetPollJourney({provider:'microsoft_excel'})});
 test('Airtable updates compare named fields after complete pagination and retain both change identities', async()=>{const {airtablePollJourney}=await import('./airtable-poll-journey.mjs');await airtablePollJourney()});
 test('Mailbox polling retains records through visible subscription expiry and restarted renewal', subscriptionPollJourney);
@@ -607,3 +607,5 @@ test('Mailbox polling retains records through visible subscription expiry and re
 test('SharePoint and custom JSON lists compare only complete current records under live account authority', async()=>{const {listPollJourney}=await import('./list-poll-journey.mjs');await listPollJourney()});
 
 test('Subject erasure removes unadmitted app observations and permanently fences source replay', async()=>{const {appSubjectJourney}=await import('./app-subject-journey.mjs');await appSubjectJourney()});
+
+test('Snapshot retention expires only old inactive payloads and preserves comparison identities', async()=>{const {appRetentionJourney}=await import('./app-retention-journey.mjs');await appRetentionJourney()});

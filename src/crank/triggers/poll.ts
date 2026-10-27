@@ -12,6 +12,7 @@ import { admit, hold, burstThreshold, type TriggerEvent, type WorkflowRow } from
 import { parseFeed } from './feeds'
 import { URL_POLL_MAX_REDIRECTS } from './definition'
 import { appItems, renewSubscription } from './app-poll'
+import { workspaceSettings } from '../ops/settings'
 import { nextLink } from './historical-source'
 import { parseXml, toJson, xpath } from './xml'
 
@@ -143,7 +144,7 @@ export async function runPoll(env: CrankEnv, poll: PollRow, time: number) {
   ])
   if (!claimed[1].results.length) return { runs: 0 }
   try {
-    const app = trigger.type === 'app_poll' ? await appItems(env, poll, trigger, started) : null
+    const app = trigger.type === 'app_poll' ? await appItems(env, poll, trigger, started, String(graph.settings?.timezone ?? (await workspaceSettings(env)).timezone)) : null
     const events = app ? app.events : trigger.type === 'feed' ? await feedItems(env, trigger) : await urlItems(env, trigger, { since, now: started, interval_minutes: poll.interval_minutes })
     if (!await stmt(env, "SELECT id FROM crank_poll_log WHERE id=? AND status='running' AND lease_expires_at>?", logId, new Date().toISOString()).first()) return { runs: 0 }
     const fresh: TriggerEvent[] = [], fetchedKeys = new Set<string>()
