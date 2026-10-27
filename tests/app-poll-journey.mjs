@@ -128,7 +128,7 @@ export async function comparisonPollJourney({inspect=async()=>{}}={}) {
   const archive=await h.send('/api/crank/data/export',{},h.owner);assert.equal(archive.status,200);
   const portable=text=>text.trim().split('\n').map(JSON.parse).flatMap(line=>line.items??[]).filter(item=>item.kind==='row'&&['crank_app_field_values','crank_app_snapshots','crank_app_erased_records'].includes(item.table)).map(item=>JSON.stringify({table:item.table,row:item.row})).sort();
   assert.ok(portable(archive.text).length>10);
-  restored=await harness('http://127.0.0.1:9',{edge:edge.edge});await restored.post('data/restore',{archive:archive.text,confirm:'RESTORE'});
+  restored=await harness('http://127.0.0.1:9',{edge:edge.edge});await restored.post('./data/restore',{archive:archive.text,confirm:'RESTORE'});
   const copy=await restored.send('/api/crank/data/export',{},restored.owner);assert.equal(copy.status,200);assert.deepEqual(portable(copy.text),portable(archive.text),'all comparison records survive byte for byte');
   const effectCount=effects.length;await restored.restart();await restored.tick(time+86400000);assert.equal(effects.length,effectCount);
   for(const w of workflows)assert.equal((await restored.get(`workflows/${w.id}`)).status,'paused');
@@ -137,7 +137,7 @@ export async function comparisonPollJourney({inspect=async()=>{}}={}) {
   await h.post(`workflows/${w.id}/draft`,{graph:{trigger:{...trigger,identity:'first_value',watched_fields:['amount'],changed_to:[[{field:'amount',op:'number.gt',value:0}]],changed_from:undefined},steps:[]}});
   await h.post(`workflows/${w.id}/publish`,{},h.owner,201);await poll();assert.equal((await runs(h,w)).length,before);
   revision++;properties={...properties,amount:150};await poll();assert.equal((await runs(h,w)).length,before,'reseed must not forget an earlier field value');
-  await h.post(`workflows/${w.id}/pause`);await h.post('data/erase',{workflow_run_id:first.id,confirm:'ERASE'});
+  await h.post(`workflows/${w.id}/pause`);await h.post('./data/erase',{workflow_run_id:first.id,confirm:'ERASE'});
   for(const table of ['crank_app_field_values','crank_app_snapshots'])assert.equal((await h.db.prepare(`SELECT COUNT(*) AS n FROM ${table} WHERE workflow_id=?`).bind(w.id).first()).n,0);
   assert.equal((await h.db.prepare('SELECT COUNT(*) AS n FROM crank_app_erased_records WHERE workflow_id=?').bind(w.id).first()).n,1);
   const afterErase=await h.send('/api/crank/data/export',{},h.owner);assert.ok(portable(afterErase.text).some(row=>row.includes('crank_app_erased_records')));
