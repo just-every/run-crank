@@ -104,27 +104,34 @@ export function validateTrigger(trigger: Record<string, unknown>) {
     }
     case 'app_poll': {
       if (typeof trigger.connection_id !== 'string') fail('choose an app connection')
-      if (!['hubspot', 'microsoft_graph'].includes(String(trigger.provider))) fail('provider must be hubspot or microsoft_graph')
+      if (!['hubspot', 'microsoft_graph', 'google_sheets'].includes(String(trigger.provider))) fail('provider must be hubspot, microsoft_graph or google_sheets')
       if (trigger.provider === 'hubspot' && !['contacts', 'companies', 'deals'].includes(String(trigger.resource))) fail('choose contacts, companies or deals')
       if (trigger.provider === 'microsoft_graph' && trigger.resource !== 'messages') fail('choose messages')
+      if (trigger.provider === 'google_sheets') {
+        if (trigger.resource !== 'rows' || typeof trigger.spreadsheet_id !== 'string' || !/^[A-Za-z0-9_-]{1,200}$/.test(trigger.spreadsheet_id)) fail('Sheets needs rows and a spreadsheet_id')
+        if (typeof trigger.range !== 'string' || !/^.+!A1(?::[A-Z]+[0-9]*)?$/.test(trigger.range) || trigger.range.length > 300) fail('Sheets range must start at A1 with a header row')
+        if (typeof trigger.key_field !== 'string' || !trigger.key_field.trim()) fail('Sheets needs a stable key_field column')
+      }
+      const fieldName = (f: unknown) => typeof f === 'string' && f.trim().length > 0 && f.length <= 200 && (trigger.provider === 'google_sheets' || /^[A-Za-z][A-Za-z0-9_]*$/.test(f))
       if (!['new', 'updated'].includes(String(trigger.event))) fail('event must be new or updated')
       if (!['from_now', 'existing'].includes(String(trigger.backfill))) fail('choose initial backfill explicitly')
       if (trigger.event === 'updated' && trigger.any_field !== true && (!Array.isArray(trigger.watched_fields) || !trigger.watched_fields.length)) fail('updated records need watched_fields or explicit any_field')
-      if (trigger.watched_fields !== undefined && (!Array.isArray(trigger.watched_fields) || trigger.watched_fields.length > 30 || trigger.watched_fields.some(f => typeof f !== 'string' || !/^[A-Za-z][A-Za-z0-9_]*$/.test(f)))) fail('watched_fields lists at most 30 property names')
+      if (trigger.watched_fields !== undefined && (!Array.isArray(trigger.watched_fields) || trigger.watched_fields.length > 30 || trigger.watched_fields.some(f => !fieldName(f)) || new Set(trigger.watched_fields).size !== trigger.watched_fields.length)) fail('watched_fields lists at most 30 property names')
       for (const direction of ['changed_to', 'changed_from']) {
         const condition = trigger[direction]
         if (condition === undefined) continue
         const fields = Array.isArray(condition)
           ? validateGroups(condition, direction).flat().map(rule => rule.field)
           : isObject(condition) ? Object.keys(condition) : fail(`${direction} needs literal fields or WORK-013 rule groups`)
-        if (!fields.length || fields.some(f => !(trigger.watched_fields as string[] | undefined)?.includes(f) && trigger.any_field !== true || !/^[A-Za-z][A-Za-z0-9_]*$/.test(f))) fail(`${direction} names watched fields`)
+        if (!fields.length || fields.some(f => !(trigger.watched_fields as string[] | undefined)?.includes(f) && trigger.any_field !== true || !fieldName(f))) fail(`${direction} names watched fields`)
       }
       if (trigger.identity !== undefined && !['change', 'first_value'].includes(String(trigger.identity))) fail('identity must be change or first_value')
       if (trigger.subscription !== undefined) {
         const s = trigger.subscription
         if (trigger.provider !== 'microsoft_graph' || !isObject(s) || typeof s.id !== 'string' || !/^[A-Za-z0-9-]{1,200}$/.test(s.id) || typeof s.expires_at !== 'string' || !Number.isFinite(Date.parse(s.expires_at))) fail('a Microsoft Graph subscription needs its id and expires_at')
       }
-      if (trigger.settle_delay !== undefined) fail('settle_delay is not supported by this app poll yet')
+      if (trigger.settle_delay !== undefined && (trigger.provider !== 'google_sheets' || !Number.isInteger(trigger.settle_delay) || Number(trigger.settle_delay) < 1 || Number(trigger.settle_delay) > 60)) fail('Sheets settle_delay must be 1 to 60 minutes')
+      for (const name of ['required_columns', 'mapped_columns']) if (trigger[name] !== undefined && (trigger.provider !== 'google_sheets' || !Array.isArray(trigger[name]) || !trigger[name].length || trigger[name].length > 100 || trigger[name].some(f => !fieldName(f)))) fail(`${name} lists 1 to 100 Sheets column names`)
       interval(trigger)
       return
     }
