@@ -5899,7 +5899,7 @@
       "executable": false
     },
     "tests/team-browser.mjs": {
-      "sha256": "7291128ae1037b037cb0dae2139b77254509b4da6c5b123650e41fff047014d6",
+      "sha256": "ce250696e540fbee5d67fc48aa2f09c71c1558152e39c30ba120f745d1fa9f42",
       "executable": false
     },
     "tests/team.test.mjs": {
