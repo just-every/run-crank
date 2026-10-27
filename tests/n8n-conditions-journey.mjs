@@ -51,6 +51,13 @@ export async function n8nConditionsJourney() {
     {...item,rule:condition('object','empty',undefined,undefined,{singleValue:true}),pass:empty,loose:true},
    ]),
    {rule:condition('object','notEmpty',"{customer: 'synthetic-crank-307', nested: [null, true,],}",undefined,{singleValue:true}),pass:true,loose:true},
+   // Literal object text and the same received text must share the data parser.
+   ...['{"message":"{{"}', "{message: '{{', nested: ['=not-code', {key: '}}'},],}", '{"{{":"=not-code"}'].flatMap(value=>[
+    {rule:condition('object','notEmpty',value,undefined,{singleValue:true}),pass:true,loose:true},
+    {rule:condition('object','notEmpty',undefined,undefined,{singleValue:true}),value,pass:true,loose:true},
+    {rule:condition('object','empty','{}',value,{rightType:'object'}),pass:true,loose:true},
+    {rule:condition('object','empty',undefined,'={{ $json.body.expected }}',{rightType:'object'}),value:'{}',expected:value,pass:true,loose:true},
+   ]),
    {rule:condition('object','notEmpty',undefined,undefined,{singleValue:true}),value:'{"__proto__":{}}',pass:true,loose:true},
    {rule:condition('object','notExists',undefined,undefined,{singleValue:true}),value:'null',pass:true,loose:true},
    {rule:condition('object','notEmpty',undefined,undefined,{singleValue:true}),value:`{"__proto__":{"synthetic-crank-305":true},"constructor":{"prototype":{}},"escaped\\u006bey":"a\\n\\"b"}`,pass:true,loose:true},
@@ -126,7 +133,7 @@ export async function n8nConditionsJourney() {
    const selected=value===null?NaN:Number(value),valid=Number.isInteger(selected)&&selected>=0&&selected<3;
    cases.push({source,body:{index:value},status:valid?'succeeded':'failed',writes:valid?1:0,expression:true,...(valid?{path:'/case'+selected}:{})});
   }
-  for(const value of ['{value: call()}', '{value: unknown}', '{value: `template`}', '{value: 1} trailing', '{value: 01}']) {
+  for(const value of ['{value: {{ unsafe }}}', '{value: \"{{\"} trailing', '{value: call()}', '{value: unknown}', '{value: `template`}', '{value: 1} trailing', '{value: 01}']) {
    const source=looseObjectExport(target,'synthetic-crank-manual-'+crypto.randomUUID());source.nodes[1].parameters.conditions.conditions[0].leftValue=value;
    const planned=await doorPlan(h,JSON.stringify(source));assert.equal(planned.status,200,planned.text);assert.equal(planned.value.rejected.length,1,'unsupported object literals stay manual');assert.ok(planned.value.diagnostics.some(row=>row.message?.includes('Manual conversion')));await door(h,'undo',{planId:planned.value.planId});
   }
