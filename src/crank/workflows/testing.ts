@@ -4,7 +4,7 @@ import { customBindings } from '../custom/bindings'
 import { customGatewayIds, requireCustomUse, validateConnectionScopes } from '../custom/use-scope'
 import { sealText, targetFor } from '../ops/payload-seal'
 import { guardedBatch, requireOwner, requirePrepare } from '../access'
-import { connectionScope, workflowScope } from '../team/policy'
+import { completeGrant, connectionScope, workflowScope } from '../team/policy'
 import { getConnection } from '../connections/store'
 import { executeRun } from '../engine/executor'
 import { branchesOf, validateGraph, type Graph } from '../engine/graph'
@@ -37,7 +37,7 @@ function bindGraph(graph: Graph, bindings: Record<string, string>) {
 /** WORK-008: freeze the draft and explicit account bindings as a test snapshot.
  * No publish pointer, trigger subscription or production authority is changed. */
 export async function testWorkflow(env: CrankEnv, actor: Actor, workflowId: string, input: Record<string, unknown>, snapshotGraph?: Graph) {
-  if (actor.team) requirePrepare(actor)
+  if (actor.team) { requirePrepare(actor); requireValue(completeGrant(actor,'test',workflowId),'Draft execution requires an explicit test grant',403) }
   else requireOwner(actor)
   workflowScope(actor, workflowId)
   const workflow = await getWorkflow(env, workflowId)

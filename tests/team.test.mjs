@@ -173,11 +173,22 @@ test('TEAM-001: complete explicit grants authorize native work, delegation, scop
   await assign(person,[grant('builder',[w.id]),grant('viewer',[w.id],[c.id])]);
   await h.post(`workflows/${w.id}/publish`,{},person.cookie,403);
   assert.equal(edge.requests.length,0);
-  await assign(person,[grant('viewer',[other.id]),grant('builder',[w.id],[c.id])]);
+  await assign(person,[grant('builder',[w.id],[c.id]),grant('viewer',[other.id])]);
   const published=await h.post(`workflows/${w.id}/publish`,{},person.cookie,201);
   assert.equal(published.version.authority.publisher,person.id);
   await h.post(`workflows/${other.id}/draft`,{name:'Refused cross-grant write'},person.cookie,403);
+  const privateRun=await h.post(`workflows/${other.id}/run`,{input:{customer:'synthetic-crank-hidden-payload'}},h.owner,201);
+  const mixed=await h.get('workflow-runs',person.cookie);
+  const hiddenRow=mixed.runs.find(row=>row.id===privateRun.id);assert.ok(hiddenRow);
+  assert.equal(hiddenRow.trigger,undefined,'viewer scope must restrict search payload even with a builder grant elsewhere');
+  assert.equal(hiddenRow.business_key,null);
+  assert.deepEqual((await h.get('workflow-runs?q=synthetic-crank-hidden-payload',person.cookie)).runs,[],'text search cannot probe a status-only workflow');
+  assert.equal((await h.get('workflow-runs/'+privateRun.id,person.cookie)).trigger,undefined);
+  const visibleRun=await h.post(`workflows/${w.id}/run`,{input:{customer:'synthetic-crank-visible-payload'}},h.owner,201);
+  assert.deepEqual((await h.get('workflow-runs?q=synthetic-crank-visible-payload',person.cookie)).runs.map(row=>row.id),[visibleRun.id]);
   await assign(admin,[grant('admin',[w.id],[c.id])]);
+  await assign(recipient,[grant('approver',[w.id],[c.id])],admin.cookie,403);
+  await assign(recipient,[grant('admin',[w.id],[c.id]),grant('approver',[w.id],[c.id])],admin.cookie,403);
   await assign(recipient,[grant('builder',[w.id],[c.id])],admin.cookie);
   await h.post(`workflows/${w.id}/draft`,{name:'Delegated builder draft'},recipient.cookie);
   await assign(recipient,[grant('builder',[other.id],[c.id])],admin.cookie,403);
@@ -202,7 +213,7 @@ test('TEAM-001: complete explicit grants authorize native work, delegation, scop
   const auditExport=(await h.get('audit/export',auditor.cookie)).trim().split('\n').map(JSON.parse);
   assert.ok(auditExport.some(row=>row.action==='audit.export'&&row.actor_id===auditor.id));
   assert.ok(auditExport.every(row=>row.detail===undefined&&row.detail_json===undefined));
-  const totals=await h.get('reports/usage',billing.cookie);assert.deepEqual(totals.map(row=>({runs:row.runs,accounted_units:row.accounted_units})),[{runs:1,accounted_units:'0'}]);
+  const totals=await h.get('reports/usage',billing.cookie);assert.deepEqual(totals.map(row=>({runs:row.runs,accounted_units:row.accounted_units})),[{runs:3,accounted_units:'0'}]);
   for(const p of [auditor,billing]) {
    for(const path of ['connections','workflows','workflow-runs']) assert.deepEqual((await h.get(path,p.cookie)).runs??await h.get(path,p.cookie),[]);
    await h.get('workflow-runs/'+run.id,p.cookie,403);await h.post('data/export',{},p.cookie,403);
@@ -241,6 +252,8 @@ test('TEAM-001: the native upgrade snapshots exact existing Base access once and
   assert.deepEqual(reports.find(row=>row.operator_id===viewer.id).grants[0].actions,['read']);
   await h.post(`workflows/${w.id}/draft`,{name:'Migrated edit remains authorized'},admin.cookie);
   await h.post(`workflows/${w.id}/publish`,{},admin.cookie,403);
+  await h.post(`workflows/${w.id}/test`,{bindings:{}},admin.cookie,403);
+  assert.equal((await h.get('workflow-runs')).runs.length,0,'migration adds no draft execution authority');
   assert.equal((await h.get('workflows/'+w.id,viewer.cookie)).name,'Migrated edit remains authorized');
   await h.post(`workflows/${w.id}/draft`,{name:'Refused migration widening'},viewer.cookie,403);
   const authored=await h.post('workflows',{name:'Synthetic migrated creation',graph:{trigger:{type:'manual'},steps:[{id:'record',type:'map',input:{ok:true}}]}},admin.cookie,201);
