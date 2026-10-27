@@ -19,9 +19,20 @@ An updated HubSpot deal trigger can use:
 }
 ```
 
-Contacts and companies are also supported. Use provider property names and values. Choose `existing` to process current matching records at first activation, or `from_now` to seed without effects. Updated triggers require watched fields or explicit `any_field: true`; the latter warns that every edit can start a run. `changed_to` compares exact values. The default identity includes the record, changed fields, current values and provider modification time. `first_value` omits the modification time. Runs expose `record_id`, `previous`, `current`, `changed_fields`, `change_time` and `change_time_source`, alongside the source record.
+Contacts and companies are also supported. Use provider property names and values. Choose `existing` to process current matching records at first activation, or `from_now` to seed without effects. Updated triggers require watched fields or explicit `any_field: true`; the latter warns that every edit can start a run. `changed_to` and `changed_from` accept literal field maps for exact equality, or WORK-013 rule groups (AND within each group, OR between groups). Every named field must be watched, unless any field was explicitly selected. A changed-from condition needs an actual prior snapshot. Typed mismatches fail the poll visibly and retain its baseline. Rule timezone options apply; the default is UTC. The default identity includes the record, changed fields, current values and provider modification time. `first_value` admits an edit only when at least one changed field has a value never observed for that record in the workflow. Each field is tracked independently, including values in initial seeds and nonmatching edits; several changed fields still admit only one run. Digests include property presence, so missing and null differ. History survives restart and a new watched-field version. Runs expose `record_id`, `previous`, `current`, `changed_fields`, `change_time` and `change_time_source`, alongside the source record.
 
-Each poll reads the complete resource, up to ten pages and 1,000 records, before admission. Overlapping pages select the newest record timestamp. Older records cannot roll a snapshot backwards. An incomplete or conflicting response retains the prior snapshot and successful poll time; the trigger displays an error and sends an owner notice. Watched fields are stored separately per immutable workflow version; a replacement version seeds without running existing records. Snapshot values follow workflow data-class sealing and rotation; archives restore inactive. Run erasure removes the linked record snapshots. Complete subject erasure and retention for snapshots that have never admitted a run remain open.
+For typed transitions, use the same field-relative rules as native filters:
+
+```json
+{
+  "changed_from": [[{"field": "dealstage", "op": "text.in", "value": ["pending", "review"]}]],
+  "changed_to": [[{"field": "dealstage", "op": "text.equals", "value": "approved"}, {"field": "amount", "op": "number.gte", "value": "100"}]]
+}
+```
+
+Both fields in this example must be in `watched_fields`. Literal field maps keep their existing exact, case-sensitive comparison; typed text operators use WORK-013 case and whitespace settings. Nonmatching observations still update the baseline and first-seen history. A type error consumes neither. This compares observations and does not recover intermediate edits absent from provider responses.
+
+Each poll reads the complete resource, up to ten pages and 1,000 records, before admission. Overlapping pages select the newest record timestamp. Older records cannot roll a snapshot backwards. An incomplete or conflicting response retains the prior snapshot and successful poll time; the trigger displays an error and sends an owner notice. Watched fields are stored separately per immutable workflow version; a replacement version seeds without running existing records. Snapshot values follow workflow data-class sealing and rotation; archives restore inactive. Run erasure removes the linked record snapshots and field-value history, and retains a value-free record digest to suppress later polls for that erased record. Complete subject erasure and retention for snapshots that have never admitted a run remain open.
 
 For mailbox polling, use `provider: "microsoft_graph"`, `resource: "messages"`, and `event: "new"` with a Microsoft Graph connection. The source is the connected mailbox's message list. This is a polling source, without a hosted inbound alias or attachment ingestion. The ten-page bound applies; a larger mailbox fails visibly rather than advancing past unread messages.
 
@@ -33,7 +44,7 @@ An owner who has already installed a Microsoft Graph subscription can optionally
 
 Crank attempts renewal within five minutes of expiry, requesting another day and retaining the provider's returned expiration. The trigger inspector shows expiry, renewal failure and the next action. Failed renewal never stops polling or establishes provider delivery. An expired or deleted subscription may require the owner to reconnect it at the provider and publish its replacement identifier. Crank does not create a notification endpoint or claim push notification delivery for Graph in this slice. Existing signed Slack events remain a separate trigger.
 
-No live provider consent or hosted mail receipt is established by the automated provider-edge journeys. Changed-from operators, settle delays, property-history detection, resource pickers and the remaining providers stay in the contract Gap.
+No live provider consent or hosted mail receipt is established by the automated provider-edge journeys. Settle delays, property-history detection, resource pickers and the remaining providers stay in the contract Gap.
 
 ## Polling rates before publication
 

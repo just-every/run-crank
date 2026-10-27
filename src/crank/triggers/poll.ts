@@ -165,7 +165,13 @@ export async function runPoll(env: CrankEnv, poll: PollRow, time: number) {
     else for (let i = 0; i < fresh.length; i += 50) {
       await env.DB.batch(fresh.slice(i, i + 50).map(event => stmt(env, 'INSERT INTO crank_seen_items(workflow_id,item_key,first_seen_at) VALUES(?,?,?) ON CONFLICT DO NOTHING', poll.workflow_id, event.key, started)))
     }
-    if (app?.snapshots.length) await env.DB.batch(app.snapshots)
+    if (app?.snapshots.length) for (let i = 0; i < app.snapshots.length; i += 50) {
+      await env.DB.batch([
+        stmt(env, `INSERT INTO crank_authority_guards(id,ok) SELECT ?,CASE WHEN EXISTS(SELECT 1 FROM crank_poll_log WHERE id=? AND status='running' AND lease_expires_at>?) AND EXISTS(SELECT 1 FROM crank_workflows WHERE id=? AND published_version_id=?) THEN 1 ELSE 0 END`, logId, logId, new Date().toISOString(), poll.workflow_id, poll.version_id),
+        ...app.snapshots.slice(i, i + 50),
+        stmt(env, 'DELETE FROM crank_authority_guards WHERE id=?', logId),
+      ])
+    }
     if (trigger.type === 'app_poll' && trigger.subscription) await renewSubscription(env, poll, trigger, time)
     const cause = lag > 30000 ? 'executor backlog' : null
     await env.DB.batch([

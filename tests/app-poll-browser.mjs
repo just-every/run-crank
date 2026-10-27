@@ -4,7 +4,7 @@ import {createServer} from 'node:http';
 import {readFile,mkdir} from 'node:fs/promises';
 import {resolve,extname,join} from 'node:path';
 import {chromium,expect} from '@playwright/test';
-import {crmPollJourney,subscriptionPollJourney} from './app-poll-journey.mjs';
+import {crmPollJourney,subscriptionPollJourney,comparisonPollJourney} from './app-poll-journey.mjs';
 import {harness} from './harness.mjs';
 import {fakeEdge,jsonResponse} from './kit.mjs';
 const evidence=process.env.CRANK_EVIDENCE;
@@ -81,9 +81,14 @@ async function rateScreens(width) {
 }
 try {
  for(const width of [1440,390]) await rateScreens(width);
- for(const width of [1440,390]) for(const journey of [crmPollJourney,subscriptionPollJourney]) {
-  await journey({inspect:async({h,w,state})=>{
+ for(const width of [1440,390]) for(const journey of [crmPollJourney,subscriptionPollJourney,comparisonPollJourney]) {
+  await journey({inspect:async({h,w,state,run})=>{
    await attach(h,width);await page.goto(h.origin+`/app/workflows/${w.id}?step=trigger`);
+   if(state==='comparison-payload') {
+    await page.goto(h.origin+'/app/workflow-runs/'+run.id);
+    if(width===1440)for(const value of ['synthetic-crank-record','changed_fields','previous','current','Pending','Approved','change_time_source','provider'])await expect(page.locator('main')).toContainText(value);
+    await shot(width,state);return;
+   }
    await expect(page.getByText('Last successful poll',{exact:true})).toBeVisible();
    await expect(page.getByText('Next poll',{exact:true})).toBeVisible();
    if(state==='expired') await expect(page.getByText('expired',{exact:true})).toBeVisible();

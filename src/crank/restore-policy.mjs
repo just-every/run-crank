@@ -135,6 +135,8 @@ export async function validateRestore({ read }) {
     try { JSON.parse(sample.payload_json); JSON.parse(sample.uploads_json); } catch { return false; }
   }
   for (const fields of await rows('crank_sample_fields')) if (!workflows.has(fields.workflow_id) || !Array.isArray(JSON.parse(fields.fields_json))) return false;
+  for (const row of await rows('crank_app_field_values')) if (!workflows.has(row.workflow_id) || !/^[a-f0-9]{64}$/.test(row.record_id) || !/^[a-f0-9]{64}$/.test(row.value_digest) || !Number.isFinite(Date.parse(row.first_seen_at))) return false;
+  for (const row of await rows('crank_app_erased_records')) if (!workflows.has(row.workflow_id) || !/^[a-f0-9]{64}$/.test(row.record_id)) return false;
   const versions = new Map((await rows('crank_workflow_versions')).map(row => [row.id, row]));
   for (const workflow of workflows.values()) {
     const graph = JSON.parse(workflow.draft_json);
