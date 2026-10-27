@@ -6,8 +6,8 @@ import {harness} from './harness.mjs';
 
 /** Real emitted app and SQLite. Only the mail provider edge is captured, so the
  * installed browser follows a genuine native email link and email step-up. */
-export async function customBrowserRuntime() {
-  const h=await harness('http://127.0.0.1:9',{emitted:true});
+export async function customBrowserRuntime(edge) {
+  const h=await harness('http://127.0.0.1:9',{emitted:true,edge});
   const client=resolve('dist/client'),publicRoot=resolve('public');
   const types={'.css':'text/css','.js':'text/javascript','.woff2':'font/woff2','.svg':'image/svg+xml','.png':'image/png','.ico':'image/x-icon'};
   const server=createServer(async(req,res)=>{
