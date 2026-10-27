@@ -80,6 +80,8 @@ export async function dataFlows(env: CrankEnv) {
     add({ id: `historical:${h.id}`, kind: 'historical', label: 'Historical source preview', state: 'retained preview; no automatic refetch', recipients: [recipient(source.url)],
       purpose: 'Owner-requested historical read before preview; release runs the saved records without refetching', fields: [...queryFields(source.url), 'pagination cursor/page'], credentials: credential(source.connection_id) })
   }
+  const digests=await stmt(env,'SELECT id,name,active,retention_days FROM crank_digests ORDER BY id').all<{id:string;name:string;active:number;retention_days:number}>()
+  for(const d of digests.results) flows.push({id:`digest:${d.id}`,kind:'digest',label:d.name,state:d.active?'active':'inactive receiving state',recipients:[],purpose:'Local cross-run digest entries and durable release receipts; downstream destinations are disclosed by their workflow steps',fields:['templated entry values','source run references','release occurrence and run references'],credentials:'Current native-owner publication; no external credential for local storage',region:'Owner-operated installation',retention:`${d.retention_days} days for local entries and release values; legal holds preserve values; erased-name digests prevent recreation without retaining entry values`})
   flows.push(...await graphDataFlows(env, credential))
   return { flows, local_retention: await retentionPolicy(env), notes: [
     'This is configuration disclosure, not evidence a request was sent, a provider was verified, or an agreement was checked.',

@@ -26,6 +26,8 @@ export function fenceRow(table, row) {
 
 /** Every value importRow may write. Base refuses any other change to a staged row. */
 export const importSafety = {
+  crank_digests: { active: [0] },
+  crank_digest_operations: { active: [0] },
   crank_recurring_tasks: { status: ['inactive'] },
   crank_state_tables: { active: [0] },
   crank_state_operations: { active: [0] },
@@ -56,6 +58,7 @@ export const importSafety = {
  * bounded value, so an unfenced unfinished run keeps only its previous status and
  * a failed delivery keeps its outcome with its single replay marked used. */
 export function importRow(table, row) {
+  if (table === 'crank_digests' || table === 'crank_digest_operations') return {...row,active:0};
   if (table === 'crank_recurring_tasks') return {...row,status:'inactive'};
   if (table === 'crank_state_tables' || table === 'crank_state_operations') return {...row,active:0};
   if (table === 'crank_subflow_calls') return {...row,...(['queued','running'].includes(row.status) ? {status:'interrupted'} : {}),lease_id:null,lease_expires_at:null};
@@ -219,5 +222,9 @@ export async function validateRestore({ read }) {
   const waits = await rows('crank_waits');
   for (const followup of followups.values()) if (!runs.has(followup.run_id) || !waits.some(wait=>wait.run_id===followup.run_id && wait.path===followup.path && wait.kind==='approval')) return false;
   for (const table of ['crank_agent_followup_recipients','crank_agent_followup_contacts']) for (const row of await rows(table)) if (!followups.has(row.followup_id)) return false;
+  const digests = new Set((await rows('crank_digests')).map(row=>row.id));
+  for (const table of ['crank_digest_entries','crank_digest_operations']) for (const row of await rows(table)) if (!digests.has(row.digest_id)) return false;
+  for (const row of await rows('crank_digest_entries')) { try { JSON.parse(row.value_json); } catch { return false; } if (!runs.has(row.source_run_id)) return false; }
+  for (const row of await rows('crank_digest_operations')) { try { JSON.parse(row.result_json); } catch { return false; } if (!runs.has(row.run_id)) return false; }
   return true;
 }
