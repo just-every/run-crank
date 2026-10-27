@@ -119,6 +119,7 @@ export async function workflowApi(request: Request, env: CrankEnv): Promise<Resp
     if (path === '/api/crank/audit' || path.startsWith('/api/crank/audit/')) {
       requireValue(request.method === 'GET', 'The audit is append-only: no caller can change or remove its records.', 405)
       if(actor.team) {
+        if(path.endsWith('/export'))await guardedBatch(env,actor,'read',[auditStatement(env,actor.id,'audit.export','workspace','audit')])
         const rows=await stmt(env,'SELECT id,at,actor_id,action,subject_kind,subject_id,version_id FROM crank_audit ORDER BY at,id').all()
         return path.endsWith('/export')?new Response(rows.results.map(row=>JSON.stringify(row)).join('\n'),{headers:{'content-type':'application/x-ndjson','cache-control':'no-store'}}):json(rows.results)
       }
