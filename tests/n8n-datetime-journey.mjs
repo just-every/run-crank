@@ -54,7 +54,7 @@ export async function n8nDateTimeJourney() {
    const key=JSON.stringify([operation,duration,timeUnit,includeInputFields,timezone]);if(bySettings.has(key))return bySettings.get(key);
    const source=arithmeticExport(target,'synthetic-crank-'+(810+index),{operation,duration,timeUnit,options:{includeInputFields}});if(timezone)source.settings.timezone=timezone;bySettings.set(key,source);sources.push(source);return source;
   });
-  const defaults=arithmeticExport(target,'synthetic-crank-850',{options:{}});delete defaults.nodes[2].parameters.outputFieldName;delete defaults.nodes[2].parameters.duration;delete defaults.nodes[2].parameters.timeUnit;
+  const defaults=arithmeticExport(target,'synthetic-crank-850',{magnitude:'2026-03-08T18:00:00Z',options:{}});delete defaults.nodes[2].parameters.outputFieldName;delete defaults.nodes[2].parameters.duration;delete defaults.nodes[2].parameters.timeUnit;
   sources.push(defaults);caseSources.push(defaults);
   for(const change of [
    s=>s.nodes[2].typeVersion=1,s=>s.nodes[2].typeVersion=2.1,
@@ -82,11 +82,11 @@ export async function n8nDateTimeJourney() {
    const hook=hooks.get(source.id);firstHook??=hook;
    const item=cases[index],date=item?.[3]??'2026-03-08T18:00:00Z',expected=item?.[4]??'2026-03-08T13:00:00.000-05:00';
    const expectedBody=item?.[5]?{date,label:'synthetic-crank-803',due:expected,nested:{values:[1,null,'synthetic-crank-806']}}:{[index===cases.length?'newDate':'due']:expected};
-   const before=writes.length,admitted=await deliver(h,hook.url,{method:'POST',headers:{'content-type':'application'+'/'+'json'},body:JSON.stringify({date})});assert.equal(admitted.status,200,admitted.text);const run=await settled(h,admitted.value.run_id);
+   const before=writes.length,admitted=await deliver(h,hook.url,{method:'POST',headers:{'content-type':'application'+'/'+'json'},body:JSON.stringify({date:index===cases.length?'synthetic-crank-unused-by-literal':date})});assert.equal(admitted.status,200,admitted.text);const run=await settled(h,admitted.value.run_id);
    assert.equal(run.status,'succeeded',JSON.stringify({index,error:run.error}));assert.equal(writes.length,before+1);assert.deepEqual(writes.at(-1),expectedBody,'complete destination payload must preserve source output and retention semantics');assert.deepEqual(run.steps.find(step=>step.step_id==='n3').output.body,{stored:expectedBody},'destination readback must match');assert.deepEqual(run.steps.find(step=>step.step_id==='n2').output,expectedBody);
   }
   await h.restart();
-  for(const date of ['2026-02-30T12:00:00Z','2026-01-01T25:00:00Z','2026-01-01T12:00:00+25:00','2026-03-08T12:00:00','03-08-2026','synthetic-crank-invalid','',null]) {
+  for(const date of ['2026-02-30T12:00:00Z','2026-01-01T25:00:00Z','2026-01-01T12:00:00+25:00','2026-03-08T12:00:00','9999-12-31T12:00:00Z','0001-01-31T12:00:00Z','03-08-2026','synthetic-crank-invalid','',null]) {
    const before=writes.length,sent=await deliver(h,firstHook.url,{method:'POST',headers:{'content-type':'application'+'/'+'json'},body:JSON.stringify({date})});const run=await settled(h,sent.value.run_id);assert.equal(run.status,'failed');assert.ok(['validation','type_mismatch'].includes(run.error.category));assert.equal(writes.length,before,'invalid date must produce no destination write');assert.ok(!run.steps.some(step=>step.step_id==='n3'&&step.status==='succeeded'));
   }
   const saved=await archive(h),original=inventory(saved),count=writes.length,restored=await harness(target,{edge});
