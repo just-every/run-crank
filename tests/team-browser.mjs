@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { spawn, execFileSync } from 'node:child_process';
 import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
-import { createWriteStream } from 'node:fs';
+import { createWriteStream, openSync, closeSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { chromium, expect } from '@playwright/test';
@@ -58,6 +58,13 @@ async function shot(width, state) {
 }
 
 try {
+  if (process.env.CI === 'true') {
+    // A fresh runner needs explicit local owner setup before the installed sign-in journey.
+    const setupLog = openSync(join(privateDir,'setup.log'),'w',0o600);
+    try { execFileSync('rer', ['setup','--owner-email','fleet@runeditrun.com','--non-interactive'], { env:process.env,timeout:600000,stdio:['ignore',setupLog,setupLog] }); }
+    catch { throw new Error('Native team browser fixture setup failed'); }
+    finally { closeSync(setupLog); }
+  }
   const dev = startDev();
   let open;
   const deadline = Date.now() + 10 * 60000;
@@ -69,7 +76,7 @@ try {
     await pause(1000);
   }
   assert.ok(open, 'rer dev readiness deadline');
-  browser = await chromium.launch({ headless: true, ...(process.platform==='linux'?{executablePath:'/usr/bin/chromium'}:{}), args: ['--use-mock-keychain', '--password-store=basic', ...(process.platform==='linux'?['--no-sandbox']:[])] });
+  browser = await chromium.launch({ headless: true, ...(process.env.CRANK_CHROMIUM?{executablePath:process.env.CRANK_CHROMIUM}:process.platform==='linux' && process.env.GITHUB_ACTIONS!=='true'?{executablePath:'/usr/bin/chromium'}:{}), args: ['--use-mock-keychain', '--password-store=basic', ...(process.platform==='linux'?['--no-sandbox']:[])] });
   const owner = await browser.newContext(); page = await owner.newPage();
   await page.goto(open);
   await page.waitForURL(url => ['/app', '/setup'].includes(url.pathname), { timeout: 60000 });
