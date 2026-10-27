@@ -2559,7 +2559,7 @@
       "executable": false
     },
     "src/crank/custom/pickers.ts": {
-      "sha256": "8df9dcf9bcc9feb3038c3a87056f3e1e7e105591a2c85ab8c50c3a0949d23033",
+      "sha256": "0a2ef82c5d3a77db452b15348786e9e63163a6b86c6cb5514feaf3605bbbce4d",
       "executable": false
     },
     "src/crank/custom/sandbox.ts": {
@@ -5447,7 +5447,7 @@
       "executable": false
     },
     "tests/custom-picker-fixture.mjs": {
-      "sha256": "a751287d1c77a06347832d5d424193fd097a4b9a91a4a67e7bc0df020c4b0c67",
+      "sha256": "f12d9423e6c09970f46c584cffd24d9724e9feec33ba44bda671d2d7890f2991",
       "executable": false
     },
     "tests/database-gateway-fixture.mjs": {

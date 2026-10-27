@@ -73,6 +73,7 @@ export async function provePagedPickers(h,fake) {
   const late=await h.post('custom-connectors/pickers',{...address,query:'1204'});assert.deepEqual(late.options,[{value:'synthetic-crank-1204',label:'Channel 1204',context:'Synthetic workspace'}]);assert.equal(late.has_next_page,false);assert.equal(calls.at(-1).query,'1204','Search is sent to the provider, not filtered from a cached page');
   state.label='Renamed channel';const refreshed=await h.post('custom-connectors/pickers',{...address,query:'1204'});assert.equal(refreshed.options[0].label,'Renamed channel');
   const duplicates=await h.post('custom-connectors/pickers',{...address,query:'Shared'});assert.deepEqual(duplicates.options.map(o=>[o.value,o.context]),[['synthetic-crank-1199','East office'],['synthetic-crank-1200','West office']]);
+  const audit=(await h.get('audit')).find(entry=>entry.action==='custom.picker_load'&&entry.subject_id===duplicates.run_id);assert.ok(audit);assert.equal(JSON.stringify(audit).includes('Shared'),false,'The general audit cannot expose the resource search text');
   await h.post('custom-connectors/selection',{...address,value:'synthetic-crank-1204',source_run_id:first.run_id,draft_digest:first.draft_digest},h.owner,409);
   await h.post('custom-connectors/selection',{...address,value:'synthetic-crank-1204',source_run_id:refreshed.run_id,draft_digest:refreshed.draft_digest});
   assert.deepEqual((await h.get('workflows/'+workflow.id)).draft.steps[0].input.channel,{$literal:'synthetic-crank-1204'});
