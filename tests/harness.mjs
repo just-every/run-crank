@@ -15,7 +15,7 @@ async function installedGustoBundle(version) {
   return (await build({...bundleOptions,plugins:[{name:'installed-provider-definition',setup(plugin){plugin.onLoad({filter:/gusto-version\.ts$/},async({path})=>({contents:(await readFile(path,'utf8')).replace(/GUSTO_CONNECTOR_VERSION = '\d+'/,`GUSTO_CONNECTOR_VERSION = '${version}'`),loader:'ts'}))}}]})).outputFiles[0].text;
 }
 /** `edge` fakes third-party APIs at the network edge: a function from Request to a Response, or undefined to use the real network. */
-export async function harness(target,{emitted=false,edge,mailEdge,quoteCosts=true,bindings={}}={}) {
+export async function harness(target,{emitted=false,edge,mailEdge,quoteCosts=true,bindings={},clock}={}) {
   bundle ??= (await build(bundleOptions)).outputFiles[0].text;
   const port=await freePort(),origin=`http://127.0.0.1:${port}`,directory=await mkdtemp(join(tmpdir(),'crank-tests-'));
   const mail=[];
@@ -26,7 +26,7 @@ export async function harness(target,{emitted=false,edge,mailEdge,quoteCosts=tru
   // the undici dispatcher miniflare installs process-wide rejects before the receiver sees the request.
   const {'content-length':_,...headers}=Object.fromEntries(request.headers);return fetch(request.url,{method:request.method,headers,body:['GET','HEAD'].includes(request.method)?undefined:await request.arrayBuffer(),redirect:'manual'})},compatibilityDate:'2026-09-08',compatibilityFlags:['nodejs_compat'],d1Databases:{DB:'crank'},bindings:{AUTH_ORIGIN:origin,AUTH_LOCAL:'true',OWNER_EMAIL:'owner@example.test',SESSION_SECRET:'test-session-secret-01234567890123456789',SETUP_TOKEN:'synthetic-test-owner-claim-01234567890123456789',MAIL_PROVIDER:'resend',MAIL_API_KEY:'example-resend-test-key',MAIL_FROM:'Crank <auth@example.test>',RER_DEV_KEY:'test-dev-gate-0123456789012345678901234567890123',CRANK_TARGET_ORIGIN:target,...bindings}};
   const optionsFor=script=>({...convertV4MiniflareOptions({...legacyOptions,...(!emitted?{script}:{})}),resourcePersistencePath:directory});
-  let currentBundle=bundle;
+  let currentBundle=clock ? `const RealDate=Date; globalThis.Date=class extends RealDate { constructor(...args) { super(...(args.length?args:[${Date.parse(clock)}])); } static now(){return ${Date.parse(clock)}} };\n`+bundle : bundle;
   let mf=new Miniflare(optionsFor(currentBundle));
   try {
     let db=await mf.getD1Database('DB');

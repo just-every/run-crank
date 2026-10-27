@@ -4,6 +4,10 @@ import { harness } from './harness.mjs';
 import { archive } from './restore-journey.mjs';
 import { estimateHold, connection, deliver, fakeEdge, fakeSecret, hookUrl, jsonResponse, publish, runs, settled, startRun, stepOf, until } from './kit.mjs';
 
+import { digestJourney } from './digest-journey.mjs';
+
+test('WORK-010: durable named digest releases survive concurrency, Chicago DST and inactive restore', digestJourney);
+
 import { tableStateJourney } from './table-state-journey.mjs';
 import { subflowsJourney } from './subflows-journey.mjs';
 import { collectJourney } from './collect-journey.mjs';
