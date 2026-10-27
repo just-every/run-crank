@@ -13,7 +13,8 @@ import { getWorkflow } from './store'
 import { canReadPayload, runDetail } from './runs'
 
 type SampleRow = { id: string; workflow_id: string; step_path: string; source: string; source_id: string | null; source_time: string | null; payload_json: string; selected: number; created_at: string }
-const sourceLabel = (row: Pick<SampleRow, 'source' | 'source_id' | 'id'>) => row.source === 'manual' ? 'manual sample' : row.source === 'schema' ? 'schema sample · not tested' : row.source === 'history' ? `history run ${row.source_id}` : `webhook sample ${row.id}`
+const sourceLabel = (row: Pick<SampleRow, 'source' | 'source_id' | 'id' | 'step_path'>) => row.source === 'manual' ? 'manual sample' : row.source === 'schema' ? 'schema sample · not tested' : row.source === 'history' ? `history run ${row.source_id}${row.step_path === 'trigger' ? '' : ` · step ${row.step_path}`}` : `webhook sample ${row.id}`
+const provenance = (row: SampleRow) => ({ id: row.id, step_path: row.step_path, source: row.source, source_id: row.source_id, source_time: row.source_time, label: sourceLabel(row), tested: false })
 function readScope(actor: Actor, workflowId: string) {
   workflowScope(actor, workflowId)
   requireValue(canReadPayload(actor, workflowId), 'Your role cannot read sample payloads', 403)
@@ -40,19 +41,29 @@ export async function saveSample(env: CrankEnv, actor: Actor, workflowId: string
   requireValue(step === 'trigger' || validateGraph(JSON.parse(workflow.draft_json)).declared.steps.some(s => s.path === step), 'Choose a step in this draft', 422)
   let payload = input.sample, sourceId: string | null = null, sourceTime: string | null = null
   if (source === 'history') {
-    requireValue(step === 'trigger' && typeof input.run_id === 'string', 'Choose a history run for the trigger')
+    requireValue(typeof input.run_id === 'string', 'Choose a history run')
     const run = await runDetail(env, actor, input.run_id)
     requireValue(run.workflow_id === workflowId && !run.payload_expired_at, 'Choose retained history from this workflow', 422)
     requireValue('trigger' in run, 'Your role cannot read this history payload', 403)
-    payload = run.trigger; sourceId = run.id; sourceTime = run.source_time ?? run.received_at
+    if (step === 'trigger') {
+      payload = run.trigger; sourceTime = run.source_time ?? run.received_at
+    } else {
+      const record = run.steps.find(record => record.path === step)
+      requireValue(record?.status === 'succeeded' && record.output !== undefined, 'Choose a retained successful output for this step', 422)
+      payload = record.output; sourceTime = record.finished_at ?? run.received_at
+    }
+    sourceId = run.id
   }
-  requireValue(isObject(payload), 'The sample must be a JSON object', 422)
+  requireValue(step === 'trigger' ? isObject(payload) : payload !== undefined, step === 'trigger' ? 'The trigger sample must be a JSON object' : 'Give a JSON sample output', 422)
   requireValue(canonical(payload).length <= 256 * 1024, 'The sample is too large', 413)
   const sampleId = id(), at = now(), target = await targetFor(env, workflowId)
+  const historyGuard = 'sample-history:' + sampleId
   await guardedBatch(env, actor, 'prepare', [
+    ...(sourceId ? [stmt(env, 'INSERT INTO crank_authority_guards(id,ok) SELECT ?,CASE WHEN EXISTS(SELECT 1 FROM crank_wf_runs WHERE id=? AND workflow_id=? AND payload_expired_at IS NULL) THEN 1 ELSE 0 END', historyGuard, sourceId, workflowId)] : []),
     stmt(env, 'UPDATE crank_workflow_samples SET selected=0 WHERE workflow_id=? AND step_path=?', workflowId, step),
     stmt(env, 'INSERT INTO crank_workflow_samples(id,workflow_id,step_path,source,source_id,source_time,payload_json,selected,created_by,created_at) VALUES(?,?,?,?,?,?,?,1,?,?)', sampleId, workflowId, step, source, sourceId, sourceTime, await sealText(target, canonical(payload)), actor.id, at),
     auditStatement(env, actor.id, 'workflow.sample', 'workflow', workflowId, { sample_id: sampleId, source, step }),
+    ...(sourceId ? [stmt(env, 'DELETE FROM crank_authority_guards WHERE id=?', historyGuard)] : []),
   ])
   return readSamples(env, actor, workflowId)
 }
@@ -92,7 +103,13 @@ export async function previewSample(env: CrankEnv, actor: Actor, workflowId: str
   }
   const row = await stmt(env, `SELECT * FROM crank_workflow_samples WHERE workflow_id=? AND step_path='trigger' AND ${input.sample_id ? 'id=?' : 'selected=1'}`, workflowId, ...(input.sample_id ? [input.sample_id] : [])).first<SampleRow>()
   requireValue(row, 'Select a trigger sample first', 422)
-  return { payload: JSON.parse((await openText(env, workflowId, row.payload_json))!), source: { id: row.id, source: row.source, source_id: row.source_id, source_time: row.source_time, label: sourceLabel(row), tested: false } }
+  return { payload: JSON.parse((await openText(env, workflowId, row.payload_json))!), source: provenance(row) }
+}
+/** Saved outputs are preview data only. They never execute the sampled step. */
+export async function previewStepSamples(env: CrankEnv, actor: Actor, workflowId: string) {
+  requirePrepare(actor); readScope(actor, workflowId)
+  const rows = (await stmt(env, "SELECT * FROM crank_workflow_samples WHERE workflow_id=? AND step_path!='trigger' AND selected=1", workflowId).all<SampleRow>()).results
+  return new Map(await Promise.all(rows.map(async row => [row.step_path, { payload: JSON.parse((await openText(env, workflowId, row.payload_json))!), source: provenance(row) }] as const)))
 }
 export async function sampleWarnings(env: CrankEnv, actor: Actor, workflowId: string, graph: Graph) {
   workflowScope(actor, workflowId)
@@ -106,9 +123,21 @@ export async function sampleWarnings(env: CrankEnv, actor: Actor, workflowId: st
     if (missing.length) warnings.push(`Stale sample: missing fields ${missing.join(', ')}`)
     if (row.source === 'schema') warnings.push('Trigger relies on a schema sample; not tested')
   } else warnings.push('Trigger relies on a schema sample; not tested')
+  const stepSamples = (await stmt(env, "SELECT * FROM crank_workflow_samples WHERE workflow_id=? AND step_path!='trigger' AND selected=1", workflowId).all<SampleRow>()).results
+  for (const sample of stepSamples) {
+    const step = validateGraph(graph).declared.steps.find(step => step.path === sample.step_path)
+    if (!step) continue
+    const payload = JSON.parse((await openText(env, workflowId, sample.payload_json, 'display'))!)
+    const prefix = `steps.${step.id}.`, fields = new Set<string>()
+    for (const match of canonical(graph.steps).matchAll(/steps\.([a-zA-Z0-9_-]+)\.([a-zA-Z0-9_.\[\]-]+)/g)) if (match[1] === step.id) fields.add(match[2])
+    const missing = [...fields].filter(field => !lookup(payload, field).found).sort()
+    if (missing.length) warnings.push(`Stale sample for step ${sample.step_path}: missing fields ${missing.map(field => prefix + field).join(', ')}`)
+    if (sample.source === 'schema') warnings.push(`Step ${sample.step_path} relies on a schema sample; not tested`)
+  }
   const tested = new Set((await stmt(env, `SELECT DISTINCT s.path FROM crank_wf_steps s JOIN crank_wf_runs r ON r.id=s.run_id JOIN crank_workflow_versions v ON v.id=r.version_id WHERE r.workflow_id=? AND r.mode='test' AND (v.graph_json=? OR json_extract(v.declared_json,'$.test_draft_digest')=?) AND s.status='succeeded'`, workflowId, canonical(graph), await digest(canonical(graph))).all<{path:string}>()).results.map(s=>s.path))
   for (const step of validateGraph(graph).declared.steps.filter(s => !['map','transform','filter','paths','loop'].includes(s.type))) {
-    if (!tested.has(step.path)) warnings.push(`Step ${step.path} relies on a schema sample; not tested`)
+    const warning = `Step ${step.path} relies on a schema sample; not tested`
+    if (!tested.has(step.path) && !warnings.includes(warning)) warnings.push(warning)
   }
   return warnings
 }

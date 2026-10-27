@@ -35,6 +35,8 @@ test('WORK-008: immutable draft tests bind test accounts; live confirmation, pro
     const approve = run => h.post(`workflow-runs/${run.id}/approve`, { path: 'release', digest: release(run).proposal_digest });
     const tested = await approve(test);
     assert.equal(tested.status, 'succeeded'); assert.equal(tested.mode, 'test'); assert.equal(tested.version.authority, 'owner-authorized draft test');
+    assert.equal(tested.version.declared.sample_source, 'manual sample');
+    assert.equal((await h.get(`audit?kind=run&id=${test.id}`)).find(entry => entry.action === 'workflow.test').detail.sample_source, 'manual sample');
     assert.deepEqual(effects, [{ account: 'Bearer ' + sandboxToken, input: { customer: 'Harbor Workshop test sample', label: 'revised' } }]);
     assert.equal((await h.get(`workflows/${workflow.id}`)).published_version_id, initialVersion.id, 'tests never publish');
     assert.ok(tested.version.declared.connection_schemas[0].schema_digest);

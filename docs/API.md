@@ -1114,6 +1114,11 @@ Authorized payload readers use `GET /api/crank/workflows/:id/samples`.
 Preparation callers save a manual trigger sample with
 `POST /api/crank/workflows/:id/samples` and `{source:"manual",sample:{...}}`,
 or select retained workflow history with `{source:"history",run_id:"..."}`.
+Include `step_path` to select that step's successful retained output instead of
+the trigger. The source keeps the run ID, step path and completion time. Missing
+or expired outputs, foreign workflows and callers without payload access are
+refused. Manual step outputs also use `step_path`; unlike trigger payloads,
+step outputs may be any JSON value, including a scalar or an array.
 A schema example uses `{source:"schema",step_path:"...",sample:{...}}` and
 always remains explicitly not tested. Use the same route with a `select` or
 `delete` suffix and `{sample_id:"..."}` to choose or remove a record. Deletion
@@ -1128,3 +1133,9 @@ not connected-provider field discovery. The workflow preview accepts
 `{sample_id:"..."}` or the selected trigger sample by default, and carries its
 source identity and time through pure mapping, transform and condition results.
 An explicit `{sample:{...}}` preview is always labelled manual.
+Selected step outputs carry previews past app steps without executing them.
+Each result names all sample sources consumed so far, and schema sources remain
+labelled not tested. A saved output does not bypass an approval, delay, loop or
+subflow. Missing fields referenced from selected outputs are named in validation
+and publication warnings. Restored step samples stay unselected until adoption
+and explicit selection; history erasure removes their retained copies too.
