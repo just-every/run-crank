@@ -10,7 +10,13 @@ import { StepError } from './engine/errors'
 
 async function state(env: CrankEnv, actor: Actor): Promise<Response> {
   requireValue(actor.kind !== 'trigger', 'Trigger tokens only admit events to their scoped flow', 403)
-  if (actor.team) return json({ actor: publicActor(actor), flows: [], runs: [], approvals: [], attempts: [], tokens: [], people: [] })
+  if (actor.team) {
+    const scope=JSON.stringify(actor.team.workflow_ids)
+    const flows=await stmt(env,'SELECT * FROM crank_flows WHERE id IN (SELECT value FROM json_each(?)) ORDER BY created_at,id',scope).all<Flow>()
+    const rows=await stmt(env,'SELECT * FROM crank_runs WHERE flow_id IN (SELECT value FROM json_each(?)) ORDER BY created_at,id LIMIT 200',scope).all<Run>()
+    const payload=['admin','builder','operator','approver'].includes(actor.team.role)
+    return json({actor:publicActor(actor),flows:flows.results,runs:rows.results.map(run=>payload?presentRun(run):{id:run.id,flow_id:run.flow_id,state:run.state,created_at:run.created_at,updated_at:run.updated_at,payload:'restricted'}),approvals:[],attempts:[],tokens:[],people:[]})
+  }
   await recoverExpiredRuns(env, actor)
   const canManage = actor.role === 'owner' && (actor.kind === 'native' || actor.kind === 'dev')
   const [flows, runs, approvals, attempts, tokens, people] = await Promise.all([
@@ -70,7 +76,6 @@ export async function crankApi(request: Request, env: CrankEnv): Promise<Respons
     }
     const runAction = /^\/api\/crank\/runs\/([^/]+)\/(approve|reject|replay)$/.exec(path)
     if (runAction) {
-      requireOwner(actor)
       if (request.body) await body(request)
       const runId = decodeURIComponent(runAction[1]), action = runAction[2]
       return json(presentRun(action === 'reject' ? await rejectRun(env, actor, runId) : await deliverRun(env, actor, runId, action === 'replay')))

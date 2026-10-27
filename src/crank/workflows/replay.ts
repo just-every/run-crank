@@ -1,3 +1,4 @@
+import { workflowScope, versionConnectionScope, completeGrant } from '../team/policy'
 import { guardedBatch, requireOwner } from '../access'
 import { executeRun } from '../engine/executor'
 import { isObject } from '../engine/values'
@@ -18,10 +19,13 @@ const isItem = (row: Row) => row.type === 'loop' && /\/items\/\d+$/.test(row.pat
  * and which effects already happened and will not repeat. Uncertain writes need
  * reconciliation (EXEC-006) and are never offered for blind replay. */
 export async function previewReplay(env: CrankEnv, actor: Actor, runId: string) {
-  requireOwner(actor)
+  if(!actor.team) requireOwner(actor)
+  else requireValue(completeGrant(actor,'replay'),'Replay requires a scoped operator',403)
   const run = await stmt(env, 'SELECT r.id,r.status,r.payload_expired_at,r.version_id,r.workflow_id,r.mode,r.repair_paths_json,r.repaired_paths_json,w.status AS workflow_status,w.owner_id FROM crank_wf_runs r JOIN crank_workflows w ON w.id=r.workflow_id WHERE r.id=?', runId)
     .first<{ id: string; status: string; payload_expired_at: string | null; version_id: string; workflow_id: string; workflow_status: string; mode: string; owner_id: string; repair_paths_json: string | null; repaired_paths_json: string }>()
   requireValue(run, 'Run not found', 404)
+  workflowScope(actor,run.workflow_id);await versionConnectionScope(env,actor,run.version_id)
+  if(run.mode==='test') requireOwner(actor)
   const rows = await Promise.all((await stmt(env, 'SELECT path,step_id,type,status,input_json,error_json,output_json,operation_key FROM crank_wf_steps WHERE run_id=? ORDER BY started_at,path', runId).all<Row>()).results
     .map(row => openRow(env, run.workflow_id, row, ['input_json', 'output_json', 'error_json'], 'display')))
   const revisions = (await stmt(env, 'SELECT path,COUNT(*) AS count FROM crank_wf_step_revisions WHERE run_id=? GROUP BY path', runId).all<{ path: string; count: number }>()).results
@@ -99,7 +103,7 @@ export async function replaySteps(env: CrankEnv, actor: Actor, runId: string, in
     stmt(env, "UPDATE crank_wf_runs SET status='queued',error_json=NULL,finished_at=NULL WHERE id=? AND status='failed' RETURNING id", runId),
     auditStatement(env, actor.id, 'run.replay', 'run', runId, { paths, corrected: Object.keys(corrections) }, preview.version_id),
   )
-  const result = await guardedBatch(env, actor, 'owner', statements)
+  const result = await guardedBatch(env, actor, actor.team?'operate':'owner', statements)
   requireValue(result.at(-2)!.results.length === 1, 'The run changed during replay; nothing was replayed', 409)
   await executeRun(env, runId)
   return runDetail(env, actor, runId)
