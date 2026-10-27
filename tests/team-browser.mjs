@@ -110,6 +110,9 @@ try {
   const peopleResponse=await owner.request.get(origin+'/auth/operators'),people=await peopleResponse.json();
   const dana=people.find(p=>p.email===invited.find(p=>p.role==='builder').email),morgan=people.find(p=>p.email===invited.find(p=>p.role==='viewer').email);
   for(const duty of duties) {const person=people.find(p=>p.email===duty.email);await send('team/'+person.id,{role:duty.role,workflow_ids:[],connection_ids:[]})}
+  const statusWorkflow=await send('workflows',{name:'Harbour Workshop — status-only department',graph:{trigger:{type:'manual'},steps:[{id:'record',type:'map',input:{ok:true}}]}},201);
+  await send(`workflows/${statusWorkflow.id}/estimate`,quote);await send(`workflows/${statusWorkflow.id}/publish`,{},201);
+  const restrictedRun=await send(`workflows/${statusWorkflow.id}/run`,{input:{customer:'synthetic-crank-hidden-customer'}},201);
   for(const width of [1440,390]) {
     await page.setViewportSize({width,height:1000});
     await page.goto(origin+'/app/access');
@@ -172,6 +175,19 @@ try {
     await transfer.locator('select[name="workflow_id"]').selectOption(workflow.id);await transfer.locator('select[name="new_owner_id"]').selectOption(morgan.id);
     await transfer.getByRole('button',{name:'Transfer ownership'}).click();await page.waitForURL('**/app/access');
     assert.equal((await send('workflows/'+workflow.id)).owner.id,morgan.id);await shot(width,'transferred');
+    await send('team/'+dana.id,{grants:[{role:'builder',workflow_ids:[workflow.id],connection_ids:[connection.id]},{role:'viewer',workflow_ids:[statusWorkflow.id],connection_ids:[]}]});
+    const listedResponse=await builderContext.request.get(origin+'/api/crank/workflow-runs');assert.equal(listedResponse.status(),200);
+    const mixedRuns=(await listedResponse.json()).runs;
+    if(width===1440) {
+      assert.ok(mixedRuns.some(run=>run.id===testRun.id&&run.trigger.input.supplier==='Northshore Fabrication — tax rehearsal'));
+      assert.equal(mixedRuns.find(run=>run.id===restrictedRun.id).payload,'restricted');
+      assert.ok(!JSON.stringify(mixedRuns).includes('synthetic-crank-hidden-customer'));
+    }
+    const ownerScreen=page;page=builderPage;await page.goto(origin+'/app/runs');await shot(width,'mixed-grant-history');
+    await page.goto(origin+'/app/workflow-runs/'+restrictedRun.id);
+    if(width===1440) {await expect(page.getByText('Restricted for your role.',{exact:true})).toBeVisible();assert.ok(!(await page.locator('main').innerText()).includes('synthetic-crank-hidden-customer'))}
+    await shot(width,'mixed-grant-status-only');page=ownerScreen;
+    await send('team/'+dana.id,{role:'builder',workflow_ids:[workflow.id],connection_ids:[connection.id]});
     const site=/RER_SITE\s+(https?:\/\/\S+)/.exec(await readFile(devLog,'utf8'))?.[1];assert.ok(site,'Installed reference site is ready');
     const docsPage=await owner.newPage();await docsPage.setViewportSize({width,height:1000});await docsPage.goto(site+'/docs/api');
     await docsPage.getByRole('cell',{name:'POST /workflows/:id/test',exact:true}).scrollIntoViewIfNeeded();await docsPage.screenshot({path:join(evidence,`${width}-api-test-role.png`)});

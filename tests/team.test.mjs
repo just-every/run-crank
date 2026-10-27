@@ -177,11 +177,52 @@ test('TEAM-001: complete explicit grants authorize native work, delegation, scop
   const published=await h.post(`workflows/${w.id}/publish`,{},person.cookie,201);
   assert.equal(published.version.authority.publisher,person.id);
   await h.post(`workflows/${other.id}/draft`,{name:'Refused cross-grant write'},person.cookie,403);
+  const visible=await h.post(`workflows/${w.id}/run`,{input:{customer:'synthetic-crank-allowed-payload'}},h.owner,201);
+  const restricted=await h.post(`workflows/${other.id}/run`,{input:{customer:'synthetic-crank-restricted-payload'},business_key:'synthetic-crank-restricted-key'},h.owner,201);
+  const legacyVisible=await h.flow('Synthetic complete legacy read'),legacyRestricted=await h.flow('Synthetic status-only legacy read');
+  const legacyRuns=[await h.run(legacyVisible,'synthetic-crank-mixed-one',{customer:'synthetic-crank-legacy-allowed'}),await h.run(legacyRestricted,'synthetic-crank-mixed-two',{customer:'synthetic-crank-legacy-restricted'})];
+  for(const grants of [
+   [grant('builder',[w.id,legacyVisible.id],[c.id]),grant('viewer',[other.id,legacyRestricted.id])],
+   [grant('viewer',[other.id,legacyRestricted.id]),grant('builder',[w.id,legacyVisible.id],[c.id])],
+  ]) {
+   await assign(person,grants);
+   const listed=(await h.get('workflow-runs',person.cookie)).runs;
+   assert.deepEqual(listed.map(row=>row.id).sort(),[visible.id,restricted.id].sort());
+   assert.equal(listed.find(row=>row.id===visible.id).trigger.input.customer,'synthetic-crank-allowed-payload');
+   const hidden=listed.find(row=>row.id===restricted.id);assert.equal(hidden.payload,'restricted');assert.equal(hidden.trigger,undefined);assert.equal(hidden.business_key,null);
+   assert.equal((await h.get('workflow-runs/'+restricted.id,person.cookie)).payload,'restricted');
+   assert.deepEqual((await h.get('workflow-runs?q=synthetic-crank-restricted-payload',person.cookie)).runs,[]);
+   assert.deepEqual((await h.get('workflow-runs?business_key=synthetic-crank-restricted-key',person.cookie)).runs,[]);
+   assert.deepEqual((await h.get('workflow-runs?q=synthetic-crank-allowed-payload',person.cookie)).runs.map(row=>row.id),[visible.id]);
+   const state=await h.get('state',person.cookie);
+   assert.equal(state.runs.find(row=>row.id===legacyRuns[0].id).input.customer,'synthetic-crank-legacy-allowed');
+   assert.equal(state.runs.find(row=>row.id===legacyRuns[1].id).payload,'restricted');
+   assert.ok(!JSON.stringify(state).includes('synthetic-crank-legacy-restricted'));
+   assert.equal((await h.get('runs/'+legacyRuns[1].id,person.cookie)).payload,'restricted');
+  }
   await assign(admin,[grant('admin',[w.id],[c.id])]);
   await assign(recipient,[grant('builder',[w.id],[c.id])],admin.cookie);
   await h.post(`workflows/${w.id}/draft`,{name:'Delegated builder draft'},recipient.cookie);
   await assign(recipient,[grant('builder',[other.id],[c.id])],admin.cookie,403);
   await assign(recipient,[grant('auditor')],admin.cookie,403);
+  await assign(recipient,[grant('approver',[w.id],[c.id])],admin.cookie,403);
+  await assign(admin,[grant('admin',[w.id],[c.id]),grant('approver',[w.id],[c.id])]);
+  await assign(recipient,[grant('approver',[w.id],[c.id])],admin.cookie,403);
+  await assign(admin,[grant('admin',['workspace:production'])]);
+  await assign(recipient,[]);
+  await assign(recipient,[grant('builder',['workspace:production'])],admin.cookie);
+  const created=await h.post('workflows',{name:'Synthetic delegated creation',graph:{trigger:{type:'manual'},steps:[{id:'record',type:'map',input:{ok:true}}]}},recipient.cookie,201);
+  assert.equal((await h.get('workflows/'+created.id,recipient.cookie)).name,'Synthetic delegated creation');
+  await h.get('workflows/'+created.id,admin.cookie,403);
+  await h.get('workflows/'+w.id,recipient.cookie,403);
+  await h.post('workflows',{name:'Synthetic denied environment',environment:'sandbox',graph:{trigger:{type:'manual'},steps:[{id:'record',type:'map',input:{ok:true}}]}},recipient.cookie,403);
+  const createdLegacy=await h.post('flows',{name:'Synthetic delegated legacy draft',source_app:'Synthetic source',destination_app:'Synthetic destination',target_url:'http://127.0.0.1:9/events'},recipient.cookie,201);
+  assert.equal((await h.get('flows/'+createdLegacy.id,recipient.cookie)).status,'draft');
+  await h.get('flows/'+createdLegacy.id,admin.cookie,403);
+  await assign(recipient,[],admin.cookie);
+  await h.get('workflows/'+created.id,recipient.cookie,403);
+  await assign(recipient,[grant('builder',[w.id],[c.id])]);
+  await assign(admin,[grant('admin',[w.id],[c.id])]);
   await h.post('data/export',{},admin.cookie,403);
   let release;const gate=new Promise(resolve=>release=resolve),encoder=new TextEncoder();
   const stream=new ReadableStream({async start(controller){controller.enqueue(encoder.encode('{"grants":'));await gate;controller.enqueue(encoder.encode(JSON.stringify([grant('viewer',[w.id])])+'}'));controller.close()}});
@@ -202,7 +243,7 @@ test('TEAM-001: complete explicit grants authorize native work, delegation, scop
   const auditExport=(await h.get('audit/export',auditor.cookie)).trim().split('\n').map(JSON.parse);
   assert.ok(auditExport.some(row=>row.action==='audit.export'&&row.actor_id===auditor.id));
   assert.ok(auditExport.every(row=>row.detail===undefined&&row.detail_json===undefined));
-  const totals=await h.get('reports/usage',billing.cookie);assert.deepEqual(totals.map(row=>({runs:row.runs,accounted_units:row.accounted_units})),[{runs:1,accounted_units:'0'}]);
+  const totals=await h.get('reports/usage',billing.cookie);assert.deepEqual(totals.map(row=>({runs:row.runs,accounted_units:row.accounted_units})),[{runs:5,accounted_units:'0'}]);
   for(const p of [auditor,billing]) {
    for(const path of ['connections','workflows','workflow-runs']) assert.deepEqual((await h.get(path,p.cookie)).runs??await h.get(path,p.cookie),[]);
    await h.get('workflow-runs/'+run.id,p.cookie,403);await h.post('data/export',{},p.cookie,403);

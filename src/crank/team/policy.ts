@@ -12,6 +12,15 @@ export const grantsAction = (grant: TeamGrant, action: TeamAction) => powers[gra
 export function completeGrant(actor: Actor, action: TeamAction, workflowId?: string, connections: string[] = []) {
   return actor.team?.grants.find(grant => grantsAction(grant, action) && (!workflowId || grant.workflow_ids.includes(workflowId)) && connections.every(id => grant.connection_ids.includes(id)))
 }
+/** Payload access follows the complete read grant for each record, never another grant's role. */
+export function payloadWorkflowIds(actor: Actor, legacy = false): string[] {
+  return [...new Set((actor.team?.grants ?? []).filter(grant => grantsAction(grant, 'read') &&
+    ['admin','builder','operator', ...(legacy ? ['approver'] : [])].includes(grant.role)).flatMap(grant => grant.workflow_ids))]
+}
+export function mayReadPayload(actor: Actor, workflowId: string, legacy = false): boolean {
+  return actor.team ? payloadWorkflowIds(actor, legacy).includes(workflowId) :
+    actor.role === 'owner' || actor.role === 'admin' || actor.kind === 'agent'
+}
 export async function teamAccess(env: CrankEnv, actor: Actor): Promise<TeamAccess | undefined> {
   if (actor.role === 'owner' || actor.tokenId || actor.grantId) return
   const row = await stmt(env, 'SELECT * FROM crank_team_access WHERE operator_id=?', actor.id).first<{role: TeamRole; workflow_ids_json: string; connection_ids_json: string; revision: string; grants_json: string}>()

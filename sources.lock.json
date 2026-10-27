@@ -139,7 +139,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "941b93e350a5799dff84048e5114bb8f4bebfa638f666de955c1919b2d2699f3",
+      "sha256": "2d257c15ccdbc5dff24a49b9f46cfa7b97b9aaeba162d5bd57eb28d1ba083f0d",
       "executable": false
     },
     "AGENTS.md": {
@@ -163,7 +163,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "174f4d60147b130266d52584cbe0961f8f231ecec6a49c0fa19353218a27919b",
+      "sha256": "548c41bf7f6242ff4758ac8ab94ac6f1e09cc6f860a8a91dcded8e5dc844300b",
       "executable": false
     },
     "DEMO.md": {
@@ -203,7 +203,7 @@
       "executable": false
     },
     "docs/CLAIMS.md": {
-      "sha256": "c2e44638fdebdf7fbc0df1371ede03493e037747ded49f9b60da1689034c0a2f",
+      "sha256": "a36def4bbcdadd424b1968d6961ad7fc299f56072f713426d145f4ec0ccfaa18",
       "executable": false
     },
     "docs/DATA-FLOWS.md": {
@@ -239,7 +239,7 @@
       "executable": false
     },
     "docs/TEAM-ACCESS.md": {
-      "sha256": "08f56b33253644440b4f1edfaa7a42eec8c35dd87d0290d3c4c9e0cab151a781",
+      "sha256": "15afb946aa6637d9b3f35d4773626964514c0656c5c50506e8eb3d03cf03a57c",
       "executable": false
     },
     "edition.json": {
@@ -2399,7 +2399,7 @@
       "executable": false
     },
     "src/crank/api.ts": {
-      "sha256": "1f4fb4d9631aa94dd0abf1ff9f24fb36a1842f0c9e5d43c54d606a3ce04c059c",
+      "sha256": "178e20b4b37114bdb64af4856686987c07337728587ed61ee68b6da38a1ff27e",
       "executable": false
     },
     "src/crank/archive-api.ts": {
@@ -3071,7 +3071,7 @@
       "executable": false
     },
     "src/crank/team/api.ts": {
-      "sha256": "b0bd5dfdf58c704213213674a96c3e88a5a9604379e961dedaacbc921f58c1ec",
+      "sha256": "6ab5b22cbd19713cbc893c5e074cdd3f0234a6ffe6332ac05130d1c64cc71722",
       "executable": false
     },
     "src/crank/team/fresh-owner.ts": {
@@ -3079,7 +3079,7 @@
       "executable": false
     },
     "src/crank/team/policy.ts": {
-      "sha256": "c5ba4bce4c4fd0945850ea9186795031448953f7de4b33368d721d24bfc028e4",
+      "sha256": "c2938c876e6e857e442efee0681f7d0fe2f6d85744455e0a95a73a92a4d603bf",
       "executable": false
     },
     "src/crank/team/service-accounts.ts": {
@@ -3395,7 +3395,7 @@
       "executable": false
     },
     "src/crank/workflows/runs.ts": {
-      "sha256": "a42de3db3c286ee3c9befcb442a71877c342a1963617eb3f26d385ea36a26c54",
+      "sha256": "6f32c5962f71a9c4eecfef47e981266a69d97c8cce2577b2d55bd67440b64a74",
       "executable": false
     },
     "src/crank/workflows/snapshot.ts": {
@@ -5863,11 +5863,11 @@
       "executable": false
     },
     "tests/team-browser.mjs": {
-      "sha256": "84fc3dcbb70b1b91d533fb09d6f9aa73867777b2afd02cf44231f8313ecdc652",
+      "sha256": "6db1512c99cba447f18fbd34de4ab9825c264fd204f6c09757bb471d681d8116",
       "executable": false
     },
     "tests/team.test.mjs": {
-      "sha256": "7e7b480ecccc80d8003ebe6142f9c58d2b2cbc8956cde72a9abefd7b9f9803ca",
+      "sha256": "7597e02855ce9d5f85253f6c26612bd061c76fe800016fd43276192b1b0c3162",
       "executable": false
     },
     "tests/triggers.test.mjs": {

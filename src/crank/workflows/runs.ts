@@ -2,7 +2,7 @@ import { collectAnswers, collectFields } from '../engine/steps/collect'
 import { collectDeadlines } from '../ops/collect-deadlines'
 import { guardedBatch } from '../access'
 import { cancelExecutorTasks } from '../executors/scheduler'
-import { workflowScope, versionConnectionScope } from '../team/policy'
+import { workflowScope, versionConnectionScope, mayReadPayload, payloadWorkflowIds } from '../team/policy'
 import { grantFence } from '../grants/authority'
 import { assertReviewer } from '../grants/reviews'
 import { isBudgetExceeded, flushUsageNotices } from '../ops/usage'
@@ -29,8 +29,6 @@ import { getWorkflow } from './store'
 
 /** DATA-003: free text search reads only plaintext payloads. */
 export const TEXT_SEARCH = 'Text search does not reach encrypted payloads of customer, financial or health workflows; find those runs by business key, or by a declared identifier on the Data screen.'
-/** Payloads are readable by owners, admins and agents; members see status and timing only. */
-export const canReadPayload = (actor: Actor) => actor.team ? ['admin','builder','operator'].includes(actor.team.role) : actor.role === 'owner' || actor.role === 'admin' || actor.kind === 'agent'
 const BUSINESS_COMPLETE = `status='succeeded' AND EXISTS(SELECT 1 FROM crank_obligations o WHERE o.run_id=crank_wf_runs.id) AND NOT EXISTS(SELECT 1 FROM crank_obligations o WHERE o.run_id=crank_wf_runs.id AND o.verified_at IS NULL) AND NOT EXISTS(SELECT 1 FROM crank_wf_steps s WHERE s.run_id=crank_wf_runs.id AND (s.status='uncertain' OR COALESCE(json_extract(s.error_json,'$.category'),'')='uncertain'))`
 function presentRun(run: RunRow & { business_complete?: number }, payload: boolean) {
   const base = { id: run.id, mode: run.mode ?? 'production', workflow_id: run.workflow_id, version_id: run.version_id, trigger_kind: run.trigger_kind, business_outcome: run.business_complete ? 'owner_verified' : 'unverified', status: run.business_complete ? 'business_complete' : run.status === 'failed' && run.error_json && JSON.parse(run.error_json).category === 'uncertain' ? 'uncertain' : run.status, business_key: payload ? run.business_key : null,
@@ -46,21 +44,23 @@ export async function searchRuns(env: CrankEnv, actor: Actor, params: URLSearchP
   const limit = Math.min(requested, 100)
   for (const key of ['from', 'to']) if (params.get(key)) requireValue(Number.isFinite(Date.parse(params.get(key)!)), `${key} must be an ISO date`, 422)
   const q = params.get('q'), before = params.get('before')
-  const rows = await stmt(env, `SELECT *, CASE WHEN (${BUSINESS_COMPLETE}) THEN 1 ELSE 0 END AS business_complete FROM crank_wf_runs WHERE (?11 IS NULL OR workflow_id IN (SELECT value FROM json_each(?11))) AND (?1 IS NULL OR workflow_id=?1) AND (?2 IS NULL OR (?2='business_complete' AND (${BUSINESS_COMPLETE})) OR (?2='uncertain' AND json_extract(error_json,'$.category')='uncertain') OR (status=?2 AND (?2!='succeeded' OR NOT (${BUSINESS_COMPLETE})) AND (?2!='failed' OR COALESCE(json_extract(error_json,'$.category'),'')!='uncertain'))) AND (?3 IS NULL OR business_key=?3)
+  const rows = await stmt(env, `SELECT *, CASE WHEN (${BUSINESS_COMPLETE}) THEN 1 ELSE 0 END AS business_complete FROM crank_wf_runs WHERE (?12 IS NULL OR workflow_id IN (SELECT value FROM json_each(?12))) AND (?11 IS NULL OR workflow_id IN (SELECT value FROM json_each(?11))) AND (?1 IS NULL OR workflow_id=?1) AND (?2 IS NULL OR (?2='business_complete' AND (${BUSINESS_COMPLETE})) OR (?2='uncertain' AND json_extract(error_json,'$.category')='uncertain') OR (status=?2 AND (?2!='succeeded' OR NOT (${BUSINESS_COMPLETE})) AND (?2!='failed' OR COALESCE(json_extract(error_json,'$.category'),'')!='uncertain'))) AND (?3 IS NULL OR business_key=?3)
     AND (?4 IS NULL OR received_at>=?4) AND (?5 IS NULL OR received_at<=?5) AND (?6 IS NULL OR json_extract(error_json,'$.category')=?6)
     AND (?7 IS NULL OR (${plain('trigger_json')} AND trigger_json LIKE ?8) OR source_id LIKE ?8 OR business_key LIKE ?8 OR (${plain('error_json')} AND error_json LIKE ?8)) AND (?9 IS NULL OR received_at||'|'||id < ?9)
     ORDER BY received_at DESC,id DESC LIMIT ?10`,
-  params.get('workflow'), params.get('status'), params.get('business_key'), params.get('from'), params.get('to')?.length === 10 ? params.get('to') + 'T23:59:59.999Z' : params.get('to'), params.get('error'), canReadPayload(actor) ? q : null, `%${q}%`, before, limit + 1, actor.team ? JSON.stringify(actor.team.workflow_ids) : null).all<RunRow & {business_complete: number}>()
+  params.get('workflow'), params.get('status'), params.get('business_key'), params.get('from'), params.get('to')?.length === 10 ? params.get('to') + 'T23:59:59.999Z' : params.get('to'), params.get('error'), q, `%${q}%`, before, limit + 1, actor.team ? JSON.stringify(actor.team.workflow_ids) : null, actor.team && (q || params.get('business_key')) ? JSON.stringify(payloadWorkflowIds(actor)) : null).all<RunRow & {business_complete: number}>()
   const page = rows.results.slice(0, limit), last = page.at(-1)
-  const payload = canReadPayload(actor)
-  return { runs: await Promise.all(page.map(async run => presentRun(payload ? await openRow(env, run.workflow_id, run, ['trigger_json', 'response_json', 'error_json'], 'display') : run, payload))), next: rows.results.length > limit && last ? `${last.received_at}|${last.id}` : null,
-    ...(q && payload ? { text_search: TEXT_SEARCH } : {}) }
+  return { runs: await Promise.all(page.map(async run => {
+    const payload = mayReadPayload(actor, run.workflow_id)
+    return presentRun(payload ? await openRow(env, run.workflow_id, run, ['trigger_json', 'response_json', 'error_json'], 'display') : run, payload)
+  })), next: rows.results.length > limit && last ? `${last.received_at}|${last.id}` : null,
+    ...(q && (!actor.team || payloadWorkflowIds(actor).length) ? { text_search: TEXT_SEARCH } : {}) }
 }
 export async function runDetail(env: CrankEnv, actor: Actor, runId: string) {
   const run = await stmt(env, `SELECT *, CASE WHEN (${BUSINESS_COMPLETE}) THEN 1 ELSE 0 END AS business_complete FROM crank_wf_runs WHERE id=?`, runId).first<RunRow & {business_complete: number}>()
   requireValue(run, 'Run not found', 404)
   workflowScope(actor, run.workflow_id)
-  const payload = canReadPayload(actor)
+  const payload = mayReadPayload(actor, run.workflow_id)
   const [steps, waits, version, attempts, revisions] = await Promise.all([
     stmt(env, 'SELECT * FROM crank_wf_steps WHERE run_id=? ORDER BY started_at,path', runId).all<Record<string, string | null>>(),
     stmt(env, 'SELECT path,kind,due_at,expires_at,proposal_json,proposal_digest,reason,created_at,resolved_at,resolution_json,decided_by FROM crank_waits WHERE run_id=? ORDER BY created_at', runId).all<Record<string, string | null>>(),
