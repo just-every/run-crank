@@ -9,6 +9,38 @@ import { SIGNATURE_PRESETS } from './signatures'
 export const POLL_FIELDS = ['poll.since', 'poll.now', 'poll.interval_minutes']
 /** TRIG-004: 1, 2, 5, 15, 30 and 60 minutes, or whole hours up to a day; no plan gate. */
 export const POLL_INTERVALS = [1, 2, 5, 15, 30, 60]
+/** Conservative published baselines, not a discovery of the connected account's quota.
+ * See ./docs/APP-TRIGGERS.md for sources, shared-budget caveats and request bounds. */
+export const POLL_RATE_TABLE = {
+  hubspot: { provider: 'HubSpot', resource: 'CRM contacts, companies and deals', limits: [{ requests: 100, window_seconds: 10 }, { requests: 250000, window_seconds: 86400 }] },
+  microsoft_graph: { provider: 'Microsoft Graph', resource: 'Outlook messages', limits: [{ requests: 10000, window_seconds: 600 }] },
+  github: { provider: 'GitHub', resource: 'Public REST repository reads (anonymous baseline)', limits: [{ requests: 60, window_seconds: 3600 }] },
+} as const
+
+/** Bound this workflow's complete poll, then select the most restrictive rate window.
+ * A warning advises; it never changes or gates the owner's chosen interval. */
+export function pollRate(trigger: Record<string, unknown>) {
+  let rate: typeof POLL_RATE_TABLE[keyof typeof POLL_RATE_TABLE] | undefined
+  let requests = 1
+  if (trigger.type === 'app_poll') {
+    rate = POLL_RATE_TABLE[trigger.provider as 'hubspot' | 'microsoft_graph']
+    requests = 10 + (trigger.subscription ? 1 : 0)
+  } else if (trigger.type === 'url_poll') {
+    const url = new URL(String(trigger.url))
+    if (url.hostname === 'api.github.com' && url.pathname.startsWith('/repos/')) rate = POLL_RATE_TABLE.github
+    if (url.hostname === 'api.hubapi.com' && /^\/crm\/v3\/objects\/(contacts|companies|deals)\/?$/.test(url.pathname)) rate = POLL_RATE_TABLE.hubspot
+    requests = isObject(trigger.pagination) ? Number(trigger.pagination.max_pages ?? 10) : 1
+  }
+  if (!rate) return null
+  const limiting = [...rate.limits].sort((a, b) => b.window_seconds / b.requests - a.window_seconds / a.requests)[0]
+  const required = requests * limiting.window_seconds / limiting.requests / 60
+  const safe = POLL_INTERVALS.find(minutes => minutes >= required) ?? Math.ceil(required / 60) * 60
+  const selected = Number(trigger.interval_minutes ?? 15)
+  const warning = selected < required
+    ? `${rate.provider} ${rate.resource}: ${requests} requests per poll at ${selected} min cannot sustain the limiting rate of ${limiting.requests} requests per ${limiting.window_seconds} seconds. Slowest safe interval: ${safe} min. Shared account traffic can require a longer interval.`
+    : null
+  return { ...rate, requests_per_poll: requests, limiting_rate: limiting, selected_interval_minutes: selected, safe_interval_minutes: safe, warning }
+}
 export const DAYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']
 const fail = (message: string): never => { throw new StepError('validation', `Trigger: ${message}`) }
 

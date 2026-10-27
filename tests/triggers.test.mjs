@@ -261,7 +261,39 @@ test('TRIG-003: incomplete poll pages retain the successful watermark and recove
   } finally { await isolated.close(); }
 });
 
-test('TRIG-007/TRIG-004: feeds start one run per new item, name their source and report poll latency', async () => {
+test('TRIG-007/TRIG-004: polling preserves interval choices, warns before publication and reports deduplicated feed latency', async () => {
+  const source = { type: 'url_poll', url: 'https://api.github.com/repos/just-every/run-crank/issues', items_path: '', interval_minutes: 1, pagination: { kind: 'link', max_pages: 2 } };
+  const draft = await h.post('workflows', { name: 'Public repository changes', graph: { trigger: source, steps: [] } }, h.owner, 201);
+  assert.equal(draft.published_version_id, null, 'the rate warning precedes any publication');
+  assert.equal(draft.poll_rate.requests_per_poll, 2);
+  assert.equal(draft.poll_rate.safe_interval_minutes, 2, 'two pages consume the anonymous hourly budget at a two-minute floor');
+  assert.deepEqual(draft.poll_rate.limiting_rate, { requests: 60, window_seconds: 3600 });
+  assert.match(draft.warnings.join(' '), /GitHub.*2 requests per poll.*60 requests per 3600 seconds.*Slowest safe interval: 2 min/);
+  assert.equal((await h.get('workflows/' + draft.id)).poll_rate.warning, draft.poll_rate.warning);
+  const validation = await h.post(`workflows/${draft.id}/validate`);
+  assert.equal(validation.ok, true); assert.deepEqual(validation.warnings, draft.warnings);
+  assert.equal((await h.get('workflows/' + draft.id)).published_version_id, null, 'validation has no publication side effect');
+  const published = await h.post(`workflows/${draft.id}/publish`, {}, h.owner, 201);
+  assert.deepEqual(published.warnings, draft.warnings, 'publication returns the same advice');
+  assert.equal((await h.get(`workflows/${draft.id}/trigger`)).poll.interval_minutes, 1, 'advice never silently changes the selected interval');
+  const bounded = await h.post(`workflows/${draft.id}/draft`, { graph: { trigger: { ...source, pagination: { kind: 'link' } }, steps: [] } });
+  assert.equal(bounded.poll_rate.requests_per_poll, 10);
+  assert.equal(bounded.poll_rate.safe_interval_minutes, 15, 'the ten-page bound rounds up to an available interval');
+  for (const minutes of [1, 2, 5, 15, 30, 60, 120, 1440]) {
+    const saved = await h.post(`workflows/${draft.id}/draft`, { graph: { trigger: { ...source, interval_minutes: minutes }, steps: [] } });
+    assert.equal(saved.draft.trigger.interval_minutes, minutes);
+    assert.equal(saved.warnings.length, minutes === 1 ? 1 : 0, 'the safe boundary and all slower supported choices are served without a warning');
+    const selected = await h.post(`workflows/${draft.id}/publish`, {}, h.owner, 201);
+    assert.equal(selected.workflow.draft.trigger.interval_minutes, minutes);
+    assert.equal((await h.get(`workflows/${draft.id}/trigger`)).poll.interval_minutes, minutes);
+  }
+  const single = await h.post(`workflows/${draft.id}/validate`, { graph: { trigger: { ...source, pagination: undefined }, steps: [] } });
+  assert.deepEqual(single.warnings, [], 'one page per minute fits the same hourly budget exactly');
+  for (const resource of ['contacts', 'companies', 'deals']) {
+    const crm = await h.post(`workflows/${draft.id}/validate`, { graph: { trigger: { type: 'app_poll', provider: 'hubspot', resource, event: 'new', connection_id: 'synthetic-crank-3', interval_minutes: 1, backfill: 'from_now' }, steps: [] } });
+    assert.deepEqual(crm.warnings, [], 'the native CRM baseline supports the one-minute choice');
+  }
+  await h.post(`workflows/${draft.id}/pause`);
   let items = [{ guid: 'a', title: 'Opening hours' }, { guid: 'b', title: 'New range' }];
   fake.routes.set('news.example', ({ url }) => url.pathname === '/rss.xml' ? new Response(rss(items), { headers: { 'content-type': 'application/rss+xml' } })
     : url.pathname === '/atom.xml' ? new Response('<feed xmlns="http://www.w3.org/2005/Atom"><title>Atom news</title><entry><id>urn:1</id><title>Atom item</title><link href="https://news.example/atom/1"/><updated>2026-10-16T12:00:00Z</updated></entry></feed>', { headers: { 'content-type': 'application/atom+xml' } })

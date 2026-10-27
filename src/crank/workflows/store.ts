@@ -21,6 +21,7 @@ import type { WorkflowRow } from '../triggers/admission'
 import { listHooks } from '../triggers/webhook'
 import { nextBoundary } from '../triggers/poll'
 import { nextOccurrence } from '../triggers/schedule'
+import { pollRate } from '../triggers/definition'
 import { claimCommand, commandCondition, commandReceipt, committedReceipt, receiptMetadata, workflowCommand, type WorkflowCommand, type WorkflowReceipt } from './idempotency'
 import { snapshotBindings } from './snapshot'
 import { adoptionStatements, pendingRestore, restoreReview } from './restore'
@@ -47,7 +48,7 @@ export async function presentWorkflow(env: CrankEnv, row: WorkflowRow) {
   const owner = await stmt(env, 'SELECT display_name FROM oa_operators WHERE id=?', row.owner_id).first<{ display_name: string }>()
   return {
     id: row.id, environment:(row as WorkflowRow & {environment:string}).environment, name: row.name, description: row.description, folder: row.folder, data_class: (row as { data_class?: string }).data_class ?? 'none', owner: { id: row.owner_id, name: owner?.display_name ?? null }, status: row.status,
-    enabled: row.status === 'published', draft: JSON.parse(row.draft_json), draft_updated_at: row.draft_updated_at, published_version_id: row.published_version_id,
+    enabled: row.status === 'published', draft: JSON.parse(row.draft_json), poll_rate: pollRate(JSON.parse(row.draft_json).trigger), draft_updated_at: row.draft_updated_at, published_version_id: row.published_version_id,
     created_by: row.created_by, created_at: row.created_at,
     versions: versions.results.map(v => ({ id: v.id, number: v.number, graph_digest: v.graph_digest, authority: JSON.parse(v.declared_json), published_by: v.published_by, published_at: v.published_at, retired_at: v.retired_at })),
     // WORK-008: every saved draft edit, newest first, with its author, time and changed fields.
