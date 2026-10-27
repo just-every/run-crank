@@ -6,7 +6,7 @@ import { causeHtml, renameOf } from '../failure'
 import { appOf, findNode, lastRecord, mappingRows, mappingText, rowLabel, shortPaths, summaryOf, type Connection, type Node, type RunDetail } from './model'
 import { summaryHtml, summaryOfResult } from './results'
 
-export interface InspectorContext { workflowId: string; graph: Graph; live: { graph: Graph; number: number } | null; node: Node; tab: string; connections: Connection[]; runs: RunDetail[]; hooks: { active: boolean }[]; canPrepare: boolean; preview: any; sample: string; now: number; people: { id: string; name: string }[] }
+export interface InspectorContext { triggerState?: any; workflowId: string; graph: Graph; live: { graph: Graph; number: number } | null; node: Node; tab: string; connections: Connection[]; runs: RunDetail[]; hooks: { active: boolean }[]; canPrepare: boolean; preview: any; sample: string; now: number; people: { id: string; name: string }[] }
 
 const STATE_ICON: Record<string, string> = { failed: 'warning', uncertain: 'warning', waiting: 'clock', running: 'clock', stopped: 'stop', skipped: 'stop' }
 
@@ -50,8 +50,11 @@ function request(input: { method?: string; url: string }) {
 function setup(ctx: InspectorContext) {
   const { node } = ctx, step = node.step
   if (node.trigger) {
+    const poll = ctx.triggerState?.poll, subscription = ctx.triggerState?.subscription
+    const pollFields = poll ? field('Initial records', esc(node.trigger.backfill === 'existing' ? 'Process existing' : 'Start from now'), false) + field('Last successful poll', ctx.triggerState.last_successful_poll ? timestamp(ctx.triggerState.last_successful_poll) : 'None yet', false) + field('Next poll', timestamp(poll.next_due_at), false) + field('Poll status', esc(poll.last_error ?? poll.last_status ?? 'Not started'), false) : ''
+    const subscriptionFields = subscription ? field('Subscription', esc(subscription.status), false) + field('Subscription expiry', timestamp(subscription.expires_at), false) + (subscription.error ? field('Next action', esc(subscription.error), false) : '') : ''
     const t = node.trigger as any, active = ctx.hooks.filter(h => h.active).length
-    return `<section class="inspector-block"><h3>Trigger</h3>${field('Type', esc(t.type), false)}${t.signature ? field('Signature', `${esc(t.signature.preset)} · verified on the raw body`, false) : ''}${t.dedup?.key ? field('Dedup key', esc(t.dedup.key)) : ''}${t.type === 'webhook' ? field('Webhook URLs', active ? `${active} active` : 'None yet', false) : ''}${t.every_minutes ? field('Every', `${esc(t.every_minutes)} min`, false) : ''}${t.at ? field('At', `${esc(t.at)} ${esc(t.timezone ?? '')}`, false) : ''}</section>`
+    return `<section class="inspector-block"><h3>Trigger</h3>${field('Type', esc(t.type), false)}${pollFields}${subscriptionFields}${t.watched_fields ? field('Watched fields', esc(t.watched_fields.join(', ')), false) : ''}${t.signature ? field('Signature', `${esc(t.signature.preset)} · verified on the raw body`, false) : ''}${t.dedup?.key ? field('Dedup key', esc(t.dedup.key)) : ''}${t.type === 'webhook' ? field('Webhook URLs', active ? `${active} active` : 'None yet', false) : ''}${t.every_minutes ? field('Every', `${esc(t.every_minutes)} min`, false) : ''}${t.at ? field('At', `${esc(t.at)} ${esc(t.timezone ?? '')}`, false) : ''}</section>`
   }
   const connection = ctx.connections.find(c => c.id === step!.connection_id)
   const mapping = step!.input && typeof step!.input === 'object' ? mappingRows(step!.input).filter(([key]) => key && !(step!.type === 'http' && ['method', 'url'].includes(key))) : []

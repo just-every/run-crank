@@ -7,6 +7,7 @@ export interface AppDefinition {
 }
 export const APPS: Record<string, AppDefinition> = {
   nook: { name: 'Nook integration token', kinds: ['bearer'], domains: 'declared' },
+  microsoft_graph: { name: 'Microsoft Graph', kinds: ['bearer'], domains: ['graph.microsoft.com'] },
   gusto: { name: 'Gusto company credentials', kinds: ['bearer', 'oauth2'], domains: ['api.gusto-demo.com', 'api.gusto.com'] },
   quickbooks: { name: 'QuickBooks sandbox', kinds: ['oauth2'], domains: ['sandbox-quickbooks.api.intuit.com'] },
   http: { name: 'HTTP API', kinds: ['bearer', 'basic', 'api_key', 'hmac', 'oauth2_client_credentials'], domains: 'declared' },

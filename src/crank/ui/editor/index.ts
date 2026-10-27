@@ -12,7 +12,7 @@ import { runsStrip } from './runs'
 import { restorePanel } from './restore'
 
 export interface EditorData {
-  workflow: any; current: Version | null; previous: Version | null; graphs: Map<string, Graph>; runs: RunDetail[]; connections: Connection[]
+  triggerState?: any; workflow: any; current: Version | null; previous: Version | null; graphs: Map<string, Graph>; runs: RunDetail[]; connections: Connection[]
   today: { runs: number; failed: number; awaiting_approval: number }; tokens: any[]; actor: any; params: URLSearchParams; preview?: any; customPicker?:string; approvals: number; people: { id: string; name: string }[]
 }
 
@@ -68,6 +68,6 @@ export function editorView(d: EditorData): { content: string; page: Page } {
   const head = `<div class="editor-head"><div class="editor-title"><h1>${esc(wf.name)}</h1>${unpublished && d.current ? chip('pending', 'Unpublished changes') : ''}${!d.current ? chip('draft', 'Draft') : ''}</div><div class="page-tools">${tools}</div>${wf.description ? `<p class="page-intro">${esc(wf.description)}</p>` : ''}</div>`
   const changes = d.params.get('changes') && d.current && d.previous ? changesPanel(d.current.graph, d.previous, changed, d.current.number) : ''
   const strip = runsStrip({ workflowId: wf.id, runs: d.runs, graphs: d.graphs, current: graph, live: d.current, connections: d.connections, today: d.today, q, status, selected: node.path })
-  const content = `<div class="editor"><div class="editor-main">${head}${owner ? restorePanel(wf) + workflowEstimateView(wf, wf.estimate) : ''}${changes}${canvas(graph, { workflowId: wf.id, connections: d.connections, runs: d.runs, selected: node.path, repaired, changedIn: d.current?.number ?? null, query })}${strip}</div><div class="editor-side">${inspector({ workflowId: wf.id, graph, live: d.current, node, tab, connections: d.connections, runs: d.runs, hooks: wf.hooks ?? [], canPrepare, preview: d.preview, sample, now: Date.now(), people: d.people })}${d.customPicker??''}${agentCard(d, changed, undo(true))}</div></div>`
+  const content = `<div class="editor"><div class="editor-main">${head}${owner ? restorePanel(wf) + workflowEstimateView(wf, wf.estimate) : ''}${changes}${canvas(graph, { workflowId: wf.id, connections: d.connections, runs: d.runs, selected: node.path, repaired, changedIn: d.current?.number ?? null, query })}${strip}</div><div class="editor-side">${inspector({ triggerState: d.triggerState, workflowId: wf.id, graph, live: d.current, node, tab, connections: d.connections, runs: d.runs, hooks: wf.hooks ?? [], canPrepare, preview: d.preview, sample, now: Date.now(), people: d.people })}${d.customPicker??''}${agentCard(d, changed, undo(true))}</div></div>`
   return { content, page: { editor: true, crumbs: [['Flows', '/app']], bar, approvals: d.approvals, section: 'Flows' } }
 }

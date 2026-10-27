@@ -72,7 +72,11 @@ async function triggerState(env: CrankEnv, workflowId: string, params: URLSearch
     stmt(env, 'SELECT * FROM crank_schedules WHERE workflow_id=?', workflowId).first(),
     stmt(env, 'SELECT * FROM crank_schedule_occurrences WHERE workflow_id=? ORDER BY planned_at DESC LIMIT 20', workflowId).all(),
   ])
+  const successful = await stmt(env, "SELECT MAX(started_at) AS at FROM crank_poll_log WHERE workflow_id=? AND status='ok'", workflowId).first<{ at: string | null }>()
+  const subscription = (poll as any)?.subscription_json ? JSON.parse((poll as any).subscription_json) : graph.trigger.subscription ? { ...graph.trigger.subscription, status: 'active' } : null
+  if (subscription && Date.parse(subscription.expires_at) <= Date.now()) subscription.status = 'expired'
   return {
+    subscription, last_successful_poll: successful?.at ?? null,
     trigger: graph.trigger, hooks: await listHooks(env, workflowId), poll, poll_log: log.results, schedule,
     planned: graph.trigger.type === 'schedule' ? plannedTimes(graph.trigger, from, count).map(o => ({ at: new Date(o.at).toISOString(), local: o.local, occurrence: o.key })) : [],
     occurrences: occurrences.results,

@@ -22,6 +22,7 @@ export async function graphDataFlows(env: CrankEnv, credential: (id: unknown) =>
       fields: [...fields(input), ...urls.flatMap(queryFields), ...(kind === 'http' ? ['multipart file names, content types and bytes when mapped', 'pagination and readback query'] : kind === 'file.fetch' ? ['URL query; download request (no uploaded file bytes)'] : [])], credentials: credential(connectionId),
     }))
     if (trigger.type === 'feed') emit('trigger', 'poll', { headers: 'feed content negotiation' }, undefined, trigger.urls as unknown[])
+    if (trigger.type === 'app_poll') emit('trigger', 'poll', { resource: trigger.resource, fields: trigger.watched_fields, subscription: trigger.subscription }, trigger.connection_id, [trigger.provider === 'hubspot' ? 'https://api.hubapi.com' : 'https://graph.microsoft.com'])
     if (trigger.type === 'url_poll') emit('trigger', 'poll', { query: trigger.query, headers: trigger.headers, pagination: trigger.pagination }, trigger.connection_id, [trigger.url])
     const walk = (steps: Step[], prefix = '') => {
       for (const step of steps) {

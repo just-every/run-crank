@@ -46,7 +46,7 @@ export const importSafety = {
   crank_wf_runs: { status: ['paused'], error_json: unfinished.map(status => runFence(status)), lease_id: [null], lease_expires_at: [null], continuation_authority: [0] },
   crank_wf_steps: { status: ['uncertain'], error_json: [uncertainWrite] },
   crank_runs: { state: ['failed'], outcome_json: [deliveryFence(null)], replay_count: [1], lease_id: [null], lease_expires_at: [null] },
-  crank_polls: { next_due_at: [distant] },
+  crank_polls: { next_due_at: [distant], subscription_json: [null] },
   crank_schedules: { next_due_at: [distant] },
 };
 
@@ -80,7 +80,8 @@ export function importRow(table, row) {
     return { ...row, lease_id: null, lease_expires_at: null,
       ...(open && row.outcome_json === null ? { state: 'failed', outcome_json: deliveryFence(null) } : open ? { state: 'failed', replay_count: 1 } : {}) };
   }
-  if (table === 'crank_polls' || table === 'crank_schedules') return { ...row, next_due_at: distant };
+  if (table === 'crank_polls') return { ...row, next_due_at: distant, subscription_json: null };
+  if (table === 'crank_schedules') return { ...row, next_due_at: distant };
   return row;
 }
 
