@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "findings": [
+    {
+      "rule": "hygiene.email",
+      "path": "tests/team-browser.mjs",
+      "blob": "903e8167d1554d56f3e3799932762173fc6bf1a8",
+      "reason": "The brief explicitly permits the public fleet identity at Run Edit Run. This exact fixture uses that identity only for local owner setup; development mail is suppressed and no customer address is present.",
+      "reviewer": "sx-crank-c-i990",
+      "date": "2026-10-27"
+    },
+    {
+      "rule": "hygiene.email",
+      "path": "tests/team-browser.mjs",
+      "blob": "b0cf9939a5c4861edb6c0f796b5807d6444df7ce",
+      "reason": "The brief explicitly permits the public fleet identity at Run Edit Run. This exact fixture uses that identity only for local owner setup; development mail is suppressed and no customer address is present.",
+      "reviewer": "sx-crank-c-i990",
+      "date": "2026-10-27"
+    }
+  ]
+}

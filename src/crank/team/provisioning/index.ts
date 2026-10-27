@@ -4,7 +4,7 @@ import { groups } from './groups'
 import { ownerApi } from './owner'
 import { schema, scim, scimError } from './protocol'
 import { users } from './users'
-export { groupAccess, groupGrantRowsSql, groupRevisionFence } from './access'
+export { groupRevisionFence } from './access'
 
 export async function provisioningApi(request: Request,env: CrankEnv): Promise<Response|null> {
   const path=new URL(request.url).pathname,ownerPath=path==='/api/crank/team-provisioning'||path.startsWith('/api/crank/team-provisioning/')

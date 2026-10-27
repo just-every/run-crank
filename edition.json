@@ -12,6 +12,7 @@
       "source": {
         "kind": "local",
         "paths": [
+          ".publish-check",
           ".github",
           ".gitignore",
           ".node-version",
