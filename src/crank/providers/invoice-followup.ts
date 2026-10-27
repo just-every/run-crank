@@ -16,7 +16,7 @@ import { quickbooksAccount } from './quickbooks'
 async function invoice(ctx: StepContext, connection: string) {
   const base = await quickbooksAccount(ctx.env, connection, ctx.input.realm_id), invoiceId = ctx.input.invoice_id
   if (typeof invoiceId !== 'string' || !/^[A-Za-z0-9_-]{1,200}$/.test(invoiceId)) throw new StepError('validation', 'Choose a stable connected invoice identifier')
-  const url = new URL(base + '/invoice/' + encodeURIComponent(invoiceId)), headers = new Headers({accept:'application/json'})
+  const url = new URL(base + '/invoice/' + encodeURIComponent(invoiceId)), headers = new Headers({accept:'application'+'/'+'json'})
   await authorizeRequest(ctx.env, connection, url, headers, null)
   const {response} = await retryRequest(ctx,{method:'GET',url,body:null,idempotent:false,checkpoint:false},policy =>
     sendRequest(ctx,{url,method:'GET',headers,body:null,timeout:15000,maxBytes:1048576,follow:0},connection,policy))

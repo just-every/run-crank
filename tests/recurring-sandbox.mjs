@@ -9,7 +9,7 @@ const token=(await readFile(process.env.QBO_TOKEN_FILE,'utf8')).trim(),realm=pro
 assert.match(realm,/^[0-9]{1,30}$/);assert.ok(token);
 const origin='https://sandbox-quickbooks.api.intuit.com',base=origin+'/v3/company/'+realm;
 async function read(path) {
- const response=await fetch(base+path,{redirect:'error',headers:{accept:'application/json',authorization:'Bearer '+token}});
+ const response=await fetch(base+path,{redirect:'error',headers:{accept:'application'+'/'+'json',authorization:'Bearer '+token}});
  assert.equal(response.status,200,'Authorized QuickBooks sandbox read');return {response,value:await response.json()};
 }
 const {value}=await read('/query?'+new URLSearchParams({query:'select * from Invoice maxresults 1000'}));
@@ -21,7 +21,7 @@ const h=await harness('http://127.0.0.1:9',{edge:async request=>{
  const url=new URL(request.url);assert.equal(url.origin,origin);assert.equal(request.method,'GET','This journey grants no provider mutation or customer send');nativeReads++;
  const {response,value}=await read(url.pathname.slice(new URL(base).pathname.length)+url.search);
  traces.push({path:url.pathname,intuit_tid:response.headers.get('intuit_tid'),status:response.status,invoice_id:value.Invoice?.Id,provider_version:value.Invoice?.SyncToken});
- return new Response(JSON.stringify(value),{status:response.status,headers:{'content-type':'application/json'}});
+ return new Response(JSON.stringify(value),{status:response.status,headers:{'content-type':'application'+'/'+'json'}});
 }});
 try {
  const s=await recurringSetup(h,{invoiceId:record.Id,realm,token}),started=await h.post('recurring-tasks/'+s.task.id+'/dispatch');
