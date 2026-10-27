@@ -1,4 +1,4 @@
-import { previewSample } from './samples'
+import { previewSample, previewStepSamples } from './samples'
 import { collectAnswers, collectFields } from '../engine/steps/collect'
 import { collectDeadlines } from '../ops/collect-deadlines'
 import { guardedBatch } from '../access'
@@ -222,31 +222,43 @@ export async function startRun(env: CrankEnv, actor: Actor, workflowId: string, 
   }
 }
 
-/** WORK-012/WORK-013 preview: pure steps run on a manual sample, labelled as such; the
- * walk stops before the first step that would call an app. */
+/** Pure previews carry retained source provenance. An app step can supply a saved
+ * output, but preview never calls the app or starts a run. */
 export async function previewWorkflow(env: CrankEnv, actor: Actor, workflowId: string, input: Record<string, unknown>) {
   const workflow = await getWorkflow(env, workflowId), graph = JSON.parse(workflow.draft_json) as Graph
   const zone = requireZone(graph.settings?.timezone ?? (await workspaceSettings(env)).timezone)
   const selected = await previewSample(env, actor, workflowId, input)
+  const saved = await previewStepSamples(env, actor, workflowId)
   const scope: Scope = { trigger: selected.payload, steps: {}, run: { id: 'preview', workflow_id: workflowId } }
   const results: Record<string, unknown>[] = [], time = Date.now()
+  type Source = { label: string; source: string; tested: boolean; id?: string }
+  const sources: Source[] = [selected.source]
+  const record = (result: Record<string, unknown>) => results.push({ ...result, source: sources.at(-1), sources: [...sources] })
   const walk = (steps: Step[], prefix: string): boolean => {
     for (const step of steps) {
       const path = prefix + step.id
       try {
+        const sample = saved.get(path)
+        if (sample && !['approval','collect','delay','loop','subflow','filter','paths'].includes(step.type)) {
+          scope.steps[step.id] = sample.payload
+          sources.push(sample.source)
+          record({ path, type: step.type, output: sample.payload, outcome: 'saved sample; step not run' })
+          continue
+        }
         if (step.type === 'paths') {
           const evaluations = branchesOf(step).filter(b => b.kind === 'rule').map(b => ({ branch: b.id, ...evaluate(b.when as Groups, scope, zone, time) }))
           const passing = evaluations.filter(e => e.pass).map(e => e.branch)
           let matched = step.mode === 'exclusive' ? passing.slice(0, 1) : passing
           if (!matched.length && isObject(step.fallback)) matched = ['fallback']
           if (isObject(step.always)) matched.push('always')
-          results.push({ path, type: 'paths', matched, evaluations, outcome: matched.length ? 'routed' : 'stopped by filter' })
+          record({ path, type: 'paths', matched, evaluations, outcome: matched.length ? 'routed' : 'stopped by filter' })
+          if (!matched.length) return false
           for (const branch of branchesOf(step).filter(b => matched.includes(b.id))) if (!walk(branch.steps, `${path}/${branch.id}/`)) return false
-          return true
+          continue
         }
         if (step.type === 'filter') {
           const evaluation = evaluate(step.when as Groups, scope, zone, time)
-          results.push({ path, type: 'filter', pass: evaluation.pass, outcome: evaluation.mismatch ? 'type mismatch' : evaluation.pass ? 'passed' : 'stopped by filter', trace: evaluation })
+          record({ path, type: 'filter', pass: evaluation.pass, outcome: evaluation.mismatch ? 'type mismatch' : evaluation.pass ? 'passed' : 'stopped by filter', trace: evaluation })
           if (!evaluation.pass) return false
           continue
         }
@@ -254,18 +266,18 @@ export async function previewWorkflow(env: CrankEnv, actor: Actor, workflowId: s
           const resolved = resolve(step.input ?? {}, scope) as Record<string, unknown>
           const output = step.type === 'map' ? resolved : runTransform(String(step.fn), resolved)
           scope.steps[step.id] = output
-          results.push({ path, type: step.type, output })
+          record({ path, type: step.type, output })
           continue
         }
-        results.push({ path, type: step.type, outcome: 'not run in preview', note: `${step.type} would act on an app or wait; test it from a run` })
+        record({ path, type: step.type, outcome: 'not run in preview', note: `${step.type} would act on an app or wait; test it from a run` })
         return false
       } catch (error) {
-        results.push({ path, type: step.type, outcome: 'validation failure', error: error instanceof StepError ? error.toJSON() : { message: 'Preview failed' } })
+        record({ path, type: step.type, outcome: 'validation failure', error: error instanceof StepError ? error.toJSON() : { message: 'Preview failed' } })
         return false
       }
     }
     return true
   }
   walk(graph.steps, '')
-  return { sample_source: selected.source.label, source: selected.source, digest: await digest(canonical(selected.payload)), steps: results.map(step => ({ ...step, source: selected.source })) }
+  return { sample_source: sources.map(source => source.label).join(' + '), source: selected.source, sources, digest: await digest(canonical([selected.payload, ...[...saved].map(([path, sample]) => [path, sample.payload])])), steps: results }
 }
