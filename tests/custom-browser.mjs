@@ -1,3 +1,5 @@
+import {fakeEdge} from './kit.mjs';
+import {pagedPickerSetup} from './custom-picker-fixture.mjs';
 import {privateWriteBrowser} from './private-write-browser.mjs';
 /** Installed owner journey: review, private gateway, checkpointed results and revocation at both widths. */
 import assert from 'node:assert/strict';
@@ -17,14 +19,17 @@ const evidence=process.env.CRANK_EVIDENCE;assert.ok(evidence,'Set CRANK_EVIDENCE
 const privateDir=await mkdtemp(join(tmpdir(),'crank-custom-browser-')),cli=promisify(execFile),wait=ms=>new Promise(r=>setTimeout(r,ms));
 let browser,page,runtime;
 try {
-  runtime=await customBrowserRuntime();const origin=runtime.origin;
-  browser=await chromium.launch({headless:true,args:['--use-mock-keychain','--password-store=basic']});const context=await browser.newContext();page=await context.newPage();
+  const fake=fakeEdge();runtime=await customBrowserRuntime(fake.edge);const origin=runtime.origin;
+  browser=await chromium.launch({headless:true,...(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH?{executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH}:{}),args:['--no-sandbox','--use-mock-keychain','--password-store=basic']});const context=await browser.newContext();page=await context.newPage();
   const requested=await runtime.h.send('/auth/magic-link',{email:'owner@example.test',returnTo:'/app'});assert.equal(requested.status,202,requested.text);
   await page.goto(runtime.mailLink());await page.getByRole('button',{name:'Confirm',exact:true}).click();await page.waitForURL(url=>['/app','/setup'].includes(url.pathname));
   if(new URL(page.url()).pathname==='/setup'){await page.getByRole('checkbox').check();await page.getByRole('button',{name:'Finish setup',exact:true}).click();await page.waitForURL('**/app')}
   const send=async(path,body,expected=200,headers={})=>{const response=await context.request.fetch(new URL(path,origin).href,{method:body===undefined?'GET':'POST',headers:{origin,...headers},...(body===undefined?{}:{data:body})});const text=await response.text();let value;try{value=JSON.parse(text)}catch{value=text}assert.equal(response.status(),expected,path+': '+JSON.stringify(value));return value};
   const h={owner:'native-owner',post:(path,body={},_owner,status=200)=>send('/api/crank/'+path,body,status),get:path=>send('/api/crank/'+path)};
   const shots=async(name,setup)=>{for(const width of [1440,390]){await page.setViewportSize({width,height:1000});if(setup)await setup();assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`${name} ${width}: overflow`);await page.screenshot({path:join(evidence,`${width}-${name}.png`),fullPage:true})}};
+  if(process.env.CRANK_PICKER_ONLY==='1') {
+    await pagedBrowser({h,page,origin,shots,fake});
+  } else {
   const publicDescription={openapi:'3.0.3',info:{title:'Harbour Workshop public stock API',version:'1'},servers:[{url:'https://stock.harbour.example'}],'x-crank-id':'harbour-public-review-'+journeyTag,'x-crank-disclosure':customDisclosure,components:{securitySchemes:{stock:{type:'oauth2',flows:{clientCredentials:{tokenUrl:'https://stock.harbour.example/token',scopes:{'records.read':'Read stock','private.notes':'Read private notes'}}}}}},paths:{'/stock':{get:{operationId:'read_stock','x-crank-kind':'action',summary:'Read wholesale stock',security:[{stock:['records.read']}],responses:{200:{description:'Stock records'}}}},'/notes':{get:{operationId:'private_notes','x-crank-kind':'action',summary:'Read private supplier notes',security:[{stock:['private.notes']}],responses:{200:{description:'Supplier notes'}}}}}};
   await page.goto(origin+'/app/connections');await page.getByText('Propose a connector from OpenAPI',{exact:true}).click();await page.getByLabel('OpenAPI description (JSON)').fill(JSON.stringify(publicDescription,null,2));await page.getByRole('button',{name:'Propose connector',exact:true}).click();await page.getByRole('checkbox',{name:'records.read',exact:true}).check();await page.getByRole('checkbox',{name:/I confirm the recipient/}).check();
   await shots('custom-proposal-review');await page.getByRole('button',{name:'Install reviewed version',exact:true}).click();await page.waitForURL('**/app/connections');
@@ -94,6 +99,49 @@ try {
   await shots('gateway-revoked-run',()=>page.goto(origin+'/app/workflow-runs/'+failed.id));await shots('gateway-revoked-connections',()=>page.goto(origin+'/app/connections'));
   const decisions=await h.get('audit');assert.ok(decisions.some(a=>a.action==='gateway.environment_denied'));assert.ok(decisions.some(a=>a.action==='gateway.revoke'));
   console.log('CONN-011 PASS: emitted native email owner OpenAPI scope review, signed private SQLite/file gateway enrollment and concrete grants, expiring service account scopes and revocation, live private account resource names, checkpointed success and refused scope, actual owner-approved PostgreSQL write and independent readback, published workflow and revoked gateway end states at 1440/390. No provider traffic is simulated in this installed journey. External provider/IdP interoperability is not asserted.');
+  }
 } catch(error) {
   if(page)await page.screenshot({path:join(evidence,'custom-journey-error.png'),fullPage:true});console.error(String(error.message).replace(/https?:\/\/\S+/g,'[private URL]'));process.exitCode=1;
 } finally {await browser?.close();await runtime?.close();await rm(privateDir,{recursive:true,force:true})}
+
+
+async function pagedBrowser({h,page,origin,shots,fake}) {
+  const f=await pagedPickerSetup(h,fake,'browser'),{address,workflow}=f;
+  const open=()=>page.goto(origin+`/app/workflows/${workflow.id}?step=choose`);
+  const click=name=>page.getByRole('button',{name,exact:true}).click();
+  await page.setViewportSize({width:1440,height:1000});
+  await h.post('custom-connectors/selection',{...address,input_name:'workspace',value:'south',draft_digest:(await h.post('custom-connectors/pickers',address)).draft_digest});
+  const draft=await h.get('workflows/'+workflow.id);delete draft.draft.steps[0].input.workspace;
+  await h.post('workflows/'+workflow.id+'/draft',{graph:draft.draft});
+  await open();assert.equal(await page.getByRole('button',{name:'Load current Channel',exact:true}).isDisabled(),true);
+  await shots('picker-parent-required');
+  await page.getByRole('textbox',{name:'Custom Workspace',exact:true}).fill('north');await click('Use custom Workspace');
+  const before=(await h.get('workflows/'+workflow.id)).draft;
+  await click('Load current Channel');assert.equal(f.calls.length,2);
+  assert.equal(await page.getByRole('combobox',{name:'Choose Channel',exact:true}).locator('option').count(),41);
+  await click('Next Channel page');assert.equal(f.calls.at(-1).offset,40);
+  await page.getByRole('textbox',{name:'Search Channel',exact:true}).fill('Shared');await click('Load current Channel');
+  const choices=await page.getByRole('combobox',{name:'Choose Channel',exact:true}).locator('option').allTextContents();
+  assert.deepEqual(choices.slice(1),['Shared channel — synthetic-crank-1199 — East office','Shared channel — synthetic-crank-1200 — West office']);
+  assert.ok(await page.locator('time[datetime]').count());
+  for(const control of await page.locator('button,a').all()) {
+    if(await control.isVisible() && !(await control.innerText()).trim())assert.ok(await control.getAttribute('data-tooltip') || await control.getAttribute('aria-label'),'Every icon control has an accessible tooltip label');
+  }
+  await shots('picker-search-duplicates');
+  await page.getByRole('textbox',{name:'Search Channel',exact:true}).fill('1204');await click('Load current Channel');
+  assert.equal(f.calls.at(-1).query,'1204');assert.equal(await page.getByRole('button',{name:'Next Channel page',exact:true}).count(),0);
+  assert.deepEqual((await h.get('workflows/'+workflow.id)).draft,before,'Searching and paging do not change the draft or publish');
+  await page.getByRole('combobox',{name:'Choose Channel',exact:true}).selectOption('synthetic-crank-1204');await click('Use Channel');
+  assert.deepEqual((await h.get('workflows/'+workflow.id)).draft.steps[0].input.channel,{$literal:'synthetic-crank-1204'});
+  await shots('picker-selected-resource');
+  await page.getByRole('textbox',{name:'Custom Workspace',exact:true}).fill('south');await click('Use custom Workspace');
+  assert.ok(await page.getByText('Cleared dependent choices: Channel. Load names for the new parent.',{exact:true}).count());
+  assert.equal((await h.get('workflows/'+workflow.id)).draft.steps[0].input.channel,undefined);
+  await click('Load current Channel');assert.equal(f.calls.at(-1).workspace,'south');
+  await h.post(`connections/${f.account.id}/revoke`);
+  await click('Next Channel page');assert.ok(await page.getByRole('heading',{name:'Resource choice refused',exact:true}).count());
+  await shots('picker-revoked-refusal');
+  assert.equal((await h.get('workflows/'+workflow.id)).published_version_id,null);
+  assert.ok(f.calls.every(call=>call.count<=40));
+  console.log('CONN-019 custom page picker PASS: provider search across 1206 synthetic resources, bounded pages, duplicate context, loaded time, parent clearing, read-only draft and revoked refusal; screens at 1440 and 390. Real provider acceptance remains unproved.');
+}

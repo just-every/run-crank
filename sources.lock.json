@@ -139,7 +139,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "c416dcf4c4db8457b04291eeeae47ff6c2175f721825543623bae0dd94c74e67",
+      "sha256": "6d57a96fc0aa8a414241302e6a5dc6e66bc283c044bc2d068dbab6ab41d4fd98",
       "executable": false
     },
     "AGENTS.md": {
@@ -163,7 +163,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "9967ae65e23df4b3c0f2cad74e37af989050441490e1a7e3fdf4856b9f6f0afd",
+      "sha256": "f9154e171f0dd59a413d5a6fb9a3b1c08a65f6b9af9c7bde11019c2688f478fc",
       "executable": false
     },
     "DEMO.md": {
@@ -203,7 +203,7 @@
       "executable": false
     },
     "docs/CLAIMS.md": {
-      "sha256": "12b705b336f6a6f6d6b3f4d591c7b1fcd4a304df4aa48d7e4ad1367fc09eadcd",
+      "sha256": "e142685642ab1de4225f2aba7483811b942eeaa2fb837d9c73cfc52845caeedb",
       "executable": false
     },
     "docs/DATA-FLOWS.md": {
@@ -2523,7 +2523,7 @@
       "executable": false
     },
     "src/crank/custom/definition.ts": {
-      "sha256": "470cbf0ebefd80f3a9b12b7c3ee7ec37294ba5e0a618896e6b0d2befbff5695b",
+      "sha256": "49de63a96db7a7cc5f12434f6949e50a766fdabc86a63719c338226dd994e004",
       "executable": false
     },
     "src/crank/custom/enterprise-recipes.ts": {
@@ -2559,7 +2559,7 @@
       "executable": false
     },
     "src/crank/custom/pickers.ts": {
-      "sha256": "ff3b4705512e55a72ebfdacbdb8ea7208f8ae32dc1ab9b4adc5191f6d1cdc30d",
+      "sha256": "b2b5c0e4da18b55e9632a5e6cae5b36a663e632e190d854a50b500fc9a46d3e9",
       "executable": false
     },
     "src/crank/custom/sandbox.ts": {
@@ -2567,7 +2567,7 @@
       "executable": false
     },
     "src/crank/custom/step.ts": {
-      "sha256": "307d73af9e694e9bf32a4fe81de3f82c235381c71cf20f2ae03b74ffc328be57",
+      "sha256": "de68357db7213bce3ba41bde1ea5ab575a00226ecd84d54ae7b57584170d7181",
       "executable": false
     },
     "src/crank/custom/store.ts": {
@@ -3199,7 +3199,7 @@
       "executable": false
     },
     "src/crank/ui/custom-picker.ts": {
-      "sha256": "7e9757c4f14408badc733c908619a218da340624af94a477879b58bba40e2e33",
+      "sha256": "748db98c5d2feba019683de9093424f84b9ffc42ebbf53d32777a2cc850390df",
       "executable": false
     },
     "src/crank/ui/data-flows.ts": {
@@ -3271,7 +3271,7 @@
       "executable": false
     },
     "src/crank/ui/handler.ts": {
-      "sha256": "23ad06f31a7834106168d73f2a6ff787ed3f7191ae243cf0adb2dca8cafc59d9",
+      "sha256": "e6bc6e05b7786a61f74cfe77aae732dcebf4f42f8be3564187d355412befa814",
       "executable": false
     },
     "src/crank/ui/icons.ts": {
@@ -5387,7 +5387,7 @@
       "executable": false
     },
     "test-budget.json": {
-      "sha256": "1163b588dedb76aef3c27797242527d49c27dd117eb53fdd7ca620446ee6c6d5",
+      "sha256": "ed1ac8ba5da991ee7c23d1529ce52d082469105b1b06adf1913052980d9f910e",
       "executable": false
     },
     "tests/app-poll-browser.mjs": {
@@ -5423,7 +5423,7 @@
       "executable": false
     },
     "tests/connections.test.mjs": {
-      "sha256": "a2e9436b08ce2f2731b9301180c276f9ae2bc7196333f7f333c8710245bfda94",
+      "sha256": "adf1d0584af229fc73536a009873e7b92b811e82c2717f5792371470680a7bd4",
       "executable": false
     },
     "tests/crank.test.mjs": {
@@ -5431,11 +5431,11 @@
       "executable": false
     },
     "tests/custom-browser-runtime.mjs": {
-      "sha256": "258a1164c9f87c2ea0fef32f374dd0145808a8ddeb6a38c963c9ef70a577b24c",
+      "sha256": "bccac610a9593f5c01f70aae1a37a3f5aa3e8bcc025a578d8acff2f067cfb9a9",
       "executable": false
     },
     "tests/custom-browser.mjs": {
-      "sha256": "2e3088d29c8cd66dd15d72e5bcf519624ed7654e387c88b7b27ff75573a36b07",
+      "sha256": "5abc5e568e4ba0c05db1679efa6c3e757c061c2f2946e22f062eff2136386074",
       "executable": false
     },
     "tests/custom-fixture.mjs": {
@@ -5447,7 +5447,7 @@
       "executable": false
     },
     "tests/custom-picker-fixture.mjs": {
-      "sha256": "d1eb2f30b5e7223717b07c2d4d3dfbcfb10e6f22b55dbc30a7f207c8a2b62178",
+      "sha256": "3460afbab38b3f72a5c452033422c30d98c77806842882d97ac7c7ac6caca54a",
       "executable": false
     },
     "tests/database-gateway-fixture.mjs": {
@@ -5931,7 +5931,7 @@
       "executable": false
     },
     "verification.json": {
-      "sha256": "1ebd1deeeb5589be997fa1a1f5fc2b7163d9d146d2cb85b214dc4514d6ceeb14",
+      "sha256": "1732e58d2b9ce7df5b0030ba6f4803f4956ed5a4826abc51357213d0a806fdd6",
       "executable": false
     },
     "VERIFY-WORKFLOW.md": {
