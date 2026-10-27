@@ -32,22 +32,23 @@ async function attach(h,width) {
  if(new URL(page.url()).pathname==='/setup'){await page.getByRole('checkbox').check();await page.getByRole('button',{name:'Finish setup',exact:true}).click()}
 }
 try {
- await sampleJourney({inspect:async({h,w,state,listener,sample,step='trigger'})=>{
+ await sampleJourney({inspect:async({h,w,state,listener,sample,warning,step='trigger'})=>{
   await attach(h,1440);
   await page.goto(h.origin+`/app/workflows/${w.id}?step=${step}&tab=test`);
-  await expect(page.getByText('Step notify relies on a schema sample; not tested',{exact:true})).toBeVisible();
+  if(!state.startsWith('array-')) await expect(page.getByText('Step notify relies on a schema sample; not tested',{exact:true})).toBeVisible();
   if(state==='waiting') {
    await page.getByRole('button',{name:'Wait for webhook',exact:true}).click();
    await expect(page.getByRole('heading',{name:'Waiting for one sample'})).toBeVisible();
    listener.url=await page.getByLabel('Draft sample URL').inputValue();
   } else {
-   if(state==='stale') await expect(page.getByText('Stale sample: missing fields body.new_question',{exact:true})).toBeVisible();
+   if(state==='array-stale') await expect(page.getByText(warning,{exact:true})).toBeVisible();
+   else if(state==='stale') await expect(page.getByText('Stale sample: missing fields body.new_question',{exact:true})).toBeVisible();
    else {
     await page.getByRole('button',{name:'Preview selected sample',exact:true}).click();
     await expect(page.getByRole('heading',{name:'Preview result',exact:true})).toBeVisible();
     const result=page.locator('.inspector-block').filter({has:page.getByRole('heading',{name:'Preview result',exact:true})});
-    await expect(result).toContainText(state==='manual'?'manual sample':state==='history'||state==='step-history'?sample.source_id:state==='step-schema'?'schema sample · not tested':sample.id);
-    await expect(result).toContainText(state==='manual'?'MANUAL-SOURCE':state==='step-history'?'SYNTHETIC-CRANK-CONTACT':state==='step-schema'?'synthetic-crank-schema':'HIDDEN-VALUE');
+    await expect(result).toContainText(state==='manual'||state==='array-current'?'manual sample':state==='history'||state==='step-history'?sample.source_id:state==='step-schema'?'schema sample · not tested':sample.id);
+    await expect(result).toContainText(state==='array-current'?'READY':state==='manual'?'MANUAL-SOURCE':state==='step-history'?'SYNTHETIC-CRANK-CONTACT':state==='step-schema'?'synthetic-crank-schema':'HIDDEN-VALUE');
     if(state==='step-history') {await expect(result).toContainText('step notify');await expect(result).toContainText('Saved sample; step not run')}
    }
   }
@@ -70,6 +71,11 @@ try {
   }
   await page.setViewportSize({width:1440,height:1000});
   const search=page.getByRole('link',{name:'Search runs',exact:true});await search.focus();await expect(page.locator('#search-tooltip')).toBeVisible();await page.locator('h1').click();await search.hover();await page.waitForTimeout(350);await expect(page.locator('#search-tooltip')).toBeVisible();
+  if(state==='waiting') {
+   const account=page.locator('a.person.control-tooltip');
+   await account.focus();await expect(page.locator('#account-tooltip')).toBeVisible();
+   await page.locator('h1').click();await account.hover();await page.waitForTimeout(350);await expect(page.locator('#account-tooltip')).toBeVisible();
+  }
   if(state==='step-history') {
    await page.getByText('Load from run history',{exact:true}).click();
    await page.getByRole('button',{name:'Load history sample',exact:true}).click();

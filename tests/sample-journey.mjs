@@ -72,8 +72,9 @@ export async function sampleJourney({inspect=async()=>{}}={}) {
   const downstream=graph();downstream.steps.push(
    {id:'contact',type:'map',input:{id:'{{steps.notify.body.id}}'}},
    {id:'contact_case',type:'transform',fn:'text.case',input:{value:'{{steps.contact.id}}',to:'upper'}},
-   {id:'contact_route',type:'paths',mode:'exclusive',branches:[{id:'known',when:[[{field:'steps.contact.id',op:'text.equals',value:'synthetic-crank-contact'}]],steps:[{id:'routed',type:'map',input:{id:'{{steps.contact.id}}'}}]}]},
-   {id:'after_route',type:'filter',when:[[{field:'steps.contact_case',op:'text.equals',value:'SYNTHETIC-CRANK-CONTACT',case_sensitive:true}]]}
+   {id:'contact_route',type:'paths',mode:'exclusive',branches:[{id:'known',when:[[{field:'steps.contact.id',op:'text.equals',value:'synthetic-crank-contact'}]],steps:[{id:'routed',type:'map',input:{id:'{{steps.contact.id}}',matched:'{{steps.contact_route.matched}}'}}]}]},
+   {id:'after_route',type:'filter',when:[[{field:'steps.contact_case',op:'text.equals',value:'SYNTHETIC-CRANK-CONTACT',case_sensitive:true}]]},
+   {id:'route_output',type:'map',input:{matched:{$ref:'steps.contact_route.matched'}}}
   );
   await h.post(base+'/draft',{graph:downstream});
   const sourceOutput=run.steps.find(step=>step.path==='notify').output;
@@ -84,9 +85,11 @@ export async function sampleJourney({inspect=async()=>{}}={}) {
   assert.deepEqual(outputSample.payload,sourceOutput);assert.equal(outputSample.source_id,run.id);assert.equal(outputSample.source_time,run.steps.find(step=>step.path==='notify').finished_at);
   const beforeOutputPreview=checkpoints(await archive(h));
   const fromOutput=await h.post(base+'/preview',{});
-  assert.deepEqual(fromOutput.steps.map(step=>step.path),['mapped','upper','qualify','notify','contact','contact_case','contact_route','contact_route/known/routed','after_route']);
+  assert.deepEqual(fromOutput.steps.map(step=>step.path),['mapped','upper','qualify','notify','contact','contact_case','contact_route','contact_route/known/routed','after_route','route_output']);
   assert.deepEqual(fromOutput.steps[4].output,{id:'synthetic-crank-contact'});assert.equal(fromOutput.steps[5].output,'SYNTHETIC-CRANK-CONTACT');
   assert.deepEqual(fromOutput.steps[6].matched,['known']);assert.equal(fromOutput.steps[8].pass,true);
+  assert.deepEqual(fromOutput.steps[7].output,{id:'synthetic-crank-contact',matched:['known']},'branch mapping reads its path group output');
+  assert.deepEqual(fromOutput.steps[9].output,{matched:['known']},'mapping after a path group reads the same match set');
   assert.deepEqual(fromOutput.steps[8].sources.map(source=>source.id),[chosen.id,outputSample.id]);assert.equal(fromOutput.steps[8].source.source_id,run.id);
   assert.equal(edge.requests.length,1);assert.deepEqual(checkpoints(await archive(h)),beforeOutputPreview);
   await inspect({h,w,state:'step-history',step:'notify',sample:outputSample,preview:fromOutput});
@@ -107,7 +110,61 @@ export async function sampleJourney({inspect=async()=>{}}={}) {
   const scalarSample=scalarHistory.samples.find(sample=>sample.selected&&sample.step_path==='upper');
   assert.equal(scalarSample.payload,'HIDDEN-VALUE');
   const scalarPreview=await h.post(base+'/preview',{});
-  assert.equal(scalarPreview.steps[1].output,'HIDDEN-VALUE');assert.equal(scalarPreview.steps[1].source.id,scalarSample.id);assert.equal(scalarPreview.steps.at(-1).pass,true);
+  assert.equal(scalarPreview.steps[1].output,'HIDDEN-VALUE');assert.equal(scalarPreview.steps[1].source.id,scalarSample.id);assert.equal(scalarPreview.steps[8].pass,true);assert.deepEqual(scalarPreview.steps.at(-1).output,{matched:['known']});
+  // Compare path outputs through both preview and isolated execution doors.
+  for(const {mode,value,matched} of [
+   {mode:'exclusive',value:'yes',matched:['first','always']},
+   {mode:'parallel',value:'yes',matched:['first','second','always']},
+   {mode:'exclusive',value:'no',matched:['fallback']},
+   {mode:'exclusive',value:'no',matched:['always']}
+  ]) {
+   const branch=id=>({id,when:[[{field:'trigger.input.value',op:'text.equals',value:'yes'}]],steps:[{id:id+'_output',type:'map',input:{matched:'{{steps.route.matched}}'}}]});
+   const routeGraph={trigger:{type:'manual'},steps:[
+    {id:'route',type:'paths',mode,branches:[branch('first'),branch('second')],
+     ...(matched.includes('fallback')?{fallback:{steps:[{id:'fallback_output',type:'map',input:{matched:{$ref:'steps.route.matched'}}}]}}:
+      {always:{steps:[{id:'always_output',type:'map',input:{matched:'{{steps.route.matched}}'}}]}})},
+    {id:'after',type:'map',input:{matched:{$ref:'steps.route.matched'}}}
+   ]};
+   const routed=await h.post('workflows',{name:'Path sample parity',graph:routeGraph},h.owner,201),routedBase=`workflows/${routed.id}`;
+   const routedPreview=await h.post(routedBase+'/preview',{sample:{input:{value}}});
+   const executed=await h.post(routedBase+'/test',{input:{value},bindings:{}},h.owner,201);
+   assert.equal(executed.status,'succeeded');
+   assert.deepEqual(routedPreview.steps[0].matched,matched);
+   assert.deepEqual(routedPreview.steps.map(step=>step.path),['route',...matched.map(id=>'route/'+id+'/'+id+'_output'),'after']);
+   for(const result of routedPreview.steps.slice(1)) {
+    assert.deepEqual(result.output,{matched});
+    assert.deepEqual(result.output,executed.steps.find(step=>step.path===result.path).output,'preview and execution expose the same path matches');
+   }
+  }
+  // Array outputs remain mappable in every supported reference position.
+  const arrayGraph={trigger:{type:'manual'},steps:[
+   {id:'notify',type:'map',input:{}},
+   {id:'mapped',type:'map',input:{
+    template:'{{steps.notify[0].id}}',embedded:'Contact {{steps.notify[0].name}}',
+    spaced:{$ref:'steps.notify[0].display label'},literal:{$literal:'{{steps.notify[9].ignored}}'},
+    reference:{$ref:'steps.notify[1][0].id'},
+    nested:{$fn:'text.case',args:{value:{$ref:'steps.notify[2].label'},to:'upper'}},
+    dotted:{$ref:'steps.notify[3].items[0].id'}
+   }},
+   {id:'check',type:'filter',when:[[{field:'steps.notify[4].allowed',op:'text.equals',value:{$ref:'steps.notify[5].expected'}}]]}
+  ]};
+  const arrays=await h.post('workflows',{name:'Array sample mappings',graph:arrayGraph},h.owner,201),arrayBase=`workflows/${arrays.id}`;
+  await h.post(arrayBase+'/samples',{sample:{input:{}}},h.owner,201);
+  const arrayFields=['[0].display label','[0].id','[0].name','[1][0].id','[2].label','[3].items[0].id','[4].allowed','[5].expected'];
+  const missingArray=await h.post(arrayBase+'/samples',{step_path:'notify',sample:[]},h.owner,201);
+  const arrayWarning='Stale sample for step notify: missing fields '+arrayFields.map(field=>'steps.notify'+field).join(', ');
+  assert.ok(missingArray.warnings.includes(arrayWarning),'each missing array reference is named when saving a sample');
+  assert.ok((await h.post(arrayBase+'/validate',{})).warnings.includes(arrayWarning),'validation names every missing array field');
+  assert.ok((await h.post(arrayBase+'/publish',{},h.owner,201)).warnings.includes(arrayWarning),'publication keeps the same array freshness warning');
+  await inspect({h,w:arrays,state:'array-stale',step:'notify',warning:arrayWarning});
+  const arrayPayload=[{id:'synthetic-crank-1',name:'Lead','display label':'Lead display'},[{id:'synthetic-crank-2'}],{label:'ready'},{items:[{id:'synthetic-crank-3'}]},{allowed:'yes'},{expected:'yes'}];
+  const completeArray=await h.post(arrayBase+'/samples',{step_path:'notify',sample:arrayPayload},h.owner,201);
+  assert.equal(completeArray.warnings.some(warning=>warning.startsWith('Stale sample')),false);
+  assert.equal((await h.post(arrayBase+'/validate',{})).warnings.some(warning=>warning.startsWith('Stale sample')),false);
+  const arrayPreview=await h.post(arrayBase+'/preview',{});
+  assert.deepEqual(arrayPreview.steps[1].output,{template:'synthetic-crank-1',embedded:'Contact Lead',spaced:'Lead display',literal:'{{steps.notify[9].ignored}}',reference:'synthetic-crank-2',nested:'READY',dotted:'synthetic-crank-3'});
+  assert.equal(arrayPreview.steps[2].pass,true);assert.equal(edge.requests.length,1);
+  await inspect({h,w:arrays,state:'array-current',step:'notify',sample:completeArray.samples.find(sample=>sample.selected&&sample.step_path==='notify')});
   const invited=await h.send('/auth/invite',{email:'sample-reader@example.test',displayName:'Sample reader',role:'member'},h.owner);assert.equal(invited.status,202);
   const token=new URL(h.mail.at(-1).html.match(/href="([^"]*\/auth\/confirm\?token=[^"]+)"/)[1].replaceAll('&amp;','&'),h.origin).searchParams.get('token');
   const reader=(await h.send('/auth/confirm',{token})).cookie;
@@ -148,7 +205,7 @@ export async function sampleJourney({inspect=async()=>{}}={}) {
    assert.equal((await receiving.post(base+'/preview',{})).source.source_id,run.id);
    await receiving.post(base+'/samples/select',{sample_id:outputSample.id});
    const restoredPreview=await receiving.post(base+'/preview',{});
-   assert.deepEqual(restoredPreview.steps[4].output,{id:'synthetic-crank-contact'});assert.equal(restoredPreview.steps.at(-1).pass,true);assert.equal(restoredPreview.steps.at(-1).source.id,outputSample.id);
+   assert.deepEqual(restoredPreview.steps[4].output,{id:'synthetic-crank-contact'});assert.equal(restoredPreview.steps[8].pass,true);assert.deepEqual(restoredPreview.steps.at(-1).output,{matched:['known']});assert.equal(restoredPreview.steps.at(-1).source.id,outputSample.id);
   } finally {await receiving.close()}
   const hold=await h.post('data'+'/holds',{kind:'workflow',workflow_id:w.id,reason:'Retain sample review'},h.owner,201);
   await h.post(base+'/samples/delete',{sample_id:fileSample.id},h.owner,409);

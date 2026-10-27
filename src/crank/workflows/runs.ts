@@ -253,6 +253,7 @@ export async function previewWorkflow(env: CrankEnv, actor: Actor, workflowId: s
           if (isObject(step.always)) matched.push('always')
           record({ path, type: 'paths', matched, evaluations, outcome: matched.length ? 'routed' : 'stopped by filter' })
           if (!matched.length) return false
+          scope.steps[step.id] = { matched }
           for (const branch of branchesOf(step).filter(b => matched.includes(b.id))) if (!walk(branch.steps, `${path}/${branch.id}/`)) return false
           continue
         }

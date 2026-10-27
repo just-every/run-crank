@@ -187,7 +187,7 @@
       "executable": false
     },
     "docs/API.md": {
-      "sha256": "3babac78f966d644cf2c09b500de18e08985e45e10da412efd389cbc595f0030",
+      "sha256": "8183da71b21f3e0eee53e4906943af693f75ae7ef8a69366fa619009ea01cdd9",
       "executable": false
     },
     "docs/APP-TRIGGERS.md": {
@@ -3199,7 +3199,7 @@
       "executable": false
     },
     "src/crank/ui/editor/inspector.ts": {
-      "sha256": "2075775d05b1533c2fde90c648dde5fa657a04c3bf9b981c533c519fa6c5ce69",
+      "sha256": "43264d177a8e031f3aa27b4c813cf8e9d6417caea5236c373012e5d2445e0643",
       "executable": false
     },
     "src/crank/ui/editor/model.ts": {
@@ -3243,7 +3243,7 @@
       "executable": false
     },
     "src/crank/ui/handler.ts": {
-      "sha256": "6c19babea0da880932fd5b626806e9fe970cb9a688ad776cdf52eb98d58f867f",
+      "sha256": "437ece0c6584e7dea7ef0cccacd89b7b2e4c5c11d0fa33570120d63c31b56ee3",
       "executable": false
     },
     "src/crank/ui/icons.ts": {
@@ -3383,11 +3383,11 @@
       "executable": false
     },
     "src/crank/workflows/runs.ts": {
-      "sha256": "259efc6d2ac17268dcfd72e283f93aec9b7ba78033e59e3e3f56aa67245afdc0",
+      "sha256": "5a959226d416748e35238a8a2f4047081919e56b206715b385fb9f064306d843",
       "executable": false
     },
     "src/crank/workflows/samples.ts": {
-      "sha256": "cc74216cfdd4dded5784900a87a31ab32bc200375143381cc6ddace34618c868",
+      "sha256": "9d92090e8ee3694228ae9e8a5f913b192b94289cc78321b47510c5a8735f97a9",
       "executable": false
     },
     "src/crank/workflows/snapshot.ts": {
@@ -5435,7 +5435,7 @@
       "executable": false
     },
     "tests/deployment.test.mjs": {
-      "sha256": "f4a1c2cf18ee62b1663ffce5cd2f54b9c17283bd05bdd15038a0fcbf94ab2a77",
+      "sha256": "37e9e564a22382ea3c9a049147f5c62168966b7004055a4d014d103829922843",
       "executable": false
     },
     "tests/dispatch-authority.test.mjs": {
@@ -5795,11 +5795,11 @@
       "executable": false
     },
     "tests/sample-browser.mjs": {
-      "sha256": "dd40a7413b08e8b9251922ea0715e3317f327ae83aa80899b19a352bdef42b9f",
+      "sha256": "39e82419dfc918cb9ac95997ab295605737658d6d74ad5f67e759a9edc4ea0f0",
       "executable": false
     },
     "tests/sample-journey.mjs": {
-      "sha256": "871a6eaff3fda82b1f0e9fe70a4a44840d21ad06ac7631712c57130c5b2fa807",
+      "sha256": "6edb7a1317b132a70cc43acfa767fe9dcdc8cbf444c7c4f00e694b6bfebcf5fc",
       "executable": false
     },
     "tests/security-browser.mjs": {

@@ -111,14 +111,29 @@ export async function previewStepSamples(env: CrankEnv, actor: Actor, workflowId
   const rows = (await stmt(env, "SELECT * FROM crank_workflow_samples WHERE workflow_id=? AND step_path!='trigger' AND selected=1", workflowId).all<SampleRow>()).results
   return new Map(await Promise.all(rows.map(async row => [row.step_path, { payload: JSON.parse((await openText(env, workflowId, row.payload_json))!), source: provenance(row) }] as const)))
 }
+/** Read the reference forms that mappings and conditions actually evaluate. */
+function sampleReferences(value: unknown, paths = new Set<string>()): Set<string> {
+  if (typeof value === 'string') {
+    for (const match of value.matchAll(/\{\{\s*([A-Za-z_][\w.\-[\]]*)\s*\}\}/g)) paths.add(match[1])
+  } else if (Array.isArray(value)) value.forEach(item => sampleReferences(item, paths))
+  else if (isObject(value) && !('$literal' in value)) {
+    if (typeof value.$ref === 'string') paths.add(value.$ref)
+    else {
+      if (typeof value.field === 'string' && typeof value.op === 'string') paths.add(value.field)
+      Object.values(value).forEach(item => sampleReferences(item, paths))
+    }
+  }
+  return paths
+}
 export async function sampleWarnings(env: CrankEnv, actor: Actor, workflowId: string, graph: Graph) {
   workflowScope(actor, workflowId)
   if (!canReadPayload(actor)) return []
+  const references = sampleReferences(graph.steps)
   const warnings: string[] = [], row = await stmt(env, "SELECT * FROM crank_workflow_samples WHERE workflow_id=? AND step_path='trigger' AND selected=1", workflowId).first<SampleRow>()
   if (row) {
     const payload = JSON.parse((await openText(env, workflowId, row.payload_json, 'display'))!), fields = await stmt(env, 'SELECT fields_json FROM crank_sample_fields WHERE workflow_id=?', workflowId).first<{fields_json:string}>()
     const expected = new Set<string>(fields ? JSON.parse(fields.fields_json) : [])
-    for (const match of canonical(graph.steps).matchAll(/trigger\.([a-zA-Z0-9_.\[\]-]+)/g)) expected.add(match[1])
+    for (const reference of references) if (reference.startsWith('trigger.')) expected.add(reference.slice('trigger.'.length))
     const missing = [...expected].filter(field => !lookup(payload, field).found).sort()
     if (missing.length) warnings.push(`Stale sample: missing fields ${missing.join(', ')}`)
     if (row.source === 'schema') warnings.push('Trigger relies on a schema sample; not tested')
@@ -128,9 +143,9 @@ export async function sampleWarnings(env: CrankEnv, actor: Actor, workflowId: st
     const step = validateGraph(graph).declared.steps.find(step => step.path === sample.step_path)
     if (!step) continue
     const payload = JSON.parse((await openText(env, workflowId, sample.payload_json, 'display'))!)
-    const prefix = `steps.${step.id}.`, fields = new Set<string>()
-    for (const match of canonical(graph.steps).matchAll(/steps\.([a-zA-Z0-9_-]+)\.([a-zA-Z0-9_.\[\]-]+)/g)) if (match[1] === step.id) fields.add(match[2])
-    const missing = [...fields].filter(field => !lookup(payload, field).found).sort()
+    const prefix = `steps.${step.id}`, fields = new Set<string>()
+    for (const reference of references) if (reference.startsWith(prefix + '.') || reference.startsWith(prefix + '[')) fields.add(reference.slice(prefix.length))
+    const missing = [...fields].filter(field => !lookup(payload, field.replace(/^\./, '')).found).sort()
     if (missing.length) warnings.push(`Stale sample for step ${sample.step_path}: missing fields ${missing.map(field => prefix + field).join(', ')}`)
     if (sample.source === 'schema') warnings.push(`Step ${sample.step_path} relies on a schema sample; not tested`)
   }
