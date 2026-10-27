@@ -1,11 +1,11 @@
 import { requireValue, stmt, type Actor, type CrankEnv } from '../model'
 
 export type TeamRole = 'admin' | 'builder' | 'operator' | 'approver' | 'viewer' | 'auditor' | 'billing'
-export type TeamAction = 'read' | 'prepare' | 'publish' | 'start' | 'approve' | 'replay' | 'delegate' | 'audit' | 'billing' | 'revoke'
-export interface TeamGrant { role: TeamRole; workflow_ids: string[]; connection_ids: string[]; actions?: TeamAction[] }
+export type TeamAction = 'read' | 'test' | 'prepare' | 'publish' | 'start' | 'approve' | 'replay' | 'delegate' | 'audit' | 'billing' | 'revoke'
+export interface TeamGrant { role: TeamRole; workflow_ids: string[]; connection_ids: string[]; actions?: TeamAction[]; review_grant_id?: string }
 export interface TeamAccess extends TeamGrant { grants: TeamGrant[]; revision: string }
 const powers: Record<TeamRole, TeamAction[]> = {
-  admin: ['read','prepare','publish','start','replay','delegate','revoke'], builder: ['read','prepare','publish'],
+  admin: ['read','test','prepare','publish','start','replay','delegate','revoke'], builder: ['read','test','prepare','publish'],
   operator: ['read','start','replay'], approver: ['read','approve'], viewer: ['read'], auditor: ['audit'], billing: ['billing'],
 }
 export const grantsAction = (grant: TeamGrant, action: TeamAction) => powers[grant.role].includes(action) && (!grant.actions || grant.actions.includes(action))
@@ -20,11 +20,11 @@ export async function teamAccess(env: CrankEnv, actor: Actor): Promise<TeamAcces
     const owned=await stmt(env,"SELECT id FROM crank_workflows WHERE created_by=? AND environment='production' UNION SELECT id FROM crank_flows WHERE created_by=?",actor.id,actor.id).all<{id:string}>()
     for(const grant of grants)if(grant.workflow_ids.includes('workspace:production'))grant.workflow_ids=[...new Set([...grant.workflow_ids,...owned.results.map(row=>row.id)])]
   }
-  const reviews=await stmt(env,`SELECT g.workflow_id,v.declared_json FROM crank_grants g JOIN oa_operators o ON o.id=g.owner_id JOIN crank_workflow_versions v ON v.id=g.version_id
+  const reviews=await stmt(env,`SELECT g.id,g.workflow_id,v.declared_json FROM crank_grants g JOIN oa_operators o ON o.id=g.owner_id JOIN crank_workflow_versions v ON v.id=g.version_id
     WHERE g.revoked_at IS NULL AND g.expires_at>? AND o.status='active' AND o.role='owner' AND o.version=g.owner_version
-    AND (EXISTS(SELECT 1 FROM json_each(g.policy_json,'$.approval.delegate_ids') WHERE value=?) OR EXISTS(SELECT 1 FROM json_each(g.policy_json,'$.approval.escalate_to') WHERE value=?))`,new Date().toISOString(),actor.id,actor.id).all<{workflow_id:string;declared_json:string}>()
-  for(const review of reviews.results) {const declared=JSON.parse(review.declared_json);grants.push({role:'approver',workflow_ids:[review.workflow_id],connection_ids:[...(declared.connections??[]),...(declared.gateways??[]).map((id:string)=>'gateway:'+id)]})}
-  return { role: grants[0]?.role ?? 'viewer', grants, workflow_ids: [...new Set(grants.filter(g=>grantsAction(g,'read')).flatMap(g=>g.workflow_ids))], connection_ids: [...new Set(grants.filter(g=>grantsAction(g,'read')).flatMap(g=>g.connection_ids))], revision: row?.revision ?? 'ungranted' }
+    AND (EXISTS(SELECT 1 FROM json_each(g.policy_json,'$.approval.delegate_ids') WHERE value=?) OR EXISTS(SELECT 1 FROM json_each(g.policy_json,'$.approval.escalate_to') WHERE value=?))`,new Date().toISOString(),actor.id,actor.id).all<{id:string;workflow_id:string;declared_json:string}>()
+  for(const review of reviews.results) {const declared=JSON.parse(review.declared_json);grants.push({review_grant_id:review.id,role:'approver',workflow_ids:[review.workflow_id],connection_ids:[...(declared.connections??[]),...(declared.gateways??[]).map((id:string)=>'gateway:'+id)]})}
+  return { role: grants[0]?.role ?? 'viewer', grants, workflow_ids: [...new Set(grants.filter(g=>!g.review_grant_id && grantsAction(g,'read')).flatMap(g=>g.workflow_ids))], connection_ids: [...new Set(grants.filter(g=>!g.review_grant_id && grantsAction(g,'read')).flatMap(g=>g.connection_ids))], revision: row?.revision ?? 'ungranted' }
 }
 export function teamFence(actor: Actor) {
   if(actor.role==='owner' && !actor.team)return {sql:'1',args:[]}
@@ -63,6 +63,7 @@ export async function admitTeamRequest(request: Request, env: CrankEnv, actor: A
   if (path === '/api/crank/state') return
   if(read && (path==='/api/crank/inbox'||path==='/api/crank/followups'||path.startsWith('/api/crank/followups/'))) return
   if (read && ['/api/crank/workflows','/api/crank/workflow-runs','/api/crank/connections','/api/crank/catalog'].includes(path)) return
+  let reviewGrantId: string | undefined
   let action: TeamAction | undefined, workflowId: string | undefined, connections: string[] = []
   if(!read && ['/api/crank/flows','/api/crank/workflows'].includes(path)) {action='prepare';workflowId='workspace:production'}
   if (path === '/api/crank/team' || path.startsWith('/api/crank/team/')) action='delegate'
@@ -76,7 +77,8 @@ export async function admitTeamRequest(request: Request, env: CrankEnv, actor: A
   if (wf) {
     workflowId=decodeURIComponent(wf[1]); const door=wf[2] ?? ''
     if (read && (!door || /^(drafts\/[^/]+|compare|versions\/\d+|today|trigger)$/.test(door))) action='read'
-    if (!read && ['draft','validate','preview','test'].includes(door)) action='prepare'
+    if (!read && ['draft','validate','preview'].includes(door)) action='prepare'
+    if (!read && door==='test') action='test'
     if (!read && ['publish','rollback','unpublish','pause','resume'].includes(door)) action='publish'
     if (!read && door==='run') {
       action='start'
@@ -86,8 +88,8 @@ export async function admitTeamRequest(request: Request, env: CrankEnv, actor: A
   }
   const run = /^\/api\/crank\/workflow-runs\/([^/]+)(?:\/(approve|reject|replay))?$/.exec(path)
   if (run) {
-    const row = await stmt(env, 'SELECT r.workflow_id,v.declared_json FROM crank_wf_runs r JOIN crank_workflow_versions v ON v.id=r.version_id WHERE r.id=?', decodeURIComponent(run[1])).first<{workflow_id:string;declared_json:string}>()
-    requireValue(row, 'Run not found', 404);workflowId=row.workflow_id
+    const row = await stmt(env, 'SELECT r.workflow_id,r.grant_id,v.declared_json FROM crank_wf_runs r JOIN crank_workflow_versions v ON v.id=r.version_id WHERE r.id=?', decodeURIComponent(run[1])).first<{workflow_id:string;grant_id:string|null;declared_json:string}>()
+    requireValue(row, 'Run not found', 404);workflowId=row.workflow_id;reviewGrantId=row.grant_id??undefined
     action=run[2]==='replay'?'replay':read?'read':'approve'
     if(!read || run[2]==='replay') {const declared=JSON.parse(row.declared_json);connections=[...(declared.connections??[]),...(declared.gateways??[]).map((id:string)=>'gateway:'+id)]}
   }
@@ -99,7 +101,7 @@ export async function admitTeamRequest(request: Request, env: CrankEnv, actor: A
   }
   // Standing grants retain their separately issued, named reviewer door.
   if (run && !action) action='read'
-  const grants=action ? actor.team.grants.filter(g=>grantsAction(g,action!) && (!workflowId || g.workflow_ids.includes(workflowId)) && connections.every(id=>g.connection_ids.includes(id))) : []
+  const grants=action ? actor.team.grants.filter(g=>(!g.review_grant_id || !!run && g.review_grant_id===reviewGrantId) && grantsAction(g,action!) && (!workflowId || g.workflow_ids.includes(workflowId)) && connections.every(id=>g.connection_ids.includes(id))) : []
   const grant=grants[0]
   requireValue(grant, 'No complete explicit grant authorizes this action and resource', 403)
   actor.team={...actor.team,...grant,grants,workflow_ids:[...new Set(grants.flatMap(g=>g.workflow_ids))],connection_ids:[...new Set(grants.flatMap(g=>g.connection_ids))]}
