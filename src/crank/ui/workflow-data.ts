@@ -24,7 +24,9 @@ export async function workflowData(read: Read, id: string, params: URLSearchPara
   const runs: RunDetail[] = await Promise.all(list.runs.map((r: any) => read(`/api/crank/workflow-runs/${encodeURIComponent(r.id)}`)))
   const graphs = new Map<string, Graph>()
   await Promise.all([...new Set(runs.map(r => r.version_id))].map(async versionId => { const n = numberOf.get(versionId); if (n) graphs.set(versionId, (await version(n)).graph) }))
-  return { workflow, current, previous, graphs, runs, connections, today, actor, params, triggerState }
+  const payload = actor.team ? ['admin','builder','operator'].includes(actor.team.role) : ['owner','admin'].includes(actor.role) || actor.kind === 'agent'
+  const sampleData = payload ? await read(`${base}/samples`) : { samples: [], warnings: [] }
+  return { workflow, current, previous, graphs, runs, connections, today, actor, params, triggerState, sampleData }
 }
 
 /** The frozen graph of each listed run's version and each workflow's live version, so a run list can

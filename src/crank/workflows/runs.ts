@@ -1,3 +1,4 @@
+import { previewSample } from './samples'
 import { collectAnswers, collectFields } from '../engine/steps/collect'
 import { collectDeadlines } from '../ops/collect-deadlines'
 import { guardedBatch } from '../access'
@@ -223,10 +224,11 @@ export async function startRun(env: CrankEnv, actor: Actor, workflowId: string, 
 
 /** WORK-012/WORK-013 preview: pure steps run on a manual sample, labelled as such; the
  * walk stops before the first step that would call an app. */
-export async function previewWorkflow(env: CrankEnv, workflowId: string, input: Record<string, unknown>) {
+export async function previewWorkflow(env: CrankEnv, actor: Actor, workflowId: string, input: Record<string, unknown>) {
   const workflow = await getWorkflow(env, workflowId), graph = JSON.parse(workflow.draft_json) as Graph
   const zone = requireZone(graph.settings?.timezone ?? (await workspaceSettings(env)).timezone)
-  const scope: Scope = { trigger: input.sample ?? {}, steps: {}, run: { id: 'preview', workflow_id: workflowId } }
+  const selected = await previewSample(env, actor, workflowId, input)
+  const scope: Scope = { trigger: selected.payload, steps: {}, run: { id: 'preview', workflow_id: workflowId } }
   const results: Record<string, unknown>[] = [], time = Date.now()
   const walk = (steps: Step[], prefix: string): boolean => {
     for (const step of steps) {
@@ -265,5 +267,5 @@ export async function previewWorkflow(env: CrankEnv, workflowId: string, input: 
     return true
   }
   walk(graph.steps, '')
-  return { sample_source: 'manual sample', digest: await digest(canonical(input.sample ?? {})), steps: results }
+  return { sample_source: selected.source.label, source: selected.source, digest: await digest(canonical(selected.payload)), steps: results.map(step => ({ ...step, source: selected.source })) }
 }
