@@ -1061,3 +1061,41 @@ Publish a step with `type: "nook.send_message"`, its `connection_id`, and `input
 The output includes the provider message `id`, `body`, `conversation_id`, `origin`, `acknowledgement: "provider_response"` and `independently_read_back: false`. An invalid or mismatched acknowledgement stays uncertain. This token cannot read messages or subscribe to events; the action does not claim either capability, app identity or independent readback. Archive restore retains the binding and history without credentials or execution authority. Local erasure does not delete a message in Nook.
 
 Protocol source: [Nook integration token documentation](https://github.com/just-every/run-nook/blob/2db1fd4fd41b3b4fa89f2a40d3549d46d747529b/docs/integration-tokens.md).
+
+
+### Bounded native subflow children
+
+The owner may POST an immutable definition to `/api/crank/subflows` with
+`kind: "native"`, `inputs`, `outputs`, `steps` and `result`. The type declarations
+use the same top-level field types as pure subflows. Native definitions start
+inactive. Review the returned digest through the version's `review` door with
+`confirm: "REVIEW_PURE_SUBFLOW"` (the existing compatibility token), then publish
+a caller that pins its version and uses `mode: "child"`. Review does not publish
+a caller or resume retained work.
+
+Native graphs support `map`, `transform`, `filter`, `paths`, `loop` and `delay`.
+Transform functions are `text.trim`, `text.case`, literal `text.replace` and
+`text.strip_html`. Declare transforms as steps; inline function mappings are
+refused. Delays use `for` or `until`; shared named queues are outside this slice.
+There are at most 20 declared steps, four nesting levels, 50 items in each loop
+and 2000 expanded invocations. Mapped inputs, outputs and intermediate
+checkpoints are bounded to 64 KiB. Oversized traces and error details are
+replaced with an explicit `truncated: true` summary and `original_bytes`;
+error summaries retain their failure category. The caller's own execution
+ceiling also applies. Provider steps, account bindings, code and recursive children are
+refused. Pure recipes retain their existing format and sample rules.
+
+The queued call returns a child id. The call's history door under
+`/api/crank/subflows/calls/{id}` returns its parent history link and child
+checkpoint metadata. A running call can be parked on its durable delay;
+checkpoint status identifies the wait. Values remain in the parent's sealed
+records. The ordinary executor continues the immutable graph from those
+checkpoints, including loop item identities. Current owner publication and
+review eligibility apply before each child step. Cancelling either the child
+or parent stops continuation. Revocation durably pauses unfinished children
+and their parents immediately, including children parked on delays. Review
+before the next scheduler pass cannot clear that fence. Review after
+revocation does not resume a child;
+the existing resume door requires the active digest and
+`confirm: "RESUME_PURE_CHILD"`. Imported unfinished children are interrupted,
+definitions are inactive, and receiving adoption and review remain necessary.

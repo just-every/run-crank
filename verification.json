@@ -62,7 +62,8 @@
         "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/decision\" node tests/decision-browser.mjs",
         "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/executor-schema\" node tests/executor-schema-browser.mjs",
         "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/app-polls\" node tests/app-poll-browser.mjs",
-        "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/digests\" node tests/digest-browser.mjs"
+        "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/digests\" node tests/digest-browser.mjs",
+        "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/subflows\" node tests/run-notices-browser.mjs"
       ]
     },
     {
