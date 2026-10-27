@@ -39,6 +39,7 @@
 .facts dd code { font-size: 13px; }
 .history-item + .history-item { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
 .history-item h3 { display: flex; align-items: center; gap: 8px; font-size: 15px; margin-bottom: 4px; }
+.recurring-list h3 { display: block; min-width: 0; overflow-wrap: anywhere; }
 .history-item p { font-size: 13.5px; color: var(--body); overflow-wrap: anywhere; }
 .history-item pre { margin-top: 8px; }
 .danger-zone { border-color: #f0cdd3; }

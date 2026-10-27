@@ -1894,7 +1894,7 @@
       "executable": false
     },
     "public/ui/pages.css": {
-      "sha256": "473e9108ed6a278987a48747918ed5d83a97256d6927e88dd64c95817335ab46",
+      "sha256": "26791c96cb735eb305d02e2d641e0da065bef600cc51d250615c4be23243a981",
       "executable": false
     },
     "public/ui/shell.css": {
@@ -3254,7 +3254,7 @@
       "executable": false
     },
     "src/crank/ui/recurring.ts": {
-      "sha256": "22b28f5bc408790b3cb050cfa26543655a7ac5ec155968cb19c61b49f3463e5b",
+      "sha256": "dc9c34211ba6141ca0e996bb5c0b9678d05be7c7e311b6008c43b1939fcb2a8a",
       "executable": false
     },
     "src/crank/ui/retention-view.ts": {
