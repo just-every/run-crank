@@ -62,7 +62,6 @@ async function execute(step:Step,ctx:StepContext,kind:'append'|'find'|'release')
     const revision=d.revision+1
     const committed=`EXISTS(SELECT 1 FROM crank_digests WHERE id=? AND revision=? AND mutation_id='${operation}') AND NOT EXISTS(SELECT 1 FROM crank_digest_operations WHERE id=?)`
     const jobs=[stmt(ctx.env,`UPDATE crank_digests SET revision=?,mutation_id=? WHERE id=? AND revision=? AND active=1 AND ${guard} AND NOT EXISTS(SELECT 1 FROM crank_digest_operations WHERE id=?)`,revision,operation,key,d.revision,ctx.run.id,ctx.run.lease_id,owner,auth.owner_version,operation)]
-    jobs.push(stmt(ctx.env,`DELETE FROM crank_digest_entries WHERE digest_id=? AND expires_at<=? AND NOT EXISTS(SELECT 1 FROM crank_legal_holds WHERE released_at IS NULL) AND ${committed}`,key,at,key,revision,operation))
     if(kind==='append')jobs.push(stmt(ctx.env,`INSERT INTO crank_digest_entries(id,digest_id,ordinal,value_json,source_run_id,created_at,expires_at) SELECT ?,?,?,?,?,?,? WHERE ${committed}`,operation,key,revision,JSON.stringify(ctx.input.entry),ctx.run.id,at,expiry,key,revision,operation))
     if(release&&step.keep_entries!==true)jobs.push(stmt(ctx.env,`DELETE FROM crank_digest_entries WHERE digest_id=? AND expires_at>? AND ${committed}`,key,at,key,revision,operation))
     jobs.push(stmt(ctx.env,`INSERT INTO crank_digest_operations(id,digest_id,run_id,kind,result_json,created_at,expires_at) SELECT ?,?,?,?,?,?,? WHERE ${committed}`,operation,key,ctx.run.id,release?'release':'append',JSON.stringify(result),at,expiry,key,revision,operation))
@@ -79,10 +78,25 @@ export const digestSteps={'digest.append':type('append'),'digest.find':type('fin
 
 export async function digestRetention(env:CrankEnv,time:number) {
   const at=new Date(time).toISOString()
-  // Legal holds on the source run retain values. Expired receipts keep only their
-  // identity, so a completed effect can never be replayed after payload expiry.
-  await stmt(env,`DELETE FROM crank_digest_entries WHERE expires_at<=? AND NOT EXISTS(SELECT 1 FROM crank_legal_holds h WHERE h.released_at IS NULL)`,at).run()
-  await stmt(env,`UPDATE crank_digest_operations SET result_json='{}',active=0 WHERE expires_at<=? AND NOT EXISTS(SELECT 1 FROM crank_legal_holds h WHERE h.released_at IS NULL)`,at).run()
+  const due=`SELECT digest_id FROM crank_digest_entries WHERE expires_at<=?1
+    UNION SELECT digest_id FROM crank_digest_operations WHERE expires_at<=?1 AND active=1`
+  if(!await stmt(env,`SELECT 1 FROM (${due}) LIMIT 1`,at).first())return
+  const guard='digest-expiry:'+id(),store=await portability(env)
+  // Recheck holds and eligibility in the same transaction as the checkpoint.
+  // Advancing the revision invalidates any snapshot read before this expiry.
+  try {
+    await env.DB.batch([
+      stmt(env,`INSERT INTO crank_authority_guards(id,ok) SELECT ?,CASE WHEN NOT EXISTS(SELECT 1 FROM crank_legal_holds WHERE released_at IS NULL)
+        AND EXISTS(${due.replaceAll('?1','?2')}) THEN 1 ELSE 0 END`,guard,at),
+      stmt(env,`UPDATE crank_digests SET revision=revision+1,mutation_id=NULL WHERE id IN (${due})`,at),
+      stmt(env,'DELETE FROM crank_digest_entries WHERE expires_at<=?',at),
+      stmt(env,"UPDATE crank_digest_operations SET result_json='{}',active=0 WHERE expires_at<=? AND active=1",at),
+      ...await store.redactionStatements!(),
+      stmt(env,'DELETE FROM crank_authority_guards WHERE id=?',guard),
+    ])
+  } catch(error) {
+    if(!/CHECK constraint failed: ok/.test(String(error)))throw error
+  }
 }
 export async function digestApi(request:Request,env:CrankEnv,actor:Actor) {
   const path=new URL(request.url).pathname,root='/api/crank/digests'

@@ -2667,7 +2667,7 @@
       "executable": false
     },
     "src/crank/engine/steps/digest.ts": {
-      "sha256": "76dab72d5c17578e17a6d5ed7f9ac25ec38505ba5d126218f489f65b293833bf",
+      "sha256": "9337c330161c577b3cd4e8ed0b2e8f5ca972a19abdb068e9baa9221243b57f66",
       "executable": false
     },
     "src/crank/engine/steps/flow.ts": {
@@ -3347,7 +3347,7 @@
       "executable": false
     },
     "src/crank/workflow-erasure.ts": {
-      "sha256": "524c5c8b9f613f148c14f2698bc603915479525cc98681360352bc812ba7e7b2",
+      "sha256": "2384355b5f184dddafcd0e6f814320756f6b704e9e81413fa3017a775f5307b4",
       "executable": false
     },
     "src/crank/workflows/api.ts": {
@@ -5447,7 +5447,7 @@
       "executable": false
     },
     "tests/digest-journey.mjs": {
-      "sha256": "2d5357f639e5db19d4b549b9fd93ad92fed4330bac36cb0f2918e264b9c581ca",
+      "sha256": "d5f30c438e55dac671c410e58f3c2c1ef8366d67eb1cda63c5dc22863b57180e",
       "executable": false
     },
     "tests/dispatch-authority.test.mjs": {
