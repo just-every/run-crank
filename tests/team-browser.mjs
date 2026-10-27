@@ -190,7 +190,7 @@ try {
     await shot(width,'mixed-grant-status-only');page=ownerScreen;
     await send('team/'+dana.id,{grants:[{role:'viewer',workflow_ids:[workflow.id],connection_ids:[]},{role:'builder',workflow_ids:[workflow.id],connection_ids:[connection.id]}]});
     page=builderPage;await page.goto(origin+'/app/workflows/'+workflow.id);
-    if(width===1440) await expect(page.getByRole('link',{name:'Test',exact:true})).toBeVisible();
+    if(width===1440) await expect(page.getByRole('banner').getByRole('link',{name:'Test',exact:true})).toBeVisible();
     await shot(width,'complete-builder-grant');page=ownerScreen;
     for(const complete of [false,true]) {
       await send('team/'+dana.id,{grants:[{role:'operator',workflow_ids:[liveWorkflow.id],connection_ids:complete?[connection.id]:[]},{role:'viewer',workflow_ids:[liveWorkflow.id],connection_ids:[connection.id]}]});

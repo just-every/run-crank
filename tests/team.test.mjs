@@ -165,7 +165,7 @@ test('TEAM-001 / WORK-008: scoped builders freeze draft tests; both account bind
 
 test('TEAM-001: complete explicit grants authorize native work, delegation, scoped recovery and value-free duties without cross-grant widening',async()=>{
  const edge=fakeEdge();edge.routes.set('grants.example',()=>jsonResponse({id:'synthetic-crank-receipt'},201));
- const h=await harness('http://127.0.0.1:9',{edge:edge.edge});
+ const h=await harness('http://127.0.0.1:9',{edge:edge.edge,clock:'2026-10-15T12:00:00.000Z'});
  try {
   const person=await invite(h,'Synthetic grant builder'),admin=await invite(h,'Synthetic delegated admin'),recipient=await invite(h,'Synthetic delegated builder'),auditor=await invite(h,'Synthetic audit reader'),billing=await invite(h,'Synthetic billing administrator');
   const c=await connection(h,{app:'http',label:'Synthetic account',auth_kind:'bearer',domains:['grants.example'],secret:{token:fakeSecret('grant-custody')}});
@@ -287,13 +287,18 @@ test('TEAM-001: the native upgrade snapshots exact existing Base access once and
  const h=await harness('http://127.0.0.1:9',{beforeTeamMigration:true});
  try {
   const w=await publish(h,'Synthetic migration workflow',{trigger:{type:'manual'},steps:[{id:'record',type:'map',input:{ok:true}}]});
-  const admin=await invite(h,'Synthetic migrating administrator','admin'),viewer=await invite(h,'Synthetic migrating reader');
+  const admin=await invite(h,'Synthetic migrating administrator','admin'),viewer=await invite(h,'Synthetic migrating reader'),scoped=await invite(h,'Synthetic already scoped reader');
+  // This is an existing installation's single-role row before the upgrade adds explicit grants.
+  await h.db.prepare('INSERT INTO crank_team_access(operator_id,role,workflow_ids_json,connection_ids_json,revision,changed_by,changed_at) VALUES(?,?,?,?,?,?,?)').bind(scoped.id,'viewer',JSON.stringify([w.id]),'[]','synthetic-crank-old-scope','synthetic-crank-migration-fixture',new Date().toISOString()).run();
   await h.migrateTeam();
   const reports=await h.get('team/migration');
-  assert.deepEqual(reports.map(row=>row.operator_id).sort(),[admin.id,viewer.id].sort());
+  assert.deepEqual(reports.map(row=>row.operator_id).sort(),[admin.id,viewer.id,scoped.id].sort());
   for(const row of reports){assert.equal(row.gained_access,0);assert.deepEqual(row.grants[0].workflow_ids.slice().sort(),(row.operator_id===admin.id?[w.id,'workspace:production']:[w.id]).sort());assert.deepEqual(row.grants[0].connection_ids,[])}
   assert.deepEqual(reports.find(row=>row.operator_id===admin.id).grants[0].actions,['read','prepare','start']);
   assert.deepEqual(reports.find(row=>row.operator_id===viewer.id).grants[0].actions,['read']);
+  assert.deepEqual(reports.find(row=>row.operator_id===scoped.id).grants,[{role:'viewer',workflow_ids:[w.id],connection_ids:[]}]);
+  assert.equal((await h.get('workflows/'+w.id,scoped.cookie)).name,'Synthetic migration workflow');
+  await h.post(`workflows/${w.id}/draft`,{name:'Refused scoped migration widening'},scoped.cookie,403);
   await h.post(`workflows/${w.id}/draft`,{name:'Migrated edit remains authorized'},admin.cookie);
   await h.post(`workflows/${w.id}/publish`,{},admin.cookie,403);
   assert.equal((await h.get('workflows/'+w.id,viewer.cookie)).name,'Migrated edit remains authorized');
@@ -303,6 +308,7 @@ test('TEAM-001: the native upgrade snapshots exact existing Base access once and
   await h.post('workflows',{name:'Refused cross-environment creation',environment:'sandbox',graph:{trigger:{type:'manual'},steps:[{id:'record',type:'map',input:{ok:true}}]}},admin.cookie,403);
   const later=await publish(h,'Synthetic post-migration record',{trigger:{type:'manual'},steps:[{id:'record',type:'map',input:{ok:true}}]});
   await h.get('workflows/'+later.id,admin.cookie,403);
+  await h.get('workflows/'+later.id,scoped.cookie,403);
   const newcomer=await invite(h,'Synthetic new ungranted administrator','admin');
   await h.get('workflows/'+w.id,newcomer.cookie,403);
   await h.restart();assert.deepEqual(await h.get('team/migration'),reports,'restart never widens or repeats the migration snapshot');
