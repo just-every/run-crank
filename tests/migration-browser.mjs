@@ -7,6 +7,7 @@ import {harness} from './harness.mjs';
 import {chromium} from '@playwright/test';
 import {createHash} from 'node:crypto';
 import {looseObjectExport} from './n8n-conditions-journey.mjs';
+import {arithmeticExport} from './n8n-datetime-journey.mjs';
 import {fakeSecret} from './kit.mjs';
 const canonical=value=>value===null||typeof value!=='object'?JSON.stringify(value):Array.isArray(value)?'['+value.map(canonical).join(',')+']':'{'+Object.keys(value).sort().map(key=>JSON.stringify(key)+':'+canonical(value[key])).join(',')+'}';
 const digest=value=>createHash('sha256').update(value).digest('hex');
@@ -100,12 +101,13 @@ try {
  const objectSource=looseObjectExport(declared,'synthetic-crank-object-browser');
  const literalObjectSource=looseObjectExport(declared,'synthetic-crank-object-literal-browser');literalObjectSource.name='Synthetic literal object routing';
  literalObjectSource.nodes[1].parameters.conditions.conditions[0].leftValue='{"message":"{{"}';
+ const dateSources=[arithmeticExport(declared,'synthetic-crank-date-browser-month'),arithmeticExport(declared,'synthetic-crank-date-browser-day',{operation:'subtractFromDate',duration:1,timeUnit:'days',options:{includeInputFields:false}})];
  const driftSources=[conversionExport('registry','synthetic-crank-84'),conversionExport('code','synthetic-crank-85')],driftBundle=driftSources.map((workflow,index)=>({workflow,conversions:{n1:index?codeChoice:registryChoice}}));
  const shots=async state=>{for(const width of [1440,390]){await page.setViewportSize({width,height:1000});await shot(width,state)}};
  // Stage the protected-undo fixtures together while every imported target is an
  // unused draft. Publication later deliberately fences this retained plan;
  // planning another import against that used native inventory is not this test.
- await page.getByLabel('Workflow export JSON').fill(JSON.stringify([sourceEnvelope,...driftBundle,objectSource,literalObjectSource]));await page.getByRole('button',{name:'Upload and plan',exact:true}).click();await page.waitForLoadState('networkidle');
+ await page.getByLabel('Workflow export JSON').fill(JSON.stringify([sourceEnvelope,...driftBundle,objectSource,literalObjectSource,...dateSources]));await page.getByRole('button',{name:'Upload and plan',exact:true}).click();await page.waitForLoadState('networkidle');
  assert.equal(await page.getByRole('button',{name:'Approve this plan',exact:true}).count(),1);await page.getByText(/Supported fields/).click();assert.ok((await page.locator('body').innerText()).includes('distinct linear done path'));await shots('done-review');
  const driftPlan=await reviewedPlan();
  await page.getByRole('button',{name:'Approve this plan',exact:true}).click();await page.waitForLoadState('networkidle');
@@ -159,6 +161,29 @@ try {
  }
  }
  console.log('WORK-013: reviewed loose-object operands, data grammar provenance, exact branch results and receiver outcomes inspected at 1440 and 390');
+
+ for(const [index,dateSource]of dateSources.entries()){
+  const dateWorkflow=(await send('workflows')).find(row=>row.name===dateSource.name),draft=await send('workflows/'+dateWorkflow.id);
+  assert.equal(draft.status,'draft');assert.deepEqual(draft.versions,[]);assert.deepEqual(draft.hooks,[]);
+  const dateStep=draft.draft.steps.find(step=>step.fn==='date.n8n_arithmetic');assert.ok(dateStep);
+  await page.setViewportSize({width:1440,height:1000});await page.goto(origin+'/app/workflows/'+dateWorkflow.id+'?step='+dateStep.id);await shots('datetime-'+index+'-inactive');
+  await send('workflows/'+dateWorkflow.id+'/estimate',{cost:{components:['orchestration','connectors','models','executors'].map(kind=>({kind,usd_per_run:'0',assumption:'Synthetic date receiver browser proof'}))}});
+  await send('workflows/'+dateWorkflow.id+'/publish',{},201);const hook=await send('workflows/'+dateWorkflow.id+'/hooks',{},201);
+  const date=index?'2026-11-02T01:30:00-06:00':'2024-01-31T18:05:06.123Z',expectedDate=index?'2026-11-01T01:30:00.000-06:00':'2024-02-29T12:05:06.123-06:00';
+  const expected=index?{due:expectedDate}:{date,label:'synthetic-crank-803',due:expectedDate,nested:{values:[1,null,'synthetic-crank-806']}};
+  const before=effects.length,response=await context.request.post(hook.url,{data:{date}});assert.equal(response.status(),200);const admission=await response.json();let result;
+  for(let tries=0;tries<100;tries++){result=await send('workflow-runs/'+admission.run_id);if(!['queued','running'].includes(result.status))break;await page.waitForTimeout(50)}
+  assert.equal(result.status,'succeeded',JSON.stringify(result.error));assert.equal(effects.length,before+1);assert.equal(effects.at(-1).path,'/date-arithmetic');assert.deepEqual(effects.at(-1).input,expected);
+  await page.setViewportSize({width:1440,height:1000});await page.goto(origin+'/app/workflows/'+dateWorkflow.id+'?step='+dateStep.id+'&tab=data');
+  const input=JSON.parse(await page.locator('.inspector-block').filter({has:page.getByRole('heading',{name:'Input',exact:true})}).locator('pre').innerText()),output=JSON.parse(await page.locator('.inspector-block').filter({has:page.getByRole('heading',{name:'Output',exact:true})}).locator('pre').innerText());
+  assert.equal(input.value,date);assert.equal(input.amount,index?-1:1);assert.equal(input.unit,index?'days':'months');assert.equal(input.timezone,'America'+'/'+'Chicago');assert.equal(input.include_input_fields,!index);assert.deepEqual(output,expected);await shots('datetime-'+index+'-operands-output');
+  await page.setViewportSize({width:1440,height:1000});await page.goto(origin+'/app/workflow-runs/'+result.id);await page.locator('.timeline details.inline-disclosure').evaluateAll(elements=>elements.forEach(element=>element.open=true));assert.ok((await page.locator('.timeline').innerText()).includes(expectedDate));await shots('datetime-'+index+'-destination-result');
+  if(index===0){const count=effects.length,bad=await context.request.post(hook.url,{data:{date:'2026-02-30T12:00:00Z'}}),admitted=await bad.json();let failed;
+   for(let tries=0;tries<100;tries++){failed=await send('workflow-runs/'+admitted.run_id);if(!['queued','running'].includes(failed.status))break;await page.waitForTimeout(50)}
+   assert.equal(failed.status,'failed');assert.equal(failed.error.category,'validation');assert.equal(effects.length,count);await page.setViewportSize({width:1440,height:1000});await page.goto(origin+'/app/workflow-runs/'+failed.id);await shots('datetime-invalid-no-write');
+  }
+ }
+ console.log('WORK-012: reviewed date arithmetic, month-end and Chicago repeated-hour results, retained fields and invalid-date refusal inspected at 1440 and 390');
 
  await context.close();
 }catch(error){if(page){await page.screenshot({path:join(evidence,'journey-error.png'),fullPage:true});console.error((await page.locator('body').innerText()).slice(0,800))}console.error(String(error.message).replace(/https?:\/\/\S+/g,'[redacted URL]'));process.exitCode=1}
