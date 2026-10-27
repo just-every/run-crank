@@ -40,6 +40,8 @@ export async function admitTeamRequest(request: Request, env: CrankEnv, actor: A
   const wf = /^\/api\/crank\/workflows\/([^/]+)(?:\/(.*))?$/.exec(path)
   if (wf) {
     workflowScope(actor, decodeURIComponent(wf[1]))
+    if (read && wf[2] === 'samples' && ['admin','builder','operator'].includes(actor.team.role)) return
+    if (!read && /^samples(?:\/(?:select|delete|fields))?$/.test(wf[2] ?? '') && mayPrepare(actor)) return
     if (read && (!wf[2] || /^(drafts\/[^/]+|compare|versions\/\d+|today)$/.test(wf[2]))) return
     if (!read && ['draft','validate','preview','publish','rollback','unpublish','pause','resume'].includes(wf[2] ?? '') && mayPrepare(actor)) return
     if (!read && wf[2] === 'test' && mayPrepare(actor)) return

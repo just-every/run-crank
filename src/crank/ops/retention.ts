@@ -189,6 +189,7 @@ async function expireWorkflowPayload(env: CrankEnv, portability: PortabilityFenc
       error_json=CASE WHEN error_json IS NULL THEN NULL ELSE json_object('category',json_extract(error_json,'$.category'),'message','Details expired under the retention policy.') END WHERE run_id=?`, runId),
     stmt(env, 'UPDATE crank_wf_step_revisions SET prior_input_json=NULL,input_json=NULL,prior_error_json=NULL WHERE run_id=?', runId),
     stmt(env, 'UPDATE crank_waits SET proposal_json=NULL,resolution_json=NULL,reason=NULL WHERE run_id=?', runId),
+    stmt(env, "DELETE FROM crank_workflow_samples WHERE source='history' AND source_id=?", runId),
     stmt(env, "UPDATE crank_hold_items SET payload_json='{}' WHERE run_id=?", runId),
     stmt(env, "UPDATE crank_app_snapshots SET fields_json='{}' WHERE workflow_id=(SELECT workflow_id FROM crank_wf_runs WHERE id=?) AND record_id=(SELECT business_key FROM crank_wf_runs WHERE id=?)", runId, runId),
     stmt(env, "UPDATE crank_historical_items SET payload_json='{}' WHERE run_id=?", runId),

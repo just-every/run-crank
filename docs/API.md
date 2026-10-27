@@ -1061,3 +1061,33 @@ Publish a step with `type: "nook.send_message"`, its `connection_id`, and `input
 The output includes the provider message `id`, `body`, `conversation_id`, `origin`, `acknowledgement: "provider_response"` and `independently_read_back: false`. An invalid or mismatched acknowledgement stays uncertain. This token cannot read messages or subscribe to events; the action does not claim either capability, app identity or independent readback. Archive restore retains the binding and history without credentials or execution authority. Local erasure does not delete a message in Nook.
 
 Protocol source: [Nook integration token documentation](https://github.com/just-every/run-nook/blob/2db1fd4fd41b3b4fa89f2a40d3549d46d747529b/docs/integration-tokens.md).
+
+
+### Retained draft samples
+
+The native owner starts a single-use, ten-minute draft webhook listener with
+`POST /api/crank/workflows/:id/samples/listen`. Send the actual form-encoded,
+JSON or multipart POST to the returned draft URL. It captures parsed and raw
+body, safe headers, query and file references plus retained file bytes. It
+never admits a production event or consumes its dedup identity. Changing the
+draft or revoking the starting session invalidates the listener. Receiving URLs
+are shown once and excluded from archives.
+
+Authorized payload readers use `GET /api/crank/workflows/:id/samples`.
+Preparation callers save a manual trigger sample with
+`POST /api/crank/workflows/:id/samples` and `{source:"manual",sample:{...}}`,
+or select retained workflow history with `{source:"history",run_id:"..."}`.
+A schema example uses `{source:"schema",step_path:"...",sample:{...}}` and
+always remains explicitly not tested. Use the same route with a `select` or
+`delete` suffix and `{sample_id:"..."}` to choose or remove a record. Deletion
+honors legal holds and records the portability erasure fence. Restored samples retain all portable
+values but are unselected; the owner must adopt the workflow before selecting
+samples or opening another listener.
+
+The `fields` suffix accepts `{fields:["body.email","body.new_question"]}` to
+refresh the native expected-field list. Validation and publication report
+missing named fields and app steps still relying on schema examples. This is
+not connected-provider field discovery. The workflow preview accepts
+`{sample_id:"..."}` or the selected trigger sample by default, and carries its
+source identity and time through pure mapping, transform and condition results.
+An explicit `{sample:{...}}` preview is always labelled manual.

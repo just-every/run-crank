@@ -39,6 +39,11 @@ test('WORK-008: immutable draft tests bind test accounts; live confirmation, pro
     assert.equal((await h.get(`workflows/${workflow.id}`)).published_version_id, initialVersion.id, 'tests never publish');
     assert.ok(tested.version.declared.connection_schemas[0].schema_digest);
     assert.equal(tested.version.declared.connection_schemas[0].purpose, 'test');
+    const testedWarnings = (await h.post(`workflows/${workflow.id}/validate`, {})).warnings;
+    assert.equal(testedWarnings.some(w => w.includes('Step invoice') && w.includes('not tested')), false, 'a completed rebound-account action test covers the saved draft');
+    await h.post(`workflows/${workflow.id}/draft`, { graph: graph('changed after test') });
+    assert.equal((await h.post(`workflows/${workflow.id}/validate`, {})).warnings.some(w => w.includes('Step invoice') && w.includes('not tested')), true, 'a changed draft requires a new test');
+    await h.post(`workflows/${workflow.id}/draft`, { graph: graph('revised') });
     assert.equal((await h.get(`workflows/${workflow.id}/today`)).runs, 1, 'test excluded from production count');
     const change = await h.get(`workflows/${workflow.id}/compare`);
     assert.ok(change.changed_fields.includes('/steps/1/input/body/label'));
@@ -117,4 +122,13 @@ test('WORK-008: immutable draft tests bind test accounts; live confirmation, pro
       assert.equal((await receiving.get('workflows/' + workflow.id)).status, 'paused');
     } finally { await receiving.close(); }
   } finally { await h.close(); }
+});
+
+test('Retained draft samples preserve captured and manual provenance, refuse restricted history and restore inactive without production admission', async () => {
+  const {sampleJourney}=await import('./sample-journey.mjs');
+  await sampleJourney();
+});
+
+test('Draft capture rejects changed authority and concurrent reuse without admitting a production event', async () => {
+ const {sampleAuthorityJourney}=await import('./sample-journey.mjs');await sampleAuthorityJourney();
 });
