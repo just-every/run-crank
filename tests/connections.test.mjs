@@ -753,3 +753,8 @@ test('Invoice outcomes stay open after successful requests until granted repair 
 test('Managed Calendar creation reads back the exact event and reconciles response loss without repeating writes',async()=>{
  const {googleCalendarJourney}=await import('./google-calendar-journey.mjs');await googleCalendarJourney();
 });
+
+test('Native Nook delivery binds installation and conversation, retains one effect across lost acknowledgements and fences current authority', async () => {
+  const {nookJourney}=await import('./nook-journey.mjs');
+  await nookJourney();
+});

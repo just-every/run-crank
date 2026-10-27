@@ -7,6 +7,8 @@ import { type DataFlow, fields, recipient, queryFields, providerFlow } from './d
 /** Project graph request declarations without exposing input values. */
 export async function graphDataFlows(env: CrankEnv, credential: (id: unknown) => string) {
   const flows: DataFlow[] = []
+  const siblings = (await stmt(env, "SELECT id,sibling_binding_json FROM crank_connections WHERE app='nook'").all<{ id: string; sibling_binding_json: string | null }>()).results
+  const siblingOrigin = (connectionId: unknown) => { const row = siblings.find(c => c.id === connectionId); return row?.sibling_binding_json ? JSON.parse(row.sibling_binding_json).origin : 'Unbound Nook installation' }
   // Include old versions still retained by nonterminal work, not just the latest graph.
   const stored = await stmt(env, `SELECT v.id,v.graph_json,w.name,w.status,v.mode FROM crank_workflow_versions v JOIN crank_workflows w ON w.id=v.workflow_id
     WHERE v.id=w.published_version_id OR EXISTS(SELECT 1 FROM crank_wf_runs r WHERE r.version_id=v.id AND r.status IN ('queued','running','waiting','awaiting_approval','paused')) ORDER BY v.id`).all<{ id: string; graph_json: string; name: string; status: string; mode: string }>()
@@ -27,6 +29,7 @@ export async function graphDataFlows(env: CrankEnv, credential: (id: unknown) =>
         if (step.type === 'paths') for (const b of branchesOf(step)) walk(b.steps, `${path}/${b.id}/`)
         else if (step.type === 'loop') walk(step.steps as Step[], `${path}/items/*/`)
         else if (step.type === 'code') emit(path,'code',{source:step.source,language:step.language,input},step.connection_id,[step.executor_url])
+        else if (step.type.startsWith('nook.')) emit(path,step.type,input,step.connection_id,[siblingOrigin(step.connection_id)])
         else if (step.type.startsWith('quickbooks.')) emit(path,step.type,input,step.connection_id,['https://sandbox-quickbooks.api.intuit.com'])
         else if (step.type.startsWith('gusto.')) emit(path,step.type,input,step.connection_id,['https://api.gusto-demo.com','https://api.gusto.com'])
         else if (step.type.startsWith('google_calendar.')) emit(path,step.type,input,step.connection_id,['https://www.googleapis.com'])

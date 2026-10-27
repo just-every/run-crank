@@ -48,7 +48,7 @@ export async function retryRequest(ctx: RequestContext, request: { method: strin
       if (!(error instanceof StepError) || error.category !== 'network' || !(safeRead || request.idempotent)) throw error
       failure = error
     }
-    if (response && (!safeRead || !transient(response.status))) return request.checkpoint === false ? { response, attempts } : saveRequestCheckpoint(ctx, ordinal, requestKey, { response, attempts })
+    if (response && (!(safeRead || request.idempotent) || !transient(response.status))) return request.checkpoint === false ? { response, attempts } : saveRequestCheckpoint(ctx, ordinal, requestKey, { response, attempts })
     const category = response?.status === 429 ? 'rate_limit' : failure ? 'network' : 'provider'
     if (attempts >= maximum) {
       if (response) return request.checkpoint === false ? { response, attempts, exhausted: true } : saveRequestCheckpoint(ctx, ordinal, requestKey, { response, attempts, exhausted: true })

@@ -1034,3 +1034,30 @@ inactive without grants or active invoice claims; receiving authority requires
 fresh owner review and grants. Run erasure removes its recurring history link
 and billing-contact values under the existing data policy. Provider recipients,
 field categories and unverified provider-controlled terms remain in Data.
+
+
+### Native Nook delivery
+
+Create a native connection through `POST /api/crank/connections` as the owner:
+
+```json
+{
+  "app": "nook",
+  "label": "Operations conversation",
+  "auth_kind": "bearer",
+  "scopes": ["messages:write"],
+  "binding": {
+    "origin": "https://nook.example.com",
+    "conversation_id": "your-conversation-id"
+  },
+  "secret": {"token": "<owner-supplied Nook integration token>"}
+}
+```
+
+Issue the token in Nook's Integration tokens settings for this conversation. Nook independently enforces its current channel membership, posting permissions and token status. The Crank scope is an owner declaration; it does not establish a provider grant. Bindings are immutable: create another connection to select a different installation or conversation. Rotation replaces the secret and scopes without changing the destination. The native connection test refuses this post-only credential; test the action through the normal draft-test door with an explicit production-effect confirmation or a declared test binding.
+
+Publish a step with `type: "nook.send_message"`, its `connection_id`, and `input: {"body": "your mapped message"}`. No URL or conversation may be mapped. Both native and generic HTTP use of this connection are confined to the exact HTTPS origin and conversation message endpoint; redirects never carry the token elsewhere. The native action checks messages:write immediately before physical dispatch after admission and retries. Its stable operation key follows Nook's documented idempotency contract. Retained retry budgets and provider waits survive restart.
+
+The output includes the provider message `id`, `body`, `conversation_id`, `origin`, `acknowledgement: "provider_response"` and `independently_read_back: false`. An invalid or mismatched acknowledgement stays uncertain. This token cannot read messages or subscribe to events; the action does not claim either capability, app identity or independent readback. Archive restore retains the binding and history without credentials or execution authority. Local erasure does not delete a message in Nook.
+
+Protocol source: [Nook integration token documentation](https://github.com/just-every/run-nook/blob/2db1fd4fd41b3b4fa89f2a40d3549d46d747529b/docs/integration-tokens.md).

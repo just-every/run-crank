@@ -5,10 +5,12 @@ import { isObject } from '../engine/values'
 import { CrankError, id, now, requireValue, stmt, text, type Actor, type CrankEnv } from '../model'
 import { auditStatement, auditStatementWhen } from '../ops/audit'
 import { notify } from '../ops/notices'
+import { siblingBinding } from './sibling-binding'
 import { APPS, SECRET_FIELDS, type AuthKind } from './apps'
 import { open, seal } from './vault'
 
 export interface ConnectionRow {
+  sibling_binding_json: string | null
   id: string; app: string; label: string; auth_kind: AuthKind; account_name: string; domains_json: string; scopes_json: string
   renewed_at: string | null; previous_expires_at: string | null
   environment:string
@@ -20,7 +22,7 @@ export type Secret = Record<string, string>
 
 /** Public view: never any credential material. */
 export function present(row: ConnectionRow) {
-  return { id: row.id, app: row.app, environment:row.environment, purpose: row.purpose, label: row.label, auth_kind: row.auth_kind, account_name: row.account_name, domains: JSON.parse(row.domains_json), scopes: JSON.parse(row.scopes_json), status: row.status, expires_at: row.expires_at, renewed_at: row.renewed_at, previous_expires_at: row.previous_expires_at, created_by: row.created_by, created_at: row.created_at, rotated_at: row.rotated_at, revoked_at: row.revoked_at, consented_at: row.consented_at }
+  return { id: row.id, app: row.app, ...(row.sibling_binding_json ? { binding: JSON.parse(row.sibling_binding_json) } : {}), environment:row.environment, purpose: row.purpose, label: row.label, auth_kind: row.auth_kind, account_name: row.account_name, domains: JSON.parse(row.domains_json), scopes: JSON.parse(row.scopes_json), status: row.status, expires_at: row.expires_at, renewed_at: row.renewed_at, previous_expires_at: row.previous_expires_at, created_by: row.created_by, created_at: row.created_at, rotated_at: row.rotated_at, revoked_at: row.revoked_at, consented_at: row.consented_at }
 }
 const binding = (row: { id: string; app: string }) => `crank-connection:${row.id}:${row.app}`
 
@@ -62,14 +64,16 @@ export async function createConnection(env: CrankEnv, actor: Actor, input: Recor
     requireValue(input.environment === 'sandbox', 'Gusto managed OAuth credentials are only available for sandbox companies')
     requireValue(/^[A-Za-z0-9_-]+$/.test(text(granted.account ?? input.account_name, 'account_name', 100)), 'Bind Gusto managed credentials to one company identifier')
   }
+  const nativeBinding = app === 'nook' ? siblingBinding(input.binding) : null
   const secret = validateSecret(kind, input.secret), row = { id: id(), app }
   const sealed = await seal(env, binding(row), secret), at = now()
   requireValue(input.purpose === undefined || ['production', 'test'].includes(String(input.purpose)), 'purpose must be production or test')
   const scopes = granted.scopes ?? (Array.isArray(input.scopes) ? input.scopes.map(String) : [])
   await guardedBatch(env, actor, 'owner', [
     stmt(env, `INSERT INTO crank_connections(id,app,label,auth_kind,account_name,domains_json,scopes_json,secret_iv,secret_ciphertext,expires_at,status,created_by,created_at,consented_at)
-      VALUES(?,?,?,?,?,?,?,?,?,?,'active',?,?,?)`, row.id, app, text(input.label, 'label'), kind, granted.account ?? (typeof input.account_name === 'string' ? input.account_name.slice(0, 200) : ''),
-      JSON.stringify(domains(app, input.domains)), JSON.stringify(scopes), sealed.iv, sealed.ciphertext, granted.expiresAt ?? secret.expires_at ?? null, actor.id, at, at),
+      VALUES(?,?,?,?,?,?,?,?,?,?,'active',?,?,?)`, row.id, app, text(input.label, 'label'), kind, nativeBinding?.conversation_id ?? granted.account ?? (typeof input.account_name === 'string' ? input.account_name.slice(0, 200) : ''),
+      JSON.stringify(nativeBinding ? [new URL(nativeBinding.origin).hostname] : domains(app, input.domains)), JSON.stringify(scopes), sealed.iv, sealed.ciphertext, granted.expiresAt ?? secret.expires_at ?? null, actor.id, at, at),
+    stmt(env, 'UPDATE crank_connections SET sibling_binding_json=? WHERE id=?', nativeBinding ? JSON.stringify(nativeBinding) : null, row.id),
     stmt(env, 'UPDATE crank_connections SET purpose=?,environment=? WHERE id=?', input.purpose ?? 'production', environmentName(input.environment??'production'), row.id),
     auditStatement(env, actor.id, 'connection.create', 'connection', row.id, { app, auth_kind: kind, scopes, purpose: input.purpose ?? 'production' }),
   ])
@@ -80,6 +84,7 @@ export async function createConnection(env: CrankEnv, actor: Actor, input: Recor
 export async function rotateConnection(env: CrankEnv, actor: Actor, connectionId: string, input: Record<string, unknown>, granted: { scopes?: string[]; expiresAt?: string | null } = {}) {
   requireOwner(actor)
   const row = await getConnection(env, connectionId)
+  requireValue(row.app !== 'nook' || input.binding === undefined, 'Connection bindings are immutable; create another connection to change the destination')
   const secret = validateSecret(row.auth_kind, input.secret), sealed = await seal(env, binding(row), secret), at = now()
   const reconnect = row.status !== 'active'
   const scopes = granted.scopes ?? (Array.isArray(input.scopes) ? input.scopes.map(String) : JSON.parse(row.scopes_json))

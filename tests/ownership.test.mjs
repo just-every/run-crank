@@ -27,7 +27,10 @@ test('BASE-001/BASE-004: an owned installation publishes and finishes every ship
     const component = await h.post('subflows', { name: 'Owned pure component', definition: { inputs: { value: 'string' }, outputs: { value: 'string' }, steps: [{ id: 'trim', fn: 'text.trim', input: { value: '{{trigger.input.value}}' } }], result: { value: '{{steps.trim}}' } } }, h.owner, 201);
     const table = await h.post('tables', { name: 'Owned operational counter', confirm: 'OPERATIONAL_NUMBERS_ONLY' }, h.owner, 201);
     await h.post(`tables/${table.id}/records`, { operation_id: crypto.randomUUID(), key: 'count', operation: 'upsert', value: 0 });
+    const nook=await connection(h,{app:'nook',label:'Owned Nook conversation',auth_kind:'bearer',scopes:['messages:write'],binding:{origin:'https://nook.example',conversation_id:'synthetic-crank-301'},secret:{token:'synthetic-crank-302'}});
+    fake.routes.set('nook.example',({body})=>jsonResponse({id:'synthetic-crank-303',body:JSON.parse(body).body}));
     const graph = ownershipGraph(slack.id,executor.id);graph.steps.unshift(custom.step,
+      {id:'nook_message',type:'nook.send_message',connection_id:nook.id,input:{body:'Owned operations message'}},
       {id:'calendar_event',type:'google_calendar.create_event',connection_id:calendar.id,input:{calendar_id:'synthetic-crank-21@example.test',summary:'Harbor appointment',start:{dateTime:'2026-11-03T09:00:00+10:00',timeZone:'Australia'+'/'+'Brisbane'},end:{dateTime:'2026-11-03T09:30:00+10:00',timeZone:'Australia'+'/'+'Brisbane'}}},
       { id: 'component', type: 'subflow', subflow_id: component.subflow_id, subflow_version: 1, input: { value: ' Owned installation ' } },
       { id: 'counter', type: 'table.atomic', table_id: table.id, input: { key: 'count', operation: 'increment', by: 1 } },
@@ -62,6 +65,7 @@ test('BASE-001/BASE-004: an owned installation publishes and finishes every ship
     assert.equal(stepOf(done, 'rep_name').output.record.id, 'U000001');
     assert.equal(stepOf(done, 'find_note').output.count, 1);
     assert.equal(stepOf(done, 'quote').output.size, new TextEncoder().encode('Harbor Workshop quote: $521.00').length);
+    assert.equal(stepOf(done, 'nook_message').output.id, 'synthetic-crank-303');
     assert.equal(stepOf(done, 'component').output.value, 'Owned installation');
     assert.equal(stepOf(done, 'lookup_count').output.record.value, 1);
     assert.equal(stepOf(done, 'question').output.answers.reference, 'Owned receipt');

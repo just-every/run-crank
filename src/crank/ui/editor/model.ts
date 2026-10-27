@@ -44,6 +44,7 @@ export function appOf(node: Node, connections: Connection[]): { title: string; t
   const step = node.step!, c = connection(step.connection_id)
   if (step.type.startsWith('quickbooks.')) return { title: 'QuickBooks sandbox', tile: 'quickbooks', glyph: 'invoice' }
   if (step.type.startsWith('gusto.')) return { title: 'Gusto', tile: 'tool', glyph: 'account' }
+  if (step.type === 'nook.send_message') return { title: 'Nook', tile: 'tool', glyph: 'chat' }
   if (step.type.startsWith('slack.')) return { title: 'Slack', tile: 'slack', glyph: 'chat' }
   if (step.type === 'http' && c) {
     const domains = [...c.domains, ...(c.app === 'google' ? [] : [])], url = String((step.input as any)?.url ?? '')
@@ -68,7 +69,7 @@ export function summaryOf(node: Node): string {
   const step = node.step!
   if (typeof step.name === 'string') return step.name
   if (step.type.startsWith('slack.')) return titleCase(step.type.slice(6).replace(/_/g, ' '))
-  const native: Record<string,string> = { 'quickbooks.invoice_outcome':'Verify invoice outcome', 'quickbooks.create_invoice':'Create invoice', 'quickbooks.create_refund_receipt':'Record refund receipt', 'quickbooks.void_invoice':'Void invoice after approval', 'gusto.contractor_1099_handoff':'Send contractor data for 1099 preparation', 'gusto.employee_w2_handoff':'Send employee data for W-2 preparation', 'gusto.contractor_payment':'Pay contractor by ACH', 'gusto.contractor_forms':'Read contractor tax forms', 'gusto.employee_forms':'Read employee tax forms', 'gusto.payment_readback':'Read contractor payment' }
+  const native: Record<string,string> = { 'nook.send_message':'Post message to the connected conversation', 'quickbooks.invoice_outcome':'Verify invoice outcome', 'quickbooks.create_invoice':'Create invoice', 'quickbooks.create_refund_receipt':'Record refund receipt', 'quickbooks.void_invoice':'Void invoice after approval', 'gusto.contractor_1099_handoff':'Send contractor data for 1099 preparation', 'gusto.employee_w2_handoff':'Send employee data for W-2 preparation', 'gusto.contractor_payment':'Pay contractor by ACH', 'gusto.contractor_forms':'Read contractor tax forms', 'gusto.employee_forms':'Read employee tax forms', 'gusto.payment_readback':'Read contractor payment' }
   if (native[step.type]) return native[step.type]
   if (step.type === 'http') return `${String((step.input as any)?.method ?? 'GET').toUpperCase()} request`
   if (step.type === 'paths') return `${node.branches?.length ?? 0} paths`

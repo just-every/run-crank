@@ -45,6 +45,7 @@ const match = (path: string, pattern: RegExp) => pattern.exec(path)?.slice(1).ma
 async function testConnection(env: CrankEnv, actor: Actor, connectionId: string, input: Record<string, unknown>) {
   requireOwner(actor)
   const row = await getConnection(env, connectionId)
+  requireValue(row.app !== 'nook', 'Nook tokens only post to their bound conversation. Test the native send_message action with explicit write confirmation or a test binding.')
   if (row.app === 'slack') {
     const result = await slackCall({ env }, connectionId, 'auth.test', {}, false)
     await stmt(env, 'UPDATE crank_connections SET account_name=? WHERE id=?', String(result.team ?? ''), connectionId).run()
