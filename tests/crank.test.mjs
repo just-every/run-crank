@@ -2,6 +2,7 @@ import {originalCodeJourney} from './n8n-code-journey.mjs';
 import {n8nBindingJourney} from './n8n-binding-journey.mjs';
 import {transformStreamJourney} from './n8n-stream-journey.mjs';
 import {n8nConditionsJourney} from './n8n-conditions-journey.mjs';
+import {n8nDateTimeJourney} from './n8n-datetime-journey.mjs';
 import {batchLoopJourney} from './n8n-batch-journey.mjs';
 import {doneLoopJourney} from './n8n-loop-journey.mjs';
 import {streamLoopJourney} from './n8n-loop-stream-journey.mjs';
@@ -206,6 +207,7 @@ test('Native n8n stream transforms process the complete bounded stream before re
 test('Native n8n fresh account binding keeps source references inactive and enforces revocation', n8nBindingJourney);
 
 test('Native n8n condition operators preserve source types and short circuit receiver dispatch', n8nConditionsJourney);
+test('Native n8n date arithmetic preserves calendar results and retained JSON through reviewed migration', n8nDateTimeJourney);
 
 test('Native n8n multi-item batches retain node barriers and replay only failed receiver work', batchLoopJourney);
 
