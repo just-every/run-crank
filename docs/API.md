@@ -1061,3 +1061,70 @@ Publish a step with `type: "nook.send_message"`, its `connection_id`, and `input
 The output includes the provider message `id`, `body`, `conversation_id`, `origin`, `acknowledgement: "provider_response"` and `independently_read_back: false`. An invalid or mismatched acknowledgement stays uncertain. This token cannot read messages or subscribe to events; the action does not claim either capability, app identity or independent readback. Archive restore retains the binding and history without credentials or execution authority. Local erasure does not delete a message in Nook.
 
 Protocol source: [Nook integration token documentation](https://github.com/just-every/run-nook/blob/2db1fd4fd41b3b4fa89f2a40d3549d46d747529b/docs/integration-tokens.md).
+
+
+### Bounded native subflow children
+
+The owner may POST an immutable definition to `/api/crank/subflows` with
+`kind: "native"`, `inputs`, `outputs`, `steps` and `result`. The type declarations
+use the same top-level field types as pure subflows. Native definitions start
+inactive. Review the returned digest through the version's `review` door with
+`confirm: "REVIEW_PURE_SUBFLOW"` (the existing compatibility token), then publish
+a caller that pins its version and uses `mode: "child"`. Review does not publish
+a caller or resume retained work.
+
+Native graphs support `map`, `transform`, `filter`, `paths`, `loop` and `delay`.
+Transform functions are `text.trim`, `text.case`, literal `text.replace` and
+`text.strip_html`. Declare transforms as steps; inline function mappings are
+refused. Delays use `for` or `until`; shared named queues are outside this slice.
+There are at most 20 declared steps, four nesting levels, 50 items in each loop
+and 2000 expanded invocations. Mapped inputs, outputs and intermediate
+checkpoints are bounded to 64 KiB. Oversized traces and error details are
+replaced with an explicit `truncated: true` summary and `original_bytes`;
+error summaries retain their failure category. The caller's own execution
+ceiling also applies. Provider steps, account bindings, code and recursive children are
+refused. Pure recipes retain their existing format and sample rules.
+
+The queued call returns a child id. The call's history door under
+`/api/crank/subflows/calls/{id}` returns its parent history link and child
+checkpoint metadata. A running call can be parked on its durable delay;
+checkpoint status identifies the wait. Values remain in the parent's sealed
+records. The ordinary executor continues the immutable graph from those
+checkpoints, including loop item identities. Current owner publication and
+review eligibility apply before each child step. Cancelling either the child
+or parent stops continuation. Revocation durably pauses unfinished children
+and their parents immediately, including children parked on delays. Review
+before the next scheduler pass cannot clear that fence. Review after
+revocation does not resume a child;
+the existing resume door requires the active digest and
+`confirm: "RESUME_PURE_CHILD"`. Imported unfinished children are interrupted,
+definitions are inactive, and receiving adoption and review remain necessary.
+
+### Retained draft samples
+
+The native owner starts a single-use, ten-minute draft webhook listener with
+`POST /api/crank/workflows/:id/samples/listen`. Send the actual form-encoded,
+JSON or multipart POST to the returned draft URL. It captures parsed and raw
+body, safe headers, query and file references plus retained file bytes. It
+never admits a production event or consumes its dedup identity. Changing the
+draft or revoking the starting session invalidates the listener. Receiving URLs
+are shown once and excluded from archives.
+
+Authorized payload readers use `GET /api/crank/workflows/:id/samples`.
+Preparation callers save a manual trigger sample with
+`POST /api/crank/workflows/:id/samples` and `{source:"manual",sample:{...}}`,
+or select retained workflow history with `{source:"history",run_id:"..."}`.
+A schema example uses `{source:"schema",step_path:"...",sample:{...}}` and
+always remains explicitly not tested. Use the same route with a `select` or
+`delete` suffix and `{sample_id:"..."}` to choose or remove a record. Deletion
+honors legal holds and records the portability erasure fence. Restored samples retain all portable
+values but are unselected; the owner must adopt the workflow before selecting
+samples or opening another listener.
+
+The `fields` suffix accepts `{fields:["body.email","body.new_question"]}` to
+refresh the native expected-field list. Validation and publication report
+missing named fields and app steps still relying on schema examples. This is
+not connected-provider field discovery. The workflow preview accepts
+`{sample_id:"..."}` or the selected trigger sample by default, and carries its
+source identity and time through pure mapping, transform and condition results.
+An explicit `{sample:{...}}` preview is always labelled manual.

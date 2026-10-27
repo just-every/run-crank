@@ -27,7 +27,7 @@ try {
     await pause(1000);
   }
   assert.ok(open, 'rer dev readiness deadline');
-  browser = await chromium.launch({ headless: true, args: ['--use-mock-keychain', '--password-store=basic'] });
+  browser = await chromium.launch({ headless: true, ...(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH ? {executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH} : {}), args: ['--use-mock-keychain', '--password-store=basic', '--no-sandbox'] });
   const context = await browser.newContext(), page = await context.newPage();
   await page.goto(open); await page.waitForURL(url => ['/app', '/setup'].includes(url.pathname), { timeout: 60000 });
   if (new URL(page.url()).pathname === '/setup') { await page.getByRole('checkbox').check(); await page.getByRole('button', { name: 'Finish setup', exact: true }).click(); await page.waitForURL('**/app'); }
@@ -44,10 +44,18 @@ try {
     const component = await send('./subflows/install',{recipe,recipe_digest:createHash('sha256').update(canonical(recipe)).digest('hex'),confirm:'INSTALL_PURE_RECIPE'},201);
     assert.equal(component.active,0);
     await send(`subflows/${component.subflow_id}/versions/1/review`,{definition_digest:component.definition_digest,confirm:'REVIEW_PURE_SUBFLOW'});
+    const native = await send(`subflows/${component.subflow_id}/versions`,{definition:{kind:'native',inputs:{address:'string'},outputs:{normalized:'string'},steps:[
+      {id:'mapped',type:'map',input:{address:'{{trigger.input.address}}'}},
+      {id:'trimmed',type:'transform',fn:'text.trim',input:{value:'{{steps.mapped.address}}'}},
+      {id:'selected',type:'paths',mode:'exclusive',branches:[{id:'address',when:[[{field:'steps.trimmed',op:'not_empty'}]],steps:[{id:'verified',type:'filter',when:[[{field:'steps.trimmed',op:'not_empty'}]]}]}]},
+      {id:'items',type:'loop',input:{items:['synthetic-crank-1','synthetic-crank-2']},max_items:2,concurrency:1,order:'input',empty:'allow',item_errors:'stop',steps:[{id:'label',type:'map',input:{value:'{{item}}'}}],result:'{{steps.label}}'},
+      {id:'delay',type:'delay',mode:'until',input:{until:'2000-01-01T00:00:00Z'}},
+    ],result:{normalized:'{{steps.trimmed}}'}}},201);
+    await send(`subflows/${component.subflow_id}/versions/2/review`,{definition_digest:native.definition_digest,confirm:'REVIEW_PURE_SUBFLOW'});
     const table = await send('tables', { name: `Operational count · ${width}`, confirm: 'OPERATIONAL_NUMBERS_ONLY' }, 201);
     await send(`tables/${table.id}/records`, { operation_id: crypto.randomUUID(), key: 'count', operation: 'upsert', value: 0 });
     for (const [kind, steps] of [
-      ['subflow', [{ id: 'normalize', type: 'subflow', mode: 'child', subflow_id: component.subflow_id, subflow_version: 1, input: { address: ' 17   Bay Road ' } }, { id: 'review', type: 'approval', input: { normalized: '{{steps.normalize.normalized}}' } }]],
+      ['subflow', [{ id: 'normalize', type: 'subflow', mode: 'child', subflow_id: component.subflow_id, subflow_version: 2, input: { address: ' 17   Bay Road ' } }, { id: 'review', type: 'approval', input: { normalized: '{{steps.normalize.normalized}}' } }]],
       ['table', [{ id: 'increment', type: 'table.atomic', table_id: table.id, input: { key: 'count', operation: 'increment', by: 1 } }, { id: 'review', type: 'approval', input: { counter: '{{steps.increment.value}}' } }]],
       ['failure', [{ id: 'check', type: 'transform', fn: 'number.divide', input: { a: 1, b: 0 } }]],
       ['approval', [{ id: 'review', type: 'approval', input: { amount: '19.99' } }]],
@@ -66,6 +74,11 @@ try {
         const childHistory = await send(`./subflows/calls/${child.id}/run`,{});
         assert.equal(childHistory.status,'succeeded');
         assert.equal(childHistory.run_id,run.id);
+        if (width === 1440) {
+          assert.ok(childHistory.checkpoints.some(step=>step.path===['normalize','child','items','items','1','label'].join('/')&&step.status==='succeeded'));
+          assert.ok(childHistory.checkpoints.some(step=>step.path===['normalize','child','delay'].join('/')&&step.status==='succeeded'));
+          assert.equal(childHistory.parent_history,'/app/workflow-runs/'+run.id);
+        }
         await page.reload();
       }
       await expect(page.getByRole('heading', { name: 'Notice delivery', exact: true })).toBeVisible();
@@ -98,7 +111,7 @@ try {
         assert.equal(detail.children.length,1);
         assert.equal(detail.children[0].status,'succeeded');
         assert.deepEqual(detail.steps.find(s => s.path === 'normalize').output, { normalized: '17 Bay Road' });
-        assert.equal(detail.steps.find(s => s.path === 'normalize').trace.version, 1);
+        assert.equal(detail.steps.find(s => s.path === 'normalize').trace.version, 2);
         await page.locator('details').filter({ has: page.getByText('Input and output', { exact: true }) }).first().locator('summary').click();
         await expect(page.locator('pre').filter({ hasText: '17 Bay Road' }).first()).toBeVisible();
         await page.screenshot({ path: join(evidence, `${width}-subflow-result.png`), fullPage: true });

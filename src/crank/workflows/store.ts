@@ -1,3 +1,4 @@
+import { sampleWarnings } from './samples'
 import { authoringPublication } from '../agents/authoring-promotion'
 import { authoringRecord, authoringState } from '../agents/authoring-record'
 import { scopedGraph } from '../agents/authoring-schema'
@@ -213,6 +214,7 @@ async function publishVersion(env: CrankEnv, actor: Actor, workflowId: string, i
   requireValue(!actor.team || !pendingRestore(current), 'Only the native owner may adopt a restored workflow', 403)
   await requireAttested(env, workflowId)
   const { graph, declared, warnings } = checked(rollback ? rollback.graph : JSON.parse(current.draft_json))
+  warnings.push(...await sampleWarnings(env, actor, workflowId, graph))
   const subflows = await subflowPublication(env, actor, graph)
   await checkCustomPublication(env,graph,actor)
   await checkCustomTriggerPublication(env,graph)

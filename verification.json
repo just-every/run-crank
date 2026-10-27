@@ -4,6 +4,7 @@
     "pnpm exec rer build --site",
     "pnpm run typecheck",
     "pnpm exec rer check --profile first-party",
+    "node src/base/contract-docs.mjs check",
     "pnpm check:deployment-spec"
   ],
   "push": [
@@ -34,11 +35,10 @@
     },
     {
       "name": "queues-erasure",
-      "browser": true,
+      "browser": false,
       "hosted": false,
       "commands": [
-        "node --test --test-concurrency=1 tests/request-limits.test.mjs tests/webhook-erasure.test.mjs tests/team.test.mjs",
-        "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/team\" node tests/team-browser.mjs"
+        "node --test --test-concurrency=1 tests/request-limits.test.mjs tests/webhook-erasure.test.mjs tests/team.test.mjs"
       ]
     },
     {
@@ -62,7 +62,10 @@
         "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/decision\" node tests/decision-browser.mjs",
         "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/executor-schema\" node tests/executor-schema-browser.mjs",
         "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/app-polls\" node tests/app-poll-browser.mjs",
-        "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/digests\" node tests/digest-browser.mjs"
+        "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/digests\" node tests/digest-browser.mjs",
+        "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/subflows\" node tests/run-notices-browser.mjs",
+        "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/team\" node tests/team-browser.mjs",
+        "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/samples\" node tests/sample-browser.mjs"
       ]
     },
     {

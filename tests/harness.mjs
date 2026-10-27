@@ -26,7 +26,7 @@ async function digestBarrierBundle() {
   }}]})).outputFiles[0].text;
 }
 /** `edge` fakes third-party APIs at the network edge: a function from Request to a Response, or undefined to use the real network. */
-export async function harness(target,{emitted=false,edge,mailEdge,quoteCosts=true,bindings={},beforeTeamMigration=false,clock,digestCommitBarrier=false}={}) {
+export async function harness(target,{emitted=false,edge,mailEdge,quoteCosts=true,bindings={},clock,digestCommitBarrier=false,beforeTeamMigration=false}={}) {
   bundle ??= (await build(bundleOptions)).outputFiles[0].text;
   const port=await freePort(),origin=`http://127.0.0.1:${port}`,directory=await mkdtemp(join(tmpdir(),'crank-tests-'));
   const mail=[];
@@ -54,9 +54,11 @@ export async function harness(target,{emitted=false,edge,mailEdge,quoteCosts=tru
     };
     const boot=await send('/auth/bootstrap',{token:'synthetic-test-owner-claim-01234567890123456789',displayName:'Harbour owner'});assert.equal(boot.status,303,boot.text);
     const owner=boot.cookie;
-    let starter, starterPromise;
-    const independentStarter=()=>starterPromise??=(async()=>{
+    let starter, starterSetup;
+    const independentStarter=async()=>{
       if(starter)return starter;
+      // Concurrent run starts share one native invitation and session setup.
+      return starterSetup ??= (async()=>{
       // Use a separate native session for owner invitation so the fixture owner's sensitive-action proof stays untouched.
       assert.equal((await send('/auth/magic-link',{email:'owner@example.test',returnTo:'/app'})).status,202);
       const linkToken=()=>new URL(mail.at(-1).html.match(/href="([^"]*\/auth\/confirm\?token=[^"]+)"/)[1].replaceAll('&amp;','&'),origin).searchParams.get('token');
@@ -67,7 +69,8 @@ export async function harness(target,{emitted=false,edge,mailEdge,quoteCosts=tru
       assert.equal(invited.status,202,invited.text);
       const token=new URL(mail.at(-1).html.match(/href="([^"]*\/auth\/confirm\?token=[^"]+)"/)[1].replaceAll('&amp;','&'),origin).searchParams.get('token');
       const signed=await send('/auth/confirm',{token});assert.equal(signed.status,303,signed.text);starter=signed.cookie;assert.equal((await send('/auth/signout',{},inviter)).status,204);return starter;
-    })();
+      })();
+    };
     // Ordinary fixture owners explicitly review zero-cost network test edges before publication.
     // Cost-gate journeys use send() (or quoteCosts:false) so this is never production behavior.
     const zeroCost={components:['orchestration','connectors','models','executors'].map(kind=>({kind,usd_per_run:'0',assumption:'Owner acceptance fixture: local/network test edges do not bill this installation'}))};

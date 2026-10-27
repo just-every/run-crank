@@ -9,6 +9,7 @@ export function validatePureRecipe(value) {
       typeof value.release !== 'string' || !/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,59}$/.test(value.release)) fail('name the recipe format and explicit release');
   if (!Array.isArray(value.connector_requirements) || value.connector_requirements.length) fail('pure recipes require no connectors; provider recipes are not supported');
   validateSubflowDefinition(value.definition);
+  if (value.definition.kind === 'native') fail('native graph recipes need separate review and are not pure recipe samples');
   const mappings = (item, depth = 0) => {
     if (depth > 32) fail('mapping nests too deeply');
     if (Array.isArray(item)) return item.forEach(value => mappings(value, depth + 1));

@@ -1,3 +1,4 @@
+import { previewSample } from './samples'
 import { collectAnswers, collectFields } from '../engine/steps/collect'
 import { collectDeadlines } from '../ops/collect-deadlines'
 import { guardedBatch } from '../access'
@@ -29,6 +30,8 @@ import { getWorkflow } from './store'
 
 /** DATA-003: free text search reads only plaintext payloads. */
 export const TEXT_SEARCH = 'Text search does not reach encrypted payloads of customer, financial or health workflows; find those runs by business key, or by a declared identifier on the Data screen.'
+/** Payload access requires a complete read grant for this workflow with an operational role. */
+export const canReadPayload = (actor: Actor, workflowId?: string) => actor.team ? payloadWorkflowIds(actor).some(id => !workflowId || id === workflowId) : mayReadPayload(actor, workflowId ?? '')
 const BUSINESS_COMPLETE = `status='succeeded' AND EXISTS(SELECT 1 FROM crank_obligations o WHERE o.run_id=crank_wf_runs.id) AND NOT EXISTS(SELECT 1 FROM crank_obligations o WHERE o.run_id=crank_wf_runs.id AND o.verified_at IS NULL) AND NOT EXISTS(SELECT 1 FROM crank_wf_steps s WHERE s.run_id=crank_wf_runs.id AND (s.status='uncertain' OR COALESCE(json_extract(s.error_json,'$.category'),'')='uncertain'))`
 function presentRun(run: RunRow & { business_complete?: number }, payload: boolean) {
   const base = { id: run.id, mode: run.mode ?? 'production', workflow_id: run.workflow_id, version_id: run.version_id, trigger_kind: run.trigger_kind, business_outcome: run.business_complete ? 'owner_verified' : 'unverified', status: run.business_complete ? 'business_complete' : run.status === 'failed' && run.error_json && JSON.parse(run.error_json).category === 'uncertain' ? 'uncertain' : run.status, business_key: payload ? run.business_key : null,
@@ -223,10 +226,11 @@ export async function startRun(env: CrankEnv, actor: Actor, workflowId: string, 
 
 /** WORK-012/WORK-013 preview: pure steps run on a manual sample, labelled as such; the
  * walk stops before the first step that would call an app. */
-export async function previewWorkflow(env: CrankEnv, workflowId: string, input: Record<string, unknown>) {
+export async function previewWorkflow(env: CrankEnv, actor: Actor, workflowId: string, input: Record<string, unknown>) {
   const workflow = await getWorkflow(env, workflowId), graph = JSON.parse(workflow.draft_json) as Graph
   const zone = requireZone(graph.settings?.timezone ?? (await workspaceSettings(env)).timezone)
-  const scope: Scope = { trigger: input.sample ?? {}, steps: {}, run: { id: 'preview', workflow_id: workflowId } }
+  const selected = await previewSample(env, actor, workflowId, input)
+  const scope: Scope = { trigger: selected.payload, steps: {}, run: { id: 'preview', workflow_id: workflowId } }
   const results: Record<string, unknown>[] = [], time = Date.now()
   const walk = (steps: Step[], prefix: string): boolean => {
     for (const step of steps) {
@@ -265,5 +269,5 @@ export async function previewWorkflow(env: CrankEnv, workflowId: string, input: 
     return true
   }
   walk(graph.steps, '')
-  return { sample_source: 'manual sample', digest: await digest(canonical(input.sample ?? {})), steps: results }
+  return { sample_source: selected.source.label, source: selected.source, digest: await digest(canonical(selected.payload)), steps: results.map(step => ({ ...step, source: selected.source })) }
 }

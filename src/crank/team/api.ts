@@ -54,11 +54,11 @@ export async function teamApi(request: Request, env: CrankEnv): Promise<Response
       requireValue(value && ['admin','builder','operator','approver','viewer','auditor','billing'].includes(value.role),'Choose a product role',422)
       requireValue(value.actions===undefined,'Custom action limits are reserved for the migration',422)
       const grant:TeamGrant={role:value.role,workflow_ids:await scope(value.workflow_ids??[],'crank_workflows'),connection_ids:await validateConnectionScopes(env,value.connection_ids??[])}
-      if(!owner) requireValue(actor.team?.grants.some(own=>grantsAction(own,'delegate') && grant.workflow_ids.every(id=>own.workflow_ids.includes(id)) && grant.connection_ids.every(id=>own.connection_ids.includes(id)) && ['read','prepare','publish','start','approve','replay','delegate','audit','billing','revoke'].every(action=>!grantsAction(grant,action as any)||grantsAction(own,action as any))), 'Delegation cannot exceed one of your own complete grants',403)
+      if(!owner) requireValue(actor.team?.grants.some(own=>grantsAction(own,'delegate') && grant.workflow_ids.every(id=>own.workflow_ids.includes(id)) && grant.connection_ids.every(id=>own.connection_ids.includes(id)) && ['read','prepare','test','publish','start','approve','replay','delegate','audit','billing','revoke'].every(action=>!grantsAction(grant,action as any)||grantsAction(own,action as any))), 'Delegation cannot exceed one of your own complete grants',403)
       grants.push(grant)
     }
     if(!owner) {
-      requireValue(priorGrants.every(grant=>actor.team?.grants.some(own=>grant.workflow_ids.every(id=>own.workflow_ids.includes(id))&&grant.connection_ids.every(id=>own.connection_ids.includes(id))&&grantsAction(own,'delegate')&& ['read','prepare','publish','start','approve','replay','delegate','audit','billing','revoke'].every(action=>!grantsAction(grant,action as any)||grantsAction(own,action as any)))),'Existing access is outside your delegated authority',403)
+      requireValue(priorGrants.every(grant=>actor.team?.grants.some(own=>grant.workflow_ids.every(id=>own.workflow_ids.includes(id))&&grant.connection_ids.every(id=>own.connection_ids.includes(id))&&grantsAction(own,'delegate')&& ['read','prepare','test','publish','start','approve','replay','delegate','audit','billing','revoke'].every(action=>!grantsAction(grant,action as any)||grantsAction(own,action as any)))),'Existing access is outside your delegated authority',403)
     }
     const workflowIds=[...new Set(grants.flatMap(g=>g.workflow_ids))],connectionIds=[...new Set(grants.flatMap(g=>g.connection_ids))],revision=id(),at=now(),role=grants[0]?.role??'viewer'
     await guardedBatch(env, actor, owner?'owner':'read', [

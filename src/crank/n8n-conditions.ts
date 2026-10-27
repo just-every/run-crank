@@ -49,14 +49,17 @@ export function compileN8nConditionSets(values: unknown[], previous: string, at:
       if (operator.singleValue !== undefined && typeof operator.singleValue !== 'boolean') throw Error('condition singleValue must be boolean')
       const rightType = operator.rightType ?? type
       if (!['string', 'number', 'boolean', 'array', 'object', 'any', 'dateTime'].includes(rightType)) throw Error('unsupported condition operand type override')
-      if (options.typeValidation !== 'strict') {
-        for (const [key, operandType] of [['leftValue', type], ['rightValue', rightType]]) {
-          if (operandType !== 'object' || key === 'rightValue' && operator.singleValue === true) continue
-          const operand = condition[key]
-          if (typeof operand === 'string' && (operand.startsWith('=') || operand.includes('{{'))) continue
-          try { normalizeN8nConditionValue(operand, 'object', false, options.version ?? 1) }
+      const operand = (key: 'leftValue' | 'rightValue', operandType: string) => {
+        const value = condition[key]
+        const expression = typeof value === 'string' && value.startsWith('=')
+        if (options.typeValidation !== 'strict' && operandType === 'object' && !expression && !(key === 'rightValue' && operator.singleValue === true)) {
+          try { normalizeN8nConditionValue(value, 'object', false, options.version ?? 1) }
           catch { throw Error('loose object operand requires data grammar v1; unsupported syntax needs manual conversion') }
+          // The shared runtime parser has established data, including quoted
+          // expression delimiters. Retain the original operand without mapping it.
+          return { $literal: value }
         }
+        return mapped(value, previous, conditionPath + '.' + key)
       }
       if (operator.singleValue === true && !unary(operation)) throw Error('binary conditions cannot skip operand validation')
       if(type==='dateTime') {
@@ -68,8 +71,8 @@ export function compileN8nConditionSets(values: unknown[], previous: string, at:
         }
       }
       operands['c' + index] = {
-        ...(Object.hasOwn(condition, 'leftValue') ? { left: mapped(condition.leftValue, previous, conditionPath + '.leftValue') } : {}),
-        ...(Object.hasOwn(condition, 'rightValue') ? { right: mapped(condition.rightValue, previous, conditionPath + '.rightValue') } : {}),
+        ...(Object.hasOwn(condition, 'leftValue') ? { left: operand('leftValue', type) } : {}),
+        ...(Object.hasOwn(condition, 'rightValue') ? { right: operand('rightValue', rightType) } : {}),
       }
       return { type, operation, rightType, singleValue: operator.singleValue === true }
     })

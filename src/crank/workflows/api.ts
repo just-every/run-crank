@@ -1,4 +1,5 @@
 import { digestApi } from '../engine/steps/digest'
+import { readSamples, saveSample, sampleAction, listenForSample, sampleWarnings } from './samples'
 import { consentRegulatedOperation, readRegulatedOperations } from '../providers/regulated-authority'
 import { tableApi } from '../tables/api'
 import { previewReconciliation, reconcileEffect } from './reconciliation'
@@ -41,7 +42,7 @@ import { cancelRun, decideApproval, previewWorkflow, resumeRun, runDetail, runsT
 import { createWorkflow, duplicateWorkflow, getWorkflow, listWorkflows, presentWorkflow, publishWorkflow, rollbackWorkflow, setWorkflowState, unpublishWorkflow, updateDraft, versionGraph } from './store'
 
 const PREFIXES = ['/api/crank/digests', '/api/crank/authoring', '/api/crank/regulated-operations', '/api/crank/tables', '/api/crank/subflows', '/api/crank/grants', '/api/crank/agent-tasks', '/api/crank/skills', '/api/crank/usage', '/api/crank/historical', '/api/crank/workflows', '/api/crank/workflow-runs', '/api/crank/connections', '/api/crank/oauth', '/api/crank/hooks', '/api/crank/holds', '/api/crank/queues', '/api/crank/catalog', '/api/crank/coverage', '/api/crank/settings', '/api/crank/audit', '/api/crank/notices', '/api/crank/reports']
-const match = (path: string, pattern: RegExp) => pattern.exec(path)?.slice(1).map(decodeURIComponent) ?? null
+const match = (path: string, pattern: RegExp) => pattern.exec(path)?.slice(1).map(value => value === undefined ? '' : decodeURIComponent(value)) ?? null
 
 async function testConnection(env: CrankEnv, actor: Actor, connectionId: string, input: Record<string, unknown>) {
   requireOwner(actor)
@@ -146,6 +147,7 @@ export async function workflowApi(request: Request, env: CrankEnv): Promise<Resp
       if ((m = match(path, /^\/api\/crank\/workflows\/([^/]+)$/))) return json(await presentWorkflow(env, await getWorkflow(env, m[0])))
       if ((m = match(path, /^\/api\/crank\/workflows\/([^/]+)\/drafts\/([^/]+)$/))) return json(await readDraft(env, m[0], m[1]))
       if ((m = match(path, /^\/api\/crank\/workflows\/([^/]+)\/compare$/))) return json(await compareWorkflow(env, m[0], url.searchParams))
+      if ((m = match(path, /^\/api\/crank\/workflows\/([^/]+)\/samples$/))) return json(await readSamples(env, actor, m[0]))
       if ((m = match(path, /^\/api\/crank\/workflows\/([^/]+)\/trigger$/))) return json(await triggerState(env, m[0], url.searchParams))
       if ((m = match(path, /^\/api\/crank\/workflows\/([^/]+)\/versions\/(\d+)$/))) return json(await versionGraph(env, m[0], Number(m[1])))
       if ((m = match(path, /^\/api\/crank\/workflows\/([^/]+)\/today$/))) return json(await runsToday(env, m[0]))
@@ -194,12 +196,16 @@ export async function workflowApi(request: Request, env: CrankEnv): Promise<Resp
     if (path === '/api/crank/reports/settings') return json(await configureOperations(env, actor, input))
     if (path === '/api/crank/reports/obligations') return json(await createObligation(env, actor, input), 201)
     if ((m = match(path, /^\/api\/crank\/reports\/obligations\/([^/]+)\/verify$/))) return json(await verifyObligation(env, actor, m[0], input))
+    if ((m = match(path, /^\/api\/crank\/workflows\/([^/]+)\/samples(?:\/(listen|select|delete|fields))?$/))) {
+      if (m[1] === 'listen') return json(await listenForSample(env, actor, m[0]), 201)
+      return json(m[1] ? await sampleAction(env, actor, m[0], m[1], input) : await saveSample(env, actor, m[0], input), m[1] ? 200 : 201)
+    }
     if (path === '/api/crank/workflows') return json(await createWorkflow(env, actor, input, request.headers.get('Idempotency-Key')), 201)
     if ((m = match(path, /^\/api\/crank\/workflows\/([^/]+)\/(draft|validate|publish|rollback|unpublish|pause|resume|duplicate|run|test|preview|hooks)$/))) {
       const [workflowId, action] = m
       if (action === 'draft') return json(await updateDraft(env, actor, workflowId, input, request.headers.get('Idempotency-Key')))
       if (action === 'validate') {
-        try { const { warnings, declared } = validateGraph(input.graph ?? JSON.parse((await getWorkflow(env, workflowId)).draft_json)); return json({ ok: true, warnings, declared }) }
+        try { const { warnings, declared } = validateGraph(input.graph ?? JSON.parse((await getWorkflow(env, workflowId)).draft_json)); return json({ ok: true, warnings: [...warnings, ...await sampleWarnings(env, actor, workflowId, input.graph as any ?? JSON.parse((await getWorkflow(env, workflowId)).draft_json))], declared }) }
         catch (error) { if (error instanceof StepError) return json({ ok: false, error: error.message }, 422); throw error }
       }
       if (action === 'publish') return json(await publishWorkflow(env, actor, workflowId, input, request.headers.get('Idempotency-Key')), 201)
@@ -209,7 +215,7 @@ export async function workflowApi(request: Request, env: CrankEnv): Promise<Resp
       if (action === 'duplicate') return json(await duplicateWorkflow(env, actor, workflowId, input, request.headers.get('Idempotency-Key')), 201)
       if (action === 'test') return json(await testWorkflow(env, actor, workflowId, input), 201)
       if (action === 'run') return json(await startRun(env, actor, workflowId, input), 201)
-      if (action === 'preview') return json(await previewWorkflow(env, workflowId, input))
+      if (action === 'preview') return json(await previewWorkflow(env, actor, workflowId, input))
       return json(await createHook(env, actor, workflowId, input), 201)
     }
     if ((m = match(path, /^\/api\/crank\/hooks\/([^/]+)\/revoke$/))) return json(await revokeHook(env, actor, m[0]))

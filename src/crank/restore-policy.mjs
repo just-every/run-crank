@@ -28,6 +28,7 @@ export function fenceRow(table, row) {
 export const importSafety = {
   crank_digests: { active: [0] },
   crank_digest_operations: { active: [0] },
+  crank_workflow_samples: { selected: [0] },
   crank_recurring_tasks: { status: ['inactive'] },
   crank_state_tables: { active: [0] },
   crank_state_operations: { active: [0] },
@@ -59,9 +60,10 @@ export const importSafety = {
  * a failed delivery keeps its outcome with its single replay marked used. */
 export function importRow(table, row) {
   if (table === 'crank_digests' || table === 'crank_digest_operations') return {...row,active:0};
+  if (table === 'crank_workflow_samples') return {...row,selected:0};
   if (table === 'crank_recurring_tasks') return {...row,status:'inactive'};
   if (table === 'crank_state_tables' || table === 'crank_state_operations') return {...row,active:0};
-  if (table === 'crank_subflow_calls') return {...row,...(['queued','running'].includes(row.status) ? {status:'interrupted'} : {}),lease_id:null,lease_expires_at:null};
+  if (table === 'crank_subflow_calls') return {...row,...(['queued','running','paused'].includes(row.status) ? {status:'interrupted'} : {}),lease_id:null,lease_expires_at:null};
   if (table === 'crank_subflow_versions') return {...row,active:0};
   if (table === 'crank_notice_deliveries') return {...row,active:0,lease_id:null,lease_expires_at:null};
   if(table==='crank_gateways')return {...Object.fromEntries(Object.entries(row).map(([key,value])=>[key,['code_hash','code_expires_at','credential_hash','public_key','fingerprint'].includes(key)?null:value])),status:'revoked'};
@@ -128,6 +130,11 @@ export async function validateRestore({ read }) {
     if (!subflows.has(row.subflow_version_id) || !(await rows('crank_wf_runs')).some(run=>run.id===row.run_id) || !(await rows('crank_wf_steps')).some(step=>step.run_id===row.run_id && step.path===row.path && step.type==='subflow' && step.operation_key===row.operation_key)) return false;
   }
   const workflows = new Map((await rows('crank_workflows')).map(row => [row.id, row]));
+  for (const sample of await rows('crank_workflow_samples')) {
+    if (!workflows.has(sample.workflow_id) || !['manual','webhook','history','schema'].includes(sample.source) || sample.source === 'history' && !(await rows('crank_wf_runs')).some(run => run.id === sample.source_id && run.workflow_id === sample.workflow_id)) return false;
+    try { JSON.parse(sample.payload_json); JSON.parse(sample.uploads_json); } catch { return false; }
+  }
+  for (const fields of await rows('crank_sample_fields')) if (!workflows.has(fields.workflow_id) || !Array.isArray(JSON.parse(fields.fields_json))) return false;
   const versions = new Map((await rows('crank_workflow_versions')).map(row => [row.id, row]));
   for (const workflow of workflows.values()) {
     const graph = JSON.parse(workflow.draft_json);

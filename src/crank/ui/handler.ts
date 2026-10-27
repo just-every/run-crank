@@ -163,8 +163,8 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
       if (preview) {
         let sample:unknown
         const id = decodeURIComponent(preview[1])
-        try { sample = JSON.parse(form.sample ?? '') } catch { return page('Invalid sample',`<p class="notice">The sample must be JSON.</p><a href="/app/workflows/${esc(id)}">Back to the flow</a>`,{},400) }
-        const response = await call(`/api/crank/workflows/${encodeURIComponent(id)}/preview`,{sample}), result:any = await response.json()
+        try { sample = form.sample_id ? undefined : JSON.parse(form.sample ?? '') } catch { return page('Invalid sample',`<p class="notice">The sample must be JSON.</p><a href="/app/workflows/${esc(id)}">Back to the flow</a>`,{},400) }
+        const response = await call(`/api/crank/workflows/${encodeURIComponent(id)}/preview`,{sample,...(form.sample_id ? {sample_id:form.sample_id} : {})}), result:any = await response.json()
         if(!response.ok) return page('Preview refused',`<p class="notice">${esc(result.error)}</p><a href="/app/workflows/${esc(id)}">Back to the flow</a>`,{},response.status)
         return editorPage(id,new URLSearchParams({step:form.step ?? '',tab:'test'}),result)
       }
@@ -185,6 +185,10 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
         return redirect(authoringPath(id ?? result.workflow_id))
       }
       const input:Record<string,unknown> = {...form}
+      if (/\/workflows\/[^/]+\/samples(?:\/[^/]+)?$/.test(path)) {
+        try { if(form.source !== 'schema' && form.sample) input.step_path='trigger'; if(form.sample) input.sample=JSON.parse(form.sample); if(form.fields !== undefined) input.fields=form.fields.split(',').map(field=>field.trim()).filter(Boolean) }
+        catch { return page('Invalid sample','<p>Enter a JSON object for the sample.</p>',{},422) }
+      }
       if(path.startsWith('/api/crank/gateways/') || path.startsWith('/api/crank/custom-connectors/')) {
         requireOwner(actor)
         try {
@@ -269,6 +273,7 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
       const result:any = await response.json()
       if(response.status===403 && result.error==='step_up_required')return page('Confirm by email',gatewayConfirmation(),{},403)
       if(!response.ok) return page('Action refused',`<p class="notice">${esc(result.error)}</p><p>No success was reported. Review the latest state before retrying.</p><a href="${back ?? (path.includes('/imports')?'/app/import':'/app')}">Return to workspace</a>`,{},response.status)
+      if(result.url && /\/samples\/listen$/.test(path)) return page('Waiting for webhook',`<section class="panel"><h2>Waiting for one sample</h2><p>Send a POST to this draft URL before ${esc(result.expires_at)}. The URL is shown once and never starts a production run.</p><label>Draft sample URL<input readonly value="${esc(result.url)}"></label><a class="btn btn-secondary" href="${esc(back ?? '/app')}">Refresh captured samples</a></section>`)
       if(result.code && path==='/api/crank/gateways')return page('Gateway enrollment',`<section class="panel"><h2>Enroll your gateway</h2><p>This code is shown once and expires ${esc(result.expires_at)}. Its authority is bound to environment ${esc(result.gateway.environment)}. Use the customer gateway CLI and save its state in a private file.</p><label>Single-use enrollment code<input type="text" autocomplete="off" readonly aria-label="Enrollment code" value="${esc(result.code)}"></label><p>Private database and storage credentials stay in the gateway manifest.</p><a href="/app/connections">Return to connections</a></section>`)
       if(result.credential && path==='/api/crank/mcp-clients') return page('Client server created',mcpCredentialView(result))
       if(result.credential) result.token=result.credential
