@@ -139,7 +139,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "bc4fae95ec3a82ea3feb1c2e7bca3782425ad83f039db97907813ad752372fd3",
+      "sha256": "c955c13788a2b2b71b15d6a16cd37d8ba042994acf902a960f259f5bfaf49846",
       "executable": false
     },
     "AGENTS.md": {
@@ -163,7 +163,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "779cbdc5a5cdd0b7a0eade83a8b06b77c02dbc47b8e4845083e4031a69e748dd",
+      "sha256": "a1f80869230e4f512cbd8d4ad02d4ec248e71ffa69f033df7ba630895cf14383",
       "executable": false
     },
     "DEMO.md": {
@@ -203,7 +203,7 @@
       "executable": false
     },
     "docs/CLAIMS.md": {
-      "sha256": "2c8ccaa85d16120250b5fe9bd882174f9a417a60b9fb15f235327caa9b77fdff",
+      "sha256": "36611de7bfacbda8bd95f19975a60dd34106d1b1b2ebc7d544e4ba9b1fcd711a",
       "executable": false
     },
     "docs/DATA-FLOWS.md": {
@@ -227,7 +227,7 @@
       "executable": false
     },
     "docs/IMPORTING.md": {
-      "sha256": "d1315742649b1a62418542e395b63994aa67ad726964b98096ef0679a02f3a33",
+      "sha256": "2d6d8f425e08fe9152b11e64e71979f6065f4594c200f4f74f97c495ac5b8f92",
       "executable": false
     },
     "docs/OPERATIONS.md": {
@@ -2707,7 +2707,7 @@
       "executable": false
     },
     "src/crank/engine/transforms/datetime.ts": {
-      "sha256": "0fcb40e92b2df4239707d09f9559dc8db621d3dfa5ceecdd9540164fd15da4b4",
+      "sha256": "a31a1d4c74a2e8f2d2a267c6f046f240ca00584f5d682bf4e28856be221307c3",
       "executable": false
     },
     "src/crank/engine/transforms/html.ts": {
@@ -2882,8 +2882,12 @@
       "sha256": "84637d6a04357830089ecb66c649e319a4895fef4e3ecf800b7499e87bf52b81",
       "executable": false
     },
+    "src/crank/n8n-datetime.ts": {
+      "sha256": "1d5797a311f04b8715ac99d4d872320bd783c506a3112d1221280f9042ce0ec7",
+      "executable": false
+    },
     "src/crank/n8n-graph.ts": {
-      "sha256": "0a1756e1c03440d35b99c388c2c11f731a580f2356d60b4a331909a594f6f085",
+      "sha256": "c045369b86ec07a0f529c2a27be1a10e9d2aa90113dcd6f5f5aba5405426799d",
       "executable": false
     },
     "src/crank/n8n-http.ts": {
@@ -5379,7 +5383,7 @@
       "executable": false
     },
     "test-budget.json": {
-      "sha256": "005166f6bee9c3f554cd0f48e85439b7ddde234a2455e8985364b15456878f25",
+      "sha256": "c557e86d5aa42b50058a3db2260906ae4834d8a3e7c051e0e61133e094c3d33a",
       "executable": false
     },
     "tests/app-poll-browser.mjs": {
@@ -5419,7 +5423,7 @@
       "executable": false
     },
     "tests/crank.test.mjs": {
-      "sha256": "7435962e6e4ebf6652ad96dc2d9767da2ea10136660d1c989be605e2e6511de6",
+      "sha256": "22dd8ab908632d6262e2cf4112056c4ffbf7e2df87320ead8c22aadceb51f4e6",
       "executable": false
     },
     "tests/custom-browser-runtime.mjs": {
@@ -5671,7 +5675,7 @@
       "executable": false
     },
     "tests/migration-browser.mjs": {
-      "sha256": "e822150c18a745d68b120373d2c521c7d02ea727dc0b7f57580194c1a02d005c",
+      "sha256": "cdf59bc0f27b6a66a5c83c28014cbc6fcb6e2682df03a9f71492887193682dfa",
       "executable": false
     },
     "tests/n8n-batch-journey.mjs": {
@@ -5692,6 +5696,10 @@
     },
     "tests/n8n-conversion-journey.mjs": {
       "sha256": "1d16697f09a2082bfd22c1976ed9d67125d68651fcca8e3bbee35db797689316",
+      "executable": false
+    },
+    "tests/n8n-datetime-journey.mjs": {
+      "sha256": "b0ae6aa3413076c714333dccb32a9cc5d6cfd922a6d972b3bbf6c8572d2f095d",
       "executable": false
     },
     "tests/n8n-graph-fixture.mjs": {

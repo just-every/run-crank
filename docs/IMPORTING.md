@@ -294,9 +294,30 @@ calendar formats are `yyyy-MM-dd`, `MM/dd/yyyy`, `yyyy/MM/dd`, `MMMM dd yyyy`
 and `MM-dd-yyyy`, including those exact patterns under `format: "custom"`.
 The source date can be a literal or a declarative data path. Null stays null;
 an invalid date fails before a downstream request. Input-format overrides,
-input-zone inference, retaining other input fields, Unix formats and other date
-operations require manual conversion. These rules preserve the declared zone
+input-zone inference, retaining other input fields for formatting, Unix formats and other date
+formatting options require manual conversion. These rules preserve the declared zone
 instead of guessing the source installation's default.
+
+Version 2 also maps `addToDate` and `subtractFromDate`: `magnitude` is a literal
+or supported data path, `duration` is a literal whole number from -10000 to 10000
+(default zero), and `timeUnit` is years, months, weeks, days, hours, minutes or
+seconds (default days). An explicit workflow timezone is required. Inputs must
+be ISO timestamps with an explicit offset, within years 0100 through 9999;
+invalid or unsupported dates fail with a named error before destination writes.
+Crossing outside that year range and historical sub-minute timezone offsets
+are refused before writing, rather than approximated by the native calendar.
+Calendar units preserve wall time and clamp month ends, while hours and smaller
+units measure elapsed time. At a repeated hour the starting offset is retained
+when possible; skipped wall times move forward. Output uses source ISO spelling
+with milliseconds and the workflow zone's offset. `outputFieldName` defaults to
+`newDate` and must be a simple field name. `options.includeInputFields` defaults
+to false; true retains the input JSON fields and replaces the output field if
+it already exists. Other versions, date operations, expression durations,
+fractions, larger amounts, quarters, milliseconds, binary data, local-date
+inference and additional options remain manual conversions. Synthetic reviewed
+import, repeated apply, restart, publication, destination readback and complete
+inactive restoration are asserted in `tests/n8n-datetime-journey.mjs`; installed
+operands, output and failure screens are covered by `tests/migration-browser.mjs`.
 
 ### Retained owner conversion choices
 
