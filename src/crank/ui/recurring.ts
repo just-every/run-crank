@@ -5,11 +5,11 @@ const apiPath=(id:string)=>'/api/crank/recurring-tasks/'+encodeURIComponent(id)
 const form=(path:string,back='/app/recurring')=>`<form method="post" action="/app/action">${hidden('path',path)}${hidden('return_to',back)}${hidden('recurring_form','true')}`
 const option=(id:string,label:string,selected?:string)=>`<option value="${esc(id)}"${id===selected?' selected':''}>${esc(label)}</option>`
 function skillSelect(skills:any[],selected?:string) {
- return `<label>Exact skill version<select name="skill_version_id" required><option value="">Choose a published skill version</option>${skills.map(s=>option(s.id,`${s.name} · version ${s.number} · ${s.id}`,selected)).join('')}</select></label>`
+ return `<label>Exact skill version<select aria-label="Exact skill version" name="skill_version_id" required><option value="">Choose a published skill version</option>${skills.map(s=>option(s.id,`${s.name} · version ${s.number} · ${s.id}`,selected)).join('')}</select></label>`
 }
 function grantSelect(grants:any[],selected?:string) {
  const available=grants.filter(g=>!g.revoked_at && Date.parse(g.expires_at)>Date.now())
- return `<label>Owner-issued execution grant<select name="grant_id" required><option value="">Choose the grant for this exact workflow version</option>${available.map(g=>option(g.id,`${g.label} · workflow version ${g.version_id} · ${g.id}`,selected)).join('')}</select></label>`
+ return `<label>Owner-issued execution grant<select aria-label="Owner-issued execution grant" name="grant_id" required><option value="">Choose the grant for this exact workflow version</option>${available.map(g=>option(g.id,`${g.label} · workflow version ${g.version_id} · ${g.id}`,selected)).join('')}</select></label>`
 }
 function objectiveFields(objective:any={}) {
  return `<div class="grid"><label>Exact QuickBooks realm<input name="objective_realm_id" required maxlength="200" value="${esc(objective.realm_id??'')}"></label>
@@ -39,10 +39,10 @@ export function recurringPanel(skills:any[],tasks:any[],workflows:any[],grants:a
  <p class="form-help">The grant must match the exact published workflow version pinned by the skill and cover its realm and invoice fields. Only its identifier is stored here. A task cannot widen the tool, connection or recipient scope.</p>
  <button class="btn btn-primary"${skills.length && grants.length?'':' disabled'}>Create recurring objective</button></form></section>
  <section class="panel"><h2>Publish an immutable skill version</h2><p>Use a currently published workflow containing exactly one native QuickBooks invoice follow-up step. Its realm and invoice identifier must be literal values. Instructions and evaluation cases are retained with this exact version; publishing never changes an existing task.</p>
- ${form('/api/crank/recurring-skills')}<label>Skill identity<select name="skill_id"><option value="">Create a new skill</option>${identities.map(s=>option(s.skill_id,s.name)).join('')}</select></label>
+ ${form('/api/crank/recurring-skills')}<label>Skill identity<select aria-label="Skill identity" name="skill_id"><option value="">Create a new skill</option>${identities.map(s=>option(s.skill_id,s.name)).join('')}</select></label>
  <label>Skill name<input name="name" required maxlength="200" aria-describedby="recurring-name-help"></label><p class="form-help" id="recurring-name-help">For another version of an existing skill, keep its current name.</p>
- <div class="grid"><label>Published workflow<select name="workflow_id" required><option value="">Choose workflow</option>${published.map(w=>option(w.id,w.name)).join('')}</select></label>
- <label>Exact published workflow version<select name="workflow_version_id" required><option value="">Choose the matching version</option>${published.map(w=>option(w.published_version_id,`${w.name} · ${w.published_version_id}`)).join('')}</select></label></div>
+ <div class="grid"><label>Published workflow<select aria-label="Published workflow" name="workflow_id" required><option value="">Choose workflow</option>${published.map(w=>option(w.id,w.name)).join('')}</select></label>
+ <label>Exact published workflow version<select aria-label="Exact published workflow version" name="workflow_version_id" required><option value="">Choose the matching version</option>${published.map(w=>option(w.published_version_id,`${w.name} · ${w.published_version_id}`)).join('')}</select></label></div>
  <label>Instructions<textarea name="instructions" required maxlength="12000" rows="4"></textarea></label>
  <label>Evaluation cases as JSON<textarea name="eval_cases" required rows="12">${json(defaultCases)}</textarea></label>
  <p class="form-help">Retain named cases for open, paid, closed and void invoices. Each case has name, invoice_status and expected. Open expects blocked; each terminal state expects stop. These safety cases describe the bounded native operation and do not establish customer delivery.</p>
