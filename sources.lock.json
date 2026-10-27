@@ -5508,7 +5508,7 @@
       "executable": false
     },
     "tests/decision-browser.mjs": {
-      "sha256": "6f91f5b701e9238fcaa48327956e2ca94c79abb88e5317ef97046c5bc51a00a6",
+      "sha256": "7787c995eacdb3278c0a26afb9033d0a578405c9179b550e95b2ac03ec58ef44",
       "executable": false
     },
     "tests/deployment.test.mjs": {
