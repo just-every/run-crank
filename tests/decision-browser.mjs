@@ -79,8 +79,15 @@ try {
     await page.waitForURL('**/app');
   }
   const origin = new URL(open).origin, storageState = await owner.storageState();
+  const starterEmail='synthetic-crank-decisions-'+crypto.randomUUID()+'@example.test';
+  const invited=await owner.request.post(origin+'/auth/invite',{headers:{origin},data:{email:starterEmail,displayName:'Independent decision starter',role:'member'}});assert.equal(invited.status(),202);
+  const signed=execFileSync('rer',['dev','--as',starterEmail],{encoding:'utf8',env:process.env,timeout:60000,stdio:['ignore','pipe','pipe']});
+  const starterContext=await browser.newContext(),starterPage=await starterContext.newPage();await starterPage.goto(/RER_OPEN\s+(https?:\/\/\S+)/.exec(signed)[1]);await starterPage.waitForURL('**/app');
+  const people=await (await owner.request.get(origin+'/auth/operators')).json(),starterId=people.find(person=>person.email===starterEmail).id;
   const send = async (path, body, expected = 200) => {
-    const response = await owner.request.fetch(origin + '/api/crank/' + path, {
+    const start=/^(workflows|flows)\/([^/]+)\/(run|runs)$/.exec(path);
+    if(start) {const scope=await owner.request.post(origin+'/api/crank/team/'+starterId,{headers:{origin},data:{role:start[1]==='flows'?'builder':'operator',workflow_ids:[start[2]],connection_ids:[]}});assert.equal(scope.status(),200)}
+    const response = await (start?starterContext:owner).request.fetch(origin + '/api/crank/' + path, {
       method: body === undefined ? 'GET' : 'POST', headers: { origin },
       ...(body === undefined ? {} : { data: body }),
     });

@@ -25,9 +25,11 @@ export async function approvalSpec(env: CrankEnv, run: RunRow, proposal: unknown
 }
 
 /** Delegation applies only to this grant's decision, never to owner administration. */
-export async function assertReviewer(env: CrankEnv, actor: Actor, runId: string, path: string): Promise<void> {
+export async function assertReviewer(env: CrankEnv, actor: Actor, runId: string, path: string, allowStarter = false): Promise<void> {
   const run = await stmt(env, 'SELECT * FROM crank_wf_runs WHERE id=?', runId).first<RunRow>()
   requireValue(run, 'Run not found', 404)
+  const checkpoint=await stmt(env,'SELECT type FROM crank_wf_steps WHERE run_id=? AND path=?',runId,path).first<{type:string}>()
+  if(!allowStarter && checkpoint?.type!=='collect') requireValue(run.created_by!==actor.id,'You cannot approve your own run',403)
   // Authority comes from the immutable graph, including the brief interval
   // between inserting a wait and saving its step checkpoint.
   if (actor.role !== 'owner' || !['native', 'dev'].includes(actor.kind)) {
@@ -42,7 +44,6 @@ export async function assertReviewer(env: CrankEnv, actor: Actor, runId: string,
   if (actor.team) {
     workflowScope(actor, run.workflow_id)
     requireValue(actor.team.role === 'approver' && !actor.tokenId && !actor.grantId && actor.kind !== 'review', 'A named scoped approver is required', 403)
-    requireValue(run.created_by !== actor.id, 'You cannot approve your own run', 403)
     await versionConnectionScope(env, actor, run.version_id)
     // WORK-008's synthetic live-effect confirmation is an owner decision.
     // Explicit approval-step payloads remain governed by their named reviewers;
