@@ -8,5 +8,5 @@ export function watchedFieldsPanel(workflowId: string, trigger: any, result?: an
     <p>Any field can start a run on every edit.</p>
     <fieldset><legend>Watched fields</legend>${result.fields.map((field: any, i: number) => `<label><input type="checkbox" name="watch_${i}" value="${esc(field.name)}"${trigger.watched_fields?.includes(field.name) ? ' checked' : ''}> ${esc(field.label)}${field.label === field.name ? '' : ` (${esc(field.name)})`}</label>`).join('')}</fieldset>
     <button class="btn btn-secondary">Save watched fields</button></form>` : `<a class="btn btn-secondary" href="${path}?step=trigger&amp;watch_fields=1">Load field names</a>`
-  return `<section class="panel"><details${result || error ? ' open' : ''}><summary>Watched field settings</summary>${trigger.any_field ? '<p class="notice" role="alert">Any field is selected: every edit can start a run.</p>' : ''}${error ? `<p class="notice" role="alert">${esc(error)}</p>` : ''}${body}</details></section>`
+  return `<section class="panel">${trigger.any_field ? '<p class="notice" role="alert">Any field is selected: every edit can start a run.</p>' : ''}<details${result || error ? ' open' : ''}><summary>Watched field settings</summary>${error ? `<p class="notice" role="alert">${esc(error)}</p>` : ''}${body}</details></section>`
 }

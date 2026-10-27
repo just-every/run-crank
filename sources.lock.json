@@ -1307,7 +1307,7 @@
       "executable": false
     },
     "management/integration/deployment-spec.json": {
-      "sha256": "6167be15360821a03abcfcbf6651946acfff2230bfe062a0238a7e24163dac2c",
+      "sha256": "d4324b074d6375dd837b8b2c16bb814780dfecdc57976623245772a88e923134",
       "executable": false
     },
     "migrations/core/0001_owner.sql": {
@@ -3399,7 +3399,7 @@
       "executable": false
     },
     "src/crank/ui/watched-fields.ts": {
-      "sha256": "602e7365e8914a39355598057098b209735acec035d83f68220c657e5bbe78fb",
+      "sha256": "4fabccbf81a279fa911eed1fec4fadba1496657c5566ab288a13a171cf97da04",
       "executable": false
     },
     "src/crank/ui/workflow-data.ts": {
