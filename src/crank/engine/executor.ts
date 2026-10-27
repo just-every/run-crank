@@ -34,6 +34,17 @@ import { isObject } from './values'
 
 const LEASE_MS = 5 * 60000
 
+const childPayloadBytes = (value: unknown) => value === undefined ? 0 : new TextEncoder().encode(JSON.stringify(value)).byteLength
+/** Omit oversized diagnostics rather than duplicating the input once per rule. */
+function boundedChildDiagnostic(value: unknown, kind: 'trace' | 'error') {
+  const bytes = childPayloadBytes(value)
+  if (bytes <= 65536) return value
+  return {
+    ...(kind === 'error' ? {category:isObject(value) ? String(value.category ?? 'validation').slice(0,80) : 'validation',message:'Subflow: oversized error details omitted'} : {}),
+    truncated:true, original_bytes:bytes,
+  }
+}
+
 export async function resumeToken(env: CrankEnv, runId: string, path: string) {
   const encoded = btoa(path).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
   return `${runId}~${encoded}~${await mac(env, 'resume', runId + '\u0000' + path)}`
@@ -80,7 +91,10 @@ class Execution {
   }
 
   async save(step: Step, path: string, status: StepRecord['status'], extra: { input?: unknown; output?: unknown; trace?: unknown; error?: unknown }) {
-    if (this.boundedChild && [extra.input,extra.output].some(value => value !== undefined && new TextEncoder().encode(JSON.stringify(value)).byteLength > 65536)) throw new StepError('validation','Subflow: intermediate value exceeds 64 KiB')
+    if (this.boundedChild) {
+      if ([extra.input,extra.output].some(value => childPayloadBytes(value) > 65536)) throw new StepError('validation','Subflow: intermediate value exceeds 64 KiB')
+      extra = {...extra,trace:boundedChildDiagnostic(extra.trace,'trace'),error:boundedChildDiagnostic(extra.error,'error')}
+    }
     const previous = this.records.get(path)
     const record = { run_id: this.run.id, path, step_id: step.id, type: step.type, status, started_at: previous?.started_at ?? new Date(this.time).toISOString(), finished_at: ['running', 'waiting'].includes(status) ? null : now(), operation_key: previous?.operation_key ?? this.replays.get(path)?.operation_key ?? `${this.run.id}:${path}` }
     await saveRecord(this.env, this.run, this.lease, { ...record, ...extra })
@@ -126,7 +140,8 @@ class Execution {
         child.records=this.records; child.waits=this.waits; child.replays=this.replays; child.zone=this.zone
         child.beforeStep=check; child.boundedChild=true
         child.scope={trigger:{input},steps:{},run:{...this.scope.run}}
-        const outcome=await child.walk(steps,path+'/child/')
+        let outcome=await child.walk(steps,path+'/child/')
+        if (outcome.kind === 'failed') outcome={...outcome,error:boundedChildDiagnostic(outcome.error,'error')}
         return {outcome,...(outcome.kind==='completed'?{output:resolve(result,child.scope)}:{})}
       },
       respond: async response => { await stmt(this.env, 'UPDATE crank_wf_runs SET response_json=? WHERE id=? AND lease_id=?', await sealText(await targetFor(this.env, this.run.workflow_id), JSON.stringify(response)), this.run.id, this.lease).run() },
@@ -192,14 +207,15 @@ class Execution {
         await this.save(step, path, 'waiting', { input, trace:error.detail.trace })
         return { kind: 'paused', reason: error.message, connectionId: String(error.detail.connection_id ?? ''), authority: error.category === 'authority' }
       }
-      const failure = error instanceof StepError ? error.toJSON() : { category: 'provider', message: `Step ${step.id} failed unexpectedly` }
+      const originalFailure = error instanceof StepError ? error.toJSON() : { category: 'provider', message: `Step ${step.id} failed unexpectedly` }
+      const failure = (this.boundedChild ? boundedChildDiagnostic(originalFailure,'error') : originalFailure) as typeof originalFailure
       if (step.on_error === 'continue' && failure.category !== 'uncertain' && !(failure as any).uncertain) {
         const value = { ok: false, error: { category: failure.category, message: failure.message }, ...(error instanceof StepError ? error.detail : {}) }
-        await this.save(step, path, 'failed', { input, output: value, error: failure, trace:(failure as any).trace })
+        await this.save(step, path, 'failed', { input, output: value, error: failure, trace:(originalFailure as any).trace })
         this.scope.steps[step.id] = value
         return { kind: 'completed' }
       }
-      await this.save(step, path, (failure as any).uncertain ? 'uncertain' : 'failed', { input, error: failure, trace: (failure as any).trace })
+      await this.save(step, path, (failure as any).uncertain ? 'uncertain' : 'failed', { input, error: failure, trace: (originalFailure as any).trace })
       return { kind: 'failed', error: { ...failure, step: step.id } }
     }
   }

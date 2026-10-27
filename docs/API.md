@@ -1079,8 +1079,10 @@ Transform functions are `text.trim`, `text.case`, literal `text.replace` and
 refused. Delays use `for` or `until`; shared named queues are outside this slice.
 There are at most 20 declared steps, four nesting levels, 50 items in each loop
 and 2000 expanded invocations. Mapped inputs, outputs and intermediate
-checkpoints are bounded to 64 KiB. The caller's own execution ceiling also
-applies. Provider steps, account bindings, code and recursive children are
+checkpoints are bounded to 64 KiB. Oversized traces and error details are
+replaced with an explicit `truncated: true` summary and `original_bytes`;
+error summaries retain their failure category. The caller's own execution
+ceiling also applies. Provider steps, account bindings, code and recursive children are
 refused. Pure recipes retain their existing format and sample rules.
 
 The queued call returns a child id. The call's history door under
@@ -1090,7 +1092,10 @@ checkpoint status identifies the wait. Values remain in the parent's sealed
 records. The ordinary executor continues the immutable graph from those
 checkpoints, including loop item identities. Current owner publication and
 review eligibility apply before each child step. Cancelling either the child
-or parent stops continuation. Review after revocation does not resume a child;
+or parent stops continuation. Revocation durably pauses unfinished children
+and their parents immediately, including children parked on delays. Review
+before the next scheduler pass cannot clear that fence. Review after
+revocation does not resume a child;
 the existing resume door requires the active digest and
 `confirm: "RESUME_PURE_CHILD"`. Imported unfinished children are interrupted,
 definitions are inactive, and receiving adoption and review remain necessary.

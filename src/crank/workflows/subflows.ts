@@ -3,6 +3,8 @@ import { childCallApi, queuePureChild, executeGraphChild } from './subflow-calls
 import { guardedBatch, requireOwner } from '../access'
 import { assertDispatchAuthority } from '../engine/authority'
 import { StepError } from '../engine/errors'
+import { getWfRun } from '../engine/records'
+import { afterSettle } from '../ops/failures'
 import { resolve, type Scope } from '../engine/mapping'
 import { text as transformText } from '../engine/transforms/args'
 import { runTransform } from '../engine/transforms'
@@ -72,10 +74,23 @@ export async function subflowApi(request: Request, env: CrankEnv, actor: Actor) 
     checked(JSON.parse(row.definition_json))
     if (row.recipe_json) await checkRecipeSamples(JSON.parse(row.recipe_json))
   }
-  await guardedBatch(env, actor, 'owner', [
+  const settled = await guardedBatch(env, actor, 'owner', [
     stmt(env, 'UPDATE crank_subflow_versions SET active=? WHERE id=?', m[3] === 'review' ? 1 : 0, row.id),
+    ...(m[3] === 'revoke' ? [
+      // Persist the continuation fence at revocation, even if review returns before Cron.
+      stmt(env, `UPDATE crank_wf_runs SET status='paused',lease_id=NULL,lease_expires_at=NULL,error_json=?
+        WHERE status IN ('queued','running','waiting') AND EXISTS(SELECT 1 FROM crank_subflow_calls c
+          WHERE c.run_id=crank_wf_runs.id AND c.subflow_version_id=? AND c.status IN ('queued','running')) RETURNING id`,canonical({category:'authority',message:'The child definition was revoked; review and explicitly resume the child before continuation'}),row.id),
+      stmt(env, `UPDATE crank_subflow_calls SET status='paused',lease_id=NULL,lease_expires_at=NULL
+        WHERE subflow_version_id=? AND status IN ('queued','running') AND EXISTS(SELECT 1 FROM crank_wf_runs r
+          WHERE r.id=crank_subflow_calls.run_id AND r.status='paused')`,row.id),
+    ] : []),
     auditStatement(env, actor.id, 'subflow.' + m[3], 'subflow', subflowId, {version:row.version,definition_digest:row.definition_digest}),
   ])
+  if (m[3] === 'revoke') for (const affected of settled[1].results as {id:string}[]) {
+    const run = await getWfRun(env,affected.id)
+    if (run) await afterSettle(env,run)
+  }
   return json(present(await readSubflow(env, subflowId, row.version)))
 }
 /** Publication snapshots every referenced immutable version. Definition review
