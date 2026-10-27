@@ -20,7 +20,7 @@ function objectiveFields(objective:any={}) {
 function taskState(task:any) {
  return task.status==='active' && (task.run_status==='paused' || task.runs?.[0]?.status==='paused')?'blocked':task.status
 }
-const blockedNotice='<p class="notice" role="status"><strong>Blocked: external customer contact is unavailable.</strong> Crank reads the live invoice, then pauses if it remains open. No customer message was sent. Paid, closed and void invoices stop.</p>'
+const blockedNotice='<p class="notice" role="status"><strong>Blocked: external customer contact is unavailable.</strong> Inspect the recorded live checks and any authority or budget stop below. No customer message was sent. Paid, closed and void invoices end their objective.</p>'
 const defaultCases=[
  {name:'Open invoice needs external contact',invoice_status:'open',expected:'blocked'},
  {name:'Paid invoice stops',invoice_status:'paid',expected:'stop'},

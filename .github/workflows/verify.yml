@@ -53,6 +53,12 @@ jobs:
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm exec node tests/decision-browser.mjs
       - run: pnpm exec node tests/executor-schema-browser.mjs
+      - name: Build recurring skill owner journey
+        run: pnpm exec vite build
+      - name: Recurring skill owner journey
+        run: pnpm exec node tests/recurring-browser.mjs
+        env:
+          CRANK_EVIDENCE: artifacts/decisions/recurring
       - name: Financial owner browser journeys
         run: pnpm exec node tests/financial-browser.mjs
         env:

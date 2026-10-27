@@ -110,7 +110,7 @@ test('Recurring skill provenance restores inactive without grants or invoice own
   assert.deepEqual(received.filter(row=>!added.includes(row)),original,'All portable recurring versions, provenance and inactive history survive completely');
   const task=await restored.get('recurring-tasks/'+s.task.id);assert.equal(task.status,'inactive');assert.equal(task.runs[0].skill_version_id,s.skill.id);assert.equal(task.runs[0].objective_version_id,s.task.objective_version_id);
   assert.equal((await restored.get('grants')).length,0);const before=reads;
-  await restored.post('recurring-tasks/'+s.task.id+'/dispatch',{},restored.owner,409);await restored.post('recurring-tasks/'+s.task.id+'/resume',{revision:task.revision},restored.owner,403);
+  await restored.post('recurring-tasks/'+s.task.id+'/dispatch',{},restored.owner,409);await restored.post('recurring-tasks/'+s.task.id+'/resume',{revision:task.revision},restored.owner,409);
   await restored.post('workflow-runs/'+start.run_id+'/resume',{},restored.owner,409);await restored.restart();await restored.tick(Date.now()+7*86400000);assert.equal(reads,before);
   await h.post('recurring-tasks/'+s.task.id+'/cancel',{revision:s.task.revision});await h.post('workflows/'+s.workflow.id+'/pause');await h.post('data/erase',{workflow_run_id:start.run_id,confirm:'ERASE'});
   assert.deepEqual((await h.get('recurring-tasks/'+s.task.id)).runs,[]);assert.ok(!(await archive(h)).includes('only-in-the-erasable-run@example.test'));
