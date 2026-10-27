@@ -233,13 +233,16 @@ test('TEAM-001: the native upgrade snapshots exact existing Base access once and
   await h.migrateTeam();
   const reports=await h.get('team/migration');
   assert.deepEqual(reports.map(row=>row.operator_id).sort(),[admin.id,viewer.id].sort());
-  for(const row of reports){assert.equal(row.gained_access,0);assert.deepEqual(row.grants[0].workflow_ids,[w.id]);assert.deepEqual(row.grants[0].connection_ids,[])}
+  for(const row of reports){assert.equal(row.gained_access,0);assert.deepEqual(row.grants[0].workflow_ids.slice().sort(),(row.operator_id===admin.id?[w.id,'workspace:production']:[w.id]).sort());assert.deepEqual(row.grants[0].connection_ids,[])}
   assert.deepEqual(reports.find(row=>row.operator_id===admin.id).grants[0].actions,['read','prepare','start']);
   assert.deepEqual(reports.find(row=>row.operator_id===viewer.id).grants[0].actions,['read']);
   await h.post(`workflows/${w.id}/draft`,{name:'Migrated edit remains authorized'},admin.cookie);
   await h.post(`workflows/${w.id}/publish`,{},admin.cookie,403);
   assert.equal((await h.get('workflows/'+w.id,viewer.cookie)).name,'Migrated edit remains authorized');
   await h.post(`workflows/${w.id}/draft`,{name:'Refused migration widening'},viewer.cookie,403);
+  const authored=await h.post('workflows',{name:'Synthetic migrated creation',graph:{trigger:{type:'manual'},steps:[{id:'record',type:'map',input:{ok:true}}]}},admin.cookie,201);
+  assert.equal((await h.get('workflows/'+authored.id,admin.cookie)).name,'Synthetic migrated creation');
+  await h.post('workflows',{name:'Refused cross-environment creation',environment:'sandbox',graph:{trigger:{type:'manual'},steps:[{id:'record',type:'map',input:{ok:true}}]}},admin.cookie,403);
   const later=await publish(h,'Synthetic post-migration record',{trigger:{type:'manual'},steps:[{id:'record',type:'map',input:{ok:true}}]});
   await h.get('workflows/'+later.id,admin.cookie,403);
   const newcomer=await invite(h,'Synthetic new ungranted administrator','admin');
