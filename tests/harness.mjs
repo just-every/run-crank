@@ -44,13 +44,16 @@ export async function harness(target,{emitted=false,edge,mailEdge,quoteCosts=tru
     let starter;
     const independentStarter=async()=>{
       if(starter)return starter;
-      const step=await send('/auth/step-up',{action:'owner:transfer'},owner);assert.equal(step.status,202,step.text);
-      const proof=new URL(mail.at(-1).html.match(/href="([^"]*\/auth\/confirm\?token=[^"]+)"/)[1].replaceAll('&amp;','&'),origin).searchParams.get('token');
-      assert.equal((await send('/auth/confirm',{token:proof},owner)).status,303);
-      const invited=await send('/auth/invite',{email:'synthetic-crank-starter@example.test',displayName:'Independent run starter',role:'owner'},owner);
+      // Use a separate native session for owner invitation so the fixture owner's sensitive-action proof stays untouched.
+      assert.equal((await send('/auth/magic-link',{email:'owner@example.test',returnTo:'/app'})).status,202);
+      const linkToken=()=>new URL(mail.at(-1).html.match(/href="([^"]*\/auth\/confirm\?token=[^"]+)"/)[1].replaceAll('&amp;','&'),origin).searchParams.get('token');
+      const inviter=(await send('/auth/confirm',{token:linkToken()})).cookie;
+      const step=await send('/auth/step-up',{action:'owner:transfer'},inviter);assert.equal(step.status,202,step.text);
+      assert.equal((await send('/auth/confirm',{token:linkToken()},inviter)).status,303);
+      const invited=await send('/auth/invite',{email:'synthetic-crank-starter@example.test',displayName:'Independent run starter',role:'owner'},inviter);
       assert.equal(invited.status,202,invited.text);
       const token=new URL(mail.at(-1).html.match(/href="([^"]*\/auth\/confirm\?token=[^"]+)"/)[1].replaceAll('&amp;','&'),origin).searchParams.get('token');
-      const signed=await send('/auth/confirm',{token});assert.equal(signed.status,303,signed.text);starter=signed.cookie;return starter;
+      const signed=await send('/auth/confirm',{token});assert.equal(signed.status,303,signed.text);starter=signed.cookie;assert.equal((await send('/auth/signout',{},inviter)).status,204);return starter;
     };
     // Ordinary fixture owners explicitly review zero-cost network test edges before publication.
     // Cost-gate journeys use send() (or quoteCosts:false) so this is never production behavior.
