@@ -232,7 +232,7 @@
       "executable": false
     },
     "docs/IMPORTING.md": {
-      "sha256": "4f3dec1818ba062f544fd7e75a25981b7fd555a28c0a5a533f1a9169b0f831fa",
+      "sha256": "d1315742649b1a62418542e395b63994aa67ad726964b98096ef0679a02f3a33",
       "executable": false
     },
     "docs/OPERATIONS.md": {
@@ -2892,7 +2892,7 @@
       "executable": false
     },
     "src/crank/n8n-conditions.ts": {
-      "sha256": "8adc102d197c343157fd66a0a36e6373c9d537a31e9552574a0f377dc291d58b",
+      "sha256": "e4d188188622975061f83001f55061fa46a66204f5c38744acc4dec521055e48",
       "executable": false
     },
     "src/crank/n8n-conversions.ts": {
@@ -5728,7 +5728,7 @@
       "executable": false
     },
     "tests/migration-browser.mjs": {
-      "sha256": "1e2600669814fc215834ed759ab98b0776071f772da9c74493da0538bafa25ea",
+      "sha256": "e822150c18a745d68b120373d2c521c7d02ea727dc0b7f57580194c1a02d005c",
       "executable": false
     },
     "tests/n8n-batch-journey.mjs": {
@@ -5744,7 +5744,7 @@
       "executable": false
     },
     "tests/n8n-conditions-journey.mjs": {
-      "sha256": "467b56fea6ecd8510628fb9bbc1ba8400a9993d9b5e27ee5a3de4a9be47f22e3",
+      "sha256": "20644c2d40b6afaec6894b9bd70b3f72cdbce7b79d398f38832e7d151acb5255",
       "executable": false
     },
     "tests/n8n-conversion-journey.mjs": {
