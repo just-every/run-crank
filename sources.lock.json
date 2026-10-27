@@ -2735,7 +2735,7 @@
       "executable": false
     },
     "src/crank/engine/transforms/n8n-filter-stream.ts": {
-      "sha256": "09b54c682492718ad0746ca31b6562b9883e44b5ecfb4d7f9600432d062e73b1",
+      "sha256": "0297ba5a80b6aa6518b87469aab9c9b92a6b1f279744132027689cf50506dead",
       "executable": false
     },
     "src/crank/engine/transforms/n8n-items.ts": {
@@ -5715,7 +5715,7 @@
       "executable": false
     },
     "tests/n8n-stream-journey.mjs": {
-      "sha256": "c35bf5c6537bb31afe5aa9d7e84c16a0bcf871938a868c54e56ff518b35c3f1b",
+      "sha256": "445793cbb578378f521047b31c39da1a9c2af587493d1df2cf62160863ef0ce0",
       "executable": false
     },
     "tests/nook-journey.mjs": {
