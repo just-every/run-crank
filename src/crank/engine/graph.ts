@@ -1,4 +1,4 @@
-import { validateTrigger } from '../triggers/definition'
+import { pollRate, validateTrigger } from '../triggers/definition'
 import { validateGroups } from './conditions'
 import { requireZone } from './dates'
 import { StepError } from './errors'
@@ -33,6 +33,8 @@ export function validateGraph(value: unknown): Validation {
   const warnings: string[] = [], declared: Declared = { steps: [], connections: [] }, ids = new Set<string>()
   let expanded = 0
   validateTrigger(value.trigger)
+  const rate = pollRate(value.trigger)
+  if (rate?.warning) warnings.push(rate.warning)
   if (value.trigger.type === 'app_poll' && value.trigger.any_field === true) warnings.push('Any field is selected: every record edit can start a run')
   if (typeof value.trigger.connection_id === 'string') declared.connections.push(value.trigger.connection_id)
   if (typeof value.trigger.signing_connection_id === 'string') declared.connections.push(value.trigger.signing_connection_id)

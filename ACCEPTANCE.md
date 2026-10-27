@@ -398,9 +398,9 @@ Status: partial.
 
 Each polling workflow has its own interval, chosen from 1, 2, 5, 15, 30 and 60 minutes or a longer schedule; the 1-minute floor is available on every installation with no plan gate, and a provider whose rate limit cannot sustain the chosen interval shows the slowest safe interval before publish. With a healthy executor each poll starts within 30 seconds of its due time. Instant triggers (webhooks, app subscriptions, form submissions and inbound email) admit an event and start its run within 10 seconds of receipt at the 95th percentile. Every run records its trigger-to-start latency (source event time where the provider supplies one, receipt time and run start), and OPS-001 reports latency percentiles per workflow against the configured interval, flagging late polls with their cause (provider rate limit, executor backlog, outage). **Acceptance evidence:** Publish a “new HubSpot deal → Slack” workflow at a 1-minute interval and an instant Typeform workflow; create 30 deals and 30 submissions spread over an hour; verify every deal run starts no later than 1 minute 30 seconds after the deal’s creation, every form run starts within 10 seconds of receipt at p95, and each run’s history shows its measured latency; throttle the HubSpot test edge with 429s and verify the late polls are flagged with “provider rate limit” in OPS-001; choose an interval faster than a provider allows and verify the pre-publish warning.
 
-Current evidence: `src/crank/ops/report.ts`; `tests/triggers.test.mjs`
+Current evidence: `src/crank/triggers/definition.ts`; `docs/APP-TRIGGERS.md`; `tests/triggers.test.mjs`, “TRIG-007/TRIG-004: polling preserves interval choices, warns before publication and reports deduplicated feed latency” and “TRIG-007: URL polls follow cursor pages with a bearer connection, dedup on a chosen key, read XPath, and surface refusals”; `tests/app-poll-browser.mjs`, rateScreens
 
-Remaining gap: Provider rate tables with slowest-safe-interval warnings; HubSpot/Typeform journey needs accounts.
+Remaining gap: Live HubSpot and Typeform test accounts and the full hour-long 30-deal plus 30-submission latency journey, including provider-rate-limit lateness explanation, remain required.
 
 ## TRIG-005 — Flood protection for bursts of trigger events
 
