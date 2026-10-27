@@ -1,3 +1,4 @@
+import { unitsUsd } from '../ops/usage-money'
 import { mcpClientsPanel, mcpCredentialView } from './mcp-clients'
 import { clientApi } from '../mcp/client-api'
 import { driftApi } from '../agents/drift-api'
@@ -325,7 +326,7 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
       return page('Approvals',approvalsView(state,details),{state,intro:'Decisions that only a person can make. Everything else runs on its own.'})
     }
     if(url.pathname==='/app/audit' && actor.team?.role==='auditor') return page('Audit history',`<section class="panel"><h2>Value-free audit history</h2><ul class="list">${(await read('/api/crank/audit')).map((row:any)=>`<li>${esc(row.at)} · ${esc(row.action)} · ${esc(row.subject_kind)}</li>`).join('')}</ul></section>`,{state})
-    if(url.pathname==='/app/billing' && actor.team?.role==='billing') return page('Billing usage',`<section class="panel"><h2>Aggregate usage</h2><ul class="list">${(await read('/api/crank/reports/usage')).map((row:any)=>`<li>${esc(row.month)} · ${row.runs} runs · ${esc(String(row.accounted_units))} accounting units</li>`).join('')}</ul></section>`,{state})
+    if(url.pathname==='/app/billing' && actor.team?.role==='billing') return page('Billing usage',`<section class="panel"><h2>Aggregate usage</h2><ul class="list">${(await read('/api/crank/reports/usage')).map((row:any)=>`<li>${esc(row.month)} · ${row.runs} runs · USD ${esc(unitsUsd(BigInt(row.accounted_units??'0')))} accounted usage</li>`).join('')}</ul></section>`,{state})
     if(url.pathname==='/app/account') { const session = await read('/auth/session'); return page('Account',accountView(session,owner,actor.team?.role),{state,intro:'Who is signed in on this browser, and what that role may do.'}) }
     if(url.pathname==='/app/gateway-confirmation')return page('Confirm by email',gatewayConfirmation(),{state})
     if(url.pathname==='/app/connections') {
