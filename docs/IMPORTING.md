@@ -271,6 +271,11 @@ is bounded to 16,384 code units, nesting to 16 levels and values to 1,000 nodes.
 An existing object passes through; a missing value and null stay distinct in the
 retained operands, an empty object exists, and empty text is a type mismatch.
 Both operand types are checked unless `singleValue` omits the right operand.
+An explicit `rightType` applies to that operand independently: for example,
+array membership with an object right operand converts the text `null` to null,
+while an `any` right operand keeps that text unchanged. A missing right operand
+stays missing. Conversion failures identify the operand, declared type, condition
+and output group; the retained input keeps its exact source value for inspection.
 AND, OR and first-match output evaluation preserve short-circuit order.
 Unsupported literal syntax stays a named manual conversion during review;
 unsupported dynamically received syntax produces a named type mismatch before
