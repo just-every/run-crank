@@ -6,7 +6,7 @@ import { auditStatement } from './ops/audit'
 const ATTRIBUTION: [table: string, column: string][] = [
   ['crank_recurring_skills','created_by'], ['crank_recurring_skill_versions','created_by'], ['crank_recurring_objective_versions','created_by'], ['crank_recurring_tasks','owner_id'],
   ['crank_state_tables','owner_id'], ['crank_state_tables','created_by'],
-  ['crank_subflow_versions','created_by'],
+  ['crank_subflow_versions','created_by'], ['crank_workflow_samples','created_by'],
   ['crank_notice_deliveries','owner_id'], ['crank_notice_routes','owner_id'],
   ['crank_agent_followups','created_by'], ['crank_agent_followup_recipients','recipient_id'], ['crank_agent_followup_contacts','recipient_id'], ['crank_agent_followup_people','changed_by'],
   ['crank_drift_proposals','created_by'], ['crank_skills', 'created_by'], ['crank_team_access', 'changed_by'],
@@ -31,6 +31,7 @@ export async function eraseOperator(env: CrankEnv, actor: Actor, operatorId: str
   const label = `erased-operator-${crypto.randomUUID()}`, guard = `erase-operator:${person.id}:${label}`, at = Date.now()
   await guardedBatch(env, actor, 'owner', [
     stmt(env, `INSERT INTO crank_authority_guards(id,ok) SELECT ?,CASE WHEN EXISTS(SELECT 1 FROM oa_operators WHERE id=? AND email=? AND role!='owner' AND status='inactive') THEN 1 ELSE 0 END`, guard, person.id, person.email),
+    stmt(env,'DELETE FROM crank_sample_listeners WHERE created_by=?',person.id),
     stmt(env,'DELETE FROM crank_mcp_clients WHERE owner_id=?',person.id),
     stmt(env,'DELETE FROM crank_service_accounts WHERE owner_id=?',person.id),
     ...ATTRIBUTION.map(([table, column]) => stmt(env, `UPDATE ${table} SET ${column}=? WHERE ${column}=?`, label, person.id)),

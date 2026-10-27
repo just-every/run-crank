@@ -1,5 +1,15 @@
 # Agent instructions
 
+## Contract documents
+
+`CONTRACT.md` owns acceptance text and status. After changing it, regenerate
+`ACCEPTANCE.md` and `docs/CLAIMS.md` with
+`node scripts/contract-docs.mjs write`, then run
+`node scripts/contract-docs.mjs check`. Keep all Status rows from each parent.
+Regenerate the edition source lock after the final source or document edit.
+
+Lander-Regenerate: `node scripts/contract-docs.mjs write`
+
 ## Launch for review
 
 When asked to launch, run or review this app, run this from the checkout root
