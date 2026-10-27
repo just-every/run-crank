@@ -32,7 +32,7 @@ export async function readSamples(env: CrankEnv, actor: Actor, workflowId: strin
   readScope(actor, workflowId)
   const workflow = await getWorkflow(env, workflowId)
   const rows = (await stmt(env, 'SELECT * FROM crank_workflow_samples WHERE workflow_id=? ORDER BY created_at DESC,id DESC LIMIT 100', workflowId).all<SampleRow>()).results
-  return { samples: await Promise.all(rows.map(row => present(env, row))), warnings: await sampleWarnings(env, workflowId, JSON.parse(workflow.draft_json)) }
+  return { samples: await Promise.all(rows.map(row => present(env, row))), warnings: await sampleWarnings(env, actor, workflowId, JSON.parse(workflow.draft_json)) }
 }
 export async function saveSample(env: CrankEnv, actor: Actor, workflowId: string, input: Record<string, unknown>) {
   const workflow = await editable(env, actor, workflowId), source = String(input.source ?? 'manual'), step = String(input.step_path ?? 'trigger')
@@ -94,7 +94,9 @@ export async function previewSample(env: CrankEnv, actor: Actor, workflowId: str
   requireValue(row, 'Select a trigger sample first', 422)
   return { payload: JSON.parse((await openText(env, workflowId, row.payload_json))!), source: { id: row.id, source: row.source, source_id: row.source_id, source_time: row.source_time, label: sourceLabel(row), tested: false } }
 }
-export async function sampleWarnings(env: CrankEnv, workflowId: string, graph: Graph) {
+export async function sampleWarnings(env: CrankEnv, actor: Actor, workflowId: string, graph: Graph) {
+  workflowScope(actor, workflowId)
+  if (!canReadPayload(actor)) return []
   const warnings: string[] = [], row = await stmt(env, "SELECT * FROM crank_workflow_samples WHERE workflow_id=? AND step_path='trigger' AND selected=1", workflowId).first<SampleRow>()
   if (row) {
     const payload = JSON.parse((await openText(env, workflowId, row.payload_json, 'display'))!), fields = await stmt(env, 'SELECT fields_json FROM crank_sample_fields WHERE workflow_id=?', workflowId).first<{fields_json:string}>()

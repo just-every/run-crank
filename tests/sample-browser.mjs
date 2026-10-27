@@ -1,4 +1,4 @@
-/** Financial owner journeys at the installed UI's public doors. Use heavy-slot. */
+/** Retained sample journeys at the installed UI's public doors. Use heavy-slot. */
 import assert from 'node:assert/strict';
 import {createServer} from 'node:http';
 import {readFile,mkdir} from 'node:fs/promises';
@@ -57,6 +57,18 @@ try {
   }
   for(const width of [1440,390]) {
    await page.setViewportSize({width,height:1000});
+   if(state==='waiting') {
+    const contrast=await page.getByRole('link',{name:'Refresh captured samples',exact:true}).evaluate(link=>{
+     const luminance=color=>{
+      const channels=color.match(/[\d.]+/g).slice(0,3).map(Number).map(value=>{const v=value/255;return v<=0.04045?v/12.92:((v+0.055)/1.055)**2.4});
+      return channels[0]*0.2126+channels[1]*0.7152+channels[2]*0.0722;
+     };
+     const style=getComputedStyle(link),foreground=luminance(style.color),background=luminance(style.backgroundColor);
+     return (Math.max(foreground,background)+0.05)/(Math.min(foreground,background)+0.05);
+    });
+    assert.ok(contrast>=4.5,`${width} sample refresh contrast ${contrast}`);
+    console.log(`${width} sample refresh contrast ${contrast.toFixed(2)}:1`);
+   }
    await page.screenshot({path:join(evidence,`${width}-${state}.png`),fullPage:true,...(state==='waiting'?{mask:[page.getByLabel('Draft sample URL')]}:{})});
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`${width} ${state} overflow`);
   }

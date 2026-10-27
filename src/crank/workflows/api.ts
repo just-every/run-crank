@@ -195,7 +195,7 @@ export async function workflowApi(request: Request, env: CrankEnv): Promise<Resp
       const [workflowId, action] = m
       if (action === 'draft') return json(await updateDraft(env, actor, workflowId, input, request.headers.get('Idempotency-Key')))
       if (action === 'validate') {
-        try { const { warnings, declared } = validateGraph(input.graph ?? JSON.parse((await getWorkflow(env, workflowId)).draft_json)); return json({ ok: true, warnings: [...warnings, ...await sampleWarnings(env, workflowId, input.graph as any ?? JSON.parse((await getWorkflow(env, workflowId)).draft_json))], declared }) }
+        try { const { warnings, declared } = validateGraph(input.graph ?? JSON.parse((await getWorkflow(env, workflowId)).draft_json)); return json({ ok: true, warnings: [...warnings, ...await sampleWarnings(env, actor, workflowId, input.graph as any ?? JSON.parse((await getWorkflow(env, workflowId)).draft_json))], declared }) }
         catch (error) { if (error instanceof StepError) return json({ ok: false, error: error.message }, 422); throw error }
       }
       if (action === 'publish') return json(await publishWorkflow(env, actor, workflowId, input, request.headers.get('Idempotency-Key')), 201)

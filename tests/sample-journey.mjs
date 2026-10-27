@@ -73,6 +73,12 @@ export async function sampleJourney({inspect=async()=>{}}={}) {
   const reader=(await h.send('/auth/confirm',{token})).cookie;
   assert.equal((await h.get('workflow-runs/'+run.id,reader)).payload,'restricted');
   await h.get(base+'/samples',reader,403);await h.post(base+'/samples',{source:'history',run_id:run.id},reader,403);await h.post(base+'/preview',{sample_id:chosen.id},reader,403);
+  await h.post(base+'/samples/fields',{fields:['body.email','body.private_question']});
+  const ownerWarnings=(await h.post(base+'/validate',{})).warnings;
+  assert.ok(ownerWarnings.some(w=>w.includes('body.private_question')));
+  assert.equal(ownerWarnings.some(w=>w.includes('body.email')),false);
+  const restrictedWarnings=(await h.post(base+'/validate',{},reader)).warnings;
+  assert.equal(restrictedWarnings.some(w=>w.includes('Stale sample')||w.includes('schema sample')),false,'validation cannot disclose retained sample field presence or test state');
   assert.equal(edge.requests.length,1);
   const foreign=await h.post('workflows',{name:'Other sample workflow',graph:graph()},h.owner,201);
   await h.post(`workflows/${foreign.id}/samples`,{source:'history',run_id:run.id},h.owner,422);
@@ -103,6 +109,18 @@ export async function sampleJourney({inspect=async()=>{}}={}) {
   await h.post(`data`+`/holds/${hold.id}/release`);
   await h.post(base+'/samples/delete',{sample_id:fileSample.id});
   assert.equal(portable(await archive(h),'crank_workflow_samples').some(s=>s.id===fileSample.id),false);
+  const adminInvite=await h.send('/auth/invite',{email:'sample-admin@example.test',displayName:'Sample admin',role:'admin'},h.owner);assert.equal(adminInvite.status,202);
+  const adminToken=new URL(h.mail.at(-1).html.match(/href="([^"]*\/auth\/confirm\?token=[^"]+)"/)[1].replaceAll('&amp;','&'),h.origin).searchParams.get('token');
+  const admin=(await h.send('/auth/confirm',{token:adminToken})).cookie;
+  const people=await h.send('/auth/operators',undefined,h.owner),adminId=people.value.find(p=>p.displayName==='Sample admin').id;
+  const adminSamples=await h.post(`workflows/${foreign.id}/samples`,{sample:{body:{email:'admin@example.test'}}},admin,201);
+  const adminSampleId=adminSamples.samples[0].id;
+  assert.equal(portable(await archive(h),'crank_workflow_samples').find(s=>s.id===adminSampleId).created_by,adminId);
+  assert.equal((await h.send('/auth/operator/status',{operatorId:adminId,status:'inactive'},h.owner)).status,200);
+  const erased=await h.post('data'+'/erase',{operator_id:adminId,confirm:'ERASE'});
+  const erasedSample=portable(await archive(h),'crank_workflow_samples').find(s=>s.id===adminSampleId);
+  assert.equal(erasedSample.created_by,erased.label);assert.notEqual(erasedSample.created_by,adminId);
+  assert.deepEqual(JSON.parse(erasedSample.payload_json),{body:{email:'admin@example.test'}});
   // Erasing the source removes the independently retained history copy too.
   await h.post(base+'/pause');await h.post('data'+'/erase',{workflow_run_id:run.id,confirm:'ERASE'});
   assert.equal((await h.get(base+'/samples')).samples.some(s=>s.source_id===run.id),false);
