@@ -255,11 +255,11 @@ async function publishVersion(env: CrankEnv, actor: Actor, workflowId: string, i
 }
 async function triggerSetup(env: CrankEnv, workflowId: string, versionId: string, graph: Graph) {
   const trigger = graph.trigger as Record<string, any>, time = Date.now()
-  if (trigger.type === 'feed' || trigger.type === 'url_poll') {
+  if (trigger.type === 'feed' || trigger.type === 'url_poll' || trigger.type === 'app_poll') {
     const seen = await stmt(env, 'SELECT 1 FROM crank_seen_items WHERE workflow_id=? LIMIT 1', workflowId).first()
     const interval = trigger.interval_minutes ?? 15
     // The first poll runs on the next pass; later polls sit on interval boundaries.
-    return [stmt(env, 'INSERT INTO crank_polls(workflow_id,version_id,interval_minutes,next_due_at,seeded) VALUES(?,?,?,?,?)', workflowId, versionId, interval, new Date(Math.min(time, nextBoundary(time, interval))).toISOString(), seen ? 1 : 0)]
+    return [stmt(env, 'INSERT INTO crank_polls(workflow_id,version_id,interval_minutes,next_due_at,seeded) VALUES(?,?,?,?,?)', workflowId, versionId, interval, new Date(Math.min(time, nextBoundary(time, interval))).toISOString(), trigger.type === 'app_poll' ? 0 : seen ? 1 : 0)]
   }
   if (trigger.type === 'schedule') {
     const next = nextOccurrence(trigger, time)

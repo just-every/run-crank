@@ -474,6 +474,12 @@
       "name": "0078_request_credential_identity.sql",
       "sha256": "e027999d7ffe73332ff9e74330167aa17ac57fb7f9f69ac5e039eb1eb5e654b2",
       "sql": "ALTER TABLE crank_wf_attempts ADD COLUMN credential_identity TEXT;\n"
+    },
+    {
+      "binding": "DB",
+      "name": "0079_app_polls.sql",
+      "sha256": "e0299623dda65ec349185b82e45e7885f7bf94f5dbe2b514981eb90f686be283",
+      "sql": "CREATE TABLE crank_app_snapshots (\n workflow_id TEXT NOT NULL REFERENCES crank_workflows(id) ON DELETE CASCADE,\n version_id TEXT NOT NULL REFERENCES crank_workflow_versions(id) ON DELETE CASCADE,\n record_id TEXT NOT NULL,\n fields_json TEXT NOT NULL,\n changed_at TEXT NOT NULL,\n PRIMARY KEY(workflow_id, version_id, record_id)\n);\nALTER TABLE crank_polls ADD COLUMN subscription_json TEXT;\n\n-- Poll identity is consumed only in the same transaction as durable admission.\n\nDROP TRIGGER crank_poll_run_dedup;\nDROP TRIGGER crank_poll_run_seen;\n\nCREATE TRIGGER crank_poll_run_dedup BEFORE INSERT ON crank_wf_runs\nWHEN NEW.created_by='trigger' AND NEW.mode='production' AND NEW.status='queued'\n AND NEW.trigger_kind IN ('url_poll','feed','app_poll')\n AND EXISTS(SELECT 1 FROM crank_seen_items WHERE workflow_id=NEW.workflow_id AND item_key=NEW.source_id)\nBEGIN\n SELECT RAISE(IGNORE);\nEND;\n\nCREATE TRIGGER crank_poll_run_seen AFTER INSERT ON crank_wf_runs\nWHEN NEW.created_by='trigger' AND NEW.mode='production' AND NEW.status='queued'\n AND NEW.trigger_kind IN ('url_poll','feed','app_poll')\nBEGIN\n INSERT OR IGNORE INTO crank_seen_items(workflow_id,item_key,first_seen_at)\n VALUES(NEW.workflow_id,NEW.source_id,NEW.received_at);\nEND;\n"
     }
   ],
   "compatibilityDate": "2026-09-08",

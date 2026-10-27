@@ -66,6 +66,25 @@ export function validateTrigger(trigger: Record<string, unknown>) {
       interval(trigger); backfill(trigger)
       return
     }
+    case 'app_poll': {
+      if (typeof trigger.connection_id !== 'string') fail('choose an app connection')
+      if (!['hubspot', 'microsoft_graph'].includes(String(trigger.provider))) fail('provider must be hubspot or microsoft_graph')
+      if (trigger.provider === 'hubspot' && !['contacts', 'companies', 'deals'].includes(String(trigger.resource))) fail('choose contacts, companies or deals')
+      if (trigger.provider === 'microsoft_graph' && trigger.resource !== 'messages') fail('choose messages')
+      if (!['new', 'updated'].includes(String(trigger.event))) fail('event must be new or updated')
+      if (!['from_now', 'existing'].includes(String(trigger.backfill))) fail('choose initial backfill explicitly')
+      if (trigger.event === 'updated' && trigger.any_field !== true && (!Array.isArray(trigger.watched_fields) || !trigger.watched_fields.length)) fail('updated records need watched_fields or explicit any_field')
+      if (trigger.watched_fields !== undefined && (!Array.isArray(trigger.watched_fields) || trigger.watched_fields.length > 30 || trigger.watched_fields.some(f => typeof f !== 'string' || !/^[A-Za-z][A-Za-z0-9_]*$/.test(f)))) fail('watched_fields lists at most 30 property names')
+      if (trigger.changed_to !== undefined && (!isObject(trigger.changed_to) || Object.keys(trigger.changed_to).some(f => !(trigger.watched_fields as string[] | undefined)?.includes(f)))) fail('changed_to names watched fields')
+      if (trigger.identity !== undefined && !['change', 'first_value'].includes(String(trigger.identity))) fail('identity must be change or first_value')
+      if (trigger.subscription !== undefined) {
+        const s = trigger.subscription
+        if (trigger.provider !== 'microsoft_graph' || !isObject(s) || typeof s.id !== 'string' || !/^[A-Za-z0-9-]{1,200}$/.test(s.id) || typeof s.expires_at !== 'string' || !Number.isFinite(Date.parse(s.expires_at))) fail('a Microsoft Graph subscription needs its id and expires_at')
+      }
+      if (trigger.changed_from !== undefined || trigger.settle_delay !== undefined) fail('changed_from and settle_delay are not supported by this app poll yet')
+      interval(trigger)
+      return
+    }
     case 'url_poll': {
       checkEgress(String(trigger.url))
       if ((trigger.items_path === undefined) === (trigger.xpath === undefined) && trigger.items_path !== '') fail('choose items_path (JSON) or xpath (XML/HTML)')
