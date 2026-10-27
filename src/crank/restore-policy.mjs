@@ -58,7 +58,7 @@ export const importSafety = {
 export function importRow(table, row) {
   if (table === 'crank_recurring_tasks') return {...row,status:'inactive'};
   if (table === 'crank_state_tables' || table === 'crank_state_operations') return {...row,active:0};
-  if (table === 'crank_subflow_calls') return {...row,...(['queued','running'].includes(row.status) ? {status:'interrupted'} : {}),lease_id:null,lease_expires_at:null};
+  if (table === 'crank_subflow_calls') return {...row,...(['queued','running','paused'].includes(row.status) ? {status:'interrupted'} : {}),lease_id:null,lease_expires_at:null};
   if (table === 'crank_subflow_versions') return {...row,active:0};
   if (table === 'crank_notice_deliveries') return {...row,active:0,lease_id:null,lease_expires_at:null};
   if(table==='crank_gateways')return {...Object.fromEntries(Object.entries(row).map(([key,value])=>[key,['code_hash','code_expires_at','credential_hash','public_key','fingerprint'].includes(key)?null:value])),status:'revoked'};

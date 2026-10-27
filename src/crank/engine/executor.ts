@@ -1,3 +1,4 @@
+import { text as transformText } from './transforms/args'
 import { assertDriftWriteAllowed, recordDriftFailure } from '../agents/drift-step'
 import { assertAuthoringStep } from './authoring-authority'
 import { settleRecurringRun } from '../agents/recurring-authority'
@@ -43,6 +44,8 @@ class Execution {
   waits!: Map<string, WaitRow>
   replays!: Map<string, Replay>
   scope!: Scope
+  beforeStep?: () => Promise<void>
+  boundedChild = false
   zone = 'America/New_York'
   constructor(readonly env: CrankEnv, public run: RunRow, readonly lease: string, readonly graph: Graph, readonly time: number, readonly retryPolicy: Record<string, unknown>) {}
 
@@ -69,6 +72,7 @@ class Execution {
 
   async fork(steps: Step[], prefix: string, item: unknown, index: number) {
     const child = new Execution(this.env, this.run, this.lease, this.graph, this.time, this.retryPolicy)
+    child.beforeStep = this.beforeStep; child.boundedChild = this.boundedChild
     child.records = this.records; child.waits = this.waits; child.replays = this.replays; child.zone = this.zone
     child.scope = { ...this.scope, item, item_index: index, steps: { ...this.scope.steps }, run: { ...this.scope.run } }
     await child.callbacks(steps, prefix)
@@ -76,6 +80,7 @@ class Execution {
   }
 
   async save(step: Step, path: string, status: StepRecord['status'], extra: { input?: unknown; output?: unknown; trace?: unknown; error?: unknown }) {
+    if (this.boundedChild && [extra.input,extra.output].some(value => value !== undefined && new TextEncoder().encode(JSON.stringify(value)).byteLength > 65536)) throw new StepError('validation','Subflow: intermediate value exceeds 64 KiB')
     const previous = this.records.get(path)
     const record = { run_id: this.run.id, path, step_id: step.id, type: step.type, status, started_at: previous?.started_at ?? new Date(this.time).toISOString(), finished_at: ['running', 'waiting'].includes(status) ? null : now(), operation_key: previous?.operation_key ?? this.replays.get(path)?.operation_key ?? `${this.run.id}:${path}` }
     await saveRecord(this.env, this.run, this.lease, { ...record, ...extra })
@@ -85,6 +90,7 @@ class Execution {
 
   async walk(steps: Step[], prefix: string): Promise<Outcome> {
     for (const step of steps) {
+      await this.beforeStep?.()
       // Renew before another action; a stale executor must not begin new effects.
       const leaseTime = Date.now()
       const held = await stmt(this.env, "UPDATE crank_wf_runs SET lease_expires_at=? WHERE id=? AND lease_id=? AND status='running' AND lease_expires_at>? RETURNING id", new Date(leaseTime + LEASE_MS).toISOString(), this.run.id, this.lease, new Date(leaseTime).toISOString()).first<{ id: string }>()
@@ -115,11 +121,28 @@ class Execution {
     let input: Record<string, unknown> = {}
     const ctx: StepContext = {
       env: this.env, run: this.run, scope: this.scope, path, operationKey: record?.operation_key ?? this.replays.get(path)?.operation_key ?? `${this.run.id}:${path}`, now: this.time, zone: this.zone, input, requests: { next: 0 }, retryPolicy: { ...this.retryPolicy, ...(isObject(step.retry_policy) ? step.retry_policy : {}), write_base_delay_ms: isObject(step.retry_policy) ? step.retry_policy.base_delay_ms ?? this.retryPolicy.write_base_delay_ms : this.retryPolicy.write_base_delay_ms },
+      executeSubflow: async (steps, input, result, check) => {
+        const child = new Execution(this.env,this.run,this.lease,{...this.graph,steps},this.time,this.retryPolicy)
+        child.records=this.records; child.waits=this.waits; child.replays=this.replays; child.zone=this.zone
+        child.beforeStep=check; child.boundedChild=true
+        child.scope={trigger:{input},steps:{},run:{...this.scope.run}}
+        const outcome=await child.walk(steps,path+'/child/')
+        return {outcome,...(outcome.kind==='completed'?{output:resolve(result,child.scope)}:{})}
+      },
       respond: async response => { await stmt(this.env, 'UPDATE crank_wf_runs SET response_json=? WHERE id=? AND lease_id=?', await sealText(await targetFor(this.env, this.run.workflow_id), JSON.stringify(response)), this.run.id, this.lease).run() },
     }
     try {
       const replay = record ? undefined : this.replays.get(path)
       input = record?.input_json ? JSON.parse(record.input_json) : replay?.input_json ? JSON.parse(replay.input_json) : (resolve(step.input ?? {}, this.scope) ?? {}) as Record<string, unknown>
+      if (this.boundedChild) {
+        if (new TextEncoder().encode(JSON.stringify(input)).byteLength > 65536) throw new StepError('validation','Subflow: mapped input exceeds 64 KiB')
+        if (step.type === 'transform' && step.fn === 'text.replace') {
+          if (input.pattern === true) throw new StepError('validation','Subflow: only literal replacement is supported')
+          const parts=transformText(input).split(transformText(input,'find')), encoder=new TextEncoder()
+          const size=parts.reduce((n,part)=>n+encoder.encode(part).byteLength,0)+Math.max(0,parts.length-1)*encoder.encode(transformText(input,'replace')).byteLength
+          if (size > 65536) throw new StepError('validation','Subflow: replacement output exceeds 64 KiB')
+        }
+      }
       ctx.input = input
       await assertAuthoringStep(this.env, this.run.id, step, input)
       ctx.beforeRequest = () => assertAuthoringStep(this.env, this.run.id, step, input)
@@ -166,13 +189,13 @@ class Execution {
         return {kind:'paused',reason:'Provider permission changed; inspect the retained drift incident before continuing',authority:true}
       }
       if (error instanceof StepError && (error.category === 'connection' || error.category === 'authority')) {
-        await this.save(step, path, 'waiting', { input })
+        await this.save(step, path, 'waiting', { input, trace:error.detail.trace })
         return { kind: 'paused', reason: error.message, connectionId: String(error.detail.connection_id ?? ''), authority: error.category === 'authority' }
       }
       const failure = error instanceof StepError ? error.toJSON() : { category: 'provider', message: `Step ${step.id} failed unexpectedly` }
       if (step.on_error === 'continue' && failure.category !== 'uncertain' && !(failure as any).uncertain) {
         const value = { ok: false, error: { category: failure.category, message: failure.message }, ...(error instanceof StepError ? error.detail : {}) }
-        await this.save(step, path, 'failed', { input, output: value, error: failure })
+        await this.save(step, path, 'failed', { input, output: value, error: failure, trace:(failure as any).trace })
         this.scope.steps[step.id] = value
         return { kind: 'completed' }
       }

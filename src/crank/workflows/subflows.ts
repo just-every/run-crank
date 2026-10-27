@@ -1,20 +1,22 @@
-import { childCallApi, queuePureChild } from './subflow-calls'
+import { validateSubflowGraph } from '../engine/graph'
+import { childCallApi, queuePureChild, executeGraphChild } from './subflow-calls'
 import { guardedBatch, requireOwner } from '../access'
 import { assertDispatchAuthority } from '../engine/authority'
 import { StepError } from '../engine/errors'
 import { resolve, type Scope } from '../engine/mapping'
 import { text as transformText } from '../engine/transforms/args'
 import { runTransform } from '../engine/transforms'
-import type { StepContext, StepType } from '../engine/types'
+import type { Step, StepContext, StepType } from '../engine/types'
 import { isObject } from '../engine/values'
 import { body, canonical, CrankError, digest, id, json, now, requireValue, stmt, text, type Actor, type CrankEnv } from '../model'
 import { auditStatement } from '../ops/audit'
 import { validatePureRecipe } from './recipe-definition.mjs'
 import { PURE_SUBFLOW_FUNCTIONS, validateSubflowDefinition, validateSubflowValue } from './subflow-definition.mjs'
 
-type Definition = { inputs: Record<string,string>; outputs: Record<string,string>; steps: {id:string;fn:string;input:Record<string,unknown>}[]; result: Record<string,unknown> }
+export type NativeDefinition = {kind:'native'; inputs:Record<string,string>;outputs:Record<string,string>;steps:Step[];result:Record<string,unknown>}
+type Definition = { kind?:never; inputs: Record<string,string>; outputs: Record<string,string>; steps: {id:string;fn:string;input:Record<string,unknown>}[]; result: Record<string,unknown> }
 type Version = { id:string; subflow_id:string; version:number; name:string; definition_json:string; definition_digest:string; active:number; created_by:string; created_at:string; recipe_json:string|null }
-function checked(value: unknown) { try { validateSubflowDefinition(value) } catch (error) { throw new CrankError(422, (error as Error).message) } }
+function checked(value: unknown) { try { validateSubflowDefinition(value); if (isObject(value) && value.kind === 'native') validateSubflowGraph(value.steps as Step[]) } catch (error) { throw new CrankError(422, (error as Error).message) } }
 const present = ({definition_json,recipe_json,...version}: Version) => ({...version,definition:JSON.parse(definition_json),recipe:recipe_json ? JSON.parse(recipe_json) : null})
 export async function readSubflow(env: CrankEnv, subflowId: string, version: number) {
   const row = await stmt(env, 'SELECT * FROM crank_subflow_versions WHERE subflow_id=? AND version=?', subflowId, version).first<Version>()
@@ -27,7 +29,7 @@ async function createVersion(env: CrankEnv, actor: Actor, input: Record<string,u
   const version = (previous?.version ?? 0) + 1, key = subflowId + ':' + version, definition = canonical(input.definition), hash = await digest(definition)
   try {
     await guardedBatch(env, actor, 'owner', [
-      stmt(env, 'INSERT INTO crank_subflow_versions(id,subflow_id,version,name,definition_json,definition_digest,created_by,created_at,recipe_json,active) VALUES(?,?,?,?,?,?,?,?,?,?)', key, subflowId, version, text(input.name ?? previous?.name, 'name', 100), definition, hash, actor.id, now(), recipe ? canonical(recipe) : null, recipe ? 0 : 1),
+      stmt(env, 'INSERT INTO crank_subflow_versions(id,subflow_id,version,name,definition_json,definition_digest,created_by,created_at,recipe_json,active) VALUES(?,?,?,?,?,?,?,?,?,?)', key, subflowId, version, text(input.name ?? previous?.name, 'name', 100), definition, hash, actor.id, now(), recipe ? canonical(recipe) : null, recipe || (input.definition as Definition | NativeDefinition).kind === 'native' ? 0 : 1),
       auditStatement(env, actor.id, 'subflow.version', 'subflow', subflowId, {version,definition_digest:hash,recipe_digest:recipe ? await digest(canonical(recipe)) : null}),
     ])
   } catch (error) { if (/UNIQUE constraint/.test(String(error))) throw new CrankError(409, 'A version was created concurrently; read it before adding another'); throw error }
@@ -88,6 +90,9 @@ export async function subflowPublication(env: CrankEnv, actor: Actor, graph: {st
         const row = await readSubflow(env, String(step.subflow_id), Number(step.subflow_version))
         requireValue(step.definition_digest === undefined || step.definition_digest === row.definition_digest, 'The reviewed subflow digest does not match the pinned registry version', 409)
         requireValue(row.active === 1, 'Review the pinned subflow version before publishing this caller', 409)
+        const definition = JSON.parse(row.definition_json)
+        checked(definition)
+        requireValue(definition.kind !== 'native' || step.mode === 'child', 'Native graph subflows require linked child mode', 422)
         refs.push({subflow_id:row.subflow_id,version:row.version,definition_digest:row.definition_digest})
       }
       await walk(step.steps)
@@ -110,7 +115,7 @@ export async function callable(ctx: Pick<StepContext,'env'|'run'>, row: Version)
         JOIN oa_operators receiving ON receiving.id=current.published_by
         WHERE current.id=w.published_version_id AND receiving.id=w.owner_id AND receiving.role='owner' AND receiving.status='active'))
     )`, ctx.run.version_id, ctx.run.id, row.id, row.definition_digest).first()
-  if (!live) throw new StepError('authority', 'The pinned pure subflow needs current owner review and native owner publication before use')
+  if (!live) throw new StepError('authority', 'The pinned subflow needs current owner review and native owner publication before use')
 }
 
 async function checkRecipeSamples(manifest: Record<string,unknown>) {
@@ -155,9 +160,14 @@ export const subflow: StepType = {
   async execute(step, ctx) {
     const row = await readSubflow(ctx.env, String(step.subflow_id), Number(step.subflow_version))
     if (step.definition_digest !== undefined && step.definition_digest !== row.definition_digest) throw new StepError('validation', 'The reviewed subflow digest does not match the pinned registry version')
-    await callable(ctx, row)
     if (await digest(row.definition_json) !== row.definition_digest) throw new StepError('validation', 'The subflow definition digest does not match')
-    const definition = JSON.parse(row.definition_json) as Definition
+    const definition = JSON.parse(row.definition_json) as Definition | NativeDefinition
+    if (definition.kind === 'native') {
+      checked(definition)
+      if (step.mode !== 'child') throw new StepError('validation','Native graphs require child mode')
+      return executeGraphChild(ctx,row,definition)
+    }
+    await callable(ctx,row)
     if (step.mode === 'child') return queuePureChild(ctx, row.id)
     try {
       const output = await evaluatePureSubflow(definition, ctx.input, () => callable(ctx, row))
