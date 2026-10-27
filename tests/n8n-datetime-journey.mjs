@@ -68,7 +68,10 @@ export async function n8nDateTimeJourney() {
    s=>delete s.settings.timezone,s=>s.settings.timezone='synthetic-crank-invalid',
    s=>s.nodes[2].parameters.operation='roundDate',s=>s.nodes[2].parameters.magnitude='={{ globalThis.crankInjected = 1 }}',
   ]) {
-   const source=structuredClone(sources[0]);change(source);const plan=await doorPlan(h,JSON.stringify(source));assert.equal(plan.status,200,plan.text);assert.equal(plan.value.rejected.length,1,'inexact settings must stay manual');assert.ok(plan.value.diagnostics.some(row=>row.message?.includes('Manual conversion')));await door(h,'undo',{planId:plan.value.planId});
+   const source=structuredClone(sources[0]);change(source);const plan=await doorPlan(h,JSON.stringify(source));assert.equal(plan.status,200,plan.text);assert.equal(plan.value.rejected.length,1,'inexact settings must stay manual');assert.ok(plan.value.diagnostics.some(row=>row.message?.includes('Manual conversion')));
+   const attempted=await door(h,'apply',{planId:plan.value.planId,reviewedFingerprint:plan.value.fingerprint});assert.ok(attempted.status<500,attempted.text);
+   assert.deepEqual(await h.get('workflows'),[],'unsupported date settings must never create an executable draft');assert.deepEqual(writes,[],'unsupported date settings must produce no destination effect even after reviewed apply');
+   await door(h,'undo',{planId:plan.value.planId});
   }
   assert.deepEqual(await h.get('workflows'),[]);assert.deepEqual(writes,[],'review must not dispatch');
   const plan=await doorImport(h,JSON.stringify(sources));assert.equal(plan.rejected.length,0);
