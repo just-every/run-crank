@@ -10,6 +10,7 @@ import { canonical, digest, id, stmt, type CrankEnv } from '../model'
 import { notify } from '../ops/notices'
 import { admit, hold, burstThreshold, type TriggerEvent, type WorkflowRow } from './admission'
 import { parseFeed } from './feeds'
+import { URL_POLL_MAX_REDIRECTS } from './definition'
 import { appItems, renewSubscription } from './app-poll'
 import { nextLink } from './historical-source'
 import { parseXml, toJson, xpath } from './xml'
@@ -33,7 +34,7 @@ function classify(response: BoundedResponse, what: string) {
 async function get(env: CrankEnv, url: URL, headers: Headers, connectionId: string | undefined) {
   const request = new Headers(headers), target = new URL(url)
   if (connectionId) await authorizeRequest(env, connectionId, target, request, null)
-  try { return await boundedFetch(target.href, { method: 'GET', headers: request, timeoutMs: 15000, maxBytes: 2 * 1024 * 1024, follow: 3, sameOrigin: Boolean(connectionId) }) }
+  try { return await boundedFetch(target.href, { method: 'GET', headers: request, timeoutMs: 15000, maxBytes: 2 * 1024 * 1024, follow: URL_POLL_MAX_REDIRECTS, sameOrigin: Boolean(connectionId) }) }
   catch (error) {
     if (error instanceof StepError && error.category === 'network') throw new PollFailure(error.message, 'outage')
     throw error
