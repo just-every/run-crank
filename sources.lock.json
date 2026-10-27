@@ -5511,7 +5511,7 @@
       "executable": false
     },
     "tests/emitted-recovery-process.mjs": {
-      "sha256": "5090eb7fff19a20ddde2b3689d4999a09efefcb1db08ff14a713e51252b6b897",
+      "sha256": "bb4e0339b6717b590a6d163b059952c2dd5c280f8387d53211e39daf67945447",
       "executable": false
     },
     "tests/emitted-recovery-worker.mjs": {
@@ -5635,7 +5635,7 @@
       "executable": false
     },
     "tests/invoice-outcome-browser.mjs": {
-      "sha256": "b683d77d71a3ecc6bf283a6d3813fba34bf6929f27805fa03b9a0f2e9450ee96",
+      "sha256": "be34363d0ad61c94cfa83d9967d0652dd7c9008b0f58a9392fb98d20f2d8868b",
       "executable": false
     },
     "tests/invoice-outcome-journey.mjs": {

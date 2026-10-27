@@ -5,7 +5,7 @@ import {resolve,extname,join} from 'node:path';
 import {chromium,expect} from '@playwright/test';
 import {invoiceOutcomeJourney} from './invoice-outcome-journey.mjs';
 const evidence=process.env.CRANK_EVIDENCE;assert.ok(evidence,'Set CRANK_EVIDENCE');await mkdir(evidence,{recursive:true});
-const browser=await chromium.launch({headless:true,args:['--use-mock-keychain','--password-store=basic']});let context,server,active,page;
+const browser=await chromium.launch({headless:true,...(process.env.CRANK_CHROMIUM_EXECUTABLE?{executablePath:process.env.CRANK_CHROMIUM_EXECUTABLE}:{}),args:['--use-mock-keychain','--password-store=basic',...(process.platform==='linux'?['--no-sandbox']:[])]});let context,server,active,page;
 const types={'.css':'text/css','.js':'text/javascript','.svg':'image/svg+xml','.woff2':'font/woff2','.png':'image/png','.webp':'image'+'/'+'webp'};
 async function attach(h,width){
  if(active===h)return;await context?.close();if(server){server.closeAllConnections();await new Promise(r=>server.close(r))}active=h;
@@ -14,7 +14,13 @@ async function attach(h,width){
  await new Promise(r=>server.listen(Number(new URL(h.origin).port),'127.0.0.1',r));context=await browser.newContext({viewport:{width,height:1000}});const [name,...value]=h.owner.split('=');await context.addCookies([{name,value:value.join('='),url:h.origin}]);page=await context.newPage();await page.goto(h.origin+'/setup');if(new URL(page.url()).pathname==='/setup'){await page.getByRole('checkbox').check();await page.getByRole('button',{name:'Finish setup',exact:true}).click()}
 }
 try{for(const width of [1440,390]){
- await invoiceOutcomeJourney({inspect:async({h,run,state})=>{await attach(h,width);await page.goto(h.origin+'/app/workflow-runs/'+run.id+(state==='uncertain-readback'?'?reconcile=verify_invoice':''));
+ await invoiceOutcomeJourney({inspect:async({h,run,state})=>{await attach(h,width);
+ // The grant owner starts this dynamic task. Review it through an independent
+ // native owner session, just as the HTTP journey does through its public doors.
+ const reviewer = state.startsWith('approve-') || state==='uncertain-readback' ? await h.independentStarter() : h.owner;
+ const [cookieName,...cookieValue]=reviewer.split('=');
+ await context.addCookies([{name:cookieName,value:cookieValue.join('='),url:h.origin}]);
+ await page.goto(h.origin+'/app/workflow-runs/'+run.id+(state==='uncertain-readback'?'?reconcile=verify_invoice':''));
  if(state.startsWith('approve-')){await page.getByRole('button',{name:'Approve',exact:true}).click();await page.waitForLoadState('networkidle');if(state==='approve-uncertain')await expect(page.locator('.detail-primary .title-row .status')).toHaveText('Uncertain');else await expect(page.getByRole('heading',{name:/Invoice criteria verified/})).toBeVisible();return h.get('workflow-runs/'+run.id)}
  if(state==='invalid-amount')await expect(page.locator('.detail-primary .title-row .status')).toHaveText('Failed');else await expect(page.getByRole('heading',{name:state.endsWith('satisfied')?/Invoice criteria verified/:/Invoice obligation open/})).toBeVisible();
  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),state+' overflow');
