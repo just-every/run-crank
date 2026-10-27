@@ -175,6 +175,22 @@ export async function n8nConditionsJourney() {
    await restored.post('data'+'/restore',{archive:saved,confirm:'RESTORE'});
    const reexported=inventory(await archive(restored));assert.deepEqual(original.filter(row=>!reexported.includes(row)),[],'every portable source record must survive intact');assert.deepEqual(reexported.filter(row=>!original.includes(row)).map(row=>[JSON.parse(row).table,JSON.parse(row).row.action]),[['crank_audit','data.restore']],'only the restore audit may be new');
    const receiving=await restored.get('workflows/'+workflow.id);assert.equal(receiving.status,'paused');assert.deepEqual(receiving.draft,before.draft);assert.ok(receiving.hooks.every(row=>row.status!=='active'));await restored.tick();assert.equal(writes.length,count,'inactive restoration must not dispatch');const refused=await deliver(restored,hook.url,{method:'POST',headers:{'content-type':'application'+'/'+'json'},body:JSON.stringify({value:'{}'})});assert.ok(refused.status>=400);assert.equal(writes.length,count);
+   await restored.post('workflows/'+workflow.id+'/publish',{},restored.owner,409);
+   assert.equal(writes.length,count,'publication without receiving-owner review must have no effect');
+   assert.deepEqual(receiving.restore.runs,[]);assert.deepEqual(receiving.restore.connections,[]);
+   const adopted=await restored.post('workflows/'+workflow.id+'/publish',{restore_snapshot:receiving.restore.snapshot,restore_decisions:{}},restored.owner,201);
+   assert.equal(adopted.workflow.restore,null);
+   const fresh=await restored.post('workflows/'+workflow.id+'/hooks',{},restored.owner,201);
+   assert.notEqual(fresh.id,hook.id,'receiving authority must use a fresh hook');
+   await restored.restart();
+   for(const [body,expected,path]of [[{value:"{key: 'synthetic-crank-restored'}"},true,'/object-present'],[{value:'null'},false,'/object-empty']]){
+    const beforeWrites=writes.length,sent=await deliver(restored,fresh.url,{method:'POST',headers:{'content-type':'application'+'/'+'json'},body:JSON.stringify(body)});
+    assert.equal(sent.status,200,sent.text);const run=await settled(restored,sent.value.run_id);
+    assert.equal(run.status,'succeeded');assert.equal(writes.length,beforeWrites+1);assert.equal(targets.at(-1),path);assert.deepEqual(writes.at(-1).body,body);
+    const evaluated=run.steps.find(step=>step.input?.sets);assert.equal(evaluated.input.sets[0].objectConversion,'data-v1');assert.equal(evaluated.input.inputs.g0.c0.left,body.value);assert.deepEqual(evaluated.output,[expected]);
+   }
+   const afterFresh=writes.length,old=await deliver(restored,hook.url,{method:'POST',headers:{'content-type':'application'+'/'+'json'},body:JSON.stringify({value:"{key: 'synthetic-crank-old-hook'}"})});
+   assert.ok(old.status>=400,'explicit publication must not revive the imported hook');assert.equal(writes.length,afterFresh);
   }finally{await restored.close()}
  } finally {await h.close()}
 }
