@@ -1,5 +1,6 @@
 import { auditStatement } from '../ops/audit'
 import { assertGrantAuthority } from '../grants/authority'
+import { assertRecurringAuthority } from '../agents/recurring-authority'
 import { now, stmt, type CrankEnv } from '../model'
 import { StepError } from './errors'
 import { frozenCustomActorSql } from '../custom/use-scope'
@@ -7,6 +8,7 @@ import { frozenCustomActorSql } from '../custom/use-scope'
 /** TEAM-004: every step and remote attempt checks the live version and bindings.
  * A recorded wait exception permits only that run's immutable original graph. */
 export async function assertDispatchAuthority(env: CrankEnv, runId: string) {
+  await assertRecurringAuthority(env, runId)
   await assertGrantAuthority(env, runId)
   const state = await stmt(env, `SELECT w.status,w.published_version_id,r.mode,r.grant_id,v.mode AS version_mode,
     EXISTS(SELECT 1 FROM oa_operators o WHERE o.id=v.published_by AND o.status='active' AND o.version=r.test_owner_version AND (

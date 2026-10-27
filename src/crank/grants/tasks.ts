@@ -10,6 +10,7 @@ import { assertGrantStart } from './authority'
 import { grantLeaves } from './policy'
 import { claimTask, readTaskReceipt, requireTaskHistory, taskCommand, taskCondition, taskReceipt } from './task-idempotency'
 import { indexStatement, sealText, targetFor } from '../ops/payload-seal'
+import { recurringStartStatements, recurringRunStatement, type RecurringAdmission } from '../agents/recurring-authority'
 
 export function taskInput(original: Record<string, unknown>, proposed: Record<string, unknown>) {
   for (const key of ['url','method','headers']) if (key in proposed)
@@ -20,7 +21,7 @@ export function taskInput(original: Record<string, unknown>, proposed: Record<st
 
 /** A task chooses and orders the owner's tools. It cannot replace a tool's account,
  * transport, retry/readback settings or graph policy. Inputs remain reviewable. */
-export async function startTask(env: CrankEnv, actor: Actor, input: Record<string, unknown>, idempotencyKey?: string | null) {
+export async function startTask(env: CrankEnv, actor: Actor, input: Record<string, unknown>, idempotencyKey?: string | null, recurring?: RecurringAdmission) {
   requireValue(actor.grantId, 'Use an owner-issued execution credential', 403)
   const grant = await stmt(env, 'SELECT workflow_id,version_id FROM crank_grants WHERE id=?', actor.grantId).first<{workflow_id: string; version_id: string}>()
   requireValue(grant, 'Grant not found', 403)
@@ -61,6 +62,7 @@ export async function startTask(env: CrankEnv, actor: Actor, input: Record<strin
   // A subset uses the owner's entire source per-run estimate, conservatively;
   // no agent may quote itself a smaller USD estimate or change retry budgets.
   const results = await guardedBatch(env, actor, 'read', [
+    ...(recurring ? recurringStartStatements(env, recurring, runId, actor.grantId) : []),
     ...(command ? [claimTask(env, actor, command, workflow.id, runId)] : []),
     stmt(env, `INSERT INTO crank_workflow_versions(id,workflow_id,number,graph_json,graph_digest,declared_json,published_by,published_at,retry_policy_json,grant_source_version_id)
       SELECT ?,?,(SELECT COALESCE(MAX(number),0)+1 FROM crank_workflow_versions WHERE workflow_id=?),?,?,?,?,?,?,? WHERE ${condition.sql}`, versionId, workflow.id, workflow.id, graphJson, await digest(graphJson), canonical(declared), source.published_by, at, source.retry_policy_json, source.id, ...condition.args),
@@ -69,6 +71,7 @@ export async function startTask(env: CrankEnv, actor: Actor, input: Record<strin
     stmt(env, `INSERT INTO crank_wf_runs(id,workflow_id,version_id,trigger_kind,source_id,trigger_json,status,received_at,created_by,grant_id,payload_key,payload_index)
       SELECT ?,?,?,'agent',?,?,'queued',?,?,?,?,? WHERE ${condition.sql}`, runId, workflow.id, versionId, text(input.task_id, 'task_id'), await sealText(target,payload), at, actor.id, actor.grantId,target.key?.id ?? null,target.key ? target.fieldsJson : null, ...condition.args),
     ...(index ? [index] : []),
+    ...(recurring ? [recurringRunStatement(env, recurring, runId, at)] : []),
     auditStatementWhen(env, condition.sql, condition.args, actor.id, 'grant.task', 'run', runId, { grant_id: actor.grantId, tools: steps.map(step => step.id) }, versionId),
     ...(command ? [taskReceipt(env, command)] : []),
   ])
@@ -80,7 +83,7 @@ export async function startTask(env: CrankEnv, actor: Actor, input: Record<strin
       return runDetail(env, actor, receipt.run_id)
     }
   }
-  await executeRun(env, runId)
+  await executeRun(env, runId, recurring?.time)
   return runDetail(env, actor, runId)
 }
 

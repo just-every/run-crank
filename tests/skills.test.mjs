@@ -5,6 +5,62 @@ import { fakeEdge, jsonResponse, startRun, stepOf } from './kit.mjs';
 import { archive, inventory } from './restore-journey.mjs';
 import { correctionCases } from './skills-fixture.mjs';
 import { authoringModelReply, setupAuthoring } from './authoring-fixture.mjs';
+import { recurringSetup } from './recurring-fixture.mjs';
+
+test('Recurring invoice objectives freeze version pins, serialize invoice ownership and retain blocked progress across due dates and restart', async () => {
+ const fake=fakeEdge();let reads=0,paid=false;
+ fake.routes.set('sandbox-quickbooks.api.intuit.com',({method,url})=>{reads++;assert.equal(method,'GET');return jsonResponse({Invoice:{Id:url.pathname.split('/').at(-1),SyncToken:String(reads),Balance:paid?0:521,DueDate:'2020-01-01',BillEmail:{Address:'billing@harbour.example.test'}}})});
+ const h=await harness('http://127.0.0.1:9',{edge:fake.edge});
+ try {
+  const s=await recurringSetup(h),path='recurring-tasks/'+s.task.id;
+  await h.post('recurring-skills',s.publication,'',401);
+  const token=await h.post('tokens',{label:'Agent cannot adopt or approve a recurring skill',scope:'agent'},h.owner,201);
+  await h.post('recurring-tasks',s.request,'',403,{authorization:'Bearer '+token.token});
+  await h.post('recurring-tasks',{...s.request,recipients:['attacker@example.test']},h.owner,422);
+  const starts=await Promise.all([h.post(path+'/dispatch'),h.post(path+'/dispatch')]);
+  assert.equal(starts[0].run_id,starts[1].run_id);
+  let task=await h.get(path),run=await h.get('workflow-runs/'+starts[0].run_id);
+  assert.equal(task.runs.length,1);assert.equal(run.status,'paused');assert.equal(reads,2);
+  const original=run.steps[0].output,firstAt=Date.parse(original.checked_at),key=run.steps[0].operation_key;
+  assert.equal(original.contact_state,'not_sent');assert.equal(original.billing_contact,'billing@harbour.example.test');assert.equal(original.same_dispatch_read,true);
+  assert.deepEqual(original.remaining_obligations,['Supported customer transport and authorized provider readback']);
+  await h.post(path+'/dispatch');assert.equal(reads,2,'Duplicate dispatch never bypasses configured cadence');
+  const duplicate=await h.post('recurring-tasks',s.request,h.owner,201);
+  await h.post('recurring-tasks/'+duplicate.id+'/dispatch',{},h.owner,409);assert.equal(reads,2);
+  const updated=await h.post('recurring-skills',{...s.publication,skill_id:s.skill.skill_id,instructions:'Second reviewed instructions. Continue to stop paid invoices and never send through an unavailable transport.'},h.owner,201);
+  await h.post(path+'/adopt',{revision:task.revision,skill_version_id:updated.id,grant_id:s.grant.id,objective:{...s.objective,recipients:['attacker@example.test']}},h.owner,422);
+  task=await h.post(path+'/adopt',{revision:task.revision,skill_version_id:updated.id,grant_id:s.grant.id,objective:{...s.objective,interval_minutes:60}});
+  assert.equal(task.skill_version_id,updated.id);assert.notEqual(task.objective_version_id,s.task.objective_version_id);
+  assert.equal(task.runs[0].skill_version_id,s.skill.id);assert.equal(task.runs[0].objective_version_id,s.task.objective_version_id);
+  await h.restart();await h.tick(firstAt+86400000);run=await h.get('workflow-runs/'+run.id);assert.equal(reads,4);
+  assert.equal(run.steps[0].operation_key,key);assert.equal(run.steps[0].output.objective_version_id,s.task.objective_version_id,'Open run keeps its original cadence and objective');
+  await h.tick(firstAt+86400000+3600000);assert.equal(reads,4,'New objective cadence cannot shorten an open run');
+  paid=true;await h.tick(firstAt+2*86400000);assert.equal(reads,5);assert.equal((await h.get(path)).status,'active','An explicitly adopted next objective remains separate from the finished frozen objective');
+  await h.tick(firstAt+3*86400000);task=await h.get(path);assert.equal(task.runs.length,2);assert.equal(task.status,'satisfied');
+  const newest=task.runs.find(r=>r.skill_version_id===updated.id);assert.ok(newest);assert.equal(newest.objective_version_id,task.objective_version_id);
+  assert.equal((await h.get('workflow-runs/'+newest.run_id)).steps[0].output.invoice_state,'paid');
+  const count=reads;await h.tick(firstAt+4*86400000);assert.equal(reads,count,'Satisfied objective schedules no further connected read or contact');
+  const audit=await h.get('audit');assert.ok(audit.some(a=>a.action==='recurring.task.adopt'));assert.equal(fake.requests.filter(r=>r.method!=='GET').length,0);
+ } finally {await h.close()}
+});
+
+test('Recurring connected-invoice contact boundary re-reads paid, closed and void state and uses only the current billing contact', async () => {
+ const fake=fakeEdge();let requests=0,current,change;
+ fake.routes.set('sandbox-quickbooks.api.intuit.com',({method,url})=>{requests++;assert.equal(method,'GET');if(change && requests%2===0)current={...current,...change};return jsonResponse({Invoice:{...current,Id:url.pathname.split('/').at(-1)}})});
+ const h=await harness('http://127.0.0.1:9',{edge:fake.edge});
+ try {
+  for(const state of ['paid','closed','void','open']) {
+   current={Balance:521,DueDate:'2020-01-01',SyncToken:'1',BillEmail:{Address:'old-billing@example.test'}};
+   change=state==='open'?{SyncToken:'2',BillEmail:{Address:'current-billing@example.test'}}:{SyncToken:'2',TxnStatus:state,...(state==='paid'?{Balance:0}:{})};
+   const s=await recurringSetup(h,{invoiceId:'synthetic-crank-'+(310+requests)}),start=await h.post('recurring-tasks/'+s.task.id+'/dispatch');
+   const run=await h.get('workflow-runs/'+start.run_id),output=run.steps[0].output;
+   assert.equal(output.same_dispatch_read,true);assert.equal(output.provider_version,'2');
+   if(state==='open'){assert.equal(run.status,'paused');assert.equal(output.billing_contact,'current-billing@example.test');assert.equal(output.contact_state,'not_sent')}
+   else {assert.equal(run.status,'succeeded');assert.equal(output.objective_state,'satisfied');assert.equal(output.invoice_state,state);assert.equal((await h.get('recurring-tasks/'+s.task.id)).status,'satisfied')}
+  }
+  assert.equal(requests,8);assert.equal(fake.requests.filter(r=>r.method!=='GET').length,0);
+ } finally {await h.close()}
+});
 
 function network() {
   const fake = fakeEdge(), records = [];

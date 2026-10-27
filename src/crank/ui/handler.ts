@@ -41,13 +41,15 @@ import { approvalsView, workflowRunView } from './workflow-run'
 import { editorView } from './editor'
 import { runGraphs, workflowData } from './workflow-data'
 import { skillsView, skillView } from './skills'
+import { recurringApi } from '../agents/recurring-api'
+import { recurringPanel, recurringTaskView } from './recurring'
 import { authoringCreateView, authoringInput, authoringPath, authoringView } from './authoring'
 
 const redirect = (location:string) => new Response(null,{status:303,headers:{location,'cache-control':'no-store'}})
 // A form may name where to return after its action: a path inside the app, nothing else.
 const safeReturn = (value:unknown) => typeof value==='string' && /^\/app(\/[A-Za-z0-9/_.-]*)?(\?[A-Za-z0-9=&%_.-]*)?$/.test(value) ? value : null
 export async function productApi(request:Request,env:CrankEnv,nativeBrowser=false):Promise<Response|null> {
-  return await clientApi(request,env) ?? await driftApi(request,env) ?? await customApi(request,env,nativeBrowser) ?? await followupApi(request,env) ?? await teamApi(request,env) ?? await versionedApi(request,env) ?? await importDoor(request,env) ?? await importApi(request,env) ?? await dataApi(request,env) ?? await workflowApi(request,env) ?? await crankApi(request,env)
+  return await recurringApi(request,env) ?? await clientApi(request,env) ?? await driftApi(request,env) ?? await customApi(request,env,nativeBrowser) ?? await followupApi(request,env) ?? await teamApi(request,env) ?? await versionedApi(request,env) ?? await importDoor(request,env) ?? await importApi(request,env) ?? await dataApi(request,env) ?? await workflowApi(request,env) ?? await crankApi(request,env)
 }
 async function formValues(request:Request) {
   if (!request.headers.get('content-type')?.startsWith('application/x-www-form-urlencoded')) throw new Error('Use a form submission.')
@@ -225,6 +227,15 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
         input.expires_in_days=Number(form.expires_in_days)
         for(const key of Object.keys(input))if(key.startsWith('service_'))delete input[key]
       }
+      if(form.recurring_form==='true') {
+        delete input.recurring_form
+        if(!input.skill_id) delete input.skill_id
+        if(input.eval_cases) { try { input.eval_cases=JSON.parse(String(input.eval_cases)) } catch { return page('Invalid evaluation cases','<p class="notice">Enter evaluation cases as JSON.</p><a href="/app/recurring">Return to recurring skills</a>',{},422) } }
+        if(input.objective_realm_id!==undefined) {
+          input.objective={realm_id:input.objective_realm_id,invoice_id:input.objective_invoice_id,interval_minutes:Number(input.objective_interval_minutes)}
+          for(const key of ['objective_realm_id','objective_invoice_id','objective_interval_minutes']) delete input[key]
+        }
+      }
       if(path.startsWith('/api/crank/skills')) requireOwner(actor)
       if(path==='/api/crank/skills') input.run_ids=(form.run_ids ?? '').split(',').map(id=>id.trim()).filter(Boolean)
       if(/^\/api\/crank\/workflows\/[^/]+\/rollback$/.test(path)) input.version=Number(form.version)
@@ -265,6 +276,8 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
       }
       if (result.held && (result.hold_id || result.holdId)) return redirect('/app/holds/' + encodeURIComponent(result.hold_id || result.holdId))
       if(path==='/api/crank/drift') return redirect('/app/drift/'+encodeURIComponent(result.proposal.id))
+      if(path==='/api/crank/recurring-tasks') return redirect('/app/recurring/'+encodeURIComponent(result.id))
+      if(path.startsWith('/api/crank/recurring-')) return redirect(back ?? '/app/recurring')
       if(path==='/api/crank/skills') return redirect('/app/skills/'+encodeURIComponent(result.id))
       if(back) return redirect(back)
       if(path.startsWith('/api/crank/imports')) return redirect('/app/import')
@@ -346,6 +359,15 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
       const [people,waiting,workflows,followups]=await Promise.all([read('/auth/operators'),read('/api/crank/workflow-runs?status=awaiting_approval&limit=100'),read('/api/crank/workflows'),read('/api/crank/followups')])
       const runs=await Promise.all(waiting.runs.map(async (run:any)=>({...await read('/api/crank/workflow-runs/'+encodeURIComponent(run.id)),workflow_name:workflows.find((w:any)=>w.id===run.workflow_id)?.name})))
       return page('Follow-ups',followupsPanel(followups,people as any[],runs),{state,intro:'Name native people and working hours for reminders. Only a person decides the waiting step.'})
+    }
+    if(url.pathname==='/app/recurring') {
+      const [recurring,workflows,grants]=await Promise.all([read('/api/crank/recurring-skills'),read('/api/crank/workflows'),read('/api/crank/grants')])
+      return page('Recurring invoice skills',recurringPanel(recurring.skills,recurring.tasks,workflows,grants),{state,section:'Skills',crumbs:[['Skills','/app/skills']]})
+    }
+    const recurringPath=/^\/app\/recurring\/([^/]+)$/.exec(url.pathname)
+    if(recurringPath) {
+      const [task,recurring,grants]=await Promise.all([read('/api/crank/recurring-tasks/'+encodeURIComponent(decodeURIComponent(recurringPath[1]))),read('/api/crank/recurring-skills'),read('/api/crank/grants')])
+      return page('Recurring invoice task',recurringTaskView(task,recurring.skills,grants),{state,section:'Skills',crumbs:[['Skills','/app/skills'],['Recurring skills','/app/recurring']]})
     }
     if(url.pathname==='/app/skills') {
       const [proposals,workflows] = await Promise.all([read('/api/crank/skills'),read('/api/crank/workflows')])

@@ -1,5 +1,6 @@
 import { assertDriftWriteAllowed, recordDriftFailure } from '../agents/drift-step'
 import { assertAuthoringStep } from './authoring-authority'
+import { settleRecurringRun } from '../agents/recurring-authority'
 import { SubflowWait } from '../workflows/subflow-calls'
 import { allowedOperation, customVersion } from '../custom/store'
 import { GatewayWait } from '../custom/gateway-tasks'
@@ -307,6 +308,7 @@ export async function executeRun(env: CrankEnv, runId: string, time = Date.now()
   // Page payloads are continuation state, not a second permanent copy of run data.
   await stmt(env,`UPDATE crank_gateway_tasks SET input_json='{}',output_json=NULL WHERE run_id=? AND (EXISTS(SELECT 1 FROM crank_wf_steps s WHERE s.run_id=crank_gateway_tasks.run_id AND s.path=crank_gateway_tasks.path AND s.status='succeeded') OR ?=1)`,runId,terminal && !(outcome.kind==='failed' && isObject(outcome.error) && outcome.error.category==='uncertain')?1:0).run()
   await afterSettle(env, settled)
+  await settleRecurringRun(env,runId,settled.status)
   await flushUsageNotices(env)
   return settled
 }

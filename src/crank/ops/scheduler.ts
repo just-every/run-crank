@@ -3,6 +3,7 @@ import { expireEnrollmentCodes } from '../custom/gateways'
 import { releaseGatewayTasks } from '../custom/gateway-tasks'
 import { cancelExecutorTasks, releaseExecutorTasks } from '../executors/scheduler'
 import { followupPass } from '../agents/followups/scheduler'
+import { recurringPass } from '../agents/recurring-dispatch'
 import { checkApprovalDeadlines } from '../grants/reviews'
 import { operation, recoverOperations } from './recovery'
 import { flushUsageNotices } from './usage'
@@ -56,6 +57,7 @@ async function runSchedulerPass(env: CrankEnv, time: number) {
   const queued = await queueCandidates(env, 50)
   for (const run of queued) { await executeRun(env, run.id, time); summary.executed++ }
   await followupPass(env, time)
+  await recurringPass(env, time)
   await flushRunNotices(env, time)
   await flushUsageNotices(env)
   await flushLogStreams(env, time)

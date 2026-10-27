@@ -26,6 +26,7 @@ export function fenceRow(table, row) {
 
 /** Every value importRow may write. Base refuses any other change to a staged row. */
 export const importSafety = {
+  crank_recurring_tasks: { status: ['inactive'] },
   crank_state_tables: { active: [0] },
   crank_state_operations: { active: [0] },
   crank_subflow_versions: { active: [0] },
@@ -55,6 +56,7 @@ export const importSafety = {
  * bounded value, so an unfenced unfinished run keeps only its previous status and
  * a failed delivery keeps its outcome with its single replay marked used. */
 export function importRow(table, row) {
+  if (table === 'crank_recurring_tasks') return {...row,status:'inactive'};
   if (table === 'crank_state_tables' || table === 'crank_state_operations') return {...row,active:0};
   if (table === 'crank_subflow_calls') return {...row,...(['queued','running'].includes(row.status) ? {status:'interrupted'} : {}),lease_id:null,lease_expires_at:null};
   if (table === 'crank_subflow_versions') return {...row,active:0};
