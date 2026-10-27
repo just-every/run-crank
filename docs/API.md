@@ -987,3 +987,50 @@ authorized sandbox runs. Drafts and provenance travel in inactive archives;
 connections and execution authority must be re-established by the receiving
 owner. The adopted human-only promotion policy remains subject to ct approval;
 AI-002 remains partial until that decision and all contract evidence are complete.
+
+## Recurring invoice skills
+
+Open Skills, then Recurring invoice skills. This native slice retains immutable
+instructions and named safety cases and executes one bounded invoice-check tool.
+Customer messaging remains blocked pending its authorized transport.
+
+The source is a published manual workflow with exactly one
+`quickbooks.followup_invoice` step, a QuickBooks sandbox connection, and literal
+`input: {realm_id, invoice_id}`. `invoice_id` is the stable provider Id.
+Quote and publish that workflow and issue its exact TEAM-002 execution grant
+through the existing doors. The rule covers the two input fields and carries
+no customer-recipient overrides. The task stores the grant identifier; its
+credential is never copied.
+
+All following routes are under `/api/crank`, require the native owner, and use
+ordinary origin-bound JSON writes.
+
+| Door | Input and result |
+| --- | --- |
+| GET `/recurring-skills` or `/recurring-tasks` | Retained skill versions and current task summaries |
+| POST `/recurring-skills` | `{name, workflow_id, workflow_version_id, instructions, eval_cases, skill_id?}`; omit `skill_id` for a new identity and supply it to publish another immutable version |
+| POST `/recurring-tasks` | `{name, skill_version_id, grant_id, objective: {realm_id, invoice_id, interval_minutes}}`; exact template invoice and current matching grant required |
+| GET `/recurring-tasks/:id` | Current pins, objective, native run history, original pins, costs, blocked work and owner stop reasons |
+| POST `/recurring-tasks/:id/adopt` | `{revision, skill_version_id, grant_id, objective}`; selects only the next run's immutable pair and matching grant |
+| POST `/recurring-tasks/:id/dispatch` | `{}`; checks a due objective or returns its existing open run; accepts no authority or recipient override |
+| POST `/recurring-tasks/:id/pause`, `/resume`, `/takeover`, `/cancel` or `/revoke-tool` | `{revision}`; stale revisions refuse; takeover and cancellation end automatic work, and tool revocation is permanent for the task |
+
+Each safety case is `{name, invoice_status, expected}`. Retain the four states
+`open`, `paid`, `closed` and `void`; an open invoice remains blocked and terminal
+states stop its objective. These retained cases describe native safety behavior;
+they are not customer-delivery evidence or a general agent evaluation engine.
+
+The per-minute scheduler reuses the open run and its original cadence. Missed
+checks produce no backlog. A new version cannot replace an open run's tools,
+invoice, grant or objective. A broader source needs its own owner-issued grant.
+Every connected read rechecks current authority, including after rate waiting.
+At a due-contact boundary another live invoice read selects the current billing
+contact and suppresses satisfied invoices. The checkpoint exposes a stable
+contact operation key and a blocked obligation, with no sent-message receipt.
+
+The ordinary native run doors inherit task pause, takeover, cancellation,
+authority expiry, budget holds and tool revocation. Complete history exports
+inactive without grants or active invoice claims; receiving authority requires
+fresh owner review and grants. Run erasure removes its recurring history link
+and billing-contact values under the existing data policy. Provider recipients,
+field categories and unverified provider-controlled terms remain in Data.

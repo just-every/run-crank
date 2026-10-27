@@ -58,7 +58,7 @@ export async function dispatchRecurring(env: CrankEnv, actor: Actor | null, task
   catch (error) { if (!(error instanceof StepError)) throw error; await retainBlock(env,task,error.message); throw new CrankError(409,error.message) }
   const source = await stmt(env,'SELECT graph_json FROM crank_workflow_versions WHERE id=?',skill.workflow_version_id).first<{graph_json:string}>()
   requireValue(source,'The pinned source version is no longer retained',409)
-  const step = JSON.parse(source.graph_json).steps[0], invoiceKey = canonical([step.connection_id,spec.realm_id,spec.invoice_id])
+  const step = JSON.parse(source.graph_json).steps[0], invoiceKey = canonical(['quickbooks_sandbox',spec.realm_id,spec.invoice_id])
   const grantActor:Actor = {id:grant.owner_id,name:'Standing recurring task',role:'admin',kind:'agent',version:grant.owner_version,grantId:grant.id,local:env.AUTH_LOCAL==='true'}
   try {
     const run = await startTask(env,grantActor,{task_id:task.id,actions:[{step_id:step.id,input:{realm_id:spec.realm_id,invoice_id:spec.invoice_id}}]},null,

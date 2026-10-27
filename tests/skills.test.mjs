@@ -28,9 +28,12 @@ test('Recurring invoice objectives freeze version pins, serialize invoice owners
   await h.post(path+'/dispatch');assert.equal(reads,2,'Duplicate dispatch never bypasses configured cadence');
   const duplicate=await h.post('recurring-tasks',s.request,h.owner,201);
   await h.post('recurring-tasks/'+duplicate.id+'/dispatch',{},h.owner,409);assert.equal(reads,2);
-  const updated=await h.post('recurring-skills',{...s.publication,skill_id:s.skill.skill_id,instructions:'Second reviewed instructions. Continue to stop paid invoices and never send through an unavailable transport.'},h.owner,201);
+  const alias=await recurringSetup(h);await h.post('recurring-tasks/'+alias.task.id+'/dispatch',{},h.owner,409);assert.equal(reads,2,'Another connection to the same company cannot bypass invoice ownership');
+  const nextSource=await recurringSetup(h,{invoiceId:'synthetic-crank-303',create:false});
+  const updated=await h.post('recurring-skills',{...nextSource.publication,name:s.skill.name,skill_id:s.skill.skill_id,instructions:'Second reviewed instructions. Continue to stop paid invoices and never send through an unavailable transport.'},h.owner,201);
   await h.post(path+'/adopt',{revision:task.revision,skill_version_id:updated.id,grant_id:s.grant.id,objective:{...s.objective,recipients:['attacker@example.test']}},h.owner,422);
-  task=await h.post(path+'/adopt',{revision:task.revision,skill_version_id:updated.id,grant_id:s.grant.id,objective:{...s.objective,interval_minutes:60}});
+  await h.post(path+'/adopt',{revision:task.revision,skill_version_id:updated.id,grant_id:s.grant.id,objective:nextSource.objective},h.owner,403);
+  task=await h.post(path+'/adopt',{revision:task.revision,skill_version_id:updated.id,grant_id:nextSource.grant.id,objective:{...nextSource.objective,interval_minutes:60}});
   assert.equal(task.skill_version_id,updated.id);assert.notEqual(task.objective_version_id,s.task.objective_version_id);
   assert.equal(task.runs[0].skill_version_id,s.skill.id);assert.equal(task.runs[0].objective_version_id,s.task.objective_version_id);
   await h.restart();await h.tick(firstAt+86400000);run=await h.get('workflow-runs/'+run.id);assert.equal(reads,4);
