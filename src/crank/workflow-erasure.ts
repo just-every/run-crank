@@ -66,6 +66,10 @@ export async function eraseWorkflowRun(env: CrankEnv, actor: Actor | null, porta
     beforeStatements: async () => [
       system ? stmt(env, `INSERT INTO crank_authority_guards(id,ok) SELECT 'erase-workflow:'||?1,CASE WHEN EXISTS(${system.eligible}) THEN 1 ELSE 0 END`, ...system.params)
         : stmt(env, `INSERT INTO crank_authority_guards(id,ok) SELECT 'erase-workflow:'||?,CASE WHEN EXISTS(${eligible}) THEN 1 ELSE 0 END`, runId, runId),
+      // Fence snapshots before the cascade removes their entries and receipts.
+      stmt(env,`UPDATE crank_digests SET revision=revision+1,mutation_id=NULL WHERE id IN (
+        SELECT digest_id FROM crank_digest_entries WHERE source_run_id=?1
+        UNION SELECT digest_id FROM crank_digest_operations WHERE run_id=?1 OR instr(result_json,?1)>0)`,runId),
       ...markers.map(marker => stmt(env, 'INSERT OR IGNORE INTO crank_erased_webhook_events(workflow_id,event_digest) VALUES(?,?)', run.workflow_id, marker)),
     ],
   })] })

@@ -83,9 +83,23 @@ export async function digestJourney({edge,secret,channel,onRelease}={}) {
     await h.tick('2026-11-03T23:00:00Z');
     const held=await h.get('digests/'+expired.id);assert.equal(held.count,1,'release and retention preserve an expired entry under a legal hold');assert.equal(held.entries[0].value,'synthetic-crank-held');
     assert.ok(held.history.some(r=>r.active===1&&r.result.count===2),'the complete counted release remains retained under the hold');
+    const beforeExpiry=await archive(h);
     await h.post('./data/holds/'+hold.id+'/release');await h.tick('2026-11-05T23:00:00Z');
     const expiredState=await h.get('digests/'+expired.id);assert.equal(expiredState.count,0);assert.ok(expiredState.history.length>=2);
     assert.ok(expiredState.history.every(r=>r.active===0&&Object.keys(r.result).length===0));
+    const afterExpiry=await archive(h);
+    const destination=await harness('http://127.0.0.1:9',{clock,edge:fake.edge});
+    try {
+      const refused=await destination.send('/api/crank/data/restore',{archive:beforeExpiry,journal:afterExpiry,confirm:'RESTORE'},destination.owner);
+      assert.equal(refused.status,409,'a later expiry journal must refuse the older digest payload archive: '+refused.text);
+      assert.match(refused.text,/erasure_epoch|erased_row/);
+      assert.deepEqual(await destination.get('digests'),[],'the refused restore is atomic');
+      await destination.post('./data/restore',{archive:afterExpiry,confirm:'RESTORE'});
+      const current=await destination.get('digests/'+expired.id);
+      assert.equal(current.count,0);
+      assert.ok(current.history.length>=2);
+      assert.ok(current.history.every(r=>r.active===0&&Object.keys(r.result).length===0));
+    } finally {await destination.close()}
     await h.post(`digests/${d.id}/erase`,{confirm:'ERASE'});await h.get('digests/'+d.id,h.owner,404);
     const refused=await startRun(h,append,{lead:'must not recreate'});assert.equal(refused.status,'paused');
     return {seven_leads:7,scheduled_releases:2,inactive_restore:true};
