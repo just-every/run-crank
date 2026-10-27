@@ -5883,7 +5883,7 @@
       "executable": false
     },
     "tests/team-browser.mjs": {
-      "sha256": "ca7afac8b15d6bd83d1edd14a3459e70064eaf3d12c347a2b4e8b563d6bf911e",
+      "sha256": "1846cb3ba08a43f387c547a2d3e1354ece451fe9041e3a46ebadaba53fb59128",
       "executable": false
     },
     "tests/team.test.mjs": {
