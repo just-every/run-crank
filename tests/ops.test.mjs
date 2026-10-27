@@ -155,7 +155,8 @@ test('SEC-003: the append-only audit records each kind of action with actor, tim
   for(const [action,subject] of [['credential.create',credential.id],['credential.revoke',credential.id],['workflow.publish',workflow.id],['flow.create',flow.id],['flow.activate',flow.id],['flow_run.approve',failed.id],['flow_run.replay',failed.id],['flow_run.reject',rejected.id],['import.apply',job.id],['import.undo',job.id],['data.export','data']])
     assert.equal(mine(action,subject)?.actor_id,owner,`SEC-003 audit records ${action}`);
   const draft=mine('workflow.draft',workflow.id),started=mine('run.start',run.id),approved=mine('run.approve',run.id),replayed=mine('flow_run.replay',failed.id);
-  for(const row of [draft,started,approved]){assert.equal(row.actor_id,owner);assert.ok(Date.parse(row.at));assert.equal(row.version_id,version,'SEC-003: draft edit, run and approval of one workflow name its version')}
+  const starterId=(await h.send('/auth/session',undefined,await h.independentStarter())).value.operator.id;
+  for(const row of [draft,started,approved]){assert.equal(row.actor_id,row===started?starterId:owner);assert.ok(Date.parse(row.at));assert.equal(row.version_id,version,'SEC-003: draft edit, run and approval of one workflow name its version')}
   assert.match(draft.detail.draft_digest,/^[0-9a-f]{64}$/);assert.equal(started.detail.authority,'published workflow');assert.equal(approved.detail.reason,privateReason);
   const admin=await (async()=>{const email='auditor-'+fakeSecret('admin')+'@example.test';assert.equal((await h.send('/auth/invite',{email,displayName:'Builder',role:'admin'},h.owner)).status,202);
     const token=new URL(h.mail.findLast(m=>m.to.includes(email)).html.match(/href="([^"]*\/auth\/confirm\?token=[^"]+)"/)[1].replaceAll('&amp;','&'),h.origin).searchParams.get('token');return (await h.send('/auth/confirm',{token})).cookie})();
