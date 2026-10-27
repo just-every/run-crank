@@ -27,7 +27,7 @@
 
 .step-text strong { font-size: 14px; font-weight: 700; letter-spacing: -.01em; overflow-wrap: anywhere; }
 .step-text span { font-size: 13px; color: #304576; overflow-wrap: anywhere; }
-.step-foot { display: flex; align-items: center; justify-content: space-between; gap: 4px; margin-top: auto; font-size: 11.5px; color: var(--body); white-space: nowrap; }
+.step-foot { display: flex; align-items: center; justify-content: space-between; gap: 4px; margin-top: auto; font-size: 13px; color: var(--body); white-space: nowrap; }
 .state { display: inline-flex; align-items: center; gap: 5px; font-weight: 600; color: var(--soft); }
 .state-mark { width: 14px; height: 14px; padding: 2px; border-radius: 50%; stroke-width: 3; color: #fff; background: var(--faint); }
 .state[data-state=succeeded] { color: var(--green-ink); } .state[data-state=succeeded] .state-mark { background: var(--green); }
@@ -44,7 +44,7 @@
 .branch:last-child::after { bottom: auto; height: 44px; border-bottom-left-radius: 14px; }
 .branch:only-child::after { display: none; }
 .branch::before { position: absolute; left: -50px; top: 33px; width: 50px; height: 22px; }
-.branch-label { position: absolute; z-index: 1; left: -60px; top: -20px; margin-left: 4px; padding: 2px 11px; border-radius: 999px; background: var(--app-selected); color: #18406f; font-size: 12px; font-weight: 650; }
+.branch-label { position: absolute; z-index: 1; left: -60px; top: -20px; margin-left: 4px; padding: 2px 11px; border-radius: 999px; background: var(--app-selected); color: #18406f; font-size: 13px; font-weight: 650; }
 .branch .chain { flex-direction: column; align-items: flex-start; }
 .branch .link { flex-direction: column; align-items: flex-start; }
 .branch .link + .link::before { width: 22px; height: 14px; margin-left: 20px; background: url('/ui/joint.svg') center / 16px 16px no-repeat, linear-gradient(90deg, var(--brass-light), var(--brass-dark)) center / 4px 100% no-repeat; }
@@ -120,10 +120,10 @@
 .field { padding: 4px 0; border-bottom: 1px solid var(--line); }
 .field:last-child { border-bottom: 0; }
 .field-value { min-width: 0; color: var(--ink); overflow-wrap: anywhere; line-height: 1.45; }
-.field-value.mono { font-size: 12px; }
-.field-value code { font-size: 12px; white-space: nowrap; }
+.field-value.mono { font-size: 13px; }
+.field-value code { font-size: 13px; white-space: nowrap; }
 .field-value .chip { vertical-align: middle; }
-.rule-or, .rule-branch { margin: 8px 0 2px; font-size: 12px; font-weight: 700; color: var(--blue); text-transform: uppercase; letter-spacing: .04em; }
+.rule-or, .rule-branch { margin: 8px 0 2px; font-size: 13px; font-weight: 700; color: var(--blue); text-transform: uppercase; letter-spacing: .04em; }
 .result-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 6px; }
 .result-head h3 { margin: 0; }
 .result-status { display: flex; align-items: center; gap: 7px; margin-bottom: 10px; font-size: 13.5px; }
@@ -140,21 +140,21 @@
 .result-status:is([data-state=stopped], [data-state=skipped]) strong { color: var(--body); }
 .result-card[data-state=waiting] { background: var(--amber-tint); }
 .result-card[data-state=waiting] .tile-result { background: var(--amber); }
-.result-error code { font-size: 12px; padding: 0 4px; border-radius: 4px; background: var(--red-tint); }
+.result-error code { font-size: 13px; padding: 0 4px; border-radius: 4px; background: var(--red-tint); }
 .result-link { display: inline-flex; align-items: center; gap: 4px; margin-top: 10px; color: var(--blue); font-size: 13px; font-weight: 600; text-decoration: none; }
 .result-link .icon { width: 14px; height: 14px; }
 .preview-list { display: grid; gap: 6px; font-size: 13px; }
 .preview-list li { display: grid; gap: 2px; padding: 8px 10px; border-radius: 8px; background: var(--row); }
 .preview-list strong { font-size: 13px; font-weight: 650; }
 .preview-list span { color: var(--body); }
-.preview-list small { color: #8f2236; font-size: 12px; }
+.preview-list small { color: #8f2236; font-size: 13px; }
 
 /* Agents card. */
 .agent-card { padding: 14px 16px 16px; background: linear-gradient(#f8fcff, #fff); }
 .agent-card h2 { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; font: 750 19px/1.2 var(--font-head); letter-spacing: -.02em; }
 .agent-card h2 .icon { width: 24px; height: 24px; color: var(--blue); fill: var(--blue-tint); }
 .agent-change { display: grid; gap: 9px; padding: 12px 13px; border-radius: 12px; background: var(--blue-tint); font-size: 13.5px; line-height: 1.5; }
-.agent-change code { font-size: 12px; padding: 0 4px; border-radius: 4px; background: rgba(255, 255, 255, .75); }
+.agent-change code { font-size: 13px; padding: 0 4px; border-radius: 4px; background: rgba(255, 255, 255, .75); }
 .diff-pair { display: flex; gap: 8px; flex-wrap: wrap; }
 .agent-since { color: var(--body); font-size: 13px; }
 .agent-actions { display: flex; gap: 8px; flex-wrap: wrap; }

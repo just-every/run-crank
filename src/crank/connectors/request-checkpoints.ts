@@ -37,6 +37,11 @@ export async function requestCheckpoint(ctx: RequestContext, ordinal: number, re
   return { response: { ...response, headers: new Headers(response.headers), bytes } as BoundedResponse, attempts: row.attempts, exhausted: !!row.exhausted }
 }
 
+/** A definite authorization refusal is recoverable after an explicit owner resume. */
+export async function discardRequestCheckpoint(ctx: RequestContext, ordinal: number) {
+  await stmt(ctx.env, 'DELETE FROM crank_request_checkpoints WHERE run_id=? AND path=? AND operation_key=? AND ordinal=?', ctx.run.id, ctx.path, ctx.operationKey, ordinal).run()
+}
+
 export async function saveRequestCheckpoint(ctx: RequestContext, ordinal: number, requestKey: string, result: RequestResult) {
   const response = result.response
   // The effective URL may contain a credential query parameter. Only the

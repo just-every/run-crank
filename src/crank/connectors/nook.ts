@@ -4,7 +4,7 @@ import { utf8 } from '../engine/egress'
 import { StepError } from '../engine/errors'
 import type { StepType } from '../engine/types'
 import { isObject } from '../engine/values'
-import { digest } from '../model'
+import { digest, stmt } from '../model'
 import { retryRequest } from './retry'
 import { sendRequest } from './request-transport'
 
@@ -29,12 +29,21 @@ export const nookSendMessage: StepType = {
     const context = { ...ctx, beforeRequest: async () => { await current(); await ctx.beforeRequest?.() } }
     const url = new URL(`/api/conversations/${binding.conversation_id}/messages`, binding.origin)
     const body = new TextEncoder().encode(JSON.stringify({ body: ctx.input.body }))
-    // Nook retains this key across token rotations. A lost acknowledgement may be
-    // retried only as the same operation and body, never as a new message.
+    // Nook deduplicates within a token family, which its posting API cannot
+    // attest. Keep a possibly accepted operation on its original credential.
+    const credentialIdentity = async (headers: Headers) => {
+      const identity = await digest(ctx.operationKey + ':' + headers.get('authorization'))
+      const prior = await stmt(ctx.env, `SELECT credential_identity FROM crank_wf_attempts
+        WHERE run_id=? AND path=? AND (http_status IS NULL OR http_status NOT IN (401,403,429))`, ctx.run.id, ctx.path)
+        .all<{ credential_identity: string | null }>()
+      if (prior.results.some(attempt => attempt.credential_identity !== identity))
+        throw new StepError('uncertain', 'Nook may have accepted this operation under an earlier credential; inspect the destination before replacing its token family', { uncertain: true })
+      return identity
+    }
     const key = await digest(ctx.operationKey)
     let result
-    try { result = await retryRequest(context, { method: 'POST', url, body, idempotent: true }, policy =>
-      sendRequest(context, { url, method: 'POST', body, timeout: Number(step.timeout_ms ?? 15000), maxBytes: 1024 * 1024, follow: 0,
+    try { result = await retryRequest(context, { method: 'POST', url, body, idempotent: true, reconnectStatuses: [401, 403] }, policy =>
+      sendRequest(context, { url, method: 'POST', body, timeout: Number(step.timeout_ms ?? 15000), maxBytes: 1024 * 1024, follow: 0, credentialIdentity,
         headers: new Headers({ 'content-type': 'application'+'/'+'json', accept: 'application'+'/'+'json', 'idempotency-key': key }) }, connectionId, policy)) }
     catch (error) {
       if (error instanceof StepError && ['network', 'provider'].includes(error.category)) throw new StepError('uncertain', 'Nook acknowledgement was lost after bounded same-operation retries; inspect the destination', { ...error.detail, uncertain: true })

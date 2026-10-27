@@ -10,11 +10,11 @@ const browser=await chromium.launch({headless:true,...(process.env.CRANK_CHROMIU
 let server,context,page;
 const types={'.css':'text'+'/'+'css','.js':'text'+'/'+'javascript','.svg':'image'+'/'+'svg+xml','.woff2':'font'+'/'+'woff2','.png':'image'+'/'+'png'};
 try {
- await nookJourney({inspect:async({h,run,state})=>{
+ await nookJourney({inspect:async({h,workflow,run,state})=>{
   if(!server){
    server=createServer(async(req,res)=>{try{
     const pathname=new URL(req.url,h.origin).pathname;
-    if(types[extname(pathname)])for(const root of ['public','dist/client']){
+    if(types[extname(pathname)])for(const root of ['public','./dist/client']){
      const dir=resolve(root),file=resolve(dir,'.'+decodeURIComponent(pathname));if(!file.startsWith(dir+'/'))continue;
      const bytes=await readFile(file).catch(()=>null);if(bytes){res.writeHead(200,{'content-type':types[extname(pathname)]});res.end(bytes);return}
     }
@@ -34,13 +34,27 @@ try {
    await page.goto(h.origin+'/app/connections');
    if(width===1440){await expect(page.getByText('Synthetic Nook operations',{exact:true})).toBeVisible();await expect(page.getByText('Nook integration token',{exact:false})).toBeVisible()}
    await page.screenshot({path:join(evidence,`${width}-nook-${state}-connection.png`),fullPage:true});
+   if(state==='acknowledged')for(const tab of ['setup','data','test']) {
+    await page.goto(h.origin+'/app/workflows/'+workflow.id+'?step=post&tab='+tab);
+    const arrow=page.locator('a.row-open').first(),tip=arrow.getByRole('tooltip');
+    if(width===390)await arrow.focus();
+    if(width===1440){
+     await arrow.focus();await expect(tip).toBeVisible();
+     await page.locator('h1').click();await arrow.hover();
+     await expect(tip).toBeHidden();await page.waitForTimeout(350);await expect(tip).toBeVisible();
+     const small=await page.locator('body').evaluate(root=>[...root.querySelectorAll('*')].filter(el=>el.getClientRects().length&&getComputedStyle(el).visibility==='visible'&&[...el.childNodes].some(n=>n.nodeType===3&&n.textContent.trim())&&parseFloat(getComputedStyle(el).fontSize)<13).map(el=>({tag:el.tagName,text:el.textContent.slice(0,80),size:getComputedStyle(el).fontSize})));
+     assert.deepEqual(small,[],'visible editor text meets the minimum size');
+    }
+    await page.screenshot({path:join(evidence,`${width}-nook-editor-${tab}.png`),fullPage:true});
+    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'editor fits viewport');
+   }
    await page.goto(h.origin+'/app/workflow-runs/'+run.id);
    if(state==='acknowledged')await page.locator('.timeline-item details.inline-disclosure summary').first().click();
    if(width===1440){
     await expect(page.getByRole('heading',{name:'Workflow run',exact:true})).toBeVisible();
     const search=page.getByRole('link',{name:'Search runs',exact:true});await search.focus();await expect(page.locator('#search-tooltip')).toBeVisible();await page.locator('h1').click();await search.hover();await page.waitForTimeout(350);await expect(page.locator('#search-tooltip')).toBeVisible();
     assert.equal(await page.evaluate(()=>typeof globalThis.inert),'undefined');
-    assert.ok((await page.locator('body').innerText()).includes(state==='acknowledged'?'synthetic-crank-200':'Reconnect'));
+    assert.ok((await page.locator('body').innerText()).includes(state==='acknowledged'?'synthetic-crank-200':state==='revoked'?'Reconnect':state==='reconnected'?'Success':'earlier credential'));
    }
    await page.screenshot({path:join(evidence,`${width}-nook-${state}-run.png`),fullPage:true});
   }

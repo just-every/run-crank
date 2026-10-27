@@ -3,7 +3,7 @@ import type { BoundedResponse } from '../engine/egress'
 import type { StepContext } from '../engine/types'
 import { canonical, digest, now, stmt } from '../model'
 import { waitForRetry } from './retry-wait'
-import { requestCheckpoint, saveRequestCheckpoint } from './request-checkpoints'
+import { discardRequestCheckpoint, requestCheckpoint, saveRequestCheckpoint } from './request-checkpoints'
 import { RETRY_POLICY, retryDelay, retryExhausted } from './retry-policy'
 export { RETRY_POLICY, validateRetryPolicy } from './retry-policy'
 
@@ -13,13 +13,14 @@ const transient = (status: number) => [429, 502, 503, 504].includes(status)
 
 /** A restart retains failed budgets/deadlines; completed earlier calls are
  * reconstructed from the unfinished step's private continuation checkpoints. */
-export async function retryRequest(ctx: RequestContext, request: { method: string; url: URL; body: Uint8Array | null; bodyIdentity?: string; idempotent: boolean; safeRead?: boolean; checkpoint?: boolean; deferred?: boolean }, send: (policy: AttemptPolicy) => Promise<BoundedResponse>) {
+export async function retryRequest(ctx: RequestContext, request: { method: string; url: URL; body: Uint8Array | null; bodyIdentity?: string; idempotent: boolean; safeRead?: boolean; checkpoint?: boolean; deferred?: boolean; reconnectStatuses?: number[] }, send: (policy: AttemptPolicy) => Promise<BoundedResponse>) {
   const ordinal = ctx.requests.next++
   const bodyHash = request.bodyIdentity ?? (request.body ? [...new Uint8Array(await crypto.subtle.digest('SHA-256', new Uint8Array(request.body)))].map(byte => byte.toString(16).padStart(2, '0')).join('') : null)
   const safeRead = request.safeRead ?? ['GET', 'HEAD'].includes(request.method)
   const requestKey = await digest(canonical({ method: request.method, url: request.url.href, body: bodyHash, ...(request.safeRead === undefined ? {} : { safe_read: safeRead }) }))
   const retained = request.checkpoint === false ? null : await requestCheckpoint(ctx, ordinal, requestKey)
-  if (retained) {
+  if (retained && request.reconnectStatuses?.includes(retained.response.status)) await discardRequestCheckpoint(ctx, ordinal)
+  else if (retained) {
     const base = new URL(retained.response.url)
     if (base.origin === request.url.origin && base.pathname === request.url.pathname) retained.response.url = request.url.href
     return retained
@@ -48,6 +49,7 @@ export async function retryRequest(ctx: RequestContext, request: { method: strin
       if (!(error instanceof StepError) || error.category !== 'network' || !(safeRead || request.idempotent)) throw error
       failure = error
     }
+    if (response && request.reconnectStatuses?.includes(response.status)) return { response, attempts }
     if (response && (!(safeRead || request.idempotent) || !transient(response.status))) return request.checkpoint === false ? { response, attempts } : saveRequestCheckpoint(ctx, ordinal, requestKey, { response, attempts })
     const category = response?.status === 429 ? 'rate_limit' : failure ? 'network' : 'provider'
     if (attempts >= maximum) {

@@ -10,7 +10,7 @@ import { id, now, stmt } from '../model'
 import { acquireRequest } from './rate-limit'
 import type { AttemptPolicy } from './retry'
 
-export interface Prepared { url: URL; method: string; headers: Headers; body: Uint8Array<ArrayBuffer> | null; bodyIdentity?: string; timeout: number; maxBytes?: number; follow?: number }
+export interface Prepared { url: URL; method: string; headers: Headers; body: Uint8Array<ArrayBuffer> | null; bodyIdentity?: string; timeout: number; maxBytes?: number; follow?: number; credentialIdentity?: (headers: Headers) => Promise<string> }
 export async function sendRequest(ctx: StepContext, prepared: Prepared, connectionId: string | undefined, policy: AttemptPolicy) {
   const headers = new Headers(prepared.headers), url = new URL(prepared.url)
   if (connectionId) await authorizeRequest(ctx.env, connectionId, url, headers, prepared.body)
@@ -24,11 +24,12 @@ export async function sendRequest(ctx: StepContext, prepared: Prepared, connecti
     if (connectionId) await authorizeRequest(ctx.env, connectionId, url, headers, prepared.body)
     if (!['GET','HEAD'].includes(prepared.method)) await assertDriftWriteAllowed(ctx.env,ctx.run.id)
     await ctx.beforeRequest?.()
+    const credentialIdentity = await prepared.credentialIdentity?.(headers) ?? null
     const attemptId = id()
-    const admitted = await stmt(ctx.env, `INSERT INTO crank_wf_attempts(id,run_id,path,number,method,destination_origin,started_at,request_key,retry_number,budget_started_at,slice_started_at)
-      SELECT ?,?,?,COALESCE((SELECT MAX(number)+1 FROM crank_wf_attempts WHERE run_id=? AND path=?),1),?,?,?,?,?,?,?
+    const admitted = await stmt(ctx.env, `INSERT INTO crank_wf_attempts(id,run_id,path,number,method,destination_origin,started_at,request_key,retry_number,budget_started_at,slice_started_at,credential_identity)
+      SELECT ?,?,?,COALESCE((SELECT MAX(number)+1 FROM crank_wf_attempts WHERE run_id=? AND path=?),1),?,?,?,?,?,?,?,?
       WHERE EXISTS(SELECT 1 FROM crank_wf_runs WHERE id=? AND status='running' AND lease_id=?) RETURNING id`,
-      attemptId, ctx.run.id, ctx.path, ctx.run.id, ctx.path, prepared.method, url.origin, now(), policy.requestKey, policy.number, policy.startedAt, policy.sliceStartedAt, ctx.run.id, ctx.run.lease_id).first()
+      attemptId, ctx.run.id, ctx.path, ctx.run.id, ctx.path, prepared.method, url.origin, now(), policy.requestKey, policy.number, policy.startedAt, policy.sliceStartedAt, credentialIdentity, ctx.run.id, ctx.run.lease_id).first()
     if (!admitted) throw new StepError('uncertain', 'Execution authority expired before the HTTP attempt', { uncertain: true })
     try {
       const remaining = policy.deadline - Date.now()
