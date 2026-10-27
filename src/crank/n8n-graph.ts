@@ -9,6 +9,7 @@ import { linearN8nNodes, itemStreamPipeline, reviewedStreamBounds, serialLoopReg
 import { conversionDisposition, conversionStep, migrationEnvelope } from './n8n-conversions'
 import { n8nHttp, reviewedHttpBinding } from './n8n-http'
 import { compileN8nConditionSets } from './n8n-conditions'
+import { n8nDateTime } from './n8n-datetime'
 
 type Obj = Record<string, any>
 const obj = (v: any): Obj => { if (!v || typeof v !== 'object' || Array.isArray(v)) throw Error('object required'); return v }
@@ -184,12 +185,7 @@ export function n8nGraph(value: Json, sourceId: string, env: ImportTargetEnv, ow
           break
         }
         case 'n8n-nodes-base.dateTime': {
-          fields(p,['operation','date','format','customFormat','outputFieldName','options'],at+'.parameters')
-          const options=obj(p.options??{});fields(options,['timezone','includeInputFields'],at+'.parameters.options')
-          const patterns:Obj={'yyyy-MM-dd':'date','MM/dd/yyyy':'MM/DD/YYYY','yyyy/MM/dd':'YYYY/MM/DD','MMMM dd yyyy':'MMMM DD YYYY','MM-dd-yyyy':'MM-DD-YYYY'}
-          const pattern=patterns[p.format==='custom'?p.customFormat:(p.format??'MM/dd/yyyy')],field=p.outputFieldName??'formattedDate'
-          if(n.typeVersion!==2||p.operation!=='formatDate'||!pattern||options.timezone!==true||options.includeInputFields===true||!settings.timezone||!/^[_A-Za-z][_A-Za-z0-9]*$/.test(field)||['__proto__','constructor','prototype'].includes(field))throw Error('date formatting requires an explicit workflow timezone, supported calendar format and replacement output field')
-          result.push({...step,id,type:'map',input:{[field]:{$fn:'date.format',args:{value:mapped(p.date,previous,at+'.parameters.date'),pattern:{$literal:pattern},timezone:{$literal:settings.timezone},nullable:true}}}} as Step)
+          result.push(n8nDateTime(n,id,previous,at,settings.timezone,fields,mapped))
           previous='steps.'+id;break
         }
         case 'n8n-nodes-base.wait':
