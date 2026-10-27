@@ -199,6 +199,9 @@ test('TEAM-001: complete explicit grants authorize native work, delegation, scop
   await assign(auditor,[grant('auditor')]);await assign(billing,[grant('billing')]);
   const history=await h.get('audit',auditor.cookie);assert.ok(history.some(row=>row.action==='team.scope'));
   assert.ok(history.every(row=>row.detail===undefined && row.detail_json===undefined));
+  const auditExport=(await h.get('audit/export',auditor.cookie)).trim().split('\n').map(JSON.parse);
+  assert.ok(auditExport.some(row=>row.action==='audit.export'&&row.actor_id===auditor.id));
+  assert.ok(auditExport.every(row=>row.detail===undefined&&row.detail_json===undefined));
   const totals=await h.get('reports/usage',billing.cookie);assert.deepEqual(totals.map(row=>({runs:row.runs,accounted_units:row.accounted_units})),[{runs:1,accounted_units:'0'}]);
   for(const p of [auditor,billing]) {
    for(const path of ['connections','workflows','workflow-runs']) assert.deepEqual((await h.get(path,p.cookie)).runs??await h.get(path,p.cookie),[]);
