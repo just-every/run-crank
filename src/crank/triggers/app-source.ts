@@ -1,3 +1,4 @@
+import { airtableFields, airtableRecords } from './airtable-poll'
 import { authorizeRequest } from '../connections/auth'
 import { credential } from '../connections/store'
 import { boundedFetch, utf8 } from '../engine/egress'
@@ -15,13 +16,17 @@ export async function appRequest(env: CrankEnv, connection: string, url: URL, me
   try { return JSON.parse(utf8(response.bytes)) } catch { throw new StepError('validation', 'App source returned invalid JSON') }
 }
 
-async function sheetRows(env: CrankEnv, trigger: Record<string, any>): Promise<AppRecord[]> {
+async function sheetValues(env: CrankEnv, trigger: Record<string, any>) {
   const excel = trigger.provider === 'microsoft_excel'
   const url = new URL(excel
     ? `https://graph.microsoft.com/v1.0/me/drive/items/${encodeURIComponent(trigger.workbook_id)}/workbook/worksheets/${encodeURIComponent(trigger.worksheet_id)}/range(address='${trigger.range}')`
     : `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(trigger.spreadsheet_id)}/values/${encodeURIComponent(trigger.range)}`)
   if (!excel) { url.searchParams.set('majorDimension', 'ROWS'); url.searchParams.set('valueRenderOption', 'UNFORMATTED_VALUE') }
-  const body = await appRequest(env, trigger.connection_id, url), rows = body.values ?? []
+  return (await appRequest(env, trigger.connection_id, url)).values ?? []
+}
+
+async function sheetRows(env: CrankEnv, trigger: Record<string, any>): Promise<AppRecord[]> {
+  const rows = await sheetValues(env, trigger)
   if (!Array.isArray(rows) || rows.some(row => !Array.isArray(row)) || rows.length > 1001) throw new StepError('validation', 'Spreadsheet source must contain a header and at most 1000 rows')
   if (!rows.length) return []
   const headers = rows[0]
@@ -47,9 +52,11 @@ export async function appRecords(env: CrankEnv, trigger: Record<string, any>): P
   const { row } = await credential(env, trigger.connection_id)
   if (row.app !== (trigger.provider === 'google_sheets' ? 'google' : trigger.provider === 'microsoft_excel' ? 'microsoft_graph' : trigger.provider)) throw new StepError('auth', 'Choose a connection for this app provider')
   if (['google_sheets', 'microsoft_excel'].includes(trigger.provider)) return sheetRows(env, trigger)
+  if (trigger.provider === 'airtable') return airtableRecords(env, trigger)
   const hubspot = trigger.provider === 'hubspot', origin = hubspot ? 'https://api.hubapi.com' : 'https://graph.microsoft.com'
   let url = new URL(hubspot ? `/crm/v3/objects/${trigger.resource}` : '/v1.0/me/messages', origin)
-  if (hubspot) { url.searchParams.set('limit', '100'); if (trigger.watched_fields?.length) url.searchParams.set('properties', trigger.watched_fields.join(',')) }
+  const properties = trigger.any_field && hubspot ? (await appFieldNames(env, trigger)).map(field => field.name) : trigger.watched_fields
+  if (hubspot) { url.searchParams.set('limit', trigger.event === 'updated' ? '50' : '100'); if (properties?.length) { url.searchParams.set('properties', properties.join(',')); if (trigger.event === 'updated') url.searchParams.set('propertiesWithHistory', properties.join(',')) } }
   else url.searchParams.set('$top', '100')
   const records = new Map<string, AppRecord>(), visited = new Set<string>()
   for (let page = 0; ; page++) {
@@ -74,4 +81,27 @@ export async function appRecords(env: CrankEnv, trigger: Record<string, any>): P
     else url = new URL(String(next), origin)
   }
   return [...records.values()]
+}
+
+/** Account-bound schema names; no values or production cursor writes. */
+export async function appFieldNames(env: CrankEnv, trigger: Record<string, any>): Promise<{ name: string; label: string }[]> {
+  await credential(env, trigger.connection_id)
+  let fields: { name: string; label: string }[]
+  if (trigger.provider === 'hubspot') {
+    const body = await appRequest(env, trigger.connection_id, new URL(`https://api.hubapi.com/crm/v3/properties/${trigger.resource}`))
+    if (!Array.isArray(body.results) || body.results.length > 1000 || body.results.some((field: any) => typeof field.name !== 'string' || !field.name)) throw new StepError('validation', 'App property names could not be loaded completely')
+    fields = body.results.filter((field: any) => !field.archived).map((field: any) => ({ name: field.name, label: typeof field.label === 'string' ? field.label : field.name }))
+  } else if (trigger.provider === 'airtable') {
+    fields = await airtableFields(env, trigger)
+  } else if (['google_sheets', 'microsoft_excel'].includes(trigger.provider)) {
+    const rows = await sheetValues(env, trigger), headers = rows[0] ?? []
+    if (!Array.isArray(headers) || !headers.length || headers.some((name: unknown) => typeof name !== 'string' || !name.trim())) throw new StepError('validation', 'A named spreadsheet header row is required')
+    fields = headers.map((name: string) => ({ name, label: name }))
+  } else {
+    const records = await appRecords(env, trigger)
+    fields = [...new Set(records.flatMap(record => Object.keys(record.fields)))].map(name => ({ name, label: name }))
+  }
+  if (fields.length > 1000 || new Set(fields.map(field => field.name)).size !== fields.length) throw new StepError('validation', 'Source field names must be complete and unique')
+  await credential(env, trigger.connection_id)
+  return fields
 }

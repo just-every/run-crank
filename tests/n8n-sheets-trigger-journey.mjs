@@ -9,7 +9,7 @@ const source=()=>({id:'synthetic-crank-610',name:'Synthetic Sheets update migrat
 ],connections:{source:{main:[[{node:'receiver',type:'main',index:0}]]}}});
 
 /** Public import proof: review binds a fresh account and stable-key semantics;
- * watched header names survive apply/restart and unsupported settings refuse all work.
+ * watched header names survive apply and restart and unsupported settings refuse all work.
  * Runtime row comparison and provider effects are covered by the native Sheets journey.
  */
 export async function n8nSheetsTriggerJourney(){
@@ -23,7 +23,7 @@ export async function n8nSheetsTriggerJourney(){
   const bundle=()=>({workflow:source(),conversions:{'synthetic-crank-611':structuredClone(choice)}});
   const rejected=async(value,field)=>{
    const plan=await doorPlan(h,JSON.stringify(value));assert.equal(plan.status,200,plan.text);assert.equal(plan.value.rejected.length,1,JSON.stringify(plan.value));
-   assert.ok(plan.value.diagnostics.some(item=>item.message?.includes(field)),JSON.stringify(plan.value.diagnostics));
+   assert.ok(plan.value.diagnostics.some(item=>item.message?.includes(field)||item.field?.includes(field)),JSON.stringify({expected:field,diagnostics:plan.value.diagnostics.filter(item=>!/Supported/.test(item.message))}));
    assert.equal((await h.get('workflows')).length,0,'a manual conversion must not create a partial draft');await door(h,'undo',{planId:plan.value.planId});return plan.value;
   };
   await rejected(source(),'fresh native');

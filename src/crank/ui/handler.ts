@@ -1,3 +1,4 @@
+import { watchedFieldsPanel } from './watched-fields'
 import { unitsUsd } from '../ops/usage-money'
 import { mcpClientsPanel, mcpCredentialView } from './mcp-clients'
 import { clientApi } from '../mcp/client-api'
@@ -93,6 +94,11 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
           customPicker=customPickerPanel({workflowId:id,stepPath:selected.path,operation,values:selected.step.input as Record<string,unknown>??{},draftDigest:await digest(canonical(data.workflow.draft)),result,resultInput:params.get('picker_input')??undefined,error})
         }
       }
+      if (selected?.trigger?.type === 'app_poll' && (actor.role === 'owner' || ['admin','builder'].includes(actor.team?.role))) {
+        let result:any, error:string|undefined
+        if(params.get('watch_fields')) { const response=await call(`/api/crank/workflows/${encodeURIComponent(id)}/trigger/fields`);const value:any=await response.json();if(response.ok)result=value;else error=value.error }
+        customPicker += watchedFieldsPanel(id,data.workflow.draft.trigger,result,error)
+      }
       const view = editorView({...data,preview,customPicker,tokens:state.tokens ?? [],people:state.people ?? [],approvals:state.runs.filter((r:any)=>r.state==='pending').length+waiting.runs.length})
       return document(data.workflow.name,view.content,actor,200,view.page)
     }
@@ -184,6 +190,10 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
         return redirect(authoringPath(id ?? result.workflow_id))
       }
       const input:Record<string,unknown> = {...form}
+      if(form.watch_selection==='true') {
+        input.watched_fields=Object.entries(form).filter(([key])=>/^watch_\d+$/.test(key)).map(([,value])=>value);input.any_field=form.watch_mode==='any'
+        for(const key of Object.keys(input))if(key.startsWith('watch_'))delete input[key]
+      }
       if (/\/workflows\/[^/]+\/samples(?:\/[^/]+)?$/.test(path)) {
         try { if(form.source !== 'schema' && form.sample) input.step_path='trigger'; if(form.sample) input.sample=JSON.parse(form.sample); if(form.fields !== undefined) input.fields=form.fields.split(',').map(field=>field.trim()).filter(Boolean) }
         catch { return page('Invalid sample','<p>Enter a JSON object for the sample.</p>',{},422) }

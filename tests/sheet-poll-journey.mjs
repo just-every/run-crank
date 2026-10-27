@@ -23,6 +23,17 @@ export async function sheetPollJourney({inspect=async()=>{},provider='google_she
   for(const patch of [{key_field:''},{watched_fields:undefined},{settle_delay:0},{required_columns:[]}]) {
    const invalid=await h.send('/api/crank/workflows',{name:'Invalid row trigger',graph:{trigger:{...trigger,...patch},steps:[]}},h.owner);assert.equal(invalid.status,422,invalid.text);
   }
+  const settingsDraft=await h.post('workflows',{name:'Choose watched order columns',graph:{trigger,steps:[]}},h.owner,201);
+  const schema=await h.get(`workflows/${settingsDraft.id}/trigger/fields`);
+  assert.deepEqual(schema.fields.map(field=>field.name),headers);assert.equal((await h.send(`/api/crank/workflows/${settingsDraft.id}/trigger/fields`,undefined)).status,401);
+  const selection={draft_digest:schema.draft_digest,schema_digest:schema.schema_digest,watched_fields:['Status','Customer'],any_field:false};
+  await h.post(`workflows/${settingsDraft.id}/trigger/fields`,selection);
+  assert.deepEqual((await h.get('workflows/'+settingsDraft.id)).draft.trigger.watched_fields,['Status','Customer']);
+  assert.equal((await h.send(`/api/crank/workflows/${settingsDraft.id}/trigger/fields`,selection,h.owner)).status,409,'a stale loaded draft cannot replace a later selection');
+  const newer=await h.get(`workflows/${settingsDraft.id}/trigger/fields`);headers[4]='Changed notes';
+  assert.equal((await h.send(`/api/crank/workflows/${settingsDraft.id}/trigger/fields`,{...selection,draft_digest:newer.draft_digest},h.owner)).status,409,'a renamed source column invalidates the loaded schema');headers[4]='Notes';
+  await inspect({h,w:settingsDraft,state:'watch-picker'});
+  assert.equal((await runs(h,settingsDraft)).length,0);assert.deepEqual(effects,[],'field discovery and draft choices never admit work');
   const workflows=[];
   for(const identity of ['change','first_value'])workflows.push(await publish(h,'Approved sheet rows '+identity,{trigger:{...trigger,identity},steps:[{id:'send',type:'http',input:{method:'POST',url:'https://receiver.example/rows',body:{identity,id:'{{trigger.record_id}}',previous:'{{trigger.previous.Status}}',current:'{{trigger.current.Status}}',row:'{{trigger.properties}}',source:'{{trigger.change_time_source}}'}}}]}));
   let time=Date.parse((await h.get(`workflows/${workflows[0].id}/trigger`)).poll.next_due_at);

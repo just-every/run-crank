@@ -6,6 +6,7 @@ import {resolve,extname,join} from 'node:path';
 import {chromium,expect} from '@playwright/test';
 import {crmPollJourney,subscriptionPollJourney,comparisonPollJourney} from './app-poll-journey.mjs';
 import {sheetPollJourney} from './sheet-poll-journey.mjs';
+import {appHistoryJourney} from './app-history-journey.mjs';
 import {harness} from './harness.mjs';
 import {fakeEdge,jsonResponse} from './kit.mjs';
 const evidence=process.env.CRANK_EVIDENCE;
@@ -82,12 +83,21 @@ async function rateScreens(width) {
 }
 try {
  for(const width of [1440,390]) await rateScreens(width);
- for(const width of [1440,390]) for(const journey of [crmPollJourney,subscriptionPollJourney,comparisonPollJourney,sheetPollJourney]) {
+ for(const width of [1440,390]) for(const journey of [crmPollJourney,subscriptionPollJourney,comparisonPollJourney,sheetPollJourney,appHistoryJourney]) {
   await journey({inspect:async({h,w,state,run})=>{
    await attach(h,width);await page.goto(h.origin+`/app/workflows/${w.id}?step=trigger`);
-   if(state==='comparison-payload'||state==='row-released') {
+   if(state==='watch-picker') {
+    await page.getByText('Watched field settings',{exact:true}).click();await page.getByRole('link',{name:'Load field names',exact:true}).click();
+    await expect(page.getByRole('checkbox',{name:'Status',exact:true})).toBeChecked();await expect(page.getByRole('checkbox',{name:'Customer',exact:true})).toBeChecked();
+    await shot(width,state);
+    await page.getByLabel('Update choice').selectOption('any');await page.getByRole('button',{name:'Save watched fields',exact:true}).click();
+    await expect(page.getByRole('alert')).toContainText('every edit can start a run');
+    const saved=await h.get('workflows/'+w.id);assert.equal(saved.draft.trigger.any_field,true);assert.equal(saved.status,'draft');assert.equal(saved.published_version_id,null);
+    await shot(width,'watch-any-field');return;
+   }
+   if(state==='comparison-payload'||state==='row-released'||state==='history-payload') {
     await page.goto(h.origin+'/app/workflow-runs/'+run.id);
-    if(width===1440)for(const value of state==='row-released'?['synthetic-crank-51','Filled buyer','450','change_time_source','poll']:['synthetic-crank-record','changed_fields','previous','current','Pending','Approved','change_time_source','provider'])await expect(page.locator('main')).toContainText(value);
+    if(width===1440)for(const value of state==='row-released'?['synthetic-crank-51','Filled buyer','450','change_time_source','poll']:[state==='history-payload'?'synthetic-crank-history':'synthetic-crank-record','changed_fields','previous','current','Pending','Approved','change_time_source','provider'])await expect(page.locator('main')).toContainText(value);
     await shot(width,state);return;
    }
    await expect(page.getByText('Last successful poll',{exact:true})).toBeVisible();

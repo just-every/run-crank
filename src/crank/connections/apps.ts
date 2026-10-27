@@ -13,6 +13,7 @@ export const APPS: Record<string, AppDefinition> = {
   http: { name: 'HTTP API', kinds: ['bearer', 'basic', 'api_key', 'hmac', 'oauth2_client_credentials'], domains: 'declared' },
   webhook: { name: 'Webhook signing secret', kinds: ['signing_secret'], domains: [] },
   slack: { name: 'Slack', kinds: ['bearer', 'oauth2'], domains: ['slack.com'], test: { method: 'POST', url: 'https://slack.com/api/auth.test' } },
+  airtable: { name: 'Airtable', kinds: ['bearer'], domains: ['api.airtable.com'] },
   hubspot: { name: 'HubSpot', kinds: ['oauth2', 'bearer'], domains: ['api.hubapi.com'], test: { method: 'GET', url: 'https://api.hubapi.com/account-info/v3/details' } },
   google: { name: 'Google', kinds: ['oauth2'], domains: ['www.googleapis.com', 'sheets.googleapis.com', 'gmail.googleapis.com'], test: { method: 'GET', url: 'https://www.googleapis.com/oauth2/v3/userinfo' } },
 }

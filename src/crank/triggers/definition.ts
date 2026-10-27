@@ -27,7 +27,7 @@ export function pollRate(trigger: Record<string, unknown>) {
   let requests = 1
   if (trigger.type === 'app_poll') {
     rate = POLL_RATE_TABLE[trigger.provider as 'hubspot' | 'microsoft_graph']
-    requests = 10 + (trigger.subscription ? 1 : 0)
+    requests = 10 + (trigger.subscription ? 1 : 0) + (trigger.provider === 'hubspot' && trigger.any_field ? 1 : 0)
   } else if (trigger.type === 'url_poll') {
     const url = new URL(String(trigger.url))
     if (url.hostname === 'api.github.com' && url.pathname.startsWith('/repos/')) rate = POLL_RATE_TABLE.github
@@ -104,7 +104,7 @@ export function validateTrigger(trigger: Record<string, unknown>) {
     }
     case 'app_poll': {
       if (typeof trigger.connection_id !== 'string') fail('choose an app connection')
-      if (!['hubspot', 'microsoft_graph', 'google_sheets', 'microsoft_excel'].includes(String(trigger.provider))) fail('choose a supported app provider')
+      if (!['hubspot', 'microsoft_graph', 'google_sheets', 'microsoft_excel', 'airtable'].includes(String(trigger.provider))) fail('choose a supported app provider')
       if (trigger.provider === 'hubspot' && !['contacts', 'companies', 'deals'].includes(String(trigger.resource))) fail('choose contacts, companies or deals')
       if (trigger.provider === 'microsoft_graph' && trigger.resource !== 'messages') fail('choose messages')
       if (trigger.provider === 'google_sheets') {
@@ -116,8 +116,10 @@ export function validateTrigger(trigger: Record<string, unknown>) {
         if (trigger.resource !== 'rows' || ['workbook_id', 'worksheet_id', 'key_field'].some(name => typeof trigger[name] !== 'string' || !String(trigger[name]).trim() || String(trigger[name]).length > 200)) fail('Excel needs rows, workbook_id, worksheet_id and a stable key_field column')
         if (typeof trigger.range !== 'string' || !/^A1:[A-Z]+[0-9]+$/.test(trigger.range)) fail('Excel range must start at A1 with a header row and an explicit end')
       }
+      if (trigger.provider === 'airtable' && (trigger.resource !== 'records' || ['base_id', 'table_id'].some(name => typeof trigger[name] !== 'string' || !String(trigger[name]).trim() || String(trigger[name]).length > 200) || trigger.view_id !== undefined && (typeof trigger.view_id !== 'string' || trigger.view_id.length > 200))) fail('Airtable needs records, base_id and table_id, with an optional view_id')
+      if (trigger.modified_field !== undefined && (trigger.provider !== 'airtable' || typeof trigger.modified_field !== 'string' || !trigger.modified_field.trim() || trigger.modified_field.length > 200)) fail('Airtable modified_field names a last-modified column')
       const spreadsheet = ['google_sheets', 'microsoft_excel'].includes(String(trigger.provider))
-      const fieldName = (f: unknown) => typeof f === 'string' && f.trim().length > 0 && f.length <= 200 && (spreadsheet || /^[A-Za-z][A-Za-z0-9_]*$/.test(f))
+      const fieldName = (f: unknown) => typeof f === 'string' && f.trim().length > 0 && f.length <= 200 && (spreadsheet || trigger.provider === 'airtable' || /^[A-Za-z][A-Za-z0-9_]*$/.test(f))
       if (!['new', 'updated'].includes(String(trigger.event))) fail('event must be new or updated')
       if (!['from_now', 'existing'].includes(String(trigger.backfill))) fail('choose initial backfill explicitly')
       if (trigger.event === 'updated' && trigger.any_field !== true && (!Array.isArray(trigger.watched_fields) || !trigger.watched_fields.length)) fail('updated records need watched_fields or explicit any_field')

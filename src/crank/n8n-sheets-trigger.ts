@@ -20,13 +20,13 @@ export function n8nSheetsTrigger(node: Obj, choice: Obj | undefined, at: string,
   if (node.typeVersion !== 1 || !['rowUpdate', 'rowAdded'].includes(p.event)) throw Error('Sheets trigger needs version 1 and explicit rowUpdate or rowAdded; anyUpdate needs manual conversion')
   if (!['triggerOAuth2', 'serviceAccount'].includes(p.authentication ?? 'triggerOAuth2')) throw Error('Sheets authentication has no supported fresh-binding mapping')
   fields(object(node.credentials ?? {}), [(p.authentication ?? 'triggerOAuth2') === 'serviceAccount' ? 'googleApi' : 'googleSheetsTriggerOAuth2Api'], at + '.credentials')
-  if ((p.includeInOutput ?? 'new') !== 'new') throw Error('Sheets includeInOutput old/both requires manual output conversion')
+  if ((p.includeInOutput ?? 'new') !== 'new') throw Error('Sheets includeInOutput old or both requires manual output conversion')
   if (options.valueRender !== undefined && options.valueRender !== 'UNFORMATTED_VALUE') throw Error('Sheets valueRender requires UNFORMATTED_VALUE')
   if (options.dateTimeRenderOption !== undefined && options.dateTimeRenderOption !== 'SERIAL_NUMBER' || p.event === 'rowAdded' && options.dateTimeRenderOption !== 'SERIAL_NUMBER') throw Error('Sheets dateTimeRenderOption needs explicit SERIAL_NUMBER for added rows')
   const locator = (raw: unknown, name: string) => {
     const value = object(raw)
     fields(value, ['__rl', 'mode', 'value', 'cachedResultName', 'cachedResultUrl'], at + '.parameters.' + name)
-    if (value.__rl !== true || !['id', 'list'].includes(value.mode)) throw Error('Sheets ' + name + ' requires an id/list resource locator; URL/expression locators need manual conversion')
+    if (value.__rl !== true || !['id', 'list'].includes(value.mode)) throw Error('Sheets ' + name + ' requires an id or list resource locator; URL or expression locators need manual conversion')
     if (value.cachedResultName !== undefined) literal(value.cachedResultName, name + '.cachedResultName', 2048)
     if (value.cachedResultUrl !== undefined) literal(value.cachedResultUrl, name + '.cachedResultUrl', 2048)
     return value.value

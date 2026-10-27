@@ -57,7 +57,7 @@ export function n8nGraph(value: Json, sourceId: string, env: ImportTargetEnv, ow
       const column=previous==='trigger.properties'?/^=\{\{ \$json\[(?:'([^'\\]+)'|"([^"\\]+)")\] \}\}$/.exec(v):null
       const name=column?.[1]??column?.[2],suffix=m?.[1]??(name&&!/[.\[\]]/.test(name)?'.'+name:undefined)
       if(suffix===undefined){gap(at,'expression has no safe native equivalent');return null}
-      if(previous==='trigger.properties'&&['row_number','change_type'].includes(suffix.split('.')[1])){gap(at,'source Sheets row_number/change_type metadata requires manual output conversion');return null}
+      if(previous==='trigger.properties'&&['row_number','change_type'].includes(suffix.split('.')[1])){gap(at,'source Sheets row_number and change_type metadata requires manual output conversion');return null}
       coverage.push({field:at,reason:'Supported declarative data path'});return {$ref:previous+suffix}
     }
     const inspectLiteral=(value:any,path:string)=>{

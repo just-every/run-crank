@@ -191,7 +191,7 @@
       "executable": false
     },
     "docs/APP-TRIGGERS.md": {
-      "sha256": "e16976c4e848b83c2714f04ba1fc98083b398969e0a078caf8df33388ed735bb",
+      "sha256": "40d36945efdd3212991a75151dec9e284419692d9d940424d604bddb7c594d48",
       "executable": false
     },
     "docs/BACKUP-RESTORE.md": {
@@ -2435,7 +2435,7 @@
       "executable": false
     },
     "src/crank/connections/apps.ts": {
-      "sha256": "ab8c545b5b7f7747794b72fdfcbf83212a4ff83f949cbc9828885e9d1a80af6e",
+      "sha256": "5df3a676623030b06c809e897cbcb950be84c7c409e9dd57e6772a3176750643",
       "executable": false
     },
     "src/crank/connections/auth.ts": {
@@ -2899,7 +2899,7 @@
       "executable": false
     },
     "src/crank/n8n-graph.ts": {
-      "sha256": "7fcb5c446bc5eee1051d6f9b6e5ff14dfd0e97876f5451f0b073e201cc174272",
+      "sha256": "e118ad8453b3f69042bd80deb9d5734188b050075bd23401b424e58338b74482",
       "executable": false
     },
     "src/crank/n8n-http.ts": {
@@ -2911,7 +2911,7 @@
       "executable": false
     },
     "src/crank/n8n-sheets-trigger.ts": {
-      "sha256": "d397f19ef2401319e57a3f5b515130f3a0dabe4972aed6d88d2ee902779a04bd",
+      "sha256": "c49f3207b402d815087226853a4d7c60a986694de89775b00b7c114fc4869716",
       "executable": false
     },
     "src/crank/n8n-transforms.ts": {
@@ -3126,12 +3126,24 @@
       "sha256": "caa2d8869dcd0e1b1f7e02bcba2e191593d94cfb29a1a10eb6e13a8cc4f2fa91",
       "executable": false
     },
+    "src/crank/triggers/airtable-poll.ts": {
+      "sha256": "d9bd48fab1b48628456052f4f118c9dfcf6cd08cbef4d9c99efbbb4335df6744",
+      "executable": false
+    },
+    "src/crank/triggers/app-history.ts": {
+      "sha256": "755de3ecbb6491f9ade8274cf417c9c6c1c389f952fb4be7a7d6e587c315089a",
+      "executable": false
+    },
     "src/crank/triggers/app-poll.ts": {
-      "sha256": "72eb7c09acc5bbfa3a5f4825b6376475ce6c405637aa1103eb29b26f56fbd4ee",
+      "sha256": "5ff8e871117642d1216f2f16f5aa4c279ad0a15f0f4fc81f00888964d8e978fa",
       "executable": false
     },
     "src/crank/triggers/app-source.ts": {
-      "sha256": "737709a107c73b6d1fd72dd6d71f434d66e0c2ceef2f823c67d5865bf41f55ff",
+      "sha256": "42022b2b4bdd985d5ad3d6f3f67d50637d14b00c7ba1135a49fb95b4fcfade36",
+      "executable": false
+    },
+    "src/crank/triggers/app-state.ts": {
+      "sha256": "a059dcaeca63d49eeb56404cd1586f41af7c95bcf7e6c310bd62523ff17456a5",
       "executable": false
     },
     "src/crank/triggers/callbacks.ts": {
@@ -3139,7 +3151,7 @@
       "executable": false
     },
     "src/crank/triggers/definition.ts": {
-      "sha256": "c3b36aa2e6e3b7a02885e51f8b21238e81cbb0ac45588ff39f29c33141865e24",
+      "sha256": "6c42237082a248f717312c6813da347e1d7c50b04b23fa882c213d03fd140125",
       "executable": false
     },
     "src/crank/triggers/feeds.ts": {
@@ -3196,6 +3208,10 @@
     },
     "src/crank/triggers/slack-events.ts": {
       "sha256": "251ee9333c10bf524e7473ed7adf6d1a2ea96d392b6faeffc3078236600ae3f0",
+      "executable": false
+    },
+    "src/crank/triggers/watched-fields.ts": {
+      "sha256": "71ac1e6b5fa99c16745e595b5b417eb3a9f3a55eac542ebe5c67744bb3877e9d",
       "executable": false
     },
     "src/crank/triggers/webhook-admission.ts": {
@@ -3295,7 +3311,7 @@
       "executable": false
     },
     "src/crank/ui/handler.ts": {
-      "sha256": "23ad06f31a7834106168d73f2a6ff787ed3f7191ae243cf0adb2dca8cafc59d9",
+      "sha256": "de92963ceb92bc45db1b389b388f11dd2a7bbea7608a99974b615b5c1701f465",
       "executable": false
     },
     "src/crank/ui/icons.ts": {
@@ -3382,6 +3398,10 @@
       "sha256": "e9cf8b26e26a02c8292fa840031a08cc41c1990ff05d82cbd2d621f6a04bd7fe",
       "executable": false
     },
+    "src/crank/ui/watched-fields.ts": {
+      "sha256": "602e7365e8914a39355598057098b209735acec035d83f68220c657e5bbe78fb",
+      "executable": false
+    },
     "src/crank/ui/workflow-data.ts": {
       "sha256": "d2a8b08efb13b21ef71b3afac30e91c05d06ed0c31682aeea56d3502b4c7d6a8",
       "executable": false
@@ -3395,7 +3415,7 @@
       "executable": false
     },
     "src/crank/workflows/api.ts": {
-      "sha256": "0812c44affe0921bafc2548e1464411e3d262defe91050a7844c131375e778c7",
+      "sha256": "85f1bb7c425fb374e93ba33d8492d50b27f691d1a9de74be4fb2652cb5107a1a",
       "executable": false
     },
     "src/crank/workflows/comparison.ts": {
@@ -5411,11 +5431,19 @@
       "executable": false
     },
     "test-budget.json": {
-      "sha256": "278cb902fd09722a33a0a6940c07e1876cb76a8e158b457869177b5065255301",
+      "sha256": "da0728b28f47d4cfa3a6465e30520e149c9a9021317518e194371cbbd06f7c19",
+      "executable": false
+    },
+    "tests/airtable-poll-journey.mjs": {
+      "sha256": "382b340c00e4a85e36a949d11a83b1ea250a846c269d16cae57a345c0a53edc3",
+      "executable": false
+    },
+    "tests/app-history-journey.mjs": {
+      "sha256": "0610ad1d601b635593513f9e770d567bdd7b2c3ddaa194e8b48b54950bd2a0d3",
       "executable": false
     },
     "tests/app-poll-browser.mjs": {
-      "sha256": "c5be4e0d906a1b381c98ed020cb7e31145984a83783a23836e4a3cd1f1dac046",
+      "sha256": "4520ec700e4a00fde35ae2fc2a85f80b22760fee9e3efbb70db69646c597ab91",
       "executable": false
     },
     "tests/app-poll-journey.mjs": {
@@ -5743,7 +5771,7 @@
       "executable": false
     },
     "tests/n8n-sheets-trigger-journey.mjs": {
-      "sha256": "52411435e7ecced34ae2646269b1bd628c4627993cdc826ba369739157158e1f",
+      "sha256": "1c0d03b21c6f78d6882f3f70d3420641d8d7c6d6027f7a927ba9b72c3bd6c967",
       "executable": false
     },
     "tests/n8n-stream-journey.mjs": {
@@ -5883,7 +5911,7 @@
       "executable": false
     },
     "tests/sheet-poll-journey.mjs": {
-      "sha256": "69c25462aa828beed21e4e381c949a0271801b2a50abde15fc65e3f61e6529db",
+      "sha256": "d8a352c222a4e6e46f88470ca57172b92f1e410d1ee27f9ff39849c5ad5d93bb",
       "executable": false
     },
     "tests/sibling-browser.mjs": {
@@ -5943,7 +5971,7 @@
       "executable": false
     },
     "tests/triggers.test.mjs": {
-      "sha256": "b015c86d5d1d5804f71425a59987430fb7e591b98fe37f9d3492a122c1fce0a4",
+      "sha256": "3fdc9af0e706ebccd5f94c5480c8664110dfa503fcce01f94a19743a45a7a6e1",
       "executable": false
     },
     "tests/usage.test.mjs": {
