@@ -1,3 +1,4 @@
+import { validateSubflowValue } from './subflow-definition.mjs'
 import { guardedBatch, requireOwner } from '../access'
 import { assertDispatchAuthority } from '../engine/authority'
 import { StepError } from '../engine/errors'
@@ -6,7 +7,7 @@ import type { StepContext } from '../engine/types'
 import { body, canonical, digest, id, json, now, requireValue, stmt, type Actor, type CrankEnv } from '../model'
 import { indexStatement, openText, sealText, targetFor } from '../ops/payload-seal'
 import { auditStatement } from '../ops/audit'
-import { callable, evaluatePureSubflow, readSubflow } from './subflows'
+import { callable, evaluatePureSubflow, readSubflow, type NativeDefinition } from './subflows'
 
 type Call = {id:string;run_id:string;path:string;operation_key:string;subflow_version_id:string;status:string;lease_id:string|null;lease_expires_at:string|null;created_at:string;started_at:string|null;finished_at:string|null}
 export class SubflowWait extends Error { constructor(readonly callId: string) { super('Pure child is retained for execution') } }
@@ -14,7 +15,8 @@ export async function readChildCall(env: CrankEnv, callId: string) {
   const call = await stmt(env, 'SELECT * FROM crank_subflow_calls WHERE id=?',callId).first<Call>()
   requireValue(call,'Pure child history not found',404)
   const {lease_id,lease_expires_at,...history} = call
-  return {...history, parent_history:'/app/workflow-runs/'+call.run_id}
+  const checkpoints = (await stmt(env,'SELECT path,step_id,type,status,started_at,finished_at,operation_key FROM crank_wf_steps WHERE run_id=? AND path GLOB ? ORDER BY path',call.run_id,call.path+'/child/*').all()).results
+  return {...history, checkpoints, parent_history:'/app/workflow-runs/'+call.run_id}
 }
 /** The parent checkpoint owns all values. A child retains only execution metadata. */
 export async function queuePureChild(ctx: StepContext, versionId: string): Promise<never> {
@@ -55,6 +57,11 @@ export async function runPureChild(env: CrankEnv, callId: string) {
     requireValue(record,'The parent checkpoint is unavailable',409)
     const input = JSON.parse((await openText(env,run.workflow_id,record.input_json))!)
     const definition = JSON.parse(row.definition_json)
+    if (definition.kind === 'native') {
+      await stmt(env,"UPDATE crank_wf_runs SET status='queued' WHERE id=? AND status='waiting' AND EXISTS(SELECT 1 FROM crank_subflow_calls WHERE id=? AND status='running' AND lease_id=?)",run.id,call.id,lease).run()
+      await stmt(env,"UPDATE crank_subflow_calls SET lease_id=NULL,lease_expires_at=NULL WHERE id=? AND status='running' AND lease_id=?",call.id,lease).run()
+      return
+    }
     output = await evaluatePureSubflow(definition,input,check)
     trace = {child_id:call.id,subflow_id:row.subflow_id,version:row.version,definition_digest:row.definition_digest,operations:definition.steps.map(({id,fn}:{id:string;fn:string})=>({id,fn}))}
   } catch (error) {
@@ -120,4 +127,35 @@ export async function childCallApi(request: Request, env: CrankEnv, actor: Actor
     ])
   }
   return json(await readChildCall(env,call.id))
+}
+
+/** Native children checkpoint under the parent's sealed custody and execution lease.
+ * The independent call history carries no values or transferable authority. */
+export async function executeGraphChild(ctx: StepContext, row: Awaited<ReturnType<typeof readSubflow>>, definition: NativeDefinition) {
+  const callId=await digest(ctx.operationKey)
+  const call=await stmt(ctx.env,'SELECT * FROM crank_subflow_calls WHERE id=?',callId).first<Call>()
+  if (!call || call.status !== 'running') { await callable(ctx,row); return queuePureChild(ctx,row.id) }
+  const check=async()=>{
+    await callable(ctx,row)
+    if (!await stmt(ctx.env,"SELECT 1 FROM crank_subflow_calls WHERE id=? AND status='running'",callId).first()) throw new StepError('authority','The child was stopped; no further operation ran')
+  }
+  try {
+    await check()
+    validateSubflowValue(definition.inputs,ctx.input,'input')
+    if (!ctx.executeSubflow) throw new StepError('validation','Native child executor unavailable')
+    const {outcome,output}=await ctx.executeSubflow(definition.steps,ctx.input,definition.result,check)
+    await check()
+    if (outcome.kind==='waiting') throw new SubflowWait(callId)
+    if (outcome.kind==='paused') throw new StepError('authority',outcome.reason)
+    if (outcome.kind==='failed') throw new StepError('validation',String((outcome.error as any)?.message ?? 'Native child failed'),{cause:outcome.error})
+    if (outcome.kind==='stopped') {
+      return {status:'stopped' as const,reason:outcome.reason,trace:{child_id:callId,child_status:'succeeded'}}
+    }
+    validateSubflowValue(definition.outputs,output,'output')
+    return {status:'succeeded' as const,output,trace:{child_id:callId,child_status:'succeeded',subflow_id:row.subflow_id,version:row.version,definition_digest:row.definition_digest}}
+  } catch(error) {
+    if (error instanceof SubflowWait) throw error
+    const failure=error instanceof StepError?error:new StepError('validation',(error as Error).message)
+    throw new StepError(failure.category,failure.message,{...failure.detail,trace:{child_id:callId,child_status:failure.category==='authority'?'paused':'failed'}})
+  }
 }

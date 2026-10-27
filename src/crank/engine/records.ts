@@ -1,5 +1,6 @@
 import { canonical, digest, id, now, stmt, type CrankEnv } from '../model'
 import type { RunRow, WaitRow, WaitSpec } from './types'
+import { isObject } from './values'
 import { StepError } from './errors'
 import { indexStatement, openRow, sealText, targetFor } from '../ops/payload-seal'
 
@@ -33,11 +34,16 @@ const encode = (value: unknown) => value === undefined ? null : JSON.stringify(v
 export async function saveRecord(env: CrankEnv, run: RunRow, lease: string, record: Omit<StepRecord, 'input_json' | 'output_json' | 'trace_json' | 'error_json'> & { input?: unknown; output?: unknown; trace?: unknown; error?: unknown }) {
   const target = await targetFor(env, run.workflow_id), input = encode(record.input), output = encode(record.output)
   const leased = 'EXISTS(SELECT 1 FROM crank_wf_runs WHERE id=? AND lease_id=?)', index = await indexStatement(env, target, run.id, [input, output], leased, [run.id, lease])
+  const trace = record.trace
+  const child = record.type === 'subflow' && isObject(trace) && typeof trace.child_id === 'string' && ['succeeded','failed','paused'].includes(String(trace.child_status))
+    ? [stmt(env, `UPDATE crank_subflow_calls SET status=?,finished_at=?,lease_id=NULL,lease_expires_at=NULL
+      WHERE id=? AND run_id=? AND path=? AND operation_key=? AND status='running' AND ${leased}`,
+      trace.child_status,trace.child_status === 'paused' ? null : now(),trace.child_id,run.id,record.path,record.operation_key,run.id,lease)] : []
   await env.DB.batch([stmt(env, `INSERT INTO crank_wf_steps(run_id,path,step_id,type,status,input_json,output_json,trace_json,error_json,started_at,finished_at,operation_key)
     SELECT ?,?,?,?,?,?,?,?,?,?,?,? WHERE EXISTS(SELECT 1 FROM crank_wf_runs WHERE id=? AND lease_id=?)
     ON CONFLICT(run_id,path) DO UPDATE SET status=excluded.status,input_json=COALESCE(excluded.input_json,crank_wf_steps.input_json),output_json=excluded.output_json,
     trace_json=excluded.trace_json,error_json=excluded.error_json,finished_at=excluded.finished_at`,
-  run.id, record.path, record.step_id, record.type, record.status, await sealText(target, input), await sealText(target, output), await sealText(target, encode(record.trace)), await sealText(target, encode(record.error)), record.started_at, record.finished_at, record.operation_key, run.id, lease), ...(index ? [index] : [])])
+  run.id, record.path, record.step_id, record.type, record.status, await sealText(target, input), await sealText(target, output), await sealText(target, encode(record.trace)), await sealText(target, encode(record.error)), record.started_at, record.finished_at, record.operation_key, run.id, lease), ...(index ? [index] : []), ...child])
 }
 export async function insertWait(env: CrankEnv, run: RunRow, path: string, spec: WaitSpec) {
   const at = now(), proposal = spec.proposal === undefined ? null : canonical(spec.proposal)

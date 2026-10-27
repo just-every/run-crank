@@ -34,6 +34,7 @@ export interface StepContext {
   input: Record<string, unknown>
   requests: { next: number }
   retryPolicy?: Record<string, unknown>
+  executeSubflow?(steps: Step[], input: Record<string,unknown>, result: Record<string,unknown>, check: () => Promise<void>): Promise<{outcome:ExecutionOutcome;output?:unknown}>
   /** Native regulated operations recheck their exact consent at physical dispatch. */
   beforeRequest?: () => Promise<void>
   /** Earlier completed decision for this step, when resuming after a wait. */
