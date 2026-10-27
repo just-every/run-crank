@@ -277,7 +277,12 @@ unsupported dynamically received syntax produces a named type mismatch before
 any downstream request. Comments, computed keys, shorthand, bare identifier
 values, methods, calls, property access, template strings, regular expressions,
 non-finite numbers, sparse arrays and additional source expressions are outside
-this grammar. Source text is parsed only as data and is never evaluated. DateTime conditions accept ISO
+this grammar. Review and execution use the same object parser. Quoted expression
+delimiters remain data: `{"message":"{{"}` is accepted both as an imported literal
+and as a received value, with the original operand retained in run history.
+An operand beginning with `=` still requires a supported declarative data path;
+unsupported source expressions stay manual. Source text is parsed only as data
+and is never evaluated. DateTime conditions accept ISO
 timestamps with an explicit UTC or numeric offset and compare absolute instants.
 Missing or null timestamps preserve source empty and comparison behavior; malformed
 or local timestamps fail before dispatch. Local-date inference, non-ISO source

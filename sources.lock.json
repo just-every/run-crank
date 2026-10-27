@@ -223,7 +223,7 @@
       "executable": false
     },
     "docs/IMPORTING.md": {
-      "sha256": "4f3dec1818ba062f544fd7e75a25981b7fd555a28c0a5a533f1a9169b0f831fa",
+      "sha256": "d1315742649b1a62418542e395b63994aa67ad726964b98096ef0679a02f3a33",
       "executable": false
     },
     "docs/OPERATIONS.md": {
@@ -5671,7 +5671,7 @@
       "executable": false
     },
     "tests/n8n-conditions-journey.mjs": {
-      "sha256": "94061a48bf23390a75d02cea3800be2d6c9b32e68d68935ae40d79e534172ba2",
+      "sha256": "20644c2d40b6afaec6894b9bd70b3f72cdbce7b79d398f38832e7d151acb5255",
       "executable": false
     },
     "tests/n8n-conversion-journey.mjs": {
