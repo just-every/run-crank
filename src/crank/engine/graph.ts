@@ -33,6 +33,7 @@ export function validateGraph(value: unknown): Validation {
   const warnings: string[] = [], declared: Declared = { steps: [], connections: [] }, ids = new Set<string>()
   let expanded = 0
   validateTrigger(value.trigger)
+  if (value.trigger.type === 'app_poll' && value.trigger.any_field === true) warnings.push('Any field is selected: every record edit can start a run')
   if (typeof value.trigger.connection_id === 'string') declared.connections.push(value.trigger.connection_id)
   if (typeof value.trigger.signing_connection_id === 'string') declared.connections.push(value.trigger.signing_connection_id)
   if (isObject(value.trigger.header_auth) && typeof value.trigger.header_auth.connection_id === 'string') declared.connections.push(value.trigger.header_auth.connection_id)

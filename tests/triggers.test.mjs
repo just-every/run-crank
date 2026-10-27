@@ -517,3 +517,7 @@ test('TRIG-001: envelope identity, transactional admission and revocation preser
     assert.equal((await deliver(isolated, url.replace('/hooks/w/', '/api/crank/workflows/'))).status, 401, 'a URL secret gives no private read authority');
   } finally { await isolated.close(); }
 });
+
+import {crmPollJourney,subscriptionPollJourney} from './app-poll-journey.mjs';
+test('Native CRM polls seed watched properties and recover complete overlapping pages without duplicate effects', crmPollJourney);
+test('Mailbox polling retains records through visible subscription expiry and restarted renewal', subscriptionPollJourney);

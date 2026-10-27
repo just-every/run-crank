@@ -1,0 +1,55 @@
+/** Financial owner journeys at the installed UI's public doors. Use heavy-slot. */
+import assert from 'node:assert/strict';
+import {createServer} from 'node:http';
+import {readFile,mkdir} from 'node:fs/promises';
+import {resolve,extname,join} from 'node:path';
+import {chromium,expect} from '@playwright/test';
+import {crmPollJourney,subscriptionPollJourney} from './app-poll-journey.mjs';
+const evidence=process.env.CRANK_EVIDENCE;
+assert.ok(evidence,'Set CRANK_EVIDENCE');await mkdir(evidence,{recursive:true});
+const browser=await chromium.launch({headless:true,...(process.env.CRANK_CHROMIUM?{executablePath:process.env.CRANK_CHROMIUM}:{}),args:['--use-mock-keychain','--password-store=basic',...(process.env.CRANK_CHROMIUM?['--no-sandbox']:[])]});
+let server,context,page,active;
+const types={'.css':'text/css','.js':'text/javascript','.svg':'image/svg+xml','.woff2':'font/woff2','.png':'image/png'};
+async function attach(h,width) {
+ if(active===h)return;
+ await context?.close();if(server){server.closeAllConnections();await new Promise(done=>server.close(done))}
+ active=h;
+ server=createServer(async(req,res)=>{try{
+  const pathname=new URL(req.url,h.origin).pathname;
+  if(types[extname(pathname)])for(const root of ['public','dist/client']){
+   const dir=resolve(root),file=resolve(dir,'.'+decodeURIComponent(pathname));if(!file.startsWith(dir+'/'))continue;
+   const bytes=await readFile(file).catch(()=>null);if(bytes){res.writeHead(200,{'content-type':types[extname(pathname)]});res.end(bytes);return}
+  }
+  const chunks=[];for await(const chunk of req)chunks.push(chunk);
+  const headers={...req.headers};delete headers['content-length'];
+  const response=await h.mf.dispatchFetch(h.origin+req.url,{method:req.method,headers,redirect:'manual',...(!['GET','HEAD'].includes(req.method)?{body:Buffer.concat(chunks)}:{})});
+  res.writeHead(response.status,Object.fromEntries(response.headers));res.end(Buffer.from(await response.arrayBuffer()));
+ }catch{res.writeHead(503);res.end('Browser transport failed')}});
+ await new Promise(done=>server.listen(Number(new URL(h.origin).port),'127.0.0.1',done));
+ context=await browser.newContext({viewport:{width,height:1000}});
+ const [name,...value]=h.owner.split('=');await context.addCookies([{name,value:value.join('='),url:h.origin}]);page=await context.newPage();
+ await page.goto(h.origin+'/setup');
+ if(new URL(page.url()).pathname==='/setup'){await page.getByRole('checkbox').check();await page.getByRole('button',{name:'Finish setup',exact:true}).click()}
+}
+async function shot(width,state) {
+ await page.screenshot({path:join(evidence,`${width}-${state}.png`),fullPage:true});
+ assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`${width} ${state} overflow`);
+ const search=page.getByRole('link',{name:'Search runs',exact:true});await search.focus();await expect(page.locator('#search-tooltip')).toBeVisible();await page.locator('h1').click();await search.hover();await page.waitForTimeout(350);await expect(page.locator('#search-tooltip')).toBeVisible();
+}
+try {
+ for(const width of [1440,390]) for(const journey of [crmPollJourney,subscriptionPollJourney]) {
+  await journey({inspect:async({h,w,state})=>{
+   await attach(h,width);await page.goto(h.origin+`/app/workflows/${w.id}?step=trigger`);
+   await expect(page.getByText('Last successful poll',{exact:true})).toBeVisible();
+   await expect(page.getByText('Next poll',{exact:true})).toBeVisible();
+   if(state==='expired') await expect(page.getByText('expired',{exact:true})).toBeVisible();
+   if(state==='renewed') await expect(page.getByText('Subscription expiry',{exact:true})).toBeVisible();
+   if(state==='changed') {
+    const open=page.locator('.row-open').first();await open.focus();await expect(open.getByRole('tooltip')).toBeVisible();
+    await page.locator('h1').click();await open.hover();await page.waitForTimeout(350);await expect(open.getByRole('tooltip')).toBeVisible();
+   }
+   await shot(width,state);
+  }});
+ }
+ console.log('App poll screens passed at 1440 and 390');
+} finally {await context?.close();await browser.close();if(server){server.closeAllConnections();await new Promise(done=>server.close(done))}}

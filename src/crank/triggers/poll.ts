@@ -10,6 +10,7 @@ import { canonical, digest, id, stmt, type CrankEnv } from '../model'
 import { notify } from '../ops/notices'
 import { admit, hold, burstThreshold, type TriggerEvent, type WorkflowRow } from './admission'
 import { parseFeed } from './feeds'
+import { appItems, renewSubscription } from './app-poll'
 import { nextLink } from './historical-source'
 import { parseXml, toJson, xpath } from './xml'
 
@@ -141,7 +142,8 @@ export async function runPoll(env: CrankEnv, poll: PollRow, time: number) {
   ])
   if (!claimed[1].results.length) return { runs: 0 }
   try {
-    const events = trigger.type === 'feed' ? await feedItems(env, trigger) : await urlItems(env, trigger, { since, now: started, interval_minutes: poll.interval_minutes })
+    const app = trigger.type === 'app_poll' ? await appItems(env, poll, trigger, started) : null
+    const events = app ? app.events : trigger.type === 'feed' ? await feedItems(env, trigger) : await urlItems(env, trigger, { since, now: started, interval_minutes: poll.interval_minutes })
     if (!await stmt(env, "SELECT id FROM crank_poll_log WHERE id=? AND status='running' AND lease_expires_at>?", logId, new Date().toISOString()).first()) return { runs: 0 }
     const fresh: TriggerEvent[] = [], fetchedKeys = new Set<string>()
     for (let i = 0; i < events.length; i += 50) {
@@ -162,6 +164,8 @@ export async function runPoll(env: CrankEnv, poll: PollRow, time: number) {
     else for (let i = 0; i < fresh.length; i += 50) {
       await env.DB.batch(fresh.slice(i, i + 50).map(event => stmt(env, 'INSERT INTO crank_seen_items(workflow_id,item_key,first_seen_at) VALUES(?,?,?) ON CONFLICT DO NOTHING', poll.workflow_id, event.key, started)))
     }
+    if (app?.snapshots.length) await env.DB.batch(app.snapshots)
+    if (trigger.type === 'app_poll' && trigger.subscription) await renewSubscription(env, poll, trigger, time)
     const cause = lag > 30000 ? 'executor backlog' : null
     await env.DB.batch([
       stmt(env, "UPDATE crank_poll_log SET finished_at=?,status='ok',items=?,new_items=?,cause=? WHERE id=? AND status='running'", new Date().toISOString(), events.length, seeding && !backfill ? 0 : fresh.length, cause, logId),
@@ -177,7 +181,7 @@ export async function runPoll(env: CrankEnv, poll: PollRow, time: number) {
     ])
     if (!poll.error_notified) {
       await notify(env, { key: `poll:${poll.workflow_id}:${started}`, workflowId: poll.workflow_id, kind: 'trigger_error', subject: `${workflow.name}: its trigger poll failed (${failure.cause})`,
-        text: `The ${trigger.type === 'feed' ? 'feed' : 'URL poll'} trigger of "${workflow.name}" failed: ${failure.message}. Nothing was skipped silently; the next poll is due at ${next}. Check the source or its connection.` })
+        text: `The ${trigger.type === 'feed' ? 'feed' : trigger.type === 'app_poll' ? 'app poll' : 'URL poll'} trigger of "${workflow.name}" failed: ${failure.message}. Nothing was skipped silently; the next poll is due at ${next}. Check the source or its connection.` })
       await stmt(env, 'UPDATE crank_polls SET error_notified=1 WHERE workflow_id=?', poll.workflow_id).run()
     }
     return { runs: 0, error: failure.message }

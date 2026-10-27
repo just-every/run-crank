@@ -53,6 +53,10 @@ jobs:
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm exec node tests/decision-browser.mjs
       - run: pnpm exec node tests/executor-schema-browser.mjs
+      - name: App polling owner browser journeys
+        run: pnpm exec node tests/app-poll-browser.mjs
+        env:
+          CRANK_EVIDENCE: artifacts/decisions/app-polls
       - name: Financial owner browser journeys
         run: pnpm exec node tests/financial-browser.mjs
         env:
