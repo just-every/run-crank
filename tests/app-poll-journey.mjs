@@ -84,7 +84,7 @@ export async function comparisonPollJourney({inspect=async()=>{}}={}) {
  try {
   const c=await connection(h,{app:'hubspot',label:'Transition records',auth_kind:'bearer',secret:{token:'synthetic-crank-8'}});
   const changed_to=[[{field:'Status',op:'text.in',value:['Approved']},{field:'amount',op:'number.gte',value:100,value_type:'number'},{field:'ready',op:'boolean.is_true'},{field:'due',op:'date.after',value:'2026-10-27T12:00:00Z'},{field:'tags',op:'list.any',inner:{field:'',op:'text.equals',value:'invoice'}}]];
-  const trigger={type:'app_poll',provider:'hubspot',resource:'deals',event:'updated',connection_id:c.id,interval_minutes:1,backfill:'from_now',watched_fields:['Status','amount','ready','due','tags'],changed_to,changed_from:[[{field:'Status',op:'text.in',value:['Pending','Approved']}]]};
+  const trigger={type:'app_poll',provider:'hubspot',resource:'deals',event:'updated',connection_id:c.id,interval_minutes:1,backfill:'from_now',watched_fields:['Status','amount','ready','due','tags'],changed_to,changed_from:[[{field:'Status',op:'text.equals',value:'Pending'}],[{field:'Status',op:'text.equals',value:'Approved'}]]};
   for(const bad of [{changed_from:[[{field:'notes',op:'exists'}]]},{changed_to:[[{field:'Status',op:'number.unknown',value:1}]]},{settle_delay:2}]) {
    const refused=await h.send('/api/crank/workflows',{name:'Invalid transition',graph:{trigger:{...trigger,...bad},steps:[]}},h.owner);assert.equal(refused.status,422,refused.text);
   }
@@ -111,12 +111,18 @@ export async function comparisonPollJourney({inspect=async()=>{}}={}) {
   // Values observed on nonmatching changes also consume first-value identity.
   revision++;properties={...properties,Status:'Pending',amount:250};await poll();await counts([4,3]);
   revision++;properties={...properties,Status:'Approved'};await poll();await counts([5,3]);
+  for(const invalid of [{amount:99},{ready:false},{due:'2026-10-26T12:00:00Z'},{tags:['unrelated']}]) {
+   revision++;properties={...properties,Status:'Approved',amount:260,...invalid};await poll();await counts([5,3]);
+   revision++;properties={...properties,Status:'Pending',ready:true,due:'2026-10-28T12:00:00Z',tags:['invoice']};await poll();await counts([5,3]);
+  }
   // A changed-from rule must refuse a valid destination reached from another origin.
   revision++;properties={...properties,Status:'Rejected',amount:300};await poll();
   revision++;properties={...properties,Status:'Approved',amount:350};await poll();await counts([5,3]);
   // Initial Approved values are spent even when no run was requested.
   const seeded=await publish(h,'Initially approved',{trigger:{...trigger,identity:'first_value',changed_from:undefined},steps:[]});
   await poll();assert.equal((await runs(h,seeded)).length,0);
+  const backfill=await publish(h,'Explicit existing approval',{trigger:{...trigger,backfill:'existing',identity:'first_value',changed_from:undefined},steps:[]});
+  await poll();assert.equal((await runs(h,backfill)).length,1,'an explicit existing-record choice admits its matching seed once');
   revision++;properties={...properties,Status:'Pending'};await poll();
   revision++;properties={...properties,Status:'Approved'};await poll({restart:true});assert.equal((await runs(h,seeded)).length,0);
   const archive=await h.send('/api/crank/data/export',{},h.owner);assert.equal(archive.status,200);
@@ -135,6 +141,9 @@ export async function comparisonPollJourney({inspect=async()=>{}}={}) {
   for(const table of ['crank_app_field_values','crank_app_snapshots'])assert.equal((await h.db.prepare(`SELECT COUNT(*) AS n FROM ${table} WHERE workflow_id=?`).bind(w.id).first()).n,0);
   assert.equal((await h.db.prepare('SELECT COUNT(*) AS n FROM crank_app_erased_records WHERE workflow_id=?').bind(w.id).first()).n,1);
   const afterErase=await h.send('/api/crank/data/export',{},h.owner);assert.ok(portable(afterErase.text).some(row=>row.includes('crank_app_erased_records')));
+  const destination=await harness('http://127.0.0.1:9',{edge:edge.edge});try {
+   const refused=await destination.send('/api/crank/data/restore',{archive:archive.text,journal:afterErase.text,confirm:'RESTORE'},destination.owner);assert.equal(refused.status,409,refused.text);
+  }finally{await destination.close()}
   await h.post(`workflows/${w.id}/publish`,{},h.owner,201);revision++;properties={...properties,amount:999};await poll({restart:true});assert.equal((await runs(h,w)).length,before-1,'erased records never reappear through a later poll');
   await h.post(`connections/${c.id}/revoke`);revision++;properties={...properties,amount:1000};const prior=await Promise.all(workflows.map(async w=>(await runs(h,w)).length));await poll();await counts(prior);
  }finally{await restored?.close();await h.close()}
