@@ -58,7 +58,12 @@ export async function emittedRecovery() {
   const pending = [];
   // Capture transport failures immediately: each request is intentionally
   // disconnected when its actual executor process group is killed.
-  const inFlight = promise => { const captured = promise.then(value => ({ value }), error => ({ error })); pending.push(captured); return captured; };
+  const inFlight = promise => {
+    const request = {};
+    request.result = promise.then(value => ({ value }), error => { request.error = error; return { error }; });
+    pending.push(request.result); return request;
+  };
+  const assertPending = requests => { for (const request of requests) if (request.error) throw request.error; };
   try {
     h = await emittedProcess(receiver.origin);
     await h.start(['DB']);
@@ -72,12 +77,13 @@ export async function emittedRecovery() {
     assert.equal(repaired.status, 200); assert.equal(repaired.value.ok, true);
     assert.deepEqual(repaired.value.dependencies, { DB: 'available', executor_storage: 'available' });
     await h.bootstrap();
+    const starter = await h.independentStarter();
     assert.equal((await h.send('/api/crank/reports/operations', undefined, '')).status, 401);
 
     const flow = await h.post('flows', { name: 'Interrupted legacy delivery', source_app: 'Support desk', destination_app: 'Acceptance receiver', target_url: endpoint('/legacy') }, 201);
     await h.post(`flows/${flow.id}/estimate`, { cost });
     await h.post(`flows/${flow.id}/activate`);
-    const legacy = await h.post(`flows/${flow.id}/runs`, { event_id: 'emitted-process-loss', input: { invoice: 'INV-BASE-003' } }, 201);
+    const legacy = await h.post(`flows/${flow.id}/runs`, { event_id: 'emitted-process-loss', input: { invoice: 'INV-BASE-003' } }, 201, starter);
     const write = await workflow(h, 'Interrupted invoice write', [http('send', 'POST', '/write'), { id: 'after', type: 'map', input: { done: true } }]);
     const read = await workflow(h, 'Interrupted safe read and queue', [http('read', 'GET', '/read')]);
     const delayed = await workflow(h, 'Durable delayed Cron read', [{ id: 'pause', type: 'delay', mode: 'for', input: { amount: 1, unit: 'minutes' } }, http('read', 'GET', '/delayed')], { priority: 20 });
@@ -87,7 +93,10 @@ export async function emittedRecovery() {
     const delivery = inFlight(h.post(`runs/${legacy.id}/approve`));
     const writing = inFlight(h.post(`workflows/${write.id}/run`, { input: { invoice: 'INV-WRITE-003' } }, 201));
     const reading = inFlight(h.post(`workflows/${read.id}/run`, { input: {} }, 201));
-    await until(() => ['/legacy', '/write', '/read'].every(path => receiver.count(path) === 1), 'all three requests accepted at the receiver');
+    await until(() => {
+      assertPending([delivery, writing, reading]);
+      return ['/legacy', '/write', '/read'].every(path => receiver.count(path) === 1);
+    }, 'all three requests accepted at the receiver');
     const writeRun = (await h.get('workflow-runs?workflow=' + write.id)).runs[0];
     const readRun = (await h.get('workflow-runs?workflow=' + read.id)).runs[0];
     assert.equal(writeRun.status, 'running'); assert.equal(readRun.status, 'running');
@@ -97,17 +106,17 @@ export async function emittedRecovery() {
     assert.deepEqual((await h.get('workflow-runs/' + queued.id)).steps, []);
 
     await h.restart(); // Actual SIGKILL with all three requests in flight.
-    for (const response of await Promise.all([delivery, writing, reading])) assert.ok(response.error, 'killed HTTP request loses its response');
+    for (const response of await Promise.all([delivery.result, writing.result, reading.result])) assert.ok(response.error, 'killed HTTP request loses its response');
     assert.equal((await h.get('workflow-runs/' + waiting.id)).status, 'waiting');
     assert.equal((await h.get('workflow-runs/' + queued.id)).status, 'queued');
     const time = Date.now();
     const interruptedCron = inFlight(h.command('tick', { time: time + 6 * 60000 }));
-    await until(() => receiver.count('/delayed') === 1, 'Cron releases the durable delay and reaches its receiver');
+    await until(() => { assertPending([interruptedCron]); return receiver.count('/delayed') === 1; }, 'Cron releases the durable delay and reaches its receiver');
     const operations = (await h.get('reports/operations')).recovery.operations;
     const started = operations.find(job => job.kind === 'scheduler' && job.status === 'running');
     assert.ok(started, 'the in-flight Cron pass has a durable operation journal');
     await h.restart(); // Kill a real maintenance pass before it can finish.
-    assert.ok((await interruptedCron).error);
+    assert.ok((await interruptedCron.result).error);
     await h.command('tick', { time: time + 22 * 60000 });
     await until(async () => (await h.get('workflow-runs/' + waiting.id)).status === 'succeeded', 'Cron resumes the interrupted safe delayed read');
     // A pass snapshots eligible queue entries. Another pass drains any queued

@@ -60,16 +60,31 @@ export async function emittedProcess(receiver) {
     try { value = JSON.parse(text); } catch { value = text; }
     return { status: response.status, text, value, headers: response.headers, cookie: response.headers.get('set-cookie')?.split(';')[0] };
   };
-  const post = async (path, body = {}, status = 200) => {
-    const result = await send('/api/crank/' + path, body);
+  const post = async (path, body = {}, status = 200, cookie = owner) => {
+    const result = await send('/api/crank/' + path, body, cookie);
     assert.equal(result.status, status, `${path}: ${result.text}`); return result.value;
   };
   const get = async path => {
     const result = await send('/api/crank/' + path);
     assert.equal(result.status, 200, `${path}: ${result.text}`); return result.value;
   };
+  const confirm = async (email, cookie = '') => {
+    const message = (await command('mail')).findLast(message => message.to.includes(email));
+    assert.ok(message, 'native confirmation mail was received');
+    const href = message.html.match(/href="([^"]*\/auth\/confirm\?token=[^"]+)"/)[1].replaceAll('&amp;', '&');
+    const result = await send('/auth/confirm', { token: new URL(href, config.origin).searchParams.get('token') }, cookie);
+    assert.equal(result.status, 303); return result.cookie;
+  };
   return { start, stop, send, post, get, command,
     async bootstrap() { const response = await send('/auth/bootstrap', { token: config.setupToken, displayName: 'Recovery owner' }); assert.equal(response.status, 303); assert.ok(response.cookie); owner = response.cookie; },
+    async independentStarter() {
+      // Native owner invitation requires the owner's fresh sensitive-action proof.
+      assert.equal((await send('/auth/step-up', { action: 'owner:transfer' })).status, 202);
+      await confirm('recovery-owner@example.test', owner);
+      const email = 'recovery-starter@example.test';
+      assert.equal((await send('/auth/invite', { email, displayName: 'Independent recovery starter', role: 'owner' })).status, 202);
+      const cookie = await confirm(email); assert.ok(cookie); return cookie;
+    },
     async restart(omit = []) { await stop(); await start(omit); },
     async close() { await stop(); await rm(persist, { recursive: true, force: true }); },
   };

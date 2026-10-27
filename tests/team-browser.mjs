@@ -191,7 +191,22 @@ try {
       assert.equal(mixedRuns.find(run=>run.id===restrictedRun.id).payload,'restricted');
       assert.ok(!JSON.stringify(mixedRuns).includes('synthetic-crank-hidden-customer'));
     }
-    const ownerScreen=page;page=builderPage;await page.goto(origin+'/app/runs');await shot(width,'mixed-grant-history');
+    const ownerScreen=page;page=builderPage;await page.goto(origin+'/app/runs');
+    const runLinks=page.locator('.runs-table .row-open');
+    assert.ok(await runLinks.count(),'Run history has chevron links');
+    assert.ok(await runLinks.evaluateAll(links=>links.every(link=>{
+      const tooltip=document.getElementById(link.getAttribute('aria-describedby'));
+      return tooltip?.getAttribute('role')==='tooltip'&&link.contains(tooltip)&&tooltip.textContent.trim().split(/\s+/).length>=2&&tooltip.textContent.trim().split(/\s+/).length<=4;
+    })),'Every run chevron describes its tooltip');
+    const runLink=runLinks.first(),runTooltip=runLink.getByRole('tooltip');
+    await page.mouse.move(0,0);await expect(runTooltip).toBeHidden();
+    await runLink.hover();
+    assert.equal(await runTooltip.evaluate(tooltip=>getComputedStyle(tooltip).visibility),'hidden','Hover tooltip waits before appearing');
+    await expect(runTooltip).toBeVisible();
+    await page.mouse.move(0,0);await expect(runTooltip).toBeHidden();
+    assert.equal(await runLink.evaluate(link=>{link.focus();return getComputedStyle(link.querySelector('[role="tooltip"]')).visibility}),'visible','Keyboard focus shows the tooltip immediately');
+    await shot(width,'mixed-grant-history');
+    const runHref=await runLink.getAttribute('href');await runLink.press('Enter');await page.waitForURL(origin+runHref);
     await page.goto(origin+'/app/workflow-runs/'+restrictedRun.id);
     if(width===1440) {await expect(page.getByText('Restricted for your role.',{exact:true})).toBeVisible();assert.ok(!(await page.locator('main').innerText()).includes('synthetic-crank-hidden-customer'))}
     await shot(width,'mixed-grant-status-only');page=ownerScreen;
