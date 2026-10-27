@@ -5940,7 +5940,7 @@
       "executable": false
     },
     "tests/team-browser.mjs": {
-      "sha256": "2125d6549a5a80b8ce2e819da487c103b4d28609ae62defe2ea71bc1889da8a7",
+      "sha256": "879906bce14f08b4ac74e9aac295c634ffc8674336004c9e5dd2de1681b602f0",
       "executable": false
     },
     "tests/team-provisioning-journey.mjs": {

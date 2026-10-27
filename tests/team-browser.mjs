@@ -208,6 +208,7 @@ try {
     },{once:true}));
     await runLink.hover();
     await expect(runTooltip).toBeVisible();
+    await expect.poll(()=>runLink.evaluate(link=>link.hoverTiming?.elapsed)).toBeGreaterThanOrEqual(250);
     const hoverTiming=await runLink.evaluate(link=>link.hoverTiming);
     assert.equal(hoverTiming.initial,'hidden','Hover begins with the tooltip hidden');
     assert.ok(hoverTiming.elapsed>=250,'The hover tooltip waits approximately 300 milliseconds');
