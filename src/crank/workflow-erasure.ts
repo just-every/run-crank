@@ -37,6 +37,8 @@ export async function eraseWorkflowRun(env: CrankEnv, actor: Actor | null, porta
   const service = createErasure({ db: env.DB, portability, declarations: [defineErasure({
     entity: 'workflow-run', root: { table: 'crank_wf_runs' },
     edges: [
+      { table:'crank_digest_entries',from:'crank_wf_runs',on:{source_run_id:'id'} },
+      { table:'crank_digest_operations',from:'crank_wf_runs',where:'run_id=? OR instr(result_json,?)>0',params:['id','id'] },
       {table:'crank_recurring_runs',from:'crank_wf_runs',on:{run_id:'id'}},
       { table: 'crank_app_snapshots', from: 'crank_wf_runs', on: { workflow_id: 'workflow_id', record_id: 'business_key' } },
       ...['crank_subflow_calls', 'crank_notice_deliveries', 'crank_gateway_tasks', 'crank_custom_hook_checks', 'crank_executor_tasks', 'crank_grant_escalations', 'crank_grant_admissions', 'crank_skill_cases', 'crank_wf_steps', 'crank_blind_index', 'crank_wf_step_revisions', 'crank_waits', 'crank_wf_attempts', 'crank_obligations', 'crank_callback_events', 'crank_queue_items', 'crank_hold_items', 'crank_historical_items', 'crank_ops_events', 'crank_request_admissions', 'crank_request_checkpoints', 'crank_request_checkpoint_chunks', 'crank_usage_observations', 'crank_usage_provider_charges', 'crank_usage_reporting_errors', 'crank_usage_reservations', 'crank_step_admissions']
@@ -64,6 +66,10 @@ export async function eraseWorkflowRun(env: CrankEnv, actor: Actor | null, porta
     beforeStatements: async () => [
       system ? stmt(env, `INSERT INTO crank_authority_guards(id,ok) SELECT 'erase-workflow:'||?1,CASE WHEN EXISTS(${system.eligible}) THEN 1 ELSE 0 END`, ...system.params)
         : stmt(env, `INSERT INTO crank_authority_guards(id,ok) SELECT 'erase-workflow:'||?,CASE WHEN EXISTS(${eligible}) THEN 1 ELSE 0 END`, runId, runId),
+      // Fence snapshots before the cascade removes their entries and receipts.
+      stmt(env,`UPDATE crank_digests SET revision=revision+1,mutation_id=NULL WHERE id IN (
+        SELECT digest_id FROM crank_digest_entries WHERE source_run_id=?1
+        UNION SELECT digest_id FROM crank_digest_operations WHERE run_id=?1 OR instr(result_json,?1)>0)`,runId),
       ...markers.map(marker => stmt(env, 'INSERT OR IGNORE INTO crank_erased_webhook_events(workflow_id,event_digest) VALUES(?,?)', run.workflow_id, marker)),
     ],
   })] })

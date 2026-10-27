@@ -5,8 +5,8 @@ Generated from [CONTRACT.md](../CONTRACT.md). Status reports implementation and 
 | Clauses | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
 | Published | 9 | 3 | 0 | 12 |
-| Target and push further | 23 | 26 | 25 | 74 |
-| All | 32 | 29 | 25 | 86 |
+| Target and push further | 23 | 27 | 24 | 74 |
+| All | 32 | 30 | 24 | 86 |
 
 | Clause | Status | Evidence | Gap |
 | --- | --- | --- | --- |
@@ -19,7 +19,7 @@ Generated from [CONTRACT.md](../CONTRACT.md). Status reports implementation and 
 | WORK-007 | partial | `src/crank/tables/state.ts`; `src/crank/tables/api.ts`; `tests/logic.test.mjs` (WORK-007: owner-only operational tables serialize ten runs and list pops with receipts and inactive erasure-safe restore); `tests/table-state-journey.mjs` (standalone exact-SHA concurrency journey); `tests/run-notices-browser.mjs` (atomic result at 1440/390) | Operational integers/lists only; general and sensitive records, forms and public challenge/spam/embed paths, record triggers/watched fields/buttons, find-or-create and isolated test bindings remain unbuilt. Owner-only non-sensitive state/adoption/erasure default awaits ct approval. |
 | WORK-008 | done | `src/crank/workflows/store.ts`; `src/crank/workflows/testing.ts`; `src/crank/workflows/drafts.ts`; `src/crank/workflows/comparison.ts`; `src/crank/engine/test-authority.ts`; `src/crank/engine/authority.ts`; `migrations/core/0037_draft_tests.sql`; `tests/logic.test.mjs`; `tests/deployment.test.mjs`; `tests/version-comparison.test.mjs`; `tests/ops.test.mjs` (WORK-008: immutable snapshots, explicit bindings, live confirmation, test history/audit, production exclusions, in-flight version retention, promotion, rollback and inactive restore) |  |
 | WORK-009 | partial | `src/crank/engine/steps/collect.ts`; `src/crank/ops/collect-deadlines.ts`; `tests/logic.test.mjs` (WORK-009: typed native questions survive restart, answer once and preserve calendar, timeout and inactive custody); `tests/collect-journey.mjs`; `tests/run-notices-browser.mjs` (collect answer forms at 1440/390) | File fields, role/person/external-link assignment, rich typed controls, Slack/Teams/Nook/mobile-push contacts and full authorized-provider journey remain; native owner-only answer default awaits ct approval. |
-| WORK-010 | missing |  | No delivered product workflow. |
+| WORK-010 | partial | `src/crank/engine/steps/digest.ts`; `tests/logic.test.mjs` (WORK-010: durable named digest releases survive concurrency, Chicago DST and inactive restore); `tests/digest-journey.mjs` (seven leads, restart, one scheduled Slack edge message, empty find, concurrent append and release, DST, weekly and monthly schedules, count and manual keep, empty policies, authority refusals, complete inactive records, retention and erasure); `tests/digest-browser.mjs` (release history at 1440 and 390; tooltip assertions at 1440); `tests/ownership.test.mjs` (owned execution); `docs/DIGESTS.md` | Actual held-Slack readback is pending: SLACK_BOT_TOKEN is not provisioned in cloud. Authorized weekly Digest Zap export, native coverage and parity remain held on the Zapier account and MIG-002. Sensitive-class sealing and restored-digest adoption remain unimplemented; those paths are refused. |
 | WORK-011 | partial | `src/crank/engine/search.ts`; `src/crank/connectors/slack.ts`; `tests/connections.test.mjs` | Only Slack searches exist; no WORK-007 tables, CONN-011 connectors or migration; HubSpot acceptance needs an account. |
 | WORK-012 | partial | `src/crank/engine/transforms/index.ts`; `tests/logic.test.mjs` | Lookup backed by WORK-007 tables; preview on WORK-014 real samples (manual sample only); MIG-001, MIG-002 and MIG-003 mappings. |
 | WORK-013 | partial | `src/crank/engine/conditions.ts`; `src/crank/engine/executor.ts`; `tests/logic.test.mjs` | Editor preview on WORK-014 samples; MIG-001, MIG-002 and MIG-003 operator mappings. |

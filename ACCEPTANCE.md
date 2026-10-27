@@ -94,13 +94,13 @@ Remaining gap: File fields, role/person/external-link assignment, rich typed con
 
 ## WORK-010 — Digest steps that collect across runs
 
-Status: missing.
+Status: partial.
 
 A digest step accumulates entries across many runs and releases them together. Each digest has a name, an entry template (text, or structured fields kept as a list) and a release rule: daily, weekly or monthly at a chosen time and day in an IANA timezone, when a count threshold is reached, or manual only. Steps can **append entry**, **find digest** (read the current entries and count without releasing) and **release now**; release either clears the digest or keeps its entries. Each release is one durable run with a stable occurrence identity, so a restart, redeploy or DST change neither drops nor double-releases a digest, and an entry appended during a release lands in exactly one release. The released text or list maps into later steps (a Slack post, an EXEC-007 email, a sheet row); entries keep their source run links, an empty digest follows a builder-chosen skip or send-empty policy, and digests have retention and erasure under DATA-002/DATA-003. DATA-001 applies before this capability ships: include its digest state in the versioned portable inventory and restore them without execution or receiving authority. **Acceptance evidence:** Publish a “new lead → append to Today’s leads” workflow with a daily 5 p.m. America/Chicago release to Slack; append 7 lead entries through the day, restart the service before 5 p.m. and verify one Slack message lists all 7 and a find-digest step then shows it empty; append during a release and verify the entry appears in exactly one release; cross a DST change with a daily digest and verify one release per day; release a manual-only digest on demand and verify a keep-entries release leaves its entries; migrate a Zap whose Digest by Zapier step uses a weekly schedule and verify the coverage report calls it native and its parity test passes. Export and restore these digest state, compare their full portable records and assert inactive receiving state under DATA-001.
 
-Current evidence: None recorded.
+Current evidence: `src/crank/engine/steps/digest.ts`; `tests/logic.test.mjs` (WORK-010: durable named digest releases survive concurrency, Chicago DST and inactive restore); `tests/digest-journey.mjs` (seven leads, restart, one scheduled Slack edge message, empty find, concurrent append and release, DST, weekly and monthly schedules, count and manual keep, empty policies, authority refusals, complete inactive records, retention and erasure); `tests/digest-browser.mjs` (release history at 1440 and 390; tooltip assertions at 1440); `tests/ownership.test.mjs` (owned execution); `docs/DIGESTS.md`
 
-Remaining gap: No delivered product workflow.
+Remaining gap: Actual held-Slack readback is pending: SLACK_BOT_TOKEN is not provisioned in cloud. Authorized weekly Digest Zap export, native coverage and parity remain held on the Zapier account and MIG-002. Sensitive-class sealing and restored-digest adoption remain unimplemented; those paths are refused.
 
 ## WORK-011 — Search steps: found, not found, several found, and find or create
 
