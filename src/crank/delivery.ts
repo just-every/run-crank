@@ -1,3 +1,4 @@
+import { completeGrant, workflowScope } from './team/policy'
 import { reportedResponse, assertReportedBudget } from './ops/usage-transport'
 import { demoEffect } from '../modules/demo/index.mjs'
 import { authority, guardedBatch, requireOwner } from './access'
@@ -27,15 +28,16 @@ async function validateSnapshot(env: CrankEnv, run: Run) {
  * revision/action, with a conditional claim in the same D1 transaction.
  * HTH jobs.ts claim pattern supplies the lease CAS, never a read-then-write claim. */
 async function claim(env: CrankEnv, actor: Actor, run: Run, replay: boolean): Promise<string> {
-  const at = now(), lease = id(), expires = new Date(Date.now() + acceptanceMs(1,DELIVERY_TIMEOUT_MS)).toISOString(), fence = authority(actor, 'owner')
+  const at = now(), lease = id(), expires = new Date(Date.now() + acceptanceMs(1,DELIVERY_TIMEOUT_MS)).toISOString(), fence = authority(actor, actor.team ? (replay?'operate':'read') : 'owner')
   const jobs: D1PreparedStatement[] = []
   if (!replay) {
+    requireValue(run.created_by!==actor.id,'You cannot approve your own run',403)
     requireValue(run.state === 'pending', 'Run is no longer awaiting approval', 409)
     const approval = id()
     jobs.push(stmt(env, `INSERT INTO crank_approvals(id,run_id,actor_id,session_id,decision,input_digest,action_digest,action_json,created_at)
       SELECT ?,r.id,?,?,'approve',r.input_digest,r.action_digest,r.action_json,? FROM crank_runs r
-      WHERE r.id=? AND r.state='pending' AND r.input_digest=? AND r.action_digest=? AND r.target_url=?
-      AND EXISTS(SELECT 1 FROM crank_usage_reservations u WHERE u.run_id=r.id AND u.workflow_id=r.flow_id) AND ${fence.sql}`, approval, actor.id, actor.sessionId, at, run.id, run.input_digest, run.action_digest, run.target_url, ...fence.args))
+      WHERE r.id=? AND r.created_by!=? AND r.state='pending' AND r.input_digest=? AND r.action_digest=? AND r.target_url=?
+      AND EXISTS(SELECT 1 FROM crank_usage_reservations u WHERE u.run_id=r.id AND u.workflow_id=r.flow_id) AND ${fence.sql}`, approval, actor.id, actor.sessionId, at, run.id, actor.id, run.input_digest, run.action_digest, run.target_url, ...fence.args))
     jobs.push(stmt(env, `UPDATE crank_runs SET state='running',lease_id=?,lease_expires_at=?,updated_at=?
       WHERE id=? AND state='pending' AND ${approvalMatch} AND ${usageMatch} AND EXISTS(SELECT 1 FROM crank_approvals WHERE id=?) AND ${fence.sql}`,
     lease, expires, at, run.id, approval, ...fence.args))
@@ -51,7 +53,7 @@ async function claim(env: CrankEnv, actor: Actor, run: Run, replay: boolean): Pr
   jobs.push(stmt(env, `INSERT INTO crank_attempts(id,run_id,number,started_at)
     SELECT ?,id,replay_count+1,? FROM crank_runs WHERE id=? AND state='running' AND lease_id=?`, lease, at, run.id, lease))
   jobs.push(auditStatementWhen(env, 'EXISTS(SELECT 1 FROM crank_attempts WHERE id=?)', [lease], actor.id, replay ? 'flow_run.replay' : 'flow_run.approve', 'flow_run', run.id, { attempt: lease }))
-  const result = await guardedBatch(env, actor, 'owner', jobs)
+  const result = await guardedBatch(env, actor, actor.team ? (replay?'operate':'read') : 'owner', jobs)
   requireValue(result[1].meta.changes === 1 && result[2].meta.changes === 1, 'Run changed or another caller claimed delivery', 409)
   return lease
 }
@@ -102,8 +104,10 @@ async function send(env: CrankEnv, run: Run, attemptId: string): Promise<Outcome
 }
 
 export async function deliverRun(env: CrankEnv, actor: Actor, runId: string, replay = false): Promise<Run> {
-  requireOwner(actor)
+  if(!actor.team) requireOwner(actor)
+  else requireValue(completeGrant(actor,replay?'replay':'approve'),'A complete decision grant is required',403)
   const run = await getRun(env, runId)
+  workflowScope(actor,run.flow_id)
   requireValue(!run.outcome_json || JSON.parse(run.outcome_json).code !== 'restore_fence', 'Restored delivery history has no replay authority. Reconcile the destination and prepare a fresh run.', 409)
   requireValue(!(run as Run & { payload_expired_at?: string | null }).payload_expired_at, 'This run’s input expired under the retention policy, so it cannot be replayed. Prepare a fresh run.', 409)
   requireValue(await stmt(env, 'SELECT 1 FROM crank_usage_reservations WHERE run_id=? AND workflow_id=?', run.id, run.flow_id).first(),

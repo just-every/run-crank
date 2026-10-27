@@ -69,7 +69,7 @@ try {
     await pause(1000);
   }
   assert.ok(open, 'rer dev readiness deadline');
-  browser = await chromium.launch({ headless: true, args: ['--use-mock-keychain', '--password-store=basic'] });
+  browser = await chromium.launch({ headless: true, ...(process.platform==='linux'?{executablePath:'/usr/bin/chromium'}:{}), args: ['--use-mock-keychain', '--password-store=basic', ...(process.platform==='linux'?['--no-sandbox']:[])] });
   const owner = await browser.newContext(); page = await owner.newPage();
   await page.goto(open);
   await page.waitForURL(url => ['/app', '/setup'].includes(url.pathname), { timeout: 60000 });
@@ -122,6 +122,14 @@ try {
     const policies=await send('team');const saved=policies.find(p=>p.operator_id===dana.id);
     assert.equal(saved.role,'builder');assert.deepEqual(saved.workflow_ids,[workflow.id]);assert.deepEqual(saved.connection_ids,[connection.id]);
     await shot(width,'scope-saved');
+    const add=page.locator('form').filter({has:page.locator(`input[name="path"][value="/api/crank/team/${dana.id}"]`)});
+    await add.locator('..').locator('summary').click();
+    await add.locator('select[name="grant_mode"]').selectOption('add');
+    await add.locator('select[name="role"]').selectOption('viewer');
+    await add.getByRole('button').click();await page.waitForURL('**/app/access');
+    const union=(await send('team')).find(p=>p.operator_id===dana.id);assert.deepEqual(union.grants.map(g=>g.role),['builder','viewer']);
+    await shot(width,'explicit-grants');
+    const search=page.getByRole('link',{name:'Search runs',exact:true});await search.focus();await expect(page.locator('#search-tooltip')).toBeVisible();await search.blur();
     const builderSend=async(path,body,expected=201)=>{
       const response=await builderContext.request.post(origin+'/api/crank/'+path,{headers:{origin},data:body});
       const result=await response.json();assert.equal(response.status(),expected,result.error);return result;
