@@ -12,15 +12,32 @@ export const dateTransforms: Record<string, Transform> = {
     const ms = n8nDateValue(args.value), tz = zone(args), amount = integer(args, 'amount'), unit = requireUnit(args.unit)
     const field = args.field
     if (ms === null || ms === undefined || new Date(ms).getUTCFullYear() < 100 || Math.abs(amount) > 10000 || unit === 'business_days' || typeof field !== 'string' || !/^[_A-Za-z][_A-Za-z0-9]*$/.test(field) || ['__proto__', 'constructor', 'prototype'].includes(field) || typeof args.include_input_fields !== 'boolean') throw new StepError('validation', 'Source date arithmetic requires a bounded ISO date, duration and output field')
+    const calendarUnit = ['years', 'months', 'weeks', 'days'].includes(unit), start = wallTime(ms, tz)
+    const rangeError = () => new StepError('validation', 'Source date arithmetic is outside the supported calendar range')
+    if (start.year < 100 || start.year > 9999) throw rangeError()
+    if (calendarUnit) {
+      // The native calendar uses Date.UTC, which interprets years below 100
+      // as twentieth-century years. Refuse a crossing before that conversion.
+      const target = new Date(0)
+      if (unit === 'years' || unit === 'months') target.setUTCFullYear(start.year, start.month - 1 + amount * (unit === 'years' ? 12 : 1), 1)
+      else target.setUTCFullYear(start.year, start.month - 1, start.day + amount * (unit === 'weeks' ? 7 : 1))
+      if (target.getUTCFullYear() < 100 || target.getUTCFullYear() > 9999) throw rangeError()
+    }
+    const wholeMinuteOffset = (value: number) => {
+      const w = wallTime(value, tz)
+      return (Date.UTC(w.year, w.month - 1, w.day, w.hour, w.minute, w.second, w.millisecond) - value) % 60000 === 0
+    }
+    if (!wholeMinuteOffset(ms)) throw new StepError('validation', 'Source date arithmetic does not support historical sub-minute timezone offsets')
     let next = addTime(ms, amount, unit, tz)
-    if (['years', 'months', 'weeks', 'days'].includes(unit)) {
+    if (calendarUnit) {
       // At an autumn overlap the source keeps the starting offset when that
       // offset still describes the target wall time, including a zero duration.
       const preferred = next + (offsetMinutes(next, tz) - offsetMinutes(ms, tz)) * 60000
       const a = wallTime(next, tz), b = wallTime(preferred, tz)
       if (a.year === b.year && a.month === b.month && a.day === b.day && a.hour === b.hour && a.minute === b.minute && a.second === b.second) next = preferred
     }
-    if (!Number.isFinite(next) || new Date(next).getUTCFullYear() < 100 || new Date(next).getUTCFullYear() > 9999) throw new StepError('validation', 'Source date arithmetic is outside the supported calendar range')
+    if (!Number.isFinite(next) || new Date(next).getUTCFullYear() < 100 || new Date(next).getUTCFullYear() > 9999 || wallTime(next, tz).year < 100 || wallTime(next, tz).year > 9999) throw rangeError()
+    if (!wholeMinuteOffset(next)) throw new StepError('validation', 'Source date arithmetic does not support historical sub-minute timezone offsets')
     // Source DateTime stringification always retains milliseconds. Calendar
     // units use the workflow zone; hours and smaller units use elapsed time.
     const iso = formatDate(next, 'iso', tz), milliseconds = String(((next % 1000) + 1000) % 1000).padStart(3, '0')

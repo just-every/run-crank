@@ -299,6 +299,8 @@ or supported data path, `duration` is a literal whole number from -10000 to 1000
 seconds (default days). An explicit workflow timezone is required. Inputs must
 be ISO timestamps with an explicit offset, within years 0100 through 9999;
 invalid or unsupported dates fail with a named error before destination writes.
+Crossing outside that year range and historical sub-minute timezone offsets
+are refused before writing, rather than approximated by the native calendar.
 Calendar units preserve wall time and clamp month ends, while hours and smaller
 units measure elapsed time. At a repeated hour the starting offset is retained
 when possible; skipped wall times move forward. Output uses source ISO spelling

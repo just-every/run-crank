@@ -86,9 +86,12 @@ export async function n8nDateTimeJourney() {
    assert.equal(run.status,'succeeded',JSON.stringify({index,error:run.error}));assert.equal(writes.length,before+1);assert.deepEqual(writes.at(-1),expectedBody,'complete destination payload must preserve source output and retention semantics');assert.deepEqual(run.steps.find(step=>step.step_id==='n3').output.body,{stored:expectedBody},'destination readback must match');assert.deepEqual(run.steps.find(step=>step.step_id==='n2').output,expectedBody);
   }
   await h.restart();
-  for(const date of ['2026-02-30T12:00:00Z','2026-01-01T25:00:00Z','2026-01-01T12:00:00+25:00','2026-03-08T12:00:00','9999-12-31T12:00:00Z','0001-01-31T12:00:00Z','03-08-2026','synthetic-crank-invalid','',null]) {
+  for(const date of ['2026-02-30T12:00:00Z','2026-01-01T25:00:00Z','2026-01-01T12:00:00+25:00','2026-03-08T12:00:00','9999-12-31T12:00:00Z','0001-01-31T12:00:00Z','1800-01-31T12:00:00Z','03-08-2026','synthetic-crank-invalid','',null]) {
    const before=writes.length,sent=await deliver(h,firstHook.url,{method:'POST',headers:{'content-type':'application'+'/'+'json'},body:JSON.stringify({date})});const run=await settled(h,sent.value.run_id);assert.equal(run.status,'failed');assert.ok(['validation','type_mismatch'].includes(run.error.category));assert.equal(writes.length,before,'invalid date must produce no destination write');assert.ok(!run.steps.some(step=>step.step_id==='n3'&&step.status==='succeeded'));
   }
+  const countBeforeRange=writes.length,rangeHook=hooks.get(caseSources[3].id);
+  const crossed=await deliver(h,rangeHook.url,{method:'POST',headers:{'content-type':'application'+'/'+'json'},body:JSON.stringify({date:'0100-02-28T12:00:00Z'})});
+  const rangeRun=await settled(h,crossed.value.run_id);assert.equal(rangeRun.status,'failed');assert.equal(rangeRun.error.category,'validation');assert.match(rangeRun.error.message,/calendar range/);assert.equal(writes.length,countBeforeRange,'crossing below the supported year must not wrap into the twentieth century');
   const saved=await archive(h),original=inventory(saved),count=writes.length,restored=await harness(target,{edge});
   try {
    await restored.post('data'+'/restore',{archive:saved,confirm:'RESTORE'});const receiving=inventory(await archive(restored));assert.deepEqual(original.filter(row=>!receiving.includes(row)),[],'all portable records survive intact');assert.deepEqual(receiving.filter(row=>!original.includes(row)).map(row=>[JSON.parse(row).table,JSON.parse(row).row.action]),[['crank_audit','data.restore']]);
