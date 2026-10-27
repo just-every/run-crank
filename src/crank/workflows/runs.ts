@@ -33,7 +33,7 @@ export const TEXT_SEARCH = 'Text search does not reach encrypted payloads of cus
 export const canReadPayload = (actor: Actor) => actor.team ? ['admin','builder','operator'].includes(actor.team.role) : actor.role === 'owner' || actor.role === 'admin' || actor.kind === 'agent'
 const BUSINESS_COMPLETE = `status='succeeded' AND EXISTS(SELECT 1 FROM crank_obligations o WHERE o.run_id=crank_wf_runs.id) AND NOT EXISTS(SELECT 1 FROM crank_obligations o WHERE o.run_id=crank_wf_runs.id AND o.verified_at IS NULL) AND NOT EXISTS(SELECT 1 FROM crank_wf_steps s WHERE s.run_id=crank_wf_runs.id AND (s.status='uncertain' OR COALESCE(json_extract(s.error_json,'$.category'),'')='uncertain'))`
 function presentRun(run: RunRow & { business_complete?: number }, payload: boolean) {
-  const base = { id: run.id, mode: run.mode ?? 'production', workflow_id: run.workflow_id, version_id: run.version_id, trigger_kind: run.trigger_kind, business_outcome: run.business_complete ? 'owner_verified' : 'unverified', status: run.business_complete ? 'business_complete' : run.status === 'failed' && run.error_json && JSON.parse(run.error_json).category === 'uncertain' ? 'uncertain' : run.status, business_key: run.business_key,
+  const base = { id: run.id, mode: run.mode ?? 'production', workflow_id: run.workflow_id, version_id: run.version_id, trigger_kind: run.trigger_kind, business_outcome: run.business_complete ? 'owner_verified' : 'unverified', status: run.business_complete ? 'business_complete' : run.status === 'failed' && run.error_json && JSON.parse(run.error_json).category === 'uncertain' ? 'uncertain' : run.status, business_key: payload ? run.business_key : null,
     source_id: payload ? run.source_id : null, source_time: run.source_time, payload_expired_at: (run as { payload_expired_at?: string | null }).payload_expired_at ?? null, received_at: run.received_at, started_at: run.started_at, finished_at: run.finished_at,
     latency_ms: run.started_at ? Date.parse(run.started_at) - Date.parse(run.received_at) : null, error: run.error_json ? (payload ? JSON.parse(run.error_json) : { category: JSON.parse(run.error_json).category, message: 'Details restricted for your role' }) : null }
   return payload ? { ...base, trigger: JSON.parse(run.trigger_json), response: run.response_json ? JSON.parse(run.response_json) : null } : { ...base, payload: 'restricted' }
@@ -127,7 +127,7 @@ export function stepAt(graph: Graph, path: string): Step | null {
  * only the step's editable fields; edits are re-validated against its caps. */
 export async function decideApproval(env: CrankEnv, actor: Actor, runId: string, decision: 'approve' | 'reject', input: Record<string, unknown>) {
   const path = String(input.path ?? '')
-  await assertReviewer(env, actor, runId, path)
+  await assertReviewer(env, actor, runId, path, decision==='reject')
   await collectDeadlines(env, Date.now(), runId)
   const wait = await stmt(env, "SELECT w.*,(SELECT type FROM crank_wf_steps s WHERE s.run_id=w.run_id AND s.path=w.path) AS step_type FROM crank_waits w WHERE run_id=? AND path=? AND kind='approval'", runId, path).first<{ proposal_json: string; proposal_digest: string; resolved_at: string | null; step_type: string }>()
   requireValue(wait, 'No approval is waiting at that step', 404)
@@ -158,7 +158,7 @@ export async function decideApproval(env: CrankEnv, actor: Actor, runId: string,
   } else resolution = { approved: false, original, reviewer: actor.id, reason: reason ?? 'rejected', decided_at: now() }
   const sessionFence=authority(actor,run!.grant_id || actor.team ? 'read':'owner')
   const executionFence=run!.grant_id ? grantFence(env,run!.grant_id,run!.workflow_id,run!.version_id) : {sql:'1',args:[]}
-  const selfFence = actor.team ? {sql:'EXISTS(SELECT 1 FROM crank_wf_runs WHERE id=? AND created_by!=?)',args:[runId,actor.id]} : {sql:'1',args:[]}
+  const selfFence = decision==='approve' && step.type !== 'collect' ? {sql:'EXISTS(SELECT 1 FROM crank_wf_runs WHERE id=? AND created_by!=?)',args:[runId,actor.id]} : {sql:'1',args:[]}
   const guard={sql:`(${sessionFence.sql}) AND (${executionFence.sql}) AND (${selfFence.sql})`,args:[...sessionFence.args,...executionFence.args,...selfFence.args]}
   const resolved = await resolveWait(env, runId, path, resolution, actor.id, { digest: wait.proposal_digest,guard,
     audit: auditStatementWhen(env,"changes()=1",[],actor.id,step.type === 'collect' ? 'collect.answer' : decision==='approve'?'run.approve':'run.reject','run',runId,{path,edited:resolution.edited??false,reason},run!.version_id)

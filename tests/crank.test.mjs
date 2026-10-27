@@ -32,6 +32,11 @@ after(async()=>{await h?.close();if(receiver)await new Promise(r=>receiver.close
 
 // The owner invites a person; they accept through the emailed link (the mail provider is the faked edge).
 async function join(role,email=`${role}-${crypto.randomUUID().slice(0,8)}@example.test`){
+ if(role==='owner') {
+  assert.equal((await h.send('/auth/step-up',{action:'owner:transfer'},h.owner)).status,202);
+  const proof=new URL(h.mail.at(-1).html.match(/href="([^"]*\/auth\/confirm\?token=[^"]+)"/)[1].replaceAll('&amp;','&'),h.origin).searchParams.get('token');
+  assert.equal((await h.send('/auth/confirm',{token:proof},h.owner)).status,303);
+ }
  const invited=await h.send('/auth/invite',{email,displayName:role,role},h.owner);assert.equal(invited.status,202,invited.text);
  const message=h.mail.findLast(message=>message.to.includes(email));
  const token=new URL(message.html.match(/href="([^"]*\/auth\/confirm\?token=[^"]+)"/)[1].replaceAll('&amp;','&'),h.origin).searchParams.get('token');
@@ -39,7 +44,7 @@ async function join(role,email=`${role}-${crypto.randomUUID().slice(0,8)}@exampl
  return {cookie:joined.cookie,id:(await h.get('state',joined.cookie)).actor.id};
 }
 
-test('native owner sign-in, admin preparation and member read-only roles apply at each HTTP door',async()=>{
+test('native sign-in grants no implicit Base-role product access; owner doors stay protected',async()=>{
  await h.get('state','',401);
  for(const role of ['admin','member']) {
   const {cookie}=await join(role,role+'@example.test');
@@ -47,7 +52,7 @@ test('native owner sign-in, admin preparation and member read-only roles apply a
   const f=await h.flow('Role boundary '+role),r=await h.run(f);
   for(const path of [`flows/${f.id}/activate`,`flows/${f.id}/pause`,`runs/${r.id}/approve`,`runs/${r.id}/reject`,`runs/${r.id}/replay`,'tokens','data/export','data/restore','data/erase']) await h.post(path,{},cookie,403);
   for(const action of ['uploads','plan','apply','undo']) assert.equal((await door(h,action,{},cookie)).status,401,`${role} cannot use the import door`);
-  await h.post('flows',{name:'Prepared by '+role,source_app:'Support desk',destination_app:'Inbox',target_url:target+'/events'},cookie,role==='admin'?201:403);
+  await h.post('flows',{name:'Prepared by '+role,source_app:'Support desk',destination_app:'Inbox',target_url:target+'/events'},cookie,403);
  }
  const csrf=await h.send('/api/crank/flows',{name:'CSRF'},h.owner,{origin:'https://foreign.example'});assert.equal(csrf.status,403);
  assert.equal((await h.send('/api/crank/data/export',{},h.owner,{origin:'https://foreign.example'})).status,403);assert.equal((await door(h,'plan',{},h.owner,{origin:'https://foreign.example'})).status,403);
@@ -95,7 +100,8 @@ test('SEC-001: private doors need a current session or scoped credential, access
   assert.equal(response.status,403,text);assert.match(text,/Authority changed/);
   assert.ok(!(await h.get()).flows.some(flow=>flow.name===name),name+' created nothing');
  };
- await admitted('SEC-001 admitted before sign-out',{cookie:admin.cookie},async()=>assert.equal((await h.send('/auth/signout',{},admin.cookie)).status,204));
+ const second=await join('owner');
+ await admitted('SEC-001 admitted before sign-out',{cookie:second.cookie},async()=>assert.equal((await h.send('/auth/signout',{},second.cookie)).status,204));
  await admitted('SEC-001 admitted before token revocation',{authorization:'Bearer '+agent.token},()=>h.post('tokens/'+agent.id+'/revoke'));
 });
 
