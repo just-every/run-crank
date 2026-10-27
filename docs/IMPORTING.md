@@ -244,7 +244,7 @@ Source code never runs during parsing or planning. An owner can supply an explic
 reviewed native replacement for a provisioned executor as described below. A
 manual disposition records remaining work; it does not satisfy eventual conversion.
 Strict Filter nodes preserve the preceding item when conditions pass and end as
-`stopped by filter` otherwise. Text comparisons preserve whitespace. Unmapped operators and loose object parsing block conversion.
+`stopped by filter` otherwise. Text comparisons preserve whitespace. Unmapped operators and object syntax outside the documented data grammar block conversion.
 
 Switch versions 3 through 3.5 accept strict `mode: "rules"`, the same condition
 groups, and one destination per output. `allMatchingOutputs` preserves first-match
@@ -262,8 +262,22 @@ array membership and length, object emptiness and typed existence operators pres
 source null handling and whitespace. AND and OR groups short circuit, as do exclusive
 Switch outputs. Case handling follows the source condition version, including the
 version 4 regular-expression flag behavior. Loose conversion is supported for numbers, text, booleans and arrays, including
-source-version boolean truthiness and version 3 empty-number handling. Loose object
-syntax remains an explicit manual conversion. DateTime conditions accept ISO
+source-version boolean truthiness and version 3 empty-number handling. Loose object conversion uses retained `data-v1` grammar metadata with condition
+versions 1 through 4: a JSON object or null, with single-quoted strings, ASCII
+identifier keys and trailing commas also accepted. Values may contain nested
+objects and arrays, finite JSON numbers, booleans, null and strings with JSON
+escapes or an escaped single quote. Duplicate keys keep their last value. Text
+is bounded to 16,384 code units, nesting to 16 levels and values to 1,000 nodes.
+An existing object passes through; a missing value and null stay distinct in the
+retained operands, an empty object exists, and empty text is a type mismatch.
+Both operand types are checked unless `singleValue` omits the right operand.
+AND, OR and first-match output evaluation preserve short-circuit order.
+Unsupported literal syntax stays a named manual conversion during review;
+unsupported dynamically received syntax produces a named type mismatch before
+any downstream request. Comments, computed keys, shorthand, bare identifier
+values, methods, calls, property access, template strings, regular expressions,
+non-finite numbers, sparse arrays and additional source expressions are outside
+this grammar. Source text is parsed only as data and is never evaluated. DateTime conditions accept ISO
 timestamps with an explicit UTC or numeric offset and compare absolute instants.
 Missing or null timestamps preserve source empty and comparison behavior; malformed
 or local timestamps fail before dispatch. Local-date inference, non-ISO source

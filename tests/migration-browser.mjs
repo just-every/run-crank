@@ -6,6 +6,7 @@ import {join,resolve,extname} from 'node:path';
 import {harness} from './harness.mjs';
 import {chromium} from '@playwright/test';
 import {createHash} from 'node:crypto';
+import {looseObjectExport} from './n8n-conditions-journey.mjs';
 import {fakeSecret} from './kit.mjs';
 const canonical=value=>value===null||typeof value!=='object'?JSON.stringify(value):Array.isArray(value)?'['+value.map(canonical).join(',')+']':'{'+Object.keys(value).sort().map(key=>JSON.stringify(key)+':'+canonical(value[key])).join(',')+'}';
 const digest=value=>createHash('sha256').update(value).digest('hex');
@@ -28,7 +29,7 @@ try {
   res.writeHead(response.status,Object.fromEntries(response.headers));res.end(Buffer.from(await response.arrayBuffer()));
  }catch{res.writeHead(500);res.end('Browser fixture transport failed')}});
  await new Promise(r=>server.listen(Number(new URL(origin).port),'127.0.0.1',r));
- browser=await chromium.launch({headless:true,args:['--use-mock-keychain','--password-store=basic']});const context=await browser.newContext();
+ browser=await chromium.launch({headless:true,...(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH?{executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH}:{}),args:['--use-mock-keychain','--password-store=basic','--no-sandbox']});const context=await browser.newContext();
  const cookie=h.owner.indexOf('=');await context.addCookies([{name:h.owner.slice(0,cookie),value:h.owner.slice(cookie+1),url:origin}]);page=await context.newPage();
  await page.goto(origin+'/setup');if(new URL(page.url()).pathname==='/setup'){await page.getByRole('checkbox').check();await page.getByRole('button',{name:'Finish setup',exact:true}).click();await page.waitForURL('**/app')}
  const send=async(path,body,status=200)=>{const r=await context.request.fetch(origin+'/api/crank/'+path,{method:body===undefined?'GET':'POST',headers:{origin},...(body===undefined?{}:{data:body})});const v=await r.json();assert.equal(r.status(),status,path+': '+(v.error??'unexpected status'));return v};
@@ -96,12 +97,13 @@ try {
 
  await page.setViewportSize({width:1440,height:1000});await page.goto(origin+'/app/import');
  const sourceEnvelope=streamLoopEnvelope(declared,'synthetic-crank-72'),source=sourceEnvelope.workflow;source.nodes[3].parameters.batchSize=2;
+ const objectSource=looseObjectExport(declared,'synthetic-crank-object-browser');
  const driftSources=[conversionExport('registry','synthetic-crank-84'),conversionExport('code','synthetic-crank-85')],driftBundle=driftSources.map((workflow,index)=>({workflow,conversions:{n1:index?codeChoice:registryChoice}}));
  const shots=async state=>{for(const width of [1440,390]){await page.setViewportSize({width,height:1000});await shot(width,state)}};
  // Stage the protected-undo fixtures together while every imported target is an
  // unused draft. Publication later deliberately fences this retained plan;
  // planning another import against that used native inventory is not this test.
- await page.getByLabel('Workflow export JSON').fill(JSON.stringify([sourceEnvelope,...driftBundle]));await page.getByRole('button',{name:'Upload and plan',exact:true}).click();await page.waitForLoadState('networkidle');
+ await page.getByLabel('Workflow export JSON').fill(JSON.stringify([sourceEnvelope,...driftBundle,objectSource]));await page.getByRole('button',{name:'Upload and plan',exact:true}).click();await page.waitForLoadState('networkidle');
  assert.equal(await page.getByRole('button',{name:'Approve this plan',exact:true}).count(),1);await page.getByText(/Supported fields/).click();assert.ok((await page.locator('body').innerText()).includes('distinct linear done path'));await shots('done-review');
  const driftPlan=await reviewedPlan();
  await page.getByRole('button',{name:'Approve this plan',exact:true}).click();await page.waitForLoadState('networkidle');
@@ -132,6 +134,26 @@ try {
  await page.goto(origin+'/app/import');const refusedResponse=page.waitForResponse(response=>new URL(response.url()).pathname==='/app/import/undo'&&response.request().method()==='POST');await page.locator('form[action="/app/import/undo"]').filter({has:page.locator('input[name="planId"][value="'+driftPlan.planId+'"]')}).getByRole('button').click();assert.ok((await refusedResponse).status()>=400,'native drift must refuse the exact conversion undo');await page.waitForLoadState('networkidle');await shots('envelope-drift-undo-refused');
  const afterRefusal=await send('workflows/'+driftCode.id);assert.equal(afterRefusal.name,changed.name);assert.equal(afterRefusal.updated_at,changed.updated_at);assert.deepEqual(afterRefusal.draft,changed.draft);assert.deepEqual((await send('workflows/'+driftRegistry.id)).draft,preserved.draft,'refused undo must preserve the companion registry graph');assert.equal((await send('workflow-runs/'+run.id)).status,'succeeded','refused retained-plan undo must preserve completed source work');
  console.log('MIG-001 1440 and 390: retained conversion envelopes, owner-reviewed registry and code provenance, inactive native drafts, exact unused undo and native drift refusal passed');
+
+ const objectWorkflow=(await send('workflows')).find(row=>row.name===objectSource.name),objectDraft=await send('workflows/'+objectWorkflow.id);
+ assert.equal(objectDraft.status,'draft');assert.equal(objectDraft.hooks.length,0);assert.equal(objectDraft.versions.length,0);
+ const conditionStep=objectDraft.draft.steps.find(step=>step.fn==='n8n.conditions');assert.ok(conditionStep);
+ await send('workflows/'+objectWorkflow.id+'/estimate',{cost:{components:['orchestration','connectors','models','executors'].map(kind=>({kind,usd_per_run:'0',assumption:'Synthetic receiver browser proof'}))}});
+ await send('workflows/'+objectWorkflow.id+'/publish',{},201);const objectHook=await send('workflows/'+objectWorkflow.id+'/hooks',{},201);
+ for(const [value,expected,path]of [["{customer: 'synthetic-crank-730', items: [null, true,],}",true,'/object-present'],['{}',false,'/object-empty']]){
+  const before=effects.length,response=await context.request.post(objectHook.url,{data:{value}});assert.equal(response.status(),200);const admitted=await response.json();let result;
+  for(let tries=0;tries<100;tries++){result=await send('workflow-runs/'+admitted.run_id);if(!['running','queued'].includes(result.status))break;await new Promise(resolve=>setTimeout(resolve,50))}
+  assert.equal(result.status,'succeeded');assert.equal(effects.length,before+1);assert.equal(effects.at(-1).path,path);assert.deepEqual(effects.at(-1).input.body,{value});assert.deepEqual(result.steps.find(step=>step.type==='paths').output.matched,[expected?'yes':'fallback']);
+  await page.setViewportSize({width:1440,height:1000});await page.goto(origin+'/app/workflows/'+objectWorkflow.id+'?step='+conditionStep.id+'&tab=data');
+  const input=JSON.parse(await page.locator('.inspector-block').filter({has:page.getByRole('heading',{name:'Input',exact:true})}).locator('pre').innerText());
+  const output=JSON.parse(await page.locator('.inspector-block').filter({has:page.getByRole('heading',{name:'Output',exact:true})}).locator('pre').innerText());
+  assert.equal(input.inputs.g0.c0.left,value);assert.equal(input.sets[0].objectConversion,'data-v1');assert.deepEqual(output,[expected]);
+  await shots(expected?'loose-object-operands-present':'loose-object-operands-empty');
+  await page.setViewportSize({width:1440,height:1000});await page.goto(origin+'/app/workflow-runs/'+result.id);await page.locator('.timeline details.inline-disclosure').evaluateAll(elements=>elements.forEach(element=>element.open=true));
+  assert.ok((await page.locator('.timeline').innerText()).includes(expected?'true':'false'));
+  await shots(expected?'loose-object-branch-present':'loose-object-branch-empty');
+ }
+ console.log('WORK-013: reviewed loose-object operands, data grammar provenance, exact branch results and receiver outcomes inspected at 1440 and 390');
 
  await context.close();
 }catch(error){if(page){await page.screenshot({path:join(evidence,'journey-error.png'),fullPage:true});console.error((await page.locator('body').innerText()).slice(0,800))}console.error(String(error.message).replace(/https?:\/\/\S+/g,'[redacted URL]'));process.exitCode=1}

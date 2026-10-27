@@ -14,8 +14,16 @@ function regex(pattern: string, subject: string, ignoreCase: boolean): boolean {
 }
 
 function test(condition: N8nCondition, input: unknown, set: N8nConditionSet): boolean {
-  const operands = isObject(input) ? input : {}, left = normalizeN8nConditionValue(operands.left, condition.type, set.strict, set.version)
-  const right = condition.singleValue ? undefined : normalizeN8nConditionValue(operands.right, condition.rightType, set.strict, set.version)
+  const operands = isObject(input) ? input : {}
+  const normalize = (operand: 'left' | 'right', type: string) => {
+    try { return normalizeN8nConditionValue(operands[operand], type, set.strict, set.version) }
+    catch (error) {
+      if (error instanceof StepError && error.category === 'type_mismatch') throw new StepError('type_mismatch', `Condition ${operand} operand cannot be converted to ${type}`, { operand, declared_type: type })
+      throw error
+    }
+  }
+  const left = normalize('left', condition.type)
+  const right = condition.singleValue ? undefined : normalize('right', condition.rightType)
   const { type, operation } = condition, exists = left !== undefined && left !== null && !Number.isNaN(left)
   if (operation === 'exists') return exists
   if (operation === 'notExists') return !exists
@@ -101,20 +109,28 @@ function test(condition: N8nCondition, input: unknown, set: N8nConditionSet): bo
   throw new StepError('validation', 'Unsupported condition operator')
 }
 
-/** Strict source conditions short circuit within groups and across exclusive outputs. */
+/** Source conditions short circuit within groups and across exclusive outputs. */
 export function n8nConditions(args: Args): boolean[] {
   if (!Array.isArray(args.sets) || !args.sets.length || args.sets.length > 25 || !isObject(args.inputs) || typeof args.all_matching !== 'boolean') throw new StepError('validation', 'Invalid condition groups')
   const inputs = args.inputs, sets = args.sets as N8nConditionSet[]
   for (const set of sets) {
     if (!isObject(set) || !['and', 'or'].includes(set.combinator) || typeof set.caseSensitive !== 'boolean' || typeof set.strict !== 'boolean' || ![1, 2, 3, 4].includes(set.version) || !Array.isArray(set.conditions) || set.conditions.length > 50) throw new StepError('validation', 'Invalid condition group')
+    if (set.objectConversion !== undefined && set.objectConversion !== 'data-v1') throw new StepError('validation', 'Unsupported object conversion grammar')
     for (const condition of set.conditions) {
-      if (!isObject(condition) || !Object.hasOwn(N8N_CONDITION_OPERATIONS, condition.type) || !N8N_CONDITION_OPERATIONS[condition.type].includes(condition.operation) || typeof condition.singleValue !== 'boolean') throw new StepError('validation', 'Unsupported condition operator')
+      if (!isObject(condition) || !Object.hasOwn(N8N_CONDITION_OPERATIONS, condition.type) || !N8N_CONDITION_OPERATIONS[condition.type].includes(condition.operation) || typeof condition.singleValue !== 'boolean' || !['string', 'number', 'boolean', 'array', 'object', 'any', 'dateTime'].includes(condition.rightType)) throw new StepError('validation', 'Unsupported condition operator')
+      if (!set.strict && (condition.type === 'object' || condition.rightType === 'object') && set.objectConversion !== 'data-v1') throw new StepError('validation', 'Loose object conditions require a versioned conversion grammar')
     }
   }
   const results = sets.map(() => false)
   for (const [group, set] of sets.entries()) {
     const operands = isObject(inputs['g' + group]) ? inputs['g' + group] as Record<string, unknown> : {}
-    const conditionPass = (condition: N8nCondition, index: number) => test(condition, operands['c' + index], set)
+    const conditionPass = (condition: N8nCondition, index: number) => {
+      try { return test(condition, operands['c' + index], set) }
+      catch (error) {
+        if (error instanceof StepError) throw new StepError(error.category, error.message, { ...error.detail, group_index: group, condition_index: index })
+        throw error
+      }
+    }
     results[group] = set.combinator === 'and' ? set.conditions.every(conditionPass) : set.conditions.some(conditionPass)
     if (results[group] && !args.all_matching) break
   }
