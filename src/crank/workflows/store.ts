@@ -121,7 +121,7 @@ export async function updateDraft(env: CrankEnv, actor: Actor, workflowId: strin
   const metadata = { name: input.name === undefined ? current.name : text(input.name, 'name'), description: input.description === undefined ? current.description : description(input.description),
     folder: input.folder === undefined ? current.folder : folder(input.folder), settings: isObject(input.settings) ? input.settings : JSON.parse(current.settings_json) }
   const destination=await workflowFolder(env,actor,(current as WorkflowRow & {environment:string}).environment,metadata.folder)
-  requireValue(!actor.team || metadata.folder===current.folder,'Use the authorized move operation to change folders',403)
+  requireValue(metadata.folder===current.folder || actor.role==='owner' && ['native','dev'].includes(actor.kind),'Use the authorized move operation to change folders',403)
   const changed = [['name', current.name], ['description', current.description], ['folder', current.folder], ['graph', null], ['settings', null]]
     .filter(([field, before]) => field === 'graph' ? canonical(graph) !== canonical(JSON.parse(current.draft_json)) : field === 'settings' ? isObject(input.settings) : input[field as string] !== undefined && input[field as string] !== before)
     .map(([field]) => field)

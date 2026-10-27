@@ -43,6 +43,9 @@ export async function teamResourcesJourney() {
   await h.post(`workflows/${w.id}/move`,{folder_id:archive.id},builder.cookie,403);
   await h.post(`workflows/${w.id}/move`,{folder_id:sandbox.id},h.owner,403);
   await h.post(`workflows/${w.id}/draft`,{folder:archive.name},builder.cookie,403);
+  const preparer=await h.post('tokens',{label:'Synthetic folder preparation',scope:'agent'},h.owner,201);
+  await h.post(`workflows/${w.id}/draft`,{folder:archive.name},'',403,{authorization:'Bearer '+preparer.token});
+  assert.equal((await h.get('workflows/'+w.id)).folder,child.name);
   const test=await h.post(`workflows/${w.id}/test`,{bindings:{}},builder.cookie,201);assert.equal(test.status,'awaiting_approval');
   const production=await h.post(`workflows/${w.id}/run`,{},h.owner,201);assert.equal(production.status,'awaiting_approval');
   let release;const wait=new Promise(resolve=>release=resolve),encoder=new TextEncoder();
