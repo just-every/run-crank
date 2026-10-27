@@ -1,3 +1,4 @@
+import { validateGroups } from '../engine/conditions'
 import { businessCalendar } from '../engine/calendar'
 import { checkEgress } from '../engine/egress'
 import { requireZone } from '../engine/dates'
@@ -110,13 +111,20 @@ export function validateTrigger(trigger: Record<string, unknown>) {
       if (!['from_now', 'existing'].includes(String(trigger.backfill))) fail('choose initial backfill explicitly')
       if (trigger.event === 'updated' && trigger.any_field !== true && (!Array.isArray(trigger.watched_fields) || !trigger.watched_fields.length)) fail('updated records need watched_fields or explicit any_field')
       if (trigger.watched_fields !== undefined && (!Array.isArray(trigger.watched_fields) || trigger.watched_fields.length > 30 || trigger.watched_fields.some(f => typeof f !== 'string' || !/^[A-Za-z][A-Za-z0-9_]*$/.test(f)))) fail('watched_fields lists at most 30 property names')
-      if (trigger.changed_to !== undefined && (!isObject(trigger.changed_to) || Object.keys(trigger.changed_to).some(f => !(trigger.watched_fields as string[] | undefined)?.includes(f)))) fail('changed_to names watched fields')
+      for (const direction of ['changed_to', 'changed_from']) {
+        const condition = trigger[direction]
+        if (condition === undefined) continue
+        const fields = Array.isArray(condition)
+          ? validateGroups(condition, direction).flat().map(rule => rule.field)
+          : isObject(condition) ? Object.keys(condition) : fail(`${direction} needs literal fields or WORK-013 rule groups`)
+        if (!fields.length || fields.some(f => !(trigger.watched_fields as string[] | undefined)?.includes(f) && trigger.any_field !== true || !/^[A-Za-z][A-Za-z0-9_]*$/.test(f))) fail(`${direction} names watched fields`)
+      }
       if (trigger.identity !== undefined && !['change', 'first_value'].includes(String(trigger.identity))) fail('identity must be change or first_value')
       if (trigger.subscription !== undefined) {
         const s = trigger.subscription
         if (trigger.provider !== 'microsoft_graph' || !isObject(s) || typeof s.id !== 'string' || !/^[A-Za-z0-9-]{1,200}$/.test(s.id) || typeof s.expires_at !== 'string' || !Number.isFinite(Date.parse(s.expires_at))) fail('a Microsoft Graph subscription needs its id and expires_at')
       }
-      if (trigger.changed_from !== undefined || trigger.settle_delay !== undefined) fail('changed_from and settle_delay are not supported by this app poll yet')
+      if (trigger.settle_delay !== undefined) fail('settle_delay is not supported by this app poll yet')
       interval(trigger)
       return
     }

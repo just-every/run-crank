@@ -598,6 +598,6 @@ test('TRIG-001: envelope identity, transactional admission and revocation preser
   } finally { await isolated.close(); }
 });
 
-import {crmPollJourney,subscriptionPollJourney} from './app-poll-journey.mjs';
-test('Native CRM polls seed watched properties and recover complete overlapping pages without duplicate effects', crmPollJourney);
+import {crmPollJourney,subscriptionPollJourney,comparisonPollJourney} from './app-poll-journey.mjs';
+test('Native CRM polls seed watched properties and recover complete overlapping pages without duplicate effects', async()=>{await crmPollJourney();await comparisonPollJourney()});
 test('Mailbox polling retains records through visible subscription expiry and restarted renewal', subscriptionPollJourney);

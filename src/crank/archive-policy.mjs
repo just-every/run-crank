@@ -1,5 +1,7 @@
 import { fenceRow, importRow, importSafety, validateRestore } from './restore-policy.mjs';
 
+// App field-value digests and erased-record fences use the default portable
+// inventory. Polls restore inactive; no receiving authority travels with history.
 // Digest definitions, entries, release receipts and erased-name fences use the
 // default portable inventory; the restore policy clears their receiving authority.
 // Credentials, data-class keys (DATA-003: an archive carries sealed values and blind-index
