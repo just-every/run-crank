@@ -23,3 +23,7 @@ BEGIN SELECT RAISE(IGNORE); END;
 CREATE TRIGGER crank_app_erased_value_insert BEFORE INSERT ON crank_app_field_values
 WHEN EXISTS(SELECT 1 FROM crank_app_erased_records WHERE workflow_id=NEW.workflow_id AND record_id=NEW.record_id)
 BEGIN SELECT RAISE(IGNORE); END;
+CREATE TRIGGER crank_app_erased_run_insert BEFORE INSERT ON crank_wf_runs
+WHEN NEW.trigger_kind='app_poll' AND NEW.mode='production'
+ AND EXISTS(SELECT 1 FROM crank_app_erased_records WHERE workflow_id=NEW.workflow_id AND record_id=NEW.business_key)
+BEGIN SELECT RAISE(IGNORE); END;

@@ -139,7 +139,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "d6404b5a6d746c25b3cc280ee46a14b12b04a5b613732631d0b1be4b7ebe40a2",
+      "sha256": "2097a46f4f80ee3b2f85678ff517076fbb147d59a63449946b4af09fb03e7de3",
       "executable": false
     },
     "AGENTS.md": {
@@ -163,7 +163,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "be26c84484abd93687f277a2b7d1a59fefb7cc1b2198393d324edab0c3fffbe3",
+      "sha256": "5711399e827b298e47f791301e28d709aa0c1fb9ef80884a1de2a39236730e43",
       "executable": false
     },
     "DEMO.md": {
@@ -203,7 +203,7 @@
       "executable": false
     },
     "docs/CLAIMS.md": {
-      "sha256": "daa65da548d8d2a13df4b27a732e8391d2b5f951c003794668d6644c8c3a80d1",
+      "sha256": "280d824b54fc790a3c2c62f9dd8d9da8e406ced553e7244a229debefb7a57888",
       "executable": false
     },
     "docs/DATA-FLOWS.md": {
@@ -1639,7 +1639,7 @@
       "executable": false
     },
     "migrations/core/0081_app_field_values.sql": {
-      "sha256": "6925702626410358af019acd0e1d55f3b9050c3033d6985f0bf43ac4cf6d386c",
+      "sha256": "3feb5f57965d57114e9c37eacea86402416889afb14cfa27ec772c09e7fddda1",
       "executable": false
     },
     "ONBOARDING.md": {
@@ -3071,7 +3071,7 @@
       "executable": false
     },
     "src/crank/restore-policy.mjs": {
-      "sha256": "b8fcb8eb6788659952f9f3388af3f60bee836f356823326e311636442a4b0c9f",
+      "sha256": "b8f783fd9d20d229e0572f92c797245f187908ce6afca9ddee4f862afe6e6378",
       "executable": false
     },
     "src/crank/runs.ts": {
@@ -3111,11 +3111,11 @@
       "executable": false
     },
     "src/crank/triggers/admission.ts": {
-      "sha256": "c956eecfbdb3a6c69cdb406587d71d28cec657dc3a1e0610b26f3493f102f7e9",
+      "sha256": "caa2d8869dcd0e1b1f7e02bcba2e191593d94cfb29a1a10eb6e13a8cc4f2fa91",
       "executable": false
     },
     "src/crank/triggers/app-poll.ts": {
-      "sha256": "d14f5c03b3a02eb074b0e256b1085f8f920fec2e0df3bf93986a35f981ff9e79",
+      "sha256": "d754cd3b63a8dbcc4e806a29365de1ab90cde19d668e02c560f8649a4deb190d",
       "executable": false
     },
     "src/crank/triggers/callbacks.ts": {
@@ -5399,7 +5399,7 @@
       "executable": false
     },
     "tests/app-poll-journey.mjs": {
-      "sha256": "548519becdc5f6534d2170e7b24c97fdd059d2f31811a0064fe72c3db579e515",
+      "sha256": "fcb9f7a4a9599834fe32070ec946da4e00ce932b026dc76b59e82611a609c407",
       "executable": false
     },
     "tests/app.test.mjs": {
