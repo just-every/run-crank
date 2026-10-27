@@ -265,10 +265,10 @@ test('TRIG-007/TRIG-004: polling preserves interval choices, warns before public
   const source = { type: 'url_poll', url: 'https://api.github.com/repos/just-every/run-crank/issues', items_path: '', interval_minutes: 1, pagination: { kind: 'link', max_pages: 2 } };
   const draft = await h.post('workflows', { name: 'Public repository changes', graph: { trigger: source, steps: [] } }, h.owner, 201);
   assert.equal(draft.published_version_id, null, 'the rate warning precedes any publication');
-  assert.equal(draft.poll_rate.requests_per_poll, 2);
-  assert.equal(draft.poll_rate.safe_interval_minutes, 2, 'two pages consume the anonymous hourly budget at a two-minute floor');
+  assert.equal(draft.poll_rate.requests_per_poll, 8);
+  assert.equal(draft.poll_rate.safe_interval_minutes, 15, 'two pages with three redirects each need eight minutes and round up to fifteen');
   assert.deepEqual(draft.poll_rate.limiting_rate, { requests: 60, window_seconds: 3600 });
-  assert.match(draft.warnings.join(' '), /GitHub.*2 requests per poll.*60 requests per 3600 seconds.*Slowest safe interval: 2 min/);
+  assert.match(draft.warnings.join(' '), /GitHub.*8 requests per poll.*3 redirects per page.*60 requests per 3600 seconds.*Slowest safe interval: 15 min/);
   assert.equal((await h.get('workflows/' + draft.id)).poll_rate.warning, draft.poll_rate.warning);
   const validation = await h.post(`workflows/${draft.id}/validate`);
   assert.equal(validation.ok, true); assert.deepEqual(validation.warnings, draft.warnings);
@@ -277,18 +277,64 @@ test('TRIG-007/TRIG-004: polling preserves interval choices, warns before public
   assert.deepEqual(published.warnings, draft.warnings, 'publication returns the same advice');
   assert.equal((await h.get(`workflows/${draft.id}/trigger`)).poll.interval_minutes, 1, 'advice never silently changes the selected interval');
   const bounded = await h.post(`workflows/${draft.id}/draft`, { graph: { trigger: { ...source, pagination: { kind: 'link' } }, steps: [] } });
-  assert.equal(bounded.poll_rate.requests_per_poll, 10);
-  assert.equal(bounded.poll_rate.safe_interval_minutes, 15, 'the ten-page bound rounds up to an available interval');
+  assert.equal(bounded.poll_rate.requests_per_poll, 40);
+  assert.equal(bounded.poll_rate.safe_interval_minutes, 60, 'the ten-page bound includes redirects and rounds up to an available interval');
   for (const minutes of [1, 2, 5, 15, 30, 60, 120, 1440]) {
     const saved = await h.post(`workflows/${draft.id}/draft`, { graph: { trigger: { ...source, interval_minutes: minutes }, steps: [] } });
     assert.equal(saved.draft.trigger.interval_minutes, minutes);
-    assert.equal(saved.warnings.length, minutes === 1 ? 1 : 0, 'the safe boundary and all slower supported choices are served without a warning');
+    assert.equal(saved.warnings.length, minutes < 8 ? 1 : 0, 'the safe boundary and all slower supported choices are served without a warning');
     const selected = await h.post(`workflows/${draft.id}/publish`, {}, h.owner, 201);
     assert.equal(selected.workflow.draft.trigger.interval_minutes, minutes);
     assert.equal((await h.get(`workflows/${draft.id}/trigger`)).poll.interval_minutes, minutes);
   }
   const single = await h.post(`workflows/${draft.id}/validate`, { graph: { trigger: { ...source, pagination: undefined }, steps: [] } });
-  assert.deepEqual(single.warnings, [], 'one page per minute fits the same hourly budget exactly');
+  assert.match(single.warnings.join(' '), /4 requests per poll.*3 redirects per page.*Slowest safe interval: 5 min/, 'one page still budgets the permitted redirects');
+  // A moved repository still returns one page but makes two physical requests.
+  const redirectEdge = fakeEdge(), redirects = await harness('http://127.0.0.1:9', { edge: redirectEdge.edge });
+  try {
+    const movedSource = { ...source, pagination: undefined, backfill: 'existing' };
+    const moved = await redirects.post('workflows', { name: 'Moved repository changes', graph: { trigger: movedSource, steps: [{ id: 'record', type: 'map', input: { id: '{{trigger.id}}' } }] } }, redirects.owner, 201);
+    assert.equal(moved.published_version_id, null);
+    assert.equal(moved.poll_rate.requests_per_poll, 4);
+    assert.equal(moved.poll_rate.safe_interval_minutes, 5);
+    assert.match(moved.warnings.join(' '), /4 requests per poll.*3 redirects per page.*60 requests per 3600 seconds.*Slowest safe interval: 5 min/);
+    const movedValidation = await redirects.post(`workflows/${moved.id}/validate`);
+    assert.equal(movedValidation.ok, true);
+    assert.deepEqual(movedValidation.warnings, moved.warnings, 'the validation door warns about the same redirect-inclusive bound');
+    const movedSafe = await redirects.post(`workflows/${moved.id}/validate`, { graph: { trigger: { ...movedSource, interval_minutes: 5 }, steps: [] } });
+    assert.deepEqual(movedSafe.warnings, [], 'the supported conservative interval is served');
+    const movedPublished = await redirects.post(`workflows/${moved.id}/publish`, {}, redirects.owner, 201);
+    assert.deepEqual(movedPublished.warnings, moved.warnings);
+    assert.equal((await redirects.get(`workflows/${moved.id}/trigger`)).poll.interval_minutes, 1, 'the warning preserves the selected interval');
+    let mode = 'moved';
+    redirectEdge.routes.set('api.github.com', ({ url }) => {
+      if (url.pathname === '/repos/just-every/run-crank/issues') return new Response(null, { status: 301, headers: { location: '/repositories/123/issues' } });
+      if (mode === 'chain' && url.pathname === '/repositories/123/issues') return new Response(null, { status: 302, headers: { location: '/repositories/456/issues' } });
+      if (mode === 'chain' && url.pathname === '/repositories/456/issues') return new Response(null, { status: 307, headers: { location: '/repositories/789/issues' } });
+      return jsonResponse([{ id: 'synthetic-crank-1' }]);
+    });
+    const pollAt = Date.parse((await redirects.get(`workflows/${moved.id}/trigger`)).poll.next_due_at);
+    const firstRequest = redirectEdge.requests.length;
+    await redirects.tick(pollAt);
+    assert.deepEqual(redirectEdge.requests.slice(firstRequest).map(r => [r.method, r.url.href]), [
+      ['GET', 'https://api.github.com/repos/just-every/run-crank/issues'],
+      ['GET', 'https://api.github.com/repositories/123/issues'],
+    ], 'one repository redirect consumes two requests for a single page');
+    const movedRuns = await runs(redirects, moved);
+    assert.equal(movedRuns.length, 1);
+    assert.equal(stepOf(await redirects.get('workflow-runs/' + movedRuns[0].id), 'record').output.id, 'synthetic-crank-1');
+    mode = 'chain';
+    const chainRequest = redirectEdge.requests.length;
+    await redirects.tick(pollAt + MINUTE);
+    assert.deepEqual(redirectEdge.requests.slice(chainRequest).map(r => r.url.href), [
+      'https://api.github.com/repos/just-every/run-crank/issues',
+      'https://api.github.com/repositories/123/issues',
+      'https://api.github.com/repositories/456/issues',
+      'https://api.github.com/repositories/789/issues',
+    ], 'all three permitted redirects consume the four-request page budget');
+    assert.equal((await runs(redirects, moved)).length, 1, 'redirected repeated records remain deduplicated');
+    await redirects.post(`workflows/${moved.id}/pause`);
+  } finally { await redirects.close(); }
   for (const resource of ['contacts', 'companies', 'deals']) {
     const crm = await h.post(`workflows/${draft.id}/validate`, { graph: { trigger: { type: 'app_poll', provider: 'hubspot', resource, event: 'new', connection_id: 'synthetic-crank-3', interval_minutes: 1, backfill: 'from_now' }, steps: [] } });
     assert.deepEqual(crm.warnings, [], 'the native CRM baseline supports the one-minute choice');

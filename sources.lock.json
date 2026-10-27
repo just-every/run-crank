@@ -191,7 +191,7 @@
       "executable": false
     },
     "docs/APP-TRIGGERS.md": {
-      "sha256": "22a2041207fcc78df0b32a15adf430421d7e973a443a1253d0b919766b6d91cb",
+      "sha256": "d10b196ff590453991dcf0773786e6865e48d2209854c3a9f961ff07128e3a7f",
       "executable": false
     },
     "docs/BACKUP-RESTORE.md": {
@@ -3087,7 +3087,7 @@
       "executable": false
     },
     "src/crank/triggers/definition.ts": {
-      "sha256": "1ce0bb5d11b615cad3abb535364befdbb4989ebc70091e56d688546ef283e089",
+      "sha256": "0111304642f0920233a2d53fd0121537ef4a3f0e57ec4d8526abf57c8d4fe7c4",
       "executable": false
     },
     "src/crank/triggers/feeds.ts": {
@@ -3119,7 +3119,7 @@
       "executable": false
     },
     "src/crank/triggers/poll.ts": {
-      "sha256": "758f07dfbb803da4a9d08f5d2b747d821ee809fc1cddd67e70c99da58ff74933",
+      "sha256": "34a1fb2f2bc28f55e99bbe7065ba960af95184033870e0a1992ffe139b4d9014",
       "executable": false
     },
     "src/crank/triggers/public.ts": {
@@ -5355,7 +5355,7 @@
       "executable": false
     },
     "tests/app-poll-browser.mjs": {
-      "sha256": "11d35dcc232b304710c0393da51f24b7cc7fc1afee76eaaffe9c47e1d6becaad",
+      "sha256": "bad1ca5110074e5029ced239872dd5f77fd3e64472cd8f44dc0e4a4c990d138c",
       "executable": false
     },
     "tests/app-poll-journey.mjs": {
@@ -5855,7 +5855,7 @@
       "executable": false
     },
     "tests/triggers.test.mjs": {
-      "sha256": "d2fe02b2aedab826fcc00492e0ad83b1e05af9a568b3d401197d31cfb6b173ad",
+      "sha256": "a82c2422a28695c8817fd575709be0e3b176d424b1892df4185f3ce5949c71d1",
       "executable": false
     },
     "tests/usage.test.mjs": {

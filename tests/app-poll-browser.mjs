@@ -40,16 +40,18 @@ async function shot(width,state) {
 }
 async function rateScreens(width) {
  const edge=fakeEdge();let limited=false;
- edge.routes.set('api.github.com',()=>limited?jsonResponse({error:'slow down'},429):jsonResponse([]));
+ edge.routes.set('api.github.com',({url})=>url.pathname.startsWith('/repos/')?new Response(null,{status:301,headers:{location:'/repositories/123/issues'}}):limited?jsonResponse({error:'slow down'},429):jsonResponse([]));
  const h=await harness('http://127.0.0.1:9',{edge:edge.edge});
  try {
-  const trigger={type:'url_poll',url:'https://api.github.com/repos/just-every/run-crank/issues',items_path:'',interval_minutes:1,pagination:{kind:'link',max_pages:2}};
+  const trigger={type:'url_poll',url:'https://api.github.com/repos/just-every/run-crank/issues',items_path:'',interval_minutes:1};
   const w=await h.post('workflows',{name:'Public repository changes',graph:{trigger,steps:[{id:'record',type:'map',input:{id:'{{trigger.id}}'}}]}},h.owner,201);
   await attach(h,width);await page.goto(h.origin+`/app/workflows/${w.id}?step=trigger`);
   if(width===1440) {
    await expect(page.getByRole('button',{name:'Publish',exact:true})).toBeVisible();
    await expect(page.getByRole('alert')).toContainText('60 requests per 3600 seconds');
-   await expect(page.getByRole('alert')).toContainText('Slowest safe interval: 2 min');
+   await expect(page.getByRole('alert')).toContainText('3 redirects per page');
+   await expect(page.getByText('Poll request budget',{exact:true}).locator('..')).toContainText('4 requests');
+   await expect(page.getByRole('alert')).toContainText('Slowest safe interval: 5 min');
    await expect(page.getByText('Polling interval',{exact:true}).locator('..')).toContainText('1 min');
    assert.equal((await h.get('workflows/'+w.id)).published_version_id,null);
    // Advice must remain visible when another step is selected before publishing.
@@ -58,16 +60,16 @@ async function rateScreens(width) {
    await page.goto(h.origin+`/app/workflows/${w.id}?step=trigger`);
   }
   await shot(width,'rate-warning-before-publish');
-  await h.post(`workflows/${w.id}/draft`,{graph:{trigger:{...trigger,interval_minutes:2},steps:[]}});
+  await h.post(`workflows/${w.id}/draft`,{graph:{trigger:{...trigger,interval_minutes:5},steps:[]}});
   await page.reload();
   if(width===1440) {
    await expect(page.getByRole('alert')).toHaveCount(0);
-   await expect(page.getByText('Polling interval',{exact:true}).locator('..')).toContainText('2 min');
+   await expect(page.getByText('Polling interval',{exact:true}).locator('..')).toContainText('5 min');
    assert.equal((await h.get('workflows/'+w.id)).published_version_id,null);
   }
   await shot(width,'supported-interval-before-publish');
   await h.post(`workflows/${w.id}/publish`,{},h.owner,201);
-  const time=Date.now()+60000;await h.tick(time);limited=true;await h.tick(time+120000);
+  const time=Date.parse((await h.get(`workflows/${w.id}/trigger`)).poll.next_due_at);await h.tick(time);limited=true;await h.tick(time+300000);
   await page.reload();
   if(width===1440) {
    await expect(page.getByText('Poll status',{exact:true}).locator('..')).toContainText('429');
