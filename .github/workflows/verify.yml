@@ -1,128 +1,129 @@
 name: Verify
-
 on:
   push:
   workflow_dispatch:
-
 permissions:
   contents: read
-
+concurrency:
+  group: seed-verify-${{ github.workflow }}-${{ github.event_name }}-${{ github.ref == 'refs/heads/main' && github.run_id || github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 jobs:
-  verify:
+  plan:
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
-    strategy:
-      fail-fast: false
-      matrix:
-        shard: [1, 2, 3, 4]
+    timeout-minutes: 3
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      skip: ${{ steps.reuse.outputs.skip }}
+      matrix: ${{ steps.matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: '22.20.0'
+          package-manager-cache: false
+      - name: Check edition source lock freshness
+        run: node scripts/edition-authoring/cli.mjs check > /dev/null
+      - id: reuse
+        run: node scripts/verify-plan.mjs
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+      - id: matrix
+        run: echo "matrix=$(node scripts/verify-ci.mjs --matrix push)" >> "$GITHUB_OUTPUT"
+  build:
+    needs: plan
+    if: needs.plan.outputs.skip != 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
     env:
       CI: 'true'
       WRANGLER_SEND_METRICS: 'false'
-      CRANK_TEST_SHARD: ${{ matrix.shard }}/4
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1; action runtime Node 24
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0; action runtime Node 24
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with:
           node-version: '22.20.0'
           package-manager-cache: false
       - run: npm install --global pnpm@10.12.4
       - run: pnpm install --frozen-lockfile
-      - run: pnpm exec playwright install --with-deps chromium
+      - name: Build once and check the edition
+        run: node scripts/verify-ci.mjs --build
+      - run: tar -czf /tmp/crank-build.tar.gz dist
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: crank-build
+          path: /tmp/crank-build.tar.gz
+          retention-days: 1
+  shard:
+    needs: [plan, build]
+    if: needs.plan.outputs.skip != 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    env:
+      CI: 'true'
+      WRANGLER_SEND_METRICS: 'false'
+      CRANK_EVIDENCE: artifacts/${{ matrix.name }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: '22.20.0'
+          package-manager-cache: false
+      - run: npm install --global pnpm@10.12.4
+      - run: pnpm install --frozen-lockfile
       - run: npm ci --prefix gateways/node --ignore-scripts
-      - run: pnpm run verify
-
-  decisions:
-    runs-on: ubuntu-24.04
-    timeout-minutes: 15
-    env:
-      CI: 'true'
-      WRANGLER_SEND_METRICS: 'false'
-      CRANK_EVIDENCE: artifacts/decisions
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with:
-          persist-credentials: false
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+          name: crank-build
+          path: /tmp
+      - run: tar -xzf /tmp/crank-build.tar.gz
+      - name: Install Chromium with a launch probe
+        if: matrix.browser
+        run: |
+          pnpm exec playwright install chromium
+          if ! node --input-type=module -e 'import {chromium} from "@playwright/test"; const browser=await chromium.launch({headless:true}); await browser.close()'; then
+            pnpm exec playwright install-deps chromium
+          fi
+      - name: Prepare the Linux executor
+        if: matrix.name == 'agent-executor'
+        run: |
+          if ! command -v bwrap; then sudo apt-get update && sudo apt-get install -y bubblewrap; fi
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+      - name: Run selected assertions
+        run: node scripts/verify-ci.mjs '${{ matrix.name }}'
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always() && matrix.browser
         with:
-          node-version: '22.20.0'
-          package-manager-cache: false
-      - run: npm install --global pnpm@10.12.4
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm exec playwright install --with-deps chromium
-      - run: pnpm exec node tests/decision-browser.mjs
-      - run: pnpm exec node tests/executor-schema-browser.mjs
-      - name: Build recurring skill owner journey
-        run: pnpm exec vite build
-      - name: Recurring skill owner journey
-        run: pnpm exec node tests/recurring-browser.mjs
-        env:
-          CRANK_EVIDENCE: artifacts/decisions/recurring
-      - name: Financial owner browser journeys
-        run: pnpm exec node tests/financial-browser.mjs
-        env:
-          CRANK_EVIDENCE: artifacts/decisions/financial
-      - name: Native sibling owner journey
-        run: pnpm exec node tests/sibling-browser.mjs
-        env:
-          CRANK_EVIDENCE: ./artifacts/decisions/siblings
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        if: always()
-        with:
-          name: decision-browser-evidence
-          path: artifacts/decisions
+          name: browser-evidence-${{ matrix.name }}
+          path: artifacts
           if-no-files-found: ignore
-
-  agent-journeys:
+  verify:
+    if: always()
+    needs: [plan, build, shard]
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
-    strategy:
-      fail-fast: false
-      matrix:
-        journey: [invoice-outcome, drift, mcp-client, migration, authoring]
-    env:
-      CI: 'true'
-      WRANGLER_SEND_METRICS: 'false'
-      CRANK_EVIDENCE: artifacts/${{ matrix.journey }}
+    timeout-minutes: 1
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: '22.20.0'
-          package-manager-cache: false
-      - run: npm install --global pnpm@10.12.4
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm exec playwright install --with-deps chromium
-      - name: Build installed browser journeys
-        if: ${{ matrix.journey == 'mcp-client' || matrix.journey == 'migration' }}
-        run: pnpm exec vite build
-      - name: Owner browser journey
-        run: pnpm exec node tests/${{ matrix.journey }}-browser.mjs
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        if: always()
-        with:
-          name: agent-browser-evidence-${{ matrix.journey }}
-          path: artifacts/${{ matrix.journey }}
-          if-no-files-found: ignore
-
-  linux-executor:
-    runs-on: ubuntu-24.04
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: '22.20.0'
-          package-manager-cache: false
-      - run: npm install --global pnpm@10.12.4
-      - run: pnpm install --frozen-lockfile
-      - run: sudo apt-get update && sudo apt-get install -y bubblewrap
-      # This disposable VM enables the kernel feature required by the Linux executor.
-      - run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
-      # Root stages fixtures; every executor job runs as the separate nobody user.
-      - run: sudo "$(command -v node)" tests/executor-linux.mjs
+      - name: Require every selected gate
+        env:
+          PLAN: ${{ needs.plan.result }}
+          SKIP: ${{ needs.plan.outputs.skip }}
+          BUILD: ${{ needs.build.result }}
+          SHARDS: ${{ needs.shard.result }}
+        run: |
+          test "$PLAN" = success
+          if [ "$SKIP" = true ]; then
+            test "$BUILD" = skipped && test "$SHARDS" = skipped
+          else
+            test "$BUILD" = success && test "$SHARDS" = success
+          fi

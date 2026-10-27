@@ -432,6 +432,48 @@
       "name": "0071_pure_subflow_calls.sql",
       "sha256": "e9677222d51c6fe8a2fe248d4d5590341bf81527a8297286d3464f6e3196b3c5",
       "sql": "CREATE TABLE crank_subflow_calls (\n id TEXT PRIMARY KEY, run_id TEXT NOT NULL, path TEXT NOT NULL,\n operation_key TEXT NOT NULL UNIQUE, subflow_version_id TEXT NOT NULL,\n status TEXT NOT NULL CHECK(status IN ('queued','running','succeeded','failed','paused','cancelled','interrupted')),\n lease_id TEXT, lease_expires_at TEXT, created_at TEXT NOT NULL,\n started_at TEXT, finished_at TEXT,\n UNIQUE(run_id,path,operation_key)\n);\nCREATE INDEX crank_subflow_call_queue ON crank_subflow_calls(status,created_at);\n"
+    },
+    {
+      "binding": "DB",
+      "name": "0072_import_workflow_state.sql",
+      "sha256": "77106683e5784fd59887f93d5b956e19160ad1c2f7d66f052bf8ad13b0b9c717",
+      "sql": "-- Source provenance revisions for inactive native graph imports.\nCREATE TABLE crank_import_workflow_state (\n workflow_id TEXT PRIMARY KEY, kit_revision TEXT NOT NULL, created_at TEXT NOT NULL\n);\n"
+    },
+    {
+      "binding": "DB",
+      "name": "0073_api_drift.sql",
+      "sha256": "712c7beed79ae3fbde3cb9a6483355ed31caf21c0d60b108a412bc01e8d40d5f",
+      "sql": "-- Drift evidence keeps references and field metadata; customer values stay in sealed runs.\nCREATE TABLE crank_drift_incidents (\n id TEXT PRIMARY KEY,\n workflow_id TEXT NOT NULL REFERENCES crank_workflows(id) ON DELETE CASCADE,\n version_id TEXT NOT NULL REFERENCES crank_workflow_versions(id),\n run_id TEXT NOT NULL REFERENCES crank_wf_runs(id) ON DELETE CASCADE,\n path TEXT NOT NULL, kind TEXT NOT NULL CHECK(kind IN ('schema','permission')),\n field TEXT NOT NULL DEFAULT '', expected_type TEXT NOT NULL DEFAULT '',\n schema_json TEXT NOT NULL DEFAULT '{}', state TEXT NOT NULL DEFAULT 'open'\n CHECK(state IN ('open','repaired','inactive')),\n created_at TEXT NOT NULL,\n UNIQUE(run_id,path,kind,field)\n);\nCREATE INDEX crank_drift_fence ON crank_drift_incidents(workflow_id,state);\nCREATE TABLE crank_drift_proposals (\n id TEXT PRIMARY KEY,\n incident_id TEXT NOT NULL REFERENCES crank_drift_incidents(id) ON DELETE CASCADE,\n workflow_id TEXT NOT NULL REFERENCES crank_workflows(id) ON DELETE CASCADE,\n version_id TEXT NOT NULL REFERENCES crank_workflow_versions(id),\n step_id TEXT NOT NULL, field TEXT NOT NULL, source_before TEXT NOT NULL,\n source_after TEXT NOT NULL, kind TEXT NOT NULL CHECK(kind IN ('mapping','scope')),\n requested_scopes_json TEXT NOT NULL DEFAULT '[]', graph_digest TEXT NOT NULL,\n status TEXT NOT NULL DEFAULT 'proposed'\n CHECK(status IN ('proposed','testing','tested','approving','approved','rejected','rolled_back','inactive')),\n created_by TEXT NOT NULL, created_at TEXT NOT NULL,\n approved_version_id TEXT REFERENCES crank_workflow_versions(id),\n test_bindings_json TEXT NOT NULL DEFAULT '{}'\n);\nCREATE TABLE crank_drift_cases (\n proposal_id TEXT NOT NULL REFERENCES crank_drift_proposals(id) ON DELETE CASCADE,\n source_run_id TEXT NOT NULL REFERENCES crank_wf_runs(id) ON DELETE CASCADE,\n test_run_id TEXT REFERENCES crank_wf_runs(id) ON DELETE CASCADE,\n source_digest TEXT NOT NULL,\n PRIMARY KEY(proposal_id,source_run_id)\n);\nCREATE TABLE crank_drift_continuations (\n proposal_id TEXT NOT NULL REFERENCES crank_drift_proposals(id) ON DELETE CASCADE,\n run_id TEXT NOT NULL REFERENCES crank_wf_runs(id) ON DELETE CASCADE,\n source_version_id TEXT NOT NULL REFERENCES crank_workflow_versions(id),\n repaired_version_id TEXT NOT NULL REFERENCES crank_workflow_versions(id),\n PRIMARY KEY(proposal_id,run_id)\n);\n"
+    },
+    {
+      "binding": "DB",
+      "name": "0074_mcp_clients.sql",
+      "sha256": "8233fb56cee61a7ebd3551ff0925d91fc3b8d60a15f3dc97adf2de9e7061ad78",
+      "sql": "CREATE TABLE crank_mcp_clients (\n  id TEXT PRIMARY KEY,\n  label TEXT NOT NULL,\n  grant_id TEXT NOT NULL UNIQUE REFERENCES crank_grants(id),\n  owner_id TEXT NOT NULL,\n  secret_hash TEXT NOT NULL UNIQUE,\n  tools_json TEXT NOT NULL,\n  created_at TEXT NOT NULL,\n  revoked_at TEXT\n);\nCREATE TABLE crank_mcp_calls (\n  id TEXT PRIMARY KEY,\n  client_id TEXT NOT NULL,\n  tool TEXT NOT NULL,\n  run_id TEXT,\n  status TEXT NOT NULL,\n  reason TEXT,\n  created_at TEXT NOT NULL\n);\nCREATE INDEX crank_mcp_calls_client ON crank_mcp_calls(client_id,created_at);\n"
+    },
+    {
+      "binding": "DB",
+      "name": "0075_recurring_skills.sql",
+      "sha256": "c872816a4a347964ee2549ef82731fbd3301981d12c7fd2a25777030db9f3e0f",
+      "sql": "CREATE TABLE crank_recurring_skills (\n id TEXT PRIMARY KEY, name TEXT NOT NULL, created_by TEXT NOT NULL, created_at TEXT NOT NULL\n);\nCREATE TABLE crank_recurring_skill_versions (\n id TEXT PRIMARY KEY, skill_id TEXT NOT NULL, number INTEGER NOT NULL,\n workflow_id TEXT NOT NULL, workflow_version_id TEXT NOT NULL,\n instructions TEXT NOT NULL, eval_cases_json TEXT NOT NULL CHECK(json_valid(eval_cases_json)),\n created_by TEXT NOT NULL, created_at TEXT NOT NULL, UNIQUE(skill_id,number)\n);\nCREATE TRIGGER crank_recurring_skill_immutable BEFORE UPDATE OF id,skill_id,number,workflow_id,workflow_version_id,instructions,eval_cases_json,created_at ON crank_recurring_skill_versions\nBEGIN SELECT RAISE(ABORT,'crank_recurring_skill_immutable'); END;\nCREATE TABLE crank_recurring_objective_versions (\n id TEXT PRIMARY KEY, task_id TEXT NOT NULL, number INTEGER NOT NULL,\n spec_json TEXT NOT NULL CHECK(json_valid(spec_json)), created_by TEXT NOT NULL, created_at TEXT NOT NULL,\n UNIQUE(task_id,number)\n);\nCREATE TRIGGER crank_recurring_objective_immutable BEFORE UPDATE OF id,task_id,number,spec_json,created_at ON crank_recurring_objective_versions\nBEGIN SELECT RAISE(ABORT,'crank_recurring_objective_immutable'); END;\nCREATE TABLE crank_recurring_tasks (\n id TEXT PRIMARY KEY, name TEXT NOT NULL, skill_version_id TEXT NOT NULL,\n objective_version_id TEXT NOT NULL, grant_id TEXT NOT NULL,\n status TEXT NOT NULL CHECK(status IN ('active','paused','takeover','cancelled','blocked','inactive','satisfied')),\n revision TEXT NOT NULL, owner_id TEXT NOT NULL, owner_version INTEGER NOT NULL,\n session_kind TEXT NOT NULL CHECK(session_kind IN ('native','dev')),\n tool_revoked_at TEXT, next_run_at TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL\n);\nCREATE INDEX crank_recurring_due ON crank_recurring_tasks(status,next_run_at);\nCREATE TABLE crank_recurring_runs (\n run_id TEXT PRIMARY KEY, task_id TEXT NOT NULL, skill_version_id TEXT NOT NULL,\n objective_version_id TEXT NOT NULL, invoice_key TEXT NOT NULL, created_at TEXT NOT NULL\n);\nCREATE INDEX crank_recurring_task_runs ON crank_recurring_runs(task_id,created_at);\nCREATE TABLE crank_recurring_claims (\n invoice_key TEXT PRIMARY KEY, task_id TEXT NOT NULL UNIQUE, run_id TEXT NOT NULL UNIQUE, created_at TEXT NOT NULL\n);\n"
+    },
+    {
+      "binding": "DB",
+      "name": "0076_budget_notice_conflicts.sql",
+      "sha256": "a2aaf82e4131d5fc9bd9bc2fabc1ccb521460739f2a8d9afb8c57e54c181fd06",
+      "sql": "-- Explicit inner conflict handling survives an outer budget upsert.\nDROP TRIGGER crank_usage_budget_insert_notice;\nDROP TRIGGER crank_usage_budget_update_notice;\nCREATE TRIGGER crank_usage_budget_insert_notice AFTER INSERT ON crank_usage_budgets\nBEGIN\n INSERT INTO crank_usage_notices(scope,scope_id,month,threshold,created_at)\n SELECT t.scope,t.scope_id,t.month,n.threshold,strftime('%Y-%m-%dT%H:%M:%fZ','now')\n FROM crank_usage_budget_totals t CROSS JOIN (SELECT 80 AS threshold UNION ALL SELECT 100) n\n WHERE (n.threshold=100 AND t.used_units>=t.limit_units)\n OR (n.threshold=80 AND t.used_units>=(t.limit_units/5)*4+((t.limit_units%5)*4+4)/5)\n ON CONFLICT(scope,scope_id,month,threshold) DO NOTHING;\nEND;\nCREATE TRIGGER crank_usage_budget_update_notice AFTER UPDATE ON crank_usage_budgets\nBEGIN\n INSERT INTO crank_usage_notices(scope,scope_id,month,threshold,created_at)\n SELECT t.scope,t.scope_id,t.month,n.threshold,strftime('%Y-%m-%dT%H:%M:%fZ','now')\n FROM crank_usage_budget_totals t CROSS JOIN (SELECT 80 AS threshold UNION ALL SELECT 100) n\n WHERE (n.threshold=100 AND t.used_units>=t.limit_units)\n OR (n.threshold=80 AND t.used_units>=(t.limit_units/5)*4+((t.limit_units%5)*4+4)/5)\n ON CONFLICT(scope,scope_id,month,threshold) DO NOTHING;\nEND;\n"
+    },
+    {
+      "binding": "DB",
+      "name": "0077_sibling_binding.sql",
+      "sha256": "8ca4ccd6d7ec61329315ed3b7642bcae5385dc61a713758f24a0105ec7b630ae",
+      "sql": "ALTER TABLE crank_connections ADD COLUMN sibling_binding_json TEXT;\n"
+    },
+    {
+      "binding": "DB",
+      "name": "0078_request_credential_identity.sql",
+      "sha256": "e027999d7ffe73332ff9e74330167aa17ac57fb7f9f69ac5e039eb1eb5e654b2",
+      "sql": "ALTER TABLE crank_wf_attempts ADD COLUMN credential_identity TEXT;\n"
     }
   ],
   "compatibilityDate": "2026-09-08",

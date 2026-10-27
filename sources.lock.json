@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "parent": null,
   "edition": "just-every/run-crank",
-  "manifest": "559f16c4634bb95cf5062b777e69bb55cfa8aedb7507689099a61b30ed89feea",
+  "manifest": "c4d3527a825b83f960fdb136b4eba5fab8ff932992f7719f9df65d7c990d9950",
   "toolchain": {
     "id": "runeditrun/edition-authoring",
     "version": "1.1.0",
@@ -57,6 +57,7 @@
           "test-budget.json",
           "tests",
           "tsconfig.json",
+          "verification.json",
           "vite.config.ts",
           "vite.site.config.ts",
           "wrangler.jsonc"
@@ -114,7 +115,7 @@
       "executable": false
     },
     ".github/workflows/retry-backoff.yml": {
-      "sha256": "0bacd8310785cff76a5ee2b4673bb10fafe98cb35859cde1f19fafeb8402d9dc",
+      "sha256": "cd0a423940a73de65e521666343640ba5b84c0a8f7d69b399dfc5004e0cd7209",
       "executable": false
     },
     ".github/workflows/run-demo.yml": {
@@ -126,7 +127,7 @@
       "executable": false
     },
     ".github/workflows/verify.yml": {
-      "sha256": "f1e474090815c1108fcb8a2f95d7912855260304a00d168d0ffe975308912b6b",
+      "sha256": "049762e12680d91adbb4769f4a796f2c2a37cb7a55618572c1347ea37d2c3a4f",
       "executable": false
     },
     ".gitignore": {
@@ -230,7 +231,7 @@
       "executable": false
     },
     "edition.json": {
-      "sha256": "559f16c4634bb95cf5062b777e69bb55cfa8aedb7507689099a61b30ed89feea",
+      "sha256": "c4d3527a825b83f960fdb136b4eba5fab8ff932992f7719f9df65d7c990d9950",
       "executable": false
     },
     "evidence/sx-crank-c-i810/financial-browser-final.log": {
@@ -1290,7 +1291,7 @@
       "executable": false
     },
     "management/integration/deployment-spec.json": {
-      "sha256": "a402639c890fc1463d239b7b10510854659f8e2488e7a4f9a7baf295de54ee3b",
+      "sha256": "bc6de3195dca54f23509465a35960233f7854bc42dc135a3fde26c9b25578af7",
       "executable": false
     },
     "migrations/core/0001_owner.sql": {
@@ -1618,7 +1619,7 @@
       "executable": false
     },
     "package.json": {
-      "sha256": "8b15d409ed54bc3cf746af5eaa569f88af6ac9068f71e8f9e3b919745fc46366",
+      "sha256": "c1df83f62209049c8b300145e469465f95d947bc7488f3121e137797e8334e56",
       "executable": false
     },
     "packaging.json": {
@@ -2119,6 +2120,18 @@
     },
     "scripts/operations-config.mjs": {
       "sha256": "decbd8619e40c741708b49639d54282bd19edc4581a782b240d96a423ad47f01",
+      "executable": false
+    },
+    "scripts/verify-app.mjs": {
+      "sha256": "3bcb2de3c23ba3ab7207d0c995b3afc408029592b066de2c15159010001cff45",
+      "executable": false
+    },
+    "scripts/verify-ci.mjs": {
+      "sha256": "2e056677b24a647bebdcb411790bde833e3f702ecf4d2fff90c723bc5daa05a0",
+      "executable": false
+    },
+    "scripts/verify-plan.mjs": {
+      "sha256": "3eefaa27f9a2578ab41a6311f8753035ef47ca6f1ac673ebe2c08d0cb9e82b87",
       "executable": false
     },
     "sdk/errors.js": {
@@ -5841,8 +5854,12 @@
       "sha256": "46726b4c29b66f46ca9e387e2064d65ac66017ccec7d05bfe163204ae190a669",
       "executable": false
     },
+    "verification.json": {
+      "sha256": "36f4c31223298e591b5dd7e57a73ce5df7c8ecc1cb4282b592c4ef73ef601635",
+      "executable": false
+    },
     "VERIFY-WORKFLOW.md": {
-      "sha256": "7d9e29a787387ce643e96f74e4b1764332b94733ceea1541c84e4633be1cf85e",
+      "sha256": "e48b0009abe6e99b3cf9e9b74ea38371f03b520f3671ec72671de474d348fc1a",
       "executable": false
     },
     "vite.config.ts": {

@@ -55,6 +55,7 @@
           "test-budget.json",
           "tests",
           "tsconfig.json",
+          "verification.json",
           "vite.config.ts",
           "vite.site.config.ts",
           "wrangler.jsonc"

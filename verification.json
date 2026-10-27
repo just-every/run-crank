@@ -1,0 +1,89 @@
+{
+  "build": [
+    "pnpm run build",
+    "pnpm exec rer build --site",
+    "pnpm run typecheck",
+    "pnpm exec rer check --profile first-party",
+    "pnpm check:deployment-spec"
+  ],
+  "push": [
+    {
+      "name": "connections",
+      "browser": false,
+      "hosted": false,
+      "commands": [
+        "node --test --test-concurrency=1 --test-skip-pattern='^(Regulated Gusto handoffs|Managed Calendar creation|Native Nook delivery)' tests/connections.test.mjs"
+      ]
+    },
+    {
+      "name": "regulated-calendar",
+      "browser": false,
+      "hosted": false,
+      "commands": [
+        "node --test --test-concurrency=1 --test-name-pattern='^(Regulated Gusto handoffs|Managed Calendar creation|Native Nook delivery)' tests/connections.test.mjs",
+        "node --test --test-concurrency=1 tests/logic.test.mjs"
+      ]
+    },
+    {
+      "name": "workflow-custody",
+      "browser": false,
+      "hosted": false,
+      "commands": [
+        "node --test --test-concurrency=1 tests/crank.test.mjs tests/ownership.test.mjs tests/skills.test.mjs"
+      ]
+    },
+    {
+      "name": "queues-erasure",
+      "browser": false,
+      "hosted": false,
+      "commands": [
+        "node --test --test-concurrency=1 tests/request-limits.test.mjs tests/webhook-erasure.test.mjs tests/team.test.mjs"
+      ]
+    },
+    {
+      "name": "runtime-authority",
+      "browser": true,
+      "hosted": true,
+      "commands": [
+        "node --test --test-concurrency=1 tests/hold-cost.test.mjs tests/usage.test.mjs tests/app.test.mjs tests/batch.test.mjs tests/pagination.test.mjs tests/historical.test.mjs tests/publish-authority.test.mjs tests/execution-queue.test.mjs tests/dispatch-authority.test.mjs tests/version-comparison.test.mjs tests/deployment.test.mjs tests/grants.test.mjs tests/security.test.mjs tests/service-accounts.test.mjs tests/executors.test.mjs tests/hosted-mail.test.mjs tests/drift.test.mjs",
+        "pnpm run test:site",
+        "pnpm run test:runtime",
+        "pnpm run test:email-link"
+      ]
+    },
+    {
+      "name": "owner-decisions",
+      "browser": true,
+      "hosted": false,
+      "commands": [
+        "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/recurring\" node tests/recurring-browser.mjs",
+        "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/sibling\" node tests/sibling-browser.mjs",
+        "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/decision\" node tests/decision-browser.mjs",
+        "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/executor-schema\" node tests/executor-schema-browser.mjs"
+      ]
+    },
+    {
+      "name": "financial-outcomes",
+      "browser": true,
+      "hosted": false,
+      "commands": [
+        "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/financial\" node tests/financial-browser.mjs",
+        "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/invoice-outcome\" node tests/invoice-outcome-browser.mjs"
+      ]
+    },
+    {
+      "name": "agent-executor",
+      "browser": true,
+      "hosted": false,
+      "commands": [
+        "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/drift\" node tests/drift-browser.mjs",
+        "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/mcp-client\" node tests/mcp-client-browser.mjs",
+        "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/migration\" node tests/migration-browser.mjs",
+        "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/authoring\" node tests/authoring-browser.mjs",
+        "sudo \"$(command -v node)\" tests/executor-linux.mjs",
+        "node --test --test-concurrency=1 tests/triggers.test.mjs tests/followups.test.mjs tests/ops.test.mjs tests/platform.test.mjs"
+      ]
+    }
+  ],
+  "nightly": []
+}

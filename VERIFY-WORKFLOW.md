@@ -1,3 +1,41 @@
+# Crank verification split
+
+Crank keeps rer 0.2.80 and its existing Base source pins. Its handwritten
+workflow now uses the shard manifest described below. No Base refresh is needed.
+
+`verification.json` owns eight push shards. The connection journeys are split
+with complementary name filters: the regulated Gusto, managed Calendar and
+native Nook journeys run together; every other connection registration runs in
+the connection shard. Every ordinary test file remains selected. All ten browser
+scripts, the emitted runtime, email sign-in, site assertions and real Linux
+executor remain on push. Existing long-running manual and scheduled journeys
+stay in their existing workflow, scheduled on Monday and Thursday at 03:37 UTC.
+
+The build job runs the production Worker build, run-site build, typecheck,
+first-party check and deployment-spec check once. Shards restore that exact
+run's build artifact. The hosted runtime shard still enters `rer verify`, so
+Base's hosted-output and hydration checks run on the shared production output.
+Browser shards install Chromium and probe launch before installing system
+packages. Only the executor shard prepares bubblewrap.
+
+To edit the split, change the manifest, inspect both matrix selections with
+`node scripts/verify-ci.mjs --matrix push` and
+`node scripts/verify-ci.mjs --matrix all`, and merge any workflow changes into
+`./.github/workflows/verify.yml`. Run one selected shard with
+`node scripts/verify-ci.mjs NAME`. The workflow reads the matrix directly from
+the manifest; there is no second generated shard list to synchronize.
+`node scripts/verify-ci.mjs --build` runs the shared build gates. Without a
+selected shard, `rer verify` retains the complete manifest command list.
+The Linux executor requires its documented Linux host preparation.
+
+Before committing, stage new source files, inspect
+`node scripts/edition-authoring/cli.mjs changes`, regenerate with
+`node scripts/edition-authoring/cli.mjs lock`, then run
+`node scripts/edition-authoring/cli.mjs check`. Never edit lock hashes.
+The final required `verify` gate fails on any failed or cancelled selected job.
+The plan can reuse a completed full push for an identical main SHA or unchanged
+parent tree; API errors and incomplete evidence run the full matrix.
+
 # Adopt the seed Verify workflow
 
 New foundation compositions and standalone reference exports receive
