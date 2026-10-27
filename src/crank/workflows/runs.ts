@@ -51,7 +51,7 @@ export async function searchRuns(env: CrankEnv, actor: Actor, params: URLSearchP
     AND (?4 IS NULL OR received_at>=?4) AND (?5 IS NULL OR received_at<=?5) AND (?6 IS NULL OR json_extract(error_json,'$.category')=?6)
     AND (?7 IS NULL OR (${plain('trigger_json')} AND trigger_json LIKE ?8) OR source_id LIKE ?8 OR business_key LIKE ?8 OR (${plain('error_json')} AND error_json LIKE ?8)) AND (?9 IS NULL OR received_at||'|'||id < ?9)
     ORDER BY received_at DESC,id DESC LIMIT ?10`,
-  params.get('workflow'), params.get('status'), params.get('business_key'), params.get('from'), params.get('to')?.length === 10 ? params.get('to') + 'T23:59:59.999Z' : params.get('to'), params.get('error'), q, `%${q}%`, before, limit + 1, actor.team ? JSON.stringify(actor.team.workflow_ids) : null, actor.team && (q || params.get('business_key')) ? JSON.stringify(payloadWorkflowIds(actor)) : null).all<RunRow & {business_complete: number}>()
+  params.get('workflow'), params.get('status'), params.get('business_key'), params.get('from'), params.get('to')?.length === 10 ? params.get('to') + 'T23:59:59.999Z' : params.get('to'), params.get('error'), q, `%${q}%`, before, limit + 1, actor.team ? JSON.stringify(actor.team.workflow_ids) : null, actor.team && (q !== null || params.has('business_key')) ? JSON.stringify(payloadWorkflowIds(actor)) : null).all<RunRow & {business_complete: number}>()
   const page = rows.results.slice(0, limit), last = page.at(-1)
   return { runs: await Promise.all(page.map(async run => {
     const payload = mayReadPayload(actor, run.workflow_id)

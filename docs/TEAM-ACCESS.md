@@ -4,7 +4,7 @@ The owner assigns explicit grants on Access. Each grant combines a product role 
 
 One grant must cover the requested action, workflow and every account used by that action. A builder grant for a workflow cannot borrow account access from a viewer grant. Admins may delegate only actions covered by one of their own complete grants; an approver grant alongside an admin grant cannot supply missing delegation powers. They cannot change owner settings, issue credentials or administer another person's broader access.
 
-Run-list payloads are checked against each workflow's complete read grant, regardless of grant order. Status-only grants never acquire customer values from a separate builder grant, including in legacy history and text or business-key searches.
+Run-list payloads are checked against each workflow's complete read grant, regardless of grant order. Status-only grants never acquire customer values from a separate builder grant, including in legacy history and text or business-key searches. An explicitly empty search value still requires payload read authority; it cannot probe a status-only record.
 
 Operators can preview and replay eligible failed steps in their scope. Completed effects stay complete and uncertain writes require reconciliation. Draft tests retain the initiating builder's authority revision, and publication retains its immutable execution authority. Removing access fences the next request and an admitted write before commit. Editor controls and approval availability check the complete grant for their own action and all accounts, even when a different role appears first.
 

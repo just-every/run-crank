@@ -189,6 +189,8 @@ test('TEAM-001: complete explicit grants authorize native work, delegation, scop
   await h.post(`workflows/${other.id}/draft`,{name:'Refused cross-grant write'},person.cookie,403);
   const visible=await h.post(`workflows/${w.id}/run`,{input:{customer:'synthetic-crank-allowed-payload'}},h.owner,201);
   const restricted=await h.post(`workflows/${other.id}/run`,{input:{customer:'synthetic-crank-restricted-payload'},business_key:'synthetic-crank-restricted-key'},h.owner,201);
+  const emptyKey=await h.post(`workflows/${other.id}/run`,{input:{customer:'synthetic-crank-empty-key-payload'},business_key:''},h.owner,201);
+  assert.deepEqual((await h.get('workflow-runs?business_key=')).runs.map(row=>row.id),[emptyKey.id],'the owner can search an explicitly empty business key');
   const legacyVisible=await h.flow('Synthetic complete legacy read'),legacyRestricted=await h.flow('Synthetic status-only legacy read');
   const legacyRuns=[await h.run(legacyVisible,'synthetic-crank-mixed-one',{customer:'synthetic-crank-legacy-allowed'}),await h.run(legacyRestricted,'synthetic-crank-mixed-two',{customer:'synthetic-crank-legacy-restricted'})];
   for(const grants of [
@@ -197,12 +199,14 @@ test('TEAM-001: complete explicit grants authorize native work, delegation, scop
   ]) {
    await assign(person,grants);
    const listed=(await h.get('workflow-runs',person.cookie)).runs;
-   assert.deepEqual(listed.map(row=>row.id).sort(),[visible.id,restricted.id].sort());
+   assert.deepEqual(listed.map(row=>row.id).sort(),[visible.id,restricted.id,emptyKey.id].sort());
    assert.equal(listed.find(row=>row.id===visible.id).trigger.input.customer,'synthetic-crank-allowed-payload');
    const hidden=listed.find(row=>row.id===restricted.id);assert.equal(hidden.payload,'restricted');assert.equal(hidden.trigger,undefined);assert.equal(hidden.business_key,null);
    assert.equal((await h.get('workflow-runs/'+restricted.id,person.cookie)).payload,'restricted');
    assert.deepEqual((await h.get('workflow-runs?q=synthetic-crank-restricted-payload',person.cookie)).runs,[]);
    assert.deepEqual((await h.get('workflow-runs?business_key=synthetic-crank-restricted-key',person.cookie)).runs,[]);
+   assert.deepEqual((await h.get('workflow-runs?business_key=',person.cookie)).runs,[],'an empty business-key filter cannot probe a status-only workflow');
+   assert.deepEqual((await h.get('workflow-runs?q=',person.cookie)).runs.map(row=>row.id),[visible.id],'an explicitly empty text query still uses payload read scopes');
    assert.deepEqual((await h.get('workflow-runs?q=synthetic-crank-allowed-payload',person.cookie)).runs.map(row=>row.id),[visible.id]);
    const state=await h.get('state',person.cookie);
    assert.equal(state.runs.find(row=>row.id===legacyRuns[0].id).input.customer,'synthetic-crank-legacy-allowed');
@@ -257,7 +261,7 @@ test('TEAM-001: complete explicit grants authorize native work, delegation, scop
   const duties=await h.send('/app/account',undefined,auditor.cookie);assert.equal(duties.status,200);
   for(const path of ['/app/audit','/app/billing']) {assert.ok(duties.text.includes(`href="${path}"`));assert.equal((await h.send(path,undefined,auditor.cookie)).status,200)}
   await h.get('./reports/usage',auditor.cookie);
-  const totals=await h.get('./reports/usage',billing.cookie);assert.deepEqual(totals.map(row=>({runs:row.runs,accounted_units:row.accounted_units})),[{runs:5,accounted_units:'0'}]);
+  const totals=await h.get('./reports/usage',billing.cookie);assert.deepEqual(totals.map(row=>({runs:row.runs,accounted_units:row.accounted_units})),[{runs:6,accounted_units:'0'}]);
   for(const p of [auditor,billing]) {
    for(const path of ['connections','workflows','workflow-runs']) assert.deepEqual((await h.get(path,p.cookie)).runs??await h.get(path,p.cookie),[]);
    await h.get('workflow-runs/'+run.id,p.cookie,403);await h.post('data/export',{},p.cookie,403);
