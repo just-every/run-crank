@@ -109,3 +109,8 @@ function validatePaths(step: Step, depth: number, warnings: string[]) {
   if (step.on_type_mismatch !== undefined && step.on_type_mismatch !== 'halt' && !seen.has(step.on_type_mismatch as string) && step.on_type_mismatch !== 'fallback') throw new StepError('validation', `Path group ${step.id}: on_type_mismatch must be halt or a branch id`)
   if (step.fallback === undefined) warnings.push(`Path group ${step.id} has no fallback branch: a run that matches no branch ends as stopped by filter`)
 }
+
+/** Native subflows share the public graph validator, without provider capabilities. */
+export function validateSubflowGraph(steps: Step[]) {
+  return validateGraph({trigger:{type:'manual'},steps,settings:{max_steps:2000}}).graph
+}

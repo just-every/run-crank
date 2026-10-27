@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { harness } from './harness.mjs';
 import { createHash } from 'node:crypto';
-import { archive, rewritten } from './restore-journey.mjs';
+import { archive, inventory, rewritten } from './restore-journey.mjs';
 import { publish, startRun, stepOf } from './kit.mjs';
 const definition = upper => ({ inputs: { address: 'string' }, outputs: { normalized: 'string' }, steps: [
   { id: 'trim', fn: 'text.trim', input: { value: '{{trigger.input.address}}' } },
@@ -129,6 +129,97 @@ export async function subflowsJourney() {
     const draftChild = await h.post('workflows/' + childFlow.id + '/test',{input},h.owner,201);
     assert.equal(draftChild.status,'paused');
     assert.deepEqual(draftChild.children,[],'draft test cannot queue production child work');
+    const nativeDefinition = upper => ({kind:'native', inputs:{address:'string',items:'array',allowed:'boolean'},outputs:{normalized:'string',items:'array'},steps:[
+      {id:'trim_native',type:'transform',fn:'text.trim',input:{value:'{{trigger.input.address}}'}},
+      {id:'allowed_native',type:'filter',when:[[{field:'trigger.input.allowed',op:'boolean.is_true'}]]},
+      {id:'choose_native',type:'paths',mode:'exclusive',branches:[{id:'address',when:[[{field:'trigger.input.address',op:'not_empty'}]],steps:[{id:'address_native',type:'map',input:{value:'{{steps.trim_native}}'}}]}],fallback:{steps:[{id:'fallback_native',type:'map',input:{value:'unknown'}}]}},
+      {id:'items_native',type:'loop',input:{items:'{{trigger.input.items}}'},max_items:5,concurrency:1,order:'input',empty:'allow',item_errors:'stop',steps:[{id:'item_native',type:'transform',fn:'text.case',input:{value:'{{item}}',to:'upper'}}],result:'{{steps.item_native}}'},
+      {id:'wait_native',type:'delay',mode:'for',input:{amount:1,unit:'hours'}},
+      {id:'result_native',type:'transform',fn:'text.case',input:{value:'{{steps.trim_native}}',to:upper?'upper':'lower'}},
+    ],result:{normalized:'{{steps.result_native}}',items:'{{steps.items_native.results}}'}});
+    for (const step of [
+      {id:'unsafe',type:'http',input:{url:'https://example.test'}},
+      {id:'unsafe',type:'subflow',subflow_id:first.subflow_id,subflow_version:1},
+      {id:'unsafe',type:'map',connection_id:'synthetic-crank-1',input:{}},
+      {...nativeDefinition(false).steps[3],max_items:1000},
+    ]) await h.post('subflows',{name:'Unsafe native graph',definition:{...nativeDefinition(false),steps:[step]}},h.owner,422);
+    const native=await h.post('subflows',{name:'Native address child',definition:nativeDefinition(false)},h.owner,201);
+    const nativePath=`subflows/${native.subflow_id}/versions`;
+    assert.equal(native.active,0,'native graphs have no eligibility before exact review');
+    const nativeGraph=version=>({trigger:{type:'manual'},steps:[{id:'normalize',type:'subflow',mode:'child',subflow_id:native.subflow_id,subflow_version:version,input:{address:'{{trigger.input.address}}',items:'{{trigger.input.items}}',allowed:'{{trigger.input.allowed}}'}},{id:'after_native',type:'map',input:{normalized:'{{steps.normalize.normalized}}',items:'{{steps.normalize.items}}'}}]});
+    const unreviewedNative=await h.post('workflows',{name:'Unreviewed native',graph:nativeGraph(1)},h.owner,201);
+    await h.post(`workflows/${unreviewedNative.id}/publish`,{},h.owner,409);
+    await h.post(nativePath+'/1/review',{definition_digest:'stale',confirm:'REVIEW_PURE_SUBFLOW'},h.owner,409);
+    await h.post(nativePath+'/1/review',{definition_digest:native.definition_digest,confirm:'REVIEW_PURE_SUBFLOW'});
+    const nativeA=await publish(h,'Native caller A',nativeGraph(1)),nativeB=await publish(h,'Native caller B',nativeGraph(1));
+    const nativeAuthority=(await h.get('workflows/'+nativeB.id)).versions[0].authority;
+    const nativeInput={address:' Bay Road ',items:['one','two'],allowed:true};
+    const beginNative=async (flow=nativeA,value=nativeInput)=>{
+      const run=await startRun(h,flow,value);assert.equal(run.status,'waiting');
+      await h.post('./subflows/calls/'+run.children[0].id+'/run');
+      return h.get('workflow-runs/'+run.id);
+    };
+    const finishNative=async run=>{
+      const detail=await h.get('workflow-runs/'+run.id),wait=detail.waits.find(w=>w.path.endsWith('/wait_native'));
+      assert.ok(wait,'native child retains its own delay checkpoint');
+      await h.tick(Date.parse(wait.due_at)+1000);
+      return h.get('workflow-runs/'+run.id);
+    };
+    const nativeWaiting=await beginNative();
+    assert.equal(nativeWaiting.status,'waiting');
+    assert.deepEqual(stepOf(nativeWaiting,'items_native').output.results,['ONE','TWO']);
+    const checkpoint=stepOf(nativeWaiting,'item_native').operation_key;
+    const nativeHistory=await h.get('./subflows/calls/'+nativeWaiting.children[0].id);
+    assert.equal(nativeHistory.run_id,nativeWaiting.id);
+    assert.ok(nativeHistory.checkpoints.some(step=>step.path.endsWith('/wait_native')&&step.status==='waiting'));
+    assert.ok(!JSON.stringify(nativeHistory).includes('Bay Road'),'child metadata discloses no payload');
+    await h.restart();
+    const nativeDone=await finishNative(nativeWaiting);
+    assert.equal(nativeDone.status,'succeeded');
+    assert.deepEqual(stepOf(nativeDone,'after_native').output,{normalized:'bay road',items:['ONE','TWO']});
+    assert.equal(stepOf(nativeDone,'item_native').operation_key,checkpoint,'restart keeps completed loop identity');
+    assert.equal(nativeDone.children[0].status,'succeeded');
+    await h.post('./subflows/calls/'+nativeDone.children[0].id+'/run');
+    assert.equal((await h.get('workflow-runs/'+nativeDone.id)).children.length,1);
+    const nativeSecond=await h.post(nativePath,{definition:nativeDefinition(true)},h.owner,201);
+    await h.post(nativePath+'/2/review',{definition_digest:nativeSecond.definition_digest,confirm:'REVIEW_PURE_SUBFLOW'});
+    await h.post('workflows/'+nativeA.id+'/draft',{graph:nativeGraph(2)});await h.post('workflows/'+nativeA.id+'/publish',{},h.owner,201);
+    assert.equal(stepOf(await finishNative(await beginNative()),'after_native').output.normalized,'BAY ROAD');
+    assert.equal(stepOf(await finishNative(await beginNative(nativeB)),'after_native').output.normalized,'bay road');
+    await h.post('workflows/'+nativeA.id+'/rollback',{version:1},h.owner,201);
+    assert.equal(stepOf(await finishNative(await beginNative()),'after_native').output.normalized,'bay road');
+    assert.deepEqual((await h.get('workflows/'+nativeB.id)).versions[0].authority,nativeAuthority);
+    const stoppedNative=await beginNative(nativeA,{...nativeInput,allowed:false});
+    assert.equal(stoppedNative.status,'stopped_by_filter');
+    assert.ok(!stoppedNative.steps.some(s=>s.step_id==='after_native'||s.step_id==='wait_native'));
+    const fallbackNative=await finishNative(await beginNative(nativeA,{...nativeInput,address:''}));
+    assert.equal(stepOf(fallbackNative,'fallback_native').output.value,'unknown');
+    const invalidNative=await beginNative(nativeA,{...nativeInput,items:'wrong'});
+    assert.equal(invalidNative.status,'failed');assert.match(invalidNative.error.message,/input.items must be array/);
+    for (const side of ['child','parent']) {
+      const run=await beginNative();
+      await h.post(side==='child'?'./subflows/calls/'+run.children[0].id+'/cancel':'workflow-runs/'+run.id+'/cancel');
+      await h.restart();await finishNative(run);
+      const cancelled=await h.get('workflow-runs/'+run.id);
+      assert.equal(cancelled.status,'cancelled');assert.equal(cancelled.children[0].status,'cancelled');
+      assert.ok(!cancelled.steps.some(s=>s.step_id==='after_native'));
+    }
+    const nativeRevoked=await beginNative();await h.post(nativePath+'/1/revoke');
+    const nativePaused=await finishNative(nativeRevoked);
+    assert.equal(nativePaused.status,'paused');assert.equal(nativePaused.children[0].status,'paused');
+    await h.post(nativePath+'/1/review',{definition_digest:native.definition_digest,confirm:'REVIEW_PURE_SUBFLOW'});
+    await h.tick();assert.equal((await h.get('workflow-runs/'+nativeRevoked.id)).status,'paused','review cannot revive waiting authority');
+    await h.post('./subflows/calls/'+nativeRevoked.children[0].id+'/resume',{definition_digest:native.definition_digest,confirm:'RESUME_PURE_CHILD'});
+    await h.tick();assert.equal((await h.get('workflow-runs/'+nativeRevoked.id)).status,'succeeded');
+    const nativeOutputVersion=await h.post(nativePath,{definition:{...nativeDefinition(false),outputs:{normalized:'number',items:'array'}}},h.owner,201);
+    await h.post(nativePath+'/3/review',{definition_digest:nativeOutputVersion.definition_digest,confirm:'REVIEW_PURE_SUBFLOW'});
+    const wrongOutputCaller=await publish(h,'Native output refusal',nativeGraph(3));
+    const wrongOutput=await finishNative(await beginNative(wrongOutputCaller));
+    assert.equal(wrongOutput.status,'failed');assert.match(wrongOutput.error.message,/output.normalized must be number/);
+    assert.equal(wrongOutput.children[0].status,'failed');assert.ok(!wrongOutput.steps.some(s=>s.step_id==='after_native'));
+    const excessItems=await beginNative(nativeA,{...nativeInput,items:['a','b','c','d','e','f']});
+    assert.equal(excessItems.status,'failed');assert.match(excessItems.error.message,/declared item/);
+    const portableNative=await beginNative();
     const waitingChild = await startRun(h, childFlow, input);
     const erasedChild = await startRun(h, childFlow, input);
     await h.post('./subflows/calls/' + erasedChild.children[0].id + '/run');
@@ -143,6 +234,11 @@ export async function subflowsJourney() {
     assert.deepEqual(await restored.get('subflows'), [], 'invalid staged subflow leaves no product rows');
     await restored.post('data/restore', { archive: exported, confirm: 'RESTORE' });
     const receivingArchive = await archive(restored);
+    const receivedInventory=inventory(receivingArchive),sourceInventory=inventory(exported);
+    const restoreEvents=receivedInventory.filter(row=>!sourceInventory.includes(row));
+    assert.deepEqual(restoreEvents.map(row=>[JSON.parse(row).table,JSON.parse(row).row.action]),[['crank_audit','data.restore']]);
+    assert.deepEqual(receivedInventory.filter(row=>!restoreEvents.includes(row)),sourceInventory,'all portable records survive native-child restoration');
+    assert.equal((await restored.get('./subflows/calls/'+portableNative.children[0].id)).status,'interrupted');
     assert.deepEqual(portable(receivingArchive), portable(exported));
     const childRows = text => text.trim().split('\n').map(JSON.parse).flatMap(part=>part.items??[]).filter(item=>item.kind==='row'&&item.table==='crank_subflow_calls').map(item=>JSON.stringify(item.row)).sort();
     assert.deepEqual(childRows(receivingArchive),childRows(exported));
@@ -152,7 +248,22 @@ export async function subflowsJourney() {
     await restored.post('./subflows/calls/' + waitingChild.children[0].id + '/run',{},restored.owner,409);
     await restored.post('./subflows/calls/' + waitingChild.children[0].id + '/resume',{definition_digest:first.definition_digest,confirm:'RESUME_PURE_CHILD'},restored.owner,422);
     assert.equal((await restored.get('./subflows/calls/' + waitingChild.children[0].id)).status,'interrupted');
+    assert.equal((await restored.get('workflow-runs/'+portableNative.id)).status,'paused');
+    await restored.post('./subflows/calls/'+portableNative.children[0].id+'/run',{},restored.owner,409);
     assert.ok((await restored.get('subflows')).every(version => version.active === 0));
+    const receivingNative=await restored.post('workflows',{name:'Receiving native caller',graph:nativeGraph(1)},restored.owner,201);
+    await restored.post('workflows/'+receivingNative.id+'/publish',{},restored.owner,409);
+    await restored.post(nativePath+'/1/review',{definition_digest:native.definition_digest,confirm:'REVIEW_PURE_SUBFLOW'});
+    assert.equal((await restored.get('workflows/'+receivingNative.id)).status,'draft');
+    assert.equal((await restored.get('workflow-runs/'+portableNative.id)).status,'paused');
+    await restored.post('workflows/'+receivingNative.id+'/publish',{},restored.owner,201);
+    const receivingRun=await startRun(restored,receivingNative,nativeInput);
+    await restored.post('./subflows/calls/'+receivingRun.children[0].id+'/run');
+    const receivingWait=(await restored.get('workflow-runs/'+receivingRun.id)).waits.find(w=>w.path.endsWith('/wait_native'));
+    await restored.restart();await restored.tick(Date.parse(receivingWait.due_at)+1000);
+    const receivingDone=await restored.get('workflow-runs/'+receivingRun.id);
+    assert.equal(receivingDone.status,'succeeded');
+    assert.deepEqual(stepOf(receivingDone,'after_native').output,{normalized:'bay road',items:['ONE','TWO']});
     const draft = await restored.post('workflows', { name: 'Reviewed receiving caller', graph: graph(2) }, restored.owner, 201);
     await restored.post(`workflows/${draft.id}/publish`, {}, restored.owner, 409);
     await restored.post(versionPath + '/2/review', { definition_digest: second.definition_digest, confirm: 'REVIEW_PURE_SUBFLOW' });
