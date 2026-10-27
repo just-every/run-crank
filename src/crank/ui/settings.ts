@@ -1,3 +1,4 @@
+import { grantsAction, type TeamAccess, type TeamAction } from '../team/policy'
 import { action, chip, esc, hidden, json, stateWords, timestamp } from './document'
 const SCOPE: Record<string, string> = { agent: 'Agent · prepares flows and runs, reads results', trigger: 'Trigger · sends events to one flow' }
 export function accessView(state:any) {
@@ -10,11 +11,14 @@ export function dataView() {
 }
 
 /** The signed-in person, in the shell: who they are, what their role may do, and sign out. */
-export function accountView(session:any, owner:boolean, productRole?:string) {
-  const operator = session?.operator ?? {}, role = productRole ?? String(operator.role ?? '')
+export function accountView(session:any, owner:boolean, team?:TeamAccess) {
+  const operator = session?.operator ?? {}, roles = team ? [...new Set(team.grants.map(grant=>grant.role))] : [String(operator.role ?? '')], role = roles[0] ?? 'none'
+  const actions:TeamAction[] = ['read','prepare','publish','start','approve','replay','delegate','audit','billing','revoke']
+  const granted = team ? actions.filter(action=>team.grants.some(grant=>grantsAction(grant,action))) : []
   const may: Record<string,string> = { builder:'Prepare and publish selected workflows; approval requires a named approver.', operator:'Start and replay selected published workflows.', approver:'Review selected workflows; your own runs require another reviewer.', viewer:'Read status and timing of selected workflows.', owner:'Approve, publish, activate, replay and manage data, people and credentials.', admin:'Prepare flows and runs and read everything; an owner approves and publishes.', member:'Product access requires an explicit grant.', auditor:'Read value-free audit history.', billing:'Read aggregate usage without customer data.' }
-  return `<section class="panel"><h2>Signed in</h2><dl class="facts"><dt>Name</dt><dd>${esc(operator.displayName ?? '')}</dd><dt>Email</dt><dd>${esc(operator.email ?? '')}</dd><dt>Role</dt><dd>${esc(stateWords(role))} · ${esc(productRole === 'admin' ? 'Prepare and publish selected workflows; owner settings remain with the native owner.' : may[role] ?? '')}</dd>${session?.createdAt ? `<dt>Signed in</dt><dd>${timestamp(new Date(session.createdAt).toISOString())}</dd>` : ''}</dl><form method="post" action="/app/signout" class="inline"><button class="btn btn-secondary">Sign out</button></form></section>
-  ${role==='auditor'?'<section class="panel"><h2>Audit duties</h2><a href="/app/audit">Read audit history</a></section>':role==='billing'?'<section class="panel"><h2>Billing duties</h2><a href="/app/billing">Read aggregate usage</a></section>':''}
+  return `<section class="panel"><h2>Signed in</h2><dl class="facts"><dt>Name</dt><dd>${esc(operator.displayName ?? '')}</dd><dt>Email</dt><dd>${esc(operator.email ?? '')}</dd><dt>Role</dt><dd>${esc(roles.map(stateWords).join(', ') || 'No product access')} · ${esc(team ? granted.length ? 'Granted actions: '+granted.map(stateWords).join(', ')+'. Workflow and account scopes apply.' : 'Product access requires an explicit grant.' : may[role] ?? '')}</dd>${session?.createdAt ? `<dt>Signed in</dt><dd>${timestamp(new Date(session.createdAt).toISOString())}</dd>` : ''}</dl><form method="post" action="/app/signout" class="inline"><button class="btn btn-secondary">Sign out</button></form></section>
+  ${granted.includes('audit')?'<section class="panel"><h2>Audit duties</h2><a href="/app/audit">Read audit history</a></section>':''}
+  ${granted.includes('billing')?'<section class="panel"><h2>Billing duties</h2><a href="/app/billing">Read aggregate usage</a></section>':''}
   ${owner ? `<section class="panel"><h2>Provider settings</h2><a href="/app/settings/provider-consent">Review Gusto responsibilities and operation consent</a></section><section class="panel"><h2>Sign-in settings</h2><p class="muted">Whether invited people may sign in through your linked identity provider. Email sign-in links stay available to the owner.</p><div class="actions"><a class="btn btn-secondary" href="/auth/settings/identity">Open sign-in settings</a></div></section>` : ''}`
 }
 

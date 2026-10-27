@@ -34,10 +34,11 @@
     },
     {
       "name": "queues-erasure",
-      "browser": false,
+      "browser": true,
       "hosted": false,
       "commands": [
-        "node --test --test-concurrency=1 tests/request-limits.test.mjs tests/webhook-erasure.test.mjs tests/team.test.mjs"
+        "node --test --test-concurrency=1 tests/request-limits.test.mjs tests/webhook-erasure.test.mjs tests/team.test.mjs",
+        "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/team\" node tests/team-browser.mjs"
       ]
     },
     {

@@ -167,6 +167,7 @@ try {
     const forbidden=await approverContext.request.post(origin+`/api/crank/workflow-runs/${liveTest.id}/approve`,{headers:{origin},data:{path:'settle',digest:liveTest.waits[0].proposal_digest}});assert.equal(forbidden.status(),403);
     page=approverPage;await page.setViewportSize({width,height:1000});await page.goto(origin+'/app/workflow-runs/'+liveTest.id);await expect(decisionForms(page)).toHaveCount(0);await shot(width,'owner-only-live-test-confirmation');page=builderPage;
     const refused=await send(`workflow-runs/${liveTest.id}/reject`,{path:'settle',digest:liveTest.waits[0].proposal_digest});assert.equal(refused.status,'rejected');assert.equal(refused.attempts.length,0);
+    await send(`workflows/${liveWorkflow.id}/estimate`,quote);await send(`workflows/${liveWorkflow.id}/publish`,{},201);
     await send('team/'+dana.id,{role:'builder',workflow_ids:[workflow.id],connection_ids:[connection.id]});
 
     await page.goto(origin+'/app/workflows/'+workflow.id);await expect(page.getByText(workflow.name,{exact:true}).first()).toBeVisible();await expect(page.locator(`input[name="path"][value="/api/crank/workflows/${workflow.id}/run"]`)).toHaveCount(0);await shot(width,'workflow');await page.goto(origin+'/app/account');await expect(page.locator('main dd').filter({hasText:/Builder/})).toBeVisible();await shot(width,'account');page=ownerPage;
@@ -187,7 +188,22 @@ try {
     await page.goto(origin+'/app/workflow-runs/'+restrictedRun.id);
     if(width===1440) {await expect(page.getByText('Restricted for your role.',{exact:true})).toBeVisible();assert.ok(!(await page.locator('main').innerText()).includes('synthetic-crank-hidden-customer'))}
     await shot(width,'mixed-grant-status-only');page=ownerScreen;
+    await send('team/'+dana.id,{grants:[{role:'viewer',workflow_ids:[workflow.id],connection_ids:[]},{role:'builder',workflow_ids:[workflow.id],connection_ids:[connection.id]}]});
+    page=builderPage;await page.goto(origin+'/app/workflows/'+workflow.id);
+    if(width===1440) await expect(page.getByRole('link',{name:'Test',exact:true})).toBeVisible();
+    await shot(width,'complete-builder-grant');page=ownerScreen;
+    for(const complete of [false,true]) {
+      await send('team/'+dana.id,{grants:[{role:'operator',workflow_ids:[liveWorkflow.id],connection_ids:complete?[connection.id]:[]},{role:'viewer',workflow_ids:[liveWorkflow.id],connection_ids:[connection.id]}]});
+      page=builderPage;await page.goto(origin+'/app/workflows/'+liveWorkflow.id);
+      if(width===1440) await expect(page.locator('summary').filter({hasText:'Run now'})).toHaveCount(complete?1:0);
+      await shot(width,complete?'complete-operator-grant':'cross-grant-start-refused');page=ownerScreen;
+    }
     await send('team/'+dana.id,{role:'builder',workflow_ids:[workflow.id],connection_ids:[connection.id]});
+    const auditPerson=people.find(person=>person.email===duties.find(duty=>duty.role==='auditor').email);
+    await send('team/'+auditPerson.id,{grants:[{role:'viewer',workflow_ids:[],connection_ids:[]},{role:'auditor',workflow_ids:[],connection_ids:[]},{role:'billing',workflow_ids:[],connection_ids:[]}]});
+    const auditDuty=duties.find(duty=>duty.role==='auditor');page=auditDuty.page;await page.setViewportSize({width,height:1000});await page.goto(origin+'/app/account');
+    if(width===1440) for(const name of ['Read audit history','Read aggregate usage']) await expect(page.getByRole('link',{name,exact:true})).toBeVisible();
+    await shot(width,'combined-audit-billing-duties');page=ownerScreen;
     const site=/RER_SITE\s+(https?:\/\/\S+)/.exec(await readFile(devLog,'utf8'))?.[1];assert.ok(site,'Installed reference site is ready');
     const docsPage=await owner.newPage();await docsPage.setViewportSize({width,height:1000});await docsPage.goto(site+'/docs/api');
     await docsPage.getByRole('cell',{name:'POST /workflows/:id/test',exact:true}).scrollIntoViewIfNeeded();await docsPage.screenshot({path:join(evidence,`${width}-api-test-role.png`)});

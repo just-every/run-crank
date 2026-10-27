@@ -52,12 +52,14 @@ export function connectionScope(actor: Actor, connectionId: string) {
   requireValue((!actor.serviceAccountId || actor.serviceConnectionIds?.includes(connectionId)) && (!actor.team || actor.team.connection_ids.includes(connectionId)), 'This connection is outside your scope', 403)
 }
 /** One complete grant covers the verb and every immutable account binding. */
-export async function versionConnectionScope(env: CrankEnv, actor: Actor, versionId: string) {
+export async function versionConnectionScope(env: CrankEnv, actor: Actor, versionId: string, action?: TeamAction) {
   if (!actor.team) return
   const version = await stmt(env, 'SELECT workflow_id,declared_json FROM crank_workflow_versions WHERE id=?', versionId).first<{workflow_id:string;declared_json:string}>()
   requireValue(version, 'Version not found', 404)
   const declared = JSON.parse(version.declared_json), connections = [...(declared.connections ?? []), ...(declared.gateways ?? []).map((id:string)=>'gateway:'+id)]
-  requireValue(actor.team.grants.some(g=>g.workflow_ids.includes(version.workflow_id) && connections.every((id:string)=>g.connection_ids.includes(id))), 'One complete grant must cover this workflow and every connection',403)
+  const grants=actor.team.grants.filter(g=>(!action || grantsAction(g,action)) && g.workflow_ids.includes(version.workflow_id) && connections.every((id:string)=>g.connection_ids.includes(id)))
+  requireValue(grants.length, 'One complete grant must cover this workflow and every connection',403)
+  actor.team={...actor.team,grants}
   for (const connectionId of connections) connectionScope(actor,connectionId)
 }
 export const mayPrepare = (actor: Actor) => actor.team ? !!completeGrant(actor,'prepare') : ['owner','admin'].includes(actor.role)
