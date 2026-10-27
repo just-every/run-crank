@@ -157,9 +157,19 @@ async function result(env: CrankEnv, actor: Actor, runId: string, current: Descr
   requireValue(source && source.workflow_id === current.at.workflow_id && source.mode === 'test' && source.created_by === actor.id && source.test_owner_version === actor.version && !source.payload_expired_at, 'Choose a retained picker test from this workflow and current owner authority', 409)
   const marker = await stmt(env, "SELECT detail_json FROM crank_audit WHERE subject_kind='run' AND subject_id=? AND action='custom.picker_load'", runId).first<{ detail_json: string }>()
   requireValue(marker, 'This run is not an explicitly loaded picker source', 409)
-  const recorded = JSON.parse(marker.detail_json)
-  current = await descriptor(env, actor, current.at, recorded.page ?? { query: '' })
-  const expected = { ...current.at, page: current.page, draft_digest: current.draftDigest, snapshot_digest: await digest(canonical(current.snapshot)), connection_consent:await connectionConsent(env,current.target) }
+  const frozen = JSON.parse(source.graph_json) as Graph, read = stepAt(frozen, READ_ID), controls = current.list.resource_page
+  const value = (name: string) => {
+    const input = isObject(read?.input) ? read.input[name] : undefined
+    return isObject(input) && Object.keys(input).length === 1 ? input.$literal : undefined
+  }
+  let page: Page = { query: '' }
+  if (controls) {
+    const query = value(controls.query_input), cursor = value(controls.cursor_input)
+    requireValue(typeof query === 'string' && (cursor === undefined || typeof cursor === 'string'), 'The retained resource page is invalid; load names again', 409)
+    page = { query, ...(cursor === undefined ? {} : { cursor }) }
+  }
+  current = await descriptor(env, actor, current.at, page)
+  const expected = { ...current.at, page_digest: await digest(canonical(page)), draft_digest: current.draftDigest, snapshot_digest: await digest(canonical(current.snapshot)), connection_consent:await connectionConsent(env,current.target) }
   requireValue(canonical(JSON.parse(marker.detail_json)) === canonical(expected) && canonical(JSON.parse(source.graph_json)) === canonical(current.snapshot), 'This picker source belongs to another input or an older draft', 409)
   requireValue(currentBinding(source.declared_json, current.row), 'Connector consent changed; explicitly reload this picker', 409)
   await assertDispatchAuthority(env, runId)
@@ -203,7 +213,7 @@ export async function loadPicker(env: CrankEnv, actor: Actor, input: Record<stri
   const bindings = typeof current.target.connection_id === 'string' ? { [current.target.connection_id]: current.target.connection_id } : {}
   const run = await testWorkflow(env, actor, current.at.workflow_id, { input: {}, bindings }, current.snapshot)
   await guardedBatch(env, actor, 'owner', [auditStatement(env, actor.id, 'custom.picker_load', 'run', run.id,
-    { ...current.at, page, draft_digest: current.draftDigest, snapshot_digest: await digest(canonical(current.snapshot)), connection_consent: consent }, run.version_id)])
+    { ...current.at, page_digest: await digest(canonical(page)), draft_digest: current.draftDigest, snapshot_digest: await digest(canonical(current.snapshot)), connection_consent: consent }, run.version_id)])
   return publicResult(await result(env, actor, run.id, current))
 }
 
