@@ -114,6 +114,8 @@ async function pagedBrowser({h,page,origin,shots,fake}) {
   const draft=await h.get('workflows/'+workflow.id);delete draft.draft.steps[0].input.workspace;
   await h.post('workflows/'+workflow.id+'/draft',{graph:draft.draft});
   await open();assert.equal(await page.getByRole('button',{name:'Load current Channel',exact:true}).isDisabled(),true);
+  assert.equal(await page.getByRole('textbox',{name:'Custom Channel',exact:true}).isDisabled(),true);
+  assert.equal(await page.getByRole('button',{name:'Use custom Channel',exact:true}).isDisabled(),true);
   await shots('picker-parent-required');
   await page.getByRole('textbox',{name:'Custom Workspace',exact:true}).fill('north');await click('Use custom Workspace');
   const before=(await h.get('workflows/'+workflow.id)).draft;
@@ -124,6 +126,12 @@ async function pagedBrowser({h,page,origin,shots,fake}) {
   const choices=await page.getByRole('combobox',{name:'Choose Channel',exact:true}).locator('option').allTextContents();
   assert.deepEqual(choices.slice(1),['Shared channel — synthetic-crank-1199 — East office','Shared channel — synthetic-crank-1200 — West office']);
   assert.ok(await page.locator('time[datetime]').count());
+  for(const control of await page.locator('.control-tooltip').all()) {
+    if(!await control.isVisible())continue;
+    const tip=control.locator('.control-tooltip-label');assert.equal(await tip.count(),1);
+    assert.ok((await tip.textContent()).trim().split(/\s+/).length>=2);
+    await control.focus();assert.equal(await tip.evaluate(el=>getComputedStyle(el).visibility),'visible');
+  }
   for(const control of await page.locator('button,a').all()) {
     if(await control.isVisible() && !(await control.innerText()).trim())assert.ok(await control.getAttribute('data-tooltip') || await control.getAttribute('aria-label'),'Every icon control has an accessible tooltip label');
   }
