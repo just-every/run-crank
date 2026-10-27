@@ -183,6 +183,11 @@ test('TEAM-001: complete explicit grants authorize native work, delegation, scop
   await assign(recipient,[grant('builder',[other.id],[c.id])],admin.cookie,403);
   await assign(recipient,[grant('auditor')],admin.cookie,403);
   await h.post('data/export',{},admin.cookie,403);
+  let release;const gate=new Promise(resolve=>release=resolve),encoder=new TextEncoder();
+  const stream=new ReadableStream({async start(controller){controller.enqueue(encoder.encode('{"grants":'));await gate;controller.enqueue(encoder.encode(JSON.stringify([grant('viewer',[w.id])])+'}'));controller.close()}});
+  const pendingDelegation=h.mf.dispatchFetch(h.origin+'/api/crank/team/'+recipient.id,{method:'POST',body:stream,duplex:'half',redirect:'manual',headers:{origin:h.origin,cookie:admin.cookie,'content-type':'application/json'}});
+  await new Promise(resolve=>setTimeout(resolve,500));await assign(admin,[]);release();assert.equal((await pendingDelegation).status,403);
+  assert.equal((await h.get('team')).find(row=>row.operator_id===recipient.id).grants[0].role,'builder');
   const recover=await publish(h,'Synthetic scoped recovery',{trigger:{type:'manual'},steps:[{id:'amount',type:'transform',fn:'number.parse',input:{value:'bad'}}]});
   const run=await h.post(`workflows/${recover.id}/run`,{},h.owner,201);
   await assign(person,[grant('operator',[recover.id])]);
@@ -194,7 +199,7 @@ test('TEAM-001: complete explicit grants authorize native work, delegation, scop
   await assign(auditor,[grant('auditor')]);await assign(billing,[grant('billing')]);
   const history=await h.get('audit',auditor.cookie);assert.ok(history.some(row=>row.action==='team.scope'));
   assert.ok(history.every(row=>row.detail===undefined && row.detail_json===undefined));
-  const totals=await h.get('reports/usage',billing.cookie);assert.ok(totals.some(row=>row.runs>0));
+  const totals=await h.get('reports/usage',billing.cookie);assert.deepEqual(totals.map(row=>({runs:row.runs,accounted_units:row.accounted_units})),[{runs:1,accounted_units:'0'}]);
   for(const p of [auditor,billing]) {
    for(const path of ['connections','workflows','workflow-runs']) assert.deepEqual((await h.get(path,p.cookie)).runs??await h.get(path,p.cookie),[]);
    await h.get('workflow-runs/'+run.id,p.cookie,403);await h.post('data/export',{},p.cookie,403);
@@ -202,7 +207,9 @@ test('TEAM-001: complete explicit grants authorize native work, delegation, scop
   }
   assert.ok(!JSON.stringify([history,totals]).includes('synthetic-crank-customer-private'));
   assert.ok(!JSON.stringify([history,totals]).includes('grant-custody'));
-  const ownerRun=await h.send('/api/crank/workflows/'+w.id+'/run',{input:{}},h.owner);assert.equal(ownerRun.status,201);
+  const reviewWorkflow=await publish(h,'Synthetic owner separation',{trigger:{type:'manual'},steps:[{id:'review',type:'approval',input:{amount:'25.00'}}]});
+  const ownerRun=await h.send('/api/crank/workflows/'+reviewWorkflow.id+'/run',{input:{}},h.owner);assert.equal(ownerRun.status,201);
+  await h.post(`workflow-runs/${ownerRun.value.id}/approve`,{path:'review',digest:ownerRun.value.waits[0].proposal_digest},h.owner,403);
   const ownTest=await h.post(`workflows/${w.id}/test`,{bindings:{[c.id]:c.id}} ,h.owner,201);
   assert.equal(ownTest.status,'awaiting_approval');
   await h.post(`workflow-runs/${ownTest.id}/approve`,{path:'send',digest:ownTest.waits[0].proposal_digest},h.owner,403);
@@ -210,7 +217,9 @@ test('TEAM-001: complete explicit grants authorize native work, delegation, scop
   const pending=await h.send('/api/crank/flows/'+legacy.id+'/runs',{event_id:'synthetic-crank-self',input:{customer:'synthetic-crank-private'}},h.owner);assert.equal(pending.status,201);
   await h.post('runs/'+pending.value.id+'/approve',{},h.owner,403);
   const legacyAdmin=await invite(h,'Synthetic legacy administrator','admin');
-  await assign(legacyAdmin,[grant('builder',[legacy.id]),grant('approver',[legacy.id])]);
+  await assign(legacyAdmin,[grant('admin',[reviewWorkflow.id,legacy.id]),grant('approver',[reviewWorkflow.id,legacy.id])]);
+  const nativeOwn=await h.post(`workflows/${reviewWorkflow.id}/run`,{},legacyAdmin.cookie,201);
+  await h.post(`workflow-runs/${nativeOwn.id}/approve`,{path:'review',digest:nativeOwn.waits[0].proposal_digest},legacyAdmin.cookie,403);
   const own=await h.post('flows/'+legacy.id+'/runs',{event_id:'synthetic-crank-admin-self',input:{}},legacyAdmin.cookie,201);
   await h.post('runs/'+own.id+'/approve',{},legacyAdmin.cookie,403);
  } finally {await h.close()}
