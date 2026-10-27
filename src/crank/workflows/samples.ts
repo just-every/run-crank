@@ -16,7 +16,7 @@ type SampleRow = { id: string; workflow_id: string; step_path: string; source: s
 const sourceLabel = (row: Pick<SampleRow, 'source' | 'source_id' | 'id'>) => row.source === 'manual' ? 'manual sample' : row.source === 'schema' ? 'schema sample · not tested' : row.source === 'history' ? `history run ${row.source_id}` : `webhook sample ${row.id}`
 function readScope(actor: Actor, workflowId: string) {
   workflowScope(actor, workflowId)
-  requireValue(canReadPayload(actor), 'Your role cannot read sample payloads', 403)
+  requireValue(canReadPayload(actor, workflowId), 'Your role cannot read sample payloads', 403)
 }
 async function editable(env: CrankEnv, actor: Actor, workflowId: string) {
   requirePrepare(actor); readScope(actor, workflowId)
@@ -96,7 +96,7 @@ export async function previewSample(env: CrankEnv, actor: Actor, workflowId: str
 }
 export async function sampleWarnings(env: CrankEnv, actor: Actor, workflowId: string, graph: Graph) {
   workflowScope(actor, workflowId)
-  if (!canReadPayload(actor)) return []
+  if (!canReadPayload(actor, workflowId)) return []
   const warnings: string[] = [], row = await stmt(env, "SELECT * FROM crank_workflow_samples WHERE workflow_id=? AND step_path='trigger' AND selected=1", workflowId).first<SampleRow>()
   if (row) {
     const payload = JSON.parse((await openText(env, workflowId, row.payload_json, 'display'))!), fields = await stmt(env, 'SELECT fields_json FROM crank_sample_fields WHERE workflow_id=?', workflowId).first<{fields_json:string}>()

@@ -86,6 +86,7 @@ async function createWorkflowDraft(env: CrankEnv, actor: Actor, input: Record<st
   if (command?.existing) return savedWorkflow(env, command.existing.workflow_id, command.existing, true)
   const { graph } = checked(input.graph)
   const workflowId = id(), draftId = id(), at = now(), condition = commandCondition(command)
+  if(actor.team)requireValue((input.environment??'production')==='production','This creation grant is limited to production',403)
   const metadata = { environment:environmentName(input.environment??'production'), name: text(input.name, 'name'), description: description(input.description), folder: folder(input.folder), settings: isObject(input.settings) ? input.settings : {} }
   const results = await guardedBatch(env, actor, 'prepare', [
     ...(command ? [claimCommand(env, actor, command, workflowId, draftId)] : []),

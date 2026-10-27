@@ -1,5 +1,5 @@
 import { authorizeServiceAccount, serviceAccountFence } from './team/service-accounts'
-import { admitTeamRequest, mayPrepare, mayPublish, teamAccess, teamFence } from './team/policy'
+import { admitTeamRequest, mayPrepare, mayPublish, teamAccess, teamFence, completeGrant } from './team/policy'
 import { operatorAuth, runtimeBindings } from '../auth.server'
 import { devGate } from '../modules/operator-auth/index.mjs'
 import { CrankError, digest, id, requireValue, stmt, type Actor, type CrankEnv } from './model'
@@ -68,7 +68,7 @@ export function authority(actor: Actor, mode: AuthorityMode): { sql: string; arg
     }
   }
   const product = teamFence(actor)
-  const teamAllowed = actor.team && (mode === 'prepare' ? mayPrepare(actor) : mode === 'publish' ? mayPublish(actor) : mode === 'operate' ? ['admin','operator'].includes(actor.team.role) : mode === 'read')
+  const teamAllowed = actor.team && (mode === 'prepare' ? mayPrepare(actor) : mode === 'publish' ? mayPublish(actor) : mode === 'operate' ? !!completeGrant(actor,'start') : mode === 'read')
   const roles = actor.team ? (teamAllowed ? "s.kind!='review'" : '0') : mode === 'publish' ? "o.role='owner' AND s.kind IN ('native','dev')" : mode === 'operate' ? "o.role IN ('owner','admin') AND s.kind!='review'" : mode === 'owner' ? "o.role='owner' AND s.kind IN ('native','dev')" : mode === 'prepare' ? "o.role IN ('owner','admin') AND s.kind!='review'" : mode === 'trigger' ? '0' : '1'
   return {
     sql: `EXISTS(SELECT 1 FROM oa_sessions s JOIN oa_operators o ON o.id=s.operator_id

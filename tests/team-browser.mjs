@@ -69,7 +69,7 @@ try {
     await pause(1000);
   }
   assert.ok(open, 'rer dev readiness deadline');
-  browser = await chromium.launch({ headless: true, args: ['--use-mock-keychain', '--password-store=basic'] });
+  browser = await chromium.launch({ headless: true, ...(process.env.CRANK_CHROMIUM_EXECUTABLE?{executablePath:process.env.CRANK_CHROMIUM_EXECUTABLE}:{}), args: ['--use-mock-keychain', '--password-store=basic', ...(process.platform==='linux'?['--no-sandbox']:[])] });
   const owner = await browser.newContext(); page = await owner.newPage();
   await page.goto(open);
   await page.waitForURL(url => ['/app', '/setup'].includes(url.pathname), { timeout: 60000 });
@@ -93,9 +93,9 @@ try {
   const workflow = await send('workflows',{name:'Harbour Workshop — finance supplier settlement and tax review',graph:{trigger:{type:'manual'},steps:[{id:'review',type:'approval',input:{supplier:'Northshore Fabrication and Industrial Supplies',amount:'2450.00',question:'Confirm the interstate sales-tax treatment before settlement.'}},{id:'record',type:'map',input:{approved:true}}]}},201);
   await send(`workflows/${workflow.id}/estimate`,quote); await send(`workflows/${workflow.id}/publish`,{},201);
   const connection = await send('connections',{app:'http',label:'Harbour Workshop — owned finance API',auth_kind:'bearer',domains:['finance.example.test'],secret:{token:'synthetic-browser-fixture-'+crypto.randomUUID()}},201);
-  const invited=[];
+  const invited=[],duties=[];
   let builderContext,builderPage,approverContext,approverPage;
-  for (const [name,role] of [['Dana Reyes — supplier finance builder','builder'],['Morgan Lee — operations viewer','viewer'],['Alex Rivera — settlement approver','approver']]) {
+  for (const [name,role] of [['Dana Reyes — supplier finance builder','builder'],['Morgan Lee — operations viewer','viewer'],['Alex Rivera — settlement approver','approver'],['Jamie Park — audit reader','auditor'],['Jordan Ellis — billing administrator','billing']]) {
     const email=name.split(' — ')[0].toLowerCase().replaceAll(' ','-')+'-'+Date.now()+'@example.test';
     const response=await owner.request.post(origin+'/auth/invite',{headers:{origin},data:{email,displayName:name,role:'member'}});
     assert.equal(response.status(),202);
@@ -104,11 +104,12 @@ try {
     catch { throw new Error('Native development persona sign-in failed'); }
     const link=/RER_OPEN\s+(https?:\/\/\S+)/.exec(local)?.[1];assert.ok(link,'Native person sign-in link');
     const context=await browser.newContext(),personPage=await context.newPage();await personPage.goto(link);await personPage.waitForURL('**/app');
-    if(role==='builder') {builderContext=context;builderPage=personPage;} else if(role==='approver') {approverContext=context;approverPage=personPage;} else await context.close();
+    if(role==='builder') {builderContext=context;builderPage=personPage;} else if(role==='approver') {approverContext=context;approverPage=personPage;} else if(['auditor','billing'].includes(role))duties.push({context,page:personPage,email,role});else await context.close();
     invited.push({email,role});
   }
   const peopleResponse=await owner.request.get(origin+'/auth/operators'),people=await peopleResponse.json();
   const dana=people.find(p=>p.email===invited.find(p=>p.role==='builder').email),morgan=people.find(p=>p.email===invited.find(p=>p.role==='viewer').email);
+  for(const duty of duties) {const person=people.find(p=>p.email===duty.email);await send('team/'+person.id,{role:duty.role,workflow_ids:[],connection_ids:[]})}
   for(const width of [1440,390]) {
     await page.setViewportSize({width,height:1000});
     await page.goto(origin+'/app/access');
@@ -122,6 +123,14 @@ try {
     const policies=await send('team');const saved=policies.find(p=>p.operator_id===dana.id);
     assert.equal(saved.role,'builder');assert.deepEqual(saved.workflow_ids,[workflow.id]);assert.deepEqual(saved.connection_ids,[connection.id]);
     await shot(width,'scope-saved');
+    const add=page.locator('form').filter({has:page.locator(`input[name="path"][value="/api/crank/team/${dana.id}"]`)});
+    await add.locator('..').locator('summary').click();
+    await add.locator('select[name="grant_mode"]').selectOption('add');
+    await add.locator('select[name="role"]').selectOption('viewer');
+    await add.getByRole('button').click();await page.waitForURL('**/app/access');
+    const union=(await send('team')).find(p=>p.operator_id===dana.id);assert.deepEqual(union.grants.map(g=>g.role),['builder','viewer']);
+    await shot(width,'explicit-grants');
+    const search=page.getByRole('link',{name:'Search runs',exact:true});await search.focus();await expect(page.locator('#search-tooltip')).toBeVisible();await search.blur();
     const builderSend=async(path,body,expected=201)=>{
       const response=await builderContext.request.post(origin+'/api/crank/'+path,{headers:{origin},data:body});
       const result=await response.json();assert.equal(response.status(),expected,result.error);return result;
@@ -167,6 +176,27 @@ try {
     const docsPage=await owner.newPage();await docsPage.setViewportSize({width,height:1000});await docsPage.goto(site+'/docs/api');
     await docsPage.getByRole('cell',{name:'POST /workflows/:id/test',exact:true}).scrollIntoViewIfNeeded();await docsPage.screenshot({path:join(evidence,`${width}-api-test-role.png`)});
     await docsPage.getByRole('heading',{name:/Scoped workflow teams/}).scrollIntoViewIfNeeded();await docsPage.getByText(/Scoped builders\/admins can edit and publish/).scrollIntoViewIfNeeded();await docsPage.screenshot({path:join(evidence,`${width}-api-builder-tests.png`)});await docsPage.close();
+    for(const duty of duties) {const ownerPage=page;page=duty.page;await page.setViewportSize({width,height:1000});await page.goto(origin+'/app/account');await page.getByRole('link',{name:duty.role==='auditor'?'Read audit history':'Read aggregate usage',exact:true}).click();await expect(page.getByRole('heading',{name:duty.role==='auditor'?'Value-free audit history':'Aggregate usage',exact:true})).toBeVisible();assert.ok(!(await page.locator('main').innerText()).includes('synthetic-browser-fixture'));await shot(width,duty.role+'-duties');page=ownerPage}
+    const visibleLegacy=await send('flows',{name:'Synthetic permitted legacy flow '+width,source_app:'Synthetic intake',destination_app:'Synthetic destination',target_url:'http://127.0.0.1:9051/events'},201);
+    const hiddenLegacy=await send('flows',{name:'Synthetic status-only legacy flow '+width,source_app:'Synthetic intake',destination_app:'Synthetic destination',target_url:'http://127.0.0.1:9051/events'},201);
+    for(const flow of [visibleLegacy,hiddenLegacy]) {await send(`flows/${flow.id}/estimate`,quote);await send(`flows/${flow.id}/activate`,{})}
+    const hiddenRun=await send(`flows/${hiddenLegacy.id}/runs`,{event_id:'synthetic-crank-hidden-event-'+width,input:{customer:'synthetic-crank-hidden-customer'}},201);
+    await send('team/'+dana.id,{grants:[{role:'builder',workflow_ids:[workflow.id,visibleLegacy.id],connection_ids:[connection.id]},{role:'viewer',workflow_ids:[hiddenLegacy.id],connection_ids:[]}]});
+    const legacyResponse=await builderContext.request.get(origin+'/api/crank/state'),legacyState=await legacyResponse.json();
+    assert.equal(legacyState.runs.find(row=>row.id===hiddenRun.id).input,undefined);
+    const legacyOwnerPage=page;page=builderPage;await page.goto(origin+'/app/runs/'+hiddenRun.id);await expect(page.locator('.detail-primary .chip')).toBeVisible();
+    assert.ok(!(await page.locator('main').innerText()).includes('synthetic-crank-hidden-customer'));assert.equal(await page.locator('pre').count(),0);
+    if(width===1440) for(const selector of ['.search.control-tooltip','.person.control-tooltip']) {
+      const control=page.locator(selector),tooltip=control.locator('[role="tooltip"]');await control.focus();
+      assert.equal(await tooltip.evaluate(el=>getComputedStyle(el).visibility),'visible','keyboard focus shows the tooltip immediately');
+      await control.blur();await page.mouse.move(0,0);await control.hover();await page.waitForTimeout(350);await expect(tooltip).toBeVisible();await page.mouse.move(0,0);
+    }
+    await shot(width,'restricted-legacy-run');
+    await page.goto(origin+'/app/runs?flow='+hiddenLegacy.id);await expect(page.locator(`a[href="/app/runs/${hiddenRun.id}"]`)).toBeVisible();assert.ok(!(await page.locator('main').innerText()).includes('synthetic-crank-hidden-event'));if(width===1440) {
+      const openRun=page.locator('.row-open.control-tooltip').first(),tip=openRun.locator('[role="tooltip"]');await openRun.focus();assert.equal(await tip.evaluate(el=>getComputedStyle(el).visibility),'visible');await openRun.blur();await page.mouse.move(0,0);await openRun.hover();await page.waitForTimeout(350);await expect(tip).toBeVisible();await page.mouse.move(0,0);
+    }
+    await shot(width,'restricted-legacy-list');page=legacyOwnerPage;
+    await send('team/'+dana.id,{role:'builder',workflow_ids:[workflow.id],connection_ids:[connection.id]});
     report.push({clause:'TEAM-001',width,states:['scope-selection','scope-saved','builder-test-waiting','builder-test-succeeded','builder-test-revoked','builder-test-repaired','owner-only-live-test-confirmation','workflow','account','transferred'],status:'pass'});
   }
   await writeFile(join(evidence,'team-browser.json'),JSON.stringify(report,null,2));

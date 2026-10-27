@@ -1,3 +1,4 @@
+import { grantsAction } from './team/policy'
 import { serviceAccountApi } from './team/service-accounts'
 import { authorize, requireOwner, requireWriteOrigin } from './access'
 import { deliverRun, recoverExpiredRuns, rejectRun } from './delivery'
@@ -8,9 +9,19 @@ import { mintToken, revokeToken, credentialColumns } from './tokens'
 import { quoteWorkflow, readWorkflowEstimate, flushUsageNotices } from './ops/usage'
 import { StepError } from './engine/errors'
 
+function teamRun(actor: Actor, run: Run) {
+  const payload = !actor.team || actor.team.grants.some(grant => !grant.review_grant_id && grantsAction(grant,'read') && grant.workflow_ids.includes(run.flow_id) && ['admin','builder','operator','approver'].includes(grant.role))
+  return payload ? presentRun(run) : {id:run.id,flow_id:run.flow_id,state:run.state,created_at:run.created_at,updated_at:run.updated_at,payload:'restricted'}
+}
+
 async function state(env: CrankEnv, actor: Actor): Promise<Response> {
   requireValue(actor.kind !== 'trigger', 'Trigger tokens only admit events to their scoped flow', 403)
-  if (actor.team) return json({ actor: publicActor(actor), flows: [], runs: [], approvals: [], attempts: [], tokens: [], people: [] })
+  if (actor.team) {
+    const scope=JSON.stringify(actor.team.workflow_ids)
+    const flows=await stmt(env,'SELECT * FROM crank_flows WHERE id IN (SELECT value FROM json_each(?)) ORDER BY created_at,id',scope).all<Flow>()
+    const rows=await stmt(env,'SELECT * FROM crank_runs WHERE flow_id IN (SELECT value FROM json_each(?)) ORDER BY created_at,id LIMIT 200',scope).all<Run>()
+    return json({actor:publicActor(actor),flows:flows.results,runs:rows.results.map(run=>teamRun(actor,run)),approvals:[],attempts:[],tokens:[],people:[]})
+  }
   await recoverExpiredRuns(env, actor)
   const canManage = actor.role === 'owner' && (actor.kind === 'native' || actor.kind === 'dev')
   const [flows, runs, approvals, attempts, tokens, people] = await Promise.all([
@@ -46,7 +57,7 @@ export async function crankApi(request: Request, env: CrankEnv): Promise<Respons
       const flow = /^\/api\/crank\/flows\/([^/]+)$/.exec(path)
       if (flow) return json(await getFlow(env, decodeURIComponent(flow[1])))
       const run = /^\/api\/crank\/runs\/([^/]+)$/.exec(path)
-      if (run) return json(presentRun(await getRun(env, decodeURIComponent(run[1]))))
+      if (run) {const row=await getRun(env,decodeURIComponent(run[1]));return json(teamRun(actor,row))}
       return json({ error: 'Route not found' }, 404)
     }
     requireValue(request.method === 'POST', 'Method not allowed', 405)
@@ -70,7 +81,6 @@ export async function crankApi(request: Request, env: CrankEnv): Promise<Respons
     }
     const runAction = /^\/api\/crank\/runs\/([^/]+)\/(approve|reject|replay)$/.exec(path)
     if (runAction) {
-      requireOwner(actor)
       if (request.body) await body(request)
       const runId = decodeURIComponent(runAction[1]), action = runAction[2]
       return json(presentRun(action === 'reject' ? await rejectRun(env, actor, runId) : await deliverRun(env, actor, runId, action === 'replay')))

@@ -1,5 +1,5 @@
 import { requireOwner, requireWriteOrigin } from '../access'
-import { body, json, requireValue, type Actor, type CrankEnv } from '../model'
+import { body, json, requireValue, type Actor, stmt, type CrankEnv } from '../model'
 import { allowOverage, flushUsageNotices, quoteWorkflow, readWorkflowEstimate, setBudget, usageReport } from './usage'
 
 /** Called after native authentication, before the workflow router consumes a body. */
@@ -7,6 +7,9 @@ export async function usageApi(request: Request, env: CrankEnv, actor: Actor): P
   const url = new URL(request.url), path = url.pathname
   const estimate = /^\/api\/crank\/workflows\/([^/]+)\/estimate$/.exec(path)
   if (!estimate && !['/api/crank/reports/usage', '/api/crank/usage/budgets', '/api/crank/usage/allowance'].includes(path)) return null
+  if(actor.team && request.method==='GET' && path==='/api/crank/reports/usage') {
+    return json((await stmt(env,'SELECT month,COUNT(*) AS runs,CAST(SUM(estimate_units) AS TEXT) AS estimate_units,CAST(SUM(accounted_units) AS TEXT) AS accounted_units FROM crank_usage_reservations GROUP BY month ORDER BY month').all()).results)
+  }
   requireOwner(actor)
   if (request.method === 'GET') {
     if (path === '/api/crank/reports/usage') return json(await usageReport(env, url.searchParams))

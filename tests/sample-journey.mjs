@@ -72,14 +72,17 @@ export async function sampleJourney({inspect=async()=>{}}={}) {
   const invited=await h.send('/auth/invite',{email:address('reader'),displayName:'Sample reader',role:'member'},h.owner);assert.equal(invited.status,202);
   const token=new URL(h.mail.at(-1).html.match(/href="([^"]*\/auth\/confirm\?token=[^"]+)"/)[1].replaceAll('&amp;','&'),h.origin).searchParams.get('token');
   const reader=(await h.send('/auth/confirm',{token})).cookie;
+  const readerPeople=await h.send('/auth/operators',undefined,h.owner),readerId=readerPeople.value.find(p=>p.displayName==='Sample reader').id;
+  await h.post('team/'+readerId,{role:'viewer',workflow_ids:[w.id],connection_ids:[]});
   assert.equal((await h.get('workflow-runs/'+run.id,reader)).payload,'restricted');
   await h.get(base+'/samples',reader,403);await h.post(base+'/samples',{source:'history',run_id:run.id},reader,403);await h.post(base+'/preview',{sample_id:chosen.id},reader,403);
   await h.post(base+'/samples/fields',{fields:['body.email','body.private_question']});
   const ownerWarnings=(await h.post(base+'/validate',{})).warnings;
   assert.ok(ownerWarnings.some(w=>w.includes('body.private_question')));
   assert.equal(ownerWarnings.some(w=>w.includes('body.email')),false);
-  const restrictedWarnings=(await h.post(base+'/validate',{},reader)).warnings;
-  assert.equal(restrictedWarnings.some(w=>w.includes('Stale sample')||w.includes('schema sample')),false,'validation cannot disclose retained sample field presence or test state');
+  const restrictedValidation=await h.post(base+'/validate',{},reader,403);
+  assert.equal(restrictedValidation.warnings,undefined,'a payload-restricted viewer cannot obtain sample validation');
+  assert.equal(JSON.stringify(restrictedValidation).includes('body.private_question'),false,'refusal cannot disclose retained sample field presence');
   assert.equal(edge.requests.length,1);
   const foreign=await h.post('workflows',{name:'Other sample workflow',graph:graph()},h.owner,201);
   await h.post(`workflows/${foreign.id}/samples`,{source:'history',run_id:run.id},h.owner,422);
@@ -114,6 +117,7 @@ export async function sampleJourney({inspect=async()=>{}}={}) {
   const adminToken=new URL(h.mail.at(-1).html.match(/href="([^"]*\/auth\/confirm\?token=[^"]+)"/)[1].replaceAll('&amp;','&'),h.origin).searchParams.get('token');
   const admin=(await h.send('/auth/confirm',{token:adminToken})).cookie;
   const people=await h.send('/auth/operators',undefined,h.owner),adminId=people.value.find(p=>p.displayName==='Sample admin').id;
+  await h.post('team/'+adminId,{role:'builder',workflow_ids:[foreign.id],connection_ids:[]});
   const adminSamples=await h.post(`workflows/${foreign.id}/samples`,{sample:{body:{email:address('admin-payload')}}},admin,201);
   const adminSampleId=adminSamples.samples[0].id;
   assert.equal(portable(await archive(h),'crank_workflow_samples').find(s=>s.id===adminSampleId).created_by,adminId);

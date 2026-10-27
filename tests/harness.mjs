@@ -26,7 +26,7 @@ async function digestBarrierBundle() {
   }}]})).outputFiles[0].text;
 }
 /** `edge` fakes third-party APIs at the network edge: a function from Request to a Response, or undefined to use the real network. */
-export async function harness(target,{emitted=false,edge,mailEdge,quoteCosts=true,bindings={},clock,digestCommitBarrier=false}={}) {
+export async function harness(target,{emitted=false,edge,mailEdge,quoteCosts=true,bindings={},clock,digestCommitBarrier=false,beforeTeamMigration=false}={}) {
   bundle ??= (await build(bundleOptions)).outputFiles[0].text;
   const port=await freePort(),origin=`http://127.0.0.1:${port}`,directory=await mkdtemp(join(tmpdir(),'crank-tests-'));
   const mail=[];
@@ -43,7 +43,7 @@ export async function harness(target,{emitted=false,edge,mailEdge,quoteCosts=tru
   let mf=new Miniflare(optionsFor(currentBundle));
   try {
     let db=await mf.getD1Database('DB');
-    for(const file of (await readdir('migrations/core')).filter(x=>x.endsWith('.sql')).sort()) await db.batch(unstable_splitSqlQuery(await readFile('migrations/core/'+file,'utf8')).map(sql=>db.prepare(sql)));
+    for(const file of (await readdir('migrations/core')).filter(x=>x.endsWith('.sql') && (!beforeTeamMigration || x!=='0080_team_grants.sql')).sort()) await db.batch(unstable_splitSqlQuery(await readFile('migrations/core/'+file,'utf8')).map(sql=>db.prepare(sql)));
     const send=async(path,body,cookie='',headers={})=>{
       const response=await mf.dispatchFetch(origin+path,{method:body===undefined?'GET':'POST',redirect:'manual',headers:{host:new URL(origin).host,origin,'content-type':'application/json',cookie,...headers},...(body===undefined?{}:{body:JSON.stringify(body)})});
       // Name the public door if the Worker transport interrupts its response.
@@ -54,6 +54,23 @@ export async function harness(target,{emitted=false,edge,mailEdge,quoteCosts=tru
     };
     const boot=await send('/auth/bootstrap',{token:'synthetic-test-owner-claim-01234567890123456789',displayName:'Harbour owner'});assert.equal(boot.status,303,boot.text);
     const owner=boot.cookie;
+    let starter, starterSetup;
+    const independentStarter=async()=>{
+      if(starter)return starter;
+      // Concurrent run starts share one native invitation and session setup.
+      return starterSetup ??= (async()=>{
+      // Use a separate native session for owner invitation so the fixture owner's sensitive-action proof stays untouched.
+      assert.equal((await send('/auth/magic-link',{email:'owner@example.test',returnTo:'/app'})).status,202);
+      const linkToken=()=>new URL(mail.at(-1).html.match(/href="([^"]*\/auth\/confirm\?token=[^"]+)"/)[1].replaceAll('&amp;','&'),origin).searchParams.get('token');
+      const inviter=(await send('/auth/confirm',{token:linkToken()})).cookie;
+      const step=await send('/auth/step-up',{action:'owner:transfer'},inviter);assert.equal(step.status,202,step.text);
+      assert.equal((await send('/auth/confirm',{token:linkToken()},inviter)).status,303);
+      const invited=await send('/auth/invite',{email:'synthetic-crank-starter@example.test',displayName:'Independent run starter',role:'owner'},inviter);
+      assert.equal(invited.status,202,invited.text);
+      const token=new URL(mail.at(-1).html.match(/href="([^"]*\/auth\/confirm\?token=[^"]+)"/)[1].replaceAll('&amp;','&'),origin).searchParams.get('token');
+      const signed=await send('/auth/confirm',{token});assert.equal(signed.status,303,signed.text);starter=signed.cookie;assert.equal((await send('/auth/signout',{},inviter)).status,204);return starter;
+      })();
+    };
     // Ordinary fixture owners explicitly review zero-cost network test edges before publication.
     // Cost-gate journeys use send() (or quoteCosts:false) so this is never production behavior.
     const zeroCost={components:['orchestration','connectors','models','executors'].map(kind=>({kind,usd_per_run:'0',assumption:'Owner acceptance fixture: local/network test edges do not bill this installation'}))};
@@ -63,6 +80,13 @@ export async function harness(target,{emitted=false,edge,mailEdge,quoteCosts=tru
         const quoted=await send('/api/crank/'+activation[1]+'/'+activation[2]+'/estimate',{cost:zeroCost},owner);
         assert.equal(quoted.status,200,quoted.text);
       }
+      if(cookie===owner && /^(workflows|flows)\/[^/]+\/(run|runs)$/.test(path))cookie=await independentStarter();
+      // Successful decision fixtures use an independent native owner when the fixture owner started the work.
+      const approval=/^(workflow-runs|runs)\/([^/]+)\/approve$/.exec(path);
+      if(cookie===owner && ![401,403].includes(status) && approval) {
+        const own=await db.prepare(`SELECT 1 FROM ${approval[1]==='runs'?'crank_runs':'crank_wf_runs'} r JOIN oa_operators o ON o.id=r.created_by WHERE r.id=? AND o.email='owner@example.test'`).bind(approval[2]).first();
+        if(own)cookie=await independentStarter();
+      }
       const r=await send('/api/crank/'+path,body,cookie,headers);assert.equal(r.status,status,`${path}: ${r.text}`);return r.value
     };
     const get=async(path='state',cookie=owner,status=200,headers={})=>{const r=await send('/api/crank/'+path,undefined,cookie,headers);assert.equal(r.status,status,`${path}: ${r.text}`);return r.value};
@@ -70,6 +94,6 @@ export async function harness(target,{emitted=false,edge,mailEdge,quoteCosts=tru
     const run=async(f,event='ticket-'+crypto.randomUUID(),input={customer:'Harbour Workshop',task:'Book a callback'})=>post('flows/'+f.id+'/runs',{event_id:event,input},owner,201);
     // The Worker's per-minute Cron pass, at a chosen scheduled time.
     const tick=async(time=Date.now())=>{const worker=await mf.getWorker();await worker.scheduled({scheduledTime:new Date(time),cron:'* * * * *'})};
-    return {get mf(){return mf},get db(){return db},mail,origin,owner,send,post,get,flow,run,tick,async restart({gustoDefinitionVersion,clock:nextClock}={}){if(nextClock!==undefined){assert.equal(emitted,false);assert.ok(Number.isFinite(Date.parse(nextClock)));currentBundle=atClock(selectedBundle,nextClock)}if(gustoDefinitionVersion!==undefined){assert.equal(emitted,false);currentBundle=await installedGustoBundle(gustoDefinitionVersion)}await mf.dispose();mf=new Miniflare(optionsFor(currentBundle));await mf.ready;db=await mf.getD1Database('DB')},async close(){await mf.dispose();await rm(directory,{recursive:true,force:true})}};
+    return {get mf(){return mf},get db(){return db},mail,origin,owner,independentStarter,send,post,get,flow,run,tick,async migrateTeam(){await db.batch(unstable_splitSqlQuery(await readFile('migrations/core/0080_team_grants.sql','utf8')).map(sql=>db.prepare(sql)))},async restart({gustoDefinitionVersion,clock:nextClock}={}){if(nextClock!==undefined){assert.equal(emitted,false);assert.ok(Number.isFinite(Date.parse(nextClock)));currentBundle=atClock(selectedBundle,nextClock)}if(gustoDefinitionVersion!==undefined){assert.equal(emitted,false);currentBundle=await installedGustoBundle(gustoDefinitionVersion)}await mf.dispose();mf=new Miniflare(optionsFor(currentBundle));await mf.ready;db=await mf.getD1Database('DB')},async close(){await mf.dispose();await rm(directory,{recursive:true,force:true})}};
   } catch(error){await mf.dispose();await rm(directory,{recursive:true,force:true});throw error}
 }
