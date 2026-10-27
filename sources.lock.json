@@ -5891,7 +5891,7 @@
       "executable": false
     },
     "tests/triggers.test.mjs": {
-      "sha256": "a82c2422a28695c8817fd575709be0e3b176d424b1892df4185f3ce5949c71d1",
+      "sha256": "8b7365887103562c7fbd466697f9254ee78074105c2f570eb80b56c146a2dddf",
       "executable": false
     },
     "tests/usage.test.mjs": {

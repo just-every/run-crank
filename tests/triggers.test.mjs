@@ -263,6 +263,7 @@ test('TRIG-003: incomplete poll pages retain the successful watermark and recove
 
 test('TRIG-007/TRIG-004: polling preserves interval choices, warns before publication and reports deduplicated feed latency', async () => {
   const source = { type: 'url_poll', url: 'https://api.github.com/repos/just-every/run-crank/issues', items_path: '', interval_minutes: 1, pagination: { kind: 'link', max_pages: 2 } };
+  const sampleWarnings = ['Trigger relies on a schema sample; not tested'];
   const draft = await h.post('workflows', { name: 'Public repository changes', graph: { trigger: source, steps: [] } }, h.owner, 201);
   assert.equal(draft.published_version_id, null, 'the rate warning precedes any publication');
   assert.equal(draft.poll_rate.requests_per_poll, 8);
@@ -271,10 +272,10 @@ test('TRIG-007/TRIG-004: polling preserves interval choices, warns before public
   assert.match(draft.warnings.join(' '), /GitHub.*8 requests per poll.*3 redirects per page.*60 requests per 3600 seconds.*Slowest safe interval: 15 min/);
   assert.equal((await h.get('workflows/' + draft.id)).poll_rate.warning, draft.poll_rate.warning);
   const validation = await h.post(`workflows/${draft.id}/validate`);
-  assert.equal(validation.ok, true); assert.deepEqual(validation.warnings, draft.warnings);
+  assert.equal(validation.ok, true); assert.deepEqual(validation.warnings, [...draft.warnings, ...sampleWarnings]);
   assert.equal((await h.get('workflows/' + draft.id)).published_version_id, null, 'validation has no publication side effect');
   const published = await h.post(`workflows/${draft.id}/publish`, {}, h.owner, 201);
-  assert.deepEqual(published.warnings, draft.warnings, 'publication returns the same advice');
+  assert.deepEqual(published.warnings, [...draft.warnings, ...sampleWarnings], 'publication preserves rate advice and adds the untested-sample warning');
   assert.equal((await h.get(`workflows/${draft.id}/trigger`)).poll.interval_minutes, 1, 'advice never silently changes the selected interval');
   const bounded = await h.post(`workflows/${draft.id}/draft`, { graph: { trigger: { ...source, pagination: { kind: 'link' } }, steps: [] } });
   assert.equal(bounded.poll_rate.requests_per_poll, 40);
@@ -284,6 +285,7 @@ test('TRIG-007/TRIG-004: polling preserves interval choices, warns before public
     assert.equal(saved.draft.trigger.interval_minutes, minutes);
     assert.equal(saved.warnings.length, minutes < 8 ? 1 : 0, 'the safe boundary and all slower supported choices are served without a warning');
     const selected = await h.post(`workflows/${draft.id}/publish`, {}, h.owner, 201);
+    assert.deepEqual(selected.warnings, [...saved.warnings, ...sampleWarnings], 'each selected interval retains both rate advice and sample provenance');
     assert.equal(selected.workflow.draft.trigger.interval_minutes, minutes);
     assert.equal((await h.get(`workflows/${draft.id}/trigger`)).poll.interval_minutes, minutes);
   }
@@ -300,11 +302,11 @@ test('TRIG-007/TRIG-004: polling preserves interval choices, warns before public
     assert.match(moved.warnings.join(' '), /4 requests per poll.*3 redirects per page.*60 requests per 3600 seconds.*Slowest safe interval: 5 min/);
     const movedValidation = await redirects.post(`workflows/${moved.id}/validate`);
     assert.equal(movedValidation.ok, true);
-    assert.deepEqual(movedValidation.warnings, moved.warnings, 'the validation door warns about the same redirect-inclusive bound');
+    assert.deepEqual(movedValidation.warnings, [...moved.warnings, ...sampleWarnings], 'the validation door retains the redirect-inclusive bound and sample warning');
     const movedSafe = await redirects.post(`workflows/${moved.id}/validate`, { graph: { trigger: { ...movedSource, interval_minutes: 5 }, steps: [] } });
-    assert.deepEqual(movedSafe.warnings, [], 'the supported conservative interval is served');
+    assert.deepEqual(movedSafe.warnings, sampleWarnings, 'the supported conservative interval adds no rate warning while retaining sample provenance');
     const movedPublished = await redirects.post(`workflows/${moved.id}/publish`, {}, redirects.owner, 201);
-    assert.deepEqual(movedPublished.warnings, moved.warnings);
+    assert.deepEqual(movedPublished.warnings, [...moved.warnings, ...sampleWarnings]);
     assert.equal((await redirects.get(`workflows/${moved.id}/trigger`)).poll.interval_minutes, 1, 'the warning preserves the selected interval');
     let mode = 'moved';
     redirectEdge.routes.set('api.github.com', ({ url }) => {
@@ -337,7 +339,7 @@ test('TRIG-007/TRIG-004: polling preserves interval choices, warns before public
   } finally { await redirects.close(); }
   for (const resource of ['contacts', 'companies', 'deals']) {
     const crm = await h.post(`workflows/${draft.id}/validate`, { graph: { trigger: { type: 'app_poll', provider: 'hubspot', resource, event: 'new', connection_id: 'synthetic-crank-3', interval_minutes: 1, backfill: 'from_now' }, steps: [] } });
-    assert.deepEqual(crm.warnings, [], 'the native CRM baseline supports the one-minute choice');
+    assert.deepEqual(crm.warnings, sampleWarnings, 'the native CRM baseline supports the one-minute choice and still identifies its untested sample');
   }
   await h.post(`workflows/${draft.id}/pause`);
   let items = [{ guid: 'a', title: 'Opening hours' }, { guid: 'b', title: 'New range' }];
