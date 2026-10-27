@@ -36,7 +36,7 @@ try {
  const importDoor=async(action,body)=>{const response=await context.request.post(origin+'/api/operator/import/'+action,{headers:{origin,'X-Import-Source':'n8n'},data:body});const value=await response.json();assert.equal(response.status(),200,action+': '+(value.error??'unexpected import status'));return value};
  const shot=async(width,state)=>{await page.screenshot({path:join(evidence,`${width}-${state}.png`),fullPage:true});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`${width} ${state} overflow`)};
  const {loopExport,streamLoopEnvelope,switchExport,dateExport,conversionExport,isolatedCodeChoice,graphExport,originalCodeExport,originalCodeChoice,expressionSwitchExport}=await import('./n8n-graph-fixture.mjs');
- const {transformStreamExport,filterStreamExport}=await import('./n8n-stream-journey.mjs');
+ const {transformStreamExport,filterStreamExport,looseObjectFilterStreamExport}=await import('./n8n-stream-journey.mjs');
  const fresh=await send('connections',{app:'http',label:'Synthetic reviewed migration account',auth_kind:'bearer',domains:['receiver.example'],secret:{token:'synthetic-crank-600'}},201);
  const component=await send('subflows',{name:'Synthetic browser registry conversion',definition:{inputs:{address:'string'},outputs:{normalized:'string'},steps:[{id:'trim',fn:'text.trim',input:{value:'{{trigger.input.address}}'}}],result:{normalized:'{{steps.trim}}'}}},201);
  const executor=await send('connections',{app:'http',label:'Synthetic browser native executor',auth_kind:'bearer',domains:['executor.example'],secret:{token:fakeSecret('browser-migration-executor')}},201);
@@ -99,13 +99,14 @@ try {
  const sourceEnvelope=streamLoopEnvelope(declared,'synthetic-crank-72'),source=sourceEnvelope.workflow;source.nodes[3].parameters.batchSize=2;
  const objectSource=looseObjectExport(declared,'synthetic-crank-object-browser');
  const overrideSource=looseObjectExport(declared,'synthetic-crank-object-override-browser');overrideSource.name='Synthetic right object operand routing';
+ const streamObjectSources=['left','right'].map(operand=>looseObjectFilterStreamExport(declared,operand));
  overrideSource.nodes[1].parameters.conditions.conditions[0]={id:'synthetic-crank-override',leftValue:'={{ $json.body.value }}',rightValue:'={{ $json.body.expected }}',operator:{type:'array',operation:'contains',rightType:'object'}};
  const driftSources=[conversionExport('registry','synthetic-crank-84'),conversionExport('code','synthetic-crank-85')],driftBundle=driftSources.map((workflow,index)=>({workflow,conversions:{n1:index?codeChoice:registryChoice}}));
  const shots=async state=>{for(const width of [1440,390]){await page.setViewportSize({width,height:1000});await shot(width,state)}};
  // Stage the protected-undo fixtures together while every imported target is an
  // unused draft. Publication later deliberately fences this retained plan;
  // planning another import against that used native inventory is not this test.
- await page.getByLabel('Workflow export JSON').fill(JSON.stringify([sourceEnvelope,...driftBundle,objectSource,overrideSource]));await page.getByRole('button',{name:'Upload and plan',exact:true}).click();await page.waitForLoadState('networkidle');
+ await page.getByLabel('Workflow export JSON').fill(JSON.stringify([sourceEnvelope,...driftBundle,objectSource,overrideSource,...streamObjectSources]));await page.getByRole('button',{name:'Upload and plan',exact:true}).click();await page.waitForLoadState('networkidle');
  assert.equal(await page.getByRole('button',{name:'Approve this plan',exact:true}).count(),1);await page.getByText(/Supported fields/).click();assert.ok((await page.locator('body').innerText()).includes('distinct linear done path'));await shots('done-review');
  const driftPlan=await reviewedPlan();
  await page.getByRole('button',{name:'Approve this plan',exact:true}).click();await page.waitForLoadState('networkidle');
@@ -185,6 +186,21 @@ try {
   await shots('loose-object-'+state+'-run');
  }
  console.log('WORK-013: object override conversion, missing right operand and named mismatch with zero receiver effects inspected at 1440 and 390');
+
+ for(const [index,operand]of ['left','right'].entries()){
+  const workflow=(await send('workflows')).find(row=>row.name===streamObjectSources[index].workflow.name);
+  await send('workflows/'+workflow.id+'/estimate',{cost:{components:['orchestration','connectors','models','executors'].map(kind=>({kind,usd_per_run:'0',assumption:'Synthetic stream receiver proof'}))}});
+  await send('workflows/'+workflow.id+'/publish',{},201);const hook=await send('workflows/'+workflow.id+'/hooks',{},201);
+  const good=operand==='left'?{value:'{ok: true}'}:{value:[null],expected:'null'},bad=operand==='left'?{value:'{invalid: call()}'}:{value:[null],expected:'{invalid: call()}'},before=effects.length;
+  const response=await context.request.post(hook.url,{data:{messages:[good,bad]}});assert.equal(response.status(),200);const admission=await response.json();let result;
+  for(let attempt=0;attempt<100;attempt++){result=await send('workflow-runs/'+admission.run_id);if(!['queued','running'].includes(result.status))break;await page.waitForTimeout(50)}
+  assert.equal(result.status,'failed');assert.equal(effects.length,before,'a stream conversion failure must dispatch no receiver write');
+  const checkpoint=result.steps.find(step=>step.step_id==='n3');assert.deepEqual(checkpoint.error,{category:'type_mismatch',message:'Condition '+operand+' operand cannot be converted to object',operand,declared_type:'object',group_index:0,condition_index:1});assert.deepEqual(checkpoint.input.items,[good,bad]);
+  await page.setViewportSize({width:1440,height:1000});await page.goto(origin+'/app/workflow-runs/'+result.id);await page.locator('.timeline details.inline-disclosure').evaluateAll(elements=>elements.forEach(element=>element.open=true));
+  const timeline=await page.locator('.timeline').innerText();assert.ok(timeline.includes(checkpoint.error.message));assert.ok(timeline.includes('{invalid: call()}'));
+  await shots('stream-object-'+operand+'-mismatch');
+ }
+ console.log('WORK-013: stream Filter retains left and right object mismatch identity and original input with no downstream effects at 1440 and 390');
 
  await context.close();
 }catch(error){if(page){await page.screenshot({path:join(evidence,'journey-error.png'),fullPage:true});console.error((await page.locator('body').innerText()).slice(0,800))}console.error(String(error.message).replace(/https?:\/\/\S+/g,'[redacted URL]'));process.exitCode=1}
