@@ -27,7 +27,7 @@ export async function emittedProcess(receiver) {
   const command = (action, fields = {}) => new Promise((resolve, reject) => {
     const id = ++sequence;
     const timeout = setTimeout(() => { pending.delete(id); reject(new Error(`Emitted fixture ${action} timed out`)); }, 30000);
-    pending.set(id, { resolve, reject, timeout });
+    pending.set(id, { action, resolve, reject, timeout });
     child.send({ id, action, ...fields });
   });
   const stop = async () => {
@@ -47,8 +47,11 @@ export async function emittedProcess(receiver) {
       pending.delete(message.id); clearTimeout(call.timeout);
       message.ok ? call.resolve(message.value) : call.reject(new Error(message.error));
     });
-    child.on('exit', () => {
-      for (const call of pending.values()) { clearTimeout(call.timeout); call.reject(new Error('Emitted fixture process exited')); }
+    child.on('exit', (code, signal) => {
+      for (const [id, call] of pending) {
+        clearTimeout(call.timeout);
+        call.reject(new Error(`Emitted fixture ${call.action} command ${id} process exited (code ${code ?? 'none'}, signal ${signal ?? 'none'})`));
+      }
       pending.clear();
     });
     await command('start', { config: { ...config, omit } });

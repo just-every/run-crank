@@ -1,3 +1,5 @@
+import {teamProvisioningJourney} from './team-provisioning-journey.mjs';
+import {teamResourcesJourney} from './team-resources-journey.mjs';
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {harness} from './harness.mjs';
@@ -274,6 +276,37 @@ test('TEAM-001: complete explicit grants authorize native work, delegation, scop
   const legacy=await h.flow('Synthetic legacy self approval');
   const pending=await h.send('/api/crank/flows/'+legacy.id+'/runs',{event_id:'synthetic-crank-self',input:{customer:'synthetic-crank-private'}},h.owner);assert.equal(pending.status,201);
   await h.post('runs/'+pending.value.id+'/approve',{},h.owner,403);
+  await assign(person,[grant('builder',[legacy.id]),grant('viewer',[legacyRestricted.id])]);
+  assert.equal((await h.post('flows/'+legacy.id+'/pause',{},person.cookie)).status,'draft');
+  assert.equal((await h.post('flows/'+legacy.id+'/activate',{},person.cookie)).status,'active');
+  for(const action of ['activate','pause']) {
+   await h.post('flows/'+legacyRestricted.id+'/'+action,{},person.cookie,403);
+   await h.post('flows/'+legacy.id+'/'+action,{},recipient.cookie,403);
+  }
+  await h.post('flows/'+legacy.id+'/runs',{event_id:'synthetic-crank-builder-start',input:{}},person.cookie,403);
+  for(const action of ['approve','reject']) await h.post('runs/'+pending.value.id+'/'+action,{},person.cookie,403);
+  await assign(recipient,[grant('operator',[legacy.id]),grant('viewer',[legacyRestricted.id])]);
+  const operated=await h.post('flows/'+legacy.id+'/runs',{event_id:'synthetic-crank-operator-start',input:{customer:'synthetic-crank-operator-private'}},recipient.cookie,201);
+  assert.equal(operated.state,'pending');assert.equal(operated.created_by,recipient.id);
+  await h.post('flows/'+legacyRestricted.id+'/runs',{event_id:'synthetic-crank-unscoped-start',input:{}},recipient.cookie,403);
+  for(const action of ['activate','pause']) await h.post('flows/'+legacy.id+'/'+action,{},recipient.cookie,403);
+  for(const run of [pending.value,operated]) for(const action of ['approve','reject']) await h.post('runs/'+run.id+'/'+action,{},recipient.cookie,403);
+  async function revokePendingLegacy(person,path,input) {
+   let release;const gate=new Promise(resolve=>release=resolve),encoder=new TextEncoder();
+   const stream=new ReadableStream({async start(controller){controller.enqueue(encoder.encode('{'));await gate;controller.enqueue(encoder.encode(JSON.stringify(input).slice(1)));controller.close()}});
+   const receiving=h.mf.dispatchFetch(h.origin+'/api/crank/'+path,{method:'POST',body:stream,duplex:'half',redirect:'manual',headers:{origin:h.origin,cookie:person.cookie,'content-type':'application/json'}});
+   await new Promise(resolve=>setTimeout(resolve,500));await assign(person,[]);release();
+   assert.equal((await receiving).status,403,'a revoked legacy grant cannot commit its admitted request');
+  }
+  await h.post('flows/'+legacy.id+'/pause',{},person.cookie);
+  await revokePendingLegacy(person,'flows/'+legacy.id+'/activate',{});
+  assert.equal((await h.get('flows/'+legacy.id)).status,'draft');
+  await h.post('flows/'+legacy.id+'/activate',{},person.cookie,403);
+  await assign(person,[grant('builder',[legacy.id])]);await h.post('flows/'+legacy.id+'/activate',{},person.cookie);
+  const refusedEvent='synthetic-crank-revoked-start';
+  await revokePendingLegacy(recipient,'flows/'+legacy.id+'/runs',{event_id:refusedEvent,input:{}});
+  assert.ok(!(await h.get('state')).runs.some(run=>run.event_id===refusedEvent));
+  await h.post('flows/'+legacy.id+'/runs',{event_id:refusedEvent,input:{}},recipient.cookie,403);
   const legacyAdmin=await invite(h,'Synthetic legacy administrator','admin');
   await assign(legacyAdmin,[grant('admin',[reviewWorkflow.id,legacy.id]),grant('approver',[reviewWorkflow.id,legacy.id])]);
   const nativeOwn=await h.post(`workflows/${reviewWorkflow.id}/run`,{},legacyAdmin.cookie,201);
@@ -326,3 +359,7 @@ test('TEAM-001: the native upgrade snapshots exact existing Base access once and
   assert.ok(!archive.trim().split('\n').map(JSON.parse).flatMap(line=>line.items??[]).some(item=>['crank_team_access','crank_team_migration_reports'].includes(item.table)));
  }finally{await h.close()}
 });
+
+test('TEAM-001: folder descendants and environment creation obey complete grants, atomic moves, immutable publication and inactive restoration',teamResourcesJourney);
+
+test('TEAM-001: native SCIM separates issuer identities, requires owner group mappings, fences changes and revokes people',teamProvisioningJourney);

@@ -39,11 +39,11 @@ export const importSafety = {
   crank_custom_versions: {status:['needs_review'],sandbox_json:[null]},
   crank_executor_tasks: { active: [0] },
   crank_agent_followups: { status: ['inactive'] },
-  crank_flows: { status: ['draft'] },
+  crank_flows: { status: ['draft'],owner_id:[RESTORED_OWNER] },
   crank_usage_budgets: { active: [0] },
   crank_usage_allowances: { active: [0] },
   crank_usage_notices: { active: [0] },
-  crank_workflows: { status: ['paused'], owner_id: [RESTORED_OWNER] },
+  crank_workflows: { status: ['paused'], owner_id: [RESTORED_OWNER],folder_id:[null] },
   crank_connections: { status: ['needs_reconnect'] },
   crank_wf_runs: { status: ['paused'], error_json: unfinished.map(status => runFence(status)), lease_id: [null], lease_expires_at: [null], continuation_authority: [0] },
   crank_wf_steps: { status: ['uncertain'], error_json: [uncertainWrite] },
@@ -58,6 +58,8 @@ export const importSafety = {
  * bounded value, so an unfenced unfinished run keeps only its previous status and
  * a failed delivery keeps its outcome with its single replay marked used. */
 export function importRow(table, row) {
+  if(table==='crank_flows')row={...row,owner_id:RESTORED_OWNER};
+  if(table==='crank_workflows')row={...row,folder_id:null};
   if (table === 'crank_digests' || table === 'crank_digest_operations') return {...row,active:0};
   if (table === 'crank_recurring_tasks') return {...row,status:'inactive'};
   if (table === 'crank_state_tables' || table === 'crank_state_operations') return {...row,active:0};
