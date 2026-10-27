@@ -4,3 +4,6 @@
 .control-tooltip:hover > .control-tooltip-label { opacity: 1; visibility: visible; transition-delay: 300ms; }
 .control-tooltip:focus > .control-tooltip-label { opacity: 1; visibility: visible; transition-delay: 0s; }
 .row-open > .control-tooltip-label { top: auto; bottom: calc(100% + 4px); }
+@media (max-width: 760px) {
+  .row-open > .control-tooltip-label { top: 50%; bottom: auto; right: 28px; transform: translateY(-50%); }
+}
