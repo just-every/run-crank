@@ -1,12 +1,13 @@
 import type { Groups } from './engine/conditions'
 import type { Step } from './engine/types'
+import { normalizeN8nConditionValue } from './engine/transforms/n8n-condition-values'
 import { n8nDateValue } from './engine/transforms/n8n-date-value'
 
 type Obj = Record<string, any>
 type Mapper = (value: any, previous: string, at: string) => any
 type Fields = (value: Obj, allowed: string[], at: string) => void
 export interface N8nCondition { type: string; operation: string; rightType: string; singleValue: boolean }
-export interface N8nConditionSet { combinator: 'and' | 'or'; caseSensitive: boolean; version: number; strict: boolean; conditions: N8nCondition[] }
+export interface N8nConditionSet { combinator: 'and' | 'or'; caseSensitive: boolean; version: number; strict: boolean; objectConversion?: 'data-v1'; conditions: N8nCondition[] }
 
 export const N8N_CONDITION_OPERATIONS: Record<string, readonly string[]> = {
   string: ['exists', 'notExists', 'empty', 'notEmpty', 'equals', 'notEquals', 'contains', 'notContains', 'startsWith', 'notStartsWith', 'endsWith', 'notEndsWith', 'regex', 'notRegex'],
@@ -48,7 +49,15 @@ export function compileN8nConditionSets(values: unknown[], previous: string, at:
       if (operator.singleValue !== undefined && typeof operator.singleValue !== 'boolean') throw Error('condition singleValue must be boolean')
       const rightType = operator.rightType ?? type
       if (!['string', 'number', 'boolean', 'array', 'object', 'any', 'dateTime'].includes(rightType)) throw Error('unsupported condition operand type override')
-      if(options.typeValidation!=='strict'&&(type==='object'||rightType==='object'))throw Error('loose object parsing requires manual conversion')
+      if (options.typeValidation !== 'strict') {
+        for (const [key, operandType] of [['leftValue', type], ['rightValue', rightType]]) {
+          if (operandType !== 'object' || key === 'rightValue' && operator.singleValue === true) continue
+          const operand = condition[key]
+          if (typeof operand === 'string' && (operand.startsWith('=') || operand.includes('{{'))) continue
+          try { normalizeN8nConditionValue(operand, 'object', false, options.version ?? 1) }
+          catch { throw Error('loose object operand requires data grammar v1; unsupported syntax needs manual conversion') }
+        }
+      }
       if (operator.singleValue === true && !unary(operation)) throw Error('binary conditions cannot skip operand validation')
       if(type==='dateTime') {
         if(rightType!=='dateTime')throw Error('DateTime comparisons require timestamp operands')
@@ -64,7 +73,7 @@ export function compileN8nConditionSets(values: unknown[], previous: string, at:
       }
       return { type, operation, rightType, singleValue: operator.singleValue === true }
     })
-    return { combinator: source.combinator, caseSensitive: options.caseSensitive ?? false, version: options.version ?? 1, strict: options.typeValidation==='strict', conditions }
+    return { combinator: source.combinator, caseSensitive: options.caseSensitive ?? false, version: options.version ?? 1, strict: options.typeValidation==='strict', ...(options.typeValidation !== 'strict' && conditions.some(condition => condition.type === 'object' || condition.rightType === 'object') ? { objectConversion: 'data-v1' as const } : {}), conditions }
   })
   const stepId = id + '_conditions'
   return {
