@@ -1307,7 +1307,7 @@
       "executable": false
     },
     "management/integration/deployment-spec.json": {
-      "sha256": "769ea70b653d5147af304bb9df92274f9958ca9e13d14694c26aeb3245797edc",
+      "sha256": "2e4b28cdaf0ee9c8510393a82fd1bc199610a1476e876953e60c21c21e4c84a3",
       "executable": false
     },
     "migrations/core/0001_owner.sql": {
@@ -5619,7 +5619,7 @@
       "executable": false
     },
     "tests/harness.mjs": {
-      "sha256": "726bb84fbc91829c1482cee0def16bb9dad664f89e2991d6df6f29fee5ed1887",
+      "sha256": "89d6a0d0e7404f3a6ed1beeed42c03ceea4d0aeadde366cf605bb919a5528871",
       "executable": false
     },
     "tests/historical.test.mjs": {
