@@ -5471,7 +5471,7 @@
       "executable": false
     },
     "tests/app-retention-journey.mjs": {
-      "sha256": "c33356a42ab4c61cbf130395ad41feec92fe62ec8236f27fc6ab02f7ad8b1e42",
+      "sha256": "73fd70af6908684dfe3f3ac3b13689e24b13c93883190e72ee0c40cf05292762",
       "executable": false
     },
     "tests/app-subject-journey.mjs": {

@@ -77,6 +77,8 @@ export async function appRetentionJourney({inspect=async()=>{}}={}) {
   assert.deepEqual(await values(h,w),retainedValues);
   // With no published baseline, the last retained version can expire as well.
   await h.post(`workflows/${w.id}/unpublish`);await h.tick(time+=minute);
+  assert.equal((await snapshots(h,w)).length,2,'a recently observed inactive snapshot keeps its full retention period');
+  time+=2*day;await h.restart({clock:new Date(time).toISOString()});await h.tick(time);
   assert.deepEqual(await snapshots(h,w),[]);
   assert.deepEqual(await values(h,w),retainedValues);
   // Prior production versions, rather than surviving payload rows, make this
