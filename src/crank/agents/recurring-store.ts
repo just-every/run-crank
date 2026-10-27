@@ -74,6 +74,7 @@ export async function publishRecurringSkill(env:CrankEnv,actor:Actor,input:Recor
  const workflowId=text(input.workflow_id,'workflow_id'),versionId=text(input.workflow_version_id,'workflow_version_id'),name=text(input.name,'name')
  requireValue(typeof input.instructions==='string' && input.instructions.trim().length>0 && input.instructions.length<=12000 && !/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(input.instructions),'Instructions must be nonempty text of at most 12000 characters',422)
  const instructions=input.instructions.trim()
+ requireValue(instructions.length>0 && instructions.length<=12000 && !/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(instructions),'Instructions need 1 to 12000 readable characters',422)
  await template(env,actor,workflowId,versionId)
  requireValue(Array.isArray(input.eval_cases) && input.eval_cases.length>=4 && input.eval_cases.length<=50,'Provide evaluation cases for open, paid, closed and void invoices',422)
  for(const raw of input.eval_cases) {

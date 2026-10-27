@@ -92,5 +92,8 @@ export async function recurringPass(env: CrankEnv, time: number) {
 
 export async function readRecurringWithRuns(env: CrankEnv,actor:Actor,taskId:string) {
   const task = await readRecurring(env,actor,taskId)
-  return {...task,runs:await Promise.all(task.runs.map(async (row:any)=>({...row,detail:await runDetail(env,actor,row.run_id)})))}
+  return {...task,runs:await Promise.all(task.runs.map(async (row:any)=>{
+    const detail = await runDetail(env,actor,row.run_id)
+    return {...row,error:detail.error,outcome:detail.steps.find(step=>step.type==='quickbooks.followup_invoice')?.output ?? null}
+  }))}
 }

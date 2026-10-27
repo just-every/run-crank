@@ -7,14 +7,14 @@ CREATE TABLE crank_recurring_skill_versions (
  instructions TEXT NOT NULL, eval_cases_json TEXT NOT NULL CHECK(json_valid(eval_cases_json)),
  created_by TEXT NOT NULL, created_at TEXT NOT NULL, UNIQUE(skill_id,number)
 );
-CREATE TRIGGER crank_recurring_skill_immutable BEFORE UPDATE ON crank_recurring_skill_versions
+CREATE TRIGGER crank_recurring_skill_immutable BEFORE UPDATE OF id,skill_id,number,workflow_id,workflow_version_id,instructions,eval_cases_json,created_at ON crank_recurring_skill_versions
 BEGIN SELECT RAISE(ABORT,'crank_recurring_skill_immutable'); END;
 CREATE TABLE crank_recurring_objective_versions (
  id TEXT PRIMARY KEY, task_id TEXT NOT NULL, number INTEGER NOT NULL,
  spec_json TEXT NOT NULL CHECK(json_valid(spec_json)), created_by TEXT NOT NULL, created_at TEXT NOT NULL,
  UNIQUE(task_id,number)
 );
-CREATE TRIGGER crank_recurring_objective_immutable BEFORE UPDATE ON crank_recurring_objective_versions
+CREATE TRIGGER crank_recurring_objective_immutable BEFORE UPDATE OF id,task_id,number,spec_json,created_at ON crank_recurring_objective_versions
 BEGIN SELECT RAISE(ABORT,'crank_recurring_objective_immutable'); END;
 CREATE TABLE crank_recurring_tasks (
  id TEXT PRIMARY KEY, name TEXT NOT NULL, skill_version_id TEXT NOT NULL,

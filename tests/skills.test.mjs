@@ -62,6 +62,62 @@ test('Recurring connected-invoice contact boundary re-reads paid, closed and voi
  } finally {await h.close()}
 });
 
+test('Recurring authority stops fence task controls, in-flight tool revocation, expired grants and budget holds through native run doors', async () => {
+ const fake=fakeEdge();let reads=0,entered,release,holdRead=false;
+ fake.routes.set('sandbox-quickbooks.api.intuit.com',async({method,url})=>{reads++;assert.equal(method,'GET');if(holdRead){holdRead=false;entered();await new Promise(resolve=>{release=resolve})}return jsonResponse({Invoice:{Id:url.pathname.split('/').at(-1),Balance:19.99,DueDate:'2020-01-01',BillEmail:{Address:'billing-stop@example.test'}}})});
+ const h=await harness('http://127.0.0.1:9',{edge:fake.edge});
+ try {
+  for(const action of ['pause','takeover','cancel']) {
+   const s=await recurringSetup(h,{invoiceId:'synthetic-crank-'+(350+reads)}),path='recurring-tasks/'+s.task.id,start=await h.post(path+'/dispatch');
+   const stopped=await h.post(path+'/'+action,{revision:s.task.revision});
+   assert.equal(stopped.status,action==='pause'?'paused':action==='cancel'?'cancelled':'takeover');
+   const before=reads;if(action!=='cancel') {const resumed=await h.post('workflow-runs/'+start.run_id+'/resume');assert.equal(resumed.status,'paused');assert.equal(resumed.error.category,'authority')}
+   await h.tick(Date.now()+3*86400000);assert.equal(reads,before,'Task control survives ordinary run resume and due scheduler');
+   if(action!=='pause')await h.post(path+'/resume',{revision:stopped.revision},h.owner,409);
+  }
+  const revoked=await recurringSetup(h,{invoiceId:'synthetic-crank-370'}),path='recurring-tasks/'+revoked.task.id;
+  const reached=new Promise(resolve=>{entered=resolve});holdRead=true;const pending=h.post(path+'/dispatch');await reached;
+  const before=reads,stopped=await h.post(path+'/revoke-tool',{revision:revoked.task.revision});release();
+  const start=await pending;assert.equal(stopped.status,'paused');assert.ok(stopped.tool_revoked_at);assert.equal(reads,before,'Revocation after the first live read blocks the same-dispatch contact read');
+  await h.post('workflow-runs/'+start.run_id+'/resume');assert.equal(reads,before);
+  await h.post(path+'/resume',{revision:stopped.revision},h.owner,409);
+  const s=await recurringSetup(h,{invoiceId:'synthetic-crank-371'}),budgetPath='recurring-tasks/'+s.task.id;
+  await h.post('usage/budgets',{scope:'workflow',workflow_id:s.workflow.id,monthly_usd:'0'});
+  await h.post(budgetPath+'/dispatch',{},h.owner,409);assert.equal(reads,before);assert.equal((await h.get(budgetPath)).status,'blocked');
+  await h.post('usage/budgets',{scope:'workflow',workflow_id:s.workflow.id,monthly_usd:'1'});
+  let budgetTask=await h.get(budgetPath);budgetTask=await h.post(budgetPath+'/resume',{revision:budgetTask.revision});const funded=await h.post(budgetPath+'/dispatch');assert.equal(reads,before+2);
+  await h.post('usage/budgets',{scope:'workflow',workflow_id:s.workflow.id,monthly_usd:'0'});
+  await h.post('workflow-runs/'+funded.run_id+'/resume');assert.equal(reads,before+2,'An already admitted run also obeys a current budget hold');
+  await h.post('grants/'+s.grant.id+'/revoke');await h.post('workflow-runs/'+funded.run_id+'/resume');assert.equal(reads,before+2);
+  const expiring=await recurringSetup(h,{invoiceId:'synthetic-crank-372',create:false});
+  const shortGrant=await h.post('grants',{label:'Owner short-lived invoice authority',workflow_id:expiring.workflow.id,version_id:expiring.published.version.id,policy:expiring.grant.policy,expires_at:new Date(Date.now()+1500).toISOString()},h.owner,201);
+  const expiringTask=await h.post('recurring-tasks',{...expiring.request,grant_id:shortGrant.id},h.owner,201);
+  await new Promise(resolve=>setTimeout(resolve,1600));await h.post('recurring-tasks/'+expiringTask.id+'/dispatch',{},h.owner,409);assert.equal(reads,before+2);
+  assert.equal((await h.get('recurring-tasks/'+expiringTask.id)).status,'blocked');assert.equal(fake.requests.filter(r=>r.method!=='GET').length,0);
+ } finally {release?.();await h.close()}
+});
+
+test('Recurring skill provenance restores inactive without grants or invoice ownership and erased run payloads leave no customer contact copy', async () => {
+ const fake=fakeEdge();let reads=0;
+ fake.routes.set('sandbox-quickbooks.api.intuit.com',({url})=>{reads++;return jsonResponse({Invoice:{Id:url.pathname.split('/').at(-1),Balance:521,DueDate:'2020-01-01',BillEmail:{Address:'only-in-the-erasable-run@example.test'}}})});
+ const h=await harness('http://127.0.0.1:9',{edge:fake.edge});let restored;
+ try {
+  const s=await recurringSetup(h),start=await h.post('recurring-tasks/'+s.task.id+'/dispatch'),saved=await archive(h);
+  assert.ok(!saved.includes(s.grant.credential));assert.ok(!saved.includes(h.owner));
+  restored=await harness('http://127.0.0.1:9',{edge:fake.edge});await restored.post('data/restore',{archive:saved,confirm:'RESTORE'});
+  const original=inventory(saved),received=inventory(await archive(restored)),added=received.filter(row=>!original.includes(row));
+  assert.deepEqual(added.map(row=>[JSON.parse(row).table,JSON.parse(row).row.action]),[['crank_audit','data.restore']]);
+  assert.deepEqual(received.filter(row=>!added.includes(row)),original,'All portable recurring versions, provenance and inactive history survive completely');
+  const task=await restored.get('recurring-tasks/'+s.task.id);assert.equal(task.status,'inactive');assert.equal(task.runs[0].skill_version_id,s.skill.id);assert.equal(task.runs[0].objective_version_id,s.task.objective_version_id);
+  assert.equal((await restored.get('grants')).length,0);const before=reads;
+  await restored.post('recurring-tasks/'+s.task.id+'/dispatch',{},restored.owner,409);await restored.post('recurring-tasks/'+s.task.id+'/resume',{revision:task.revision},restored.owner,403);
+  await restored.post('workflow-runs/'+start.run_id+'/resume',{},restored.owner,409);await restored.restart();await restored.tick(Date.now()+7*86400000);assert.equal(reads,before);
+  await h.post('recurring-tasks/'+s.task.id+'/cancel',{revision:s.task.revision});await h.post('workflows/'+s.workflow.id+'/pause');await h.post('data/erase',{workflow_run_id:start.run_id,confirm:'ERASE'});
+  assert.deepEqual((await h.get('recurring-tasks/'+s.task.id)).runs,[]);assert.ok(!(await archive(h)).includes('only-in-the-erasable-run@example.test'));
+  const flows=await h.get('data/flows');const read=flows.flows.find(f=>f.kind==='quickbooks.followup_invoice');assert.ok(read);assert.deepEqual(read.recipients,['https://sandbox-quickbooks.api.intuit.com']);assert.match(read.region,/provider-controlled/i);
+ } finally {await restored?.close();await h.close()}
+});
+
 function network() {
   const fake = fakeEdge(), records = [];
   fake.routes.set('addresses.example', ({ body }) => {
