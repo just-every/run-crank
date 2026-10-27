@@ -5,7 +5,58 @@ import { archive } from './restore-journey.mjs';
 import { connection, fakeEdge, fakeSecret, jsonResponse, publish, runs, startRun, stepOf } from './kit.mjs';
 const clock='2026-10-31T15:00:00.000Z';
 const base={digest_name:'Today’s leads',retention_days:30};
+export async function digestFenceJourney() {
+  let armed=false,arrived,release;
+  const h=await harness('http://127.0.0.1:9',{clock,digestCommitBarrier:true,edge:async request=>{
+    if(new URL(request.url).hostname!=='digest-barrier.example')return;
+    if(armed) {armed=false;arrived();await new Promise(resolve=>{release=resolve})}
+    return jsonResponse({ok:true});
+  }});
+  const pause=()=>{
+    let timer;
+    const waiting=new Promise((resolve,reject)=>{arrived=resolve;timer=setTimeout(()=>reject(new Error('digest barrier not reached')),10000)});
+    armed=true;return waiting.finally(()=>clearTimeout(timer));
+  };
+  let pending;
+  try {
+    const config={digest_name:'Expiry fence',retention_days:1};
+    const append=await publish(h,'Append fenced values',{trigger:{type:'manual'},steps:[{id:'append',type:'digest.append',...config,input:{entry:'{{trigger.input.value}}'}}]});
+    const keep=await publish(h,'Release fenced values',{trigger:{type:'manual'},steps:[{id:'release',type:'digest.release',...config,keep_entries:true,empty:'send_empty'}]});
+    await startRun(h,append,{value:'synthetic-crank-expired'});
+    assert.equal(stepOf(await startRun(h,keep,{}),'release').output.count,1);
+    // Cross expiry without expiring the pending run's lease: only the digest
+    // revision fence can reject this snapshot, rather than executor recovery.
+    await h.restart({clock:'2026-11-01T14:59:59.900Z'});
+    let waiting=pause();pending=startRun(h,keep,{});await waiting;
+    await h.tick('2026-11-01T15:00:00Z');release();
+    let result=await pending;pending=null;
+    assert.equal(result.status,'succeeded');
+    assert.deepEqual(stepOf(result,'release').output.entries,[],'expiry invalidates the already-read release snapshot');
+    let [digest]=await h.get('digests');
+    assert.ok(!JSON.stringify(await h.get('digests/'+digest.id)).includes('synthetic-crank-expired'),'expired values cannot be re-saved in a release receipt');
+
+    const erased=await startRun(h,append,{value:'synthetic-crank-erased'});
+    const survivor=await startRun(h,append,{value:'synthetic-crank-retained'});
+    const prior=await startRun(h,keep,{});
+    assert.equal(stepOf(prior,'release').output.count,2);
+    await h.post('workflows/'+append.id+'/pause');
+    waiting=pause();pending=startRun(h,keep,{});await waiting;
+    const receipt=await h.post('./data/erase',{workflow_run_id:erased.id,confirm:'ERASE'});
+    assert.equal(receipt.phase,'complete');
+    await h.get('workflow-runs/'+erased.id,h.owner,404);
+    release();result=await pending;pending=null;
+    assert.equal(result.status,'succeeded');
+    const entries=stepOf(result,'release').output.entries;
+    assert.deepEqual(entries.map(e=>e.value),['synthetic-crank-retained'],'source erasure invalidates the pending release while preserving the unrelated entry');
+    assert.deepEqual(entries.map(e=>e.source_run_id),[survivor.id]);
+    const retained=await h.get('digests/'+digest.id);
+    assert.ok(!JSON.stringify(retained).includes('synthetic-crank-erased'),'no new receipt resurrects the erased source');
+    assert.ok(!retained.history.some(r=>r.run_id===prior.id),'old receipts containing the erased source are removed');
+    assert.deepEqual(retained.entries.map(e=>e.value),['synthetic-crank-retained']);
+  } finally {release?.();await pending?.catch(()=>{});await h.close()}
+}
 export async function digestJourney({edge,secret,channel,onRelease}={}) {
+  await digestFenceJourney();
   const fake=fakeEdge();
   fake.routes.set('slack.com',({body,url})=>url.pathname.endsWith('chat.postMessage')?jsonResponse({ok:true,channel:'C12345678',ts:String(fake.requests.length),message:{text:new URLSearchParams(body).get('text')}}):jsonResponse({ok:true,team:'synthetic-crank-1'}));
   const h=await harness('http://127.0.0.1:9',{clock,edge:edge??fake.edge});let restored;
@@ -75,6 +126,11 @@ export async function digestJourney({edge,secret,channel,onRelease}={}) {
     const before=await restored.get('digests');await restored.restart();await restored.tick('2026-11-02T23:00:00Z');assert.deepEqual(await restored.get('digests'),before);
     const d=(await h.get('digests')).find(d=>d.name===base.digest_name);
     const history=await h.get('digests/'+d.id);assert.ok(history.history.length>=4);assert.ok(history.history.every(r=>r.result.occurrence&&r.result.release_run_id));
+    await restored.tick('2027-01-01T23:00:00Z');
+    const receivedExpired=await restored.get('digests/'+receivedLead.digest.id);
+    assert.equal(receivedExpired.count,0);
+    assert.ok(receivedExpired.history.length>=4);
+    assert.ok(receivedExpired.history.every(r=>r.active===0&&Object.keys(r.result).length===0),'inactive receiving receipts also expire their values');
     const expired=(await h.get('digests')).find(d=>d.name==='Counted');
     await startRun(h,count,{lead:'synthetic-crank-held'});
     const hold=await h.post('./data/holds',{kind:'workflow',workflow_id:count.id,reason:'Retain digest values'} ,h.owner,201);

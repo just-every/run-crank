@@ -207,7 +207,7 @@
       "executable": false
     },
     "docs/DIGESTS.md": {
-      "sha256": "6898a8e8be65b797e6164bc871cdbdafac6f821a432b94751420cb07444fd8a2",
+      "sha256": "5853f2da9e8c7ff58956f941470fe1a953ea7e6e636e58ead7a656c4a91317ea",
       "executable": false
     },
     "docs/enterprise-connectors.md": {
@@ -2667,7 +2667,7 @@
       "executable": false
     },
     "src/crank/engine/steps/digest.ts": {
-      "sha256": "9337c330161c577b3cd4e8ed0b2e8f5ca972a19abdb068e9baa9221243b57f66",
+      "sha256": "bcb12d154acedeec6d7c203604d631a0687800e7e72e9ddbe7ed7e57e2211cd7",
       "executable": false
     },
     "src/crank/engine/steps/flow.ts": {
@@ -5447,7 +5447,7 @@
       "executable": false
     },
     "tests/digest-journey.mjs": {
-      "sha256": "d5f30c438e55dac671c410e58f3c2c1ef8366d67eb1cda63c5dc22863b57180e",
+      "sha256": "9c945718498c6727461b2ad221d4cccb1bf113777a70fb37a673785957b5b755",
       "executable": false
     },
     "tests/dispatch-authority.test.mjs": {
@@ -5603,7 +5603,7 @@
       "executable": false
     },
     "tests/harness.mjs": {
-      "sha256": "8ef02b0fdbe086fbe2b8eca56172872ff3a2c5eac566b239b09c0ae577c973ee",
+      "sha256": "20e4764837facae6bbacc7714fda39d8d1a9868bb55ba1aaaca001df8c648413",
       "executable": false
     },
     "tests/historical.test.mjs": {

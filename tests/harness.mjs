@@ -14,8 +14,19 @@ async function installedGustoBundle(version) {
   assert.match(version,/^\d+$/);
   return (await build({...bundleOptions,plugins:[{name:'installed-provider-definition',setup(plugin){plugin.onLoad({filter:/gusto-version\.ts$/},async({path})=>({contents:(await readFile(path,'utf8')).replace(/GUSTO_CONNECTOR_VERSION = '\d+'/,`GUSTO_CONNECTOR_VERSION = '${version}'`),loader:'ts'}))}}]})).outputFiles[0].text;
 }
+// Pause only the scheduling boundary in a test-built Worker. Requests still use
+// the native workflow, retention and erasure doors and the real D1 transaction.
+async function digestBarrierBundle() {
+  return (await build({...bundleOptions,plugins:[{name:'digest-commit-barrier',setup(plugin){
+    plugin.onLoad({filter:/engine[\/]steps[\/]digest\.ts$/},async({path})=>{
+      const contents=await readFile(path,'utf8'),boundary='const changes=await ctx.env.DB.batch(jobs)';
+      assert.ok(contents.includes(boundary),'the fixture must pause before the native commit');
+      return {contents:contents.replace(boundary,"await fetch('https://digest-barrier.example/before-commit'); "+boundary),loader:'ts'};
+    });
+  }}]})).outputFiles[0].text;
+}
 /** `edge` fakes third-party APIs at the network edge: a function from Request to a Response, or undefined to use the real network. */
-export async function harness(target,{emitted=false,edge,mailEdge,quoteCosts=true,bindings={},clock}={}) {
+export async function harness(target,{emitted=false,edge,mailEdge,quoteCosts=true,bindings={},clock,digestCommitBarrier=false}={}) {
   bundle ??= (await build(bundleOptions)).outputFiles[0].text;
   const port=await freePort(),origin=`http://127.0.0.1:${port}`,directory=await mkdtemp(join(tmpdir(),'crank-tests-'));
   const mail=[];
@@ -26,7 +37,9 @@ export async function harness(target,{emitted=false,edge,mailEdge,quoteCosts=tru
   // the undici dispatcher miniflare installs process-wide rejects before the receiver sees the request.
   const {'content-length':_,...headers}=Object.fromEntries(request.headers);return fetch(request.url,{method:request.method,headers,body:['GET','HEAD'].includes(request.method)?undefined:await request.arrayBuffer(),redirect:'manual'})},compatibilityDate:'2026-09-08',compatibilityFlags:['nodejs_compat'],d1Databases:{DB:'crank'},bindings:{AUTH_ORIGIN:origin,AUTH_LOCAL:'true',OWNER_EMAIL:'owner@example.test',SESSION_SECRET:'test-session-secret-01234567890123456789',SETUP_TOKEN:'synthetic-test-owner-claim-01234567890123456789',MAIL_PROVIDER:'resend',MAIL_API_KEY:'example-resend-test-key',MAIL_FROM:'Crank <auth@example.test>',RER_DEV_KEY:'test-dev-gate-0123456789012345678901234567890123',CRANK_TARGET_ORIGIN:target,...bindings}};
   const optionsFor=script=>({...convertV4MiniflareOptions({...legacyOptions,...(!emitted?{script}:{})}),resourcePersistencePath:directory});
-  let currentBundle=clock ? `const RealDate=Date; globalThis.Date=class extends RealDate { constructor(...args) { super(...(args.length?args:[${Date.parse(clock)}])); } static now(){return ${Date.parse(clock)}} };\n`+bundle : bundle;
+  const selectedBundle=digestCommitBarrier?await digestBarrierBundle():bundle;
+  const atClock=(script,time)=>time ? `const RealDate=Date; globalThis.Date=class extends RealDate { constructor(...args) { super(...(args.length?args:[${Date.parse(time)}])); } static now(){return ${Date.parse(time)}} };\n`+script : script;
+  let currentBundle=atClock(selectedBundle,clock);
   let mf=new Miniflare(optionsFor(currentBundle));
   try {
     let db=await mf.getD1Database('DB');
@@ -57,6 +70,6 @@ export async function harness(target,{emitted=false,edge,mailEdge,quoteCosts=tru
     const run=async(f,event='ticket-'+crypto.randomUUID(),input={customer:'Harbour Workshop',task:'Book a callback'})=>post('flows/'+f.id+'/runs',{event_id:event,input},owner,201);
     // The Worker's per-minute Cron pass, at a chosen scheduled time.
     const tick=async(time=Date.now())=>{const worker=await mf.getWorker();await worker.scheduled({scheduledTime:new Date(time),cron:'* * * * *'})};
-    return {get mf(){return mf},get db(){return db},mail,origin,owner,send,post,get,flow,run,tick,async restart({gustoDefinitionVersion}={}){if(gustoDefinitionVersion!==undefined){assert.equal(emitted,false);currentBundle=await installedGustoBundle(gustoDefinitionVersion)}await mf.dispose();mf=new Miniflare(optionsFor(currentBundle));await mf.ready;db=await mf.getD1Database('DB')},async close(){await mf.dispose();await rm(directory,{recursive:true,force:true})}};
+    return {get mf(){return mf},get db(){return db},mail,origin,owner,send,post,get,flow,run,tick,async restart({gustoDefinitionVersion,clock:nextClock}={}){if(nextClock!==undefined){assert.equal(emitted,false);assert.ok(Number.isFinite(Date.parse(nextClock)));currentBundle=atClock(selectedBundle,nextClock)}if(gustoDefinitionVersion!==undefined){assert.equal(emitted,false);currentBundle=await installedGustoBundle(gustoDefinitionVersion)}await mf.dispose();mf=new Miniflare(optionsFor(currentBundle));await mf.ready;db=await mf.getD1Database('DB')},async close(){await mf.dispose();await rm(directory,{recursive:true,force:true})}};
   } catch(error){await mf.dispose();await rm(directory,{recursive:true,force:true});throw error}
 }
