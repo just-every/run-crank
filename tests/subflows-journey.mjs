@@ -204,6 +204,23 @@ export async function subflowsJourney() {
       assert.equal(cancelled.status,'cancelled');assert.equal(cancelled.children[0].status,'cancelled');
       assert.ok(!cancelled.steps.some(s=>s.step_id==='after_native'));
     }
+    const rapidRevoked=await beginNative();
+    const rapidCheckpoint=stepOf(rapidRevoked,'item_native').operation_key;
+    await h.post(nativePath+'/1/revoke');
+    await h.post(nativePath+'/1/review',{definition_digest:native.definition_digest,confirm:'REVIEW_PURE_SUBFLOW'});
+    await h.restart();
+    const rapidPaused=await finishNative(rapidRevoked);
+    assert.equal(rapidPaused.status,'paused','re-review before the next scheduler pass cannot revive a revoked delayed child');
+    assert.equal(rapidPaused.children[0].status,'paused');
+    assert.ok(!rapidPaused.steps.some(s=>s.step_id==='after_native'||s.step_id==='result_native'));
+    await h.post('./subflows/calls/'+rapidRevoked.children[0].id+'/run',{},h.owner,409);
+    await h.post('./subflows/calls/'+rapidRevoked.children[0].id+'/resume',{definition_digest:'stale',confirm:'RESUME_PURE_CHILD'},h.owner,409);
+    await h.post('./subflows/calls/'+rapidRevoked.children[0].id+'/resume',{definition_digest:native.definition_digest,confirm:'RESUME_PURE_CHILD'});
+    await h.tick();
+    const rapidDone=await h.get('workflow-runs/'+rapidRevoked.id);
+    assert.equal(rapidDone.status,'succeeded');
+    assert.deepEqual(stepOf(rapidDone,'after_native').output,{normalized:'bay road',items:['ONE','TWO']});
+    assert.equal(stepOf(rapidDone,'item_native').operation_key,rapidCheckpoint);
     const nativeRevoked=await beginNative();await h.post(nativePath+'/1/revoke');
     const nativePaused=await finishNative(nativeRevoked);
     assert.equal(nativePaused.status,'paused');assert.equal(nativePaused.children[0].status,'paused');
@@ -219,6 +236,39 @@ export async function subflowsJourney() {
     assert.equal(wrongOutput.children[0].status,'failed');assert.ok(!wrongOutput.steps.some(s=>s.step_id==='after_native'));
     const excessItems=await beginNative(nativeA,{...nativeInput,items:['a','b','c','d','e','f']});
     assert.equal(excessItems.status,'failed');assert.match(excessItems.error.message,/declared item/);
+    // Repeated condition operands must not multiply retained payloads beyond the child bound.
+    for (const [kind,mismatch] of [['filter',false],['filter',true],['paths',false],['paths',true]]) {
+      const boundedDefinition={kind:'native',inputs:{value:'string'},outputs:{value:'string'},steps:[
+        {id:'bounded_filter',type:'filter',when:[[
+          {field:'trigger.input.value',op:'text.contains',value:'x'},
+          {field:'trigger.input.value',op:mismatch?'number.gt':'text.contains',value:mismatch?1:'x'},
+        ]]},
+      ],result:{value:'{{trigger.input.value}}'}};
+      if(kind==='paths') boundedDefinition.steps=[{id:'bounded_filter',type:'paths',mode:'exclusive',branches:[{id:'chosen',when:boundedDefinition.steps[0].when,steps:[{id:'bounded_result',type:'map',input:{ok:true}}]}]}];
+      const bounded=await h.post('subflows',{name:'Bounded condition checkpoint',definition:boundedDefinition},h.owner,201);
+      await h.post(`subflows/${bounded.subflow_id}/versions/1/review`,{definition_digest:bounded.definition_digest,confirm:'REVIEW_PURE_SUBFLOW'});
+      const boundedFlow=await publish(h,'Bounded condition caller',{trigger:{type:'manual'},steps:[
+        {id:'bounded_child',type:'subflow',mode:'child',subflow_id:bounded.subflow_id,subflow_version:1,input:{value:'{{trigger.input.value}}'}},
+        {id:'bounded_after',type:'map',input:{value:'{{steps.bounded_child.value}}'}},
+      ]});
+      const value='x'.repeat(40000),boundedRun=await startRun(h,boundedFlow,{value});
+      await h.restart();await h.tick();
+      const boundedDone=await h.get('workflow-runs/'+boundedRun.id);
+      assert.equal(boundedDone.status,mismatch?'failed':'succeeded');
+      if (!mismatch) assert.deepEqual(stepOf(boundedDone,'bounded_after').output,{value});
+      else assert.ok(!boundedDone.steps.some(step=>step.step_id==='bounded_after'));
+      const filter=stepOf(boundedDone,'bounded_filter');
+      assert.equal(filter.trace.truncated,true,`oversized native ${kind} traces are explicitly summarized (${Buffer.byteLength(JSON.stringify(filter.trace))} bytes)`);
+      assert.ok(filter.trace.original_bytes>65536);
+      for (const step of boundedDone.steps) for (const field of ['input','output','trace','error']) {
+        if(step[field]!==undefined && step[field]!==null) assert.ok(Buffer.byteLength(JSON.stringify(step[field]))<=65536,`${step.path} ${field} exceeds the child checkpoint bound`);
+      }
+      if(mismatch) {
+        assert.equal(filter.error.truncated,true,'oversized mismatch error details are explicitly summarized');
+        assert.equal(filter.error.category,'type_mismatch');
+        assert.ok(Buffer.byteLength(JSON.stringify(boundedDone.error))<=65536,'the parent cannot retain an oversized nested child error');
+      }
+    }
     const portableNative=await beginNative();
     const waitingChild = await startRun(h, childFlow, input);
     const erasedChild = await startRun(h, childFlow, input);

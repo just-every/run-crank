@@ -187,7 +187,7 @@
       "executable": false
     },
     "docs/API.md": {
-      "sha256": "dca2ea192cc34d96b82b9590ad061a7e752f2709580789b057797f4f61eb37f1",
+      "sha256": "3b26a840fe85c45497c71a02e0049508b9ef942ea7d450802f3a55a73a85602e",
       "executable": false
     },
     "docs/APP-TRIGGERS.md": {
@@ -2623,7 +2623,7 @@
       "executable": false
     },
     "src/crank/engine/executor.ts": {
-      "sha256": "3bf628c6036653a4eb256194e5df654bc94367084ff7b66c29c09068b525d34b",
+      "sha256": "ec6cde4cb398986501d8d9c70d02a8b00f2e266c733b5c915611e1ecb6e19a2d",
       "executable": false
     },
     "src/crank/engine/graph.ts": {
@@ -3415,7 +3415,7 @@
       "executable": false
     },
     "src/crank/workflows/subflows.ts": {
-      "sha256": "c2abd813d4e4e7b29a87c542bd4943a28b4edc2717b60066a2170d98e3ea217c",
+      "sha256": "e5b00a9ff31a3a76b1572075cff15944fafa9745e95f3db5edec51beed2b2774",
       "executable": false
     },
     "src/crank/workflows/testing.ts": {
@@ -5859,7 +5859,7 @@
       "executable": false
     },
     "tests/subflows-journey.mjs": {
-      "sha256": "4ccccb295b3068a9a367d8bc303c6dc529d1858637da785d19c3eb91bd70b5ca",
+      "sha256": "ba416f1833a8160c59527bce2c9ec08452888ebf19f5400fd6a0265cdfedc58d",
       "executable": false
     },
     "tests/table-state-journey.mjs": {
