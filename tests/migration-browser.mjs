@@ -98,12 +98,14 @@ try {
  await page.setViewportSize({width:1440,height:1000});await page.goto(origin+'/app/import');
  const sourceEnvelope=streamLoopEnvelope(declared,'synthetic-crank-72'),source=sourceEnvelope.workflow;source.nodes[3].parameters.batchSize=2;
  const objectSource=looseObjectExport(declared,'synthetic-crank-object-browser');
+ const overrideSource=looseObjectExport(declared,'synthetic-crank-object-override-browser');overrideSource.name='Synthetic right object operand routing';
+ overrideSource.nodes[1].parameters.conditions.conditions[0]={id:'synthetic-crank-override',leftValue:'={{ $json.body.value }}',rightValue:'={{ $json.body.expected }}',operator:{type:'array',operation:'contains',rightType:'object'}};
  const driftSources=[conversionExport('registry','synthetic-crank-84'),conversionExport('code','synthetic-crank-85')],driftBundle=driftSources.map((workflow,index)=>({workflow,conversions:{n1:index?codeChoice:registryChoice}}));
  const shots=async state=>{for(const width of [1440,390]){await page.setViewportSize({width,height:1000});await shot(width,state)}};
  // Stage the protected-undo fixtures together while every imported target is an
  // unused draft. Publication later deliberately fences this retained plan;
  // planning another import against that used native inventory is not this test.
- await page.getByLabel('Workflow export JSON').fill(JSON.stringify([sourceEnvelope,...driftBundle,objectSource]));await page.getByRole('button',{name:'Upload and plan',exact:true}).click();await page.waitForLoadState('networkidle');
+ await page.getByLabel('Workflow export JSON').fill(JSON.stringify([sourceEnvelope,...driftBundle,objectSource,overrideSource]));await page.getByRole('button',{name:'Upload and plan',exact:true}).click();await page.waitForLoadState('networkidle');
  assert.equal(await page.getByRole('button',{name:'Approve this plan',exact:true}).count(),1);await page.getByText(/Supported fields/).click();assert.ok((await page.locator('body').innerText()).includes('distinct linear done path'));await shots('done-review');
  const driftPlan=await reviewedPlan();
  await page.getByRole('button',{name:'Approve this plan',exact:true}).click();await page.waitForLoadState('networkidle');
@@ -154,6 +156,35 @@ try {
   await shots(expected?'loose-object-branch-present':'loose-object-branch-empty');
  }
  console.log('WORK-013: reviewed loose-object operands, data grammar provenance, exact branch results and receiver outcomes inspected at 1440 and 390');
+
+ const overrideWorkflow=(await send('workflows')).find(row=>row.name===overrideSource.name),overrideDraft=await send('workflows/'+overrideWorkflow.id);
+ assert.equal(overrideDraft.status,'draft');assert.equal(overrideDraft.hooks.length,0);assert.equal(overrideDraft.versions.length,0);
+ const overrideStep=overrideDraft.draft.steps.find(step=>step.fn==='n8n.conditions');assert.ok(overrideStep);
+ await send('workflows/'+overrideWorkflow.id+'/estimate',{cost:{components:['orchestration','connectors','models','executors'].map(kind=>({kind,usd_per_run:'0',assumption:'Synthetic receiver browser proof'}))}});
+ await send('workflows/'+overrideWorkflow.id+'/publish',{},201);const overrideHook=await send('workflows/'+overrideWorkflow.id+'/hooks',{},201);
+ for(const [body,expected,status,path,state]of [
+  [{value:[null],expected:'null'},true,'succeeded','/object-present','converted-null'],
+  [{value:[null]},false,'succeeded','/object-empty','missing-operand'],
+  [{value:[null],expected:'{invalid: call()}'},null,'failed',null,'refused-operand'],
+ ]){
+  const before=effects.length,response=await context.request.post(overrideHook.url,{data:body});assert.equal(response.status(),200);const admitted=await response.json();let result;
+  for(let tries=0;tries<100;tries++){result=await send('workflow-runs/'+admitted.run_id);if(!['running','queued'].includes(result.status))break;await new Promise(resolve=>setTimeout(resolve,50))}
+  assert.equal(result.status,status);assert.equal(effects.length,before+(path?1:0));
+  if(path){assert.equal(effects.at(-1).path,path);assert.deepEqual(effects.at(-1).input.body,body);assert.deepEqual(result.steps.find(step=>step.type==='paths').output.matched,[expected?'yes':'fallback'])}
+  else {assert.equal(result.error.category,'type_mismatch');assert.equal(result.error.operand,'right');assert.equal(result.error.declared_type,'object');assert.equal(result.error.condition_index,0);assert.equal(result.error.group_index,0);assert.equal(result.steps.some(step=>step.type==='paths'),false)}
+  await page.setViewportSize({width:1440,height:1000});await page.goto(origin+'/app/workflows/'+overrideWorkflow.id+'?step='+overrideStep.id+'&tab=data');
+  const input=JSON.parse(await page.locator('.inspector-block').filter({has:page.getByRole('heading',{name:'Input',exact:true})}).locator('pre').innerText());
+  assert.deepEqual(input.inputs.g0.c0.left,body.value);assert.equal(Object.hasOwn(input.inputs.g0.c0,'right'),Object.hasOwn(body,'expected'));
+  if(Object.hasOwn(body,'expected'))assert.equal(input.inputs.g0.c0.right,body.expected);
+  assert.equal(input.sets[0].conditions[0].rightType,'object');
+  if(path){const output=JSON.parse(await page.locator('.inspector-block').filter({has:page.getByRole('heading',{name:'Output',exact:true})}).locator('pre').innerText());assert.deepEqual(output,[expected])}
+  await shots('loose-object-'+state);
+  await page.setViewportSize({width:1440,height:1000});await page.goto(origin+'/app/workflow-runs/'+result.id);await page.locator('.timeline details.inline-disclosure').evaluateAll(elements=>elements.forEach(element=>element.open=true));
+  const timeline=await page.locator('.timeline').innerText();
+  if(path)assert.ok(timeline.includes(expected?'true':'false'));else {assert.ok(timeline.includes('Condition right operand cannot be converted to object'));assert.ok(timeline.includes(body.expected))}
+  await shots('loose-object-'+state+'-run');
+ }
+ console.log('WORK-013: object override conversion, missing right operand and named mismatch with zero receiver effects inspected at 1440 and 390');
 
  await context.close();
 }catch(error){if(page){await page.screenshot({path:join(evidence,'journey-error.png'),fullPage:true});console.error((await page.locator('body').innerText()).slice(0,800))}console.error(String(error.message).replace(/https?:\/\/\S+/g,'[redacted URL]'));process.exitCode=1}

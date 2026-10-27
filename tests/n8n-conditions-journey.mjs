@@ -57,6 +57,17 @@ export async function n8nConditionsJourney() {
    {rule:condition('object','empty',undefined,'={{ $json.body.expected }}',{rightType:'object'}),value:'{}',expected:"{valid: 'synthetic-crank-306'}",pass:true,loose:true},
    {rule:condition('object','empty',undefined,'={{ $json.body.expected }}',{rightType:'object'}),value:'{}',expected:'{invalid: call()}',failure:true,loose:true,operand:'right'},
    {rule:condition('object','empty',undefined,'{invalid: call()}',{rightType:'object',singleValue:true}),value:'{}',pass:true,loose:true},
+   // Object conversion on the right must affect membership, rather than merely
+   // accepting the operand. These independent expectations distinguish null,
+   // missing, source text and the explicitly overridden operand type.
+   {rule:condition('array','contains',undefined,'={{ $json.body.expected }}',{rightType:'object'}),value:[null],expected:'null',pass:true,loose:true},
+   {rule:condition('array','contains',undefined,'={{ $json.body.expected }}',{rightType:'any'}),value:[null],expected:'null',pass:false,loose:true},
+   {rule:condition('array','contains',undefined,'={{ $json.body.expected }}',{rightType:'object'}),value:[null],expected:null,pass:true,loose:true},
+   {rule:condition('array','contains',undefined,'={{ $json.body.expected }}',{rightType:'object'}),value:[null],pass:false,loose:true},
+   {rule:condition('array','contains',undefined,'={{ $json.body.expected }}',{rightType:'object'}),value:['{}'],expected:'{}',pass:false,loose:true},
+   {rule:condition('array','contains',undefined,'={{ $json.body.expected }}',{rightType:'any'}),value:['{}'],expected:'{}',pass:true,loose:true},
+   {rule:condition('array','contains',undefined,'={{ $json.body.expected }}',{rightType:'object'}),value:[null],expected:'{invalid: call()}',failure:true,loose:true,operand:'right'},
+   {rule:condition('array','contains',undefined,'={{ $json.body.expected }}',{rightType:'any'}),value:['{invalid: call()}'],expected:'{invalid: call()}',pass:true,loose:true},
    ...['', ' ', '[]', '[{}]', 'false', '12', '{value:', '{value: missing}', '{...other}', '{[key]: 1}', '{get value(){return 1}}', '{value: globalThis.crankInjected = 1}', '{value: (() => 1)()}', '{value: /pattern/}', '{value: NaN}', '{value: 1e999}', '{value: 01}', '{value: "bad\\x41"}', '{};globalThis.crankInjected=1', '{value: [1,,2]}', '{'+ 'x:'.repeat(2) + '1}', '{value:'+ '['.repeat(18)+'0'+']'.repeat(18)+'}', '{value:['+'0,'.repeat(1000)+'0]}', '{value:"'+'x'.repeat(16384)+'"}'].map(value=>({rule:condition('object','empty',undefined,undefined,{singleValue:true}),value,failure:true,loose:true,operand:'left'})),
    {rule:condition('any','notExists'),pass:true},
    {rule:condition('string','regex',undefined,'/^[A-Z]+$/i'),value:'ABC',pass:true},
@@ -94,7 +105,7 @@ export async function n8nConditionsJourney() {
    source.nodes=source.nodes.slice(0,2).concat(source.nodes[3]);source.connections={n0:{main:[[{node:'n2',type:'main',index:0}]]},n2:{main:[[{node:'n4',type:'main',index:0}]]}};
    return source;
   });
-  const cases=tests.map((item,index)=>({source:sources[index],body:{...(Object.hasOwn(item,'value')?{value:item.value}:{}),...(item.expected?{expected:item.expected}:{})},status:item.failure?'failed':item.pass?'succeeded':'stopped_by_filter',writes:item.pass?1:0,...(item.failure?{operand:item.operand??'left'}:{})}));
+  const cases=tests.map((item,index)=>({source:sources[index],body:{...(Object.hasOwn(item,'value')?{value:item.value}:{}),...(Object.hasOwn(item,'expected')?{expected:item.expected}:{})},status:item.failure?'failed':item.pass?'succeeded':'stopped_by_filter',writes:item.pass?1:0,...(item.failure?{operand:item.operand??'left'}:{})}));
   for(const combinator of ['and','or']){
    const source=structuredClone(sources[0]);source.id='synthetic-crank-'+combinator;source.name='Synthetic short circuit '+combinator;
    source.nodes[1].parameters.conditions={options:{caseSensitive:true,typeValidation:'strict',version:2},combinator,conditions:[condition('string','equals','synthetic-crank-350',combinator==='and'?'synthetic-crank-351':'synthetic-crank-350'),condition('number','gt','synthetic-crank-invalid',5)]};
@@ -147,7 +158,7 @@ export async function n8nConditionsJourney() {
    await h.post('workflows/'+workflow.id+'/publish',{},h.owner,201);const hook=await h.post('workflows/'+workflow.id+'/hooks',{},h.owner,201),before=writes.length;
    const sent=await deliver(h,hook.url,{method:'POST',headers:{'content-type':'application'+'/'+'json'},body:JSON.stringify(item.body)});assert.equal(sent.status,200,sent.text);
    const run=await settled(h,sent.value.run_id);assert.equal(run.status,item.status,JSON.stringify({index,error:run.error}));assert.equal(writes.length,before+item.writes);const evaluated=run.steps.find(row=>row.type==='transform'&&(item.expression?row.input?.outputs===3:row.input?.inputs&&row.input?.sets));assert.ok(evaluated,'source operands must remain inspectable beside the stopping rule');if(item.status==='failed'&&index<tests.length&&tests[index].rule.operator.type!=='dateTime'){assert.equal(run.error.category,'type_mismatch');assert.equal(run.error.operand,item.operand);assert.equal(run.error.condition_index,0);assert.equal(run.error.group_index,0)}if(item.path)assert.equal(targets.at(-1),item.path);
-   if(index<tests.length){const operands=evaluated.input.inputs.g0.c0;if(tests[index].rule.leftValue==='={{ $json.body.value }}'){assert.equal(Object.hasOwn(operands,'left'),Object.hasOwn(item.body,'value'),'missing must remain missing in retained operands');if(Object.hasOwn(item.body,'value'))assert.deepEqual(operands.left,item.body.value,'null, empty and source object text must remain exact')}else assert.deepEqual(operands.left,tests[index].rule.leftValue,'reviewed literal operands must remain exact')}
+   if(index<tests.length){const operands=evaluated.input.inputs.g0.c0,rule=tests[index].rule;if(rule.leftValue==='={{ $json.body.value }}'){assert.equal(Object.hasOwn(operands,'left'),Object.hasOwn(item.body,'value'),'missing must remain missing in retained operands');if(Object.hasOwn(item.body,'value'))assert.deepEqual(operands.left,item.body.value,'null, empty and source object text must remain exact')}else assert.deepEqual(operands.left,rule.leftValue,'reviewed literal operands must remain exact');if(rule.rightValue==='={{ $json.body.expected }}'){assert.equal(Object.hasOwn(operands,'right'),Object.hasOwn(item.body,'expected'),'a missing right operand must remain missing');if(Object.hasOwn(item.body,'expected'))assert.deepEqual(operands.right,item.body.expected,'right operands retain source text and explicit null separately');assert.equal(evaluated.input.sets[0].conditions[0].rightType,rule.operator.rightType??rule.operator.type)}if(item.status==='failed'&&run.error.category==='type_mismatch')assert.equal(run.error.declared_type,item.operand==='right'?(rule.operator.rightType??rule.operator.type):rule.operator.type)}
    if(item.writes&&index<tests.length)assert.deepEqual(writes.at(-1).body,item.body);
   }
   }

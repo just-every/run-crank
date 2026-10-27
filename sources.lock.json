@@ -223,7 +223,7 @@
       "executable": false
     },
     "docs/IMPORTING.md": {
-      "sha256": "4f3dec1818ba062f544fd7e75a25981b7fd555a28c0a5a533f1a9169b0f831fa",
+      "sha256": "76418e6bcf88a90a7279de68e07c5155f9f4615f9f4e2d2ba1b8734f381e6bd8",
       "executable": false
     },
     "docs/OPERATIONS.md": {
@@ -5655,7 +5655,7 @@
       "executable": false
     },
     "tests/migration-browser.mjs": {
-      "sha256": "1e2600669814fc215834ed759ab98b0776071f772da9c74493da0538bafa25ea",
+      "sha256": "01591590bcd9eb4652f843d25d7804c2f47d80d382796f4e62fdb236a1ebfc62",
       "executable": false
     },
     "tests/n8n-batch-journey.mjs": {
@@ -5671,7 +5671,7 @@
       "executable": false
     },
     "tests/n8n-conditions-journey.mjs": {
-      "sha256": "467b56fea6ecd8510628fb9bbc1ba8400a9993d9b5e27ee5a3de4a9be47f22e3",
+      "sha256": "84b2ee7063d14b6d3a20944f5db2425f9a81ce75925dcbab6d4083cc90dc4c14",
       "executable": false
     },
     "tests/n8n-conversion-journey.mjs": {
