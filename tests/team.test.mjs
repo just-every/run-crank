@@ -177,11 +177,12 @@ test('TEAM-001: complete explicit grants authorize native work, delegation, scop
   const published=await h.post(`workflows/${w.id}/publish`,{},person.cookie,201);
   assert.equal(published.version.authority.publisher,person.id);
   await h.post(`workflows/${other.id}/draft`,{name:'Refused cross-grant write'},person.cookie,403);
-  const privateRun=await h.post(`workflows/${other.id}/run`,{input:{customer:'synthetic-crank-hidden-payload'}},h.owner,201);
+  const privateRun=await h.post(`workflows/${other.id}/run`,{business_key:'synthetic-crank-hidden-key',input:{customer:'synthetic-crank-hidden-payload'}},h.owner,201);
   const mixed=await h.get('workflow-runs',person.cookie);
   const hiddenRow=mixed.runs.find(row=>row.id===privateRun.id);assert.ok(hiddenRow);
   assert.equal(hiddenRow.trigger,undefined,'viewer scope must restrict search payload even with a builder grant elsewhere');
   assert.equal(hiddenRow.business_key,null);
+  assert.deepEqual((await h.get('workflow-runs?business_key=synthetic-crank-hidden-key',person.cookie)).runs,[],'exact business-key filtering cannot probe a status-only workflow');
   assert.deepEqual((await h.get('workflow-runs?q=synthetic-crank-hidden-payload',person.cookie)).runs,[],'text search cannot probe a status-only workflow');
   assert.equal((await h.get('workflow-runs/'+privateRun.id,person.cookie)).trigger,undefined);
   const visibleRun=await h.post(`workflows/${w.id}/run`,{input:{customer:'synthetic-crank-visible-payload'}},h.owner,201);
@@ -221,6 +222,16 @@ test('TEAM-001: complete explicit grants authorize native work, delegation, scop
   }
   assert.ok(!JSON.stringify([history,totals]).includes('synthetic-crank-customer-private'));
   assert.ok(!JSON.stringify([history,totals]).includes('grant-custody'));
+  const legacyVisible=await h.flow('Synthetic visible legacy flow'),legacyHidden=await h.flow('Synthetic status-only legacy flow');
+  const visibleLegacy=await h.run(legacyVisible,'synthetic-crank-visible-legacy',{customer:'synthetic-crank-visible-legacy'});
+  const hiddenLegacy=await h.run(legacyHidden,'synthetic-crank-hidden-legacy',{customer:'synthetic-crank-hidden-legacy'});
+  await assign(person,[grant('builder',[legacyVisible.id]),grant('viewer',[legacyHidden.id])]);
+  const legacyState=await h.get('state',person.cookie);
+  assert.deepEqual(legacyState.runs.find(row=>row.id===visibleLegacy.id).input,{customer:'synthetic-crank-visible-legacy'});
+  assert.equal(legacyState.runs.find(row=>row.id===hiddenLegacy.id).input,undefined,'legacy dashboard applies payload permission per flow');
+  assert.ok(!JSON.stringify(legacyState).includes('synthetic-crank-hidden-legacy'));
+  const hiddenDetail=await h.get('runs/'+hiddenLegacy.id,person.cookie);assert.equal(hiddenDetail.input,undefined);assert.equal(hiddenDetail.payload,'restricted');
+  assert.deepEqual((await h.get('runs/'+visibleLegacy.id,person.cookie)).input,{customer:'synthetic-crank-visible-legacy'});
   const reviewWorkflow=await publish(h,'Synthetic owner separation',{trigger:{type:'manual'},steps:[{id:'review',type:'approval',input:{amount:'25.00'}}]});
   const ownerRun=await h.send('/api/crank/workflows/'+reviewWorkflow.id+'/run',{input:{}},h.owner);assert.equal(ownerRun.status,201);
   await h.post(`workflow-runs/${ownerRun.value.id}/approve`,{path:'review',digest:ownerRun.value.waits[0].proposal_digest},h.owner,403);
