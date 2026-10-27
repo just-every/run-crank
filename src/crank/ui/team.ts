@@ -27,7 +27,7 @@ function scopeChoices(kind: 'workflow' | 'connection', choices: { id: string; la
 function personPolicy(person: Person, policy: TeamPolicy | undefined, workflows: Workflow[], connections: Connection[]) {
   const role = policy?.role ?? 'none'
   const summary = policy ? stateWords(role) : 'No product access'
-  const workflowChoices = workflows.map(workflow => ({ id: workflow.id, label: workflow.name }))
+  const workflowChoices = [{id:'workspace:production',label:'Create production workflows'},...workflows.map(workflow => ({ id: workflow.id, label: workflow.name }))]
   const connectionChoices = connections.map(connection => ({ id: connection.id,
     label: [connection.label, connection.account_name, connection.app, connection.status && connection.status !== 'active' ? stateWords(connection.status) : ''].filter(Boolean).join(' · ') }))
   return `<li class="history-item"><h3>${esc(nameOf(person))} ${chip(person.status)}</h3>

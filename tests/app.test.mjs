@@ -75,6 +75,8 @@ test('EXEC-005: older business-key history, date/error filters, mapping decision
   const message = h.mail.findLast(m => m.to.includes(email));
   const token = new URL(message.html.match(/href="([^"]*\/auth\/confirm\?token=[^"]+)"/)[1].replaceAll('&amp;', '&'), h.origin).searchParams.get('token');
   const cookie = (await h.send('/auth/confirm', { token })).cookie;
+  const reader=(await h.send('/auth/operators',undefined,h.owner)).value.find(person=>person.email===email);
+  await h.post('team/'+reader.id,{role:'viewer',workflow_ids:[w.id],connection_ids:[]});
   const safe = await h.get('workflow-runs/' + failed.id, cookie);
   assert.equal(safe.status, 'failed'); assert.ok(safe.received_at); assert.equal(safe.payload, 'restricted');
   assert.equal(safe.steps.find(s => s.path === 'invoice').input, undefined);

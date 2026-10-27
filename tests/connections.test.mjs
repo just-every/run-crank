@@ -683,6 +683,8 @@ test('Enrolled private gateway reads a real database, checkpoints file pages acr
   const dispatchedBeforeRevoke=deliveries.length;
   const invitation=await h.send('/auth/invite',{email:'warehouse-admin@example.test',displayName:'Warehouse administrator',role:'admin'},h.owner);assert.equal(invitation.status,202,invitation.text);
   const link=h.mail.at(-1).html.match(/href="([^"]*\/auth\/confirm\?token=[^"]+)"/)[1].replaceAll('&amp;','&');const admin=await h.send('/auth/confirm',{token:new URL(link).searchParams.get('token')});assert.equal(admin.status,303,admin.text);
+  const scopedAdmin=(await h.send('/auth/operators',undefined,h.owner)).value.find(person=>person.email==='warehouse-admin@example.test');
+  await h.post('team/'+scopedAdmin.id,{role:'admin',workflow_ids:[production.id],connection_ids:['gateway:'+state.gateway.id]});
   await h.post(base+'/grants',{environment:'production',connector_id:connectorId,connector_version:1,operations:['record'],destinations:manifestDestinations({operations:{stock:manifest.operations.stock}},manifestPath)},admin.cookie,403);
   await h.post(base+'/revoke',{},admin.cookie);await h.tick();const refused=await h.get('workflow-runs/'+waiting.id);assert.equal(refused.status,'failed');assert.match(refused.error.message,/gateway revoked/);assert.equal(deliveries.length,dispatchedBeforeRevoke);assert.equal(stepOf(refused,'stock').output,null);
   await gatewayPost(h,state,`gateways/${state.gateway.id}/tasks/${deliveries.at(-1).id}/result`,{environment:'production',output:{rows:[{name:'Oak workbench',quantity:999}]}},401);

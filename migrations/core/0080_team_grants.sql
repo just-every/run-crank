@@ -6,11 +6,11 @@ CREATE TABLE crank_team_migration_reports (
 );
 INSERT INTO crank_team_access(operator_id,role,workflow_ids_json,connection_ids_json,revision,changed_by,changed_at,grants_json)
  SELECT o.id,CASE WHEN o.role='admin' THEN 'admin' ELSE 'viewer' END,
- (SELECT json_group_array(id) FROM (SELECT id FROM crank_workflows UNION SELECT id FROM crank_flows)),(SELECT json_group_array(id) FROM crank_connections),
+ (SELECT json_group_array(id) FROM (SELECT id FROM crank_workflows UNION SELECT id FROM crank_flows UNION SELECT 'workspace:production' AS id WHERE o.role='admin')),(SELECT json_group_array(id) FROM crank_connections),
  lower(hex(randomblob(16))),'system:team-migration',strftime('%Y-%m-%dT%H:%M:%fZ','now'),
  json_array(json_object('role',CASE WHEN o.role='admin' THEN 'admin' ELSE 'viewer' END,
  'actions',json(CASE WHEN o.role='admin' THEN '["read","prepare","start"]' ELSE '["read"]' END),
- 'workflow_ids',json((SELECT json_group_array(id) FROM (SELECT id FROM crank_workflows UNION SELECT id FROM crank_flows))),
+ 'workflow_ids',json((SELECT json_group_array(id) FROM (SELECT id FROM crank_workflows UNION SELECT id FROM crank_flows UNION SELECT 'workspace:production' AS id WHERE o.role='admin'))),
  'connection_ids',json((SELECT json_group_array(id) FROM crank_connections))))
  FROM oa_operators o WHERE o.role!='owner' AND NOT EXISTS(SELECT 1 FROM crank_team_access t WHERE t.operator_id=o.id);
 INSERT INTO crank_team_migration_reports
