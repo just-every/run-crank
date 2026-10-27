@@ -139,7 +139,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "6d57a96fc0aa8a414241302e6a5dc6e66bc283c044bc2d068dbab6ab41d4fd98",
+      "sha256": "c9b0d98164c4b7e4f13b1435cf520b7734a4b8f11d3fecf2422daa932b642923",
       "executable": false
     },
     "AGENTS.md": {
@@ -163,7 +163,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "f9154e171f0dd59a413d5a6fb9a3b1c08a65f6b9af9c7bde11019c2688f478fc",
+      "sha256": "39c1ba3106db7c8e6de6a1db3c1edaa6e77f73d51e34f902fd06488e120af8b4",
       "executable": false
     },
     "DEMO.md": {
@@ -203,7 +203,7 @@
       "executable": false
     },
     "docs/CLAIMS.md": {
-      "sha256": "e142685642ab1de4225f2aba7483811b942eeaa2fb837d9c73cfc52845caeedb",
+      "sha256": "04b0b697cabcd4f94ff9e8166abf5f3939bcdabae6b56db2d323e9d2deb9a2f2",
       "executable": false
     },
     "docs/DATA-FLOWS.md": {
@@ -2559,7 +2559,7 @@
       "executable": false
     },
     "src/crank/custom/pickers.ts": {
-      "sha256": "b2b5c0e4da18b55e9632a5e6cae5b36a663e632e190d854a50b500fc9a46d3e9",
+      "sha256": "8df9dcf9bcc9feb3038c3a87056f3e1e7e105591a2c85ab8c50c3a0949d23033",
       "executable": false
     },
     "src/crank/custom/sandbox.ts": {
@@ -3423,7 +3423,7 @@
       "executable": false
     },
     "src/crank/workflows/store.ts": {
-      "sha256": "2aabb00085a941ad384b80c441819672284c3f0bece89be1accfbdb7b41b1046",
+      "sha256": "81e296f47b69730d9fab2a87df0a1e95be2d8c33067f987c121bfec72f37540b",
       "executable": false
     },
     "src/crank/workflows/subflow-calls.ts": {
@@ -5435,7 +5435,7 @@
       "executable": false
     },
     "tests/custom-browser.mjs": {
-      "sha256": "5abc5e568e4ba0c05db1679efa6c3e757c061c2f2946e22f062eff2136386074",
+      "sha256": "1e09cd6a2b7eb53d6c93d629b5d3ec60235dab370087c2e495d693a4e30e5a17",
       "executable": false
     },
     "tests/custom-fixture.mjs": {
@@ -5447,7 +5447,7 @@
       "executable": false
     },
     "tests/custom-picker-fixture.mjs": {
-      "sha256": "3460afbab38b3f72a5c452033422c30d98c77806842882d97ac7c7ac6caca54a",
+      "sha256": "a751287d1c77a06347832d5d424193fd097a4b9a91a4a67e7bc0df020c4b0c67",
       "executable": false
     },
     "tests/database-gateway-fixture.mjs": {
@@ -5627,7 +5627,7 @@
       "executable": false
     },
     "tests/harness.mjs": {
-      "sha256": "89d6a0d0e7404f3a6ed1beeed42c03ceea4d0aeadde366cf605bb919a5528871",
+      "sha256": "a86d2a12133b2a20a7bb61b7b76b09ab459759ba51128fc07325b7ae3bc7d786",
       "executable": false
     },
     "tests/historical.test.mjs": {

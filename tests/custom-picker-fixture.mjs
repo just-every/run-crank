@@ -49,7 +49,7 @@ export async function pagedPickerSetup(h,fake,tag='native') {
   const restricted=await connection(h,{app:'http',label:'Synthetic restricted channel account',purpose:'test',auth_kind:'bearer',domains:['picker.example'],scopes:['records.read'],secret:{token:restrictedToken}});
   const rows=Array.from({length:1206},(_,n)=>({id:'synthetic-crank-'+n,name:n===1199||n===1200?'Shared channel':'Channel '+n,workspace:n===1199?'East office':n===1200?'West office':'Synthetic workspace'}));
   const state={oversized:false,label:'Channel 1204'};
-  fake.routes.set('picker.example',({method,url,headers})=>{
+  fake.routes.set('picker.example',async({method,url,headers})=>{
     assert.equal(method,'GET','Picker reads cannot write resources');assert.equal(url.pathname,'/names','Picker loads cannot run the target action');
     assert.ok(['north','south'].includes(url.searchParams.get('workspace')));
     const query=url.searchParams.get('query')??'',offset=Number(url.searchParams.get('cursor')??0),size=Number(url.searchParams.get('size'));
@@ -57,6 +57,7 @@ export async function pagedPickerSetup(h,fake,tag='native') {
     const visible=rows.filter(row=>(headers.authorization!=='Bearer '+restrictedToken||row.id!=='synthetic-crank-1205')&&(row.name.toLowerCase().includes(query.toLowerCase())||row.id.includes(query)));
     const page=visible.slice(offset,offset+size).map(row=>row.id==='synthetic-crank-1204'?{...row,name:state.label}:row);
     calls.push({query,offset,count:page.length,workspace:url.searchParams.get('workspace')});
+    if(state.beforeReply){const run=state.beforeReply;state.beforeReply=undefined;await run()}
     return jsonResponse({rows:state.oversized?rows.slice(0,41):page,next:offset+size<visible.length?String(offset+size):null});
   });
   const graph={trigger:{type:'manual'},steps:[{id:'choose',type:'custom.request',connector_id:installed.id,connector_version:1,operation:'record',connection_id:account.id,input:{workspace:'north'}}]};
@@ -87,9 +88,17 @@ export async function provePagedPickers(h,fake) {
   await h.post(`connections/${account.id}/rotate`,{secret:{token:'synthetic-crank-23'}});
   await h.post('custom-connectors/pickers',{...address,cursor_run_id:frozen.run_id},h.owner,409);
   await h.post('custom-connectors/selection',{...address,value:'synthetic-crank-0',source_run_id:frozen.run_id,draft_digest:frozen.draft_digest},h.owner,409);
+  state.beforeReply=()=>h.post(`connections/${account.id}/rotate`,{secret:{token:'synthetic-crank-24'}});
+  const inFlight=calls.length;await h.post('custom-connectors/pickers',address,h.owner,409);assert.equal(calls.length,inFlight+1,'A credential change during the read invalidates its returned page');
   const fresh=await h.post('custom-connectors/pickers',address);state.oversized=true;
   await h.post('custom-connectors/pickers',address,h.owner,422);state.oversized=false;
+  fake.routes.set('picker-commit.example',async()=>{await h.post(`connections/${account.id}/revoke`);return jsonResponse({ok:true})});
+  await h.restart({pickerCommitBarrier:true});
+  await h.post('custom-connectors/selection',{...address,value:'synthetic-crank-0',source_run_id:fresh.run_id,draft_digest:fresh.draft_digest},h.owner,403);
+  assert.equal((await h.get('workflows/'+workflow.id)).draft.steps[0].input.channel,undefined,'Revocation after selection checks rolls back the draft commit');
+  await h.post(`connections/${account.id}/rotate`,{secret:{token:'synthetic-crank-25'}});
+  const reconnected=await h.post('custom-connectors/pickers',address);
   await h.post(`custom-connectors/${f.installed.id}/versions/1/revoke-scopes`,{scopes:['records.read']});
-  const count=calls.length;await h.post('custom-connectors/pickers',{...address,cursor_run_id:fresh.run_id},h.owner,422);await h.post('custom-connectors/selection',{...address,value:'synthetic-crank-0',source_run_id:fresh.run_id,draft_digest:fresh.draft_digest},h.owner,422);assert.equal(calls.length,count);
+  const count=calls.length;await h.post('custom-connectors/pickers',{...address,cursor_run_id:reconnected.run_id},h.owner,422);await h.post('custom-connectors/selection',{...address,value:'synthetic-crank-0',source_run_id:reconnected.run_id,draft_digest:reconnected.draft_digest},h.owner,422);assert.equal(calls.length,count);
   assert.equal((await h.get('workflows/'+workflow.id)).draft.steps[0].input.channel,undefined,'Refusals never substitute another resource');
 }
