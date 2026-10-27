@@ -52,7 +52,7 @@ export async function crankApi(request: Request, env: CrankEnv): Promise<Respons
       const flow = /^\/api\/crank\/flows\/([^/]+)$/.exec(path)
       if (flow) return json(await getFlow(env, decodeURIComponent(flow[1])))
       const run = /^\/api\/crank\/runs\/([^/]+)$/.exec(path)
-      if (run) return json(presentRun(await getRun(env, decodeURIComponent(run[1]))))
+      if (run) {const row=await getRun(env,decodeURIComponent(run[1]));return json(actor.team && actor.team.role==='viewer'?{id:row.id,flow_id:row.flow_id,state:row.state,created_at:row.created_at,updated_at:row.updated_at,payload:'restricted'}:presentRun(row))}
       return json({ error: 'Route not found' }, 404)
     }
     requireValue(request.method === 'POST', 'Method not allowed', 405)
