@@ -52,6 +52,7 @@ try {
   await page.getByRole('button',{name:'Check invoice now',exact:true}).click();await page.waitForLoadState('networkidle');
   let task=await h.get('recurring-tasks/'+taskId);assert.equal(task.runs.length,1);assert.equal(task.runs[0].outcome.contact_state,'not_sent');assert.equal(task.runs[0].skill_version_id,version.id);
   await shot(width,'blocked-contact');
+  await page.getByRole('link',{name:'Open workflow run',exact:true}).click();await page.waitForLoadState('networkidle');await shot(width,'native-run');await page.goto(h.origin+'/app/recurring/'+taskId);
   const newer=await h.post('recurring-skills',{...s.publication,skill_id:s.skill.skill_id,instructions:'Third reviewed version; no broader tool or recipient authority.'},h.owner,201);
   await page.reload();await page.getByLabel('Exact skill version',{exact:true}).selectOption(newer.id);await page.getByLabel('Elapsed minutes between live checks',{exact:true}).fill('60');
   await page.getByRole('button',{name:'Adopt for the next run',exact:true}).click();await page.waitForLoadState('networkidle');

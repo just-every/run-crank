@@ -7,6 +7,7 @@ import { startTask } from '../grants/tasks'
 import { canonical, CrankError, now, requireValue, stmt, type Actor, type CrankEnv } from '../model'
 import { auditStatementWhen } from '../ops/audit'
 import { isBudgetExceeded } from '../ops/usage'
+import { unitsUsd } from '../ops/usage-money'
 import { runDetail } from '../workflows/runs'
 import { assertRecurringAuthority, assertRecurringBudget, releaseRecurringClaims } from './recurring-authority'
 import { readRecurring, type RecurringTask, type RecurringSkillVersion, type RecurringObjective } from './recurring-store'
@@ -33,7 +34,8 @@ export async function dispatchRecurring(env: CrankEnv, actor: Actor | null, task
   const open = await frozenRun(env,task.id)
   // Adoption changes the next admission, never the grant or inputs on an open run.
   if (open) {
-    await assertRecurringAuthority(env,open.run_id)
+    try { await assertRecurringAuthority(env,open.run_id) }
+    catch (error) { if (!(error instanceof StepError)) throw error; await retainBlock(env,task,error.message); throw new CrankError(409,error.message) }
     if (Date.parse(task.next_run_at)>time || !['paused','queued'].includes(open.status)) return {run_id:open.run_id,status:open.status,reused:true}
     await stmt(env, `UPDATE crank_wf_runs SET status='queued',error_json=NULL WHERE id=? AND status='paused'
       AND EXISTS(SELECT 1 FROM crank_recurring_tasks WHERE id=? AND status='active' AND tool_revoked_at IS NULL)`,open.run_id,task.id).run()
@@ -64,10 +66,13 @@ export async function dispatchRecurring(env: CrankEnv, actor: Actor | null, task
     await advance(env,task,run.id,time)
     return {run_id:run.id,status:run.status,reused:false}
   } catch (error) {
-    const raced = await frozenRun(env,task.id)
-    if (raced) return {run_id:raced.run_id,status:raced.status,reused:true}
     if (isBudgetExceeded(error)) { await retainBlock(env,task,'USD budget hold; no recurring run or provider request was admitted'); throw new CrankError(409,'USD budget hold; replenish the applicable budget before resuming') }
-    if (/UNIQUE constraint failed: crank_recurring_claims/.test(String(error))) throw new CrankError(409,'Another active run already owns this connected invoice')
+    if (/UNIQUE constraint failed: crank_recurring_claims/.test(String(error))) {
+      const raced = await frozenRun(env,task.id)
+      if (raced) return {run_id:raced.run_id,status:raced.status,reused:true}
+      await retainBlock(env,task,'Another active run already owns this connected invoice')
+      throw new CrankError(409,'Another active run already owns this connected invoice')
+    }
     throw error
   }
 }
@@ -94,6 +99,8 @@ export async function readRecurringWithRuns(env: CrankEnv,actor:Actor,taskId:str
   const task = await readRecurring(env,actor,taskId)
   return {...task,runs:await Promise.all(task.runs.map(async (row:any)=>{
     const detail = await runDetail(env,actor,row.run_id)
-    return {...row,error:detail.error,outcome:detail.steps.find(step=>step.type==='quickbooks.followup_invoice')?.output ?? null}
+    const usage = await stmt(env,'SELECT CAST(estimate_units AS TEXT) estimate_units,CAST(accounted_units AS TEXT) accounted_units FROM crank_usage_reservations WHERE run_id=?',row.run_id).first<{estimate_units:string;accounted_units:string}>()
+    return {...row,error:detail.error,outcome:detail.steps.find(step=>step.type==='quickbooks.followup_invoice')?.output ?? null,
+      cost:usage?{owner_estimate_usd:unitsUsd(usage.estimate_units),budget_accounted_usd:unitsUsd(usage.accounted_units)}:null}
   }))}
 }

@@ -54,7 +54,7 @@ export const invoiceFollowup: StepType = {
     const first = await invoice(ctx,String(step.connection_id)), firstState = terminal(first)
     const checkedAt = new Date(ctx.now).toISOString(), next = new Date(ctx.now + objective.interval_minutes*60000).toISOString()
     const observed = {invoice_id:first.Id,provider_version:first.SyncToken,balance:first.Balance,checked_at:checkedAt,
-      objective_version_id:link.objective_version_id,contact_operation_key:ctx.operationKey,remaining_obligations:['Supported customer transport and authorized provider readback'],next_check_at:next}
+      objective_version_id:link.objective_version_id,contact_operation_key:ctx.operationKey,remaining_obligations:[{kind:'customer_contact',state:'blocked',reason:'Authorized customer transport and provider readback are unavailable'}],next_check_at:next}
     if (firstState) return {status:'succeeded',output:{...observed,objective_state:'satisfied',invoice_state:firstState,remaining_obligations:[]}}
     if (typeof first.DueDate !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(first.DueDate)) throw new StepError('provider','The connected invoice needs an explicit due date')
     if (first.DueDate >= checkedAt.slice(0,10)) return {status:'paused',reason:'The connected invoice is not overdue',output:{...observed,objective_state:'not_due'}}
@@ -64,7 +64,7 @@ export const invoiceFollowup: StepType = {
     if (state) return {status:'succeeded',output:{...observed,provider_version:current.SyncToken,balance:current.Balance,invoice_state:state,objective_state:'satisfied',same_dispatch_read:true,remaining_obligations:[]}}
     const email = current.BillEmail?.Address
     const recipient = typeof email === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : null
-    return {status:'paused',reason:recipient ? 'Customer contact is blocked: connect an authorized EXEC-007 or CONN-003 transport' : 'The connected invoice has no unambiguous billing contact',
+    return {status:'paused',reason:recipient ? 'Customer contact is blocked: an authorized customer email or SMS transport is unavailable' : 'The connected invoice has no unambiguous billing contact',
       output:{...observed,provider_version:current.SyncToken,balance:current.Balance,objective_state:'blocked',same_dispatch_read:true,
         billing_contact:recipient,contact_state:'not_sent',transport:'unavailable',cost:'See native run usage; no customer send was charged'}}
   },

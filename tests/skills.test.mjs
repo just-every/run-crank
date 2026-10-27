@@ -23,7 +23,8 @@ test('Recurring invoice objectives freeze version pins, serialize invoice owners
   assert.equal(task.runs.length,1);assert.equal(run.status,'paused');assert.equal(reads,2);
   const original=run.steps[0].output,firstAt=Date.parse(original.checked_at),key=run.steps[0].operation_key;
   assert.equal(original.contact_state,'not_sent');assert.equal(original.billing_contact,'billing@harbour.example.test');assert.equal(original.same_dispatch_read,true);
-  assert.deepEqual(original.remaining_obligations,['Supported customer transport and authorized provider readback']);
+  assert.deepEqual(original.remaining_obligations.map(({kind,state})=>({kind,state})),[{kind:'customer_contact',state:'blocked'}]);
+  assert.equal(task.runs[0].cost.owner_estimate_usd,'0');assert.equal(task.runs[0].cost.budget_accounted_usd,'0');
   await h.post(path+'/dispatch');assert.equal(reads,2,'Duplicate dispatch never bypasses configured cadence');
   const duplicate=await h.post('recurring-tasks',s.request,h.owner,201);
   await h.post('recurring-tasks/'+duplicate.id+'/dispatch',{},h.owner,409);assert.equal(reads,2);
