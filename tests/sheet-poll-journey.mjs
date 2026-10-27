@@ -4,21 +4,22 @@ import {connection,fakeEdge,jsonResponse,publish,runs} from './kit.mjs';
 const minute=60000;
 
 /** Real workflow HTTP and Cron doors; only Google and the destination are faked. */
-export async function sheetPollJourney({inspect=async()=>{}}={}) {
+export async function sheetPollJourney({inspect=async()=>{},provider='google_sheets'}={}) {
  const edge=fakeEdge(),h=await harness('http://127.0.0.1:9',{edge:edge.edge,clock:'2026-10-28T01:00:00Z'});
  const headers=['Record ID','Status','Customer','Amount','Notes'];
  let rows=Array.from({length:50},(_,i)=>['synthetic-crank-'+i,'Approved','Buyer '+i,100,'seed']),effects=[],reads=0,blocked=false,release,arrived;
- edge.routes.set('sheets.googleapis.com',async({url,headers:request})=>{
-  reads++;assert.equal(request.authorization,'Bearer synthetic-crank-10');assert.equal(decodeURIComponent(url.pathname),'/v4/spreadsheets/synthetic-crank-11/values/Orders!A1:E1001');
-  assert.equal(url.searchParams.get('valueRenderOption'),'UNFORMATTED_VALUE');
-  if(blocked){arrived();await new Promise(done=>{release=done})}
+ const excel=provider==='microsoft_excel';
+ edge.routes.set(excel?'graph.microsoft.com':'sheets.googleapis.com',async({url,headers:request})=>{
+  reads++;assert.equal(request.authorization,'Bearer synthetic-crank-10');assert.equal(decodeURIComponent(url.pathname),excel?"/v1.0/me/drive/items/synthetic-crank-11/workbook/worksheets/Orders/range(address='A1:E1001')":'/v4/spreadsheets/synthetic-crank-11/values/Orders!A1:E1001');
+  if(!excel)assert.equal(url.searchParams.get('valueRenderOption'),'UNFORMATTED_VALUE');
+  if(blocked){blocked=false;arrived();await new Promise(done=>{release=done})}
   return jsonResponse({range:'Orders!A1:E'+(rows.length+1),majorDimension:'ROWS',values:[headers,...rows]});
  });
  edge.routes.set('receiver.example',({body})=>{effects.push(JSON.parse(body));return jsonResponse({ok:true})});
  let restored;
  try {
-  const c=await connection(h,{app:'google',label:'Orders spreadsheet',auth_kind:'oauth2',scopes:['https://www.googleapis.com/auth/spreadsheets.readonly'],secret:{access_token:'synthetic-crank-10'}});
-  const trigger={type:'app_poll',provider:'google_sheets',resource:'rows',spreadsheet_id:'synthetic-crank-11',range:'Orders!A1:E1001',key_field:'Record ID',event:'updated',connection_id:c.id,interval_minutes:1,backfill:'from_now',watched_fields:['Status'],changed_to:[[{field:'Status',op:'text.equals',value:'Approved'}]]};
+  const c=await connection(h,excel?{app:'microsoft_graph',label:'Orders workbook',auth_kind:'bearer',secret:{token:'synthetic-crank-10'}}:{app:'google',label:'Orders spreadsheet',auth_kind:'oauth2',scopes:['https://www.googleapis.com/auth/spreadsheets.readonly'],secret:{access_token:'synthetic-crank-10'}});
+  const trigger={type:'app_poll',provider,resource:'rows',...(excel?{workbook_id:'synthetic-crank-11',worksheet_id:'Orders',range:'A1:E1001'}:{spreadsheet_id:'synthetic-crank-11',range:'Orders!A1:E1001'}),key_field:'Record ID',event:'updated',connection_id:c.id,interval_minutes:1,backfill:'from_now',watched_fields:['Status'],changed_to:[[{field:'Status',op:'text.equals',value:'Approved'}]]};
   for(const patch of [{key_field:''},{watched_fields:undefined},{settle_delay:0},{required_columns:[]}]) {
    const invalid=await h.send('/api/crank/workflows',{name:'Invalid row trigger',graph:{trigger:{...trigger,...patch},steps:[]}},h.owner);assert.equal(invalid.status,422,invalid.text);
   }
@@ -64,7 +65,7 @@ export async function sheetPollJourney({inspect=async()=>{}}={}) {
   assert.equal((await h.db.prepare('SELECT COUNT(*) AS n FROM crank_app_pending_rows WHERE workflow_id=? AND record_id=?').bind(settled.id,digest).first()).n,0);
   const journal=await h.send('/api/crank/data/export',{},h.owner),destination=await harness('http://127.0.0.1:9',{edge:edge.edge});try {assert.equal((await destination.send('/api/crank/data/restore',{archive:archive.text,journal:journal.text,confirm:'RESTORE'},destination.owner)).status,409)}finally{await destination.close()}
   await h.post(`workflows/${settled.id}/publish`,{},h.owner,201);row[1]='Approved';await poll();time+=3*minute;await h.tick(time);assert.equal((await runs(h,settled)).length,1,'only the other retained run survives erasure and replay');
-  const reached=new Promise(done=>{arrived=done});blocked=true;time+=minute;const inflight=h.tick(time);await reached;
-  await h.post(`connections/${c.id}/revoke`);row[1]='Pending';blocked=false;release();await inflight;const count=effects.length;await poll();assert.equal(effects.length,count);assert.ok(reads>10);
+  const reached=new Promise(done=>{arrived=done});blocked=true;time+=minute;const count=effects.length;rows.push(['synthetic-crank-53','Approved','Revoked buyer',600,'']);const inflight=h.tick(time);await reached;
+  await h.post(`connections/${c.id}/revoke`);row[1]='Pending';blocked=false;release();await inflight;assert.equal(effects.length,count);await poll();assert.equal(effects.length,count);assert.ok(reads>10);
  } finally {await restored?.close();await h.close()}
 }

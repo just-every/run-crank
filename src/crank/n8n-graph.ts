@@ -10,6 +10,7 @@ import { conversionDisposition, conversionStep, migrationEnvelope } from './n8n-
 import { n8nHttp, reviewedHttpBinding } from './n8n-http'
 import { compileN8nConditionSets } from './n8n-conditions'
 import { n8nDateTime } from './n8n-datetime'
+import { n8nSheetsTrigger } from './n8n-sheets-trigger'
 
 type Obj = Record<string, any>
 const obj = (v: any): Obj => { if (!v || typeof v !== 'object' || Array.isArray(v)) throw Error('object required'); return v }
@@ -32,7 +33,8 @@ export function n8nGraph(value: Json, sourceId: string, env: ImportTargetEnv, ow
   const names = new Map<string,number>(), ids = new Set<string>()
   nodes.forEach((n,i)=>{ label(n.id); label(n.name); if(names.has(n.name)||ids.has(n.id)) gap('nodes.'+i,'duplicate identity'); names.set(n.name,i);ids.add(n.id)
     const httpBinding=n.type==='n8n-nodes-base.httpRequest'&&conversions[n.id]?.kind==='http-connection'&&conversions[n.id]?.reviewed===true
-    if(n.credentials&&!httpBinding)for(const key of Object.keys(obj(n.credentials)))gap('nodes.'+i+'.credentials.'+key,'fresh native account binding required; source credential reference grants no authority')
+    const sheetsBinding=n.type==='n8n-nodes-base.googleSheetsTrigger'&&conversions[n.id]?.kind==='sheets-trigger'&&conversions[n.id]?.reviewed===true
+    if(n.credentials&&!httpBinding&&!sheetsBinding)for(const key of Object.keys(obj(n.credentials)))gap('nodes.'+i+'.credentials.'+key,'fresh native account binding required; source credential reference grants no authority')
     fields(n,['id','name','type','typeVersion','position','parameters','webhookId','credentials'],'nodes.'+i)
     if(!Array.isArray(n.position)||n.position.length!==2||n.position.some((x:any)=>typeof x!=='number'||!Number.isFinite(x))) gap('nodes.'+i+'.position','invalid layout')
   })
@@ -45,11 +47,19 @@ export function n8nGraph(value: Json, sourceId: string, env: ImportTargetEnv, ow
     if(!Array.isArray(list)){gap(at,'invalid outputs');continue}
     edges.set(from,list.map((branch:any)=>{ if(!Array.isArray(branch)){gap(at,'invalid edge list');return []} return branch.flatMap((raw:any)=>{const e=obj(raw);fields(e,['node','type','index'],at);const target=names.get(e.node);if(target===undefined||e.type!=='main'||e.index!==0){gap(at,'unsupported edge or input');return []}return [target]}) }))
   }
-  const starts=nodes.map((n,i)=>['n8n-nodes-base.webhook','n8n-nodes-base.manualTrigger',...(context.depth ? ['n8n-nodes-base.executeWorkflowTrigger'] : [])].includes(n.type)?i:-1).filter(i=>i>=0)
+  const starts=nodes.map((n,i)=>['n8n-nodes-base.webhook','n8n-nodes-base.manualTrigger',...(!context.depth ? ['n8n-nodes-base.googleSheetsTrigger'] : ['n8n-nodes-base.executeWorkflowTrigger'])].includes(n.type)?i:-1).filter(i=>i>=0)
   if(starts.length!==1) gap('nodes','exactly one supported trigger required')
   const seen=new Set<number>(), layout=nodes.map((n,i)=>({id:context.prefix+'n'+i,source_id:n.id,name:n.name,position:n.position})), trigger:Obj={type:'manual'}
   const mapped = (v:any, previous:string, at:string):any => {
-    if(typeof v==='string'&&(v.startsWith('=')||v.includes('{{'))){const m=/^=\{\{ \$json((?:\.[A-Za-z_][A-Za-z0-9_]*)*) \}\}$/.exec(v);if(!m){gap(at,'expression has no safe native equivalent');return null} coverage.push({field:at,reason:'Supported declarative data path'});return {$ref:previous+m[1]}}
+    if(typeof v==='string'&&(v.startsWith('=')||v.includes('{{'))){
+      const m=/^=\{\{ \$json((?:\.[A-Za-z_][A-Za-z0-9_]*)*) \}\}$/.exec(v)
+      // Direct quoted column references preserve spaces without evaluating source code.
+      const column=previous==='trigger.properties'?/^=\{\{ \$json\[(?:'([^'\\]+)'|"([^"\\]+)")\] \}\}$/.exec(v):null
+      const name=column?.[1]??column?.[2],suffix=m?.[1]??(name&&!/[.\[\]]/.test(name)?'.'+name:undefined)
+      if(suffix===undefined){gap(at,'expression has no safe native equivalent');return null}
+      if(previous==='trigger.properties'&&['row_number','change_type'].includes(suffix.split('.')[1])){gap(at,'source Sheets row_number/change_type metadata requires manual output conversion');return null}
+      coverage.push({field:at,reason:'Supported declarative data path'});return {$ref:previous+suffix}
+    }
     const inspectLiteral=(value:any,path:string)=>{
       if(typeof value==='string'&&(value.startsWith('=')||value.includes('{{')))gap(path,'nested source expression needs an explicit native conversion')
       else if(value&&typeof value==='object')for(const [key,item]of Object.entries(value))inspectLiteral(item,path+'.'+key)
@@ -75,6 +85,12 @@ export function n8nGraph(value: Json, sourceId: string, env: ImportTargetEnv, ow
         const mappedTransform=n8nTransform({node:n,id,previous,at,fields,mapped})!
         result.push(...mappedTransform.steps);previous=mappedTransform.output
       } else switch(n.type){
+        case 'n8n-nodes-base.googleSheetsTrigger':
+          if(context.depth)throw Error('Sheets polling cannot be used as an embedded subflow trigger')
+          Object.assign(trigger,n8nSheetsTrigger(n,conversions[n.id],at,fields));previous='trigger.properties'
+          dispositions.push(conversionDisposition(n,conversions[n.id],true))
+          coverage.push({field:at,reason:'Supported reviewed stable-key current-row polling with fresh native binding; source watched column names preserved, initial rows seed without running; Drive revision history and row-number metadata are not migrated'})
+          break
         case 'n8n-nodes-base.webhook':
           fields(p,['httpMethod','path','authentication','responseMode','options'],at+'.parameters')
           if(![1,2,2.1].includes(n.typeVersion)||p.httpMethod!=='POST'||(p.authentication??'none')!=='none'||(p.responseMode??'onReceived')!=='onReceived'||Object.keys(obj(p.options??{})).length)throw Error('unsupported webhook settings')
@@ -240,7 +256,7 @@ export function n8nGraph(value: Json, sourceId: string, env: ImportTargetEnv, ow
         default: gap(at,'node type '+String(n.type)+' has no committed mapping');fields(p,[],at+'.parameters')
       }
     }catch(error){gap(at,(error as Error).message);if(conversions[n.id]||['n8n-nodes-base.code','n8n-nodes-base.function','n8n-nodes-base.functionItem','n8n-nodes-base.executeWorkflow'].includes(n.type))dispositions.push(conversionDisposition(n,conversions[n.id],false))}
-    if(conversions[n.id]&&!['n8n-nodes-base.httpRequest','n8n-nodes-base.splitOut','n8n-nodes-base.code','n8n-nodes-base.function','n8n-nodes-base.functionItem','n8n-nodes-base.executeWorkflow'].includes(n.type))gap('conversions.'+n.id,'choice does not apply to this source node')
+    if(conversions[n.id]&&!['n8n-nodes-base.googleSheetsTrigger','n8n-nodes-base.httpRequest','n8n-nodes-base.splitOut','n8n-nodes-base.code','n8n-nodes-base.function','n8n-nodes-base.functionItem','n8n-nodes-base.executeWorkflow'].includes(n.type))gap('conversions.'+n.id,'choice does not apply to this source node')
     if(out.length>1||out.some(b=>b.length>1))gap(at+'.connections','fan-out needs an explicit native branch')
     tails.set(index,previous)
     for(const branch of out)for(const next of branch){result.push(...compile(next,previous,depth+1,stop,stream));tails.set(index,tails.get(next)??previous)}

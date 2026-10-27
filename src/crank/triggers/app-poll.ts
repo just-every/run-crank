@@ -1,3 +1,4 @@
+import { credential } from '../connections/store'
 import { appRecords, appRequest } from './app-source'
 import { rowReady } from './row-settle'
 import { evaluate, type Groups } from '../engine/conditions'
@@ -13,15 +14,17 @@ function matches(condition: unknown, fields: Record<string, unknown> | null, dir
   if (condition === undefined) return true
   if (fields === null) return false
   if (!Array.isArray(condition)) return Object.entries(condition as Record<string, unknown>).every(([field, value]) => canonical(fields[field]) === canonical(value))
-  const groups = (condition as Groups).map(group => group.map(rule => ({ ...rule, field: 'trigger.' + rule.field })))
-  const result = evaluate(groups, { trigger: fields, steps: {}, run: {} }, 'UTC', time)
-  if (result.mismatch) throw new StepError('validation', `${direction}: type mismatch for ${result.mismatch.field}: ${result.mismatch.message}`)
+  const names = [...new Set((condition as Groups).flat().map(rule => rule.field))]
+  const groups = (condition as Groups).map(group => group.map(rule => ({ ...rule, field: `trigger.values[${names.indexOf(rule.field)}]` })))
+  const result = evaluate(groups, { trigger: { values: names.map(name => fields[name]) }, steps: {}, run: {} }, 'UTC', time)
+  if (result.mismatch) throw new StepError('validation', `${direction}: type mismatch for ${names[Number(/\[(\d+)\]/.exec(result.mismatch.field)?.[1])]}: ${result.mismatch.message}`)
   return result.pass
 }
 
 /** Read every bounded page before changing snapshots or admitting work. */
 export async function appItems(env: CrankEnv, poll: PollRow, trigger: Record<string, any>, started: string) {
   const records = await appRecords(env, trigger)
+  await credential(env, trigger.connection_id)
   const reseeding = !poll.seeded && !!await stmt(env, 'SELECT 1 FROM crank_app_snapshots WHERE workflow_id=? AND version_id!=? LIMIT 1', poll.workflow_id, poll.version_id).first()
   const events: TriggerEvent[] = [], snapshots: D1PreparedStatement[] = [], target = await targetFor(env, poll.workflow_id)
   for (const record of records) {

@@ -16,10 +16,13 @@ export async function appRequest(env: CrankEnv, connection: string, url: URL, me
 }
 
 async function sheetRows(env: CrankEnv, trigger: Record<string, any>): Promise<AppRecord[]> {
-  const url = new URL(`https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(trigger.spreadsheet_id)}/values/${encodeURIComponent(trigger.range)}`)
-  url.searchParams.set('majorDimension', 'ROWS'); url.searchParams.set('valueRenderOption', 'UNFORMATTED_VALUE')
+  const excel = trigger.provider === 'microsoft_excel'
+  const url = new URL(excel
+    ? `https://graph.microsoft.com/v1.0/me/drive/items/${encodeURIComponent(trigger.workbook_id)}/workbook/worksheets/${encodeURIComponent(trigger.worksheet_id)}/range(address='${trigger.range}')`
+    : `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(trigger.spreadsheet_id)}/values/${encodeURIComponent(trigger.range)}`)
+  if (!excel) { url.searchParams.set('majorDimension', 'ROWS'); url.searchParams.set('valueRenderOption', 'UNFORMATTED_VALUE') }
   const body = await appRequest(env, trigger.connection_id, url), rows = body.values ?? []
-  if (!Array.isArray(rows) || rows.some(row => !Array.isArray(row)) || rows.length > 1001) throw new StepError('validation', 'Sheets source must contain a header and at most 1000 rows')
+  if (!Array.isArray(rows) || rows.some(row => !Array.isArray(row)) || rows.length > 1001) throw new StepError('validation', 'Spreadsheet source must contain a header and at most 1000 rows')
   if (!rows.length) return []
   const headers = rows[0]
   if (headers.some((name: unknown) => typeof name !== 'string' || !name.trim()) || new Set(headers).size !== headers.length) throw new StepError('validation', 'Sheet column names must be nonempty and unique')
@@ -42,8 +45,8 @@ async function sheetRows(env: CrankEnv, trigger: Record<string, any>): Promise<A
 /** Fetch a complete bounded source before touching any comparison state. */
 export async function appRecords(env: CrankEnv, trigger: Record<string, any>): Promise<AppRecord[]> {
   const { row } = await credential(env, trigger.connection_id)
-  if (row.app !== (trigger.provider === 'google_sheets' ? 'google' : trigger.provider)) throw new StepError('auth', 'Choose a connection for this app provider')
-  if (trigger.provider === 'google_sheets') return sheetRows(env, trigger)
+  if (row.app !== (trigger.provider === 'google_sheets' ? 'google' : trigger.provider === 'microsoft_excel' ? 'microsoft_graph' : trigger.provider)) throw new StepError('auth', 'Choose a connection for this app provider')
+  if (['google_sheets', 'microsoft_excel'].includes(trigger.provider)) return sheetRows(env, trigger)
   const hubspot = trigger.provider === 'hubspot', origin = hubspot ? 'https://api.hubapi.com' : 'https://graph.microsoft.com'
   let url = new URL(hubspot ? `/crm/v3/objects/${trigger.resource}` : '/v1.0/me/messages', origin)
   if (hubspot) { url.searchParams.set('limit', '100'); if (trigger.watched_fields?.length) url.searchParams.set('properties', trigger.watched_fields.join(',')) }

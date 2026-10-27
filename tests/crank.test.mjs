@@ -336,3 +336,5 @@ test('erasure deletes input and decisions, blocks redelivery, and fences an olde
   }finally{await empty.close()}
  }finally{await isolated.close()}
 });
+
+test('Reviewed n8n Sheets triggers retain named columns and explicit fresh comparison bindings', async()=>{const {n8nSheetsTriggerJourney}=await import('./n8n-sheets-trigger-journey.mjs');await n8nSheetsTriggerJourney()});
