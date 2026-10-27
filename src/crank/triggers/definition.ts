@@ -104,7 +104,7 @@ export function validateTrigger(trigger: Record<string, unknown>) {
     }
     case 'app_poll': {
       if (typeof trigger.connection_id !== 'string') fail('choose an app connection')
-      if (!['hubspot', 'microsoft_graph', 'google_sheets', 'microsoft_excel', 'airtable'].includes(String(trigger.provider))) fail('choose a supported app provider')
+      if (!['hubspot', 'microsoft_graph', 'google_sheets', 'microsoft_excel', 'airtable', 'sharepoint', 'http_json'].includes(String(trigger.provider))) fail('choose a supported app provider')
       if (trigger.provider === 'hubspot' && !['contacts', 'companies', 'deals'].includes(String(trigger.resource))) fail('choose contacts, companies or deals')
       if (trigger.provider === 'microsoft_graph' && trigger.resource !== 'messages') fail('choose messages')
       if (trigger.provider === 'google_sheets') {
@@ -118,8 +118,19 @@ export function validateTrigger(trigger: Record<string, unknown>) {
       }
       if (trigger.provider === 'airtable' && (trigger.resource !== 'records' || ['base_id', 'table_id'].some(name => typeof trigger[name] !== 'string' || !String(trigger[name]).trim() || String(trigger[name]).length > 200) || trigger.view_id !== undefined && (typeof trigger.view_id !== 'string' || trigger.view_id.length > 200))) fail('Airtable needs records, base_id and table_id, with an optional view_id')
       if (trigger.modified_field !== undefined && (trigger.provider !== 'airtable' || typeof trigger.modified_field !== 'string' || !trigger.modified_field.trim() || trigger.modified_field.length > 200)) fail('Airtable modified_field names a last-modified column')
+      if (trigger.provider === 'sharepoint' && (trigger.resource !== 'list_items' || ['site_id', 'list_id'].some(name => typeof trigger[name] !== 'string' || !String(trigger[name]).trim() || String(trigger[name]).length > 500))) fail('SharePoint needs list_items, site_id and list_id')
+      if (trigger.provider === 'http_json') {
+        if (trigger.resource !== 'records') fail('JSON lists use records')
+        const url = checkEgress(String(trigger.url))
+        if (url.protocol !== 'https:' || url.username || url.password || url.hash || String(trigger.url).includes('{{')) fail('JSON lists need a literal HTTPS URL')
+        for (const name of ['items_path', 'id_path', 'fields_path', 'modified_path']) if ((['items_path', 'id_path'].includes(name) || trigger[name] !== undefined) && (typeof trigger[name] !== 'string' || String(trigger[name]).length > 500 || name !== 'items_path' && name !== 'fields_path' && !String(trigger[name]).trim())) fail(`${name} must be a field path`)
+        if (trigger.pagination !== undefined) {
+          const p = trigger.pagination
+          if (!isObject(p) || Object.keys(p).some(name => !['cursor_path','param','max_pages'].includes(name)) || typeof p.cursor_path !== 'string' || !p.cursor_path.trim() || typeof p.param !== 'string' || !p.param.trim() || p.max_pages !== undefined && (!Number.isInteger(p.max_pages) || Number(p.max_pages) < 1 || Number(p.max_pages) > 10)) fail('JSON pagination needs cursor_path, param and at most ten pages')
+        }
+      }
       const spreadsheet = ['google_sheets', 'microsoft_excel'].includes(String(trigger.provider))
-      const fieldName = (f: unknown) => typeof f === 'string' && f.trim().length > 0 && f.length <= 200 && (spreadsheet || trigger.provider === 'airtable' || /^[A-Za-z][A-Za-z0-9_]*$/.test(f))
+      const fieldName = (f: unknown) => typeof f === 'string' && f.trim().length > 0 && f.length <= 200 && (spreadsheet || ['airtable', 'sharepoint', 'http_json'].includes(String(trigger.provider)) || /^[A-Za-z][A-Za-z0-9_]*$/.test(f))
       if (!['new', 'updated'].includes(String(trigger.event))) fail('event must be new or updated')
       if (!['from_now', 'existing'].includes(String(trigger.backfill))) fail('choose initial backfill explicitly')
       if (trigger.event === 'updated' && trigger.any_field !== true && (!Array.isArray(trigger.watched_fields) || !trigger.watched_fields.length)) fail('updated records need watched_fields or explicit any_field')

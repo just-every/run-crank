@@ -603,3 +603,5 @@ test('Native CRM polls seed watched properties and recover complete overlapping 
 test('Sheet changes wait for complete stable rows and preserve per-record identities across restart and restore', async()=>{const {sheetPollJourney}=await import('./sheet-poll-journey.mjs');await sheetPollJourney();await sheetPollJourney({provider:'microsoft_excel'})});
 test('Airtable updates compare named fields after complete pagination and retain both change identities', async()=>{const {airtablePollJourney}=await import('./airtable-poll-journey.mjs');await airtablePollJourney()});
 test('Mailbox polling retains records through visible subscription expiry and restarted renewal', subscriptionPollJourney);
+
+test('SharePoint and custom JSON lists compare only complete current records under live account authority', async()=>{const {listPollJourney}=await import('./list-poll-journey.mjs');await listPollJourney()});

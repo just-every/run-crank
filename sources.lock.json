@@ -191,7 +191,7 @@
       "executable": false
     },
     "docs/APP-TRIGGERS.md": {
-      "sha256": "40d36945efdd3212991a75151dec9e284419692d9d940424d604bddb7c594d48",
+      "sha256": "a4951333794d63771a6189e310d17d17bfd46d8a07790431da752b5afcec6934",
       "executable": false
     },
     "docs/BACKUP-RESTORE.md": {
@@ -3139,7 +3139,7 @@
       "executable": false
     },
     "src/crank/triggers/app-source.ts": {
-      "sha256": "42022b2b4bdd985d5ad3d6f3f67d50637d14b00c7ba1135a49fb95b4fcfade36",
+      "sha256": "13d1347f41e2f1f5b536f4c2b45b95f6f02b184d11e22ba90b8b517a7978eda0",
       "executable": false
     },
     "src/crank/triggers/app-state.ts": {
@@ -3151,7 +3151,7 @@
       "executable": false
     },
     "src/crank/triggers/definition.ts": {
-      "sha256": "6c42237082a248f717312c6813da347e1d7c50b04b23fa882c213d03fd140125",
+      "sha256": "f89da590f0ae676d25649cf8440e63110e2a8cbd1f76fbb3e811a03703643146",
       "executable": false
     },
     "src/crank/triggers/feeds.ts": {
@@ -3180,6 +3180,10 @@
     },
     "src/crank/triggers/inbound.ts": {
       "sha256": "c7875e4a850fc9c495dd55270bdad3d68e915ae362884d95f9b8fb2797b34499",
+      "executable": false
+    },
+    "src/crank/triggers/list-sources.ts": {
+      "sha256": "e48a19291fd676134c44eb25b230c64cd570393c46a369852dea19550c2bd46b",
       "executable": false
     },
     "src/crank/triggers/poll.ts": {
@@ -3399,7 +3403,7 @@
       "executable": false
     },
     "src/crank/ui/watched-fields.ts": {
-      "sha256": "4fabccbf81a279fa911eed1fec4fadba1496657c5566ab288a13a171cf97da04",
+      "sha256": "ea092d7b104d7ee68f6a73950c8d2bf9c1c9d572d8384efe2005b35d08610ddb",
       "executable": false
     },
     "src/crank/ui/workflow-data.ts": {
@@ -5431,7 +5435,7 @@
       "executable": false
     },
     "test-budget.json": {
-      "sha256": "da0728b28f47d4cfa3a6465e30520e149c9a9021317518e194371cbbd06f7c19",
+      "sha256": "76332815b07a8c6f6402d68f90a5343081f56fa53c4981c766d2abc230105768",
       "executable": false
     },
     "tests/airtable-poll-journey.mjs": {
@@ -5710,6 +5714,10 @@
       "sha256": "00b43f457da1bf85be680800dd41548e1eea7b90ce9ee6befaf04530478141da",
       "executable": false
     },
+    "tests/list-poll-journey.mjs": {
+      "sha256": "60cdc75779563e15e62b89d64d161aca55d3cb302af68d09e407577a20709a1f",
+      "executable": false
+    },
     "tests/logic.test.mjs": {
       "sha256": "8f56e8e1ad1fcd59adf876b2a3bcce13942bcbfde5aa417c8d3b81f97be32d19",
       "executable": false
@@ -5971,7 +5979,7 @@
       "executable": false
     },
     "tests/triggers.test.mjs": {
-      "sha256": "3fdc9af0e706ebccd5f94c5480c8664110dfa503fcce01f94a19743a45a7a6e1",
+      "sha256": "3483b31e14d439477d653fb961e068ece6aa2e21936dee375e850c6dd56963ea",
       "executable": false
     },
     "tests/usage.test.mjs": {
