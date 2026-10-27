@@ -93,9 +93,9 @@ try {
   const workflow = await send('workflows',{name:'Harbour Workshop — finance supplier settlement and tax review',graph:{trigger:{type:'manual'},steps:[{id:'review',type:'approval',input:{supplier:'Northshore Fabrication and Industrial Supplies',amount:'2450.00',question:'Confirm the interstate sales-tax treatment before settlement.'}},{id:'record',type:'map',input:{approved:true}}]}},201);
   await send(`workflows/${workflow.id}/estimate`,quote); await send(`workflows/${workflow.id}/publish`,{},201);
   const connection = await send('connections',{app:'http',label:'Harbour Workshop — owned finance API',auth_kind:'bearer',domains:['finance.example.test'],secret:{token:'synthetic-browser-fixture-'+crypto.randomUUID()}},201);
-  const invited=[];
+  const invited=[],duties=[];
   let builderContext,builderPage,approverContext,approverPage;
-  for (const [name,role] of [['Dana Reyes — supplier finance builder','builder'],['Morgan Lee — operations viewer','viewer'],['Alex Rivera — settlement approver','approver']]) {
+  for (const [name,role] of [['Dana Reyes — supplier finance builder','builder'],['Morgan Lee — operations viewer','viewer'],['Alex Rivera — settlement approver','approver'],['Jamie Park — audit reader','auditor'],['Jordan Ellis — billing administrator','billing']]) {
     const email=name.split(' — ')[0].toLowerCase().replaceAll(' ','-')+'-'+Date.now()+'@example.test';
     const response=await owner.request.post(origin+'/auth/invite',{headers:{origin},data:{email,displayName:name,role:'member'}});
     assert.equal(response.status(),202);
@@ -104,11 +104,12 @@ try {
     catch { throw new Error('Native development persona sign-in failed'); }
     const link=/RER_OPEN\s+(https?:\/\/\S+)/.exec(local)?.[1];assert.ok(link,'Native person sign-in link');
     const context=await browser.newContext(),personPage=await context.newPage();await personPage.goto(link);await personPage.waitForURL('**/app');
-    if(role==='builder') {builderContext=context;builderPage=personPage;} else if(role==='approver') {approverContext=context;approverPage=personPage;} else await context.close();
+    if(role==='builder') {builderContext=context;builderPage=personPage;} else if(role==='approver') {approverContext=context;approverPage=personPage;} else if(['auditor','billing'].includes(role))duties.push({context,page:personPage,email,role});else await context.close();
     invited.push({email,role});
   }
   const peopleResponse=await owner.request.get(origin+'/auth/operators'),people=await peopleResponse.json();
   const dana=people.find(p=>p.email===invited.find(p=>p.role==='builder').email),morgan=people.find(p=>p.email===invited.find(p=>p.role==='viewer').email);
+  for(const duty of duties) {const person=people.find(p=>p.email===duty.email);await send('team/'+person.id,{role:duty.role,workflow_ids:[],connection_ids:[]})}
   for(const width of [1440,390]) {
     await page.setViewportSize({width,height:1000});
     await page.goto(origin+'/app/access');
@@ -175,6 +176,7 @@ try {
     const docsPage=await owner.newPage();await docsPage.setViewportSize({width,height:1000});await docsPage.goto(site+'/docs/api');
     await docsPage.getByRole('cell',{name:'POST /workflows/:id/test',exact:true}).scrollIntoViewIfNeeded();await docsPage.screenshot({path:join(evidence,`${width}-api-test-role.png`)});
     await docsPage.getByRole('heading',{name:/Scoped workflow teams/}).scrollIntoViewIfNeeded();await docsPage.getByText(/Scoped builders\/admins can edit and publish/).scrollIntoViewIfNeeded();await docsPage.screenshot({path:join(evidence,`${width}-api-builder-tests.png`)});await docsPage.close();
+    for(const duty of duties) {const ownerPage=page;page=duty.page;await page.setViewportSize({width,height:1000});await page.goto(origin+'/app/account');await page.getByRole('link',{name:duty.role==='auditor'?'Read audit history':'Read aggregate usage',exact:true}).click();await expect(page.getByRole('heading',{name:duty.role==='auditor'?'Value-free audit history':'Aggregate usage',exact:true})).toBeVisible();assert.ok(!(await page.locator('main').innerText()).includes('synthetic-browser-fixture'));await shot(width,duty.role+'-duties');page=ownerPage}
     report.push({clause:'TEAM-001',width,states:['scope-selection','scope-saved','builder-test-waiting','builder-test-succeeded','builder-test-revoked','builder-test-repaired','owner-only-live-test-confirmation','workflow','account','transferred'],status:'pass'});
   }
   await writeFile(join(evidence,'team-browser.json'),JSON.stringify(report,null,2));
