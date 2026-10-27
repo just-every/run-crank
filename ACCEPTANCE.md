@@ -389,7 +389,7 @@ Verify the worker-data handoff's actual provider readback and that this slice ma
 
 **Completion:** CT policy is ADOPTED with its 25 October riders. The live native implementation is pinned at 4e1b18ab0ced91d3263da50fceeadd83d9f82ce9. Expanded registered conformance passed at de8a0fbb6845aad09d119d06b83d9d5ca216ef6d through heavy-slot run 20261026T000150265993Z-heavy-slot-2413fe0a, including actual in-request retry transitions, generation-only invalidation and post-snapshot consent-commit refusal. Later changes extend tests and inspectable artifacts without changing product source. The actual redacted Demo stdout and 24 PNGs are included under `./evidence/sx-crank-c-i810/`; public artifact pin ad7f0bccca1e5b15a4ef22510571a1752cbc9831 provides the same outputs separately. Every original acceptance point is proved by the named existing US-workflow test, native consent and handoff journey, actual authorized Demo ACH receipt and native UI journey. No missing Gusto key, second app, redirect URI or owner console action remains. Other connector, filing, invitation and sibling targets keep their existing clauses and statuses.
 
-**86 clauses: 32 done, 28 partial, 26 missing.** Status details and product behavior are in the contract’s final table. Completion requires the whole journey, including negative cases and observable end states; a cited partial implementation alone cannot promote an item.
+**86 clauses: 32 done, 29 partial, 25 missing.** Status details and product behavior are in the contract’s final table. Completion requires the whole journey, including negative cases and observable end states; a cited partial implementation alone cannot promote an item.
 
 ## Push further: agents that own the outcome
 
