@@ -238,6 +238,10 @@
       "sha256": "bd01701c2b00791f7775a3d785c1156cb506cecc497b46f3c729bc0ef978b308",
       "executable": false
     },
+    "docs/TEAM-ACCESS.md": {
+      "sha256": "946536b99274a982ec289eab8349c60cc90ff8253df7285f91550438ca0c5c85",
+      "executable": false
+    },
     "edition.json": {
       "sha256": "c4d3527a825b83f960fdb136b4eba5fab8ff932992f7719f9df65d7c990d9950",
       "executable": false
@@ -2395,7 +2399,7 @@
       "executable": false
     },
     "src/crank/api.ts": {
-      "sha256": "aae661c31c9afd1a5906c711e9300964b76d1e5d76dc4636cd1347f699b95a1b",
+      "sha256": "1f4fb4d9631aa94dd0abf1ff9f24fb36a1842f0c9e5d43c54d606a3ce04c059c",
       "executable": false
     },
     "src/crank/archive-api.ts": {
@@ -2587,7 +2591,7 @@
       "executable": false
     },
     "src/crank/delivery.ts": {
-      "sha256": "3f3cc8f2acb24f7b32f78c28581f8aba91aa0d7e92e5f0946b67a6dfa77a5953",
+      "sha256": "67702c86a78481040bf0ff81ada7380f0519ac4d854428adf1e56ba1353d62a2",
       "executable": false
     },
     "src/crank/engine/authoring-authority.ts": {
