@@ -128,9 +128,10 @@ export async function deliverRun(env: CrankEnv, actor: Actor, runId: string, rep
 }
 
 export async function rejectRun(env: CrankEnv, actor: Actor, runId: string): Promise<Run> {
-  requireOwner(actor)
-  const decision = id(), at = now(), fence = authority(actor, 'owner')
-  const result = await guardedBatch(env, actor, 'owner', [
+  if(!actor.team)requireOwner(actor)
+  else {requireValue(completeGrant(actor,'approve'),'A complete decision grant is required',403);workflowScope(actor,(await getRun(env,runId)).flow_id)}
+  const decision = id(), at = now(), fence = authority(actor, actor.team?'read':'owner')
+  const result = await guardedBatch(env, actor, actor.team?'read':'owner', [
     stmt(env, `INSERT INTO crank_approvals(id,run_id,actor_id,session_id,decision,input_digest,action_digest,action_json,created_at)
       SELECT ?,r.id,?,?,'reject',r.input_digest,r.action_digest,r.action_json,? FROM crank_runs r
       WHERE r.id=? AND r.state='pending' AND ${fence.sql}`, decision, actor.id, actor.sessionId, at, runId, ...fence.args),
