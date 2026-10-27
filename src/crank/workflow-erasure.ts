@@ -41,6 +41,7 @@ export async function eraseWorkflowRun(env: CrankEnv, actor: Actor | null, porta
       { table:'crank_digest_operations',from:'crank_wf_runs',where:'run_id=? OR instr(result_json,?)>0',params:['id','id'] },
       { table: 'crank_workflow_samples', from: 'crank_wf_runs', where: "source='history' AND source_id=?", params: ['id'] },
       {table:'crank_recurring_runs',from:'crank_wf_runs',on:{run_id:'id'}},
+      { table: 'crank_app_subjects', from: 'crank_wf_runs', on: { workflow_id: 'workflow_id', record_id: 'business_key' } },
       { table: 'crank_app_pending_rows', from: 'crank_wf_runs', on: { workflow_id: 'workflow_id', record_id: 'business_key' } },
       { table: 'crank_app_field_values', from: 'crank_wf_runs', on: { workflow_id: 'workflow_id', record_id: 'business_key' } },
       { table: 'crank_app_snapshots', from: 'crank_wf_runs', on: { workflow_id: 'workflow_id', record_id: 'business_key' } },

@@ -1,3 +1,4 @@
+import { appSubjectStatement } from './app-subjects'
 import { appState } from './app-state'
 import { appTimeline } from './app-history'
 import { credential } from '../connections/store'
@@ -17,8 +18,8 @@ function matches(condition: unknown, fields: Record<string, unknown> | null, dir
   if (fields === null) return false
   if (!Array.isArray(condition)) return Object.entries(condition as Record<string, unknown>).every(([field, value]) => canonical(fields[field]) === canonical(value))
   const names = [...new Set((condition as Groups).flat().map(rule => rule.field))]
-  const groups = (condition as Groups).map(group => group.map(rule => ({ ...rule, field: `trigger.values[${names.indexOf(rule.field)}]` })))
-  const result = evaluate(groups, { trigger: { values: names.map(name => fields[name]) }, steps: {}, run: {} }, 'UTC', time)
+  const groups = (condition as Groups).map(group => group.map(rule => ({ ...rule, field: `run.watched_values[${names.indexOf(rule.field)}]` })))
+  const result = evaluate(groups, { trigger: fields, steps: {}, run: { watched_values: names.map(name => fields[name]) } }, 'UTC', time)
   if (result.mismatch) throw new StepError('validation', `${direction}: type mismatch for ${names[Number(/\[(\d+)\]/.exec(result.mismatch.field)?.[1])]}: ${result.mismatch.message}`)
   return result.pass
 }
@@ -29,10 +30,11 @@ export async function appItems(env: CrankEnv, poll: PollRow, trigger: Record<str
   await credential(env, trigger.connection_id)
   const reseeding = !poll.seeded && !!await stmt(env, 'SELECT 1 FROM crank_app_snapshots WHERE workflow_id=? AND version_id!=? LIMIT 1', poll.workflow_id, poll.version_id).first()
   const events: TriggerEvent[] = [], snapshots: D1PreparedStatement[] = [], target = await targetFor(env, poll.workflow_id)
-  const { keys, retained, erased, pending } = await appState(env, poll.workflow_id, poll.version_id, records)
+  const { keys, retained, erased, pending, indexed } = await appState(env, poll.workflow_id, poll.version_id, records)
   for (const record of records) {
     const recordKey = keys.get(record.id)!
     if (erased.has(recordKey)) continue
+    if (!indexed.has(recordKey)) snapshots.push(await appSubjectStatement(env, poll.workflow_id, record.id, recordKey))
     const prior = retained.get(recordKey)
     const opened = prior ? await openText(env, poll.workflow_id, prior.fields_json, 'strict') : null
     let previous: Record<string, unknown> | null = opened ? JSON.parse(opened) : null, previousAt = prior?.changed_at ?? null

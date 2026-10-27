@@ -76,15 +76,15 @@ export async function subscriptionPollJourney({inspect=async()=>{}}={}) {
 /** Typed transitions and individual field-value identity through HTTP and Cron. */
 export async function comparisonPollJourney({inspect=async()=>{}}={}) {
  const edge=fakeEdge(),h=await harness('http://127.0.0.1:9',{edge:edge.edge,clock:'2026-10-27T21:00:00.000Z'});
- let revision=0,properties={Status:'Pending',amount:10,ready:true,due:'2026-10-28T12:00:00Z',tags:['invoice'],notes:'initial'},effects=[];
+ let revision=0,properties={Status:'Pending',amount:10,minimum_amount:100,ready:true,due:'2026-10-28T12:00:00Z',tags:['invoice'],notes:'initial'},effects=[];
  const at=()=>new Date(Date.parse('2026-10-26T12:00:00Z')+revision*minute).toISOString();
  edge.routes.set('api.hubapi.com',()=>jsonResponse({results:[{id:'synthetic-crank-record',updatedAt:at(),properties}]}));
  edge.routes.set('receiver.example',({body})=>{effects.push(JSON.parse(body));return jsonResponse({ok:true})});
  let restored;
  try {
   const c=await connection(h,{app:'hubspot',label:'Transition records',auth_kind:'bearer',secret:{token:'synthetic-crank-8'}});
-  const changed_to=[[{field:'Status',op:'text.in',value:['Approved']},{field:'amount',op:'number.gte',value:100,value_type:'number'},{field:'ready',op:'boolean.is_true'},{field:'due',op:'date.after',value:'2026-10-27T12:00:00Z'},{field:'tags',op:'list.any',inner:{field:'',op:'text.equals',value:'invoice'}}]];
-  const trigger={type:'app_poll',provider:'hubspot',resource:'deals',event:'updated',connection_id:c.id,interval_minutes:1,backfill:'from_now',watched_fields:['Status','amount','ready','due','tags'],changed_to,changed_from:[[{field:'Status',op:'text.equals',value:'Pending'}],[{field:'Status',op:'text.equals',value:'Approved'}]]};
+  const changed_to=[[{field:'Status',op:'text.in',value:['Approved']},{field:'amount',op:'number.gte',value:100,value_type:'number'},{field:'amount',op:'number.gte',value:{$ref:'trigger.minimum_amount'}},{field:'ready',op:'boolean.is_true'},{field:'due',op:'date.after',value:'2026-10-27T12:00:00Z'},{field:'tags',op:'list.any',inner:{field:'',op:'text.equals',value:'invoice'}}]];
+  const trigger={type:'app_poll',provider:'hubspot',resource:'deals',event:'updated',connection_id:c.id,interval_minutes:1,backfill:'from_now',watched_fields:['Status','amount','minimum_amount','ready','due','tags'],changed_to,changed_from:[[{field:'Status',op:'text.equals',value:'Pending'}],[{field:'Status',op:'text.equals',value:'Approved'}]]};
   for(const bad of [{changed_from:[[{field:'notes',op:'exists'}]]},{changed_to:[[{field:'Status',op:'number.unknown',value:1}]]},{settle_delay:2}]) {
    const refused=await h.send('/api/crank/workflows',{name:'Invalid transition',graph:{trigger:{...trigger,...bad},steps:[]}},h.owner);assert.equal(refused.status,422,refused.text);
   }
@@ -111,9 +111,9 @@ export async function comparisonPollJourney({inspect=async()=>{}}={}) {
   // Values observed on nonmatching changes also consume first-value identity.
   revision++;properties={...properties,Status:'Pending',amount:250};await poll();await counts([4,3]);
   revision++;properties={...properties,Status:'Approved'};await poll();await counts([5,3]);
-  for(const invalid of [{amount:99},{ready:false},{due:'2026-10-26T12:00:00Z'},{tags:['unrelated']}]) {
+  for(const invalid of [{amount:99},{minimum_amount:999},{ready:false},{due:'2026-10-26T12:00:00Z'},{tags:['unrelated']}]) {
    revision++;properties={...properties,Status:'Approved',amount:260,...invalid};await poll();await counts([5,3]);
-   revision++;properties={...properties,Status:'Pending',ready:true,due:'2026-10-28T12:00:00Z',tags:['invoice']};await poll();await counts([5,3]);
+   revision++;properties={...properties,Status:'Pending',minimum_amount:100,ready:true,due:'2026-10-28T12:00:00Z',tags:['invoice']};await poll();await counts([5,3]);
   }
   // A changed-from rule must refuse a valid destination reached from another origin.
   revision++;properties={...properties,Status:'Rejected',amount:300};await poll();
@@ -126,7 +126,7 @@ export async function comparisonPollJourney({inspect=async()=>{}}={}) {
   revision++;properties={...properties,Status:'Pending'};await poll();
   revision++;properties={...properties,Status:'Approved'};await poll({restart:true});assert.equal((await runs(h,seeded)).length,0);
   const archive=await h.send('/api/crank/data/export',{},h.owner);assert.equal(archive.status,200);
-  const portable=text=>text.trim().split('\n').map(JSON.parse).flatMap(line=>line.items??[]).filter(item=>item.kind==='row'&&['crank_app_field_values','crank_app_snapshots','crank_app_erased_records'].includes(item.table)).map(item=>JSON.stringify({table:item.table,row:item.row})).sort();
+  const portable=text=>text.trim().split('\n').map(JSON.parse).flatMap(line=>line.items??[]).filter(item=>item.kind==='row'&&['crank_app_field_values','crank_app_snapshots','crank_app_erased_records','crank_app_subjects','crank_app_pending_rows'].includes(item.table)).map(item=>JSON.stringify({table:item.table,row:item.row})).sort();
   assert.ok(portable(archive.text).length>10);
   restored=await harness('http://127.0.0.1:9',{edge:edge.edge});await restored.post('./data/restore',{archive:archive.text,confirm:'RESTORE'});
   const copy=await restored.send('/api/crank/data/export',{},restored.owner);assert.equal(copy.status,200);assert.deepEqual(portable(copy.text),portable(archive.text),'all comparison records survive byte for byte');

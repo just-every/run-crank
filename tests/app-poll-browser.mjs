@@ -7,6 +7,7 @@ import {chromium,expect} from '@playwright/test';
 import {crmPollJourney,subscriptionPollJourney,comparisonPollJourney} from './app-poll-journey.mjs';
 import {sheetPollJourney} from './sheet-poll-journey.mjs';
 import {appHistoryJourney} from './app-history-journey.mjs';
+import {appSubjectJourney} from './app-subject-journey.mjs';
 import {harness} from './harness.mjs';
 import {fakeEdge,jsonResponse} from './kit.mjs';
 const evidence=process.env.CRANK_EVIDENCE;
@@ -83,9 +84,14 @@ async function rateScreens(width) {
 }
 try {
  for(const width of [1440,390]) await rateScreens(width);
- for(const width of [1440,390]) for(const journey of [crmPollJourney,subscriptionPollJourney,comparisonPollJourney,sheetPollJourney,appHistoryJourney]) {
+ for(const width of [1440,390]) for(const journey of [crmPollJourney,subscriptionPollJourney,comparisonPollJourney,sheetPollJourney,appHistoryJourney,appSubjectJourney]) {
   await journey({inspect:async({h,w,state,run})=>{
    await attach(h,width);await page.goto(h.origin+`/app/workflows/${w.id}?step=trigger`);
+   if(state==='unadmitted-subject-preview') {
+    await page.goto(h.origin+'/app/data');await page.getByLabel('Identifier',{exact:true}).fill('Synthetic-Crank-21');await page.getByRole('button',{name:'Preview erasure',exact:true}).click();
+    await expect(page.getByRole('heading',{name:'Erasure preview',exact:true})).toBeVisible();await expect(page.getByText('Retained comparison data',{exact:true})).toBeVisible();
+    await expect(page.getByRole('button',{name:'Erase matching data',exact:true})).toBeVisible();await shot(width,state);return;
+   }
    if(state==='watch-picker') {
     await page.getByText('Watched field settings',{exact:true}).click();await page.getByRole('link',{name:'Load field names',exact:true}).click();
     await expect(page.getByRole('checkbox',{name:'Status',exact:true})).toBeChecked();await expect(page.getByRole('checkbox',{name:'Customer',exact:true})).toBeChecked();
