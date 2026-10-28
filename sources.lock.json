@@ -187,7 +187,7 @@
       "executable": false
     },
     "docs/API.md": {
-      "sha256": "947d910625ea7637dc7796a82b18be8507947882eaa56231a9d6045d416f5421",
+      "sha256": "2c31630bae36bdab4863a2606bfbe99468012989e9845dce2d8bf68592d86260",
       "executable": false
     },
     "docs/APP-TRIGGERS.md": {
@@ -5551,7 +5551,7 @@
       "executable": false
     },
     "test-budget.json": {
-      "sha256": "469d23efc63302d0b3b35fa206838f1114574d5cba9ab5534b00942ce3db9815",
+      "sha256": "bcee3563eb5d9213c9dff84be8cc20d3e5f26115fc3e2172de612f15be12a82c",
       "executable": false
     },
     "tests/accounting-poll-journey.mjs": {

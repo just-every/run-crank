@@ -1177,6 +1177,7 @@ stale until reloaded. This does not claim provider field discovery or a live
 provider receipt. Sample values and frozen upstream results stay in the workflow's
 sealed run payload when its data class requires encryption; they are never
 inserted into graph metadata, and declared subject identifiers remain indexed.
+
 ## Gmail thread metadata search
 
 The native `gmail.search_threads` step uses one fixed managed Google connection and its already-consented Gmail read scope. It searches only that connection's mailbox. Supply `input.query` as nonempty Gmail search text, including supported provider operators such as `from:billing has:attachment label:invoices`; the text is forwarded unchanged. Declare `metadata_headers` with 1 to 16 unique header names and `sort` with `field` equal to `id` or `latest_internal_date` and `direction` equal to `asc` or `desc`.
