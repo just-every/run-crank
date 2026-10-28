@@ -10,8 +10,10 @@ import {appHistoryJourney} from './app-history-journey.mjs';
 import {appSubjectJourney} from './app-subject-journey.mjs';
 import {appRetentionJourney} from './app-retention-journey.mjs';
 import {tablePollJourney} from './table-poll-journey.mjs';
+import {commercePollJourney} from './commerce-poll-journey.mjs';
+import {accountingPollJourney} from './accounting-poll-journey.mjs';
 import {harness} from './harness.mjs';
-import {fakeEdge,jsonResponse} from './kit.mjs';
+import {fakeEdge,jsonResponse,runs} from './kit.mjs';
 const evidence=process.env.CRANK_EVIDENCE;
 assert.ok(evidence,'Set CRANK_EVIDENCE');await mkdir(evidence,{recursive:true});
 const browser=await chromium.launch({headless:true,...(process.env.CRANK_CHROMIUM?{executablePath:process.env.CRANK_CHROMIUM}:{}),args:['--use-mock-keychain','--password-store=basic',...(process.env.CRANK_CHROMIUM?['--no-sandbox']:[])]});
@@ -86,9 +88,15 @@ async function rateScreens(width) {
 }
 try {
  for(const width of [1440,390]) await rateScreens(width);
- for(const width of [1440,390]) for(const journey of [crmPollJourney,subscriptionPollJourney,comparisonPollJourney,sheetPollJourney,appHistoryJourney,appSubjectJourney,appRetentionJourney,tablePollJourney]) {
-  await journey({inspect:async({h,w,state,run})=>{
+ for(const width of [1440,390]) for(const journey of [crmPollJourney,subscriptionPollJourney,comparisonPollJourney,sheetPollJourney,appHistoryJourney,appSubjectJourney,appRetentionJourney,tablePollJourney,commercePollJourney,accountingPollJourney]) {
+  await journey({inspect:async({h,w,state,run,provider,resource})=>{
+   if(state==='commerce-change'&&provider!=='zendesk'||state==='accounting-change'&&(provider!=='xero'||resource!=='invoices'))return;
    await attach(h,width);await page.goto(h.origin+`/app/workflows/${w.id}?step=trigger`);
+   if(state==='commerce-change'||state==='accounting-change') {
+    const retained=(await runs(h,w))[0];await page.goto(h.origin+'/app/workflow-runs/'+retained.id);
+    for(const value of ['previous','current','changed_fields','change_time_source'])await expect(page.locator('main')).toContainText(value);
+    await shot(width,provider+'-payload');await page.goto(h.origin+'/app/connections');await expect(page.locator('main')).toContainText(provider==='xero'?'Xero tenant token':'Zendesk');await shot(width,provider+'-connections');return;
+   }
    if(state==='table-payload') {
     await page.goto(h.origin+'/app/workflow-runs/'+run.id);
     for(const value of ['counter_98','previous','current','revision','change_time_source'])await expect(page.locator('main')).toContainText(value);

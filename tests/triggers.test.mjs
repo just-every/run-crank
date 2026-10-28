@@ -615,3 +615,5 @@ test('Pipedrive, Shopify and Zendesk snapshots admit only watched changes from c
 test('Pinned custom polling retains reviewed request boundaries and current consent across pages and admissions', async()=>{const {customPollJourney}=await import('./custom-poll-journey.mjs');await customPollJourney()});
 
 test('Operational table changes preserve native custody and revision identities without synthetic credentials', async()=>{const {tablePollJourney}=await import('./table-poll-journey.mjs');await tablePollJourney()});
+
+test('Accounting snapshots preserve watched changes and tenant boundaries through complete reads', async()=>{const {accountingPollJourney}=await import('./accounting-poll-journey.mjs');await accountingPollJourney()});

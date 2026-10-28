@@ -2,6 +2,7 @@ import { sharepointRecords, httpJsonRecords } from './list-sources'
 import { airtableFields, airtableRecords } from './airtable-poll'
 import { excelTableValues } from './excel-table'
 import { COMMERCE_PROVIDERS, commerceRecords, commerceFieldNames } from './commerce-sources'
+import { ACCOUNTING_PROVIDERS, accountingRecords, accountingFieldNames } from './accounting-sources'
 import { authorizeRequest } from '../connections/auth'
 import { credential } from '../connections/store'
 import { boundedFetch, utf8 } from '../engine/egress'
@@ -60,6 +61,7 @@ export async function appRecords(env: CrankEnv, trigger: Record<string, any>, op
   if (trigger.provider === 'sharepoint') return sharepointRecords(env, trigger)
   if (trigger.provider === 'http_json') return httpJsonRecords(env, trigger, options)
   if ((COMMERCE_PROVIDERS as readonly string[]).includes(trigger.provider)) return commerceRecords(env, trigger)
+  if ((ACCOUNTING_PROVIDERS as readonly string[]).includes(trigger.provider)) return accountingRecords(env, trigger)
   const hubspot = trigger.provider === 'hubspot', origin = hubspot ? 'https://api.hubapi.com' : 'https://graph.microsoft.com'
   let url = new URL(hubspot ? `/crm/v3/objects/${trigger.resource}` : '/v1.0/me/messages', origin)
   const properties = trigger.any_field && hubspot ? (await appFieldNames(env, trigger)).map(field => field.name) : trigger.watched_fields
@@ -98,6 +100,8 @@ export async function appFieldNames(env: CrankEnv, trigger: Record<string, any>)
     const body = await appRequest(env, trigger.connection_id, new URL(`https://api.hubapi.com/crm/v3/properties/${trigger.resource}`))
     if (!Array.isArray(body.results) || body.results.length > 1000 || body.results.some((field: any) => typeof field.name !== 'string' || !field.name)) throw new StepError('validation', 'App property names could not be loaded completely')
     fields = body.results.filter((field: any) => !field.archived).map((field: any) => ({ name: field.name, label: typeof field.label === 'string' ? field.label : field.name }))
+  } else if ((ACCOUNTING_PROVIDERS as readonly string[]).includes(trigger.provider)) {
+    fields = await accountingFieldNames(env, trigger)
   } else if ((COMMERCE_PROVIDERS as readonly string[]).includes(trigger.provider)) {
     fields = await commerceFieldNames(env, trigger)
   } else if (trigger.provider === 'airtable') {

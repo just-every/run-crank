@@ -15,7 +15,7 @@ function definition(version=1) {
   Object.assign(value.operations.find(op=>op.id==='event'),{
     name:'Read changed stock records',method:'GET',path:'https://custom.example/teams/{team}/records',scopes:['records.read'],
     inputs:{team:{type:'string',required:true,location:'path'},limit:{type:'integer',required:true,location:'query'},active:{type:'boolean',required:true,location:'query'},filter:{type:'string',required:false,location:'query'},cursor:{type:'string',required:false,location:'query'}},
-    pagination:{items_path:'page.items',cursor_path:'next',cursor_param:'cursor',max_pages:3,max_items:1000},
+    pagination:{items_path:'page.items',cursor_path:'next',cursor_param:'cursor',max_pages:3,max_items:2},
   });
   return value;
 }
@@ -54,7 +54,7 @@ export async function customPollJourney({inspect=async()=>{}}={}) {
     if(second&&duringPage){const act=duringPage;duringPage=null;await act()}
     if(second&&mode==='outage')return jsonResponse({},503);
     const record={key:'synthetic-crank-103',modified:new Date(Date.parse('2026-10-27T12:00:00Z')+revision*minute).toISOString(),data:{Status:status}};
-    return jsonResponse({page:{items:[record]},...(!second?{next:'synthetic-crank-102'}:{})});
+    return jsonResponse({page:{items:second&&mode==='overbound'?[record,record]:[record]},...(!second?{next:'synthetic-crank-102'}:{})});
   });
   try {
     const installed=await installDefinition(h,definition());
@@ -90,7 +90,9 @@ export async function customPollJourney({inspect=async()=>{}}={}) {
     const count=async n=>assert.equal((await runs(h,workflow)).length,n);
     await h.tick(time);await count(0);
     await inspect({h,workflow,state:'seeded'});
-    revision++;status='Approved';mode='outage';await poll();await count(0);
+    revision++;status='Approved';mode='overbound';await poll();await count(0);
+    assert.match((await h.get(`workflows/${workflow.id}/trigger`)).poll.last_error,/reviewed total item bound/i);
+    mode='outage';await poll();await count(0);
     assert.equal((await h.get(`workflows/${workflow.id}/trigger`)).poll.last_status,'error');
     mode='ok';await h.restart();await poll();await count(1);
     await settled(h,(await runs(h,workflow))[0].id);

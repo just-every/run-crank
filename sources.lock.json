@@ -139,7 +139,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "1ddb2de01a0df072025280e963a9038fb57cbccf1a8aeab8d49511d036f60056",
+      "sha256": "3cc6471810bdcd1d24f8583038bde65d2313bc601d1db73ed7954ade61f7a6fa",
       "executable": false
     },
     "AGENTS.md": {
@@ -163,7 +163,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "2e95dfba37c700a5fb8247f54bf92e867acff0e1c9632e2567eb71c79488ff2c",
+      "sha256": "528ce3d6e6995d7b81070ba7bb4880390720dea2312750009bdb6824392f4735",
       "executable": false
     },
     "DEMO.md": {
@@ -191,7 +191,7 @@
       "executable": false
     },
     "docs/APP-TRIGGERS.md": {
-      "sha256": "d599149e3a3faee3e4ea2a21a9a09803ad49acc403e645b3a0773592e9166214",
+      "sha256": "36284995d149bcf8fc2edf2489425e9e6036df1a6341cbd0c2cd98c2691d6ace",
       "executable": false
     },
     "docs/BACKUP-RESTORE.md": {
@@ -203,7 +203,7 @@
       "executable": false
     },
     "docs/CLAIMS.md": {
-      "sha256": "00a5d4b5abe7f5efc22403c22ac3e0e8e19206a04b95e6ed4267863f0056bfd6",
+      "sha256": "20e888a4ba7a96dbd3a8639d48ef78b868003b216d154a888a635840bf22f042",
       "executable": false
     },
     "docs/DATA-FLOWS.md": {
@@ -2443,7 +2443,7 @@
       "executable": false
     },
     "src/crank/connections/apps.ts": {
-      "sha256": "4d625a535a771ec91e2859e6ea6f50814b8c9e01e79b0785373f499e9a43a8a6",
+      "sha256": "43975b60effbfac7442a09b22541e2bd4ca727b3cf0dff677a129b6d6297e89c",
       "executable": false
     },
     "src/crank/connections/auth.ts": {
@@ -3134,6 +3134,10 @@
       "sha256": "89d0e767fb39763ea721ae34b17c1de4a0742e304fbf7c929632908456e6b9ee",
       "executable": false
     },
+    "src/crank/triggers/accounting-sources.ts": {
+      "sha256": "698a442716eb91c0408c951750426a62d6fa2ce1fd670ce0c343e279704fb289",
+      "executable": false
+    },
     "src/crank/triggers/admission.ts": {
       "sha256": "caa2d8869dcd0e1b1f7e02bcba2e191593d94cfb29a1a10eb6e13a8cc4f2fa91",
       "executable": false
@@ -3147,7 +3151,7 @@
       "executable": false
     },
     "src/crank/triggers/app-poll.ts": {
-      "sha256": "85141da459690af54c9c4414f063b9f678c92b5c314cac21208350f306e8182f",
+      "sha256": "9c2af42279d4551da8d3d925107de5b2efda4e0a472c06bf1a300b46b300a38b",
       "executable": false
     },
     "src/crank/triggers/app-retention.ts": {
@@ -3155,7 +3159,7 @@
       "executable": false
     },
     "src/crank/triggers/app-source.ts": {
-      "sha256": "6edd559c1ebc3794eb5f5ed9a244276a55c75d329f9353e31079ad1bd3cc7b0d",
+      "sha256": "16703c1c25f2eb49ab731bf6f82756c6340f2f9274362d5a4e1ace44161d6a2a",
       "executable": false
     },
     "src/crank/triggers/app-state.ts": {
@@ -3175,7 +3179,7 @@
       "executable": false
     },
     "src/crank/triggers/definition.ts": {
-      "sha256": "25bdcdfcd0403d39828a422130d42d6b7bac23807e291bb18a4e685b49a37daf",
+      "sha256": "47661d3077f0b35529145bb6e41b6559a29c9c230f26ee5442fc547f1730eded",
       "executable": false
     },
     "src/crank/triggers/excel-table.ts": {
@@ -5467,7 +5471,11 @@
       "executable": false
     },
     "test-budget.json": {
-      "sha256": "90698afa6dad73e35f8908fe2a25275cf7d88e1c8422aea64c7f18b4420519ac",
+      "sha256": "7fb5b154cc1fe00ac5d72d5bf643f1af045b67de2c290c8894406c58cbac4138",
+      "executable": false
+    },
+    "tests/accounting-poll-journey.mjs": {
+      "sha256": "0c09db04c84b104431dfca05ab12604ae51308f7359f368bcb70240329043ac0",
       "executable": false
     },
     "tests/airtable-poll-journey.mjs": {
@@ -5479,7 +5487,7 @@
       "executable": false
     },
     "tests/app-poll-browser.mjs": {
-      "sha256": "33bae8501db4efc4721e1aebfc4bd058d745e4eb997afae8321f6f3ecca1028f",
+      "sha256": "d78ec134f246ff82e114299a47f6ef12a88f119bac5770013b76e61690cf381f",
       "executable": false
     },
     "tests/app-poll-journey.mjs": {
@@ -5551,7 +5559,7 @@
       "executable": false
     },
     "tests/custom-poll-journey.mjs": {
-      "sha256": "74278bff47220e28c45b8ab63ffe526849b0810001ca553daad8f095b377545b",
+      "sha256": "d942b32edcb9747c1bcb82c05aea37fd43eda092cfd401a47cee2e80d8c99b11",
       "executable": false
     },
     "tests/database-gateway-fixture.mjs": {
@@ -6035,7 +6043,7 @@
       "executable": false
     },
     "tests/triggers.test.mjs": {
-      "sha256": "20cc853f1711232defeb1dbbbb799e46c8bada89cca149f53e2bfb112d8ea622",
+      "sha256": "f4a552aa5222342d8e7fa2e583d703b109107e3ad72ecfdd6812f583d05711a9",
       "executable": false
     },
     "tests/usage.test.mjs": {

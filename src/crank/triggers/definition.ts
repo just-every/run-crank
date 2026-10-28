@@ -6,6 +6,7 @@ import { StepError } from '../engine/errors'
 import { isObject } from '../engine/values'
 import { SIGNATURE_PRESETS } from './signatures'
 import { COMMERCE_PROVIDERS, validateCommerceTrigger } from './commerce-sources'
+import { ACCOUNTING_PROVIDERS, validateAccountingTrigger } from './accounting-sources'
 
 /** TRIG-007: what a URL poll's header and query values may map. */
 export const POLL_FIELDS = ['poll.since', 'poll.now', 'poll.interval_minutes']
@@ -106,8 +107,9 @@ export function validateTrigger(trigger: Record<string, unknown>) {
     case 'app_poll': {
       const nativeTable = trigger.provider === 'crank_table'
       if (nativeTable ? trigger.connection_id !== undefined || trigger.resource !== 'records' || typeof trigger.table_id !== 'string' || !trigger.table_id.trim() || trigger.table_id.length > 200 : typeof trigger.connection_id !== 'string') fail('choose an app connection, or a native operational table without a connection')
-      if (!['hubspot', 'microsoft_graph', 'google_sheets', 'microsoft_excel', 'airtable', 'sharepoint', 'http_json', 'crank_table', ...COMMERCE_PROVIDERS].includes(String(trigger.provider))) fail('choose a supported app provider')
+      if (!['hubspot', 'microsoft_graph', 'google_sheets', 'microsoft_excel', 'airtable', 'sharepoint', 'http_json', 'crank_table', ...COMMERCE_PROVIDERS, ...ACCOUNTING_PROVIDERS].includes(String(trigger.provider))) fail('choose a supported app provider')
       if ((COMMERCE_PROVIDERS as readonly string[]).includes(String(trigger.provider))) validateCommerceTrigger(trigger)
+      if ((ACCOUNTING_PROVIDERS as readonly string[]).includes(String(trigger.provider))) validateAccountingTrigger(trigger)
       if (trigger.provider === 'hubspot' && !['contacts', 'companies', 'deals'].includes(String(trigger.resource))) fail('choose contacts, companies or deals')
       if (trigger.provider === 'microsoft_graph' && trigger.resource !== 'messages') fail('choose messages')
       if (trigger.provider === 'google_sheets') {

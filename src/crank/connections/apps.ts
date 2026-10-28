@@ -10,6 +10,7 @@ export const APPS: Record<string, AppDefinition> = {
   microsoft_graph: { name: 'Microsoft Graph', kinds: ['bearer'], domains: ['graph.microsoft.com'] },
   gusto: { name: 'Gusto company credentials', kinds: ['bearer', 'oauth2'], domains: ['api.gusto-demo.com', 'api.gusto.com'] },
   quickbooks: { name: 'QuickBooks sandbox', kinds: ['oauth2'], domains: ['sandbox-quickbooks.api.intuit.com'] },
+  xero: { name: 'Xero tenant token', kinds: ['bearer'], domains: ['api.xero.com'] },
   http: { name: 'HTTP API', kinds: ['bearer', 'basic', 'api_key', 'hmac', 'oauth2_client_credentials'], domains: 'declared' },
   webhook: { name: 'Webhook signing secret', kinds: ['signing_secret'], domains: [] },
   slack: { name: 'Slack', kinds: ['bearer', 'oauth2'], domains: ['slack.com'], test: { method: 'POST', url: 'https://slack.com/api/auth.test' } },
