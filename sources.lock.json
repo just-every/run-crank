@@ -191,7 +191,7 @@
       "executable": false
     },
     "docs/APP-TRIGGERS.md": {
-      "sha256": "13de1166bf230792f0f8a070d663c2547c95628d840039e5069bf93b1a89415b",
+      "sha256": "0a0c9af336125e008034d2c74d113dafcab66e771eeeb1182b14f1a6f7552d76",
       "executable": false
     },
     "docs/BACKUP-RESTORE.md": {
@@ -2443,7 +2443,7 @@
       "executable": false
     },
     "src/crank/connections/apps.ts": {
-      "sha256": "5df3a676623030b06c809e897cbcb950be84c7c409e9dd57e6772a3176750643",
+      "sha256": "4d625a535a771ec91e2859e6ea6f50814b8c9e01e79b0785373f499e9a43a8a6",
       "executable": false
     },
     "src/crank/connections/auth.ts": {
@@ -3151,7 +3151,7 @@
       "executable": false
     },
     "src/crank/triggers/app-source.ts": {
-      "sha256": "eacee0f7a8c2a02e500b0052ac0b46ab7d75addf88bc5935de96bf90aa4b08ea",
+      "sha256": "904131ca91b613b2c3baad2d640063d1a4d49e82bd812838cdf19652baa2a1d2",
       "executable": false
     },
     "src/crank/triggers/app-state.ts": {
@@ -3166,8 +3166,12 @@
       "sha256": "459e5747b05cc022ef183acf468fd377f279c720bd35d1941fa3dcce6097b653",
       "executable": false
     },
+    "src/crank/triggers/commerce-sources.ts": {
+      "sha256": "bfe5bb07f2149733d37f268f7fd7f526c984aacb1f9747e28f9c0e5ac7d68523",
+      "executable": false
+    },
     "src/crank/triggers/definition.ts": {
-      "sha256": "377a02d6ebfc7f30a6d41c139ff3b930d9ddeb3ba5e954a9c8ef533ee721b196",
+      "sha256": "f005df7528ec9dc3b935e13db320c9fd5b7b8b1db8ed593149359abca62594ba",
       "executable": false
     },
     "src/crank/triggers/excel-table.ts": {
@@ -5455,7 +5459,7 @@
       "executable": false
     },
     "test-budget.json": {
-      "sha256": "ba312052e6848ac96c06b102270946165be843fb438fdeac096c15b3e196f481",
+      "sha256": "884554f528acec508aba145b6a670dd4685d4d0647866409eab1a129fe4e489e",
       "executable": false
     },
     "tests/airtable-poll-journey.mjs": {
@@ -5504,6 +5508,10 @@
     },
     "tests/collect-journey.mjs": {
       "sha256": "b47717f824603ebfde2b89dcc06adcaa63f2c7be5d0d6999e90998b3b70378ad",
+      "executable": false
+    },
+    "tests/commerce-poll-journey.mjs": {
+      "sha256": "e0ae8b13ed1a530782a50b5f1eee349eff881be07ffbcf7ee5e0b412c8a9bc23",
       "executable": false
     },
     "tests/connections.test.mjs": {
@@ -6011,7 +6019,7 @@
       "executable": false
     },
     "tests/triggers.test.mjs": {
-      "sha256": "9251bf40ba33422460020ba22b0f9a9178bdc85b1fe31c4953bcf1c6441d70e7",
+      "sha256": "e37e988b531e776c2662e87f8c1e35f60037f63b3c801be7c4966f7e4145e26a",
       "executable": false
     },
     "tests/usage.test.mjs": {

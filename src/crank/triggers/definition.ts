@@ -5,6 +5,7 @@ import { requireZone } from '../engine/dates'
 import { StepError } from '../engine/errors'
 import { isObject } from '../engine/values'
 import { SIGNATURE_PRESETS } from './signatures'
+import { COMMERCE_PROVIDERS, validateCommerceTrigger } from './commerce-sources'
 
 /** TRIG-007: what a URL poll's header and query values may map. */
 export const POLL_FIELDS = ['poll.since', 'poll.now', 'poll.interval_minutes']
@@ -104,7 +105,8 @@ export function validateTrigger(trigger: Record<string, unknown>) {
     }
     case 'app_poll': {
       if (typeof trigger.connection_id !== 'string') fail('choose an app connection')
-      if (!['hubspot', 'microsoft_graph', 'google_sheets', 'microsoft_excel', 'airtable', 'sharepoint', 'http_json'].includes(String(trigger.provider))) fail('choose a supported app provider')
+      if (!['hubspot', 'microsoft_graph', 'google_sheets', 'microsoft_excel', 'airtable', 'sharepoint', 'http_json', ...COMMERCE_PROVIDERS].includes(String(trigger.provider))) fail('choose a supported app provider')
+      if ((COMMERCE_PROVIDERS as readonly string[]).includes(String(trigger.provider))) validateCommerceTrigger(trigger)
       if (trigger.provider === 'hubspot' && !['contacts', 'companies', 'deals'].includes(String(trigger.resource))) fail('choose contacts, companies or deals')
       if (trigger.provider === 'microsoft_graph' && trigger.resource !== 'messages') fail('choose messages')
       if (trigger.provider === 'google_sheets') {

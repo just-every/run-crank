@@ -609,3 +609,5 @@ test('SharePoint and custom JSON lists compare only complete current records und
 test('Subject erasure removes unadmitted app observations and permanently fences source replay', async()=>{const {appSubjectJourney}=await import('./app-subject-journey.mjs');await appSubjectJourney()});
 
 test('Snapshot retention expires only old inactive payloads and preserves comparison identities', async()=>{const {appRetentionJourney}=await import('./app-retention-journey.mjs');await appRetentionJourney()});
+
+test('Pipedrive, Shopify and Zendesk snapshots admit only watched changes from complete authorized pages', async()=>{const {commercePollJourney}=await import('./commerce-poll-journey.mjs');await commercePollJourney()});

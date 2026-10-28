@@ -14,6 +14,9 @@ export const APPS: Record<string, AppDefinition> = {
   webhook: { name: 'Webhook signing secret', kinds: ['signing_secret'], domains: [] },
   slack: { name: 'Slack', kinds: ['bearer', 'oauth2'], domains: ['slack.com'], test: { method: 'POST', url: 'https://slack.com/api/auth.test' } },
   airtable: { name: 'Airtable', kinds: ['bearer'], domains: ['api.airtable.com'] },
+  pipedrive: { name: 'Pipedrive', kinds: ['bearer'], domains: 'declared' },
+  shopify: { name: 'Shopify', kinds: ['api_key'], domains: 'declared' },
+  zendesk: { name: 'Zendesk', kinds: ['bearer', 'basic'], domains: 'declared' },
   hubspot: { name: 'HubSpot', kinds: ['oauth2', 'bearer'], domains: ['api.hubapi.com'], test: { method: 'GET', url: 'https://api.hubapi.com/account-info/v3/details' } },
   google: { name: 'Google', kinds: ['oauth2'], domains: ['www.googleapis.com', 'sheets.googleapis.com', 'gmail.googleapis.com'], test: { method: 'GET', url: 'https://www.googleapis.com/oauth2/v3/userinfo' } },
 }
