@@ -231,9 +231,15 @@ next write, and an empty stream never creates an aggregate record.
 Execute Workflow versions 1 through 1.3 support `source: "parameter"`, a literal
 `workflowJson`, `mode: "once"` and synchronous completion. Its snapshot needs
 one Execute Workflow Trigger version 1 with empty parameters and a linear body
-of Set, JSON HTTP or nested embedded calls. The caller supplies one current
-item. Child steps are inlined with distinct native identities; snapshot digests
+of Set, interval Wait (version 1.1), JSON HTTP or nested embedded calls. The
+caller supplies one current item. Child steps are inlined with distinct native identities; snapshot digests
 and layout are retained in `n8n_subflow_pins`. Nesting is limited to four levels.
+Embedded waits accept the same literal nonnegative whole amount and seconds,
+minutes, hours or days as top-level interval waits; native waits are limited to
+366 days. They preserve the incoming JSON, continue once after restart and
+recheck current native authority without repeating completed receiver effects.
+Other wait modes, source expressions and additional settings require manual
+conversion. Cancellation prevents the delayed child from continuing.
 The reviewed import fingerprint binds the whole snapshot. Unbound database IDs, dynamic
 sources, asynchronous calls, declared child-input schemas and arbitrary child
 graphs require manual conversion. This does not create a reusable native registry

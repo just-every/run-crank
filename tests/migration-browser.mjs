@@ -9,6 +9,7 @@ import {createHash} from 'node:crypto';
 import {looseObjectExport} from './n8n-conditions-journey.mjs';
 import {arithmeticExport} from './n8n-datetime-journey.mjs';
 import {fakeSecret} from './kit.mjs';
+import {embeddedWaitExport} from './n8n-conversion-journey.mjs';
 const canonical=value=>value===null||typeof value!=='object'?JSON.stringify(value):Array.isArray(value)?'['+value.map(canonical).join(',')+']':'{'+Object.keys(value).sort().map(key=>JSON.stringify(key)+':'+canonical(value[key])).join(',')+'}';
 const digest=value=>createHash('sha256').update(value).digest('hex');
 const evidence=process.env.CRANK_EVIDENCE;
@@ -17,7 +18,7 @@ let browser,page,h,server,receiver;
 try {
  // Build first. This runs the emitted deployment Worker, real D1 and native handlers.
  const declared='https://receiver.example',effects=[];
- receiver=createServer(async(req,res)=>{let text='';for await(const chunk of req)text+=chunk;const input=JSON.parse(text);effects.push({path:req.url,input});res.writeHead(200,{'content-type':'application'+'/'+'json'});res.end(JSON.stringify(req.url==='/body'?[1,2].map(part=>({processed:input.message,part})):{processed:input.processed,part:input.part}))});
+ receiver=createServer(async(req,res)=>{let text='';for await(const chunk of req)text+=chunk;const input=JSON.parse(text);effects.push({path:req.url,input});res.writeHead(200,{'content-type':'application'+'/'+'json'});res.end(JSON.stringify(req.url.startsWith('/embedded-wait-')?input:req.url==='/body'?[1,2].map(part=>({processed:input.message,part})):{processed:input.processed,part:input.part}))});
  await new Promise(resolve=>receiver.listen(0,'127.0.0.1',resolve));const receiverOrigin='http://127.0.0.1:'+receiver.address().port;
  h=await harness(declared,{emitted:true,edge:async request=>{const url=new URL(request.url);if(url.origin!==declared)return undefined;const headers=new Headers(request.headers);headers.delete('content-length');return fetch(receiverOrigin+url.pathname,{method:request.method,headers,body:await request.arrayBuffer()})}});const origin=h.origin;
  const types={'.css':'text'+'/'+'css','.js':'text'+'/'+'javascript','.svg':'image'+'/'+'svg+xml','.woff2':'font'+'/'+'woff2','.webp':'image'+'/'+'webp','.png':'image'+'/'+'png','.json':'application'+'/'+'json'};
@@ -103,12 +104,13 @@ try {
  literalObjectSource.nodes[1].parameters.conditions.conditions[0].leftValue='{"message":"{{"}';
  const streamObjectSources=['left','right'].map(operand=>looseObjectFilterStreamExport(declared,operand));
  const dateSources=[arithmeticExport(declared,'synthetic-crank-date-browser-month'),arithmeticExport(declared,'synthetic-crank-date-browser-day',{operation:'subtractFromDate',duration:1,timeUnit:'days',options:{includeInputFields:false}})];
+ const waitSource=embeddedWaitExport(declared,'synthetic-crank-wait-browser');
  const driftSources=[conversionExport('registry','synthetic-crank-84'),conversionExport('code','synthetic-crank-85')],driftBundle=driftSources.map((workflow,index)=>({workflow,conversions:{n1:index?codeChoice:registryChoice}}));
  const shots=async state=>{for(const width of [1440,390]){await page.setViewportSize({width,height:1000});await shot(width,state)}};
  // Stage the protected-undo fixtures together while every imported target is an
  // unused draft. Publication later deliberately fences this retained plan;
  // planning another import against that used native inventory is not this test.
- await page.getByLabel('Workflow export JSON').fill(JSON.stringify([sourceEnvelope,...driftBundle,objectSource,literalObjectSource,...streamObjectSources,...dateSources]));await page.getByRole('button',{name:'Upload and plan',exact:true}).click();await page.waitForLoadState('networkidle');
+ await page.getByLabel('Workflow export JSON').fill(JSON.stringify([sourceEnvelope,...driftBundle,objectSource,literalObjectSource,...streamObjectSources,...dateSources,waitSource]));await page.getByRole('button',{name:'Upload and plan',exact:true}).click();await page.waitForLoadState('networkidle');
  assert.equal(await page.getByRole('button',{name:'Approve this plan',exact:true}).count(),1);await page.getByText(/Supported fields/).click();assert.ok((await page.locator('body').innerText()).includes('distinct linear done path'));await shots('done-review');
  const driftPlan=await reviewedPlan();
  await page.getByRole('button',{name:'Approve this plan',exact:true}).click();await page.waitForLoadState('networkidle');
@@ -199,6 +201,24 @@ try {
   }
  }
  console.log('WORK-012: reviewed date arithmetic, month-end and Chicago repeated-hour results, retained fields and invalid-date refusal inspected at 1440 and 390');
+
+ // Assert the embedded-child flow at desktop width; capture both release widths.
+ await page.setViewportSize({width:1440,height:1000});
+ const waitWorkflow=(await send('workflows')).find(row=>row.name===waitSource.name),waitDetail=await send('workflows/'+waitWorkflow.id);
+ assert.equal(waitDetail.status,'draft');assert.deepEqual(waitDetail.versions,[]);assert.deepEqual(waitDetail.hooks,[]);assert.equal(waitDetail.draft.settings.n8n_subflow_pins.length,1);
+ await page.goto(origin+'/app/workflows/'+waitWorkflow.id+'?step=n2_n1');
+ assert.ok((await page.locator('.inspector').innerText()).includes('Child interval wait'));await shots('embedded-child-wait-inactive');
+ await send('workflows/'+waitWorkflow.id+'/estimate',{cost:{components:['orchestration','connectors','models','executors'].map(kind=>({kind,usd_per_run:'0',assumption:'Synthetic embedded child receiver proof'}))}});
+ await send('workflows/'+waitWorkflow.id+'/publish',{},201);
+ const waitPayload={message:'synthetic-crank-embedded-browser',amount:7,nested:{items:[null,false,'',7]}},waitBefore=effects.length;
+ const waitRun=await send('workflows/'+waitWorkflow.id+'/run',{input:waitPayload},201);assert.equal(waitRun.status,'waiting');assert.equal(waitRun.waits[0].path,'n2_n1');assert.deepEqual(effects.slice(waitBefore),[{path:'/embedded-wait-before',input:waitPayload}]);
+ await page.setViewportSize({width:1440,height:1000});await page.goto(origin+'/app/workflow-runs/'+waitRun.id);assert.ok((await page.locator('body').innerText()).includes('Child interval wait'));await shots('embedded-child-wait-held');
+ await h.restart();await h.tick(Date.parse(waitRun.waits[0].due_at)+1);await h.tick(Date.parse(waitRun.waits[0].due_at)+60001);
+ const waitDone=await send('workflow-runs/'+waitRun.id);assert.equal(waitDone.status,'succeeded');assert.deepEqual(effects.slice(waitBefore),['before','after','final'].map(phase=>({path:'/embedded-wait-'+phase,input:waitPayload})));
+ await page.setViewportSize({width:1440,height:1000});await page.goto(origin+'/app/workflows/'+waitWorkflow.id+'?step=n2_n2&tab=data');
+ const waitOutput=JSON.parse(await page.locator('.inspector-block').filter({has:page.getByRole('heading',{name:'Output',exact:true})}).locator('pre').innerText());assert.deepEqual(waitOutput.body,waitPayload);await shots('embedded-child-wait-output');
+ await page.setViewportSize({width:1440,height:1000});await page.goto(origin+'/app/workflow-runs/'+waitRun.id);await shots('embedded-child-wait-completed');
+ console.log('MIG-001: embedded child Wait, inactive pinned draft, restart and once-only receiver continuation asserted at 1440 and inspected at 1440 and 390');
 
  await context.close();
 }catch(error){if(page){await page.screenshot({path:join(evidence,'journey-error.png'),fullPage:true});console.error((await page.locator('body').innerText()).slice(0,800))}console.error(String(error.message).replace(/https?:\/\/\S+/g,'[redacted URL]'));process.exitCode=1}
