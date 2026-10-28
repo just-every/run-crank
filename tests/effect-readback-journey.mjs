@@ -46,6 +46,24 @@ export async function quickbooksInputJourney({ inspect } = {}) {
     const exact = { ...payload, Line: [sale('9007199254740993.01')], TxnTaxDetail: undefined };
     assert.equal((await startRun(h, workflow, { ...runInput, payload: exact, total: '9007199254740993.01' })).status, 'succeeded');
     assert.equal(payloads.at(-1).Line[0].Amount, '9007199254740993.01');
+    // Unit prices may be finer than cents when the resulting amount is exact cents.
+    const fractionalPrice = { ...defaults, Line: [sale('0.250', { Qty: 2, UnitPrice: '0.125' })] };
+    assert.equal((await startRun(h, workflow, { ...runInput, payload: fractionalPrice, total: undefined })).status, 'succeeded');
+    assert.deepEqual(payloads.at(-1).Line, fractionalPrice.Line);
+    const noTotalWrites = payloads.length;
+    for (const target of [workflow, refund]) {
+      const conflict = { ...defaults, Line: [sale('0.25', { Qty: 2, UnitPrice: '0.20' })] };
+      const failed = await startRun(h, target, { ...runInput, payload: conflict, total: undefined });
+      assert.equal(failed.status, 'failed', 'omitting an optional total must not admit contradictory line amounts');
+      assert.equal(failed.error.field, 'input.payload.Line[0].Amount');
+      assert.match(failed.error.message, /quantity and unit price/);
+      const badLiteral = await h.send('/api/crank/workflows', { name: 'Conflicting line amount', graph: { trigger: { type: 'manual' }, steps: [create(target === refund ? 'quickbooks.create_refund_receipt' : undefined, { payload: conflict, amount_usd: undefined })] } }, h.owner);
+      assert.equal(badLiteral.status, 422); assert.match(badLiteral.value.error, /Line\[0\].Amount/);
+      const mixed = structuredClone(conflict); mixed.CustomerRef.value = { $ref: 'trigger.input.customer' };
+      const mixedLiteral = await h.send('/api/crank/workflows', { name: 'Partly mapped conflicting line', graph: { trigger: { type: 'manual' }, steps: [create(undefined, { payload: mixed, amount_usd: undefined })] } }, h.owner);
+      assert.equal(mixedLiteral.status, 422, 'a dynamic customer does not hide definite line arithmetic');
+    }
+    assert.equal(payloads.length, noTotalWrites);
     const mapped = await publish(h, 'Individual mapped accounting lines', { trigger: { type: 'manual' }, steps: [create(undefined, {
       payload: { CustomerRef: { value: { $ref: 'trigger.input.customer' } },
         Line: ['{{trigger.input.first}}', '{{trigger.input.middle}}', '{{trigger.input.last}}'],
@@ -78,6 +96,9 @@ export async function quickbooksInputJourney({ inspect } = {}) {
       [{ ...payload, CurrencyRef: { value: 'EUR' } }, 'input.payload.CurrencyRef.value', 'USD'],
       [null, 'input.payload', 'null'],
       [undefined, 'input.payload', 'missing'],
+      [{ ...payload, Line: [sale('0.001')] }, 'input.payload.Line[0].Amount', 'cents'],
+      [{ ...payload, TxnTaxDetail: { TotalTax: '0.001' } }, 'input.payload.TxnTaxDetail.TotalTax', 'cents'],
+      [{ ...payload, TxnTaxDetail: { TaxLine: [{ Amount: '0.001', DetailType: 'TaxLineDetail', TaxLineDetail: { TaxRateRef: { value: '1' } } }] } }, 'input.payload.TxnTaxDetail.TaxLine[0].Amount', 'cents'],
       [{ ...payload, Line: [sale('not money')] }, 'input.payload.Line[0].Amount', 'decimal'],
       [{ ...payload, Line: [sale('1.00', { ItemRef: null })] }, 'input.payload.Line[0].SalesItemLineDetail.ItemRef', 'null'],
     ];
@@ -106,11 +127,19 @@ export async function quickbooksInputJourney({ inspect } = {}) {
     }
     const mismatch = await startRun(h, workflow, { ...runInput, payload: { ...payload, Line: [sale('10.00', { Qty: 3, UnitPrice: '3.33' })] }, total: '11.00' });
     assert.equal(mismatch.status, 'failed'); assert.equal(payloads.length, before);
+    const fractionalTotal = await startRun(h, workflow, { ...runInput, total: '11.001' });
+    assert.equal(fractionalTotal.status, 'failed'); assert.equal(fractionalTotal.error.field, 'input.amount_usd');
+    assert.match(fractionalTotal.error.message, /cents/); assert.equal(payloads.length, before);
     // Publication revalidates a retained draft from before the schema was installed.
     const legacy = { trigger: { type: 'manual' }, steps: [create(undefined, { payload: { ...payload, Line: [] } })] };
     await h.db.prepare('UPDATE crank_workflows SET draft_json=? WHERE id=?').bind(JSON.stringify(legacy), refund.id).run();
     const refused = await h.send(`/api/crank/workflows/${refund.id}/publish`, {}, h.owner);
     assert.equal(refused.status, 422); assert.match(refused.value.error, /input.payload.Line/); assert.equal(payloads.length, before);
+    const legacyConflict = { trigger: { type: 'manual' }, steps: [create(undefined, { payload: { ...defaults, Line: [sale('0.25', { Qty: 2, UnitPrice: '0.20' })] }, amount_usd: undefined })] };
+    await h.db.prepare('UPDATE crank_workflows SET draft_json=? WHERE id=?').bind(JSON.stringify(legacyConflict), refund.id).run();
+    const conflictPublish = await h.send(`/api/crank/workflows/${refund.id}/publish`, {}, h.owner);
+    assert.equal(conflictPublish.status, 422); assert.match(conflictPublish.value.error, /Line\[0\].Amount/);
+    assert.equal(payloads.length, before);
     // Dynamic leaves defer without hiding a definite error beside them; literals remain literal.
     const mixed = structuredClone(payload); mixed.CustomerRef.value = { $ref: 'trigger.input.customer' }; mixed.Line[0].SalesItemLineDetail.Qty = 'many';
     const mixedSave = await h.send('/api/crank/workflows', { name: 'Mixed mappings', graph: { trigger: { type: 'manual' }, steps: [create(undefined, { payload: mixed })] } }, h.owner);
@@ -130,6 +159,17 @@ export async function quickbooksInputJourney({ inspect } = {}) {
     assert.equal(failed.status, 'failed'); assert.equal(failed.error.field, invalid[10][1]); assert.equal(stepOf(failed, 'later'), undefined);
     assert.equal(payloads.length, prior + 1); assert.deepEqual(payloads.at(-1).Line, payload.Line);
     if (inspect) await inspect({ h, workflow: delayed, run: failed, state: 'nested-validation' });
+    const delayedConflict = await startRun(h, delayed, { ...runInput, payload: { ...defaults, Line: [sale('0.25', { Qty: 2, UnitPrice: '0.20' })] }, total: undefined });
+    const delayedCents = await startRun(h, delayed, { ...runInput, payload: { ...defaults, Line: [sale('0.001')] }, total: undefined });
+    assert.equal(delayedConflict.status, 'waiting'); assert.equal(delayedCents.status, 'waiting');
+    await h.restart(); await h.tick(Date.now() + 120000);
+    const conflictAfterRestart = await settled(h, delayedConflict.id), centsAfterRestart = await settled(h, delayedCents.id);
+    for (const refused of [conflictAfterRestart, centsAfterRestart]) {
+      assert.equal(refused.status, 'failed'); assert.equal(refused.error.field, 'input.payload.Line[0].Amount');
+      assert.equal(stepOf(refused, 'later'), undefined);
+    }
+    assert.equal(payloads.length, prior + 1, 'restart cannot dispatch conflicting or fractional-cent lines');
+    if (inspect) await inspect({ h, workflow: delayed, run: centsAfterRestart, state: 'cent-validation' });
     assert.deepEqual((await h.get(`workflow-runs/${failed.id}/replay`)).eligible.map(step => step.path), ['invoice'], 'a validation refusal is distinct from an uncertain write');
   } finally { await h.close(); }
 }

@@ -42,15 +42,18 @@ try {
   await quickbooksInputJourney({inspect:async({h,workflow,run,state})=>{
    await attach(h,width);
    await page.goto(h.origin+`/app/workflows/${workflow.id}?step=invoice`);
-   if(state==='nested-validation'){
-    await expect(page.locator('.last-result .result-error')).toContainText('input.payload.Line[1].SalesItemLineDetail.Qty');
-    await expect(page.locator('.last-result .result-error')).toContainText('nonnegative exact decimal');
+   const invalid=state==='nested-validation'||state==='cent-validation';
+   const field=state==='cent-validation'?'input.payload.Line[0].Amount':'input.payload.Line[1].SalesItemLineDetail.Qty';
+   const message=state==='cent-validation'?'exact USD cents':'nonnegative exact decimal';
+   if(invalid){
+    await expect(page.locator('.last-result .result-error')).toContainText(field);
+    await expect(page.locator('.last-result .result-error')).toContainText(message);
    }else await expect(page.locator('.last-result')).toContainText('Success');
    await shot(width,`mapping-${state}`);
    await page.goto(h.origin+`/app/workflow-runs/${run.id}`);
-   if(state==='nested-validation'){
-    await expect(page.locator('.detail-primary')).toContainText('input.payload.Line[1].SalesItemLineDetail.Qty');
-    await expect(page.locator('.detail-primary')).toContainText('nonnegative exact decimal');
+   if(invalid){
+    await expect(page.locator('.detail-primary')).toContainText(field);
+    await expect(page.locator('.detail-primary')).toContainText(message);
    }
    await shot(width,`run-${state}`);
   }});
