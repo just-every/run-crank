@@ -788,3 +788,8 @@ test('Native Orbit snapshots admit watched deal changes and new records once, re
 test('Private custom find or create retains exact approval, key ownership and accountable readback',async()=>{
   const {customSearchJourney}=await import('./custom-search-journey.mjs');await customSearchJourney();
 });
+
+test('Stripe test-mode subscription searches retain exact customer outcomes, current authority and sealed inactive custody',async()=>{
+ const {stripeSearchJourney,stripeCustodyJourney}=await import('./stripe-search-journey.mjs');
+ await stripeSearchJourney();await stripeCustodyJourney();
+});

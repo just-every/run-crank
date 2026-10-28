@@ -1,3 +1,5 @@
+import { mac } from '../connections/vault'
+import { stmt } from '../model'
 import { credential } from '../connections/store'
 import { utf8 } from '../engine/egress'
 import { StepError } from '../engine/errors'
@@ -39,6 +41,7 @@ function validate(step: Step) {
 async function account(env: CrankEnv, connectionId: string) {
   const { row, secret } = await credential(env, connectionId)
   if (row.app !== 'stripe' || row.auth_kind !== 'bearer' || !/^(sk|rk)_test_[A-Za-z0-9_-]{8,256}$/.test(secret.token ?? '')) throw new StepError('authority', 'Stripe subscription search requires a selected Stripe test-mode credential; account authorization is unverified', { connection_id: connectionId })
+  return mac(env, 'stripe-search-credential', secret.token)
 }
 function subscription(value: unknown, selected: ReturnType<typeof input>) {
   if (!isObject(value) || value.object !== 'subscription' || value.livemode !== false) return malformed('expected a test-mode subscription')
@@ -61,8 +64,13 @@ export const stripeFindSubscriptions: StepType = {
   mutating: false, connection: 'required', required: ['customer_id'], validate,
   async execute(step, ctx) {
     const selected = input(ctx.input), connectionId = String(step.connection_id)
-    await account(ctx.env, connectionId)
-    const context: StepContext = { ...ctx, beforeRequest: async () => { await account(ctx.env, connectionId); await ctx.beforeRequest?.() } }
+    const identity = await account(ctx.env, connectionId)
+    const assertAccount = async () => {
+      if (await account(ctx.env, connectionId) !== identity) throw new StepError('authority', 'The selected Stripe credential changed during this search; start a fresh run', { connection_id: connectionId })
+    }
+    const previous = await stmt(ctx.env, 'SELECT credential_identity FROM crank_wf_attempts WHERE run_id=? AND path=?', ctx.run.id, ctx.path).all<{credential_identity:string|null}>()
+    if (previous.results.some(row => row.credential_identity !== identity)) throw new StepError('authority', 'Retained Stripe pages belong to a different credential; start a fresh run', { connection_id: connectionId })
+    const context: StepContext = { ...ctx, beforeRequest: async () => { await assertAccount(); await ctx.beforeRequest?.() } }
     const records: Record<string, unknown>[] = [], ids = new Set<string>(), cursors = new Set<string>()
     let cursor: string | undefined, incomplete = false
     const pageSize = Number(step.page_size ?? 100), maxPages = Number(step.max_pages ?? 5)
@@ -72,10 +80,14 @@ export const stripeFindSubscriptions: StepType = {
       if (cursor) url.searchParams.set('starting_after', cursor)
       const result = await retryRequest(context, { method: 'GET', url, body: null, idempotent: false }, policy => sendRequest(context, {
         url, method: 'GET', headers: new Headers({ accept: 'application' + '/' + 'json', 'stripe-version': API_VERSION }), body: null,
+        credentialIdentity: async headers => {
+          if (await mac(ctx.env, 'stripe-search-credential', (headers.get('authorization') ?? '').replace(/^Bearer /, '')) !== identity) throw new StepError('authority', 'Stripe credential changed before dispatch; start a fresh run')
+          return identity
+        },
         timeout: Number(step.timeout_ms ?? 15000), maxBytes: 1024 * 1024, follow: 0,
       }, connectionId, policy))
       // Reusing a completed page never bypasses current selected-connection authority.
-      await account(ctx.env, connectionId)
+      await assertAccount()
       if (result.response.status !== 200) throw new StepError([401, 403].includes(result.response.status) ? 'auth' : result.response.status === 429 ? 'rate_limit' : 'provider', `Stripe subscription search refused with status ${result.response.status}`, { status: result.response.status })
       let value: unknown
       try { value = JSON.parse(utf8(result.response.bytes)) } catch { return malformed('invalid JSON response') }
@@ -91,7 +103,7 @@ export const stripeFindSubscriptions: StepType = {
       cursors.add(next); cursor = next; incomplete = true
     }
     // Stable tie-breaker makes first deterministic even when created timestamps match.
-    records.sort((a, b) => String(a.id).localeCompare(String(b.id)))
+    records.sort((a, b) => String(a.id) < String(b.id) ? -1 : String(a.id) > String(b.id) ? 1 : 0)
     return searchOutcome({ ...step, sort: step.sort ?? { field: 'created', direction: 'desc' } }, records, incomplete)
   },
 }

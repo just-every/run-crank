@@ -30,7 +30,7 @@ export const findNode = (graph: Graph, path: string) => flatten(nodes(graph)).fi
 
 const titleCase = (text: string) => text.charAt(0).toUpperCase() + text.slice(1)
 const TRIGGERS: Record<string, string> = { webhook: 'Webhooks', schedule: 'Schedule', feed: 'RSS, Atom and JSON Feed', url_poll: 'URL poll', app_poll: 'App records', slack_event: 'Slack', manual: 'Manual start' }
-const STEPS: Record<string, string> = { 'ai.classify':'AI classification', 'custom.request':'Custom connector', code: 'Code executor', filter: 'Filter', paths: 'Paths', transform: 'Formatter', map: 'Formatter', delay: 'Delay', wait_for_callback: 'Delay', approval: 'Approval', 'file.fetch': 'Files', respond: 'Webhooks', http: 'Webhooks' }
+const STEPS: Record<string, string> = { 'stripe.find_subscriptions':'Stripe test mode', 'ai.classify':'AI classification', 'custom.request':'Custom connector', code: 'Code executor', filter: 'Filter', paths: 'Paths', transform: 'Formatter', map: 'Formatter', delay: 'Delay', wait_for_callback: 'Delay', approval: 'Approval', 'file.fetch': 'Files', respond: 'Webhooks', http: 'Webhooks' }
 
 /** The app or tool a card names: the connection's label for API requests, Slack for Slack steps,
  * the signing preset for a signed webhook, otherwise the built-in tool. */

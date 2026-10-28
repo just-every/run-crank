@@ -5,6 +5,7 @@ import {readFile,mkdir} from 'node:fs/promises';
 import {resolve,extname,join} from 'node:path';
 import {chromium,expect} from '@playwright/test';
 import {quickbooksInputJourney,quickbooksReconciliationJourney} from './effect-readback-journey.mjs';
+import {stripeSearchJourney} from './stripe-search-journey.mjs';
 import {gustoHandoffJourney} from './gusto-handoff-journey.mjs';
 const evidence=process.env.CRANK_EVIDENCE;
 assert.ok(evidence,'Set CRANK_EVIDENCE');await mkdir(evidence,{recursive:true});
@@ -38,6 +39,26 @@ async function shot(width,state) {
  const search=page.getByRole('link',{name:'Search runs',exact:true});await search.focus();await expect(page.locator('#search-tooltip')).toBeVisible();await page.locator('h1').click();await search.hover();await page.waitForTimeout(350);await expect(page.locator('#search-tooltip')).toBeVisible();
 }
 try {
+ await stripeSearchJourney({inspect:async({h,workflow,run})=>{
+  for(const width of [1440,390]) {
+   await attach(h,width);await page.setViewportSize({width,height:1000});
+   await page.goto(h.origin+`/app/workflows/${workflow.id}?step=subscriptions&tab=data`);
+   if(width===1440)await expect(page.getByRole('region',{name:'Selected step'})).toContainText('Customer subscriptions');
+   await page.screenshot({path:join(evidence,`${width}-stripe-customer-editor.png`),fullPage:true});
+   await page.goto(h.origin+`/app/workflow-runs/${run.id}`);
+   const subscriptions=page.locator('.timeline-item').filter({hasText:'Customer subscriptions'}).first();
+   await subscriptions.getByText('Input and output',{exact:true}).click();
+   if(width===1440) {
+    await expect(subscriptions).toContainText('cus_syntheticcrank1');
+    await expect(subscriptions).toContainText('sub_syntheticcrank3');
+    await expect(subscriptions).toContainText('price_syntheticcrank3');
+    await expect(subscriptions).toContainText('quantity');await expect(subscriptions).toContainText('found');
+    const search=page.getByRole('link',{name:'Search runs',exact:true});await search.focus();await expect(page.locator('#search-tooltip')).toBeVisible();
+    await page.locator('h1').click();await search.hover();await page.waitForTimeout(350);await expect(page.locator('#search-tooltip')).toBeVisible();
+   }
+   await page.screenshot({path:join(evidence,`${width}-stripe-subscriptions-run.png`),fullPage:true});
+  }
+ }});
  for(const width of [1440,390]) {
   await quickbooksInputJourney({inspect:async({h,workflow,run,state})=>{
    await attach(h,width);

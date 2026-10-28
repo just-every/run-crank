@@ -2,7 +2,7 @@ import { StepError } from '../engine/errors'
 import type { BoundedResponse } from '../engine/egress'
 import type { RequestContext } from './retry'
 import { stmt, type CrankEnv } from '../model'
-import { fileBase64, indexStatement, openText, sealFileBase64, sealJson, targetFor, type Target } from '../ops/payload-seal'
+import { fileBase64, indexStatement, isSealed, openText, sealFileBase64, sealJson, targetFor, type Target } from '../ops/payload-seal'
 
 const credentialHeader = /authorization|cookie|api[-_]?key|token|secret|password|signature/i
 export interface RequestResult { response: BoundedResponse; attempts: number; exhausted?: boolean }
@@ -78,12 +78,12 @@ export async function checkpointSubjects(env: CrankEnv, subject: string) {
     for (const row of page.results) {
       const response = JSON.parse(row.response_json)
       after = row.cursor
-      if (typeof response.headers === 'string' || (await stmt(env, 'SELECT content_base64 FROM crank_request_checkpoint_chunks WHERE run_id=? AND path=? AND operation_key=? AND ordinal=? LIMIT 1', row.run_id, row.path, row.operation_key, row.ordinal).first<{content_base64: string}>())?.content_base64.startsWith('{')) continue
+      const first = await stmt(env, 'SELECT content_base64 FROM crank_request_checkpoint_chunks WHERE run_id=? AND path=? AND operation_key=? AND ordinal=? LIMIT 1', row.run_id, row.path, row.operation_key, row.ordinal).first<{content_base64: string}>()
+      if (isSealed(response.headers) || isSealed(first?.content_base64)) continue
       const workflow = await stmt(env, 'SELECT workflow_id FROM crank_wf_runs WHERE id=?', row.run_id).first<{workflow_id: string}>()
       if (!workflow) continue
       const text = new TextDecoder().decode(await responseBytes(env, row, response.body_bytes, workflow.workflow_id)).toLowerCase()
       if (text.includes(subject) || text.includes(JSON.stringify(subject).slice(1, -1)) || JSON.stringify(response.headers).toLowerCase().includes(subject)) runs.add(row.run_id)
-      after = row.cursor
     }
   }
 }
