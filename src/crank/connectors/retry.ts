@@ -25,7 +25,12 @@ export async function retryRequest(ctx: RequestContext, request: { method: strin
     if (base.origin === request.url.origin && base.pathname === request.url.pathname) retained.response.url = request.url.href
     return retained
   }
-  const previous = await stmt(ctx.env, 'SELECT id,retry_number,budget_started_at,slice_started_at,retry_at,http_status,error_category,retry_parked_at,retry_resumed_at FROM crank_wf_attempts WHERE run_id=? AND path=? AND request_key=? ORDER BY number DESC LIMIT 1', ctx.run.id, ctx.path, requestKey)
+  // Identical private reads can be separate phases of one step. A readback
+  // must not inherit the initial search's budget across a human approval wait.
+  // Keep the stored request and task identities so unfinished work still resumes.
+  const attemptScope = request.deferred ? ' AND EXISTS(SELECT 1 FROM crank_gateway_tasks t WHERE t.attempt_id=crank_wf_attempts.id AND t.operation_key=?)' : ''
+  const scopeValues = request.deferred ? [ctx.operationKey] : []
+  const previous = await stmt(ctx.env, 'SELECT id,retry_number,budget_started_at,slice_started_at,retry_at,http_status,error_category,retry_parked_at,retry_resumed_at FROM crank_wf_attempts WHERE run_id=? AND path=? AND request_key=?' + attemptScope + ' ORDER BY number DESC LIMIT 1', ctx.run.id, ctx.path, requestKey, ...scopeValues)
     .first<{ id: string; retry_number: number; budget_started_at: string; slice_started_at: string | null; retry_at: string | null; http_status: number | null; error_category: string | null; retry_parked_at: string | null; retry_resumed_at: string | null }>()
   // A gateway records its physical result before the executor consumes it.
   // Even a completed success still belongs to that deferred attempt until its
@@ -59,7 +64,7 @@ export async function retryRequest(ctx: RequestContext, request: { method: strin
     const delay = retryDelay(attempts, response?.headers.get('retry-after') ?? null, Number(safeRead ? ctx.retryPolicy?.base_delay_ms ?? RETRY_POLICY.base_delay_ms : ctx.retryPolicy?.write_base_delay_ms ?? RETRY_POLICY.write_base_delay_ms))
     if (!Number.isFinite(delay)) throw retryExhausted(category, 'the provider requires a retry wait beyond the one-hour limit; no early retry was sent')
     const retryAt = new Date(Date.now() + delay).toISOString(), reason = failure ? 'network response lost' : `HTTP ${response!.status}`
-    const attempt = await stmt(ctx.env, `UPDATE crank_wf_attempts SET retry_at=?,retry_reason=? WHERE id=(SELECT id FROM crank_wf_attempts WHERE run_id=? AND path=? AND request_key=? ORDER BY number DESC LIMIT 1) RETURNING id`, retryAt, reason, ctx.run.id, ctx.path, requestKey).first<{id: string}>()
+    const attempt = await stmt(ctx.env, `UPDATE crank_wf_attempts SET retry_at=?,retry_reason=? WHERE id=(SELECT id FROM crank_wf_attempts WHERE run_id=? AND path=? AND request_key=?${attemptScope} ORDER BY number DESC LIMIT 1) RETURNING id`, retryAt, reason, ctx.run.id, ctx.path, requestKey, ...scopeValues).first<{id: string}>()
     if (delay > RETRY_POLICY.max_wait_ms) throw retryExhausted(category, 'the provider requires a retry wait beyond the one-hour limit; no early retry was sent')
     if (delay <= 30000 && Date.parse(retryAt) >= deadline) throw retryExhausted(category, 'the next in-request retry exceeds the active execution-slice budget; no early retry was sent')
     sliceStartedAt = await waitForRetry(ctx, { id: attempt!.id, retry_at: retryAt }) ?? sliceStartedAt
