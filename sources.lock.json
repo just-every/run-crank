@@ -2495,7 +2495,7 @@
       "executable": false
     },
     "src/crank/connectors/google-calendar-search.ts": {
-      "sha256": "44acd8943e34b00220164fb01062eca54ab5e59c5d8b5164cedbbd3b85d85302",
+      "sha256": "c86b53b126bb3dfd742d3edeae2df30e7aff306bc1cef10064d4751f2fbf6c58",
       "executable": false
     },
     "src/crank/connectors/google-calendar.ts": {
@@ -3131,7 +3131,7 @@
       "executable": false
     },
     "src/crank/restore-policy.mjs": {
-      "sha256": "9d5b201cae923a071f87c7322bfdfa1f836142a541500e01317f29bacfb68f21",
+      "sha256": "6cedc3fab63b1d40a5e37e8e18191bdfc3f64ebd1dde9d4cca92a9fec36c309a",
       "executable": false
     },
     "src/crank/runs.ts": {
@@ -5767,7 +5767,7 @@
       "executable": false
     },
     "tests/google-calendar-search-journey.mjs": {
-      "sha256": "42b4c9807ee00156a6cf728a674dc854712ec644a82aaff90ff03f02cb574a30",
+      "sha256": "fbf56ecdda752a7d68f80ffe77983762fc3140ac8ebd9e2223ad69e6be5ccf15",
       "executable": false
     },
     "tests/grants-browser.mjs": {
