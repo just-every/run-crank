@@ -1,5 +1,7 @@
 // Composed identity over Base's OA accounts, or an explicitly paired native
 // accounts/proof adapter. Native composition never constructs the OA store.
+import { businessSettingsControls } from './business-settings.mjs';
+import { businessTeam } from './accounts/business-team.mjs';
 import { scheduledPolicies } from './scheduled/index.mjs';
 import { fencedCredentials } from './accounts/credentials.mjs';
 import { providerControl } from './accounts/provider-control.mjs';
@@ -23,14 +25,15 @@ import { displayNameChange } from './accounts/display-name.mjs';
 import { isLocalCli } from './local-cli.mjs';
 import { devAdmitted } from './dev-admission.mjs';
 import { oneClickAccounts } from './accounts/one-click.mjs';
+import { delegatedAdministration } from './accounts/delegated.mjs';
 
 export { STEP_UP_ACTIONS, STEP_UP_SECONDS } from './identity/email-link/index.mjs';
 export function createOperatorAuth(options) {
   const { db, config: input, mailSender, clientIp, rolePolicy = defaultRolePolicy, clock = Date.now, hooks = {}, fetch, waitUntil, accounts: nativeAccounts, proofs } = options;
   const config = configure(input);
   if (typeof clientIp !== 'function') throw new AuthError('client_ip_required', 503);
-  if (!hooks || typeof hooks !== 'object' || ['beforeMagicLink', 'afterConfirm'].some(name => hooks[name] !== undefined && typeof hooks[name] !== 'function')) throw new AuthError('invalid_configuration', 503);
-  if (Object.hasOwn(options, 'accounts') || Object.hasOwn(options, 'proofs')) return createNativeAuth({ db, config, accounts: nativeAccounts, proofs, mailSender, clientIp, clock, hooks, fetch, waitUntil });
+  if (!hooks || typeof hooks !== 'object' || ['beforeMagicLink', 'afterConfirm', 'audit'].some(name => hooks[name] !== undefined && typeof hooks[name] !== 'function')) throw new AuthError('invalid_configuration', 503);
+  if (Object.hasOwn(options, 'accounts') || Object.hasOwn(options, 'proofs')) return createNativeAuth({ db, config, accounts: nativeAccounts, proofs, mailSender, clientIp, clock, hooks, fetch, waitUntil, businessSettings: options.businessSettings });
   const store = new AuthStore(db);
   const sessions = oaSessions({ config, store, clock });
   const { hash, newSession, completed, authenticate } = sessions;
@@ -73,10 +76,14 @@ export function createOperatorAuth(options) {
       },
     } });
   const { limit, newToken, sendLink, requireFreshProof } = email;
-  const admin = administration({ config, store, clock, authorize: rolePolicy, authenticate, newToken, sendLink, limit, requireFreshProof, providers });
+  const adminContext = { config, store, clock, authorize: rolePolicy, authenticate, newToken, sendLink, limit, requireFreshProof, providers, accounts, audit: hooks.audit };
+  const { prepareInvitation: _prepareInvitation, ...admin } = administration(adminContext);
   const external = legacyAdmission({ admission, config });
   return Object.freeze({
     ...admin,
+    delegatedAdministration: input => delegatedAdministration(adminContext, input),
+    businessTeam: businessTeam(adminContext),
+    ...businessSettingsControls({ businessSettings: options.businessSettings, config, accounts, authenticate, requireFreshProof, store, clock }),
     ...(options.scheduledPolicies ? { scheduledPolicies: scheduledPolicies({ definitions: options.scheduledPolicies, store, config, clock, authenticate, requireFreshProof, rolePolicy }) } : {}),
     ...providerControl({ store, accounts, authenticate, config, clock }),
     ...fencedCredentials({store,authenticate,requireFreshProof,config,clock,hash}),

@@ -3,11 +3,11 @@ import { needsStreamOrigin } from './stream-origin.ts';
 import { nativeStagingScope } from './native-staging-context.ts';
 import { streamBoundary } from './stream-boundary.ts';
 import { requestContext } from './budget.ts';
-import { loadPlans, planBody, planGuards, planChunkReads, retainPlan, creationCodec, LARGE_PLAN_BYTES } from './plans.ts';
+import { loadPlans, storedPlanSnapshot, planBody, planGuards, planChunkReads, retainPlan, creationCodec, LARGE_PLAN_BYTES } from './plans.ts';
 import { randomUUID } from 'node:crypto';
 import type { ImportJob, ImportPlan, ImportMapping, SourceBundle, ImportAction } from '../types.ts';
 import { buildImportPlan, planFingerprint } from '../plan/index.ts';
-import { creationStatements, validateCreation } from './creation.ts';
+import { creationStatements, preflightD1ImportJob, validateCreation } from './creation.ts';
 import { planStagedCreation, runStagedCreation, stagedSize } from './staged-creation.ts';
 import type { D1ImportContext, D1Sql } from './types.ts';
 import { atomic, readAtomic, authorize, guard, sql } from './database.ts';
@@ -31,7 +31,7 @@ export async function stored(id: string, context: D1ImportContext, action: Impor
   // Unbounded guards run before their transaction's writes: a large plan is
   // fenced by its custody revisions instead of resending it in every request.
   const fenced = !bounded, job = decode(row), plan = (await loadPlans([row], context.storage.database, context.storage.targets.planCodec, undefined, fenced)).get(id)!;
-  planReads.set(job, planChunkReads(row.plan_json, fenced));
+  planReads.set(job, planChunkReads(row.plan_json, fenced, storedPlanSnapshot(plan, id).chunks));
   if (job.destination !== context.destination || job.namespace !== context.namespace || job.mappingVersion !== context.mappingVersion || job.principalId !== context.authorization.principalId) throw new Error('JOB_BINDING_MISMATCH');
   if (context.reviewedFingerprint !== undefined && context.reviewedFingerprint !== job.fingerprint) throw new Error('REVIEW_FINGERPRINT_MISMATCH');
   if ((verifiedPlanFingerprint(plan) ?? planFingerprint(plan)) !== job.fingerprint || plan.fingerprint !== job.fingerprint || plan.destination !== job.destination || plan.namespace !== job.namespace || plan.mappingVersion !== job.mappingVersion || plan.principalId !== job.principalId || plan.entries.length !== job.total) throw new Error('STORED_PLAN_CHANGED');
@@ -47,6 +47,10 @@ export async function planD1Import(source: SourceBundle, mapping: ImportMapping,
   context = requestContext(context);
   await authorize(context, 'plan');
   const plan = buildImportPlan(source, mapping, context);
+  // Admission measures calls, not current create authority. Planning still
+  // evaluates only the plan grant; creation checks its own live predicate.
+  const { storage, ...admission } = context;
+  preflightD1ImportJob(plan, { ...admission, planCodec: storage.targets.planCodec, reviewedFingerprint: plan.fingerprint, authorization: { principalId: context.authorization.principalId, predicate: () => sql('1') } });
   await authorize(context, 'plan');
   return plan;
 }
@@ -76,16 +80,16 @@ export async function createD1ImportJob(plan: ImportPlan, context: D1ImportConte
   await guardErasedSources(plan, db);
   revalidate();
   const codec = creationCodec(plan, context.storage.targets.planCodec), unbounded = context.maxBatchBytes === undefined;
-  const returnReads = (body: string) => 1 + planChunkReads(body, unbounded) + Number(context.reversalPolicy === 'preserve-conflicts');
   const id = randomUUID(), retained = retainPlan(plan, id, codec);
+  const returnReads = 1 + planChunkReads(retained.body, unbounded, retained.encoded.chunks) + Number(context.reversalPolicy === 'preserve-conflicts');
   // A large plan is created in bounded steps; a retry resumes what was staged.
   if (unbounded && stagedSize(retained.encoded) > LARGE_PLAN_BYTES) {
     const creation = await planStagedCreation(plan, context, operationKey, retained.encoded, () => [randomUUID(), randomUUID(), id]);
     revalidate();
-    return (await stored(await runStagedCreation(context, creation, returnReads(retained.body)), context, 'create')).job;
+    return (await stored(await runStagedCreation(context, creation, returnReads), context, 'create')).job;
   }
   const creation = creationStatements(plan, { ...context, planCodec: codec }, id, operationKey, retained);
-  await atomic(context, 'create', creation, returnReads(retained.body));
+  await atomic(context, 'create', creation, returnReads);
   return (await stored(id, context, 'create')).job;
 }
 export async function readD1ImportJob(id: string, context: D1ImportContext): Promise<ImportJob> {

@@ -1,11 +1,11 @@
-import { iconHead } from './icon-head'
+import { iconHead } from './icon-head.ts'
 // Base's no-JavaScript documents (first-run /setup, the foundation sign-in)
 // wear a seed's theme by linking its served rer-theme.css, whose --rer-* tokens
 // this frame style maps onto the document; each token falls back to a readable
 // neutral if the file cannot load. Without a theme nothing is added.
 // This file is copied unchanged to src/base by both maintained exporters.
 /** `accentColor` (#rrggbb) colours buttons when the theme declares no --rer-accent. */
-export interface FrameTheme { href: string; productName?: string; accentColor?: string }
+export interface FrameTheme { href: string; productName?: string; accentColor?: string; logo?: string; businessSettings?: { publicBrand(): Promise<{ displayName?: string; logo?: string }> } }
 export interface Frame { htmlClass: string; head: string; brand: string; policy: string }
 
 const FRAME_STYLE = '.rer-themed body{box-sizing:border-box;margin:0;min-height:100vh;padding:48px 20px;background:var(--rer-page,#f3f5f8);color:var(--rer-text,#172033);font-family:var(--rer-font-body,inherit);line-height:1.6}'
@@ -22,6 +22,7 @@ const FRAME_STYLE = '.rer-themed body{box-sizing:border-box;margin:0;min-height:
   + '.rer-themed .rer-brand{display:flex;align-items:center;gap:12px;margin:0 0 28px;color:var(--rer-text,#172033);font-family:var(--rer-font-heading,var(--rer-font-body,inherit));font-size:18px;font-weight:600}'
   // content toggles the mark only when --rer-logo is declared; the background draws it at size.
   + '.rer-themed .rer-brand::before{content:var(--rer-logo,none);display:block;flex:none;width:32px;height:32px;overflow:hidden;text-indent:200%;white-space:nowrap;background:var(--rer-logo) center/contain no-repeat}'
+  + '.rer-themed .rer-brand img{display:block;flex:none;width:32px;height:32px;object-fit:contain}.rer-themed .rer-brand:has(img)::before{display:none}'
   + '@media(max-width:480px){.rer-themed body{padding:24px 16px}.rer-themed main{padding:28px 20px}.rer-themed h1{font-size:26px}}'
 
 const escape = (value: string) => value.replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character]!))
@@ -33,6 +34,10 @@ const digest = async (text: string) => btoa(String.fromCharCode(...new Uint8Arra
 /** `policy` is the document's style/font/image CSP: the hashed frame style plus same-origin theme files. */
 export async function themeFrame(theme?: FrameTheme): Promise<Frame> {
   if (!theme) return { htmlClass: '', head: iconHead, brand: '', policy: "style-src 'self'; font-src 'self'; img-src 'self'" }
+  const business = await theme.businessSettings?.publicBrand()
+  const name = business?.displayName ?? theme.productName
+  const logo = business?.logo ?? theme.logo
+  if (logo !== undefined && !/^\/rer-business-logo\?v=[a-f0-9]{12,64}$/.test(logo)) throw new Error('A Business logo must use the versioned same-origin logo route.')
   if (!/^\/(?!\/)[A-Za-z0-9._~/-]{1,200}\.css$/.test(theme.href) || theme.href.includes('/.')) throw new Error('Declare the seed theme as a same-origin path to its served .css file.')
   if (theme.accentColor !== undefined && !/^#[0-9a-f]{6}$/i.test(theme.accentColor)) throw new Error('A frame accent color is #rrggbb.')
   const style = (theme.accentColor ? `.rer-themed{--rer-brand-accent:${theme.accentColor};--rer-brand-accent-text:${ink(theme.accentColor)}}` : '') + FRAME_STYLE
@@ -40,7 +45,7 @@ export async function themeFrame(theme?: FrameTheme): Promise<Frame> {
   return {
     htmlClass: ' class="rer-themed"',
     head: `${iconHead}<link rel="stylesheet" href="${theme.href}"><style>${style}</style>`,
-    brand: theme.productName ? `<p class="rer-brand"><span data-rer-name>${escape(theme.productName)}</span></p>` : '',
+    brand: name ? `<p class="rer-brand">${logo ? `<img src="${escape(logo)}" width="32" height="32" alt="${escape(name)}">` : ''}<span data-rer-name>${escape(name)}</span></p>` : '',
     policy: `style-src 'self' 'sha256-${await hashes.get(style)}'; font-src 'self'; img-src 'self'`,
   }
 }

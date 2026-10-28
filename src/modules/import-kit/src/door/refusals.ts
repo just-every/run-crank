@@ -8,6 +8,7 @@ const reasons: Record<string, string> = {
   MALFORMED_JSON: 'The upload is not valid JSON in the declared format.',
   MALFORMED_UTF8: 'The upload is not valid UTF-8.',
   INVALID_OR_CREDENTIAL_SOURCE_DATA: 'A source value is not plain JSON data, holds a URL that cannot be parsed, or is encoded too deeply to inspect for credentials.',
+  SOURCE_RAW_READER_FAILED: "The seed's reader refused the raw upload. Check the archive format and contents.",
   SOURCE_PARSER_FAILED: "The seed's parser refused a source value.",
   SOURCE_OBJECT_DROPPED: "The seed's parser returned no record for a source value.",
   INVALID_PARSED_RECORDS: "The seed's parser returned an invalid record list.",
@@ -46,6 +47,6 @@ export function sourceRefusal(error: unknown): DoorError | undefined {
       reason: `The upload holds a credential the door cannot remove: a ${field}. Remove it and upload again.`, ...at});
   }
   if (!(error instanceof ReaderError) && !Object.hasOwn(reasons, code)) return undefined;
-  const reason = reasons[code] ?? `The reader refused the upload (${code}).`;
+  const reason = error instanceof PlanTooLargeError ? `The import ${error.subject} is ${error.bytes} canonical JSON bytes; the limit is ${error.limit}.` : reasons[code] ?? `The reader refused the upload (${code}).`;
   return new DoorError('source_' + code.toLowerCase().replace(/^source_/, ''), tooLarge.has(code) ? 413 : 422, {reason, ...at});
 }

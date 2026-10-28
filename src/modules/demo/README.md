@@ -37,6 +37,14 @@ Production build/deploy refuses that setting; ordinary builds keep real effects.
   local and hosted demos. No per-seed link is required. CSS adds the label suffix without
   changing the application's hydrated text; CSP allows exact hashes only.
 
+  The exit uses only spare space beside or directly below the label and truncates its own text.
+  It stays out of the host layout, preserving sibling rectangles and document
+  width relative to the same header with the Demo suffix but no exit. It never
+  repairs an already overflowing host header. With no readable room it remains
+  a keyboard stop; keyboard focus reveals the full link above clipping ancestors.
+  The full name is also its accessible name and title. The host keeps ownership
+  of its responsive layout.
+
 Public sockets, WebSockets and event streams remain usable for checks. The
 local sockets guard and hosted egress retain a small direct mail/SMS denylist;
 use the effect helper for such sends. Hosted demos keep their isolated

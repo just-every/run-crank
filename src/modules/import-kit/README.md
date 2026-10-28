@@ -14,9 +14,12 @@ here, not installation `.rer` archives. Editions adopt this same door
 with their own supported readers and native adapters.
 
 The import kit plans and applies reviewed, inert data imports. It preserves the
-source records, exact available source bytes, and the provenance needed to inspect,
-resume, reconcile, or reverse an import. It does not send messages, enqueue work,
-activate access, or run application lifecycle hooks.
+source records, available custody bytes, and the provenance needed to inspect,
+resume, reconcile, or reverse an import. Without an intake declaration, custody
+keeps the exact available source bytes. A door source that declares an intake
+allowlist drops other fields before any persistent write and keeps the sanitized
+NDJSON as its original custody; it never stores the raw export. It does not send
+messages, enqueue work, activate access, or run application lifecycle hooks.
 
 ## Adopt the shared door
 
@@ -25,6 +28,31 @@ The signed-in screen, RER and Business share upload, plan, reviewed fingerprint,
 apply, reconcile and undo. Keep product readers, mappings and native adapters;
 remove separate importer routes and their job creation/apply callers. Owner
 history and Undo include jobs from either authority.
+
+Use the door's optional static `intake: {formats, allow}` declaration when a
+seed's source contract prohibits retaining fields outside an allowlist, including
+in uploads and originals. CSV lists exact case-sensitive decoded headers; JSON
+and NDJSON list exact RFC 6901 pointers to scalar leaves. The door streams the
+raw request through that drop-only declaration into NDJSON before storage;
+parsers and mappings still run during planning with `credentials: 'remove'`.
+No sanitizer callback or client-supplied sanitizer/hash is accepted. See the
+[intake protocol](src/door/README.md#optional-intake-before-custody) and the
+[Auth adoption example](src/door/ADOPTING.md#example-auth-source-contract).
+
+The declaration belongs to the source returned to both door mounts:
+
+```ts
+const source: ImportDoorSource = {
+  parse, mapping,
+  intake: {
+    formats: ['csv', 'ndjson'],
+    allow: {
+      csv: ['user_id', 'email', 'name', 'blocked'],
+      ndjson: ['/user_id', '/email', '/name', '/blocked'],
+    },
+  },
+};
+```
 
 ## Engine primitives
 
@@ -353,6 +381,119 @@ to resolve and verify the referenced evidence. A `documented format` row records
 `validation: "synthetic-only"` and `realExport: "not-supplied"`; only the required
 real-export evidence can establish `verified` status.
 
+### Signing receipts and supplying a trust policy
+
+The public API exports `canonicalReceiptJson`, `signImporterVerificationReceipt`,
+`verifyImporterVerificationReceipt` and `createReceiptEvidencePort`. The receipt
+and status entry points (`src/receipt/index.ts` and `src/status/index.ts`) use only
+WebCrypto and Web APIs and can run in a Worker or Node. The root entry also
+exports these APIs alongside the existing Node SQLite engine. Package consumers
+use `@runeditrun/rer/modules/import-kit/receipt` for signing, portable verification
+and trust policy, and `@runeditrun/rer/modules/import-kit/status` for
+`validateImporters`; both entries avoid the Node SQLite engine. Bundle these
+TypeScript package entries for your Node or Worker target.
+
+The signer takes a caller-supplied Ed25519 private `CryptoKey` with `sign` usage
+and a payload satisfying
+[`importer-verification-receipt` v1](./schema/importer-verification-receipt.schema.json).
+It validates the schema, snapshots the payload and signs its canonical UTF-8
+bytes. Canonical JSON sorts every object's keys recursively by JavaScript's
+UTF-16 code-unit ordering, preserves array order, and uses `JSON.stringify`
+scalar escaping and number representation, without whitespace. Non-JSON values,
+non-finite numbers, sparse arrays and cycles are refused. The signature is padded
+base64. Only `payload` is signed, as required by v1; envelope key IDs select a
+public key and do not independently attest an issuer name. Reordering an object's
+keys before verification is harmless; signing insertion-order JSON instead of
+canonical JSON produces an invalid signature.
+
+The verifier returns `{ valid, issues }`. It checks the complete schema
+(including `source.sha256`, every dry-run/apply count and `byKind`), the signature,
+and the existing mapping, count, reconciliation, unmapped-manifest and safe-text
+rules. Unmapped items must be sorted by `sourceIdentitySha256` in the same UTF-16
+code-unit order as canonical keys, never by locale, so every host reaches the
+same verdict.
+For the same reason the export origin, `source.origin`, is read by the module's
+own ASCII grammar, never by the runtime's URL parser, whose IDNA tables differ
+between Node and Workers releases. It must be `https://` (scheme letters in
+either case), then a host, an optional port from 1 to 65535 without leading
+zeros, and an optional RFC 3986 path (`/` and unreserved, sub-delimiter, `:`,
+`@` and well-formed `%XX` characters), with no credentials, `?` or `#`. The
+host is either a dotted-quad IPv4 address without leading zeros or labels of
+ASCII letters (either case), digits and inner hyphens, optionally ending in one
+dot, whose last label is not numeric (all digits, or `0x` hex). Write an
+internationalized host as its `xn--` labels; they are not decoded, so every
+runtime treats them as ASCII. Non-ASCII text anywhere, IPv6 literals and
+WHATWG's lenient forms (backslashes, missing slashes, short or hexadecimal IPv4
+numbers, empty labels) are refused.
+`synthetic: true` always fails. A policy maps each `keyId` to a public
+Ed25519 `CryptoKey` with `verify` usage or an SPKI PEM public key. Its `environment`
+is a non-empty string chosen by the consumer; a key's optional `environments` array
+restricts its use to the environments it names. An empty array refuses it
+everywhere; omitting `environments` permits every environment, and any other
+value (such as a string, `null` or `false`) refuses the key. Unknown IDs and keys
+outside these rules fail closed.
+The policy is trusted consumer configuration and must never come from the receipt
+or registry being checked.
+
+For example, given a real verification payload and its reviewed registry, this
+Node example signs with a temporary development key, then checks pinned artifacts:
+
+```ts
+import { readFile } from 'node:fs/promises';
+import {
+  signImporterVerificationReceipt, verifyImporterVerificationReceipt,
+  createReceiptEvidencePort, validateImporters,
+} from './src/index.ts';
+
+const payload = JSON.parse(await readFile('verification-payload.json', 'utf8'));
+const registry = JSON.parse(await readFile('importers.json', 'utf8'));
+const keys = await crypto.subtle.generateKey('Ed25519', false, ['sign', 'verify']);
+const policy = {
+  environment: 'stage',
+  keys: { 'stage-development': { publicKey: keys.publicKey, environments: ['stage'] } },
+};
+const receipt = await signImporterVerificationReceipt(payload, 'stage-development', keys.privateKey);
+const verified = await verifyImporterVerificationReceipt(receipt, policy);
+if (!verified.valid) throw new Error(JSON.stringify(verified.issues));
+// Publish JSON.stringify(receipt) and the finished research artifact. Pin the
+// SHA-256 and byte size of those exact published bytes in registry evidence.
+const evidence = createReceiptEvidencePort({
+  trustedHosts: ['evidence.example.test'], // Use your controlled publisher host.
+  async resolve(link) {
+    const response = await fetch(link, { redirect: 'error' });
+    if (!response.ok) return undefined;
+    return { url: response.url, bytes: new Uint8Array(await response.arrayBuffer()) };
+  },
+}, policy);
+const result = await validateImporters(registry, evidence);
+if (!result.valid) throw new Error(JSON.stringify(result.issues));
+```
+
+`validateImporters` accepts that port directly. It additionally binds the receipt
+to the row's incumbent/product and the resolved research bytes, and retains URL,
+publisher-host, size and artifact hash checks. An evidence link's scheme,
+credentials, host and port are read by the same grammar: an `https` link needs
+`//` and a host of that form, which must equal an entry of `trustedHosts`
+ignoring ASCII case (pin an internationalized host by its `xn--` form); a host
+in the consumer's `evidence:` scheme may be any RFC 3986 registered name. The
+path, query and fragment reach the resolver as written. A link may contain no
+spaces or control characters, no credentials and no query key naming a token,
+password, secret, API key or authorization. A valid result's
+`evidence.verifiedReceipts` counts only verified rows whose receipts pass every
+check. It does not promote or mutate registry rows; `documented format` keeps its
+synthetic-only meaning. Existing `receiptPublicKeys` PEM pins remain an unrestricted
+public-key policy when `receiptTrustPolicy` is absent; an explicit trust policy
+takes precedence and never falls back to those pins on refusal.
+
+Signing attests the caller's claims; it does not capture exports, recalculate the
+source digest, run an importer or perform the review. The caller must calculate
+those values from the actual export, preview, apply and reconciliation results.
+The signer never generates, stores or retrieves production keys. The consumer
+lists public keys only. Production private-key custody, issuer authorization and
+rotation are owner decisions outside this module; this contract chooses none of
+them. A stage-only key must be explicitly restricted to `['stage']` and cannot
+authorize a production receipt.
+
 Base keeps its edition registry and source-specific guides in its private
 authoring tree. They retain exact source identities and evidence pins and are
 not part of this reusable module. Review any consumer registry and its source
@@ -366,7 +507,8 @@ suites. The targeted crash and evidence-validation checks can be run with:
 ```sh
 TMPDIR="$PWD/../scratch" node --test \
   modules/import-kit/tests/core/crash.test.ts \
-  modules/import-kit/tests/status.test.ts
+  modules/import-kit/tests/status.test.ts \
+  modules/import-kit/tests/receipt.test.ts
 ```
 
 Set `TMPDIR` to an existing writable directory inside the work area before

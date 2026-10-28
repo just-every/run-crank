@@ -1,7 +1,6 @@
 // The /contract page's style, after run-site.ts's BASE (rer-consolidation
-// evidence/br-contract SPEC.md sections 3 to 6), whose header it keeps as every
-// page does. The status tokens are Base's defaults at zero specificity, so a
-// seed's rer-theme.css :root wins over them.
+// evidence/br-contract SPEC.md sections 3 to 6). The status tokens are Base's
+// defaults at zero specificity, so a seed's rer-theme.css :root wins over them.
 // This file is copied unchanged to src/base by both maintained exporters.
 const DEFAULTS = ':where(:root){--rer-done:#1e8458;--rer-partial:#e9a23b;--rer-missing:#d03f57;--rer-done-ink:#17744c;--rer-partial-ink:#8a5a00;--rer-missing-ink:#b02a43;'
   + '--rer-on-done:#fff;--rer-on-partial:var(--rer-text,#172033);--rer-on-missing:#fff}'
@@ -25,7 +24,7 @@ const PAGE = 'main{max-width:1440px;margin:0 auto;padding:0 56px}'
   + '@container (max-width:88px){.cnt{display:none}}@container (max-width:40px){.pct{display:none}}'
   + '.hero-foot{margin-top:14px;display:flex;justify-content:space-between;align-items:flex-start;gap:12px 32px;flex-wrap:wrap}'
   + '.legend{display:flex;flex-wrap:wrap;gap:10px 32px;font-size:18px;font-weight:500;color:var(--site-ink)}.legend li{display:flex;align-items:center;gap:10px}'
-  + '.judged{text-align:right;font-size:15px;line-height:1.6;color:var(--site-body)}.sha{font-family:var(--site-mono);font-size:.93em}'
+  + '.judged{text-align:right;font-size:15px;line-height:1.6;color:var(--site-body)}'
   // The cards: the kind split and product target, then areas beside clauses.
   + '.layout{margin-top:28px;display:grid;grid-template-columns:5fr 7fr;gap:20px}'
   + '.card{min-width:0;background:var(--rer-surface,#fff);border:1px solid var(--site-line);border-radius:min(var(--rer-radius,18px),20px);padding:24px;'
@@ -51,7 +50,7 @@ const PAGE = 'main{max-width:1440px;margin:0 auto;padding:0 56px}'
   // All clauses: search, chips, the live line and the table.
   + '.search{position:relative;display:block;width:min(300px,100%)}.search svg{position:absolute;left:14px;top:50%;width:16px;height:16px;transform:translateY(-50%);fill:none;stroke:var(--site-body);stroke-width:1.8;stroke-linecap:round}'
   + '.search input{width:100%;min-height:40px;padding:0 16px 0 38px;border:1px solid var(--site-line);border-radius:999px;background:var(--rer-surface,#fff);color:var(--site-ink);font:400 15px var(--rer-font-body,inherit)}'
-  + '.search input::placeholder{color:var(--site-body)}.search input:focus{outline:none;border-color:color-mix(in srgb,var(--rer-focus,var(--site-ink)) 55%,transparent);box-shadow:0 0 0 3px color-mix(in srgb,var(--rer-focus,var(--site-ink)) 28%,transparent)}'
+  + '.search input::placeholder{color:var(--site-body)}.search input:focus-visible{outline:3px solid var(--rer-focus,var(--site-ink));outline-offset:3px}'
   + '.chips{margin-top:14px;display:flex;flex-wrap:wrap;gap:8px}'
   + '.chips button,.clear{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:36px;padding:0 14px;border:1px solid var(--site-line);border-radius:999px;background:var(--rer-surface,#fff);color:var(--site-ink);font:500 14px/1 var(--rer-font-body,inherit);cursor:pointer}'
   + '.chips b{font-weight:600;font-variant-numeric:tabular-nums}.chips button[aria-pressed=true]{background:var(--site-accent);color:var(--site-accent-ink);border-color:var(--site-accent)}'
@@ -63,7 +62,8 @@ const PAGE = 'main{max-width:1440px;margin:0 auto;padding:0 56px}'
   + '.group th{padding:10px 8px;text-align:left;font-size:13.5px;font-weight:400;background:var(--contract-tint);border-top:1px solid var(--site-line)}'
   + '.group-name{font-weight:600;color:var(--site-ink);margin-right:8px}.group-counts{color:var(--site-body)}'
   + '.id a{font:500 13px/1.45 var(--site-mono);white-space:nowrap}.kind{display:block;font-size:13px;line-height:1.35;color:var(--site-body);white-space:nowrap}.st{display:inline-flex;align-items:center;gap:8px;font-weight:500}'
-  + '.path{display:block;font:13px/1.35 var(--site-mono);color:var(--site-ink)}.gap{display:block;color:var(--site-body);font-size:13.5px;line-height:1.4}.path+.gap{margin-top:2px}'
+  + '.evidence{display:block;color:var(--site-ink)}.gap{display:block;color:var(--site-body);font-size:13.5px;line-height:1.4}.evidence+.gap{margin-top:2px}'
+  + '.gap summary{cursor:pointer;color:var(--site-link);text-decoration:underline;text-underline-offset:3px}.gap summary:focus-visible{outline:3px solid var(--rer-focus,var(--site-ink));outline-offset:3px;border-radius:4px}.gap[open] summary{margin-bottom:6px}'
   + '.empty td{padding:22px 8px;color:var(--site-body)}.clear{margin-left:10px;min-height:32px}'
   // How statuses are judged, and the footer.
   + '.judging{margin-top:40px}.judging dl{margin-top:16px;display:grid;grid-template-columns:repeat(3,1fr);gap:24px}'

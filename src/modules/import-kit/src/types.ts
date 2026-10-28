@@ -12,7 +12,9 @@ export interface SourceArtifact { name: string; sha256: string; size: number; or
 export interface RetainedOriginal { jobId: string; kind: 'artifact' | 'attachment'; key: string; name: string; sha256: string; size: number; original: { status: 'retained'; base64: string } | UnavailableOriginal }
 /** Exact noncredential pagination query key; strict credential policy when omitted. */
 export type PaginationCursorPolicy = 'page-token-v1';
-export interface SourceBundle { paginationCursorPolicy?: PaginationCursorPolicy; records: SourceRecord[]; artifacts: SourceArtifact[]; diagnostics: Diagnostic[] }
+/** The door's sanitized form is the original custody, never the user's raw file. */
+export interface IntakeCustody { sanitized: true; allowlistSha256: string; inputFormat: 'csv' | 'ndjson' | 'json'; custodyFormat: 'ndjson' }
+export interface SourceBundle { intake?: IntakeCustody; paginationCursorPolicy?: PaginationCursorPolicy; records: SourceRecord[]; artifacts: SourceArtifact[]; diagnostics: Diagnostic[] }
 export interface ReaderLimits { maxBytes?: number; maxRecords?: number; maxRecordBytes?: number }
 export interface ParsedRecord { kind: string; sourceId: string; payload: Json; pointer?: string }
 /** 'refuse' (the default) rejects a source holding a credential value; 'remove'

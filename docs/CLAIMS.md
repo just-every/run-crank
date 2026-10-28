@@ -5,8 +5,8 @@ Generated from [CONTRACT.md](../CONTRACT.md). Status reports implementation and 
 | Clauses | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
 | Published | 9 | 3 | 0 | 12 |
-| Target and push further | 23 | 32 | 19 | 74 |
-| All | 32 | 35 | 19 | 86 |
+| Target and push further | 23 | 32 | 32 | 87 |
+| All | 32 | 35 | 32 | 99 |
 
 | Clause | Status | Evidence | Gap |
 | --- | --- | --- | --- |
@@ -96,3 +96,16 @@ Generated from [CONTRACT.md](../CONTRACT.md). Status reports implementation and 
 | BASE-004 | done | `LICENSE`; `package.json`; `README.md`; `tests/site.test.mjs`; `tests/ownership.test.mjs` | Every shipped step type finishes through HTTP/Cron with unconfigured outbound hosts blocked, including author domains, across restart/callback/approval. MIT text, metadata, README and built-site license link are checked; product route/step/screen and shared-source scan found no commercial entitlement gates. |
 | BASE-005 | partial | `RUN-LOCALLY.md`; `src/site/run.json`; `deploy.json`; `tests/runtime.mjs` | No supported own-server production path (a supervised workerd service with on-disk data, Cron and HTTPS); `rer dev` stops after 12 idle hours and is not a production service; live owner-account deploy is not proven by the cited tests. |
 | BOUND-001 | done | `tests/logic.test.mjs` (WORK-012 and WORK-002: no-code transforms, exact USD math, business days and line items write exact payloads or nothing); `tests/connections.test.mjs` (Regulated Gusto handoffs retain obligations until exact provider agreement and scope consent); `tests/gusto-handoff-journey.mjs` (gustoHandoffJourney: USD tax fields, ACH references, 1099 and W-2 worker readback, requirements and restart, company and operation consent, scopes, replacement and inactive restore); `tests/gusto-authority-journey.mjs` (gustoAuthorityJourney and gustoOwnerVersionFence: installed definition upgrade, second connection, company mismatch, stale consent commit, withdrawal, scope loss, replacement and revocation during admission and continuation, uncertain started write, native owner version and regrant); `tests/gusto-retry-journey.mjs` (gustoRetryJourney: actual in-request provider 429 Retry-After wait, positive retry control and withdrawal, scope loss, same-scope replacement and revocation before the next physical request); `tests/gusto-renewal-journey.mjs` (gustoRenewalJourney: unattended unchanged effective-scope renewal and changed-scope refusal); `tests/gusto-reconciliation-journey.mjs` (gustoReconciliationJourney: lost worker acknowledgement, restart, exact readback and once-only continuation, sealed financial disclosure and erasure); `tests/gusto-payment-reconciliation.mjs` (gustoPaymentReconciliationJourney: uncertain payment, paginated readback, current-consent decision and once-only continuation); `tests/gusto-sandbox.mjs` (1099 and W-2 native provider readback; onboarded and bank-verified Demo ACH payment e202bdd1-de17-474c-a967-a082ccc630ee and native Funded receipt); `tests/financial-browser.mjs` (responsibilities, consent and retained-run screens at 1440 and 390) |  |
+| BASE-AGENT-001 | missing |  | Not yet judged through this seed's own doors. |
+| BASE-AGENT-002 | missing |  | Not yet judged through this seed's own doors. |
+| BASE-AGENT-003 | missing |  | Not yet judged through this seed's own doors. |
+| BASE-AGENT-004 | missing |  | Not yet judged through this seed's own doors. |
+| BASE-AGENT-005 | missing |  | Not yet judged through this seed's own doors. |
+| BASE-AGENT-006 | missing |  | Not yet judged through this seed's own doors. |
+| BASE-AGENT-007 | missing |  | Not yet judged through this seed's own doors. |
+| BASE-AGENT-008 | missing |  | Not yet judged through this seed's own doors. |
+| BASE-AGENT-009 | missing |  | Not yet judged through this seed's own doors. |
+| BASE-AGENT-010 | missing |  | Not yet judged through this seed's own doors. |
+| BASE-AGENT-011 | missing |  | Not yet judged through this seed's own doors. |
+| BASE-AGENT-012 | missing |  | Not yet judged through this seed's own doors. |
+| BASE-AGENT-013 | missing |  | Not yet judged through this seed's own doors. |

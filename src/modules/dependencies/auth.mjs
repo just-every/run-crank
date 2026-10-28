@@ -35,7 +35,7 @@ export function linkedProviders(options) {
   async links(){const p=await current();const links=[...await staticProviders?.links()??[],...(p!==staticProviders?await p?.links()??[]:[])];return [...new Map(links.map(link=>[link.id,link])).values()];},
   // The Auth dependency is linked and unlinked through its own approval routes;
   // a static provider keeps its own pin controls.
-  async relink(id){if(id==='auth')throw new Error('Use the dependency link with fresh local owner proof');return staticProviders.relink(id);},
-  async unlink(id){if(id==='auth')throw new Error('Use the dependency unlink with fresh local owner proof');return staticProviders.unlink(id);},
+  async relink(id, audit){if(id==='auth')throw new Error('Use the dependency link with fresh local owner proof');return staticProviders.relink(id, audit);},
+  async unlink(id, audit){if(id==='auth')throw new Error('Use the dependency unlink with fresh local owner proof');return staticProviders.unlink(id, audit);},
  };
 }

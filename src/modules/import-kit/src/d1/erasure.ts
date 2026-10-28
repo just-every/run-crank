@@ -1,7 +1,7 @@
 import { erasedCustody } from './erased-custody.ts';
 import { targetGuards } from './target-guards.ts';
 import type { D1FieldMatch, D1ImportContext, D1RelatedErasure, D1Sql } from './types.ts';
-import { requestContext, packGuards, remaining, D1RequestLimitError } from './budget.ts';
+import { requestContext, limitStatements, packGuards, remaining, D1RequestLimitError } from './budget.ts';
 import { readAtomic, authority, finalAuthority, readonlyChecks, guard, sql, prepare } from './database.ts';
 import { decode } from './jobs.ts';
 import { retainPlan } from './plans.ts';
@@ -34,7 +34,7 @@ import { supersededEntries } from './erasure-superseded.ts';
  * must redact them. `related.fields` instead sanitizes peer values while
  * preserving their effects, provenance and reversible before-images. */
 export async function eraseD1ImportTarget(kind: string, id: string, nativeStatements: D1Sql[], context: D1ImportContext, related?: D1RelatedErasure): Promise<{ nativeResults: unknown[]; erasedRecords: number; fieldMatches: D1FieldMatch[] }> {
-  context = requestContext(context);
+  context = limitStatements(requestContext(context), 1000);
   if (related) related = { ...related, fields: fieldRedactions(related.fields) };
   if (context.originalErasurePolicy !== undefined && !['withdraw-affected-artifacts', 'withdraw-all-job-artifacts'].includes(context.originalErasurePolicy)) throw new Error('INVALID_ORIGINAL_ERASURE_POLICY');
   requireText(kind, 'target kind'); requireText(id, 'target id');
