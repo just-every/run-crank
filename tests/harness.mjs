@@ -50,8 +50,19 @@ async function appCustodyBarrierBundle() {
     });
   }}]})).outputFiles[0].text;
 }
+// Force a mistaken dispatch inside the comparison evaluator, so its transport
+// refusal is exercised through the same native HTTP comparison door.
+async function comparisonDispatchProbeBundle() {
+  return (await build({...bundleOptions,plugins:[{name:'comparison-dispatch-probe',setup(plugin){
+    plugin.onLoad({filter:/import-shadow\.ts$/},async({path})=>{
+      const contents=await readFile(path,'utf8'),boundary='const body = prepared.body ?';
+      assert.equal(contents.split(boundary).length,2);
+      return {contents:"import {sendRequest} from './connectors/request-transport'\n"+contents.replace(boundary,"await sendRequest(ctx,prepared,'synthetic-crank-no-credential',{} as any); "+boundary),loader:'ts'};
+    });
+  }}]})).outputFiles[0].text;
+}
 /** `edge` fakes third-party APIs at the network edge: a function from Request to a Response, or undefined to use the real network. */
-export async function harness(target,{emitted=false,edge,mailEdge,quoteCosts=true,bindings={},clock,digestCommitBarrier=false,appCustodyBarrier=false,beforeTeamMigration=false}={}) {
+export async function harness(target,{emitted=false,edge,mailEdge,quoteCosts=true,bindings={},clock,digestCommitBarrier=false,appCustodyBarrier=false,beforeTeamMigration=false,comparisonDispatchProbe=false}={}) {
   bundle ??= (await build(bundleOptions)).outputFiles[0].text;
   const port=await freePort(),origin=`http://127.0.0.1:${port}`,directory=await mkdtemp(join(tmpdir(),'crank-tests-'));
   const mail=[];
@@ -62,7 +73,7 @@ export async function harness(target,{emitted=false,edge,mailEdge,quoteCosts=tru
   // the undici dispatcher miniflare installs process-wide rejects before the receiver sees the request.
   const {'content-length':_,...headers}=Object.fromEntries(request.headers);return fetch(request.url,{method:request.method,headers,body:['GET','HEAD'].includes(request.method)?undefined:await request.arrayBuffer(),redirect:'manual'})},compatibilityDate:'2026-09-08',compatibilityFlags:['nodejs_compat'],d1Databases:{DB:'crank'},bindings:{AUTH_ORIGIN:origin,AUTH_LOCAL:'true',OWNER_EMAIL:'owner@example.test',SESSION_SECRET:'test-session-secret-01234567890123456789',SETUP_TOKEN:'synthetic-test-owner-claim-01234567890123456789',MAIL_PROVIDER:'resend',MAIL_API_KEY:'example-resend-test-key',MAIL_FROM:'Crank <auth@example.test>',RER_DEV_KEY:'test-dev-gate-0123456789012345678901234567890123',CRANK_TARGET_ORIGIN:target,...bindings}};
   const optionsFor=script=>({...convertV4MiniflareOptions({...legacyOptions,...(!emitted?{script}:{})}),resourcePersistencePath:directory});
-  const selectedBundle=appCustodyBarrier?await appCustodyBarrierBundle():digestCommitBarrier?await digestBarrierBundle():bundle;
+  const selectedBundle=comparisonDispatchProbe?await comparisonDispatchProbeBundle():appCustodyBarrier?await appCustodyBarrierBundle():digestCommitBarrier?await digestBarrierBundle():bundle;
   const atClock=(script,time)=>time ? `const RealDate=Date; globalThis.Date=class extends RealDate { constructor(...args) { super(...(args.length?args:[${Date.parse(time)}])); } static now(){return ${Date.parse(time)}} };\n`+script : script;
   let currentBundle=atClock(selectedBundle,clock);
   let mf=new Miniflare(optionsFor(currentBundle));

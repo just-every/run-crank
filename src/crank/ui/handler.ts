@@ -1,5 +1,6 @@
 import { editNative, EditError } from './editor/native'
 import type { EditFeedback } from './editor/native-view'
+import { comparisonList, comparisonView } from './import-comparison'
 import { watchedFieldsPanel } from './watched-fields'
 import { unitsUsd } from '../ops/usage-money'
 import { mcpClientsPanel, mcpCredentialView } from './mcp-clients'
@@ -175,6 +176,19 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
         const response = await call('/api/crank/data/retention/preview',{payload_days:form.payload_days,attachment_days:form.attachment_days,history_days:form.history_days}), preview:any = await response.json()
         if(!response.ok) return page('Retention refused',`<p class="notice">${esc(preview.error)}</p><a href="/app/data">Back to Data</a>`,{},response.status)
         return page('Retention dry run',retentionPreview(preview))
+      }
+      const comparisonForm=/^\/app\/import\/comparisons(?:\/([^/]+)\/(evaluate|observe|decisions))?$/.exec(url.pathname)
+      if (comparisonForm) {
+        requireOwner(actor)
+        const key=comparisonForm[1],action=comparisonForm[2]
+        let input:Record<string,unknown>
+        try {
+          input=key ? action==='decisions'?{event_id:form.event_id,reason:form.reason}:{event_id:form.event_id,sequence:Number(form.sequence),input:JSON.parse(form.input),...(action==='observe'?{result:JSON.parse(form.result),provenance:{kind:form.provenance_kind,label:form.provenance_label}}:{})}
+            :{workflow_id:form.workflow_id,draft_digest:form.draft_digest,source_system:form.source_system,source_workflow:form.source_workflow,source_revision:form.source_revision,non_sensitive:form.non_sensitive==='true'}
+        } catch {return page('Comparison refused','<p class="notice">Supply complete JSON for the event input and source result.</p><a href="/app/import/comparisons">Back to comparisons</a>',{},400)}
+        const response=await call('/api/crank/imports/comparisons'+(key?'/'+encodeURIComponent(key)+'/'+action:''),input),result:any=await response.json()
+        if(!response.ok)return page('Comparison refused',`<p class="notice">${esc(result.error)}</p><a href="/app/import/comparisons${key?'/'+encodeURIComponent(key):''}">Back to comparison</a>`,{},response.status)
+        return redirect('/app/import/comparisons/'+encodeURIComponent(result.id))
       }
       if (url.pathname.startsWith('/app/import/')) {
         requireOwner(actor)
@@ -427,6 +441,9 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
     if (heldPath) return page('Held work', usageHoldView(await read('/api/crank/holds/' + encodeURIComponent(heldPath[1]))), {state})
     if(url.pathname==='/app/access') {const response=await call('/auth/operators'), people=response.ok?await response.json():[]; return page('Access','<section class="panel"><h2>AI clients</h2><a href="/app/settings/mcp">Manage client tool servers</a></section>'+accessView({...state,people})+teamPanel(await read('/api/crank/team'),people as any[],await read('/api/crank/workflows'),[...await read('/api/crank/connections'),...(actor.role==='owner'?(await read('/api/crank/gateways')).gateways.filter((g:any)=>g.status==='active').map((g:any)=>({...g,id:gatewayScopeId(g.id)})):[])])+grantsPanel(await read('/api/crank/grants'),await read('/api/crank/workflows'),people as any[]),{state,intro:'Credentials for agents and sending apps, and the people who can sign in.'})}
     if(url.pathname==='/app/data') { const [retention,workflows,flows] = await Promise.all([read('/api/crank/data/retention'),read('/api/crank/workflows'),read('/api/crank/data/flows')]); return page('Data',dataFlowsPanel(flows)+dataView()+retentionPanels(retention,workflows)+sensitivePanel(retention.sensitive,workflows)+encryptionPanel(retention.sensitive)+erasurePanels((people=>Array.isArray(people)?people:people.operators??[])(await read('/auth/operators'))),{state,intro:'Export, restore and erase. Your data stays on this installation.'}) }
+    if(url.pathname==='/app/import/comparisons') return page('Migration comparisons',comparisonList(await read('/api/crank/imports/comparisons')),{state})
+    const comparisonPath=/^\/app\/import\/comparisons\/([^/]+)$/.exec(url.pathname)
+    if(comparisonPath)return page('Migration comparison',comparisonView(await read('/api/crank/imports/comparisons/'+encodeURIComponent(comparisonPath[1]))),{state})
     if(url.pathname==='/app/import') { const jobs=await call('/api/crank/imports'); if(!jobs.ok) throw new Error('Import journal unavailable'); return page('Move in',importView(await jobs.json() as any[],await read('/api/operator/import-settings')),{state,intro:'Bring workflows from another tool as drafts you review first.'}) }
     return page('Not found','<a href="/app">Return to flows</a>',{state},404)
   } catch(error:any) {
