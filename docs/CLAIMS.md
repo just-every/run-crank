@@ -5,8 +5,8 @@ Generated from [CONTRACT.md](../CONTRACT.md). Status reports implementation and 
 | Clauses | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
 | Published | 9 | 3 | 0 | 12 |
-| Target and push further | 23 | 30 | 21 | 74 |
-| All | 32 | 33 | 21 | 86 |
+| Target and push further | 23 | 31 | 20 | 74 |
+| All | 32 | 34 | 20 | 86 |
 
 | Clause | Status | Evidence | Gap |
 | --- | --- | --- | --- |
@@ -28,7 +28,7 @@ Generated from [CONTRACT.md](../CONTRACT.md). Status reports implementation and 
 | CONN-002 | partial | `src/crank/flows.ts`; `src/crank/delivery.ts`; `src/crank/tokens.ts`; `tests/crank.test.mjs`; `src/crank/connections/auth.ts`; `src/crank/connections/oauth.ts`; `src/crank/connections/store.ts`; `src/crank/connections/vault.ts`; `tests/connections.test.mjs`; `tests/logic.test.mjs` ; `tests/oauth-renewal-journey.mjs` (oauthRenewalJourney: unattended scheduled refresh, expiry/renewal history, one rotating refresh under concurrency, revoked refresh, scope refusal, secret-free history/export) | Team ownership transfer, provider-verified identity/shared-account admission and live provider consent/readback remain; renewing a scope never supplies new consent. |
 | CONN-003 | missing |  | No delivered product workflow. |
 | CONN-004 | partial | `src/crank/connectors/slack.ts`; `src/crank/triggers/slack-events.ts`; `tests/connections.test.mjs` | Nook and Teams; approval and failure notices to Slack; live Slack workspace proof needs an account. |
-| CONN-005 | missing |  | No delivered product workflow. |
+| CONN-005 | partial | `tests/sheets-search-journey.mjs` (sheetsSearchJourney and sheetsCustodyJourney, invoked by the Sheets registration in `tests/connections.test.mjs`: bounded typed exact row lookup, complete windows and search outcomes, consent and resource refusal, retained retry windows and sealed inactive custody); `tests/ownership.test.mjs` (owned installation registry journey via sheetsOwnership) | Native read-only Google Sheets exact typed column lookup within an explicit bounded worksheet rectangle only. Missing Airtable and Microsoft 365 test accounts; actual Google buyer consent and live resource readback remain required. Sheets, Excel and Airtable append-row, ordered append-batch, upsert and remaining queries; all watched and new-row behavior under TRIG-008; Drive, OneDrive and SharePoint file and folder custody and actions, SharePoint item triggers and writes, live named resource and field pickers, samples, source migration parity and every required cross-provider readback and lost-write journey remain obligations. This slice releases no TRIG-003, CONN-019 or WORK-001 hold. |
 | CONN-006 | missing |  | No delivered product workflow. |
 | CONN-007 | missing |  | No delivered product workflow. |
 | CONN-008 | missing |  | No delivered product workflow. |

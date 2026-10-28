@@ -785,3 +785,7 @@ test('Native Orbit snapshots admit watched deal changes and new records once, re
 test('Private custom find or create retains exact approval, key ownership and accountable readback',async()=>{
   const {customSearchJourney}=await import('./custom-search-journey.mjs');await customSearchJourney();
 });
+
+test('Sheets exact typed row search retains complete windows, current consent and sealed inactive custody',async()=>{
+  const {sheetsSearchJourney,sheetsCustodyJourney}=await import('./sheets-search-journey.mjs');await sheetsSearchJourney();await sheetsCustodyJourney();
+});

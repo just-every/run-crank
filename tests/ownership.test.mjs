@@ -92,7 +92,9 @@ test('BASE-001/BASE-004: an owned installation publishes and finishes every ship
     const orbitTypes = await orbitOwnership(h,fake,publish,startRun,stepOf);
     const { aiOwnership } = await import('./ai-steps-journey.mjs');
     const aiTypes = await aiOwnership(h,fake);
-    const succeeded = new Set([...done.steps.filter(s => s.status === 'succeeded').map(s => s.type), ...financialTypes, ...driftTypes, ...recurringTypes, ...orbitTypes, ...aiTypes]);
+    const { sheetsOwnership } = await import('./sheets-search-journey.mjs');
+    const sheetsTypes = await sheetsOwnership(h,fake);
+    const succeeded = new Set([...done.steps.filter(s => s.status === 'succeeded').map(s => s.type), ...financialTypes, ...driftTypes, ...recurringTypes, ...orbitTypes, ...aiTypes, ...sheetsTypes]);
     for (const type of [...Object.keys(STEP_TYPES), 'paths', 'loop']) assert.ok(succeeded.has(type), `BASE-004 needs a successful public-door journey for ${type}`);
     assert.deepEqual(refused, [], 'core operation never tries an author or other unconfigured host');
     assert.equal((await h.send('/app/workflow-runs/' + done.id, undefined, h.owner)).status, 200);

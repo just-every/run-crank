@@ -34,6 +34,7 @@ export async function graphDataFlows(env: CrankEnv, credential: (id: unknown) =>
         else if ((step.type.startsWith('nook.') || step.type.startsWith('orbit.'))) emit(path,step.type,input,step.connection_id,[siblingOrigin(step.connection_id)])
         else if (step.type.startsWith('quickbooks.')) emit(path,step.type,input,step.connection_id,['https://sandbox-quickbooks.api.intuit.com'])
         else if (step.type.startsWith('gusto.')) emit(path,step.type,input,step.connection_id,['https://api.gusto-demo.com','https://api.gusto.com'])
+        else if (step.type.startsWith('google_sheets.')) emit(path,step.type,{ spreadsheet_id: 'selected resource identifier', range: 'bounded worksheet coordinates' },step.connection_id,['https://sheets.googleapis.com'])
         else if (step.type.startsWith('google_calendar.')) emit(path,step.type,input,step.connection_id,['https://www.googleapis.com'])
         else if (step.type === 'http' || step.type === 'file.fetch' || step.type.startsWith('slack.')) {
           const readback = isObject(step.readback) ? step.readback : {}

@@ -187,7 +187,7 @@ export async function validateRestore({ read }) {
         const allowed=[search?.id,search?.find_or_create?.operation].filter(Boolean)
         if (!step.gateway_id || !search?.gateway || response.body_bytes>65536 || !allowed.some(operation=>url.pathname===`/api/crank/gateways/${encodeURIComponent(step.gateway_id)}/operations/${encodeURIComponent(operation)}/pages/0`)) return false;
       }
-      if (!step || !['http','file.fetch','custom.request'].includes(step.type) && !step.type.startsWith('orbit.') && !step.type.startsWith('nook.') && !step.type.startsWith('slack.') && !step.type.startsWith('quickbooks.') && !step.type.startsWith('gusto.')) return false;
+      if (!step || !['http','file.fetch','custom.request'].includes(step.type) && !step.type.startsWith('google_sheets.') && !step.type.startsWith('orbit.') && !step.type.startsWith('nook.') && !step.type.startsWith('slack.') && !step.type.startsWith('quickbooks.') && !step.type.startsWith('gusto.')) return false;
       const bound = (step.type === 'file.fetch' || step.type === 'nook.send_message' || step.type.startsWith('orbit.') ? 1 : step.type.startsWith('slack.') ? 4 : 2) * 1024 * 1024;
       if (!Number.isSafeInteger(checkpoint.ordinal) || checkpoint.ordinal < 0 || !/^[a-f0-9]{64}$/.test(checkpoint.request_key) || typeof checkpoint.operation_key !== 'string' || !checkpoint.operation_key) return false;
       if (!Number.isInteger(response.status) || response.status < 100 || response.status > 599 || !['http:', 'https:'].includes(url.protocol) || url.username || url.password || url.search || url.hash) return false;
@@ -197,7 +197,10 @@ export async function validateRestore({ read }) {
       let length = 0;
       for (const [index, chunk] of body.entries()) {
         if (chunk.chunk_index !== index || typeof chunk.content_base64 !== 'string') return false;
-        const bytes = atob(chunk.content_base64).length;
+        const expected = Math.min(65536, response.body_bytes - length);
+        const envelope = chunk.content_base64.startsWith('{"sealed":"crank-payload-v1"') ? JSON.parse(chunk.content_base64) : null;
+        if (envelope && (envelope.sealed !== 'crank-payload-v1' || !['customer','financial','health'].includes(envelope.c) || typeof envelope.k !== 'string' || atob(envelope.iv).length !== 12 || atob(envelope.ct).length !== JSON.stringify('x'.repeat(Math.ceil(expected / 3) * 4)).length + 16 || !(await rows('crank_payload_keys')).some(key => key.id === envelope.k && key.data_class === envelope.c))) return false;
+        const bytes = envelope ? expected : atob(chunk.content_base64).length;
         if (bytes !== Math.min(65536, response.body_bytes - length)) return false;
         length += bytes;
       }
