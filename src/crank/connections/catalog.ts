@@ -1,3 +1,4 @@
+import { SEARCH_SETTING_KEYS, TRANSFORM_ARGUMENTS } from '../ops/coverage-capabilities'
 import { HTTP_REQUEST_LIMIT } from '../connectors/rate-limit'
 import { RETRY_POLICY } from '../connectors/retry'
 import { LIMITS, OPERATORS } from '../engine/conditions'
@@ -7,7 +8,7 @@ import { POLL_INTERVALS } from '../triggers/definition'
 import { SIGNATURE_PRESETS } from '../triggers/signatures'
 import { PROVIDERS } from './oauth'
 
-const SEARCH_OUTCOMES = { outcomes: ['found', 'not found', 'multiple matches', 'truncated'], no_match: ['halt', 'continue'], multi_match: ['first', 'stop', 'all'] }
+const SEARCH_OUTCOMES = { outcomes: ['found', 'not found', 'multiple matches', 'truncated'], no_match: ['halt', 'continue'], multi_match: ['first', 'stop', 'all'], coverage_settings: SEARCH_SETTING_KEYS }
 const op = (id: string, name: string, extra: Record<string, unknown> = {}) => ({ id, name, ...extra })
 
 /** Native apps and built-in tools that exist in this installation, with their exact operations. */
@@ -23,7 +24,7 @@ export const CATALOG = [
   { app: 'schedule', name: 'Schedule', clauses: ['TRIG-002'], triggers: [op('every', 'Every N minutes', { trigger: 'schedule' }), op('daily', 'Daily, weekday or monthly time in an IANA timezone', { trigger: 'schedule', business_days: 'us_federal or custom calendar' })], actions: [], searches: [] },
   { app: 'rss', name: 'RSS, Atom and JSON Feed', clauses: ['TRIG-007'], triggers: [op('new_item', 'New item in one or several feeds', { trigger: 'feed', intervals_minutes: POLL_INTERVALS })], actions: [], searches: [] },
   { app: 'retrieve_poll', name: 'URL poll (Retrieve Poll)', clauses: ['TRIG-007'], triggers: [op('new_record', 'New record at a JSON path or XPath', { trigger: 'url_poll', pagination: ['cursor', 'page', 'link'], intervals_minutes: POLL_INTERVALS })], actions: [], searches: [] },
-  { app: 'formatter', name: 'Formatter', clauses: ['WORK-012', 'WORK-002'], triggers: [], actions: Object.keys(TRANSFORMS).map(name => op(name, name, { step: 'transform' })), searches: [] },
+  { app: 'formatter', name: 'Formatter', clauses: ['WORK-012', 'WORK-002'], triggers: [], actions: [op('map', 'Map named fields', { step: 'map' }), ...Object.keys(TRANSFORMS).map(name => op(name, name, { step: 'transform', coverage_arguments: TRANSFORM_ARGUMENTS[name] ?? null }))], searches: [] },
   { app: 'filter_paths', name: 'Filter and Paths', clauses: ['WORK-013'], operators: OPERATORS, limits: { rules_per_group: LIMITS.rulesPerGroup, groups: LIMITS.groups, branches: PATH_LIMITS.branches, nesting: PATH_LIMITS.depth }, triggers: [], actions: [op('filter', 'Filter', { step: 'filter' }), op('paths', 'Paths (exclusive or parallel, fallback or always-run)', { step: 'paths' })], searches: [] },
   { app: 'delay', name: 'Delay', clauses: ['WORK-004'], triggers: [], actions: [op('delay_for', 'Delay for (minutes to weeks, or business days)', { step: 'delay', mode: 'for' }), op('delay_until', 'Delay until', { step: 'delay', mode: 'until' }), op('delay_queue', 'Delay queue (named, shared, spaced)', { step: 'delay', mode: 'queue' }), op('wait_for_callback', 'Wait for a callback', { step: 'wait_for_callback' })], searches: [] },
   { app: 'approvals', name: 'Approvals', clauses: ['TEAM-005', 'TEAM-004'], triggers: [], actions: [op('approval', 'Approval with editable, capped fields', { step: 'approval' })], searches: [] },
