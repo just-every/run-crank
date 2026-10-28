@@ -1315,7 +1315,7 @@
       "executable": false
     },
     "management/integration/deployment-spec.json": {
-      "sha256": "393289ae23de1211b0a45b1cd717b1e9d0910b2d9fcf3483e30e71cae5bf7880",
+      "sha256": "230309407bf8523056f310b1fec24268a638e7a3f86b1a93702b6c51c7dff43e",
       "executable": false
     },
     "migrations/core/0001_owner.sql": {
