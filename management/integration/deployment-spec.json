@@ -534,6 +534,12 @@
       "name": "0085_model_response_identity.sql",
       "sha256": "e64f92bc122b5554cb98be23624201a521b0b7d2c74176059266cd4d588368db",
       "sql": "-- A bounded provider response identifier survives interruption of the later\n-- step-result transaction. Model text and credentials never enter this field.\nALTER TABLE crank_wf_attempts ADD COLUMN response_identity TEXT;\n"
+    },
+    {
+      "binding": "DB",
+      "name": "0086_checkpoint_subjects.sql",
+      "sha256": "b8ceff1fef6192af88a3f6740d0205f3d18ec44822b3c7c31caaeb368fed389a",
+      "sql": "-- Earlier maintenance sealed checkpoint chunks independently of their subject\n-- index. Rebuild the index for retained sealed runs, including already-sealed\n-- pages, before subject erasure can report a complete preview.\nUPDATE crank_wf_runs SET payload_index=NULL\nWHERE payload_key IS NOT NULL\n  AND EXISTS(SELECT 1 FROM crank_request_checkpoint_chunks p WHERE p.run_id=crank_wf_runs.id);\n"
     }
   ],
   "compatibilityDate": "2026-09-08",
