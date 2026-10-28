@@ -172,7 +172,22 @@ async function retainedPageProgress() {
   const due=await preview(h);
   assert.deepEqual(due.payload.app_snapshots.map(row=>row.record_id),[sha(eligible.id)]);
   assert.equal(due.payload.kept.filter(row=>row.reason==='legal hold').length,kept.length);
-  await h.tick(time);await h.restart({clock:new Date(time+=minute).toISOString()});await h.tick(time);
+  await h.tick(time);
+  const checkpoint=await h.send('/api/crank/data/export',{},h.owner);assert.equal(checkpoint.status,200,checkpoint.text);
+  const full=async source=>(await source.db.prepare('SELECT * FROM crank_app_snapshots WHERE workflow_id=? ORDER BY version_id,record_id').bind(w.id).all()).results;
+  const copy=await harness('http://127.0.0.1:9',{edge:edge.edge,clock:new Date(time+minute).toISOString()});
+  try {
+   await copy.post('./data/restore',{archive:checkpoint.text,confirm:'RESTORE'});
+   assert.deepEqual(await full(copy),await full(h),'snapshot payloads, clocks and scan progress travel together');
+   const inactive=await copy.get('workflows/'+w.id);assert.equal(inactive.status,'draft');assert.equal(inactive.published_version_id,null);
+   const reads=edge.requests.length;await copy.tick(time+minute);
+   assert.equal(edge.requests.length,reads,'inactive restored snapshots grant no provider request authority');
+   const restoredRows=await snapshots(copy,w);
+   assert.ok(!restoredRows.some(row=>row.record_id===sha(eligible.id)),'restored cleanup continues beyond the kept page');
+   assert.equal(restoredRows.length,kept.length,'restored subject holds still protect every payload');
+   assert.equal((await runs(copy,w)).length,0);
+  } finally {await copy.close()}
+  await h.restart({clock:new Date(time+=minute).toISOString()});await h.tick(time);
   const after=await snapshots(h,w);
   assert.ok(!after.some(row=>row.record_id===sha(eligible.id)),'eligible inactive payloads must expire beyond a full page of legally held snapshots after restart');
   assert.equal(after.length,kept.length,'every held payload remains retained');
