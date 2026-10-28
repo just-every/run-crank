@@ -147,7 +147,7 @@
       "executable": false
     },
     "base-copies.json": {
-      "sha256": "b67fff332407d84901f14976515ff1208cb9590a2ec130e30c59f4685c2900bf",
+      "sha256": "e4d7e14c4f4f93f81e32d740260723210bb9066da6d49394fb575d3e395c7de0",
       "executable": false
     },
     "CHANGELOG.md": {
@@ -223,7 +223,7 @@
       "executable": false
     },
     "docs/GETTING-STARTED.md": {
-      "sha256": "361f5626b5405fd80ef810755e47db76aeb775d014fc4fd2de7c10b62c28363b",
+      "sha256": "4c2dde84c15c418de19a7f9695152c7c0ad2019e3f3469fbd1703eee324905cc",
       "executable": false
     },
     "docs/IMPORTING.md": {
@@ -6015,7 +6015,7 @@
       "executable": false
     },
     "src/site/docs/build/render.ts": {
-      "sha256": "68be26312a8d0acd4289b85a9a5f61934bc5383440d00eebbfc304327cf643ec",
+      "sha256": "dee59712a615991fed89aa6de6fdfada9f9c3e77bafc67bf314aa120d3ed91bd",
       "executable": false
     },
     "src/site/docs/build/site.ts": {
@@ -6687,7 +6687,7 @@
       "executable": false
     },
     "tests/run-commands.mjs": {
-      "sha256": "375c725ae94eb18895d34ba5aff9d1ff8c578b88f4d870a8b239b19eac4e1369",
+      "sha256": "0dcebc8c1e0bc63a2276469cacc9f2fe84946959ecf018e85b1ec138a7cade63",
       "executable": false
     },
     "tests/run-notices-browser.mjs": {
