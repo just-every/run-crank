@@ -90,13 +90,13 @@ try {
    await attach(h,width);await page.goto(h.origin+`/app/workflows/${w.id}?step=trigger`);
    if(state==='snapshot-retention-preview') {
     await page.goto(h.origin+'/app/data');await page.getByLabel('Payload days',{exact:true}).fill('1');await page.getByRole('button',{name:'Preview what this removes',exact:true}).click();
-    await expect(page.getByRole('heading',{name:'Retention dry run',exact:true})).toBeVisible();
+    await expect(page.getByRole('heading',{name:'Retention dry run',exact:true,level:1})).toBeVisible();
     if(width===1440){await expect(page.locator('.retention-app-records .settings-row')).toHaveCount(1);await expect(page.locator('main')).toContainText('legal hold');await expect(page.locator('main')).toContainText('current published-version baseline')}
     await shot(width,state);return;
    }
    if(state==='unadmitted-subject-preview') {
     await page.goto(h.origin+'/app/data');await page.getByLabel('Identifier',{exact:true}).fill('Synthetic-Crank-21');await page.getByRole('button',{name:'Preview erasure',exact:true}).click();
-    await expect(page.getByRole('heading',{name:'Erasure preview',exact:true})).toBeVisible();await expect(page.getByText('Retained comparison data',{exact:true})).toBeVisible();
+    await expect(page.getByRole('heading',{name:'Erasure preview',exact:true,level:1})).toBeVisible();await expect(page.getByText('Retained comparison data',{exact:true})).toBeVisible();
     await expect(page.getByRole('button',{name:'Erase matching data',exact:true})).toBeVisible();await shot(width,state);return;
    }
    if(state==='watch-picker') {

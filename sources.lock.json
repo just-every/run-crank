@@ -5463,7 +5463,7 @@
       "executable": false
     },
     "tests/app-poll-browser.mjs": {
-      "sha256": "79ce04ae3e372e3a4633821b09ec24e13536fb9792795bdb8f176cf93defdb62",
+      "sha256": "839173868a304176ff569bbb150b17ac2f4179984bc498389341a6653beb8342",
       "executable": false
     },
     "tests/app-poll-journey.mjs": {
