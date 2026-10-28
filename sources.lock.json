@@ -4024,7 +4024,7 @@
       "executable": false
     },
     "src/crank/ui/editor/inspector.ts": {
-      "sha256": "02db38f4ddef49be67cff7a8a0e6082d282494495d93bba5ca5a123d99c72556",
+      "sha256": "eaf6538b38b9c434273bf48fcc1ae2b965fa590c1e1a8d9faf8d0ff1591f87be",
       "executable": false
     },
     "src/crank/ui/editor/model.ts": {
