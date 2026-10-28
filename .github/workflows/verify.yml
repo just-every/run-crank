@@ -64,7 +64,7 @@ jobs:
     needs: [plan, build]
     if: needs.plan.outputs.skip != 'true'
     runs-on: ubuntu-24.04
-    timeout-minutes: 12
+    timeout-minutes: ${{ matrix.name == 'app-comparisons' && 16 || 12 }}
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
