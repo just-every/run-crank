@@ -74,9 +74,10 @@ export async function migrationShadowJourney() {
   const difference=report.events.find(e=>e.sequence===6).differences.find(d=>d.field.endsWith('["customer"]'));
   assert.deepEqual(difference.source,{present:true,value:'synthetic-crank-6'});assert.deepEqual(difference.crank,{present:true,value:'synthetic-crank-wrong'});
   await h.post(base+key+'/cutover',{},h.owner,409);
-  report=await h.post(base+key+'/decisions',{event_id:bad.event_id,reason:'Synthetic mapping discrepancy accepted for inspection only'});
-  assert.equal(report.events.find(e=>e.sequence===6).decisions[0].reason,'Synthetic mapping discrepancy accepted for inspection only');assert.ok(report.events.find(e=>e.sequence===6).decisions[0].decided_by);
+  report=await h.post(base+key+'/decisions',{event_id:bad.event_id,reason:'Synthetic mapping discrepancy accepted for inspection only synthetic-crank-reviewer-subject'});
+  assert.equal(report.events.find(e=>e.sequence===6).decisions[0].reason,'Synthetic mapping discrepancy accepted for inspection only synthetic-crank-reviewer-subject');assert.ok(report.events.find(e=>e.sequence===6).decisions[0].decided_by);
   assert.equal(report.counts.consecutive,0,'a reason cannot turn a mismatch into a match');
+  for(const subject of ['synthetic-crank-reviewer-subject','synthetic-crank-shadow'])assert.ok((await h.post('data/subject',{subject})).import_comparisons.some(row=>row.id===key),'subject erasure includes decision reasons and source identity labels');
   const unpaired=observation(target,7);await h.post(base+key+'/observe',unpaired);
   assert.equal((await h.get(base+key)).events.find(e=>e.sequence===7).status,'unpaired');
   await h.restart();

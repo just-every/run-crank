@@ -2887,7 +2887,7 @@
       "executable": false
     },
     "src/crank/import-comparison.ts": {
-      "sha256": "c6eac0de919d18c20b532254b34a896fe5e22fce1b3f34d41e838c5512c6fe29",
+      "sha256": "6f830bb03f5e609c26d4de4d099bc1713d9e1669be058fb1676a251d7185ee99",
       "executable": false
     },
     "src/crank/import-door.ts": {
@@ -5895,7 +5895,7 @@
       "executable": false
     },
     "tests/migration-shadow-journey.mjs": {
-      "sha256": "99290c3e423a15bbf0cd09cf4dfd76bcee8aa4e97778bb3fdd6a455e53b30e6a",
+      "sha256": "2216a5fdc1cc74963d36569c44810396bc25bff46c3088b6cb99ddbea3920b3d",
       "executable": false
     },
     "tests/n8n-batch-journey.mjs": {
