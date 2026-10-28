@@ -101,6 +101,9 @@ export async function customSearchJourney() {
       await restored.tick();assert.equal((await restored.get('workflow-runs/'+portable.run.id)).status,'paused');
       assert.equal((await restored.db.prepare('SELECT count(*) AS n FROM crank_custom_search_keys').first()).n,0);
     }finally{await restored.close()}
+    const scopeBefore=f.arrivals.length;
+    await h.post(`custom-connectors/${f.definition.id}/versions/1/revoke-scopes`,{scopes:['records.write']});
+    const scopeDenied=await f.draft('synthetic-crank-982');assert.equal(scopeDenied.run.status,'failed');assert.equal(scopeDenied.run.error.custom_scope,true);assert.equal(f.arrivals.length,scopeBefore,'A revoked connector write scope cannot be supplied by search access');
     console.log('custom-search-journey PASS: exact approved creation, normalized-key concurrency, restart and durable recovery, conflict readback, safe failures and inactive portability');
   }finally{await f.close()}
 }

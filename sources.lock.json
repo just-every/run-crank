@@ -5587,7 +5587,7 @@
       "executable": false
     },
     "tests/custom-search-browser.mjs": {
-      "sha256": "554380293ad124b0112418a7be531e71ce15f13d5f76281afe4e8511dd808cfe",
+      "sha256": "29a0d26c045fcc862a750efadeeb3a97e058e63f6ccd6b357e58479ffb7aeb18",
       "executable": false
     },
     "tests/custom-search-fixture.mjs": {
@@ -5595,7 +5595,7 @@
       "executable": false
     },
     "tests/custom-search-journey.mjs": {
-      "sha256": "275f66425526686cd1bab96f7e25086648eea6c77a154e2b73d6d3db07bd910c",
+      "sha256": "0bf8393587a8bae322aac1323c973eb04ef00719beaf4071dfe50653ff4f3896",
       "executable": false
     },
     "tests/database-gateway-fixture.mjs": {
@@ -5935,7 +5935,7 @@
       "executable": false
     },
     "tests/private-write-browser.mjs": {
-      "sha256": "7891360f296ba00ad2952bc057026f60bfd16ac0233785e83d368f83c01e3625",
+      "sha256": "8960fd26f73cc85c62ebbff237d8a6c7c2d8510a3f284ad9adb26662f1508a5f",
       "executable": false
     },
     "tests/publish-authority.test.mjs": {

@@ -67,4 +67,5 @@ export async function customSearchBrowser({f,page,shots}) {
     const tip=control.locator('.control-tooltip-label');assert.equal(await tip.count(),1);
     await control.focus();assert.equal(await tip.evaluate(el=>getComputedStyle(el).visibility),'visible');
   }
+  return {created:completed.id,found:found.id,waiting:review.run.id};
 }
