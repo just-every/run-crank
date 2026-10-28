@@ -1,4 +1,6 @@
-import { guardedBatch, requireOwner, requirePrepare } from './access'
+import { requireCreationScope } from './team/resources'
+import { guardedBatch, requirePrepare, requirePublish } from './access'
+import { completeGrant } from './team/policy'
 import { auditStatement, auditStatementWhen } from './ops/audit'
 import { publishFlowUsageStatements } from './ops/usage'
 import { createdRecordGrants } from './team/policy'
@@ -22,20 +24,22 @@ export async function getFlow(env: CrankEnv, flowId: string): Promise<Flow> {
 }
 export async function createFlow(env: CrankEnv, actor: Actor, input: Record<string, unknown>): Promise<Flow> {
   requirePrepare(actor)
+  requireCreationScope(actor,'production',null)
   const flow: Flow = { id: id(), name: text(input.name, 'name'), source_app: text(input.source_app, 'source_app'), destination_app: text(input.destination_app, 'destination_app'), target_url: targetUrl(input.target_url, env), revision: 1, status: 'draft', created_by: actor.id, created_at: now() }
   requireValue(flow.source_app !== flow.destination_app, 'Choose two different apps')
-  await guardedBatch(env, actor, 'prepare', [stmt(env, `INSERT INTO crank_flows(id,name,source_app,destination_app,target_url,revision,status,created_by,created_at) VALUES(?,?,?,?,?,?,?,?,?)`, flow.id, flow.name, flow.source_app, flow.destination_app, flow.target_url, flow.revision, flow.status, flow.created_by, flow.created_at),
+  await guardedBatch(env, actor, 'prepare', [stmt(env, `INSERT INTO crank_flows(id,name,source_app,destination_app,target_url,revision,status,created_by,created_at,owner_id) VALUES(?,?,?,?,?,?,?,?,?,?)`, flow.id, flow.name, flow.source_app, flow.destination_app, flow.target_url, flow.revision, flow.status, flow.created_by, flow.created_at,actor.id),
     ...createdRecordGrants(env, actor, flow.id, 'crank_flows'),
     auditStatement(env, actor.id, 'flow.create', 'flow', flow.id)])
   return flow
 }
 export async function setFlowStatus(env: CrankEnv, actor: Actor, flowId: string, status: 'draft' | 'active'): Promise<Flow> {
-  requireOwner(actor)
+  requirePublish(actor)
+  requireValue(!actor.team || completeGrant(actor, 'publish', flowId), 'Publishing requires a complete grant for this flow', 403)
   const flow = await getFlow(env, flowId)
   if (status === 'active') targetUrl(flow.target_url, env)
   const usage = status === 'active' ? await publishFlowUsageStatements(env, flowId) : []
   const guard = id()
-  const result = await guardedBatch(env, actor, 'owner', [
+  const result = await guardedBatch(env, actor, 'publish', [
     stmt(env, `INSERT INTO crank_authority_guards(id,ok) SELECT ?,CASE WHEN EXISTS(SELECT 1 FROM crank_flows
       WHERE id=? AND revision=? AND target_url=? AND source_app=? AND destination_app=?) THEN 1 ELSE 0 END`,
     guard, flowId, flow.revision, flow.target_url, flow.source_app, flow.destination_app),

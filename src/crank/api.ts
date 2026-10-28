@@ -75,7 +75,6 @@ export async function crankApi(request: Request, env: CrankEnv): Promise<Respons
         await flushUsageNotices(env)
         return json('held' in result ? result : presentRun(result), 'held' in result ? 202 : 201)
       }
-      requireOwner(actor)
       if (request.body) await body(request)
       return json(await setFlowStatus(env, actor, flowId, action === 'activate' ? 'active' : 'draft'))
     }
