@@ -6,7 +6,7 @@
   "toolchain": {
     "id": "runeditrun/edition-authoring",
     "version": "1.1.0",
-    "sha256": "a44bae4aae36d7a2e3d5e2da4e080d3c92eb11f226f6e7322b23680f43e6f982"
+    "sha256": "5cfbabc877752218b1fdb82052bf220ee2be22ef21b573650005250661f70cd8"
   },
   "components": [
     {
