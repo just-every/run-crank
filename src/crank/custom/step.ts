@@ -90,7 +90,7 @@ export const customRequest:StepType={
     if(op.kind==='search' && !op.resource_page) {
       const records=Array.isArray(output)?output:isObject(output)?output.items??output.rows:null
       if(!Array.isArray(records) || records.some(record=>!isObject(record))) throw new StepError('provider','Custom search must return an array of records')
-      return searchOutcome(step,records as Record<string,unknown>[])
+      return searchOutcome(step,records as Record<string,unknown>[],isObject(output) && (output.truncated === true || output.complete === false))
     }
     return {status:'succeeded',output:{body:output,connector_id:row.id,connector_version:row.version,definition_digest:row.definition_digest}}
   },
@@ -108,6 +108,7 @@ function normalizeKeys(op:CustomOperation,input:Record<string,unknown>) {
   for (const [name,key] of Object.entries(op.find_or_create!.keys)) input[name]=normalized(input[name],key.match)
 }
 function records(output:unknown,op:CustomOperation,input:Record<string,unknown>) {
+  if (isObject(output) && (output.truncated === true || output.complete === false)) throw new StepError('provider','Custom key search is incomplete; no create decision can be established')
   const rows=Array.isArray(output)?output:isObject(output)?output.rows??output.items:null
   if (!Array.isArray(rows) || rows.some(row=>!isObject(row))) throw new StepError('provider','Custom search must return a bounded array of records')
   if (rows.length>500) throw new StepError('provider','Custom search exceeded 500 records')
