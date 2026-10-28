@@ -139,11 +139,12 @@ export async function comparisonDecision(env:CrankEnv,actor:Actor,key:string,inp
 
 // Comparison samples have an explicit non-sensitive boundary. They still follow
 // native subject erasure, legal holds and durable archive and redelivery fences.
-const HELD=`EXISTS(SELECT 1 FROM crank_legal_holds h WHERE h.released_at IS NULL AND ((h.kind='workflow' AND h.workflow_id=c.workflow_id) OR (h.kind='subject' AND instr(lower(c.draft_json||COALESCE(o.input_json,'')||COALESCE(o.source_json,'')||COALESCE(o.native_json,'')),h.subject_encoded)>0)))`
+const RETAINED=`c.draft_json||c.source_system||c.source_workflow||c.source_revision||COALESCE(o.input_json,'')||COALESCE(o.source_json,'')||COALESCE(o.native_json,'')||COALESCE((SELECT group_concat(d.reason) FROM crank_import_decisions d WHERE d.observation_id=o.id),'')`
+const HELD=`EXISTS(SELECT 1 FROM crank_legal_holds h WHERE h.released_at IS NULL AND ((h.kind='workflow' AND h.workflow_id=c.workflow_id) OR (h.kind='subject' AND instr(lower(${RETAINED}),h.subject_encoded)>0)))`
 export async function comparisonSubjects(env:CrankEnv,value:string) {
-  const rows=(await stmt(env,`SELECT c.id,c.workflow_id,w.status AS workflow_status,CASE WHEN ${HELD} THEN 1 ELSE 0 END AS held,c.draft_json,o.id AS observation_id,o.source_json,o.native_json,o.input_json
+  const rows=(await stmt(env,`SELECT c.id,c.workflow_id,w.status AS workflow_status,CASE WHEN ${HELD} THEN 1 ELSE 0 END AS held,c.draft_json,o.id AS observation_id,o.source_json,o.native_json,o.input_json,c.source_system,c.source_workflow,c.source_revision,(SELECT json_group_array(d.reason) FROM crank_import_decisions d WHERE d.observation_id=o.id) AS decisions_json
     FROM crank_import_comparisons c JOIN crank_workflows w ON w.id=c.workflow_id LEFT JOIN crank_import_observations o ON o.comparison_id=c.id
-    WHERE instr(lower(c.draft_json||COALESCE(o.input_json,'')||COALESCE(o.source_json,'')||COALESCE(o.native_json,'')),?)>0 ORDER BY c.id,o.id`,JSON.stringify(value).slice(1,-1)).all<{id:string;workflow_id:string;workflow_status:string;held:number}>()).results
+    WHERE instr(lower(${RETAINED}),?)>0 ORDER BY c.id,o.id`,JSON.stringify(value).slice(1,-1)).all<{id:string;workflow_id:string;workflow_status:string;held:number}>()).results
   return {records:[...new Map(rows.map(row=>[row.id,{id:row.id,workflow_id:row.workflow_id,blocked:row.held?'Release the legal hold first.':!['paused','draft'].includes(row.workflow_status)?'Pause its workflow first.':null}])).values()],digest:await digest(canonical(rows))}
 }
 export async function eraseComparison(env:CrankEnv,actor:Actor,portability:PortabilityFence,key:string) {
