@@ -61,7 +61,11 @@ test('TEAM-001: product scopes fence direct reads, lists, publication, review an
   const spend=await h.post(`workflows/${spending.id}/run`,{input:{}},operator.cookie,201),spendDecision={path:'review',digest:spend.waits[0].proposal_digest};
   await scope(approver,'approver',[spending.id],[]);
   assert.equal((await h.send(`/api/crank/workflow-runs/${spend.id}/approve`,spendDecision,approver.cookie)).status,403,'approvers also need the declared connection-use scope');
-  await scope(approver,'approver',[spending.id],[hidden.id]);
+  await h.post('team/'+approver.id,{grants:[{role:'approver',workflow_ids:[spending.id],connection_ids:[]},{role:'builder',workflow_ids:[spending.id],connection_ids:[hidden.id]}]});
+  assert.equal((await h.get('workflow-runs/'+spend.id,approver.cookie)).waits[0].can_review,false,'read authority cannot supply an approver’s missing account scope');
+  await h.post('team/'+approver.id,{grants:[{role:'viewer',workflow_ids:[spending.id],connection_ids:[]},{role:'approver',workflow_ids:[spending.id],connection_ids:[hidden.id]}]});
+  assert.equal((await h.get('workflow-runs/'+spend.id,approver.cookie)).waits[0].can_review,true,'a complete approver grant works after a status-only grant');
+
   assert.equal((await h.post(`workflow-runs/${spend.id}/approve`,spendDecision,approver.cookie)).status,'succeeded');assert.equal(edge.requests.length,1);
   let release;const arriving=new Promise(resolve=>release=resolve),encoder=new TextEncoder();
   const stream=new ReadableStream({async start(controller){controller.enqueue(encoder.encode('{"name":'));await arriving;controller.enqueue(encoder.encode('"A revoked builder must not save this"}'));controller.close()}});
@@ -81,7 +85,7 @@ test('TEAM-001: product scopes fence direct reads, lists, publication, review an
   const audit=await h.get('audit');assert.ok(audit.some(a=>a.action==='team.scope'));assert.ok(audit.some(a=>a.action==='workflow.transfer'));
   const archive=await h.post('data/export');assert.ok(!JSON.stringify(archive).includes('private-finance'));assert.ok(!JSON.stringify(archive).includes('hidden-account'));
   assert.ok(!archive.trim().split('\n').map(JSON.parse).flatMap(line=>line.items??[]).some(item=>item.kind==='row'&&item.table==='crank_team_access'));
-  const setup=await h.mf.dispatchFetch(h.origin+'/setup',{method:'POST',redirect:'manual',headers:{origin:h.origin,cookie:h.owner,'content-type':'application/x-www-form-urlencoded'},body:'confirm=yes'});assert.equal(setup.status,303);
+  const setup=await h.mf.dispatchFetch(h.origin+'/setup',{method:'POST',redirect:'manual',headers:{origin:h.origin,cookie:h.owner,'content-type':'application'+'/x-www-form-urlencoded'},body:'confirm=yes'});assert.equal(setup.status,303);
   const page=await h.send('/app/access',undefined,h.owner);assert.equal(page.status,200);assert.ok(page.text.includes('/api/crank/team/'+viewer.id));
  }finally{await h.close()}
 });
@@ -91,6 +95,11 @@ test('TEAM-001 / WORK-008: scoped builders freeze draft tests; both account bind
  const h=await harness('http://127.0.0.1:9',{edge:edge.edge});
  try{
   const builder=await invite(h,'Riley Chen'),viewer=await invite(h,'Sam Patel');
+  await h.post('team/'+builder.id,{role:'builder',workflow_ids:['workspace:production'],connection_ids:[]});
+  const workspaceDraft=await h.post('workflows',{name:'Synthetic workspace builder rehearsal',graph:{trigger:{type:'manual'},steps:[{id:'record',type:'map',input:{ok:true}}]}},builder.cookie,201);
+  const workspaceTest=await h.post(`workflows/${workspaceDraft.id}/test`,{bindings:{}},builder.cookie,201);
+  assert.equal(workspaceTest.status,'succeeded','a current workspace creation grant also authorizes its own draft test at dispatch');
+  assert.deepEqual(workspaceTest.steps[0].output,{ok:true});
   const account=await connection(h,{app:'http',label:'Harbour production ledger',auth_kind:'bearer',domains:['ledger.example'],secret:{token:fakeSecret('production')}});
   const sandbox=await connection(h,{app:'http',label:'Harbour test ledger',auth_kind:'bearer',domains:['ledger.example'],secret:{token:fakeSecret('sandbox')}});
   await h.post(`connections/${sandbox.id}/purpose`,{purpose:'test'});
@@ -161,7 +170,7 @@ test('TEAM-001 / WORK-008: scoped builders freeze draft tests; both account bind
 
 test('TEAM-001: complete explicit grants authorize native work, delegation, scoped recovery and value-free duties without cross-grant widening',async()=>{
  const edge=fakeEdge();edge.routes.set('grants.example',()=>jsonResponse({id:'synthetic-crank-receipt'},201));
- const h=await harness('http://127.0.0.1:9',{edge:edge.edge});
+ const h=await harness('http://127.0.0.1:9',{edge:edge.edge,clock:'2026-10-15T12:00:00.000Z'});
  try {
   const person=await invite(h,'Synthetic grant builder'),admin=await invite(h,'Synthetic delegated admin'),recipient=await invite(h,'Synthetic delegated builder'),auditor=await invite(h,'Synthetic audit reader'),billing=await invite(h,'Synthetic billing administrator');
   const c=await connection(h,{app:'http',label:'Synthetic account',auth_kind:'bearer',domains:['grants.example'],secret:{token:fakeSecret('grant-custody')}});
@@ -170,30 +179,83 @@ test('TEAM-001: complete explicit grants authorize native work, delegation, scop
   const grant=(role,workflow_ids=[],connection_ids=[])=>({role,workflow_ids,connection_ids});
   const assign=(p,grants,cookie=h.owner,status=200)=>h.post('team/'+p.id,{grants},cookie,status);
   await h.get('workflows/'+w.id,person.cookie,403);
+  const setup=await h.mf.dispatchFetch(h.origin+'/setup',{method:'POST',redirect:'manual',headers:{origin:h.origin,cookie:h.owner,'content-type':'application'+'/x-www-form-urlencoded'},body:'confirm=yes'});assert.equal(setup.status,303);
+  await h.post(`workflows/${w.id}/draft`,{graph:{...graph,steps:[{...graph.steps[0],input:{...graph.steps[0].input,body:{...graph.steps[0].input.body,reviewed:true}}}]}});
   await assign(person,[grant('builder',[w.id]),grant('viewer',[w.id],[c.id])]);
+  const publishDoor=`value="/api/crank/workflows/${w.id}/publish"`;
+  const incompleteScreen=await h.send('/app/workflows/'+w.id,undefined,person.cookie);assert.equal(incompleteScreen.status,200);assert.ok(!incompleteScreen.text.includes(publishDoor),'the editor cannot borrow accounts from a viewer grant');
   await h.post(`workflows/${w.id}/publish`,{},person.cookie,403);
   assert.equal(edge.requests.length,0);
-  await assign(person,[grant('builder',[w.id],[c.id]),grant('viewer',[other.id])]);
+  await h.post(`workflows/${w.id}/estimate`,{cost:{components:['orchestration','connectors','models','executors'].map(kind=>({kind,usd_per_run:'0',assumption:'Synthetic authority fixture with no provider charge'}))}});
+  await assign(person,[grant('viewer',[w.id,other.id]),grant('builder',[w.id],[c.id])]);
+  const completeScreen=await h.send('/app/workflows/'+w.id,undefined,person.cookie);assert.equal(completeScreen.status,200);assert.ok(completeScreen.text.includes(publishDoor),'a complete builder grant remains usable after a viewer grant');
   const published=await h.post(`workflows/${w.id}/publish`,{},person.cookie,201);
   assert.equal(published.version.authority.publisher,person.id);
   await h.post(`workflows/${other.id}/draft`,{name:'Refused cross-grant write'},person.cookie,403);
-  const privateRun=await h.post(`workflows/${other.id}/run`,{business_key:'synthetic-crank-hidden-key',input:{customer:'synthetic-crank-hidden-payload'}},h.owner,201);
-  const mixed=await h.get('workflow-runs',person.cookie);
-  const hiddenRow=mixed.runs.find(row=>row.id===privateRun.id);assert.ok(hiddenRow);
-  assert.equal(hiddenRow.trigger,undefined,'viewer scope must restrict search payload even with a builder grant elsewhere');
-  assert.equal(hiddenRow.business_key,null);
-  assert.deepEqual((await h.get('workflow-runs?business_key=synthetic-crank-hidden-key',person.cookie)).runs,[],'exact business-key filtering cannot probe a status-only workflow');
-  assert.deepEqual((await h.get('workflow-runs?q=synthetic-crank-hidden-payload',person.cookie)).runs,[],'text search cannot probe a status-only workflow');
-  assert.equal((await h.get('workflow-runs/'+privateRun.id,person.cookie)).trigger,undefined);
-  const visibleRun=await h.post(`workflows/${w.id}/run`,{input:{customer:'synthetic-crank-visible-payload'}},h.owner,201);
-  assert.deepEqual((await h.get('workflow-runs?q=synthetic-crank-visible-payload',person.cookie)).runs.map(row=>row.id),[visibleRun.id]);
+  const visible=await h.post(`workflows/${w.id}/run`,{input:{customer:'synthetic-crank-allowed-payload'}},h.owner,201);
+  const restricted=await h.post(`workflows/${other.id}/run`,{input:{customer:'synthetic-crank-restricted-payload'},business_key:'synthetic-crank-restricted-key'},h.owner,201);
+  const emptyKey=await h.post(`workflows/${other.id}/run`,{input:{customer:'synthetic-crank-empty-key-payload'},business_key:''},h.owner,201);
+  assert.deepEqual((await h.get('workflow-runs?business_key=')).runs.map(row=>row.id),[emptyKey.id],'the owner can search an explicitly empty business key');
+  const legacyVisible=await h.flow('Synthetic complete legacy read'),legacyRestricted=await h.flow('Synthetic status-only legacy read');
+  const legacyRuns=[await h.run(legacyVisible,'synthetic-crank-mixed-one',{customer:'synthetic-crank-legacy-allowed'}),await h.run(legacyRestricted,'synthetic-crank-mixed-two',{customer:'synthetic-crank-legacy-restricted'})];
+  for(const grants of [
+   [grant('builder',[w.id,legacyVisible.id],[c.id]),grant('viewer',[other.id,legacyRestricted.id])],
+   [grant('viewer',[other.id,legacyRestricted.id]),grant('builder',[w.id,legacyVisible.id],[c.id])],
+  ]) {
+   await assign(person,grants);
+   const listed=(await h.get('workflow-runs',person.cookie)).runs;
+   assert.deepEqual(listed.map(row=>row.id).sort(),[visible.id,restricted.id,emptyKey.id].sort());
+   assert.equal(listed.find(row=>row.id===visible.id).trigger.input.customer,'synthetic-crank-allowed-payload');
+   const hidden=listed.find(row=>row.id===restricted.id);assert.equal(hidden.payload,'restricted');assert.equal(hidden.trigger,undefined);assert.equal(hidden.business_key,null);
+   assert.equal((await h.get('workflow-runs/'+restricted.id,person.cookie)).payload,'restricted');
+   assert.deepEqual((await h.get('workflow-runs?q=synthetic-crank-restricted-payload',person.cookie)).runs,[]);
+   assert.deepEqual((await h.get('workflow-runs?business_key=synthetic-crank-restricted-key',person.cookie)).runs,[]);
+   assert.deepEqual((await h.get('workflow-runs?business_key=',person.cookie)).runs,[],'an empty business-key filter cannot probe a status-only workflow');
+   assert.deepEqual((await h.get('workflow-runs?q=',person.cookie)).runs.map(row=>row.id),[visible.id],'an explicitly empty text query still uses payload read scopes');
+   assert.deepEqual((await h.get('workflow-runs?q=synthetic-crank-allowed-payload',person.cookie)).runs.map(row=>row.id),[visible.id]);
+   const state=await h.get('state',person.cookie);
+   assert.equal(state.runs.find(row=>row.id===legacyRuns[0].id).input.customer,'synthetic-crank-legacy-allowed');
+   assert.equal(state.runs.find(row=>row.id===legacyRuns[1].id).payload,'restricted');
+   assert.ok(!JSON.stringify(state).includes('synthetic-crank-legacy-restricted'));
+   assert.equal((await h.get('runs/'+legacyRuns[1].id,person.cookie)).payload,'restricted');
+   assert.deepEqual((await h.get('runs/'+legacyRuns[0].id,person.cookie)).input,{customer:'synthetic-crank-legacy-allowed'});
+  }
   await assign(admin,[grant('admin',[w.id],[c.id])]);
-  await assign(recipient,[grant('approver',[w.id],[c.id])],admin.cookie,403);
-  await assign(recipient,[grant('admin',[w.id],[c.id]),grant('approver',[w.id],[c.id])],admin.cookie,403);
   await assign(recipient,[grant('builder',[w.id],[c.id])],admin.cookie);
   await h.post(`workflows/${w.id}/draft`,{name:'Delegated builder draft'},recipient.cookie);
   await assign(recipient,[grant('builder',[other.id],[c.id])],admin.cookie,403);
   await assign(recipient,[grant('auditor')],admin.cookie,403);
+  await assign(recipient,[grant('approver',[w.id],[c.id])],admin.cookie,403);
+  await assign(admin,[grant('admin',[w.id],[c.id]),grant('approver',[w.id],[c.id])]);
+  await assign(recipient,[grant('approver',[w.id],[c.id])],admin.cookie,403);
+  await assign(admin,[grant('admin',['workspace:production'])]);
+  await assign(recipient,[]);
+  await assign(recipient,[grant('builder',['workspace:production'])],admin.cookie);
+  const created=await h.post('workflows',{name:'Synthetic delegated creation',graph:{trigger:{type:'manual'},steps:[{id:'record',type:'map',input:{ok:true}}]}},recipient.cookie,201);
+  assert.equal((await h.get('workflows/'+created.id,recipient.cookie)).name,'Synthetic delegated creation');
+  await h.get('workflows/'+created.id,admin.cookie,403);
+  await h.get('workflows/'+w.id,recipient.cookie,403);
+  await h.post('workflows',{name:'Synthetic denied environment',environment:'sandbox',graph:{trigger:{type:'manual'},steps:[{id:'record',type:'map',input:{ok:true}}]}},recipient.cookie,403);
+  const createdLegacy=await h.post('flows',{name:'Synthetic delegated legacy draft',source_app:'Synthetic source',destination_app:'Synthetic destination',target_url:'http://127.0.0.1:9/events'},recipient.cookie,201);
+  assert.equal((await h.get('flows/'+createdLegacy.id,recipient.cookie)).status,'draft');
+  await h.get('flows/'+createdLegacy.id,admin.cookie,403);
+  await assign(recipient,[]);
+  await h.get('workflows/'+created.id,recipient.cookie,403);
+  await h.get('flows/'+createdLegacy.id,recipient.cookie,403);
+  await assign(recipient,[grant('builder',['workspace:production'])],admin.cookie);
+  await h.get('workflows/'+created.id,recipient.cookie,403);
+  await h.get('flows/'+createdLegacy.id,recipient.cookie,403);
+  const fresh=await h.post('workflows',{name:'Synthetic delegated creation after revocation',graph:{trigger:{type:'manual'},steps:[{id:'record',type:'map',input:{ok:true}}]}},recipient.cookie,201);
+  assert.equal((await h.get('workflows/'+fresh.id,recipient.cookie)).name,'Synthetic delegated creation after revocation');
+  const freshLegacy=await h.post('flows',{name:'Synthetic delegated legacy draft after revocation',source_app:'Synthetic source',destination_app:'Synthetic destination',target_url:'http://127.0.0.1:9/events'},recipient.cookie,201);
+  assert.equal((await h.get('flows/'+freshLegacy.id,recipient.cookie)).status,'draft');
+  await h.get('workflows/'+created.id,recipient.cookie,403);
+  await h.get('flows/'+createdLegacy.id,recipient.cookie,403);
+  await assign(recipient,[],admin.cookie);
+  await h.get('workflows/'+fresh.id,recipient.cookie,403);
+  await h.get('flows/'+freshLegacy.id,recipient.cookie,403);
+  await assign(recipient,[grant('builder',[w.id],[c.id])]);
+  await assign(admin,[grant('admin',[w.id],[c.id])]);
   await h.post('data/export',{},admin.cookie,403);
   let release;const gate=new Promise(resolve=>release=resolve),encoder=new TextEncoder();
   const stream=new ReadableStream({async start(controller){controller.enqueue(encoder.encode('{"grants":'));await gate;controller.enqueue(encoder.encode(JSON.stringify([grant('viewer',[w.id])])+'}'));controller.close()}});
@@ -214,7 +276,11 @@ test('TEAM-001: complete explicit grants authorize native work, delegation, scop
   const auditExport=(await h.get('audit/export',auditor.cookie)).trim().split('\n').map(JSON.parse);
   assert.ok(auditExport.some(row=>row.action==='audit.export'&&row.actor_id===auditor.id));
   assert.ok(auditExport.every(row=>row.detail===undefined&&row.detail_json===undefined));
-  const totals=await h.get('reports/usage',billing.cookie);assert.deepEqual(totals.map(row=>({runs:row.runs,accounted_units:row.accounted_units})),[{runs:3,accounted_units:'0'}]);
+  await assign(auditor,[grant('viewer'),grant('auditor'),grant('billing')]);
+  const duties=await h.send('/app/account',undefined,auditor.cookie);assert.equal(duties.status,200);
+  for(const path of ['/app/audit','/app/billing']) {assert.ok(duties.text.includes(`href="${path}"`));assert.equal((await h.send(path,undefined,auditor.cookie)).status,200)}
+  await h.get('./reports/usage',auditor.cookie);
+  const totals=await h.get('./reports/usage',billing.cookie);assert.deepEqual(totals.map(row=>({runs:row.runs,accounted_units:row.accounted_units})),[{runs:6,accounted_units:'0'}]);
   for(const p of [auditor,billing]) {
    for(const path of ['connections','workflows','workflow-runs']) assert.deepEqual((await h.get(path,p.cookie)).runs??await h.get(path,p.cookie),[]);
    await h.get('workflow-runs/'+run.id,p.cookie,403);await h.post('data/export',{},p.cookie,403);
@@ -222,16 +288,6 @@ test('TEAM-001: complete explicit grants authorize native work, delegation, scop
   }
   assert.ok(!JSON.stringify([history,totals]).includes('synthetic-crank-customer-private'));
   assert.ok(!JSON.stringify([history,totals]).includes('grant-custody'));
-  const legacyVisible=await h.flow('Synthetic visible legacy flow'),legacyHidden=await h.flow('Synthetic status-only legacy flow');
-  const visibleLegacy=await h.run(legacyVisible,'synthetic-crank-visible-legacy',{customer:'synthetic-crank-visible-legacy'});
-  const hiddenLegacy=await h.run(legacyHidden,'synthetic-crank-hidden-legacy',{customer:'synthetic-crank-hidden-legacy'});
-  await assign(person,[grant('builder',[legacyVisible.id]),grant('viewer',[legacyHidden.id])]);
-  const legacyState=await h.get('state',person.cookie);
-  assert.deepEqual(legacyState.runs.find(row=>row.id===visibleLegacy.id).input,{customer:'synthetic-crank-visible-legacy'});
-  assert.equal(legacyState.runs.find(row=>row.id===hiddenLegacy.id).input,undefined,'legacy dashboard applies payload permission per flow');
-  assert.ok(!JSON.stringify(legacyState).includes('synthetic-crank-hidden-legacy'));
-  const hiddenDetail=await h.get('runs/'+hiddenLegacy.id,person.cookie);assert.equal(hiddenDetail.input,undefined);assert.equal(hiddenDetail.payload,'restricted');
-  assert.deepEqual((await h.get('runs/'+visibleLegacy.id,person.cookie)).input,{customer:'synthetic-crank-visible-legacy'});
   const reviewWorkflow=await publish(h,'Synthetic owner separation',{trigger:{type:'manual'},steps:[{id:'review',type:'approval',input:{amount:'25.00'}}]});
   const ownerRun=await h.send('/api/crank/workflows/'+reviewWorkflow.id+'/run',{input:{}},h.owner);assert.equal(ownerRun.status,201);
   await h.post(`workflow-runs/${ownerRun.value.id}/approve`,{path:'review',digest:ownerRun.value.waits[0].proposal_digest},h.owner,403);
@@ -254,13 +310,18 @@ test('TEAM-001: the native upgrade snapshots exact existing Base access once and
  const h=await harness('http://127.0.0.1:9',{beforeTeamMigration:true});
  try {
   const w=await publish(h,'Synthetic migration workflow',{trigger:{type:'manual'},steps:[{id:'record',type:'map',input:{ok:true}}]});
-  const admin=await invite(h,'Synthetic migrating administrator','admin'),viewer=await invite(h,'Synthetic migrating reader');
+  const admin=await invite(h,'Synthetic migrating administrator','admin'),viewer=await invite(h,'Synthetic migrating reader'),scoped=await invite(h,'Synthetic already scoped reader');
+  // This is an existing installation's single-role row before the upgrade adds explicit grants.
+  await h.db.prepare('INSERT INTO crank_team_access(operator_id,role,workflow_ids_json,connection_ids_json,revision,changed_by,changed_at) VALUES(?,?,?,?,?,?,?)').bind(scoped.id,'viewer',JSON.stringify([w.id]),'[]','synthetic-crank-old-scope','synthetic-crank-migration-fixture',new Date().toISOString()).run();
   await h.migrateTeam();
-  const reports=await h.get('team/migration');
-  assert.deepEqual(reports.map(row=>row.operator_id).sort(),[admin.id,viewer.id].sort());
+  const reports=await h.get('./team/migration');
+  assert.deepEqual(reports.map(row=>row.operator_id).sort(),[admin.id,viewer.id,scoped.id].sort());
   for(const row of reports){assert.equal(row.gained_access,0);assert.deepEqual(row.grants[0].workflow_ids.slice().sort(),(row.operator_id===admin.id?[w.id,'workspace:production']:[w.id]).sort());assert.deepEqual(row.grants[0].connection_ids,[])}
   assert.deepEqual(reports.find(row=>row.operator_id===admin.id).grants[0].actions,['read','prepare','start']);
   assert.deepEqual(reports.find(row=>row.operator_id===viewer.id).grants[0].actions,['read']);
+  assert.deepEqual(reports.find(row=>row.operator_id===scoped.id).grants,[{role:'viewer',workflow_ids:[w.id],connection_ids:[]}]);
+  assert.equal((await h.get('workflows/'+w.id,scoped.cookie)).name,'Synthetic migration workflow');
+  await h.post(`workflows/${w.id}/draft`,{name:'Refused scoped migration widening'},scoped.cookie,403);
   await h.post(`workflows/${w.id}/draft`,{name:'Migrated edit remains authorized'},admin.cookie);
   await h.post(`workflows/${w.id}/publish`,{},admin.cookie,403);
   await h.post(`workflows/${w.id}/test`,{bindings:{}},admin.cookie,403);
@@ -272,9 +333,21 @@ test('TEAM-001: the native upgrade snapshots exact existing Base access once and
   await h.post('workflows',{name:'Refused cross-environment creation',environment:'sandbox',graph:{trigger:{type:'manual'},steps:[{id:'record',type:'map',input:{ok:true}}]}},admin.cookie,403);
   const later=await publish(h,'Synthetic post-migration record',{trigger:{type:'manual'},steps:[{id:'record',type:'map',input:{ok:true}}]});
   await h.get('workflows/'+later.id,admin.cookie,403);
+  await h.get('workflows/'+later.id,scoped.cookie,403);
   const newcomer=await invite(h,'Synthetic new ungranted administrator','admin');
   await h.get('workflows/'+w.id,newcomer.cookie,403);
-  await h.restart();assert.deepEqual(await h.get('team/migration'),reports,'restart never widens or repeats the migration snapshot');
+  await h.restart();assert.deepEqual(await h.get('./team/migration'),reports,'restart never widens or repeats the migration snapshot');
+  const before=(await h.get('team')).find(row=>row.operator_id===admin.id);
+  await h.post('team/'+admin.id,{role:'viewer',workflow_ids:[later.id],connection_ids:[],grant_mode:'add'});
+  const appended=(await h.get('team')).find(row=>row.operator_id===admin.id);
+  assert.deepEqual(appended.grants,[...before.grants,{role:'viewer',workflow_ids:[later.id],connection_ids:[]}],'adding a grant retains the exact migrated action limits');
+  assert.equal((await h.get('workflows/'+later.id,admin.cookie)).name,'Synthetic post-migration record');
+  await h.post(`workflows/${later.id}/draft`,{name:'Refused appended viewer edit'},admin.cookie,403);
+  await h.post(`workflows/${w.id}/publish`,{},admin.cookie,403);
+  await h.post(`workflows/${w.id}/test`,{bindings:{}},admin.cookie,403);
+  await h.post('team/'+admin.id,{grants:[{role:'admin',actions:['publish'],workflow_ids:[w.id],connection_ids:[]}],grant_mode:'add'},h.owner,422);
+  assert.deepEqual((await h.get('team')).find(row=>row.operator_id===admin.id).grants,appended.grants,'submitted action limits cannot replace retained migration limits');
+  assert.deepEqual(await h.get('./team/migration'),reports,'later explicit grants never rewrite the one-time report');
   const archive=await h.post('data/export');
   assert.ok(!archive.trim().split('\n').map(JSON.parse).flatMap(line=>line.items??[]).some(item=>['crank_team_access','crank_team_migration_reports'].includes(item.table)));
  }finally{await h.close()}
