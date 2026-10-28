@@ -127,7 +127,7 @@
       "executable": false
     },
     ".github/workflows/verify.yml": {
-      "sha256": "5ff4a88af1f55f97c4c7ab382a6a7cf806f7594a373d3f622531a34ad84b7a65",
+      "sha256": "661ec31f138086a1a8af9fa473c3a44497f948c08724023ea61753e96c8c807c",
       "executable": false
     },
     ".gitignore": {
@@ -2703,15 +2703,15 @@
       "executable": false
     },
     "scripts/verify-app.mjs": {
-      "sha256": "3bcb2de3c23ba3ab7207d0c995b3afc408029592b066de2c15159010001cff45",
+      "sha256": "53d32df18fc683c843d980a06e5e92b4c4029af9e307027307678ea28cf888e4",
       "executable": false
     },
     "scripts/verify-ci.mjs": {
-      "sha256": "85a5c88e34df65f9516988f9cd368ee7bec007d67c5364bbfeda046bd0810c51",
+      "sha256": "1da44dfa8e543e14eda47ffac50e21db445189d0e91b226e08b27a6390482b20",
       "executable": false
     },
     "scripts/verify-plan.mjs": {
-      "sha256": "3eefaa27f9a2578ab41a6311f8753035ef47ca6f1ac673ebe2c08d0cb9e82b87",
+      "sha256": "9e5b07086b15a691d5763606b2fbdaf742c9ccda2527f5c639c5efaa1c956aaf",
       "executable": false
     },
     "sdk/errors.js": {
@@ -6031,7 +6031,7 @@
       "executable": false
     },
     "src/site/docs/DocsIndex.tsx": {
-      "sha256": "058acb7b41316eeb640bccc379b94bce942c6e024bb3a00543af190cdebcca67",
+      "sha256": "8339535198f054c0a820f84046db925f907caa488195b6719294e067f1fed7b9",
       "executable": false
     },
     "src/site/docs/DocsNav.tsx": {
@@ -6095,11 +6095,15 @@
       "executable": false
     },
     "src/site/pages.tsx": {
-      "sha256": "792a6de0212db9adadc871ff07fb2a63b4c72798a79fddabc214fde76a41f231",
+      "sha256": "94c4c9eaf193d68e2fe5ae8e26ba3dc3d30c9589e4f482ba4bca34e7a7ebe73c",
       "executable": false
     },
     "src/site/run.json": {
       "sha256": "77305401916c07df913bd304180127367a4d4444fd679b9fb4976862cac1d33d",
+      "executable": false
+    },
+    "src/site/run.ts": {
+      "sha256": "109af7c25f4227a6ff9ed61402de6009e9199d39aa975693e8a6d94143fe639f",
       "executable": false
     },
     "src/site/shell/Actions.tsx": {

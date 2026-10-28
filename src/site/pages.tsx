@@ -4,12 +4,14 @@
 import type { ReactElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { contractPageHtml } from '../base/contract-page'
+import { hostingPageHtml } from '../base/hosting-page'
 import { runPageHtml, siteNotFoundHtml, type SiteBuild, type SiteContext } from '../base/run-site'
 import { identity } from '../identity'
 import { DocsArticle } from './docs/DocsArticle'
 import { DocsIndex } from './docs/DocsIndex'
 import { docsHead, docsPages } from './docs/pages'
 import { Landing } from './landing/Landing'
+import { SiteHeader } from './shell/SiteHeader'
 import { run } from './run'
 
 // Code cards get their Copy button only when script runs; without it the command is still there to select.
@@ -17,7 +19,10 @@ const COPY = "document.querySelectorAll('.docs-copy').forEach(b=>{b.hidden=false
 
 const SHARE_IMAGE = `${identity.runSite}/site/share.jpg`
 
-export function sitePages({ styles, contract }: SiteContext): SiteBuild {
+export function sitePages({ styles, contract, hosting }: SiteContext): SiteBuild {
+  const homepageHeader = { html: renderToStaticMarkup(<SiteHeader />), styles }
+  // The homepage's skip link targets the shared pages' main content too.
+  const shared = (html: string) => html.replace('<main>', '<main id="main">')
   const document = (title: string, description: string, body: ReactElement, script = '') => '<!doctype html>' + renderToStaticMarkup(
     <html lang="en">
       <head>
@@ -49,8 +54,9 @@ export function sitePages({ styles, contract }: SiteContext): SiteBuild {
   return {
     pages: [
       { path: '/', html: document('Crank · The busywork runs itself.', identity.tagline, <Landing />) },
-      { path: '/run', html: runPageHtml(identity, run, contract) },
+      { path: '/run', html: shared(runPageHtml(identity, run, contract, homepageHeader)) },
       ...(contract ? [{ path: '/contract', html: contractPageHtml(identity, run, contract) }] : []),
+      { path: '/docs/hosting', html: shared(hostingPageHtml(identity, run, hosting ?? null, contract, { ...homepageHeader, html: renderToStaticMarkup(<SiteHeader current="docs" />) })) },
       { path: '/docs', html: document(...head(), <DocsIndex />) },
       ...docsPages.map(page => ({ path: `/docs/${page.slug}`, html: document(...head(page.slug), <DocsArticle slug={page.slug} />, COPY) })),
       { path: '/404', html: siteNotFoundHtml(identity, run, contract) },
