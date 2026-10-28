@@ -233,6 +233,9 @@ test('TEAM-001: complete explicit grants authorize native work, delegation, scop
   await assign(recipient,[grant('builder',['workspace:production'])],admin.cookie);
   const created=await h.post('workflows',{name:'Synthetic delegated creation',graph:{trigger:{type:'manual'},steps:[{id:'record',type:'map',input:{ok:true}}]}},recipient.cookie,201);
   assert.equal((await h.get('workflows/'+created.id,recipient.cookie)).name,'Synthetic delegated creation');
+  const createdTest=await h.post(`workflows/${created.id}/test`,{bindings:{}},recipient.cookie,201);
+  assert.equal(createdTest.status,'succeeded','a workspace-only builder grant remains authorized at test dispatch');
+  assert.deepEqual(createdTest.steps.find(step=>step.path==='record').output,{ok:true});
   await h.get('workflows/'+created.id,admin.cookie,403);
   await h.get('workflows/'+w.id,recipient.cookie,403);
   await h.post('workflows',{name:'Synthetic denied environment',environment:'sandbox',graph:{trigger:{type:'manual'},steps:[{id:'record',type:'map',input:{ok:true}}]}},recipient.cookie,403);
@@ -245,6 +248,7 @@ test('TEAM-001: complete explicit grants authorize native work, delegation, scop
   await assign(recipient,[grant('builder',['workspace:production'])],admin.cookie);
   await h.get('workflows/'+created.id,recipient.cookie,403);
   await h.get('flows/'+createdLegacy.id,recipient.cookie,403);
+  await h.post(`workflows/${created.id}/test`,{bindings:{}},recipient.cookie,403);
   const fresh=await h.post('workflows',{name:'Synthetic delegated creation after revocation',graph:{trigger:{type:'manual'},steps:[{id:'record',type:'map',input:{ok:true}}]}},recipient.cookie,201);
   assert.equal((await h.get('workflows/'+fresh.id,recipient.cookie)).name,'Synthetic delegated creation after revocation');
   const freshLegacy=await h.post('flows',{name:'Synthetic delegated legacy draft after revocation',source_app:'Synthetic source',destination_app:'Synthetic destination',target_url:'http://127.0.0.1:9/events'},recipient.cookie,201);

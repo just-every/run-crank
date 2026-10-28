@@ -2,7 +2,7 @@ import { requireValue, stmt, type Actor, type CrankEnv } from '../model'
 
 export type TeamRole = 'admin' | 'builder' | 'operator' | 'approver' | 'viewer' | 'auditor' | 'billing'
 export type TeamAction = 'read' | 'test' | 'prepare' | 'publish' | 'start' | 'approve' | 'replay' | 'delegate' | 'audit' | 'billing' | 'revoke'
-export interface TeamGrant { role: TeamRole; workflow_ids: string[]; connection_ids: string[]; actions?: TeamAction[]; review_grant_id?: string }
+export interface TeamGrant { role: TeamRole; workflow_ids: string[]; connection_ids: string[]; created_workflow_ids?: string[]; actions?: TeamAction[]; review_grant_id?: string }
 export interface TeamAccess extends TeamGrant { grants: TeamGrant[]; revision: string }
 const powers: Record<TeamRole, TeamAction[]> = {
   admin: ['read','test','prepare','publish','start','replay','delegate','revoke'], builder: ['read','test','prepare','publish'],
@@ -25,19 +25,24 @@ export async function teamAccess(env: CrankEnv, actor: Actor): Promise<TeamAcces
   if (actor.role === 'owner' || actor.tokenId || actor.grantId) return
   const row = await stmt(env, 'SELECT * FROM crank_team_access WHERE operator_id=?', actor.id).first<{role: TeamRole; workflow_ids_json: string; connection_ids_json: string; revision: string; grants_json: string}>()
   const grants: TeamGrant[] = row ? JSON.parse(row.grants_json ?? 'null') ?? [{role:row.role,workflow_ids:JSON.parse(row.workflow_ids_json),connection_ids:JSON.parse(row.connection_ids_json)}] : []
-  if(grants.some(grant=>grant.workflow_ids.includes('workspace:production'))) {
-    // A replacement grant must never revive records created under revoked authority.
-    const owned=await stmt(env,`SELECT w.id FROM crank_workflows w JOIN crank_audit a ON a.subject_id=w.id AND a.subject_kind='workflow' AND a.action='workflow.create'
-      WHERE w.created_by=? AND w.environment='production' AND a.actor_id=w.created_by AND json_extract(a.detail_json,'$.team_revision')=?
-      UNION SELECT f.id FROM crank_flows f JOIN crank_audit a ON a.subject_id=f.id AND a.subject_kind='flow' AND a.action='flow.create'
-      WHERE f.created_by=? AND a.actor_id=f.created_by AND json_extract(a.detail_json,'$.team_revision')=?`,actor.id,row!.revision,actor.id,row!.revision).all<{id:string}>()
-    for(const grant of grants)if(grant.workflow_ids.includes('workspace:production'))grant.workflow_ids=[...new Set([...grant.workflow_ids,...owned.results.map(row=>row.id)])]
-  }
+  for (const grant of grants) if (grant.workflow_ids.includes('workspace:production'))
+    grant.workflow_ids = [...new Set([...grant.workflow_ids, ...grant.created_workflow_ids ?? []])]
   const reviews=await stmt(env,`SELECT g.id,g.workflow_id,v.declared_json FROM crank_grants g JOIN oa_operators o ON o.id=g.owner_id JOIN crank_workflow_versions v ON v.id=g.version_id
     WHERE g.revoked_at IS NULL AND g.expires_at>? AND o.status='active' AND o.role='owner' AND o.version=g.owner_version
     AND (EXISTS(SELECT 1 FROM json_each(g.policy_json,'$.approval.delegate_ids') WHERE value=?) OR EXISTS(SELECT 1 FROM json_each(g.policy_json,'$.approval.escalate_to') WHERE value=?))`,new Date().toISOString(),actor.id,actor.id).all<{id:string;workflow_id:string;declared_json:string}>()
   for(const review of reviews.results) {const declared=JSON.parse(review.declared_json);grants.push({review_grant_id:review.id,role:'approver',workflow_ids:[review.workflow_id],connection_ids:[...(declared.connections??[]),...(declared.gateways??[]).map((id:string)=>'gateway:'+id)]})}
   return { role: grants[0]?.role ?? 'viewer', grants, workflow_ids: [...new Set(grants.filter(g=>!g.review_grant_id && grantsAction(g,'read')).flatMap(g=>g.workflow_ids))], connection_ids: [...new Set(grants.filter(g=>!g.review_grant_id && grantsAction(g,'read')).flatMap(g=>g.connection_ids))], revision: row?.revision ?? 'ungranted' }
+}
+/** Creation adds only its new record to the current grant, in the creation transaction. */
+export function createdRecordGrants(env: CrankEnv, actor: Actor, recordId: string, table: 'crank_workflows' | 'crank_flows') {
+  if (!actor.team) return []
+  return [stmt(env, `UPDATE crank_team_access SET
+    grants_json=(SELECT json_group_array(json(CASE WHEN EXISTS(
+      SELECT 1 FROM json_each(g.value,'$.workflow_ids') WHERE value='workspace:production'
+    ) THEN json_set(g.value,'$.created_workflow_ids',json_insert(COALESCE(json_extract(g.value,'$.created_workflow_ids'),'[]'),'$[#]',?)) ELSE g.value END))
+      FROM json_each(grants_json) g)
+    WHERE operator_id=? AND revision=? AND EXISTS(SELECT 1 FROM ${table} WHERE id=? AND created_by=?)`,
+    recordId, actor.id, actor.team.revision, recordId, actor.id)]
 }
 export function teamFence(actor: Actor) {
   if(actor.role==='owner' && !actor.team)return {sql:'1',args:[]}
