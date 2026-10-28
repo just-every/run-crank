@@ -18,7 +18,7 @@ import { RetryWait } from '../connectors/retry-wait'
 import { canonical, digest, id, now, stmt, type CrankEnv } from '../model'
 import { afterSettle } from '../ops/failures'
 import { workspaceSettings } from '../ops/settings'
-import { evaluate, type Groups } from './conditions'
+import { evaluatePaths } from './path-conditions'
 import { assertDispatchAuthority } from './authority'
 import { cappedProposal } from './caps'
 import { claimQueuedRun } from './queue'
@@ -280,27 +280,12 @@ class Execution {
     if (record?.status === 'succeeded') chosen = JSON.parse(record.output_json!).matched
     else if (record?.status === 'stopped') return { kind: 'stopped', reason: 'filter' }
     else {
-      const results: { branch: string; pass: boolean; trace: unknown }[] = []
-      let mismatch: { branch: string; message: string } | null = null
-      for (const branch of branches.filter(b => b.kind === 'rule')) {
-        const evaluation = evaluate(branch.when as Groups, this.scope, this.zone, this.time)
-        results.push({ branch: branch.id, pass: evaluation.pass, trace: evaluation })
-        if (evaluation.mismatch && !mismatch) mismatch = { branch: branch.id, message: `type mismatch in path ${step.id}/${branch.id}: ${evaluation.mismatch.field} (${evaluation.mismatch.message})` }
+      const { matched, trace: results, error } = evaluatePaths(step, this.scope, this.zone, this.time)
+      if (error) {
+        await this.save(step, path, 'failed', { error: error.toJSON(), trace: results })
+        return { kind: 'failed', error: { ...error.toJSON(), step: step.id } }
       }
-      if (mismatch) {
-        const route = step.on_type_mismatch
-        if (route === undefined || route === 'halt') {
-          const error = new StepError('type_mismatch', mismatch.message, { outcome: 'type mismatch', trace: results })
-          await this.save(step, path, 'failed', { error: error.toJSON(), trace: results })
-          return { kind: 'failed', error: { ...error.toJSON(), step: step.id } }
-        }
-        chosen = [String(route)]
-      } else {
-        const passing = results.filter(r => r.pass).map(r => r.branch)
-        chosen = step.mode === 'exclusive' ? passing.slice(0, 1) : passing
-        if (!chosen.length && branches.some(b => b.kind === 'fallback')) chosen = ['fallback']
-      }
-      if (branches.some(b => b.kind === 'always')) chosen.push('always')
+      chosen = matched
       if (!chosen.length) {
         await this.save(step, path, 'stopped', { output: { reason: 'filter', matched: [] }, trace: results })
         return { kind: 'stopped', reason: 'filter' }

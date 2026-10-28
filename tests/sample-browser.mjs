@@ -39,6 +39,33 @@ async function shot(width,state) {
 try {
  await sampleJourney({inspect:async({h,w,state,listener,sample})=>{
   await attach(h,1440);
+  if(state.startsWith('condition-')) {
+   await page.goto(h.origin+`/app/workflows/${w.id}?step=route&tab=test`);
+   await page.getByRole('button',{name:'Preview selected sample',exact:true}).click();
+   const result=page.locator('.inspector-block').filter({has:page.getByRole('heading',{name:'Preview result',exact:true})});
+   await expect(result).toContainText(sample.source==='webhook'?sample.id:'manual sample');
+   const routing=result.locator(`.preview-list > li[data-outcome="${state==='condition-mismatch'?'type mismatch':'routed'}"]`);
+   await expect(routing).toHaveCount(1);
+   await routing.getByText('Condition details',{exact:true}).click();
+   await expect(routing.locator('pre')).toContainText('"branch": "premium"');
+   await expect(routing.locator('pre')).toContainText('"right": 5000');
+   await expect(routing.locator('pre')).toContainText(state==='condition-mismatch'||state==='condition-routed'?'type_mismatch':state==='condition-fallback'?'"left": "100"':'"left": "6000"');
+   if(state==='condition-mismatch') {
+    await expect(result).not.toContainText('Not run in preview');
+    await expect(routing).toContainText('Type mismatch');
+   } else {
+    await expect(result).toContainText('Not run in preview');
+    await expect(routing).toContainText(state==='condition-fallback'||state==='condition-routed'?'Fallback':'Qualified lead');
+    if(state==='condition-captured') await expect(routing).toContainText('Regional lead');
+   }
+   const search=page.getByRole('link',{name:'Search runs',exact:true});await search.focus();await expect(page.locator('#search-tooltip')).toBeVisible();await page.locator('h1').click();await search.hover();await page.waitForTimeout(350);await expect(page.locator('#search-tooltip')).toBeVisible();
+   for(const width of [1440,390]) {
+    await page.setViewportSize({width,height:1000});
+    await page.screenshot({path:join(evidence,`${width}-${state}.png`),fullPage:true});
+   }
+   await page.setViewportSize({width:1440,height:1000});
+   return;
+  }
   await page.goto(h.origin+`/app/workflows/${w.id}?step=trigger&tab=test`);
   await expect(page.getByText('Step notify relies on a schema sample; not tested',{exact:true})).toBeVisible();
   if(state==='waiting') {

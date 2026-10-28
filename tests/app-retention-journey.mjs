@@ -148,4 +148,38 @@ export async function appRetentionJourney({inspect=async()=>{}}={}) {
   assert.equal((await runs(h,active)).length,2,'later legitimate source changes still run exactly once');
 
  } finally {barrier=undefined;await restored?.close();await h.close()}
+ await retainedPageProgress();
+}
+
+/** Kept records must not starve a later eligible payload across maintenance passes. */
+async function retainedPageProgress() {
+ const edge=fakeEdge(),h=await harness('http://127.0.0.1:9',{edge:edge.edge,clock:'2026-10-20T01:00:00.000Z'});
+ const kept=Array.from({length:104},(_,i)=>({id:'synthetic-crank-retained-'+i,updatedAt:'2010-01-01T00:00:00.000Z',properties:{Status:'Pending',Customer:'synthetic-crank-held'}}));
+ const eligible={id:'synthetic-crank-eligible',updatedAt:'2010-01-01T00:00:00.000Z',properties:{Status:'Pending',Customer:'synthetic-crank-unheld'}};
+ let records=kept;
+ edge.routes.set('api.hubapi.com',()=>jsonResponse({results:records}));
+ try {
+  const c=await connection(h,{app:'hubspot',label:'Paged retention records',auth_kind:'bearer',secret:{token:'synthetic-crank-200'}});
+  const w=await publish(h,'Retained page progress',{trigger:{type:'app_poll',provider:'hubspot',resource:'deals',event:'updated',connection_id:c.id,interval_minutes:1,backfill:'from_now',watched_fields:['Status','Customer'],changed_to:{Status:'Approved'}},steps:[]});
+  let time=Date.parse((await h.get(`workflows/${w.id}/trigger`)).poll.next_due_at);
+  await h.tick(time);records=[eligible];await h.tick(time+=minute);
+  assert.equal((await runs(h,w)).length,0);
+  await h.post(`workflows/${w.id}/unpublish`);
+  const hold=await h.post('./data/holds',{kind:'subject',subject:'synthetic-crank-held',reason:'Keep source baselines under review'},h.owner,201);
+  const reviewed=await preview(h);await h.post('./data/retention',{...policy,digest:reviewed.digest});
+  const retained=await values(h,w);
+  time+=2*day;await h.restart({clock:new Date(time).toISOString()});
+  const due=await preview(h);
+  assert.deepEqual(due.payload.app_snapshots.map(row=>row.record_id),[sha(eligible.id)]);
+  assert.equal(due.payload.kept.filter(row=>row.reason==='legal hold').length,kept.length);
+  await h.tick(time);await h.restart({clock:new Date(time+=minute).toISOString()});await h.tick(time);
+  const after=await snapshots(h,w);
+  assert.ok(!after.some(row=>row.record_id===sha(eligible.id)),'eligible inactive payloads must expire beyond a full page of legally held snapshots after restart');
+  assert.equal(after.length,kept.length,'every held payload remains retained');
+  assert.deepEqual(await values(h,w),retained,'scan progress never clears comparison identities');
+  await h.post(`./data/holds/${hold.id}/release`);
+  for(let pass=0;pass<5;pass++)await h.tick(time+=minute);
+  assert.equal((await snapshots(h,w)).length,0,'releasing a hold makes every previously scanned payload eligible again');
+  assert.equal((await runs(h,w)).length,0,'maintenance never admits source work');
+ } finally {await h.close()}
 }

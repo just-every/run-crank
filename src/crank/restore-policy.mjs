@@ -137,7 +137,7 @@ export async function validateRestore({ read }) {
   for (const fields of await rows('crank_sample_fields')) if (!workflows.has(fields.workflow_id) || !Array.isArray(JSON.parse(fields.fields_json))) return false;
   for (const row of await rows('crank_app_field_values')) if (!workflows.has(row.workflow_id) || !/^[a-f0-9]{64}$/.test(row.record_id) || !/^[a-f0-9]{64}$/.test(row.value_digest) || !Number.isFinite(Date.parse(row.first_seen_at))) return false;
   for (const row of await rows('crank_app_pending_rows')) if (!workflows.has(row.workflow_id) || !/^[a-f0-9]{64}$/.test(row.record_id) || !/^[a-f0-9]{64}$/.test(row.value_digest) || !Number.isFinite(Date.parse(row.stable_since))) return false;
-  for (const row of await rows('crank_app_snapshots')) if (row.observed_at != null && !Number.isFinite(Date.parse(row.observed_at))) return false;
+  for (const row of await rows('crank_app_snapshots')) for (const time of [row.observed_at,row.retention_checked_at]) if (time != null && !Number.isFinite(Date.parse(time))) return false;
   for (const row of await rows('crank_app_subjects')) if (!workflows.has(row.workflow_id) || !/^[a-f0-9]{64}$/.test(row.record_id) || !/^[a-f0-9]{64}$/.test(row.record_subject_digest)) return false;
   const erasedAppRecords = new Set();
   for (const row of await rows('crank_app_erased_records')) {

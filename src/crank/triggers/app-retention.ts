@@ -34,7 +34,7 @@ async function candidates(env: CrankEnv, before: string, limit: number, expiring
     FROM crank_app_snapshots s JOIN crank_workflows w ON w.id=s.workflow_id JOIN crank_workflow_versions v ON v.id=s.version_id
     WHERE (s.observed_at IS NULL OR s.observed_at<=?1)
     ${expiringOnly ? 'AND s.observed_at IS NOT NULL AND s.version_id IS NOT w.published_version_id' : ''}
-    ORDER BY s.observed_at,s.workflow_id,s.version_id,s.record_id LIMIT ?2`, before, limit).all<Snapshot>()).results
+    ORDER BY ${expiringOnly ? 's.retention_checked_at,' : ''}s.observed_at,s.workflow_id,s.version_id,s.record_id LIMIT ?2`, before, limit).all<Snapshot>()).results
 }
 
 async function evaluate(env: CrankEnv, row: Snapshot) {
@@ -76,13 +76,18 @@ export async function appRetentionScope(env: CrankEnv, before: string, limit = 5
 }
 
 /** At most 25 payload rows per pass. Preserve workflow-level value digests and
- * subject identities; fence only the retired snapshot's exact primary key. */
+ * subject identities; fence only the retired snapshot's exact primary key.
+ * Rotate kept rows behind unvisited candidates, so holds and unavailable keys
+ * cannot permanently starve later eligible payloads after a full scan page. */
 export async function expireAppSnapshots(env: CrankEnv, portability: PortabilityFence, before: string, at: string) {
   let expired = 0
   for (const row of await candidates(env, before, 100, true)) {
     if (expired === 25) break
     const { raw, reason } = await evaluate(env, row)
-    if (reason) continue
+    if (reason) {
+      await stmt(env, 'UPDATE crank_app_snapshots SET retention_checked_at=? WHERE workflow_id=? AND version_id=? AND record_id=?', at, row.workflow_id, row.version_id, row.record_id).run()
+      continue
+    }
     const guard = `retention-app:${id()}`
     const key = { workflow_id: row.workflow_id, version_id: row.version_id, record_id: row.record_id }
     try {
