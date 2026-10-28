@@ -50,7 +50,7 @@ export async function presentWorkflow(env: CrankEnv, row: WorkflowRow) {
   const owner = await stmt(env, 'SELECT display_name FROM oa_operators WHERE id=?', row.owner_id).first<{ display_name: string }>()
   return {
     id: row.id, environment:(row as WorkflowRow & {environment:string}).environment, name: row.name, description: row.description, folder: row.folder, data_class: (row as { data_class?: string }).data_class ?? 'none', owner: { id: row.owner_id, name: owner?.display_name ?? null }, status: row.status,
-    enabled: row.status === 'published', draft: JSON.parse(row.draft_json), poll_rate: pollRate(JSON.parse(row.draft_json).trigger), draft_updated_at: row.draft_updated_at, published_version_id: row.published_version_id,
+    enabled: row.status === 'published', draft: JSON.parse(row.draft_json), poll_rate: pollRate(JSON.parse(row.draft_json).trigger), draft_updated_at: row.draft_updated_at, draft_digest: await digest(canonical(JSON.parse(row.draft_json))), published_version_id: row.published_version_id,
     created_by: row.created_by, created_at: row.created_at,
     versions: versions.results.map(v => ({ id: v.id, number: v.number, graph_digest: v.graph_digest, authority: JSON.parse(v.declared_json), published_by: v.published_by, published_at: v.published_at, retired_at: v.retired_at })),
     // WORK-008: every saved draft edit, newest first, with its author, time and changed fields.
@@ -106,6 +106,11 @@ export async function updateDraft(env: CrankEnv, actor: Actor, workflowId: strin
   const command = await workflowCommand(env, actor, idempotencyKey, 'draft', workflowId, input)
   if (command?.existing) return savedWorkflow(env, workflowId, command.existing, true)
   const current = await getWorkflow(env, workflowId)
+  if (input.draft_digest !== undefined) {
+    requireValue(typeof input.draft_digest === 'string' && /^[a-f0-9]{64}$/.test(input.draft_digest), 'Supply the current draft digest')
+    requireValue(await digest(canonical(JSON.parse(current.draft_json))) === input.draft_digest, 'The draft changed; reload it before saving', 409)
+    expectedDraftJson = expectedDraftJson ?? current.draft_json
+  }
   requireValue(expectedDraftJson===undefined || current.draft_json===expectedDraftJson, 'The draft changed; load its current resources again',409)
   const draftGuard=expectedDraftJson===undefined?null:id()
   const graph = input.graph === undefined ? JSON.parse(current.draft_json) : checked(input.graph).graph

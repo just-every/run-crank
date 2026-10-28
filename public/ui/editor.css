@@ -228,3 +228,22 @@
   .runs-strip { padding: 14px; }
   .field { grid-template-columns: 84px minmax(0, 1fr); }
 }
+
+/* Native draft construction uses the same fields and controls as the inspector. */
+.native-add, .native-workflow-settings { padding: 14px 18px; margin: 10px 0; }
+.native-add summary, .native-workflow-settings summary { font-size: 15px; font-weight: 700; cursor: pointer; }
+.native-form { display: grid; gap: 6px; margin: 12px 0; min-width: 0; }
+.native-form :is(input, select) { width: 100%; min-width: 0; max-width: 100%; font-size: 14px; }
+.native-form label { font-size: 13px; font-weight: 600; }
+.native-form .btn { justify-self: start; white-space: normal; text-align: left; }
+.native-settings :is(p, summary, legend), .native-add p { font-size: 13px; overflow-wrap: anywhere; }
+.native-settings details { margin: 10px 0; }
+.native-settings summary { cursor: pointer; font-weight: 600; }
+.native-rules { min-width: 0; border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; margin: 10px 0; }
+.native-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.field-error { color: #a52a3f; font-size: 13px; }
+.native-form [aria-invalid] { border-color: #a52a3f; }
+.inspector-head > div { min-width: 0; overflow-wrap: anywhere; }
+.native-add .native-form { grid-template-columns: minmax(0, 1fr); max-width: 480px; }
+.branch-label { max-width: 180px; overflow-wrap: anywhere; }
+.step-lineage { font-size: 13px; color: var(--body); overflow-wrap: anywhere; }
