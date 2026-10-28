@@ -13,10 +13,10 @@ import { canonical, type CrankEnv } from '../model'
 export interface AppRecord { id: string; fields: Record<string, unknown>; at: string | null; payload: Record<string, unknown> }
 interface AppReadOptions { beforePage?: () => Promise<unknown>; maxItems?: number }
 
-export async function appRequest(env: CrankEnv, connection: string, url: URL, method = 'GET', body?: unknown) {
+export async function appRequest(env: CrankEnv, connection: string, url: URL, method = 'GET', body?: unknown, nativeOrbit = false) {
   const headers = new Headers({ accept: 'application/json', ...(body ? { 'content-type': 'application/json' } : {}) })
   const text = body ? JSON.stringify(body) : null
-  await authorizeRequest(env, connection, url, headers, text, method)
+  await authorizeRequest(env, connection, url, headers, text, method, nativeOrbit)
   const response = await boundedFetch(url.href, { method, headers, ...(text ? { body: text } : {}), maxBytes: 2 * 1024 * 1024, timeoutMs: 15000, follow: 0 })
   if (response.status < 200 || response.status > 299) throw new StepError('network', `App source returned ${response.status}; records and the last successful poll are retained`)
   try { return JSON.parse(utf8(response.bytes)) } catch { throw new StepError('validation', 'App source returned invalid JSON') }

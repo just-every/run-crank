@@ -84,7 +84,7 @@ try {
    if(state==='orbit-read-back')await page.locator('.timeline-item details.inline-disclosure summary').last().click();
    if(width===1440){
     await expect(page.getByRole('heading',{name:'Workflow run',exact:true})).toBeVisible();
-    assert.ok((await page.locator('body').innerText()).includes(state==='orbit-read-back'?'requested fields observed':'Reconnect Orbit'));
+    assert.ok((await page.locator('body').innerText()).includes(state==='orbit-read-back'?'requested fields observed':'Orbit requires current deal.read authority'));
    }
    await page.screenshot({path:join(evidence,`${width}-${state}-run.png`),fullPage:true});
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'Orbit run fits viewport');

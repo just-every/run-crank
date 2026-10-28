@@ -12,7 +12,7 @@ export async function orbitRecords(env: CrankEnv, trigger: Record<string, any>):
     const url = new URL('/api/rest/v1/deals', binding.origin)
     url.searchParams.set('fields', binding.fields.join(',')); url.searchParams.set('limit', '100')
     if (cursor) url.searchParams.set('cursor', cursor)
-    const body = await appRequest(env, trigger.connection_id, url)
+    const body = await appRequest(env, trigger.connection_id, url, 'GET', undefined, true)
     if (!Array.isArray(body?.deals) || body.deals.length > 100 || !Object.hasOwn(body, 'nextCursor')) throw new StepError('validation', 'Orbit polling needs a complete deal page')
     for (const value of body.deals) {
       const record = orbitRecord(value, binding), { id, ...fields } = record, key = String(id)

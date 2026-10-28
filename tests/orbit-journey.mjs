@@ -37,6 +37,7 @@ export async function orbitJourney({inspect=async()=>{}}={}) {
    ['GET',orbitOrigin+`/api/rest/v1/deals/01K00000000000000000000009?fields=title`],
    ['GET',orbitOrigin+`/api/rest/v1/deals/${orbitIds[0]}?fields=title,private_note`],
    ['GET',orbitOrigin+`/api/rest/v1/deals/${orbitIds[0]}?fields=title&tenant=foreign`],
+   ['GET',orbitOrigin+'/api/rest/v1/deals?fields=title'],
    ['DELETE',orbitOrigin+`/api/rest/v1/deals/${orbitIds[0]}`],
    ['POST',orbitOrigin+'/api/rest/v1/deals',{title:'synthetic-crank-403'}],
    ['PATCH',orbitOrigin+`/api/rest/v1/deals/${orbitIds[0]}`,{private_note:'synthetic-crank-403'}],
@@ -45,6 +46,8 @@ export async function orbitJourney({inspect=async()=>{}}={}) {
    assert.notEqual((await startRun(h,unsafe,{})).status,'succeeded');
   }
   assert.equal(f.calls.length,before,'no foreign destination, record, field or unsupported verb reaches the provider');
+  const boundedRead=await publish(h,'Orbit bound generic read',{trigger:{type:'manual'},steps:[{id:'read',type:'http',connection_id:c.id,input:{method:'GET',url:orbitOrigin+`/api/rest/v1/deals/${orbitIds[0]}?fields=title`}}]});
+  const generic=await startRun(h,boundedRead,{});assert.equal(generic.status,'succeeded');assert.deepEqual(stepOf(generic,'read').output.body,{deal:{id:orbitIds[0],title:'synthetic-crank-401'}});
   const changes={value_cents:9500,stage_id:orbitNextStage,company_id:null};
   const graph={trigger:{type:'manual'},steps:[step('read_deal',{deal_id:orbitIds[0]},{id:'read'}),step('update_deal',{deal_id:orbitIds[0],etag:'{{steps.read.etag}}',fields:changes},{id:'update'})]};
   const w=await publish(h,'Orbit conditional update',graph),done=await startRun(h,w,{});

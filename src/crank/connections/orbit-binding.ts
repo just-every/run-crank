@@ -19,11 +19,12 @@ export function orbitBinding(value: unknown): OrbitBinding {
 }
 
 /** Protect native steps, polling, generic HTTP and connection verification alike. */
-export function assertOrbitDestination(binding: OrbitBinding, scopes: string[], url: URL, method: string, body: string | Uint8Array<ArrayBuffer> | null, headers: Headers) {
+export function assertOrbitDestination(binding: OrbitBinding, scopes: string[], url: URL, method: string, body: string | Uint8Array<ArrayBuffer> | null, headers: Headers, nativeOrbit = false) {
   const id = url.pathname.startsWith('/api/rest/v1/deals/') ? url.pathname.slice('/api/rest/v1/deals/'.length) : null
   const list = url.pathname === '/api/rest/v1/deals'
   if (url.origin !== binding.origin || url.hash || !(list || id && binding.record_ids.includes(id)) || !['GET', 'PATCH'].includes(method) || method === 'PATCH' && !id)
     throw new StepError('egress', 'Orbit credentials are bound to the selected installation and existing deals')
+  if (!nativeOrbit && (list || method !== 'GET')) throw new StepError('egress', 'Use native Orbit operations for scoped lists and updates with readback')
   const required = method === 'PATCH' ? 'deal.update' : 'deal.read'
   if (!scopes.includes(required)) throw new StepError('connection', `Orbit requires current ${required} authority`, { reconnect: true })
   const allowed = list ? ['fields', 'title', 'limit', 'cursor'] : ['fields']

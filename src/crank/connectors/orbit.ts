@@ -49,7 +49,7 @@ function transport(step: Step, ctx: StepContext, connectionId: string, operation
         const prior = await stmt(ctx.env, 'SELECT id FROM crank_wf_attempts WHERE run_id=? AND path=? AND method=\'PATCH\' AND (http_status IS NULL OR http_status NOT IN (401,403,429)) LIMIT 1', ctx.run.id, ctx.path).first()
         if (prior) throw new StepError('network', 'Orbit update was already attempted; continue by exact deal readback only', { uncertain: true })
       }
-      return sendRequest(context, { url, method, body, headers, timeout: Number(step.timeout_ms ?? 15000), maxBytes: 1024 * 1024, follow: 0 }, connectionId, policy)
+      return sendRequest(context, { nativeOrbit: true, url, method, body, headers, timeout: Number(step.timeout_ms ?? 15000), maxBytes: 1024 * 1024, follow: 0 }, connectionId, policy)
     })
     await orbitAccount(ctx.env, connectionId, operation)
     return result
