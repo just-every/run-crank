@@ -1,3 +1,4 @@
+import { frozenTeamGrantSql } from '../team/grant-records'
 import { requireOwner } from '../access'
 import { branchesOf, type Graph } from '../engine/graph'
 import type { Step } from '../engine/types'
@@ -51,17 +52,9 @@ export function frozenCustomActorSql(run = 'r', version = 'v', workflow = 'w'): 
   return `EXISTS(SELECT 1 FROM oa_operators use_actor WHERE use_actor.id=${version}.published_by AND use_actor.status='active'
     AND use_actor.version=CASE WHEN ${run}.mode='test' THEN ${run}.test_owner_version ELSE json_extract(${version}.declared_json,'$.publisher_version') END
     AND (${run}.mode!='test' OR ${run}.created_by=use_actor.id)
-    AND ((use_actor.role='owner' AND (${revision}) IS NULL) OR EXISTS(
-      SELECT 1 FROM crank_team_access use_team,json_each(COALESCE(use_team.grants_json,json_array(json_object('role',use_team.role,'workflow_ids',json(use_team.workflow_ids_json),'connection_ids',json(use_team.connection_ids_json))))) ug WHERE use_team.operator_id=use_actor.id AND json_extract(ug.value,'$.role') IN ('admin','builder')
-      AND use_team.revision=(${revision})
-      AND EXISTS(SELECT 1 FROM json_each(ug.value,'$.workflow_ids') WHERE value=${run}.workflow_id)
-      AND NOT EXISTS(SELECT 1 FROM json_each(${version}.declared_json,'$.connections') c
-        WHERE c.value NOT IN (SELECT value FROM json_each(ug.value,'$.connection_ids')))
-      AND NOT EXISTS(SELECT 1 FROM json_each(${version}.declared_json,'$.gateways') g
-        WHERE 'gateway:' || g.value NOT IN (SELECT value FROM json_each(ug.value,'$.connection_ids')))
-    )))
+    AND ((use_actor.role='owner' AND (${revision}) IS NULL) OR ${frozenTeamGrantSql('use_actor',run,version)})
     AND NOT EXISTS(SELECT 1 FROM json_each(${version}.declared_json,'$.gateways') use_gateway
       LEFT JOIN crank_gateways use_g ON use_g.id=use_gateway.value LEFT JOIN oa_operators use_owner ON use_owner.id=use_g.owner_id
       WHERE use_g.id IS NULL OR use_g.status!='active' OR use_g.environment!=${workflow}.environment
-        OR use_owner.id IS NULL OR use_owner.status!='active' OR use_owner.role!='owner' OR use_owner.version!=use_g.owner_version)`
+        OR use_owner.id IS NULL OR use_owner.status!='active' OR use_owner.role!='owner' OR use_owner.version!=use_g.owner_version))`
 }

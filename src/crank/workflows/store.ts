@@ -1,4 +1,5 @@
 import { sampleWarnings } from './samples'
+import { requireCreationScope, workflowFolder } from '../team/resources'
 import { authoringPublication } from '../agents/authoring-promotion'
 import { authoringRecord, authoringState } from '../agents/authoring-record'
 import { scopedGraph } from '../agents/authoring-schema'
@@ -49,7 +50,7 @@ export async function presentWorkflow(env: CrankEnv, row: WorkflowRow) {
   const versions = await stmt(env, "SELECT id,number,graph_digest,declared_json,published_by,published_at,retired_at FROM crank_workflow_versions WHERE workflow_id=? AND mode='production' ORDER BY number DESC", row.id).all<Omit<VersionRow, 'graph_json' | 'workflow_id'>>()
   const owner = await stmt(env, 'SELECT display_name FROM oa_operators WHERE id=?', row.owner_id).first<{ display_name: string }>()
   return {
-    id: row.id, environment:(row as WorkflowRow & {environment:string}).environment, name: row.name, description: row.description, folder: row.folder, data_class: (row as { data_class?: string }).data_class ?? 'none', owner: { id: row.owner_id, name: owner?.display_name ?? null }, status: row.status,
+    id: row.id, environment:(row as WorkflowRow & {environment:string}).environment, name: row.name, description: row.description, folder: row.folder, folder_id:(row as WorkflowRow & {folder_id:string|null}).folder_id, data_class: (row as { data_class?: string }).data_class ?? 'none', owner: { id: row.owner_id, name: owner?.display_name ?? null }, status: row.status,
     enabled: row.status === 'published', draft: JSON.parse(row.draft_json), poll_rate: pollRate(JSON.parse(row.draft_json).trigger), draft_updated_at: row.draft_updated_at, published_version_id: row.published_version_id,
     created_by: row.created_by, created_at: row.created_at,
     versions: versions.results.map(v => ({ id: v.id, number: v.number, graph_digest: v.graph_digest, authority: JSON.parse(v.declared_json), published_by: v.published_by, published_at: v.published_at, retired_at: v.retired_at })),
@@ -84,15 +85,16 @@ export async function createWorkflow(env: CrankEnv, actor: Actor, input: Record<
 }
 
 async function createWorkflowDraft(env: CrankEnv, actor: Actor, input: Record<string, unknown>, command: WorkflowCommand | null) {
-  if (command?.existing) return savedWorkflow(env, command.existing.workflow_id, command.existing, true)
+  if (command?.existing) {workflowScope(actor,command.existing.workflow_id);return savedWorkflow(env, command.existing.workflow_id, command.existing, true)}
   const { graph } = checked(input.graph)
   const workflowId = id(), draftId = id(), at = now(), condition = commandCondition(command)
-  if(actor.team)requireValue((input.environment??'production')==='production','This creation grant is limited to production',403)
   const metadata = { environment:environmentName(input.environment??'production'), name: text(input.name, 'name'), description: description(input.description), folder: folder(input.folder), settings: isObject(input.settings) ? input.settings : {} }
+  const destination=await workflowFolder(env,actor,metadata.environment,metadata.folder)
+  requireCreationScope(actor,metadata.environment,destination.id)
   const results = await guardedBatch(env, actor, 'prepare', [
     ...(command ? [claimCommand(env, actor, command, workflowId, draftId)] : []),
-    stmt(env, `INSERT INTO crank_workflows(id,name,description,folder,owner_id,draft_json,draft_updated_at,status,settings_json,created_by,created_at,environment) SELECT ?,?,?,?,?,?,?,'draft',?,?,?,? WHERE ${condition.sql}`,
-      workflowId, metadata.name, metadata.description, metadata.folder, actor.id, JSON.stringify(graph), at, JSON.stringify(metadata.settings), actor.id, at, metadata.environment, ...condition.args),
+    stmt(env, `INSERT INTO crank_workflows(id,name,description,folder,owner_id,draft_json,draft_updated_at,status,settings_json,created_by,created_at,environment,folder_id) SELECT ?,?,?,?,?,?,?,'draft',?,?,?,?,? WHERE ${condition.sql}`,
+      workflowId, metadata.name, metadata.description, metadata.folder, actor.id, JSON.stringify(graph), at, JSON.stringify(metadata.settings), actor.id, at, metadata.environment,destination.id, ...condition.args),
     await savedDraft(env, actor, workflowId, draftId, null, graph, metadata, at, command),
     ...createdRecordGrants(env, actor, workflowId, 'crank_workflows'),
     auditStatementWhen(env, condition.sql, condition.args, actor.id, 'workflow.create', 'workflow', workflowId, actor.team ? {team_revision:actor.team.revision} : {}),
@@ -121,6 +123,8 @@ export async function updateDraft(env: CrankEnv, actor: Actor, workflowId: strin
   const draftId = id(), at = now(), condition = commandCondition(command)
   const metadata = { name: input.name === undefined ? current.name : text(input.name, 'name'), description: input.description === undefined ? current.description : description(input.description),
     folder: input.folder === undefined ? current.folder : folder(input.folder), settings: isObject(input.settings) ? input.settings : JSON.parse(current.settings_json) }
+  const destination=await workflowFolder(env,actor,(current as WorkflowRow & {environment:string}).environment,metadata.folder)
+  requireValue(metadata.folder===current.folder || actor.role==='owner' && ['native','dev'].includes(actor.kind),'Use the authorized move operation to change folders',403)
   const changed = [['name', current.name], ['description', current.description], ['folder', current.folder], ['graph', null], ['settings', null]]
     .filter(([field, before]) => field === 'graph' ? canonical(graph) !== canonical(JSON.parse(current.draft_json)) : field === 'settings' ? isObject(input.settings) : input[field as string] !== undefined && input[field as string] !== before)
     .map(([field]) => field)
@@ -129,8 +133,8 @@ export async function updateDraft(env: CrankEnv, actor: Actor, workflowId: strin
     ...(draftGuard ? [stmt(env,'INSERT INTO crank_authority_guards(id,ok) SELECT ?,CASE WHEN EXISTS(SELECT 1 FROM crank_workflows WHERE id=? AND draft_json=?) THEN 1 ELSE 0 END',draftGuard,workflowId,expectedDraftJson)] : []),
     ...(extraAudit?.guards ?? []),
     ...(command ? [claimCommand(env, actor, command, workflowId, draftId)] : []),
-    stmt(env, `UPDATE crank_workflows SET name=?,description=?,folder=?,draft_json=?,draft_updated_at=?,settings_json=? WHERE id=? AND ${condition.sql}`,
-      metadata.name, metadata.description, metadata.folder, JSON.stringify(graph), at, JSON.stringify(metadata.settings), workflowId, ...condition.args),
+    stmt(env, `UPDATE crank_workflows SET name=?,description=?,folder=?,draft_json=?,draft_updated_at=?,settings_json=?,folder_id=? WHERE id=? AND ${condition.sql}`,
+      metadata.name, metadata.description, metadata.folder, JSON.stringify(graph), at, JSON.stringify(metadata.settings),destination.id, workflowId, ...condition.args),
     await savedDraft(env, actor, workflowId, draftId, current.published_version_id, graph, metadata, at, command),
     auditStatementWhen(env, condition.sql, condition.args, actor.id, 'workflow.draft', 'workflow', workflowId, { draft_digest: await digest(JSON.stringify(graph)), changed }, current.published_version_id),
     ...(extraAudit?[auditStatementWhen(env,condition.sql,condition.args,actor.id,extraAudit.action,'workflow',workflowId,extraAudit.detail)]:[]),
@@ -161,9 +165,9 @@ export async function duplicateWorkflow(env: CrankEnv, actor: Actor, workflowId:
   const command = await workflowCommand(env, actor, key, 'duplicate', workflowId, input)
   // Resolve the original destination before reading the source's current draft.
   // A retry must not copy a later source revision or overwrite destination edits.
-  if (command?.existing) return savedWorkflow(env, command.existing.workflow_id, command.existing, true)
+  if (command?.existing) {workflowScope(actor,command.existing.workflow_id);return savedWorkflow(env, command.existing.workflow_id, command.existing, true)}
   const current = await getWorkflow(env, workflowId)
-  return createWorkflowDraft(env, actor, { name: `${current.name} (copy)`.slice(0, 200), description: current.description, folder: current.folder, graph: JSON.parse(current.draft_json), settings: JSON.parse(current.settings_json) }, command)
+  return createWorkflowDraft(env, actor, { name: `${current.name} (copy)`.slice(0, 200), description: current.description, environment:(current as WorkflowRow & {environment:string}).environment, folder: current.folder, graph: JSON.parse(current.draft_json), settings: JSON.parse(current.settings_json) }, command)
 }
 
 /** Retrying publication reads the original version without changing current state. */
@@ -234,7 +238,7 @@ async function publishVersion(env: CrankEnv, actor: Actor, workflowId: string, i
   const previous = await stmt(env, 'SELECT MAX(number) AS n FROM crank_workflow_versions WHERE workflow_id=?', workflowId).first<{ n: number | null }>()
   const versionId = id(), at = now(), number = (previous?.n ?? 0) + 1, graphJson = canonical(graph)
   const authoring = await authoringPublication(env, actor, workflowId, graph, input, versionId)
-  const authority = { ...(authoring.length ? { authoring: true } : {}), subflows, custom_bindings: await customBindings(env,graph), gateways, publisher: actor.id, publisher_version: actor.version, publisher_team_revision: actor.team?.revision ?? null, published_at: at, workflow_settings: JSON.parse(current.settings_json), steps: declared.steps, connections: declared.connections, bindings: await snapshotBindings(env, declared.connections), trigger: graph.trigger.type, ...(rollback ? { rollback_of: rollback.rollback_of } : {}) }
+  const authority = { ...(authoring.length ? { authoring: true } : {}), subflows, custom_bindings: await customBindings(env,graph), gateways, publisher: actor.id, publisher_version: actor.version, publisher_team_revision: actor.team?.revision ?? null, publisher_policy_revision: actor.team?.policy_revision ?? null, publisher_group_revision: actor.team?.group_revision ?? null, published_at: at, workflow_settings: JSON.parse(current.settings_json), steps: declared.steps, connections: declared.connections, bindings: await snapshotBindings(env, declared.connections), trigger: graph.trigger.type, ...(rollback ? { rollback_of: rollback.rollback_of } : {}) }
   const adoption = await adoptionStatements(env, actor, current, input)
   const guard = `attested:${versionId}`
   const statements = [

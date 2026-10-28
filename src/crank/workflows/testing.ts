@@ -69,7 +69,7 @@ export async function testWorkflow(env: CrankEnv, actor: Actor, workflowId: stri
   const { graph, declared } = validateGraph(bindGraph(draft.graph, bindings as Record<string, string>))
   const at = now(), runId = id(), versionId = id(), graphJson = canonical(graph)
   const previous = await stmt(env, 'SELECT MAX(number) AS n FROM crank_workflow_versions WHERE workflow_id=?', workflowId).first<{ n: number | null }>()
-  const authority = { ...(authored ? { authoring: true } : {}), custom_bindings: await customBindings(env,graph), gateways, test: true, test_draft_digest: draftDigest, tested_at: at, test_team_revision: actor.team?.revision ?? null, workflow_settings: JSON.parse(workflow.settings_json), steps: declared.steps, connections: declared.connections, bindings: accounts, connection_schemas: await snapshotBindings(env, declared.connections), sample_source: 'manual sample' }
+  const authority = { ...(authored ? { authoring: true } : {}), custom_bindings: await customBindings(env,graph), gateways, test: true, test_draft_digest: draftDigest, tested_at: at, test_team_revision: actor.team?.revision ?? null, test_policy_revision: actor.team?.policy_revision ?? null, test_group_revision: actor.team?.group_revision ?? null, workflow_settings: JSON.parse(workflow.settings_json), steps: declared.steps, connections: declared.connections, bindings: accounts, connection_schemas: await snapshotBindings(env, declared.connections), sample_source: 'manual sample' }
   const target = await targetFor(env, workflowId)
   await guardedBatch(env, actor, actor.team ? 'prepare' : 'owner', [
     stmt(env, `INSERT INTO crank_workflow_versions(id,workflow_id,number,graph_json,graph_digest,declared_json,published_by,published_at,mode,retry_policy_json)
