@@ -1,4 +1,5 @@
 import { previewSample } from './samples'
+import { responseOf } from '../engine/steps/core'
 import { collectAnswers, collectFields } from '../engine/steps/collect'
 import { collectDeadlines } from '../ops/collect-deadlines'
 import { guardedBatch } from '../access'
@@ -239,7 +240,7 @@ export async function previewWorkflow(env: CrankEnv, actor: Actor, workflowId: s
       try {
         if (step.type === 'paths') {
           const { matched, trace, error } = evaluatePaths(step, scope, zone, time)
-          results.push({ path, type: 'paths', matched, evaluations: trace.map(result => ({ branch: result.branch, ...result.trace })), trace, ...(error ? { error: error.toJSON() } : {}), outcome: error ? 'type mismatch' : matched.length ? 'routed' : 'stopped by filter' })
+          results.push({ path, type: 'paths', matched, evaluations: trace.map(result => ({ branch: result.branch, ...result.trace })), trace, ...(error ? { error: error.toJSON() } : {}), ...(error ? {} : {output:{matched}}), outcome: error ? 'type mismatch' : matched.length ? 'routed' : 'stopped by filter' })
           if (error) return 'failed'
           if (!matched.length) return 'stopped'
           scope.steps[step.id] = { matched }
@@ -254,7 +255,7 @@ export async function previewWorkflow(env: CrankEnv, actor: Actor, workflowId: s
         }
         if (step.type === 'filter') {
           const evaluation = evaluate(step.when as Groups, scope, zone, time)
-          results.push({ path, type: 'filter', pass: evaluation.pass, outcome: evaluation.mismatch ? 'type mismatch' : evaluation.pass ? 'passed' : 'stopped by filter', trace: evaluation })
+          results.push({ path, type: 'filter', pass: evaluation.pass, ...(evaluation.pass ? {output:{passed:true}} : {}), outcome: evaluation.mismatch ? 'type mismatch' : evaluation.pass ? 'passed' : 'stopped by filter', trace: evaluation })
           if (!evaluation.pass) return evaluation.mismatch ? 'failed' : 'stopped'
           scope.steps[step.id] = { passed: true }
           continue
@@ -264,6 +265,12 @@ export async function previewWorkflow(env: CrankEnv, actor: Actor, workflowId: s
           const output = step.type === 'map' ? resolved : runTransform(String(step.fn), resolved)
           scope.steps[step.id] = output
           results.push({ path, type: step.type, output })
+          continue
+        }
+        if (step.type === 'respond') {
+          const output = responseOf(resolve(step.input ?? {}, scope) as Record<string, unknown>)
+          scope.steps[step.id] = output
+          results.push({path, type:step.type, output, outcome:'response preview · not sent'})
           continue
         }
         results.push({ path, type: step.type, outcome: 'not run in preview', note: `${step.type} would act on an app or wait; test it from a run` })
@@ -276,5 +283,5 @@ export async function previewWorkflow(env: CrankEnv, actor: Actor, workflowId: s
     return 'completed'
   }
   walk(graph.steps, '')
-  return { sample_source: selected.source.label, source: selected.source, digest: await digest(canonical(selected.payload)), steps: results.map(step => ({ ...step, source: selected.source })) }
+  return { draft_digest: await digest(canonical(graph)), trigger: selected.payload, sample_source: selected.source.label, source: selected.source, digest: await digest(canonical(selected.payload)), steps: results.map(step => ({ ...step, source: selected.source })) }
 }

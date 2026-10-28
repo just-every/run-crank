@@ -28,7 +28,7 @@ import { importApi } from '../import-api'
 import { importDoor } from '../import-door'
 import { dataApi } from '../data'
 import { encryptionPanel, retentionPanels, retentionPreview, sensitivePanel } from './retention-view'
-import { authorize, requireOwner, requireWriteOrigin } from '../access'
+import { authorize, requireOwner, requirePrepare, requireWriteOrigin } from '../access'
 import { canonical, digest, type CrankEnv } from '../model'
 import { authResponse } from '../../auth.server'
 import { document, esc } from './document'
@@ -81,6 +81,12 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
     }
     const editorPage = async (id:string,params:URLSearchParams,preview?:unknown,editFeedback?:EditFeedback,status=200) => {
       const [data,state,waiting] = await Promise.all([workflowData(read,id,params,actor),read('/api/crank/state'),read('/api/crank/workflow-runs?status=awaiting_approval&limit=100')])
+      // Pure evaluation uses the same authorized preview door as the Test tab.
+      // It never tests an app action or crosses a wait to invent a result.
+      if (!preview && data.sampleData.samples.some((sample:any)=>sample.selected && sample.step_path==='trigger')) {
+        const response=await call('/api/crank/workflows/'+encodeURIComponent(id)+'/preview',{})
+        if(response.ok)preview=await response.json()
+      }
       let customPicker=''
       const selected=findNode(data.workflow.draft,params.get('step')??'')??flatten(nodes(data.workflow.draft)).at(-1)
       if(actor.role==='owner' && ['native','dev'].includes(actor.kind) && selected?.step?.type==='custom.request') {
@@ -120,6 +126,7 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
       }
       const nativeEdit=/^\/app\/workflows\/([^/]+)\/edit$/.exec(url.pathname)
       if(nativeEdit) {
+        requirePrepare(actor)
         const workflowId=decodeURIComponent(nativeEdit[1]), workflow=await read('/api/crank/workflows/'+encodeURIComponent(workflowId))
         if(form.draft_digest!==workflow.draft_digest)return page('Draft changed',`<p class="notice">The draft changed. Reload it before saving; your changes were not applied.</p><a href="/app/workflows/${esc(workflowId)}">Reload draft</a>`,{},409)
         try {

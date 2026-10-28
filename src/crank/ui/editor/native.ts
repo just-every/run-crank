@@ -38,10 +38,11 @@ export function namedFields(graph: Graph, target: string): NamedField[] {
     const fields = [...incoming]
     for (const step of steps) {
       if (step.id === target) { found = fields; return true }
+      const name = String(step.name ?? NATIVE_TYPES[step.type as NativeType] ?? step.type)
       if (step.type === 'paths') {
+        fields.push({ref:'steps.' + step.id + '.matched',label:name + ' · matched routes',kind:'list'})
         for (const branch of branchesOf(step)) if (walk(branch.steps, fields)) return true
       }
-      const name = String(step.name ?? NATIVE_TYPES[step.type as NativeType] ?? step.type)
       if (step.type === 'map' && isObject(step.input)) {
         const leaves = (value: unknown, path: string, label: string, depth = 0) => {
           if (depth > 8) return
