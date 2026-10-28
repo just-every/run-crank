@@ -139,7 +139,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "16f1f577fe401cea78ff92524cdb98b377fce4bb61050f1bd758f105b2c86109",
+      "sha256": "8eaa077acd2b53b65251bd3a18b72637ad0259e6a18a3e58a3a37e1e6a347b81",
       "executable": false
     },
     "AGENTS.md": {
@@ -163,7 +163,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "e620af4214d22d5bf95f7c6183da8da14417be232b5938ff98f7df463ab1cdf4",
+      "sha256": "71a330b3632581c6bcea6ec3d3610b03488cd8bacc9f569d4107c2466f79c35a",
       "executable": false
     },
     "DEMO.md": {
@@ -203,7 +203,7 @@
       "executable": false
     },
     "docs/CLAIMS.md": {
-      "sha256": "960c16b1d78d657878dd213514ce40b4a225dc7d2a97cb5a0c93b48d618bcdb2",
+      "sha256": "8639647fa382fec3e067a472998c8904763ba33d153d9d415e728ae78a986ba9",
       "executable": false
     },
     "docs/DATA-FLOWS.md": {
@@ -2687,7 +2687,7 @@
       "executable": false
     },
     "src/crank/engine/graph.ts": {
-      "sha256": "892a07e64bc5c30123341ed77831fb7345211152504092f3bc0f300aa4f72eee",
+      "sha256": "b3c80641f66e6725ac99d025dc06f354d16a5aa9944bc07a517f345d6bfd5c17",
       "executable": false
     },
     "src/crank/engine/interruption.ts": {
@@ -3531,7 +3531,7 @@
       "executable": false
     },
     "src/crank/workflows/runs.ts": {
-      "sha256": "91bc482482800515adb1700d1fdaf1ad7ae35700a491df0e813eccd95d2a8c63",
+      "sha256": "aa2e1a864de3f816c869af2565fcffe4fdc08c67fe7c0aa75215a9b96792437b",
       "executable": false
     },
     "src/crank/workflows/samples.ts": {
@@ -6027,11 +6027,11 @@
       "executable": false
     },
     "tests/sample-browser.mjs": {
-      "sha256": "afaeae44266a2cc7bafb8eff3ee2a472244debb1c6ea8d6016926c51375d5e05",
+      "sha256": "6611254bf4e4a9d97d5c4f07a7926ece6eb14a58ea03966488776ebd28081310",
       "executable": false
     },
     "tests/sample-journey.mjs": {
-      "sha256": "63dc446ce0a02c6a7181b99d4d05aa8b1cd768973051f741b000728d593bef7a",
+      "sha256": "af107f0126f7ef0108a28a253695ed871c918f883d2679821e31bc0790568413",
       "executable": false
     },
     "tests/security-browser.mjs": {

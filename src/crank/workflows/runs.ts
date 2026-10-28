@@ -256,6 +256,7 @@ export async function previewWorkflow(env: CrankEnv, actor: Actor, workflowId: s
           const evaluation = evaluate(step.when as Groups, scope, zone, time)
           results.push({ path, type: 'filter', pass: evaluation.pass, outcome: evaluation.mismatch ? 'type mismatch' : evaluation.pass ? 'passed' : 'stopped by filter', trace: evaluation })
           if (!evaluation.pass) return evaluation.mismatch ? 'failed' : 'stopped'
+          scope.steps[step.id] = { passed: true }
           continue
         }
         if (step.type === 'transform' || step.type === 'map') {
