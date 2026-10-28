@@ -13,6 +13,7 @@ import { identity } from './identity'
 import { appResponse, productApi } from './crank/ui/handler'
 import { publicHooks } from './crank/triggers/public'
 import { schedulerPass } from './crank/ops/scheduler'
+import { emailHandler } from './crank/triggers/email'
 
 const api = new Hono<{ Bindings: Bindings }>()
 api.get('/health', (context) => healthResponse(context.env))
@@ -27,6 +28,7 @@ function noTransform(response: Response): Response {
 }
 
 export default withDemo({
+  email: emailHandler,
   async fetch(request, env, execution) {
     const asset = await staticAssetResponse(request, env)
     if (asset) return asset

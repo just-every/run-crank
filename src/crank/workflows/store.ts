@@ -220,7 +220,7 @@ async function publishVersion(env: CrankEnv, actor: Actor, workflowId: string, i
   const subflows = await subflowPublication(env, actor, graph)
   await checkCustomPublication(env,graph,actor)
   await checkCustomTriggerPublication(env,graph)
-  if (isTableSource(graph.trigger)) requireOwner(actor)
+  if (isTableSource(graph.trigger) || graph.trigger.type === 'email') requireOwner(actor)
   const tableGuard = isTableSource(graph.trigger) ? await tableSourceGuard(env, graph.trigger, { workflowId, ...(pendingRestore(current) ? { adoptingOwnerId: actor.id } : {}) }) : null
   const gateways = customGatewayIds(graph)
   await validateConnectionScopes(env, gateways.map(gatewayId => 'gateway:' + gatewayId), (current as WorkflowRow & {environment:string}).environment)

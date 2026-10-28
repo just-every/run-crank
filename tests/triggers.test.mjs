@@ -2,6 +2,7 @@ import { before, after, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash, createHmac } from 'node:crypto';
 import { harness } from './harness.mjs';
+import {inboundEmailJourney,inboundEmailBoundsJourney,inboundEmailCustodyJourney} from './inbound-email-journey.mjs';
 import { estimateHold, connection, deliver, fakeEdge, fakeSecret, hookUrl, jsonResponse, publish, runs, settled, stepOf, until } from './kit.mjs';
 
 // Feeds, vendor APIs and mail are faked only at the network edge.
@@ -11,6 +12,10 @@ before(async () => { h = await harness('http://127.0.0.1:9', { edge: fake.edge }
 after(async () => { await h?.close() });
 const MINUTE = 60000;
 const form = (body, headers = {}) => ({ method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded', ...headers }, body });
+
+test('Inbound email admits forwarded fields and files once and refuses sender, authentication and alias authority failures',()=>inboundEmailJourney());
+test('Inbound email bounds raw streams and MIME and fences in-flight revocation and stale owner authority',()=>inboundEmailBoundsJourney());
+test('Inbound email restores complete inactive custody and erases files without replay or archive resurrection',()=>inboundEmailCustodyJourney());
 
 test('TRIG-001: a secret URL admits form posts once per dedup window, verifies Stripe signatures and rotates', async () => {
   const w = await publish(h, 'Quote requests', { trigger: { type: 'webhook', dedup: { window_minutes: 5 } }, steps: [{ id: 'lead', type: 'map', input: { customer: '{{trigger.body.customer}}', amount: '{{trigger.body.amount}}' } }] });

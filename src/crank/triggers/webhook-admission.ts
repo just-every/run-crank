@@ -6,15 +6,23 @@ import type { InboundUpload } from './inbound'
 import type { WorkflowRow } from './admission'
 
 interface SlackEventAdmission { connectionId: string; signingConnectionId: string; signingIv: string | null; sourceTime: string | null }
+interface EmailAdmission { aliasId: string; receiptId: string }
 
 /** D1 serializes the whole batch: an event identity is committed with exactly one
  * queued run or held item. The admission ID distinguishes this request's claim. */
-export async function admitWebhook(env: CrankEnv, workflow: WorkflowRow, hookId: string, key: string, payloadDigest: string, payload: unknown, threshold: number, windowMinutes: number | null, files: InboundUpload[] = [], budgetHold = false, appEvent?: SlackEventAdmission) {
+export async function admitWebhook(env: CrankEnv, workflow: WorkflowRow, hookId: string, key: string, payloadDigest: string, payload: unknown, threshold: number, windowMinutes: number | null, files: InboundUpload[] = [], budgetHold = false, appEvent?: SlackEventAdmission, email?: EmailAdmission) {
   const token = id(), candidateHold = id(), guard = id(), at = now(), eventDigest = await digest(key)
   const windowStart = windowMinutes === null ? '' : new Date(Date.now() - windowMinutes * 60000).toISOString()
   const settings = JSON.parse(workflow.settings_json || '{}')
   const expiry = Number.isInteger(settings.hold_expiry_hours) ? new Date(Date.now() + settings.hold_expiry_hours * 3600000).toISOString() : null
-  const authority = appEvent ? `EXISTS(SELECT 1 FROM crank_workflows w JOIN crank_workflow_versions v ON v.id=w.published_version_id
+  const authority = email ? `EXISTS(SELECT 1 FROM crank_email_aliases a JOIN crank_workflows w ON w.id=a.workflow_id
+    JOIN crank_workflow_versions v ON v.id=w.published_version_id JOIN oa_operators o ON o.id=a.owner_id
+    WHERE a.id=? AND a.workflow_id=? AND a.active=1 AND a.revoked_at IS NULL
+    AND w.owner_id=a.owner_id AND o.status='active' AND o.role='owner' AND o.version=a.owner_version
+    AND w.status IN ('published','paused') AND v.id=? AND v.retired_at IS NULL
+    AND json_extract(v.graph_json,'$.trigger.type')='email')
+    AND NOT EXISTS(SELECT 1 FROM crank_erased_webhook_events WHERE workflow_id=? AND event_digest=?)`
+    : appEvent ? `EXISTS(SELECT 1 FROM crank_workflows w JOIN crank_workflow_versions v ON v.id=w.published_version_id
     JOIN crank_connections c ON c.id=? JOIN crank_connections s ON s.id=?
     WHERE w.id=? AND w.status IN ('published','paused') AND v.id=? AND v.retired_at IS NULL
     AND json_extract(v.graph_json,'$.trigger.type')='slack_event'
@@ -25,7 +33,8 @@ export async function admitWebhook(env: CrankEnv, workflow: WorkflowRow, hookId:
     WHERE h.id=? AND h.workflow_id=? AND h.revoked_at IS NULL AND (h.expires_at IS NULL OR h.expires_at>?)
     AND w.status IN ('published','paused') AND v.id=? AND v.retired_at IS NULL)
     AND NOT EXISTS(SELECT 1 FROM crank_erased_webhook_events WHERE workflow_id=? AND event_digest=?)`
-  const args = appEvent ? [appEvent.connectionId, appEvent.signingConnectionId, workflow.id, workflow.published_version_id, appEvent.signingIv, workflow.id, eventDigest]
+  const args = email ? [email.aliasId, workflow.id, workflow.published_version_id, workflow.id, eventDigest]
+    : appEvent ? [appEvent.connectionId, appEvent.signingConnectionId, workflow.id, workflow.published_version_id, appEvent.signingIv, workflow.id, eventDigest]
     : [hookId, workflow.id, at, workflow.published_version_id, workflow.id, eventDigest]
   const claimed = `EXISTS(SELECT 1 FROM crank_trigger_events WHERE workflow_id=? AND dedup_key=? AND admission_id=?)`
   // DATA-003: a financial or health workflow's event, uploads and held copy are sealed before they are stored.
@@ -48,21 +57,24 @@ export async function admitWebhook(env: CrankEnv, workflow: WorkflowRow, hookId:
       stmt(env, `UPDATE crank_trigger_events SET hold_id=(SELECT id FROM crank_holds WHERE workflow_id=? AND status='open' AND source='webhook' ORDER BY created_at,id LIMIT 1)
         WHERE workflow_id=? AND dedup_key=? AND admission_id=?`, workflow.id, workflow.id, key, token),
       ...files.map((file, i) => stmt(env, `INSERT INTO crank_files(id,workflow_id,name,type,size,sha256,source,content_base64,created_at)
-        SELECT ?,?,?,?,?,?,'webhook upload',?,? WHERE ${claimed}`, file.file_id, workflow.id, file.name, file.type, file.size, file.sha256, sealedFiles[i], at, workflow.id, key, token)),
+        SELECT ?,?,?,?,?,?,?,?,? WHERE ${claimed}`, file.file_id, workflow.id, file.name, file.type, file.size, file.sha256, email ? 'email attachment' : 'webhook upload', sealedFiles[i], at, workflow.id, key, token)),
       stmt(env, `INSERT INTO crank_wf_runs(id,workflow_id,version_id,trigger_kind,source_id,trigger_json,status,received_at,created_by,business_key,payload_key,payload_index,source_time)
         SELECT ?,?,?,?,?,?,'queued',?,'trigger',?,?,?,? WHERE ${claimed}
         AND NOT EXISTS(SELECT 1 FROM crank_trigger_events WHERE workflow_id=? AND dedup_key=? AND hold_id IS NOT NULL)`,
-      token, workflow.id, workflow.published_version_id, appEvent ? 'slack_event' : 'webhook', key, sealedTrigger, at, key, target.key?.id ?? null, target.key ? target.fieldsJson : null, appEvent?.sourceTime ?? null, workflow.id, key, token, workflow.id, key),
+      token, workflow.id, workflow.published_version_id, email ? 'email' : appEvent ? 'slack_event' : 'webhook', key, sealedTrigger, at, key, target.key?.id ?? null, target.key ? target.fieldsJson : null, appEvent?.sourceTime ?? null, workflow.id, key, token, workflow.id, key),
       ...(index ? [index] : []),
       stmt(env, `UPDATE crank_trigger_events SET run_id=? WHERE workflow_id=? AND dedup_key=? AND admission_id=? AND hold_id IS NULL`, token, workflow.id, key, token),
       stmt(env, `INSERT INTO crank_hold_items(hold_id,item_key,payload_json,received_at,source_time,status)
         SELECT hold_id,?,?,?,?,'held' FROM crank_trigger_events WHERE workflow_id=? AND dedup_key=? AND admission_id=? AND hold_id IS NOT NULL ON CONFLICT(hold_id,item_key) DO UPDATE SET payload_json=excluded.payload_json,received_at=excluded.received_at,status='held',decided_by=NULL,decided_at=NULL,run_id=NULL WHERE crank_hold_items.status!='held'`,
       key, sealedTrigger, at, appEvent?.sourceTime ?? null, workflow.id, key, token),
+      ...(email ? [stmt(env, `INSERT INTO crank_email_receipts(id,workflow_id,alias_id,received_at,decision,event_key,run_id,hold_id)
+        SELECT ?,?,?,?,CASE WHEN admission_id!=? THEN 'duplicate' WHEN hold_id IS NOT NULL THEN 'held' ELSE 'admitted' END,dedup_key,run_id,hold_id
+        FROM crank_trigger_events WHERE workflow_id=? AND dedup_key=?`, email.receiptId, workflow.id, email.aliasId, at, token, workflow.id, key)] : []),
       stmt(env, `UPDATE crank_authority_guards SET ok=CASE WHEN ${authority} THEN 1 ELSE 0 END WHERE id=?`, ...args, guard),
       stmt(env, 'DELETE FROM crank_authority_guards WHERE id=?', guard),
     ])
   } catch (error) {
-    if ((isBudgetExceeded(error) || /crank_usage_estimate_required/.test(String(error))) && !budgetHold) return admitWebhook(env, workflow, hookId, key, payloadDigest, payload, threshold, windowMinutes, files, true, appEvent)
+    if ((isBudgetExceeded(error) || /crank_usage_estimate_required/.test(String(error))) && !budgetHold) return admitWebhook(env, workflow, hookId, key, payloadDigest, payload, threshold, windowMinutes, files, true, appEvent, email)
     if (/crank_authority_guards|CHECK constraint failed: ok/.test(String(error))) throw new CrankError(409, 'Webhook authority changed or this event was erased; no event was admitted')
     throw error
   }

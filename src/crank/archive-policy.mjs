@@ -1,5 +1,6 @@
 import { fenceRow, importRow, importSafety, validateRestore } from './restore-policy.mjs';
 
+// Email aliases travel inactive; value-free receipts and sealed run files retain custody.
 // AI classifications retain validated outputs, model provenance and bounded response
 // checkpoints in the existing step, attempt and usage inventory, without model keys.
 // App subject indexes, pending-row digests, field-value digests and erased-record fences use the default portable
