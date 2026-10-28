@@ -31,7 +31,7 @@ export async function sendEmail(h,to,raw,{sender=address('purchasing'),stream=fa
   return stream?value.rejection:value.rejectReason??null;
 }
 const alias=(h,w,input={})=>h.post(`workflows/${w.id}/email-aliases`,{domain:'inbound.example.test',...input},h.owner,201);
-const history=(h,w)=>h.get('settings/email?workflow_id='+w.id);
+const history=(h,w)=>h.get('./settings/email?workflow_id='+w.id);
 
 /** Transport to native publication, admission, history and controlled destination. */
 export async function inboundEmailJourney({onScreen=async()=>{},emitted=false}={}) {
@@ -133,7 +133,7 @@ export async function inboundEmailCustodyJourney() {
   const h=await harness('http://127.0.0.1:9',{emailTransport:true});let restored,destination;
   try {
     const w=await publish(h,'Private email custody',{trigger:{type:'email'},steps:[{id:'seen',type:'map',input:{file:'{{trigger.files.attachment_0}}',order:'{{trigger.text}}'}}]}),a=await alias(h,w);
-    await h.post(`workflows/${w.id}/pause`);await h.post('data/classes',{workflow_id:w.id,data_class:'customer',identifier_fields:['text']});await h.post(`workflows/${w.id}/resume`);
+    await h.post(`workflows/${w.id}/pause`);await h.post('./data/classes',{workflow_id:w.id,data_class:'customer',identifier_fields:['text']});await h.post(`workflows/${w.id}/resume`);
     await sendEmail(h,a.address,emailFixture(a.address));
     const run=await settled(h,(await runs(h,w))[0].id),file=stepOf(run,'seen').output.file;
     const stored=await h.db.prepare('SELECT trigger_json FROM crank_wf_runs WHERE id=?').bind(run.id).first();assert.equal(JSON.parse(stored.trigger_json).sealed,'crank-payload-v1');
@@ -144,7 +144,7 @@ export async function inboundEmailCustodyJourney() {
     assert.ok(records(archive.text).length>=4);
     restored=await harness('http://127.0.0.1:9',{emailTransport:true});await restored.post('./data/restore',{archive:archive.text,confirm:'RESTORE'});
     const copy=await restored.send('/api/crank/data/export',{},restored.owner);assert.equal(copy.status,200);assert.deepEqual(records(copy.text),records(archive.text),'complete receiving, receipt and file records survive byte for byte');
-    assert.equal((await restored.get(`workflows/${w.id}`)).status,'paused');assert.ok((await restored.get('settings/email')).aliases.every(a=>a.active===0));
+    assert.equal((await restored.get(`workflows/${w.id}`)).status,'paused');assert.ok((await restored.get('./settings/email')).aliases.every(a=>a.active===0));
     await restored.restart();await restored.tick();assert.match(await sendEmail(restored,a.address,emailFixture(a.address)),/inactive/);
     await h.post(`workflows/${w.id}/pause`);await h.post('./data/erase',{workflow_run_id:run.id,confirm:'ERASE'});
     assert.equal(await h.db.prepare('SELECT 1 FROM crank_files WHERE id=?').bind(file.file_id).first(),null);

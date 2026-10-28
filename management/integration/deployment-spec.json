@@ -534,6 +534,12 @@
       "name": "0085_model_response_identity.sql",
       "sha256": "e64f92bc122b5554cb98be23624201a521b0b7d2c74176059266cd4d588368db",
       "sql": "-- A bounded provider response identifier survives interruption of the later\n-- step-result transaction. Model text and credentials never enter this field.\nALTER TABLE crank_wf_attempts ADD COLUMN response_identity TEXT;\n"
+    },
+    {
+      "binding": "DB",
+      "name": "0086_inbound_email.sql",
+      "sha256": "ebc59b93d48d5bd0757bc7862ccc144e39903053fe6f444bb177be1b0842759f",
+      "sql": "CREATE TABLE crank_email_aliases (\n  id TEXT PRIMARY KEY,\n  workflow_id TEXT NOT NULL REFERENCES crank_workflows(id),\n  address_hash TEXT NOT NULL UNIQUE,\n  domain TEXT NOT NULL,\n  owner_id TEXT NOT NULL,\n  owner_version INTEGER NOT NULL,\n  active INTEGER NOT NULL DEFAULT 1 CHECK(active IN (0,1)),\n  created_at TEXT NOT NULL,\n  revoked_at TEXT\n);\nCREATE TABLE crank_email_receipts (\n  id TEXT PRIMARY KEY,\n  workflow_id TEXT NOT NULL REFERENCES crank_workflows(id),\n  alias_id TEXT NOT NULL REFERENCES crank_email_aliases(id),\n  received_at TEXT NOT NULL,\n  decision TEXT NOT NULL,\n  event_key TEXT,\n  run_id TEXT,\n  hold_id TEXT\n);\nCREATE INDEX crank_email_receipts_workflow ON crank_email_receipts(workflow_id,received_at);\n"
     }
   ],
   "compatibilityDate": "2026-09-08",
