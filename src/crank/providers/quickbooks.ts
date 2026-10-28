@@ -1,4 +1,4 @@
-import { requireInvoiceAmount } from './invoice-amount'
+import { requireInvoiceAmount, requireInvoiceLines } from './invoice-amount'
 import { credential } from '../connections/store'
 import { authorizeRequest } from '../connections/auth'
 import { retryRequest } from '../connectors/retry'
@@ -17,6 +17,7 @@ export const qboCreate = (type: string) => ['quickbooks.create_invoice', 'quickb
 
 const text: InputSchema = { type: 'string' }
 const decimal: InputSchema = { type: 'decimal' }
+const cents: InputSchema = { ...decimal, decimalPlaces: 2 }
 const ref: InputSchema = { type: 'object', properties: { value: { type: 'string', required: true, nonempty: true }, name: text } }
 const sales: InputSchema = { type: 'object', properties: { ItemRef: ref, Qty: decimal, UnitPrice: decimal, TaxCodeRef: ref, ClassRef: ref, ServiceDate: text } }
 const discount: InputSchema = { type: 'object', properties: { PercentBased: { type: 'boolean' }, DiscountPercent: decimal, DiscountAccountRef: ref } }
@@ -24,12 +25,12 @@ const line: InputSchema = {
   type: 'object', required: true,
   properties: {
     DetailType: { type: 'string', required: true, enum: ['SalesItemLineDetail', 'DiscountLineDetail', 'SubTotalLineDetail', 'DescriptionOnly'] },
-    Amount: decimal, Description: text, Id: text, LineNum: decimal,
+    Amount: cents, Description: text, Id: text, LineNum: decimal,
     SalesItemLineDetail: sales, DiscountLineDetail: discount, SubTotalLineDetail: { type: 'object' }, DescriptionLineDetail: { type: 'object' },
   },
   discriminator: { field: 'DetailType', variants: {
-    SalesItemLineDetail: { Amount: { ...decimal, required: true }, SalesItemLineDetail: { ...sales, required: true } },
-    DiscountLineDetail: { Amount: { ...decimal, required: true }, DiscountLineDetail: { ...discount, required: true } },
+    SalesItemLineDetail: { Amount: { ...cents, required: true }, SalesItemLineDetail: { ...sales, required: true } },
+    DiscountLineDetail: { Amount: { ...cents, required: true }, DiscountLineDetail: { ...discount, required: true } },
     SubTotalLineDetail: {}, DescriptionOnly: {},
   } },
 }
@@ -38,12 +39,12 @@ export const quickbooksInputSchema: InputSchema = {
   type: 'object', required: true, properties: {
     realm_id: { type: 'string', required: true, pattern: /^[0-9]{1,30}$/ },
     business_key: { type: 'string', required: true, nonempty: true, maxLength: 21 },
-    amount_usd: decimal,
+    amount_usd: cents,
     payload: { type: 'object', required: true, properties: {
       CustomerRef: { ...ref, required: true }, Line: { type: 'array', required: true, minItems: 1, items: line },
       CurrencyRef: { type: 'object', properties: { value: { type: 'string', required: true, enum: ['USD'] } } },
-      TxnTaxDetail: { type: 'object', properties: { TotalTax: decimal, TxnTaxCodeRef: ref, TaxLine: { type: 'array', items: { type: 'object', required: true, properties: {
-        Amount: { ...decimal, required: true }, DetailType: { type: 'string', required: true, enum: ['TaxLineDetail'] },
+      TxnTaxDetail: { type: 'object', properties: { TotalTax: cents, TxnTaxCodeRef: ref, TaxLine: { type: 'array', items: { type: 'object', required: true, properties: {
+        Amount: { ...cents, required: true }, DetailType: { type: 'string', required: true, enum: ['TaxLineDetail'] },
         TaxLineDetail: { type: 'object', required: true, properties: { TaxRateRef: { ...ref, required: true }, PercentBased: { type: 'boolean' }, TaxPercent: decimal, NetAmountTaxable: decimal } },
       } } } } },
       DepartmentRef: ref, SalesTermRef: ref, DepositToAccountRef: ref, PaymentMethodRef: ref,
@@ -92,11 +93,13 @@ const create: StepType = {
   validate(step) {
     if (step.timeout_ms !== undefined && (!Number.isInteger(step.timeout_ms) || Number(step.timeout_ms) < 100 || Number(step.timeout_ms) > 30000)) throw new StepError('validation', 'QuickBooks timeout_ms must be 100 to 30000')
     const input = isObject(step.input) ? step.input : {}, payload = inputLiteral(input.payload), amount = inputLiteral(input.amount_usd)
+    requireInvoiceLines(input.payload, true)
     if (payload.known && amount.known && amount.value !== undefined) requireInvoiceAmount(payload.value, amount.value)
   },
   async execute(step, ctx) {
     const input = ctx.input
     validateInput(quickbooksInputSchema, input, step.id)
+    requireInvoiceLines(input.payload)
     if (input.amount_usd !== undefined) requireInvoiceAmount(input.payload,input.amount_usd)
     const base = await quickbooksAccount(ctx.env, String(step.connection_id), input.realm_id)
     const entity = entityOf(step.type), url = new URL(base + '/' + entity.toLowerCase())

@@ -873,6 +873,14 @@ remaining owner estimate and provider evidence. Notification acceptance remains
 a separate subsequent checkpoint. This does not change operations reporting's
 separately labelled owner attestation.
 
+Native QuickBooks create operations require whole-cent line, discount and tax
+amounts. Explicit quantity and unit price values must multiply to the line
+amount even when `amount_usd` is omitted. Unit prices may retain finer decimal
+precision when the resulting amount is exact cents; omitted provider defaults
+remain omitted. Definite literal errors are refused at save and publication,
+and resolved mappings are checked before dispatch, including after restart.
+Errors name the indexed input field.
+
 When a native invoice supplies `amount_usd`, Crank validates its exact line,
 discount and tax total before dispatch. Conflicting quantity and price inputs
 or percentage discounts without an exact bounded total are refused. A grant's
