@@ -95,6 +95,11 @@ test('TEAM-001 / WORK-008: scoped builders freeze draft tests; both account bind
  const h=await harness('http://127.0.0.1:9',{edge:edge.edge});
  try{
   const builder=await invite(h,'Riley Chen'),viewer=await invite(h,'Sam Patel');
+  await h.post('team/'+builder.id,{role:'builder',workflow_ids:['workspace:production'],connection_ids:[]});
+  const workspaceDraft=await h.post('workflows',{name:'Synthetic workspace builder rehearsal',graph:{trigger:{type:'manual'},steps:[{id:'record',type:'map',input:{ok:true}}]}},builder.cookie,201);
+  const workspaceTest=await h.post(`workflows/${workspaceDraft.id}/test`,{bindings:{}},builder.cookie,201);
+  assert.equal(workspaceTest.status,'succeeded','a current workspace creation grant also authorizes its own draft test at dispatch');
+  assert.deepEqual(workspaceTest.steps[0].output,{ok:true});
   const account=await connection(h,{app:'http',label:'Harbour production ledger',auth_kind:'bearer',domains:['ledger.example'],secret:{token:fakeSecret('production')}});
   const sandbox=await connection(h,{app:'http',label:'Harbour test ledger',auth_kind:'bearer',domains:['ledger.example'],secret:{token:fakeSecret('sandbox')}});
   await h.post(`connections/${sandbox.id}/purpose`,{purpose:'test'});
@@ -213,6 +218,7 @@ test('TEAM-001: complete explicit grants authorize native work, delegation, scop
    assert.equal(state.runs.find(row=>row.id===legacyRuns[1].id).payload,'restricted');
    assert.ok(!JSON.stringify(state).includes('synthetic-crank-legacy-restricted'));
    assert.equal((await h.get('runs/'+legacyRuns[1].id,person.cookie)).payload,'restricted');
+   assert.deepEqual((await h.get('runs/'+legacyRuns[0].id,person.cookie)).input,{customer:'synthetic-crank-legacy-allowed'});
   }
   await assign(admin,[grant('admin',[w.id],[c.id])]);
   await assign(recipient,[grant('builder',[w.id],[c.id])],admin.cookie);
@@ -233,8 +239,18 @@ test('TEAM-001: complete explicit grants authorize native work, delegation, scop
   const createdLegacy=await h.post('flows',{name:'Synthetic delegated legacy draft',source_app:'Synthetic source',destination_app:'Synthetic destination',target_url:'http://127.0.0.1:9/events'},recipient.cookie,201);
   assert.equal((await h.get('flows/'+createdLegacy.id,recipient.cookie)).status,'draft');
   await h.get('flows/'+createdLegacy.id,admin.cookie,403);
-  await assign(recipient,[],admin.cookie);
+  await assign(recipient,[]);
   await h.get('workflows/'+created.id,recipient.cookie,403);
+  await h.get('flows/'+createdLegacy.id,recipient.cookie,403);
+  await assign(recipient,[grant('builder',['workspace:production'])],admin.cookie);
+  await h.get('workflows/'+created.id,recipient.cookie,403);
+  await h.get('flows/'+createdLegacy.id,recipient.cookie,403);
+  const fresh=await h.post('workflows',{name:'Synthetic delegated creation after revocation',graph:{trigger:{type:'manual'},steps:[{id:'record',type:'map',input:{ok:true}}]}},recipient.cookie,201);
+  assert.equal((await h.get('workflows/'+fresh.id,recipient.cookie)).name,'Synthetic delegated creation after revocation');
+  const freshLegacy=await h.post('flows',{name:'Synthetic delegated legacy draft after revocation',source_app:'Synthetic source',destination_app:'Synthetic destination',target_url:'http://127.0.0.1:9/events'},recipient.cookie,201);
+  assert.equal((await h.get('flows/'+freshLegacy.id,recipient.cookie)).status,'draft');
+  await h.get('workflows/'+created.id,recipient.cookie,403);
+  await h.get('flows/'+createdLegacy.id,recipient.cookie,403);
   await assign(recipient,[grant('builder',[w.id],[c.id])]);
   await assign(admin,[grant('admin',[w.id],[c.id])]);
   await h.post('data/export',{},admin.cookie,403);
@@ -306,6 +322,7 @@ test('TEAM-001: the native upgrade snapshots exact existing Base access once and
   await h.post(`workflows/${w.id}/draft`,{name:'Migrated edit remains authorized'},admin.cookie);
   await h.post(`workflows/${w.id}/publish`,{},admin.cookie,403);
   await h.post(`workflows/${w.id}/test`,{bindings:{}},admin.cookie,403);
+  assert.equal((await h.get('workflow-runs')).runs.length,0,'migration adds no draft execution authority');
   assert.equal((await h.get('workflows/'+w.id,viewer.cookie)).name,'Migrated edit remains authorized');
   await h.post(`workflows/${w.id}/draft`,{name:'Refused migration widening'},viewer.cookie,403);
   const authored=await h.post('workflows',{name:'Synthetic migrated creation',graph:{trigger:{type:'manual'},steps:[{id:'record',type:'map',input:{ok:true}}]}},admin.cookie,201);
