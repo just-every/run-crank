@@ -1,4 +1,4 @@
-import { workflowScope, versionConnectionScope } from '../team/policy'
+import { workflowScope, versionConnectionScope, completeGrant } from '../team/policy'
 import { authority, requireOwner } from '../access'
 import type { RunRow, WaitSpec } from '../engine/types'
 import { requireValue, stmt, type Actor, type CrankEnv } from '../model'
@@ -43,8 +43,9 @@ export async function assertReviewer(env: CrankEnv, actor: Actor, runId: string,
   }
   if (actor.team) {
     workflowScope(actor, run.workflow_id)
-    requireValue(actor.team.role === 'approver' && !actor.tokenId && !actor.grantId && actor.kind !== 'review', 'A named scoped approver is required', 403)
-    await versionConnectionScope(env, actor, run.version_id)
+    requireValue(completeGrant(actor,'approve',run.workflow_id) && !actor.tokenId && !actor.grantId && actor.kind !== 'review', 'A named scoped approver is required', 403)
+    // Inspect approval authority independently from complete read or preparation grants.
+    await versionConnectionScope(env, {...actor,team:{...actor.team}}, run.version_id, 'approve')
     // WORK-008's synthetic live-effect confirmation is an owner decision.
     // Explicit approval-step payloads remain governed by their named reviewers;
     // mapped values cannot turn an ordinary approval into this trusted boundary.
