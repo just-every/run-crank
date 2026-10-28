@@ -6151,7 +6151,7 @@
       "executable": false
     },
     "tests/team-browser.mjs": {
-      "sha256": "4a2255f0bda26fe025175c71ce37e5f6cca1148cbbbd4639c4f5adfaa2f4fbd8",
+      "sha256": "5e986f67332da510fb94fc65ba05b298670f4f15e4ba9c954410082428af564d",
       "executable": false
     },
     "tests/team-provisioning-journey.mjs": {
