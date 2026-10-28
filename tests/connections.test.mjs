@@ -272,8 +272,118 @@ test('CONN-001: the catalog lists exact native operations and the coverage repor
     { app: 'Slack', operation: 'send_channel_message' }, { app: 'Slack', operation: 'archive_channel' }, { app: 'HubSpot', operation: 'create_contact' },
     { app: 'Webhooks', operation: 'catch_hook' }, { app: 'Formatter', operation: 'text.split' }, { app: 'Acme Partner Portal', operation: 'sync', public_api: 'partner' }, { app: 'Docs Tool', operation: 'create', public_api: 'openapi' }] });
   assert.deepEqual(report.items.map(i => i.status), ['native', 'agent-buildable', 'agent-buildable', 'native', 'native', 'blocked', 'agent-buildable']);
-  const n8n = await h.post('coverage', { n8n: { name: 'Lead flow', nodes: [{ type: 'n8n-nodes-base.webhook' }, { type: 'n8n-nodes-base.if' }, { type: 'n8n-nodes-base.slack', parameters: { resource: 'message', operation: 'post' } }, { type: 'n8n-nodes-base.hubspot', parameters: { resource: 'contact', operation: 'upsert' } }] } });
-  assert.deepEqual(n8n.items.map(i => i.status), ['native', 'native', 'native', 'agent-buildable']);
+  assert.ok(report.items.filter(i => i.status === 'native').every(i => i.coverage_scope === 'operation' && i.configuration_status === 'not_assessed'));
+  const requestsBefore = fake.requests.length;
+  const rule = { field: 'trigger.score', op: 'number.gte', value: 10, value_type: 'number' };
+  const lookup = { input: { name: 'synthetic-crank-1' }, no_match: 'halt', multi_match: 'all', limit: 20, sort: { field: 'name', direction: 'asc' } };
+  const path = { mode: 'exclusive', branches: [{ id: 'qualified', when: [[rule]] }], fallback: true };
+  const cases = [
+    ['slack', 'find_channel_by_name', lookup, true],
+    ['slack', 'find_channel_by_name', { ...lookup, create_if_not_found: { is_private: true } }, true],
+    ['slack', 'find_channel_by_name', { ...lookup, no_match: 'silently_ignore' }, false],
+    ['slack', 'find_channel_by_name', { ...lookup, multi_match: 'random' }, false],
+    ['slack', 'find_channel_by_name', { ...lookup, limit: 0 }, false],
+    ['slack', 'find_channel_by_name', { ...lookup, create_if_not_found: { topic: 'synthetic-crank-2' } }, false],
+    ['slack', 'find_user_by_name', { ...lookup, create_if_not_found: {} }, false],
+    ['slack', 'find_channel_by_name', { ...lookup, unknown: true }, false],
+    ['slack', 'find_channel_by_name', { no_match: 'halt' }, false],
+    ['custom', 'search', { create_if_not_found: { operation: 'synthetic-crank-3' } }, false],
+    ['formatter', 'text.case', { value: 'synthetic-crank-4', to: 'upper' }, true],
+    ['formatter', 'text.case', { value: 'synthetic-crank-4', to: 'invented' }, false],
+    ['formatter', 'text.split', { value: 'one,two', separator: ',', segment: 'last' }, true],
+    ['formatter', 'text.split', { value: 'one,two', separator: ',', segment: 9 }, false],
+    ['formatter', 'text.split', { value: 'one,two', separator: ',', unknown: true }, false],
+    ['formatter', 'text.case', {}, false],
+    ['formatter', 'number.formula', { formula: 'SUM(1,2)', unknown: true }, false],
+    ['filter_paths', 'filter', { when: [[rule]] }, true],
+    ['filter_paths', 'filter', { when: [[{ ...rule, op: 'number.unknown' }]] }, false],
+    ['filter_paths', 'filter', { when: [[{ ...rule, case_sensitive: 'yes' }]] }, false],
+    ['filter_paths', 'filter', { when: [[{ ...rule, unknown: true }]] }, false],
+    ['filter_paths', 'paths', path, true],
+    ['filter_paths', 'paths', { ...path, mode: 'parallel', fallback: undefined, always: true }, true],
+    ['filter_paths', 'paths', { ...path, mode: 'random' }, false],
+    ['filter_paths', 'paths', { ...path, always: true }, false],
+    ['filter_paths', 'paths', { ...path, fallback: 'last' }, false],
+  ];
+  const configured = await h.post('coverage', { items: cases.map(([app, operation, settings]) => ({ app, operation, settings })) });
+  configured.items.forEach((item, i) => {
+    assert.equal(item.operation_status, 'native', cases[i][1]);
+    assert.equal(item.coverage_scope, 'configuration');
+    assert.equal(item.status, cases[i][3] ? 'native' : 'agent-buildable', JSON.stringify(cases[i]));
+    assert.equal(item.configuration_status, cases[i][3] ? 'supported' : 'unsupported');
+    assert.deepEqual(item.settings, JSON.parse(JSON.stringify(cases[i][2])));
+    assert.ok(item.reason && item.reason.length < 300);
+    assert.ok(item.diagnostics.length > 0 && item.diagnostics.length <= 8);
+  });
+  assert.equal(configured.configuration_summary.supported, cases.filter(row => row[3]).length);
+  const unrecognized = await h.post('coverage', { items: [
+    { app: 'slack', operation: 'find_channel_by_name', create_if_not_found: { unknown: true } },
+    { app: 'formatter', operation: 'text.case', settings: { value: 'synthetic-crank-15', to: 'upper' }, source_version: 99 },
+    { app: 'slack', operation: 'find_message', settings: { input: { channel: 'synthetic-crank-16', text: 'synthetic-crank-17' } } },
+  ] });
+  assert.ok(unrecognized.items.every(item => item.status === 'agent-buildable' && item.configuration_status === 'unsupported'));
+  assert.deepEqual(unrecognized.items[0].extra_settings.create_if_not_found, { unknown: true });
+  assert.equal(unrecognized.items[0].diagnostics[0].code, 'unsupported_inventory_fields');
+  assert.equal(unrecognized.items[1].source_version, 99);
+  assert.equal(unrecognized.items[2].diagnostics[0].code, 'resource_mapping_unavailable');
+  const resources = await h.post('coverage', { items: [{ app: 'slack', operation: 'send_channel_message', selected_resources: [{ kind: 'channel', source_id: 'synthetic-crank-5', target_id: 'synthetic-crank-6' }] }] });
+  assert.equal(resources.items[0].status, 'agent-buildable');
+  assert.equal(resources.items[0].diagnostics[0].code, 'resource_mapping_unavailable');
+
+  // Synthetic n8n documented export shape: nodes retain typeVersion and parameters;
+  // these fixtures are not captured buyer exports or live provider receipts.
+  const node = (id, type, typeVersion, parameters, options = {}) => ({ id, name: id, position: [200, 100], type: 'n8n-nodes-base.' + type, typeVersion, parameters, ...options });
+  const conditions = { options: { caseSensitive: true, typeValidation: 'strict', version: 2 }, combinator: 'and', conditions: [{ id: 'synthetic-crank-rule', leftValue: '={{ $json.score }}', rightValue: 10, operator: { type: 'number', operation: 'gte' } }] };
+  const sourceNodes = [
+    node('synthetic-crank-hook', 'webhook', 2, { httpMethod: 'POST', path: 'synthetic-crank-7' }),
+    node('synthetic-crank-wait', 'wait', 1.1, { resume: 'timeInterval', amount: 2, unit: 'hours' }),
+    node('synthetic-crank-wait-version', 'wait', 9, { amount: 2, unit: 'hours' }),
+    node('synthetic-crank-wait-mode', 'wait', 1.1, { resume: 'webhook', amount: 2, unit: 'hours' }),
+    node('synthetic-crank-date', 'dateTime', 2, { operation: 'addToDate', magnitude: '={{ $json.date }}', duration: 1, timeUnit: 'days', outputFieldName: 'next', options: { includeInputFields: true } }),
+    node('synthetic-crank-date-options', 'dateTime', 2, { operation: 'addToDate', magnitude: '={{ $json.date }}', options: { unsupported: true } }),
+    node('synthetic-crank-filter', 'if', 2.2, { conditions, options: {} }),
+    node('synthetic-crank-operator', 'if', 2.2, { conditions: { ...conditions, conditions: [{ ...conditions.conditions[0], operator: { type: 'number', operation: 'invented' } }] } }),
+    node('synthetic-crank-paths', 'switch', 3.2, { mode: 'rules', rules: { values: [{ conditions }] }, options: { fallbackOutput: 'extra', allMatchingOutputs: true } }),
+    node('synthetic-crank-fallback', 'switch', 3.2, { rules: { values: [{ conditions }] }, options: { fallbackOutput: 'invented' } }),
+    node('synthetic-crank-slack', 'slack', 2, { resource: 'message', operation: 'post', channelId: { __rl: true, value: 'synthetic-crank-8', mode: 'list' }, text: 'synthetic-crank-9' }),
+    node('synthetic-crank-search', 'slack', 2, { resource: 'user', operation: 'getByEmail', returnAll: true, options: { createIfMissing: true } }, { alwaysOutputData: true }),
+    node('synthetic-crank-create', 'slack', 2, { resource: 'channel', operation: 'create' }),
+    node('synthetic-crank-missing-version', 'wait', undefined, { amount: 2, unit: 'hours' }),
+    node('synthetic-crank-options', 'wait', 1.1, { amount: 2, unit: 'hours' }, { alwaysOutputData: true }),
+    node('synthetic-crank-map', 'set', 3.4, { assignments: { assignments: [{ id: 'synthetic-crank-field', name: 'score', value: 10, type: 'number' }] }, options: {} }),
+  ];
+  const n8n = await h.post('coverage', { n8n: { name: 'synthetic-crank-10', nodes: sourceNodes, connections: {}, settings: { timezone: 'America/Chicago' } } });
+  const sourceSupported = new Set([0, 1, 4, 6, 8, 15]);
+  n8n.items.forEach((item, i) => {
+    assert.equal(item.status, sourceSupported.has(i) ? 'native' : 'agent-buildable', sourceNodes[i].id + ': ' + JSON.stringify(item));
+    assert.equal(item.source_version, sourceNodes[i].typeVersion);
+    assert.deepEqual(item.settings, sourceNodes[i].parameters);
+    assert.equal(item.coverage_scope, 'configuration');
+  });
+  assert.equal(n8n.items[10].diagnostics[0].code, 'source_mapping_unavailable');
+  assert.equal(n8n.items[11].source_options.alwaysOutputData, true);
+  assert.equal(n8n.items[12].operation_status, 'unavailable', 'A source create is never relabelled as native find-or-create');
+  assert.equal(n8n.items[13].diagnostics[0].code, 'missing_source_version');
+  const hostile = await h.post('coverage', { n8n: { nodes: [node('synthetic-crank-expression', 'set', 3.4, { assignments: { assignments: [{ name: 'value', type: 'string', value: '={{ fetch("https://synthetic-crank.example") }}' }] } })] } });
+  assert.equal(hostile.items[0].status, 'agent-buildable');
+  assert.ok(!hostile.items[0].reason.includes('fetch'), 'diagnostics do not copy source values');
+
+  // Synthetic Make blueprint shape: version, parameters, mapper, route filters and fallbacks.
+  const makeFlow = [{ id: 1, module: 'builtin:BasicRouter', version: 1, parameters: {}, routes: [{ flow: [{ id: 2, module: 'slack:CreateMessage', version: 4, parameters: { select: 'channel' }, mapper: { channel: 'synthetic-crank-11', text: 'synthetic-crank-12' }, filter: { conditions: [[{ a: '{{1.score}}', o: 'number:greater', b: '10' }]] } }], fallback: true }] }];
+  const make = await h.post('coverage', { make: { name: 'synthetic-crank-13', flow: makeFlow } });
+  assert.equal(make.items.length, 2);
+  assert.ok(make.items.every(item => item.operation_status === 'native' && item.status === 'agent-buildable' && item.diagnostics[0].code === 'source_mapping_unavailable'));
+  assert.deepEqual(make.items[0].settings.routes, makeFlow[0].routes);
+  assert.deepEqual(make.items[1].settings.mapper, makeFlow[0].routes[0].flow[0].mapper);
+  assert.deepEqual(make.items[1].settings.filter, makeFlow[0].routes[0].flow[0].filter);
+  assert.equal(make.items[1].source_version, 4);
+  const incomplete = await h.post('coverage', { n8n: { name: 'synthetic-crank-14', nodes: [{ type: 'n8n-nodes-base.webhook' }, { type: 'n8n-nodes-base.if' }, { type: 'n8n-nodes-base.slack', parameters: { resource: 'message', operation: 'post' } }, { type: 'n8n-nodes-base.hubspot', parameters: { resource: 'contact', operation: 'upsert' } }] } });
+  assert.deepEqual(incomplete.items.map(i => i.status), ['agent-buildable', 'agent-buildable', 'agent-buildable', 'agent-buildable'], 'Incomplete source nodes cannot prove configuration coverage');
+  await h.post('coverage', { items: Array.from({ length: 501 }, () => ({ app: 'slack', operation: 'find_message' })) }, h.owner, 400);
+  await h.post('coverage', { items: [{ app: 'formatter', operation: 'text.case', settings: { value: 'x'.repeat(5000), to: 'upper' } }] }, h.owner, 400);
+  await h.post('coverage', { n8n: { nodes: [null] } }, h.owner, 400);
+  await h.post('coverage', { make: { flow: [{ module: 'builtin:BasicRouter', routes: {} }] } }, h.owner, 400);
+  assert.equal(fake.requests.length, requestsBefore, 'Coverage performs no outbound requests, including source expressions and selected resources');
 });
 
 test('EXEC-002: two accounts progress independently through 429, backoff, permanent auth and exhausted read failures; attempts retain retry timing', async () => {

@@ -139,7 +139,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "28a96560def52e5025272febf921892db066ba8d01769cda56ea49d629c3cc5e",
+      "sha256": "dc891379d0c006316d04923db8cb07b052774ed3303a2a8e4ebca39e774c3776",
       "executable": false
     },
     "AGENTS.md": {
@@ -163,7 +163,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "fa39ff3e48b279fc246dfdaba2914275678244932917cbdf545235ea969f3d23",
+      "sha256": "260a55925a51834518efafe6ee2f283e9230f3a2e531a46a4703da560fbc7719",
       "executable": false
     },
     "DEMO.md": {
@@ -203,7 +203,7 @@
       "executable": false
     },
     "docs/CLAIMS.md": {
-      "sha256": "84950068bfbb8e773949fe266f40b5f61f65b911e92fc5c897655ad03c8539a8",
+      "sha256": "b57f78dd1597f3b91df52e7f77e44d5336ab93e1424453b4bf7fa4451277a57d",
       "executable": false
     },
     "docs/DATA-FLOWS.md": {
@@ -2463,7 +2463,7 @@
       "executable": false
     },
     "src/crank/connections/catalog.ts": {
-      "sha256": "ad85ef4b386003ac0aae0624efb325a3edfc7c90d7a16af94eada0fc5642f920",
+      "sha256": "adaa11ec073e123b9508510b724c3059b6cafee24c5d8ad647e94ea655cd69c4",
       "executable": false
     },
     "src/crank/connections/oauth.ts": {
@@ -2978,8 +2978,12 @@
       "sha256": "6096810ab6c34f8ba98dbebf49f8f3a6b68a50462de7a60cb01fc329f1dfdc72",
       "executable": false
     },
+    "src/crank/ops/coverage-capabilities.ts": {
+      "sha256": "284022d278269986de94aa6ab34b44266436bcf9a81ab3f6ef9f29ee12a10501",
+      "executable": false
+    },
     "src/crank/ops/coverage.ts": {
-      "sha256": "11fe27f989d8478c1ef061a47bbfa196f7da04f81f9dd6c683bd3ae9dcf5e78e",
+      "sha256": "9fb4d63d460f435e63553c6d9ea5130ea87523379e2627a5c95b5c44ee33f141",
       "executable": false
     },
     "src/crank/ops/delay-queues.ts": {
@@ -5583,7 +5587,7 @@
       "executable": false
     },
     "tests/connections.test.mjs": {
-      "sha256": "5e2f3f216a4a5139c8f7c05956d673596646fa4348eef5de5d4ba86d3b93dcea",
+      "sha256": "6268b2d26ba1591c6abf5f97929a978685b850b6ebbf16f26ff0f6d97382fd75",
       "executable": false
     },
     "tests/crank.test.mjs": {
