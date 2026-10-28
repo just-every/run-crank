@@ -235,8 +235,10 @@ of Set, interval Wait (version 1.1), JSON HTTP or nested embedded calls. The
 caller supplies one current item. Child steps are inlined with distinct native identities; snapshot digests
 and layout are retained in `n8n_subflow_pins`. Nesting is limited to four levels.
 Embedded waits accept the same literal nonnegative whole amount and seconds,
-minutes, hours or days as top-level interval waits; native waits are limited to
-366 days. They preserve the incoming JSON, continue once after restart and
+minutes, hours or days as top-level interval waits. Preview refuses intervals
+longer than 366 days. Interval days are exactly 24 elapsed hours across daylight
+saving changes, rather than native calendar days.
+They preserve the incoming JSON, continue once after restart and
 recheck current native authority without repeating completed receiver effects.
 Other wait modes, source expressions and additional settings require manual
 conversion. Cancellation prevents the delayed child from continuing.
