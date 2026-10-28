@@ -1,3 +1,4 @@
+import { mappingTables } from '../tables/mapping'
 import { previewSample } from './samples'
 import { collectAnswers, collectFields } from '../engine/steps/collect'
 import { collectDeadlines } from '../ops/collect-deadlines'
@@ -233,10 +234,11 @@ export async function previewWorkflow(env: CrankEnv, actor: Actor, workflowId: s
   const scope: Scope = { trigger: selected.payload, steps: {}, run: { id: 'preview', workflow_id: workflowId } }
   const results: Record<string, unknown>[] = [], time = Date.now()
   type PreviewOutcome = 'completed' | 'stopped' | 'blocked' | 'failed'
-  const walk = (steps: Step[], prefix: string): PreviewOutcome => {
+  const walk = async (steps: Step[], prefix: string): Promise<PreviewOutcome> => {
     for (const step of steps) {
       const path = prefix + step.id
       try {
+        scope.tables = await mappingTables(env, step, { actor, workflowId })
         if (step.type === 'paths') {
           const { matched, trace, error } = evaluatePaths(step, scope, zone, time)
           results.push({ path, type: 'paths', matched, evaluations: trace.map(result => ({ branch: result.branch, ...result.trace })), trace, ...(error ? { error: error.toJSON() } : {}), outcome: error ? 'type mismatch' : matched.length ? 'routed' : 'stopped by filter' })
@@ -245,7 +247,7 @@ export async function previewWorkflow(env: CrankEnv, actor: Actor, workflowId: s
           scope.steps[step.id] = { matched }
           const outcomes: PreviewOutcome[] = []
           for (const branch of branchesOf(step).filter(b => matched.includes(b.id))) {
-            const outcome = walk(branch.steps, `${path}/${branch.id}/`)
+            const outcome = await walk(branch.steps, `${path}/${branch.id}/`)
             if (outcome === 'blocked' || outcome === 'failed') return outcome
             outcomes.push(outcome)
           }
@@ -275,6 +277,6 @@ export async function previewWorkflow(env: CrankEnv, actor: Actor, workflowId: s
     }
     return 'completed'
   }
-  walk(graph.steps, '')
+  await walk(graph.steps, '')
   return { sample_source: selected.source.label, source: selected.source, digest: await digest(canonical(selected.payload)), steps: results.map(step => ({ ...step, source: selected.source })) }
 }

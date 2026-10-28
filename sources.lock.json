@@ -139,7 +139,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "e3df74ce0b291a9b7cf3fa6edc511bd31ffce064e8079b0d46d7377845879906",
+      "sha256": "2e0939d6c5a4f7830dcc21cb4d0fc7f84b8cbf2a2f9a1e81f74cb40f77e10991",
       "executable": false
     },
     "AGENTS.md": {
@@ -163,7 +163,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "a7c500c52fd6ebe493cc285d36008211c6ffc91a7ee87d9de208a6d6a7190b29",
+      "sha256": "f43298ac5312d7a53077cdc800be062e8bae8e4e76371cc713628747542755e7",
       "executable": false
     },
     "DEMO.md": {
@@ -187,7 +187,7 @@
       "executable": false
     },
     "docs/API.md": {
-      "sha256": "22610100d509bb37934c9b01b68b5effd596458bfb1ff68b625dd383b3e979d9",
+      "sha256": "256cb34a4db6904139f335b5ee93592e5ee69a809f4d0226f4f0cd2d068ba457",
       "executable": false
     },
     "docs/APP-TRIGGERS.md": {
@@ -203,7 +203,7 @@
       "executable": false
     },
     "docs/CLAIMS.md": {
-      "sha256": "227abc2937dc914019470620aa2e4483086e5345b6e4b0a032b2f1a030cb2d40",
+      "sha256": "7db4794c3093efeec6858bf798d29553e779fb7e6267ffc288ca52f330ff0ae4",
       "executable": false
     },
     "docs/DATA-FLOWS.md": {
@@ -227,7 +227,7 @@
       "executable": false
     },
     "docs/IMPORTING.md": {
-      "sha256": "0d9bac88e2e10f819da30b6ca4f09e7c7f6c120641e95af9712e22ffb7825eb3",
+      "sha256": "de18f5b9811482acc437cc08c9fe5c65119d3df84f77c619110fbf473ab8021c",
       "executable": false
     },
     "docs/OPERATIONS.md": {
@@ -2631,7 +2631,7 @@
       "executable": false
     },
     "src/crank/data-flows.ts": {
-      "sha256": "825c120199ba4bfcfef2a08ec1e77f144cad445e7026d2717cc61987d229b71d",
+      "sha256": "8ee0ee31415941aa7c07d0ba366302bed671b30c0a822cdc6d2d712991db6523",
       "executable": false
     },
     "src/crank/data.ts": {
@@ -2683,11 +2683,11 @@
       "executable": false
     },
     "src/crank/engine/executor.ts": {
-      "sha256": "3fe0167898d7ab89eca76f27ec4ee3dfadea59d269129e7d56dfd23f10bbfd4f",
+      "sha256": "5ca5757c85d9955039812e33ba9a1c0cc3e11c1670dfa201b0cfe4939d0fa689",
       "executable": false
     },
     "src/crank/engine/graph.ts": {
-      "sha256": "b3c80641f66e6725ac99d025dc06f354d16a5aa9944bc07a517f345d6bfd5c17",
+      "sha256": "b2961b18f30c4464867aab748495edcf99336e8c13426af0d8ba8b2604738d19",
       "executable": false
     },
     "src/crank/engine/interruption.ts": {
@@ -2699,7 +2699,7 @@
       "executable": false
     },
     "src/crank/engine/mapping.ts": {
-      "sha256": "1e82806276251f3fcb0ac8190d8a22b0dd0cd195c8752b20d3772bd94a92ae99",
+      "sha256": "e1d84cbded5b41ceace8c45e743fa7f4dd87b9cdf1c8d6ed3f36875ea6047fc3",
       "executable": false
     },
     "src/crank/engine/path-conditions.ts": {
@@ -2759,7 +2759,7 @@
       "executable": false
     },
     "src/crank/engine/transforms/datetime.ts": {
-      "sha256": "a31a1d4c74a2e8f2d2a267c6f046f240ca00584f5d682bf4e28856be221307c3",
+      "sha256": "c845ad64ab6e22bb0d479510ceda236ea01fcc00f2249328238c131bc03c79f1",
       "executable": false
     },
     "src/crank/engine/transforms/html.ts": {
@@ -2935,7 +2935,7 @@
       "executable": false
     },
     "src/crank/n8n-datetime.ts": {
-      "sha256": "1d5797a311f04b8715ac99d4d872320bd783c506a3112d1221280f9042ce0ec7",
+      "sha256": "35b3a1aa6eff2cf95ad248bab9534a59dacb5eb5ff066c78274570030800dcd5",
       "executable": false
     },
     "src/crank/n8n-graph.ts": {
@@ -3142,8 +3142,12 @@
       "sha256": "876c683fe7deafebbb79899eb05ed4038f87a27238158bd91f258a7de74b6af9",
       "executable": false
     },
+    "src/crank/tables/mapping.ts": {
+      "sha256": "875949103214645c13f8751b95c1ef804b86e4b688469a41cdcff193258ffa1f",
+      "executable": false
+    },
     "src/crank/tables/state.ts": {
-      "sha256": "77a437993e1e7d1e8037c89b3e21e0ff9312d8ff9f5a8b727214ea733b3d0617",
+      "sha256": "db2a156a40940e14dbb71d54551ed16d0ceaed176033ee1a2d09b0e4910d0fa9",
       "executable": false
     },
     "src/crank/team/api.ts": {
@@ -3531,7 +3535,7 @@
       "executable": false
     },
     "src/crank/workflows/runs.ts": {
-      "sha256": "aa2e1a864de3f816c869af2565fcffe4fdc08c67fe7c0aa75215a9b96792437b",
+      "sha256": "135f87264f8b35e2e6651c812e9c13b48c20626f345fdbddd406b29302ca7e04",
       "executable": false
     },
     "src/crank/workflows/samples.ts": {
@@ -3563,7 +3567,7 @@
       "executable": false
     },
     "src/crank/workflows/testing.ts": {
-      "sha256": "763053d6a38ca05bffab9aa9b7449d983630ae03b8d31cd5bfe0b94aea5189f2",
+      "sha256": "b4aba55e0b84ffe273600296be07ce65b8fcfca8057631f3e02723f29d4494cf",
       "executable": false
     },
     "src/demo-usage.ts": {
@@ -5855,7 +5859,7 @@
       "executable": false
     },
     "tests/migration-browser.mjs": {
-      "sha256": "2421158251a3ba1ecfe86a8e7866237649be7008a3e9462777f329161f72ab13",
+      "sha256": "c013f655603cf3a25ee534744214c4e06f3809553d6096ef72949587bd45912d",
       "executable": false
     },
     "tests/n8n-batch-journey.mjs": {
@@ -5879,7 +5883,7 @@
       "executable": false
     },
     "tests/n8n-datetime-journey.mjs": {
-      "sha256": "e66571e8302ac1d208ed0648e075ca3e47078679c9813cd196db8c35becfe905",
+      "sha256": "2f7ea91bf9ed2d259b09953c904cc10404b6e4802f7c988e5faf0d7f19a055cb",
       "executable": false
     },
     "tests/n8n-graph-fixture.mjs": {
@@ -6027,7 +6031,7 @@
       "executable": false
     },
     "tests/sample-browser.mjs": {
-      "sha256": "6611254bf4e4a9d97d5c4f07a7926ece6eb14a58ea03966488776ebd28081310",
+      "sha256": "63f051c1e2ee6054b627a8f8d131ca35643eb8dafe97cbe1580567db0a477f53",
       "executable": false
     },
     "tests/sample-journey.mjs": {
@@ -6103,7 +6107,7 @@
       "executable": false
     },
     "tests/table-state-journey.mjs": {
-      "sha256": "8c44025432ddccd8b9d79a05692df83f99281b0b0bdb9933f8b65e3734acd86c",
+      "sha256": "1f3178edc8791629b0e698299edf2424355248748b7622e8fccaf8f08e663fbe",
       "executable": false
     },
     "tests/team-browser.mjs": {

@@ -7,7 +7,7 @@ import {harness} from './harness.mjs';
 import {chromium} from '@playwright/test';
 import {createHash} from 'node:crypto';
 import {looseObjectExport} from './n8n-conditions-journey.mjs';
-import {arithmeticExport} from './n8n-datetime-journey.mjs';
+import {arithmeticExport,formattingExport} from './n8n-datetime-journey.mjs';
 import {fakeSecret} from './kit.mjs';
 import {embeddedWaitExport} from './n8n-conversion-journey.mjs';
 const canonical=value=>value===null||typeof value!=='object'?JSON.stringify(value):Array.isArray(value)?'['+value.map(canonical).join(',')+']':'{'+Object.keys(value).sort().map(key=>JSON.stringify(key)+':'+canonical(value[key])).join(',')+'}';
@@ -103,6 +103,7 @@ try {
  const literalObjectSource=looseObjectExport(declared,'synthetic-crank-object-literal-browser');literalObjectSource.name='Synthetic literal object routing';
  literalObjectSource.nodes[1].parameters.conditions.conditions[0].leftValue='{"message":"{{"}';
  const streamObjectSources=['left','right'].map(operand=>looseObjectFilterStreamExport(declared,operand));
+ const formatSource=formattingExport(declared,'synthetic-crank-format-browser');
  const dateSources=[arithmeticExport(declared,'synthetic-crank-date-browser-month'),arithmeticExport(declared,'synthetic-crank-date-browser-day',{operation:'subtractFromDate',duration:1,timeUnit:'days',options:{includeInputFields:false}})];
  const waitSource=embeddedWaitExport(declared,'synthetic-crank-wait-browser',{resume:'timeInterval',amount:1,unit:'days'});
  waitSource.settings={timezone:'America'+'/'+'Chicago'};
@@ -111,7 +112,7 @@ try {
  // Stage the protected-undo fixtures together while every imported target is an
  // unused draft. Publication later deliberately fences this retained plan;
  // planning another import against that used native inventory is not this test.
- await page.getByLabel('Workflow export JSON').fill(JSON.stringify([sourceEnvelope,...driftBundle,objectSource,literalObjectSource,...streamObjectSources,...dateSources,waitSource]));await page.getByRole('button',{name:'Upload and plan',exact:true}).click();await page.waitForLoadState('networkidle');
+ await page.getByLabel('Workflow export JSON').fill(JSON.stringify([sourceEnvelope,...driftBundle,objectSource,literalObjectSource,...streamObjectSources,...dateSources,formatSource,waitSource]));await page.getByRole('button',{name:'Upload and plan',exact:true}).click();await page.waitForLoadState('networkidle');
  assert.equal(await page.getByRole('button',{name:'Approve this plan',exact:true}).count(),1);await page.getByText(/Supported fields/).click();assert.ok((await page.locator('body').innerText()).includes('distinct linear done path'));await shots('done-review');
  const driftPlan=await reviewedPlan();
  await page.getByRole('button',{name:'Approve this plan',exact:true}).click();await page.waitForLoadState('networkidle');
@@ -202,6 +203,21 @@ try {
   }
  }
  console.log('WORK-012: reviewed date arithmetic, month-end and Chicago repeated-hour results, retained fields and invalid-date refusal inspected at 1440 and 390');
+ const formatted=(await send('workflows')).find(row=>row.name===formatSource.name),formatBase='workflows/'+formatted.id;
+ const listener=await send(formatBase+'/samples/listen',{},201),formatDate='2024-03-01T00:30:00Z',formatCount=effects.length;
+ assert.equal((await context.request.post(listener.url,{form:{date:formatDate}})).status(),201);
+ await page.setViewportSize({width:1440,height:1000});await page.goto(origin+'/app/workflows/'+formatted.id+'?step=n2&tab=test');
+ await page.getByRole('button',{name:'Preview selected sample',exact:true}).click();
+ const formatPreview=page.locator('.inspector-block').filter({has:page.getByRole('heading',{name:'Preview result',exact:true})});
+ const formatExpected={date:formatDate,label:'synthetic-crank-803',due:'02/29/2024',nested:{values:[1,null,'synthetic-crank-806']}};
+ assert.ok((await formatPreview.innerText()).includes('webhook sample'));assert.deepEqual(JSON.parse(await formatPreview.locator('pre').nth(1).innerText()),formatExpected);assert.equal(effects.length,formatCount);await shots('datetime-retained-format-preview');
+ await send(formatBase+'/estimate',{cost:{components:['orchestration','connectors','models','executors'].map(kind=>({kind,usd_per_run:'0',assumption:'Synthetic retained formatting proof'}))}});
+ await send(formatBase+'/publish',{},201);const formatHook=await send(formatBase+'/hooks',{},201),formatAdmission=await context.request.post(formatHook.url,{form:{date:formatDate}}),formatAdmitted=await formatAdmission.json();let formatRun;
+ for(let tries=0;tries<100;tries++){formatRun=await send('workflow-runs/'+formatAdmitted.run_id);if(!['queued','running'].includes(formatRun.status))break;await page.waitForTimeout(50)}
+ assert.equal(formatRun.status,'succeeded',JSON.stringify(formatRun.error));assert.deepEqual(effects.at(-1).input,formatExpected);assert.equal(effects.length,formatCount+1);
+ await page.setViewportSize({width:1440,height:1000});await page.goto(origin+'/app/workflows/'+formatted.id+'?step=n2&tab=data');
+ assert.deepEqual(JSON.parse(await page.locator('.inspector-block').filter({has:page.getByRole('heading',{name:'Output',exact:true})}).locator('pre').innerText()),formatExpected);await shots('datetime-retained-format-output');
+
 
  // Assert the embedded-child flow at desktop width; capture both release widths.
  await page.setViewportSize({width:1440,height:1000});
