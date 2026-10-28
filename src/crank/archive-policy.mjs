@@ -1,5 +1,7 @@
 import { fenceRow, importRow, importSafety, validateRestore } from './restore-policy.mjs';
 
+// AI classifications retain validated outputs, model provenance and bounded response
+// checkpoints in the existing step, attempt and usage inventory, without model keys.
 // App subject indexes, pending-row digests, field-value digests and erased-record fences use the default portable
 // inventory. Polls restore inactive; no receiving authority travels with history.
 // Digest definitions, entries, release receipts and erased-name fences use the

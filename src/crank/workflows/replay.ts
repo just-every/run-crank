@@ -39,7 +39,7 @@ export async function previewReplay(env: CrankEnv, actor: Actor, runId: string) 
     return path === selected || !!item && path.startsWith(item + '/')
   })
   const eligible = ['failed', 'succeeded'].includes(run.status) ? rows.filter(row => row.status === 'failed' && !isItem(row) && !failedBelow(row)
-    && !parse(row.error_json)?.uncertain && withinRepair(row.path) && !claimed.includes(row.path)
+    && !parse(row.error_json)?.uncertain && !parse(row.error_json)?.replay_forbidden && withinRepair(row.path) && !claimed.includes(row.path)
     && (run.status === 'failed' || /\/items\/\d+\//.test(row.path))) : []
   const preview = {
     run_id: run.id, version_id: run.version_id, status: run.status, mode: run.status === 'succeeded' ? 'linked_repair' : 'resume', claimed_paths: claimed, limit: REPLAY_LIMIT,
@@ -48,6 +48,7 @@ export async function previewReplay(env: CrankEnv, actor: Actor, runId: string) 
       : run.workflow_status === 'paused' || run.mode !== 'test' && run.workflow_status !== 'published' || pendingRestore(run) ? 'Publish (and adopt) the workflow before replaying its runs.' : null,
     eligible: eligible.map(row => ({ path: row.path, step_id: row.step_id, type: row.type, input: parse(row.input_json), error: parse(row.error_json), operation_key: row.operation_key,
       revisions: count.get(row.path) ?? 0, correctable: !['loop', 'paths'].includes(row.type) })),
+    non_replayable: rows.filter(row => parse(row.error_json)?.replay_forbidden).map(row => ({ path: row.path, operation_key: row.operation_key, reason: 'This billed response is retained for inspection; start a deliberate new run to request a new model response.' })),
     uncertain: rows.filter(row => row.status === 'uncertain' || parse(row.error_json)?.uncertain).map(row => ({ path: row.path, step_id: row.step_id, operation_key: row.operation_key, reconcile: 'Reconcile this write in its destination (EXEC-006); it is never replayed blindly.' })),
     completed_effects: rows.filter(row => row.status === 'succeeded' && !isItem(row) && !['loop', 'paths'].includes(row.type)).map(row => ({ path: row.path, step_id: row.step_id, type: row.type, operation_key: row.operation_key })),
   }

@@ -13,7 +13,7 @@ const uncertainWrite = encode({ category: 'uncertain', message: 'Restore interru
 const deliveryFence = previous => encode({ status: 'failed', code: 'restore_fence', uncertain: true, previous });
 const fenced = (json, key, code) => json !== null && JSON.parse(json)[key] === code;
 const remoteWrite = row => row.status === 'running' &&
-  (row.type === 'orbit.update_deal' || row.type.startsWith('nook.') || row.type.startsWith('slack.') || row.type.startsWith('google_calendar.') || row.type.startsWith('quickbooks.') || row.type.startsWith('gusto.') || row.type === 'http' && !['GET', 'HEAD'].includes(String(JSON.parse(row.input_json ?? '{}').method ?? 'GET').toUpperCase()));
+  (row.type === 'ai.classify' || row.type === 'orbit.update_deal' || row.type.startsWith('nook.') || row.type.startsWith('slack.') || row.type.startsWith('google_calendar.') || row.type.startsWith('quickbooks.') || row.type.startsWith('gusto.') || row.type === 'http' && !['GET', 'HEAD'].includes(String(JSON.parse(row.input_json ?? '{}').method ?? 'GET').toUpperCase()));
 
 /** Pure/idempotent export normalization: backups carry history, never execution authority. */
 export function fenceRow(table, row) {
