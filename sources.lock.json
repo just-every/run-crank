@@ -139,7 +139,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "28a96560def52e5025272febf921892db066ba8d01769cda56ea49d629c3cc5e",
+      "sha256": "96992f1f091409574adeb80589106b0960abe3fd396dbedec5925366b1a8c62e",
       "executable": false
     },
     "AGENTS.md": {
@@ -163,7 +163,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "fa39ff3e48b279fc246dfdaba2914275678244932917cbdf545235ea969f3d23",
+      "sha256": "805c6f99dc0d9e8ccc9facc0a7a94060fb9b9ce7e738a6c2f3808ae40a0e792b",
       "executable": false
     },
     "DEMO.md": {
@@ -203,7 +203,7 @@
       "executable": false
     },
     "docs/CLAIMS.md": {
-      "sha256": "84950068bfbb8e773949fe266f40b5f61f65b911e92fc5c897655ad03c8539a8",
+      "sha256": "af2a3d53f61ed5d573f05e69a4867508683456d3baf4dd7f8764dc3846f911ba",
       "executable": false
     },
     "docs/DATA-FLOWS.md": {
@@ -1943,7 +1943,7 @@
       "executable": false
     },
     "public/ui/editor.css": {
-      "sha256": "ebe75e99b77c2caf49c9f2737cfee0db0de74634fbc9b0930259a1453f488179",
+      "sha256": "0b3a67c3712e6443f0c724cf34b05798e77bf8e7d646ad019baf8b5644e67fb0",
       "executable": false
     },
     "public/ui/haze-rail.webp": {
@@ -3339,19 +3339,27 @@
       "executable": false
     },
     "src/crank/ui/editor/canvas.ts": {
-      "sha256": "506dca85369658ad64cf37bcccda5f19f5c3fb7e407bf6ca9f15b28e597fcc75",
+      "sha256": "8729c59a34cfa436e46bfc9e26dda87c1ef178aaef71c9bbef50c19c88bbad8e",
       "executable": false
     },
     "src/crank/ui/editor/index.ts": {
-      "sha256": "8e3359b62e1b8008fa3cad2095b0ad2c90bcb7bb11816e758d9ba0b22df8ae82",
+      "sha256": "3497b021158671213aa2780c6abca819e519c758fdf70e2440a864193c081689",
       "executable": false
     },
     "src/crank/ui/editor/inspector.ts": {
-      "sha256": "ef73cabc63876f4deda0355d2c1d0e90042d7dc4eb96838709b14be3395ef672",
+      "sha256": "cdee40121ca7948edeafda01adf7fc601200c0cbebc2fe738986f6679f48b8dc",
       "executable": false
     },
     "src/crank/ui/editor/model.ts": {
       "sha256": "8f6cd22f80d6746190247a60851292650200b3cd3dd41f4e433820152f30bea3",
+      "executable": false
+    },
+    "src/crank/ui/editor/native-view.ts": {
+      "sha256": "455951e200ef77a762f38a4c9d884130f69da95ff5eb3ac3748c42fb3364800d",
+      "executable": false
+    },
+    "src/crank/ui/editor/native.ts": {
+      "sha256": "a39978bc069dba43f2f5e8e81a2952b25da40989d2b5f57f56b6d31a4fb528d4",
       "executable": false
     },
     "src/crank/ui/editor/restore.ts": {
@@ -3379,7 +3387,7 @@
       "executable": false
     },
     "src/crank/ui/flows.ts": {
-      "sha256": "bcdfc68cdbba4e8230fdd7f3e9310f6ad53245a937db0d9fe9151c5642f90e88",
+      "sha256": "dbdcc97f2641ab8124dfcb9486385df42a757f5642bac30da229cd6c5c8e034b",
       "executable": false
     },
     "src/crank/ui/followups.ts": {
@@ -3391,7 +3399,7 @@
       "executable": false
     },
     "src/crank/ui/handler.ts": {
-      "sha256": "34664ac87d6fe7bb8fc9494f9b28c29fc2a8d4b80ae2fa7df810d0062486c3be",
+      "sha256": "6996ab19f702f1fc337c41a06040dd1c1ef74ad72357cd42214df2424db92a55",
       "executable": false
     },
     "src/crank/ui/icons.ts": {
@@ -3547,7 +3555,7 @@
       "executable": false
     },
     "src/crank/workflows/store.ts": {
-      "sha256": "3d2e6051fbcdeeb991f60445b9b2f091edb207cf92de39b48ca4c4eb10f75786",
+      "sha256": "451abc87fbfa4d7af86f3034674e8e46870eebe99e7857fa085198e824e0451a",
       "executable": false
     },
     "src/crank/workflows/subflow-calls.ts": {
@@ -5511,7 +5519,7 @@
       "executable": false
     },
     "test-budget.json": {
-      "sha256": "f0695e2ebc9af28db15621f7664b3ee81a4a7436ca3ed7dd7042a339f1a60f6c",
+      "sha256": "16ef56f385b7112de1c5fc7f71db233aea61a694bc2ff2dbf9893b184dac7bd1",
       "executable": false
     },
     "tests/accounting-poll-journey.mjs": {
@@ -5555,7 +5563,7 @@
       "executable": false
     },
     "tests/app.test.mjs": {
-      "sha256": "13c13b950bf2ecec889191664f18e3875c1651ae2db5745f7e46bb24f21b5790",
+      "sha256": "b6b27943d3e49877b3fdef2cf4a44aeb2e8b62578cc36b9e1c66375946ed8142",
       "executable": false
     },
     "tests/authoring-browser.mjs": {

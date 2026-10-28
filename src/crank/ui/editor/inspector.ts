@@ -1,3 +1,4 @@
+import { nativeSettings, type EditFeedback } from './native-view'
 import { chip, esc, hidden, json, timestamp } from '../document'
 import { icon } from '../icons'
 import { STEP_STATE, tile } from './canvas'
@@ -7,7 +8,7 @@ import { appOf, findNode, lastRecord, mappingRows, mappingText, rowLabel, shortP
 import { summaryHtml, summaryOfResult } from './results'
 import { pollRate } from '../../triggers/definition'
 
-export interface InspectorContext { sampleData?: any; triggerState?: any; workflowId: string; graph: Graph; live: { graph: Graph; number: number } | null; node: Node; tab: string; connections: Connection[]; runs: RunDetail[]; hooks: { active: boolean }[]; canPrepare: boolean; preview: any; sample: string; now: number; people: { id: string; name: string }[] }
+export interface InspectorContext { draftDigest: string; editFeedback?: EditFeedback; sampleData?: any; triggerState?: any; workflowId: string; graph: Graph; live: { graph: Graph; number: number } | null; node: Node; tab: string; connections: Connection[]; runs: RunDetail[]; hooks: { active: boolean }[]; canPrepare: boolean; preview: any; sample: string; now: number; people: { id: string; name: string }[] }
 
 const STATE_ICON: Record<string, string> = { failed: 'warning', uncertain: 'warning', waiting: 'clock', running: 'clock', stopped: 'stop', skipped: 'stop' }
 
@@ -110,8 +111,8 @@ function test(ctx: InspectorContext) {
 }
 
 export function inspector(ctx: InspectorContext) {
-  const app = appOf(ctx.node, ctx.connections), tabs = [['setup', 'Setup'], ['data', 'Data'], ['test', 'Test']]
+  const app = appOf(ctx.node, ctx.connections), tabs = [['setup', 'Settings'], ['data', 'Data'], ['test', 'Test']]
   const link = (tab: string) => `?step=${encodeURIComponent(ctx.node.path)}&amp;tab=${tab}`
-  const body = ctx.tab === 'data' ? data(ctx) : ctx.tab === 'test' ? test(ctx) : setup(ctx) + lastResult(ctx)
+  const body = ctx.tab === 'data' ? data(ctx) : ctx.tab === 'test' ? test(ctx) : (ctx.canPrepare ? nativeSettings({workflowId:ctx.workflowId,graph:ctx.graph,digest:ctx.draftDigest,feedback:ctx.editFeedback},ctx.node.step) : '') + setup(ctx) + lastResult(ctx)
   return `<section class="panel inspector" aria-label="Selected step"><div class="inspector-head">${tile(app)}<div><h2>${esc(app.title)}</h2><p>${esc(summaryOf(ctx.node))}</p></div></div><nav class="tabs" aria-label="Step details">${tabs.map(([id, name]) => `<a href="${link(id)}"${ctx.tab === id ? ' aria-current="page"' : ''}>${name}</a>`).join('')}</nav><div class="inspector-body">${body}</div></section>`
 }
