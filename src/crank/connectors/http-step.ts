@@ -76,6 +76,27 @@ async function readback(ctx: StepContext, step: Record<string, unknown>, connect
   return found.found && canonical(found.value) === canonical(resolved.equals) ? { response, body } : null
 }
 
+/** The same native validation and bytes for execution and no-write migration intents.
+ * Connection credentials are added only by sendRequest, never by preparation. */
+export async function prepareHttpRequest(step: Record<string, unknown>, ctx: StepContext): Promise<Prepared> {
+    const input = ctx.input, method = String(input.method ?? 'GET').toUpperCase(), mutating = !['GET', 'HEAD'].includes(method)
+    if (typeof input.url !== 'string') throw new StepError('mapping', `HTTP ${step.id}: url is required`, { field: 'url' })
+    const url = checkEgress(input.url)
+    if (isObject(input.query)) for (const [key, value] of Object.entries(input.query)) if (value !== undefined && value !== null) url.searchParams.set(key, textOf(value) ?? JSON.stringify(value))
+    if (isObject(step.pagination) && step.pagination.kind === 'page') url.searchParams.set(String(step.pagination.param ?? 'page'), String(step.pagination.start ?? 1))
+    const headers = new Headers({ accept: 'application/json, application/xml;q=0.9, text/plain;q=0.8, */*;q=0.5' })
+    if (isObject(input.headers)) for (const [name, value] of Object.entries(input.headers)) {
+      if (SECRET_HEADER.test(name)) throw new StepError('validation', `Put credentials in a connection, not header ${name}`)
+      if (value !== undefined && value !== null) headers.set(name, textOf(value) ?? JSON.stringify(value))
+    }
+    const encoded = await encode(ctx, String(step.body_kind ?? 'json'), method === 'GET' || method === 'HEAD' ? undefined : input.body, typeof step.content_type === 'string' ? step.content_type : undefined)
+    if (encoded.type) headers.set('content-type', encoded.type)
+    if (mutating && typeof step.idempotency_header === 'string') headers.set(step.idempotency_header, ctx.operationKey)
+    const timeout = Number(step.timeout_ms ?? 15000), connectionId = typeof step.connection_id === 'string' ? step.connection_id : undefined
+    return { url, method, headers, body: encoded.body, timeout, ...(step.body_kind === 'multipart' ? { bodyIdentity: await digest(canonical({ kind: 'multipart', body: input.body })) } : {}) }
+
+}
+
 /** HTTP-002: any API call, with credentials from a stored connection only. */
 export const httpRequest: StepType = {
   mutating: true,
@@ -92,21 +113,9 @@ export const httpRequest: StepType = {
     if (isObject(step.readback) && step.readback.records_path !== undefined && (typeof step.readback.records_path !== 'string' || step.readback.records_path.length > 200 || typeof step.readback.path !== 'string' || !Object.hasOwn(step.readback, 'equals'))) throw new StepError('validation', `HTTP ${step.id}: list readback needs records_path, path and equals`)
   },
   async execute(step, ctx) {
-    const input = ctx.input, method = String(input.method ?? 'GET').toUpperCase(), mutating = !['GET', 'HEAD'].includes(method)
-    if (typeof input.url !== 'string') throw new StepError('mapping', `HTTP ${step.id}: url is required`, { field: 'url' })
-    const url = checkEgress(input.url)
-    if (isObject(input.query)) for (const [key, value] of Object.entries(input.query)) if (value !== undefined && value !== null) url.searchParams.set(key, textOf(value) ?? JSON.stringify(value))
-    if (isObject(step.pagination) && step.pagination.kind === 'page') url.searchParams.set(String(step.pagination.param ?? 'page'), String(step.pagination.start ?? 1))
-    const headers = new Headers({ accept: 'application/json, application/xml;q=0.9, text/plain;q=0.8, */*;q=0.5' })
-    if (isObject(input.headers)) for (const [name, value] of Object.entries(input.headers)) {
-      if (SECRET_HEADER.test(name)) throw new StepError('validation', `Put credentials in a connection, not header ${name}`)
-      if (value !== undefined && value !== null) headers.set(name, textOf(value) ?? JSON.stringify(value))
-    }
-    const encoded = await encode(ctx, String(step.body_kind ?? 'json'), method === 'GET' || method === 'HEAD' ? undefined : input.body, typeof step.content_type === 'string' ? step.content_type : undefined)
-    if (encoded.type) headers.set('content-type', encoded.type)
-    if (mutating && typeof step.idempotency_header === 'string') headers.set(step.idempotency_header, ctx.operationKey)
-    const timeout = Number(step.timeout_ms ?? 15000), connectionId = typeof step.connection_id === 'string' ? step.connection_id : undefined
-    const prepared: Prepared = { url, method, headers, body: encoded.body, timeout, ...(step.body_kind === 'multipart' ? { bodyIdentity: await digest(canonical({ kind: 'multipart', body: input.body })) } : {}) }
+    const prepared = await prepareHttpRequest(step, ctx)
+    const { method, timeout } = prepared, mutating = !['GET', 'HEAD'].includes(method)
+    const connectionId = typeof step.connection_id === 'string' ? step.connection_id : undefined
 
     let reconciledBody: unknown, response: BoundedResponse, reconciled = false, attempts = 0, budgetExhausted = false
     try {

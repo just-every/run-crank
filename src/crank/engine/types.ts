@@ -23,13 +23,15 @@ export type StepResult =
 
 export interface RunRow {
   grant_id?: string | null
-  mode?: 'production' | 'test'; test_owner_version?: number | null
+  mode?: 'production' | 'test' | 'comparison'; test_owner_version?: number | null
   repair_of?: string | null; repair_paths_json?: string | null
   id: string; workflow_id: string; version_id: string; trigger_kind: string; source_id: string | null; trigger_json: string
   status: string; source_time: string | null; received_at: string; started_at: string | null; finished_at: string | null
   lease_id: string | null; lease_expires_at: string | null; error_json: string | null; response_json: string | null; created_by: string; business_key: string | null
 }
 export interface StepContext {
+  /** Internal execution subtype; no HTTP input can grant or disable it. */
+  readonly comparison?: true
   env: CrankEnv; run: RunRow; scope: Scope; path: string; operationKey: string; now: number; zone: string
   input: Record<string, unknown>
   requests: { next: number }

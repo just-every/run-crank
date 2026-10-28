@@ -26,6 +26,7 @@ export function fenceRow(table, row) {
 
 /** Every value importRow may write. Base refuses any other change to a staged row. */
 export const importSafety = {
+  crank_import_comparisons: { active: [0] },
   crank_digests: { active: [0] },
   crank_digest_operations: { active: [0] },
   crank_workflow_samples: { selected: [0] },
@@ -59,6 +60,7 @@ export const importSafety = {
  * bounded value, so an unfenced unfinished run keeps only its previous status and
  * a failed delivery keeps its outcome with its single replay marked used. */
 export function importRow(table, row) {
+  if (table === 'crank_import_comparisons') return {...row,active:0};
   if (table === 'crank_digests' || table === 'crank_digest_operations') return {...row,active:0};
   if (table === 'crank_workflow_samples') return {...row,selected:0};
   if (table === 'crank_recurring_tasks') return {...row,status:'inactive'};
@@ -130,6 +132,23 @@ export async function validateRestore({ read }) {
     if (!subflows.has(row.subflow_version_id) || !(await rows('crank_wf_runs')).some(run=>run.id===row.run_id) || !(await rows('crank_wf_steps')).some(step=>step.run_id===row.run_id && step.path===row.path && step.type==='subflow' && step.operation_key===row.operation_key)) return false;
   }
   const workflows = new Map((await rows('crank_workflows')).map(row => [row.id, row]));
+  const comparisons = new Map((await rows('crank_import_comparisons')).map(row=>[row.id,row]));
+  for (const row of comparisons.values()) {
+    if (!workflows.has(row.workflow_id) || workflows.get(row.workflow_id).data_class!=='none') return false;
+    const parsed=JSON.parse(row.draft_json);
+    const canonical=value=>value===null||typeof value!=='object'?JSON.stringify(value):Array.isArray(value)?'['+value.map(canonical).join(',')+']':'{'+Object.keys(value).sort().map(key=>JSON.stringify(key)+':'+canonical(value[key])).join(',')+'}';
+    const hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(canonical(parsed)));
+    if(Array.from(new Uint8Array(hash),byte=>byte.toString(16).padStart(2,'0')).join('')!==row.draft_digest)return false;
+  }
+  const observations=new Map((await rows('crank_import_observations')).map(row=>[row.id,row]));
+  for (const row of observations.values()) {
+    const comparison=comparisons.get(row.comparison_id);
+    if (!comparison || !/^[a-f0-9]{64}$/.test(row.event_digest) || !Number.isSafeInteger(row.sequence) || row.sequence<1) return false;
+    if ((await rows('crank_import_erased_events')).some(f=>f.workflow_id===comparison.workflow_id && f.event_digest===row.event_digest)) return false;
+    for(const name of ['source_json','native_json'])if(row[name]){const value=JSON.parse(row[name]);if(!value.result || !/^[a-f0-9]{64}$/.test(value.input_digest))return false;}
+  }
+  for(const row of await rows('crank_import_decisions'))if(!observations.has(row.observation_id))return false;
+
   for (const sample of await rows('crank_workflow_samples')) {
     if (!workflows.has(sample.workflow_id) || !['manual','webhook','history','schema'].includes(sample.source) || sample.source === 'history' && !(await rows('crank_wf_runs')).some(run => run.id === sample.source_id && run.workflow_id === sample.workflow_id)) return false;
     try { JSON.parse(sample.payload_json); JSON.parse(sample.uploads_json); } catch { return false; }
