@@ -95,7 +95,7 @@ try {
     await shot(width,state);return;
    }
    if(state==='unadmitted-subject-preview') {
-    await page.goto(h.origin+'/app/data');await page.getByLabel('Identifier',{exact:true}).fill('Synthetic-Crank-21');await page.getByRole('button',{name:'Preview erasure',exact:true}).click();
+    await page.goto(h.origin+'/app/data');await shot(width,'unadmitted-subject-data');await page.getByLabel('Identifier',{exact:true}).fill('Synthetic-Crank-21');await page.getByRole('button',{name:'Preview erasure',exact:true}).click();
     await expect(page.getByRole('heading',{name:'Erasure preview',exact:true,level:1})).toBeVisible();await expect(page.getByText('Retained comparison data',{exact:true})).toBeVisible();
     await expect(page.getByRole('button',{name:'Erase matching data',exact:true})).toBeVisible();await shot(width,state);return;
    }
