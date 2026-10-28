@@ -148,7 +148,7 @@ async function conditionPreviews(h,edge,inspect) {
    {id:'premium',name:'Qualified lead',when:[[{field:'trigger.body.amount',op:'number.gt',value:5000}]],steps:[note('premium_note')]},
    {id:'regional',name:'Regional lead',when:[[{field:'trigger.body.state',op:'text.in',value:['TX','OK','LA']}]],steps:[note('regional_note')]}
   ],fallback:{steps:[note('fallback_note')]}},
-  {id:'summary',type:'map',input:{matched:'{{steps.route.matched}}',key:'{{trigger.body.key}}'}},
+  {id:'summary',type:'map',input:{matched:'{{steps.route.matched}}',key:'{{trigger.body.key}}',qualified:'{{steps.present.passed}}'}},
   {id:'notify',type:'http',input:{method:'POST',url:'https://crm.example/contacts',body:'{{steps.summary}}'}}
  ]};
  const w=await h.post('workflows',{name:'Lead condition previews',graph:routing},h.owner,201),base=`workflows/${w.id}`;
@@ -172,7 +172,7 @@ async function conditionPreviews(h,edge,inspect) {
    assert.equal(route.trace[0].trace.groups[0].rules[0].result,'type_mismatch');
    assert.deepEqual(result.steps.map(step=>step.path),['present','route']);
   } else {
-   assert.deepEqual(result.steps.find(step=>step.path==='summary').output,{matched,key:payload.key});
+   assert.deepEqual(result.steps.find(step=>step.path==='summary').output,{matched,key:payload.key,qualified:true});
    assert.equal(result.steps.at(-1).outcome,'not run in preview');
   }
   assert.equal(edge.requests.length,initialWrites,'preview sends no destination request');
@@ -201,7 +201,7 @@ async function conditionPreviews(h,edge,inspect) {
  assert.equal(sent.status,200,sent.text);
  const run=await settled(h,sent.value.run_id);assert.equal(run.status,'succeeded');
  assert.deepEqual(run.steps.find(step=>step.path==='route').output.matched,['fallback']);
- assert.deepEqual(JSON.parse(edge.requests.at(-1).body),{matched:['fallback'],key:payload.key});
+ assert.deepEqual(JSON.parse(edge.requests.at(-1).body),{matched:['fallback'],key:payload.key,qualified:true});
  await h.post(base+'/samples',{source:'history',run_id:run.id},h.owner,201);
  const history=await h.post(base+'/preview',{});
  assert.equal(history.source.source_id,run.id);assert.deepEqual(history.steps.find(step=>step.path==='route').matched,['fallback']);
@@ -220,6 +220,8 @@ async function conditionPreviews(h,edge,inspect) {
  await h.post(base+'/draft',{graph:always});
  const withAlways=await h.post(base+'/preview',{});
  assert.deepEqual(withAlways.steps.find(step=>step.path==='summary').output.matched,['premium','regional','always']);
+ const undeclared=structuredClone(always);undeclared.steps[1].on_type_mismatch='fallback';
+ await h.post(base+'/draft',{graph:undeclared},h.owner,422);
  assert.equal(edge.requests.length,initialWrites+1);
 }
 

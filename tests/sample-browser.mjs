@@ -51,11 +51,11 @@ try {
    await expect(routing.locator('pre')).toContainText('"right": 5000');
    await expect(routing.locator('pre')).toContainText(state==='condition-mismatch'||state==='condition-routed'?'type_mismatch':state==='condition-fallback'?'"left": "100"':'"left": "6000"');
    if(state==='condition-mismatch') {
-    await expect(result).not.toContainText('not run in preview');
+    await expect(result).not.toContainText('Not run in preview');
     await expect(routing).toContainText('Type mismatch');
    } else {
     await expect(result).toContainText('Not run in preview');
-    await expect(routing).toContainText(state==='condition-fallback'||state==='condition-routed'?'fallback':'Qualified lead');
+    await expect(routing).toContainText(state==='condition-fallback'||state==='condition-routed'?'Fallback':'Qualified lead');
     if(state==='condition-captured') await expect(routing).toContainText('Regional lead');
    }
    const search=page.getByRole('link',{name:'Search runs',exact:true});await search.focus();await expect(page.locator('#search-tooltip')).toBeVisible();await page.locator('h1').click();await search.hover();await page.waitForTimeout(350);await expect(page.locator('#search-tooltip')).toBeVisible();
