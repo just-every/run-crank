@@ -12,12 +12,25 @@ export const grantsAction = (grant: TeamGrant, action: TeamAction) => powers[gra
 export function completeGrant(actor: Actor, action: TeamAction, workflowId?: string, connections: string[] = []) {
   return actor.team?.grants.find(grant => grantsAction(grant, action) && (!workflowId || grant.workflow_ids.includes(workflowId)) && connections.every(id => grant.connection_ids.includes(id)))
 }
+/** Payload access follows the complete read grant for each record, never another grant's role. */
+export function payloadWorkflowIds(actor: Actor, legacy = false): string[] {
+  return [...new Set((actor.team?.grants ?? []).filter(grant => !grant.review_grant_id && grantsAction(grant, 'read') &&
+    ['admin','builder','operator', ...(legacy ? ['approver'] : [])].includes(grant.role)).flatMap(grant => grant.workflow_ids))]
+}
+export function mayReadPayload(actor: Actor, workflowId: string, legacy = false): boolean {
+  return actor.team ? payloadWorkflowIds(actor, legacy).includes(workflowId) :
+    actor.role === 'owner' || actor.role === 'admin' || actor.kind === 'agent'
+}
 export async function teamAccess(env: CrankEnv, actor: Actor): Promise<TeamAccess | undefined> {
   if (actor.role === 'owner' || actor.tokenId || actor.grantId) return
   const row = await stmt(env, 'SELECT * FROM crank_team_access WHERE operator_id=?', actor.id).first<{role: TeamRole; workflow_ids_json: string; connection_ids_json: string; revision: string; grants_json: string}>()
   const grants: TeamGrant[] = row ? JSON.parse(row.grants_json ?? 'null') ?? [{role:row.role,workflow_ids:JSON.parse(row.workflow_ids_json),connection_ids:JSON.parse(row.connection_ids_json)}] : []
   if(grants.some(grant=>grant.workflow_ids.includes('workspace:production'))) {
-    const owned=await stmt(env,"SELECT id FROM crank_workflows WHERE created_by=? AND environment='production' UNION SELECT id FROM crank_flows WHERE created_by=?",actor.id,actor.id).all<{id:string}>()
+    // A replacement grant must never revive records created under revoked authority.
+    const owned=await stmt(env,`SELECT w.id FROM crank_workflows w JOIN crank_audit a ON a.subject_id=w.id AND a.subject_kind='workflow' AND a.action='workflow.create'
+      WHERE w.created_by=? AND w.environment='production' AND a.actor_id=w.created_by AND json_extract(a.detail_json,'$.team_revision')=?
+      UNION SELECT f.id FROM crank_flows f JOIN crank_audit a ON a.subject_id=f.id AND a.subject_kind='flow' AND a.action='flow.create'
+      WHERE f.created_by=? AND a.actor_id=f.created_by AND json_extract(a.detail_json,'$.team_revision')=?`,actor.id,row!.revision,actor.id,row!.revision).all<{id:string}>()
     for(const grant of grants)if(grant.workflow_ids.includes('workspace:production'))grant.workflow_ids=[...new Set([...grant.workflow_ids,...owned.results.map(row=>row.id)])]
   }
   const reviews=await stmt(env,`SELECT g.id,g.workflow_id,v.declared_json FROM crank_grants g JOIN oa_operators o ON o.id=g.owner_id JOIN crank_workflow_versions v ON v.id=g.version_id
@@ -43,12 +56,14 @@ export function connectionScope(actor: Actor, connectionId: string) {
   requireValue((!actor.serviceAccountId || actor.serviceConnectionIds?.includes(connectionId)) && (!actor.team || actor.team.connection_ids.includes(connectionId)), 'This connection is outside your scope', 403)
 }
 /** One complete grant covers the verb and every immutable account binding. */
-export async function versionConnectionScope(env: CrankEnv, actor: Actor, versionId: string) {
+export async function versionConnectionScope(env: CrankEnv, actor: Actor, versionId: string, action?: TeamAction) {
   if (!actor.team) return
   const version = await stmt(env, 'SELECT workflow_id,declared_json FROM crank_workflow_versions WHERE id=?', versionId).first<{workflow_id:string;declared_json:string}>()
   requireValue(version, 'Version not found', 404)
   const declared = JSON.parse(version.declared_json), connections = [...(declared.connections ?? []), ...(declared.gateways ?? []).map((id:string)=>'gateway:'+id)]
-  requireValue(actor.team.grants.some(g=>g.workflow_ids.includes(version.workflow_id) && connections.every((id:string)=>g.connection_ids.includes(id))), 'One complete grant must cover this workflow and every connection',403)
+  const grants=actor.team.grants.filter(g=>(!action || grantsAction(g,action)) && g.workflow_ids.includes(version.workflow_id) && connections.every((id:string)=>g.connection_ids.includes(id)))
+  requireValue(grants.length, 'One complete grant must cover this workflow and every connection',403)
+  actor.team={...actor.team,grants}
   for (const connectionId of connections) connectionScope(actor,connectionId)
 }
 export const mayPrepare = (actor: Actor) => actor.team ? !!completeGrant(actor,'prepare') : ['owner','admin'].includes(actor.role)
