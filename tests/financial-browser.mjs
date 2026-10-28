@@ -44,7 +44,7 @@ try {
    await page.goto(h.origin+`/app/workflows/${workflow.id}?step=invoice`);
    const invalid=state==='nested-validation'||state==='cent-validation';
    const field=state==='cent-validation'?'input.payload.Line[0].Amount':'input.payload.Line[1].SalesItemLineDetail.Qty';
-   const message=state==='cent-validation'?'exact USD cents':'nonnegative exact decimal';
+   const message=state==='cent-validation'?'exact USD cents':'must be an exact decimal';
    if(invalid){
     await expect(page.locator('.last-result .result-error')).toContainText(field);
     await expect(page.locator('.last-result .result-error')).toContainText(message);

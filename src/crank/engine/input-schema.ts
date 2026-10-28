@@ -14,6 +14,7 @@ export interface InputSchema {
   items?: InputSchema
   minItems?: number
   decimalPlaces?: number
+  signed?: boolean
   discriminator?: { field: string; variants: Record<string, Record<string, InputSchema>> }
 }
 
@@ -84,8 +85,9 @@ export function validateInput(schema: InputSchema, input: unknown, step: string,
     } else if (rule.type === 'boolean') {
       if (typeof value !== 'boolean') fail('must be a boolean')
     } else {
-      const decimal = typeof value === 'number' || typeof value === 'string' && /^\d+(?:\.\d+)?$/.test(value) ? parseDecimal(value) : null
-      if (!decimal || decimal.units < 0n) fail('must be a nonnegative exact decimal')
+      const format = rule.signed ? /^-?\d+(?:\.\d+)?$/ : /^\d+(?:\.\d+)?$/
+      const decimal = typeof value === 'number' || typeof value === 'string' && format.test(value) ? parseDecimal(value) : null
+      if (!decimal || !rule.signed && decimal.units < 0n) fail(rule.signed ? 'must be an exact decimal' : 'must be a nonnegative exact decimal')
       if (rule.decimalPlaces !== undefined && decimal && normalize(decimal).scale > rule.decimalPlaces) fail('must be exact USD cents')
     }
   }

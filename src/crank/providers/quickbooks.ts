@@ -18,22 +18,27 @@ export const qboCreate = (type: string) => ['quickbooks.create_invoice', 'quickb
 const text: InputSchema = { type: 'string' }
 const decimal: InputSchema = { type: 'decimal' }
 const cents: InputSchema = { ...decimal, decimalPlaces: 2 }
+const signedDecimal: InputSchema = { ...decimal, signed: true }
+const lineAmount: InputSchema = { ...cents, signed: true }
 const ref: InputSchema = { type: 'object', properties: { value: { type: 'string', required: true, nonempty: true }, name: text } }
-const sales: InputSchema = { type: 'object', properties: { ItemRef: ref, Qty: decimal, UnitPrice: decimal, TaxCodeRef: ref, ClassRef: ref, ServiceDate: text } }
+const sales: InputSchema = { type: 'object', properties: { ItemRef: ref, Qty: signedDecimal, UnitPrice: signedDecimal, TaxCodeRef: ref, ClassRef: ref, ServiceDate: text } }
 const discount: InputSchema = { type: 'object', properties: { PercentBased: { type: 'boolean' }, DiscountPercent: decimal, DiscountAccountRef: ref } }
+const group: InputSchema = { type: 'object', properties: { GroupItemRef: { ...ref, required: true }, Qty: signedDecimal, PrintGroupItems: { type: 'boolean' } } }
 const line: InputSchema = {
   type: 'object', required: true,
   properties: {
-    DetailType: { type: 'string', required: true, enum: ['SalesItemLineDetail', 'DiscountLineDetail', 'SubTotalLineDetail', 'DescriptionOnly'] },
-    Amount: cents, Description: text, Id: text, LineNum: decimal,
+    DetailType: { type: 'string', required: true, enum: ['SalesItemLineDetail', 'DiscountLineDetail', 'SubTotalLineDetail', 'DescriptionOnly', 'GroupLineDetail'] },
+    Amount: lineAmount, Description: text, Id: text, LineNum: decimal,
     SalesItemLineDetail: sales, DiscountLineDetail: discount, SubTotalLineDetail: { type: 'object' }, DescriptionLineDetail: { type: 'object' },
+    GroupLineDetail: group,
   },
   discriminator: { field: 'DetailType', variants: {
-    SalesItemLineDetail: { Amount: { ...cents, required: true }, SalesItemLineDetail: { ...sales, required: true } },
+    SalesItemLineDetail: { Amount: { ...lineAmount, required: true }, SalesItemLineDetail: { ...sales, required: true } },
     DiscountLineDetail: { Amount: { ...cents, required: true }, DiscountLineDetail: { ...discount, required: true } },
-    SubTotalLineDetail: {}, DescriptionOnly: {},
+    SubTotalLineDetail: {}, DescriptionOnly: {}, GroupLineDetail: { GroupLineDetail: { ...group, required: true } },
   } },
 }
+group.properties!.Line = { type: 'array', items: line }
 /** Bounded create schemas cover existing operations, leaving optional provider fields intact. */
 export const quickbooksInputSchema: InputSchema = {
   type: 'object', required: true, properties: {

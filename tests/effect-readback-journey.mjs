@@ -46,6 +46,29 @@ export async function quickbooksInputJourney({ inspect } = {}) {
     const exact = { ...payload, Line: [sale('9007199254740993.01')], TxnTaxDetail: undefined };
     assert.equal((await startRun(h, workflow, { ...runInput, payload: exact, total: '9007199254740993.01' })).status, 'succeeded');
     assert.equal(payloads.at(-1).Line[0].Amount, '9007199254740993.01');
+    // Existing provider adjustments and bundles remain valid without a declared total.
+    const compatible = [
+      { ...defaults, Line: [sale('10.00'), sale('-2.50')] },
+      { ...defaults, Line: [sale('10.00'), sale('-2.50', { Qty: 1, UnitPrice: '-2.50' })] },
+      { ...defaults, Line: [sale('10.00'), sale(-2.5, { Qty: -1, UnitPrice: 2.5 })] },
+      { ...defaults, Line: [{ DetailType: 'GroupLineDetail', Description: 'Existing bundle',
+        GroupLineDetail: { GroupItemRef: { value: 'synthetic-crank-5' }, Qty: 2,
+          Line: [sale('4.00', { Qty: 2, UnitPrice: '2.00' }), sale('6.00', { Qty: 2, UnitPrice: '3.00' })] } }] },
+    ];
+    for (const [index, supported] of compatible.entries()) {
+      const input = { ...runInput, key: `synthetic-crank-${index + 10}`, payload: supported, total: undefined };
+      const saved = await publish(h, 'Existing accounting input', { trigger: { type: 'manual' },
+        steps: [create(undefined, { payload: supported, amount_usd: undefined })] });
+      for (const target of [saved, workflow]) {
+        const before = payloads.length, complete = await startRun(h, target, input);
+        assert.equal(complete.status, 'succeeded', 'supported literal and resolved inputs reach the provider');
+        assert.equal(payloads.length, before + 1);
+        assert.deepEqual(payloads.at(-1), { ...JSON.parse(JSON.stringify(supported)), DocNumber: input.key, CurrencyRef: { value: 'USD' } });
+        assert.deepEqual(stepOf(complete, 'invoice').output.body.Invoice.Line, supported.Line);
+        if (inspect && target === saved && (index === 0 || index === 3)) await inspect({ h, workflow: saved, run: complete,
+          state: index === 0 ? 'negative-adjustment' : 'bundle-lines' });
+      }
+    }
     // Unit prices may be finer than cents when the resulting amount is exact cents.
     const fractionalPrice = { ...defaults, Line: [sale('0.250', { Qty: 2, UnitPrice: '0.125' })] };
     assert.equal((await startRun(h, workflow, { ...runInput, payload: fractionalPrice, total: undefined })).status, 'succeeded');
@@ -97,6 +120,10 @@ export async function quickbooksInputJourney({ inspect } = {}) {
       [null, 'input.payload', 'null'],
       [undefined, 'input.payload', 'missing'],
       [{ ...payload, Line: [sale('0.001')] }, 'input.payload.Line[0].Amount', 'cents'],
+      [{ ...payload, Line: [sale('-0.001')] }, 'input.payload.Line[0].Amount', 'cents'],
+      [{ ...payload, Line: [sale('-1.00', { Qty: -1, UnitPrice: '2.00' })] }, 'input.payload.Line[0].Amount', 'quantity and unit price'],
+      [{ ...payload, Line: [{ DetailType: 'GroupLineDetail' }] }, 'input.payload.Line[0].GroupLineDetail', 'missing'],
+      [{ ...payload, Line: [{ DetailType: 'GroupLineDetail', GroupLineDetail: { GroupItemRef: { value: '' } } }] }, 'input.payload.Line[0].GroupLineDetail.GroupItemRef.value', 'empty'],
       [{ ...payload, TxnTaxDetail: { TotalTax: '0.001' } }, 'input.payload.TxnTaxDetail.TotalTax', 'cents'],
       [{ ...payload, TxnTaxDetail: { TaxLine: [{ Amount: '0.001', DetailType: 'TaxLineDetail', TaxLineDetail: { TaxRateRef: { value: '1' } } }] } }, 'input.payload.TxnTaxDetail.TaxLine[0].Amount', 'cents'],
       [{ ...payload, Line: [sale('not money')] }, 'input.payload.Line[0].Amount', 'decimal'],
