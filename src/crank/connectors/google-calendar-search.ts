@@ -38,7 +38,7 @@ function eventTime(value: unknown, zone: string): {value: Record<string,string>;
 function event(value: unknown, calendar: string, zone: string) {
   if (!isObject(value) || !boundedText(value.id,1024) || !['confirmed','tentative','cancelled'].includes(String(value.status))) return malformed()
   const start = value.start === undefined ? null : eventTime(value.start,zone), end = value.end === undefined ? null : eventTime(value.end,zone)
-  if (value.status !== 'cancelled' && (!start || !end) || start && end && end.ms <= start.ms) return malformed()
+  if (value.status !== 'cancelled' && (!start || !end) || start && end && (end.ms <= start.ms || ('date' in start.value) !== ('date' in end.value))) return malformed()
   if (value.summary !== undefined && (typeof value.summary !== 'string' || value.summary.length > 8192)) return malformed()
   if (value.recurringEventId !== undefined && !boundedText(value.recurringEventId,1024)) return malformed()
   const original = value.originalStartTime === undefined ? null : eventTime(value.originalStartTime,zone)
@@ -64,8 +64,9 @@ export const googleCalendarSearchEvents: StepType = {
       const url = new URL(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(input.calendar_id)}/events`)
       for (const [name,value] of Object.entries({timeMin:input.time_min,timeMax:input.time_max,timeZone:input.time_zone,singleEvents:'true',showDeleted:'true',maxResults:'100',...(input.query === undefined ? {} : {q:input.query}),...(token ? {pageToken:token} : {})})) url.searchParams.set(name,value)
       const result = await retryRequest(context,{method:'GET',url,body:null,idempotent:false},policy => sendRequest(context,{url,method:'GET',body:null,headers:new Headers({accept:'application'+'/'+'json'}),timeout:Number(step.timeout_ms ?? 15000),maxBytes:1024*1024,follow:0,
-        // Only the JSON payload and content type are needed for a retained read.
-        sanitizeResponse:async response => ({...response,headers:new Headers([...response.headers].filter(([name]) => ['content-type','retry-after'].includes(name)))}),
+        // Keep calendar identifiers and opaque cursors out of plaintext metadata.
+        // The immutable request digest binds the real URL; reads use only these bytes.
+        sanitizeResponse:async response => ({...response,url:'https://www.googleapis.com/calendar/v3/events',headers:new Headers([...response.headers].filter(([name]) => ['content-type','retry-after'].includes(name)))}),
       },connectionId,policy))
       const status = result.response.status
       if (status !== 200) throw new StepError(status === 401 || status === 403 ? 'auth' : status === 429 ? 'rate_limit' : 'provider',`Google Calendar search refused the request with status ${status}`,{status,...(result.exhausted ? {exhausted:true} : {})})
