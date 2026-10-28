@@ -68,6 +68,7 @@ export async function aiClassificationJourney({onScreen}={}) {
       ['wrong model identity',modelReply({model:'synthetic-crank-unapproved-model'})],
       ['token limit',modelReply({usage:{prompt_tokens:100,completion_tokens:129,total_tokens:229}})],
     ];
+    await h.restart({clock:'2026-11-10T15:00:01Z'});
     for(const [name,response] of invalid) {
       fake.routes.set('api.openai.com',()=>jsonResponse(response));
       const failed=await startRun(h,w,{text:'synthetic-crank-'+name});
@@ -82,6 +83,11 @@ export async function aiClassificationJourney({onScreen}={}) {
         assert.equal(fake.to('api.openai.com').length,requests,'re-inspecting a billed invalid response cannot issue another request');
       }
     }
+    fake.routes.set('api.openai.com',async()=>{await new Promise(done=>setTimeout(done,300));return jsonResponse(modelReply())});
+    const timed=await aiWorkflow(h,c.id,{name:'Bounded model time',step:{timeout_ms:100},after});
+    const timedOut=await startRun(h,timed,{text:'synthetic-crank-time-bound'});
+    assert.equal(timedOut.status,'uncertain');assert.equal(timedOut.attempts.length,1);assert.equal(timedOut.attempts[0].error_category,'network');
+    assert.equal(stepOf(timedOut,'count'),undefined);assert.equal(await count(),3,'a late model response cannot start downstream work');
     let calls=fake.to('api.openai.com').length;
     for(const text of [null,{},['text'],'','x'.repeat(32769),'x'.repeat(8200)]) {
       const failed=await startRun(h,w,{text});assert.equal(failed.status,'failed');assert.match(failed.error.message,/model input unsupported/);assert.equal(await count(),3);
@@ -115,6 +121,10 @@ export async function aiAuthorityJourney() {
   const {h,fake,c}=await fixture();let release;const pending=[];
   try {
     const w=await aiWorkflow(h,c.id);
+    const oneAttempt=await aiWorkflow(h,c.id,{name:'Bounded rejected attempts',step:{retry_policy:{read_attempts:1}}});
+    fake.routes.set('api.openai.com',()=>jsonResponse({},429));
+    const exhausted=await startRun(h,oneAttempt,{text:'synthetic-crank-attempt-bound'});
+    assert.equal(exhausted.status,'failed');assert.equal(exhausted.attempts.length,1);assert.equal(exhausted.error.category,'rate_limit');
     fake.routes.set('api.openai.com',()=>jsonResponse({error:'synthetic-crank-rate-limit'},429,{'retry-after':'60'}));
     let run=await startRun(h,w,{text:'synthetic-crank-parked'});
     assert.equal(run.status,'waiting');assert.equal(run.attempts.length,1);assert.ok(run.attempts[0].retry_parked_at);
@@ -160,9 +170,12 @@ export async function aiCustodyJourney({onScreen}={}) {
     await h.post(`workflow-runs/${interrupted.id}/replay`,{paths:['classify'],digest:interruptedPreview.digest},h.owner,409);
     assert.equal(fake.to('api.openai.com').length,interruptedCalls);
     const good=await startRun(h,w,{text:'synthetic-crank-retained-person'});
-    fake.routes.set('api.openai.com',()=>{throw new Error('synthetic-crank-lost-response')});
+    // The model accepts the request, but its response arrives after the native
+    // transport deadline. The billed effect has no acknowledged local result.
+    fake.routes.set('api.openai.com',async()=>{await new Promise(done=>setTimeout(done,1500));return jsonResponse(modelReply())});
     const lost=await startRun(h,w,{text:'synthetic-crank-lost'}),calls=fake.to('api.openai.com').length;
     assert.equal(lost.status,'uncertain');assert.equal(stepOf(lost,'classify').status,'uncertain');assert.equal(lost.error.category,'uncertain');
+    assert.equal(lost.attempts[0].error_category,'network','a response lost after dispatch remains a billed uncertainty');
     const operation=stepOf(lost,'classify').operation_key;
     await h.restart();await h.tick('2026-11-10T15:02:00Z');
     const replay=await h.get(`workflow-runs/${lost.id}/replay`);assert.deepEqual(replay.eligible,[]);assert.equal(replay.uncertain[0].operation_key,operation);

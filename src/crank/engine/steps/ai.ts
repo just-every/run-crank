@@ -126,7 +126,7 @@ export const aiClassify: StepType = {
       if (error instanceof StepError && ['network','provider','egress'].includes(error.category)) throw new StepError('uncertain', 'AI classification response is unknown; a billed request is never replayed blindly', { uncertain: true, trace: provenance })
       throw error
     }
-    if (response.status >= 500 || response.status >= 300 && response.status < 400) throw new StepError('uncertain', 'AI classification outcome is unestablished; inspect the provider before starting another billed request', { uncertain: true, trace: provenance })
+    if (response.status >= 500 || response.status >= 300 && response.status < 400) throw new StepError('uncertain', 'AI classification response is unknown; inspect the provider before starting another billed request', { uncertain: true, trace: provenance })
     if (response.status !== 200) throw new StepError(response.status === 429 ? 'rate_limit' : response.status === 401 || response.status === 403 ? 'auth' : 'provider', `AI classification request refused with status ${response.status}`, { trace: provenance })
     const result = JSON.parse(utf8(response.bytes))
     const reported = response.headers.get('x-crank-usage-usd')
