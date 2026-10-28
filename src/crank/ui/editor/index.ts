@@ -58,7 +58,7 @@ export function editorView(d: EditorData): { content: string; page: Page } {
   const canStart = d.actor.team ? !!completeGrant(d.actor,'start',wf.id,liveAccounts) : ['owner','admin'].includes(d.actor.role)
   const all = flatten(nodes(graph)), requested = d.params.get('step') ?? '', fallback = all.at(-1)!.path
   const node = findNode(graph, requested) ?? findNode(graph, fallback)!
-  const tab = ['setup', 'data', 'test'].includes(d.params.get('tab') ?? '') ? d.params.get('tab')! : d.preview ? 'test' : 'setup'
+  const tab = ['setup', 'data', 'test'].includes(d.params.get('tab') ?? '') ? d.params.get('tab')! : 'setup'
   const changed = d.current && d.previous ? changedPaths(d.current.graph, d.previous.graph) : new Set<string>()
   const unpublished = !d.current || canonical(d.current.graph) !== canonical(graph)
   const q = d.params.get('q') ?? '', status = d.params.get('status') ?? ''

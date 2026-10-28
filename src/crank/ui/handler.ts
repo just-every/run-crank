@@ -86,7 +86,7 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
       // Pure evaluation uses the same authorized preview door as the Test tab.
       // It never tests an app action or crosses a wait to invent a result.
       if (!preview && data.sampleData.samples.some((sample:any)=>sample.selected && sample.step_path==='trigger')) {
-        const response=await call('/api/crank/workflows/'+encodeURIComponent(id)+'/preview',{})
+        const response=await call('/api/crank/workflows/'+encodeURIComponent(id)+'/preview')
         if(response.ok)preview=await response.json()
       }
       let customPicker=''
