@@ -538,7 +538,9 @@ test('Custom connector review, agent OpenAPI proposal and sandbox gates retain e
   assert.equal((await h.get('custom-connectors')).find(v=>v.id===installed.id&&v.version===1).status,'sandbox','Re-review requires fresh readback and duplicate-event proof');
   await h.post(`custom-connectors/${installed.id}/versions/1/revoke-scopes`,{scopes:['records.read']});
   const deniedBefore=fake.to('custom.example').length,deniedSearch=await draftTest(h,'Revoked stock search',[search],{query:'oak'},{[account.id]:account.id});assert.equal(deniedSearch.run.status,'failed');assert.equal(stepOf(deniedSearch.run,'lookup').error.custom_scope,true);assert.equal(fake.to('custom.example').length,deniedBefore);
-  await (await import('./custom-picker-fixture.mjs')).proveCustomPickers(h,account,agent,fake);
+  const pickers=await import('./custom-picker-fixture.mjs');
+  await pickers.proveCustomPickers(h,account,agent,fake);
+  await pickers.provePagedPickers(h,fake);
   const decisions=await h.get('audit');assert.ok(decisions.some(d=>d.action==='custom.owner_denied'&&d.detail.session_kind==='agent'));
 });
 
@@ -759,4 +761,16 @@ test('Managed Calendar creation reads back the exact event and reconciles respon
 test('Native Nook delivery binds installation and conversation, retains one effect across lost acknowledgements and fences current authority', async () => {
   const {nookJourney}=await import('./nook-journey.mjs');
   await nookJourney();
+});
+
+test('Native Orbit deals preserve scoped lookup, conditional update and readback across loss, revocation and inactive custody', async () => {
+ const {orbitJourney}=await import('./orbit-journey.mjs');await orbitJourney();
+});
+
+test('Native Orbit snapshots admit watched deal changes and new records once, retaining pages and erasure fences', async () => {
+ const {orbitPollJourney}=await import('./orbit-journey.mjs');await orbitPollJourney();
+});
+
+test('Private custom find or create retains exact approval, key ownership and accountable readback',async()=>{
+  const {customSearchJourney}=await import('./custom-search-journey.mjs');await customSearchJourney();
 });

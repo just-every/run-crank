@@ -1,3 +1,4 @@
+import { watchedFields, saveWatchedFields } from '../triggers/watched-fields'
 import { digestApi } from '../engine/steps/digest'
 import { readSamples, saveSample, sampleAction, listenForSample, sampleWarnings } from './samples'
 import { consentRegulatedOperation, readRegulatedOperations } from '../providers/regulated-authority'
@@ -148,6 +149,7 @@ export async function workflowApi(request: Request, env: CrankEnv): Promise<Resp
       if ((m = match(path, /^\/api\/crank\/workflows\/([^/]+)\/drafts\/([^/]+)$/))) return json(await readDraft(env, m[0], m[1]))
       if ((m = match(path, /^\/api\/crank\/workflows\/([^/]+)\/compare$/))) return json(await compareWorkflow(env, m[0], url.searchParams))
       if ((m = match(path, /^\/api\/crank\/workflows\/([^/]+)\/samples$/))) return json(await readSamples(env, actor, m[0]))
+      if ((m = match(path, /^\/api\/crank\/workflows\/([^/]+)\/trigger\/fields$/))) return json(await watchedFields(env, actor, m[0]))
       if ((m = match(path, /^\/api\/crank\/workflows\/([^/]+)\/trigger$/))) return json(await triggerState(env, m[0], url.searchParams))
       if ((m = match(path, /^\/api\/crank\/workflows\/([^/]+)\/versions\/(\d+)$/))) return json(await versionGraph(env, m[0], Number(m[1])))
       if ((m = match(path, /^\/api\/crank\/workflows\/([^/]+)\/today$/))) return json(await runsToday(env, m[0]))
@@ -196,6 +198,7 @@ export async function workflowApi(request: Request, env: CrankEnv): Promise<Resp
     if (path === '/api/crank/reports/settings') return json(await configureOperations(env, actor, input))
     if (path === '/api/crank/reports/obligations') return json(await createObligation(env, actor, input), 201)
     if ((m = match(path, /^\/api\/crank\/reports\/obligations\/([^/]+)\/verify$/))) return json(await verifyObligation(env, actor, m[0], input))
+    if ((m = match(path, /^\/api\/crank\/workflows\/([^/]+)\/trigger\/fields$/))) return json(await saveWatchedFields(env, actor, m[0], input))
     if ((m = match(path, /^\/api\/crank\/workflows\/([^/]+)\/samples(?:\/(listen|select|delete|fields))?$/))) {
       if (m[1] === 'listen') return json(await listenForSample(env, actor, m[0]), 201)
       return json(m[1] ? await sampleAction(env, actor, m[0], m[1], input) : await saveSample(env, actor, m[0], input), m[1] ? 200 : 201)

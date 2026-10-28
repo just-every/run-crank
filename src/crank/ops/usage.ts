@@ -22,3 +22,5 @@ export async function recordProviderCharge(env: CrankEnv, runId: string, path: s
   const stored = await stmt(env, 'SELECT CAST(usd_units AS TEXT) usd_units FROM crank_usage_provider_charges WHERE run_id=? AND path=? AND source=?', runId, path, source).first<{ usd_units: string }>()
   requireValue(!stored || stored.usd_units === units, 'A reported charge attempt cannot be rewritten with a different amount', 409)
 }
+
+export { modelCost } from './model-cost'

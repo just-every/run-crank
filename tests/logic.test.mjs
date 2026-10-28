@@ -1,3 +1,7 @@
+import { aiClassificationJourney, aiAuthorityJourney, aiCustodyJourney } from './ai-steps-journey.mjs';
+test('AI classification validates text and output, meters known and unknown costs and stops downstream writes', aiClassificationJourney);
+test('AI classification retries only rejected requests and fences parked budgets and current dispatch authority', aiAuthorityJourney);
+test('AI classification retains uncertain billed identities without replay and restores complete inactive custody', aiCustodyJourney);
 import { before, after, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { harness } from './harness.mjs';

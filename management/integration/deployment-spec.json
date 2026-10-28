@@ -498,6 +498,42 @@
       "name": "0080_workflow_samples.sql",
       "sha256": "5d0fcbeda03cd899c479389340b9ef14f158dda74f319b7dd05b2f884794feb3",
       "sql": "-- Samples are retained preview data, never trigger admission or execution authority.\nCREATE TABLE crank_workflow_samples (\n  id TEXT PRIMARY KEY,\n  workflow_id TEXT NOT NULL REFERENCES crank_workflows(id),\n  step_path TEXT NOT NULL,\n  source TEXT NOT NULL CHECK(source IN ('manual','webhook','history','schema')),\n  source_id TEXT,\n  source_time TEXT,\n  payload_json TEXT NOT NULL,\n  uploads_json TEXT NOT NULL DEFAULT '[]',\n  selected INTEGER NOT NULL DEFAULT 0 CHECK(selected IN (0,1)),\n  created_by TEXT NOT NULL,\n  created_at TEXT NOT NULL\n);\nCREATE INDEX crank_workflow_samples_workflow ON crank_workflow_samples(workflow_id,created_at);\nCREATE UNIQUE INDEX crank_workflow_samples_selected ON crank_workflow_samples(workflow_id,step_path) WHERE selected=1;\nCREATE TABLE crank_sample_fields (\n  workflow_id TEXT PRIMARY KEY REFERENCES crank_workflows(id),\n  fields_json TEXT NOT NULL,\n  updated_at TEXT NOT NULL\n);\n-- Short-lived, single-use receiving capabilities never leave this installation.\nCREATE TABLE crank_sample_listeners (\n  secret_hash TEXT PRIMARY KEY,\n  workflow_id TEXT NOT NULL REFERENCES crank_workflows(id),\n  draft_json TEXT NOT NULL,\n  created_by TEXT NOT NULL,\n  operator_version INTEGER NOT NULL,\n  session_id TEXT NOT NULL,\n  expires_at TEXT NOT NULL\n);\n"
+    },
+    {
+      "binding": "DB",
+      "name": "0081_app_field_values.sql",
+      "sha256": "3feb5f57965d57114e9c37eacea86402416889afb14cfa27ec772c09e7fddda1",
+      "sql": "-- Comparison history contains digests, never a second copy of watched values.\nCREATE TABLE crank_app_field_values (\n workflow_id TEXT NOT NULL REFERENCES crank_workflows(id) ON DELETE CASCADE,\n record_id TEXT NOT NULL,\n field TEXT NOT NULL,\n value_digest TEXT NOT NULL,\n first_seen_at TEXT NOT NULL,\n PRIMARY KEY(workflow_id,record_id,field,value_digest)\n);\n-- Run erasure prevents a later poll or older archive from reviving that record.\nCREATE TABLE crank_app_erased_records (\n workflow_id TEXT NOT NULL REFERENCES crank_workflows(id) ON DELETE CASCADE,\n record_id TEXT NOT NULL,\n PRIMARY KEY(workflow_id,record_id)\n);\n\nCREATE TRIGGER crank_app_erased_snapshot_insert BEFORE INSERT ON crank_app_snapshots\nWHEN EXISTS(SELECT 1 FROM crank_app_erased_records WHERE workflow_id=NEW.workflow_id AND record_id=NEW.record_id)\nBEGIN SELECT RAISE(IGNORE); END;\nCREATE TRIGGER crank_app_erased_snapshot_update BEFORE UPDATE ON crank_app_snapshots\nWHEN EXISTS(SELECT 1 FROM crank_app_erased_records WHERE workflow_id=NEW.workflow_id AND record_id=NEW.record_id)\nBEGIN SELECT RAISE(IGNORE); END;\nCREATE TRIGGER crank_app_erased_value_insert BEFORE INSERT ON crank_app_field_values\nWHEN EXISTS(SELECT 1 FROM crank_app_erased_records WHERE workflow_id=NEW.workflow_id AND record_id=NEW.record_id)\nBEGIN SELECT RAISE(IGNORE); END;\nCREATE TRIGGER crank_app_erased_run_insert BEFORE INSERT ON crank_wf_runs\nWHEN NEW.trigger_kind='app_poll' AND NEW.mode='production'\n AND EXISTS(SELECT 1 FROM crank_app_erased_records WHERE workflow_id=NEW.workflow_id AND record_id=NEW.business_key)\nBEGIN SELECT RAISE(IGNORE); END;\n"
+    },
+    {
+      "binding": "DB",
+      "name": "0082_app_pending_rows.sql",
+      "sha256": "5819c7c1a3a92ee34b6898d0f5a010e279e9d4cf0234f65ff89ebf47b9111170",
+      "sql": "-- Row settling retains no cell values before the row is ready for comparison.\nCREATE TABLE crank_app_pending_rows (\n workflow_id TEXT NOT NULL REFERENCES crank_workflows(id) ON DELETE CASCADE,\n version_id TEXT NOT NULL REFERENCES crank_workflow_versions(id) ON DELETE CASCADE,\n record_id TEXT NOT NULL,\n value_digest TEXT NOT NULL,\n stable_since TEXT NOT NULL,\n PRIMARY KEY(workflow_id,version_id,record_id)\n);\nCREATE TRIGGER crank_app_erased_pending_insert BEFORE INSERT ON crank_app_pending_rows\nWHEN EXISTS(SELECT 1 FROM crank_app_erased_records WHERE workflow_id=NEW.workflow_id AND record_id=NEW.record_id)\nBEGIN SELECT RAISE(IGNORE); END;\n"
+    },
+    {
+      "binding": "DB",
+      "name": "0083_app_subjects.sql",
+      "sha256": "b9b72352386daf086f7fd152be7f8c11a1e4cadd69a91bc5d3b62c50d512b9c2",
+      "sql": "-- Provider record identity can be matched case-insensitively without retaining it.\n-- Existing observation keys hash the original spelling and cannot be backfilled.\nCREATE TABLE crank_app_subjects (\n workflow_id TEXT NOT NULL REFERENCES crank_workflows(id) ON DELETE CASCADE,\n record_id TEXT NOT NULL,\n record_subject_digest TEXT NOT NULL,\n PRIMARY KEY(workflow_id,record_id)\n);\nCREATE INDEX crank_app_subjects_digest ON crank_app_subjects(record_subject_digest);\n\nCREATE TRIGGER crank_app_erased_subject_insert BEFORE INSERT ON crank_app_subjects\nWHEN EXISTS(SELECT 1 FROM crank_app_erased_records WHERE workflow_id=NEW.workflow_id AND record_id=NEW.record_id)\nBEGIN SELECT RAISE(IGNORE); END;\nCREATE TRIGGER crank_app_erased_subject_update BEFORE UPDATE ON crank_app_subjects\nWHEN EXISTS(SELECT 1 FROM crank_app_erased_records WHERE workflow_id=NEW.workflow_id AND record_id=NEW.record_id)\nBEGIN SELECT RAISE(IGNORE); END;\n\n-- Fences survive a delayed poll commit and cannot be withdrawn or relabelled.\nCREATE TRIGGER crank_app_erased_record_update BEFORE UPDATE ON crank_app_erased_records\nBEGIN SELECT RAISE(ABORT,'crank_app_erased_record_immutable'); END;\nCREATE TRIGGER crank_app_erased_record_delete BEFORE DELETE ON crank_app_erased_records\nWHEN EXISTS(SELECT 1 FROM crank_workflows WHERE id=OLD.workflow_id)\nBEGIN SELECT RAISE(ABORT,'crank_app_erased_record_immutable'); END;\nCREATE TRIGGER crank_app_erased_value_update BEFORE UPDATE ON crank_app_field_values\nWHEN EXISTS(SELECT 1 FROM crank_app_erased_records WHERE workflow_id=NEW.workflow_id AND record_id=NEW.record_id)\nBEGIN SELECT RAISE(IGNORE); END;\nCREATE TRIGGER crank_app_erased_pending_update BEFORE UPDATE ON crank_app_pending_rows\nWHEN EXISTS(SELECT 1 FROM crank_app_erased_records WHERE workflow_id=NEW.workflow_id AND record_id=NEW.record_id)\nBEGIN SELECT RAISE(IGNORE); END;\n"
+    },
+    {
+      "binding": "DB",
+      "name": "0084_app_observed_at.sql",
+      "sha256": "c9b59a865a9aea5c6e71f1dc46e6f677f94c23fb541aeee6947ba17b67e96ec0",
+      "sql": "-- Retention measures Crank's last complete observation, never provider edit time.\n-- Legacy snapshots have no trustworthy observation time and stay retained.\nALTER TABLE crank_app_snapshots ADD COLUMN observed_at TEXT;\nCREATE INDEX crank_app_snapshots_observed ON crank_app_snapshots(observed_at,workflow_id,version_id,record_id);\n"
+    },
+    {
+      "binding": "DB",
+      "name": "0085_custom_search_keys.sql",
+      "sha256": "be35508c8666989d5a7a5f09f84ac66febeea24810e71e289f82ed8425df31c3",
+      "sql": "-- Value-free installation-local ownership; never restored as execution authority.\nCREATE TABLE crank_custom_search_keys (\n  name TEXT PRIMARY KEY,\n  run_id TEXT NOT NULL REFERENCES crank_wf_runs(id) ON DELETE CASCADE,\n  holder TEXT NOT NULL\n);\nCREATE INDEX crank_custom_search_keys_run ON crank_custom_search_keys(run_id);\n"
+    },
+    {
+      "binding": "DB",
+      "name": "0085_model_response_identity.sql",
+      "sha256": "e64f92bc122b5554cb98be23624201a521b0b7d2c74176059266cd4d588368db",
+      "sql": "-- A bounded provider response identifier survives interruption of the later\n-- step-result transaction. Model text and credentials never enter this field.\nALTER TABLE crank_wf_attempts ADD COLUMN response_identity TEXT;\n"
     }
   ],
   "compatibilityDate": "2026-09-08",

@@ -1,9 +1,12 @@
+import { validateGroups } from '../engine/conditions'
 import { businessCalendar } from '../engine/calendar'
 import { checkEgress } from '../engine/egress'
 import { requireZone } from '../engine/dates'
 import { StepError } from '../engine/errors'
 import { isObject } from '../engine/values'
 import { SIGNATURE_PRESETS } from './signatures'
+import { COMMERCE_PROVIDERS, validateCommerceTrigger } from './commerce-sources'
+import { ACCOUNTING_PROVIDERS, validateAccountingTrigger } from './accounting-sources'
 
 /** TRIG-007: what a URL poll's header and query values may map. */
 export const POLL_FIELDS = ['poll.since', 'poll.now', 'poll.interval_minutes']
@@ -26,7 +29,7 @@ export function pollRate(trigger: Record<string, unknown>) {
   let requests = 1
   if (trigger.type === 'app_poll') {
     rate = POLL_RATE_TABLE[trigger.provider as 'hubspot' | 'microsoft_graph']
-    requests = 10 + (trigger.subscription ? 1 : 0)
+    requests = 10 + (trigger.subscription ? 1 : 0) + (trigger.provider === 'hubspot' && trigger.any_field ? 1 : 0)
   } else if (trigger.type === 'url_poll') {
     const url = new URL(String(trigger.url))
     if (url.hostname === 'api.github.com' && url.pathname.startsWith('/repos/')) rate = POLL_RATE_TABLE.github
@@ -102,21 +105,59 @@ export function validateTrigger(trigger: Record<string, unknown>) {
       return
     }
     case 'app_poll': {
-      if (typeof trigger.connection_id !== 'string') fail('choose an app connection')
-      if (!['hubspot', 'microsoft_graph'].includes(String(trigger.provider))) fail('provider must be hubspot or microsoft_graph')
+      const nativeTable = trigger.provider === 'crank_table'
+      if (nativeTable ? trigger.connection_id !== undefined || trigger.resource !== 'records' || typeof trigger.table_id !== 'string' || !trigger.table_id.trim() || trigger.table_id.length > 200 : typeof trigger.connection_id !== 'string') fail('choose an app connection, or a native operational table without a connection')
+      if (!['orbit', 'hubspot', 'microsoft_graph', 'google_sheets', 'microsoft_excel', 'airtable', 'sharepoint', 'http_json', 'crank_table', ...COMMERCE_PROVIDERS, ...ACCOUNTING_PROVIDERS].includes(String(trigger.provider))) fail('choose a supported app provider')
+      if ((COMMERCE_PROVIDERS as readonly string[]).includes(String(trigger.provider))) validateCommerceTrigger(trigger)
+      if ((ACCOUNTING_PROVIDERS as readonly string[]).includes(String(trigger.provider))) validateAccountingTrigger(trigger)
+      if (trigger.provider === 'orbit' && (trigger.resource !== 'deals' || ['url','query','origin','record_ids','fields'].some(key => trigger[key] !== undefined) || Array.isArray(trigger.watched_fields) && trigger.watched_fields.some(field => !['title','stage_id','value_cents','company_id'].includes(String(field))))) fail('Orbit polls only the bound deals and allowed fields')
       if (trigger.provider === 'hubspot' && !['contacts', 'companies', 'deals'].includes(String(trigger.resource))) fail('choose contacts, companies or deals')
       if (trigger.provider === 'microsoft_graph' && trigger.resource !== 'messages') fail('choose messages')
+      if (trigger.provider === 'google_sheets') {
+        if (trigger.resource !== 'rows' || typeof trigger.spreadsheet_id !== 'string' || !/^[A-Za-z0-9_-]{1,200}$/.test(trigger.spreadsheet_id)) fail('Sheets needs rows and a spreadsheet_id')
+        if (typeof trigger.range !== 'string' || !/^.+!A1(?::[A-Z]+[0-9]*)?$/.test(trigger.range) || trigger.range.length > 300) fail('Sheets range must start at A1 with a header row')
+        if (typeof trigger.key_field !== 'string' || !trigger.key_field.trim()) fail('Sheets needs a stable key_field column')
+      }
+      if (trigger.provider === 'microsoft_excel') {
+        if (!['rows', 'table_rows'].includes(String(trigger.resource)) || ['workbook_id', 'key_field', trigger.resource === 'table_rows' ? 'table_id' : 'worksheet_id'].some(name => typeof trigger[name] !== 'string' || !String(trigger[name]).trim() || String(trigger[name]).length > 200)) fail('Excel needs a workbook, a worksheet or table, and a stable key_field column')
+        if (trigger.resource === 'rows' && (typeof trigger.range !== 'string' || !/^A1:[A-Z]+[0-9]+$/.test(trigger.range))) fail('Excel range must start at A1 with a header row and an explicit end')
+        if (trigger.resource === 'table_rows' && (trigger.range !== undefined || trigger.worksheet_id !== undefined)) fail('Excel table_rows uses table_id without a worksheet range')
+      }
+      if (trigger.provider === 'airtable' && (trigger.resource !== 'records' || ['base_id', 'table_id'].some(name => typeof trigger[name] !== 'string' || !String(trigger[name]).trim() || String(trigger[name]).length > 200) || trigger.view_id !== undefined && (typeof trigger.view_id !== 'string' || trigger.view_id.length > 200))) fail('Airtable needs records, base_id and table_id, with an optional view_id')
+      if (trigger.modified_field !== undefined && (trigger.provider !== 'airtable' || typeof trigger.modified_field !== 'string' || !trigger.modified_field.trim() || trigger.modified_field.length > 200)) fail('Airtable modified_field names a last-modified column')
+      if (trigger.provider === 'sharepoint' && (trigger.resource !== 'list_items' || ['site_id', 'list_id'].some(name => typeof trigger[name] !== 'string' || !String(trigger[name]).trim() || String(trigger[name]).length > 500))) fail('SharePoint needs list_items, site_id and list_id')
+      if (trigger.provider === 'http_json') {
+        if (trigger.resource !== 'records') fail('JSON lists use records')
+        const url = checkEgress(String(trigger.url))
+        if (url.protocol !== 'https:' || url.username || url.password || url.hash || String(trigger.url).includes('{{')) fail('JSON lists need a literal HTTPS URL')
+        for (const name of ['items_path', 'id_path', 'fields_path', 'modified_path']) if ((['items_path', 'id_path'].includes(name) || trigger[name] !== undefined) && (typeof trigger[name] !== 'string' || String(trigger[name]).length > 500 || name !== 'items_path' && name !== 'fields_path' && !String(trigger[name]).trim())) fail(`${name} must be a field path`)
+        if (trigger.pagination !== undefined) {
+          const p = trigger.pagination
+          if (!isObject(p) || Object.keys(p).some(name => !['cursor_path','param','max_pages'].includes(name)) || typeof p.cursor_path !== 'string' || !p.cursor_path.trim() || typeof p.param !== 'string' || !p.param.trim() || p.max_pages !== undefined && (!Number.isInteger(p.max_pages) || Number(p.max_pages) < 1 || Number(p.max_pages) > 10)) fail('JSON pagination needs cursor_path, param and at most ten pages')
+        }
+      }
+      const spreadsheet = ['google_sheets', 'microsoft_excel'].includes(String(trigger.provider))
+      const fieldName = (f: unknown) => typeof f === 'string' && f.trim().length > 0 && f.length <= 200 && (spreadsheet || ['airtable', 'sharepoint', 'http_json'].includes(String(trigger.provider)) || /^[A-Za-z][A-Za-z0-9_]*$/.test(f))
+      if (nativeTable && Array.isArray(trigger.watched_fields) && trigger.watched_fields.some(field => !['key', 'value', 'revision'].includes(String(field)))) fail('Operational tables expose key, value and revision')
       if (!['new', 'updated'].includes(String(trigger.event))) fail('event must be new or updated')
       if (!['from_now', 'existing'].includes(String(trigger.backfill))) fail('choose initial backfill explicitly')
       if (trigger.event === 'updated' && trigger.any_field !== true && (!Array.isArray(trigger.watched_fields) || !trigger.watched_fields.length)) fail('updated records need watched_fields or explicit any_field')
-      if (trigger.watched_fields !== undefined && (!Array.isArray(trigger.watched_fields) || trigger.watched_fields.length > 30 || trigger.watched_fields.some(f => typeof f !== 'string' || !/^[A-Za-z][A-Za-z0-9_]*$/.test(f)))) fail('watched_fields lists at most 30 property names')
-      if (trigger.changed_to !== undefined && (!isObject(trigger.changed_to) || Object.keys(trigger.changed_to).some(f => !(trigger.watched_fields as string[] | undefined)?.includes(f)))) fail('changed_to names watched fields')
+      if (trigger.watched_fields !== undefined && (!Array.isArray(trigger.watched_fields) || trigger.watched_fields.length > 30 || trigger.watched_fields.some(f => !fieldName(f)) || new Set(trigger.watched_fields).size !== trigger.watched_fields.length)) fail('watched_fields lists at most 30 property names')
+      for (const direction of ['changed_to', 'changed_from']) {
+        const condition = trigger[direction]
+        if (condition === undefined) continue
+        const fields = Array.isArray(condition)
+          ? validateGroups(condition, direction).flat().map(rule => rule.field)
+          : isObject(condition) ? Object.keys(condition) : fail(`${direction} needs literal fields or WORK-013 rule groups`)
+        if (!fields.length || fields.some(f => !(trigger.watched_fields as string[] | undefined)?.includes(f) && trigger.any_field !== true || !fieldName(f))) fail(`${direction} names watched fields`)
+      }
       if (trigger.identity !== undefined && !['change', 'first_value'].includes(String(trigger.identity))) fail('identity must be change or first_value')
       if (trigger.subscription !== undefined) {
         const s = trigger.subscription
         if (trigger.provider !== 'microsoft_graph' || !isObject(s) || typeof s.id !== 'string' || !/^[A-Za-z0-9-]{1,200}$/.test(s.id) || typeof s.expires_at !== 'string' || !Number.isFinite(Date.parse(s.expires_at))) fail('a Microsoft Graph subscription needs its id and expires_at')
       }
-      if (trigger.changed_from !== undefined || trigger.settle_delay !== undefined) fail('changed_from and settle_delay are not supported by this app poll yet')
+      if (trigger.settle_delay !== undefined && (!spreadsheet || !Number.isInteger(trigger.settle_delay) || Number(trigger.settle_delay) < 1 || Number(trigger.settle_delay) > 60)) fail('Spreadsheet settle_delay must be 1 to 60 minutes')
+      for (const name of ['required_columns', 'mapped_columns']) if (trigger[name] !== undefined && (!spreadsheet || !Array.isArray(trigger[name]) || !trigger[name].length || trigger[name].length > 100 || trigger[name].some(f => !fieldName(f)))) fail(`${name} lists 1 to 100 spreadsheet column names`)
       interval(trigger)
       return
     }

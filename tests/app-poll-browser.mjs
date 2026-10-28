@@ -4,9 +4,16 @@ import {createServer} from 'node:http';
 import {readFile,mkdir} from 'node:fs/promises';
 import {resolve,extname,join} from 'node:path';
 import {chromium,expect} from '@playwright/test';
-import {crmPollJourney,subscriptionPollJourney} from './app-poll-journey.mjs';
+import {crmPollJourney,subscriptionPollJourney,comparisonPollJourney} from './app-poll-journey.mjs';
+import {sheetPollJourney} from './sheet-poll-journey.mjs';
+import {appHistoryJourney} from './app-history-journey.mjs';
+import {appSubjectJourney} from './app-subject-journey.mjs';
+import {appRetentionJourney} from './app-retention-journey.mjs';
+import {tablePollJourney} from './table-poll-journey.mjs';
+import {commercePollJourney} from './commerce-poll-journey.mjs';
+import {accountingPollJourney} from './accounting-poll-journey.mjs';
 import {harness} from './harness.mjs';
-import {fakeEdge,jsonResponse} from './kit.mjs';
+import {fakeEdge,jsonResponse,runs} from './kit.mjs';
 const evidence=process.env.CRANK_EVIDENCE;
 assert.ok(evidence,'Set CRANK_EVIDENCE');await mkdir(evidence,{recursive:true});
 const browser=await chromium.launch({headless:true,...(process.env.CRANK_CHROMIUM?{executablePath:process.env.CRANK_CHROMIUM}:{}),args:['--use-mock-keychain','--password-store=basic',...(process.env.CRANK_CHROMIUM?['--no-sandbox']:[])]});
@@ -81,9 +88,45 @@ async function rateScreens(width) {
 }
 try {
  for(const width of [1440,390]) await rateScreens(width);
- for(const width of [1440,390]) for(const journey of [crmPollJourney,subscriptionPollJourney]) {
-  await journey({inspect:async({h,w,state})=>{
+ for(const width of [1440,390]) for(const journey of [crmPollJourney,subscriptionPollJourney,comparisonPollJourney,sheetPollJourney,appHistoryJourney,appSubjectJourney,appRetentionJourney,tablePollJourney,commercePollJourney,accountingPollJourney]) {
+  await journey({inspect:async({h,w,state,run,provider,resource})=>{
+   if(state==='commerce-change'&&provider!=='zendesk'||state==='accounting-change'&&(provider!=='xero'||resource!=='invoices'))return;
    await attach(h,width);await page.goto(h.origin+`/app/workflows/${w.id}?step=trigger`);
+   if(state==='commerce-change'||state==='accounting-change') {
+    const retained=(await runs(h,w))[0];await page.goto(h.origin+'/app/workflow-runs/'+retained.id);
+    for(const value of ['previous','current','changed_fields','change_time_source'])await expect(page.locator('main')).toContainText(value);
+    await shot(width,provider+'-payload');await page.goto(h.origin+'/app/connections');await expect(page.locator('main')).toContainText(provider==='xero'?'Xero tenant token':'Zendesk');await shot(width,provider+'-connections');return;
+   }
+   if(state==='table-payload') {
+    await page.goto(h.origin+'/app/workflow-runs/'+run.id);
+    for(const value of ['counter_98','previous','current','revision','change_time_source'])await expect(page.locator('main')).toContainText(value);
+    await shot(width,state);return;
+   }
+   if(state==='snapshot-retention-preview') {
+    await page.goto(h.origin+'/app/data');await page.getByLabel('Payload days',{exact:true}).fill('1');await page.getByRole('button',{name:'Preview what this removes',exact:true}).click();
+    await expect(page.getByRole('heading',{name:'Retention dry run',exact:true,level:1})).toBeVisible();
+    if(width===1440){await expect(page.locator('.retention-app-records .settings-row')).toHaveCount(1);await expect(page.locator('main')).toContainText('legal hold');await expect(page.locator('main')).toContainText('current published-version baseline')}
+    await shot(width,state);return;
+   }
+   if(state==='unadmitted-subject-preview') {
+    await page.goto(h.origin+'/app/data');await shot(width,'unadmitted-subject-data');await page.getByLabel('Identifier',{exact:true}).fill('Synthetic-Crank-21');await page.getByRole('button',{name:'Preview erasure',exact:true}).click();
+    await expect(page.getByRole('heading',{name:'Erasure preview',exact:true,level:1})).toBeVisible();await expect(page.getByText('Retained comparison data',{exact:true})).toBeVisible();
+    await expect(page.getByRole('button',{name:'Erase matching data',exact:true})).toBeVisible();await shot(width,state);return;
+   }
+   if(state==='watch-picker') {
+    await page.getByText('Watched field settings',{exact:true}).click();await page.getByRole('link',{name:'Load field names',exact:true}).click();
+    await expect(page.getByRole('checkbox',{name:'Status',exact:true})).toBeChecked();await expect(page.getByRole('checkbox',{name:'Customer',exact:true})).toBeChecked();
+    await shot(width,state);
+    await page.getByLabel('Update choice').selectOption('any');await page.getByRole('button',{name:'Save watched fields',exact:true}).click();
+    await expect(page.getByRole('alert')).toContainText('every edit can start a run');
+    const saved=await h.get('workflows/'+w.id);assert.equal(saved.draft.trigger.any_field,true);assert.equal(saved.status,'draft');assert.equal(saved.published_version_id,null);
+    await shot(width,'watch-any-field');return;
+   }
+   if(state==='comparison-payload'||state==='row-released'||state==='history-payload') {
+    await page.goto(h.origin+'/app/workflow-runs/'+run.id);
+    if(width===1440)for(const value of state==='row-released'?['synthetic-crank-51','Filled buyer','450','change_time_source','poll']:[state==='history-payload'?'synthetic-crank-history':'synthetic-crank-record','changed_fields','previous','current','Pending','Approved','change_time_source','provider'])await expect(page.locator('main')).toContainText(value);
+    await shot(width,state);return;
+   }
    await expect(page.getByText('Last successful poll',{exact:true})).toBeVisible();
    await expect(page.getByText('Next poll',{exact:true})).toBeVisible();
    if(state==='expired') await expect(page.getByText('expired',{exact:true})).toBeVisible();

@@ -61,3 +61,20 @@ export async function withKeyLock<T>(env: CrankEnv, name: string, holder: string
   }
   try { return await work() } finally { await stmt(env, 'DELETE FROM crank_locks WHERE name=? AND holder=?', name, holder).run() }
 }
+
+/** Installation-local ownership has no time lease: an approval or unknown write
+ * must never let another run create the same normalized business key. */
+export class SearchKeyWait extends Error {
+  constructor(readonly key: string) { super('Waiting for the run owning this search key') }
+}
+export async function ownSearchKey(env: CrankEnv, key: string, runId: string, holder: string) {
+  await stmt(env, `DELETE FROM crank_custom_search_keys WHERE name=? AND NOT EXISTS(
+    SELECT 1 FROM crank_wf_runs r WHERE r.id=crank_custom_search_keys.run_id AND r.status IN ('queued','running','waiting','awaiting_approval','paused'))
+    AND NOT EXISTS(SELECT 1 FROM crank_gateway_tasks t WHERE t.run_id=crank_custom_search_keys.run_id AND t.operation_key=crank_custom_search_keys.holder||':create')`, key).run()
+  await stmt(env, 'INSERT INTO crank_custom_search_keys(name,run_id,holder) VALUES(?,?,?) ON CONFLICT(name) DO NOTHING', key, runId, holder).run()
+  const row = await stmt(env, 'SELECT holder FROM crank_custom_search_keys WHERE name=?', key).first<{holder:string}>()
+  if (row?.holder !== holder) throw new SearchKeyWait(key)
+}
+export async function releaseSearchKey(env: CrankEnv, key: string, holder: string) {
+  await stmt(env, 'DELETE FROM crank_custom_search_keys WHERE name=? AND holder=?', key, holder).run()
+}

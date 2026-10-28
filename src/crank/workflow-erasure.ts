@@ -41,8 +41,13 @@ export async function eraseWorkflowRun(env: CrankEnv, actor: Actor | null, porta
       { table:'crank_digest_operations',from:'crank_wf_runs',where:'run_id=? OR instr(result_json,?)>0',params:['id','id'] },
       { table: 'crank_workflow_samples', from: 'crank_wf_runs', where: "source='history' AND source_id=?", params: ['id'] },
       {table:'crank_recurring_runs',from:'crank_wf_runs',on:{run_id:'id'}},
+      ...(!system ? [
+      { table: 'crank_app_subjects', from: 'crank_wf_runs', on: { workflow_id: 'workflow_id', record_id: 'business_key' } },
+      { table: 'crank_app_pending_rows', from: 'crank_wf_runs', on: { workflow_id: 'workflow_id', record_id: 'business_key' } },
+      { table: 'crank_app_field_values', from: 'crank_wf_runs', on: { workflow_id: 'workflow_id', record_id: 'business_key' } },
       { table: 'crank_app_snapshots', from: 'crank_wf_runs', on: { workflow_id: 'workflow_id', record_id: 'business_key' } },
-      ...['crank_subflow_calls', 'crank_notice_deliveries', 'crank_gateway_tasks', 'crank_custom_hook_checks', 'crank_executor_tasks', 'crank_grant_escalations', 'crank_grant_admissions', 'crank_skill_cases', 'crank_wf_steps', 'crank_blind_index', 'crank_wf_step_revisions', 'crank_waits', 'crank_wf_attempts', 'crank_obligations', 'crank_callback_events', 'crank_queue_items', 'crank_hold_items', 'crank_historical_items', 'crank_ops_events', 'crank_request_admissions', 'crank_request_checkpoints', 'crank_request_checkpoint_chunks', 'crank_usage_observations', 'crank_usage_provider_charges', 'crank_usage_reporting_errors', 'crank_usage_reservations', 'crank_step_admissions']
+      ] : []),
+      ...['crank_custom_search_keys', 'crank_subflow_calls', 'crank_notice_deliveries', 'crank_gateway_tasks', 'crank_custom_hook_checks', 'crank_executor_tasks', 'crank_grant_escalations', 'crank_grant_admissions', 'crank_skill_cases', 'crank_wf_steps', 'crank_blind_index', 'crank_wf_step_revisions', 'crank_waits', 'crank_wf_attempts', 'crank_obligations', 'crank_callback_events', 'crank_queue_items', 'crank_hold_items', 'crank_historical_items', 'crank_ops_events', 'crank_request_admissions', 'crank_request_checkpoints', 'crank_request_checkpoint_chunks', 'crank_usage_observations', 'crank_usage_provider_charges', 'crank_usage_reporting_errors', 'crank_usage_reservations', 'crank_step_admissions']
         .map(table => ({ table, from: 'crank_wf_runs', on: { run_id: 'id' } })),
       {table:'crank_drift_incidents',from:'crank_wf_runs',on:{run_id:'id'}},
       {table:'crank_drift_proposals',from:'crank_drift_incidents',on:{incident_id:'id'}},
@@ -67,6 +72,7 @@ export async function eraseWorkflowRun(env: CrankEnv, actor: Actor | null, porta
     beforeStatements: async () => [
       system ? stmt(env, `INSERT INTO crank_authority_guards(id,ok) SELECT 'erase-workflow:'||?1,CASE WHEN EXISTS(${system.eligible}) THEN 1 ELSE 0 END`, ...system.params)
         : stmt(env, `INSERT INTO crank_authority_guards(id,ok) SELECT 'erase-workflow:'||?,CASE WHEN EXISTS(${eligible}) THEN 1 ELSE 0 END`, runId, runId),
+      ...(!system ? [stmt(env, `INSERT OR IGNORE INTO crank_app_erased_records(workflow_id,record_id) SELECT workflow_id,business_key FROM crank_wf_runs WHERE id=? AND trigger_kind='app_poll' AND business_key IS NOT NULL`, runId)] : []),
       // Fence snapshots before the cascade removes their entries and receipts.
       stmt(env,`UPDATE crank_digests SET revision=revision+1,mutation_id=NULL WHERE id IN (
         SELECT digest_id FROM crank_digest_entries WHERE source_run_id=?1

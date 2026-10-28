@@ -88,7 +88,7 @@ export async function dataFlows(env: CrankEnv) {
     'This is configuration disclosure, not evidence a request was sent, a provider was verified, or an agreement was checked.',
     'Mapped URLs, redirect destinations and pagination are resolved at runtime under current connection/egress rules. Origins only are shown here; URL paths, query values, graph values and credentials are omitted.',
     'Native source, data and archives remain on this installation. Source updates/package installation are explicit operator commands; core automation requires no author telemetry, license check or kill switch.',
-    'No production LLM or external executor step is shipped. Local development live AI, when configured, is listed separately; it is never a production workflow step.',
+    'Native text classification discloses only mapped text and the declared category enum to the pinned OpenAI model using an installation-owned connection. Provider region and retention remain unverified. Local development AI is listed separately.',
     'Owner-initiated connection tests and historical previews send the supplied URL/query and selected connection credential before a workflow executes. Review that request before submitting it.',
     'Provider deletion and retention are separate from local DATA-003 retention. Unknown provider terms are not a compliance certification.',
   ] }

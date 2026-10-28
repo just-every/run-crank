@@ -1,3 +1,4 @@
+import { watchedFieldsPanel } from './watched-fields'
 import { unitsUsd } from '../ops/usage-money'
 import { mcpClientsPanel, mcpCredentialView } from './mcp-clients'
 import { clientApi } from '../mcp/client-api'
@@ -91,8 +92,13 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
             const response=await call(`/api/crank/custom-connectors/pickers/${encodeURIComponent(params.get('picker_run')!)}?${query}`),value:any=await response.json()
             if(response.ok)result=value;else error=value.error??'Resource read was refused; load current names again.'
           }
-          customPicker=customPickerPanel({workflowId:id,stepPath:selected.path,operation,values:selected.step.input as Record<string,unknown>??{},draftDigest:await digest(canonical(data.workflow.draft)),result,resultInput:params.get('picker_input')??undefined,error})
+          customPicker=customPickerPanel({workflowId:id,stepPath:selected.path,operation,values:selected.step.input as Record<string,unknown>??{},draftDigest:await digest(canonical(data.workflow.draft)),result,searchableInputs:Object.entries(operation.inputs).filter(([,input]:any)=>connector.definition.operations.find((op:any)=>op.id===input.resource?.operation)?.resource_page).map(([name])=>name),clearedInputs:params.get('cleared')?.split(','),resultInput:params.get('picker_input')??undefined,error})
         }
+      }
+      if (selected?.trigger?.type === 'app_poll' && (actor.role === 'owner' || ['admin','builder'].includes(actor.team?.role))) {
+        let result:any, error:string|undefined
+        if(params.get('watch_fields')) { const response=await call(`/api/crank/workflows/${encodeURIComponent(id)}/trigger/fields`);const value:any=await response.json();if(response.ok)result=value;else error=value.error }
+        customPicker += watchedFieldsPanel(id,data.workflow.draft.trigger,result,error)
       }
       const view = editorView({...data,preview,customPicker,tokens:state.tokens ?? [],people:state.people ?? [],approvals:state.runs.filter((r:any)=>r.state==='pending').length+waiting.runs.length})
       return document(data.workflow.name,view.content,actor,200,view.page)
@@ -107,11 +113,11 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
       const form = await formValues(request)
       if(url.pathname==='/app/custom-connectors/pickers' || url.pathname==='/app/custom-connectors/selection') {
         requireOwner(actor)
-        const input=Object.fromEntries(['workflow_id','step_path','input_name','value','draft_digest','source_run_id'].filter(key=>form[key]!==undefined && form[key]!=='').map(key=>[key,form[key]]))
+        const input=Object.fromEntries(['workflow_id','step_path','input_name','value','draft_digest','source_run_id','query','cursor_run_id'].filter(key=>form[key]!==undefined && form[key]!=='').map(key=>[key,form[key]]))
         const response=await call('/api/crank/custom-connectors/'+url.pathname.split('/').at(-1),input),result:any=await response.json()
         const back='/app/workflows/'+encodeURIComponent(form.workflow_id??'')+'?step='+encodeURIComponent(form.step_path??'')
         if(!response.ok)return page('Resource choice refused',`<p class="notice">${esc(result.error)}</p><a href="${esc(back)}">Return to this draft</a>`,{},response.status)
-        return redirect(back+(result.run_id?'&picker_input='+encodeURIComponent(form.input_name??'')+'&picker_run='+encodeURIComponent(result.run_id):''))
+        return redirect(back+(result.run_id?'&picker_input='+encodeURIComponent(form.input_name??'')+'&picker_run='+encodeURIComponent(result.run_id):'')+(result.cleared_inputs?.length?'&cleared='+encodeURIComponent(result.cleared_inputs.join(',')):''))
       }
       if(url.pathname==='/app/custom-connectors/propose' || url.pathname==='/app/custom-connectors/install') {
         requireOwner(actor)
@@ -185,6 +191,10 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
         return redirect(authoringPath(id ?? result.workflow_id))
       }
       const input:Record<string,unknown> = {...form}
+      if(form.watch_selection==='true') {
+        input.watched_fields=Object.entries(form).filter(([key])=>/^watch_\d+$/.test(key)).map(([,value])=>value);input.any_field=form.watch_mode==='any'
+        for(const key of Object.keys(input))if(key.startsWith('watch_'))delete input[key]
+      }
       if (/\/workflows\/[^/]+\/samples(?:\/[^/]+)?$/.test(path)) {
         try { if(form.source !== 'schema' && form.sample) input.step_path='trigger'; if(form.sample) input.sample=JSON.parse(form.sample); if(form.fields !== undefined) input.fields=form.fields.split(',').map(field=>field.trim()).filter(Boolean) }
         catch { return page('Invalid sample','<p>Enter a JSON object for the sample.</p>',{},422) }

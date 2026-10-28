@@ -13,7 +13,7 @@ const uncertainWrite = encode({ category: 'uncertain', message: 'Restore interru
 const deliveryFence = previous => encode({ status: 'failed', code: 'restore_fence', uncertain: true, previous });
 const fenced = (json, key, code) => json !== null && JSON.parse(json)[key] === code;
 const remoteWrite = row => row.status === 'running' &&
-  (row.type.startsWith('nook.') || row.type.startsWith('slack.') || row.type.startsWith('google_calendar.') || row.type.startsWith('quickbooks.') || row.type.startsWith('gusto.') || row.type === 'http' && !['GET', 'HEAD'].includes(String(JSON.parse(row.input_json ?? '{}').method ?? 'GET').toUpperCase()));
+  (row.type === 'ai.classify' || row.type === 'orbit.update_deal' || row.type.startsWith('nook.') || row.type.startsWith('slack.') || row.type.startsWith('google_calendar.') || row.type.startsWith('quickbooks.') || row.type.startsWith('gusto.') || row.type === 'http' && !['GET', 'HEAD'].includes(String(JSON.parse(row.input_json ?? '{}').method ?? 'GET').toUpperCase()));
 
 /** Pure/idempotent export normalization: backups carry history, never execution authority. */
 export function fenceRow(table, row) {
@@ -135,7 +135,18 @@ export async function validateRestore({ read }) {
     try { JSON.parse(sample.payload_json); JSON.parse(sample.uploads_json); } catch { return false; }
   }
   for (const fields of await rows('crank_sample_fields')) if (!workflows.has(fields.workflow_id) || !Array.isArray(JSON.parse(fields.fields_json))) return false;
+  for (const row of await rows('crank_app_field_values')) if (!workflows.has(row.workflow_id) || !/^[a-f0-9]{64}$/.test(row.record_id) || !/^[a-f0-9]{64}$/.test(row.value_digest) || !Number.isFinite(Date.parse(row.first_seen_at))) return false;
+  for (const row of await rows('crank_app_pending_rows')) if (!workflows.has(row.workflow_id) || !/^[a-f0-9]{64}$/.test(row.record_id) || !/^[a-f0-9]{64}$/.test(row.value_digest) || !Number.isFinite(Date.parse(row.stable_since))) return false;
+  for (const row of await rows('crank_app_snapshots')) if (row.observed_at != null && !Number.isFinite(Date.parse(row.observed_at))) return false;
+  for (const row of await rows('crank_app_subjects')) if (!workflows.has(row.workflow_id) || !/^[a-f0-9]{64}$/.test(row.record_id) || !/^[a-f0-9]{64}$/.test(row.record_subject_digest)) return false;
+  const erasedAppRecords = new Set();
+  for (const row of await rows('crank_app_erased_records')) {
+    if (!workflows.has(row.workflow_id) || !/^[a-f0-9]{64}$/.test(row.record_id)) return false;
+    erasedAppRecords.add(JSON.stringify([row.workflow_id,row.record_id]));
+  }
+  for (const table of ['crank_app_field_values','crank_app_snapshots','crank_app_pending_rows','crank_app_subjects']) for (const row of await rows(table)) if (erasedAppRecords.has(JSON.stringify([row.workflow_id,row.record_id]))) return false;
   const versions = new Map((await rows('crank_workflow_versions')).map(row => [row.id, row]));
+  for (const row of await rows('crank_app_pending_rows')) if (versions.get(row.version_id)?.workflow_id !== row.workflow_id) return false;
   for (const workflow of workflows.values()) {
     const graph = JSON.parse(workflow.draft_json);
     if (!graph.trigger || !Array.isArray(graph.steps) || workflow.published_version_id && versions.get(workflow.published_version_id)?.workflow_id !== workflow.id) return false;
@@ -169,8 +180,15 @@ export async function validateRestore({ read }) {
       const leaf = checkpoint.path.split('/').at(-1);
       const find = steps => steps.flatMap(step => [step, ...find(step.steps ?? []), ...(step.branches ?? []).flatMap(branch => find(branch.steps ?? [])), ...find(step.fallback?.steps ?? []), ...find(step.always?.steps ?? [])]);
       const step = graph && find(JSON.parse(graph).steps).find(step => step.id === leaf);
-      if (!step || !['http','file.fetch'].includes(step.type) && !step.type.startsWith('nook.') && !step.type.startsWith('slack.') && !step.type.startsWith('quickbooks.') && !step.type.startsWith('gusto.')) return false;
-      const bound = (step.type === 'file.fetch' || step.type === 'nook.send_message' ? 1 : step.type.startsWith('slack.') ? 4 : 2) * 1024 * 1024;
+      if (step?.type === 'custom.request') {
+        const definitionRow=(await rows('crank_custom_versions')).find(row=>row.id===step.connector_id && row.version===step.connector_version)
+        const operations=definitionRow && JSON.parse(definitionRow.definition_json).operations
+        const search=operations?.find(op=>op.id===step.operation)
+        const allowed=[search?.id,search?.find_or_create?.operation].filter(Boolean)
+        if (!step.gateway_id || !search?.gateway || response.body_bytes>65536 || !allowed.some(operation=>url.pathname===`/api/crank/gateways/${encodeURIComponent(step.gateway_id)}/operations/${encodeURIComponent(operation)}/pages/0`)) return false;
+      }
+      if (!step || !['http','file.fetch','custom.request'].includes(step.type) && !step.type.startsWith('orbit.') && !step.type.startsWith('nook.') && !step.type.startsWith('slack.') && !step.type.startsWith('quickbooks.') && !step.type.startsWith('gusto.')) return false;
+      const bound = (step.type === 'file.fetch' || step.type === 'nook.send_message' || step.type.startsWith('orbit.') ? 1 : step.type.startsWith('slack.') ? 4 : 2) * 1024 * 1024;
       if (!Number.isSafeInteger(checkpoint.ordinal) || checkpoint.ordinal < 0 || !/^[a-f0-9]{64}$/.test(checkpoint.request_key) || typeof checkpoint.operation_key !== 'string' || !checkpoint.operation_key) return false;
       if (!Number.isInteger(response.status) || response.status < 100 || response.status > 599 || !['http:', 'https:'].includes(url.protocol) || url.username || url.password || url.search || url.hash) return false;
       if (!Number.isSafeInteger(response.body_bytes) || response.body_bytes < 0 || response.body_bytes > bound || response.chunk_count !== Math.ceil(response.body_bytes / 65536) || !Array.isArray(response.headers)) return false;

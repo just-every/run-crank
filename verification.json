@@ -13,7 +13,8 @@
       "browser": false,
       "hosted": false,
       "commands": [
-        "node --test --test-concurrency=1 --test-skip-pattern='^(Regulated Gusto handoffs|Managed Calendar creation|Native Nook delivery)' tests/connections.test.mjs"
+        "node --test --test-concurrency=1 --test-skip-pattern='^(Regulated Gusto handoffs|Managed Calendar creation|Native Nook delivery)' tests/connections.test.mjs",
+        "node --test --test-concurrency=1 tests/request-limits.test.mjs tests/webhook-erasure.test.mjs tests/team.test.mjs"
       ]
     },
     {
@@ -31,14 +32,6 @@
       "hosted": false,
       "commands": [
         "node --test --test-concurrency=1 tests/crank.test.mjs tests/ownership.test.mjs tests/skills.test.mjs"
-      ]
-    },
-    {
-      "name": "queues-erasure",
-      "browser": false,
-      "hosted": false,
-      "commands": [
-        "node --test --test-concurrency=1 tests/request-limits.test.mjs tests/webhook-erasure.test.mjs tests/team.test.mjs"
       ]
     },
     {
@@ -61,11 +54,18 @@
         "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/sibling\" node tests/sibling-browser.mjs",
         "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/decision\" node tests/decision-browser.mjs",
         "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/executor-schema\" node tests/executor-schema-browser.mjs",
-        "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/app-polls\" node tests/app-poll-browser.mjs",
         "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/digests\" node tests/digest-browser.mjs",
         "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/subflows\" node tests/run-notices-browser.mjs",
         "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/team\" node tests/team-browser.mjs",
         "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/samples\" node tests/sample-browser.mjs"
+      ]
+    },
+    {
+      "name": "app-comparisons",
+      "browser": true,
+      "hosted": false,
+      "commands": [
+        "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/app-polls\" node tests/app-poll-browser.mjs"
       ]
     },
     {
@@ -74,7 +74,10 @@
       "hosted": false,
       "commands": [
         "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/financial\" node tests/financial-browser.mjs",
-        "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/invoice-outcome\" node tests/invoice-outcome-browser.mjs"
+        "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/invoice-outcome\" node tests/invoice-outcome-browser.mjs",
+        "CRANK_PICKER_ONLY=1 CRANK_EVIDENCE=\"$CRANK_EVIDENCE/pickers\" node tests/custom-browser.mjs",
+        "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/custom-search\" node tests/custom-search-browser.mjs",
+        "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/ai\" node tests/ai-steps-browser.mjs"
       ]
     },
     {

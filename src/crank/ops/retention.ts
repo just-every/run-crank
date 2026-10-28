@@ -6,6 +6,7 @@ import { auditStatement } from './audit'
 import { workspaceSettings } from './settings'
 import { eraseFlowRun, eraseWorkflowRun } from '../workflow-erasure'
 import { HELD_FLOW_RUN, HELD_WORKFLOW_RUN } from '../legal-holds'
+import { appRetentionScope, expireAppSnapshots } from '../triggers/app-retention'
 
 /** DATA-003: whole days after a run finished, counted in UTC; null keeps forever (the default). */
 export interface RetentionPolicy { payload_days: number | null; attachment_days: number | null; history_days: number | null }
@@ -88,8 +89,9 @@ export async function retentionScope(env: CrankEnv, policy: RetentionPolicy, tim
   if (policy.payload_days !== null) {
     const before = cutoff(time, policy.payload_days)
     const work = summary(await workflowCandidates(env, before, 'AND r.payload_expired_at IS NULL', limit)), flows = summary(await flowCandidates(env, before, 'AND r.payload_expired_at IS NULL', limit))
-    scope.payload = { cutoff: before, runs: [...work.expiring.map(r => ({ ...r, kind: 'workflow_run' })), ...flows.expiring.map(r => ({ ...r, kind: 'flow_run' }))],
-      kept: [...work.kept.map(r => ({ ...r, kind: 'workflow_run' })), ...flows.kept.map(r => ({ ...r, kind: 'flow_run' }))] }
+    const snapshots = await appRetentionScope(env, before, limit)
+    scope.payload = { cutoff: before, runs: [...work.expiring.map(r => ({ ...r, kind: 'workflow_run' })), ...flows.expiring.map(r => ({ ...r, kind: 'flow_run' }))], app_snapshots: snapshots.expiring,
+      kept: [...work.kept.map(r => ({ ...r, kind: 'workflow_run' })), ...flows.kept.map(r => ({ ...r, kind: 'flow_run' })), ...snapshots.kept] }
   }
   if (policy.attachment_days !== null) {
     const before = cutoff(time, policy.attachment_days), rows = summary(await workflowCandidates(env, before, 'AND r.files_expired_at IS NULL', limit))
@@ -113,7 +115,7 @@ export async function previewRetention(env: CrankEnv, input: Record<string, unkn
   const policy = parsePolicy(input), scope = await retentionScope(env, policy, time)
   // Bind what would be removed, not the cutoff instant, so the same scope saves a moment later.
   const ids = (part: any) => part ? (part.runs ?? part.files).map((x: { id: string }) => x.id) : null
-  return { ...scope, digest: await digest(canonical({ policy, payload: ids(scope.payload), attachments: ids(scope.attachments), history: ids(scope.history) })) }
+  return { ...scope, digest: await digest(canonical({ policy, payload: ids(scope.payload), app_snapshots: (scope.payload as any)?.app_snapshots ?? null, attachments: ids(scope.attachments), history: ids(scope.history) })) }
 }
 
 /** Saving a policy requires the digest of its dry run, so the owner has seen what it removes. */
@@ -191,7 +193,6 @@ async function expireWorkflowPayload(env: CrankEnv, portability: PortabilityFenc
     stmt(env, 'UPDATE crank_waits SET proposal_json=NULL,resolution_json=NULL,reason=NULL WHERE run_id=?', runId),
     stmt(env, "DELETE FROM crank_workflow_samples WHERE source='history' AND source_id=?", runId),
     stmt(env, "UPDATE crank_hold_items SET payload_json='{}' WHERE run_id=?", runId),
-    stmt(env, "UPDATE crank_app_snapshots SET fields_json='{}' WHERE workflow_id=(SELECT workflow_id FROM crank_wf_runs WHERE id=?) AND record_id=(SELECT business_key FROM crank_wf_runs WHERE id=?)", runId, runId),
     stmt(env, "UPDATE crank_historical_items SET payload_json='{}' WHERE run_id=?", runId),
     stmt(env, 'DELETE FROM crank_blind_index WHERE run_id=?', runId),
     stmt(env, "UPDATE crank_gateway_tasks SET input_json='{}',output_json=NULL WHERE run_id=?", runId),
@@ -229,7 +230,7 @@ async function expireFiles(env: CrankEnv, portability: PortabilityFence, runId: 
 /** The maintenance pass, run by the per-minute Cron. Each run expires in one atomic batch,
  * so a restart resumes where it stopped. Returns how many runs and files expired. */
 export async function retentionPass(env: CrankEnv, store: () => Promise<PortabilityFence>, time: number) {
-  const policy = await retentionPolicy(env), at = new Date(time).toISOString(), done = { payload: 0, files: 0, history: 0 }
+  const policy = await retentionPolicy(env), at = new Date(time).toISOString(), done = { payload: 0, app_snapshots: 0, files: 0, history: 0 }
   if (policy.payload_days === null && policy.attachment_days === null && policy.history_days === null) return done
   const portability = await store()
   if (policy.payload_days !== null) {
@@ -238,6 +239,7 @@ export async function retentionPass(env: CrankEnv, store: () => Promise<Portabil
       if (!run.kept && done.payload < BATCH && await expireWorkflowPayload(env, portability, run.id, before, at)) done.payload++
     for (const run of await flowCandidates(env, before, "AND r.payload_expired_at IS NULL AND r.state IN ('succeeded','failed','rejected')", BATCH * 4))
       if (!run.kept && done.payload < BATCH * 2 && await expireFlowPayload(env, portability, run.id, before, at)) done.payload++
+    done.app_snapshots = await expireAppSnapshots(env, portability, before, at)
   }
   if (policy.attachment_days !== null) {
     const before = cutoff(time, policy.attachment_days)

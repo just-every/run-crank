@@ -6,13 +6,20 @@ export interface AppDefinition {
   test?: { method: string; url: string }
 }
 export const APPS: Record<string, AppDefinition> = {
+  openai: { name: 'OpenAI text classification', kinds: ['bearer'], domains: ['api.openai.com'] },
+  orbit: { name: 'Orbit scoped deal API', kinds: ['bearer'], domains: 'declared' },
   nook: { name: 'Nook integration token', kinds: ['bearer'], domains: 'declared' },
   microsoft_graph: { name: 'Microsoft Graph', kinds: ['bearer'], domains: ['graph.microsoft.com'] },
   gusto: { name: 'Gusto company credentials', kinds: ['bearer', 'oauth2'], domains: ['api.gusto-demo.com', 'api.gusto.com'] },
   quickbooks: { name: 'QuickBooks sandbox', kinds: ['oauth2'], domains: ['sandbox-quickbooks.api.intuit.com'] },
+  xero: { name: 'Xero tenant token', kinds: ['bearer'], domains: ['api.xero.com'] },
   http: { name: 'HTTP API', kinds: ['bearer', 'basic', 'api_key', 'hmac', 'oauth2_client_credentials'], domains: 'declared' },
   webhook: { name: 'Webhook signing secret', kinds: ['signing_secret'], domains: [] },
   slack: { name: 'Slack', kinds: ['bearer', 'oauth2'], domains: ['slack.com'], test: { method: 'POST', url: 'https://slack.com/api/auth.test' } },
+  airtable: { name: 'Airtable', kinds: ['bearer'], domains: ['api.airtable.com'] },
+  pipedrive: { name: 'Pipedrive', kinds: ['bearer'], domains: 'declared' },
+  shopify: { name: 'Shopify', kinds: ['api_key'], domains: 'declared' },
+  zendesk: { name: 'Zendesk', kinds: ['bearer', 'basic'], domains: 'declared' },
   hubspot: { name: 'HubSpot', kinds: ['oauth2', 'bearer'], domains: ['api.hubapi.com'], test: { method: 'GET', url: 'https://api.hubapi.com/account-info/v3/details' } },
   google: { name: 'Google', kinds: ['oauth2'], domains: ['www.googleapis.com', 'sheets.googleapis.com', 'gmail.googleapis.com'], test: { method: 'GET', url: 'https://www.googleapis.com/oauth2/v3/userinfo' } },
 }
