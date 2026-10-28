@@ -139,7 +139,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "4977603b812ee88bb55fc5516fe43354a809119e4797d614a2bf9a37f4de7505",
+      "sha256": "f75cb35a439715abd0b963e64c179f7d2ae10d544f01ad22a425dc7b19e83ed2",
       "executable": false
     },
     "AGENTS.md": {
@@ -163,7 +163,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "dfe6cd7d6e0fa9efe6c268de4610445151630c64dc622b6893e960cc8718e6f7",
+      "sha256": "ef8acbf97d3ff01fb9d3ed0d5cbbf7108014e5b10228888c2712ae9e6584b558",
       "executable": false
     },
     "DEMO.md": {
@@ -203,7 +203,7 @@
       "executable": false
     },
     "docs/CLAIMS.md": {
-      "sha256": "ea515d86dc37a6c4c01fa3f91a54d0860b3ca365c850ac28e65898561b0247cc",
+      "sha256": "6e1011f27c4dd070d44a225e45287b5525d362d5bd83daf8cd38fe2d786b08ad",
       "executable": false
     },
     "docs/DATA-FLOWS.md": {
@@ -2615,7 +2615,7 @@
       "executable": false
     },
     "src/crank/engine/authority.ts": {
-      "sha256": "d02e8fe400bad6abdce8d94153d247c9da5b5bbcc138e73291bc1fa5b53cf566",
+      "sha256": "5a73f9f1fbed7accf7bde4f1aaff5e87d4ef38f51fcfd0f74651e38c05fd82fd",
       "executable": false
     },
     "src/crank/engine/calendar.ts": {
@@ -2791,7 +2791,7 @@
       "executable": false
     },
     "src/crank/flows.ts": {
-      "sha256": "43c00f96c525bd94569e7a4b491264c4d7c19201dc98516dc5ec16343dac6cf2",
+      "sha256": "661a167db16476ce8af8e9f4a3b4738d5b7f398ff57041ebbe54253d9c2b8258",
       "executable": false
     },
     "src/crank/grants/authority.ts": {
@@ -3103,7 +3103,7 @@
       "executable": false
     },
     "src/crank/team/policy.ts": {
-      "sha256": "6c8fe6b62ee121c086114af66aedfa6fa445350968ae67997d5cf2cd55d30146",
+      "sha256": "fb40c4d40b9fc27bb3e1bca42243e546d146aa98f85a67cd43a6068a61a53f92",
       "executable": false
     },
     "src/crank/team/service-accounts.ts": {
@@ -3431,7 +3431,7 @@
       "executable": false
     },
     "src/crank/workflows/store.ts": {
-      "sha256": "2aabb00085a941ad384b80c441819672284c3f0bece89be1accfbdb7b41b1046",
+      "sha256": "1b7abc44882be163f8590b13355023a0dd1c6bca14563b42adde7bc60192a5d4",
       "executable": false
     },
     "src/crank/workflows/subflow-calls.ts": {
@@ -5915,7 +5915,7 @@
       "executable": false
     },
     "tests/team.test.mjs": {
-      "sha256": "3f5f6bdfd33e955a7737e20ef73f6203fdcc1d3417dd440aebe1a9550c1cde89",
+      "sha256": "524dbe26c26fcb8113fe53445bb6291e8d840d4cfa5f5d7d5c175da16f72e31f",
       "executable": false
     },
     "tests/triggers.test.mjs": {
