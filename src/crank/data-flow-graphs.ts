@@ -29,6 +29,7 @@ export async function graphDataFlows(env: CrankEnv, credential: (id: unknown) =>
         const path = prefix + step.id, input = isObject(step.input) ? step.input : {}
         if (step.type === 'paths') for (const b of branchesOf(step)) walk(b.steps, `${path}/${b.id}/`)
         else if (step.type === 'loop') walk(step.steps as Step[], `${path}/items/*/`)
+        else if (step.type === 'ai.classify') emit(path, 'ai.classify', { text: 'declared text only', categories: 'builder-selected category enum', model: 'pinned model identity' }, step.connection_id, ['https://api.openai.com'])
         else if (step.type === 'code') emit(path,'code',{source:step.source,language:step.language,input},step.connection_id,[step.executor_url])
         else if ((step.type.startsWith('nook.') || step.type.startsWith('orbit.'))) emit(path,step.type,input,step.connection_id,[siblingOrigin(step.connection_id)])
         else if (step.type.startsWith('quickbooks.')) emit(path,step.type,input,step.connection_id,['https://sandbox-quickbooks.api.intuit.com'])
