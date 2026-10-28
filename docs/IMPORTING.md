@@ -525,3 +525,51 @@ schemas follow verbatim as `0032_import_custody_replace.sql`,
 `0033_import_erasure_progress.sql` and `0034_import_door.sql`.
 
 The copied file inventory is recorded in `base-copies.json`.
+
+
+## No-write migration comparisons
+
+In **Move in**, open **Review no-write comparisons**. Under **Comparison settings**,
+choose a reviewed imported native workflow, review its draft fingerprint and name
+its source system, workflow and revision. Confirm that the samples are non-sensitive.
+Only the owning native owner can create or extend this comparison.
+
+This separate comparison subtype evaluates native map, filter and paths steps
+ending in terminal JSON HTTP write intents. It uses the native mapping,
+condition validation and HTTP request serialization. It retains the intended
+URL, method, safe headers, JSON body and exact serialized body without loading
+connection credentials, contacting a provider or inventing an HTTP response.
+The entire graph is checked first, including unselected branches. Read steps,
+delays, loops, custom operations and response-dependent continuations are refused.
+A transport guard independently refuses every attempted comparison request.
+Ordinary draft tests keep their separate explicitly approved effect rules.
+
+Evaluate each sample using its exact event input, source event id and positive
+source sequence. Retain a source observation with the same identity and input,
+its outcome, mapped outputs and intended requests. Label it **Synthetic fixture**
+or **Owner-captured source result** and describe its provenance. Both labels are
+unverified owner-supplied evidence; this screen never reads a source installation.
+The API result shape is `{outcome, outputs, intents}`; each intent contains `path`,
+`destination`, `method`, `headers`, `body` and `body_text`.
+
+The report distinguishes matched, mismatched and unpaired events. Differences
+show both values and explicitly distinguish a missing field from null; array
+positions keep their order. Source sequences determine the displayed match
+streak, independent of arrival order. Missing sides, sequence gaps and mismatches
+break a streak. Duplicate delivery cannot add a match or replace retained data.
+A mismatch reason records the responsible owner and original observation digests;
+it does not turn a mismatch into a match.
+
+Changing the draft makes the report stale. Review a new comparison after fixing
+its mapping; older reports keep their original draft and input fingerprints.
+Restarts preserve observations and counts. Restored comparisons remain inactive,
+and owner-supplied matches never permit production cutover, even after 20 matches.
+Live source readers, qualified parity, watermark takeover, source shutdown,
+rollback and once-only production effects remain unfinished.
+
+Samples stay on this installation until erased. Native subject erasure includes
+the comparison and its decisions, respects legal holds and leaves value-free
+replay fences. An older archive cannot restore erased samples when checked against
+the later journal. Complete comparison history travels in archives without active
+comparison authority. Erase existing non-sensitive comparisons before changing
+a workflow to a sensitive data class.
