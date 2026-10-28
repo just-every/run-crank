@@ -606,7 +606,7 @@ test('Mailbox polling retains records through visible subscription expiry and re
 
 test('SharePoint and custom JSON lists compare only complete current records under live account authority', async()=>{const {listPollJourney}=await import('./list-poll-journey.mjs');await listPollJourney()});
 
-test('Subject erasure removes unadmitted app observations and permanently fences source replay', async()=>{const {appSubjectJourney}=await import('./app-subject-journey.mjs');await appSubjectJourney()});
+test('Subject erasure removes unadmitted app observations and permanently fences source replay', async()=>{const {appSubjectJourney,appSubjectConcurrencyJourney}=await import('./app-subject-journey.mjs');await appSubjectJourney();await appSubjectConcurrencyJourney()});
 
 test('Snapshot retention expires only old inactive payloads and preserves comparison identities', async()=>{const {appRetentionJourney}=await import('./app-retention-journey.mjs');await appRetentionJourney()});
 
