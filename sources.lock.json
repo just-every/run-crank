@@ -139,7 +139,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "1aab34a878781f987c1f05b7e1c3bfd5f0038efc2648497fe9197b0a5f9f6809",
+      "sha256": "c7e0d49cbb7fec5cfeea67d4d7d6228ba4bb6a1c2b8f8fa7683113cc509f43ab",
       "executable": false
     },
     "AGENTS.md": {
@@ -163,7 +163,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "aa17d668b42d999cf5afa8efa2d30b58bbea52bd8d69c90103ac2874c2731079",
+      "sha256": "4ee1f39a8afd80094135f9b07995463f51f5dd5e220295cfbc69d2c8f5a873a6",
       "executable": false
     },
     "DEMO.md": {
@@ -203,7 +203,7 @@
       "executable": false
     },
     "docs/CLAIMS.md": {
-      "sha256": "ed161c8cab8df3bac628ed1e547ed7239a37aa1b2aabf6b48186d67da9702758",
+      "sha256": "49a58226798dfb284636bc969755f2a06bd65324f498653ca92763a5a0574394",
       "executable": false
     },
     "docs/DATA-FLOWS.md": {
@@ -227,7 +227,7 @@
       "executable": false
     },
     "docs/IMPORTING.md": {
-      "sha256": "29deb2307776fb6107f2fe4892b31c787c24bc7e111f1b46736e595e9b536bb7",
+      "sha256": "eced66d91f9aa398d872fba3fcce51df48760f41b7eb0766bd0bdef354bce5a7",
       "executable": false
     },
     "docs/OPERATIONS.md": {
@@ -2927,7 +2927,7 @@
       "executable": false
     },
     "src/crank/n8n-graph.ts": {
-      "sha256": "e118ad8453b3f69042bd80deb9d5734188b050075bd23401b424e58338b74482",
+      "sha256": "eafc59dfa723c7a4123e067d3b316e0f35d6eef83314674c17047a4c9487b348",
       "executable": false
     },
     "src/crank/n8n-http.ts": {
@@ -5831,7 +5831,7 @@
       "executable": false
     },
     "tests/migration-browser.mjs": {
-      "sha256": "bbefee04c9a38b43a5fe0b734c4208a331b6a6f151a3cdc12d436247436f2b38",
+      "sha256": "1ad5e0efaf4af17cdc5eb494677c3dcee1299ad4a005c4f60b65f0c0b3aee623",
       "executable": false
     },
     "tests/n8n-batch-journey.mjs": {
@@ -5851,7 +5851,7 @@
       "executable": false
     },
     "tests/n8n-conversion-journey.mjs": {
-      "sha256": "1d16697f09a2082bfd22c1976ed9d67125d68651fcca8e3bbee35db797689316",
+      "sha256": "97806f2b55c0ee23bedc4b95774296a863d0a5f761a15d2d930e1bb41bca9a0d",
       "executable": false
     },
     "tests/n8n-datetime-journey.mjs": {
