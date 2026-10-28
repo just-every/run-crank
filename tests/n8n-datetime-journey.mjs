@@ -21,6 +21,12 @@ export function arithmeticExport(target,id='synthetic-crank-date-arithmetic',par
  return source;
 }
 
+export function formattingExport(target,id='synthetic-crank-format-retention') {
+ const source=arithmeticExport(target,id);source.name='Synthetic retained date formatting';
+ source.nodes[2].parameters={operation:'formatDate',date:'={{ $json.date }}',format:'custom',customFormat:'MM/dd/yyyy',outputFieldName:'due',options:{timezone:true,includeInputFields:true}};
+ return source;
+}
+
 /** Review and apply are inert; exact calendar results are read at the destination. */
 export async function n8nDateTimeJourney() {
  const target='https://receiver.example',writes=[];
@@ -100,6 +106,47 @@ export async function n8nDateTimeJourney() {
    await restored.post('data'+'/restore',{archive:saved,confirm:'RESTORE'});const receiving=inventory(await archive(restored));assert.deepEqual(original.filter(row=>!receiving.includes(row)),[],'all portable records survive intact');assert.deepEqual(receiving.filter(row=>!original.includes(row)).map(row=>[JSON.parse(row).table,JSON.parse(row).row.action]),[['crank_audit','data.restore']]);
    for(const workflow of workflows){const detail=await restored.get('workflows/'+workflow.id);assert.equal(detail.status,'paused');assert.deepEqual(detail.draft,(await h.get('workflows/'+workflow.id)).draft);assert.ok(detail.hooks.every(row=>row.status!=='active'))}
    await restored.tick();const refused=await deliver(restored,firstHook.url,{method:'POST',headers:{'content-type':'application'+'/'+'json'},body:JSON.stringify({date:'2024-01-31T18:05:06.123Z'})});assert.ok(refused.status>=400);assert.equal(writes.length,count,'restoration must remain inactive');
+  } finally {await restored.close()}
+ } finally {await h.close()}
+ await formattingJourney();
+}
+
+/** The same source formatter is previewed from a captured form and dispatched. */
+async function formattingJourney() {
+ const target='https://receiver.example',writes=[];
+ const edge=async request=>{if(new URL(request.url).origin!==target)return undefined;const body=await request.json();writes.push(body);return Response.json({stored:body})};
+ const h=await harness(target,{edge});
+ try {
+  const plan=await doorImport(h,JSON.stringify(formattingExport(target)));assert.equal(plan.rejected.length,0);
+  assert.equal((await door(h,'apply',{planId:plan.planId,reviewedFingerprint:plan.fingerprint})).value.job.state,'completed');
+  assert.equal((await h.get('workflows')).length,1);assert.deepEqual(writes,[]);
+  const formatted=(await h.get('workflows')).find(row=>row.name==='Synthetic retained date formatting'),formatBase='workflows/'+formatted.id;
+  const listener=await h.post(formatBase+'/samples/listen',{},h.owner,201),countBeforePreview=writes.length;
+  const date='2024-03-01T00:30:00Z',sampleBody=new URLSearchParams({date}).toString();
+  const captured=await deliver(h,listener.url,{method:'POST',headers:{'content-type':'application'+'/x-www-form-urlencoded'},body:sampleBody});assert.equal(captured.status,201,captured.text);
+  const formattedBody={date,label:'synthetic-crank-803',due:'02/29/2024',nested:{values:[1,null,'synthetic-crank-806']}};
+  await h.restart();
+  const preview=await h.post(formatBase+'/preview',{});
+  assert.equal(preview.source.id,captured.value.sample_id);assert.equal(preview.source.source,'webhook');assert.match(preview.sample_source,/webhook sample/);
+  assert.deepEqual(preview.steps.find(step=>step.path==='n2').output,formattedBody);assert.equal(preview.steps.at(-1).outcome,'not run in preview');assert.ok(preview.steps.every(step=>step.source.id===captured.value.sample_id));assert.equal(writes.length,countBeforePreview);
+  await h.post(formatBase+'/publish',{},h.owner,201);const formatHook=await h.post(formatBase+'/hooks',{},h.owner,201);
+  const sent=await deliver(h,formatHook.url,{method:'POST',headers:{'content-type':'application'+'/x-www-form-urlencoded'},body:sampleBody}),formattedRun=await settled(h,sent.value.run_id);
+  assert.equal(formattedRun.status,'succeeded',JSON.stringify(formattedRun.error));assert.deepEqual(writes.at(-1),formattedBody);assert.deepEqual(formattedRun.steps.find(step=>step.step_id==='n3').output.body,{stored:formattedBody});assert.equal(writes.length,countBeforePreview+1);
+  for(const invalid of ['2026-02-30T12:00:00Z','synthetic-crank-invalid']) {
+   const badListener=await h.post(formatBase+'/samples/listen',{},h.owner,201);
+   assert.equal((await deliver(h,badListener.url,{method:'POST',headers:{'content-type':'application'+'/x-www-form-urlencoded'},body:new URLSearchParams({date:invalid}).toString()})).status,201);
+   const badPreview=await h.post(formatBase+'/preview',{});assert.equal(badPreview.steps.at(-1).outcome,'validation failure');assert.equal(badPreview.steps.at(-1).error.category,'validation');assert.ok(!badPreview.steps.some(step=>step.path==='n3'));
+   const bad=await deliver(h,formatHook.url,{method:'POST',headers:{'content-type':'application'+'/x-www-form-urlencoded'},body:new URLSearchParams({date:invalid}).toString()}),run=await settled(h,bad.value.run_id);assert.equal(run.status,'failed');assert.equal(run.error.category,'validation');assert.equal(writes.length,countBeforePreview+1,'an invalid formatting input must not reach the destination');
+  }
+
+  const saved=await archive(h),original=inventory(saved),count=writes.length,restored=await harness(target,{edge});
+  try {
+   await restored.post('data'+'/restore',{archive:saved,confirm:'RESTORE'});
+   const receiving=inventory(await archive(restored));assert.deepEqual(original.filter(row=>!receiving.includes(row)),[],'complete formatter and sample custody survives inactive restore');
+   assert.deepEqual(receiving.filter(row=>!original.includes(row)).map(row=>[JSON.parse(row).table,JSON.parse(row).row.action]),[['crank_audit','data.restore']]);
+   assert.equal((await restored.get(formatBase)).status,'paused');assert.ok((await restored.get(formatBase+'/samples')).samples.every(sample=>!sample.selected));
+   await restored.tick();assert.equal(writes.length,count);
+   assert.ok((await deliver(restored,formatHook.url,{method:'POST',headers:{'content-type':'application'+'/x-www-form-urlencoded'},body:sampleBody})).status>=400);assert.equal(writes.length,count);
   } finally {await restored.close()}
  } finally {await h.close()}
 }

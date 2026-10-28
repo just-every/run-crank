@@ -5,6 +5,7 @@ import {readFile,mkdir} from 'node:fs/promises';
 import {resolve,extname,join} from 'node:path';
 import {chromium,expect} from '@playwright/test';
 import {sampleJourney} from './sample-journey.mjs';
+import {tableTransformJourney} from './table-state-journey.mjs';
 const evidence=process.env.CRANK_EVIDENCE;
 assert.ok(evidence,'Set CRANK_EVIDENCE');await mkdir(evidence,{recursive:true});
 const browser=await chromium.launch({headless:true,...(process.env.CRANK_CHROMIUM?{executablePath:process.env.CRANK_CHROMIUM}:{}),args:['--use-mock-keychain','--password-store=basic',...(process.env.CRANK_CHROMIUM?['--no-sandbox']:[])]});
@@ -102,5 +103,17 @@ try {
   await page.setViewportSize({width:1440,height:1000});
   const search=page.getByRole('link',{name:'Search runs',exact:true});await search.focus();await expect(page.locator('#search-tooltip')).toBeVisible();await page.locator('h1').click();await search.hover();await page.waitForTimeout(350);await expect(page.locator('#search-tooltip')).toBeVisible();
  }});
- console.log('Retained sample screens passed at 1440 and 390');
+ await tableTransformJourney({inspect:async({h,w,state,expected})=>{
+  await attach(h,1440);await page.setViewportSize({width:1440,height:1000});
+  await page.goto(h.origin+`/app/workflows/${w.id}?step=rep&tab=test`);
+  await page.getByRole('button',{name:'Preview selected sample',exact:true}).click();
+  const result=page.locator('.inspector-block').filter({has:page.getByRole('heading',{name:'Preview result',exact:true})});
+  await expect(result).toContainText('webhook sample');
+  if(state==='table-paused') await expect(result).toContainText('paused or restored');
+  else assert.equal(JSON.parse(await result.locator('pre').first().innerText()),expected);
+  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),state+' overflow');
+  const search=page.getByRole('link',{name:'Search runs',exact:true});await search.focus();await expect(page.locator('#search-tooltip')).toBeVisible();await page.locator('h1').click();await search.hover();await page.waitForTimeout(350);await expect(page.locator('#search-tooltip')).toBeVisible();
+  for(const width of [1440,390]) {await page.setViewportSize({width,height:1000});await page.screenshot({path:join(evidence,`${width}-${state}.png`),fullPage:true})}
+ }});
+ console.log('Retained sample and operational lookup screens passed at 1440 and 390');
 } finally {await context?.close();await browser.close();if(server){server.closeAllConnections();await new Promise(done=>server.close(done))}}
