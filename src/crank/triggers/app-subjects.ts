@@ -6,12 +6,13 @@ import { auditStatement } from '../ops/audit'
 import { identifierValues, SEALED_PREFIX, openText, plain } from '../ops/payload-seal'
 
 type Identity = { workflow_id: string; record_id: string }
-export interface AppSubjectRecord extends Identity { blocked: string | null }
-interface RetainedRecord { row: Identity; subjectDigest: string; texts: string[]; identifiers: Set<string>; heldItems: { hold_id: string; item_key: string }[] }
+export interface AppSubjectRecord extends Identity { held_events: number; blocked: string | null }
+interface RetainedRecord { row: Identity; subjectDigest: string; texts: string[]; identifiers: Set<string>; heldItems: { hold_id: string; item_key: string }[]; heldRuns: Set<string>; legacySeen: { workflow_id: string; item_key: string }[] }
 interface AppSubjectState {
   subjects: [string, string, string][]
   snapshots: [string, string, string, string, string, string | null, number][]
   held_items: [string, string, string, string, string, string | null, number][]
+  legacy_seen: [string, string, string][]
   values: [string, string, string, string, string][]
   pending: [string, string, string, string, string][]
   workflows: [string, string, string, string][]
@@ -29,13 +30,14 @@ const STATE_SQL = `SELECT json_object(
   'subjects',json(${array('workflow_id,record_id,record_subject_digest', 'crank_app_subjects', 'workflow_id,record_id')}),
   'snapshots',json(${array(`workflow_id,version_id,record_id,fields_json,changed_at,observed_at,CASE WHEN ${plain('fields_json')} OR EXISTS(SELECT 1 FROM crank_payload_keys k WHERE k.id=json_extract(fields_json,'$.k') AND k.sealed_key IS NOT NULL) THEN 1 ELSE 0 END`, 'crank_app_snapshots', 'workflow_id,version_id,record_id')}),
   'held_items',json(${array(`workflow_id,hold_id,item_key,payload_json,status,run_id,CASE WHEN ${plain('payload_json')} OR EXISTS(SELECT 1 FROM crank_payload_keys k WHERE k.id=json_extract(payload_json,'$.k') AND k.sealed_key IS NOT NULL) THEN 1 ELSE 0 END`, `(SELECT h.workflow_id,i.* FROM crank_hold_items i JOIN crank_holds h ON h.id=i.hold_id WHERE COALESCE(h.origin_kind,h.source)='poll' AND h.workflow_id IN (${appWorkflows}))`, 'workflow_id,hold_id,item_key')}),
+  'legacy_seen',json(${array('workflow_id,item_key,first_seen_at', `(SELECT * FROM crank_seen_items WHERE item_key LIKE 'app:%' AND workflow_id IN (${appWorkflows}))`, 'workflow_id,item_key')}),
   'values',json(${array('workflow_id,record_id,field,value_digest,first_seen_at', 'crank_app_field_values', 'workflow_id,record_id,field,value_digest')}),
   'pending',json(${array('workflow_id,version_id,record_id,value_digest,stable_since', 'crank_app_pending_rows', 'workflow_id,version_id,record_id')}),
   'workflows',json(${array('id,status,data_class,identifier_fields_json', `(SELECT * FROM crank_workflows WHERE id IN (${appWorkflows}))`, 'id')}),
   'holds',json(${array('id,kind,subject,subject_encoded,subject_digest,workflow_id', '(SELECT * FROM crank_legal_holds WHERE released_at IS NULL)', 'id')}),
   'runs',json((SELECT json_group_array(json_array(id,workflow_id,business_key,status,held)) FROM (
     SELECT r.id,r.workflow_id,r.business_key,r.status,CASE WHEN ${HELD_WORKFLOW_RUN} THEN 1 ELSE 0 END AS held
-    FROM crank_wf_runs r WHERE r.trigger_kind='app_poll' ORDER BY r.id)))
+    FROM crank_wf_runs r WHERE r.trigger_kind='app_poll' OR EXISTS(SELECT 1 FROM crank_hold_items i JOIN crank_holds h ON h.id=i.hold_id WHERE i.run_id=r.id AND COALESCE(h.origin_kind,h.source)='poll' AND h.workflow_id IN (${appWorkflows})) ORDER BY r.id)))
 ) AS value`
 
 /** Observe every source record, including seeds, nonmatches and settling rows. */
@@ -53,7 +55,7 @@ export async function previewAppSubjects(env: CrankEnv, value: string) {
   const records = new Map<string, RetainedRecord>()
   for (const [workflow_id, record_id, marker] of state.subjects) {
     const row = { workflow_id, record_id }
-    records.set(identity(row), { row, subjectDigest: marker, texts: [], identifiers: new Set(), heldItems: [] })
+    records.set(identity(row), { row, subjectDigest: marker, texts: [], identifiers: new Set(), heldItems: [], heldRuns: new Set(), legacySeen: [] })
   }
   const unindexed = new Set<string>(), unavailable = new Set<string>()
   for (const [workflow_id, , record_id, text, , , available] of state.snapshots) {
@@ -70,7 +72,7 @@ export async function previewAppSubjects(env: CrankEnv, value: string) {
   // A paused source can retain a comparison event without ever admitting a run.
   // Include both previous and current values, and erase the held copy through Base
   // so archives cannot bring it back after the comparison rows have been removed.
-  for (const [workflow_id, hold_id, item_key, text, , , available] of state.held_items) {
+  for (const [workflow_id, hold_id, item_key, text, , run_id, available] of state.held_items) {
     const heldKey = canonical([hold_id, item_key])
     if (!available) { unavailable.add(heldKey); continue }
     let payload: Record<string, unknown>
@@ -80,9 +82,17 @@ export async function previewAppSubjects(env: CrankEnv, value: string) {
     const key = identity({ workflow_id, record_id: await digest(payload.record_id) }), record = records.get(key)
     if (!record) { unindexed.add(key); continue }
     record.heldItems.push({ hold_id, item_key })
+    if (run_id) record.heldRuns.add(run_id)
     if (text.startsWith(SEALED_PREFIX)) identifierValues(payload, workflows.get(workflow_id)!.fields, record.identifiers)
     else record.texts.push(text.toLowerCase())
   }
+  // Earlier new-record receipts embedded the provider identifier. They are
+  // payload copies, while new receipts use the opaque comparison key instead.
+  for (const [workflow_id, item_key] of state.legacy_seen) {
+    const record = records.get(identity({ workflow_id, record_id: await digest(item_key.slice(4)) }))
+    if (record) record.legacySeen.push({ workflow_id, item_key })
+  }
+  const linkedRuns = (record: RetainedRecord) => state.runs.filter(([run, workflow, key]) => workflow === record.row.workflow_id && (key === record.row.record_id || record.heldRuns.has(run)))
   for (const [workflow_id, record_id] of state.values) if (!records.has(identity({ workflow_id, record_id }))) unindexed.add(identity({ workflow_id, record_id }))
   for (const [workflow_id, , record_id] of state.pending) if (!records.has(identity({ workflow_id, record_id }))) unindexed.add(identity({ workflow_id, record_id }))
   const matches = (record: RetainedRecord, subject: string, encoded: string, marker: string) =>
@@ -92,8 +102,8 @@ export async function previewAppSubjects(env: CrankEnv, value: string) {
     if (!matches(record, value, JSON.stringify(value).slice(1, -1), subjectDigest)) continue
     const held = state.holds.some(([, kind, subject, encoded, marker, workflow]) => kind === 'workflow' ? workflow === record.row.workflow_id
       : matches(record, subject!, encoded!, marker!))
-    const runs = state.runs.filter(([, workflow, key]) => workflow === record.row.workflow_id && key === record.row.record_id)
-    app_records.push({ ...record.row, blocked: held || runs.some(([, , , , held]) => held) ? 'Under a legal hold: release it first.'
+    const runs = linkedRuns(record)
+    app_records.push({ ...record.row, held_events: record.heldItems.length, blocked: held || runs.some(([, , , , held]) => held) ? 'Under a legal hold: release it first.'
       : runs.some(([, , , status]) => !terminal.includes(status)) ? 'Finish or cancel this record’s runs first.'
       : workflows.get(record.row.workflow_id)?.status !== 'paused' ? 'Pause its workflow first.' : null })
   }
@@ -101,7 +111,7 @@ export async function previewAppSubjects(env: CrankEnv, value: string) {
     ...(unindexed.size ? [`${unindexed.size} retained app record${unindexed.size === 1 ? ' has' : 's have'} no case-insensitive identifier index. Poll the source again to observe those records before erasing a subject.`] : []),
     ...(unavailable.size ? [`${unavailable.size} encrypted app record${unavailable.size === 1 ? ' is' : 's are'} sealed under a key this installation does not hold. Import the owner's key file on the Data screen before erasing a subject.`] : []),
   ]
-  return { app_records, held_items: app_records.flatMap(row => records.get(identity(row))!.heldItems), unmatched, state_digest: await digest(raw), raw }
+  return { app_records, held_items: app_records.flatMap(row => records.get(identity(row))!.heldItems), legacy_seen: app_records.flatMap(row => records.get(identity(row))!.legacySeen), run_ids: [...new Set(app_records.flatMap(row => linkedRuns(records.get(identity(row))!).map(([run]) => run)))], unmatched, state_digest: await digest(raw), raw }
 }
 
 /** Base fences each snapshot version and each comparison/pending/index row. The
@@ -117,10 +127,11 @@ export async function eraseAppSubjects(env: CrankEnv, actor: Actor, portability:
     edges: ['crank_app_snapshots', 'crank_app_field_values', 'crank_app_pending_rows'].map(table => ({ table, from: 'crank_app_subjects', on: { workflow_id: 'workflow_id', record_id: 'record_id' } })),
     retain: [{ table: 'crank_app_erased_records', reason: 'Opaque workflow and record keys permanently prevent source redelivery from restoring an erased record.' }],
     beforeStatements: ({ subject }) => [stmt(env, 'INSERT OR IGNORE INTO crank_app_erased_records(workflow_id,record_id) VALUES(?,?)', subject.workflow_id, subject.record_id)],
-  }), defineErasure({ entity: 'app-held-item', root: { table: 'crank_hold_items' } })] })
+  }), defineErasure({ entity: 'app-held-item', root: { table: 'crank_hold_items' } }), defineErasure({ entity: 'app-seen-item', root: { table: 'crank_seen_items' } })] })
   const prepared = []
   for (const record of preview.app_records) prepared.push(await service.nativeStatements('app-subject', { workflow_id: record.workflow_id, record_id: record.record_id }))
   for (const item of preview.held_items) prepared.push(await service.nativeStatements('app-held-item', item))
+  for (const item of preview.legacy_seen) prepared.push(await service.nativeStatements('app-seen-item', item))
   const guard = `erase-app-subject:${id()}`
   await guardedBatch(env, actor, 'owner', [
     stmt(env, `INSERT INTO crank_authority_guards(id,ok) SELECT ?,CASE WHEN (${STATE_SQL})=? THEN 1 ELSE 0 END`, guard, preview.raw),
