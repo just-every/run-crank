@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import {pathToFileURL} from 'node:url';
+import {readFile} from 'node:fs/promises';
 import {harness} from './harness.mjs';
 import {archive,inventory} from './restore-journey.mjs';
 import {connection,fakeEdge,jsonResponse,publish,startRun,stepOf} from './kit.mjs';
@@ -124,12 +125,33 @@ export async function googleCalendarSearchCustodyJourney({onScreen}={}) {
  try {
   const w=await flow(h,c,{multi_match:'all',limit:10});
   await h.post(`workflows/${w.id}/pause`);await h.post('data/classes',{workflow_id:w.id,data_class:'customer',identifier_fields:['id','summary']});await h.post(`workflows/${w.id}/resume`);
-  let items=[{...events[0],description:'x'.repeat(70000)}],parking=true;
+  let items=[{description:'x'.repeat(70000),...events[0]}],parking=true;
   fake.routes.set('www.googleapis.com',request=>{assertRead(request);return request.url.searchParams.has('pageToken')?(parking?jsonResponse({},429,{'retry-after':'60'}):jsonResponse({items:[events[1],events[2]]})):jsonResponse({items,nextPageToken:'synthetic-crank-private-page'})});
   const parked=await startRun(h,w,{});assert.equal(parked.status,'waiting');
   const chunks=async id=>(await h.db.prepare('SELECT content_base64 FROM crank_request_checkpoint_chunks WHERE run_id=? ORDER BY ordinal,chunk_index').bind(id).all()).results;
   const metadata=await h.db.prepare('SELECT response_json FROM crank_request_checkpoints WHERE run_id=?').bind(parked.id).first();assert.ok(!metadata.response_json.includes(interval.calendar_id),'resource identifiers stay out of plaintext checkpoint metadata');
   const raw=await chunks(parked.id);assert.equal(raw.length,2,'a completed page crosses the binary chunk boundary');assert.ok(raw.every(row=>JSON.parse(row.content_base64).sealed==='crank-payload-v1'));assert.ok(!raw[0].content_base64.includes(events[0].summary));
+  // Upgrade fixture: older sealed runs retained completed pages as raw base64,
+  // without a subject index, even though their run key metadata was current.
+  const legacy=Buffer.from(JSON.stringify({items,nextPageToken:'synthetic-crank-private-page'}));
+  await h.db.batch([
+   ...Array.from({length:Math.ceil(legacy.length/65536)},(_,index)=>h.db.prepare('UPDATE crank_request_checkpoint_chunks SET content_base64=? WHERE run_id=? AND ordinal=0 AND chunk_index=?').bind(legacy.subarray(index*65536,(index+1)*65536).toString('base64'),parked.id,index)),
+   h.db.prepare('DELETE FROM crank_blind_index WHERE run_id=?').bind(parked.id),
+  ]);
+  assert.deepEqual((await h.post('data/subject',{subject:events[0].id})).workflow_runs.map(r=>r.id),[parked.id],'plaintext legacy pages remain discoverable before maintenance');
+  await h.db.exec(`CREATE TRIGGER interrupt_checkpoint_index BEFORE INSERT ON crank_blind_index WHEN NEW.run_id='${parked.id}' BEGIN SELECT RAISE(ABORT,'synthetic-crank-index-interruption'); END;`);
+  await h.tick('2026-11-10T15:00:10Z');
+  assert.ok((await chunks(parked.id)).every(row=>!row.content_base64.startsWith('{')),'failed indexing rolls back checkpoint sealing');
+  await h.db.exec('DROP TRIGGER interrupt_checkpoint_index');
+  await h.restart();await h.tick('2026-11-10T15:00:20Z');
+  assert.ok((await chunks(parked.id)).every(row=>JSON.parse(row.content_base64).sealed==='crank-payload-v1'),'restart seals all legacy chunks with their subject index');
+  assert.equal((await h.post('data/subject',{subject:events[0].id})).sealed_unmatched.length,0);
+  // The upgrade migration also marks pages already sealed by older maintenance
+  // for re-indexing; losing that index must block erasure until the pass finishes.
+  await h.db.prepare('DELETE FROM crank_blind_index WHERE run_id=?').bind(parked.id).run();
+  await h.db.prepare(await readFile(new URL('../migrations/core/0086_checkpoint_subjects.sql',import.meta.url),'utf8')).run();
+  assert.equal((await h.post('data/subject',{subject:events[0].id})).blocked,true);
+  await h.tick('2026-11-10T15:00:30Z');
   const preview=await h.post('data/subject',{subject:events[0].id});assert.deepEqual(preview.workflow_runs.map(r=>r.id),[parked.id]);assert.equal(preview.blocked,true,'unfinished page is a retained subject even before a step result');
   const hold=await h.post('data/holds',{kind:'subject',subject:events[0].id,reason:'Calendar record under review'},h.owner,201);
   assert.match((await h.post('data/subject',{subject:events[0].id})).workflow_runs[0].blocked,/legal hold/);
