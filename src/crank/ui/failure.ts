@@ -45,6 +45,7 @@ export function renameOf(error: any, path: string | undefined, newer: { graph: G
 /** The cause as HTML: `Field amount not found (renamed to amount_total; version 2 reads it)`. */
 export function causeHtml(error: any, rename: Rename | null) {
   if (!error) return ''
+  if (error.input_schema === true) return esc(error.message)
   if (typeof error.field !== 'string') return esc(error.message ?? 'Failed')
   const name = error.field.split('.').at(-1)!, similar = Array.isArray(error.similar) ? error.similar as string[] : []
   const words = rename ? ` (renamed to <code>${esc(rename.to)}</code>; version ${rename.version} reads it)`
