@@ -7,7 +7,7 @@ import {chromium,expect} from '@playwright/test';
 import {crmPollJourney,subscriptionPollJourney,comparisonPollJourney} from './app-poll-journey.mjs';
 import {sheetPollJourney} from './sheet-poll-journey.mjs';
 import {appHistoryJourney} from './app-history-journey.mjs';
-import {appSubjectJourney} from './app-subject-journey.mjs';
+import {appSubjectJourney,appSubjectConcurrencyJourney} from './app-subject-journey.mjs';
 import {appRetentionJourney} from './app-retention-journey.mjs';
 import {tablePollJourney} from './table-poll-journey.mjs';
 import {commercePollJourney} from './commerce-poll-journey.mjs';
@@ -88,7 +88,7 @@ async function rateScreens(width) {
 }
 try {
  for(const width of [1440,390]) await rateScreens(width);
- for(const width of [1440,390]) for(const journey of [crmPollJourney,subscriptionPollJourney,comparisonPollJourney,sheetPollJourney,appHistoryJourney,appSubjectJourney,appRetentionJourney,tablePollJourney,commercePollJourney,accountingPollJourney]) {
+ for(const width of [1440,390]) for(const journey of [crmPollJourney,subscriptionPollJourney,comparisonPollJourney,sheetPollJourney,appHistoryJourney,appSubjectJourney,appSubjectConcurrencyJourney,appRetentionJourney,tablePollJourney,commercePollJourney,accountingPollJourney]) {
   await journey({inspect:async({h,w,state,run,provider,resource})=>{
    if(state==='commerce-change'&&provider!=='zendesk'||state==='accounting-change'&&(provider!=='xero'||resource!=='invoices'))return;
    await attach(h,width);await page.goto(h.origin+`/app/workflows/${w.id}?step=trigger`);
@@ -106,6 +106,12 @@ try {
     await page.goto(h.origin+'/app/data');await page.getByLabel('Payload days',{exact:true}).fill('1');await page.getByRole('button',{name:'Preview what this removes',exact:true}).click();
     await expect(page.getByRole('heading',{name:'Retention dry run',exact:true,level:1})).toBeVisible();
     if(width===1440){await expect(page.locator('.retention-app-records .settings-row')).toHaveCount(1);await expect(page.locator('main')).toContainText('legal hold');await expect(page.locator('main')).toContainText('current published-version baseline')}
+    await shot(width,state);return;
+   }
+   if(state==='held-subject-preview') {
+    await page.goto(h.origin+'/app/data');await page.getByLabel('Identifier',{exact:true}).fill('synthetic-crank-82');await page.getByRole('button',{name:'Preview erasure',exact:true}).click();
+    await expect(page.getByRole('heading',{name:'Erasure preview',exact:true,level:1})).toBeVisible();
+    if(width===1440){await expect(page.locator('main')).toContainText('Includes 1 held trigger event.');await expect(page.getByRole('button',{name:'Erase matching data',exact:true})).toBeVisible()}
     await shot(width,state);return;
    }
    if(state==='unadmitted-subject-preview') {

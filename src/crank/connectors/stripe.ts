@@ -51,7 +51,7 @@ function subscription(value: unknown, selected: ReturnType<typeof input>) {
   if (!isObject(value.items) || value.items.object !== 'list' || value.items.has_more !== false || !Array.isArray(value.items.data) || !value.items.data.length || value.items.data.length > 100) return malformed('subscription items must be a complete bounded list')
   const seen = new Set<string>()
   const items = value.items.data.map(item => {
-    if (!isObject(item) || !providerId(item.id, 'si') || seen.has(item.id) || !Number.isSafeInteger(item.quantity) || Number(item.quantity) < 0) return malformed('invalid subscription item identity or quantity')
+    if (!isObject(item) || !providerId(item.id, 'si') || seen.has(item.id) || item.quantity !== null && (!Number.isSafeInteger(item.quantity) || Number(item.quantity) < 0)) return malformed('invalid subscription item identity or quantity')
     seen.add(item.id)
     const price = item.price
     if (!isObject(price) || price.object !== 'price' || price.livemode !== false || !providerId(price.id, 'price') || !providerId(price.product, 'prod') || typeof price.currency !== 'string' || !/^[a-z]{3}$/.test(price.currency) || price.unit_amount !== null && (!Number.isSafeInteger(price.unit_amount) || Number(price.unit_amount) < 0)) return malformed('invalid test-mode price projection')

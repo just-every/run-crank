@@ -18,7 +18,7 @@ const search=connection_id=>({id:'subscriptions',name:'Customer subscriptions',t
 export async function stripeSearchJourney({inspect}={}) {
  const fake=fakeEdge(),h=await harness('http://127.0.0.1:9',{clock,edge:fake.edge});
  const east=testKey(10),west=testKey(11),readCalls=[];
- let shape='pages',parked=false,changed=false,hook,retries=0;
+ let shape='pages',parked=false,changed=false,hook,retries=0,quantity;
  fake.routes.set('api.stripe.com',async request=>{
   const {url,method,headers,body}=request;
   assert.equal(method,'GET','the native operation never writes');assert.equal(body,'');
@@ -34,6 +34,7 @@ export async function stripeSearchJourney({inspect}={}) {
   if(shape==='empty')return jsonResponse(list([]));
   if(shape==='tie')return jsonResponse(list([subscription(2,{created:100}),subscription(1,{created:100})]));
   if(shape==='one')return jsonResponse(list([subscription(1)]));
+  if(shape==='quantity'){const row=subscription(1);row.items.data[0].quantity=quantity;return jsonResponse(list([row]))}
   if(shape==='wrong customer')return jsonResponse(list([subscription(1,{customer_id:otherCustomer})]));
   if(shape==='live')return jsonResponse(list([subscription(1,{livemode:true})]));
   if(shape==='bad price')return jsonResponse(list([subscription(1,{items:{object:'list',has_more:false,data:[{id:identifier('si',1),quantity:'1',price:{}}]}})]));
@@ -99,6 +100,17 @@ export async function stripeSearchJourney({inspect}={}) {
   }
   assert.equal(h.mail.length,mailBefore,'search halts are not failure notices');
   shape='one';assert.equal(stepOf(await run(),'subscriptions').output.count,1);
+  shape='quantity';
+  for(quantity of [null,0,2]) {
+   const r=await run();assert.equal(r.status,'succeeded',JSON.stringify(r.error));
+   assert.equal(stepOf(r,'subscriptions').output.record.items[0].quantity,quantity);
+   assert.equal(r.response.body.record.items[0].quantity,quantity,'nullable and integer quantities reach downstream work unchanged');
+  }
+  for(quantity of [-1,1.5,'1',undefined]) {
+   const r=await run();assert.equal(r.status,'failed');assert.equal(r.error.category,'provider');
+   assert.match(r.error.message,/invalid subscription item identity or quantity/);
+   assert.equal(stepOf(r,'done'),undefined,'invalid quantities never reach downstream work');
+  }
   shape='pages';
   for(const multi_match of ['all','first','stop']) {
    const w=await settings('Bounded scan '+multi_match,{max_pages:1,multi_match}),r=await startRun(h,w,{customer_id:customer});
