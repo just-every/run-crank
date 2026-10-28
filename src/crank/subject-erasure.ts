@@ -27,8 +27,8 @@ export async function previewSubject(env: CrankEnv, subject: unknown) {
       OR EXISTS(SELECT 1 FROM crank_wf_steps s WHERE s.run_id=r.id AND ((${plain('s.input_json')} AND instr(lower(COALESCE(s.input_json,'')),?2)>0) OR (${plain('s.output_json')} AND instr(lower(COALESCE(s.output_json,'')),?2)>0)))
       OR r.id IN (SELECT value FROM json_each(?3))
       OR EXISTS(SELECT 1 FROM crank_blind_index b,json_each(?4) d WHERE b.run_id=r.id AND b.key_id=json_extract(d.value,'$.key_id') AND b.digest=json_extract(d.value,'$.digest'))
-      OR (r.trigger_kind='app_poll' AND EXISTS(SELECT 1 FROM json_each(?5) a WHERE json_extract(a.value,'$.workflow_id')=r.workflow_id AND json_extract(a.value,'$.record_id')=r.business_key))
-      ORDER BY r.received_at,r.id`, value, encoded, JSON.stringify(continuationRuns), JSON.stringify(digests), JSON.stringify(app.app_records)).all<{ id: string; workflow_id: string; status: string; workflow_status: string; held: number }>(),
+      OR r.id IN (SELECT value FROM json_each(?5))
+      ORDER BY r.received_at,r.id`, value, encoded, JSON.stringify(continuationRuns.runs), JSON.stringify(digests), JSON.stringify(app.run_ids)).all<{ id: string; workflow_id: string; status: string; workflow_status: string; held: number }>(),
     stmt(env, `SELECT r.id,r.flow_id,r.state,f.status AS flow_status,CASE WHEN ${HELD_FLOW_RUN} THEN 1 ELSE 0 END AS held FROM crank_runs r JOIN crank_flows f ON f.id=r.flow_id
       WHERE lower(r.event_id)=?1 OR instr(lower(r.input_json),?2)>0 ORDER BY r.created_at,r.id`, value, encoded).all<{ id: string; flow_id: string; state: string; flow_status: string; held: number }>(),
     pendingRuns(env),
@@ -37,7 +37,7 @@ export async function previewSubject(env: CrankEnv, subject: unknown) {
   // Sealed runs not yet indexed under the current fields, or sealed under a key this installation
   // does not hold, cannot be matched; the preview says so and erasure waits.
   const sealed = [
-    ...app.unmatched,
+    ...app.unmatched, ...continuationRuns.unmatched,
     ...(pending ? [`${pending} run${pending === 1 ? ' is' : 's are'} still being sealed or re-indexed under its workflow's data class; preview again after the next maintenance minute.`] : []),
     ...(unavailable?.n ? [`${unavailable.n} encrypted run${unavailable.n === 1 ? ' is' : 's are'} sealed under a key this installation does not hold; import the owner's key file on the Data screen, or erase those runs one by one.`] : []),
   ]

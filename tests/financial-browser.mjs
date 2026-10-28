@@ -4,12 +4,12 @@ import {createServer} from 'node:http';
 import {readFile,mkdir} from 'node:fs/promises';
 import {resolve,extname,join} from 'node:path';
 import {chromium,expect} from '@playwright/test';
-import {quickbooksReconciliationJourney} from './effect-readback-journey.mjs';
+import {quickbooksInputJourney,quickbooksReconciliationJourney} from './effect-readback-journey.mjs';
 import {quickbooksSearchJourney} from './quickbooks-search-journey.mjs';
 import {gustoHandoffJourney} from './gusto-handoff-journey.mjs';
 const evidence=process.env.CRANK_EVIDENCE;
 assert.ok(evidence,'Set CRANK_EVIDENCE');await mkdir(evidence,{recursive:true});
-const browser=await chromium.launch({headless:true,...(process.env.CRANK_CHROMIUM?{executablePath:process.env.CRANK_CHROMIUM}:{}),args:['--no-sandbox','--use-mock-keychain','--password-store=basic']});
+const browser=await chromium.launch({headless:true,...(process.env.CRANK_CHROMIUM_PATH?{executablePath:process.env.CRANK_CHROMIUM_PATH}:{}),args:['--use-mock-keychain','--password-store=basic',...(process.env.CRANK_CHROMIUM_PATH?['--no-sandbox']:[])]});
 let server,context,page,active;
 const types={'.css':'text/css','.js':'text/javascript','.svg':'image/svg+xml','.woff2':'font/woff2','.png':'image/png'};
 async function attach(h,width) {
@@ -51,6 +51,21 @@ try {
   for(const width of [1440,390]){await page.setViewportSize({width,height:1000});await shot(width,state)}
  }});
  for(const width of [1440,390]) {
+  await quickbooksInputJourney({inspect:async({h,workflow,run,state})=>{
+   await attach(h,width);
+   await page.goto(h.origin+`/app/workflows/${workflow.id}?step=invoice`);
+   if(state==='nested-validation'){
+    await expect(page.locator('.last-result .result-error')).toContainText('input.payload.Line[1].SalesItemLineDetail.Qty');
+    await expect(page.locator('.last-result .result-error')).toContainText('nonnegative exact decimal');
+   }else await expect(page.locator('.last-result')).toContainText('Success');
+   await shot(width,`mapping-${state}`);
+   await page.goto(h.origin+`/app/workflow-runs/${run.id}`);
+   if(state==='nested-validation'){
+    await expect(page.locator('.detail-primary')).toContainText('input.payload.Line[1].SalesItemLineDetail.Qty');
+    await expect(page.locator('.detail-primary')).toContainText('nonnegative exact decimal');
+   }
+   await shot(width,`run-${state}`);
+  }});
   await quickbooksReconciliationJourney({inspect:async({h,run,decision,state})=>{
    await attach(h,width);
    await page.goto(h.origin+`/app/workflow-runs/${run.id}`+(state==='multiple'||state==='choose'?'?reconcile=invoice':''));

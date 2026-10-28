@@ -5,7 +5,7 @@ import { isObject } from '../engine/values'
 /** A declared grant amount covers the actual invoice total, never a parallel label. */
 export function invoiceAmountMatches(payload: unknown, expected: unknown) {
   const amount = parseDecimal(expected)
-  if (!isObject(payload) || !Array.isArray(payload.Line) || !amount || amount.units < 0n) return false
+  if (!isObject(payload) || !Array.isArray(payload.Line) || !payload.Line.length || !amount || amount.units < 0n) return false
   let total: Decimal = { units: 0n, scale: 0 }
   for (const line of payload.Line) {
     if (!isObject(line)) return false
@@ -28,5 +28,5 @@ export function invoiceAmountMatches(payload: unknown, expected: unknown) {
   return total.units >= 0n && compare(total,amount) === 0
 }
 export function requireInvoiceAmount(payload: unknown, expected: unknown) {
-  if (!invoiceAmountMatches(payload,expected)) throw new StepError('validation','Declared invoice USD amount must equal its exact line, discount and tax total before dispatch')
+  if (!invoiceAmountMatches(payload,expected)) throw new StepError('validation','Field "input.amount_usd": declared invoice USD amount must equal its exact line, discount and tax total before dispatch', { field: 'input.amount_usd', input_schema: true })
 }
