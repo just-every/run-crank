@@ -15,7 +15,7 @@ async function onScreen({h,w,run}) {
   const server=createServer(async(req,res)=>{
     try {
       const pathname=new URL(req.url,h.origin).pathname;
-      if(types[extname(pathname)])for(const root of ['public','dist/client']) {
+      if(types[extname(pathname)])for(const root of ['public','./dist/client']) {
         const directory=resolve(root),file=resolve(directory,'.'+decodeURIComponent(pathname));if(!file.startsWith(directory+'/'))continue;
         const bytes=await readFile(file).catch(()=>null);if(bytes){res.writeHead(200,{'content-type':types[extname(pathname)]});res.end(bytes);return}
       }
