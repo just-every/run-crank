@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { spawn, execFileSync } from 'node:child_process';
 import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
-import { createWriteStream, openSync, closeSync } from 'node:fs';
+import { createWriteStream } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { chromium, expect } from '@playwright/test';
@@ -58,13 +58,6 @@ async function shot(width, state) {
 }
 
 try {
-  if (process.env.CI === 'true') {
-    // A fresh runner needs explicit local owner setup before the installed sign-in journey.
-    const setupLog = openSync(join(privateDir,'setup.log'),'w',0o600);
-    try { execFileSync('rer', ['setup','--owner-email','synthetic-crank-browser'+'@'+'example.test','--non-interactive'], { env:process.env,timeout:600000,stdio:['ignore',setupLog,setupLog] }); }
-    catch { throw new Error('Native team browser fixture setup failed'); }
-    finally { closeSync(setupLog); }
-  }
   const dev = startDev();
   let open;
   const deadline = Date.now() + 10 * 60000;
