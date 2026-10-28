@@ -1,6 +1,7 @@
 // Real Linux PostgreSQL + actual Worker/native owner approval + gateway CLI.
 // Separate heavy-slot proof: CRANK_DOCKER=docker node tests/postgres-write-journey.mjs
 import assert from 'node:assert/strict';
+import {customSearchJourney} from './custom-search-journey.mjs';
 import { fork } from 'node:child_process';
 import { createServer } from 'node:http';
 import { mkdtemp, readFile, writeFile, rm } from 'node:fs/promises';
@@ -175,6 +176,7 @@ try {
   assert.equal(results.at(-1).error?.category, 'operation_refused', 'readback-only recovery with no receipt must not run a first write');
   await finished(absent, 'failed'); assert.equal(await count(), 3);
 
+  await customSearchJourney();
   const archive = await h.send('/api/crank/data/export', {}, h.owner); assert.equal(archive.status, 200); noCredentials(archive.text);
   noCredentials(JSON.stringify(await h.get('state')));
   for (const raw of traffic.slice(1)) noCredentials(raw);
