@@ -6047,7 +6047,7 @@
       "executable": false
     },
     "tests/quickbooks-search-journey.mjs": {
-      "sha256": "26a1d06f1af5443415619b654197a8d8f1c555dd4e53c4ed72315ba0834049e2",
+      "sha256": "bebe57c42e01ba04b3d10f4e056eea87d777122f29d1a83aba472450c4c817e2",
       "executable": false
     },
     "tests/recurring-browser.mjs": {
