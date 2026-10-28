@@ -175,7 +175,7 @@ export async function runPoll(env: CrankEnv, poll: PollRow, time: number) {
     }
     if (app?.snapshots.length) for (let i = 0; i < app.snapshots.length; i += 50) {
       await env.DB.batch([
-        stmt(env, `INSERT INTO crank_authority_guards(id,ok) SELECT ?,CASE WHEN EXISTS(SELECT 1 FROM crank_poll_log WHERE id=? AND status='running' AND lease_expires_at>?) AND EXISTS(SELECT 1 FROM crank_workflows WHERE id=? AND published_version_id=?) AND EXISTS(SELECT 1 FROM crank_connections WHERE id=? AND status='active') ${app.guard ? `AND (${app.guard.sql})` : ''} THEN 1 ELSE 0 END`, logId, logId, new Date().toISOString(), poll.workflow_id, poll.version_id, trigger.connection_id, ...(app.guard?.params ?? [])),
+        stmt(env, `INSERT INTO crank_authority_guards(id,ok) SELECT ?,CASE WHEN EXISTS(SELECT 1 FROM crank_poll_log WHERE id=? AND status='running' AND lease_expires_at>?) AND EXISTS(SELECT 1 FROM crank_workflows WHERE id=? AND published_version_id=?) ${trigger.provider === 'crank_table' ? '' : "AND EXISTS(SELECT 1 FROM crank_connections WHERE id=? AND status='active')"} ${app.guard ? `AND (${app.guard.sql})` : ''} THEN 1 ELSE 0 END`, logId, logId, new Date().toISOString(), poll.workflow_id, poll.version_id, ...(trigger.provider === 'crank_table' ? [] : [trigger.connection_id]), ...(app.guard?.params ?? [])),
         ...app.snapshots.slice(i, i + 50),
         stmt(env, 'DELETE FROM crank_authority_guards WHERE id=?', logId),
       ])

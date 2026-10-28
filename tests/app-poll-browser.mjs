@@ -9,6 +9,7 @@ import {sheetPollJourney} from './sheet-poll-journey.mjs';
 import {appHistoryJourney} from './app-history-journey.mjs';
 import {appSubjectJourney} from './app-subject-journey.mjs';
 import {appRetentionJourney} from './app-retention-journey.mjs';
+import {tablePollJourney} from './table-poll-journey.mjs';
 import {harness} from './harness.mjs';
 import {fakeEdge,jsonResponse} from './kit.mjs';
 const evidence=process.env.CRANK_EVIDENCE;
@@ -85,9 +86,14 @@ async function rateScreens(width) {
 }
 try {
  for(const width of [1440,390]) await rateScreens(width);
- for(const width of [1440,390]) for(const journey of [crmPollJourney,subscriptionPollJourney,comparisonPollJourney,sheetPollJourney,appHistoryJourney,appSubjectJourney,appRetentionJourney]) {
+ for(const width of [1440,390]) for(const journey of [crmPollJourney,subscriptionPollJourney,comparisonPollJourney,sheetPollJourney,appHistoryJourney,appSubjectJourney,appRetentionJourney,tablePollJourney]) {
   await journey({inspect:async({h,w,state,run})=>{
    await attach(h,width);await page.goto(h.origin+`/app/workflows/${w.id}?step=trigger`);
+   if(state==='table-payload') {
+    await page.goto(h.origin+'/app/workflow-runs/'+run.id);
+    for(const value of ['counter_98','previous','current','revision','change_time_source'])await expect(page.locator('main')).toContainText(value);
+    await shot(width,state);return;
+   }
    if(state==='snapshot-retention-preview') {
     await page.goto(h.origin+'/app/data');await page.getByLabel('Payload days',{exact:true}).fill('1');await page.getByRole('button',{name:'Preview what this removes',exact:true}).click();
     await expect(page.getByRole('heading',{name:'Retention dry run',exact:true,level:1})).toBeVisible();

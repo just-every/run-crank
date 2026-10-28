@@ -3,15 +3,17 @@ import { connectionScope, completeGrant, workflowScope } from '../team/policy'
 import { canonical, digest, requireValue, type Actor, type CrankEnv } from '../model'
 import { appFieldNames } from './app-source'
 import { getWorkflow, updateDraft } from '../workflows/store'
+import { isTableSource, tableFieldNames } from './table-source'
 
 /** Loading names reads the exact current draft account, without trigger admission. */
 export async function watchedFields(env: CrankEnv, actor: Actor, workflowId: string) {
   requirePrepare(actor); workflowScope(actor, workflowId)
   const workflow = await getWorkflow(env, workflowId), graph = JSON.parse(workflow.draft_json)
   requireValue(graph.trigger.type === 'app_poll', 'Choose a native app polling trigger')
-  connectionScope(actor, graph.trigger.connection_id)
-  requireValue(!actor.team || completeGrant(actor, 'prepare', workflowId, [graph.trigger.connection_id]), 'One complete grant must cover the workflow and its account', 403)
-  const fields = await appFieldNames(env, graph.trigger)
+  const native = isTableSource(graph.trigger)
+  if (!native) connectionScope(actor, graph.trigger.connection_id)
+  requireValue(!actor.team || !native && completeGrant(actor, 'prepare', workflowId, [graph.trigger.connection_id]), 'One complete grant must cover the workflow and its account', 403)
+  const fields = native ? await tableFieldNames(env, graph.trigger, { workflowId }) : await appFieldNames(env, graph.trigger)
   requireValue((await getWorkflow(env, workflowId)).draft_json === workflow.draft_json, 'The draft changed; load current field names again', 409)
   return { fields, draft_digest: await digest(canonical(graph)), schema_digest: await digest(canonical(fields)) }
 }

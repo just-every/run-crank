@@ -104,8 +104,9 @@ export function validateTrigger(trigger: Record<string, unknown>) {
       return
     }
     case 'app_poll': {
-      if (typeof trigger.connection_id !== 'string') fail('choose an app connection')
-      if (!['hubspot', 'microsoft_graph', 'google_sheets', 'microsoft_excel', 'airtable', 'sharepoint', 'http_json', ...COMMERCE_PROVIDERS].includes(String(trigger.provider))) fail('choose a supported app provider')
+      const nativeTable = trigger.provider === 'crank_table'
+      if (nativeTable ? trigger.connection_id !== undefined || trigger.resource !== 'records' || typeof trigger.table_id !== 'string' || !trigger.table_id.trim() || trigger.table_id.length > 200 : typeof trigger.connection_id !== 'string') fail('choose an app connection, or a native operational table without a connection')
+      if (!['hubspot', 'microsoft_graph', 'google_sheets', 'microsoft_excel', 'airtable', 'sharepoint', 'http_json', 'crank_table', ...COMMERCE_PROVIDERS].includes(String(trigger.provider))) fail('choose a supported app provider')
       if ((COMMERCE_PROVIDERS as readonly string[]).includes(String(trigger.provider))) validateCommerceTrigger(trigger)
       if (trigger.provider === 'hubspot' && !['contacts', 'companies', 'deals'].includes(String(trigger.resource))) fail('choose contacts, companies or deals')
       if (trigger.provider === 'microsoft_graph' && trigger.resource !== 'messages') fail('choose messages')
@@ -134,6 +135,7 @@ export function validateTrigger(trigger: Record<string, unknown>) {
       }
       const spreadsheet = ['google_sheets', 'microsoft_excel'].includes(String(trigger.provider))
       const fieldName = (f: unknown) => typeof f === 'string' && f.trim().length > 0 && f.length <= 200 && (spreadsheet || ['airtable', 'sharepoint', 'http_json'].includes(String(trigger.provider)) || /^[A-Za-z][A-Za-z0-9_]*$/.test(f))
+      if (nativeTable && Array.isArray(trigger.watched_fields) && trigger.watched_fields.some(field => !['key', 'value', 'revision'].includes(String(field)))) fail('Operational tables expose key, value and revision')
       if (!['new', 'updated'].includes(String(trigger.event))) fail('event must be new or updated')
       if (!['from_now', 'existing'].includes(String(trigger.backfill))) fail('choose initial backfill explicitly')
       if (trigger.event === 'updated' && trigger.any_field !== true && (!Array.isArray(trigger.watched_fields) || !trigger.watched_fields.length)) fail('updated records need watched_fields or explicit any_field')

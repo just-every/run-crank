@@ -18,7 +18,7 @@ export interface CustomPollBinding {
 }
 
 function invalid(message: string): never { throw new StepError('validation', message) }
-function denied(message: string): never { throw new StepError('auth', message, { custom_scope: true }) }
+function denied(message: string): never { throw new StepError('authority', message, { custom_scope: true }) }
 
 /** No mappings, source evaluation, inferred inputs or workflow-owned pagination. */
 function operationUrl(op: CustomOperation, raw: unknown): string {
@@ -47,6 +47,7 @@ function operationUrl(op: CustomOperation, raw: unknown): string {
   const url = checkEgress(path)
   if (url.protocol !== 'https:' || url.search || url.hash) invalid('Custom poll operation URLs cannot contain a query or fragment')
   url.search = query.toString()
+  url.searchParams.sort()
   return url.href
 }
 
@@ -77,7 +78,9 @@ export async function customPollBinding(env: CrankEnv, trigger: Record<string, u
   if (!op || !op.scopes.every(scope => scopes.includes(scope))) denied('The custom polling operation or its scope was refused or revoked')
   if (op.kind !== 'trigger' || op.method !== 'GET' || op.gateway) invalid('Custom polling supports only public GET trigger operations')
   const url = operationUrl(op, trigger.custom_inputs)
-  if (typeof trigger.url !== 'string' || trigger.url !== url) invalid('Custom poll URL must exactly match its reviewed operation and typed literal inputs')
+  if (typeof trigger.url !== 'string') invalid('Custom poll URL must exactly match its reviewed operation and typed literal inputs')
+  const configuredUrl = checkEgress(trigger.url); configuredUrl.searchParams.sort()
+  if (configuredUrl.href !== url) invalid('Custom poll URL must exactly match its reviewed operation and typed literal inputs')
   paginationMatches(trigger, op)
   if (typeof trigger.connection_id !== 'string') invalid('Choose a stored HTTP connection for the custom poll')
   const connection = await getConnection(env, trigger.connection_id)

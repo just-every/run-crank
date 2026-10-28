@@ -613,3 +613,5 @@ test('Snapshot retention expires only old inactive payloads and preserves compar
 test('Pipedrive, Shopify and Zendesk snapshots admit only watched changes from complete authorized pages', async()=>{const {commercePollJourney}=await import('./commerce-poll-journey.mjs');await commercePollJourney()});
 
 test('Pinned custom polling retains reviewed request boundaries and current consent across pages and admissions', async()=>{const {customPollJourney}=await import('./custom-poll-journey.mjs');await customPollJourney()});
+
+test('Operational table changes preserve native custody and revision identities without synthetic credentials', async()=>{const {tablePollJourney}=await import('./table-poll-journey.mjs');await tablePollJourney()});
