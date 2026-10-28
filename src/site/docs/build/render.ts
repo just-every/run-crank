@@ -1,5 +1,5 @@
 import { Marked } from 'marked'
-import { startLine } from '../../../base/run-site'
+import { pipelines, startLine } from '../../../base/run-site'
 import { run } from '../../run'
 import type { DocsTocEntry } from '../types'
 import { rewriteLink, type Anchor, type LinkContext } from './links'
@@ -25,7 +25,8 @@ export function renderMarkdown(markdown: string, context: Omit<LinkContext, 'anc
       if (recipe === 'rer-start') text = startLine(run)
       else if (recipe === 'rer-alternative') text = run.clone
       const label = /^(sh|bash|shell|zsh)$/.test(language) ? 'Shell' : language.toUpperCase() || 'Code'
-      return `<div class="docs-code"><div class="docs-code-label">${escapeHtml(label)}<button class="docs-copy" type="button" hidden>Copy</button></div><pre tabindex="0" aria-label="${escapeHtml(label)} code"><code>${escapeHtml(text)}</code></pre></div>\n`
+      const localRecipe = recipe === 'rer-start' || recipe === 'rer-alternative'
+      return `<div class="docs-code${localRecipe ? ' docs-recipe' : ''}"><div class="docs-code-label">${escapeHtml(label)}<button class="docs-copy" type="button" hidden>Copy</button></div><pre tabindex="0" aria-label="${escapeHtml(label)} code"><code>${localRecipe ? pipelines(text) : escapeHtml(text)}</code></pre></div>\n`
     },
     html({ text }) { return escapeHtml(text) },
     link({ href, title: label, tokens }) {

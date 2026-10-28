@@ -115,19 +115,19 @@
       "executable": false
     },
     ".github/workflows/retry-backoff.yml": {
-      "sha256": "cd0a423940a73de65e521666343640ba5b84c0a8f7d69b399dfc5004e0cd7209",
+      "sha256": "f12d215dbb3da1120ba7cff34aec96178c0dd6a684dd2c280db583252442f5d8",
       "executable": false
     },
     ".github/workflows/run-demo.yml": {
-      "sha256": "41365ec7c002e9451166313b085f9e64ed2e3ea002c27f3d5ead845bc9c302b2",
+      "sha256": "cd478e5acaa5b7ecac7c8d93069a928886b59bc48e72c495700e42aa3c1b5232",
       "executable": false
     },
     ".github/workflows/run-site.yml": {
-      "sha256": "dbb451a6f670e2829e79bb8f38079bb2f9901a23b8324c948e60313fe1ea839b",
+      "sha256": "dcd60a82b19b641deec3c259e28f15d8f70b9400373d3221f9caa2934f100dd8",
       "executable": false
     },
     ".github/workflows/verify.yml": {
-      "sha256": "661ec31f138086a1a8af9fa473c3a44497f948c08724023ea61753e96c8c807c",
+      "sha256": "077330def4e27398a9c2c7b8cce72a87171bde955d03ab5e399dd9d52d9d51ad",
       "executable": false
     },
     ".gitignore": {
@@ -147,7 +147,7 @@
       "executable": false
     },
     "base-copies.json": {
-      "sha256": "e4d7e14c4f4f93f81e32d740260723210bb9066da6d49394fb575d3e395c7de0",
+      "sha256": "26dc45a0bdaa6bdfd5901b4268274c01afa5724256b37f6820d2ff43fac2b243",
       "executable": false
     },
     "CHANGELOG.md": {
@@ -2707,7 +2707,7 @@
       "executable": false
     },
     "scripts/verify-ci.mjs": {
-      "sha256": "1da44dfa8e543e14eda47ffac50e21db445189d0e91b226e08b27a6390482b20",
+      "sha256": "b141048c47dc1a7017634253fe36006210ac1ba7d826ba7a00d0d45125b7d7e8",
       "executable": false
     },
     "scripts/verify-plan.mjs": {
@@ -6015,7 +6015,7 @@
       "executable": false
     },
     "src/site/docs/build/render.ts": {
-      "sha256": "dee59712a615991fed89aa6de6fdfada9f9c3e77bafc67bf314aa120d3ed91bd",
+      "sha256": "deb0bf2d079d912ffd65257b2def129b6abda5b2efa3bfd01ee167af7a96ae07",
       "executable": false
     },
     "src/site/docs/build/site.ts": {
@@ -6127,7 +6127,7 @@
       "executable": false
     },
     "src/site/styles/docs.css": {
-      "sha256": "e125a7a71fca98b4129273bf3a5e2a34da8f26bfd4690bc37eb362a097bd380c",
+      "sha256": "cf4ab714c1e4764c28e582c2a5b49049acab6f9c36e3a642511f4ae56138daf7",
       "executable": false
     },
     "src/site/styles/landing.css": {
@@ -6823,7 +6823,7 @@
       "executable": false
     },
     "VERIFY-WORKFLOW.md": {
-      "sha256": "61922356069e5b8bef16446bc690e8c578ec7f39326372a9ee159ed1cb706b92",
+      "sha256": "cfad93915174052655736fa220764686b0baab194ea0610fda7ebdac4d0e4706",
       "executable": false
     },
     "vite.config.ts": {
