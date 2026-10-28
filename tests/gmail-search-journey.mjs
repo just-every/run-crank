@@ -173,6 +173,73 @@ export async function gmailCustodyJourney(){
  }finally{await erased?.close();await waitingReceiving?.close();await receiving?.close();await h.close()}
 }
 
+/** Older sealed searches can retain a subject only in a raw metadata response,
+ * without a declared-field digest or a completed search output. */
+export async function gmailLegacyCheckpointJourney(){
+ const f=await gmailFixture(),{h,c,fake}=f;
+ try{
+  const w=await publish(h,'Older sealed mailbox search',graph(gmailStep(c.id)));
+  await h.post('data'+'/'+'classes',{workflow_id:w.id,data_class:'customer',identifier_fields:['from']});
+  f.setMode('park');const parked=await startRun(h,w,{query});assert.equal(parked.status,'waiting');
+  await h.tick(Date.parse(clock));
+  const saved=inventory(await archive(h)).map(JSON.parse);
+  assert.ok(saved.find(item=>item.table==='crank_wf_runs'&&item.row.id===parked.id).row.payload_key);
+  assert.ok(saved.some(item=>item.table==='crank_request_checkpoint_chunks'&&item.row.run_id===parked.id&&item.row.content_base64.startsWith('{"sealed":"crank-payload-v1"')));
+  // Upgrade fixture: the older checkpoint writer retained sealed bytes without
+  // adding checkpoint identifiers to the run's blind index. No customer data changes.
+  await h.db.prepare('DELETE FROM crank_blind_index WHERE run_id=?').bind(parked.id).run();
+  const held=await h.post('data'+'/'+'subject',{subject:'synthetic-crank-person'});
+  assert.ok(held.workflow_runs.some(item=>item.id===parked.id),'subject preview includes an unfinished sealed checkpoint without a field digest');
+  assert.equal(held.blocked,true);
+  await h.post('data'+'/'+'erase',{subject:'synthetic-crank-person',digest:held.digest,confirm:'ERASE'},h.owner,409);
+  const checkpoints=rows=>rows.filter(item=>item.table.startsWith('crank_request_checkpoint')&&item.row.run_id===parked.id);
+  assert.deepEqual(checkpoints(inventory(await archive(h)).map(JSON.parse)),checkpoints(saved),'refused erasure leaves retained data unchanged');
+  await h.post(`workflow-runs/${parked.id}/cancel`);
+  assert.deepEqual(checkpoints(inventory(await archive(h)).map(JSON.parse)),[],'cancellation removes the unfinished checkpoint copy');
+  f.setMode('normal');const completed=await startRun(h,w,{query:'one'});assert.equal(completed.status,'succeeded');
+  await h.post(`workflows/${w.id}/pause`);
+  const preview=await h.post('data'+'/'+'subject',{subject:'synthetic-crank-person'});
+  assert.deepEqual(preview.workflow_runs.map(item=>item.id),[completed.id]);
+  const count=fake.requests.length;
+  const erased=await h.post('data'+'/'+'erase',{subject:'synthetic-crank-person',digest:preview.digest,confirm:'ERASE'});assert.equal(erased.workflow_runs,1);
+  await h.get('workflow-runs/'+completed.id,h.owner,404);
+  assert.equal((await h.get('workflow-runs/'+parked.id)).status,'cancelled');
+  const remaining=inventory(await archive(h)).map(JSON.parse);assert.ok(!remaining.some(item=>item.table.startsWith('crank_request_checkpoint')&&[parked.id,completed.id].includes(item.row.run_id)),'subject erasure removes every retained checkpoint copy');
+  await h.restart({clock:later});await h.tick(Date.parse(later));assert.equal(fake.requests.length,count,'erased unfinished metadata cannot restart');
+ }finally{await h.close()}
+}
+
+/** Rotation may happen while a human question is pending, before the first
+ * provider read. Every sealed value names its own key in the inactive archive. */
+export async function gmailRotatedCollectJourney(){
+ const f=await gmailFixture(),{h,c,fake}=f;let receiving;
+ try{
+  const w=await publish(h,'Mailbox search after a human answer',{trigger:{type:'manual'},steps:[
+   {id:'ask',type:'collect',fields:{confirmed:{type:'checkbox',required:true}},timeout:{amount:30,unit:'business_days'},instructions:'Confirm mailbox review'},
+   gmailStep(c.id),
+  ]});
+  await h.post('data'+'/'+'classes',{workflow_id:w.id,data_class:'customer',identifier_fields:['from']});
+  const waiting=await startRun(h,w,{query});assert.equal(waiting.status,'awaiting_approval');
+  await h.tick(Date.parse(clock));
+  const rotated=await h.post('data'+'/'+'keys'+'/'+'rotate',{data_class:'customer',confirm:'ROTATE'});
+  f.setMode('park');await h.post(`workflow-runs/${waiting.id}/approve`,{path:'ask',digest:waiting.waits[0].proposal_digest,edits:{confirmed:true}});
+  const parked=await h.get('workflow-runs/'+waiting.id);assert.equal(parked.status,'waiting',JSON.stringify(parked.error));
+  const saved=await archive(h),original=inventory(saved),rows=original.map(JSON.parse);
+  const run=rows.find(item=>item.table==='crank_wf_runs'&&item.row.id===waiting.id).row;
+  assert.ok(rotated.replaces);assert.equal(run.payload_key,rotated.replaces);
+  const chunks=rows.filter(item=>item.table==='crank_request_checkpoint_chunks'&&item.row.run_id===run.id);
+  assert.equal(chunks.length,3);assert.ok(chunks.every(item=>JSON.parse(item.row.content_base64).k===rotated.key_id));
+  receiving=await harness('http://127.0.0.1:9',{edge:fake.edge,clock});
+  await receiving.post('data'+'/'+'restore',{archive:saved,confirm:'RESTORE'});
+  const returned=inventory(await archive(receiving)),source=new Set(original),extra=returned.filter(item=>!source.has(item));
+  assert.equal(extra.length,1);assert.equal(JSON.parse(extra[0]).row.action,'data.restore');assert.deepEqual(returned.filter(item=>item!==extra[0]),original,'rotation between collect and search preserves every inactive portable record');
+  assert.ok((await receiving.get('workflows')).every(item=>item.status!=='published'));assert.ok((await receiving.get('connections')).every(item=>item.status!=='active'));
+  const unavailable=await receiving.post('data'+'/'+'subject',{subject:'synthetic-crank-person'});assert.equal(unavailable.blocked,true);assert.ok(unavailable.sealed_unmatched.length);
+  await receiving.post('data'+'/'+'erase',{subject:'synthetic-crank-person',digest:unavailable.digest,confirm:'ERASE'},receiving.owner,409);
+  const count=fake.requests.length;await receiving.restart({clock:later});await receiving.tick(Date.parse(later));assert.equal(fake.requests.length,count,'mixed-key restoration grants no mailbox authority');
+ }finally{await receiving?.close();await h.close()}
+}
+
 export async function gmailOwnership(h,fake){
  fake.routes.set('gmail.googleapis.com',({url})=>jsonResponse(url.pathname.endsWith('/threads')?{threads:[{id:'thread-a'}]}:{id:'thread-a',messages:[message('thread-a')]}));
  const c=await connection(h,{app:'google',auth_kind:'oauth2',label:'Owned mailbox',scopes:[gmailScope],secret:{access_token:'synthetic-crank-604'}}),w=await publish(h,'Owned Gmail metadata',graph(gmailStep(c.id))),run=await startRun(h,w,{query:'one'});

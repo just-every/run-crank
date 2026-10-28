@@ -2539,7 +2539,7 @@
       "executable": false
     },
     "src/crank/connectors/request-checkpoints.ts": {
-      "sha256": "d7fe962f6a840ff3a79ad1d9c6cf54e84bb3720d29c9d1545f9597af82431876",
+      "sha256": "b6c2e4fde0179fec44dde0ed803058decd0e1a159a0b346078bcded2002bea37",
       "executable": false
     },
     "src/crank/connectors/request-transport.ts": {
@@ -3147,7 +3147,7 @@
       "executable": false
     },
     "src/crank/restore-policy.mjs": {
-      "sha256": "a684fb8b9f610293c028f49a1077eb7127fd96546fcf80342365178a1adf20dc",
+      "sha256": "096334917975e32781785ac739c6c77177c81d17bf870e0aa9ba5e19bdf33d89",
       "executable": false
     },
     "src/crank/runs.ts": {
@@ -3155,7 +3155,7 @@
       "executable": false
     },
     "src/crank/subject-erasure.ts": {
-      "sha256": "3226a3511386d075221e050f7dfbdb2de59719731fcded923f9cbcaf265a7c4f",
+      "sha256": "9c2ef171689a771d72b666a59e97aa7fb56cf8087835c1d6e7d78d0d79679a44",
       "executable": false
     },
     "src/crank/tables/api.ts": {
@@ -5623,7 +5623,7 @@
       "executable": false
     },
     "tests/connections.test.mjs": {
-      "sha256": "ee02befe67ee830dd61ad9a9daab28354ccc136937ff440c505d240ccd1a0da2",
+      "sha256": "69c6df8b86f48cd3a0276edb561f4d726236f6f136c28e6eef1624f8f91a6fb6",
       "executable": false
     },
     "tests/crank.test.mjs": {
@@ -5807,7 +5807,7 @@
       "executable": false
     },
     "tests/gmail-search-journey.mjs": {
-      "sha256": "68b6cd5767b3dab7d4d4074acc85cae6be5c76ca14a001a29430e9ef88de56dc",
+      "sha256": "29e872b5a07fade2093029b9e931b0f3c8a186a2bcf85c4531093a4909cabe07",
       "executable": false
     },
     "tests/google-calendar-journey.mjs": {

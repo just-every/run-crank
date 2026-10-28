@@ -203,7 +203,9 @@ export async function validateRestore({ read }) {
         let bytes;
         if (chunk.content_base64.startsWith('{"sealed":"crank-payload-v1"')) {
           const envelope = JSON.parse(chunk.content_base64);
-          if (!run.payload_key || envelope.k !== run.payload_key || !['customer','financial','health'].includes(envelope.c) || atob(envelope.iv).length !== 12 || atob(envelope.ct).length !== 4 * Math.ceil(expected / 3) + 18) return false;
+          // Rotation can precede a continuation read while the run still names
+          // its earlier key. Each sealed value retains its own key identity.
+          if (typeof envelope.k !== 'string' || !envelope.k || !['customer','financial','health'].includes(envelope.c) || atob(envelope.iv).length !== 12 || atob(envelope.ct).length !== 4 * Math.ceil(expected / 3) + 18) return false;
           bytes = expected;
         } else bytes = atob(chunk.content_base64).length;
         if (bytes !== Math.min(65536, response.body_bytes - length)) return false;

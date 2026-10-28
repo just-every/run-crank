@@ -1,7 +1,7 @@
 import { StepError } from '../engine/errors'
 import type { BoundedResponse } from '../engine/egress'
 import type { RequestContext } from './retry'
-import { stmt, type CrankEnv } from '../model'
+import { CrankError, stmt, type CrankEnv } from '../model'
 import { fileBase64, indexStatement, sealFileBase64, targetFor } from '../ops/payload-seal'
 
 const credentialHeader = /authorization|cookie|api[-_]?key|token|secret|password|signature/i
@@ -68,19 +68,25 @@ export async function saveRequestCheckpoint(ctx: RequestContext, ordinal: number
   return result
 }
 
-/** DATA-002 also finds a subject whose only retained occurrence is in an
- * unfinished page. Scan in small batches; cancellation drops these responses. */
+/** DATA-002 also finds a subject whose only retained occurrence is in a
+ * checkpoint written before blind indexing. Sealing does not imply that a
+ * legacy response was indexed. Unreadable copies block subject erasure. */
 export async function checkpointSubjects(env: CrankEnv, subject: string) {
   const runs = new Set<string>()
-  let after = 0
+  let after = 0, unavailable = 0
   for (;;) {
-    const page = await stmt(env, 'SELECT c.rowid AS cursor,c.run_id,c.path,c.operation_key,c.ordinal,c.response_json FROM crank_request_checkpoints c JOIN crank_wf_runs r ON r.id=c.run_id WHERE c.rowid>? AND r.payload_key IS NULL ORDER BY c.rowid LIMIT 25', after)
+    const page = await stmt(env, 'SELECT c.rowid AS cursor,c.run_id,c.path,c.operation_key,c.ordinal,c.response_json FROM crank_request_checkpoints c JOIN crank_wf_runs r ON r.id=c.run_id WHERE c.rowid>? ORDER BY c.rowid LIMIT 25', after)
       .all<{ cursor: number; run_id: string; path: string; operation_key: string; ordinal: number; response_json: string }>()
-    if (!page.results.length) return [...runs]
+    if (!page.results.length) return { runs: [...runs], unavailable }
     for (const row of page.results) {
       const response = JSON.parse(row.response_json)
-      const text = new TextDecoder().decode(await responseBytes(env, row, response.body_bytes)).toLowerCase()
-      if (text.includes(subject) || text.includes(JSON.stringify(subject).slice(1, -1)) || JSON.stringify(response.headers).toLowerCase().includes(subject)) runs.add(row.run_id)
+      try {
+        const text = new TextDecoder().decode(await responseBytes(env, row, response.body_bytes)).toLowerCase()
+        if (text.includes(subject) || text.includes(JSON.stringify(subject).slice(1, -1)) || JSON.stringify(response.headers).toLowerCase().includes(subject)) runs.add(row.run_id)
+      } catch (error) {
+        if (!(error instanceof CrankError) || error.status !== 409) throw error
+        unavailable++
+      }
       after = row.cursor
     }
   }
