@@ -68,7 +68,8 @@ export async function eraseWorkflowRun(env: CrankEnv, actor: Actor | null, porta
     beforeStatements: async () => [
       system ? stmt(env, `INSERT INTO crank_authority_guards(id,ok) SELECT 'erase-workflow:'||?1,CASE WHEN EXISTS(${system.eligible}) THEN 1 ELSE 0 END`, ...system.params)
         : stmt(env, `INSERT INTO crank_authority_guards(id,ok) SELECT 'erase-workflow:'||?,CASE WHEN EXISTS(${eligible}) THEN 1 ELSE 0 END`, runId, runId),
-      stmt(env, `INSERT OR IGNORE INTO crank_app_erased_records(workflow_id,record_id) SELECT workflow_id,business_key FROM crank_wf_runs WHERE id=? AND trigger_kind='app_poll' AND business_key IS NOT NULL`, runId),
+      // Explicit erasure blocks this record permanently; history expiry permits future changes.
+      ...(!system ? [stmt(env, `INSERT OR IGNORE INTO crank_app_erased_records(workflow_id,record_id) SELECT workflow_id,business_key FROM crank_wf_runs WHERE id=? AND trigger_kind='app_poll' AND business_key IS NOT NULL`, runId)] : []),
       // Fence snapshots before the cascade removes their entries and receipts.
       stmt(env,`UPDATE crank_digests SET revision=revision+1,mutation_id=NULL WHERE id IN (
         SELECT digest_id FROM crank_digest_entries WHERE source_run_id=?1

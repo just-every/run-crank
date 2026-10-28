@@ -103,6 +103,7 @@ try {
  literalObjectSource.nodes[1].parameters.conditions.conditions[0].leftValue='{"message":"{{"}';
  const streamObjectSources=['left','right'].map(operand=>looseObjectFilterStreamExport(declared,operand));
  const dateSources=[arithmeticExport(declared,'synthetic-crank-date-browser-month'),arithmeticExport(declared,'synthetic-crank-date-browser-day',{operation:'subtractFromDate',duration:1,timeUnit:'days',options:{includeInputFields:false}})];
+ const londonSource=arithmeticExport(declared,'synthetic-crank-date-browser-overlap',{duration:30,options:{includeInputFields:false}});londonSource.settings.timezone='Europe'+'/'+'London';dateSources.push(londonSource);
  const driftSources=[conversionExport('registry','synthetic-crank-84'),conversionExport('code','synthetic-crank-85')],driftBundle=driftSources.map((workflow,index)=>({workflow,conversions:{n1:index?codeChoice:registryChoice}}));
  const shots=async state=>{for(const width of [1440,390]){await page.setViewportSize({width,height:1000});await shot(width,state)}};
  // Stage the protected-undo fixtures together while every imported target is an
@@ -184,21 +185,21 @@ try {
   await page.setViewportSize({width:1440,height:1000});await page.goto(origin+'/app/workflows/'+dateWorkflow.id+'?step='+dateStep.id);await shots('datetime-'+index+'-inactive');
   await send('workflows/'+dateWorkflow.id+'/estimate',{cost:{components:['orchestration','connectors','models','executors'].map(kind=>({kind,usd_per_run:'0',assumption:'Synthetic date receiver browser proof'}))}});
   await send('workflows/'+dateWorkflow.id+'/publish',{},201);const hook=await send('workflows/'+dateWorkflow.id+'/hooks',{},201);
-  const date=index?'2026-11-02T01:30:00-06:00':'2024-01-31T18:05:06.123Z',expectedDate=index?'2026-11-01T01:30:00.000-06:00':'2024-02-29T12:05:06.123-06:00';
+  const date=['2024-01-31T18:05:06.123Z','2026-11-02T01:30:00-06:00','1939-02-10T02:30:00Z'][index],expectedDate=['2024-02-29T12:05:06.123-06:00','2026-11-01T01:30:00.000-06:00','1941-08-10T02:30:00.000+01:00'][index];
   const expected=index?{due:expectedDate}:{date,label:'synthetic-crank-803',due:expectedDate,nested:{values:[1,null,'synthetic-crank-806']}};
   const before=effects.length,response=await context.request.post(hook.url,{data:{date}});assert.equal(response.status(),200);const admission=await response.json();let result;
   for(let tries=0;tries<100;tries++){result=await send('workflow-runs/'+admission.run_id);if(!['queued','running'].includes(result.status))break;await page.waitForTimeout(50)}
   assert.equal(result.status,'succeeded',JSON.stringify(result.error));assert.equal(effects.length,before+1);assert.equal(effects.at(-1).path,'/date-arithmetic');assert.deepEqual(effects.at(-1).input,expected);
   await page.setViewportSize({width:1440,height:1000});await page.goto(origin+'/app/workflows/'+dateWorkflow.id+'?step='+dateStep.id+'&tab=data');
   const input=JSON.parse(await page.locator('.inspector-block').filter({has:page.getByRole('heading',{name:'Input',exact:true})}).locator('pre').innerText()),output=JSON.parse(await page.locator('.inspector-block').filter({has:page.getByRole('heading',{name:'Output',exact:true})}).locator('pre').innerText());
-  assert.equal(input.value,date);assert.equal(input.amount,index?-1:1);assert.equal(input.unit,index?'days':'months');assert.equal(input.timezone,'America'+'/'+'Chicago');assert.equal(input.include_input_fields,!index);assert.deepEqual(output,expected);await shots('datetime-'+index+'-operands-output');
+  assert.equal(input.value,date);assert.equal(input.amount,[1,-1,30][index]);assert.equal(input.unit,index===1?'days':'months');assert.equal(input.timezone,dateSource.settings.timezone);assert.equal(input.include_input_fields,!index);assert.deepEqual(output,expected);await shots('datetime-'+index+'-operands-output');
   await page.setViewportSize({width:1440,height:1000});await page.goto(origin+'/app/workflow-runs/'+result.id);await page.locator('.timeline details.inline-disclosure').evaluateAll(elements=>elements.forEach(element=>element.open=true));assert.ok((await page.locator('.timeline').innerText()).includes(expectedDate));await shots('datetime-'+index+'-destination-result');
   if(index===0){const count=effects.length,bad=await context.request.post(hook.url,{data:{date:'2026-02-30T12:00:00Z'}}),admitted=await bad.json();let failed;
    for(let tries=0;tries<100;tries++){failed=await send('workflow-runs/'+admitted.run_id);if(!['queued','running'].includes(failed.status))break;await page.waitForTimeout(50)}
    assert.equal(failed.status,'failed');assert.equal(failed.error.category,'validation');assert.equal(effects.length,count);await page.setViewportSize({width:1440,height:1000});await page.goto(origin+'/app/workflow-runs/'+failed.id);await shots('datetime-invalid-no-write');
   }
  }
- console.log('WORK-012: reviewed date arithmetic, month-end and Chicago repeated-hour results, retained fields and invalid-date refusal inspected at 1440 and 390');
+ console.log('WORK-012: reviewed date arithmetic, month-end, Chicago and London repeated-hour results, retained fields and invalid-date refusal inspected at 1440 and 390');
 
  await context.close();
 }catch(error){if(page){await page.screenshot({path:join(evidence,'journey-error.png'),fullPage:true});console.error((await page.locator('body').innerText()).slice(0,800))}console.error(String(error.message).replace(/https?:\/\/\S+/g,'[redacted URL]'));process.exitCode=1}

@@ -6,6 +6,7 @@ import { StepError } from '../engine/errors'
 import { canonical, digest, stmt, type CrankEnv } from '../model'
 import { openText, sealText, targetFor } from '../ops/payload-seal'
 import { notify } from '../ops/notices'
+import { workspaceSettings } from '../ops/settings'
 import type { TriggerEvent } from './admission'
 import type { PollRow } from './poll'
 
@@ -19,19 +20,20 @@ async function request(env: CrankEnv, connection: string, url: URL, method = 'GE
 }
 
 /** Literal maps retain exact equality; typed groups share WORK-013 evaluation. */
-function matches(condition: unknown, fields: Record<string, unknown> | null, direction: string, time: number) {
+function matches(condition: unknown, fields: Record<string, unknown> | null, direction: string, zone: string, time: number) {
   if (condition === undefined) return true
   if (fields === null) return false
   if (!Array.isArray(condition)) return Object.entries(condition as Record<string, unknown>).every(([field, value]) => canonical(fields[field]) === canonical(value))
   const groups = (condition as Groups).map(group => group.map(rule => ({ ...rule, field: 'trigger.' + rule.field })))
-  const result = evaluate(groups, { trigger: fields, steps: {}, run: {} }, 'UTC', time)
-  if (result.mismatch) throw new StepError('validation', `${direction}: type mismatch for ${result.mismatch.field}: ${result.mismatch.message}`)
+  const result = evaluate(groups, { trigger: fields, steps: {}, run: {} }, zone, time)
+  if (result.mismatch) throw new StepError('validation', `${direction}: type mismatch for ${result.mismatch.field} (values omitted)`)
   return result.pass
 }
 
 /** Read every bounded page before changing snapshots or admitting work. */
 export async function appItems(env: CrankEnv, poll: PollRow, trigger: Record<string, any>, started: string) {
   const { row } = await credential(env, trigger.connection_id)
+  const { timezone } = await workspaceSettings(env)
   if (row.app !== trigger.provider) throw new StepError('auth', 'Choose a connection for this app provider')
   const hubspot = trigger.provider === 'hubspot', origin = hubspot ? 'https://api.hubapi.com' : 'https://graph.microsoft.com'
   let url = new URL(hubspot ? `/crm/v3/objects/${trigger.resource}` : '/v1.0/me/messages', origin)
@@ -91,7 +93,7 @@ export async function appItems(env: CrankEnv, poll: PollRow, trigger: Record<str
       snapshots.push(stmt(env, 'INSERT OR IGNORE INTO crank_app_field_values(workflow_id,record_id,field,value_digest,first_seen_at) VALUES(?,?,?,?,?)', poll.workflow_id, recordKey, field, hash, started))
     }
     const novel = (await Promise.all(changed.map(async field => !seen.has(canonical([field, await valueKey(fields, field)]))))).some(Boolean)
-    const to = matches(trigger.changed_to, fields, 'changed_to', Date.parse(started)), from = matches(trigger.changed_from, previous, 'changed_from', Date.parse(started))
+    const to = matches(trigger.changed_to, fields, 'changed_to', timezone, Date.parse(started)), from = matches(trigger.changed_from, previous, 'changed_from', timezone, Date.parse(started))
     const matched = to && from
     const shouldRun = trigger.event === 'new' ? !prior : changed.length > 0 && matched && (trigger.identity !== 'first_value' || novel)
     if (shouldRun && !reseeding) {

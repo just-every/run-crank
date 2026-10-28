@@ -76,14 +76,15 @@ export async function subscriptionPollJourney({inspect=async()=>{}}={}) {
 /** Typed transitions and individual field-value identity through HTTP and Cron. */
 export async function comparisonPollJourney({inspect=async()=>{}}={}) {
  const edge=fakeEdge(),h=await harness('http://127.0.0.1:9',{edge:edge.edge,clock:'2026-10-27T21:00:00.000Z'});
- let revision=0,properties={Status:'Pending',amount:10,ready:true,due:'2026-10-28T12:00:00Z',tags:['invoice'],notes:'initial'},effects=[];
+ let revision=0,properties={Status:'Pending',amount:10,ready:true,due:'2026-10-28T00:00:00Z',tags:['invoice'],notes:'initial'},effects=[];
  const at=()=>new Date(Date.parse('2026-10-26T12:00:00Z')+revision*minute).toISOString();
  edge.routes.set('api.hubapi.com',()=>jsonResponse({results:[{id:'synthetic-crank-record',updatedAt:at(),properties}]}));
  edge.routes.set('receiver.example',({body})=>{effects.push(JSON.parse(body));return jsonResponse({ok:true})});
  let restored;
  try {
   const c=await connection(h,{app:'hubspot',label:'Transition records',auth_kind:'bearer',secret:{token:'synthetic-crank-8'}});
-  const changed_to=[[{field:'Status',op:'text.in',value:['Approved']},{field:'amount',op:'number.gte',value:100,value_type:'number'},{field:'ready',op:'boolean.is_true'},{field:'due',op:'date.after',value:'2026-10-27T12:00:00Z'},{field:'tags',op:'list.any',inner:{field:'',op:'text.equals',value:'invoice'}}]];
+  await h.post('settings',{timezone:'Pacific'+'/'+'Auckland'});
+  const changed_to=[[{field:'Status',op:'text.in',value:['Approved']},{field:'amount',op:'number.gte',value:100,value_type:'number'},{field:'ready',op:'boolean.is_true'},{field:'due',op:'date.after',value:'2026-10-27T12:00:00Z'},{field:'due',op:'date.equals',value:{relative:'today'},precision:'day'},{field:'tags',op:'list.any',inner:{field:'',op:'text.equals',value:'invoice'}}]];
   const trigger={type:'app_poll',provider:'hubspot',resource:'deals',event:'updated',connection_id:c.id,interval_minutes:1,backfill:'from_now',watched_fields:['Status','amount','ready','due','tags'],changed_to,changed_from:[[{field:'Status',op:'text.equals',value:'Pending'}],[{field:'Status',op:'text.equals',value:'Approved'}]]};
   for(const bad of [{changed_from:[[{field:'notes',op:'exists'}]]},{changed_to:[[{field:'Status',op:'number.unknown',value:1}]]},{settle_delay:2}]) {
    const refused=await h.send('/api/crank/workflows',{name:'Invalid transition',graph:{trigger:{...trigger,...bad},steps:[]}},h.owner);assert.equal(refused.status,422,refused.text);
@@ -108,12 +109,21 @@ export async function comparisonPollJourney({inspect=async()=>{}}={}) {
   revision++;properties={...properties,amount:'200'};await poll();await counts([3,2]);
   for(const w of workflows){const state=await h.get(`workflows/${w.id}/trigger`);assert.equal(state.poll.last_status,'error');assert.match(state.poll.last_error,/changed_to: type mismatch.*amount/)}
   properties={...properties,amount:200};await poll();await counts([4,3]);
+  // A provider value must stay out of plaintext diagnostics and outgoing owner notices.
+  const privateValue='synthetic-crank-private-value',mailBefore=h.mail.length;
+  revision++;properties={...properties,ready:privateValue};await poll();await counts([4,3]);
+  for(const w of workflows){
+   const state=await h.get(`workflows/${w.id}/trigger`);assert.equal(state.poll.last_status,'error');assert.match(state.poll.last_error,/changed_to: type mismatch.*ready/);assert.ok(!JSON.stringify(state).includes(privateValue));
+   const logs=(await h.db.prepare('SELECT error FROM crank_poll_log WHERE workflow_id=? AND status=?').bind(w.id,'error').all()).results;assert.ok(logs.some(row=>/ready/.test(row.error)));assert.ok(!JSON.stringify(logs).includes(privateValue));
+  }
+  const notices=h.mail.slice(mailBefore);assert.equal(notices.filter(m=>/trigger poll failed/.test(m.subject)).length,2);assert.ok(notices.every(m=>/ready/.test(m.text)));assert.ok(!JSON.stringify(notices).includes(privateValue));
+  properties={...properties,ready:true};await poll();await counts([4,3]);
   // Values observed on nonmatching changes also consume first-value identity.
   revision++;properties={...properties,Status:'Pending',amount:250};await poll();await counts([4,3]);
   revision++;properties={...properties,Status:'Approved'};await poll();await counts([5,3]);
   for(const invalid of [{amount:99},{ready:false},{due:'2026-10-26T12:00:00Z'},{tags:['unrelated']}]) {
    revision++;properties={...properties,Status:'Approved',amount:260,...invalid};await poll();await counts([5,3]);
-   revision++;properties={...properties,Status:'Pending',ready:true,due:'2026-10-28T12:00:00Z',tags:['invoice']};await poll();await counts([5,3]);
+   revision++;properties={...properties,Status:'Pending',ready:true,due:'2026-10-28T00:00:00Z',tags:['invoice']};await poll();await counts([5,3]);
   }
   // A changed-from rule must refuse a valid destination reached from another origin.
   revision++;properties={...properties,Status:'Rejected',amount:300};await poll();
@@ -145,6 +155,18 @@ export async function comparisonPollJourney({inspect=async()=>{}}={}) {
    const refused=await destination.send('/api/crank/data/restore',{archive:archive.text,journal:afterErase.text,confirm:'RESTORE'},destination.owner);assert.equal(refused.status,409,refused.text);
   }finally{await destination.close()}
   await h.post(`workflows/${w.id}/publish`,{},h.owner,201);revision++;properties={...properties,amount:999};await poll({restart:true});assert.equal((await runs(h,w)).length,before-1,'erased records never reappear through a later poll');
+  // Expiring run history removes retained snapshots without permanently blocking the source record.
+  const expiry=await publish(h,'Expiring comparison history',{trigger:{...trigger,watched_fields:['amount'],changed_to:[[{field:'amount',op:'number.gt',value:0}]],changed_from:undefined},steps:[]});
+  await poll();assert.equal((await runs(h,expiry)).length,0);
+  revision++;properties={...properties,amount:1001};await poll();const expiredRun=(await runs(h,expiry))[0];assert.ok(expiredRun);
+  const policy={payload_days:null,attachment_days:null,history_days:1},preview=await h.post('./data/retention/preview',policy);await h.post('./data/retention',{...policy,digest:preview.digest});
+  time+=2*86400000;await h.tick(time);
+  await h.get('workflow-runs/'+expiredRun.id,h.owner,404);assert.equal((await runs(h,expiry)).length,0);
+  assert.equal((await h.db.prepare('SELECT COUNT(*) AS n FROM crank_app_snapshots WHERE workflow_id=?').bind(expiry.id).first()).n,0);
+  assert.equal((await h.db.prepare('SELECT COUNT(*) AS n FROM crank_app_erased_records WHERE workflow_id=?').bind(expiry.id).first()).n,0);
+  const keep={...policy,history_days:null},keepPreview=await h.post('./data/retention/preview',keep);await h.post('./data/retention',{...keep,digest:keepPreview.digest});
+  revision++;properties={...properties,amount:1002};await poll({restart:true});const fresh=(await runs(h,expiry));assert.equal(fresh.length,1,'history expiry must allow the next source change to start a run');assert.equal((await h.get('workflow-runs/'+fresh[0].id)).trigger.current.amount,1002);
+  assert.equal((await h.db.prepare('SELECT COUNT(*) AS n FROM crank_app_erased_records WHERE workflow_id=?').bind(w.id).first()).n,1,'explicit erasure remains permanent after automatic history expiry');
   await h.post(`connections/${c.id}/revoke`);revision++;properties={...properties,amount:1000};const prior=await Promise.all(workflows.map(async w=>(await runs(h,w)).length));await poll();await counts(prior);
  }finally{await restored?.close();await h.close()}
 }

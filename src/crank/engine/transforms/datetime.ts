@@ -15,6 +15,7 @@ export const dateTransforms: Record<string, Transform> = {
     const calendarUnit = ['years', 'months', 'weeks', 'days'].includes(unit), start = wallTime(ms, tz)
     const rangeError = () => new StepError('validation', 'Source date arithmetic is outside the supported calendar range')
     if (start.year < 100 || start.year > 9999) throw rangeError()
+    let localTarget: number | undefined
     if (calendarUnit) {
       // The native calendar uses Date.UTC, which interprets years below 100
       // as twentieth-century years. Refuse a crossing before that conversion.
@@ -22,20 +23,29 @@ export const dateTransforms: Record<string, Transform> = {
       if (unit === 'years' || unit === 'months') target.setUTCFullYear(start.year, start.month - 1 + amount * (unit === 'years' ? 12 : 1), 1)
       else target.setUTCFullYear(start.year, start.month - 1, start.day + amount * (unit === 'weeks' ? 7 : 1))
       if (target.getUTCFullYear() < 100 || target.getUTCFullYear() > 9999) throw rangeError()
+      if (unit === 'years' || unit === 'months') target.setUTCDate(Math.min(start.day, new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0)).getUTCDate()))
+      target.setUTCHours(start.hour, start.minute, start.second, start.millisecond)
+      localTarget = target.getTime()
     }
     const wholeMinuteOffset = (value: number) => {
       const w = wallTime(value, tz)
       return (Date.UTC(w.year, w.month - 1, w.day, w.hour, w.minute, w.second, w.millisecond) - value) % 60000 === 0
     }
     if (!wholeMinuteOffset(ms)) throw new StepError('validation', 'Source date arithmetic does not support historical sub-minute timezone offsets')
-    let next = addTime(ms, amount, unit, tz)
-    if (calendarUnit) {
-      // At an autumn overlap the source keeps the starting offset when that
-      // offset still describes the target wall time, including a zero duration.
-      const preferred = next + (offsetMinutes(next, tz) - offsetMinutes(ms, tz)) * 60000
-      const a = wallTime(next, tz), b = wallTime(preferred, tz)
-      if (a.year === b.year && a.month === b.month && a.day === b.day && a.hour === b.hour && a.minute === b.minute && a.second === b.second) next = preferred
-    }
+    let next: number
+    if (localTarget !== undefined) {
+      // Resolve the target wall time with the source offset as the initial
+      // guess, following Luxon's fixOffset. A third historical offset may
+      // select either occurrence; skipped times move forward by the gap.
+      const initialOffset = offsetMinutes(ms, tz)
+      next = localTarget - initialOffset * 60000
+      const guessedOffset = offsetMinutes(next, tz)
+      if (guessedOffset !== initialOffset) {
+        next -= (guessedOffset - initialOffset) * 60000
+        const adjustedOffset = offsetMinutes(next, tz)
+        if (guessedOffset !== adjustedOffset) next = localTarget - Math.min(guessedOffset, adjustedOffset) * 60000
+      }
+    } else next = addTime(ms, amount, unit, tz)
     if (!Number.isFinite(next) || new Date(next).getUTCFullYear() < 100 || new Date(next).getUTCFullYear() > 9999 || wallTime(next, tz).year < 100 || wallTime(next, tz).year > 9999) throw rangeError()
     if (!wholeMinuteOffset(next)) throw new StepError('validation', 'Source date arithmetic does not support historical sub-minute timezone offsets')
     // Source DateTime stringification always retains milliseconds. Calendar

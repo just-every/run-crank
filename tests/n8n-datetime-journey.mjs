@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {harness} from './harness.mjs';
-import {door,doorPlan,doorImport,deliver,settled} from './kit.mjs';
+import {door,doorPlan,deliver,settled} from './kit.mjs';
 import {archive,inventory} from './restore-journey.mjs';
 import {graphExport} from './n8n-graph-fixture.mjs';
 
@@ -47,6 +47,15 @@ export async function n8nDateTimeJourney() {
    ['subtractFromDate',1,'days','2026-11-02T01:30:00-06:00','2026-11-01T01:30:00.000-06:00',false],
    ['addToDate',1,'days','2026-10-31T01:30:00-05:00','2026-11-01T01:30:00.000-05:00',false],
    ['addToDate',0,'days','2026-11-01T01:30:00-06:00','2026-11-01T01:30:00.000-06:00',true],
+   // London moved between three offsets during wartime. The source offset
+   // is neither target offset at the repeated hour; adjacent hours and the
+   // spring gap guard the full offset-resolution sequence.
+   ['addToDate',30,'months','1939-02-10T02:30:00Z','1941-08-10T02:30:00.000+01:00',false,'Europe'+'/'+'London'],
+   ['addToDate',30,'months','1939-02-10T01:30:00Z','1941-08-10T02:30:00.000+02:00',false,'Europe'+'/'+'London'],
+   ['addToDate',30,'months','1939-02-10T03:30:00Z','1941-08-10T03:30:00.000+01:00',false,'Europe'+'/'+'London'],
+   ['addToDate',30,'months','1938-11-04T01:30:00Z','1941-05-04T01:30:00.000+01:00',false,'Europe'+'/'+'London'],
+   ['addToDate',30,'months','1938-11-04T02:30:00Z','1941-05-04T03:30:00.000+02:00',false,'Europe'+'/'+'London'],
+   ['addToDate',30,'months','1938-11-04T03:30:00Z','1941-05-04T03:30:00.000+02:00',false,'Europe'+'/'+'London'],
    ['addToDate',1,'months','2024-01-31T18:05:06.123Z','2024-02-29T18:05:06.123Z',false,'UTC'],
    ['subtractFromDate',1,'months','2024-03-31T18:05:06Z','2024-02-29T18:05:06.000+00:00',false,'Etc'+'/'+'UTC'],
   ];
@@ -74,8 +83,11 @@ export async function n8nDateTimeJourney() {
    await door(h,'undo',{planId:plan.value.planId});
   }
   assert.deepEqual(await h.get('workflows'),[]);assert.deepEqual(writes,[],'review must not dispatch');
-  const plan=await doorImport(h,JSON.stringify(sources));assert.equal(plan.rejected.length,0);
-  assert.equal((await door(h,'apply',{planId:plan.planId,reviewedFingerprint:plan.fingerprint})).value.job.state,'completed');
+  for(let offset=0;offset<sources.length;offset+=20) {
+   const planned=await doorPlan(h,JSON.stringify(sources.slice(offset,offset+20)),offset>0);assert.equal(planned.status,200,planned.text);
+   const plan=planned.value;assert.equal(plan.rejected.length,0);
+   for(let apply=0;apply<2;apply++)assert.equal((await door(h,'apply',{planId:plan.planId,reviewedFingerprint:plan.fingerprint})).value.job.state,'completed');
+  }
   const workflows=await h.get('workflows');assert.equal(workflows.length,sources.length,'repeated apply must retain exactly one draft per source');
   for(const workflow of workflows){const detail=await h.get('workflows/'+workflow.id);assert.equal(detail.status,'draft');assert.deepEqual(detail.versions,[]);assert.deepEqual(detail.hooks,[])}
   await h.restart();
