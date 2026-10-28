@@ -265,7 +265,7 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
       if(form.sink_token) { input.secret={token:form.sink_token}; delete input.sink_token }
       if(form.disclosure_confirmed==='true')input.disclosure_confirmed=true
       if(form.confirm_business_outcome==='true') input.confirm_business_outcome=true
-      if(form.step_path!==undefined && !sampleRequest) { input.path=form.step_path; delete input.step_path }
+      if(form.step_path!==undefined && !sampleRequest && !/^\/api\/crank\/workflows\/[^/]+\/test$/.test(path)) { input.path=form.step_path; delete input.step_path }
       if (form.all !== undefined) input.all = form.all === 'true'
       if (Object.keys(form).some(key => /^hold_item_\d+$/.test(key))) {
         input.items = Object.entries(form).filter(([key]) => /^hold_item_\d+$/.test(key)).map(([,value]) => value)
@@ -278,6 +278,10 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
       }
       if(input.reason==='') delete input.reason
       if(input.flow_id==='') delete input.flow_id
+      if (/^\/api\/crank\/workflows\/[^/]+\/test$/.test(path) && form.step_path) {
+        input.bindings = form.test_binding ? { [form.test_binding]: form.test_connection } : {}
+        delete input.test_binding; delete input.test_connection
+      }
       const response = await call(path,input)
       if(path==='/api/crank/data/export' && response.ok) return response
       const result:any = await response.json()
@@ -304,7 +308,7 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
       if(path.startsWith('/api/crank/tokens')) return redirect('/app/access')
       if(path.startsWith('/auth/')) return redirect('/app/access')
       if(path.startsWith('/api/crank/data')) return page('Data operation complete',`<p class="notice">${path.endsWith('/erase')?'The run and its dependent data have been erased. Existing destination effects remain there.':'Your archive has been restored. Every workflow is paused or draft and waits for your review at publish; flows are drafts and connections need reconnecting.'}</p>${restoreSummary(result)}<a href="/app">Return to flows</a>`)
-      if(path.startsWith('/api/crank/workflow-runs/') || /^\/api\/crank\/workflows\/[^/]+\/run$/.test(path)) return redirect('/app/workflow-runs/'+encodeURIComponent(result.id))
+      if(path.startsWith('/api/crank/workflow-runs/') || /^\/api\/crank\/workflows\/[^/]+\/(?:run|test)$/.test(path)) return redirect('/app/workflow-runs/'+encodeURIComponent(result.id))
       if(path==='/api/crank/workflows') return redirect('/app/workflows/'+encodeURIComponent(result.id))
       if(result.flow_id) return redirect('/app/runs/'+result.id)
       return redirect('/app')

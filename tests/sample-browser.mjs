@@ -5,6 +5,7 @@ import {readFile,mkdir} from 'node:fs/promises';
 import {resolve,extname,join} from 'node:path';
 import {chromium,expect} from '@playwright/test';
 import {sampleJourney} from './sample-journey.mjs';
+import {stepSampleJourney} from './step-sample-journey.mjs';
 const evidence=process.env.CRANK_EVIDENCE;
 assert.ok(evidence,'Set CRANK_EVIDENCE');await mkdir(evidence,{recursive:true});
 const browser=await chromium.launch({headless:true,...(process.env.CRANK_CHROMIUM?{executablePath:process.env.CRANK_CHROMIUM}:{}),args:['--use-mock-keychain','--password-store=basic',...(process.env.CRANK_CHROMIUM?['--no-sandbox']:[])]});
@@ -30,6 +31,11 @@ async function attach(h,width) {
  const [name,...value]=h.owner.split('=');await context.addCookies([{name,value:value.join('='),url:h.origin}]);page=await context.newPage();
  await page.goto(h.origin+'/setup');
  if(new URL(page.url()).pathname==='/setup'){await page.getByRole('checkbox').check();await page.getByRole('button',{name:'Finish setup',exact:true}).click()}
+}
+async function shot(width,state) {
+ await page.screenshot({path:join(evidence,`${width}-${state}.png`),fullPage:true});
+ assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`${width} ${state} overflow`);
+ const search=page.getByRole('link',{name:'Search runs',exact:true});await search.focus();await expect(page.locator('#search-tooltip')).toBeVisible();await page.locator('h1').click();await search.hover();await page.waitForTimeout(350);await expect(page.locator('#search-tooltip')).toBeVisible();
 }
 try {
  await sampleJourney({inspect:async({h,w,state,listener,sample,step='trigger'})=>{
@@ -99,5 +105,25 @@ try {
    await page.setViewportSize({width:1440,height:1000});
   }
  }});
- console.log('Retained sample screens passed at 1440 and 390');
+ await stepSampleJourney({inspect:async({h,w,state,run,step})=>{
+  await attach(h,1440);
+  if(state==='step-confirmation') {
+   await page.goto(h.origin+`/app/workflow-runs/${run.id}`);
+   await expect(page.getByText('Synthetic Crank production',{exact:false}).first()).toBeVisible();
+   await expect(page.getByText('Confirm live test:',{exact:false}).first()).toBeVisible();
+  } else {
+   await page.goto(h.origin+`/app/workflows/${w.id}?step=${step}&tab=test`);
+   await expect(page.getByRole('heading',{name:'Retained step outputs',exact:true})).toBeVisible();
+   await page.getByRole('button',{name:'Test this step',exact:true}).click();
+   await expect(page).toHaveURL(new RegExp('/app/workflow-runs/'));
+   await expect(page.getByText('Draft test · this snapshot',{exact:false}).first()).toBeVisible();
+  }
+  for(const width of [1440,390]) {
+   await page.setViewportSize({width,height:1000});
+   await page.screenshot({path:join(evidence,`${width}-${state}.png`),fullPage:true});
+   if(width===1440)assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`${width} ${state} overflow`);
+  }
+  await page.setViewportSize({width:1440,height:1000});
+ }});
+ console.log('Retained sample screens and isolated step tests passed at 1440 and 390');
 } finally {await context?.close();await browser.close();if(server){server.closeAllConnections();await new Promise(done=>server.close(done))}}
