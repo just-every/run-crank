@@ -31,21 +31,26 @@ export const map: StepType = {
   async execute(_step, ctx) { return { status: 'succeeded', output: ctx.input } },
 }
 
+/** Pure response validation shared by execution and the no-send preview. */
+export function responseOf(input: Record<string, unknown>) {
+  const status = input.status === undefined ? 200 : Number(input.status)
+  if (!Number.isInteger(status) || status < 200 || status > 599) throw new StepError('validation', 'Response status must be 200 to 599')
+  const headers: Record<string, string> = {}
+  if (input.headers !== undefined) {
+    if (!isObject(input.headers)) throw new StepError('validation', 'Response headers must be an object')
+    for (const [name, value] of Object.entries(input.headers)) {
+      if (!/^[A-Za-z0-9-]{1,64}$/.test(name) || /^(set-cookie|content-length|transfer-encoding|connection)$/i.test(name)) throw new StepError('validation', `Response header ${name} is not allowed`)
+      headers[name.toLowerCase()] = String(value)
+    }
+  }
+  return { status, headers, body: input.body ?? null }
+}
+
 /** The synchronous webhook response (TRIG-001), sent when the sender is still waiting. */
 export const respond: StepType = {
   mutating: false,
   async execute(_step, ctx) {
-    const status = ctx.input.status === undefined ? 200 : Number(ctx.input.status)
-    if (!Number.isInteger(status) || status < 200 || status > 599) throw new StepError('validation', 'Response status must be 200 to 599')
-    const headers: Record<string, string> = {}
-    if (ctx.input.headers !== undefined) {
-      if (!isObject(ctx.input.headers)) throw new StepError('validation', 'Response headers must be an object')
-      for (const [name, value] of Object.entries(ctx.input.headers)) {
-        if (!/^[A-Za-z0-9-]{1,64}$/.test(name) || /^(set-cookie|content-length|transfer-encoding|connection)$/i.test(name)) throw new StepError('validation', `Response header ${name} is not allowed`)
-        headers[name.toLowerCase()] = String(value)
-      }
-    }
-    const response = { status, headers, body: ctx.input.body ?? null }
+    const response = responseOf(ctx.input)
     await ctx.respond(response)
     return { status: 'succeeded', output: response }
   },

@@ -34,7 +34,7 @@
 .state[data-state=failed], .state[data-state=uncertain] { color: #a52a3f; } .state:is([data-state=failed], [data-state=uncertain]) .state-mark { background: var(--red); }
 .state[data-state=waiting] { color: var(--amber-ink); } .state[data-state=waiting] .state-mark { background: none; color: var(--amber); stroke-width: 2; padding: 0; }
 .state:is([data-state=stopped], [data-state=skipped]) { color: var(--body); }
-.has-branches > .step-card { width: 140px; min-height: 92px; }
+.has-branches > .step-node > .step-card { width: 140px; min-height: 92px; }
 .branches { position: relative; display: grid; gap: 20px; padding-left: 72px; }
 .branches::before { position: absolute; left: 0; top: 50%; width: 24px; height: 22px; margin-top: -11px; }
 .branch { position: relative; display: grid; gap: 6px; justify-items: start; }
@@ -203,7 +203,7 @@
 @media (max-width: 1000px) {
   .chain, .link, .has-branches { flex-direction: column; align-items: stretch; }
   .link + .link::before { width: 22px; height: 22px; margin-left: 18px; background: url('/ui/joint.svg') center / 18px 18px no-repeat, linear-gradient(90deg, var(--brass-light), var(--brass-dark)) center / 4px 100% no-repeat; }
-  .step-card, .has-branches > .step-card, .branch .step-card { width: 100%; min-height: 0; }
+  .step-card, .has-branches > .step-node > .step-card, .branch .step-card { width: 100%; min-height: 0; }
   .branches { padding: 14px 0 0 36px; }
   .branches::before { left: 18px; top: 0; width: 22px; height: 14px; margin: 0; background: linear-gradient(90deg, var(--brass-light), var(--brass-dark)) center / 4px 100% no-repeat; }
   .branch { justify-items: stretch; }
@@ -249,3 +249,12 @@
 .step-lineage { font-size: 13px; color: var(--body); overflow-wrap: anywhere; }
 .editor-main > .panel :is(p, li) { overflow-wrap: anywhere; }
 .branch-label { position: static; justify-self: start; }
+
+/* Sample disclosures keep the existing canvas cards and inspector vocabulary. */
+.step-node { display: grid; gap: 8px; width: 162px; flex: none; min-width: 0; }
+.has-branches > .step-node { width: 140px; }
+.branch .step-node { width: 200px; }
+.edge-sample { min-width: 0; padding: 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); font-size: 13px; overflow-wrap: anywhere; }
+.edge-sample summary { cursor: pointer; font-weight: 600; }
+.edge-sample p { margin-top: 6px; font-size: 13px; }
+.edge-sample pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; max-height: 240px; overflow: auto; }

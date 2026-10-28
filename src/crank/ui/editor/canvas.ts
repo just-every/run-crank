@@ -1,6 +1,6 @@
 import { namedFields, reference } from './native'
 import type { Graph } from '../../engine/graph'
-import { clock, esc } from '../document'
+import { clock, esc, json } from '../document'
 import { icon } from '../icons'
 import { appOf, lastRecord, nodes, summaryOf, type Connection, type Node, type RunDetail } from './model'
 
@@ -14,7 +14,7 @@ export function tile(app: { tile: string; glyph: string }) {
 }
 
 /** `repaired`: steps where a run of an older version failed on a field the live version (`changedIn`) reads under its new name. */
-export interface CanvasContext { graph?: Graph; workflowId: string; connections: Connection[]; runs: RunDetail[]; selected: string; repaired: Set<string>; changedIn: number | null; query: string }
+export interface CanvasContext { preview?: {source:{label:string;source_time?:string};trigger:unknown;steps:{path:string;output?:unknown;outcome?:string;error?:{message?:string}}[]}; graph?: Graph; workflowId: string; connections: Connection[]; runs: RunDetail[]; selected: string; repaired: Set<string>; changedIn: number | null; query: string }
 
 function card(node: Node, ctx: CanvasContext) {
   const app = appOf(node, ctx.connections), found = node.trigger ? (ctx.runs[0] ? { run: ctx.runs[0], record: null } : null) : lastRecord(ctx.runs, node.path)
@@ -31,8 +31,16 @@ function card(node: Node, ctx: CanvasContext) {
   return `<a class="step-card${ctx.selected === node.path ? ' is-selected' : ''}" href="${esc(href)}"${ctx.selected === node.path ? ' aria-current="true"' : ''}><span class="step-head">${tile(app)}<span class="step-text"><strong>${esc(app.title)}</strong><span>${esc(summaryOf(node))}</span></span></span>${lineage.length ? `<span class="step-lineage">Reads ${esc(lineage.join('; '))}</span>` : ''}${node.branches && node.step?.type !== 'loop' ? '' : foot}</a>`
 }
 
+function edgeSample(node: Node, ctx: CanvasContext) {
+  const preview=ctx.preview
+  if(!preview)return ''
+  const result=preview.steps.find(step=>step.path===node.path), value=node.trigger?preview.trigger:result?.output
+  const available=node.trigger || result && Object.hasOwn(result,'output')
+  const status=available?'Sample data':result?.outcome ?? 'Not reached in this preview'
+  return `<details class="edge-sample" data-step="${esc(node.path)}"><summary>${esc(status)}</summary><p>${esc(preview.source.label)}${preview.source.source_time?` · ${clock(preview.source.source_time)}`:''}</p>${available?`${result?.outcome?`<p>${esc(result.outcome)}</p>`:''}<pre>${json(value)}</pre>`:`<p>${esc(result?.error?.message ?? (result?.outcome==='not run in preview'?'App actions and waits need a separate step test.':'This route produced no sample output.'))}</p>`}</details>`
+}
 function column(list: Node[], ctx: CanvasContext): string {
-  return `<ol class="chain">${list.map(node => `<li class="link${node.branches ? ' has-branches' : ''}">${card(node, ctx)}${node.branches ? `<div class="branches">${node.branches.map(branch => `<section class="branch" aria-label="${esc(branch.name)}"><span class="branch-label">${esc(branch.name)}</span>${branch.nodes.length ? column(branch.nodes, ctx) : '<p class="branch-empty">No steps</p>'}</section>`).join('')}</div>` : ''}</li>`).join('')}</ol>`
+  return `<ol class="chain">${list.map(node => `<li class="link${node.branches ? ' has-branches' : ''}"><div class="step-node">${card(node, ctx)}${edgeSample(node,ctx)}</div>${node.branches ? `<div class="branches">${node.branches.map(branch => `<section class="branch" aria-label="${esc(branch.name)}"><span class="branch-label">${esc(branch.name)}</span>${branch.nodes.length ? column(branch.nodes, ctx) : '<p class="branch-empty">No steps</p>'}</section>`).join('')}</div>` : ''}</li>`).join('')}</ol>`
 }
 
 /** The steps in order; a path group's branches stack in a column to its right. */
