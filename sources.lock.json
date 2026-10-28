@@ -2247,7 +2247,7 @@
       "executable": false
     },
     "src/base/contract-docs.mjs": {
-      "sha256": "5c5f744d59bbcddc8a8db00bc3c9e1a86c250ab2538735b3a5d343f48842a5e4",
+      "sha256": "93419978ddf79d15fc30c840bc3454e7e4f787504109993b8cc72ac2c511410a",
       "executable": false
     },
     "src/base/contract-filter.ts": {
@@ -6047,7 +6047,7 @@
       "executable": false
     },
     "tests/quickbooks-search-journey.mjs": {
-      "sha256": "26a1d06f1af5443415619b654197a8d8f1c555dd4e53c4ed72315ba0834049e2",
+      "sha256": "bebe57c42e01ba04b3d10f4e056eea87d777122f29d1a83aba472450c4c817e2",
       "executable": false
     },
     "tests/recurring-browser.mjs": {
