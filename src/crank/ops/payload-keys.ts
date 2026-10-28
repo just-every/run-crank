@@ -168,6 +168,8 @@ export async function destroyUnreferenced(env: CrankEnv, time = Date.now()) {
   for (const key of retiring) {
     const marker = `"k":"${key.id}"`
     const used = await stmt(env, `SELECT 1 WHERE EXISTS(SELECT 1 FROM crank_wf_runs WHERE payload_key=?1 OR instr(trigger_json,?2)>0 OR instr(COALESCE(response_json,''),?2)>0 OR instr(COALESCE(error_json,''),?2)>0)
+      OR EXISTS(SELECT 1 FROM crank_request_checkpoints WHERE instr(response_json,?2)>0)
+      OR EXISTS(SELECT 1 FROM crank_request_checkpoint_chunks WHERE instr(content_base64,?2)>0)
       OR EXISTS(SELECT 1 FROM crank_workflow_samples WHERE instr(payload_json,?2)>0 OR instr(uploads_json,?2)>0)
       OR EXISTS(SELECT 1 FROM crank_gateway_tasks WHERE instr(COALESCE(input_json,''),?2)>0 OR instr(COALESCE(output_json,''),?2)>0)
       OR EXISTS(SELECT 1 FROM crank_wf_steps WHERE instr(COALESCE(input_json,''),?2)>0 OR instr(COALESCE(output_json,''),?2)>0 OR instr(COALESCE(trace_json,''),?2)>0 OR instr(COALESCE(error_json,''),?2)>0)
