@@ -103,9 +103,13 @@ export async function keyState(env: CrankEnv) {
 
 /** SQL over runs `r` joined to their workflow `w`: the run's stored form differs from its target
  * (sealed under the class's active key with the declared fields indexed, or plaintext). */
+// Earlier writers could leave a plaintext continuation beside an already-sealed run.
+// Its page still needs sealing and declared identifier indexing before subject lookup is complete.
+const CHECKPOINT_KEY = `CASE WHEN json_valid(c.content_base64) THEN CASE WHEN json_extract(c.content_base64,'$.sealed')='crank-payload-v1' THEN json_extract(c.content_base64,'$.k') END END`
 export const NEEDS_RESEAL = `r.payload_expired_at IS NULL AND CASE WHEN w.data_class IN ('customer','financial','health')
   THEN r.payload_key IS NULL OR r.payload_key IS NOT (SELECT id FROM crank_payload_keys k WHERE k.data_class=w.data_class AND k.status='active') OR r.payload_index IS NOT w.identifier_fields_json
-  ELSE r.payload_key IS NOT NULL END`
+    OR EXISTS(SELECT 1 FROM crank_request_checkpoint_chunks c WHERE c.run_id=r.id AND (${CHECKPOINT_KEY}) IS NOT (SELECT id FROM crank_payload_keys k WHERE k.data_class=w.data_class AND k.status='active'))
+  ELSE r.payload_key IS NOT NULL OR EXISTS(SELECT 1 FROM crank_request_checkpoint_chunks c WHERE c.run_id=r.id AND (${CHECKPOINT_KEY}) IS NOT NULL) END`
 export const RESEAL_POSSIBLE = `(r.payload_key IS NULL OR EXISTS(SELECT 1 FROM crank_payload_keys x WHERE x.id=r.payload_key AND x.sealed_key IS NOT NULL))`
 export async function pendingRuns(env: CrankEnv) {
   return (await stmt(env, `SELECT COUNT(*) AS n FROM crank_wf_runs r JOIN crank_workflows w ON w.id=r.workflow_id WHERE ${NEEDS_RESEAL} AND ${RESEAL_POSSIBLE}`).first<{ n: number }>())?.n ?? 0

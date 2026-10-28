@@ -146,7 +146,30 @@ export async function sheetsSearchJourney({onScreen}={}) {
   } finally {await h.close()}
 }
 
+async function legacyCheckpointJourney() {
+const fake=fakeEdge(),subject='synthetic-crank-legacy',body={items:[{person:subject}],next:'later'};
+fake.routes.set('synthetic-crank-legacy.example',({url})=>url.searchParams.has('cursor')?jsonResponse({},429,{'retry-after':'60'}):jsonResponse(body));
+const h=await harness('http://127.0.0.1:9',{clock:'2026-11-10T15:00:00Z',edge:fake.edge});
+try {
+ const w=await h.post('workflows',{name:'Legacy classified response custody',graph:{trigger:{type:'manual'},steps:[{id:'read',type:'http',input:{url:'https://synthetic-crank-legacy.example/records'},pagination:{kind:'cursor',items_path:'items',cursor_path:'next',max_pages:2}}]}},h.owner,201);
+ await h.post('data/classes',{workflow_id:w.id,data_class:'customer',identifier_fields:['person']});await h.post(`workflows/${w.id}/publish`,{},h.owner,201);
+ const run=await startRun(h,w,{});assert.equal(run.status,'waiting',JSON.stringify(run.error));
+ const payloadKey=await h.db.prepare('SELECT payload_key FROM crank_wf_runs WHERE id=?').bind(run.id).first();assert.ok(payloadKey.payload_key);
+ // Prior writer fixture: valid base64 continuation, current run key, no page blind index.
+ await h.db.prepare('UPDATE crank_request_checkpoint_chunks SET content_base64=? WHERE run_id=? AND ordinal=0 AND chunk_index=0').bind(Buffer.from(JSON.stringify(body)).toString('base64'),run.id).run();
+ await h.db.prepare('DELETE FROM crank_blind_index WHERE run_id=?').bind(run.id).run();
+ const preview=await h.post('data/subject',{subject});
+ assert.match(preview.sealed_unmatched.join(' '),/still being sealed/,'legacy plaintext pages must block an incomplete subject preview until migration');
+ await h.tick('2026-11-10T15:00:01Z');
+ assert.deepEqual((await h.post('data/subject',{subject})).workflow_runs.map(row=>row.id),[run.id]);
+ const chunks=(await h.db.prepare('SELECT content_base64 FROM crank_request_checkpoint_chunks WHERE run_id=?').bind(run.id).all()).results;
+ assert.ok(chunks.length);for(const row of chunks)assert.ok(row.content_base64.startsWith('{"sealed":"crank-payload-v1"'));
+}finally{await h.close()}
+
+}
+
 export async function sheetsCustodyJourney() {
+  await legacyCheckpointJourney();
   const {h,fake,state,account}=await fixture();let other,erased;
   try {
     const step=sheetsStep(account.id);step.input.value=1;const w=await h.post('workflows',{name:'Private row search',graph:{trigger:{type:'webhook'},steps:[step]}},h.owner,201);
