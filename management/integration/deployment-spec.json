@@ -522,6 +522,12 @@
       "name": "0084_app_observed_at.sql",
       "sha256": "c9b59a865a9aea5c6e71f1dc46e6f677f94c23fb541aeee6947ba17b67e96ec0",
       "sql": "-- Retention measures Crank's last complete observation, never provider edit time.\n-- Legacy snapshots have no trustworthy observation time and stay retained.\nALTER TABLE crank_app_snapshots ADD COLUMN observed_at TEXT;\nCREATE INDEX crank_app_snapshots_observed ON crank_app_snapshots(observed_at,workflow_id,version_id,record_id);\n"
+    },
+    {
+      "binding": "DB",
+      "name": "0085_model_response_identity.sql",
+      "sha256": "e64f92bc122b5554cb98be23624201a521b0b7d2c74176059266cd4d588368db",
+      "sql": "-- A bounded provider response identifier survives interruption of the later\n-- step-result transaction. Model text and credentials never enter this field.\nALTER TABLE crank_wf_attempts ADD COLUMN response_identity TEXT;\n"
     }
   ],
   "compatibilityDate": "2026-09-08",
