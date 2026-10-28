@@ -18,7 +18,7 @@ export const qboCreate = (type: string) => ['quickbooks.create_invoice', 'quickb
 const text: InputSchema = { type: 'string' }
 const decimal: InputSchema = { type: 'decimal' }
 const ref: InputSchema = { type: 'object', properties: { value: { type: 'string', required: true, nonempty: true }, name: text } }
-const sales: InputSchema = { type: 'object', properties: { ItemRef: { ...ref, required: true }, Qty: decimal, UnitPrice: decimal, TaxCodeRef: ref, ClassRef: ref, ServiceDate: text } }
+const sales: InputSchema = { type: 'object', properties: { ItemRef: ref, Qty: decimal, UnitPrice: decimal, TaxCodeRef: ref, ClassRef: ref, ServiceDate: text } }
 const discount: InputSchema = { type: 'object', properties: { PercentBased: { type: 'boolean' }, DiscountPercent: decimal, DiscountAccountRef: ref } }
 const line: InputSchema = {
   type: 'object', required: true,
