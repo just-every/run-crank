@@ -247,3 +247,5 @@
 .native-add .native-form { grid-template-columns: minmax(0, 1fr); max-width: 480px; }
 .branch-label { max-width: 180px; overflow-wrap: anywhere; }
 .step-lineage { font-size: 13px; color: var(--body); overflow-wrap: anywhere; }
+.editor-main > .panel :is(p, li) { overflow-wrap: anywhere; }
+.branch-label { position: static; justify-self: start; }

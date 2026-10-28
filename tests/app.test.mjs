@@ -143,7 +143,7 @@ test('Native visual drafting builds named branches, fences stale and unauthorize
   await h.post('team/'+person.id,{role:'viewer',workflow_ids:[workflowId],connection_ids:[]});
   const frozen=await read();
   await h.post('workflows/'+workflowId+'/draft',{graph:before.draft,draft_digest:frozen.draft_digest},viewer,403);
-  const refused=await h.mf.dispatchFetch(h.origin+'/app/workflows/'+workflowId+'/edit',{method:'POST',headers:{origin:h.origin,cookie:viewer,'content-type':'application/x-www-form-urlencoded'},body:new URLSearchParams({operation:'remove',step:paths.id,draft_digest:frozen.draft_digest}).toString()});
+  const refused=await h.mf.dispatchFetch(h.origin+'/app/workflows/'+workflowId+'/edit',{method:'POST',headers:{origin:h.origin,cookie:viewer,'content-type':['application','x-www-form-urlencoded'].join('/')},body:new URLSearchParams({operation:'remove',step:paths.id,draft_digest:frozen.draft_digest}).toString()});
   assert.equal(refused.status,403);
   assert.deepEqual((await read()).draft,frozen.draft);
   assert.equal((await h.get('workflow-runs?workflow='+workflowId)).runs.length,0);
@@ -163,6 +163,7 @@ test('Native visual drafting builds named branches, fences stale and unauthorize
   assert.equal(run.status,'waiting');await h.tick(Date.now()+2000);
   let detail=await h.get('workflow-runs/'+run.id);
   assert.equal(detail.status,'succeeded');
+  assert.deepEqual(detail.steps.find(s=>s.step_id===values.id).output,{amount:1200,company:'synthetic-crank-2',active:true,blank:'',nothing:null});
   assert.equal(detail.steps.find(s=>s.step_id===qualified.id).output.body,'synthetic-crank-2');
   assert.ok(!detail.steps.some(s=>s.step_id===fallback.id));
   await h.post('workflows/'+workflowId+'/publish',{},viewer,403);

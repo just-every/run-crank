@@ -23,7 +23,7 @@ export function locations(graph: Graph): Location[] {
   ])
   return walk(graph.steps)
 }
-export const nativeGraph = (graph: Graph) => graph.trigger.type === 'manual' && locations(graph).every(({step}) => step.type in NATIVE_TYPES)
+export const nativeGraph = (graph: Graph) => graph.trigger.type === 'manual' && locations(graph).every(({step}) => Object.hasOwn(NATIVE_TYPES,step.type) && (step.type !== 'delay' || step.mode === 'for'))
 
 type Kind = 'text' | 'number' | 'boolean' | 'null' | 'object' | 'list'
 export interface NamedField { ref: string; label: string; kind: Kind }
@@ -118,7 +118,7 @@ function ruleOf(form: Record<string,string>, fields: NamedField[]) {
   const source = fields.find(f => f.ref === form.source)
   if (!source) return fail('source', 'Choose an earlier named field on this route.')
   const op = form.operator
-  if (!(op in EDIT_OPERATORS)) return fail('operator', 'Choose a supported condition.')
+  if (!Object.hasOwn(EDIT_OPERATORS,op)) return fail('operator', 'Choose a supported condition.')
   const family = op.split('.')[0], expected = family === 'text' ? 'text' : family
   if (['text','number','boolean'].includes(family) && source.kind !== expected) return fail('operator', 'Choose a condition matching the field type: ' + source.kind + '.')
   if (family === 'boolean' || !op.includes('.')) return {field:source.ref,op}
@@ -155,7 +155,7 @@ export function editNative(source: Graph, form: Record<string,string>): {graph: 
   const location = locations(graph).find(l => l.step.id === form.step)
   let selected = form.step ?? 'trigger'
   if (operation === 'add') {
-    if (!(form.type in NATIVE_TYPES)) return fail('type','Choose a native step type.')
+    if (!Object.hasOwn(NATIVE_TYPES,form.type)) return fail('type','Choose a native step type.')
     const type = form.type as NativeType, step:Step = {id:generated(),type,name:NATIVE_TYPES[type]}
     if (type === 'map') step.input = {}
     if (type === 'filter') step.when = defaultRule()
@@ -209,13 +209,18 @@ export function editNative(source: Graph, form: Record<string,string>): {graph: 
         if (form.key && form.key!==key) delete input[form.key]
         input[key]=value
       }
-    } else if (operation === 'add-branch' || operation === 'remove-branch' || operation === 'rename-branch') {
+    } else if (['add-branch','remove-branch','rename-branch','branch-up','branch-down'].includes(operation)) {
       if (step.type!=='paths') return fail('operation','Choose a paths step.')
       const branches=step.branches as any[], at=branches.findIndex(b=>b.id===form.branch)
       if (operation==='add-branch') branches.push({id:generated(),name:title(form.branch_name,'branch_name'),when:defaultRule(),steps:[]})
       else {
         if (at<0) return fail('branch_name','Choose a current route.')
         if (operation==='rename-branch') branches[at].name=title(form.branch_name,'branch_name')
+        else if (operation==='branch-up' || operation==='branch-down') {
+          const next=at+(operation==='branch-up'?-1:1)
+          if(next<0 || next>=branches.length)return fail('branch_name','This route is already at the end of the matching order.')
+          ;[branches[at],branches[next]]=[branches[next],branches[at]]
+        }
         else if (branches.length===1) return fail('branch_name','Keep at least one matching route.')
         else branches.splice(at,1)
       }
