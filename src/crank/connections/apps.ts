@@ -6,6 +6,7 @@ export interface AppDefinition {
   test?: { method: string; url: string }
 }
 export const APPS: Record<string, AppDefinition> = {
+  stripe: { name: 'Stripe test-mode subscriptions', kinds: ['bearer'], domains: ['api.stripe.com'] },
   openai: { name: 'OpenAI text classification', kinds: ['bearer'], domains: ['api.openai.com'] },
   orbit: { name: 'Orbit scoped deal API', kinds: ['bearer'], domains: 'declared' },
   nook: { name: 'Nook integration token', kinds: ['bearer'], domains: 'declared' },

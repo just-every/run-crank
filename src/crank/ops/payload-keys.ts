@@ -172,6 +172,8 @@ export async function destroyUnreferenced(env: CrankEnv, time = Date.now()) {
       OR EXISTS(SELECT 1 FROM crank_gateway_tasks WHERE instr(COALESCE(input_json,''),?2)>0 OR instr(COALESCE(output_json,''),?2)>0)
       OR EXISTS(SELECT 1 FROM crank_wf_steps WHERE instr(COALESCE(input_json,''),?2)>0 OR instr(COALESCE(output_json,''),?2)>0 OR instr(COALESCE(trace_json,''),?2)>0 OR instr(COALESCE(error_json,''),?2)>0)
       OR EXISTS(SELECT 1 FROM crank_wf_step_revisions WHERE instr(COALESCE(input_json,''),?2)>0 OR instr(COALESCE(prior_input_json,''),?2)>0 OR instr(COALESCE(prior_error_json,''),?2)>0)
+      OR EXISTS(SELECT 1 FROM crank_request_checkpoints WHERE instr(response_json,?2)>0)
+      OR EXISTS(SELECT 1 FROM crank_request_checkpoint_chunks WHERE instr(content_base64,?2)>0)
       OR EXISTS(SELECT 1 FROM crank_waits WHERE instr(COALESCE(proposal_json,''),?2)>0 OR instr(COALESCE(resolution_json,''),?2)>0)
       OR EXISTS(SELECT 1 FROM crank_hold_items WHERE instr(payload_json,?2)>0) OR EXISTS(SELECT 1 FROM crank_historical_items WHERE instr(payload_json,?2)>0)
       OR EXISTS(SELECT 1 FROM crank_app_snapshots WHERE instr(fields_json,?2)>0) OR EXISTS(SELECT 1 FROM crank_files WHERE instr(content_base64,?2)>0) OR EXISTS(SELECT 1 FROM crank_blind_index WHERE key_id=?1)`, key.id, marker).first()

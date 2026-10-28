@@ -1,5 +1,11 @@
 import { validatePureRecipe } from './workflows/recipe-definition.mjs';
 import { validateSubflowDefinition } from './workflows/subflow-definition.mjs';
+function sealedPayload(text, cipherBytes) {
+  try {
+    const value=JSON.parse(text);
+    return value.sealed==='crank-payload-v1' && typeof value.k==='string' && value.k.length>0 && ['customer','financial','health'].includes(value.c) && atob(value.iv).length===12 && (cipherBytes===undefined ? atob(value.ct).length>=16 : atob(value.ct).length===cipherBytes);
+  } catch { return false; }
+}
 const unfinished = ['queued', 'running', 'waiting', 'awaiting_approval', 'paused'];
 const distant = '9999-12-31T00:00:00.000Z';
 const encode = value => JSON.stringify(value);
@@ -187,23 +193,26 @@ export async function validateRestore({ read }) {
         const allowed=[search?.id,search?.find_or_create?.operation].filter(Boolean)
         if (!step.gateway_id || !search?.gateway || response.body_bytes>65536 || !allowed.some(operation=>url.pathname===`/api/crank/gateways/${encodeURIComponent(step.gateway_id)}/operations/${encodeURIComponent(operation)}/pages/0`)) return false;
       }
-      if (!step || !['http','file.fetch','custom.request'].includes(step.type) && !step.type.startsWith('orbit.') && !step.type.startsWith('nook.') && !step.type.startsWith('slack.') && !step.type.startsWith('quickbooks.') && !step.type.startsWith('gusto.')) return false;
+      if (!step || !['http','file.fetch','custom.request'].includes(step.type) && step.type !== 'stripe.find_subscriptions' && !step.type.startsWith('google_calendar.') && !step.type.startsWith('orbit.') && !step.type.startsWith('nook.') && !step.type.startsWith('slack.') && !step.type.startsWith('quickbooks.') && !step.type.startsWith('gusto.')) return false;
       const bound = (step.type === 'file.fetch' || step.type === 'nook.send_message' || step.type.startsWith('orbit.') ? 1 : step.type.startsWith('slack.') ? 4 : 2) * 1024 * 1024;
       if (!Number.isSafeInteger(checkpoint.ordinal) || checkpoint.ordinal < 0 || !/^[a-f0-9]{64}$/.test(checkpoint.request_key) || typeof checkpoint.operation_key !== 'string' || !checkpoint.operation_key) return false;
       if (!Number.isInteger(response.status) || response.status < 100 || response.status > 599 || !['http:', 'https:'].includes(url.protocol) || url.username || url.password || url.search || url.hash) return false;
-      if (!Number.isSafeInteger(response.body_bytes) || response.body_bytes < 0 || response.body_bytes > bound || response.chunk_count !== Math.ceil(response.body_bytes / 65536) || !Array.isArray(response.headers)) return false;
+      if (!Number.isSafeInteger(response.body_bytes) || response.body_bytes < 0 || response.body_bytes > bound || response.chunk_count !== Math.ceil(response.body_bytes / 65536) || !Array.isArray(response.headers) && !sealedPayload(response.headers)) return false;
       const key = checkpointKey(checkpoint), body = (chunks.get(key) ?? []).sort((a, b) => a.chunk_index - b.chunk_index);
       if (body.length !== response.chunk_count) return false;
       let length = 0;
       for (const [index, chunk] of body.entries()) {
         if (chunk.chunk_index !== index || typeof chunk.content_base64 !== 'string') return false;
-        const bytes = atob(chunk.content_base64).length;
+        const expected = Math.min(65536, response.body_bytes - length);
+        const sealed = sealedPayload(chunk.content_base64, (4 * Math.ceil(expected / 3)) + 2 + 16);
+        if (chunk.content_base64.startsWith('{') && !sealed) return false;
+        const bytes = sealed ? expected : atob(chunk.content_base64).length;
         if (bytes !== Math.min(65536, response.body_bytes - length)) return false;
         length += bytes;
       }
       if (length !== response.body_bytes) return false;
       chunks.delete(key);
-      if (response.headers.some(pair => !Array.isArray(pair) || pair.length !== 2 || pair.some(value => typeof value !== 'string') || /authorization|cookie|api[-_]?key|token|secret|password|signature/i.test(pair[0]))) return false;
+      if (Array.isArray(response.headers) && response.headers.some(pair => !Array.isArray(pair) || pair.length !== 2 || pair.some(value => typeof value !== 'string') || /authorization|cookie|api[-_]?key|token|secret|password|signature/i.test(pair[0]))) return false;
     } catch { return false; }
   }
   if (chunks.size) return false;
