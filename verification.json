@@ -65,7 +65,8 @@
       "browser": true,
       "hosted": false,
       "commands": [
-        "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/app-polls\" node tests/app-poll-browser.mjs"
+        "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/app-polls\" node tests/app-poll-browser.mjs",
+        "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/inbound-email\" node tests/inbound-email-browser.mjs"
       ]
     },
     {

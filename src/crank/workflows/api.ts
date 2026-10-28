@@ -1,4 +1,5 @@
 import { watchedFields, saveWatchedFields } from '../triggers/watched-fields'
+import { createEmailAlias, emailState, revokeEmailAlias } from '../triggers/email'
 import { digestApi } from '../engine/steps/digest'
 import { readSamples, saveSample, sampleAction, listenForSample, sampleWarnings } from './samples'
 import { consentRegulatedOperation, readRegulatedOperations } from '../providers/regulated-authority'
@@ -108,6 +109,10 @@ export async function workflowApi(request: Request, env: CrankEnv): Promise<Resp
     }
     requireValue(!path.startsWith('/api/crank/agent-tasks'), 'Agent tasks require a separate execution credential',403)
     requireValue(actor.kind !== 'trigger', 'Trigger tokens only admit events', 403)
+    if (path === '/api/crank/settings/email') {
+      requireValue(request.method === 'GET', 'Method not allowed', 405)
+      return json(await emailState(env, actor, url.searchParams.get('workflow_id') ?? undefined))
+    }
     if (path === '/api/crank/tables' || path.startsWith('/api/crank/tables/')) {
       if (request.method !== 'GET') requireWriteOrigin(request, env, actor)
       return await tableApi(request, env, actor)
@@ -181,6 +186,8 @@ export async function workflowApi(request: Request, env: CrankEnv): Promise<Resp
     requireValue(request.method === 'POST', 'Method not allowed', 405)
     requireWriteOrigin(request, env, actor)
     const input = request.body ? await body(request, 256 * 1024) : {}
+    if ((m = match(path, /^\/api\/crank\/workflows\/([^/]+)\/email-aliases$/))) return json(await createEmailAlias(env, actor, m[0], input), 201)
+    if ((m = match(path, /^\/api\/crank\/settings\/email\/([^/]+)\/revoke$/))) return json(await revokeEmailAlias(env, actor, m[0]))
     if (path === '/api/crank/authoring') return json(await generateAuthoring(env, actor, input), 201)
     if ((m = match(path, /^\/api\/crank\/authoring\/([^/]+)\/(revise|test|promote)$/))) {
       const action = m[1] === 'revise' ? reviseAuthoring : m[1] === 'test' ? testAuthoring : promoteAuthoring
