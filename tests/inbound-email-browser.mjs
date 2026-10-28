@@ -38,7 +38,26 @@ async function onScreen({h,w,run}) {
         const link=history.getByRole('link',{name:'Open run'}).first();await expect(link).toHaveAttribute('href',/^\/app\/workflow-runs\//);
         for(const label of ['Search runs','Your account']) {
           const control=page.locator(`[aria-describedby="${label==='Search runs'?'search-tooltip':'account-tooltip'}"]`),tooltip=page.getByRole('tooltip',{name:label,exact:true});
-          await page.mouse.move(0,0);await control.blur();await expect(tooltip).toBeHidden();await control.hover();await page.waitForTimeout(150);await expect(tooltip).toBeHidden();await expect(tooltip).toBeVisible();await page.mouse.move(0,0);await control.focus();await expect(tooltip).toBeVisible({timeout:100});await control.blur();
+          await page.mouse.move(0,0);await control.blur();await expect(tooltip).toBeHidden();
+          // Sample the real hover transition on its own clock. Host/browser
+          // round trips can exceed the 300 ms delay on a busy CI runner.
+          await control.evaluate(el=>{
+            el.addEventListener('mouseenter',()=>{
+              const tip=el.querySelector('[role="tooltip"]'),style=getComputedStyle(tip);
+              const delay=style.transitionDelay,initial=style.visibility;
+              const transitions=tip.getAnimations();
+              for(const transition of transitions){transition.pause();transition.currentTime=150}
+              el.tooltipTiming={delay,initial,at150:getComputedStyle(tip).visibility,transitions:transitions.length};
+              for(const transition of transitions)transition.play();
+            },{once:true});
+          });
+          await control.hover();
+          const timing=await control.evaluate(el=>el.tooltipTiming);
+          assert.equal(timing.delay,'0.3s');assert.equal(timing.initial,'hidden');
+          assert.ok(timing.transitions>0,'hover uses the real CSS transition');
+          assert.equal(timing.at150,'hidden','tooltip remains hidden at 150 ms');
+          await expect(tooltip).toBeVisible();await page.mouse.move(0,0);
+          await control.focus();await expect(tooltip).toBeVisible({timeout:100});await control.blur();
         }
         assert.ok(await page.locator('.panel').evaluateAll(panels=>panels.every(panel=>[...panel.querySelectorAll('p,label,button,a,h2,h3,strong')].every(el=>parseFloat(getComputedStyle(el).fontSize)>=13))),'settings text is at least 13 pixels');
       }

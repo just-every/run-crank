@@ -5911,7 +5911,7 @@
       "executable": false
     },
     "tests/inbound-email-browser.mjs": {
-      "sha256": "f345c31b6dbe41fc1ffd489f36a3c941c00f26e4c310d85424225eedbf40dba5",
+      "sha256": "4311a678b90b02397a96a486527981ea42d2ed94e121b18248241ca5bc416ff9",
       "executable": false
     },
     "tests/inbound-email-journey.mjs": {
