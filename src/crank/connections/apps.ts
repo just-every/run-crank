@@ -5,7 +5,7 @@ export interface AppDefinition {
   /** Fields of the stored secret, by credential kind; none ever leave the server. */
   test?: { method: string; url: string }
 }
-export const APPS: Record<string, AppDefinition> = {
+export const APPS: Record<string, AppDefinition> = Object.assign(Object.create(null), {
   stripe: { name: 'Stripe test-mode subscriptions', kinds: ['bearer'], domains: ['api.stripe.com'] },
   openai: { name: 'OpenAI text classification', kinds: ['bearer'], domains: ['api.openai.com'] },
   orbit: { name: 'Orbit scoped deal API', kinds: ['bearer'], domains: 'declared' },
@@ -23,7 +23,7 @@ export const APPS: Record<string, AppDefinition> = {
   zendesk: { name: 'Zendesk', kinds: ['bearer', 'basic'], domains: 'declared' },
   hubspot: { name: 'HubSpot', kinds: ['oauth2', 'bearer'], domains: ['api.hubapi.com'], test: { method: 'GET', url: 'https://api.hubapi.com/account-info/v3/details' } },
   google: { name: 'Google', kinds: ['oauth2'], domains: ['www.googleapis.com', 'sheets.googleapis.com', 'gmail.googleapis.com'], test: { method: 'GET', url: 'https://www.googleapis.com/oauth2/v3/userinfo' } },
-}
+} satisfies Record<string, AppDefinition>)
 
 export const SECRET_FIELDS: Record<AuthKind, { required: string[]; optional: string[] }> = {
   bearer: { required: ['token'], optional: ['signing_secret'] },

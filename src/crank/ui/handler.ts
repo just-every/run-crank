@@ -1,3 +1,5 @@
+import { editNative, EditError } from './editor/native'
+import type { EditFeedback } from './editor/native-view'
 import { watchedFieldsPanel } from './watched-fields'
 import { unitsUsd } from '../ops/usage-money'
 import { mcpClientsPanel, mcpCredentialView } from './mcp-clients'
@@ -78,7 +80,7 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
       const state = options.state ?? await read('/api/crank/state'), waiting = await read('/api/crank/workflow-runs?status=awaiting_approval&limit=100')
       return document(title,content,actor,status,{...options,state:undefined,approvals:state.runs.filter((r:any)=>r.state==='pending').length+waiting.runs.length})
     }
-    const editorPage = async (id:string,params:URLSearchParams,preview?:unknown) => {
+    const editorPage = async (id:string,params:URLSearchParams,preview?:unknown,editFeedback?:EditFeedback,status=200) => {
       const [data,state,waiting] = await Promise.all([workflowData(read,id,params,actor),read('/api/crank/state'),read('/api/crank/workflow-runs?status=awaiting_approval&limit=100')])
       let customPicker=''
       const selected=findNode(data.workflow.draft,params.get('step')??'')??flatten(nodes(data.workflow.draft)).at(-1)
@@ -100,8 +102,8 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
         if(params.get('watch_fields')) { const response=await call(`/api/crank/workflows/${encodeURIComponent(id)}/trigger/fields`);const value:any=await response.json();if(response.ok)result=value;else error=value.error }
         customPicker += watchedFieldsPanel(id,data.workflow.draft.trigger,result,error)
       }
-      const view = editorView({...data,preview,customPicker,tokens:state.tokens ?? [],people:state.people ?? [],approvals:state.runs.filter((r:any)=>r.state==='pending').length+waiting.runs.length})
-      return document(data.workflow.name,view.content,actor,200,view.page)
+      const view = editorView({...data,preview,editFeedback,customPicker,tokens:state.tokens ?? [],people:state.people ?? [],approvals:state.runs.filter((r:any)=>r.state==='pending').length+waiting.runs.length})
+      return document(data.workflow.name,view.content,actor,status,view.page)
     }
     if (request.method === 'POST') {
       requireWriteOrigin(request,env,actor)
@@ -111,6 +113,27 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
         return new Response(null,{status:303,headers:{location:'/signin','cache-control':'no-store',...(cookie?{'set-cookie':cookie}:{})}})
       }
       const form = await formValues(request)
+      if (url.pathname === '/app/workflows/create') {
+        const response=await call('/api/crank/workflows',{name:form.name,description:form.description??'',folder:form.folder??'',graph:{trigger:{type:'manual',name:'Started by hand'},steps:[]}})
+        const result:any=await response.json()
+        if(!response.ok)return page('Workflow refused',`<p class="notice">${esc(result.error)}</p><a href="/app">Return to workflows</a>`,{},response.status)
+        return redirect('/app/workflows/'+encodeURIComponent(result.id)+'?step=trigger')
+      }
+      const nativeEdit=/^\/app\/workflows\/([^/]+)\/edit$/.exec(url.pathname)
+      if(nativeEdit) {
+        const workflowId=decodeURIComponent(nativeEdit[1]), workflow=await read('/api/crank/workflows/'+encodeURIComponent(workflowId))
+        if(form.draft_digest!==workflow.draft_digest)return page('Draft changed',`<p class="notice">The draft changed. Reload it before saving; your changes were not applied.</p><a href="/app/workflows/${esc(workflowId)}">Reload draft</a>`,{},409)
+        try {
+          const edited=editNative(workflow.draft,form)
+          const response=await call('/api/crank/workflows/'+encodeURIComponent(workflowId)+'/draft',{graph:edited.graph,draft_digest:form.draft_digest}), result:any=await response.json()
+          if(!response.ok)return page('Save refused',`<p class="notice">${esc(result.error)}</p><a href="/app/workflows/${esc(workflowId)}">Reload draft</a>`,{},response.status)
+          return redirect('/app/workflows/'+encodeURIComponent(workflowId)+'?step='+encodeURIComponent(edited.selected))
+        } catch(error) {
+          if(!(error instanceof EditError))throw error
+          const selected=flatten(nodes(workflow.draft)).find(node=>node.step?.id===form.step)?.path??'trigger'
+          return editorPage(workflowId,new URLSearchParams({step:selected}),undefined,{form,field:error.field,message:error.message},422)
+        }
+      }
       if(url.pathname==='/app/custom-connectors/pickers' || url.pathname==='/app/custom-connectors/selection') {
         requireOwner(actor)
         const input=Object.fromEntries(['workflow_id','step_path','input_name','value','draft_digest','source_run_id','query','cursor_run_id'].filter(key=>form[key]!==undefined && form[key]!=='').map(key=>[key,form[key]]))
@@ -305,15 +328,16 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
       if(path.startsWith('/auth/')) return redirect('/app/access')
       if(path.startsWith('/api/crank/data')) return page('Data operation complete',`<p class="notice">${path.endsWith('/erase')?'The run and its dependent data have been erased. Existing destination effects remain there.':'Your archive has been restored. Every workflow is paused or draft and waits for your review at publish; flows are drafts and connections need reconnecting.'}</p>${restoreSummary(result)}<a href="/app">Return to flows</a>`)
       if(path.startsWith('/api/crank/workflow-runs/') || /^\/api\/crank\/workflows\/[^/]+\/run$/.test(path)) return redirect('/app/workflow-runs/'+encodeURIComponent(result.id))
-      if(path==='/api/crank/workflows') return redirect('/app/workflows/'+encodeURIComponent(result.id))
+      if(path==='/api/crank/workflows' || /^\/api\/crank\/workflows\/[^/]+\/duplicate$/.test(path)) return redirect('/app/workflows/'+encodeURIComponent(result.id))
       if(result.flow_id) return redirect('/app/runs/'+result.id)
       return redirect('/app')
     }
     if(request.method !== 'GET') return page('Method not allowed','<a href="/app">Return to flows</a>',{},405)
     const state = await read('/api/crank/state'), owner = actor.role==='owner'
     if(url.pathname==='/app') {
-      const [workflows,connections] = await Promise.all([read('/api/crank/workflows'),read('/api/crank/connections')])
-      return page('Flows',flowsView(state,env.CRANK_TARGET_ORIGIN ?? (env.AUTH_LOCAL==='true'?'http://127.0.0.1:9051':'https://inbox.example.com'),workflows,connections),{state,intro:'Workflows run unattended once published; approval steps and approval flows wait for an owner.'})
+      const filters=new URLSearchParams();for(const key of ['q','folder'])if(url.searchParams.get(key))filters.set(key,url.searchParams.get(key)!)
+      const [workflows,connections] = await Promise.all([read('/api/crank/workflows?'+filters),read('/api/crank/connections')])
+      return page('Flows',flowsView(state,env.CRANK_TARGET_ORIGIN ?? (env.AUTH_LOCAL==='true'?'http://127.0.0.1:9051':'https://inbox.example.com'),workflows,connections,url.searchParams),{state,intro:'Workflows run unattended once published; approval steps and approval flows wait for an owner.'})
     }
     const workflowPath = /^\/app\/workflows\/([^/]+)$/.exec(url.pathname)
     if(workflowPath) return editorPage(decodeURIComponent(workflowPath[1]),url.searchParams)

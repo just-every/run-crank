@@ -42,7 +42,13 @@ export async function dataFlows(env: CrankEnv) {
   for (const route of noticeRoutes.results) add({ id: `notice:${route.workflow_id}`, kind: 'notice', label: 'Owner-authorized Slack operational notices', state: route.enabled ? 'enabled' : 'disabled', recipients: ['https://slack.com'], purpose: 'Failure and approval notices to the exact owner-consented conversation; no approval or continuation authority', fields: ['conversation ID', 'notice kind and category', 'owner reference', 'authenticated run link'], credentials: credential(route.connection_id) })
   const apps = await stmt(env, 'SELECT app FROM crank_oauth_apps ORDER BY app').all<{ app: string }>()
   for (const { app } of apps.results) {
-    const p = PROVIDERS[app]
+    const p = Object.hasOwn(PROVIDERS, app) ? PROVIDERS[app] : undefined
+    if (!p) {
+      // A pre-upgrade registration may name an inherited or removed provider.
+      add({ id: `oauth:${app}`, kind: 'oauth', label: `${app} OAuth`, state: 'unsupported provider', recipients: [],
+        purpose: 'Unsupported OAuth registration; consent, token exchange and refresh are refused', fields: [], credentials: 'Sealed client secret stays on this installation' })
+      continue
+    }
     add({ id: `oauth:${app}`, kind: 'oauth', label: `${app} OAuth`, state: 'configured', recipients: [recipient(p.authorize), recipient(p.token)],
       purpose: 'Owner-initiated provider consent, token exchange and refresh', fields: ['client identity', 'requested scopes', 'redirect URI', 'state/PKCE', 'authorization code or refresh token'], credentials: 'Owner-registered client ID and sealed client secret; provider-issued tokens' })
   }

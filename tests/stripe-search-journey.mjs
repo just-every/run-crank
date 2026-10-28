@@ -18,7 +18,7 @@ const search=connection_id=>({id:'subscriptions',name:'Customer subscriptions',t
 export async function stripeSearchJourney({inspect}={}) {
  const fake=fakeEdge(),h=await harness('http://127.0.0.1:9',{clock,edge:fake.edge});
  const east=testKey(10),west=testKey(11),readCalls=[];
- let shape='pages',parked=false,changed=false,hook,retries=0;
+ let shape='pages',parked=false,changed=false,hook,retries=0,quantity;
  fake.routes.set('api.stripe.com',async request=>{
   const {url,method,headers,body}=request;
   assert.equal(method,'GET','the native operation never writes');assert.equal(body,'');
@@ -34,6 +34,7 @@ export async function stripeSearchJourney({inspect}={}) {
   if(shape==='empty')return jsonResponse(list([]));
   if(shape==='tie')return jsonResponse(list([subscription(2,{created:100}),subscription(1,{created:100})]));
   if(shape==='one')return jsonResponse(list([subscription(1)]));
+  if(shape==='quantity'){const row=subscription(1);row.items.data[0].quantity=quantity;return jsonResponse(list([row]))}
   if(shape==='wrong customer')return jsonResponse(list([subscription(1,{customer_id:otherCustomer})]));
   if(shape==='live')return jsonResponse(list([subscription(1,{livemode:true})]));
   if(shape==='bad price')return jsonResponse(list([subscription(1,{items:{object:'list',has_more:false,data:[{id:identifier('si',1),quantity:'1',price:{}}]}})]));
@@ -99,6 +100,17 @@ export async function stripeSearchJourney({inspect}={}) {
   }
   assert.equal(h.mail.length,mailBefore,'search halts are not failure notices');
   shape='one';assert.equal(stepOf(await run(),'subscriptions').output.count,1);
+  shape='quantity';
+  for(quantity of [null,0]) {
+   const r=await run();assert.equal(r.status,'succeeded',JSON.stringify(r.error));
+   const result=stepOf(r,'subscriptions').output;assert.equal(result.outcome,'found');assert.equal(result.count,1);
+   assert.deepEqual(result.record.items,[{id:identifier('si',1),quantity,price:{id:identifier('price',1),product_id:identifier('prod',1),currency:'usd',unit_amount:1250}}]);
+   assert.deepEqual(r.response.body,result,'nullable and zero quantities reach downstream work unchanged');
+  }
+  for(quantity of [undefined,'1',-1,1.5]) {
+   const r=await run();assert.equal(r.status,'failed');assert.equal(r.error.category,'provider');
+   assert.equal(stepOf(r,'done'),undefined,'malformed quantities cannot reach downstream work');
+  }
   shape='pages';
   for(const multi_match of ['all','first','stop']) {
    const w=await settings('Bounded scan '+multi_match,{max_pages:1,multi_match}),r=await startRun(h,w,{customer_id:customer});
