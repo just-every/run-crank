@@ -79,10 +79,9 @@ export async function commercePollJourney({inspect=async()=>{}}={}) {
    revision++;state=pending;value=100;await poll();await count([2,2]);
    revision++;state=approved;value=200;await poll();await success([3,2]);
    revision++;value=300;await poll();await success([4,3]);
-   for(const w of workflows)await h.post(`workflows/${w.id}/pause`);
    await h.post(`connections/${c.id}/revoke`);const before=edge.to(host).length;
-   for(const w of workflows)await h.post(`workflows/${w.id}/publish`,{},h.owner,201);
    revision++;value=400;await poll();await count([4,3]);assert.equal(edge.to(host).length,before);
+   for(const w of workflows)assert.equal((await h.send(`/api/crank/workflows/${w.id}/publish`,{},h.owner)).status,422,'a revoked account cannot authorize a replacement version');
    for(const w of workflows)await h.post(`workflows/${w.id}/pause`);
   }
  }finally{await h.close()}

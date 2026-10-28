@@ -611,3 +611,5 @@ test('Subject erasure removes unadmitted app observations and permanently fences
 test('Snapshot retention expires only old inactive payloads and preserves comparison identities', async()=>{const {appRetentionJourney}=await import('./app-retention-journey.mjs');await appRetentionJourney()});
 
 test('Pipedrive, Shopify and Zendesk snapshots admit only watched changes from complete authorized pages', async()=>{const {commercePollJourney}=await import('./commerce-poll-journey.mjs');await commercePollJourney()});
+
+test('Pinned custom polling retains reviewed request boundaries and current consent across pages and admissions', async()=>{const {customPollJourney}=await import('./custom-poll-journey.mjs');await customPollJourney()});

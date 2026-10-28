@@ -1,4 +1,5 @@
 import { appSubjectStatement } from './app-subjects'
+import { customPollBinding } from '../custom/poll-binding'
 import { appState } from './app-state'
 import { appTimeline } from './app-history'
 import { credential } from '../connections/store'
@@ -26,7 +27,8 @@ function matches(condition: unknown, fields: Record<string, unknown> | null, dir
 
 /** Read every bounded page before changing snapshots or admitting work. */
 export async function appItems(env: CrankEnv, poll: PollRow, trigger: Record<string, any>, started: string, zone: string) {
-  const records = await appRecords(env, trigger)
+  const binding = await customPollBinding(env, trigger, poll.version_id)
+  const records = await appRecords(env, trigger, binding ? { beforePage: () => customPollBinding(env, trigger, poll.version_id), maxItems: binding.maxItems } : {})
   await credential(env, trigger.connection_id)
   const reseeding = !poll.seeded && !!await stmt(env, "SELECT 1 FROM crank_workflow_versions WHERE workflow_id=? AND id!=? AND mode='production' AND json_extract(graph_json,'$.trigger.type')='app_poll' LIMIT 1", poll.workflow_id, poll.version_id).first()
   const events: TriggerEvent[] = [], snapshots: D1PreparedStatement[] = [], target = await targetFor(env, poll.workflow_id)
@@ -91,7 +93,7 @@ export async function appItems(env: CrankEnv, poll: PollRow, trigger: Record<str
     snapshots.push(stmt(env, `INSERT INTO crank_app_snapshots(workflow_id,version_id,record_id,fields_json,changed_at,observed_at) VALUES(?,?,?,?,?,?) ON CONFLICT(workflow_id,version_id,record_id) DO UPDATE SET fields_json=excluded.fields_json,changed_at=excluded.changed_at,observed_at=excluded.observed_at WHERE crank_app_snapshots.changed_at<excluded.changed_at`, poll.workflow_id, poll.version_id, recordKey, await sealText(target, JSON.stringify(fields)), at, started))
     }
   }
-  return { events, snapshots }
+  return { events, snapshots, guard: binding?.guard }
 }
 
 /** Renew an owner-installed Graph subscription; polling stays the recovery backstop. */

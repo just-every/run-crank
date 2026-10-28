@@ -52,13 +52,13 @@ async function sheetRows(env: CrankEnv, trigger: Record<string, any>): Promise<A
 }
 
 /** Fetch a complete bounded source before touching any comparison state. */
-export async function appRecords(env: CrankEnv, trigger: Record<string, any>): Promise<AppRecord[]> {
+export async function appRecords(env: CrankEnv, trigger: Record<string, any>, options: { beforePage?: () => Promise<unknown>; maxItems?: number } = {}): Promise<AppRecord[]> {
   const { row } = await credential(env, trigger.connection_id)
   if (row.app !== (trigger.provider === 'google_sheets' ? 'google' : ['microsoft_excel', 'sharepoint'].includes(trigger.provider) ? 'microsoft_graph' : trigger.provider === 'http_json' ? 'http' : trigger.provider)) throw new StepError('auth', 'Choose a connection for this app provider')
   if (['google_sheets', 'microsoft_excel'].includes(trigger.provider)) return sheetRows(env, trigger)
   if (trigger.provider === 'airtable') return airtableRecords(env, trigger)
   if (trigger.provider === 'sharepoint') return sharepointRecords(env, trigger)
-  if (trigger.provider === 'http_json') return httpJsonRecords(env, trigger)
+  if (trigger.provider === 'http_json') return httpJsonRecords(env, trigger, options)
   if ((COMMERCE_PROVIDERS as readonly string[]).includes(trigger.provider)) return commerceRecords(env, trigger)
   const hubspot = trigger.provider === 'hubspot', origin = hubspot ? 'https://api.hubapi.com' : 'https://graph.microsoft.com'
   let url = new URL(hubspot ? `/crm/v3/objects/${trigger.resource}` : '/v1.0/me/messages', origin)

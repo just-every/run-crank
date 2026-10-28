@@ -67,7 +67,7 @@ export async function sharepointRecords(env: CrankEnv, trigger: Record<string, a
 }
 
 /** A configured read-only JSON list, with opaque query cursors on the same URL. */
-export async function httpJsonRecords(env: CrankEnv, trigger: Record<string, any>): Promise<AppRecord[]> {
+export async function httpJsonRecords(env: CrankEnv, trigger: Record<string, any>, options: { beforePage?: () => Promise<unknown>; maxItems?: number } = {}): Promise<AppRecord[]> {
   const { row } = await credential(env, trigger.connection_id)
   if (row.app !== 'http') throw new StepError('auth', 'Choose an HTTP connection for this JSON source')
   const base = new URL(trigger.url)
@@ -75,12 +75,18 @@ export async function httpJsonRecords(env: CrankEnv, trigger: Record<string, any
   const pagination = trigger.pagination, maxPages = pagination?.max_pages ?? 10
   if (pagination && (!Number.isInteger(maxPages) || maxPages < 1 || maxPages > 10 || typeof pagination.cursor_path !== 'string' || !pagination.cursor_path || typeof pagination.param !== 'string' || !pagination.param)) fail('JSON pagination needs cursor_path, param and at most ten pages')
   const collected = collector(), visited = new Set<string>()
+  let itemCount = 0
   let url = base
   for (let page = 0; ; page++) {
     if (page >= maxPages || visited.has(url.href)) fail('JSON pagination did not complete within its distinct-page limit')
     visited.add(url.href)
+    await options.beforePage?.()
     const body: unknown = await appRequest(env, trigger.connection_id, new URL(url))
-    for (const item of collected.page(body, pathValue(body, trigger.items_path))) {
+    await options.beforePage?.()
+    const items = collected.page(body, pathValue(body, trigger.items_path))
+    itemCount += items.length
+    if (options.maxItems !== undefined && itemCount > options.maxItems) fail('Custom poll exceeded its reviewed total item bound')
+    for (const item of items) {
       if (!isObject(item)) fail('JSON list records must be objects')
       collected.add(item, pathValue(item, trigger.id_path), trigger.fields_path === undefined ? item : pathValue(item, trigger.fields_path), trigger.modified_path === undefined ? null : pathValue(item, trigger.modified_path), trigger.modified_path !== undefined)
     }
