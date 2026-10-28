@@ -1,3 +1,4 @@
+import { provisioningErasureStatements } from './team/provisioning/index'
 import { guardedBatch } from './access'
 import { requireValue, stmt, type Actor, type CrankEnv } from './model'
 import { auditStatement } from './ops/audit'
@@ -12,7 +13,7 @@ const ATTRIBUTION: [table: string, column: string][] = [
   ['crank_drift_proposals','created_by'], ['crank_skills', 'created_by'], ['crank_team_access', 'changed_by'],
   ['crank_usage_workflow_estimates', 'quoted_by'], ['crank_usage_version_estimates', 'quoted_by'], ['crank_usage_budgets', 'updated_by'], ['crank_usage_allowances', 'created_by'],
   ['crank_audit', 'actor_id'], ['crank_approvals', 'actor_id'], ['crank_waits', 'decided_by'], ['crank_hold_items', 'decided_by'],
-  ['crank_flows', 'created_by'], ['crank_runs', 'created_by'], ['crank_workflows', 'owner_id'], ['crank_workflows', 'created_by'],
+  ['crank_flows', 'created_by'], ['crank_flows','owner_id'], ['crank_runs', 'created_by'], ['crank_workflows', 'owner_id'], ['crank_workflows', 'created_by'],
   ['crank_workflow_versions', 'published_by'], ['crank_workflow_drafts', 'created_by'], ['crank_wf_runs', 'created_by'], ['crank_wf_step_revisions', 'created_by'],
   ['crank_custom_versions','created_by'], ['crank_gateways','owner_id'], ['crank_gateway_grants','created_by'],
   ['crank_tokens', 'created_by'], ['crank_hooks', 'created_by'], ['crank_connections', 'created_by'], ['crank_oauth_apps', 'updated_by'],
@@ -32,6 +33,7 @@ export async function eraseOperator(env: CrankEnv, actor: Actor, operatorId: str
   await guardedBatch(env, actor, 'owner', [
     stmt(env, `INSERT INTO crank_authority_guards(id,ok) SELECT ?,CASE WHEN EXISTS(SELECT 1 FROM oa_operators WHERE id=? AND email=? AND role!='owner' AND status='inactive') THEN 1 ELSE 0 END`, guard, person.id, person.email),
     stmt(env,'DELETE FROM crank_sample_listeners WHERE created_by=?',person.id),
+    ...provisioningErasureStatements(env,person.id),
     stmt(env,'DELETE FROM crank_mcp_clients WHERE owner_id=?',person.id),
     stmt(env,'DELETE FROM crank_service_accounts WHERE owner_id=?',person.id),
     ...ATTRIBUTION.map(([table, column]) => stmt(env, `UPDATE ${table} SET ${column}=? WHERE ${column}=?`, label, person.id)),

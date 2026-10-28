@@ -12,8 +12,8 @@ export type GrantActor = Actor & { grantId: string }
 
 /** Repeated inside effect admission, so a revoked grant cannot win a stale check. */
 export function grantFence(actor: Actor & { grantId?: string }): { sql: string; args: unknown[] }
-export function grantFence(env: CrankEnv, grantId: string, workflowId: string, versionId: string): { sql: string; args: unknown[] }
-export function grantFence(subject: CrankEnv | (Actor & { grantId?: string }), grantId?: string, workflowId?: string, versionId?: string): { sql: string; args: unknown[] } {
+export function grantFence(env: Pick<CrankEnv, 'AUTH_LOCAL'>, grantId: string, workflowId: string, versionId: string): { sql: string; args: unknown[] }
+export function grantFence(subject: Pick<CrankEnv, 'AUTH_LOCAL'> | (Actor & { grantId?: string }), grantId?: string, workflowId?: string, versionId?: string): { sql: string; args: unknown[] } {
   if (grantId === undefined) {
     const actor = subject as Actor & { grantId?: string }
     return {

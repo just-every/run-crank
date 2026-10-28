@@ -1177,3 +1177,9 @@ stale until reloaded. This does not claim provider field discovery or a live
 provider receipt. Sample values and frozen upstream results stay in the workflow's
 sealed run payload when its data class requires encryption; they are never
 inserted into graph metadata, and declared subject identifiers remain indexed.
+
+### Native team resource and provisioning authority
+
+The owner reads the resource inventory at `GET /api/crank/team-resources` and creates an environment or folder at `POST /api/crank/team-resources/environments` or `POST /api/crank/team-resources/folders`. A folder has a unique name within one environment and an optional parent in that environment. Team grants accept `folder_ids` and `environment_ids`; descendants expand inside each complete grant. A workflow move uses `POST /api/crank/workflows/:id/move` with `folder_id`, or null for its environment root. Source and destination both require preparation rights; cross-environment moves are refused. Production publication remains immutable.
+
+A native owner issues SCIM-only credentials at `POST /api/crank/team-provisioning/credentials`, naming an HTTPS issuer URL. The secret is shown once, and GET lists omit it. The revoke door is `POST /api/crank/team-provisioning/credentials/:id/revoke`. Users and Groups use SCIM 2.0 under `/scim/v2`; their identity is issuer plus external id. Equality filtering, bounded pagination, conditional ETags and idempotent PUT and PATCH are supported. New people receive no product access. Owner-mapped groups use `POST /api/crank/team-provisioning/groups/:id/grants` with complete grants and are listed at `GET /api/crank/team-provisioning/groups`. Membership changes fence requests and draft tests; deactivation revokes sessions and stored credentials. No owner can be deprovisioned. No provisioning or access authority is portable. Real IdP compatibility remains unverified without the owner's tenant.
