@@ -9,7 +9,7 @@ import { sendRequest } from './request-transport'
 
 export const GMAIL_READ_SCOPE = 'https://www.googleapis.com/auth/gmail.readonly'
 const readScopes = [GMAIL_READ_SCOPE, 'https://www.googleapis.com/auth/gmail.modify', 'https://mail.google.com/']
-const MAX_PAGES = 10, MAX_THREADS = 100, PAGE_SIZE = 25, MAX_BYTES = 262144
+const MAX_PAGES = 10, MAX_THREADS = 100, PAGE_SIZE = 25, MAX_BYTES = 262144, MAX_RESULT_BYTES = 524288
 const invalid = (message: string): never => { throw new StepError('validation', `Gmail search: ${message}`) }
 const malformed = (message: string): never => { throw new StepError('provider', `Gmail search: malformed ${message}`) }
 const identity = (value: unknown): string => typeof value === 'string' && /^[A-Za-z0-9_-]{1,128}$/.test(value) ? value : malformed('thread or message identity')
@@ -106,6 +106,7 @@ export const gmailSearchThreads: StepType = {
       if (number === MAX_PAGES - 1 || ids.size >= MAX_THREADS) { incomplete = true; break }
     }
     const records: Record<string, unknown>[] = []
+    let resultBytes = 0
     for (const id of ids) {
       const url = new URL(`https://gmail.googleapis.com/gmail/v1/users/me/threads/${encodeURIComponent(id)}`)
       url.searchParams.set('format', 'metadata')
@@ -114,6 +115,8 @@ export const gmailSearchThreads: StepType = {
       // The checkpoint contains only the validated projection, even if a provider
       // returns unsolicited message content or attachment descriptions.
       const value = await read(url, value => thread(value, id, names))
+      resultBytes += new TextEncoder().encode(JSON.stringify(value)).length
+      if (resultBytes > MAX_RESULT_BYTES) throw new StepError('provider', 'Gmail search metadata exceeds the 512 KiB retained-result bound; narrow the query or header projection')
       records.push(value)
     }
     records.sort((a, b) => String(a.id) < String(b.id) ? -1 : String(a.id) > String(b.id) ? 1 : 0)
