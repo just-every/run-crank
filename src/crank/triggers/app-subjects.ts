@@ -37,9 +37,10 @@ const STATE_SQL = `SELECT json_object(
 ) AS value`
 
 /** Observe every source record, including seeds, nonmatches and settling rows. */
-export async function appSubjectStatement(env: CrankEnv, workflowId: string, recordId: string, recordKey: string) {
-  return stmt(env, `INSERT INTO crank_app_subjects(workflow_id,record_id,record_subject_digest) VALUES(?,?,?)
-    ON CONFLICT(workflow_id,record_id) DO NOTHING`, workflowId, recordKey, await digest(recordId.trim().toLowerCase()))
+export async function appSubjectWriter(env: CrankEnv, workflowId: string, recordId: string, recordKey: string) {
+  const subject = await digest(recordId.trim().toLowerCase())
+  return (guard = '1', params: unknown[] = []) => stmt(env, `INSERT INTO crank_app_subjects(workflow_id,record_id,record_subject_digest) SELECT ?,?,? WHERE ${guard}
+    ON CONFLICT(workflow_id,record_id) DO NOTHING`, workflowId, recordKey, subject, ...params)
 }
 
 /** Retained app records have a life before admission; DATA-002 covers that life too. */

@@ -146,12 +146,19 @@ export async function runPoll(env: CrankEnv, poll: PollRow, time: number) {
   try {
     const app = trigger.type === 'app_poll' ? await appItems(env, poll, trigger, started, String(graph.settings?.timezone ?? (await workspaceSettings(env)).timezone)) : null
     const events = app ? app.events : trigger.type === 'feed' ? await feedItems(env, trigger) : await urlItems(env, trigger, { since, now: started, interval_minutes: poll.interval_minutes })
-    if (app?.guard) for (const event of events) {
-      const retain = event.onRetain, sourceGuard = app.guard, guardId = 'poll-source:' + id()
-      event.onRetain = (guard, params) => [
+    const sourceAuthority = () => ({
+      sql: `EXISTS(SELECT 1 FROM crank_poll_log WHERE id=? AND status='running' AND lease_expires_at>?) AND EXISTS(SELECT 1 FROM crank_workflows WHERE id=? AND published_version_id=?) ${trigger.provider === 'crank_table' ? '' : "AND EXISTS(SELECT 1 FROM crank_connections WHERE id=? AND status='active')"} ${app?.guard ? `AND (${app.guard.sql})` : ''}`,
+      params: [logId, new Date().toISOString(), poll.workflow_id, poll.version_id, ...(trigger.provider === 'crank_table' ? [] : [trigger.connection_id]), ...(app?.guard?.params ?? [])],
+    })
+    if (app) for (const event of events) {
+      const retain = event.onRetain, guardId = 'poll-source:' + id()
+      event.onRetain = (guard, params) => {
+        const sourceGuard = sourceAuthority()
+        return [
         stmt(env, `INSERT INTO crank_authority_guards(id,ok) SELECT ?,CASE WHEN ${sourceGuard.sql} THEN 1 ELSE 0 END WHERE ${guard}`, guardId, ...sourceGuard.params, ...params),
         ...(retain?.(guard, params) ?? []), stmt(env, 'DELETE FROM crank_authority_guards WHERE id=?', guardId),
-      ]
+        ]
+      }
     }
     if (!await stmt(env, "SELECT id FROM crank_poll_log WHERE id=? AND status='running' AND lease_expires_at>?", logId, new Date().toISOString()).first()) return { runs: 0 }
     const fresh: TriggerEvent[] = [], fetchedKeys = new Set<string>()
@@ -174,8 +181,9 @@ export async function runPoll(env: CrankEnv, poll: PollRow, time: number) {
       await env.DB.batch(fresh.slice(i, i + 50).map(event => stmt(env, 'INSERT INTO crank_seen_items(workflow_id,item_key,first_seen_at) VALUES(?,?,?) ON CONFLICT DO NOTHING', poll.workflow_id, event.key, started)))
     }
     if (app?.snapshots.length) for (let i = 0; i < app.snapshots.length; i += 50) {
+      const sourceGuard = sourceAuthority()
       await env.DB.batch([
-        stmt(env, `INSERT INTO crank_authority_guards(id,ok) SELECT ?,CASE WHEN EXISTS(SELECT 1 FROM crank_poll_log WHERE id=? AND status='running' AND lease_expires_at>?) AND EXISTS(SELECT 1 FROM crank_workflows WHERE id=? AND published_version_id=?) ${trigger.provider === 'crank_table' ? '' : "AND EXISTS(SELECT 1 FROM crank_connections WHERE id=? AND status='active')"} ${app.guard ? `AND (${app.guard.sql})` : ''} THEN 1 ELSE 0 END`, logId, logId, new Date().toISOString(), poll.workflow_id, poll.version_id, ...(trigger.provider === 'crank_table' ? [] : [trigger.connection_id]), ...(app.guard?.params ?? [])),
+        stmt(env, `INSERT INTO crank_authority_guards(id,ok) SELECT ?,CASE WHEN ${sourceGuard.sql} THEN 1 ELSE 0 END`, logId, ...sourceGuard.params),
         ...app.snapshots.slice(i, i + 50),
         stmt(env, 'DELETE FROM crank_authority_guards WHERE id=?', logId),
       ])

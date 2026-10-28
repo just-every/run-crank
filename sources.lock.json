@@ -139,7 +139,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "f15689e7976dd6c595e9515945af37ec1f8f0094cff03fdc84e66044f59be509",
+      "sha256": "2192ef41e2c2d68a6d8910cdba4dec30d8a31c975569383e961166ed81ce98f2",
       "executable": false
     },
     "AGENTS.md": {
@@ -163,7 +163,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "75169bd98fcfa947faa0288973385d7708479338c3c3c3c57e6c5b6d31c93d03",
+      "sha256": "a4b734842df0594d6987308d3b0c80b8908484d942dd9828c43d30fd72dc2a97",
       "executable": false
     },
     "DEMO.md": {
@@ -191,7 +191,7 @@
       "executable": false
     },
     "docs/APP-TRIGGERS.md": {
-      "sha256": "148649be6f1de4a2d152da7f9bdf67cf44813f3c60397b5d692b2c3faf75e6da",
+      "sha256": "58a08a0eee4930f22c06d71222fb239afb2435f8847599c611fb371fba447ee5",
       "executable": false
     },
     "docs/BACKUP-RESTORE.md": {
@@ -203,7 +203,7 @@
       "executable": false
     },
     "docs/CLAIMS.md": {
-      "sha256": "2b62385be38c352cf6b9d293901627af037765b9e9d7a213e2897e77cf238f16",
+      "sha256": "7ff2f5015bf4c2df29e46ac51dd63b06b602f847b99aa6b253806beaed467686",
       "executable": false
     },
     "docs/DATA-FLOWS.md": {
@@ -3151,7 +3151,7 @@
       "executable": false
     },
     "src/crank/triggers/app-poll.ts": {
-      "sha256": "9c2af42279d4551da8d3d925107de5b2efda4e0a472c06bf1a300b46b300a38b",
+      "sha256": "2254ce33bebddda1d7abcfff91997fd741db4e7ec9f3b8b654ef6ba4ef0bbc18",
       "executable": false
     },
     "src/crank/triggers/app-retention.ts": {
@@ -3167,7 +3167,7 @@
       "executable": false
     },
     "src/crank/triggers/app-subjects.ts": {
-      "sha256": "1bdaad23ed3bdcf6a9dcda89ae0a51649d146c64a1ebb3b696949a55a1d40697",
+      "sha256": "1d56abfb258a74db9fe63c4c82ba455b3e71095fd3dd42b6ac4447b22108a65c",
       "executable": false
     },
     "src/crank/triggers/callbacks.ts": {
@@ -3219,7 +3219,7 @@
       "executable": false
     },
     "src/crank/triggers/poll.ts": {
-      "sha256": "31e342252d1041bb2756c0c8f8677a9fe5c2ef919545e05536a5c1a72c2fc4c8",
+      "sha256": "837b543f44460be016e5e9a33391776f8ebbac4c4f42fe6681c61dcfabee997a",
       "executable": false
     },
     "src/crank/triggers/public.ts": {
@@ -5471,7 +5471,7 @@
       "executable": false
     },
     "test-budget.json": {
-      "sha256": "7fb5b154cc1fe00ac5d72d5bf643f1af045b67de2c290c8894406c58cbac4138",
+      "sha256": "ea0589fb587f5eed23a11847b85818af5d0cde672aa3af0229e883bfc8168341",
       "executable": false
     },
     "tests/accounting-poll-journey.mjs": {
