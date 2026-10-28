@@ -44,6 +44,9 @@ export async function inboundEmailJourney({onScreen=async()=>{},emitted=false}={
     ]};
     const w=await publish(h,'Forwarded purchase orders',graph),a=await alias(h,w);
     assert.equal((await h.send(`/api/crank/workflows/${w.id}/email-aliases`,{domain:'inbound.example.test'})).status,401);
+    const agent=await h.post('tokens',{label:'Email preparation only',scope:'agent'},h.owner,201),authorization={authorization:'Bearer '+agent.token};
+    assert.equal((await h.send(`/api/crank/workflows/${w.id}/email-aliases`,{domain:'inbound.example.test'},'',authorization)).status,403);
+    assert.equal((await h.send('/api/crank/settings/email',undefined,'',authorization)).status,403);
     const opaque=await h.db.prepare('SELECT * FROM crank_email_aliases WHERE id=?').bind(a.id).first();
     assert.equal(JSON.stringify(opaque).includes(a.address),false,'only the address hash is stored');
     const raw=emailFixture(a.address);
@@ -110,6 +113,7 @@ export async function inboundEmailBoundsJourney() {
       emailFixture(a.address,{id:'synthetic-crank-transfer'}).replace(pdf.toString('base64'),'%%%invalid%%%'),
       emailFixture(a.address,{id:'synthetic-crank-big-file',attachment:Buffer.alloc(1024*1024+1)}),
       emailFixture(a.address,{id:'synthetic-crank-ambiguous',headers:[`Message-ID: ${messageId('synthetic-crank-second')}`]}),
+      emailFixture(a.address,{id:'synthetic-crank-escaped',body:'\0'.repeat(250000)}),
     ])assert.match(await sendEmail(h,a.address,raw,{stream:true}),/Malformed/);
     assert.equal((await runs(h,w)).length,2);
     let resume,started;const reading=new Promise(resolve=>started=resolve);

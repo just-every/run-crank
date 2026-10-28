@@ -44,6 +44,12 @@ async function onScreen({h,w,run}) {
       }
       assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`${width} email settings fits`);
       await page.screenshot({path:join(evidence,`${width}-email-admission.png`),fullPage:true});
+      await page.goto(h.origin+'/app/runs?workflow='+w.id);
+      if(width===1440) {
+        const history=page.getByRole('region',{name:'Email admission history'});await expect(history).toContainText('Sender is not allowed');await expect(history).toContainText('duplicate');await expect(history).not.toContainText('Authenticated email only');
+      }
+      assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`${width} received mail history fits`);
+      await page.screenshot({path:join(evidence,`${width}-email-received-history.png`),fullPage:true});
       await page.goto(h.origin+`/app/workflow-runs/${run.id}`);
       const mapping=page.locator('.timeline-item').filter({hasText:'Formatter'}).first();await mapping.getByText('Input and output',{exact:true}).click();
       if(width===1440){await expect(mapping).toContainText('Forwarded purchase order');await expect(mapping).toContainText('order.pdf');await expect(mapping).toContainText('PO 4301');await expect(mapping).toContainText('Vendor PO')}

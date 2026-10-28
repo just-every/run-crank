@@ -80,6 +80,8 @@ export async function receiveEmail(message: ForwardableEmailMessage, env: CrankE
     const key = 'email:' + await digest(parsed.message_id)
     const { uploads, ...fields } = parsed
     const payload = { ...fields, envelope: { from: sender, to: address }, authentication: { verified: false, source: 'unavailable' } }
+    // JSON escaping and forwarded headers must also fit sealed D1 custody.
+    if (new TextEncoder().encode(JSON.stringify(payload)).byteLength > 1024 * 1024) throw new StepError('validation', 'Parsed email exceeds payload custody bounds')
     const payloadDigest = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes)), b => b.toString(16).padStart(2, '0')).join('')
     const admitted = await admitWebhook(env, workflow, '', key, payloadDigest, payload, burstThreshold(graph), Number(trigger.dedup_window_minutes ?? 1440), uploads, false, undefined, { aliasId: alias.id, receiptId: id() })
     if (admitted.accepted && admitted.runId) {

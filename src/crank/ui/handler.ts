@@ -1,5 +1,5 @@
 import { watchedFieldsPanel } from './watched-fields'
-import { emailSettings } from './email'
+import { emailHistory, emailSettings } from './email'
 import { unitsUsd } from '../ops/usage-money'
 import { mcpClientsPanel, mcpCredentialView } from './mcp-clients'
 import { clientApi } from '../mcp/client-api'
@@ -324,7 +324,8 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
       const search = new URLSearchParams({limit:'50'}); if(q) search.set('q',q); if(status) search.set('status',status); if(workflow) search.set('workflow',workflow); for (const key of ['before','business_key','from','to','error']) { const value = url.searchParams.get(key); if(value) search.set(key,value) }
       const [runs,workflows] = await Promise.all([read('/api/crank/workflow-runs?'+search),read('/api/crank/workflows')])
       const {graphs,live} = await runGraphs(read,runs.runs)
-      return page('Runs',runsView(state,url.searchParams.get('flow'),{runs:runs.runs,next:runs.next,workflows,q,status,workflow,graphs,live,params:url.searchParams}),{state,intro:'Every run keeps its own record: workflow runs step by step, approval flow runs with their decision and delivery.'})
+      const mail = owner && workflows.some((w:any)=>w.trigger==='email' && (!workflow || w.id===workflow)) ? emailHistory(await read('/api/crank/settings/email'+(workflow?'?workflow_id='+encodeURIComponent(workflow):'')),workflows) : ''
+      return page('Runs',runsView(state,url.searchParams.get('flow'),{runs:runs.runs,next:runs.next,workflows,q,status,workflow,graphs,live,params:url.searchParams})+mail,{state,intro:'Every run keeps its own record: workflow runs step by step, approval flow runs with their decision and delivery.'})
     }
     if(/^\/app\/runs\/[^/]+$/.test(url.pathname)) return page('Run details',runView(state,url.pathname.split('/')[3]),{state,crumbs:[['Runs','/app/runs']]})
     const runPath = /^\/app\/workflow-runs\/([^/]+)$/.exec(url.pathname)
