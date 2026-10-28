@@ -71,7 +71,7 @@ export async function googleCalendarSearchJourney({onScreen}={}) {
   mode='pages';fake.routes.set('www.googleapis.com',request=>{assertRead(request);return jsonResponse({items:[events[0]]})});
   const one=await startRun(h,all,{});assert.equal(found(one).count,1);assert.equal(found(one).record.id,events[0].id);
   // Restore the common edge for malformed and error cases.
-  const responses=[['malformed',()=>new Response('not JSON')],['bad items',()=>jsonResponse({items:{}})],['bad event',()=>jsonResponse({items:[{id:'synthetic-crank-no-time',status:'confirmed'}]})],['bad date',()=>jsonResponse({items:[{...events[0],start:{date:'2026-02-30'}}]})],['provider error',()=>jsonResponse({},500)],['permission',()=>jsonResponse({},403)],['cursor loop',()=>jsonResponse({items:[events[0]],nextPageToken:'synthetic-crank-loop'})],['bad token',()=>jsonResponse({items:[],nextPageToken:{bad:true}})],['too many events',()=>jsonResponse({items:Array(101).fill(events[0])})],['changed duplicate',({url})=>jsonResponse(url.searchParams.has('pageToken')?{items:[{...events[0],summary:'changed'}]}:{items:[events[0]],nextPageToken:'synthetic-crank-page'})]];
+  const responses=[['malformed',()=>new Response('not JSON')],['bad items',()=>jsonResponse({items:{}})],['bad event',()=>jsonResponse({items:[{id:'synthetic-crank-no-time',status:'confirmed'}]})],['bad date',()=>jsonResponse({items:[{...events[0],start:{date:'2026-02-30'}}]})],['mixed time kinds',()=>jsonResponse({items:[{...events[0],start:{date:'2026-11-01'}}]})],['provider error',()=>jsonResponse({},500)],['permission',()=>jsonResponse({},403)],['cursor loop',()=>jsonResponse({items:[events[0]],nextPageToken:'synthetic-crank-loop'})],['bad token',()=>jsonResponse({items:[],nextPageToken:{bad:true}})],['too many events',()=>jsonResponse({items:Array(101).fill(events[0])})],['changed duplicate',({url})=>jsonResponse(url.searchParams.has('pageToken')?{items:[{...events[0],summary:'changed'}]}:{items:[events[0]],nextPageToken:'synthetic-crank-page'})]];
   for(const [label,reply] of responses) {
    fake.routes.set('www.googleapis.com',request=>{assertRead(request);return reply(request)});
    const bad=await startRun(h,all,{});assert.equal(bad.status,'failed',label);assert.notEqual(bad.error.category,'not_found',label);assert.equal(found(bad),null,label);
@@ -88,6 +88,9 @@ export async function googleCalendarSearchJourney({onScreen}={}) {
   for(const refused of [wrong,insufficient])assert.notEqual((await startRun(h,await flow(h,refused),{})).status,'succeeded');
   assert.equal(fake.requests.length,before,'wrong credentials and freebusy-only consent send no event request');
   const other=await connection(h,{app:'google',auth_kind:'oauth2',scopes:[scope],label:'Separate managed account',secret:{access_token:'synthetic-crank-504'}});
+  fake.routes.set('www.googleapis.com',request=>{assertRead(request,'synthetic-crank-504','synthetic-crank-other-calendar');return jsonResponse({items:[{...events[0],id:'synthetic-crank-other-event'}]})});
+  fake.routes.set('www.googleapis.com',request=>{assertRead(request,'synthetic-crank-504','synthetic-crank-other-calendar');return jsonResponse({items:[{id:'synthetic-crank-cancelled',status:'cancelled'}]})});
+  const sparse=await startRun(h,await flow(h,other,{input:{...interval,calendar_id:'synthetic-crank-other-calendar'}}),{});assert.equal(sparse.status,'succeeded');assert.equal(found(sparse).record.status,'cancelled');assert.equal(found(sparse).record.start,null);assert.equal(found(sparse).record.end,null);
   fake.routes.set('www.googleapis.com',request=>{assertRead(request,'synthetic-crank-504','synthetic-crank-other-calendar');return jsonResponse({items:[{...events[0],id:'synthetic-crank-other-event'}]})});
   const isolated=await startRun(h,await flow(h,other,{input:{...interval,calendar_id:'synthetic-crank-other-calendar'}}),{});assert.equal(found(isolated).record.id,'synthetic-crank-other-event');assert.equal(found(complete).records.some(e=>e.id==='synthetic-crank-other-event'),false);
   // A later-page request is parked. Restart must reconstruct the completed page.
@@ -121,11 +124,12 @@ export async function googleCalendarSearchCustodyJourney({onScreen}={}) {
  try {
   const w=await flow(h,c,{multi_match:'all',limit:10});
   await h.post(`workflows/${w.id}/pause`);await h.post('data/classes',{workflow_id:w.id,data_class:'customer',identifier_fields:['id','summary']});await h.post(`workflows/${w.id}/resume`);
-  let items=[events[0]],parking=true;
+  let items=[{...events[0],description:'x'.repeat(70000)}],parking=true;
   fake.routes.set('www.googleapis.com',request=>{assertRead(request);return request.url.searchParams.has('pageToken')?(parking?jsonResponse({},429,{'retry-after':'60'}):jsonResponse({items:[events[1],events[2]]})):jsonResponse({items,nextPageToken:'synthetic-crank-private-page'})});
   const parked=await startRun(h,w,{});assert.equal(parked.status,'waiting');
   const chunks=async id=>(await h.db.prepare('SELECT content_base64 FROM crank_request_checkpoint_chunks WHERE run_id=? ORDER BY ordinal,chunk_index').bind(id).all()).results;
-  const raw=await chunks(parked.id);assert.equal(raw.length,1);assert.equal(JSON.parse(raw[0].content_base64).sealed,'crank-payload-v1');assert.ok(!raw[0].content_base64.includes(events[0].summary));
+  const metadata=await h.db.prepare('SELECT response_json FROM crank_request_checkpoints WHERE run_id=?').bind(parked.id).first();assert.ok(!metadata.response_json.includes(interval.calendar_id),'resource identifiers stay out of plaintext checkpoint metadata');
+  const raw=await chunks(parked.id);assert.equal(raw.length,2,'a completed page crosses the binary chunk boundary');assert.ok(raw.every(row=>JSON.parse(row.content_base64).sealed==='crank-payload-v1'));assert.ok(!raw[0].content_base64.includes(events[0].summary));
   const preview=await h.post('data/subject',{subject:events[0].id});assert.deepEqual(preview.workflow_runs.map(r=>r.id),[parked.id]);assert.equal(preview.blocked,true,'unfinished page is a retained subject even before a step result');
   const hold=await h.post('data/holds',{kind:'subject',subject:events[0].id,reason:'Calendar record under review'},h.owner,201);
   assert.match((await h.post('data/subject',{subject:events[0].id})).workflow_runs[0].blocked,/legal hold/);
@@ -136,7 +140,7 @@ export async function googleCalendarSearchCustodyJourney({onScreen}={}) {
   const unavailable=await restored.post('data/subject',{subject:events[0].id});assert.equal(unavailable.blocked,true);assert.match(unavailable.sealed_unmatched.join(' '),/key file/);
   const before=fake.requests.length;await restored.restart();await restored.tick('2026-11-10T15:02:01Z');assert.equal(fake.requests.length,before,'sealed inactive restore issues no provider requests');
   const rotation=await h.post('data/keys/rotate',{data_class:'customer',confirm:'ROTATE'});await h.tick('2026-11-10T15:00:10Z');
-  assert.equal(JSON.parse((await chunks(parked.id))[0].content_base64).k,rotation.key_id,'rotation re-seals unfinished pages');
+  assert.ok((await chunks(parked.id)).every(row=>JSON.parse(row.content_base64).k===rotation.key_id),'rotation re-seals every unfinished page chunk');
   assert.deepEqual((await h.post('data/subject',{subject:events[0].id})).workflow_runs.map(r=>r.id),[parked.id],'rotation preserves declared subject discovery');
   parking=false;const calls=fake.requests.length;
   fake.routes.set('www.googleapis.com',request=>{assertRead(request);assert.equal(request.url.searchParams.get('pageToken'),'synthetic-crank-private-page');return jsonResponse({items:[events[1],events[2]]})});

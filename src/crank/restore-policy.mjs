@@ -190,8 +190,8 @@ export async function validateRestore({ read }) {
         if (!step.gateway_id || !search?.gateway || response.body_bytes>65536 || !allowed.some(operation=>url.pathname===`/api/crank/gateways/${encodeURIComponent(step.gateway_id)}/operations/${encodeURIComponent(operation)}/pages/0`)) return false;
       }
       if (!step || !['http','file.fetch','custom.request'].includes(step.type) && !step.type.startsWith('orbit.') && !step.type.startsWith('nook.') && !step.type.startsWith('slack.') && !step.type.startsWith('quickbooks.') && !step.type.startsWith('gusto.') && !step.type.startsWith('google_calendar.')) return false;
-      if (step.type === 'google_calendar.search_events' && (url.origin !== 'https://www.googleapis.com' || !/^\/calendar\/v3\/calendars\/[^/]+\/events$/.test(url.pathname))) return false;
-      const bound = (step.type === 'file.fetch' || step.type === 'nook.send_message' || step.type.startsWith('orbit.') ? 1 : step.type.startsWith('slack.') ? 4 : 2) * 1024 * 1024;
+      if (step.type === 'google_calendar.search_events' && url.href !== 'https://www.googleapis.com/calendar/v3/events') return false;
+      const bound = (step.type === 'file.fetch' || step.type === 'nook.send_message' || step.type.startsWith('orbit.') || step.type === 'google_calendar.search_events' ? 1 : step.type.startsWith('slack.') ? 4 : 2) * 1024 * 1024;
       if (!Number.isSafeInteger(checkpoint.ordinal) || checkpoint.ordinal < 0 || !/^[a-f0-9]{64}$/.test(checkpoint.request_key) || typeof checkpoint.operation_key !== 'string' || !checkpoint.operation_key) return false;
       if (!Number.isInteger(response.status) || response.status < 100 || response.status > 599 || !['http:', 'https:'].includes(url.protocol) || url.username || url.password || url.search || url.hash) return false;
       if (!Number.isSafeInteger(response.body_bytes) || response.body_bytes < 0 || response.body_bytes > bound || response.chunk_count !== Math.ceil(response.body_bytes / 65536) || !Array.isArray(response.headers)) return false;
