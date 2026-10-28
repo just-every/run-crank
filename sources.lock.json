@@ -6163,7 +6163,7 @@
       "executable": false
     },
     "tests/team.test.mjs": {
-      "sha256": "f1d207ee27043cd1a5823a9d83146e1772d53d495283118e8bd672dd51912d8f",
+      "sha256": "95d7ea05abe92ac31297b3ed1065686d335a9934986cc48cc26e26f46add2100",
       "executable": false
     },
     "tests/triggers.test.mjs": {
