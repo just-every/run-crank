@@ -13,6 +13,10 @@ import { allowedOperation, customVersion } from './store'
 
 function typedInput(op:CustomOperation,input:Record<string,unknown>) {
   if (Object.keys(input).some(key=>!Object.hasOwn(op.inputs,key))) throw new StepError('validation','Custom operation received an undeclared input')
+  if (op.resource_page) {
+    const page=op.resource_page
+    if(input[page.size_input]!==page.page_size || typeof input[page.query_input]!=='string' || String(input[page.query_input]).length>200 || input[page.cursor_input]!==undefined && (typeof input[page.cursor_input]!=='string' || !String(input[page.cursor_input]).length || String(input[page.cursor_input]).length>8192)) throw new StepError('validation','Resource reads require their reviewed page size and bounded query and cursor')
+  }
   for (const [name,spec] of Object.entries(op.inputs)) {
     const value=input[name]
     if (value===undefined || value===null) {if(spec.required) throw new StepError('validation',`Custom input ${name} is required`);continue}
@@ -78,7 +82,7 @@ export const customRequest:StepType={
       }
     }
     const output=op.gateway?await privatePages(step,ctx,op):await publicRead(step,ctx,op)
-    if(op.kind==='search') {
+    if(op.kind==='search' && !op.resource_page) {
       const records=Array.isArray(output)?output:isObject(output)?output.items??output.rows:null
       if(!Array.isArray(records) || records.some(record=>!isObject(record))) throw new StepError('provider','Custom search must return an array of records')
       return searchOutcome(step,records as Record<string,unknown>[])

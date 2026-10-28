@@ -4,7 +4,7 @@ import { assertDispatchAuthority } from '../engine/authority'
 import { branchesOf, validateGraph, type Graph } from '../engine/graph'
 import type { Step } from '../engine/types'
 import { isObject, lookup } from '../engine/values'
-import { canonical, digest, requireValue, stmt, text, type Actor, type CrankEnv } from '../model'
+import { canonical, digest, id, requireValue, stmt, text, type Actor, type CrankEnv } from '../model'
 import { auditStatement } from '../ops/audit'
 import { connectionScope, workflowScope } from '../team/policy'
 import { pendingRestore } from '../workflows/restore'
@@ -16,7 +16,8 @@ import type { CustomDefinition, CustomInput, CustomOperation } from './definitio
 import { allowedOperation, customVersion } from './store'
 
 type Address = { workflow_id: string; step_path: string; input_name: string }
-type Option = { value: string | number | boolean; label: string }
+type Option = { value: string | number | boolean; label: string; context?: string }
+type Page = { query: string; cursor?: string }
 const READ_ID = 'picker_read'
 
 function address(input: Record<string, unknown>, extra: string[] = []): Address {
@@ -72,7 +73,7 @@ async function targetDescriptor(env: CrankEnv, actor: Actor, at: Address) {
 }
 type TargetDescriptor = Awaited<ReturnType<typeof targetDescriptor>>
 
-async function descriptor(env: CrankEnv, actor: Actor, at: Address) {
+async function descriptor(env: CrankEnv, actor: Actor, at: Address, page: Page = { query: '' }) {
   const current = await targetDescriptor(env, actor, at)
   const { spec, row, operation, target, graph } = current
   requireValue(spec?.resource, 'This input has no reviewed resource picker', 422)
@@ -84,12 +85,19 @@ async function descriptor(env: CrankEnv, actor: Actor, at: Address) {
     const value = literal(isObject(target.input) ? target.input[sibling] : undefined, operation.inputs[sibling])
     parentInput[name] = { $literal: checkedValue(value, list.inputs[name]) }
   }
+  requireValue(typeof page.query === 'string' && page.query.length <= 200 && !/[\u0000-\u001f\u007f]/.test(page.query) && (page.cursor === undefined || typeof page.cursor === 'string' && page.cursor.length > 0 && page.cursor.length <= 8192), 'Invalid resource query or cursor', 422)
+  requireValue(list.resource_page || !page.query && !page.cursor, 'This reviewed picker does not declare provider search or pages', 422)
+  if (list.resource_page) {
+    parentInput[list.resource_page.query_input] = { $literal: page.query }
+    parentInput[list.resource_page.size_input] = { $literal: list.resource_page.page_size }
+    if (page.cursor) parentInput[list.resource_page.cursor_input] = { $literal: page.cursor }
+  }
   requireValue(Object.entries(list.inputs).every(([name, input]) => !input.required || Object.hasOwn(parentInput, name)), 'Choose every required picker parent before loading options', 422)
   const read: Step = { id: READ_ID, type: 'custom.request', connector_id: row.id, connector_version: row.version, operation: list.id, input: parentInput }
   for (const key of ['connection_id', 'gateway_id', 'environment', 'timeout_ms', 'retry_policy']) if (target[key] !== undefined) read[key] = structuredClone(target[key])
-  if (list.kind === 'search') Object.assign(read, { multi_match: 'all', limit: 500, no_match: 'continue' })
+  if (list.kind === 'search' && !list.resource_page) Object.assign(read, { multi_match: 'all', limit: 500, no_match: 'continue' })
   const snapshot = validateGraph({ trigger: { type: 'manual' }, steps: [read], ...(graph.settings ? { settings: structuredClone(graph.settings) } : {}) }).graph
-  return { ...current, resource, list, snapshot }
+  return { ...current, resource, list, snapshot, page }
 }
 type Descriptor = Awaited<ReturnType<typeof descriptor>>
 
@@ -121,7 +129,7 @@ async function currentConsent(env: CrankEnv, actor: Actor, current: TargetDescri
 function optionsFrom(output: unknown, current: Descriptor): Option[] {
   requireValue(isObject(output) && output.truncated !== true, 'The picker read was incomplete; no partial choices are available', 422)
   const items = lookup(output, current.resource.items_path)
-  requireValue(items.found && Array.isArray(items.value) && items.value.length <= 500, 'Picker output must contain at most 500 complete records', 422)
+  requireValue(items.found && Array.isArray(items.value) && items.value.length <= (current.list.resource_page?.page_size ?? 500), 'Picker output exceeds its reviewed page bound', 422)
   const seen = new Set<string>()
   return items.value.map(item => {
     requireValue(isObject(item), 'Picker records must be objects', 422)
@@ -131,23 +139,37 @@ function optionsFrom(output: unknown, current: Descriptor): Option[] {
     const key = canonical(value)
     requireValue(!seen.has(key), 'Picker output contains duplicate resource identifiers', 422)
     seen.add(key)
-    return { value, label }
+    const context = current.resource.context_path ? lookup(item, current.resource.context_path).value : undefined
+    requireValue(context === undefined || typeof context === 'string' && context.length <= 2000 && !/[\u0000-\u001f\u007f]/.test(context), 'Picker context must be bounded text', 422)
+    return { value, label, ...(context === undefined ? {} : { context }) }
   })
 }
 
 async function connectionConsent(env:CrankEnv,target:Step) {
   if(typeof target.connection_id!=='string')return null
   const row=await getConnection(env,target.connection_id)
-  return digest(canonical({id:row.id,auth_kind:row.auth_kind,account_name:row.account_name,rotated_at:row.rotated_at,consented_at:row.consented_at,domains:row.domains_json,scopes:row.scopes_json}))
+  return digest(canonical({id:row.id,auth_kind:row.auth_kind,account_name:row.account_name,rotated_at:row.rotated_at,consented_at:row.consented_at,domains:row.domains_json,scopes:row.scopes_json,credential_generation:row.secret_iv}))
 }
 async function result(env: CrankEnv, actor: Actor, runId: string, current: Descriptor) {
-  const source = await stmt(env, `SELECT r.workflow_id,r.mode,r.version_id,r.created_by,r.test_owner_version,r.payload_expired_at,v.graph_json,v.declared_json
+  const source = await stmt(env, `SELECT r.workflow_id,r.mode,r.version_id,r.created_by,COALESCE(r.finished_at,r.received_at) AS loaded_at,r.test_owner_version,r.payload_expired_at,v.graph_json,v.declared_json
     FROM crank_wf_runs r JOIN crank_workflow_versions v ON v.id=r.version_id WHERE r.id=?`, runId)
-    .first<{ workflow_id: string; mode: string; version_id: string; created_by: string; test_owner_version: number; payload_expired_at: string | null; graph_json: string; declared_json: string }>()
+    .first<{ workflow_id: string; mode: string; version_id: string; created_by: string; loaded_at: string; test_owner_version: number; payload_expired_at: string | null; graph_json: string; declared_json: string }>()
   requireValue(source && source.workflow_id === current.at.workflow_id && source.mode === 'test' && source.created_by === actor.id && source.test_owner_version === actor.version && !source.payload_expired_at, 'Choose a retained picker test from this workflow and current owner authority', 409)
   const marker = await stmt(env, "SELECT detail_json FROM crank_audit WHERE subject_kind='run' AND subject_id=? AND action='custom.picker_load'", runId).first<{ detail_json: string }>()
   requireValue(marker, 'This run is not an explicitly loaded picker source', 409)
-  const expected = { ...current.at, draft_digest: current.draftDigest, snapshot_digest: await digest(canonical(current.snapshot)), connection_consent:await connectionConsent(env,current.target) }
+  const frozen = JSON.parse(source.graph_json) as Graph, read = stepAt(frozen, READ_ID), controls = current.list.resource_page
+  const value = (name: string) => {
+    const input = isObject(read?.input) ? read.input[name] : undefined
+    return isObject(input) && Object.keys(input).length === 1 ? input.$literal : undefined
+  }
+  let page: Page = { query: '' }
+  if (controls) {
+    const query = value(controls.query_input), cursor = value(controls.cursor_input)
+    requireValue(typeof query === 'string' && (cursor === undefined || typeof cursor === 'string'), 'The retained resource page is invalid; load names again', 409)
+    page = { query, ...(cursor === undefined ? {} : { cursor }) }
+  }
+  current = await descriptor(env, actor, current.at, page)
+  const expected = { ...current.at, page_digest: await digest(canonical(page)), draft_digest: current.draftDigest, snapshot_digest: await digest(canonical(current.snapshot)), connection_consent:await connectionConsent(env,current.target) }
   requireValue(canonical(JSON.parse(marker.detail_json)) === canonical(expected) && canonical(JSON.parse(source.graph_json)) === canonical(current.snapshot), 'This picker source belongs to another input or an older draft', 409)
   requireValue(currentBinding(source.declared_json, current.row), 'Connector consent changed; explicitly reload this picker', 409)
   await assertDispatchAuthority(env, runId)
@@ -162,28 +184,73 @@ async function result(env: CrankEnv, actor: Actor, runId: string, current: Descr
     requireValue(step?.status === 'succeeded', 'The picker read has no successful retained output', 409)
     return optionsFrom(step.output, current)
   })() : []
-  return { run_id: runId, status: run.status, options, draft_digest: current.draftDigest, ...(run.error?{error:String(run.error.message??'The resource read failed; inspect its run before loading again')}:{}) }
+  let nextCursor: string | undefined
+  if (run.status === 'succeeded' && current.list.resource_page) {
+    const output = run.steps.find(step => step.path === READ_ID)!.output
+    const cursor = lookup(isObject(output) ? output.body : undefined, current.list.resource_page.cursor_path).value
+    requireValue(cursor === undefined || cursor === null || cursor === '' || typeof cursor === 'string' && cursor.length <= 8192 && cursor !== current.page.cursor, 'The provider returned an invalid or repeated resource cursor', 422)
+    if (typeof cursor === 'string' && cursor) nextCursor = cursor
+  }
+  return { run_id: runId, status: run.status, options, loaded_at: source.loaded_at, query: current.page.query, has_next_page: !!nextCursor, nextCursor, draft_digest: current.draftDigest, ...(run.error?{error:String(run.error.message??'The resource read failed; inspect its run before loading again')}:{}) }
+}
+
+function publicResult(value: Awaited<ReturnType<typeof result>>) {
+  const { nextCursor, ...response } = value
+  return response
 }
 
 export async function loadPicker(env: CrankEnv, actor: Actor, input: Record<string, unknown>) {
-  const current = await descriptor(env, actor, address(input))
+  const at = address(input, ['query', 'cursor_run_id'])
+  let page: Page = { query: input.query === undefined ? '' : text(input.query, 'query', 200) }
+  if (input.cursor_run_id !== undefined) {
+    const previous = await result(env, actor, text(input.cursor_run_id, 'cursor_run_id', 100), await descriptor(env, actor, at))
+    requireValue(previous.status === 'succeeded' && previous.nextCursor && (input.query === undefined || page.query === previous.query), 'Reload this search before requesting another resource page', 409)
+    page = { query: previous.query, cursor: previous.nextCursor }
+  }
+  const current = await descriptor(env, actor, at, page)
   await currentConsent(env, actor, current)
+  const consent = await connectionConsent(env, current.target)
   const bindings = typeof current.target.connection_id === 'string' ? { [current.target.connection_id]: current.target.connection_id } : {}
   const run = await testWorkflow(env, actor, current.at.workflow_id, { input: {}, bindings }, current.snapshot)
   await guardedBatch(env, actor, 'owner', [auditStatement(env, actor.id, 'custom.picker_load', 'run', run.id,
-    { ...current.at, draft_digest: current.draftDigest, snapshot_digest: await digest(canonical(current.snapshot)), connection_consent:await connectionConsent(env,current.target) }, run.version_id)])
-  return result(env, actor, run.id, await descriptor(env, actor, current.at))
+    { ...current.at, page_digest: await digest(canonical(page)), draft_digest: current.draftDigest, snapshot_digest: await digest(canonical(current.snapshot)), connection_consent: consent }, run.version_id)])
+  return publicResult(await result(env, actor, run.id, current))
 }
 
 export async function readPicker(env: CrankEnv, actor: Actor, runId: string, input: Record<string, unknown>) {
-  return result(env, actor, text(runId, 'run_id', 100), await descriptor(env, actor, address(input)))
+  return publicResult(await result(env, actor, text(runId, 'run_id', 100), await descriptor(env, actor, address(input))))
+}
+
+/** These checks run in the same transaction that saves the selection. */
+async function selectionGuards(env: CrankEnv, current: TargetDescriptor, sourceRunId: unknown, connection: Awaited<ReturnType<typeof getConnection>> | undefined): Promise<D1PreparedStatement[]> {
+  const guard = id(), args: unknown[] = [guard, current.row.id, current.row.version, current.row.definition_digest, current.row.consent_generation, current.row.scopes_json, current.row.status, current.at.workflow_id]
+  let condition = `EXISTS(SELECT 1 FROM crank_custom_versions WHERE id=? AND version=? AND definition_digest=? AND consent_generation=? AND scopes_json=? AND status=?)
+    AND EXISTS(SELECT 1 FROM crank_workflows WHERE id=? AND status!='paused')`
+  if (typeof current.target.connection_id === 'string') {
+    const row = connection!
+    condition += ` AND EXISTS(SELECT 1 FROM crank_connections WHERE id=? AND status='active' AND secret_iv IS ? AND rotated_at IS ? AND consented_at IS ? AND domains_json=? AND scopes_json=? AND expires_at IS ? AND environment=? AND purpose=?)`
+    args.push(row.id, row.secret_iv, row.rotated_at, row.consented_at, row.domains_json, row.scopes_json, row.expires_at, row.environment, row.purpose)
+  }
+  if (typeof current.target.gateway_id === 'string') {
+    condition += ` AND EXISTS(SELECT 1 FROM crank_gateway_grants a JOIN crank_gateways g ON g.id=a.gateway_id JOIN oa_operators o ON o.id=g.owner_id
+      WHERE a.gateway_id=? AND a.connector_id=? AND a.connector_version=? AND a.status='active' AND g.status='active' AND o.status='active' AND o.role='owner' AND o.version=g.owner_version
+      AND EXISTS(SELECT 1 FROM json_each(a.operations_json) WHERE value=?))`
+    args.push(current.target.gateway_id, current.row.id, current.row.version, current.operation.id)
+    if (typeof sourceRunId === 'string') {
+      condition += ` AND NOT EXISTS(SELECT 1 FROM crank_gateway_tasks t LEFT JOIN crank_gateway_grants a ON a.id=t.grant_id WHERE t.run_id=? AND (a.id IS NULL OR a.status!='active'))`
+      args.push(sourceRunId)
+    }
+  }
+  return [stmt(env, `INSERT INTO crank_authority_guards(id,ok) SELECT ?,CASE WHEN ${condition} THEN 1 ELSE 0 END`, ...args), stmt(env, 'DELETE FROM crank_authority_guards WHERE id=?', guard)]
 }
 
 export async function selectPicker(env: CrankEnv, actor: Actor, input: Record<string, unknown>) {
   const current = await targetDescriptor(env, actor, address(input, ['value', 'draft_digest', 'source_run_id']))
+  const connection = typeof current.target.connection_id === 'string' ? await getConnection(env, current.target.connection_id) : undefined
   requireValue(current.spec.resource || current.spec.type === 'string' && Object.values(current.operation.inputs).some(spec => Object.values(spec.resource?.parents ?? {}).includes(current.at.input_name)), 'Only a reviewed resource input or its declared literal parent may be selected', 422)
   requireValue(input.draft_digest === current.draftDigest, 'The draft changed; reload its current picker before selecting', 409)
   await currentConsent(env, actor, current)
+  if (current.spec.resource) await descriptor(env, actor, current.at)
   const value = checkedValue(input.value, current.spec)
   if (input.source_run_id !== undefined) {
     requireValue(current.spec.resource, 'Literal parents do not accept a picker source run', 422)
@@ -202,6 +269,6 @@ export async function selectPicker(env: CrankEnv, actor: Actor, input: Record<st
   current.target.input = fields
   requireValue(await digest(canonical(JSON.parse((await getWorkflow(env, current.at.workflow_id)).draft_json))) === current.draftDigest, 'The draft changed before this selection; reload it', 409)
   const saved = await updateDraft(env, actor, current.at.workflow_id, { graph: current.graph }, undefined, current.workflow.draft_json,
-    { action:'custom.picker_select',detail:{ step_path: current.at.step_path, input_name: current.at.input_name, source_run_id: input.source_run_id ?? null, custom_literal: input.source_run_id === undefined, cleared: [...cleared].filter(name => name !== current.at.input_name) } })
-  return { ...saved, draft_digest: await digest(canonical(saved.draft)) }
+    { guards: await selectionGuards(env, current, input.source_run_id, connection), action:'custom.picker_select',detail:{ step_path: current.at.step_path, input_name: current.at.input_name, source_run_id: input.source_run_id ?? null, custom_literal: input.source_run_id === undefined, cleared: [...cleared].filter(name => name !== current.at.input_name) } })
+  return { ...saved, cleared_inputs: [...cleared].filter(name => name !== current.at.input_name), draft_digest: await digest(canonical(saved.draft)) }
 }
