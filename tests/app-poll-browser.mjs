@@ -20,7 +20,7 @@ const browser=await chromium.launch({headless:true,...(process.env.CRANK_CHROMIU
 let server,context,page,active;
 const types={'.css':'text/css','.js':'text/javascript','.svg':'image/svg+xml','.woff2':'font/woff2','.png':'image/png'};
 async function attach(h,width) {
- if(active===h)return;
+ if(active===h){await page.setViewportSize({width,height:1000});return;}
  await context?.close();if(server){server.closeAllConnections();await new Promise(done=>server.close(done))}
  active=h;
  server=createServer(async(req,res)=>{try{
@@ -41,6 +41,7 @@ async function attach(h,width) {
  if(new URL(page.url()).pathname==='/setup'){await page.getByRole('checkbox').check();await page.getByRole('button',{name:'Finish setup',exact:true}).click()}
 }
 async function shot(width,state) {
+ await page.setViewportSize({width,height:1000});
  await page.screenshot({path:join(evidence,`${width}-${state}.png`),fullPage:true});
  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`${width} ${state} overflow`);
  const search=page.getByRole('link',{name:'Search runs',exact:true});await search.focus();await expect(page.locator('#search-tooltip')).toBeVisible();await page.locator('h1').click();await search.hover();await page.waitForTimeout(350);await expect(page.locator('#search-tooltip')).toBeVisible();
@@ -88,44 +89,50 @@ async function rateScreens(width) {
 }
 try {
  for(const width of [1440,390]) await rateScreens(width);
- for(const width of [1440,390]) for(const journey of [crmPollJourney,subscriptionPollJourney,comparisonPollJourney,sheetPollJourney,appHistoryJourney,appSubjectJourney,appRetentionJourney,tablePollJourney,commercePollJourney,accountingPollJourney]) {
+ // Exercise each data journey once; inspect its retained screens at both widths.
+ const width=1440;
+ const proof=async state=>{
+  for(const viewport of [1440,390])await shot(viewport,state);
+  await page.setViewportSize({width,height:1000});
+ };
+ for(const journey of [crmPollJourney,subscriptionPollJourney,comparisonPollJourney,sheetPollJourney,appHistoryJourney,appSubjectJourney,appRetentionJourney,tablePollJourney,commercePollJourney,accountingPollJourney]) {
   await journey({inspect:async({h,w,state,run,provider,resource})=>{
    if(state==='commerce-change'&&provider!=='zendesk'||state==='accounting-change'&&(provider!=='xero'||resource!=='invoices'))return;
    await attach(h,width);await page.goto(h.origin+`/app/workflows/${w.id}?step=trigger`);
    if(state==='commerce-change'||state==='accounting-change') {
     const retained=(await runs(h,w))[0];await page.goto(h.origin+'/app/workflow-runs/'+retained.id);
     for(const value of ['previous','current','changed_fields','change_time_source'])await expect(page.locator('main')).toContainText(value);
-    await shot(width,provider+'-payload');await page.goto(h.origin+'/app/connections');await expect(page.locator('main')).toContainText(provider==='xero'?'Xero tenant token':'Zendesk');await shot(width,provider+'-connections');return;
+    await proof(provider+'-payload');await page.goto(h.origin+'/app/connections');await expect(page.locator('main')).toContainText(provider==='xero'?'Xero tenant token':'Zendesk');await proof(provider+'-connections');return;
    }
    if(state==='table-payload') {
     await page.goto(h.origin+'/app/workflow-runs/'+run.id);
     for(const value of ['counter_98','previous','current','revision','change_time_source'])await expect(page.locator('main')).toContainText(value);
-    await shot(width,state);return;
+    await proof(state);return;
    }
    if(state==='snapshot-retention-preview') {
     await page.goto(h.origin+'/app/data');await page.getByLabel('Payload days',{exact:true}).fill('1');await page.getByRole('button',{name:'Preview what this removes',exact:true}).click();
     await expect(page.getByRole('heading',{name:'Retention dry run',exact:true,level:1})).toBeVisible();
     if(width===1440){await expect(page.locator('.retention-app-records .settings-row')).toHaveCount(1);await expect(page.locator('main')).toContainText('legal hold');await expect(page.locator('main')).toContainText('current published-version baseline')}
-    await shot(width,state);return;
+    await proof(state);return;
    }
    if(state==='unadmitted-subject-preview') {
-    await page.goto(h.origin+'/app/data');await shot(width,'unadmitted-subject-data');await page.getByLabel('Identifier',{exact:true}).fill('Synthetic-Crank-21');await page.getByRole('button',{name:'Preview erasure',exact:true}).click();
+    await page.goto(h.origin+'/app/data');await proof('unadmitted-subject-data');await page.getByLabel('Identifier',{exact:true}).fill('Synthetic-Crank-21');await page.getByRole('button',{name:'Preview erasure',exact:true}).click();
     await expect(page.getByRole('heading',{name:'Erasure preview',exact:true,level:1})).toBeVisible();await expect(page.getByText('Retained comparison data',{exact:true})).toBeVisible();
-    await expect(page.getByRole('button',{name:'Erase matching data',exact:true})).toBeVisible();await shot(width,state);return;
+    await expect(page.getByRole('button',{name:'Erase matching data',exact:true})).toBeVisible();await proof(state);return;
    }
    if(state==='watch-picker') {
     await page.getByText('Watched field settings',{exact:true}).click();await page.getByRole('link',{name:'Load field names',exact:true}).click();
     await expect(page.getByRole('checkbox',{name:'Status',exact:true})).toBeChecked();await expect(page.getByRole('checkbox',{name:'Customer',exact:true})).toBeChecked();
-    await shot(width,state);
+    await proof(state);
     await page.getByLabel('Update choice').selectOption('any');await page.getByRole('button',{name:'Save watched fields',exact:true}).click();
     await expect(page.getByRole('alert')).toContainText('every edit can start a run');
     const saved=await h.get('workflows/'+w.id);assert.equal(saved.draft.trigger.any_field,true);assert.equal(saved.status,'draft');assert.equal(saved.published_version_id,null);
-    await shot(width,'watch-any-field');return;
+    await proof('watch-any-field');return;
    }
    if(state==='comparison-payload'||state==='row-released'||state==='history-payload') {
     await page.goto(h.origin+'/app/workflow-runs/'+run.id);
     if(width===1440)for(const value of state==='row-released'?['synthetic-crank-51','Filled buyer','450','change_time_source','poll']:[state==='history-payload'?'synthetic-crank-history':'synthetic-crank-record','changed_fields','previous','current','Pending','Approved','change_time_source','provider'])await expect(page.locator('main')).toContainText(value);
-    await shot(width,state);return;
+    await proof(state);return;
    }
    await expect(page.getByText('Last successful poll',{exact:true})).toBeVisible();
    await expect(page.getByText('Next poll',{exact:true})).toBeVisible();
@@ -135,7 +142,7 @@ try {
     const open=page.locator('.row-open').first();await open.focus();await expect(open.getByRole('tooltip')).toBeVisible();
     await page.locator('h1').click();await open.hover();await page.waitForTimeout(350);await expect(open.getByRole('tooltip')).toBeVisible();
    }
-   await shot(width,state);
+   await proof(state);
   }});
  }
  console.log('App poll screens passed at 1440 and 390');

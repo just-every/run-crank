@@ -5527,7 +5527,7 @@
       "executable": false
     },
     "tests/app-poll-browser.mjs": {
-      "sha256": "d78ec134f246ff82e114299a47f6ef12a88f119bac5770013b76e61690cf381f",
+      "sha256": "69a97ee486d9b97a7b1b7e6c0826b6634e3483ef6acdc9e22a68581b706dd93a",
       "executable": false
     },
     "tests/app-poll-interruption.mjs": {
