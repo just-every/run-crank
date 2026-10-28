@@ -50,6 +50,27 @@ export async function quickbooksInputJourney({ inspect } = {}) {
     const fractionalPrice = { ...defaults, Line: [sale('0.250', { Qty: 2, UnitPrice: '0.125' })] };
     assert.equal((await startRun(h, workflow, { ...runInput, payload: fractionalPrice, total: undefined })).status, 'succeeded');
     assert.deepEqual(payloads.at(-1).Line, fractionalPrice.Line);
+    // Existing adjustments and bundles remain valid without a declared total.
+    const preserved = [
+      ['negative quantity', [sale('10.00'), sale('-1.00', { Qty: '-1', UnitPrice: '1.00' })]],
+      ['negative price', [sale('10.00'), sale(-1, { Qty: 1, UnitPrice: -1 })]],
+      ['provider-priced adjustment', [sale('10.00'), sale('-1.00')]],
+      ['existing bundle', [{ DetailType: 'GroupLineDetail', GroupLineDetail: {
+        GroupItemRef: { value: 'synthetic-crank-5' }, Quantity: 1,
+        Line: [sale('10.00', { Qty: 2, UnitPrice: '5.00' }), sale('5.00')],
+      } }]],
+    ];
+    for (const [name, lines] of preserved) {
+      const validPayload = { CustomerRef: payload.CustomerRef, Line: lines };
+      const literal = await publish(h, name, { trigger: { type: 'manual' }, steps: [create(undefined, { payload: validPayload, amount_usd: undefined })] });
+      const prior = payloads.length;
+      assert.equal((await startRun(h, literal, runInput)).status, 'succeeded', name);
+      assert.deepEqual(payloads.at(-1), { ...validPayload, DocNumber: runInput.key, CurrencyRef: { value: 'USD' } });
+      await h.restart();
+      assert.equal((await startRun(h, workflow, { ...runInput, payload: validPayload, total: undefined })).status, 'succeeded', name + ' after restart');
+      assert.deepEqual(payloads.at(-1), { ...validPayload, DocNumber: runInput.key, CurrencyRef: { value: 'USD' } });
+      assert.equal(payloads.length, prior + 2, 'one complete invoice per run');
+    }
     const noTotalWrites = payloads.length;
     for (const target of [workflow, refund]) {
       const conflict = { ...defaults, Line: [sale('0.25', { Qty: 2, UnitPrice: '0.20' })] };
@@ -101,6 +122,9 @@ export async function quickbooksInputJourney({ inspect } = {}) {
       [{ ...payload, TxnTaxDetail: { TaxLine: [{ Amount: '0.001', DetailType: 'TaxLineDetail', TaxLineDetail: { TaxRateRef: { value: '1' } } }] } }, 'input.payload.TxnTaxDetail.TaxLine[0].Amount', 'cents'],
       [{ ...payload, Line: [sale('not money')] }, 'input.payload.Line[0].Amount', 'decimal'],
       [{ ...payload, Line: [sale('1.00', { ItemRef: null })] }, 'input.payload.Line[0].SalesItemLineDetail.ItemRef', 'null'],
+      [{ ...payload, Line: [sale('-0.001')] }, 'input.payload.Line[0].Amount', 'cents'],
+      [{ ...payload, Line: [sale('-1.00', { Qty: '-1', UnitPrice: '2.00' })] }, 'input.payload.Line[0].Amount', 'quantity and unit price'],
+      [{ ...payload, Line: [{ DetailType: 'GroupLineDetail', GroupLineDetail: { GroupItemRef: { value: '' } } }] }, 'input.payload.Line[0].GroupLineDetail.GroupItemRef.value', 'empty'],
     ];
     for (const [bad, field, error] of invalid) {
       const before = payloads.length;
