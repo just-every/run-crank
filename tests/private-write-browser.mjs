@@ -37,3 +37,35 @@ export async function privateWriteBrowser({h,page,shots,origin,state,manifest,wo
     await shots('gateway-write-completed',()=>page.goto(origin+'/app/workflow-runs/'+draft.run.id));
   } finally {await writeFile(manifest,original,{mode:0o600});await database.close()}
 }
+
+/** The bounded find or create uses the existing approval and retained-run screens. */
+export async function customSearchBrowser({f,page,shots}) {
+  const {h,database}=f,origin=h.origin;
+  await page.setViewportSize({width:1440,height:1000});
+  const created=await f.draft('  SYNTHETIC-CRANK-990  ');await f.work();
+  const pending=await f.get(created);assert.equal(pending.status,'awaiting_approval');
+  assert.equal(pending.waits[0].proposal.find_or_create.input.name,'synthetic-crank-990');
+  await page.goto(origin+'/app/workflow-runs/'+created.run.id);
+  await page.getByRole('button',{name:'Approve',exact:true}).click();
+  await h.tick();const completed=await f.pump(created);
+  assert.equal(completed.steps.find(s=>s.step_id==='search').output.outcome,'created');
+  assert.equal((await database.sql("SELECT quantity FROM public.write_stock WHERE name='synthetic-crank-990';")).stdout.trim(),'7');
+  const open=async run=>{await page.goto(origin+'/app/workflow-runs/'+run.id);await page.getByText('Input and output',{exact:true}).click()};
+  await open(completed);assert.ok((await page.locator('body').innerText()).includes('created'));
+  await shots('custom-search-created',()=>open(completed));
+  const found=await f.pump(await f.draft('synthetic-crank-990'));
+  assert.equal(found.steps.find(s=>s.step_id==='search').output.outcome,'found');assert.equal(found.waits.length,0);
+  await open(found);assert.ok((await page.locator('body').innerText()).includes('found'));
+  await shots('custom-search-found',()=>open(found));
+  const review=await f.draft('synthetic-crank-991');await f.work();
+  await page.goto(origin+'/app/workflow-runs/'+review.run.id);
+  assert.ok(await page.getByRole('button',{name:'Approve',exact:true}).count());
+  assert.ok((await page.locator('body').innerText()).includes('synthetic-crank-991'));
+  await shots('custom-search-exact-approval',()=>page.goto(origin+'/app/workflow-runs/'+review.run.id));
+  for(const control of await page.locator('.control-tooltip').all()) {
+    if(!await control.isVisible())continue;
+    const tip=control.locator('.control-tooltip-label');assert.equal(await tip.count(),1);
+    await control.focus();assert.equal(await tip.evaluate(el=>getComputedStyle(el).visibility),'visible');
+  }
+  return {created:completed.id,found:found.id,waiting:review.run.id};
+}

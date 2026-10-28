@@ -85,6 +85,7 @@ export function embeddedWaitExport(target,id='synthetic-crank-embedded-wait',wai
 }
 
 async function embeddedWaitJourney() {
+ await elapsedWaitJourney();
  const target='https://receiver.example',writes=[],h=await harness(target,{edge:async request=>{if(new URL(request.url).origin!==target)return undefined;const body=await request.json();writes.push({path:new URL(request.url).pathname,body});return Response.json(body)}});
  let restored;
  try {
@@ -92,7 +93,7 @@ async function embeddedWaitJourney() {
   const changeChild=(source,change)=>{const child=JSON.parse(source.nodes[2].parameters.workflowJson);change(child);source.nodes[2].parameters.workflowJson=JSON.stringify(child)};
   for(const change of [
    s=>changeChild(s,c=>c.nodes[1].typeVersion=1),s=>changeChild(s,c=>c.nodes[1].typeVersion=2),
-   ...[{resume:'specificTime'}, {resume:'webhook'}, {resume:'form'}, {amount:'={{ $json.amount }}'}, {amount:'1'}, {amount:0.5}, {amount:-1}, {unit:'weeks'}, {unit:'={{ $json.unit }}'}, {options:{}}, {unknown:true}].map(settings=>s=>changeChild(s,c=>Object.assign(c.nodes[1].parameters,settings))),
+   ...[{resume:'specificTime'}, {resume:'webhook'}, {resume:'form'}, {amount:'={{ $json.amount }}'}, {amount:'1'}, {amount:0.5}, {amount:-1}, {amount:367,unit:'days'}, {amount:8785,unit:'hours'}, {amount:527041,unit:'minutes'}, {amount:31622401,unit:'seconds'}, {amount:Number.MAX_SAFE_INTEGER+1,unit:'seconds'}, {unit:'weeks'}, {unit:'={{ $json.unit }}'}, {options:{}}, {unknown:true}].map(settings=>s=>changeChild(s,c=>Object.assign(c.nodes[1].parameters,settings))),
    s=>s.nodes[2].parameters.mode='each',s=>s.nodes[2].parameters.options.waitForSubWorkflow=false,
    s=>changeChild(s,c=>c.connections['Child interval wait'].main[0].push({node:'n2',type:'main',index:0})),
    s=>changeChild(s,c=>c.nodes.push({...c.nodes[0],id:'n4',name:'n4'})),
@@ -142,4 +143,24 @@ async function embeddedWaitJourney() {
   assert.equal((await h.post('workflow-runs/'+portable.id+'/resume')).status,'paused');assert.equal(writes.length,beforeRestore,'manual resume cannot revive revoked authority');
   const undo=await door(h,'undo',{planId:plan.planId});assert.ok(undo.status>=400||undo.value.job?.state!=='undone','used child wait imports remain protected');
  }finally{await restored?.close();await h.close()}
+}
+
+/** n8n interval days are elapsed 24-hour durations, including across DST. */
+async function elapsedWaitJourney() {
+ for(const [clock,days] of [['2026-03-07T18:00:00Z',1],['2026-10-31T18:00:00Z',1],['2026-03-07T18:00:00Z',366]]) {
+  const target='https://receiver.example',writes=[],h=await harness(target,{clock,edge:async request=>{if(new URL(request.url).origin!==target)return undefined;const body=await request.json();writes.push({path:new URL(request.url).pathname,body});return Response.json(body)}});
+  try {
+   const source=embeddedWaitExport(target,'synthetic-crank-elapsed-wait',{resume:'timeInterval',amount:days,unit:'days'});
+   source.settings={timezone:'America'+'/'+'Chicago'};
+   await reviewed(h,source);const [workflow]=await h.get('workflows');assert.deepEqual(writes,[]);
+   await h.post('workflows/'+workflow.id+'/publish',{},h.owner,201);
+   const payload={message:'synthetic-crank-elapsed',days},waiting=await startRun(h,workflow,payload),due=Date.parse(waiting.waits[0].due_at);
+   assert.equal(waiting.status,'waiting');assert.equal(due-Date.parse(clock),days*86400000,'source interval days must stay exactly 24 hours across daylight saving changes');
+   assert.deepEqual(writes,[{path:'/embedded-wait-before',body:payload}]);const checkpoint=stepOf(waiting,'n1');
+   await h.restart();await h.tick(due-1);assert.equal((await h.get('workflow-runs/'+waiting.id)).status,'waiting');assert.equal(writes.length,1);
+   await h.tick(due+1);await h.tick(due+60001);const done=await h.get('workflow-runs/'+waiting.id);
+   assert.equal(done.status,'succeeded');assert.deepEqual(stepOf(done,'n1'),checkpoint);
+   assert.deepEqual(writes,['before','after','final'].map(phase=>({path:'/embedded-wait-'+phase,body:payload})));
+  }finally{await h.close()}
+ }
 }

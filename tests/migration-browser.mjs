@@ -104,7 +104,8 @@ try {
  literalObjectSource.nodes[1].parameters.conditions.conditions[0].leftValue='{"message":"{{"}';
  const streamObjectSources=['left','right'].map(operand=>looseObjectFilterStreamExport(declared,operand));
  const dateSources=[arithmeticExport(declared,'synthetic-crank-date-browser-month'),arithmeticExport(declared,'synthetic-crank-date-browser-day',{operation:'subtractFromDate',duration:1,timeUnit:'days',options:{includeInputFields:false}})];
- const waitSource=embeddedWaitExport(declared,'synthetic-crank-wait-browser');
+ const waitSource=embeddedWaitExport(declared,'synthetic-crank-wait-browser',{resume:'timeInterval',amount:1,unit:'days'});
+ waitSource.settings={timezone:'America'+'/'+'Chicago'};
  const driftSources=[conversionExport('registry','synthetic-crank-84'),conversionExport('code','synthetic-crank-85')],driftBundle=driftSources.map((workflow,index)=>({workflow,conversions:{n1:index?codeChoice:registryChoice}}));
  const shots=async state=>{for(const width of [1440,390]){await page.setViewportSize({width,height:1000});await shot(width,state)}};
  // Stage the protected-undo fixtures together while every imported target is an
@@ -206,6 +207,8 @@ try {
  await page.setViewportSize({width:1440,height:1000});
  const waitWorkflow=(await send('workflows')).find(row=>row.name===waitSource.name),waitDetail=await send('workflows/'+waitWorkflow.id);
  assert.equal(waitDetail.status,'draft');assert.deepEqual(waitDetail.versions,[]);assert.deepEqual(waitDetail.hooks,[]);assert.equal(waitDetail.draft.settings.n8n_subflow_pins.length,1);
+ assert.deepEqual(waitDetail.draft.steps.find(step=>step.id==='n2_n1').input,{amount:24,unit:'hours'});
+ assert.equal(waitDetail.draft.settings.n8n_subflow_pins[0].digest,digest(canonical(JSON.parse(waitSource.nodes[2].parameters.workflowJson))));
  await page.goto(origin+'/app/workflows/'+waitWorkflow.id+'?step=n2_n1');
  assert.ok((await page.locator('.inspector').innerText()).includes('Child interval wait'));await shots('embedded-child-wait-inactive');
  await send('workflows/'+waitWorkflow.id+'/estimate',{cost:{components:['orchestration','connectors','models','executors'].map(kind=>({kind,usd_per_run:'0',assumption:'Synthetic embedded child receiver proof'}))}});
