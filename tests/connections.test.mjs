@@ -183,6 +183,7 @@ test('CONN-004: Slack posts by channel name and user email, applies search outco
   assert.equal(stepOf(await startRun(h, room, {}), 'room').output.outcome, 'created');
   assert.equal(stepOf(await startRun(h, room, {}), 'room').output.outcome, 'found');
   assert.equal(channels.filter(c => c.name === 'deals-won').length, 1);
+  const {searchOutcomesJourney}=await import('./search-outcomes-journey.mjs');await searchOutcomesJourney();
 
   const secret = fakeSecret('signing');
   const signing = await connection(h, { app: 'webhook', label: 'Slack signing secret', auth_kind: 'signing_secret', secret: { secret } });
@@ -517,6 +518,16 @@ test('Custom connector review, agent OpenAPI proposal and sandbox gates retain e
   const multiple=await startRun(h,stopMultiple,{query:'oak'});assert.equal(multiple.status,'stopped_by_search');assert.equal(stepOf(multiple,'lookup').output.outcome,'multiple matches');assert.equal(stepOf(multiple,'after'),undefined);
   searchRows=matches;
   const all=await startRun(h,allMatches,{query:'oak'});assert.equal(all.status,'succeeded');assert.deepEqual(stepOf(all,'lookup').output.records,[matches[1],matches[0]]);assert.deepEqual(stepOf(all,'each').output.results,['stock-1','stock-2']);
+  const boundedMatches=await searchFlow('Custom search exposes a declared bound',{multi_match:'all',limit:1},[{id:'route',type:'paths',mode:'exclusive',branches:[{id:'bounded',when:[[{field:'steps.lookup.outcome',op:'text.equals',value:'truncated'}]],steps:[]}],fallback:{steps:[]}}]);
+  const bounded=await startRun(h,boundedMatches,{query:'oak'});assert.equal(bounded.status,'succeeded');
+  assert.equal(stepOf(bounded,'lookup').output.outcome,'truncated');assert.equal(stepOf(bounded,'lookup').output.count,1);assert.equal(stepOf(bounded,'lookup').output.truncated,true);
+  assert.deepEqual(stepOf(bounded,'lookup').output.records,[matches[1]]);assert.deepEqual(stepOf(bounded,'route').output.matched,['bounded']);
+  searchRows={rows:[matches[0]],complete:false};
+  const incomplete=await startRun(h,firstMatch,{query:'oak'});assert.equal(incomplete.status,'failed');assert.equal(incomplete.error.outcome,'search incomplete');assert.equal(stepOf(incomplete,'after'),undefined);
+  const singlePartial=await startRun(h,allMatches,{query:'oak'});assert.equal(singlePartial.status,'succeeded');assert.equal(stepOf(singlePartial,'lookup').output.outcome,'truncated');assert.equal(stepOf(singlePartial,'lookup').output.truncated,true);assert.deepEqual(stepOf(singlePartial,'each').output.results,['stock-2']);
+  searchRows={rows:[],truncated:true};
+  const incompleteEmpty=await startRun(h,missingContinue,{query:'oak'});assert.equal(incompleteEmpty.status,'failed');assert.equal(incompleteEmpty.error.category,'provider');assert.equal(stepOf(incompleteEmpty,'after'),undefined);
+  searchRows=matches;
   searchFailure=true;
   const failed=await startRun(h,missingContinue,{query:'oak'});assert.equal(failed.status,'failed');assert.equal(failed.error.category,'provider');assert.equal(stepOf(failed,'lookup').output?.outcome,undefined);assert.equal(stepOf(failed,'after'),undefined,'Provider failure never follows the not-found continuation');
   searchFailure=false;

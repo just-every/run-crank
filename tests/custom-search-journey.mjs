@@ -48,6 +48,10 @@ export async function customSearchJourney() {
     const first=await f.pump(await f.draft('synthetic-crank-980',{create_if_not_found:undefined,multi_match:'first',sort:{field:'quantity',direction:'desc'}}));assert.equal(output(first).record.quantity,9);
     const stopped=await f.pump(await f.draft('synthetic-crank-980',{create_if_not_found:undefined,multi_match:'stop'}),'stopped_by_search');assert.equal(output(stopped).outcome,'multiple matches');
     const all=await f.pump(await f.draft('synthetic-crank-980',{create_if_not_found:undefined,multi_match:'all',sort:{field:'quantity',direction:'asc'}}));assert.deepEqual(output(all).records.map(row=>row.quantity),[3,6,9]);
+    assert.equal(output(all).outcome,'found');assert.equal(output(all).truncated,false);assert.equal(output(all).count,3);
+    const bounded=await f.pump(await f.draft('synthetic-crank-980',{create_if_not_found:undefined,multi_match:'all',limit:1,sort:{field:'quantity',direction:'desc'}}));
+    assert.equal(output(bounded).outcome,'truncated');assert.equal(output(bounded).truncated,true);assert.equal(output(bounded).count,1);assert.deepEqual(output(bounded).records.map(row=>row.quantity),[9]);
+    const single=await f.pump(await f.draft('synthetic-crank-970',{create_if_not_found:undefined,multi_match:'all',limit:1}));assert.equal(output(single).outcome,'found');assert.equal(output(single).truncated,false);assert.equal(output(single).count,1);
     const original=f.operations.find_stock;
     await f.save({...f.operations,find_stock:{...original,query:'SELECT name,quantity FROM public.absent_stock WHERE lower(name)=$1'}});
     const failed=await f.pump(await f.draft('synthetic-crank-974'),'failed');assert.notEqual(failed.error.category,'not found');assert.equal(output(failed),null);

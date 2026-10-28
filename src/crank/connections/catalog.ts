@@ -7,7 +7,7 @@ import { POLL_INTERVALS } from '../triggers/definition'
 import { SIGNATURE_PRESETS } from '../triggers/signatures'
 import { PROVIDERS } from './oauth'
 
-const SEARCH_OUTCOMES = { outcomes: ['found', 'not found', 'multiple matches'], no_match: ['halt', 'continue'], multi_match: ['first', 'stop', 'all'] }
+const SEARCH_OUTCOMES = { outcomes: ['found', 'not found', 'multiple matches', 'truncated'], no_match: ['halt', 'continue'], multi_match: ['first', 'stop', 'all'] }
 const op = (id: string, name: string, extra: Record<string, unknown> = {}) => ({ id, name, ...extra })
 
 /** Native apps and built-in tools that exist in this installation, with their exact operations. */
