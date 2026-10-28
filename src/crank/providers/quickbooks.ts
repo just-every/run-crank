@@ -8,11 +8,50 @@ import { boundedFetch, utf8 } from '../engine/egress'
 import { StepError } from '../engine/errors'
 import type { Step, StepContext, StepType } from '../engine/types'
 import { isObject } from '../engine/values'
+import { inputLiteral, validateInput, type InputSchema } from '../engine/input-schema'
 import { digest, type CrankEnv } from '../model'
 
 export const QBO_SCOPE = 'com.intuit.quickbooks.accounting'
 const entityOf = (type: string) => type === 'quickbooks.create_invoice' ? 'Invoice' : 'RefundReceipt'
 export const qboCreate = (type: string) => ['quickbooks.create_invoice', 'quickbooks.create_refund_receipt'].includes(type)
+
+const text: InputSchema = { type: 'string' }
+const decimal: InputSchema = { type: 'decimal' }
+const ref: InputSchema = { type: 'object', properties: { value: { type: 'string', required: true, nonempty: true }, name: text } }
+const sales: InputSchema = { type: 'object', properties: { ItemRef: { ...ref, required: true }, Qty: decimal, UnitPrice: decimal, TaxCodeRef: ref, ClassRef: ref, ServiceDate: text } }
+const discount: InputSchema = { type: 'object', properties: { PercentBased: { type: 'boolean' }, DiscountPercent: decimal, DiscountAccountRef: ref } }
+const line: InputSchema = {
+  type: 'object', required: true,
+  properties: {
+    DetailType: { type: 'string', required: true, enum: ['SalesItemLineDetail', 'DiscountLineDetail', 'SubTotalLineDetail', 'DescriptionOnly'] },
+    Amount: decimal, Description: text, Id: text, LineNum: decimal,
+    SalesItemLineDetail: sales, DiscountLineDetail: discount, SubTotalLineDetail: { type: 'object' }, DescriptionLineDetail: { type: 'object' },
+  },
+  discriminator: { field: 'DetailType', variants: {
+    SalesItemLineDetail: { Amount: { ...decimal, required: true }, SalesItemLineDetail: { ...sales, required: true } },
+    DiscountLineDetail: { Amount: { ...decimal, required: true }, DiscountLineDetail: { ...discount, required: true } },
+    SubTotalLineDetail: {}, DescriptionOnly: {},
+  } },
+}
+/** Bounded create schemas cover existing operations, leaving optional provider fields intact. */
+export const quickbooksInputSchema: InputSchema = {
+  type: 'object', required: true, properties: {
+    realm_id: { type: 'string', required: true, pattern: /^[0-9]{1,30}$/ },
+    business_key: { type: 'string', required: true, nonempty: true, maxLength: 21 },
+    amount_usd: decimal,
+    payload: { type: 'object', required: true, properties: {
+      CustomerRef: { ...ref, required: true }, Line: { type: 'array', required: true, minItems: 1, items: line },
+      CurrencyRef: { type: 'object', properties: { value: { type: 'string', required: true, enum: ['USD'] } } },
+      TxnTaxDetail: { type: 'object', properties: { TotalTax: decimal, TxnTaxCodeRef: ref, TaxLine: { type: 'array', items: { type: 'object', required: true, properties: {
+        Amount: { ...decimal, required: true }, DetailType: { type: 'string', required: true, enum: ['TaxLineDetail'] },
+        TaxLineDetail: { type: 'object', required: true, properties: { TaxRateRef: { ...ref, required: true }, PercentBased: { type: 'boolean' }, TaxPercent: decimal, NetAmountTaxable: decimal } },
+      } } } } },
+      DepartmentRef: ref, SalesTermRef: ref, DepositToAccountRef: ref, PaymentMethodRef: ref,
+      PrivateNote: text, CustomerMemo: { type: 'object', properties: { value: text } }, TxnDate: text, DueDate: text,
+      ApplyTaxAfterDiscount: { type: 'boolean' }, AllowOnlineACHPayment: { type: 'boolean' }, AllowOnlineCreditCardPayment: { type: 'boolean' },
+    } },
+  },
+}
 
 /** Native sandbox endpoints are fixed; graph inputs cannot redirect credentials. */
 export async function quickbooksAccount(env: CrankEnv, connectionId: string, realm: unknown) {
@@ -49,18 +88,21 @@ export async function quickbooksReadback(env: CrankEnv, step: Step, input: Recor
 
 const create: StepType = {
   mutating: true, connection: 'required', required: ['realm_id', 'business_key', 'payload'],
+  inputSchema: quickbooksInputSchema,
   validate(step) {
     if (step.timeout_ms !== undefined && (!Number.isInteger(step.timeout_ms) || Number(step.timeout_ms) < 100 || Number(step.timeout_ms) > 30000)) throw new StepError('validation', 'QuickBooks timeout_ms must be 100 to 30000')
+    const input = isObject(step.input) ? step.input : {}, payload = inputLiteral(input.payload), amount = inputLiteral(input.amount_usd)
+    if (payload.known && amount.known && amount.value !== undefined) requireInvoiceAmount(payload.value, amount.value)
   },
   async execute(step, ctx) {
-    const input = ctx.input, base = await quickbooksAccount(ctx.env, String(step.connection_id), input.realm_id)
-    if (typeof input.business_key !== 'string' || !input.business_key || input.business_key.length > 21 || !isObject(input.payload) || !isObject(input.payload.CustomerRef) || !Array.isArray(input.payload.Line)) throw new StepError('validation', 'QuickBooks requires a business key, customer reference and line items')
-    if (isObject(input.payload.CurrencyRef) && input.payload.CurrencyRef.value !== 'USD') throw new StepError('validation', 'This QuickBooks handoff preserves USD only')
+    const input = ctx.input
+    validateInput(quickbooksInputSchema, input, step.id)
     if (input.amount_usd !== undefined) requireInvoiceAmount(input.payload,input.amount_usd)
+    const base = await quickbooksAccount(ctx.env, String(step.connection_id), input.realm_id)
     const entity = entityOf(step.type), url = new URL(base + '/' + entity.toLowerCase())
     url.searchParams.set('requestid', (await digest(ctx.operationKey)).slice(0, 50))
     try {
-      const result = await httpRequest.execute({ ...step, input: undefined }, { ...ctx, input: { method: 'POST', url: url.href, body: { ...input.payload, DocNumber: input.business_key, CurrencyRef: { value: 'USD' } } } })
+      const result = await httpRequest.execute({ ...step, input: undefined }, { ...ctx, input: { method: 'POST', url: url.href, body: { ...input.payload as Record<string, unknown>, DocNumber: input.business_key, CurrencyRef: { value: 'USD' } } } })
       const record = result.status === 'succeeded' && isObject(result.output) && isObject(result.output.body) ? result.output.body[entity] : null
       if (!isObject(record) || typeof record.Id !== 'string') throw new StepError('uncertain', 'QuickBooks returned no identifiable financial effect', { uncertain: true })
       return result
