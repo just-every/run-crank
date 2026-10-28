@@ -30,7 +30,7 @@ export const findNode = (graph: Graph, path: string) => flatten(nodes(graph)).fi
 
 const titleCase = (text: string) => text.charAt(0).toUpperCase() + text.slice(1)
 const TRIGGERS: Record<string, string> = { webhook: 'Webhooks', schedule: 'Schedule', feed: 'RSS, Atom and JSON Feed', url_poll: 'URL poll', app_poll: 'App records', slack_event: 'Slack', manual: 'Manual start' }
-const STEPS: Record<string, string> = { 'custom.request':'Custom connector', code: 'Code executor', filter: 'Filter', paths: 'Paths', transform: 'Formatter', map: 'Formatter', delay: 'Delay', wait_for_callback: 'Delay', approval: 'Approval', 'file.fetch': 'Files', respond: 'Webhooks', http: 'Webhooks' }
+const STEPS: Record<string, string> = { 'ai.classify':'AI classification', 'custom.request':'Custom connector', code: 'Code executor', filter: 'Filter', paths: 'Paths', transform: 'Formatter', map: 'Formatter', delay: 'Delay', wait_for_callback: 'Delay', approval: 'Approval', 'file.fetch': 'Files', respond: 'Webhooks', http: 'Webhooks' }
 
 /** The app or tool a card names: the connection's label for API requests, Slack for Slack steps,
  * the signing preset for a signed webhook, otherwise the built-in tool. */
@@ -69,7 +69,7 @@ export function summaryOf(node: Node): string {
   const step = node.step!
   if (typeof step.name === 'string') return step.name
   if (step.type.startsWith('slack.')) return titleCase(step.type.slice(6).replace(/_/g, ' '))
-  const native: Record<string,string> = { 'nook.send_message':'Post message to the connected conversation', 'quickbooks.invoice_outcome':'Verify invoice outcome', 'quickbooks.create_invoice':'Create invoice', 'quickbooks.create_refund_receipt':'Record refund receipt', 'quickbooks.void_invoice':'Void invoice after approval', 'gusto.contractor_1099_handoff':'Send contractor data for 1099 preparation', 'gusto.employee_w2_handoff':'Send employee data for W-2 preparation', 'gusto.contractor_payment':'Pay contractor by ACH', 'gusto.contractor_forms':'Read contractor tax forms', 'gusto.employee_forms':'Read employee tax forms', 'gusto.payment_readback':'Read contractor payment' }
+  const native: Record<string,string> = { 'ai.classify':'Classify text into a category', 'nook.send_message':'Post message to the connected conversation', 'quickbooks.invoice_outcome':'Verify invoice outcome', 'quickbooks.create_invoice':'Create invoice', 'quickbooks.create_refund_receipt':'Record refund receipt', 'quickbooks.void_invoice':'Void invoice after approval', 'gusto.contractor_1099_handoff':'Send contractor data for 1099 preparation', 'gusto.employee_w2_handoff':'Send employee data for W-2 preparation', 'gusto.contractor_payment':'Pay contractor by ACH', 'gusto.contractor_forms':'Read contractor tax forms', 'gusto.employee_forms':'Read employee tax forms', 'gusto.payment_readback':'Read contractor payment' }
   if (native[step.type]) return native[step.type]
   if (step.type === 'http') return `${String((step.input as any)?.method ?? 'GET').toUpperCase()} request`
   if (step.type === 'paths') return `${node.branches?.length ?? 0} paths`
