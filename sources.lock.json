@@ -139,7 +139,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "638c44123d3fed62eed6048f3029f2dd0801e2c3ab8c8b0233c038d7fbb44fbd",
+      "sha256": "7b6163907783b1975ea0eb22e035a707b19a2222f11c5ad33ecc21b395adeff8",
       "executable": false
     },
     "AGENTS.md": {
@@ -163,7 +163,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "6984dfe8f18e5402a51a000de76acf9ec5fb44e5ed76fbdcd280a6eb235b7002",
+      "sha256": "8667d55827a9b7c0b03ab4b0446418d7205e8cce12958a2936c8e3c3c00e49ba",
       "executable": false
     },
     "DEMO.md": {
@@ -203,7 +203,7 @@
       "executable": false
     },
     "docs/CLAIMS.md": {
-      "sha256": "cd432894de8f5e722eb06f40ad4f3e883bff8510d37cd90bfabf9feeaff04c3a",
+      "sha256": "3c9241c9190664cf864842a4fb34545cbb2d1c7e515b579fb8b6de721299d206",
       "executable": false
     },
     "docs/DATA-FLOWS.md": {
@@ -1678,6 +1678,10 @@
       "sha256": "041f00b01f9a56b7827dfddc6481138398e692607b40179cd859646a1b97f373",
       "executable": false
     },
+    "migrations/core/0088_checkpoint_subjects.sql": {
+      "sha256": "b8ceff1fef6192af88a3f6740d0205f3d18ec44822b3c7c31caaeb368fed389a",
+      "executable": false
+    },
     "ONBOARDING.md": {
       "sha256": "5d20f1bd0c24def0cd6c1165d1a58d0472ad0f02f2b60047014bda962eaf4274",
       "executable": false
@@ -1987,7 +1991,7 @@
       "executable": false
     },
     "RELEASE.json": {
-      "sha256": "ede224f457d01bbb0594c0f146e2c9c2f16760dd8a71f7bb658e605cf8462a14",
+      "sha256": "3a4da936547072ed348a6302d584da848bbae3cb36b292844a769417dc25e8c3",
       "executable": false
     },
     "rer-project.json": {
@@ -3035,11 +3039,11 @@
       "executable": false
     },
     "src/crank/ops/payload-keys.ts": {
-      "sha256": "3e33d0f3ac7efb91598c234955a2262247e819c8a9c886f7ed527cddb6257f5b",
+      "sha256": "8a6206b89a66cc9fac2e5cdd263330126686324580f412ab9b0cb1d09e8ffc68",
       "executable": false
     },
     "src/crank/ops/payload-pass.ts": {
-      "sha256": "d8eb19e24acda7d7777547ae83e25f451666fc4cddcefd0ed366688e1a221bb2",
+      "sha256": "a93665f333efca9fd965b531c4d6cf8bd7935209ba08434b6720f9bf45468833",
       "executable": false
     },
     "src/crank/ops/payload-seal.ts": {
@@ -5811,7 +5815,7 @@
       "executable": false
     },
     "tests/google-calendar-search-journey.mjs": {
-      "sha256": "fbf56ecdda752a7d68f80ffe77983762fc3140ac8ebd9e2223ad69e6be5ccf15",
+      "sha256": "be37147237dea93421990bf6a7c2d84827655dca1a1fc8a14290e186ead33ca2",
       "executable": false
     },
     "tests/grants-browser.mjs": {
