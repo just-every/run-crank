@@ -79,7 +79,8 @@
         "CRANK_PICKER_ONLY=1 CRANK_EVIDENCE=\"$CRANK_EVIDENCE/pickers\" node tests/custom-browser.mjs",
         "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/custom-search\" node tests/custom-search-browser.mjs",
         "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/ai\" node tests/ai-steps-browser.mjs",
-        "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/editor\" node tests/editor-browser.mjs"
+        "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/editor\" node tests/editor-browser.mjs",
+        "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/gmail\" node tests/gmail-search-browser.mjs"
       ]
     },
     {

@@ -1,6 +1,7 @@
 import { id, stmt, type CrankEnv } from '../model'
 import { activeKey, destroyUnreferenced, NEEDS_RESEAL, RESEAL_POSSIBLE } from './payload-keys'
-import { blindDigests, openText, SEALED_PREFIX, sealText, subjectDigests, targetFor, type Target } from './payload-seal'
+import { blindDigests, fileBase64, openText, SEALED_PREFIX, sealFileBase64, sealText, subjectDigests, targetFor, type Target } from './payload-seal'
+import { checkpointPayloads } from '../connectors/request-checkpoints'
 
 const RUNS_PER_PASS = 25, ITEMS_PER_PASS = 50, FILES_PER_PASS = 10
 const PREFIX_SQL = `'${SEALED_PREFIX}'`
@@ -14,7 +15,8 @@ const stale = (column: string) => `CASE WHEN w.data_class IN ('customer','financ
 const FINGERPRINT = `SELECT COALESCE(r.trigger_json,'')||'|'||COALESCE(r.response_json,'')||'|'||COALESCE(r.error_json,'')||'|'||COALESCE(r.lease_id,'')||'|'||COALESCE(r.payload_key,'')||'|'||COALESCE(r.status,'')||'|'||
   COALESCE((SELECT group_concat(x,'#') FROM (SELECT path||'|'||status||'|'||COALESCE(input_json,'')||'|'||COALESCE(output_json,'')||'|'||COALESCE(trace_json,'')||'|'||COALESCE(error_json,'') AS x FROM crank_wf_steps WHERE run_id=r.id ORDER BY path)),'')||'|'||
   COALESCE((SELECT group_concat(x,'#') FROM (SELECT path||'|'||revision||'|'||COALESCE(input_json,'')||'|'||COALESCE(prior_input_json,'')||'|'||COALESCE(prior_error_json,'') AS x FROM crank_wf_step_revisions WHERE run_id=r.id ORDER BY path,revision)),'')||'|'||
-  COALESCE((SELECT group_concat(x,'#') FROM (SELECT path||'|'||COALESCE(proposal_json,'')||'|'||COALESCE(resolution_json,'') AS x FROM crank_waits WHERE run_id=r.id ORDER BY path)),'') AS fp
+  COALESCE((SELECT group_concat(x,'#') FROM (SELECT path||'|'||COALESCE(proposal_json,'')||'|'||COALESCE(resolution_json,'') AS x FROM crank_waits WHERE run_id=r.id ORDER BY path)),'')||'|'||
+  COALESCE((SELECT group_concat(x,'#') FROM (SELECT path||'|'||operation_key||'|'||ordinal||'|'||chunk_index||'|'||content_base64 AS x FROM crank_request_checkpoint_chunks WHERE run_id=r.id ORDER BY path,operation_key,ordinal,chunk_index)),'') AS fp
   FROM crank_wf_runs r WHERE r.id=?`
 
 /** DATA-003, per Cron minute: brings up to 25 runs, 50 held or historical event copies and 10 run
@@ -63,18 +65,19 @@ export async function payloadPass(env: CrankEnv, time = Date.now()) {
 }
 
 async function resealRun(env: CrankEnv, target: Target, runId: string, at: string) {
-  const [run, steps, revisions, waits, fp] = await Promise.all([
+  const [run, steps, revisions, waits, chunks, fp] = await Promise.all([
     stmt(env, 'SELECT trigger_json,response_json,error_json FROM crank_wf_runs WHERE id=?', runId).first<{ trigger_json: string; response_json: string | null; error_json: string | null }>(),
     stmt(env, 'SELECT path,input_json,output_json,trace_json,error_json FROM crank_wf_steps WHERE run_id=?', runId).all<{ path: string; input_json: string | null; output_json: string | null; trace_json: string | null; error_json: string | null }>(),
     stmt(env, 'SELECT path,revision,input_json,prior_input_json,prior_error_json FROM crank_wf_step_revisions WHERE run_id=?', runId).all<{ path: string; revision: number; input_json: string | null; prior_input_json: string | null; prior_error_json: string | null }>(),
     stmt(env, 'SELECT path,proposal_json,resolution_json FROM crank_waits WHERE run_id=?', runId).all<{ path: string; proposal_json: string | null; resolution_json: string | null }>(),
+    stmt(env, 'SELECT rowid AS rid,content_base64 FROM crank_request_checkpoint_chunks WHERE run_id=?', runId).all<{rid: number; content_base64: string}>(),
     stmt(env, FINGERPRINT, runId).first<{ fp: string }>(),
   ])
   if (!run || !fp) return false
   const w = target.workflowId, open = (text: string | null) => openText(env, w, text)
   const reseal = async (text: string | null) => sealText(target, await open(text))
   const trigger = await open(run.trigger_json), stepPlain = await Promise.all(steps.results.map(async s => ({ ...s, input: await open(s.input_json), output: await open(s.output_json) })))
-  const digests = await blindDigests(target, [trigger, ...stepPlain.flatMap(s => [s.input, s.output])])
+  const digests = await blindDigests(target, [trigger, ...stepPlain.flatMap(s => [s.input, s.output]), ...await checkpointPayloads(env, runId)])
   const guard = id()
   const statements = [
     stmt(env, `INSERT INTO crank_authority_guards(id,ok) SELECT ?,CASE WHEN (${FINGERPRINT.replace('WHERE r.id=?', 'WHERE r.id=? AND (r.lease_id IS NULL OR r.lease_expires_at<?)')})=? THEN 1 ELSE 0 END`, guard, runId, at, fp.fp),
@@ -84,6 +87,7 @@ async function resealRun(env: CrankEnv, target: Target, runId: string, at: strin
       await sealText(target, s.input), await sealText(target, s.output), await reseal(s.trace_json), await reseal(s.error_json), runId, s.path))),
     ...await Promise.all(revisions.results.map(async r => stmt(env, 'UPDATE crank_wf_step_revisions SET input_json=?,prior_input_json=?,prior_error_json=? WHERE run_id=? AND path=? AND revision=?', await reseal(r.input_json), await reseal(r.prior_input_json), await reseal(r.prior_error_json), runId, r.path, r.revision))),
     ...await Promise.all(waits.results.map(async x => stmt(env, 'UPDATE crank_waits SET proposal_json=?,resolution_json=? WHERE run_id=? AND path=?', await reseal(x.proposal_json), await reseal(x.resolution_json), runId, x.path))),
+    ...await Promise.all(chunks.results.map(async x => stmt(env, 'UPDATE crank_request_checkpoint_chunks SET content_base64=? WHERE rowid=?', await sealFileBase64(target, await fileBase64(env, w, x.content_base64)), x.rid))),
     stmt(env, 'DELETE FROM crank_blind_index WHERE run_id=?', runId),
     ...(digests.length ? [stmt(env, 'INSERT OR IGNORE INTO crank_blind_index(run_id,key_id,digest) SELECT ?,?,value FROM json_each(?)', runId, target.key!.id, JSON.stringify(digests))] : []),
     stmt(env, 'DELETE FROM crank_authority_guards WHERE id=?', guard),

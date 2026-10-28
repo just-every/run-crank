@@ -9,6 +9,10 @@ import { oauthRenewalJourney } from './oauth-renewal-journey.mjs';
 import { connection, deliver, fakeEdge, fakeSecret, jsonResponse, publish, runs, settled, startRun, stepOf, until } from './kit.mjs';
 
 const fake = fakeEdge();
+test('Gmail thread metadata search retains declared outcomes, consent, parked pages and inactive sealed custody', async () => {
+  const {gmailSearchJourney,gmailCustodyJourney}=await import('./gmail-search-journey.mjs');
+  await gmailSearchJourney();await gmailCustodyJourney();
+});
 let h;
 before(async () => {
   fake.routes.set('crm.example', () => jsonResponse({ ok: true }, 201));

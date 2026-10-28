@@ -30,6 +30,7 @@ export async function graphDataFlows(env: CrankEnv, credential: (id: unknown) =>
         if (step.type === 'paths') for (const b of branchesOf(step)) walk(b.steps, `${path}/${b.id}/`)
         else if (step.type === 'loop') walk(step.steps as Step[], `${path}/items/*/`)
         else if (step.type === 'ai.classify') emit(path, 'ai.classify', { text: 'declared text only', categories: 'builder-selected category enum', model: 'pinned model identity' }, step.connection_id, ['https://api.openai.com'])
+        else if (step.type === 'gmail.search_threads') emit(path, step.type, { query: 'Gmail search text', metadata_headers: 'declared header names', mailbox: 'selected managed connection' }, step.connection_id, ['https://gmail.googleapis.com'])
         else if (step.type === 'code') emit(path,'code',{source:step.source,language:step.language,input},step.connection_id,[step.executor_url])
         else if ((step.type.startsWith('nook.') || step.type.startsWith('orbit.'))) emit(path,step.type,input,step.connection_id,[siblingOrigin(step.connection_id)])
         else if (step.type.startsWith('quickbooks.')) emit(path,step.type,input,step.connection_id,['https://sandbox-quickbooks.api.intuit.com'])
