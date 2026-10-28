@@ -219,8 +219,9 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
         input.watched_fields=Object.entries(form).filter(([key])=>/^watch_\d+$/.test(key)).map(([,value])=>value);input.any_field=form.watch_mode==='any'
         for(const key of Object.keys(input))if(key.startsWith('watch_'))delete input[key]
       }
-      if (/\/workflows\/[^/]+\/samples(?:\/[^/]+)?$/.test(path)) {
-        try { if(form.source !== 'schema' && form.sample) input.step_path='trigger'; if(form.sample) input.sample=JSON.parse(form.sample); if(form.fields !== undefined) input.fields=form.fields.split(',').map(field=>field.trim()).filter(Boolean) }
+      const sampleRequest = /\/workflows\/[^/]+\/samples(?:\/[^/]+)?$/.test(path)
+      if (sampleRequest) {
+        try { if(form.sample) input.sample=JSON.parse(form.sample); if(form.fields !== undefined) input.fields=form.fields.split(',').map(field=>field.trim()).filter(Boolean) }
         catch { return page('Invalid sample','<p>Enter a JSON object for the sample.</p>',{},422) }
       }
       if(path.startsWith('/api/crank/gateways/') || path.startsWith('/api/crank/custom-connectors/')) {
@@ -289,7 +290,7 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
       if(form.sink_token) { input.secret={token:form.sink_token}; delete input.sink_token }
       if(form.disclosure_confirmed==='true')input.disclosure_confirmed=true
       if(form.confirm_business_outcome==='true') input.confirm_business_outcome=true
-      if(form.step_path!==undefined) { input.path=form.step_path; delete input.step_path }
+      if(form.step_path!==undefined && !sampleRequest) { input.path=form.step_path; delete input.step_path }
       if (form.all !== undefined) input.all = form.all === 'true'
       if (Object.keys(form).some(key => /^hold_item_\d+$/.test(key))) {
         input.items = Object.entries(form).filter(([key]) => /^hold_item_\d+$/.test(key)).map(([,value]) => value)
