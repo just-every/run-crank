@@ -31,6 +31,7 @@ export function orbitFixture(edge) {
   assert.equal(method,'PATCH');assert.equal(url.search,'');
   if(headers['if-match']!==etag(record))return jsonResponse({error:'synthetic-crank-stale'},409);
   const fields=JSON.parse(body);Object.assign(record,fields);updates.push({id,fields});
+  if(mode==='oversized'){mode='ok';return new Response('x'.repeat(1024*1024+1),{headers:{'content-type':'application'+'/'+'json'}})}
   if(mode==='lost'){mode='ok';await new Promise(resolve=>setTimeout(resolve,350))}
   if(mode==='post-revoke'){mode='ok';await afterWrite?.()}
   return jsonResponse({id});

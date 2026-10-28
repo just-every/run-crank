@@ -65,6 +65,9 @@ export async function orbitJourney({inspect=async()=>{}}={}) {
   const recovered=await startRun(h,lost,{});assert.equal(recovered.status,'succeeded',JSON.stringify(recovered.error));assert.equal(f.updates.length,before+1);
   assert.equal(stepOf(recovered,'deal').output.record.value_cents,9000);assert.equal(stepOf(recovered,'deal').output.reconciled,true);
   await h.restart();assert.equal(stepOf(await h.get('workflow-runs/'+recovered.id),'deal').operation_key,stepOf(recovered,'deal').operation_key);assert.equal(f.updates.length,before+1);
+  f.mode='oversized';before=f.updates.length;
+  const oversized=await manual('update_deal',{deal_id:orbitIds[0],etag:f.etag(f.records.get(orbitIds[0])),fields:{value_cents:8500}});
+  const bounded=await startRun(h,oversized,{});assert.equal(bounded.status,'succeeded',JSON.stringify(bounded.error));assert.equal(f.updates.length,before+1);assert.equal(stepOf(bounded,'deal').output.record.value_cents,8500);assert.equal(stepOf(bounded,'deal').output.reconciled,true);
   f.mode='bad-readback';const uncertain=await startRun(h,w,{});assert.equal(uncertain.status,'uncertain');
   assert.deepEqual((await h.get(`workflow-runs/${uncertain.id}/replay`)).eligible,[]);await h.post(`workflow-runs/${uncertain.id}/resume`,{},h.owner,409);
   f.mode='ok';

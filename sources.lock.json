@@ -139,7 +139,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "ba9cc35274f9978aec4d6e95883366172bc877b941505b23c40424019d39aacb",
+      "sha256": "5d15d782be03a41342b2a5ecb451f27b7dc385a5b468153f5dda5a37d50260b8",
       "executable": false
     },
     "AGENTS.md": {
@@ -163,7 +163,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "dd29cf335147a57b55f5d697b5b06611962b2453aed6e28f70b3ad3a352902f9",
+      "sha256": "14a1b3956ccf258f7aa40d57999e2e2695a1b5bc02929c8861275af9849aba2d",
       "executable": false
     },
     "DEMO.md": {
@@ -203,7 +203,7 @@
       "executable": false
     },
     "docs/CLAIMS.md": {
-      "sha256": "289e14a042a12d242ec5ff3def8aa3d07c2fcc56381cd544d25169e2ee780680",
+      "sha256": "69ff95cc79b345d11f5dab816dd4beea96cedb7d372b06f25778b71f53156edd",
       "executable": false
     },
     "docs/DATA-FLOWS.md": {
@@ -2503,7 +2503,7 @@
       "executable": false
     },
     "src/crank/connectors/orbit.ts": {
-      "sha256": "23e662c544cccec4ea1412babaf5b28aaa94c2fee0b284c375a093f1436db64d",
+      "sha256": "ff377bf46f06714ac782c23011965d1f6a3d0ea0c2a4392ea6008bd24a406288",
       "executable": false
     },
     "src/crank/connectors/pagination.ts": {
@@ -5875,11 +5875,11 @@
       "executable": false
     },
     "tests/orbit-fixture.mjs": {
-      "sha256": "83d3a77e5125d403b201a9af6d2e1096dfe4ca585138d09bafec380536fdfec4",
+      "sha256": "41cbbd4e112765c9c048ab9186b911dec6271dacff3e74d2302644e44c5c5c89",
       "executable": false
     },
     "tests/orbit-journey.mjs": {
-      "sha256": "ba1eed67c11bd289834ef2dd193908cdb178e94cb247c46c06208054fa034faa",
+      "sha256": "920c46126d477b0d16139ca34e7f3a8a814f0d556e1beb653c77e2bbaa20eb30",
       "executable": false
     },
     "tests/owned-operation.mjs": {

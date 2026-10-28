@@ -113,7 +113,8 @@ const updateDeal: StepType = {
       if (response.status >= 500) reconciled = true
       else failure(response, connectionId)
     } catch (error) {
-      if (error instanceof RetryWait || !(error instanceof StepError) || !['network','uncertain'].includes(error.category)) throw error
+      if (error instanceof RetryWait || !(error instanceof StepError) || !['network','provider','uncertain'].includes(error.category)) throw error
+      if (error.category === 'provider' && typeof error.detail.status === 'number' && error.detail.status < 500) throw error
       reconciled = true
     }
     try {
