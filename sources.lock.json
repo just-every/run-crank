@@ -3343,7 +3343,7 @@
       "executable": false
     },
     "src/crank/ui/editor/inspector.ts": {
-      "sha256": "cdee40121ca7948edeafda01adf7fc601200c0cbebc2fe738986f6679f48b8dc",
+      "sha256": "d9e7118c891b5eb787ad0906a765e1fb3a1b4dca2110da3c39705f49c878ba4b",
       "executable": false
     },
     "src/crank/ui/editor/model.ts": {
