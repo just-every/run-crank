@@ -14,7 +14,7 @@ const snapshotIds=rows=>rows.map(row=>[row.version_id,row.record_id]).sort();
 export async function appRetentionJourney({inspect=async()=>{}}={}) {
  const edge=fakeEdge(),initial='2026-10-20T01:00:00.000Z';
  const h=await harness('http://127.0.0.1:9',{edge:edge.edge,clock:initial});
- const ownerEmail=(await h.get()).people.find(person=>person.role==='owner').email;
+ let ownerEmail;
  const renewOwner=async()=>{
   assert.equal((await h.send('/auth/magic-link',{email:ownerEmail,returnTo:'/app'})).status,202);
   const token=new URL(h.mail.at(-1).html.match(/href="([^"]*\/auth\/confirm\?token=[^"]+)"/)[1].replaceAll('&amp;','&'),h.origin).searchParams.get('token');
@@ -35,6 +35,7 @@ export async function appRetentionJourney({inspect=async()=>{}}={}) {
   return jsonResponse({results:records.map((id,i)=>({id,updatedAt:providerTime(),properties:{Status:status,Customer:'synthetic-crank-'+(23+i),amount:'10'}}))});
  });
  try {
+  const people=(await h.send('/auth/operators',undefined,h.owner)).value;ownerEmail=people.find(person=>person.role==='owner').email;
   const c=await connection(h,{app:'hubspot',label:'Retained app observations',auth_kind:'bearer',secret:{token:'synthetic-crank-20'}});
   const trigger={type:'app_poll',provider:'hubspot',resource:'deals',event:'updated',connection_id:c.id,interval_minutes:1,backfill:'from_now',identity:'first_value',watched_fields:['Status','Customer'],changed_to:{Status:'Approved'}};
   const graph={trigger,steps:[]},w=await publish(h,'Retained unadmitted app rows',graph);
