@@ -756,7 +756,11 @@ test('Connection credentials are never resent past a redirect that leaves the AP
   assert.deepEqual(fake.requests.filter(r => r.url.host === 'collector.example' || r.url.protocol === 'http:' && r.url.host === 'api.trusted.example').map(r => r.url.href), [], 'no credentialed request leaves the API origin or its HTTPS scheme');
 });
 
-test('Native financial effects reconcile after restart, continue once and require separate compensation approval', quickbooksReconciliationJourney);
+test('Native financial effects reconcile after restart, continue once and require separate compensation approval', async () => {
+  await quickbooksReconciliationJourney();
+  const { quickbooksSearchJourney } = await import('./quickbooks-search-journey.mjs');
+  await quickbooksSearchJourney();
+});
 test('Regulated Gusto handoffs retain obligations until exact provider agreement and scope consent', gustoHandoffJourney);
 
 test('Invoice outcomes stay open after successful requests until granted repair and independent provider readback, with inactive complete reconciliation records', async () => {

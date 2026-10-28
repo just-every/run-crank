@@ -11,6 +11,7 @@ import { code } from '../../executors/step'
 import { fileFetch } from '../../connectors/files'
 import { httpRequest } from '../../connectors/http-step'
 import { gustoSteps } from '../../providers/gusto'
+import { quickbooksFindInvoice } from '../../providers/quickbooks-search'
 import { quickbooksSteps } from '../../providers/quickbooks'
 import { invoiceOutcome } from '../../providers/invoice-outcome'
 import { invoiceFollowup } from '../../providers/invoice-followup'
@@ -26,5 +27,5 @@ import { join } from './join'
 export const STEP_TYPES: Record<string, StepType> = {
   'ai.classify': aiClassify, ...orbitSteps, 'nook.send_message': nookSendMessage, 'quickbooks.followup_invoice': invoiceFollowup,
   'drift.map': driftMap, 'table.atomic': tableAtomic, 'table.lookup': tableLookup, subflow, collect, 'custom.request':customRequest, code, filter, transform, map, respond, delay, wait_for_callback: waitForCallback, approval, join,
-  'quickbooks.invoice_outcome': invoiceOutcome, http: httpRequest, 'file.fetch': fileFetch, ...digestSteps, ...slackSteps, ...googleCalendarSteps, ...quickbooksSteps, ...gustoSteps, 'quickbooks.void_invoice': quickbooksVoid,
+  'quickbooks.find_invoice': quickbooksFindInvoice, 'quickbooks.invoice_outcome': invoiceOutcome, http: httpRequest, 'file.fetch': fileFetch, ...digestSteps, ...slackSteps, ...googleCalendarSteps, ...quickbooksSteps, ...gustoSteps, 'quickbooks.void_invoice': quickbooksVoid,
 }

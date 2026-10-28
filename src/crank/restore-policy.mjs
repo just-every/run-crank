@@ -1,5 +1,6 @@
 import { validatePureRecipe } from './workflows/recipe-definition.mjs';
 import { validateSubflowDefinition } from './workflows/subflow-definition.mjs';
+const sealedValue = value => value?.sealed === 'crank-payload-v1' && typeof value.k === 'string' && ['customer','financial','health'].includes(value.c) && typeof value.iv === 'string' && atob(value.iv).length === 12 && typeof value.ct === 'string' && atob(value.ct).length >= 16;
 const unfinished = ['queued', 'running', 'waiting', 'awaiting_approval', 'paused'];
 const distant = '9999-12-31T00:00:00.000Z';
 const encode = value => JSON.stringify(value);
@@ -13,7 +14,7 @@ const uncertainWrite = encode({ category: 'uncertain', message: 'Restore interru
 const deliveryFence = previous => encode({ status: 'failed', code: 'restore_fence', uncertain: true, previous });
 const fenced = (json, key, code) => json !== null && JSON.parse(json)[key] === code;
 const remoteWrite = row => row.status === 'running' &&
-  (row.type === 'ai.classify' || row.type === 'orbit.update_deal' || row.type.startsWith('nook.') || row.type.startsWith('slack.') || row.type.startsWith('google_calendar.') || row.type.startsWith('quickbooks.') || row.type.startsWith('gusto.') || row.type === 'http' && !['GET', 'HEAD'].includes(String(JSON.parse(row.input_json ?? '{}').method ?? 'GET').toUpperCase()));
+  (row.type === 'ai.classify' || row.type === 'orbit.update_deal' || row.type.startsWith('nook.') || row.type.startsWith('slack.') || row.type.startsWith('google_calendar.') || (row.type.startsWith('quickbooks.') && row.type !== 'quickbooks.find_invoice') || row.type.startsWith('gusto.') || row.type === 'http' && !['GET', 'HEAD'].includes(String(JSON.parse(row.input_json ?? '{}').method ?? 'GET').toUpperCase()));
 
 /** Pure/idempotent export normalization: backups carry history, never execution authority. */
 export function fenceRow(table, row) {
@@ -191,19 +192,22 @@ export async function validateRestore({ read }) {
       const bound = (step.type === 'file.fetch' || step.type === 'nook.send_message' || step.type.startsWith('orbit.') ? 1 : step.type.startsWith('slack.') ? 4 : 2) * 1024 * 1024;
       if (!Number.isSafeInteger(checkpoint.ordinal) || checkpoint.ordinal < 0 || !/^[a-f0-9]{64}$/.test(checkpoint.request_key) || typeof checkpoint.operation_key !== 'string' || !checkpoint.operation_key) return false;
       if (!Number.isInteger(response.status) || response.status < 100 || response.status > 599 || !['http:', 'https:'].includes(url.protocol) || url.username || url.password || url.search || url.hash) return false;
-      if (!Number.isSafeInteger(response.body_bytes) || response.body_bytes < 0 || response.body_bytes > bound || response.chunk_count !== Math.ceil(response.body_bytes / 65536) || !Array.isArray(response.headers)) return false;
+      if (!Number.isSafeInteger(response.body_bytes) || response.body_bytes < 0 || response.body_bytes > bound || response.chunk_count !== Math.ceil(response.body_bytes / 65536) || !(Array.isArray(response.headers) || sealedValue(response.headers))) return false;
       const key = checkpointKey(checkpoint), body = (chunks.get(key) ?? []).sort((a, b) => a.chunk_index - b.chunk_index);
       if (body.length !== response.chunk_count) return false;
       let length = 0;
       for (const [index, chunk] of body.entries()) {
         if (chunk.chunk_index !== index || typeof chunk.content_base64 !== 'string') return false;
-        const bytes = atob(chunk.content_base64).length;
+        const expected = Math.min(65536, response.body_bytes - length);
+        const envelope = chunk.content_base64.startsWith('{') ? JSON.parse(chunk.content_base64) : null;
+        if (envelope && (!sealedValue(envelope) || atob(envelope.ct).length !== 4 * Math.ceil(expected / 3) + 18)) return false;
+        const bytes = envelope ? expected : atob(chunk.content_base64).length;
         if (bytes !== Math.min(65536, response.body_bytes - length)) return false;
         length += bytes;
       }
       if (length !== response.body_bytes) return false;
       chunks.delete(key);
-      if (response.headers.some(pair => !Array.isArray(pair) || pair.length !== 2 || pair.some(value => typeof value !== 'string') || /authorization|cookie|api[-_]?key|token|secret|password|signature/i.test(pair[0]))) return false;
+      if (Array.isArray(response.headers) && response.headers.some(pair => !Array.isArray(pair) || pair.length !== 2 || pair.some(value => typeof value !== 'string') || /authorization|cookie|api[-_]?key|token|secret|password|signature/i.test(pair[0]))) return false;
     } catch { return false; }
   }
   if (chunks.size) return false;
