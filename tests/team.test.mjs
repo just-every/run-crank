@@ -251,6 +251,9 @@ test('TEAM-001: complete explicit grants authorize native work, delegation, scop
   assert.equal((await h.get('flows/'+freshLegacy.id,recipient.cookie)).status,'draft');
   await h.get('workflows/'+created.id,recipient.cookie,403);
   await h.get('flows/'+createdLegacy.id,recipient.cookie,403);
+  await assign(recipient,[],admin.cookie);
+  await h.get('workflows/'+fresh.id,recipient.cookie,403);
+  await h.get('flows/'+freshLegacy.id,recipient.cookie,403);
   await assign(recipient,[grant('builder',[w.id],[c.id])]);
   await assign(admin,[grant('admin',[w.id],[c.id])]);
   await h.post('data/export',{},admin.cookie,403);
