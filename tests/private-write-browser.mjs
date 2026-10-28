@@ -57,6 +57,12 @@ export async function customSearchBrowser({f,page,shots}) {
   assert.equal(found.steps.find(s=>s.step_id==='search').output.outcome,'found');assert.equal(found.waits.length,0);
   await open(found);assert.ok((await page.locator('body').innerText()).includes('found'));
   await shots('custom-search-found',()=>open(found));
+  await database.sql("INSERT INTO public.write_stock VALUES ('synthetic-crank-992',3),('SYNTHETIC-CRANK-992',9),('Synthetic-crank-992',6);");
+  const bounded=await f.pump(await f.draft('synthetic-crank-992',{create_if_not_found:undefined,multi_match:'all',limit:2,sort:{field:'quantity',direction:'desc'}}));
+  const result=bounded.steps.find(s=>s.step_id==='search').output;
+  assert.equal(result.outcome,'truncated');assert.equal(result.count,2);assert.equal(result.truncated,true);assert.deepEqual(result.records.map(row=>row.quantity),[9,6]);
+  await open(bounded);assert.match(await page.locator('body').innerText(),/truncated/);
+  await shots('custom-search-truncated',()=>open(bounded));
   const review=await f.draft('synthetic-crank-991');await f.work();
   await page.goto(origin+'/app/workflow-runs/'+review.run.id);
   assert.ok(await page.getByRole('button',{name:'Approve',exact:true}).count());
