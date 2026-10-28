@@ -1,4 +1,4 @@
-import { SEARCH_SETTING_KEYS, TRANSFORM_ARGUMENTS } from '../ops/coverage-capabilities'
+import { CONDITION_OPTIONS, SEARCH_SETTING_KEYS, TRANSFORM_ARGUMENTS } from '../ops/coverage-capabilities'
 import { HTTP_REQUEST_LIMIT } from '../connectors/rate-limit'
 import { RETRY_POLICY } from '../connectors/retry'
 import { LIMITS, OPERATORS } from '../engine/conditions'
@@ -25,7 +25,7 @@ export const CATALOG = [
   { app: 'rss', name: 'RSS, Atom and JSON Feed', clauses: ['TRIG-007'], triggers: [op('new_item', 'New item in one or several feeds', { trigger: 'feed', intervals_minutes: POLL_INTERVALS })], actions: [], searches: [] },
   { app: 'retrieve_poll', name: 'URL poll (Retrieve Poll)', clauses: ['TRIG-007'], triggers: [op('new_record', 'New record at a JSON path or XPath', { trigger: 'url_poll', pagination: ['cursor', 'page', 'link'], intervals_minutes: POLL_INTERVALS })], actions: [], searches: [] },
   { app: 'formatter', name: 'Formatter', clauses: ['WORK-012', 'WORK-002'], triggers: [], actions: [op('map', 'Map named fields', { step: 'map' }), ...Object.keys(TRANSFORMS).map(name => op(name, name, { step: 'transform', coverage_arguments: TRANSFORM_ARGUMENTS[name] ?? null }))], searches: [] },
-  { app: 'filter_paths', name: 'Filter and Paths', clauses: ['WORK-013'], operators: OPERATORS, limits: { rules_per_group: LIMITS.rulesPerGroup, groups: LIMITS.groups, branches: PATH_LIMITS.branches, nesting: PATH_LIMITS.depth }, triggers: [], actions: [op('filter', 'Filter', { step: 'filter' }), op('paths', 'Paths (exclusive or parallel, fallback or always-run)', { step: 'paths' })], searches: [] },
+  { app: 'filter_paths', name: 'Filter and Paths', clauses: ['WORK-013'], operators: OPERATORS, coverage_rule_options: CONDITION_OPTIONS, limits: { rules_per_group: LIMITS.rulesPerGroup, groups: LIMITS.groups, branches: PATH_LIMITS.branches, nesting: PATH_LIMITS.depth }, triggers: [], actions: [op('filter', 'Filter', { step: 'filter' }), op('paths', 'Paths (exclusive or parallel, fallback or always-run)', { step: 'paths' })], searches: [] },
   { app: 'delay', name: 'Delay', clauses: ['WORK-004'], triggers: [], actions: [op('delay_for', 'Delay for (minutes to weeks, or business days)', { step: 'delay', mode: 'for' }), op('delay_until', 'Delay until', { step: 'delay', mode: 'until' }), op('delay_queue', 'Delay queue (named, shared, spaced)', { step: 'delay', mode: 'queue' }), op('wait_for_callback', 'Wait for a callback', { step: 'wait_for_callback' })], searches: [] },
   { app: 'approvals', name: 'Approvals', clauses: ['TEAM-005', 'TEAM-004'], triggers: [], actions: [op('approval', 'Approval with editable, capped fields', { step: 'approval' })], searches: [] },
   { app: 'files', name: 'Files', clauses: ['WORK-002'], triggers: [], actions: [op('fetch', 'Fetch a public file URL into a file reference', { step: 'file.fetch', max_bytes: 1048576 })], searches: [] },

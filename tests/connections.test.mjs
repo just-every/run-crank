@@ -280,6 +280,7 @@ test('CONN-001: the catalog lists exact native operations and the coverage repor
   const path = { mode: 'exclusive', branches: [{ id: 'qualified', when: [[rule]] }], fallback: true };
   const cases = [
     ['slack', 'find_channel_by_name', lookup, true],
+    ['slack', 'slack.find_channel_by_name', lookup, true],
     ['slack', 'find_channel_by_name', { ...lookup, create_if_not_found: { is_private: true } }, true],
     ['slack', 'find_channel_by_name', { ...lookup, no_match: 'silently_ignore' }, false],
     ['slack', 'find_channel_by_name', { ...lookup, multi_match: 'random' }, false],
@@ -287,6 +288,11 @@ test('CONN-001: the catalog lists exact native operations and the coverage repor
     ['slack', 'find_channel_by_name', { ...lookup, create_if_not_found: { topic: 'synthetic-crank-2' } }, false],
     ['slack', 'find_user_by_name', { ...lookup, create_if_not_found: {} }, false],
     ['slack', 'find_channel_by_name', { ...lookup, unknown: true }, false],
+    ['slack', 'find_channel_by_name', { ...lookup, multi_match: 'stop', on_multiple: 'continue' }, true],
+    ['slack', 'find_channel_by_name', { ...lookup, multi_match: 'first' }, true],
+    ['slack', 'find_channel_by_name', { ...lookup, on_multiple: 'ignore' }, false],
+    ['slack', 'find_channel_by_name', { ...lookup, sort: { field: 'unavailable_field', direction: 'asc' } }, false],
+    ['slack', 'find_user_by_name', { ...lookup, sort: { field: 'display_name', direction: 'desc' } }, true],
     ['slack', 'find_channel_by_name', { no_match: 'halt' }, false],
     ['custom', 'search', { create_if_not_found: { operation: 'synthetic-crank-3' } }, false],
     ['formatter', 'text.case', { value: 'synthetic-crank-4', to: 'upper' }, true],
@@ -300,6 +306,14 @@ test('CONN-001: the catalog lists exact native operations and the coverage repor
     ['filter_paths', 'filter', { when: [[{ ...rule, op: 'number.unknown' }]] }, false],
     ['filter_paths', 'filter', { when: [[{ ...rule, case_sensitive: 'yes' }]] }, false],
     ['filter_paths', 'filter', { when: [[{ ...rule, unknown: true }]] }, false],
+    ['filter_paths', 'filter', { when: [[{ field: 'trigger.name', op: 'text.equals', value: 'synthetic-crank-18', case_sensitive: true, keep_whitespace: false }]] }, true],
+    ['filter_paths', 'filter', { when: [[{ ...rule, case_sensitive: true }]] }, false],
+    ['filter_paths', 'filter', { when: [[{ ...rule, compare: 'gt' }]] }, false],
+    ['filter_paths', 'filter', { when: [[{ ...rule, inner: rule }]] }, false],
+    ['filter_paths', 'filter', { when: [[{ ...rule, precision: 'day' }]] }, false],
+    ['filter_paths', 'filter', { when: [[{ field: 'trigger.scores', op: 'list.length', compare: 'gte', value: 2 }]] }, true],
+    ['filter_paths', 'filter', { when: [[{ field: 'trigger.scores', op: 'list.any', inner: { ...rule, field: '' } }]] }, true],
+    ['filter_paths', 'filter', { when: [[{ field: 'trigger.scores', op: 'list.any', inner: { ...rule, field: '', keep_whitespace: true } }]] }, false],
     ...['now', 'today', 'start_of_week', 'start_of_month'].map(relative => ['filter_paths', 'filter', { when: [[{ ...dateRule, value: { relative, offset: { amount: 1, unit: 'days' } } }]] }, true]),
     ['filter_paths', 'filter', { when: [[{ ...dateRule, value: { relative: 'tomorrow' } }]] }, false],
     ['filter_paths', 'filter', { when: [[{ ...dateRule, value: { relative: 'today', unknown: true } }]] }, false],
@@ -325,6 +339,15 @@ test('CONN-001: the catalog lists exact native operations and the coverage repor
     assert.ok(item.diagnostics.length > 0 && item.diagnostics.length <= 8);
   });
   assert.equal(configured.configuration_summary.supported, cases.filter(row => row[3]).length);
+  assert.deepEqual(configured.operation_summary, { native: cases.length, unavailable: 0 });
+  const ambiguous = await h.post('coverage', { items: [
+    { app: 'formatter', operation: 'transform' },
+    { app: 'formatter', operation: 'transform', settings: { value: 'one two' } },
+    { app: 'custom', operation: 'custom.request' },
+    { app: 'slack', operation: 'x'.repeat(4096), settings: {} },
+  ] });
+  assert.ok(ambiguous.items.every(item => item.status === 'agent-buildable' && item.operation_status === 'unavailable' && item.reason.length < 300), 'Ambiguous aliases and unknown operations cannot imply native coverage or unbounded diagnostics');
+  assert.deepEqual(ambiguous.operation_summary, { native: 0, unavailable: 4 });
   const unrecognized = await h.post('coverage', { items: [
     { app: 'slack', operation: 'find_channel_by_name', create_if_not_found: { unknown: true } },
     { app: 'formatter', operation: 'text.case', settings: { value: 'synthetic-crank-15', to: 'upper' }, source_version: 99 },
@@ -363,9 +386,14 @@ test('CONN-001: the catalog lists exact native operations and the coverage repor
     node('synthetic-crank-date-offset', 'dateTime', 2, { operation: 'addToDate', magnitude: '2026-10-29T12:00:00-05:00', duration: 1, timeUnit: 'days' }),
     node('synthetic-crank-date-no-offset', 'dateTime', 2, { operation: 'addToDate', magnitude: '2026-10-29', duration: 1, timeUnit: 'days' }),
     node('synthetic-crank-date-invalid', 'dateTime', 2, { operation: 'subtractFromDate', magnitude: '2026-02-30T12:00:00Z', duration: 1, timeUnit: 'days' }),
+    node('synthetic-crank-map-invalid-retention', 'set', 3.4, { assignments: { assignments: [{ name: 'score', value: 10, type: 'number' }] }, includeOtherFields: 'false', options: {} }),
+    node('synthetic-crank-date-invalid-retention', 'dateTime', 2, { operation: 'formatDate', date: '2026-10-29T12:00:00Z', format: 'yyyy-MM-dd', options: { timezone: true, includeInputFields: 'false' } }),
+    node('synthetic-crank-date-format', 'dateTime', 2, { operation: 'formatDate', date: '2026-10-29T12:00:00Z', format: 'yyyy-MM-dd', options: { timezone: true, includeInputFields: false } }),
+    node('synthetic-crank-date-format-invalid', 'dateTime', 2, { operation: 'formatDate', date: 'invalid date', format: 'yyyy-MM-dd', options: { timezone: true } }),
+    node('synthetic-crank-date-format-missing', 'dateTime', 2, { operation: 'formatDate', format: 'yyyy-MM-dd', options: { timezone: true } }),
   ];
   const n8n = await h.post('coverage', { n8n: { name: 'synthetic-crank-10', nodes: sourceNodes, connections: {}, settings: { timezone: 'America/Chicago' } } });
-  const sourceSupported = new Set([0, 1, 4, 6, 8, 15, 16]);
+  const sourceSupported = new Set([0, 1, 4, 6, 8, 15, 16, 21]);
   n8n.items.forEach((item, i) => {
     assert.equal(item.status, sourceSupported.has(i) ? 'native' : 'agent-buildable', sourceNodes[i].id + ': ' + JSON.stringify(item));
     assert.equal(item.source_version, sourceNodes[i].typeVersion);

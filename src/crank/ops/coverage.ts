@@ -15,7 +15,9 @@ export function assess(item: InventoryItem) {
   const entry = CATALOG.find(c => c.app === app)
   if (entry) {
     const operations = [...entry.triggers, ...entry.actions, ...entry.searches] as { id: string; step?: string; trigger?: string }[]
-    const match = operations.find(o => normal(o.id) === operation || (o.step && normal(o.step) === operation))
+    const named = operations.filter(o => normal(o.id) === operation)
+    const matches = named.length ? named : operations.filter(o => o.step && normal(o.step) === operation)
+    const match = matches.length === 1 ? matches[0] : undefined
     if (match) {
       if (scope === 'operation') return { ...operationItem, operation_status: 'native', status: 'native', clause: entry.clauses.join(', '), operation_id: match.id }
       const configuration = configurationCoverage({ ...item, app }, match.id)
@@ -23,7 +25,9 @@ export function assess(item: InventoryItem) {
         configuration_status: configuration.supported ? 'supported' : 'unsupported', clause: entry.clauses.join(', '), operation_id: match.id,
         reason: configuration.reason, diagnostics: [{ code: configuration.code, field: 'settings', reason: configuration.reason }] }
     }
-    return { ...operationItem, status: 'agent-buildable', clause: 'CONN-011', reason: `${entry.name} is native, but "${item.operation}" is not one of its built operations` }
+    return { ...operationItem, status: 'agent-buildable', clause: 'CONN-011', reason: matches.length > 1
+      ? `${entry.name} requires a named operation; this step type is shared by several operations`
+      : `${entry.name} has no declared native capability for this operation` }
   }
   const planned = PLANNED[app]
   if (planned) return { ...operationItem, status: 'agent-buildable', clause: 'CONN-011', reason: `${planned.name} has a public ${planned.api === 'openapi' ? 'OpenAPI-described' : 'REST'} API; its native connector (${planned.clause}) is not built in this installation yet` }
@@ -107,5 +111,7 @@ export function coverageReport(input: Record<string, unknown>) {
   for (const item of items) summary[item.status]++
   const configuration_summary = { supported: 0, unsupported: 0, not_assessed: 0 } as Record<string, number>
   for (const item of items) configuration_summary[item.configuration_status]++
-  return { summary, configuration_summary, limits: COVERAGE_LIMITS, items }
+  const operation_summary = { native: 0, unavailable: 0 } as Record<string, number>
+  for (const item of items) operation_summary[item.operation_status]++
+  return { summary, operation_summary, configuration_summary, limits: COVERAGE_LIMITS, items }
 }

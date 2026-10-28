@@ -19,6 +19,17 @@ export interface InventoryItem {
   source_options?: Record<string, unknown>; workflow_settings?: unknown
 }
 export const SEARCH_SETTING_KEYS = ['input', 'no_match', 'multi_match', 'on_multiple', 'limit', 'sort', 'create_if_not_found']
+const SEARCH_FIELDS: Record<string, { input: string[]; sort: string[] }> = {
+  find_channel_by_name: { input: ['name'], sort: ['id', 'name', 'is_private', 'is_archived', 'num_members'] },
+  find_user_by_name: { input: ['name'], sort: ['id', 'name', 'real_name', 'display_name', 'email', 'is_bot', 'team_id'] },
+  find_user_by_email: { input: ['email'], sort: ['id', 'name', 'real_name', 'display_name', 'email', 'is_bot', 'team_id'] },
+}
+export const CONDITION_OPTIONS: Record<string, string[]> = {
+  text: ['value', 'case_sensitive', 'keep_whitespace', 'value_type'],
+  number: ['value', 'value_type'], date: ['value', 'precision', 'timezone'],
+  boolean: ['value_type'], exists: ['value_type'],
+  'list.length': ['value', 'compare'], 'list.any': ['inner'], 'list.every': ['inner'],
+}
 export const TRANSFORM_ARGUMENTS: Record<string, string[]> = {
   'text.split': ['value', 'rule', 'separator', 'segment'], 'text.case': ['value', 'to'],
   'text.trim': ['value', 'collapse'], 'text.truncate': ['value', 'length', 'ellipsis'],
@@ -66,9 +77,11 @@ function conditionSettings(settings: Record<string, unknown>, paths: boolean) {
     validateGroups(groups, 'Coverage conditions')
     return (groups as unknown[][]).every(group => group.every(raw => {
       const rule = raw as Record<string, unknown>
-      return keys(rule, ['field', 'op', 'value', 'case_sensitive', 'keep_whitespace', 'value_type', 'precision', 'timezone', 'calendar', 'inner', 'compare'])
+      const op = String(rule.op), family = op.includes('.') ? op.split('.')[0] : 'exists'
+      const options = CONDITION_OPTIONS[family === 'list' ? op : family]
+      return !!options && keys(rule, ['field', 'op', ...options])
         && choice(rule.case_sensitive, [true, false]) && choice(rule.keep_whitespace, [true, false])
-        && choice(rule.precision, ['instant', 'day']) && rule.calendar === undefined
+        && choice(rule.precision, ['instant', 'day'])
         && (!String(rule.op).startsWith('date.') || relativeDateSettings(rule.value))
         && (rule.inner === undefined || inspect([[rule.inner]]))
     }))
@@ -88,6 +101,12 @@ function sourceSettings(item: InventoryItem) {
   // These compiler branches are pure and require no account, conversion grant or environment.
   const types = ['webhook', 'wait', 'set', 'dateTime', 'if', 'filter', 'switch'].map(type => 'n8n-nodes-base.' + type)
   if (!types.includes(item.source_type ?? '')) return fail('source_mapping_unavailable', 'This source node has no declared account-free setting mapping; native operation availability supplies no migration authority')
+  // The compiler only maps replacement outputs for these modes. Do not let an
+  // invalid source option look equivalent merely because it is not boolean true.
+  if (isObject(item.settings)) {
+    if (item.source_type === 'n8n-nodes-base.set' && !choice(item.settings.includeOtherFields, [false])) return fail('unsupported_source_configuration', 'Source field retention requires an explicitly supported replacement-output setting')
+    if (item.source_type === 'n8n-nodes-base.dateTime' && item.settings.operation === 'formatDate' && isObject(item.settings.options) && !choice(item.settings.options.includeInputFields, [false])) return fail('unsupported_source_configuration', 'Source field retention requires an explicitly supported replacement-output setting')
+  }
   const node = { ...item.source_options, id: 'coverage_node', name: 'Coverage node', position: [200, 0], type: item.source_type, typeVersion: item.source_version, parameters: item.settings }
   const start = { id: 'coverage_start', name: 'Coverage start', position: [0, 0], type: 'n8n-nodes-base.manualTrigger', typeVersion: 1, parameters: {} }
   const webhook = item.source_type === 'n8n-nodes-base.webhook'
@@ -102,6 +121,15 @@ function sourceSettings(item: InventoryItem) {
       for (const step of effect.graph.steps) {
         if (isObject(step) && step.fn === 'date.n8n_arithmetic' && isObject(step.input) && isObject(step.input.value) && own(step.input.value, '$literal')) {
           runTransform('date.n8n_arithmetic', resolve(step.input, { trigger: { input: {} }, steps: {}, run: {} }) as Record<string, unknown>)
+        }
+        if (isObject(step) && step.type === 'map' && isObject(step.input)) {
+          for (const value of Object.values(step.input)) {
+            if (isObject(value) && value.$fn === 'date.format' && isObject(value.args) && isObject(value.args.value) && own(value.args.value, '$literal')) {
+              const args = resolve(value.args, { trigger: { input: {} }, steps: {}, run: {} }) as Record<string, unknown>
+              if (args.value === null || args.value === undefined) return fail('incomplete_settings', 'Source date formatting requires a date input')
+              runTransform('date.format', args)
+            }
+          }
         }
       }
     }
@@ -121,11 +149,11 @@ export function configurationCoverage(item: InventoryItem, operation: string) {
       if (!keys(settings, SEARCH_SETTING_KEYS)) return fail('unsupported_settings', 'Unknown search setting')
       validateSearch({ id: 'coverage', type: 'slack.' + operation, ...settings } as Step)
       if (operation === 'find_message') return fail('resource_mapping_unavailable', 'Selected Slack channel resources need current-account mapping proof that this report cannot establish')
-      const inputs: Record<string, string[]> = { find_channel_by_name: ['name'], find_user_by_name: ['name'], find_user_by_email: ['email'], find_message: ['channel', 'text'] }
-      const fields = inputs[operation]
-      if (!fields || !isObject(settings.input) || !keys(settings.input, fields) || !fields.every(field => nonempty((settings.input as Record<string, unknown>)[field]))) return fail('incomplete_settings', 'Search requires its exact typed lookup inputs')
+      const fields = SEARCH_FIELDS[operation]
+      if (!fields || !isObject(settings.input) || !keys(settings.input, fields.input) || !fields.input.every(field => nonempty((settings.input as Record<string, unknown>)[field]))) return fail('incomplete_settings', 'Search requires its exact typed lookup inputs')
       if (settings.create_if_not_found !== undefined && (operation !== 'find_channel_by_name' || !isObject(settings.create_if_not_found) || !keys(settings.create_if_not_found, ['is_private']) || !choice(settings.create_if_not_found.is_private, [true, false]))) return fail('unsupported_create', 'No matching create capability exists for these exact search settings')
       if (settings.sort !== undefined && (!isObject(settings.sort) || !keys(settings.sort, ['field', 'direction']))) return fail('unsupported_settings', 'Unknown search sort option')
+      if (isObject(settings.sort) && !fields.sort.includes(String(settings.sort.field))) return fail('unsupported_sort', 'The requested sort field is not returned by this native search operation')
       return supported
     }
     if (item.app === 'formatter') return transformSettings(operation, settings)
