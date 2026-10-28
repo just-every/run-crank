@@ -5851,7 +5851,7 @@
       "executable": false
     },
     "tests/migration-browser.mjs": {
-      "sha256": "1ad5e0efaf4af17cdc5eb494677c3dcee1299ad4a005c4f60b65f0c0b3aee623",
+      "sha256": "2421158251a3ba1ecfe86a8e7866237649be7008a3e9462777f329161f72ab13",
       "executable": false
     },
     "tests/n8n-batch-journey.mjs": {
