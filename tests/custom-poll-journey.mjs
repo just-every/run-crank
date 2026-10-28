@@ -67,7 +67,10 @@ export async function customPollJourney({inspect=async()=>{}}={}) {
       assert.match(refused.error,pattern);
       return workflow;
     };
-    await rejectPublication('Unreviewed custom poll cannot publish',{},/production authority/i);
+    const unreviewed=await rejectPublication('Unreviewed custom poll cannot publish',{},/production authority/i);
+    const beforeUnreviewed=edge.to('custom.example').length;
+    assert.equal((await h.send(`/api/crank/workflows/${unreviewed.id}/trigger/fields`,undefined,h.owner)).status,422,'field discovery also requires reviewed custom polling authority');
+    assert.equal(edge.to('custom.example').length,beforeUnreviewed,'unreviewed field discovery sends no provider request');
     await rejectPublication('A sandbox flag cannot bypass custom poll review',{custom_sandbox:true},/sandbox/i);
     const proof=await sandbox(h,installed,account);
     await h.post(`connections/${account.id}/purpose`,{purpose:'production'});
@@ -85,6 +88,11 @@ export async function customPollJourney({inspect=async()=>{}}={}) {
     await rejectPublication('Custom poll checks current account scopes',{connection_id:narrowed.id},/account.*scope/i);
 
     const workflow=await publish(h,'Reviewed custom record changes',{trigger,steps});
+    assert.deepEqual((await h.get(`workflows/${workflow.id}/trigger/fields`)).fields.map(field=>field.name),['Status']);
+    duringPage=()=>h.post(`custom-connectors/${installed.id}/versions/1/revoke-scopes`,{scopes:[]});
+    const interruptedFields=await h.send(`/api/crank/workflows/${workflow.id}/trigger/fields`,undefined,h.owner);
+    assert.equal(interruptedFields.status,422);assert.equal(interruptedFields.value.fields,undefined,'in-flight revoked consent returns no discovered source fields');
+    await h.post(`custom-connectors/${installed.id}/versions/1/sandbox`,proof.receipt);
     let time=Date.parse((await h.get(`workflows/${workflow.id}/trigger`)).poll.next_due_at);
     const poll=async()=>{time+=minute;await h.tick(time)};
     const count=async n=>assert.equal((await runs(h,workflow)).length,n);
@@ -119,6 +127,9 @@ export async function customPollJourney({inspect=async()=>{}}={}) {
     // Version revocation prevents even the first provider page. Native re-review
     // and a complete new sandbox must still not revive an old published binding.
     await h.post(`custom-connectors/${installed.id}/versions/1/revoke`);
+    const beforeDiscovery=edge.to('custom.example').length;
+    assert.equal((await h.send(`/api/crank/workflows/${workflow.id}/trigger/fields`,undefined,h.owner)).status,422,'revoked custom consent cannot expose source fields');
+    assert.equal(edge.to('custom.example').length,beforeDiscovery);
     const requests=edge.to('custom.example').length;revision++;status='Returned';await poll();await count(3);
     assert.equal(edge.to('custom.example').length,requests);
     const revoked=await draftTest(h,'Revoked custom poll version proof',[proof.step],{},{[account.id]:account.id});

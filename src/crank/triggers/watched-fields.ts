@@ -1,9 +1,10 @@
-import { requirePrepare } from '../access'
+import { requireOwner, requirePrepare } from '../access'
 import { connectionScope, completeGrant, workflowScope } from '../team/policy'
-import { canonical, digest, requireValue, type Actor, type CrankEnv } from '../model'
+import { canonical, digest, requireValue, stmt, type Actor, type CrankEnv } from '../model'
 import { appFieldNames } from './app-source'
 import { getWorkflow, updateDraft } from '../workflows/store'
 import { isTableSource, tableFieldNames } from './table-source'
+import { customPollBinding } from '../custom/poll-binding'
 
 /** Loading names reads the exact current draft account, without trigger admission. */
 export async function watchedFields(env: CrankEnv, actor: Actor, workflowId: string) {
@@ -11,9 +12,15 @@ export async function watchedFields(env: CrankEnv, actor: Actor, workflowId: str
   const workflow = await getWorkflow(env, workflowId), graph = JSON.parse(workflow.draft_json)
   requireValue(graph.trigger.type === 'app_poll', 'Choose a native app polling trigger')
   const native = isTableSource(graph.trigger)
+  if (graph.trigger.custom_connector_id !== undefined) requireOwner(actor)
+  const binding = await customPollBinding(env, graph.trigger)
+  const currentConsent = async () => {
+    await customPollBinding(env, graph.trigger)
+    requireValue(binding && await stmt(env, `SELECT 1 WHERE ${binding.guard.sql}`, ...binding.guard.params).first(), 'Source consent changed; load current field names again', 409)
+  }
   if (!native) connectionScope(actor, graph.trigger.connection_id)
   requireValue(!actor.team || !native && completeGrant(actor, 'prepare', workflowId, [graph.trigger.connection_id]), 'One complete grant must cover the workflow and its account', 403)
-  const fields = native ? await tableFieldNames(env, graph.trigger, { workflowId }) : await appFieldNames(env, graph.trigger)
+  const fields = native ? await tableFieldNames(env, graph.trigger, { workflowId }) : await appFieldNames(env, graph.trigger, binding ? { beforePage: currentConsent, maxItems: binding.maxItems } : {})
   requireValue((await getWorkflow(env, workflowId)).draft_json === workflow.draft_json, 'The draft changed; load current field names again', 409)
   return { fields, draft_digest: await digest(canonical(graph)), schema_digest: await digest(canonical(fields)) }
 }

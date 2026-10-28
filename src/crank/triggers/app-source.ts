@@ -10,6 +10,7 @@ import { StepError } from '../engine/errors'
 import { canonical, type CrankEnv } from '../model'
 
 export interface AppRecord { id: string; fields: Record<string, unknown>; at: string | null; payload: Record<string, unknown> }
+interface AppReadOptions { beforePage?: () => Promise<unknown>; maxItems?: number }
 
 export async function appRequest(env: CrankEnv, connection: string, url: URL, method = 'GET', body?: unknown) {
   const headers = new Headers({ accept: 'application/json', ...(body ? { 'content-type': 'application/json' } : {}) })
@@ -53,7 +54,7 @@ async function sheetRows(env: CrankEnv, trigger: Record<string, any>): Promise<A
 }
 
 /** Fetch a complete bounded source before touching any comparison state. */
-export async function appRecords(env: CrankEnv, trigger: Record<string, any>, options: { beforePage?: () => Promise<unknown>; maxItems?: number } = {}): Promise<AppRecord[]> {
+export async function appRecords(env: CrankEnv, trigger: Record<string, any>, options: AppReadOptions = {}): Promise<AppRecord[]> {
   const { row } = await credential(env, trigger.connection_id)
   if (row.app !== (trigger.provider === 'google_sheets' ? 'google' : ['microsoft_excel', 'sharepoint'].includes(trigger.provider) ? 'microsoft_graph' : trigger.provider === 'http_json' ? 'http' : trigger.provider)) throw new StepError('auth', 'Choose a connection for this app provider')
   if (['google_sheets', 'microsoft_excel'].includes(trigger.provider)) return sheetRows(env, trigger)
@@ -93,7 +94,7 @@ export async function appRecords(env: CrankEnv, trigger: Record<string, any>, op
 }
 
 /** Account-bound schema names; no values or production cursor writes. */
-export async function appFieldNames(env: CrankEnv, trigger: Record<string, any>): Promise<{ name: string; label: string }[]> {
+export async function appFieldNames(env: CrankEnv, trigger: Record<string, any>, options: AppReadOptions = {}): Promise<{ name: string; label: string }[]> {
   await credential(env, trigger.connection_id)
   let fields: { name: string; label: string }[]
   if (trigger.provider === 'hubspot') {
@@ -111,7 +112,7 @@ export async function appFieldNames(env: CrankEnv, trigger: Record<string, any>)
     if (!Array.isArray(headers) || !headers.length || headers.some((name: unknown) => typeof name !== 'string' || !name.trim())) throw new StepError('validation', 'A named spreadsheet header row is required')
     fields = headers.map((name: string) => ({ name, label: name }))
   } else {
-    const records = await appRecords(env, trigger)
+    const records = await appRecords(env, trigger, options)
     fields = [...new Set(records.flatMap(record => Object.keys(record.fields)))].map(name => ({ name, label: name }))
   }
   if (fields.length > 1000 || new Set(fields.map(field => field.name)).size !== fields.length) throw new StepError('validation', 'Source field names must be complete and unique')

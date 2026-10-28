@@ -139,7 +139,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "3cc6471810bdcd1d24f8583038bde65d2313bc601d1db73ed7954ade61f7a6fa",
+      "sha256": "f15689e7976dd6c595e9515945af37ec1f8f0094cff03fdc84e66044f59be509",
       "executable": false
     },
     "AGENTS.md": {
@@ -163,7 +163,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "528ce3d6e6995d7b81070ba7bb4880390720dea2312750009bdb6824392f4735",
+      "sha256": "75169bd98fcfa947faa0288973385d7708479338c3c3c3c57e6c5b6d31c93d03",
       "executable": false
     },
     "DEMO.md": {
@@ -191,7 +191,7 @@
       "executable": false
     },
     "docs/APP-TRIGGERS.md": {
-      "sha256": "36284995d149bcf8fc2edf2489425e9e6036df1a6341cbd0c2cd98c2691d6ace",
+      "sha256": "148649be6f1de4a2d152da7f9bdf67cf44813f3c60397b5d692b2c3faf75e6da",
       "executable": false
     },
     "docs/BACKUP-RESTORE.md": {
@@ -203,7 +203,7 @@
       "executable": false
     },
     "docs/CLAIMS.md": {
-      "sha256": "20e888a4ba7a96dbd3a8639d48ef78b868003b216d154a888a635840bf22f042",
+      "sha256": "2b62385be38c352cf6b9d293901627af037765b9e9d7a213e2897e77cf238f16",
       "executable": false
     },
     "docs/DATA-FLOWS.md": {
@@ -3159,7 +3159,7 @@
       "executable": false
     },
     "src/crank/triggers/app-source.ts": {
-      "sha256": "16703c1c25f2eb49ab731bf6f82756c6340f2f9274362d5a4e1ace44161d6a2a",
+      "sha256": "e74db176b0bc1d04a3b04b7b2c9032ee177d92a1db63ff1b37dbf7b49024675e",
       "executable": false
     },
     "src/crank/triggers/app-state.ts": {
@@ -3251,7 +3251,7 @@
       "executable": false
     },
     "src/crank/triggers/watched-fields.ts": {
-      "sha256": "6e1504edeea39f0b2f76a59ad573e6a4e089c13d580b5ceb6d4a04fbc849d3d4",
+      "sha256": "4377c509e5558c0059e8b64965df3900b6fa9e234277750c4bfc642636fe3781",
       "executable": false
     },
     "src/crank/triggers/webhook-admission.ts": {
@@ -5559,7 +5559,7 @@
       "executable": false
     },
     "tests/custom-poll-journey.mjs": {
-      "sha256": "d942b32edcb9747c1bcb82c05aea37fd43eda092cfd401a47cee2e80d8c99b11",
+      "sha256": "4062f6a1c7f9763a774117ceb2e3e372f00f407854ee0e097af52087d5675a14",
       "executable": false
     },
     "tests/database-gateway-fixture.mjs": {
