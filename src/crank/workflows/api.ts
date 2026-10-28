@@ -149,6 +149,8 @@ export async function workflowApi(request: Request, env: CrankEnv): Promise<Resp
       if ((m = match(path, /^\/api\/crank\/workflows\/([^/]+)\/drafts\/([^/]+)$/))) return json(await readDraft(env, m[0], m[1]))
       if ((m = match(path, /^\/api\/crank\/workflows\/([^/]+)\/compare$/))) return json(await compareWorkflow(env, m[0], url.searchParams))
       if ((m = match(path, /^\/api\/crank\/workflows\/([^/]+)\/samples$/))) return json(await readSamples(env, actor, m[0]))
+      // This selected-sample evaluation is pure; app actions and waits are never dispatched.
+      if ((m = match(path, /^\/api\/crank\/workflows\/([^/]+)\/preview$/))) return json(await previewWorkflow(env, actor, m[0], {}))
       if ((m = match(path, /^\/api\/crank\/workflows\/([^/]+)\/trigger\/fields$/))) return json(await watchedFields(env, actor, m[0]))
       if ((m = match(path, /^\/api\/crank\/workflows\/([^/]+)\/trigger$/))) return json(await triggerState(env, m[0], url.searchParams))
       if ((m = match(path, /^\/api\/crank\/workflows\/([^/]+)\/versions\/(\d+)$/))) return json(await versionGraph(env, m[0], Number(m[1])))

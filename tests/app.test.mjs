@@ -171,6 +171,11 @@ test('Native visual drafting builds named branches, fences stale and unauthorize
   const samplePage=await page('/app/workflows/'+workflowId+'?step='+values.id);
   assert.ok(samplePage.includes('class="edge-sample"'));
   assert.ok(samplePage.includes('manual sample'));
+  const ordinaryGet=await h.mf.dispatchFetch(h.origin+'/app/workflows/'+workflowId,{headers:{cookie:h.owner}});
+  assert.equal(ordinaryGet.status,200);assert.ok((await ordinaryGet.text()).includes('class="edge-sample"'),'ordinary navigation has no write Origin header and still reads the pure preview');
+  assert.equal((await h.get('workflows/'+workflowId+'/preview')).source.id,sampleId);
+  await h.get('workflows/'+workflowId+'/preview',viewer,403);
+
   assert.ok(samplePage.includes('&lt;script&gt;synthetic-crank-edge-1&lt;/script&gt;'));
   assert.ok(!samplePage.includes('<script>synthetic-crank-edge-1</script>'));
   assert.ok(samplePage.includes('Not reached in this preview'),'a wait cannot invent a downstream response');

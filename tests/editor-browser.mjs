@@ -157,11 +157,10 @@ try {
   assert.equal(edge.requests.length,0,'construction sends no production request');
   await page.locator('.step-card').filter({hasText:'Started by hand'}).click();
   await page.getByRole('link',{name:'Test',exact:true}).first().click();
-  const sampleForm=page.locator('form').filter({has:page.getByRole('button',{name:'Save sample',exact:true})});
-  await sampleForm.getByLabel('Sample JSON',{exact:true}).fill(JSON.stringify({input:{lead:'synthetic-crank-edge-browser'}}));
-  await sampleForm.getByRole('button',{name:'Save sample',exact:true}).click();
+  await page.getByRole('textbox',{name:'Sample JSON',exact:true}).fill(JSON.stringify({input:{lead:'synthetic-crank-edge-browser'}}));
+  await page.getByRole('button',{name:'Save sample',exact:true}).click();
   await page.waitForURL(/tab=test/);
-  const sourceEdge=()=>page.locator('.edge-sample').filter({has:page.locator('pre').filter({hasText:'"amount"'})});
+  const sourceEdge=()=>page.locator('.edge-sample[data-step="'+source.id+'"]');
   const edgeDisclosure=sourceEdge();await edgeDisclosure.locator('summary').focus();await edgeDisclosure.locator('summary').press('Enter');
   await expect(edgeDisclosure).toContainText('manual sample');await expect(edgeDisclosure).toContainText('1200');
   await expect(page.locator('.edge-sample').filter({hasText:'Not reached in this preview'}).first()).toBeVisible();

@@ -18,6 +18,7 @@ import { followupsPanel, inboxPanel } from './followups'
 import { decisionEdits } from './decision-fields'
 import { teamApi } from '../team/api'
 import { teamPanel } from './team'
+import { completeGrant } from '../team/policy'
 import { grantsPanel } from './grants'
 import { usageView, usageHoldView } from './usage'
 import { operationsView } from './operations'
@@ -84,7 +85,7 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
       // Pure evaluation uses the same authorized preview door as the Test tab.
       // It never tests an app action or crosses a wait to invent a result.
       if (!preview && data.sampleData.samples.some((sample:any)=>sample.selected && sample.step_path==='trigger')) {
-        const response=await call('/api/crank/workflows/'+encodeURIComponent(id)+'/preview',{})
+        const response=await call('/api/crank/workflows/'+encodeURIComponent(id)+'/preview')
         if(response.ok)preview=await response.json()
       }
       let customPicker=''
@@ -371,9 +372,9 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
       const details = await Promise.all(waiting.runs.map(async (r:any)=>({run:await read('/api/crank/workflow-runs/'+r.id),workflow:await read('/api/crank/workflows/'+encodeURIComponent(r.workflow_id))})))
       return page('Approvals',approvalsView(state,details),{state,intro:'Decisions that only a person can make. Everything else runs on its own.'})
     }
-    if(url.pathname==='/app/audit' && actor.team?.role==='auditor') return page('Audit history',`<section class="panel"><h2>Value-free audit history</h2><ul class="list">${(await read('/api/crank/audit')).map((row:any)=>`<li>${esc(row.at)} · ${esc(row.action)} · ${esc(row.subject_kind)}</li>`).join('')}</ul></section>`,{state})
-    if(url.pathname==='/app/billing' && actor.team?.role==='billing') return page('Billing usage',`<section class="panel"><h2>Aggregate usage</h2><ul class="list">${(await read('/api/crank/reports/usage')).map((row:any)=>`<li>${esc(row.month)} · ${row.runs} runs · USD ${esc(unitsUsd(BigInt(row.accounted_units??'0')))} accounted usage</li>`).join('')}</ul></section>`,{state})
-    if(url.pathname==='/app/account') { const session = await read('/auth/session'); return page('Account',accountView(session,owner,actor.team?.role),{state,intro:'Who is signed in on this browser, and what that role may do.'}) }
+    if(url.pathname==='/app/audit' && completeGrant(actor,'audit')) return page('Audit history',`<section class="panel"><h2>Value-free audit history</h2><ul class="list">${(await read('/api/crank/audit')).map((row:any)=>`<li>${esc(row.at)} · ${esc(row.action)} · ${esc(row.subject_kind)}</li>`).join('')}</ul></section>`,{state})
+    if(url.pathname==='/app/billing' && completeGrant(actor,'billing')) return page('Billing usage',`<section class="panel"><h2>Aggregate usage</h2><ul class="list">${(await read('/api/crank/reports/usage')).map((row:any)=>`<li>${esc(row.month)} · ${row.runs} runs · USD ${esc(unitsUsd(BigInt(row.accounted_units??'0')))} accounted usage</li>`).join('')}</ul></section>`,{state})
+    if(url.pathname==='/app/account') { const session = await read('/auth/session'); return page('Account',accountView(session,owner,actor.team),{state,intro:'Who is signed in on this browser, and what that role may do.'}) }
     if(url.pathname==='/app/gateway-confirmation')return page('Confirm by email',gatewayConfirmation(),{state})
     if(url.pathname==='/app/connections') {
       const nativeOwner=actor.role==='owner' && ['native','dev'].includes(actor.kind)

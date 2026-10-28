@@ -1,5 +1,7 @@
 import { workflowEstimateView } from '../usage'
-import type { Graph } from '../../engine/graph'
+import { validateGraph, type Graph } from '../../engine/graph'
+import { completeGrant } from '../../team/policy'
+import { customGatewayIds } from '../../custom/use-scope'
 import { canonical } from '../../model'
 import { action, chip, clock, esc, hidden, personName } from '../document'
 import { renameOf, renamesBetween } from '../failure'
@@ -45,11 +47,16 @@ function agentCard(d: EditorData, changed: Set<string>, undo: string) {
 }
 
 export function editorView(d: EditorData): { content: string; page: Page } {
-  const wf = d.workflow, graph = wf.draft as Graph, owner = d.actor.role === 'owner', canPrepare = d.actor.team ? ['admin','builder'].includes(d.actor.team.role) : ['owner', 'admin'].includes(d.actor.role), canPublish = owner || ['admin','builder'].includes(d.actor.team?.role)
-  const canStart = (d.actor.team ? ['admin','operator'].includes(d.actor.team.role) && (wf.versions.find((v:any)=>v.id===wf.published_version_id)?.authority.connections ?? []).every((id:string)=>d.actor.team.connection_ids.includes(id)) : ['owner','admin'].includes(d.actor.role))
+  const wf = d.workflow, graph = wf.draft as Graph, owner = d.actor.role === 'owner'
+  const draftAccounts = [...validateGraph(graph).declared.connections, ...customGatewayIds(graph).map(id => 'gateway:' + id)]
+  const liveAuthority = wf.versions.find((v:any)=>v.id===wf.published_version_id)?.authority
+  const liveAccounts = [...(liveAuthority?.connections ?? []), ...(liveAuthority?.gateways ?? []).map((id:string)=>'gateway:' + id)]
+  const canPrepare = d.actor.team ? !!completeGrant(d.actor,'prepare',wf.id) : ['owner','admin'].includes(d.actor.role)
+  const canPublish = d.actor.team ? !!completeGrant(d.actor,'publish',wf.id,draftAccounts) : owner
+  const canStart = d.actor.team ? !!completeGrant(d.actor,'start',wf.id,liveAccounts) : ['owner','admin'].includes(d.actor.role)
   const all = flatten(nodes(graph)), requested = d.params.get('step') ?? '', fallback = all.at(-1)!.path
   const node = findNode(graph, requested) ?? findNode(graph, fallback)!
-  const tab = ['setup', 'data', 'test'].includes(d.params.get('tab') ?? '') ? d.params.get('tab')! : d.preview ? 'test' : 'setup'
+  const tab = ['setup', 'data', 'test'].includes(d.params.get('tab') ?? '') ? d.params.get('tab')! : 'setup'
   const changed = d.current && d.previous ? changedPaths(d.current.graph, d.previous.graph) : new Set<string>()
   const unpublished = !d.current || canonical(d.current.graph) !== canonical(graph)
   const q = d.params.get('q') ?? '', status = d.params.get('status') ?? ''
