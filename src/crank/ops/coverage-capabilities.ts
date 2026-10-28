@@ -2,10 +2,11 @@ import { runTransform } from '../engine/transforms'
 import { validateGroups } from '../engine/conditions'
 import { validateGraph } from '../engine/graph'
 import { validateSearch } from '../engine/search'
-import { requireUnit } from '../engine/dates'
+import { parseDate, requireUnit, requireZone } from '../engine/dates'
+import { parseDecimal } from '../engine/decimal'
 import { resolve } from '../engine/mapping'
 import type { Step } from '../engine/types'
-import { isObject } from '../engine/values'
+import { isObject, textOf } from '../engine/values'
 import { n8nGraph } from '../n8n-graph'
 
 /** Coverage declarations are deliberately smaller than the execution registry.
@@ -69,6 +70,29 @@ function relativeDateSettings(value: unknown) {
   return true
 }
 
+function conditionOperand(rule: Record<string, unknown>, requested = rule.value, literal = false): boolean {
+  const op = String(rule.op)
+  if (requested === undefined) return !own(rule, 'value')
+  if (!literal && isObject(requested)) {
+    if (own(requested, '$literal')) return keys(requested, ['$literal']) && conditionOperand(rule, requested.$literal, true)
+    if (own(requested, '$ref')) return keys(requested, ['$ref']) && nonempty(requested.$ref)
+  }
+  // Native data references are supported; their eventual values remain runtime
+  // validation duties. No transform expression is executed to assess an operand.
+  if (!literal && typeof requested === 'string' && /\{\{\s*[A-Za-z_][\w.\-[\]]*\s*\}\}/.test(requested)) return true
+  if (rule.value_type !== undefined && typeof requested !== rule.value_type) return false
+  if (op.startsWith('number.') || op === 'list.length') return parseDecimal(requested) !== null
+  if (op.startsWith('date.')) return isObject(requested) && own(requested, 'relative')
+    ? relativeDateSettings(requested) : parseDate(requested, requireZone(rule.timezone)) !== null
+  if (op.startsWith('text.')) {
+    if (['text.in', 'text.not_in'].includes(op) && Array.isArray(requested)) return requested.every(value => conditionOperand({ ...rule, op: 'text.equals', value }, value, literal))
+    if (requested !== null && textOf(requested) === null) return false
+    if (op.endsWith('matches')) new RegExp(String(requested))
+    return true
+  }
+  return false
+}
+
 function conditionSettings(settings: Record<string, unknown>, paths: boolean) {
   const allowed = paths ? ['mode', 'branches', 'fallback', 'always', 'on_type_mismatch'] : ['when']
   if (!keys(settings, allowed)) return fail('unsupported_settings', 'Unknown filter or path option')
@@ -83,6 +107,7 @@ function conditionSettings(settings: Record<string, unknown>, paths: boolean) {
         && choice(rule.case_sensitive, [true, false]) && choice(rule.keep_whitespace, [true, false])
         && choice(rule.precision, ['instant', 'day'])
         && (!String(rule.op).startsWith('date.') || relativeDateSettings(rule.value))
+        && conditionOperand(rule)
         && (rule.inner === undefined || inspect([[rule.inner]]))
     }))
   }

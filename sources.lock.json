@@ -139,7 +139,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "b3693bc22def7dfa0ee28e8cde20978d222286e29c70c7ebe1bb925617e6c8e0",
+      "sha256": "aaba8d20a8cd922746443451d3fcf35785ee3948d90ac2c327603b0eba8eba66",
       "executable": false
     },
     "AGENTS.md": {
@@ -163,7 +163,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "d73b5612e49fcb4ccece7d31af4ab54ef3ff050a6023b0172c3a8ced50f7c669",
+      "sha256": "7aed363a6e5927bc99e5339590d0f6e3e9681b7bd61d86042a0afbd7c61ca015",
       "executable": false
     },
     "DEMO.md": {
@@ -203,7 +203,7 @@
       "executable": false
     },
     "docs/CLAIMS.md": {
-      "sha256": "46e7a2b9309651ad1cba6804e661ea3320cd8dad45459329e690c7aaad591247",
+      "sha256": "49045bef47e4b737c1b4639838f8b53083ed26ed1d559be18051f2d59d911496",
       "executable": false
     },
     "docs/DATA-FLOWS.md": {
@@ -2975,7 +2975,7 @@
       "executable": false
     },
     "src/crank/ops/coverage-capabilities.ts": {
-      "sha256": "b0a09665e1a63b528744ac5e547ec39404c2ffd8396e6a43f5d8d942862c0702",
+      "sha256": "5bb0b4a6e2719cf92b781b76e34c957d128ff24e64d98f708bc7ea1f8afbf577",
       "executable": false
     },
     "src/crank/ops/coverage.ts": {
@@ -5583,7 +5583,7 @@
       "executable": false
     },
     "tests/connections.test.mjs": {
-      "sha256": "49153ef9e79fafbc7c6389b271d1517f1c23c898716ac6c0dcf2cbfcf53fd939",
+      "sha256": "aad77fbb736ac76060e6e7f59c1db8cd77f7f5a331602219d35d537723fc58e4",
       "executable": false
     },
     "tests/crank.test.mjs": {
