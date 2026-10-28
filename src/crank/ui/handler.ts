@@ -1,4 +1,5 @@
 import { watchedFieldsPanel } from './watched-fields'
+import { emailSettings } from './email'
 import { unitsUsd } from '../ops/usage-money'
 import { mcpClientsPanel, mcpCredentialView } from './mcp-clients'
 import { clientApi } from '../mcp/client-api'
@@ -277,6 +278,7 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
       }
       if(input.reason==='') delete input.reason
       if(input.flow_id==='') delete input.flow_id
+      if(input.rotate==='') delete input.rotate
       const response = await call(path,input)
       if(path==='/api/crank/data/export' && response.ok) return response
       const result:any = await response.json()
@@ -284,6 +286,7 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
       if(!response.ok) return page('Action refused',`<p class="notice">${esc(result.error)}</p><p>No success was reported. Review the latest state before retrying.</p><a href="${back ?? (path.includes('/imports')?'/app/import':'/app')}">Return to workspace</a>`,{},response.status)
       if(result.url && /\/samples\/listen$/.test(path)) return page('Waiting for webhook',`<section class="panel"><h2>Waiting for one sample</h2><p>Send a POST to this draft URL before ${esc(result.expires_at)}. The URL is shown once and never starts a production run.</p><label>Draft sample URL<input readonly value="${esc(result.url)}"></label><a class="btn btn-secondary" href="${esc(back ?? '/app')}">Refresh captured samples</a></section>`)
       if(result.code && path==='/api/crank/gateways')return page('Gateway enrollment',`<section class="panel"><h2>Enroll your gateway</h2><p>This code is shown once and expires ${esc(result.expires_at)}. Its authority is bound to environment ${esc(result.gateway.environment)}. Use the customer gateway CLI and save its state in a private file.</p><label>Single-use enrollment code<input type="text" autocomplete="off" readonly aria-label="Enrollment code" value="${esc(result.code)}"></label><p>Private database and storage credentials stay in the gateway manifest.</p><a href="/app/connections">Return to connections</a></section>`)
+      if(result.address && /\/email-aliases$/.test(path)) return page('Inbound address created',`<section class="panel"><h2>Save this address</h2><label>Inbound address<input readonly autocomplete="off" value="${esc(result.address)}"></label><p>${esc(result.routing)}</p><a href="/app/settings/email">Return to email settings</a></section>`)
       if(result.credential && path==='/api/crank/mcp-clients') return page('Client server created',mcpCredentialView(result))
       if(result.credential) result.token=result.credential
       if(result.token) {
@@ -363,6 +366,7 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
     const driftWorkflow=/^\/app\/workflows\/([^/]+)\/drift$/.exec(url.pathname), driftReview=/^\/app\/drift\/([^/]+)$/.exec(url.pathname)
     if(driftWorkflow) { const workflow=await read('/api/crank/workflows/'+driftWorkflow[1]); return page('Provider drift',driftListView(workflow,await read('/api/crank/drift')),{state,crumbs:[['Workflow','/app/workflows/'+workflow.id]]}) }
     if(driftReview) { const review=await read('/api/crank/drift/'+driftReview[1]); return page(review.proposal.kind==='scope'?'Review requested scopes':'Review mapping repair',driftReviewView(review,await read('/api/crank/connections')),{state}) }
+    if(url.pathname==='/app/settings/email') return page('Email settings',emailSettings(await read('/api/crank/settings/email'),await read('/api/crank/workflows')),{state,section:'Account',crumbs:[['Account','/app/account']]})
     if(url.pathname==='/app/settings/mcp') {
       const selected=url.searchParams.get('client') ?? undefined
       const [clients,workflows,calls]=await Promise.all([read('/api/crank/mcp-clients'),read('/api/crank/workflows'),selected?read('/api/crank/mcp-clients/'+encodeURIComponent(selected)+'/calls'):[]])

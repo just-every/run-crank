@@ -26,6 +26,7 @@ export function fenceRow(table, row) {
 
 /** Every value importRow may write. Base refuses any other change to a staged row. */
 export const importSafety = {
+  crank_email_aliases: { active: [0] },
   crank_digests: { active: [0] },
   crank_digest_operations: { active: [0] },
   crank_workflow_samples: { selected: [0] },
@@ -59,6 +60,7 @@ export const importSafety = {
  * bounded value, so an unfenced unfinished run keeps only its previous status and
  * a failed delivery keeps its outcome with its single replay marked used. */
 export function importRow(table, row) {
+  if (table === 'crank_email_aliases') return {...row,active:0};
   if (table === 'crank_digests' || table === 'crank_digest_operations') return {...row,active:0};
   if (table === 'crank_workflow_samples') return {...row,selected:0};
   if (table === 'crank_recurring_tasks') return {...row,status:'inactive'};

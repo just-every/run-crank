@@ -414,13 +414,13 @@ Remaining gap: None.
 
 ## TRIG-006 — Hosted inbound email addresses
 
-Status: missing.
+Status: partial.
 
 Each workflow can have its own inbound email address on the installation’s inbound domain (Cloudflare Email Routing to the Worker, or MX records the buyer points at Crank on a subdomain), so staff can forward or CC messages and vendors that can only email can start a run without mailbox OAuth. Addresses use a revocable, rotatable alias; an optional sender allowlist (addresses or domains) and SPF/DKIM/DMARC results gate admission; messages over the stated size limit (25 MB including attachments) are refused with a bounce. The parsed sender, recipients, subject, plain and HTML body, headers, forwarded-original fields and attachments (as file references under CONN-005 rules) are mappable. The Message-ID deduplicates within the TRIG-001 window, and each received message is visible in run history with its admission decision. **Acceptance evidence:** Forward a vendor email with a PDF attachment to a workflow’s alias; extract the PO number from the body with a mapping or AI-001 node, attach the PDF to a HubSpot test record and verify one run and the record by readback; resend the same message and verify no second run; send from a non-allowlisted domain and an oversized message and verify both are refused and visible; revoke the alias and verify mail to it bounces.
 
-Current evidence: None recorded.
+Current evidence: `tests/triggers.test.mjs` — “Inbound email admits forwarded fields and files once and refuses sender, authentication and alias authority failures”, “Inbound email bounds raw streams and MIME and fences in-flight revocation and stale owner authority” and “Inbound email restores complete inactive custody and erases files without replay or archive resurrection”, using `tests/inbound-email-journey.mjs`, exercise the exported Email Worker handler, owner-managed aliases, literal parsed and forwarded fields, PDF file references, one controlled native destination effect, workflow-scoped duplicate and concurrent or restarted delivery, sender and forged-authentication refusal, streaming boundaries, malformed MIME, rotation, revocation, late-commit authority, sealed files, complete inactive archives and erased-event fences. `docs/INBOUND-EMAIL.md` states the delivered bounds and routing boundary.
 
-Remaining gap: No delivered product workflow.
+Remaining gap: Native receiving slice only; installed browser proof pending. Conservative interim default: native workflow-owner-only alias and publication authority; broader scoped delegation remains unproved. Required: actual installation-domain routing and MX setup, routed delivery and bounces, trustworthy live SPF, DKIM and DMARC evidence, and the complete forwarded-email and PDF-to-HubSpot test-record journey with provider readback; no HubSpot test account or Cloudflare routing setup is held in this run. Current file custody is bounded to 1 MiB per attachment and 20 attachments; broader MIME and file custody remain unproved. AI-001 downstream acceptance remains held and no prerequisite is released.
 
 ## TRIG-007 — Feed and URL polling triggers
 
