@@ -56,7 +56,7 @@ export async function customSearchFixture({browser=false}={}) {
     };
     await grantAccess();await h.independentStarter();
     const step=(name,extra={})=>({id:'search',type:'custom.request',connector_id:id,connector_version:1,operation:'find_stock',gateway_id:state.gateway.id,environment:'production',retry_policy:{read_attempts:1},input:{name},create_if_not_found:{input:{quantity:7}},...extra});
-    const draft=(name,extra)=>draftTest(h,fixture(960+sequence++),[step(name,extra)]);
+    const draft=(name,extra,tail=[])=>draftTest(h,fixture(960+sequence++),[step(name,extra),...tail]);
     const get=run=>h.get('workflow-runs/'+(run.run?.id??run.id));
     const pump=async(run,status='succeeded',limit=12)=>{for(let n=0;n<limit;n++){const current=await get(run);if(current.status===status)return current;assert.ok(['waiting','queued','running'].includes(current.status),JSON.stringify({status:current.status,error:current.error}));await work()}assert.fail('Private search did not reach '+status)};
     const review=async(run)=>{const current=await pump(run,'awaiting_approval');const wait=current.waits.find(w=>w.path==='search');assert.ok(wait?.proposal_digest);await h.post('workflow-runs/'+current.id+'/approve',{path:'search',digest:wait.proposal_digest});await h.tick();return get(run)};

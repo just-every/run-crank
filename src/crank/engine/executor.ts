@@ -166,6 +166,7 @@ class Execution {
         const operation=allowedOperation(await customVersion(this.env,String(step.connector_id),Number(step.connector_version)),String(step.operation),this.run.mode==='test')
         mutating=!['GET','HEAD'].includes(operation.method)
       }
+      if(step.type==='table.lookup') mutating=step.create_if_not_found!==undefined
       if (record?.status === 'running' && mutating && !type.reconciles) {
         await this.save(step, path, 'uncertain', { error: { category: 'uncertain', message: 'Interrupted during a remote write; check the destination before replaying' } })
         return { kind: 'failed', error: { category: 'uncertain', message: 'Interrupted during a remote write' } }

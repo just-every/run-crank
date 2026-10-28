@@ -42,7 +42,9 @@ export async function customSearchJourney() {
 
     const emptyBefore=f.arrivals.length,empty=await f.draft('   ');assert.equal(empty.run.status,'failed');assert.match(empty.run.error.message,/empty|required/i);assert.equal(f.arrivals.length,emptyBefore);
     const halt=await f.pump(await f.draft('synthetic-crank-973',{create_if_not_found:undefined,no_match:'halt'}),'stopped_by_search');assert.equal(output(halt).outcome,'not found');
-    const continuation=await f.pump(await f.draft('synthetic-crank-973',{create_if_not_found:undefined,no_match:'continue'}));assert.equal(output(continuation).outcome,'not found');
+    const missingRoute={id:'route',type:'paths',mode:'exclusive',branches:[{id:'missing',when:[[{field:'steps.search.outcome',op:'text.equals',value:'not found'}]],steps:[]}],fallback:{steps:[]}};
+    const continuation=await f.pump(await f.draft('synthetic-crank-973',{create_if_not_found:undefined,no_match:'continue'},[missingRoute]));assert.equal(output(continuation).outcome,'not found');
+    assert.deepEqual(stepOf(continuation,'route').output.matched,['missing']);
     const typed=await f.draft(980);assert.equal(typed.run.status,'failed');assert.match(typed.run.error.message,/string/);
     await database.sql("INSERT INTO public.write_stock VALUES ('synthetic-crank-980',3),('SYNTHETIC-CRANK-980',9),('Synthetic-crank-980',6);");
     const first=await f.pump(await f.draft('synthetic-crank-980',{create_if_not_found:undefined,multi_match:'first',sort:{field:'quantity',direction:'desc'}}));assert.equal(output(first).record.quantity,9);
@@ -52,6 +54,12 @@ export async function customSearchJourney() {
     const bounded=await f.pump(await f.draft('synthetic-crank-980',{create_if_not_found:undefined,multi_match:'all',limit:1,sort:{field:'quantity',direction:'desc'}}));
     assert.equal(output(bounded).outcome,'truncated');assert.equal(output(bounded).truncated,true);assert.equal(output(bounded).count,1);assert.deepEqual(output(bounded).records.map(row=>row.quantity),[9]);
     const single=await f.pump(await f.draft('synthetic-crank-970',{create_if_not_found:undefined,multi_match:'all',limit:1}));assert.equal(output(single).outcome,'found');assert.equal(output(single).truncated,false);assert.equal(output(single).count,1);
+    const loop={id:'each',type:'loop',max_items:10,concurrency:2,order:'input',empty:'allow',item_errors:'stop',input:{items:'{{steps.search.records}}'},result:'{{steps.seen.quantity}}',steps:[{id:'seen',type:'map',input:{quantity:'{{item.quantity}}'}}]};
+    const looped=await f.pump(await f.draft('synthetic-crank-980',{create_if_not_found:undefined,multi_match:'all',sort:{field:'quantity',direction:'asc'}},[loop]));
+    assert.deepEqual(stepOf(looped,'each').output.results,[3,6,9]);assert.equal(stepOf(looped,'each').output.total,3);
+    const multipleRoute={...missingRoute,branches:[{id:'ambiguous',when:[[{field:'steps.search.outcome',op:'text.equals',value:'multiple matches'}]],steps:[]}]};
+    const routed=await f.pump(await f.draft('synthetic-crank-980',{create_if_not_found:undefined,multi_match:'stop',on_multiple:'continue'},[multipleRoute]));
+    assert.deepEqual(stepOf(routed,'route').output.matched,['ambiguous']);assert.equal(output(routed).record,null);assert.equal(output(routed).count,3);
     const original=f.operations.find_stock;
     await f.save({...f.operations,find_stock:{...original,query:'SELECT name,quantity FROM public.absent_stock WHERE lower(name)=$1'}});
     const failed=await f.pump(await f.draft('synthetic-crank-974'),'failed');assert.notEqual(failed.error.category,'not found');assert.equal(output(failed),null);
