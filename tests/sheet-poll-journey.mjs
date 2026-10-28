@@ -4,22 +4,31 @@ import {connection,fakeEdge,jsonResponse,publish,runs} from './kit.mjs';
 const minute=60000;
 
 /** Real workflow HTTP and Cron doors; only Google and the destination are faked. */
-export async function sheetPollJourney({inspect=async()=>{},provider='google_sheets'}={}) {
+export async function sheetPollJourney({inspect=async()=>{},provider='google_sheets',table=false}={}) {
  const edge=fakeEdge(),h=await harness('http://127.0.0.1:9',{edge:edge.edge,clock:'2026-10-28T01:00:00Z'});
  const headers=['Record ID','Status','Customer','Amount','Notes'];
  let rows=Array.from({length:50},(_,i)=>['synthetic-crank-'+i,'Approved','Buyer '+i,100,'seed']),effects=[],reads=0,blocked=false,release,arrived;
  const excel=provider==='microsoft_excel';
  edge.routes.set(excel?'graph.microsoft.com':'sheets.googleapis.com',async({url,headers:request})=>{
-  reads++;assert.equal(request.authorization,'Bearer synthetic-crank-10');assert.equal(decodeURIComponent(url.pathname),excel?"/v1.0/me/drive/items/synthetic-crank-11/workbook/worksheets/Orders/range(address='A1:E1001')":'/v4/spreadsheets/synthetic-crank-11/values/Orders!A1:E1001');
+  reads++;assert.equal(request.authorization,'Bearer synthetic-crank-10');
+  const tableBase='/v1.0/me/drive/items/synthetic-crank-11/workbook/tables/Orders';
+  if(table)assert.ok([tableBase+'/columns',tableBase+'/rows'].includes(decodeURIComponent(url.pathname)));
+  else assert.equal(decodeURIComponent(url.pathname),excel?"/v1.0/me/drive/items/synthetic-crank-11/workbook/worksheets/Orders/range(address='A1:E1001')":'/v4/spreadsheets/synthetic-crank-11/values/Orders!A1:E1001');
   if(!excel)assert.equal(url.searchParams.get('valueRenderOption'),'UNFORMATTED_VALUE');
   if(blocked){blocked=false;arrived();await new Promise(done=>{release=done})}
+  if(table){
+   if(url.pathname.endsWith('/columns'))return jsonResponse({value:headers.map((name,index)=>({name,index}))});
+   const all=[...rows.slice(0,25),...Array.from({length:75},()=>[]),...rows.slice(25)],offset=Number(url.searchParams.get('$skip'));
+   assert.equal(url.searchParams.get('$top'),'100');
+   return jsonResponse({value:all.slice(offset,offset+100).map((row,i)=>({index:offset+i,values:[row]}))});
+  }
   return jsonResponse({range:'Orders!A1:E'+(rows.length+1),majorDimension:'ROWS',values:[headers,...rows]});
  });
  edge.routes.set('receiver.example',({body})=>{effects.push(JSON.parse(body));return jsonResponse({ok:true})});
  let restored;
  try {
   const c=await connection(h,excel?{app:'microsoft_graph',label:'Orders workbook',auth_kind:'bearer',secret:{token:'synthetic-crank-10'}}:{app:'google',label:'Orders spreadsheet',auth_kind:'oauth2',scopes:['https://www.googleapis.com/auth/spreadsheets.readonly'],secret:{access_token:'synthetic-crank-10'}});
-  const trigger={type:'app_poll',provider,resource:'rows',...(excel?{workbook_id:'synthetic-crank-11',worksheet_id:'Orders',range:'A1:E1001'}:{spreadsheet_id:'synthetic-crank-11',range:'Orders!A1:E1001'}),key_field:'Record ID',event:'updated',connection_id:c.id,interval_minutes:1,backfill:'from_now',watched_fields:['Status'],changed_to:[[{field:'Status',op:'text.equals',value:'Approved'}]]};
+  const trigger={type:'app_poll',provider,resource:table?'table_rows':'rows',...(excel?{workbook_id:'synthetic-crank-11',...(table?{table_id:'Orders'}:{worksheet_id:'Orders',range:'A1:E1001'})}:{spreadsheet_id:'synthetic-crank-11',range:'Orders!A1:E1001'}),key_field:'Record ID',event:'updated',connection_id:c.id,interval_minutes:1,backfill:'from_now',watched_fields:['Status'],changed_to:[[{field:'Status',op:'text.equals',value:'Approved'}]]};
   for(const patch of [{key_field:''},{watched_fields:undefined},{settle_delay:0},{required_columns:[]}]) {
    const invalid=await h.send('/api/crank/workflows',{name:'Invalid row trigger',graph:{trigger:{...trigger,...patch},steps:[]}},h.owner);assert.equal(invalid.status,422,invalid.text);
   }

@@ -113,8 +113,9 @@ export function validateTrigger(trigger: Record<string, unknown>) {
         if (typeof trigger.key_field !== 'string' || !trigger.key_field.trim()) fail('Sheets needs a stable key_field column')
       }
       if (trigger.provider === 'microsoft_excel') {
-        if (trigger.resource !== 'rows' || ['workbook_id', 'worksheet_id', 'key_field'].some(name => typeof trigger[name] !== 'string' || !String(trigger[name]).trim() || String(trigger[name]).length > 200)) fail('Excel needs rows, workbook_id, worksheet_id and a stable key_field column')
-        if (typeof trigger.range !== 'string' || !/^A1:[A-Z]+[0-9]+$/.test(trigger.range)) fail('Excel range must start at A1 with a header row and an explicit end')
+        if (!['rows', 'table_rows'].includes(String(trigger.resource)) || ['workbook_id', 'key_field', trigger.resource === 'table_rows' ? 'table_id' : 'worksheet_id'].some(name => typeof trigger[name] !== 'string' || !String(trigger[name]).trim() || String(trigger[name]).length > 200)) fail('Excel needs a workbook, a worksheet or table, and a stable key_field column')
+        if (trigger.resource === 'rows' && (typeof trigger.range !== 'string' || !/^A1:[A-Z]+[0-9]+$/.test(trigger.range))) fail('Excel range must start at A1 with a header row and an explicit end')
+        if (trigger.resource === 'table_rows' && (trigger.range !== undefined || trigger.worksheet_id !== undefined)) fail('Excel table_rows uses table_id without a worksheet range')
       }
       if (trigger.provider === 'airtable' && (trigger.resource !== 'records' || ['base_id', 'table_id'].some(name => typeof trigger[name] !== 'string' || !String(trigger[name]).trim() || String(trigger[name]).length > 200) || trigger.view_id !== undefined && (typeof trigger.view_id !== 'string' || trigger.view_id.length > 200))) fail('Airtable needs records, base_id and table_id, with an optional view_id')
       if (trigger.modified_field !== undefined && (trigger.provider !== 'airtable' || typeof trigger.modified_field !== 'string' || !trigger.modified_field.trim() || trigger.modified_field.length > 200)) fail('Airtable modified_field names a last-modified column')

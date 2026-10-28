@@ -1,5 +1,6 @@
 import { sharepointRecords, httpJsonRecords } from './list-sources'
 import { airtableFields, airtableRecords } from './airtable-poll'
+import { excelTableValues } from './excel-table'
 import { authorizeRequest } from '../connections/auth'
 import { credential } from '../connections/store'
 import { boundedFetch, utf8 } from '../engine/egress'
@@ -18,6 +19,7 @@ export async function appRequest(env: CrankEnv, connection: string, url: URL, me
 }
 
 async function sheetValues(env: CrankEnv, trigger: Record<string, any>) {
+  if (trigger.provider === 'microsoft_excel' && trigger.resource === 'table_rows') return excelTableValues(env, trigger)
   const excel = trigger.provider === 'microsoft_excel'
   const url = new URL(excel
     ? `https://graph.microsoft.com/v1.0/me/drive/items/${encodeURIComponent(trigger.workbook_id)}/workbook/worksheets/${encodeURIComponent(trigger.worksheet_id)}/range(address='${trigger.range}')`

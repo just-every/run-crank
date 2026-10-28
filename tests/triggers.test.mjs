@@ -600,7 +600,7 @@ test('TRIG-001: envelope identity, transactional admission and revocation preser
 
 import {crmPollJourney,subscriptionPollJourney,comparisonPollJourney,transitionTimezoneJourney} from './app-poll-journey.mjs';
 test('Native CRM polls seed watched properties and recover complete overlapping pages without duplicate effects', async()=>{await crmPollJourney();await comparisonPollJourney();const {appHistoryJourney}=await import('./app-history-journey.mjs');await appHistoryJourney();await transitionTimezoneJourney()});
-test('Sheet changes wait for complete stable rows and preserve per-record identities across restart and restore', async()=>{const {sheetPollJourney}=await import('./sheet-poll-journey.mjs');await sheetPollJourney();await sheetPollJourney({provider:'microsoft_excel'})});
+test('Sheet changes wait for complete stable rows and preserve per-record identities across restart and restore', async()=>{const {sheetPollJourney}=await import('./sheet-poll-journey.mjs');await sheetPollJourney();await sheetPollJourney({provider:'microsoft_excel'});await sheetPollJourney({provider:'microsoft_excel',table:true})});
 test('Airtable updates compare named fields after complete pagination and retain both change identities', async()=>{const {airtablePollJourney}=await import('./airtable-poll-journey.mjs');await airtablePollJourney()});
 test('Mailbox polling retains records through visible subscription expiry and restarted renewal', subscriptionPollJourney);
 

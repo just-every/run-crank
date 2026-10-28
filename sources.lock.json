@@ -3151,7 +3151,7 @@
       "executable": false
     },
     "src/crank/triggers/app-source.ts": {
-      "sha256": "13d1347f41e2f1f5b536f4c2b45b95f6f02b184d11e22ba90b8b517a7978eda0",
+      "sha256": "eacee0f7a8c2a02e500b0052ac0b46ab7d75addf88bc5935de96bf90aa4b08ea",
       "executable": false
     },
     "src/crank/triggers/app-state.ts": {
@@ -3167,7 +3167,11 @@
       "executable": false
     },
     "src/crank/triggers/definition.ts": {
-      "sha256": "f89da590f0ae676d25649cf8440e63110e2a8cbd1f76fbb3e811a03703643146",
+      "sha256": "377a02d6ebfc7f30a6d41c139ff3b930d9ddeb3ba5e954a9c8ef533ee721b196",
+      "executable": false
+    },
+    "src/crank/triggers/excel-table.ts": {
+      "sha256": "a5b903e486d6bca2bbfdf7bb8c0357dc662bfed55575c0afd50cd331ed5ef26c",
       "executable": false
     },
     "src/crank/triggers/feeds.ts": {
@@ -5947,7 +5951,7 @@
       "executable": false
     },
     "tests/sheet-poll-journey.mjs": {
-      "sha256": "d8a352c222a4e6e46f88470ca57172b92f1e410d1ee27f9ff39849c5ad5d93bb",
+      "sha256": "391552d03ad77441b8ecf71f98ee7bd169c36c10b6cc50552fe8b864d3f774bd",
       "executable": false
     },
     "tests/sibling-browser.mjs": {
@@ -6007,7 +6011,7 @@
       "executable": false
     },
     "tests/triggers.test.mjs": {
-      "sha256": "435916ffa88b8a13e1ecfe4e1faba1de14fc01d189d5382ee3ed6e604e7fe712",
+      "sha256": "9251bf40ba33422460020ba22b0f9a9178bdc85b1fe31c4953bcf1c6441d70e7",
       "executable": false
     },
     "tests/usage.test.mjs": {
