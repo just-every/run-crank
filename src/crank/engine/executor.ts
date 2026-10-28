@@ -1,3 +1,4 @@
+import { mappingTables } from '../tables/mapping'
 import { text as transformText } from './transforms/args'
 import { assertDriftWriteAllowed, recordDriftFailure } from '../agents/drift-step'
 import { assertAuthoringStep } from './authoring-authority'
@@ -149,6 +150,7 @@ class Execution {
     }
     try {
       const replay = record ? undefined : this.replays.get(path)
+      this.scope.tables = await mappingTables(this.env, step, { run: this.run })
       input = record?.input_json ? JSON.parse(record.input_json) : replay?.input_json ? JSON.parse(replay.input_json) : (resolve(step.input ?? {}, this.scope) ?? {}) as Record<string, unknown>
       if (this.boundedChild) {
         if (new TextEncoder().encode(JSON.stringify(input)).byteLength > 65536) throw new StepError('validation','Subflow: mapped input exceeds 64 KiB')
@@ -283,6 +285,7 @@ class Execution {
       const results: { branch: string; pass: boolean; trace: unknown }[] = []
       let mismatch: { branch: string; message: string } | null = null
       for (const branch of branches.filter(b => b.kind === 'rule')) {
+        this.scope.tables = await mappingTables(this.env, branch.when, { run: this.run })
         const evaluation = evaluate(branch.when as Groups, this.scope, this.zone, this.time)
         results.push({ branch: branch.id, pass: evaluation.pass, trace: evaluation })
         if (evaluation.mismatch && !mismatch) mismatch = { branch: branch.id, message: `type mismatch in path ${step.id}/${branch.id}: ${evaluation.mismatch.field} (${evaluation.mismatch.message})` }

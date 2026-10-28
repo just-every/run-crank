@@ -301,13 +301,16 @@ Missing or null timestamps preserve source empty and comparison behavior; malfor
 or local timestamps fail before dispatch. Local-date inference, non-ISO source
 formats and source DateTime runtime objects need an explicit manual conversion.
 
-Date & Time version 2 maps `operation: "formatDate"` with replacement output,
+Date & Time version 2 maps `operation: "formatDate"` with replacement or retained input output,
 `options.timezone: true`, and an explicit IANA `settings.timezone`. Supported
 calendar formats are `yyyy-MM-dd`, `MM/dd/yyyy`, `yyyy/MM/dd`, `MMMM dd yyyy`
 and `MM-dd-yyyy`, including those exact patterns under `format: "custom"`.
 The source date can be a literal or a declarative data path. Null stays null;
-an invalid date fails before a downstream request. Input-format overrides,
-input-zone inference, retaining other input fields for formatting, Unix formats and other date
+an invalid date fails before a downstream request. `options.includeInputFields`
+is a boolean, defaulting to false; true retains every input JSON field and
+replaces the named output field. A captured webhook sample can preview that
+formatter before publication, preserving its source label without dispatch.
+Input-format overrides, input-zone inference, Unix formats and other date
 formatting options require manual conversion. These rules preserve the declared zone
 instead of guessing the source installation's default.
 

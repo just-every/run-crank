@@ -1,3 +1,4 @@
+import { mappingTables } from '../tables/mapping'
 import { previewSample } from './samples'
 import { collectAnswers, collectFields } from '../engine/steps/collect'
 import { collectDeadlines } from '../ops/collect-deadlines'
@@ -231,10 +232,11 @@ export async function previewWorkflow(env: CrankEnv, actor: Actor, workflowId: s
   const selected = await previewSample(env, actor, workflowId, input)
   const scope: Scope = { trigger: selected.payload, steps: {}, run: { id: 'preview', workflow_id: workflowId } }
   const results: Record<string, unknown>[] = [], time = Date.now()
-  const walk = (steps: Step[], prefix: string): boolean => {
+  const walk = async (steps: Step[], prefix: string): Promise<boolean> => {
     for (const step of steps) {
       const path = prefix + step.id
       try {
+        scope.tables = await mappingTables(env, step, { actor, workflowId })
         if (step.type === 'paths') {
           const evaluations = branchesOf(step).filter(b => b.kind === 'rule').map(b => ({ branch: b.id, ...evaluate(b.when as Groups, scope, zone, time) }))
           const passing = evaluations.filter(e => e.pass).map(e => e.branch)
@@ -242,7 +244,7 @@ export async function previewWorkflow(env: CrankEnv, actor: Actor, workflowId: s
           if (!matched.length && isObject(step.fallback)) matched = ['fallback']
           if (isObject(step.always)) matched.push('always')
           results.push({ path, type: 'paths', matched, evaluations, outcome: matched.length ? 'routed' : 'stopped by filter' })
-          for (const branch of branchesOf(step).filter(b => matched.includes(b.id))) if (!walk(branch.steps, `${path}/${branch.id}/`)) return false
+          for (const branch of branchesOf(step).filter(b => matched.includes(b.id))) if (!await walk(branch.steps, `${path}/${branch.id}/`)) return false
           return true
         }
         if (step.type === 'filter') {
@@ -267,6 +269,6 @@ export async function previewWorkflow(env: CrankEnv, actor: Actor, workflowId: s
     }
     return true
   }
-  walk(graph.steps, '')
+  await walk(graph.steps, '')
   return { sample_source: selected.source.label, source: selected.source, digest: await digest(canonical(selected.payload)), steps: results.map(step => ({ ...step, source: selected.source })) }
 }

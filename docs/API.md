@@ -1128,3 +1128,29 @@ not connected-provider field discovery. The workflow preview accepts
 `{sample_id:"..."}` or the selected trigger sample by default, and carries its
 source identity and time through pure mapping, transform and condition results.
 An explicit `{sample:{...}}` preview is always labelled manual.
+
+
+### Stored operational lookup values
+
+A built-in `utility.lookup` transform, including an inline function in a mapped
+input, accepts `table: {"$table": "<native-table-id>"}` instead of a static object.
+The reference is fixed in the draft. It reads the current complete WORK-007
+operational table; its lower-case record keys map to safe integers or integer
+lists. The transform keeps its existing case matching and explicit `default`
+behavior. Each run reads fresh values; retained step inputs and completed
+checkpoints keep their recorded values.
+
+The existing table owner creates and updates records through the native table
+API with `OPERATIONAL_NUMBERS_ONLY` confirmation and stable operation IDs. No
+customer, financial or health data, strings or general records are accepted.
+Preview requires that table owner and a non-sensitive workflow. Production
+requires that owner's current native publication and all existing dispatch
+authority checks. A paused or restored table supplies no values. Draft execution
+is refused because operational tables have no isolated test bindings; a pure
+preview performs no mutation or downstream request. Table records, receipts and
+spent-key fences remain portable, with receiving tables inactive until explicit
+owner adoption. Erased keys cannot be recreated by replay. The Data inventory
+discloses local custody and retention without record values.
+
+This bounded numeric lookup does not complete general WORK-007 records, scoped
+builder access, sensitive custody or isolated table test bindings.

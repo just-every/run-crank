@@ -70,7 +70,63 @@ export async function tableStateJourney() {
     await h.post(`tables/${table.id}/records`,{key:'received_count',operation:'upsert',value:0,operation_id:uuid()},h.owner,409);
     const journal=await archive(h);erasedRestore=await harness('http://127.0.0.1:9');
     const rejected=await erasedRestore.send('/api/crank/data/restore',{archive:exported,journal,confirm:'RESTORE'},erasedRestore.owner);assert.equal(rejected.status,409,'later erasure journal refuses old state rows');
+    await tableTransformJourney();
     return {concurrent_runs:10,counter:12,pop_values:[11,22,33],empty_outcomes:1,erased_record:seeded.record_id};
   } finally {await erasedRestore?.close();await restored?.close();await h.close()}
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href)console.log(JSON.stringify(await tableStateJourney()));
+
+/** Stored lookup values drive pure transforms and inline mappings at native doors. */
+export async function tableTransformJourney({inspect=async()=>{}}={}) {
+ const target='https://receiver.example',writes=[];
+ const edge=async request=>{if(new URL(request.url).origin!==target)return undefined;const body=await request.json();writes.push(body);return Response.json({stored:body})};
+ const h=await harness(target,{edge});let restored;
+ try {
+  const table=await h.post('tables',{name:'Non-sensitive sales routing codes',confirm:'OPERATIONAL_NUMBERS_ONLY'},h.owner,201);
+  const put=(key,value)=>h.post(`tables/${table.id}/records`,{key,operation:'upsert',value,operation_id:crypto.randomUUID()});
+  await put('tx',101);await put('ok',102);
+  const graph={trigger:{type:'webhook'},steps:[
+   {id:'rep',type:'transform',fn:'utility.lookup',input:{value:'{{trigger.body.state}}',table:{$table:table.id},default:999}},
+   {id:'destination',type:'http',input:{method:'POST',url:target+'/routing',body:{rep:'{{steps.rep}}',inline:{$fn:'utility.lookup',args:{value:'{{trigger.body.state}}',table:{$table:table.id},default:999}}}}},
+  ]};
+  const w=await h.post('workflows',{name:'Stored sales routing',graph},h.owner,201),base='workflows/'+w.id;
+  const listener=await h.post(base+'/samples/listen',{},h.owner,201);
+  const {deliver,settled}=await import('./kit.mjs');
+  assert.equal((await deliver(h,listener.url,{method:'POST',headers:{'content-type':'application'+'/x-www-form-urlencoded'},body:'state=TX'})).status,201);
+  const preview=await h.post(base+'/preview',{});assert.equal(preview.source.source,'webhook');assert.equal(preview.steps[0].output,101);assert.equal(preview.steps[1].outcome,'not run in preview');assert.deepEqual(writes,[]);
+  await inspect({h,w,state:'table-preview',expected:101});
+  // A second current native owner still needs explicit ownership of the table.
+  const otherOwner=await h.independentStarter();
+  const refused=await h.post(base+'/preview',{},otherOwner);assert.equal(refused.steps.at(-1).outcome,'validation failure');assert.equal(refused.steps.some(step=>step.output!==undefined),false);assert.deepEqual(writes,[]);
+  await h.post(base+'/test',{bindings:{}},h.owner,422);
+  await h.post(base+'/publish',{},h.owner,201);const hook=await h.post(base+'/hooks',{},h.owner,201);
+  let event=0;
+  const dispatch=async state=>{const admitted=await deliver(h,hook.url,{method:'POST',headers:{'content-type':'application'+'/x-www-form-urlencoded'},body:new URLSearchParams({state,event:'synthetic-crank-lookup-'+(++event)}).toString()});assert.equal(admitted.status,200,admitted.text);return settled(h,admitted.value.run_id)};
+  assert.equal((await dispatch('TX')).status,'succeeded');assert.deepEqual(writes.at(-1),{rep:101,inline:101});
+  await h.restart();assert.equal((await dispatch('ZZ')).status,'succeeded');assert.deepEqual(writes.at(-1),{rep:999,inline:999});
+  await put('tx',201);assert.equal((await dispatch(' tx ')).status,'succeeded');assert.deepEqual(writes.at(-1),{rep:201,inline:201},'a new run reads the current stored lookup value');
+  await inspect({h,w,state:'table-result',expected:201});
+  const disclosed=(await h.get('data'+'/flows')).flows.find(row=>row.id==='table:'+table.id);assert.ok(disclosed);assert.deepEqual(disclosed.recipients,[]);assert.equal(JSON.stringify(disclosed).includes('201'),false);
+  const exported=await archive(h);
+  restored=await harness(target,{edge});await restored.post('data'+'/restore',{archive:exported,confirm:'RESTORE'});
+  const {inventory}=await import('./restore-journey.mjs');
+  const before=inventory(exported),after=inventory(await archive(restored));assert.deepEqual(before.filter(row=>!after.includes(row)),[],'all lookup, workflow, sample and history rows survive inactive');
+  assert.deepEqual(after.filter(row=>!before.includes(row)).map(row=>[JSON.parse(row).table,JSON.parse(row).row.action]),[['crank_audit','data.restore']]);
+  const count=writes.length;await restored.tick();assert.equal(writes.length,count);assert.equal((await restored.get('tables/'+table.id)).table.active,0);
+  assert.equal((await restored.post(base+'/preview',{sample:{body:{state:'TX'}}})).steps.at(-1).outcome,'validation failure');
+  assert.ok((await deliver(restored,hook.url,{method:'POST',body:'state=TX'})).status>=400);assert.equal(writes.length,count);
+  await h.post('tables/'+table.id+'/pause');
+  const paused=await h.post(base+'/preview',{});assert.equal(paused.steps.at(-1).outcome,'validation failure');assert.equal((await dispatch('TX')).status,'paused');assert.equal(writes.length,count);
+  await inspect({h,w,state:'table-paused'});
+  await h.post(`tables/${table.id}/records/tx/erase`,{confirm:'ERASE'});
+  const review=await h.get('tables/'+table.id);await h.post(`tables/${table.id}/adopt`,{digest:review.digest,confirm:'ADOPT_OPERATIONAL_STATE'});
+  await h.get(`tables/${table.id}/records/tx`,h.owner,404);await h.post(`tables/${table.id}/records`,{key:'tx',operation:'upsert',value:201,operation_id:crypto.randomUUID()},h.owner,409);
+  assert.equal((await dispatch('TX')).status,'succeeded');assert.deepEqual(writes.at(-1),{rep:999,inline:999},'reusing the captured key after erasure cannot revive its stored value');
+  await inspect({h,w,state:'table-erased',expected:999});
+  await h.post(base+'/pause');
+  const sensitive=await h.post('workflows',{name:'Sensitive lookup refusal',graph},h.owner,201),sensitiveBase='workflows/'+sensitive.id;
+  await h.post('data'+'/classes',{workflow_id:sensitive.id,data_class:'customer'});
+  const privatePreview=await h.post(sensitiveBase+'/preview',{sample:{body:{state:'OK'}}});assert.equal(privatePreview.steps.at(-1).error.category,'authority');assert.equal(privatePreview.steps.some(step=>step.output!==undefined),false);
+  assert.equal(writes.length,count+1);
+ } finally {await restored?.close();await h.close()}
+}
