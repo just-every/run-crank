@@ -130,7 +130,7 @@ export async function inboundEmailBoundsJourney() {
 
 /** Full portable record comparison, inactive restored receiving and erase replay fences. */
 export async function inboundEmailCustodyJourney() {
-  const h=await harness('http://127.0.0.1:9',{emailTransport:true});let restored,destination;
+  const h=await harness('http://127.0.0.1:9',{emailTransport:true,clock:'2026-10-28T12:00:00.000Z'});let restored,destination;
   try {
     const w=await publish(h,'Private email custody',{trigger:{type:'email'},steps:[{id:'seen',type:'map',input:{file:'{{trigger.files.attachment_0}}',order:'{{trigger.text}}'}}]}),a=await alias(h,w);
     await h.post(`workflows/${w.id}/pause`);await h.post('./data/classes',{workflow_id:w.id,data_class:'customer',identifier_fields:['text']});await h.post(`workflows/${w.id}/resume`);
@@ -153,5 +153,27 @@ export async function inboundEmailCustodyJourney() {
     destination=await harness('http://127.0.0.1:9',{emailTransport:true});const refused=await destination.send('/api/crank/data/restore',{archive:archive.text,journal:journal.text,confirm:'RESTORE'},destination.owner);assert.equal(refused.status,409,refused.text);
     await h.post(`workflows/${w.id}/resume`);await h.restart();assert.match(await sendEmail(h,a.address,emailFixture(a.address)),/erased/);assert.equal((await runs(h,w)).length,0);
     assert.equal(await h.db.prepare('SELECT 1 FROM crank_files WHERE id=?').bind(file.file_id).first(),null);
+
+    // A later deduplication window replaces the event's run link. Erasing the
+    // older run must still fence its retained email identity permanently.
+    const raw=emailFixture(a.address,{id:'synthetic-crank-window'});
+    assert.equal(await sendEmail(h,a.address,raw),null);
+    const older=await settled(h,(await runs(h,w))[0].id),olderFile=stepOf(older,'seen').output.file;
+    const expireWindow=()=>h.db.prepare('UPDATE crank_trigger_events SET received_at=? WHERE workflow_id=?').bind('2026-10-26T12:00:00.000Z',w.id).run();
+    await expireWindow();assert.equal(await sendEmail(h,a.address,raw),null);
+    const newer=await settled(h,(await runs(h,w)).find(r=>r.id!==older.id).id),newerFile=stepOf(newer,'seen').output.file;
+    assert.equal((await runs(h,w)).length,2,'the same Message-ID may run again after the configured window');
+    assert.equal((await h.db.prepare('SELECT run_id FROM crank_trigger_events WHERE workflow_id=?').bind(w.id).first()).run_id,newer.id);
+    await h.post(`workflows/${w.id}/pause`);await h.post('./data/erase',{workflow_run_id:older.id,confirm:'ERASE'});
+    await h.get('workflow-runs/'+older.id,h.owner,404);
+    assert.equal(await h.db.prepare('SELECT 1 FROM crank_files WHERE id=?').bind(olderFile.file_id).first(),null);
+    await expireWindow();await h.post(`workflows/${w.id}/resume`);await h.restart();
+    const receiptIds=new Set((await history(h,w)).receipts.map(r=>r.id));
+    assert.match(await sendEmail(h,a.address,raw),/erased/,'erasure outlives event rollover and restart');
+    assert.deepEqual((await runs(h,w)).map(r=>r.id),[newer.id],'redelivery cannot resurrect the erased email as another run');
+    assert.deepEqual(stepOf(await h.get('workflow-runs/'+newer.id),'seen').output,stepOf(newer,'seen').output,'the newer retained run is unchanged');
+    assert.equal((await h.db.prepare('SELECT id FROM crank_files WHERE workflow_id=?').bind(w.id).all()).results.length,1,'redelivery stores no new attachment');
+    assert.ok(await h.db.prepare('SELECT 1 FROM crank_files WHERE id=?').bind(newerFile.file_id).first());
+    assert.deepEqual((await history(h,w)).receipts.filter(r=>!receiptIds.has(r.id)).map(r=>r.decision),['Email authority changed or event was erased']);
   } finally {await destination?.close();await restored?.close();await h.close()}
 }

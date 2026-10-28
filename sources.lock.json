@@ -3507,7 +3507,7 @@
       "executable": false
     },
     "src/crank/workflow-erasure.ts": {
-      "sha256": "d93a1aa4185c6e8d796d733bd7dc3a27b51dd0de6dbbfe262069bef67241bb34",
+      "sha256": "f521c961bf33e00be80f1d9c07b4301ce4e909e071eced9dd1e6f82b4946a8c7",
       "executable": false
     },
     "src/crank/workflows/api.ts": {
@@ -5839,7 +5839,7 @@
       "executable": false
     },
     "tests/inbound-email-journey.mjs": {
-      "sha256": "38dda5dee6f292ed82c04d8cdfe6f02e2cc63cb3abaf052d4daf8de397c80c9d",
+      "sha256": "784d41a0bf8db32d59413acd4407ceeea5dfe0880b643197dfd2f043960e524b",
       "executable": false
     },
     "tests/invoice-outcome-browser.mjs": {

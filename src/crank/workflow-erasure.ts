@@ -31,7 +31,7 @@ export async function eraseWorkflowRun(env: CrankEnv, actor: Actor | null, porta
 
   const keys = (await stmt(env, `SELECT dedup_key FROM crank_trigger_events WHERE run_id=?
     UNION SELECT item_key AS dedup_key FROM crank_hold_items i JOIN crank_holds h ON h.id=i.hold_id WHERE i.run_id=? AND h.source='webhook'
-    UNION SELECT source_id AS dedup_key FROM crank_wf_runs WHERE id=? AND trigger_kind='webhook' AND source_id IS NOT NULL`, runId, runId, runId)
+    UNION SELECT source_id AS dedup_key FROM crank_wf_runs WHERE id=? AND trigger_kind IN ('webhook','email') AND source_id IS NOT NULL`, runId, runId, runId)
     .all<{ dedup_key: string }>()).results
   const markers = await Promise.all(keys.map(async key => digest(key.dedup_key)))
   const service = createErasure({ db: env.DB, portability, declarations: [defineErasure({
