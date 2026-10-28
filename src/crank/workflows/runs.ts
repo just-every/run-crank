@@ -10,6 +10,7 @@ import { isBudgetExceeded, flushUsageNotices } from '../ops/usage'
 import { hold } from '../triggers/admission'
 import { authority, requireOwner } from '../access'
 import { evaluate, type Groups } from '../engine/conditions'
+import { evaluatePaths } from '../engine/path-conditions'
 import { requireZone, startOfDay } from '../engine/dates'
 import { StepError } from '../engine/errors'
 import { executeRun } from '../engine/executor'
@@ -223,7 +224,7 @@ export async function startRun(env: CrankEnv, actor: Actor, workflowId: string, 
   }
 }
 
-/** WORK-012/WORK-013 preview: pure steps run on a manual sample, labelled as such; the
+/** WORK-012 and WORK-013 preview: pure steps run on a source-labelled sample; the
  * walk stops before the first step that would call an app. */
 export async function previewWorkflow(env: CrankEnv, actor: Actor, workflowId: string, input: Record<string, unknown>) {
   const workflow = await getWorkflow(env, workflowId), graph = JSON.parse(workflow.draft_json) as Graph
@@ -231,24 +232,30 @@ export async function previewWorkflow(env: CrankEnv, actor: Actor, workflowId: s
   const selected = await previewSample(env, actor, workflowId, input)
   const scope: Scope = { trigger: selected.payload, steps: {}, run: { id: 'preview', workflow_id: workflowId } }
   const results: Record<string, unknown>[] = [], time = Date.now()
-  const walk = (steps: Step[], prefix: string): boolean => {
+  type PreviewOutcome = 'completed' | 'stopped' | 'blocked' | 'failed'
+  const walk = (steps: Step[], prefix: string): PreviewOutcome => {
     for (const step of steps) {
       const path = prefix + step.id
       try {
         if (step.type === 'paths') {
-          const evaluations = branchesOf(step).filter(b => b.kind === 'rule').map(b => ({ branch: b.id, ...evaluate(b.when as Groups, scope, zone, time) }))
-          const passing = evaluations.filter(e => e.pass).map(e => e.branch)
-          let matched = step.mode === 'exclusive' ? passing.slice(0, 1) : passing
-          if (!matched.length && isObject(step.fallback)) matched = ['fallback']
-          if (isObject(step.always)) matched.push('always')
-          results.push({ path, type: 'paths', matched, evaluations, outcome: matched.length ? 'routed' : 'stopped by filter' })
-          for (const branch of branchesOf(step).filter(b => matched.includes(b.id))) if (!walk(branch.steps, `${path}/${branch.id}/`)) return false
-          return true
+          const { matched, trace, error } = evaluatePaths(step, scope, zone, time)
+          results.push({ path, type: 'paths', matched, evaluations: trace.map(result => ({ branch: result.branch, ...result.trace })), trace, ...(error ? { error: error.toJSON() } : {}), outcome: error ? 'type mismatch' : matched.length ? 'routed' : 'stopped by filter' })
+          if (error) return 'failed'
+          if (!matched.length) return 'stopped'
+          scope.steps[step.id] = { matched }
+          const outcomes: PreviewOutcome[] = []
+          for (const branch of branchesOf(step).filter(b => matched.includes(b.id))) {
+            const outcome = walk(branch.steps, `${path}/${branch.id}/`)
+            if (outcome === 'blocked' || outcome === 'failed') return outcome
+            outcomes.push(outcome)
+          }
+          if (outcomes.every(outcome => outcome === 'stopped')) return 'stopped'
+          continue
         }
         if (step.type === 'filter') {
           const evaluation = evaluate(step.when as Groups, scope, zone, time)
           results.push({ path, type: 'filter', pass: evaluation.pass, outcome: evaluation.mismatch ? 'type mismatch' : evaluation.pass ? 'passed' : 'stopped by filter', trace: evaluation })
-          if (!evaluation.pass) return false
+          if (!evaluation.pass) return evaluation.mismatch ? 'failed' : 'stopped'
           continue
         }
         if (step.type === 'transform' || step.type === 'map') {
@@ -259,13 +266,13 @@ export async function previewWorkflow(env: CrankEnv, actor: Actor, workflowId: s
           continue
         }
         results.push({ path, type: step.type, outcome: 'not run in preview', note: `${step.type} would act on an app or wait; test it from a run` })
-        return false
+        return 'blocked'
       } catch (error) {
         results.push({ path, type: step.type, outcome: 'validation failure', error: error instanceof StepError ? error.toJSON() : { message: 'Preview failed' } })
-        return false
+        return 'failed'
       }
     }
-    return true
+    return 'completed'
   }
   walk(graph.steps, '')
   return { sample_source: selected.source.label, source: selected.source, digest: await digest(canonical(selected.payload)), steps: results.map(step => ({ ...step, source: selected.source })) }
