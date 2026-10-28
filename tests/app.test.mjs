@@ -98,9 +98,11 @@ test('Native visual drafting builds named branches, fences stale and unauthorize
     return {response,current:await read()};
   };
   const added=async(type,after)=>{
+    const before=await read();
     const {current}=await edit({operation:'add',type,after});
     const flat=graph=>graph.steps.flatMap(step=>[step,...(step.branches??[]).flatMap(b=>flat({steps:b.steps})),...flat({steps:step.fallback?.steps??[]})]);
-    return flat(current.draft).findLast(step=>step.type===type);
+    const existing=new Set(flat(before.draft).map(step=>step.id));
+    return flat(current.draft).find(step=>step.type===type&&!existing.has(step.id));
   };
   const startRequests=edge.requests.length;
   const values=await added('map','start');
@@ -114,6 +116,10 @@ test('Native visual drafting builds named branches, fences stale and unauthorize
     await edit({operation:'field',step:values.id,key:'',field_name,value_kind,value});
   const filter=await added('filter','after:'+values.id);
   await edit({operation:'rule',step:filter.id,group:'0',rule:'0',source:'steps.'+values.id+'.amount',operator:'number.gte',value_kind:'number',value:'1000'});
+  const typedBefore=await read();
+  const retyped=await edit({operation:'field',step:values.id,key:'amount',field_name:'amount',value_kind:'text',value:'1200'},422);
+  assert.match(await retyped.response.text(),/invalidate a typed condition/);
+  assert.deepEqual((await read()).draft,typedBefore.draft,'a field retype cannot silently break a downstream typed condition');
   const paths=await added('paths','after:'+filter.id);
   const branch=paths.branches[0].id;
   await edit({operation:'rename-branch',step:paths.id,branch,branch_name:'Qualified leads'});
@@ -128,6 +134,14 @@ test('Native visual drafting builds named branches, fences stale and unauthorize
   await edit({operation:'up',step:wait.id});
   await edit({operation:'down',step:wait.id});
   await edit({operation:'move',step:filter.id,after:'start'},422);
+  const scalar=await added('respond','after:'+wait.id);
+  await edit({operation:'save-step',step:scalar.id,name:'Text response',status:'200',value_kind:'text',value:'approved'});
+  const responseFilter=await added('filter','after:'+scalar.id);
+  await edit({operation:'rule',step:responseFilter.id,group:'0',rule:'0',source:'steps.'+scalar.id+'.body',operator:'text.equals',value_kind:'text',value:'approved'});
+  const scalarBefore=await read();
+  await edit({operation:'save-step',step:scalar.id,name:'Text response',status:'200',value_kind:'number',value:'1'},422);
+  assert.deepEqual((await read()).draft,scalarBefore.draft);
+  await edit({operation:'remove',step:responseFilter.id});await edit({operation:'remove',step:scalar.id});
   const temporary=await added('map','after:'+wait.id);
   await edit({operation:'remove',step:temporary.id});
   const before=await read(), staleDigest=before.draft_digest;

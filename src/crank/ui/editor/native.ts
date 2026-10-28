@@ -56,7 +56,11 @@ export function namedFields(graph: Graph, target: string): NamedField[] {
       }
       if (step.type === 'filter') fields.push({ref:'steps.' + step.id + '.passed',label:name + ' · passed',kind:'boolean'})
       if (step.type === 'delay') for (const key of ['due_at','released_at']) fields.push({ref:'steps.' + step.id + '.' + key,label:name + ' · ' + key.replaceAll('_',' '),kind:'text'})
-      if (step.type === 'respond') for (const [key,kind] of [['status','number'],['body','object']] as const) fields.push({ref:'steps.' + step.id + '.' + key,label:name + ' · ' + key,kind})
+      if (step.type === 'respond') {
+        const body = (step.input as Record<string, unknown> | undefined)?.body, ref = reference(body)
+        const kind = ref ? fields.find(f => f.ref === ref)?.kind ?? 'text' : kindOf(isObject(body) && '$literal' in body ? body.$literal : body ?? null)
+        fields.push({ref:'steps.' + step.id + '.status',label:name + ' · status',kind:'number'}, {ref:'steps.' + step.id + '.body',label:name + ' · body',kind})
+      }
     }
     return false
   }
@@ -121,15 +125,25 @@ function ruleOf(form: Record<string,string>, fields: NamedField[]) {
   if (!Object.hasOwn(EDIT_OPERATORS,op)) return fail('operator', 'Choose a supported condition.')
   const family = op.split('.')[0], expected = family === 'text' ? 'text' : family
   if (['text','number','boolean'].includes(family) && source.kind !== expected) return fail('operator', 'Choose a condition matching the field type: ' + source.kind + '.')
-  if (family === 'boolean' || !op.includes('.')) return {field:source.ref,op}
+  if (family === 'boolean') return {field:source.ref,op,value_type:'boolean'}
+  if (!op.includes('.')) return {field:source.ref,op}
   const value = valueOf(form, fields), ref = reference(value), literal = isObject(value) && '$literal' in value ? value.$literal : value
   const rightKind = ref ? fields.find(f => f.ref === ref)!.kind : kindOf(literal)
   if (rightKind !== expected) return fail('value_kind', 'The comparison value must be ' + expected + '.')
   return {field:source.ref,op,value,value_type:family === 'text' ? 'string' : 'number'}
 }
-function links(graph: Graph) {
+function links(graph: Graph, editField: string) {
   for (const {step} of locations(graph)) {
-    const available = new Set(namedFields(graph, step.id).map(f => f.ref))
+    const fields = namedFields(graph, step.id), available = new Set(fields.map(f => f.ref))
+    const conditions = (groups: unknown) => {
+      if (!Array.isArray(groups)) return
+      for (const group of groups) for (const rule of group) {
+        const expected = rule.value_type === 'string' ? 'text' : rule.value_type
+        if (!expected) continue
+        const left = fields.find(f => f.ref === rule.field), right = fields.find(f => f.ref === reference(rule.value))
+        if (left && left.kind !== expected || right && right.kind !== expected) fail(editField, 'This change would invalidate a typed condition in ' + String(step.name ?? step.type) + '. Update that condition first.')
+      }
+    }
     const check = (value: unknown) => {
       if (Array.isArray(value)) { value.forEach(check); return }
       if (isObject(value) && '$literal' in value) return
@@ -142,8 +156,8 @@ function links(graph: Graph) {
       if (typeof value === 'string') for (const match of value.matchAll(/\{\{\s*(steps\.[\w.\-[\]]+)\s*\}\}/g)) if (!available.has(match[1])) fail('after', 'This change disconnects a mapped field. Reconnect it first.')
     }
     check(step.input)
-    check(step.when)
-    if (step.type === 'paths') for (const branch of branchesOf(step)) check(branch.when)
+    check(step.when); conditions(step.when)
+    if (step.type === 'paths') for (const branch of branchesOf(step)) {check(branch.when); conditions(branch.when)}
   }
 }
 const defaultRule = () => [[{field:'run.id',op:'exists'}]]
@@ -234,7 +248,7 @@ export function editNative(source: Graph, form: Record<string,string>): {graph: 
         if (operation==='add-rule') groups[g].push(defaultRule()[0][0])
         else {
           if (!Number.isInteger(r) || !groups[g][r]) return fail('source','Choose a current condition.')
-          if (operation==='rule') groups[g][r]={...groups[g][r],...ruleOf(form,fields),...(!form.operator?.includes('.') || form.operator.startsWith('boolean.')?{value:undefined,value_type:undefined}:{})}
+          if (operation==='rule') groups[g][r]={...groups[g][r],...ruleOf(form,fields),...(!form.operator?.includes('.') || form.operator.startsWith('boolean.')?{value:undefined,...(form.operator.startsWith('boolean.')?{}:{value_type:undefined})}:{})}
           else if (groups[g].length>1) groups[g].splice(r,1)
           else if (groups.length>1) groups.splice(g,1)
           else return fail('source','Keep at least one condition.')
@@ -242,7 +256,7 @@ export function editNative(source: Graph, form: Record<string,string>): {graph: 
       }
     } else return fail('operation','Choose an editing action.')
   }
-  links(graph)
+  links(graph, operation === 'field' || operation === 'save-step' ? 'value_kind' : 'after')
   try {validateGraph(graph)} catch(error:any) {return fail('operation',error.message)}
   const selectedLocation=locations(graph).find(l=>l.step.id===selected)
   return {graph,selected:selectedLocation?.path??'trigger'}
