@@ -37,6 +37,8 @@ test('BASE-001/BASE-004: an owned installation publishes and finishes every ship
       {id:'calendar_event',type:'google_calendar.create_event',connection_id:calendar.id,input:{calendar_id:'synthetic-crank-21@example.test',summary:'Harbor appointment',start:{dateTime:'2026-11-03T09:00:00+10:00',timeZone:'Australia'+'/'+'Brisbane'},end:{dateTime:'2026-11-03T09:30:00+10:00',timeZone:'Australia'+'/'+'Brisbane'}}},
       { id: 'component', type: 'subflow', subflow_id: component.subflow_id, subflow_version: 1, input: { value: ' Owned installation ' } },
       { id: 'counter', type: 'table.atomic', table_id: table.id, input: { key: 'count', operation: 'increment', by: 1 } },
+      { id: 'create_counter', type: 'table.lookup', table_id: table.id, input: { key: 'next_count' }, create_if_not_found: { value: 7 } },
+      { id: 'find_counter', type: 'table.lookup', table_id: table.id, input: { key: 'next_count' }, create_if_not_found: { value: 9 } },
       { id: 'lookup_count', type: 'table.lookup', table_id: table.id, input: { key: 'count' } });
     graph.steps.splice(-1, 0, { id: 'question', type: 'collect', fields: { reference: { type: 'text', required: true } } });
     const workflow = await publish(h, 'Harbor wholesale · owned installation', graph);
@@ -73,6 +75,7 @@ test('BASE-001/BASE-004: an owned installation publishes and finishes every ship
     assert.equal(stepOf(done, 'nook_message').output.id, 'synthetic-crank-303');
     assert.equal(stepOf(done, 'component').output.value, 'Owned installation');
     assert.equal(stepOf(done, 'lookup_count').output.record.value, 1);
+    assert.equal(stepOf(done, 'create_counter').output.outcome, 'created');assert.equal(stepOf(done, 'find_counter').output.outcome, 'found');assert.equal(stepOf(done, 'find_counter').output.record.value, 7);
     assert.equal(stepOf(done, 'question').output.answers.reference, 'Owned receipt');
     assert.equal(fake.to('ledger.example').length, 1, 'restart and approval do not repeat the invoice');
     // Discover the live registry rather than pinning a version-specific list.

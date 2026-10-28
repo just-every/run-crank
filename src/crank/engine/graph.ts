@@ -109,6 +109,7 @@ function validatePaths(step: Step, depth: number, warnings: string[]) {
   }
   for (const key of ['fallback', 'always'] as const) if (step[key] !== undefined && (!isObject(step[key]) || !Array.isArray((step[key] as Record<string, unknown>).steps))) throw new StepError('validation', `Path group ${step.id}: ${key} needs steps`)
   if (step.on_type_mismatch !== undefined && step.on_type_mismatch !== 'halt' && !seen.has(step.on_type_mismatch as string) && step.on_type_mismatch !== 'fallback') throw new StepError('validation', `Path group ${step.id}: on_type_mismatch must be halt or a branch id`)
+  if (step.on_type_mismatch === 'fallback' && step.fallback === undefined) throw new StepError('validation', `Path group ${step.id}: add a fallback branch before routing type mismatches to it`)
   if (step.fallback === undefined) warnings.push(`Path group ${step.id} has no fallback branch: a run that matches no branch ends as stopped by filter`)
 }
 

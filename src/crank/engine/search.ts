@@ -8,6 +8,8 @@ export function validateSearch(step: Step) {
   if (step.no_match !== undefined && !['halt', 'continue'].includes(step.no_match as string)) throw new StepError('validation', `Search ${step.id}: no_match must be halt or continue`)
   if (step.multi_match !== undefined && !['first', 'stop', 'all'].includes(step.multi_match as string)) throw new StepError('validation', `Search ${step.id}: multi_match must be first, stop or all`)
   if (step.on_multiple !== undefined && !['halt', 'continue'].includes(step.on_multiple as string)) throw new StepError('validation', `Search ${step.id}: on_multiple must be halt or continue`)
+  if (step.limit !== undefined && (!Number.isInteger(step.limit) || Number(step.limit) < 1 || Number(step.limit) > 500)) throw new StepError('validation', `Search ${step.id}: limit must be an integer from 1 to 500`)
+  if (step.sort !== undefined && (!isObject(step.sort) || typeof step.sort.field !== 'string' || !step.sort.field.trim() || !['asc', 'desc'].includes(String(step.sort.direction)))) throw new StepError('validation', `Search ${step.id}: sort needs a field and an asc or desc direction`)
   if (step.create_if_not_found !== undefined && !isObject(step.create_if_not_found)) throw new StepError('validation', `Search ${step.id}: create_if_not_found must hold the create step's mapped input`)
 }
 /** Keys are typed; an empty key is a validation error, never a match-all. */
@@ -28,17 +30,19 @@ function sortRecords(records: Record<string, unknown>[], step: Step) {
 
 /** Applies the declared no-match and multi-match outcomes to a completed provider search. */
 export function searchOutcome(step: Step, records: Record<string, unknown>[], truncated = false): StepResult {
-  const count = records.length
+  const count = records.length, mode = step.multi_match ?? 'first'
+  // A bounded scan cannot establish absence or the first record in a declared
+  // order. Only the explicit all mode can release a visibly incomplete set.
+  if (truncated && mode !== 'all') throw new StepError('provider', 'Search is incomplete; no no-match or first-match decision was made', { outcome: 'search incomplete' })
+  if (mode === 'all' && (count > 0 || truncated)) {
+    const limit = Number(step.limit ?? 100), list = sortRecords(records, step).slice(0, limit), limited = truncated || records.length > limit
+    return { status: 'succeeded', output: { outcome: limited ? 'truncated' : 'found', record: list[0] ?? null, records: list, count: list.length, truncated: limited } }
+  }
   if (count === 0) {
     if (step.no_match === 'halt') return { status: 'stopped', reason: 'search', output: { outcome: 'not found', count: 0 } }
     return { status: 'succeeded', output: { outcome: 'not found', record: null, records: [], count: 0 } }
   }
   if (count === 1) return { status: 'succeeded', output: { outcome: 'found', record: records[0], records, count } }
-  const mode = step.multi_match ?? 'first'
-  if (mode === 'all') {
-    const limit = Math.min(Number(step.limit ?? 100), 500), list = sortRecords(records, step).slice(0, limit)
-    return { status: 'succeeded', output: { outcome: 'found', record: list[0], records: list, count: list.length, truncated: truncated || records.length > limit } }
-  }
   if (mode === 'stop') {
     if (step.on_multiple === 'continue') return { status: 'succeeded', output: { outcome: 'multiple matches', record: null, records, count } }
     return { status: 'stopped', reason: 'search', output: { outcome: 'multiple matches', count } }

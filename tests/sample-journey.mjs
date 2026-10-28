@@ -129,8 +129,100 @@ export async function sampleJourney({inspect=async()=>{}}={}) {
   // Erasing the source removes the independently retained history copy too.
   await h.post(base+'/pause');await h.post('data'+'/erase',{workflow_run_id:run.id,confirm:'ERASE'});
   assert.equal((await h.get(base+'/samples')).samples.some(s=>s.source_id===run.id),false);
+  await conditionPreviews(h,edge,inspect);
   return {samples:6};
  } finally {await h.close()}
+}
+
+/** One retained lead journey checks previews against deliberate destination readback. */
+async function conditionPreviews(h,edge,inspect) {
+ const note=id=>({id,type:'map',input:{branch:id}});
+ const routing={trigger:{type:'webhook'},steps:[
+  {id:'present',type:'filter',when:[[
+   {field:'trigger.body.key',op:'exists'},
+   {field:'trigger.body.missing',op:'not_exists'},
+   {field:'trigger.body.nil',op:'not_exists'},
+   {field:'trigger.body.blank',op:'is_empty'}
+  ]]},
+  {id:'route',type:'paths',mode:'parallel',branches:[
+   {id:'premium',name:'Qualified lead',when:[[{field:'trigger.body.amount',op:'number.gt',value:5000}]],steps:[note('premium_note')]},
+   {id:'regional',name:'Regional lead',when:[[{field:'trigger.body.state',op:'text.in',value:['TX','OK','LA']}]],steps:[note('regional_note')]}
+  ],fallback:{steps:[note('fallback_note')]}},
+  {id:'summary',type:'map',input:{matched:'{{steps.route.matched}}',key:'{{trigger.body.key}}',qualified:'{{steps.present.passed}}'}},
+  {id:'notify',type:'http',input:{method:'POST',url:'https://crm.example/contacts',body:'{{steps.summary}}'}}
+ ]};
+ const w=await h.post('workflows',{name:'Lead condition previews',graph:routing},h.owner,201),base=`workflows/${w.id}`;
+ const payload={key:'synthetic-crank-preview',amount:'6000',state:'TX',nil:null,blank:''};
+ const listener=await h.post(base+'/samples/listen',{},h.owner,201);
+ const captured=await deliver(h,listener.url,{method:'POST',headers:{'content-type':'application'+'/json'},body:JSON.stringify(payload)});
+ assert.equal(captured.status,201,captured.text);
+ await h.restart();
+ const stored=(await h.get(base+'/samples')).samples.find(sample=>sample.id===captured.value.sample_id);
+ const initialWrites=edge.requests.length;
+ const preview=async(state,matched,error=false)=>{
+  const result=await h.post(base+'/preview',{}),route=result.steps.find(step=>step.path==='route');
+  assert.deepEqual(route.matched,matched);
+  assert.equal(route.outcome,error?'type mismatch':'routed');
+  assert.equal(result.source.id,(await h.get(base+'/samples')).samples.find(sample=>sample.selected).id);
+  assert.ok(result.steps.every(step=>step.source.id===result.source.id));
+  const kinds=result.steps[0].trace.groups[0].rules.map(rule=>[rule.kind,rule.result]);
+  assert.deepEqual(kinds,[['value',true],['missing',true],['null',true],['empty',true]]);
+  if(error) {
+   assert.equal(route.error.category,'type_mismatch');
+   assert.equal(route.trace[0].trace.groups[0].rules[0].result,'type_mismatch');
+   assert.deepEqual(result.steps.map(step=>step.path),['present','route']);
+  } else {
+   assert.deepEqual(result.steps.find(step=>step.path==='summary').output,{matched,key:payload.key,qualified:true});
+   assert.equal(result.steps.at(-1).outcome,'not run in preview');
+  }
+  assert.equal(edge.requests.length,initialWrites,'preview sends no destination request');
+  await inspect({h,w,state,sample:(await h.get(base+'/samples')).samples.find(sample=>sample.selected),preview:result});
+  return result;
+ };
+ const capturedPreview=await preview('condition-captured',['premium','regional']);
+ assert.equal(capturedPreview.sample_source,`webhook sample ${stored.id}`);
+ assert.deepEqual(capturedPreview.steps[1].trace.map(branch=>branch.trace.groups[0].rules.map(rule=>[rule.left,rule.right,rule.result])),[[['6000',5000,true]],[['TX',['TX','OK','LA'],true]]]);
+ await h.post(base+'/samples',{sample:{body:{...payload,amount:'abc'}}},h.owner,201);
+ await preview('condition-mismatch',[],true);
+ await h.post(base+'/samples',{sample:{body:{...payload,amount:'100',state:'CA'}}},h.owner,201);
+ await preview('condition-fallback',['fallback']);
+ await h.post(base+'/samples/select',{sample_id:stored.id});
+ const exclusive=structuredClone(routing);exclusive.steps[1].mode='exclusive';
+ await h.post(base+'/draft',{graph:exclusive});
+ await preview('condition-exclusive',['premium']);
+ const routed=structuredClone(routing);routed.steps[1].on_type_mismatch='fallback';
+ await h.post(base+'/draft',{graph:routed});
+ await h.post(base+'/samples',{sample:{body:{...payload,amount:'abc'}}},h.owner,201);
+ const mismatchPreview=await preview('condition-routed',['fallback']);
+ assert.equal(mismatchPreview.steps[1].trace[0].trace.groups[0].rules[0].result,'type_mismatch');
+ // Deliberate execution is separate from preview; the destination sees the same route.
+ await h.post(base+'/publish',{},h.owner,201);
+ const hook=await hookUrl(h,w),sent=await deliver(h,hook,{method:'POST',headers:{'content-type':'application'+'/json'},body:JSON.stringify({...payload,amount:'abc'})});
+ assert.equal(sent.status,200,sent.text);
+ const run=await settled(h,sent.value.run_id);assert.equal(run.status,'succeeded');
+ assert.deepEqual(run.steps.find(step=>step.path==='route').output.matched,['fallback']);
+ assert.deepEqual(JSON.parse(edge.requests.at(-1).body),{matched:['fallback'],key:payload.key,qualified:true});
+ await h.post(base+'/samples',{source:'history',run_id:run.id},h.owner,201);
+ const history=await h.post(base+'/preview',{});
+ assert.equal(history.source.source_id,run.id);assert.deepEqual(history.steps.find(step=>step.path==='route').matched,['fallback']);
+ assert.equal(edge.requests.length,initialWrites+1,'history previews do not repeat an effect');
+ // A stopped branch must not hide a later parallel branch or manufacture a continuation.
+ const mixed=structuredClone(routing),stop={id:'stop',type:'filter',when:[[{field:'trigger.body.never',op:'exists'}]]};
+ mixed.steps[1].branches[0].steps=[stop];
+ await h.post(base+'/draft',{graph:mixed});await h.post(base+'/samples/select',{sample_id:stored.id});
+ const continued=await h.post(base+'/preview',{});
+ assert.deepEqual(continued.steps.find(step=>step.path==='summary').output.matched,['premium','regional']);
+ mixed.steps[1].branches[1].steps=[{...stop,id:'stop_regional'}];
+ await h.post(base+'/draft',{graph:mixed});
+ const stopped=await h.post(base+'/preview',{});
+ assert.equal(stopped.steps.some(step=>step.path==='summary'),false,'all stopped branches end the preview');
+ const always=structuredClone(routing);delete always.steps[1].fallback;always.steps[1].always={steps:[note('always_note')]};
+ await h.post(base+'/draft',{graph:always});
+ const withAlways=await h.post(base+'/preview',{});
+ assert.deepEqual(withAlways.steps.find(step=>step.path==='summary').output.matched,['premium','regional','always']);
+ const undeclared=structuredClone(always);undeclared.steps[1].on_type_mismatch='fallback';
+ await h.post(base+'/draft',{graph:undeclared},h.owner,422);
+ assert.equal(edge.requests.length,initialWrites+1);
 }
 
 export async function sampleAuthorityJourney() {
