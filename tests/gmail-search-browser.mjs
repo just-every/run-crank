@@ -13,7 +13,7 @@ async function onScreen({h,w,run,state}){
  const server=createServer(async(req,res)=>{
   try{
    const pathname=new URL(req.url,h.origin).pathname;
-   if(types[extname(pathname)])for(const root of ['public','dist/client']){
+   if(types[extname(pathname)])for(const root of ['./public','./dist/client']){
     const directory=resolve(root),file=resolve(directory,'.'+decodeURIComponent(pathname));if(!file.startsWith(directory+'/'))continue;
     const bytes=await readFile(file).catch(()=>null);if(bytes){res.writeHead(200,{'content-type':types[extname(pathname)]});res.end(bytes);return}
    }
@@ -34,7 +34,7 @@ async function onScreen({h,w,run,state}){
    await page.goto(h.origin+`/app/workflow-runs/${run.id}`);
    const mail=page.locator('.timeline-item').filter({hasText:'Gmail'}).first();await mail.getByText('Input and output',{exact:true}).click();
    if(width===1440){
-    if(state==='found'){await expect(mail).toContainText('thread-b');await expect(mail).toContainText('message-thread-b');await expect(mail).toContainText('found');await expect(mail).toContainText(hostileSubject);assert.equal(await page.evaluate(()=>globalThis.gmailInjected),undefined,'hostile headers are literal text');await expect(mail.locator('img')).toHaveCount(0);}
+    if(state==='found'){await expect(mail).toContainText('thread-b');await expect(mail).toContainText('message-thread-b');await expect(mail).toContainText('found');const rendered=JSON.parse(await mail.locator('pre').nth(1).innerText());assert.equal(rendered.record.messages[0].headers.subject[0],hostileSubject,'the displayed metadata retains the exact hostile header');assert.equal(await page.evaluate(()=>globalThis.gmailInjected),undefined,'hostile headers are literal text');await expect(mail.locator('pre img')).toHaveCount(0);}
     else{await expect(mail).toContainText('incomplete');await expect(page.locator('.timeline-item[data-state="succeeded"]')).toHaveCount(0);}
     for(const label of ['Search runs','Your account']){
      const control=page.locator(`[aria-describedby="${label==='Search runs'?'search-tooltip':'account-tooltip'}"]`),tooltip=page.getByRole('tooltip',{name:label,exact:true});
