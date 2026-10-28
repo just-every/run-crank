@@ -18,9 +18,14 @@ export async function customSearchJourney() {
     assert.equal(proposal.find_or_create.input.quantity,7);
     const self=await h.send('/api/crank/workflow-runs/'+waiting.id+'/approve',{path:'search',digest:waiting.waits[0].proposal_digest},h.owner);assert.equal(self.status,403,'Even the owner cannot approve their own create');
     const competing=await f.draft('synthetic-crank-970');assert.equal(competing.run.status,'waiting');
-    await h.restart();await f.work();assert.equal((await f.get(competing)).status,'waiting','Ownership survives restart and the approval wait');
+    // Approval time is not active readback time. Advance beyond the request
+    // budget and restart while the normalized key remains owned by this run.
+    await h.restart({clock:new Date(Date.now()+65000).toISOString()});await f.work();assert.equal((await f.get(competing)).status,'waiting','Ownership survives restart and the approval wait');
     await f.review(created);const completed=await f.pump(created);assert.equal(output(completed).outcome,'created');
     assert.deepEqual(output(completed).record,{name:'synthetic-crank-970',quantity:7});
+    assert.equal(f.arrivals.filter(t=>t.operation_key===output(completed).operation_key.replace(/:create$/,':readback')).length,1,'Delayed approval still dispatches one independent readback');
+    const reads=completed.attempts.filter(a=>a.method==='GET');
+    assert.equal(reads.length,2);assert.ok(Date.parse(reads[1].budget_started_at)-Date.parse(reads[0].budget_started_at)>=65000,'Readback starts its own budget after approval');
     const concurrent=await f.pump(competing);assert.equal(output(concurrent).outcome,'found');assert.equal(writes()-before,1);
     assert.equal((await database.sql("SELECT count(*) FROM public.write_stock WHERE name='synthetic-crank-970';")).stdout.trim(),'1');
     const found=await f.pump(await f.draft(' SyNtHeTiC-CrAnK-970 '));assert.equal(output(found).outcome,'found');assert.equal(found.waits.length,0);

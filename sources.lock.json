@@ -2539,7 +2539,7 @@
       "executable": false
     },
     "src/crank/connectors/retry.ts": {
-      "sha256": "6aa52eb62d1858b5ca92ef53101a3dae3ec5b6866b9e8ce97959f1d4a60d2ab0",
+      "sha256": "c4ebbcc9bbbd5315057a7e0f808d44a867404f83ddba3f75a248c668c273fbbd",
       "executable": false
     },
     "src/crank/connectors/slack-request.ts": {
@@ -5615,7 +5615,7 @@
       "executable": false
     },
     "tests/custom-search-journey.mjs": {
-      "sha256": "0bf8393587a8bae322aac1323c973eb04ef00719beaf4071dfe50653ff4f3896",
+      "sha256": "ee7af1238ed533e5877c901620bbfd24c2e24b734415ad52244f74dfa8b95d2c",
       "executable": false
     },
     "tests/database-gateway-fixture.mjs": {
