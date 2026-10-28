@@ -5,7 +5,8 @@ export function decodeEntities(text: string): string {
       const code = name[1].toLowerCase() === 'x' ? parseInt(name.slice(2), 16) : parseInt(name.slice(1), 10)
       return Number.isFinite(code) && code > 0 && code <= 0x10ffff ? String.fromCodePoint(code) : whole
     }
-    return ENTITIES[name.toLowerCase()] ?? whole
+    const key = name.toLowerCase()
+    return Object.hasOwn(ENTITIES, key) ? ENTITIES[key] : whole
   })
 }
 const dropBlocks = (html: string) => html.replace(/<!--[\s\S]*?-->/g, '').replace(/<(script|style|head|template)\b[\s\S]*?<\/\1\s*>/gi, '')

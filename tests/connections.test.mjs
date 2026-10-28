@@ -10,8 +10,8 @@ import { connection, deliver, fakeEdge, fakeSecret, jsonResponse, publish, runs,
 
 const fake = fakeEdge();
 test('Gmail thread metadata search retains declared outcomes, consent, parked pages and inactive sealed custody', async () => {
-  const {gmailSearchJourney,gmailCustodyJourney}=await import('./gmail-search-journey.mjs');
-  await gmailSearchJourney();await gmailCustodyJourney();
+  const {gmailSearchJourney,gmailCustodyJourney,legacyCheckpointErasureJourney,rotatedCheckpointRestoreJourney}=await import('./gmail-search-journey.mjs');
+  await gmailSearchJourney();await gmailCustodyJourney();await legacyCheckpointErasureJourney();await rotatedCheckpointRestoreJourney();
 });
 let h;
 before(async () => {

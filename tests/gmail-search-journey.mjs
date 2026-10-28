@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {harness} from './harness.mjs';
-import {archive,inventory} from './restore-journey.mjs';
+import {archive,inventory,rewritten} from './restore-journey.mjs';
 import {connection,fakeEdge,jsonResponse,publish,startRun,stepOf} from './kit.mjs';
 
 const clock='2026-11-10T15:00:00Z',later='2026-11-10T15:02:00Z';
@@ -177,4 +177,65 @@ export async function gmailOwnership(h,fake){
  fake.routes.set('gmail.googleapis.com',({url})=>jsonResponse(url.pathname.endsWith('/threads')?{threads:[{id:'thread-a'}]}:{id:'thread-a',messages:[message('thread-a')]}));
  const c=await connection(h,{app:'google',auth_kind:'oauth2',label:'Owned mailbox',scopes:[gmailScope],secret:{access_token:'synthetic-crank-604'}}),w=await publish(h,'Owned Gmail metadata',graph(gmailStep(c.id))),run=await startRun(h,w,{query:'one'});
  assert.equal(run.status,'succeeded',JSON.stringify(run.error));assert.equal(stepOf(run,'mail').output.record.thread_id,'thread-a');return ['gmail.search_threads'];
+}
+
+
+/** Upgrade fixture: older releases sealed the run but kept response chunks as
+ * plaintext base64, without adding their identifiers to the blind index. */
+export async function legacyCheckpointErasureJourney(){
+ const subject='synthetic-crank-legacy-person',page={rows:[{from:subject}],next:'second'},fake=fakeEdge();let park=false;
+ fake.routes.set('legacy-search.example',({url})=>jsonResponse(url.searchParams.has('cursor')?(park?{}:{rows:[]}):page,park&&url.searchParams.has('cursor')?429:200,park?{'retry-after':'31'}:{}));
+ const h=await harness('http://127.0.0.1:9',{edge:fake.edge,clock});
+ try{
+  const w=await publish(h,'Older sealed search',{trigger:{type:'manual'},steps:[{id:'search',type:'http',input:{url:'https://legacy-search.example/contacts'},pagination:{kind:'cursor',items_path:'rows',cursor_path:'next',max_pages:5,max_items:20},retry_policy:{read_attempts:2,base_delay_ms:1}}]});
+  await h.post('data'+'/'+'classes',{workflow_id:w.id,data_class:'customer',identifier_fields:['from']});
+  const complete=await startRun(h,w,{});assert.equal(complete.status,'succeeded');
+  park=true;const parked=await startRun(h,w,{});assert.equal(parked.status,'waiting');
+  // Recreate only the legacy persisted representation, after native run admission.
+  // All preview, cancellation and erasure behavior below uses public doors.
+  assert.ok((await h.db.prepare('SELECT payload_key FROM crank_wf_runs WHERE id=?').bind(parked.id).first()).payload_key);
+  await h.db.batch([
+   h.db.prepare('UPDATE crank_request_checkpoint_chunks SET content_base64=? WHERE run_id=? AND ordinal=0').bind(Buffer.from(JSON.stringify(page)).toString('base64'),parked.id),
+   h.db.prepare('DELETE FROM crank_blind_index WHERE run_id=?').bind(parked.id),
+  ]);
+  await h.restart();await h.post(`workflows/${w.id}/pause`);
+  const pending=await h.post('data'+'/'+'subject',{subject});
+  assert.ok(pending.workflow_runs.some(item=>item.id===parked.id),'legacy plaintext checkpoint remains visible inside a sealed parked run');
+  assert.equal(pending.blocked,true);
+  await h.post('data'+'/'+'erase',{subject,digest:pending.digest,confirm:'ERASE'},h.owner,409);
+  await h.post(`workflow-runs/${parked.id}/cancel`);
+  const preview=await h.post('data'+'/'+'subject',{subject});assert.equal(preview.blocked,false);
+  assert.deepEqual(preview.workflow_runs.map(item=>item.id),[complete.id],'cancellation already removed the parked checkpoint data');
+  const erased=await h.post('data'+'/'+'erase',{subject,digest:preview.digest,confirm:'ERASE'});assert.equal(erased.workflow_runs,1);
+  await h.get('workflow-runs/'+complete.id,h.owner,404);
+  const remaining=inventory(await archive(h)).map(JSON.parse);assert.ok(!remaining.some(item=>item.table.startsWith('crank_request_checkpoint')&&[complete.id,parked.id].includes(item.row.run_id)),'no legacy subject checkpoint survives successful erasure');
+ }finally{await h.close()}
+}
+
+/** A human wait can span rotation before any maintenance pass reseals its run. */
+export async function rotatedCheckpointRestoreJourney(){
+ const f=await gmailFixture(),{h,c,fake}=f;let receiving,invalid;
+ try{
+  const w=await publish(h,'Search after collected approval',{trigger:{type:'manual'},steps:[{id:'ask',type:'collect',fields:{proceed:{type:'checkbox',required:true}}},...graph(gmailStep(c.id)).steps]});
+  await h.post('data'+'/'+'classes',{workflow_id:w.id,data_class:'customer',identifier_fields:['from']});
+  const waiting=await startRun(h,w,{query});assert.equal(waiting.status,'awaiting_approval');
+  const rotated=await h.post('data'+'/'+'keys'+'/'+'rotate',{data_class:'customer',confirm:'ROTATE'});
+  f.setMode('park');const parked=await h.post(`workflow-runs/${waiting.id}/approve`,{path:'ask',digest:waiting.waits[0].proposal_digest,edits:{proceed:true}});assert.equal(parked.status,'waiting',JSON.stringify(parked.error));
+  const saved=await archive(h),original=inventory(saved),rows=original.map(JSON.parse),run=rows.find(item=>item.table==='crank_wf_runs'&&item.row.id===parked.id).row;
+  const chunks=rows.filter(item=>item.table==='crank_request_checkpoint_chunks'&&item.row.run_id===parked.id);
+  assert.equal(chunks.length,3);assert.notEqual(run.payload_key,rotated.key_id,'the waiting run still names its original key');
+  assert.ok(chunks.every(item=>JSON.parse(item.row.content_base64).k===rotated.key_id),'new reads use the rotated key before maintenance');
+  assert.ok(!saved.includes(hostileSubject));
+  receiving=await harness('http://127.0.0.1:9',{edge:fake.edge,clock});await receiving.post('data'+'/'+'restore',{archive:saved,confirm:'RESTORE'});
+  const returned=inventory(await archive(receiving)),source=new Set(original),extra=returned.filter(item=>!source.has(item));
+  assert.equal(extra.length,1);assert.equal(JSON.parse(extra[0]).row.action,'data.restore');assert.deepEqual(returned.filter(item=>item!==extra[0]),original,'mixed-key pages, collected answers and run records restore completely');
+  const received=await receiving.get('workflow-runs/'+parked.id);assert.equal(received.status,'paused');assert.equal(stepOf(received,'ask').output.sealed,true);
+  const count=fake.requests.length;await receiving.restart({clock:later});await receiving.tick(Date.parse(later));assert.equal(fake.requests.length,count,'restored mixed-key reads remain inactive without credentials or key material');
+  assert.ok((await receiving.get('connections')).every(item=>item.status!=='active'));assert.ok((await receiving.get('workflows')).every(item=>item.status!=='published'));
+  invalid=await harness('http://127.0.0.1:9',{edge:fake.edge,clock});
+  for(const patch of [{k:''},{c:'unsupported'},{iv:'AA=='},{ct:'AA=='}]){
+   const broken=await rewritten(saved,(table,row)=>{if(table==='crank_request_checkpoint_chunks')row.content_base64=JSON.stringify({...JSON.parse(row.content_base64),...patch})});
+   await invalid.post('data'+'/'+'restore',{archive:broken,confirm:'RESTORE'},invalid.owner,400);assert.deepEqual(await invalid.get('workflows'),[],'invalid checkpoint envelopes still refuse restore without importing records');
+  }
+ }finally{await invalid?.close();await receiving?.close();await h.close()}
 }

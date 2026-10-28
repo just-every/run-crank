@@ -201,7 +201,9 @@ export async function validateRestore({ read }) {
         let bytes;
         if (chunk.content_base64.startsWith('{"sealed":"crank-payload-v1"')) {
           const envelope = JSON.parse(chunk.content_base64);
-          if (!run.payload_key || envelope.k !== run.payload_key || !['customer','financial','health'].includes(envelope.c) || atob(envelope.iv).length !== 12 || atob(envelope.ct).length !== 4 * Math.ceil(expected / 3) + 18) return false;
+          // A continuation can read under a rotated key before maintenance reseals
+          // its older run. Each envelope names its own key; archives omit material.
+          if (typeof envelope.k !== 'string' || !envelope.k || !['customer','financial','health'].includes(envelope.c) || typeof envelope.iv !== 'string' || typeof envelope.ct !== 'string' || atob(envelope.iv).length !== 12 || atob(envelope.ct).length !== 4 * Math.ceil(expected / 3) + 18) return false;
           bytes = expected;
         } else bytes = atob(chunk.content_base64).length;
         if (bytes !== Math.min(65536, response.body_bytes - length)) return false;

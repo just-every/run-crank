@@ -2,7 +2,7 @@ import { StepError } from '../engine/errors'
 import type { BoundedResponse } from '../engine/egress'
 import type { RequestContext } from './retry'
 import { stmt, type CrankEnv } from '../model'
-import { fileBase64, indexStatement, sealFileBase64, targetFor } from '../ops/payload-seal'
+import { fileBase64, indexStatement, plain, sealFileBase64, targetFor } from '../ops/payload-seal'
 
 const credentialHeader = /authorization|cookie|api[-_]?key|token|secret|password|signature/i
 export interface RequestResult { response: BoundedResponse; attempts: number; exhausted?: boolean }
@@ -74,7 +74,12 @@ export async function checkpointSubjects(env: CrankEnv, subject: string) {
   const runs = new Set<string>()
   let after = 0
   for (;;) {
-    const page = await stmt(env, 'SELECT c.rowid AS cursor,c.run_id,c.path,c.operation_key,c.ordinal,c.response_json FROM crank_request_checkpoints c JOIN crank_wf_runs r ON r.id=c.run_id WHERE c.rowid>? AND r.payload_key IS NULL ORDER BY c.rowid LIMIT 25', after)
+    // Older sealed runs retained plaintext chunks without checkpoint blind indexes.
+    // Match those bytes too; newly sealed responses still use declared identifiers.
+    const page = await stmt(env, `SELECT c.rowid AS cursor,c.run_id,c.path,c.operation_key,c.ordinal,c.response_json FROM crank_request_checkpoints c JOIN crank_wf_runs r ON r.id=c.run_id
+      WHERE c.rowid>? AND (r.payload_key IS NULL OR EXISTS(SELECT 1 FROM crank_request_checkpoint_chunks x
+        WHERE x.run_id=c.run_id AND x.path=c.path AND x.operation_key=c.operation_key AND x.ordinal=c.ordinal AND ${plain('x.content_base64')}))
+      ORDER BY c.rowid LIMIT 25`, after)
       .all<{ cursor: number; run_id: string; path: string; operation_key: string; ordinal: number; response_json: string }>()
     if (!page.results.length) return [...runs]
     for (const row of page.results) {
