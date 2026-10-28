@@ -1,3 +1,4 @@
+import { responseOf } from '../engine/steps/core'
 import { mappingTables } from '../tables/mapping'
 import { previewSample, previewStepSamples } from './samples'
 import { collectAnswers, collectFields } from '../engine/steps/collect'
@@ -270,7 +271,7 @@ export async function evaluatePreview(env: CrankEnv, actor: Actor, workflowId: s
         }
         if (step.type === 'filter') {
           const evaluation = evaluate(step.when as Groups, scope, zone, time)
-          record({ path, type: 'filter', pass: evaluation.pass, outcome: evaluation.mismatch ? 'type mismatch' : evaluation.pass ? 'passed' : 'stopped by filter', trace: evaluation })
+          record({ path, type: 'filter', pass: evaluation.pass, ...(evaluation.pass ? {output:{passed:true}} : {}), outcome: evaluation.mismatch ? 'type mismatch' : evaluation.pass ? 'passed' : 'stopped by filter', trace: evaluation })
           if (!evaluation.pass) return evaluation.mismatch ? 'failed' : 'stopped'
           scope.steps[step.id] = { passed: true }
           continue
@@ -280,6 +281,12 @@ export async function evaluatePreview(env: CrankEnv, actor: Actor, workflowId: s
           const output = step.type === 'map' ? resolved : runTransform(String(step.fn), resolved)
           scope.steps[step.id] = output
           record({ path, type: step.type, output })
+          continue
+        }
+        if (step.type === 'respond') {
+          const output = responseOf(resolve(step.input ?? {}, scope) as Record<string, unknown>)
+          scope.steps[step.id] = output
+          record({path, type:step.type, output, outcome:'response preview · not sent'})
           continue
         }
         record({ path, type: step.type, outcome: 'not run in preview', note: `${step.type} would act on an app or wait; test it from a run` })
@@ -292,7 +299,7 @@ export async function evaluatePreview(env: CrankEnv, actor: Actor, workflowId: s
     return 'completed'
   }
   await walk(graph.steps, '')
-  return { scope, reached, result: { sample_source: sources.map(source => source.label).join(' + '), source: selected.source, sources, digest: await digest(canonical([selected.payload, ...[...saved].map(([path, sample]) => [path, sample.payload])])), steps: results } }
+  return { scope, reached, result: { draft_digest: await digest(canonical(graph)), trigger: selected.payload, sample_source: sources.map(source => source.label).join(' + '), source: selected.source, sources, digest: await digest(canonical([selected.payload, ...[...saved].map(([path, sample]) => [path, sample.payload])])), steps: results } }
 }
 
 export async function previewWorkflow(env: CrankEnv, actor: Actor, workflowId: string, input: Record<string, unknown>) {

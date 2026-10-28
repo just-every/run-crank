@@ -144,6 +144,8 @@ test('Native visual drafting builds named branches, fences stale and unauthorize
   await edit({operation:'remove',step:responseFilter.id});await edit({operation:'remove',step:scalar.id});
   const temporary=await added('map','after:'+wait.id);
   await edit({operation:'remove',step:temporary.id});
+  const matched=await added('map','after:'+paths.id);
+  await edit({operation:'field',step:matched.id,key:'',field_name:'routes',value_kind:'field',reference:'steps.'+paths.id+'.matched'});
   const before=await read(), staleDigest=before.draft_digest;
   await edit({operation:'field',step:values.id,key:'company',field_name:'company',value_kind:'text',value:'synthetic-crank-2'});
   const stale=await form({operation:'remove',step:paths.id,draft_digest:staleDigest},'/app/workflows/'+workflowId+'/edit');
@@ -164,6 +166,19 @@ test('Native visual drafting builds named branches, fences stale and unauthorize
   assert.equal(edge.requests.length,startRequests,'draft editing sends no provider request');
   const reopened=await page('/app/workflows/'+workflowId+'?step='+paths.id);
   assert.ok(reopened.includes('Qualified leads'));
+  const sampleResult=await h.post('workflows/'+workflowId+'/samples',{source:'manual',sample:{input:{marker:'synthetic-crank-edge-1',literal:'<script>synthetic-crank-edge-1</script>'}}},h.owner,201);
+  const sampleId=sampleResult.samples.find(sample=>sample.selected).id;
+  const samplePage=await page('/app/workflows/'+workflowId+'?step='+values.id);
+  assert.ok(samplePage.includes('class="edge-sample"'));
+  assert.ok(samplePage.includes('manual sample'));
+  assert.ok(samplePage.includes('&lt;script&gt;synthetic-crank-edge-1&lt;/script&gt;'));
+  assert.ok(!samplePage.includes('<script>synthetic-crank-edge-1</script>'));
+  assert.ok(samplePage.includes('Not reached in this preview'),'a wait cannot invent a downstream response');
+  const restricted=await h.send('/app/workflows/'+workflowId,undefined,viewer);
+  assert.equal(restricted.status,200);assert.ok(!restricted.text.includes('synthetic-crank-edge-1'));assert.ok(!restricted.text.includes('class="edge-sample"'));
+  assert.equal(edge.requests.length,startRequests,'edge previews do not send an app request');
+  assert.equal((await h.get('workflow-runs?workflow='+workflowId)).runs.length,0);
+
   const copy=await h.post('workflows/'+workflowId+'/duplicate',{},h.owner,201);
   assert.deepEqual(copy.draft,frozen.draft);
   const saved=await h.get('workflows/'+workflowId+'/drafts/'+frozen.draft_versions[0].id);
@@ -180,11 +195,36 @@ test('Native visual drafting builds named branches, fences stale and unauthorize
   assert.deepEqual(detail.steps.find(s=>s.step_id===values.id).output,{amount:1200,company:'synthetic-crank-2',active:true,blank:'',nothing:null});
   assert.equal(detail.steps.find(s=>s.step_id===qualified.id).output.body,'synthetic-crank-2');
   assert.ok(!detail.steps.some(s=>s.step_id===fallback.id));
+  assert.deepEqual(detail.steps.find(s=>s.step_id===matched.id).output,{routes:[branch]});
   await h.post('workflows/'+workflowId+'/publish',{},viewer,403);
   await h.post('workflows/'+workflowId+'/publish',{},h.owner,201);
   run=await h.post('workflows/'+workflowId+'/run',{input:{}},h.owner,201);
   await h.tick(Date.now()+2000);detail=await h.get('workflow-runs/'+run.id);
   assert.equal(detail.steps.find(s=>s.step_id===fallback.id).output.body,'not qualified');
   assert.ok(!detail.steps.some(s=>s.step_id===qualified.id));
+  assert.deepEqual(detail.steps.find(s=>s.step_id===matched.id).output,{routes:['fallback']});
   assert.equal(version.number,published.version.number);
+  // The selected source survives reopening, while derived values follow only the current draft.
+  const history=await h.post('workflows/'+workflowId+'/samples',{source:'history',run_id:run.id},h.owner,201);
+  const historyPage=await page('/app/workflows/'+workflowId);
+  assert.ok(historyPage.includes('history run '+run.id));
+  await h.post('workflows/'+workflowId+'/samples/select',{sample_id:sampleId});
+  await edit({operation:'move',step:wait.id,after:'after:'+paths.id});
+  const dry=await h.post('workflows/'+workflowId+'/preview',{});
+  assert.equal(dry.draft_digest,(await read()).draft_digest);
+  assert.equal(dry.source.id,sampleId);
+  assert.equal(dry.steps.find(s=>s.path===paths.id+'/fallback/'+fallback.id).output.body,'not qualified');
+  assert.equal(dry.steps.find(s=>s.type==='respond').outcome,'response preview · not sent');
+  assert.deepEqual((await h.get('workflows/'+workflowId+'/versions/1')).graph,version.graph);
+  const runCount=(await h.get('workflow-runs?workflow='+workflowId)).runs.length;
+  await h.post('workflows/'+workflowId+'/samples',{source:'schema',sample:{input:{schema_marker:'synthetic-crank-schema-edge'}}},h.owner,201);
+  assert.ok((await page('/app/workflows/'+workflowId)).includes('schema sample · not tested'));
+  await h.post('workflows/'+workflowId+'/samples/select',{sample_id:sampleId});
+  await h.post('workflows/'+workflowId+'/samples/delete',{sample_id:sampleId});
+  const deletedPage=await page('/app/workflows/'+workflowId);
+  assert.ok(!deletedPage.includes('synthetic-crank-edge-1'));
+  assert.ok(!deletedPage.includes('class="edge-sample"'),'deleted selection leaves no cached preview');
+  assert.equal((await h.get('workflow-runs?workflow='+workflowId)).runs.length,runCount);
+  assert.equal(edge.requests.length,startRequests);
+
 });

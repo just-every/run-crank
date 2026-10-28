@@ -155,6 +155,18 @@ try {
   assert.deepEqual((await read()).draft,saved.draft);
   assert.equal((await h.get('workflow-runs?workflow='+workflowId)).runs.length,0);
   assert.equal(edge.requests.length,0,'construction sends no production request');
+  await page.locator('.step-card').filter({hasText:'Started by hand'}).click();
+  await page.getByRole('link',{name:'Test',exact:true}).first().click();
+  const sampleForm=page.locator('form').filter({has:page.getByRole('button',{name:'Save sample',exact:true})});
+  await sampleForm.getByLabel('Sample JSON',{exact:true}).fill(JSON.stringify({input:{lead:'synthetic-crank-edge-browser'}}));
+  await sampleForm.getByRole('button',{name:'Save sample',exact:true}).click();
+  await page.waitForURL(/tab=test/);
+  const sourceEdge=()=>page.locator('.edge-sample').filter({has:page.locator('pre').filter({hasText:'"amount"'})});
+  const edgeDisclosure=sourceEdge();await edgeDisclosure.locator('summary').focus();await edgeDisclosure.locator('summary').press('Enter');
+  await expect(edgeDisclosure).toContainText('manual sample');await expect(edgeDisclosure).toContainText('1200');
+  await expect(page.locator('.edge-sample').filter({hasText:'Not reached in this preview'}).first()).toBeVisible();
+  await page.reload();await sourceEdge().locator('summary').click();await expect(sourceEdge()).toContainText('1200');
+  assert.equal((await h.get('workflow-runs?workflow='+workflowId)).runs.length,0);assert.equal(edge.requests.length,0);
   await shot('constructed-draft');
   // The installed controls are operable by keyboard, including shell tooltips.
   const search=page.getByRole('link',{name:'Search runs',exact:true}),tooltip=page.locator('#search-tooltip');
@@ -177,7 +189,16 @@ try {
   // Edit the draft through its controls, then run the still-immutable live version.
   await page.locator('.step-card').filter({has:page.getByText(sourceName,{exact:true})}).click();
   const amount=currentSettings().locator('details').filter({has:page.locator('summary').filter({hasText:/^amount$/})}).first();await open(amount);
-  await amount.getByLabel('Literal value',{exact:true}).fill('50');await submit(amount,'Save field');
+  await amount.getByLabel('Value type',{exact:true}).selectOption({label:'Text'});
+  const typeRefusal=page.waitForResponse(r=>r.request().method()==='POST'&&r.url().endsWith('/edit'));
+  await amount.getByRole('button',{name:'Save field',exact:true}).click();assert.equal((await typeRefusal).status(),422);
+  await expect(page.locator('[name="value_kind"][aria-invalid="true"]')).toBeVisible();
+  await expect(page.locator('[name="value_kind"][aria-invalid="true"]')).toHaveValue('text');
+  const correctedAmount=currentSettings().locator('details').filter({has:page.locator('summary').filter({hasText:/^amount$/})}).first();
+  await correctedAmount.getByLabel('Value type',{exact:true}).selectOption({label:'Number'});
+  await correctedAmount.getByLabel('Literal value',{exact:true}).fill('50');await submit(correctedAmount,'Save field');
+  await sourceEdge().locator('summary').click();await expect(sourceEdge()).toContainText('50');await expect(sourceEdge()).not.toContainText('1200');
+
   assert.deepEqual((await h.get('workflows/'+workflowId+'/versions/1')).graph,published.graph);
   async function runAndInspect(expectedName,expectedBody,status) {
     await page.locator('.run-menu > summary').click();await page.getByRole('button',{name:'Start run',exact:true}).click();
@@ -197,6 +218,18 @@ try {
   await expect(page.locator('main')).toContainText('Cost estimate required');
   await page.goto(base);await quoteNativeWork();await page.getByRole('button',{name:'Publish',exact:true}).click();await page.waitForURL(base);
   await runAndInspect('Standard response','standard lead',202);
+  await page.goto(base);await page.locator('.step-card').filter({hasText:'Wait before routing after review'}).click();
+  organize=currentSettings().locator('details').filter({has:page.locator('summary').filter({hasText:/^Order and connections$/})}).first();await open(organize);
+  await organize.getByLabel('Connect after',{exact:true}).selectOption({label:'After Lead value routes'});await submit(organize,'Connect step');
+  const responseEdge=page.locator('.edge-sample').filter({hasText:'response preview · not sent'});await responseEdge.locator('summary').click();
+  await expect(responseEdge).toContainText('standard lead');await expect(responseEdge).toContainText('manual sample');
+  assert.equal((await h.get('workflow-runs?workflow='+workflowId)).runs.length,2);assert.equal(edge.requests.length,0);
+  await shot('source-labelled-branch-samples');
+  // History is selected explicitly and remains provenance, without replaying that run.
+  const latestRun=(await h.get('workflow-runs?workflow='+workflowId)).runs[0];
+  await h.post('workflows/'+workflowId+'/samples',{source:'history',run_id:latestRun.id},h.owner,201);
+  await page.reload();await expect(page.locator('.edge-sample').first()).toContainText('history run '+latestRun.id);
+  await shot('history-labelled-branch-samples');
   await page.goto(base);const workflowSettings=page.locator('.native-workflow-settings');await open(workflowSettings);
   await workflowSettings.getByLabel('Description',{exact:true}).fill('Reviewed native workflow');
   await workflowSettings.getByRole('button',{name:'Save workflow settings',exact:true}).click();await page.waitForURL(base);
