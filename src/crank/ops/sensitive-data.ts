@@ -42,8 +42,11 @@ export async function setDataClass(env: CrankEnv, actor: Actor, workflowId: stri
   const workflow = await stmt(env, 'SELECT id,status,data_class,identifier_fields_json FROM crank_workflows WHERE id=?', workflowId).first<{ id: string; status: string; data_class: string; identifier_fields_json: string }>()
   requireValue(workflow, 'Workflow not found', 404)
   if (workflow.status === 'published' && ATTESTED_CLASSES.includes(value)) requireValue(await stmt(env, 'SELECT 1 FROM crank_data_attestations WHERE data_class=?', value).first(), `Record your ${value} data attestation first, or pause this workflow before classifying it.`, 409)
+  if (value !== 'none') requireValue(!await stmt(env,'SELECT 1 FROM crank_import_comparisons WHERE workflow_id=? LIMIT 1',workflowId).first(),'Erase non-sensitive migration comparisons before changing this workflow data class',409)
   const declared = fields === undefined ? workflow.identifier_fields_json : identifierFields(fields)
   await guardedBatch(env, actor, 'owner', [
+    stmt(env, `INSERT INTO crank_authority_guards(id,ok) SELECT ?,CASE WHEN ?='none' OR NOT EXISTS(SELECT 1 FROM crank_import_comparisons WHERE workflow_id=?) THEN 1 ELSE 0 END`, 'comparison-class:'+workflowId,value,workflowId),
+    stmt(env,'DELETE FROM crank_authority_guards WHERE id=?','comparison-class:'+workflowId),
     stmt(env, 'UPDATE crank_workflows SET data_class=?,identifier_fields_json=? WHERE id=?', value, declared, workflowId),
     auditStatement(env, actor.id, 'workflow.data_class', 'workflow', workflowId, { from: workflow.data_class, to: value, identifier_fields: JSON.parse(declared) }),
   ])
