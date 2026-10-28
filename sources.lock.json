@@ -5599,7 +5599,7 @@
       "executable": false
     },
     "test-budget.json": {
-      "sha256": "e4892f9be51ffc4c86b4801efa1f221b7a52a633a4284ef9f00614c65df99921",
+      "sha256": "b9f6f7739696ca28bfd63fe41ab7e354029804a8b200566680c2372eed8a8efd",
       "executable": false
     },
     "tests/accounting-poll-journey.mjs": {
