@@ -123,7 +123,11 @@
       "executable": false
     },
     ".github/workflows/run-site.yml": {
-      "sha256": "dcd60a82b19b641deec3c259e28f15d8f70b9400373d3221f9caa2934f100dd8",
+      "sha256": "21d4d3d127284a971edabcff1b19cc4134b8b3b50548439b4a27ea492fd173c8",
+      "executable": false
+    },
+    ".github/workflows/verify-nightly.yml": {
+      "sha256": "f73260a3970c6c43aa460a2ff8125210c72279de554c39d0c9a359da4ca481d5",
       "executable": false
     },
     ".github/workflows/verify.yml": {
@@ -147,7 +151,7 @@
       "executable": false
     },
     "base-copies.json": {
-      "sha256": "26dc45a0bdaa6bdfd5901b4268274c01afa5724256b37f6820d2ff43fac2b243",
+      "sha256": "3127d95749ee42315ba9c270b5f09e8aa0b2df673ae912ea551694b34dfa92ef",
       "executable": false
     },
     "CHANGELOG.md": {
@@ -2006,10 +2010,6 @@
       "sha256": "765b035fb0a6cecc2a07b2109f2dc36d110c1740021622c91b0bd7d64444268d",
       "executable": false
     },
-    "scripts/ci/chromium-probe.mjs": {
-      "sha256": "b660d6603c7038f2846a37836c10061b7c7b678d041b6075c461251e12264adc",
-      "executable": false
-    },
     "scripts/crank.mjs": {
       "sha256": "8136bfc3ed8ab00cda4409a234ff3a5e403e3ae0e399b63e23402dc7c79e945d",
       "executable": false
@@ -2678,6 +2678,10 @@
       "sha256": "d0e747277142e54d86acd1c01549ee8b76bf15c060366387bd074c57f77f7d2d",
       "executable": false
     },
+    "scripts/install-chromium-deps.py": {
+      "sha256": "d3027108ad8e08ceeddb0ed477d967b1207e40bb6bf5ae941854c534c2cf4004",
+      "executable": false
+    },
     "scripts/install.mjs": {
       "sha256": "ce9c6eb4f127e88b32d538655a3fb3a2dc9fc3e83e48782fd56ffd3377da16fd",
       "executable": false
@@ -2708,6 +2712,14 @@
     },
     "scripts/verify-ci.mjs": {
       "sha256": "b141048c47dc1a7017634253fe36006210ac1ba7d826ba7a00d0d45125b7d7e8",
+      "executable": false
+    },
+    "scripts/verify-evidence.mjs": {
+      "sha256": "9224f772d6a17f043448694eca3c149df83070417b995a2840497e36a9ad0100",
+      "executable": false
+    },
+    "scripts/verify-light.mjs": {
+      "sha256": "5a1dd608747df0e728159bd62463fa47c06586a3587de242eee7d8027ee4dab7",
       "executable": false
     },
     "scripts/verify-plan.mjs": {
@@ -6095,7 +6107,7 @@
       "executable": false
     },
     "src/site/pages.tsx": {
-      "sha256": "94c4c9eaf193d68e2fe5ae8e26ba3dc3d30c9589e4f482ba4bca34e7a7ebe73c",
+      "sha256": "6d41b359d7d6cca67037c92486c7b516ebc64747d9e4e333c71356c044857922",
       "executable": false
     },
     "src/site/run.json": {

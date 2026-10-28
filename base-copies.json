@@ -17,7 +17,62 @@
       },
       "originFiles": [
         "export/run-demo.yml"
-      ]
+      ],
+      "adapted": {
+        ".github/workflows/run-demo.yml": "f96363bf919ea3e7ed1837daba6894810a50e4a6"
+      },
+      "acknowledged": {
+        ".github/workflows/run-demo.yml": {
+          "sha256": "cd478e5acaa5b7ecac7c8d93069a928886b59bc48e72c495700e42aa3c1b5232",
+          "mode": "100644"
+        }
+      }
+    },
+    {
+      "path": ".github/workflows/verify-nightly.yml",
+      "originPath": "export/verify-nightly.yml",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        ".github/workflows/verify-nightly.yml": "45c6e89a797a3e0ce6fac9cec5b28c952ee357d3cd1c689cd854604a2edb7dbc"
+      },
+      "modes": {
+        ".github/workflows/verify-nightly.yml": "100644"
+      },
+      "originFiles": [
+        "export/verify-nightly.yml"
+      ],
+      "adapted": {
+        ".github/workflows/verify-nightly.yml": "f96363bf919ea3e7ed1837daba6894810a50e4a6"
+      },
+      "acknowledged": {
+        ".github/workflows/verify-nightly.yml": {
+          "sha256": "f73260a3970c6c43aa460a2ff8125210c72279de554c39d0c9a359da4ca481d5",
+          "mode": "100644"
+        }
+      }
+    },
+    {
+      "path": ".github/workflows/verify.yml",
+      "originPath": "export/verify.yml",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        ".github/workflows/verify.yml": "09fe6d2a0b274d4925950ef0ddde9c8c7099e15edb5333a601ead2bbcec73a86"
+      },
+      "modes": {
+        ".github/workflows/verify.yml": "100644"
+      },
+      "originFiles": [
+        "export/verify.yml"
+      ],
+      "adapted": {
+        ".github/workflows/verify.yml": "f96363bf919ea3e7ed1837daba6894810a50e4a6"
+      },
+      "acknowledged": {
+        ".github/workflows/verify.yml": {
+          "sha256": "077330def4e27398a9c2c7b8cce72a87171bde955d03ab5e399dd9d52d9d51ad",
+          "mode": "100644"
+        }
+      }
     },
     {
       "path": "DEMO.md",
@@ -602,6 +657,20 @@
       ]
     },
     {
+      "path": "scripts/edition-authoring/archive-source.mjs",
+      "originPath": "edition-authoring/archive-source.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/archive-source.mjs": "073b0b6515e5df412065cba7ba82717a9fc35f794cfcaf4bcfd796d70320f8b5"
+      },
+      "modes": {
+        "scripts/edition-authoring/archive-source.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/archive-source.mjs"
+      ]
+    },
+    {
       "path": "scripts/edition-authoring/base-acknowledgements.mjs",
       "originPath": "edition-authoring/base-acknowledgements.mjs",
       "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
@@ -658,6 +727,20 @@
       ]
     },
     {
+      "path": "scripts/edition-authoring/edition-migrations.mjs",
+      "originPath": "edition-authoring/edition-migrations.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/edition-migrations.mjs": "7e9837c9a373cf7f394a575230c9f386a289786a15cc9685e4f11911e9a84e88"
+      },
+      "modes": {
+        "scripts/edition-authoring/edition-migrations.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/edition-migrations.mjs"
+      ]
+    },
+    {
       "path": "scripts/edition-authoring/files.mjs",
       "originPath": "edition-authoring/files.mjs",
       "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
@@ -700,6 +783,62 @@
       ]
     },
     {
+      "path": "scripts/edition-authoring/module-closure.mjs",
+      "originPath": "edition-authoring/module-closure.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/module-closure.mjs": "95889883ce093f5c017cd1478107e5744fdef06ad80e36a4f8e6476d9449aff5"
+      },
+      "modes": {
+        "scripts/edition-authoring/module-closure.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/module-closure.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/module-edges.mjs",
+      "originPath": "edition-authoring/module-edges.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/module-edges.mjs": "f89ad266463fd93ceff85749bddf5d0b3d9ef4ae830d48470e2200a23559becc"
+      },
+      "modes": {
+        "scripts/edition-authoring/module-edges.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/module-edges.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/module-resolution.mjs",
+      "originPath": "edition-authoring/module-resolution.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/module-resolution.mjs": "8c8efd3e59e668cb3271b1b3fd1556a7acb505cf2b193bc6e8155712c3b4ccc1"
+      },
+      "modes": {
+        "scripts/edition-authoring/module-resolution.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/module-resolution.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/module-syntax.mjs",
+      "originPath": "edition-authoring/module-syntax.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/module-syntax.mjs": "eb5a1d2da81c2cfde8587ecf395c4543bcb97b8f293946e73ee5a73b4d7e50fb"
+      },
+      "modes": {
+        "scripts/edition-authoring/module-syntax.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/module-syntax.mjs"
+      ]
+    },
+    {
       "path": "scripts/edition-authoring/offline-git.mjs",
       "originPath": "edition-authoring/offline-git.mjs",
       "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
@@ -711,6 +850,20 @@
       },
       "originFiles": [
         "edition-authoring/offline-git.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/package-target.mjs",
+      "originPath": "edition-authoring/package-target.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/package-target.mjs": "f0d3168d7fffcc86cd9f0ac385dcaa73bd0312bf20da5ff096d9a93091d1db76"
+      },
+      "modes": {
+        "scripts/edition-authoring/package-target.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/package-target.mjs"
       ]
     },
     {
@@ -756,6 +909,20 @@
       ]
     },
     {
+      "path": "scripts/edition-authoring/runtime-dependencies.mjs",
+      "originPath": "edition-authoring/runtime-dependencies.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/runtime-dependencies.mjs": "f80f59284b27a9610a96baa6b0f1d0f59f68e075a3c4ae20e85fb153d7def4f3"
+      },
+      "modes": {
+        "scripts/edition-authoring/runtime-dependencies.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/runtime-dependencies.mjs"
+      ]
+    },
+    {
       "path": "scripts/edition-authoring/sources.mjs",
       "originPath": "edition-authoring/sources.mjs",
       "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
@@ -781,6 +948,1658 @@
       },
       "originFiles": [
         "edition-authoring/updates.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-helper-string-parser/index.mjs",
+      "originPath": "edition-authoring/vendor/babel-parser/babel-helper-string-parser/index.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-helper-string-parser/index.mjs": "79c5329b757f4aef92ab32e701f0587b0b469bb73fcfc8b4387b07572103903b"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-helper-string-parser/index.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/babel-parser/babel-helper-string-parser/index.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-helper-validator-identifier/identifier.mjs",
+      "originPath": "edition-authoring/vendor/babel-parser/babel-helper-validator-identifier/identifier.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-helper-validator-identifier/identifier.mjs": "96c7f08c06171788dd3d612c41b2c4bbeeac6632867d7d8eaec6e2d82a1fe507"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-helper-validator-identifier/identifier.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/babel-parser/babel-helper-validator-identifier/identifier.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-helper-validator-identifier/index.mjs",
+      "originPath": "edition-authoring/vendor/babel-parser/babel-helper-validator-identifier/index.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-helper-validator-identifier/index.mjs": "dc3a12f1276104e25dda3697e26b2fc7e7785ef2b708c9e3aa2ec6b86b3d1554"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-helper-validator-identifier/index.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/babel-parser/babel-helper-validator-identifier/index.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-helper-validator-identifier/keyword.mjs",
+      "originPath": "edition-authoring/vendor/babel-parser/babel-helper-validator-identifier/keyword.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-helper-validator-identifier/keyword.mjs": "e8f3eaa64807800726bfb23d6ea29dbcbb9947e139b518578f765763ea044014"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-helper-validator-identifier/keyword.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/babel-parser/babel-helper-validator-identifier/keyword.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/index.mjs",
+      "originPath": "edition-authoring/vendor/babel-parser/babel-parser/index.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-parser/index.mjs": "fb528c027ed1afa7bf7318f44c82f23dd54a03646c247b51ef4eab3b9b327a90"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-parser/index.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/babel-parser/babel-parser/index.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/options.mjs",
+      "originPath": "edition-authoring/vendor/babel-parser/babel-parser/options.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-parser/options.mjs": "50d27f3585df78b2bbd25ad2a6f89b779ad5e288669a945aa04a42ad1642ee8c"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-parser/options.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/babel-parser/babel-parser/options.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/parse-error.mjs",
+      "originPath": "edition-authoring/vendor/babel-parser/babel-parser/parse-error.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-parser/parse-error.mjs": "7a8ebf3e2ccd7109a767b01e88d40f03dda05c30f9dcef0ad0a05f5ccf5f7f0e"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-parser/parse-error.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/babel-parser/babel-parser/parse-error.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/parse-error/bind-operator-errors.mjs",
+      "originPath": "edition-authoring/vendor/babel-parser/babel-parser/parse-error/bind-operator-errors.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-parser/parse-error/bind-operator-errors.mjs": "7ccd8271f6cbbad7d1fd2115919336a6c52488bac074b5b6e45b97ea747ca12b"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-parser/parse-error/bind-operator-errors.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/babel-parser/babel-parser/parse-error/bind-operator-errors.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/parse-error/module-errors.mjs",
+      "originPath": "edition-authoring/vendor/babel-parser/babel-parser/parse-error/module-errors.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-parser/parse-error/module-errors.mjs": "92c0d0284fda16496376377a38f17979e44864b3cc3f55115b44291979c2320a"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-parser/parse-error/module-errors.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/babel-parser/babel-parser/parse-error/module-errors.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/parse-error/parse-expression-errors.mjs",
+      "originPath": "edition-authoring/vendor/babel-parser/babel-parser/parse-error/parse-expression-errors.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-parser/parse-error/parse-expression-errors.mjs": "e9749768b9fd91a038f0b28721c8b9fd4da2fb2effe2c488558f9ae0723d45df"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-parser/parse-error/parse-expression-errors.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/babel-parser/babel-parser/parse-error/parse-expression-errors.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/parse-error/pipeline-operator-errors.mjs",
+      "originPath": "edition-authoring/vendor/babel-parser/babel-parser/parse-error/pipeline-operator-errors.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-parser/parse-error/pipeline-operator-errors.mjs": "8bfac7fefb82e13e5a0ca8f759519a2074acb54f135f22f8bb773b38d2aeda70"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-parser/parse-error/pipeline-operator-errors.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/babel-parser/babel-parser/parse-error/pipeline-operator-errors.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/parse-error/standard-errors.mjs",
+      "originPath": "edition-authoring/vendor/babel-parser/babel-parser/parse-error/standard-errors.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-parser/parse-error/standard-errors.mjs": "0f8cef5a33e069874d9b515b36f113b65e3653e06f99ab1b4c47d9a8b991bc61"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-parser/parse-error/standard-errors.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/babel-parser/babel-parser/parse-error/standard-errors.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/parse-error/strict-mode-errors.mjs",
+      "originPath": "edition-authoring/vendor/babel-parser/babel-parser/parse-error/strict-mode-errors.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-parser/parse-error/strict-mode-errors.mjs": "776411adeb8b6648acdccdf1bf0e40e2c2688d05a80bb804ce0041d60c535d52"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-parser/parse-error/strict-mode-errors.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/babel-parser/babel-parser/parse-error/strict-mode-errors.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/parse-error/to-node-description.mjs",
+      "originPath": "edition-authoring/vendor/babel-parser/babel-parser/parse-error/to-node-description.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-parser/parse-error/to-node-description.mjs": "fd95735fb141d4626acc1c80aef5cb453381f231e9a13cb52609225178cc9e30"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-parser/parse-error/to-node-description.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/babel-parser/babel-parser/parse-error/to-node-description.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/parser/base.mjs",
+      "originPath": "edition-authoring/vendor/babel-parser/babel-parser/parser/base.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-parser/parser/base.mjs": "02da28b8159e6df6c9f1fbc6b3326283782d8fdffc0f5d7c5151e5e833ee7c3d"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-parser/parser/base.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/babel-parser/babel-parser/parser/base.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/parser/comments.mjs",
+      "originPath": "edition-authoring/vendor/babel-parser/babel-parser/parser/comments.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-parser/parser/comments.mjs": "071794af5a25d879be7589ea026c9ba61534a57a2ff92e5cf239359dac26e2fb"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-parser/parser/comments.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/babel-parser/babel-parser/parser/comments.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/parser/expression.mjs",
+      "originPath": "edition-authoring/vendor/babel-parser/babel-parser/parser/expression.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-parser/parser/expression.mjs": "854a6d320bf64245f456068c5680cc063b2932d5bc7d618e8b61ea353601319c"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-parser/parser/expression.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/babel-parser/babel-parser/parser/expression.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/parser/index.mjs",
+      "originPath": "edition-authoring/vendor/babel-parser/babel-parser/parser/index.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-parser/parser/index.mjs": "1a2ddbb040066a640d4d91b493513a16140bc9f945868fa1a809f2824f13abc3"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-parser/parser/index.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/babel-parser/babel-parser/parser/index.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/parser/lval.mjs",
+      "originPath": "edition-authoring/vendor/babel-parser/babel-parser/parser/lval.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-parser/parser/lval.mjs": "c9152a612afe62cae2a6dbd9f90c142cb51751770cba7539824b46da2e91aed1"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-parser/parser/lval.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/babel-parser/babel-parser/parser/lval.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/parser/node.mjs",
+      "originPath": "edition-authoring/vendor/babel-parser/babel-parser/parser/node.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-parser/parser/node.mjs": "d26e42b4a06f15ab67be17794b581a0fd8cf668da86bb4eb7e46b75a2fbfd442"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-parser/parser/node.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/babel-parser/babel-parser/parser/node.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/parser/statement.mjs",
+      "originPath": "edition-authoring/vendor/babel-parser/babel-parser/parser/statement.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-parser/parser/statement.mjs": "d7c74eca0b0ef263d860070d0dc1d5dfd7fa5a0fe2727c6d9c1fb697ed3082fd"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-parser/parser/statement.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/babel-parser/babel-parser/parser/statement.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/parser/util.mjs",
+      "originPath": "edition-authoring/vendor/babel-parser/babel-parser/parser/util.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-parser/parser/util.mjs": "dde0ff114feacd5ce448906432c40be8ae6704398c39ec133ee119668077770e"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-parser/parser/util.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/babel-parser/babel-parser/parser/util.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/plugin-utils.mjs",
+      "originPath": "edition-authoring/vendor/babel-parser/babel-parser/plugin-utils.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-parser/plugin-utils.mjs": "3dc924773d500f909b3b3caa582f571526a4b1c544a3604e3267830cfdbfbfe2"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-parser/plugin-utils.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/babel-parser/babel-parser/plugin-utils.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/plugins/estree.mjs",
+      "originPath": "edition-authoring/vendor/babel-parser/babel-parser/plugins/estree.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-parser/plugins/estree.mjs": "3f0758e14f0745614496042baa4865f8a7a61569dc16f5d3246224706ac0d03c"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-parser/plugins/estree.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/babel-parser/babel-parser/plugins/estree.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/plugins/flow/index.mjs",
+      "originPath": "edition-authoring/vendor/babel-parser/babel-parser/plugins/flow/index.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-parser/plugins/flow/index.mjs": "d15a7c4741f12c167119913ec147ec828d3e25bb237671be2d96594faaa7f39e"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-parser/plugins/flow/index.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/babel-parser/babel-parser/plugins/flow/index.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/plugins/flow/scope.mjs",
+      "originPath": "edition-authoring/vendor/babel-parser/babel-parser/plugins/flow/scope.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-parser/plugins/flow/scope.mjs": "75567406d5c855f58e8cf149ba22495cdb96b913ce923c1b606a5f641479adf1"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-parser/plugins/flow/scope.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/babel-parser/babel-parser/plugins/flow/scope.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/plugins/jsx/index.mjs",
+      "originPath": "edition-authoring/vendor/babel-parser/babel-parser/plugins/jsx/index.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-parser/plugins/jsx/index.mjs": "db44cb69416293c2110aef1f94790e3cf849afe52d6e00cb06aa7213401ffff5"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-parser/plugins/jsx/index.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/babel-parser/babel-parser/plugins/jsx/index.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/plugins/jsx/xhtml.mjs",
+      "originPath": "edition-authoring/vendor/babel-parser/babel-parser/plugins/jsx/xhtml.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-parser/plugins/jsx/xhtml.mjs": "e4162785fe91410df9d5f16a37b2a75862c2c0c8fe86df015aa91f1dd1685906"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-parser/plugins/jsx/xhtml.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/babel-parser/babel-parser/plugins/jsx/xhtml.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/plugins/placeholders.mjs",
+      "originPath": "edition-authoring/vendor/babel-parser/babel-parser/plugins/placeholders.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-parser/plugins/placeholders.mjs": "f04c6fe32e86242032acaef0ccc1032147bc359c06c94dd28d56ca6347309486"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-parser/plugins/placeholders.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/babel-parser/babel-parser/plugins/placeholders.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/plugins/typescript/index.mjs",
+      "originPath": "edition-authoring/vendor/babel-parser/babel-parser/plugins/typescript/index.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-parser/plugins/typescript/index.mjs": "075fd3d378600b13db9ae7c89cab8a6c3d0f5d1e6921eae02faf2fc502b7720c"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-parser/plugins/typescript/index.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/babel-parser/babel-parser/plugins/typescript/index.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/plugins/typescript/scope.mjs",
+      "originPath": "edition-authoring/vendor/babel-parser/babel-parser/plugins/typescript/scope.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-parser/plugins/typescript/scope.mjs": "6a2a33ef47df6d961381c924ea769830d8bc2503062e6ea8e2bab86ac4a89c1d"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-parser/plugins/typescript/scope.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/babel-parser/babel-parser/plugins/typescript/scope.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/plugins/v8intrinsic.mjs",
+      "originPath": "edition-authoring/vendor/babel-parser/babel-parser/plugins/v8intrinsic.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-parser/plugins/v8intrinsic.mjs": "bc5c25cc42359df18ba0da8643bb270bcadb4805d051b3851226aca9a420a069"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-parser/plugins/v8intrinsic.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/babel-parser/babel-parser/plugins/v8intrinsic.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/tokenizer/context.mjs",
+      "originPath": "edition-authoring/vendor/babel-parser/babel-parser/tokenizer/context.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-parser/tokenizer/context.mjs": "a52b9a0cd4878cacb196e89961170d34ce1ae6b0a7d2fe2b32170c7845f0f767"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-parser/tokenizer/context.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/babel-parser/babel-parser/tokenizer/context.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/tokenizer/index.mjs",
+      "originPath": "edition-authoring/vendor/babel-parser/babel-parser/tokenizer/index.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-parser/tokenizer/index.mjs": "c3eb5b431ed4ccd0f3727e9cb32f90f99f5f9c1e2e24f7aaaaeb2f8a4453c00b"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-parser/tokenizer/index.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/babel-parser/babel-parser/tokenizer/index.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/tokenizer/state.mjs",
+      "originPath": "edition-authoring/vendor/babel-parser/babel-parser/tokenizer/state.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-parser/tokenizer/state.mjs": "08345203d621c9a0f4223ace7898fa59986f3c52da0b85a95a88ad1738ac98d1"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-parser/tokenizer/state.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/babel-parser/babel-parser/tokenizer/state.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/tokenizer/types.mjs",
+      "originPath": "edition-authoring/vendor/babel-parser/babel-parser/tokenizer/types.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-parser/tokenizer/types.mjs": "91f57c5f80c40ca21576629278fc991b8032918ae96d17301c3433c9f2387347"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-parser/tokenizer/types.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/babel-parser/babel-parser/tokenizer/types.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/util/class-scope.mjs",
+      "originPath": "edition-authoring/vendor/babel-parser/babel-parser/util/class-scope.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-parser/util/class-scope.mjs": "4ad4eff3aabb23b6834aee30370b3f1691d5278d9befb882ba3228593db9a5a2"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-parser/util/class-scope.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/babel-parser/babel-parser/util/class-scope.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/util/expression-scope.mjs",
+      "originPath": "edition-authoring/vendor/babel-parser/babel-parser/util/expression-scope.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-parser/util/expression-scope.mjs": "669d87b7373855d2013c08584b5c84c9f9c49d8ee3d8ac48799e94f83d5e5e45"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-parser/util/expression-scope.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/babel-parser/babel-parser/util/expression-scope.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/util/identifier.mjs",
+      "originPath": "edition-authoring/vendor/babel-parser/babel-parser/util/identifier.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-parser/util/identifier.mjs": "915cbccee5460da1c5a7a9d60f56fdcfb8a2816e355ac56c5e9f4ed62049a8f6"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-parser/util/identifier.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/babel-parser/babel-parser/util/identifier.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/util/location.mjs",
+      "originPath": "edition-authoring/vendor/babel-parser/babel-parser/util/location.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-parser/util/location.mjs": "b9b93ff1ceb418387d4f5c654fc25bacd864a9fe16529ce09a0e6351d70b1813"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-parser/util/location.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/babel-parser/babel-parser/util/location.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/util/production-parameter.mjs",
+      "originPath": "edition-authoring/vendor/babel-parser/babel-parser/util/production-parameter.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-parser/util/production-parameter.mjs": "259a7843694360df30e9a6269fac44162591bc36110aa40c6b9ccca15df95654"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-parser/util/production-parameter.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/babel-parser/babel-parser/util/production-parameter.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/util/scope.mjs",
+      "originPath": "edition-authoring/vendor/babel-parser/babel-parser/util/scope.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-parser/util/scope.mjs": "eb85dc3fe59bc0f71b0a3e44baa7a2bc37d35334a315bfce01eb3bcbaca6c0f8"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-parser/util/scope.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/babel-parser/babel-parser/util/scope.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/util/scopeflags.mjs",
+      "originPath": "edition-authoring/vendor/babel-parser/babel-parser/util/scopeflags.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-parser/util/scopeflags.mjs": "93dbea40745ea00fc5767510d8caad8a70dd4ff64bbfe674ed34b1aa69c0a6f0"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-parser/util/scopeflags.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/babel-parser/babel-parser/util/scopeflags.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/util/whitespace.mjs",
+      "originPath": "edition-authoring/vendor/babel-parser/babel-parser/util/whitespace.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-parser/util/whitespace.mjs": "4598e97a1f0d4a5918d8ad1227d526b491d502ba964236f38d85bac1ff08e59a"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-parser/util/whitespace.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/babel-parser/babel-parser/util/whitespace.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/compose/compose-collection.mjs",
+      "originPath": "edition-authoring/vendor/yaml/compose/compose-collection.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/yaml/compose/compose-collection.mjs": "13125588d0e6f925c98b13f7a5ce74d99d7bd1c63e6733cde404781d296108d0"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/yaml/compose/compose-collection.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/yaml/compose/compose-collection.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/compose/compose-doc.mjs",
+      "originPath": "edition-authoring/vendor/yaml/compose/compose-doc.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/yaml/compose/compose-doc.mjs": "a63f228a7d82fccc230a7d456c502f745345ccc27fa83438f5e2d6aaa1eb5ba2"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/yaml/compose/compose-doc.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/yaml/compose/compose-doc.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/compose/compose-node.mjs",
+      "originPath": "edition-authoring/vendor/yaml/compose/compose-node.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/yaml/compose/compose-node.mjs": "d860a6edd8c37c146be2b962868029b50123e9bd1c2d48f1c33e0f50d5ea6afd"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/yaml/compose/compose-node.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/yaml/compose/compose-node.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/compose/compose-scalar.mjs",
+      "originPath": "edition-authoring/vendor/yaml/compose/compose-scalar.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/yaml/compose/compose-scalar.mjs": "a527a5f13c4f82dcec36249258de8d3d9b5b421e486d6fccf73e6f8bd876ba61"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/yaml/compose/compose-scalar.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/yaml/compose/compose-scalar.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/compose/composer.mjs",
+      "originPath": "edition-authoring/vendor/yaml/compose/composer.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/yaml/compose/composer.mjs": "d45a9899e7e3965de5ec4e19f1af44783499f5f5dfd966ae71870a7cf08cfe0c"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/yaml/compose/composer.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/yaml/compose/composer.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/compose/resolve-block-map.mjs",
+      "originPath": "edition-authoring/vendor/yaml/compose/resolve-block-map.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/yaml/compose/resolve-block-map.mjs": "fed77d3faec4dc55368c2f3a06f04256dae6df7d0abbf73d75b768eefe79facb"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/yaml/compose/resolve-block-map.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/yaml/compose/resolve-block-map.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/compose/resolve-block-scalar.mjs",
+      "originPath": "edition-authoring/vendor/yaml/compose/resolve-block-scalar.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/yaml/compose/resolve-block-scalar.mjs": "583eeff9f7ec30361be813a43f13e8ce771769f1669dca9fce5276390faf9ca5"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/yaml/compose/resolve-block-scalar.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/yaml/compose/resolve-block-scalar.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/compose/resolve-block-seq.mjs",
+      "originPath": "edition-authoring/vendor/yaml/compose/resolve-block-seq.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/yaml/compose/resolve-block-seq.mjs": "fe50d6411a540d57ec0f4da90a5b74b7723b5f75935a602cd2f7e7310342c75e"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/yaml/compose/resolve-block-seq.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/yaml/compose/resolve-block-seq.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/compose/resolve-end.mjs",
+      "originPath": "edition-authoring/vendor/yaml/compose/resolve-end.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/yaml/compose/resolve-end.mjs": "e0a32e1b8c5649ea14152b0c0d45fbd64d46dbfa299a7328b71421e49ee48db2"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/yaml/compose/resolve-end.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/yaml/compose/resolve-end.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/compose/resolve-flow-collection.mjs",
+      "originPath": "edition-authoring/vendor/yaml/compose/resolve-flow-collection.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/yaml/compose/resolve-flow-collection.mjs": "16edd43b7b6bac50a244c943985e4bd94aca4dcba707ae69653510c6afd2c3fd"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/yaml/compose/resolve-flow-collection.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/yaml/compose/resolve-flow-collection.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/compose/resolve-flow-scalar.mjs",
+      "originPath": "edition-authoring/vendor/yaml/compose/resolve-flow-scalar.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/yaml/compose/resolve-flow-scalar.mjs": "10612dd033708c46f9151605bbb219f4c17211461b968628e4919c691392e5c5"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/yaml/compose/resolve-flow-scalar.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/yaml/compose/resolve-flow-scalar.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/compose/resolve-props.mjs",
+      "originPath": "edition-authoring/vendor/yaml/compose/resolve-props.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/yaml/compose/resolve-props.mjs": "343c7827441fceca412e26a450028d195cc3433c9c3708980b285449df7e223d"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/yaml/compose/resolve-props.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/yaml/compose/resolve-props.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/compose/util-contains-newline.mjs",
+      "originPath": "edition-authoring/vendor/yaml/compose/util-contains-newline.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/yaml/compose/util-contains-newline.mjs": "4810ffba0d74ebb913731e1369ea17f6fef20df2feb2ef0bd8553e439f4a6b78"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/yaml/compose/util-contains-newline.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/yaml/compose/util-contains-newline.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/compose/util-empty-scalar-position.mjs",
+      "originPath": "edition-authoring/vendor/yaml/compose/util-empty-scalar-position.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/yaml/compose/util-empty-scalar-position.mjs": "7a6f0afe9909cc32557156c05a7499a87fe78881d4f57c37ba09805b959509c7"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/yaml/compose/util-empty-scalar-position.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/yaml/compose/util-empty-scalar-position.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/compose/util-flow-indent-check.mjs",
+      "originPath": "edition-authoring/vendor/yaml/compose/util-flow-indent-check.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/yaml/compose/util-flow-indent-check.mjs": "ca3648e4d5ee337448f409ea997a59b5fd195573070416282bd35ad1568226a7"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/yaml/compose/util-flow-indent-check.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/yaml/compose/util-flow-indent-check.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/compose/util-map-includes.mjs",
+      "originPath": "edition-authoring/vendor/yaml/compose/util-map-includes.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/yaml/compose/util-map-includes.mjs": "90d45ac60812727160c1798bd9b10595e50e34e88a1aedfe43f5d27bc894699f"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/yaml/compose/util-map-includes.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/yaml/compose/util-map-includes.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/doc/anchors.mjs",
+      "originPath": "edition-authoring/vendor/yaml/doc/anchors.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/yaml/doc/anchors.mjs": "dd0184df10028d12ae9dde16c00c75820e38ec4683fc1818ec47bc879806e45e"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/yaml/doc/anchors.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/yaml/doc/anchors.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/doc/applyReviver.mjs",
+      "originPath": "edition-authoring/vendor/yaml/doc/applyReviver.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/yaml/doc/applyReviver.mjs": "f09ad07a73144157cc584a8d9f890b6ca142abf8f24bc0031e9d24784ed815e8"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/yaml/doc/applyReviver.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/yaml/doc/applyReviver.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/doc/createNode.mjs",
+      "originPath": "edition-authoring/vendor/yaml/doc/createNode.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/yaml/doc/createNode.mjs": "c8cac858816bb6f87a3a16038b448dfe310666697fd2a08bdf5146cd990eeabf"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/yaml/doc/createNode.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/yaml/doc/createNode.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/doc/directives.mjs",
+      "originPath": "edition-authoring/vendor/yaml/doc/directives.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/yaml/doc/directives.mjs": "7f1a1fb7f580601b2b1dbdcdad02f888a2d6a53cb7df9c0eb29503722523d807"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/yaml/doc/directives.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/yaml/doc/directives.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/doc/Document.mjs",
+      "originPath": "edition-authoring/vendor/yaml/doc/Document.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/yaml/doc/Document.mjs": "008ef5d6c1f75e9250f9b89d1ef6feb304da97bbce03d9066de32ae9b38bd10c"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/yaml/doc/Document.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/yaml/doc/Document.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/errors.mjs",
+      "originPath": "edition-authoring/vendor/yaml/errors.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/yaml/errors.mjs": "410bb3397beb0d3a8c649d048b6e087bddf1f7114832eaf94be0fcbb4a8af29b"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/yaml/errors.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/yaml/errors.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/index.mjs",
+      "originPath": "edition-authoring/vendor/yaml/index.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/yaml/index.mjs": "ac6be7be5716e70422ca9992d3942f336ff4fc986b45a37f196fadc196963cd8"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/yaml/index.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/yaml/index.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/log.mjs",
+      "originPath": "edition-authoring/vendor/yaml/log.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/yaml/log.mjs": "2e7d7edee783c901f36a8f986d126f15f33ac504fe17d4655e6846869d07b9e4"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/yaml/log.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/yaml/log.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/nodes/addPairToJSMap.mjs",
+      "originPath": "edition-authoring/vendor/yaml/nodes/addPairToJSMap.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/yaml/nodes/addPairToJSMap.mjs": "43b2c31ac993d29f828595f4a5b9c025b97bf7f50dd8a6cbd810405f18ee3105"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/yaml/nodes/addPairToJSMap.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/yaml/nodes/addPairToJSMap.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/nodes/Alias.mjs",
+      "originPath": "edition-authoring/vendor/yaml/nodes/Alias.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/yaml/nodes/Alias.mjs": "60b073b1793a6bbef0e9b665ae3d206b4251bf235c27e7e8813b71b4f0a0d5fc"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/yaml/nodes/Alias.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/yaml/nodes/Alias.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/nodes/Collection.mjs",
+      "originPath": "edition-authoring/vendor/yaml/nodes/Collection.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/yaml/nodes/Collection.mjs": "ba8984c3012efe283b59024029d434c74791fef04ea8dcdb9a63866da9114c13"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/yaml/nodes/Collection.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/yaml/nodes/Collection.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/nodes/identity.mjs",
+      "originPath": "edition-authoring/vendor/yaml/nodes/identity.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/yaml/nodes/identity.mjs": "da71af70da393500ab6e3cdbceba9c66965bc89c3401388c9ad422c91abf467f"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/yaml/nodes/identity.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/yaml/nodes/identity.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/nodes/Node.mjs",
+      "originPath": "edition-authoring/vendor/yaml/nodes/Node.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/yaml/nodes/Node.mjs": "27d8f8b1cb126934bf3303410257326c32756aea07d82b18938c32d79d802946"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/yaml/nodes/Node.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/yaml/nodes/Node.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/nodes/Pair.mjs",
+      "originPath": "edition-authoring/vendor/yaml/nodes/Pair.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/yaml/nodes/Pair.mjs": "663c3905a34ed3e7b880882856f01990746f699380acde5275657b014b5ff598"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/yaml/nodes/Pair.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/yaml/nodes/Pair.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/nodes/Scalar.mjs",
+      "originPath": "edition-authoring/vendor/yaml/nodes/Scalar.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/yaml/nodes/Scalar.mjs": "61873e6c416bab96af2320e1c7220e49da6c3498411118b2998eed9a1ef8f4c3"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/yaml/nodes/Scalar.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/yaml/nodes/Scalar.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/nodes/toJS.mjs",
+      "originPath": "edition-authoring/vendor/yaml/nodes/toJS.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/yaml/nodes/toJS.mjs": "4d41d68a91607838600d813d08800e99cb52e1dd8da518fcba3049724914ff81"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/yaml/nodes/toJS.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/yaml/nodes/toJS.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/nodes/YAMLMap.mjs",
+      "originPath": "edition-authoring/vendor/yaml/nodes/YAMLMap.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/yaml/nodes/YAMLMap.mjs": "3e728e6e9b8a07231c6f56a57c4bfdf728018474ae5b84f3900fb502af44e7d4"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/yaml/nodes/YAMLMap.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/yaml/nodes/YAMLMap.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/nodes/YAMLSeq.mjs",
+      "originPath": "edition-authoring/vendor/yaml/nodes/YAMLSeq.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/yaml/nodes/YAMLSeq.mjs": "fbc1434c7bb867663d417b1d9b993b7d25e80d8e70ba625a95577a9ed305b2f0"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/yaml/nodes/YAMLSeq.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/yaml/nodes/YAMLSeq.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/parse/cst-scalar.mjs",
+      "originPath": "edition-authoring/vendor/yaml/parse/cst-scalar.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/yaml/parse/cst-scalar.mjs": "9f9724f39c25bd995d9ca05fc588235a052000d3fe6074ac7b34419df847e43d"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/yaml/parse/cst-scalar.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/yaml/parse/cst-scalar.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/parse/cst-stringify.mjs",
+      "originPath": "edition-authoring/vendor/yaml/parse/cst-stringify.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/yaml/parse/cst-stringify.mjs": "275b500e3f1a0067d5d8671af5c536963a46d4921e49cf156547f796067b8810"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/yaml/parse/cst-stringify.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/yaml/parse/cst-stringify.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/parse/cst-visit.mjs",
+      "originPath": "edition-authoring/vendor/yaml/parse/cst-visit.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/yaml/parse/cst-visit.mjs": "0baadd57686b26163ba71e7323a9208fcba81978e9ecebbad80afaa8baa61788"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/yaml/parse/cst-visit.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/yaml/parse/cst-visit.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/parse/cst.mjs",
+      "originPath": "edition-authoring/vendor/yaml/parse/cst.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/yaml/parse/cst.mjs": "54ac13b91a6721104a716badaf46b021a80a6271302b43f14845f7011f71ca2e"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/yaml/parse/cst.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/yaml/parse/cst.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/parse/lexer.mjs",
+      "originPath": "edition-authoring/vendor/yaml/parse/lexer.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/yaml/parse/lexer.mjs": "980aef0546cff1a804c7a13f1c79c9035dccef66a3bc682e9000130e39d0d62d"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/yaml/parse/lexer.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/yaml/parse/lexer.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/parse/line-counter.mjs",
+      "originPath": "edition-authoring/vendor/yaml/parse/line-counter.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/yaml/parse/line-counter.mjs": "2428d1b9a18ad7d8dabc7e12276e0fd90446c9e3433f1501e6bb43e111ad63c0"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/yaml/parse/line-counter.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/yaml/parse/line-counter.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/parse/parser.mjs",
+      "originPath": "edition-authoring/vendor/yaml/parse/parser.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/yaml/parse/parser.mjs": "e191b5d90eb695766121c8be1e3fa371702f0e5ec04d98a8ea013d7029f3ac71"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/yaml/parse/parser.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/yaml/parse/parser.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/public-api.mjs",
+      "originPath": "edition-authoring/vendor/yaml/public-api.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/yaml/public-api.mjs": "40c785a329b688abfb41aa02cff16a12e30bf187957860f889b23461e7c92121"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/yaml/public-api.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/yaml/public-api.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/schema/common/map.mjs",
+      "originPath": "edition-authoring/vendor/yaml/schema/common/map.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/yaml/schema/common/map.mjs": "3dd7dc390919af03b7404b0ee6715f78de421c12afe8fb78e3da999e694d6f43"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/yaml/schema/common/map.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/yaml/schema/common/map.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/schema/common/null.mjs",
+      "originPath": "edition-authoring/vendor/yaml/schema/common/null.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/yaml/schema/common/null.mjs": "5d8b9de0716843b67a311417b67a3fd9508e057f1ea36c9ac2f0546ba5119b5b"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/yaml/schema/common/null.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/yaml/schema/common/null.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/schema/common/seq.mjs",
+      "originPath": "edition-authoring/vendor/yaml/schema/common/seq.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/yaml/schema/common/seq.mjs": "941e62fdf4b1693ea07b88b73417515f348e784c3c0657bf2642432512feb1e8"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/yaml/schema/common/seq.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/yaml/schema/common/seq.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/schema/common/string.mjs",
+      "originPath": "edition-authoring/vendor/yaml/schema/common/string.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/yaml/schema/common/string.mjs": "f7c26c4fed96722a71a5ada0defa275169dbd129f874f3e1119c7292d68a4db8"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/yaml/schema/common/string.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/yaml/schema/common/string.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/schema/core/bool.mjs",
+      "originPath": "edition-authoring/vendor/yaml/schema/core/bool.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/yaml/schema/core/bool.mjs": "a7be77cffe27d9f38d812d96cf91d86a04d6f243d0f1180c1c8352e1fa285439"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/yaml/schema/core/bool.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/yaml/schema/core/bool.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/schema/core/float.mjs",
+      "originPath": "edition-authoring/vendor/yaml/schema/core/float.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/yaml/schema/core/float.mjs": "5dc2983e1963813748a731bdf35b06b828314710a648cda744fa84847e4eb041"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/yaml/schema/core/float.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/yaml/schema/core/float.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/schema/core/int.mjs",
+      "originPath": "edition-authoring/vendor/yaml/schema/core/int.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/yaml/schema/core/int.mjs": "9b8cc5a8796396a6f4028061985272debc68da24c0ec87fae32fe9149dce1780"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/yaml/schema/core/int.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/yaml/schema/core/int.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/schema/core/schema.mjs",
+      "originPath": "edition-authoring/vendor/yaml/schema/core/schema.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/yaml/schema/core/schema.mjs": "641e2b83116546d2a3ed1ee7763d55cb87044e9c9c5996d30b13c86be9c1d70c"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/yaml/schema/core/schema.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/yaml/schema/core/schema.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/schema/json/schema.mjs",
+      "originPath": "edition-authoring/vendor/yaml/schema/json/schema.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/yaml/schema/json/schema.mjs": "efc2713b12f344eede662c9927e508c072c68b209470e2784a027da8b0ebf1b5"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/yaml/schema/json/schema.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/yaml/schema/json/schema.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/schema/Schema.mjs",
+      "originPath": "edition-authoring/vendor/yaml/schema/Schema.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/yaml/schema/Schema.mjs": "15aed0d6ba9a45fce5bfd1c91351595b39006bdefb6be2c35506e5fc93eb9682"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/yaml/schema/Schema.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/yaml/schema/Schema.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/schema/tags.mjs",
+      "originPath": "edition-authoring/vendor/yaml/schema/tags.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/yaml/schema/tags.mjs": "768368a452c2b6d26415ff66c4dc4c15648fb633c8f79f2060bfcd3d0f92b69b"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/yaml/schema/tags.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/yaml/schema/tags.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/schema/yaml-1.1/binary.mjs",
+      "originPath": "edition-authoring/vendor/yaml/schema/yaml-1.1/binary.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/yaml/schema/yaml-1.1/binary.mjs": "40959bfa6ba10d8c96cadd513e7ec039f932e572f6565a9d38266088b213d65a"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/yaml/schema/yaml-1.1/binary.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/yaml/schema/yaml-1.1/binary.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/schema/yaml-1.1/bool.mjs",
+      "originPath": "edition-authoring/vendor/yaml/schema/yaml-1.1/bool.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/yaml/schema/yaml-1.1/bool.mjs": "898602784a4dcc42a7a75c8241937afe57276713456fd62c3719c91127b00db0"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/yaml/schema/yaml-1.1/bool.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/yaml/schema/yaml-1.1/bool.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/schema/yaml-1.1/float.mjs",
+      "originPath": "edition-authoring/vendor/yaml/schema/yaml-1.1/float.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/yaml/schema/yaml-1.1/float.mjs": "2ef1d06060e0ffc89f6705d824448344f8ef56dc5bc1fff28245a7d90a1c1f86"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/yaml/schema/yaml-1.1/float.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/yaml/schema/yaml-1.1/float.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/schema/yaml-1.1/int.mjs",
+      "originPath": "edition-authoring/vendor/yaml/schema/yaml-1.1/int.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/yaml/schema/yaml-1.1/int.mjs": "fd14d2f40d9296a7b2da4f6382122fc156b93fa4cb6bcaf158b6f80b27d79228"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/yaml/schema/yaml-1.1/int.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/yaml/schema/yaml-1.1/int.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/schema/yaml-1.1/merge.mjs",
+      "originPath": "edition-authoring/vendor/yaml/schema/yaml-1.1/merge.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/yaml/schema/yaml-1.1/merge.mjs": "39e329954b41824d9fa2b9b5f4d865cb8d3710ef36a53eefce39cb95fe0bb458"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/yaml/schema/yaml-1.1/merge.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/yaml/schema/yaml-1.1/merge.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/schema/yaml-1.1/omap.mjs",
+      "originPath": "edition-authoring/vendor/yaml/schema/yaml-1.1/omap.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/yaml/schema/yaml-1.1/omap.mjs": "e60534abb7f89e04c39fe60c23c2e013c3cfc8557fd8b3a0abc5a54108c1b5b0"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/yaml/schema/yaml-1.1/omap.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/yaml/schema/yaml-1.1/omap.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/schema/yaml-1.1/pairs.mjs",
+      "originPath": "edition-authoring/vendor/yaml/schema/yaml-1.1/pairs.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/yaml/schema/yaml-1.1/pairs.mjs": "b359d5a6cd7c858a7ed1b49d152402d91cc10eee1c41834b61e9e1131708c890"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/yaml/schema/yaml-1.1/pairs.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/yaml/schema/yaml-1.1/pairs.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/schema/yaml-1.1/schema.mjs",
+      "originPath": "edition-authoring/vendor/yaml/schema/yaml-1.1/schema.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/yaml/schema/yaml-1.1/schema.mjs": "75a94d66561f5b1da188311c198dcbded6fc38a0a73dd74a3c22d55b2e2d5f4f"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/yaml/schema/yaml-1.1/schema.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/yaml/schema/yaml-1.1/schema.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/schema/yaml-1.1/set.mjs",
+      "originPath": "edition-authoring/vendor/yaml/schema/yaml-1.1/set.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/yaml/schema/yaml-1.1/set.mjs": "30e71b433a5c8346a8b35f3ea63e79ee3b6c2537d47bfffbd2f48769f61eccc5"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/yaml/schema/yaml-1.1/set.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/yaml/schema/yaml-1.1/set.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/schema/yaml-1.1/timestamp.mjs",
+      "originPath": "edition-authoring/vendor/yaml/schema/yaml-1.1/timestamp.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/yaml/schema/yaml-1.1/timestamp.mjs": "2b426a75a9087e31a6da03499220195abfc1f3e2234b91d2711bbdd651a75bc7"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/yaml/schema/yaml-1.1/timestamp.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/yaml/schema/yaml-1.1/timestamp.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/stringify/foldFlowLines.mjs",
+      "originPath": "edition-authoring/vendor/yaml/stringify/foldFlowLines.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/yaml/stringify/foldFlowLines.mjs": "1a6360496e3cb52767d4c346655307c978cb2c94853229152f97017c4209745a"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/yaml/stringify/foldFlowLines.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/yaml/stringify/foldFlowLines.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/stringify/stringify.mjs",
+      "originPath": "edition-authoring/vendor/yaml/stringify/stringify.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/yaml/stringify/stringify.mjs": "51961de1b2aaa7b08bd3b8c0edc9d59a9d185b127f05eecc1c2cf3b73206fd6c"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/yaml/stringify/stringify.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/yaml/stringify/stringify.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/stringify/stringifyCollection.mjs",
+      "originPath": "edition-authoring/vendor/yaml/stringify/stringifyCollection.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/yaml/stringify/stringifyCollection.mjs": "ea39504928f1f2e052a1ac11ac8e6686a6ffdae002c0827fe1ed331bf9311670"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/yaml/stringify/stringifyCollection.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/yaml/stringify/stringifyCollection.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/stringify/stringifyComment.mjs",
+      "originPath": "edition-authoring/vendor/yaml/stringify/stringifyComment.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/yaml/stringify/stringifyComment.mjs": "20d3dc6bebda3efc2394ca162455ce9e4691b6c60995b5b4418b30659e09e03e"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/yaml/stringify/stringifyComment.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/yaml/stringify/stringifyComment.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/stringify/stringifyDocument.mjs",
+      "originPath": "edition-authoring/vendor/yaml/stringify/stringifyDocument.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/yaml/stringify/stringifyDocument.mjs": "1941c07929e6ba2203632c5eacb81d2021e3c674b50bca4b069ebf6bdf304709"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/yaml/stringify/stringifyDocument.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/yaml/stringify/stringifyDocument.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/stringify/stringifyNumber.mjs",
+      "originPath": "edition-authoring/vendor/yaml/stringify/stringifyNumber.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/yaml/stringify/stringifyNumber.mjs": "e0d02220e66fedc267b435e5d13d2383e24c8460562d815f670a169dadc2859f"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/yaml/stringify/stringifyNumber.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/yaml/stringify/stringifyNumber.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/stringify/stringifyPair.mjs",
+      "originPath": "edition-authoring/vendor/yaml/stringify/stringifyPair.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/yaml/stringify/stringifyPair.mjs": "3c47f3c822fda98bdbe279df1602878cf47572f58532faea663813588a963300"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/yaml/stringify/stringifyPair.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/yaml/stringify/stringifyPair.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/stringify/stringifyString.mjs",
+      "originPath": "edition-authoring/vendor/yaml/stringify/stringifyString.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/yaml/stringify/stringifyString.mjs": "c6510e7e90fff12258d72d910a9992675392a72025732dc6b767871e7e33326f"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/yaml/stringify/stringifyString.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/yaml/stringify/stringifyString.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/visit.mjs",
+      "originPath": "edition-authoring/vendor/yaml/visit.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/vendor/yaml/visit.mjs": "ac2f199b2eb4c2930b05e976af5e0505f4e8e3a56adee99b8edd9343120e085e"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/yaml/visit.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/yaml/visit.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/workflow-copies.mjs",
+      "originPath": "edition-authoring/workflow-copies.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/workflow-copies.mjs": "be15199b125ca10e19991469f65efe49e441d8e518df234b4f47ebb1d3727ec7"
+      },
+      "modes": {
+        "scripts/edition-authoring/workflow-copies.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/workflow-copies.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/workflow-scripts.mjs",
+      "originPath": "edition-authoring/workflow-scripts.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/edition-authoring/workflow-scripts.mjs": "d0e747277142e54d86acd1c01549ee8b76bf15c060366387bd074c57f77f7d2d"
+      },
+      "modes": {
+        "scripts/edition-authoring/workflow-scripts.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/workflow-scripts.mjs"
       ]
     },
     {
@@ -824,6 +2643,75 @@
       "originFiles": [
         "foundation/template/scripts/operations-config.mjs"
       ]
+    },
+    {
+      "path": "scripts/verify-app.mjs",
+      "originPath": "export/verify-app.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/verify-app.mjs": "4c3a87c809e2b671a555dc36171b60675f87be96362de7d2269d9f5e1c3100b6"
+      },
+      "modes": {
+        "scripts/verify-app.mjs": "100644"
+      },
+      "originFiles": [
+        "export/verify-app.mjs"
+      ],
+      "adapted": {
+        "scripts/verify-app.mjs": "f96363bf919ea3e7ed1837daba6894810a50e4a6"
+      },
+      "acknowledged": {
+        "scripts/verify-app.mjs": {
+          "sha256": "53d32df18fc683c843d980a06e5e92b4c4029af9e307027307678ea28cf888e4",
+          "mode": "100644"
+        }
+      }
+    },
+    {
+      "path": "scripts/verify-ci.mjs",
+      "originPath": "export/verify-ci.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/verify-ci.mjs": "cf1ceb8773ed276f82245fb8fb4c4bdc95bff40ecc0e8ca8ac9e776978b17340"
+      },
+      "modes": {
+        "scripts/verify-ci.mjs": "100644"
+      },
+      "originFiles": [
+        "export/verify-ci.mjs"
+      ],
+      "adapted": {
+        "scripts/verify-ci.mjs": "f96363bf919ea3e7ed1837daba6894810a50e4a6"
+      },
+      "acknowledged": {
+        "scripts/verify-ci.mjs": {
+          "sha256": "b141048c47dc1a7017634253fe36006210ac1ba7d826ba7a00d0d45125b7d7e8",
+          "mode": "100644"
+        }
+      }
+    },
+    {
+      "path": "scripts/verify-plan.mjs",
+      "originPath": "export/verify-plan.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "scripts/verify-plan.mjs": "45fe2ab9c5cbc72d0186bf77fab32c985605caae6ecee50676dd618612c3e78f"
+      },
+      "modes": {
+        "scripts/verify-plan.mjs": "100644"
+      },
+      "originFiles": [
+        "export/verify-plan.mjs"
+      ],
+      "adapted": {
+        "scripts/verify-plan.mjs": "f96363bf919ea3e7ed1837daba6894810a50e4a6"
+      },
+      "acknowledged": {
+        "scripts/verify-plan.mjs": {
+          "sha256": "9e5b07086b15a691d5763606b2fbdaf742c9ccda2527f5c639c5efaa1c956aaf",
+          "mode": "100644"
+        }
+      }
     },
     {
       "path": "src/base/contract-filter.ts",
@@ -907,6 +2795,20 @@
       },
       "originFiles": [
         "foundation/runtime/font-response.ts"
+      ]
+    },
+    {
+      "path": "src/base/hosting-page.ts",
+      "originPath": "foundation/runtime/hosting-page.ts",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "src/base/hosting-page.ts": "280e291c4d74cc27560379876044be55c7b2ba8d827ddb76b58e2a1b90b21569"
+      },
+      "modes": {
+        "src/base/hosting-page.ts": "100644"
+      },
+      "originFiles": [
+        "foundation/runtime/hosting-page.ts"
       ]
     },
     {
@@ -1019,6 +2921,62 @@
       },
       "originFiles": [
         "foundation/runtime/rejected-response.ts"
+      ]
+    },
+    {
+      "path": "src/base/run-chooser-style.ts",
+      "originPath": "foundation/runtime/run-chooser-style.ts",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "src/base/run-chooser-style.ts": "62cd0b43762dbe406958d929ee6d27440658ffaead40bb51229eca7c4aea0756"
+      },
+      "modes": {
+        "src/base/run-chooser-style.ts": "100644"
+      },
+      "originFiles": [
+        "foundation/runtime/run-chooser-style.ts"
+      ]
+    },
+    {
+      "path": "src/base/run-data.d.mts",
+      "originPath": "foundation/runtime/run-data.d.mts",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "src/base/run-data.d.mts": "8b8f8e6b6030abe061027eef4b1b1560fdc77f54b25c82048839887da4fe56c1"
+      },
+      "modes": {
+        "src/base/run-data.d.mts": "100644"
+      },
+      "originFiles": [
+        "foundation/runtime/run-data.d.mts"
+      ]
+    },
+    {
+      "path": "src/base/run-data.mjs",
+      "originPath": "foundation/runtime/run-data.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "src/base/run-data.mjs": "e27f7c181fe17f54771893a0988098f49395511a8264b4fd3b848ecda1f5c1c9"
+      },
+      "modes": {
+        "src/base/run-data.mjs": "100644"
+      },
+      "originFiles": [
+        "foundation/runtime/run-data.mjs"
+      ]
+    },
+    {
+      "path": "src/base/run-pricing.ts",
+      "originPath": "foundation/runtime/run-pricing.ts",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "files": {
+        "src/base/run-pricing.ts": "f95bdf9b5e62c7d302e97a57ae4dcb580846197fa4cf2222e17a5e1b2c0a02fd"
+      },
+      "modes": {
+        "src/base/run-pricing.ts": "100644"
+      },
+      "originFiles": [
+        "foundation/runtime/run-pricing.ts"
       ]
     },
     {
@@ -3061,7 +5019,7 @@
       },
       "acknowledged": {
         "VERIFY-WORKFLOW.md": {
-          "sha256": "61922356069e5b8bef16446bc690e8c578ec7f39326372a9ee159ed1cb706b92",
+          "sha256": "cfad93915174052655736fa220764686b0baab194ea0610fda7ebdac4d0e4706",
           "mode": "100644"
         }
       },
@@ -3070,1837 +5028,54 @@
       ]
     },
     {
-      "path": "src/base/run-pricing.ts",
-      "originPath": "foundation/runtime/run-pricing.ts",
+      "path": "scripts/install-chromium-deps.py",
+      "originPath": "export/install-chromium-deps.py",
       "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
       "files": {
-        "src/base/run-pricing.ts": "f95bdf9b5e62c7d302e97a57ae4dcb580846197fa4cf2222e17a5e1b2c0a02fd"
+        "scripts/install-chromium-deps.py": "d3027108ad8e08ceeddb0ed477d967b1207e40bb6bf5ae941854c534c2cf4004"
       },
       "modes": {
-        "src/base/run-pricing.ts": "100644"
+        "scripts/install-chromium-deps.py": "100644"
       },
       "originFiles": [
-        "foundation/runtime/run-pricing.ts"
+        "export/install-chromium-deps.py"
       ]
     },
     {
-      "path": "scripts/edition-authoring/archive-source.mjs",
-      "originPath": "edition-authoring/archive-source.mjs",
+      "path": "scripts/verify-light.mjs",
+      "originPath": "export/verify-light.mjs",
       "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
       "files": {
-        "scripts/edition-authoring/archive-source.mjs": "073b0b6515e5df412065cba7ba82717a9fc35f794cfcaf4bcfd796d70320f8b5"
+        "scripts/verify-light.mjs": "f9b126130837144e43a65d10d370d602b63daad2be7ff66c93178d461a7521d9"
       },
       "modes": {
-        "scripts/edition-authoring/archive-source.mjs": "100644"
+        "scripts/verify-light.mjs": "100644"
       },
       "originFiles": [
-        "edition-authoring/archive-source.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/workflow-copies.mjs",
-      "originPath": "edition-authoring/workflow-copies.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/workflow-copies.mjs": "be15199b125ca10e19991469f65efe49e441d8e518df234b4f47ebb1d3727ec7"
-      },
-      "modes": {
-        "scripts/edition-authoring/workflow-copies.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/workflow-copies.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/edition-migrations.mjs",
-      "originPath": "edition-authoring/edition-migrations.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/edition-migrations.mjs": "7e9837c9a373cf7f394a575230c9f386a289786a15cc9685e4f11911e9a84e88"
-      },
-      "modes": {
-        "scripts/edition-authoring/edition-migrations.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/edition-migrations.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/module-closure.mjs",
-      "originPath": "edition-authoring/module-closure.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/module-closure.mjs": "95889883ce093f5c017cd1478107e5744fdef06ad80e36a4f8e6476d9449aff5"
-      },
-      "modes": {
-        "scripts/edition-authoring/module-closure.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/module-closure.mjs"
-      ]
-    },
-    {
-      "path": "src/base/hosting-page.ts",
-      "originPath": "foundation/runtime/hosting-page.ts",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "src/base/hosting-page.ts": "280e291c4d74cc27560379876044be55c7b2ba8d827ddb76b58e2a1b90b21569"
-      },
-      "modes": {
-        "src/base/hosting-page.ts": "100644"
-      },
-      "originFiles": [
-        "foundation/runtime/hosting-page.ts"
-      ]
-    },
-    {
-      "path": "src/base/run-chooser-style.ts",
-      "originPath": "foundation/runtime/run-chooser-style.ts",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "src/base/run-chooser-style.ts": "62cd0b43762dbe406958d929ee6d27440658ffaead40bb51229eca7c4aea0756"
-      },
-      "modes": {
-        "src/base/run-chooser-style.ts": "100644"
-      },
-      "originFiles": [
-        "foundation/runtime/run-chooser-style.ts"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/workflow-scripts.mjs",
-      "originPath": "edition-authoring/workflow-scripts.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/workflow-scripts.mjs": "d0e747277142e54d86acd1c01549ee8b76bf15c060366387bd074c57f77f7d2d"
-      },
-      "modes": {
-        "scripts/edition-authoring/workflow-scripts.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/workflow-scripts.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/runtime-dependencies.mjs",
-      "originPath": "edition-authoring/runtime-dependencies.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/runtime-dependencies.mjs": "f80f59284b27a9610a96baa6b0f1d0f59f68e075a3c4ae20e85fb153d7def4f3"
-      },
-      "modes": {
-        "scripts/edition-authoring/runtime-dependencies.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/runtime-dependencies.mjs"
-      ]
-    },
-    {
-      "path": "src/base/run-data.mjs",
-      "originPath": "foundation/runtime/run-data.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "src/base/run-data.mjs": "e27f7c181fe17f54771893a0988098f49395511a8264b4fd3b848ecda1f5c1c9"
-      },
-      "modes": {
-        "src/base/run-data.mjs": "100644"
-      },
-      "originFiles": [
-        "foundation/runtime/run-data.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/yaml/index.mjs",
-      "originPath": "edition-authoring/vendor/yaml/index.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/yaml/index.mjs": "ac6be7be5716e70422ca9992d3942f336ff4fc986b45a37f196fadc196963cd8"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/yaml/index.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/yaml/index.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/module-edges.mjs",
-      "originPath": "edition-authoring/module-edges.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/module-edges.mjs": "f89ad266463fd93ceff85749bddf5d0b3d9ef4ae830d48470e2200a23559becc"
-      },
-      "modes": {
-        "scripts/edition-authoring/module-edges.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/module-edges.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/module-resolution.mjs",
-      "originPath": "edition-authoring/module-resolution.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/module-resolution.mjs": "8c8efd3e59e668cb3271b1b3fd1556a7acb505cf2b193bc6e8155712c3b4ccc1"
-      },
-      "modes": {
-        "scripts/edition-authoring/module-resolution.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/module-resolution.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/module-syntax.mjs",
-      "originPath": "edition-authoring/module-syntax.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/module-syntax.mjs": "eb5a1d2da81c2cfde8587ecf395c4543bcb97b8f293946e73ee5a73b4d7e50fb"
-      },
-      "modes": {
-        "scripts/edition-authoring/module-syntax.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/module-syntax.mjs"
-      ]
-    },
-    {
-      "path": "src/base/run-data.d.mts",
-      "originPath": "foundation/runtime/run-data.d.mts",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "src/base/run-data.d.mts": "8b8f8e6b6030abe061027eef4b1b1560fdc77f54b25c82048839887da4fe56c1"
-      },
-      "modes": {
-        "src/base/run-data.d.mts": "100644"
-      },
-      "originFiles": [
-        "foundation/runtime/run-data.d.mts"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/yaml/visit.mjs",
-      "originPath": "edition-authoring/vendor/yaml/visit.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/yaml/visit.mjs": "ac2f199b2eb4c2930b05e976af5e0505f4e8e3a56adee99b8edd9343120e085e"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/yaml/visit.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/yaml/visit.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/yaml/public-api.mjs",
-      "originPath": "edition-authoring/vendor/yaml/public-api.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/yaml/public-api.mjs": "40c785a329b688abfb41aa02cff16a12e30bf187957860f889b23461e7c92121"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/yaml/public-api.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/yaml/public-api.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/yaml/parse/parser.mjs",
-      "originPath": "edition-authoring/vendor/yaml/parse/parser.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/yaml/parse/parser.mjs": "e191b5d90eb695766121c8be1e3fa371702f0e5ec04d98a8ea013d7029f3ac71"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/yaml/parse/parser.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/yaml/parse/parser.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/yaml/parse/line-counter.mjs",
-      "originPath": "edition-authoring/vendor/yaml/parse/line-counter.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/yaml/parse/line-counter.mjs": "2428d1b9a18ad7d8dabc7e12276e0fd90446c9e3433f1501e6bb43e111ad63c0"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/yaml/parse/line-counter.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/yaml/parse/line-counter.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/yaml/parse/lexer.mjs",
-      "originPath": "edition-authoring/vendor/yaml/parse/lexer.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/yaml/parse/lexer.mjs": "980aef0546cff1a804c7a13f1c79c9035dccef66a3bc682e9000130e39d0d62d"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/yaml/parse/lexer.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/yaml/parse/lexer.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/yaml/parse/cst.mjs",
-      "originPath": "edition-authoring/vendor/yaml/parse/cst.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/yaml/parse/cst.mjs": "54ac13b91a6721104a716badaf46b021a80a6271302b43f14845f7011f71ca2e"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/yaml/parse/cst.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/yaml/parse/cst.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/yaml/nodes/YAMLSeq.mjs",
-      "originPath": "edition-authoring/vendor/yaml/nodes/YAMLSeq.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/yaml/nodes/YAMLSeq.mjs": "fbc1434c7bb867663d417b1d9b993b7d25e80d8e70ba625a95577a9ed305b2f0"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/yaml/nodes/YAMLSeq.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/yaml/nodes/YAMLSeq.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/yaml/nodes/YAMLMap.mjs",
-      "originPath": "edition-authoring/vendor/yaml/nodes/YAMLMap.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/yaml/nodes/YAMLMap.mjs": "3e728e6e9b8a07231c6f56a57c4bfdf728018474ae5b84f3900fb502af44e7d4"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/yaml/nodes/YAMLMap.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/yaml/nodes/YAMLMap.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/yaml/nodes/Scalar.mjs",
-      "originPath": "edition-authoring/vendor/yaml/nodes/Scalar.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/yaml/nodes/Scalar.mjs": "61873e6c416bab96af2320e1c7220e49da6c3498411118b2998eed9a1ef8f4c3"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/yaml/nodes/Scalar.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/yaml/nodes/Scalar.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/yaml/nodes/Pair.mjs",
-      "originPath": "edition-authoring/vendor/yaml/nodes/Pair.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/yaml/nodes/Pair.mjs": "663c3905a34ed3e7b880882856f01990746f699380acde5275657b014b5ff598"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/yaml/nodes/Pair.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/yaml/nodes/Pair.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/yaml/nodes/identity.mjs",
-      "originPath": "edition-authoring/vendor/yaml/nodes/identity.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/yaml/nodes/identity.mjs": "da71af70da393500ab6e3cdbceba9c66965bc89c3401388c9ad422c91abf467f"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/yaml/nodes/identity.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/yaml/nodes/identity.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/yaml/nodes/Alias.mjs",
-      "originPath": "edition-authoring/vendor/yaml/nodes/Alias.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/yaml/nodes/Alias.mjs": "60b073b1793a6bbef0e9b665ae3d206b4251bf235c27e7e8813b71b4f0a0d5fc"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/yaml/nodes/Alias.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/yaml/nodes/Alias.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/yaml/errors.mjs",
-      "originPath": "edition-authoring/vendor/yaml/errors.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/yaml/errors.mjs": "410bb3397beb0d3a8c649d048b6e087bddf1f7114832eaf94be0fcbb4a8af29b"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/yaml/errors.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/yaml/errors.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/yaml/schema/Schema.mjs",
-      "originPath": "edition-authoring/vendor/yaml/schema/Schema.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/yaml/schema/Schema.mjs": "15aed0d6ba9a45fce5bfd1c91351595b39006bdefb6be2c35506e5fc93eb9682"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/yaml/schema/Schema.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/yaml/schema/Schema.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/yaml/doc/Document.mjs",
-      "originPath": "edition-authoring/vendor/yaml/doc/Document.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/yaml/doc/Document.mjs": "008ef5d6c1f75e9250f9b89d1ef6feb304da97bbce03d9066de32ae9b38bd10c"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/yaml/doc/Document.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/yaml/doc/Document.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/yaml/compose/composer.mjs",
-      "originPath": "edition-authoring/vendor/yaml/compose/composer.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/yaml/compose/composer.mjs": "d45a9899e7e3965de5ec4e19f1af44783499f5f5dfd966ae71870a7cf08cfe0c"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/yaml/compose/composer.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/yaml/compose/composer.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/index.mjs",
-      "originPath": "edition-authoring/vendor/babel-parser/babel-parser/index.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-parser/index.mjs": "fb528c027ed1afa7bf7318f44c82f23dd54a03646c247b51ef4eab3b9b327a90"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-parser/index.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/babel-parser/babel-parser/index.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/package-target.mjs",
-      "originPath": "edition-authoring/package-target.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/package-target.mjs": "f0d3168d7fffcc86cd9f0ac385dcaa73bd0312bf20da5ff096d9a93091d1db76"
-      },
-      "modes": {
-        "scripts/edition-authoring/package-target.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/package-target.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/yaml/log.mjs",
-      "originPath": "edition-authoring/vendor/yaml/log.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/yaml/log.mjs": "2e7d7edee783c901f36a8f986d126f15f33ac504fe17d4655e6846869d07b9e4"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/yaml/log.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/yaml/log.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/yaml/parse/cst-visit.mjs",
-      "originPath": "edition-authoring/vendor/yaml/parse/cst-visit.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/yaml/parse/cst-visit.mjs": "0baadd57686b26163ba71e7323a9208fcba81978e9ecebbad80afaa8baa61788"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/yaml/parse/cst-visit.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/yaml/parse/cst-visit.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/yaml/parse/cst-stringify.mjs",
-      "originPath": "edition-authoring/vendor/yaml/parse/cst-stringify.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/yaml/parse/cst-stringify.mjs": "275b500e3f1a0067d5d8671af5c536963a46d4921e49cf156547f796067b8810"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/yaml/parse/cst-stringify.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/yaml/parse/cst-stringify.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/yaml/parse/cst-scalar.mjs",
-      "originPath": "edition-authoring/vendor/yaml/parse/cst-scalar.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/yaml/parse/cst-scalar.mjs": "9f9724f39c25bd995d9ca05fc588235a052000d3fe6074ac7b34419df847e43d"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/yaml/parse/cst-scalar.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/yaml/parse/cst-scalar.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/yaml/nodes/toJS.mjs",
-      "originPath": "edition-authoring/vendor/yaml/nodes/toJS.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/yaml/nodes/toJS.mjs": "4d41d68a91607838600d813d08800e99cb52e1dd8da518fcba3049724914ff81"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/yaml/nodes/toJS.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/yaml/nodes/toJS.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/yaml/nodes/Collection.mjs",
-      "originPath": "edition-authoring/vendor/yaml/nodes/Collection.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/yaml/nodes/Collection.mjs": "ba8984c3012efe283b59024029d434c74791fef04ea8dcdb9a63866da9114c13"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/yaml/nodes/Collection.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/yaml/nodes/Collection.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/yaml/stringify/stringifyCollection.mjs",
-      "originPath": "edition-authoring/vendor/yaml/stringify/stringifyCollection.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/yaml/stringify/stringifyCollection.mjs": "ea39504928f1f2e052a1ac11ac8e6686a6ffdae002c0827fe1ed331bf9311670"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/yaml/stringify/stringifyCollection.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/yaml/stringify/stringifyCollection.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/yaml/doc/createNode.mjs",
-      "originPath": "edition-authoring/vendor/yaml/doc/createNode.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/yaml/doc/createNode.mjs": "c8cac858816bb6f87a3a16038b448dfe310666697fd2a08bdf5146cd990eeabf"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/yaml/doc/createNode.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/yaml/doc/createNode.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/yaml/nodes/addPairToJSMap.mjs",
-      "originPath": "edition-authoring/vendor/yaml/nodes/addPairToJSMap.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/yaml/nodes/addPairToJSMap.mjs": "43b2c31ac993d29f828595f4a5b9c025b97bf7f50dd8a6cbd810405f18ee3105"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/yaml/nodes/addPairToJSMap.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/yaml/nodes/addPairToJSMap.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/yaml/nodes/Node.mjs",
-      "originPath": "edition-authoring/vendor/yaml/nodes/Node.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/yaml/nodes/Node.mjs": "27d8f8b1cb126934bf3303410257326c32756aea07d82b18938c32d79d802946"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/yaml/nodes/Node.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/yaml/nodes/Node.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/yaml/stringify/stringifyPair.mjs",
-      "originPath": "edition-authoring/vendor/yaml/stringify/stringifyPair.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/yaml/stringify/stringifyPair.mjs": "3c47f3c822fda98bdbe279df1602878cf47572f58532faea663813588a963300"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/yaml/stringify/stringifyPair.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/yaml/stringify/stringifyPair.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/yaml/doc/anchors.mjs",
-      "originPath": "edition-authoring/vendor/yaml/doc/anchors.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/yaml/doc/anchors.mjs": "dd0184df10028d12ae9dde16c00c75820e38ec4683fc1818ec47bc879806e45e"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/yaml/doc/anchors.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/yaml/doc/anchors.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/yaml/schema/tags.mjs",
-      "originPath": "edition-authoring/vendor/yaml/schema/tags.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/yaml/schema/tags.mjs": "768368a452c2b6d26415ff66c4dc4c15648fb633c8f79f2060bfcd3d0f92b69b"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/yaml/schema/tags.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/yaml/schema/tags.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/yaml/schema/common/string.mjs",
-      "originPath": "edition-authoring/vendor/yaml/schema/common/string.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/yaml/schema/common/string.mjs": "f7c26c4fed96722a71a5ada0defa275169dbd129f874f3e1119c7292d68a4db8"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/yaml/schema/common/string.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/yaml/schema/common/string.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/yaml/schema/common/seq.mjs",
-      "originPath": "edition-authoring/vendor/yaml/schema/common/seq.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/yaml/schema/common/seq.mjs": "941e62fdf4b1693ea07b88b73417515f348e784c3c0657bf2642432512feb1e8"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/yaml/schema/common/seq.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/yaml/schema/common/seq.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/yaml/schema/common/map.mjs",
-      "originPath": "edition-authoring/vendor/yaml/schema/common/map.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/yaml/schema/common/map.mjs": "3dd7dc390919af03b7404b0ee6715f78de421c12afe8fb78e3da999e694d6f43"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/yaml/schema/common/map.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/yaml/schema/common/map.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/yaml/doc/directives.mjs",
-      "originPath": "edition-authoring/vendor/yaml/doc/directives.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/yaml/doc/directives.mjs": "7f1a1fb7f580601b2b1dbdcdad02f888a2d6a53cb7df9c0eb29503722523d807"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/yaml/doc/directives.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/yaml/doc/directives.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/yaml/doc/applyReviver.mjs",
-      "originPath": "edition-authoring/vendor/yaml/doc/applyReviver.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/yaml/doc/applyReviver.mjs": "f09ad07a73144157cc584a8d9f890b6ca142abf8f24bc0031e9d24784ed815e8"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/yaml/doc/applyReviver.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/yaml/doc/applyReviver.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/yaml/stringify/stringifyDocument.mjs",
-      "originPath": "edition-authoring/vendor/yaml/stringify/stringifyDocument.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/yaml/stringify/stringifyDocument.mjs": "1941c07929e6ba2203632c5eacb81d2021e3c674b50bca4b069ebf6bdf304709"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/yaml/stringify/stringifyDocument.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/yaml/stringify/stringifyDocument.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/yaml/compose/resolve-end.mjs",
-      "originPath": "edition-authoring/vendor/yaml/compose/resolve-end.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/yaml/compose/resolve-end.mjs": "e0a32e1b8c5649ea14152b0c0d45fbd64d46dbfa299a7328b71421e49ee48db2"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/yaml/compose/resolve-end.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/yaml/compose/resolve-end.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/yaml/compose/compose-doc.mjs",
-      "originPath": "edition-authoring/vendor/yaml/compose/compose-doc.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/yaml/compose/compose-doc.mjs": "a63f228a7d82fccc230a7d456c502f745345ccc27fa83438f5e2d6aaa1eb5ba2"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/yaml/compose/compose-doc.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/yaml/compose/compose-doc.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/tokenizer/types.mjs",
-      "originPath": "edition-authoring/vendor/babel-parser/babel-parser/tokenizer/types.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-parser/tokenizer/types.mjs": "91f57c5f80c40ca21576629278fc991b8032918ae96d17301c3433c9f2387347"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-parser/tokenizer/types.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/babel-parser/babel-parser/tokenizer/types.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/parser/index.mjs",
-      "originPath": "edition-authoring/vendor/babel-parser/babel-parser/parser/index.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-parser/parser/index.mjs": "1a2ddbb040066a640d4d91b493513a16140bc9f945868fa1a809f2824f13abc3"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-parser/parser/index.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/babel-parser/babel-parser/parser/index.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/plugin-utils.mjs",
-      "originPath": "edition-authoring/vendor/babel-parser/babel-parser/plugin-utils.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-parser/plugin-utils.mjs": "3dc924773d500f909b3b3caa582f571526a4b1c544a3604e3267830cfdbfbfe2"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-parser/plugin-utils.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/babel-parser/babel-parser/plugin-utils.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/yaml/stringify/stringifyString.mjs",
-      "originPath": "edition-authoring/vendor/yaml/stringify/stringifyString.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/yaml/stringify/stringifyString.mjs": "c6510e7e90fff12258d72d910a9992675392a72025732dc6b767871e7e33326f"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/yaml/stringify/stringifyString.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/yaml/stringify/stringifyString.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/yaml/compose/resolve-flow-scalar.mjs",
-      "originPath": "edition-authoring/vendor/yaml/compose/resolve-flow-scalar.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/yaml/compose/resolve-flow-scalar.mjs": "10612dd033708c46f9151605bbb219f4c17211461b968628e4919c691392e5c5"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/yaml/compose/resolve-flow-scalar.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/yaml/compose/resolve-flow-scalar.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/yaml/compose/resolve-block-scalar.mjs",
-      "originPath": "edition-authoring/vendor/yaml/compose/resolve-block-scalar.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/yaml/compose/resolve-block-scalar.mjs": "583eeff9f7ec30361be813a43f13e8ce771769f1669dca9fce5276390faf9ca5"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/yaml/compose/resolve-block-scalar.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/yaml/compose/resolve-block-scalar.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/yaml/stringify/stringifyComment.mjs",
-      "originPath": "edition-authoring/vendor/yaml/stringify/stringifyComment.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/yaml/stringify/stringifyComment.mjs": "20d3dc6bebda3efc2394ca162455ce9e4691b6c60995b5b4418b30659e09e03e"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/yaml/stringify/stringifyComment.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/yaml/stringify/stringifyComment.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/yaml/stringify/stringify.mjs",
-      "originPath": "edition-authoring/vendor/yaml/stringify/stringify.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/yaml/stringify/stringify.mjs": "51961de1b2aaa7b08bd3b8c0edc9d59a9d185b127f05eecc1c2cf3b73206fd6c"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/yaml/stringify/stringify.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/yaml/stringify/stringify.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/yaml/schema/yaml-1.1/merge.mjs",
-      "originPath": "edition-authoring/vendor/yaml/schema/yaml-1.1/merge.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/yaml/schema/yaml-1.1/merge.mjs": "39e329954b41824d9fa2b9b5f4d865cb8d3710ef36a53eefce39cb95fe0bb458"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/yaml/schema/yaml-1.1/merge.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/yaml/schema/yaml-1.1/merge.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/yaml/schema/yaml-1.1/timestamp.mjs",
-      "originPath": "edition-authoring/vendor/yaml/schema/yaml-1.1/timestamp.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/yaml/schema/yaml-1.1/timestamp.mjs": "2b426a75a9087e31a6da03499220195abfc1f3e2234b91d2711bbdd651a75bc7"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/yaml/schema/yaml-1.1/timestamp.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/yaml/schema/yaml-1.1/timestamp.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/yaml/schema/yaml-1.1/set.mjs",
-      "originPath": "edition-authoring/vendor/yaml/schema/yaml-1.1/set.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/yaml/schema/yaml-1.1/set.mjs": "30e71b433a5c8346a8b35f3ea63e79ee3b6c2537d47bfffbd2f48769f61eccc5"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/yaml/schema/yaml-1.1/set.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/yaml/schema/yaml-1.1/set.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/yaml/schema/yaml-1.1/schema.mjs",
-      "originPath": "edition-authoring/vendor/yaml/schema/yaml-1.1/schema.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/yaml/schema/yaml-1.1/schema.mjs": "75a94d66561f5b1da188311c198dcbded6fc38a0a73dd74a3c22d55b2e2d5f4f"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/yaml/schema/yaml-1.1/schema.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/yaml/schema/yaml-1.1/schema.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/yaml/schema/yaml-1.1/pairs.mjs",
-      "originPath": "edition-authoring/vendor/yaml/schema/yaml-1.1/pairs.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/yaml/schema/yaml-1.1/pairs.mjs": "b359d5a6cd7c858a7ed1b49d152402d91cc10eee1c41834b61e9e1131708c890"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/yaml/schema/yaml-1.1/pairs.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/yaml/schema/yaml-1.1/pairs.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/yaml/schema/yaml-1.1/omap.mjs",
-      "originPath": "edition-authoring/vendor/yaml/schema/yaml-1.1/omap.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/yaml/schema/yaml-1.1/omap.mjs": "e60534abb7f89e04c39fe60c23c2e013c3cfc8557fd8b3a0abc5a54108c1b5b0"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/yaml/schema/yaml-1.1/omap.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/yaml/schema/yaml-1.1/omap.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/yaml/schema/yaml-1.1/binary.mjs",
-      "originPath": "edition-authoring/vendor/yaml/schema/yaml-1.1/binary.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/yaml/schema/yaml-1.1/binary.mjs": "40959bfa6ba10d8c96cadd513e7ec039f932e572f6565a9d38266088b213d65a"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/yaml/schema/yaml-1.1/binary.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/yaml/schema/yaml-1.1/binary.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/yaml/schema/json/schema.mjs",
-      "originPath": "edition-authoring/vendor/yaml/schema/json/schema.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/yaml/schema/json/schema.mjs": "efc2713b12f344eede662c9927e508c072c68b209470e2784a027da8b0ebf1b5"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/yaml/schema/json/schema.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/yaml/schema/json/schema.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/yaml/schema/core/schema.mjs",
-      "originPath": "edition-authoring/vendor/yaml/schema/core/schema.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/yaml/schema/core/schema.mjs": "641e2b83116546d2a3ed1ee7763d55cb87044e9c9c5996d30b13c86be9c1d70c"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/yaml/schema/core/schema.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/yaml/schema/core/schema.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/yaml/schema/core/int.mjs",
-      "originPath": "edition-authoring/vendor/yaml/schema/core/int.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/yaml/schema/core/int.mjs": "9b8cc5a8796396a6f4028061985272debc68da24c0ec87fae32fe9149dce1780"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/yaml/schema/core/int.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/yaml/schema/core/int.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/yaml/schema/core/float.mjs",
-      "originPath": "edition-authoring/vendor/yaml/schema/core/float.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/yaml/schema/core/float.mjs": "5dc2983e1963813748a731bdf35b06b828314710a648cda744fa84847e4eb041"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/yaml/schema/core/float.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/yaml/schema/core/float.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/yaml/schema/core/bool.mjs",
-      "originPath": "edition-authoring/vendor/yaml/schema/core/bool.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/yaml/schema/core/bool.mjs": "a7be77cffe27d9f38d812d96cf91d86a04d6f243d0f1180c1c8352e1fa285439"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/yaml/schema/core/bool.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/yaml/schema/core/bool.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/yaml/schema/common/null.mjs",
-      "originPath": "edition-authoring/vendor/yaml/schema/common/null.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/yaml/schema/common/null.mjs": "5d8b9de0716843b67a311417b67a3fd9508e057f1ea36c9ac2f0546ba5119b5b"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/yaml/schema/common/null.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/yaml/schema/common/null.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/yaml/compose/resolve-props.mjs",
-      "originPath": "edition-authoring/vendor/yaml/compose/resolve-props.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/yaml/compose/resolve-props.mjs": "343c7827441fceca412e26a450028d195cc3433c9c3708980b285449df7e223d"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/yaml/compose/resolve-props.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/yaml/compose/resolve-props.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/yaml/compose/compose-node.mjs",
-      "originPath": "edition-authoring/vendor/yaml/compose/compose-node.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/yaml/compose/compose-node.mjs": "d860a6edd8c37c146be2b962868029b50123e9bd1c2d48f1c33e0f50d5ea6afd"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/yaml/compose/compose-node.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/yaml/compose/compose-node.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/tokenizer/context.mjs",
-      "originPath": "edition-authoring/vendor/babel-parser/babel-parser/tokenizer/context.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-parser/tokenizer/context.mjs": "a52b9a0cd4878cacb196e89961170d34ce1ae6b0a7d2fe2b32170c7845f0f767"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-parser/tokenizer/context.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/babel-parser/babel-parser/tokenizer/context.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/util/scope.mjs",
-      "originPath": "edition-authoring/vendor/babel-parser/babel-parser/util/scope.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-parser/util/scope.mjs": "eb85dc3fe59bc0f71b0a3e44baa7a2bc37d35334a315bfce01eb3bcbaca6c0f8"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-parser/util/scope.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/babel-parser/babel-parser/util/scope.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/parser/statement.mjs",
-      "originPath": "edition-authoring/vendor/babel-parser/babel-parser/parser/statement.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-parser/parser/statement.mjs": "d7c74eca0b0ef263d860070d0dc1d5dfd7fa5a0fe2727c6d9c1fb697ed3082fd"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-parser/parser/statement.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/babel-parser/babel-parser/parser/statement.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/options.mjs",
-      "originPath": "edition-authoring/vendor/babel-parser/babel-parser/options.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-parser/options.mjs": "50d27f3585df78b2bbd25ad2a6f89b779ad5e288669a945aa04a42ad1642ee8c"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-parser/options.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/babel-parser/babel-parser/options.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/plugins/v8intrinsic.mjs",
-      "originPath": "edition-authoring/vendor/babel-parser/babel-parser/plugins/v8intrinsic.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-parser/plugins/v8intrinsic.mjs": "bc5c25cc42359df18ba0da8643bb270bcadb4805d051b3851226aca9a420a069"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-parser/plugins/v8intrinsic.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/babel-parser/babel-parser/plugins/v8intrinsic.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/plugins/placeholders.mjs",
-      "originPath": "edition-authoring/vendor/babel-parser/babel-parser/plugins/placeholders.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-parser/plugins/placeholders.mjs": "f04c6fe32e86242032acaef0ccc1032147bc359c06c94dd28d56ca6347309486"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-parser/plugins/placeholders.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/babel-parser/babel-parser/plugins/placeholders.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/plugins/typescript/index.mjs",
-      "originPath": "edition-authoring/vendor/babel-parser/babel-parser/plugins/typescript/index.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-parser/plugins/typescript/index.mjs": "075fd3d378600b13db9ae7c89cab8a6c3d0f5d1e6921eae02faf2fc502b7720c"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-parser/plugins/typescript/index.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/babel-parser/babel-parser/plugins/typescript/index.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/plugins/jsx/index.mjs",
-      "originPath": "edition-authoring/vendor/babel-parser/babel-parser/plugins/jsx/index.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-parser/plugins/jsx/index.mjs": "db44cb69416293c2110aef1f94790e3cf849afe52d6e00cb06aa7213401ffff5"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-parser/plugins/jsx/index.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/babel-parser/babel-parser/plugins/jsx/index.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/plugins/flow/index.mjs",
-      "originPath": "edition-authoring/vendor/babel-parser/babel-parser/plugins/flow/index.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-parser/plugins/flow/index.mjs": "d15a7c4741f12c167119913ec147ec828d3e25bb237671be2d96594faaa7f39e"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-parser/plugins/flow/index.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/babel-parser/babel-parser/plugins/flow/index.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/plugins/estree.mjs",
-      "originPath": "edition-authoring/vendor/babel-parser/babel-parser/plugins/estree.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-parser/plugins/estree.mjs": "3f0758e14f0745614496042baa4865f8a7a61569dc16f5d3246224706ac0d03c"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-parser/plugins/estree.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/babel-parser/babel-parser/plugins/estree.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/yaml/stringify/foldFlowLines.mjs",
-      "originPath": "edition-authoring/vendor/yaml/stringify/foldFlowLines.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/yaml/stringify/foldFlowLines.mjs": "1a6360496e3cb52767d4c346655307c978cb2c94853229152f97017c4209745a"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/yaml/stringify/foldFlowLines.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/yaml/stringify/foldFlowLines.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/yaml/stringify/stringifyNumber.mjs",
-      "originPath": "edition-authoring/vendor/yaml/stringify/stringifyNumber.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/yaml/stringify/stringifyNumber.mjs": "e0d02220e66fedc267b435e5d13d2383e24c8460562d815f670a169dadc2859f"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/yaml/stringify/stringifyNumber.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/yaml/stringify/stringifyNumber.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/yaml/schema/yaml-1.1/int.mjs",
-      "originPath": "edition-authoring/vendor/yaml/schema/yaml-1.1/int.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/yaml/schema/yaml-1.1/int.mjs": "fd14d2f40d9296a7b2da4f6382122fc156b93fa4cb6bcaf158b6f80b27d79228"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/yaml/schema/yaml-1.1/int.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/yaml/schema/yaml-1.1/int.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/yaml/schema/yaml-1.1/float.mjs",
-      "originPath": "edition-authoring/vendor/yaml/schema/yaml-1.1/float.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/yaml/schema/yaml-1.1/float.mjs": "2ef1d06060e0ffc89f6705d824448344f8ef56dc5bc1fff28245a7d90a1c1f86"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/yaml/schema/yaml-1.1/float.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/yaml/schema/yaml-1.1/float.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/yaml/schema/yaml-1.1/bool.mjs",
-      "originPath": "edition-authoring/vendor/yaml/schema/yaml-1.1/bool.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/yaml/schema/yaml-1.1/bool.mjs": "898602784a4dcc42a7a75c8241937afe57276713456fd62c3719c91127b00db0"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/yaml/schema/yaml-1.1/bool.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/yaml/schema/yaml-1.1/bool.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/yaml/compose/util-empty-scalar-position.mjs",
-      "originPath": "edition-authoring/vendor/yaml/compose/util-empty-scalar-position.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/yaml/compose/util-empty-scalar-position.mjs": "7a6f0afe9909cc32557156c05a7499a87fe78881d4f57c37ba09805b959509c7"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/yaml/compose/util-empty-scalar-position.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/yaml/compose/util-empty-scalar-position.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/yaml/compose/compose-scalar.mjs",
-      "originPath": "edition-authoring/vendor/yaml/compose/compose-scalar.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/yaml/compose/compose-scalar.mjs": "a527a5f13c4f82dcec36249258de8d3d9b5b421e486d6fccf73e6f8bd876ba61"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/yaml/compose/compose-scalar.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/yaml/compose/compose-scalar.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/yaml/compose/compose-collection.mjs",
-      "originPath": "edition-authoring/vendor/yaml/compose/compose-collection.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/yaml/compose/compose-collection.mjs": "13125588d0e6f925c98b13f7a5ce74d99d7bd1c63e6733cde404781d296108d0"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/yaml/compose/compose-collection.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/yaml/compose/compose-collection.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/parse-error.mjs",
-      "originPath": "edition-authoring/vendor/babel-parser/babel-parser/parse-error.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-parser/parse-error.mjs": "7a8ebf3e2ccd7109a767b01e88d40f03dda05c30f9dcef0ad0a05f5ccf5f7f0e"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-parser/parse-error.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/babel-parser/babel-parser/parse-error.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/util/scopeflags.mjs",
-      "originPath": "edition-authoring/vendor/babel-parser/babel-parser/util/scopeflags.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-parser/util/scopeflags.mjs": "93dbea40745ea00fc5767510d8caad8a70dd4ff64bbfe674ed34b1aa69c0a6f0"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-parser/util/scopeflags.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/babel-parser/babel-parser/util/scopeflags.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/tokenizer/state.mjs",
-      "originPath": "edition-authoring/vendor/babel-parser/babel-parser/tokenizer/state.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-parser/tokenizer/state.mjs": "08345203d621c9a0f4223ace7898fa59986f3c52da0b85a95a88ad1738ac98d1"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-parser/tokenizer/state.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/babel-parser/babel-parser/tokenizer/state.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/parser/lval.mjs",
-      "originPath": "edition-authoring/vendor/babel-parser/babel-parser/parser/lval.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-parser/parser/lval.mjs": "c9152a612afe62cae2a6dbd9f90c142cb51751770cba7539824b46da2e91aed1"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-parser/parser/lval.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/babel-parser/babel-parser/parser/lval.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/util/location.mjs",
-      "originPath": "edition-authoring/vendor/babel-parser/babel-parser/util/location.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-parser/util/location.mjs": "b9b93ff1ceb418387d4f5c654fc25bacd864a9fe16529ce09a0e6351d70b1813"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-parser/util/location.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/babel-parser/babel-parser/util/location.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/tokenizer/index.mjs",
-      "originPath": "edition-authoring/vendor/babel-parser/babel-parser/tokenizer/index.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-parser/tokenizer/index.mjs": "c3eb5b431ed4ccd0f3727e9cb32f90f99f5f9c1e2e24f7aaaaeb2f8a4453c00b"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-parser/tokenizer/index.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/babel-parser/babel-parser/tokenizer/index.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/util/expression-scope.mjs",
-      "originPath": "edition-authoring/vendor/babel-parser/babel-parser/util/expression-scope.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-parser/util/expression-scope.mjs": "669d87b7373855d2013c08584b5c84c9f9c49d8ee3d8ac48799e94f83d5e5e45"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-parser/util/expression-scope.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/babel-parser/babel-parser/util/expression-scope.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/util/production-parameter.mjs",
-      "originPath": "edition-authoring/vendor/babel-parser/babel-parser/util/production-parameter.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-parser/util/production-parameter.mjs": "259a7843694360df30e9a6269fac44162591bc36110aa40c6b9ccca15df95654"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-parser/util/production-parameter.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/babel-parser/babel-parser/util/production-parameter.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/parser/util.mjs",
-      "originPath": "edition-authoring/vendor/babel-parser/babel-parser/parser/util.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-parser/parser/util.mjs": "dde0ff114feacd5ce448906432c40be8ae6704398c39ec133ee119668077770e"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-parser/parser/util.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/babel-parser/babel-parser/parser/util.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/util/identifier.mjs",
-      "originPath": "edition-authoring/vendor/babel-parser/babel-parser/util/identifier.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-parser/util/identifier.mjs": "915cbccee5460da1c5a7a9d60f56fdcfb8a2816e355ac56c5e9f4ed62049a8f6"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-parser/util/identifier.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/babel-parser/babel-parser/util/identifier.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/parser/expression.mjs",
-      "originPath": "edition-authoring/vendor/babel-parser/babel-parser/parser/expression.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-parser/parser/expression.mjs": "854a6d320bf64245f456068c5680cc063b2932d5bc7d618e8b61ea353601319c"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-parser/parser/expression.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/babel-parser/babel-parser/parser/expression.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/plugins/typescript/scope.mjs",
-      "originPath": "edition-authoring/vendor/babel-parser/babel-parser/plugins/typescript/scope.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-parser/plugins/typescript/scope.mjs": "6a2a33ef47df6d961381c924ea769830d8bc2503062e6ea8e2bab86ac4a89c1d"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-parser/plugins/typescript/scope.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/babel-parser/babel-parser/plugins/typescript/scope.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/util/whitespace.mjs",
-      "originPath": "edition-authoring/vendor/babel-parser/babel-parser/util/whitespace.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-parser/util/whitespace.mjs": "4598e97a1f0d4a5918d8ad1227d526b491d502ba964236f38d85bac1ff08e59a"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-parser/util/whitespace.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/babel-parser/babel-parser/util/whitespace.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/plugins/jsx/xhtml.mjs",
-      "originPath": "edition-authoring/vendor/babel-parser/babel-parser/plugins/jsx/xhtml.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-parser/plugins/jsx/xhtml.mjs": "e4162785fe91410df9d5f16a37b2a75862c2c0c8fe86df015aa91f1dd1685906"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-parser/plugins/jsx/xhtml.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/babel-parser/babel-parser/plugins/jsx/xhtml.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/plugins/flow/scope.mjs",
-      "originPath": "edition-authoring/vendor/babel-parser/babel-parser/plugins/flow/scope.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-parser/plugins/flow/scope.mjs": "75567406d5c855f58e8cf149ba22495cdb96b913ce923c1b606a5f641479adf1"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-parser/plugins/flow/scope.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/babel-parser/babel-parser/plugins/flow/scope.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/yaml/compose/resolve-flow-collection.mjs",
-      "originPath": "edition-authoring/vendor/yaml/compose/resolve-flow-collection.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/yaml/compose/resolve-flow-collection.mjs": "16edd43b7b6bac50a244c943985e4bd94aca4dcba707ae69653510c6afd2c3fd"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/yaml/compose/resolve-flow-collection.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/yaml/compose/resolve-flow-collection.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/yaml/compose/resolve-block-seq.mjs",
-      "originPath": "edition-authoring/vendor/yaml/compose/resolve-block-seq.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/yaml/compose/resolve-block-seq.mjs": "fe50d6411a540d57ec0f4da90a5b74b7723b5f75935a602cd2f7e7310342c75e"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/yaml/compose/resolve-block-seq.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/yaml/compose/resolve-block-seq.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/yaml/compose/resolve-block-map.mjs",
-      "originPath": "edition-authoring/vendor/yaml/compose/resolve-block-map.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/yaml/compose/resolve-block-map.mjs": "fed77d3faec4dc55368c2f3a06f04256dae6df7d0abbf73d75b768eefe79facb"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/yaml/compose/resolve-block-map.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/yaml/compose/resolve-block-map.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/parse-error/bind-operator-errors.mjs",
-      "originPath": "edition-authoring/vendor/babel-parser/babel-parser/parse-error/bind-operator-errors.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-parser/parse-error/bind-operator-errors.mjs": "7ccd8271f6cbbad7d1fd2115919336a6c52488bac074b5b6e45b97ea747ca12b"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-parser/parse-error/bind-operator-errors.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/babel-parser/babel-parser/parse-error/bind-operator-errors.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/parse-error/pipeline-operator-errors.mjs",
-      "originPath": "edition-authoring/vendor/babel-parser/babel-parser/parse-error/pipeline-operator-errors.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-parser/parse-error/pipeline-operator-errors.mjs": "8bfac7fefb82e13e5a0ca8f759519a2074acb54f135f22f8bb773b38d2aeda70"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-parser/parse-error/pipeline-operator-errors.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/babel-parser/babel-parser/parse-error/pipeline-operator-errors.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/parse-error/parse-expression-errors.mjs",
-      "originPath": "edition-authoring/vendor/babel-parser/babel-parser/parse-error/parse-expression-errors.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-parser/parse-error/parse-expression-errors.mjs": "e9749768b9fd91a038f0b28721c8b9fd4da2fb2effe2c488558f9ae0723d45df"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-parser/parse-error/parse-expression-errors.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/babel-parser/babel-parser/parse-error/parse-expression-errors.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/parse-error/strict-mode-errors.mjs",
-      "originPath": "edition-authoring/vendor/babel-parser/babel-parser/parse-error/strict-mode-errors.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-parser/parse-error/strict-mode-errors.mjs": "776411adeb8b6648acdccdf1bf0e40e2c2688d05a80bb804ce0041d60c535d52"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-parser/parse-error/strict-mode-errors.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/babel-parser/babel-parser/parse-error/strict-mode-errors.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/parse-error/standard-errors.mjs",
-      "originPath": "edition-authoring/vendor/babel-parser/babel-parser/parse-error/standard-errors.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-parser/parse-error/standard-errors.mjs": "0f8cef5a33e069874d9b515b36f113b65e3653e06f99ab1b4c47d9a8b991bc61"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-parser/parse-error/standard-errors.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/babel-parser/babel-parser/parse-error/standard-errors.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/parse-error/module-errors.mjs",
-      "originPath": "edition-authoring/vendor/babel-parser/babel-parser/parse-error/module-errors.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-parser/parse-error/module-errors.mjs": "92c0d0284fda16496376377a38f17979e44864b3cc3f55115b44291979c2320a"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-parser/parse-error/module-errors.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/babel-parser/babel-parser/parse-error/module-errors.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/parser/node.mjs",
-      "originPath": "edition-authoring/vendor/babel-parser/babel-parser/parser/node.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-parser/parser/node.mjs": "d26e42b4a06f15ab67be17794b581a0fd8cf668da86bb4eb7e46b75a2fbfd442"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-parser/parser/node.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/babel-parser/babel-parser/parser/node.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/babel-parser/babel-helper-string-parser/index.mjs",
-      "originPath": "edition-authoring/vendor/babel-parser/babel-helper-string-parser/index.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-helper-string-parser/index.mjs": "79c5329b757f4aef92ab32e701f0587b0b469bb73fcfc8b4387b07572103903b"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-helper-string-parser/index.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/babel-parser/babel-helper-string-parser/index.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/parser/comments.mjs",
-      "originPath": "edition-authoring/vendor/babel-parser/babel-parser/parser/comments.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-parser/parser/comments.mjs": "071794af5a25d879be7589ea026c9ba61534a57a2ff92e5cf239359dac26e2fb"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-parser/parser/comments.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/babel-parser/babel-parser/parser/comments.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/util/class-scope.mjs",
-      "originPath": "edition-authoring/vendor/babel-parser/babel-parser/util/class-scope.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-parser/util/class-scope.mjs": "4ad4eff3aabb23b6834aee30370b3f1691d5278d9befb882ba3228593db9a5a2"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-parser/util/class-scope.mjs": "100644"
+        "export/verify-light.mjs"
+      ],
+      "adapted": {
+        "scripts/verify-light.mjs": "f96363bf919ea3e7ed1837daba6894810a50e4a6"
       },
-      "originFiles": [
-        "edition-authoring/vendor/babel-parser/babel-parser/util/class-scope.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/babel-parser/babel-helper-validator-identifier/index.mjs",
-      "originPath": "edition-authoring/vendor/babel-parser/babel-helper-validator-identifier/index.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-helper-validator-identifier/index.mjs": "dc3a12f1276104e25dda3697e26b2fc7e7785ef2b708c9e3aa2ec6b86b3d1554"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-helper-validator-identifier/index.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/babel-parser/babel-helper-validator-identifier/index.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/yaml/compose/util-map-includes.mjs",
-      "originPath": "edition-authoring/vendor/yaml/compose/util-map-includes.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/yaml/compose/util-map-includes.mjs": "90d45ac60812727160c1798bd9b10595e50e34e88a1aedfe43f5d27bc894699f"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/yaml/compose/util-map-includes.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/yaml/compose/util-map-includes.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/yaml/compose/util-contains-newline.mjs",
-      "originPath": "edition-authoring/vendor/yaml/compose/util-contains-newline.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/yaml/compose/util-contains-newline.mjs": "4810ffba0d74ebb913731e1369ea17f6fef20df2feb2ef0bd8553e439f4a6b78"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/yaml/compose/util-contains-newline.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/yaml/compose/util-contains-newline.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/yaml/compose/util-flow-indent-check.mjs",
-      "originPath": "edition-authoring/vendor/yaml/compose/util-flow-indent-check.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/yaml/compose/util-flow-indent-check.mjs": "ca3648e4d5ee337448f409ea997a59b5fd195573070416282bd35ad1568226a7"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/yaml/compose/util-flow-indent-check.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/yaml/compose/util-flow-indent-check.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/parse-error/to-node-description.mjs",
-      "originPath": "edition-authoring/vendor/babel-parser/babel-parser/parse-error/to-node-description.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-parser/parse-error/to-node-description.mjs": "fd95735fb141d4626acc1c80aef5cb453381f231e9a13cb52609225178cc9e30"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-parser/parse-error/to-node-description.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/babel-parser/babel-parser/parse-error/to-node-description.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/parser/base.mjs",
-      "originPath": "edition-authoring/vendor/babel-parser/babel-parser/parser/base.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-parser/parser/base.mjs": "02da28b8159e6df6c9f1fbc6b3326283782d8fdffc0f5d7c5151e5e833ee7c3d"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-parser/parser/base.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/babel-parser/babel-parser/parser/base.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/babel-parser/babel-helper-validator-identifier/keyword.mjs",
-      "originPath": "edition-authoring/vendor/babel-parser/babel-helper-validator-identifier/keyword.mjs",
-      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
-      "files": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-helper-validator-identifier/keyword.mjs": "e8f3eaa64807800726bfb23d6ea29dbcbb9947e139b518578f765763ea044014"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-helper-validator-identifier/keyword.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/babel-parser/babel-helper-validator-identifier/keyword.mjs"
-      ]
+      "acknowledged": {
+        "scripts/verify-light.mjs": {
+          "sha256": "5a1dd608747df0e728159bd62463fa47c06586a3587de242eee7d8027ee4dab7",
+          "mode": "100644"
+        }
+      }
     },
     {
-      "path": "scripts/edition-authoring/vendor/babel-parser/babel-helper-validator-identifier/identifier.mjs",
-      "originPath": "edition-authoring/vendor/babel-parser/babel-helper-validator-identifier/identifier.mjs",
+      "path": "scripts/verify-evidence.mjs",
+      "originPath": "export/verify-evidence.mjs",
       "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
       "files": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-helper-validator-identifier/identifier.mjs": "96c7f08c06171788dd3d612c41b2c4bbeeac6632867d7d8eaec6e2d82a1fe507"
+        "scripts/verify-evidence.mjs": "9224f772d6a17f043448694eca3c149df83070417b995a2840497e36a9ad0100"
       },
       "modes": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-helper-validator-identifier/identifier.mjs": "100644"
+        "scripts/verify-evidence.mjs": "100644"
       },
       "originFiles": [
-        "edition-authoring/vendor/babel-parser/babel-helper-validator-identifier/identifier.mjs"
+        "export/verify-evidence.mjs"
       ]
     }
   ]
