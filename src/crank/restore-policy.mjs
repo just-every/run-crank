@@ -199,7 +199,7 @@ export async function validateRestore({ read }) {
         if (chunk.chunk_index !== index || typeof chunk.content_base64 !== 'string') return false;
         const expected = Math.min(65536, response.body_bytes - length);
         const envelope = chunk.content_base64.startsWith('{"sealed":"crank-payload-v1"') ? JSON.parse(chunk.content_base64) : null;
-        if (envelope && (envelope.sealed !== 'crank-payload-v1' || !['customer','financial','health'].includes(envelope.c) || typeof envelope.k !== 'string' || atob(envelope.iv).length !== 12 || atob(envelope.ct).length !== JSON.stringify('x'.repeat(Math.ceil(expected / 3) * 4)).length + 16 || !(await rows('crank_payload_keys')).some(key => key.id === envelope.k && key.data_class === envelope.c))) return false;
+        if (envelope && (envelope.sealed !== 'crank-payload-v1' || !['customer','financial','health'].includes(envelope.c) || typeof envelope.k !== 'string' || !/^[a-f0-9-]{36}$/.test(envelope.k) || atob(envelope.iv).length !== 12 || atob(envelope.ct).length !== JSON.stringify('x'.repeat(Math.ceil(expected / 3) * 4)).length + 16)) return false;
         const bytes = envelope ? expected : atob(chunk.content_base64).length;
         if (bytes !== Math.min(65536, response.body_bytes - length)) return false;
         length += bytes;

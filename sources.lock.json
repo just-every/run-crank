@@ -139,7 +139,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "d66f12b1b5d3b2da7380012718f3190e6c80430f988e62c6b5270bb60a9f6e78",
+      "sha256": "90973a17fdd53b4baebd6c3d624800c8e63ec731c6828170b2bc8e333fcdf169",
       "executable": false
     },
     "AGENTS.md": {
@@ -163,7 +163,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "392fccedd2ce8a3d9500e5138df0b61e2c77c81c4e31034712bf15c3e0f2f756",
+      "sha256": "f3d6825c8af35966db31c4085eb6e893517546e79f272596ecba79b2daee8218",
       "executable": false
     },
     "DEMO.md": {
@@ -203,7 +203,7 @@
       "executable": false
     },
     "docs/CLAIMS.md": {
-      "sha256": "55473b187b1b4f0eeaf985e93a916d29c1274f28e8023b86a8940d3f854caddb",
+      "sha256": "b8d3ae1b11a96c668ce569750dd03a6d84803ec9537435370d704f2f6d9845e2",
       "executable": false
     },
     "docs/DATA-FLOWS.md": {
@@ -2499,7 +2499,7 @@
       "executable": false
     },
     "src/crank/connectors/google-sheets.ts": {
-      "sha256": "1d6373a0c73a6d543f391d95d7b0084f026ef1067dcfa2db417a59e9081b09ab",
+      "sha256": "f169ddb86225b9080b6935b4c9b14df32ca626d4c3eeb7b32dd292c8d79bec22",
       "executable": false
     },
     "src/crank/connectors/http-step.ts": {
@@ -3131,7 +3131,7 @@
       "executable": false
     },
     "src/crank/restore-policy.mjs": {
-      "sha256": "653bfd7cada42190a3bf7e85250dd2ff09a2bb56f55238bb413ca72a53b1a1bc",
+      "sha256": "40191c15a00e2c2923c628c352d4e02d4f5f753114a8dbd203a2d7316ca03ee8",
       "executable": false
     },
     "src/crank/runs.ts": {
@@ -5511,7 +5511,7 @@
       "executable": false
     },
     "test-budget.json": {
-      "sha256": "c940ce16e8c03bb9ae5ec3313ffc56f7fd3df5668edad241df0cb76945405d32",
+      "sha256": "2e544f8759125c1ba0ceb663efd77aee47cee8defdbeff14519e54d111d2828f",
       "executable": false
     },
     "tests/accounting-poll-journey.mjs": {
@@ -6063,7 +6063,7 @@
       "executable": false
     },
     "tests/sheets-search-journey.mjs": {
-      "sha256": "6ee23e4342274a6164bacdaa5f179750d7e8b2a8e16403578c29e93374a223d6",
+      "sha256": "433dbe0b9b8e7ce3a9c6b054588271ae2faf31ceb833062e0f570846f26cd2f0",
       "executable": false
     },
     "tests/sibling-browser.mjs": {

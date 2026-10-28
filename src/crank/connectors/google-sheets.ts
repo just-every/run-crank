@@ -4,12 +4,12 @@ import { StepError } from '../engine/errors'
 import { searchOutcome, validateSearch } from '../engine/search'
 import type { Step, StepContext, StepType } from '../engine/types'
 import { isObject } from '../engine/values'
-import type { CrankEnv } from '../model'
+import { digest, stmt, type CrankEnv } from '../model'
 import { retryRequest } from './retry'
 import { sendRequest } from './request-transport'
 
 export const SHEETS_READ_SCOPES = ['https://www.googleapis.com/auth/spreadsheets.readonly', 'https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive.readonly', 'https://www.googleapis.com/auth/drive']
-export const SHEETS_BOUNDS = { rows: 1000, columns: 50, window: 100, response_bytes: 1024 * 1024 }
+export const SHEETS_BOUNDS = { rows: 1000, columns: 50, window: 100, response_bytes: 1024 * 1024, scan_bytes: 4 * 1024 * 1024, result_bytes: 2 * 1024 * 1024 }
 const invalid = (message: string): never => { throw new StepError('validation', `Google Sheets: ${message}`) }
 const malformed = (message: string): never => { throw new StepError('provider', `Google Sheets: ${message}`) }
 const fields = ['spreadsheet_id', 'range', 'column', 'value']
@@ -44,8 +44,9 @@ function validate(step: Step) {
   inputOf(step.input, true)
 }
 async function account(env: CrankEnv, connectionId: string) {
-  const { row } = await credential(env, connectionId)
+  const current = await credential(env, connectionId), { row } = current
   if (row.app !== 'google' || row.auth_kind !== 'oauth2' || !row.consented_at || !SHEETS_READ_SCOPES.some(scope => JSON.parse(row.scopes_json).includes(scope))) throw new StepError('authority', 'Google Sheets requires an already-consented managed Google connection with spreadsheet read scope', { connection_id: connectionId })
+  return current
 }
 function decode(response: BoundedResponse, height: number, width: number, expectedRange: string) {
   let body: unknown
@@ -62,27 +63,42 @@ export const googleSheetsFindRow: StepType = {
   mutating: false, connection: 'required', required: ['spreadsheet_id', 'range', 'column'], validate,
   async execute(step, ctx) {
     const bounds = inputOf(ctx.input), connectionId = String(step.connection_id)
-    await account(ctx.env, connectionId)
-    const context: StepContext = { ...ctx, beforeRequest: async () => { await account(ctx.env, connectionId); await ctx.beforeRequest?.() } }
+    const identity = async (authorization: string) => {
+      const value = await digest(ctx.operationKey + ':' + authorization)
+      const prior = await stmt(ctx.env, 'SELECT credential_identity FROM crank_wf_attempts WHERE run_id=? AND path=?', ctx.run.id, ctx.path).all<{credential_identity:string|null}>()
+      if (prior.results.some(attempt => attempt.credential_identity !== value)) throw new StepError('authority', 'Google Sheets credential changed during this scan; start a fresh run without mixing account windows')
+      return value
+    }
+    const current = async () => { const { secret } = await account(ctx.env, connectionId); await identity('Bearer ' + secret.access_token) }
+    await current()
+    const context: StepContext = { ...ctx, beforeRequest: async () => { await current(); await ctx.beforeRequest?.() } }
     const spreadsheet = String(ctx.input.spreadsheet_id), records: Record<string, unknown>[] = []
+    let scannedBytes = 0, resultBytes = 0
     const read = async (from: number, to: number, headers?: string[]) => {
       // Authority is checked even when this window is reconstructed from a checkpoint.
-      await account(ctx.env, connectionId); await ctx.beforeRequest?.()
+      await current(); await ctx.beforeRequest?.()
       const range = bounds.window(from, to)
       const url = new URL(`https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(spreadsheet)}/values/${encodeURIComponent(range)}`)
       url.searchParams.set('majorDimension', 'ROWS'); url.searchParams.set('valueRenderOption', 'UNFORMATTED_VALUE'); url.searchParams.set('dateTimeRenderOption', 'SERIAL_NUMBER')
       const result = await retryRequest(context, { method: 'GET', url, body: null, idempotent: true }, policy => sendRequest(context, {
-        url, method: 'GET', headers: new Headers({ accept: 'application' + '/' + 'json' }), body: null, follow: 0, timeout: Number(step.timeout_ms ?? 15000), maxBytes: SHEETS_BOUNDS.response_bytes,
+        url, method: 'GET', credentialIdentity: headers => identity(headers.get('authorization') ?? ''), headers: new Headers({ accept: 'application' + '/' + 'json' }), body: null, follow: 0, timeout: Number(step.timeout_ms ?? 15000), maxBytes: SHEETS_BOUNDS.response_bytes,
         sanitizeResponse: async response => {
           // No provider header values enter the private continuation except content negotiation.
           const safe = { ...response, headers: new Headers({ 'content-type': 'application' + '/' + 'json' }) }
+          const retryAfter = response.headers.get('retry-after')
+          if (retryAfter && /^\d+(?:\.\d+)?$/.test(retryAfter.trim())) safe.headers.set('retry-after', retryAfter.trim())
+          else if (retryAfter && Number.isFinite(Date.parse(retryAfter))) safe.headers.set('retry-after', new Date(retryAfter).toUTCString())
           if (response.status !== 200) return { ...safe, bytes: new TextEncoder().encode('{}') }
           const values = decode(response, to - from + 1, bounds.width, range)
           // Named rows let DATA-003 index declared identifiers in unfinished windows, before a later 429.
-          return { ...safe, bytes: new TextEncoder().encode(JSON.stringify({ range, majorDimension: 'ROWS', values, named_rows: headers ? values.map(row => Object.fromEntries(headers.flatMap((name, i) => i < row.length && row[i] !== null ? [[name, row[i]]] : []))) : [] })) }
+          const bytes = new TextEncoder().encode(JSON.stringify({ range, majorDimension: 'ROWS', values, named_rows: headers ? values.map(row => Object.fromEntries(headers.flatMap((name, i) => i < row.length && row[i] !== null ? [[name, row[i]]] : []))) : [] }))
+          if (bytes.length > SHEETS_BOUNDS.response_bytes) return malformed('the named row window exceeds its byte bound; narrow the range')
+          return { ...safe, bytes }
         },
       }, connectionId, policy))
       if (result.response.status !== 200) throw new StepError([401,403,404].includes(result.response.status) ? 'auth' : result.response.status === 429 ? 'rate_limit' : 'provider', `Google Sheets refused the worksheet read with status ${result.response.status}`, { status: result.response.status, ...(result.exhausted ? { exhausted: true } : {}) })
+      scannedBytes += result.response.bytes.length
+      if (scannedBytes > SHEETS_BOUNDS.scan_bytes) return malformed('the complete scan exceeds its byte bound; narrow the range')
       return decode(result.response, to - from + 1, bounds.width, range)
     }
     const headerRows = await read(bounds.first, bounds.first), headers = headerRows[0]
@@ -95,10 +111,13 @@ export const googleSheetsFindRow: StepType = {
         if (selected >= row.length || row[selected] === null || row[selected] !== ctx.input.value) continue
         const fields = Object.fromEntries(names.flatMap((name, i) => i < row.length && row[i] !== null ? [[name, row[i]]] : []))
         const cells = Object.fromEntries(names.map((name, i) => [name, i >= row.length || row[i] === null ? { state: 'missing' } : row[i] === '' ? { state: 'empty', value: '' } : { state: 'value', value: row[i] }]))
-        records.push({ spreadsheet_id: spreadsheet, range: String(ctx.input.range), row_number: from + offset, row_range: bounds.window(from + offset, from + offset), fields, cells })
+        const record = { spreadsheet_id: spreadsheet, range: String(ctx.input.range), row_number: from + offset, row_range: bounds.window(from + offset, from + offset), fields, cells }
+        resultBytes += new TextEncoder().encode(JSON.stringify(record)).length
+        if (resultBytes > SHEETS_BOUNDS.result_bytes) return malformed('the matched rows exceed their byte bound; narrow the range')
+        records.push(record)
       }
     }
-    await account(ctx.env, connectionId); await ctx.beforeRequest?.()
+    await current(); await ctx.beforeRequest?.()
     return searchOutcome(step, records)
   },
 }
