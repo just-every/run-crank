@@ -33,6 +33,7 @@ export async function graphDataFlows(env: CrankEnv, credential: (id: unknown) =>
         else if (step.type === 'gmail.search_threads') emit(path, step.type, { query: 'Gmail search text', metadata_headers: 'declared header names', mailbox: 'selected managed connection' }, step.connection_id, ['https://gmail.googleapis.com'])
         else if (step.type === 'code') emit(path,'code',{source:step.source,language:step.language,input},step.connection_id,[step.executor_url])
         else if ((step.type.startsWith('nook.') || step.type.startsWith('orbit.'))) emit(path,step.type,input,step.connection_id,[siblingOrigin(step.connection_id)])
+        else if (step.type === 'quickbooks.find_invoice') emit(path,step.type,{ realm_id: 'selected sandbox company', doc_number: 'exact invoice document number' },step.connection_id,['https://sandbox-quickbooks.api.intuit.com'])
         else if (step.type.startsWith('quickbooks.')) emit(path,step.type,input,step.connection_id,['https://sandbox-quickbooks.api.intuit.com'])
         else if (step.type.startsWith('gusto.')) emit(path,step.type,input,step.connection_id,['https://api.gusto-demo.com','https://api.gusto.com'])
         else if (step.type.startsWith('google_calendar.')) emit(path,step.type,input,step.connection_id,['https://www.googleapis.com'])
