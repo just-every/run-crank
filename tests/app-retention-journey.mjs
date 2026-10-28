@@ -14,6 +14,19 @@ const snapshotIds=rows=>rows.map(row=>[row.version_id,row.record_id]).sort();
 export async function appRetentionJourney({inspect=async()=>{}}={}) {
  const edge=fakeEdge(),initial='2026-10-20T01:00:00.000Z';
  const h=await harness('http://127.0.0.1:9',{edge:edge.edge,clock:initial});
+ const ownerEmail=(await h.get()).people.find(person=>person.role==='owner').email;
+ const renewOwner=async()=>{
+  assert.equal((await h.send('/auth/magic-link',{email:ownerEmail,returnTo:'/app'})).status,202);
+  const token=new URL(h.mail.at(-1).html.match(/href="([^"]*\/auth\/confirm\?token=[^"]+)"/)[1].replaceAll('&amp;','&'),h.origin).searchParams.get('token');
+  const signed=await h.send('/auth/confirm',{token});assert.equal(signed.status,303);h.owner=signed.cookie;
+  const post=h.post,get=h.get;
+  h.post=async(path,body={},cookie=h.owner,status=200,headers={})=>{
+   const activation=/^(workflows|flows)\/([^/]+)\/(publish|activate)$/.exec(path);
+   if(activation&&[200,201].includes(status))await post(activation[1]+'/'+activation[2]+'/estimate',{cost:{components:['orchestration','connectors','models','executors'].map(kind=>({kind,usd_per_run:'0',assumption:'Local provider edge proof has no billed effect'}))}},cookie);
+   return post(path,body,cookie,status,headers)
+  };
+  h.get=(path='state',cookie=h.owner,status=200,headers={})=>get(path,cookie,status,headers);
+ };
  const records=['synthetic-crank-21','synthetic-crank-22'];
  let revision=0,status='Approved',restored;
  const providerTime=()=>new Date(Date.parse('2010-01-01T00:00:00Z')+revision*minute).toISOString();
@@ -83,7 +96,7 @@ export async function appRetentionJourney({inspect=async()=>{}}={}) {
   assert.deepEqual(await values(h,w),retainedValues);
   // Prior production versions, rather than surviving payload rows, make this
   // an intentional reseed even though backfill now explicitly says existing.
-  await h.restart({clock:new Date(time+=day).toISOString()});
+  await h.restart({clock:new Date(time+=day).toISOString()});await renewOwner();
   await h.post(`workflows/${w.id}/draft`,{graph:{trigger:{...trigger,backfill:'existing'},steps:[]}});
   await h.post(`workflows/${w.id}/publish`,{},h.owner,201);await h.tick(time+=minute);
   assert.equal((await runs(h,w)).length,0,'cleaning all old snapshots must not manufacture an existing-record run');

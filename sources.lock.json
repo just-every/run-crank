@@ -5471,7 +5471,7 @@
       "executable": false
     },
     "tests/app-retention-journey.mjs": {
-      "sha256": "73fd70af6908684dfe3f3ac3b13689e24b13c93883190e72ee0c40cf05292762",
+      "sha256": "7574e5d06804795a33bb62c1d9985924f99060623b5a4921c2a62790b2d6ab62",
       "executable": false
     },
     "tests/app-subject-journey.mjs": {
@@ -5907,7 +5907,7 @@
       "executable": false
     },
     "tests/row-settle-timing.mjs": {
-      "sha256": "ecedce8d5ed6e6fe1cefb72f5238df3765e1d327c4875f6850f2ea280a8bf6a9",
+      "sha256": "dd90fafb6e48fee396ecdaf58472743c3da44776d38f2737894033b2eb9c50a1",
       "executable": false
     },
     "tests/run-commands.mjs": {
