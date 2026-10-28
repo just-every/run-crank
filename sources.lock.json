@@ -139,7 +139,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "6d12ebd260912f46d39c678f1327c2813ac6fc92518ef3a58631c97aa4a96afe",
+      "sha256": "72b3a4eabefe72719ee2f0f4806ca5e1b854737b625450a59bca895526744d4d",
       "executable": false
     },
     "AGENTS.md": {
@@ -163,7 +163,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "b5982682fb4f94c0df78dfdefd172c37d8143346ae4bbcc6c10fdb77b5669aa6",
+      "sha256": "c618fd101090333745be9a5a0976beecfb131def86afa31465e6b6a75f5f6759",
       "executable": false
     },
     "DEMO.md": {
@@ -203,7 +203,7 @@
       "executable": false
     },
     "docs/CLAIMS.md": {
-      "sha256": "5958eae6db5e81e41a585df4847075a037ebb592da025a677bb4c280ed7840ad",
+      "sha256": "8c0f8600c06e9d6dfc9f292632a4bf55b29fed0165f88fc7738391fb750d43bc",
       "executable": false
     },
     "docs/DATA-FLOWS.md": {
@@ -2719,7 +2719,7 @@
       "executable": false
     },
     "src/crank/engine/steps/ai.ts": {
-      "sha256": "9e33338cc30f33199dd2055e444d11ca3fa81d65330ef31d1745de98da6b9e12",
+      "sha256": "be382cf54a9a39ad0664072560f37911cf28028380ee49be6260eb95538ebf9d",
       "executable": false
     },
     "src/crank/engine/steps/collect.ts": {
@@ -3339,7 +3339,7 @@
       "executable": false
     },
     "src/crank/ui/editor/inspector.ts": {
-      "sha256": "87ff3cc14d8b183e2e6e4bff418f7b69331fac4178691a268b8098c2ca188d91",
+      "sha256": "ef73cabc63876f4deda0355d2c1d0e90042d7dc4eb96838709b14be3395ef672",
       "executable": false
     },
     "src/crank/ui/editor/model.ts": {
@@ -5503,15 +5503,19 @@
       "executable": false
     },
     "test-budget.json": {
-      "sha256": "ed987bc005eca264d36fa46682f99635183fc221e6bd3c3bf967e3e81160dffd",
+      "sha256": "210a19d4a3d34d0ad8e074c23a0d3ece2630d4ada26cf0f6adecf91307a90863",
       "executable": false
     },
     "tests/accounting-poll-journey.mjs": {
       "sha256": "0c09db04c84b104431dfca05ab12604ae51308f7359f368bcb70240329043ac0",
       "executable": false
     },
+    "tests/ai-steps-browser.mjs": {
+      "sha256": "697afe478cf688563adce3bbc466aa644afd69af4e0258fc01692502784ebaf5",
+      "executable": false
+    },
     "tests/ai-steps-journey.mjs": {
-      "sha256": "3a2f6dc7524337e0450b7d7d875bd85881374e017c22db9e3572bfbce3e1fad1",
+      "sha256": "d1a2dfe8720d9006e6bc12d3c19213799959adcb7b4c7677a9d9e90271884fb8",
       "executable": false
     },
     "tests/airtable-poll-journey.mjs": {
@@ -6127,7 +6131,7 @@
       "executable": false
     },
     "verification.json": {
-      "sha256": "bd153adde9d984e9a448a906d35631e18c4022b2c7d85aeb013c081d70dc38e6",
+      "sha256": "d4d912224483774bb3ff0fb1a07e77c8574f36784c0fd4e38e1e5d0dd40ea9af",
       "executable": false
     },
     "VERIFY-WORKFLOW.md": {
