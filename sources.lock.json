@@ -139,7 +139,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "90973a17fdd53b4baebd6c3d624800c8e63ec731c6828170b2bc8e333fcdf169",
+      "sha256": "972c6b700a44b6933f6d935f7ea3070c7983f55e33f8ab39bc251fa19f7fe47d",
       "executable": false
     },
     "AGENTS.md": {
@@ -163,7 +163,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "f3d6825c8af35966db31c4085eb6e893517546e79f272596ecba79b2daee8218",
+      "sha256": "a4ca07607acabe0c804ec7b0a63a8422206f75501e756f6bc2125c7a2064c0fa",
       "executable": false
     },
     "DEMO.md": {
@@ -203,7 +203,7 @@
       "executable": false
     },
     "docs/CLAIMS.md": {
-      "sha256": "b8d3ae1b11a96c668ce569750dd03a6d84803ec9537435370d704f2f6d9845e2",
+      "sha256": "a783a8c551b320a26ae1306c0f2ba2e7a3454b5e9651b59c013ea2d755529f95",
       "executable": false
     },
     "docs/DATA-FLOWS.md": {
@@ -2687,11 +2687,15 @@
       "executable": false
     },
     "src/crank/engine/executor.ts": {
-      "sha256": "3fe0167898d7ab89eca76f27ec4ee3dfadea59d269129e7d56dfd23f10bbfd4f",
+      "sha256": "c87ec5f20fce82655dd39e0be9a23b45562cb775147359999524aa8a998f387b",
       "executable": false
     },
     "src/crank/engine/graph.ts": {
-      "sha256": "b3c80641f66e6725ac99d025dc06f354d16a5aa9944bc07a517f345d6bfd5c17",
+      "sha256": "bdd46cd4469204dca2408e9b8f3c693741d98c3d96f5df0545af6fd97ef7a25e",
+      "executable": false
+    },
+    "src/crank/engine/input-schema.ts": {
+      "sha256": "721a584fb3b45e8f9439371827cca915cc703df948bcf51e87992fa672278f92",
       "executable": false
     },
     "src/crank/engine/interruption.ts": {
@@ -2703,7 +2707,7 @@
       "executable": false
     },
     "src/crank/engine/mapping.ts": {
-      "sha256": "1e82806276251f3fcb0ac8190d8a22b0dd0cd195c8752b20d3772bd94a92ae99",
+      "sha256": "c2ac904c5583b9586c5d8fd6b309d596fe918f9af50dde5d0b2ad575e4f75a95",
       "executable": false
     },
     "src/crank/engine/path-conditions.ts": {
@@ -2815,7 +2819,7 @@
       "executable": false
     },
     "src/crank/engine/types.ts": {
-      "sha256": "aea5de019412a6c606c4da693861fb454b0995594d9d21f82cd99c4a747e1d48",
+      "sha256": "96af6451883dae8f07fc7ba1359164f2e77abb244ba62b142989863a4ec1006d",
       "executable": false
     },
     "src/crank/engine/values.ts": {
@@ -3103,7 +3107,7 @@
       "executable": false
     },
     "src/crank/providers/invoice-amount.ts": {
-      "sha256": "f868835e7f3a44cba3d8eaa058c4472b280de904ff4320c83ff143450abc8a11",
+      "sha256": "58dc4cd0a95c2cb08801b7ef6df639da72c22540ad8c8497890ee7bde0223c46",
       "executable": false
     },
     "src/crank/providers/invoice-followup.ts": {
@@ -3119,7 +3123,7 @@
       "executable": false
     },
     "src/crank/providers/quickbooks.ts": {
-      "sha256": "a525563bb01741fb4717be6cdf22ad86264593d11c1a1818a7009a18ac42333e",
+      "sha256": "b728846118b6413ff6cc27ff568879e63e575b374085de8dfcdde771708c3ee3",
       "executable": false
     },
     "src/crank/providers/regulated-authority.ts": {
@@ -3375,7 +3379,7 @@
       "executable": false
     },
     "src/crank/ui/failure.ts": {
-      "sha256": "74af4d3fa1446040c88b5b61e316bdab1c029bfd53709f2116cbb161d0f5706c",
+      "sha256": "49456b1145c03fbdaaaa5b55fa3d016221da74fb891ad7b3043514e9b4a1376b",
       "executable": false
     },
     "src/crank/ui/flows.ts": {
@@ -5583,7 +5587,7 @@
       "executable": false
     },
     "tests/connections.test.mjs": {
-      "sha256": "737ef79d8bdbc86962b3aae71350282409cf029871ed92ec4cce10af1e4a08ea",
+      "sha256": "adf7514c738f4f3c0017d3ee16d381755999e09ec9b0c1f3e9c9ba1e1d2c2ee0",
       "executable": false
     },
     "tests/crank.test.mjs": {
@@ -5683,7 +5687,7 @@
       "executable": false
     },
     "tests/effect-readback-journey.mjs": {
-      "sha256": "d54c0b8d394c7a42404ce858cf37810dbc276f114fec527eb2315b43fd36ca87",
+      "sha256": "fb93aa1f8d4dd769fc1185f2a4b5d60c4b2745dd4b72dadd8240924b8910c139",
       "executable": false
     },
     "tests/email-link.mjs": {
@@ -5731,7 +5735,7 @@
       "executable": false
     },
     "tests/financial-browser.mjs": {
-      "sha256": "c278a3f9db25b534be8c6398220e4421cbe8508195f4e1dec03823518e654939",
+      "sha256": "3045c8f197c503d2671654e4df625737770e39c27cbca689cba0f12da1bdd322",
       "executable": false
     },
     "tests/financial-ownership.mjs": {
