@@ -4,6 +4,7 @@ import { assertAuthoringStep } from './authoring-authority'
 import { settleRecurringRun } from '../agents/recurring-authority'
 import { SubflowWait } from '../workflows/subflow-calls'
 import { allowedOperation, customVersion } from '../custom/store'
+import { SearchKeyWait } from './search'
 import { GatewayWait } from '../custom/gateway-tasks'
 import { ExecutorWait } from '../executors/step'
 import { grantProposal } from '../grants/policy'
@@ -134,7 +135,7 @@ class Execution {
     if (record?.status === 'waiting' && wait && !wait.resolved_at) return { kind: 'waiting', approval: wait.kind === 'approval' }
     let input: Record<string, unknown> = {}
     const ctx: StepContext = {
-      env: this.env, run: this.run, scope: this.scope, path, operationKey: record?.operation_key ?? this.replays.get(path)?.operation_key ?? `${this.run.id}:${path}`, now: this.time, zone: this.zone, input, requests: { next: 0 }, retryPolicy: { ...this.retryPolicy, ...(isObject(step.retry_policy) ? step.retry_policy : {}), write_base_delay_ms: isObject(step.retry_policy) ? step.retry_policy.base_delay_ms ?? this.retryPolicy.write_base_delay_ms : this.retryPolicy.write_base_delay_ms },
+      wait, env: this.env, run: this.run, scope: this.scope, path, operationKey: record?.operation_key ?? this.replays.get(path)?.operation_key ?? `${this.run.id}:${path}`, now: this.time, zone: this.zone, input, requests: { next: 0 }, retryPolicy: { ...this.retryPolicy, ...(isObject(step.retry_policy) ? step.retry_policy : {}), write_base_delay_ms: isObject(step.retry_policy) ? step.retry_policy.base_delay_ms ?? this.retryPolicy.write_base_delay_ms : this.retryPolicy.write_base_delay_ms },
       executeSubflow: async (steps, input, result, check) => {
         const child = new Execution(this.env,this.run,this.lease,{...this.graph,steps},this.time,this.retryPolicy)
         child.records=this.records; child.waits=this.waits; child.replays=this.replays; child.zone=this.zone
@@ -185,6 +186,10 @@ class Execution {
     } catch (error) {
       if (error instanceof SubflowWait) {
         await this.save(step,path,'waiting',{input,trace:{child_id:error.callId}})
+        return {kind:'waiting',approval:false}
+      }
+      if (error instanceof SearchKeyWait) {
+        await this.save(step,path,'waiting',{input,trace:{search_key:error.key}})
         return {kind:'waiting',approval:false}
       }
       if (error instanceof GatewayWait) {

@@ -6,6 +6,7 @@ export type CustomOperation = {
   id: string; name: string; kind: 'action' | 'search' | 'trigger'
   method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'HEAD' | 'OPTIONS'
   path: string; scopes: string[]; inputs: Record<string, CustomInput>
+  find_or_create?: { operation: string; keys: Record<string, { create_input: string; record_path: string; match: 'exact' | 'case_insensitive' | 'email' }> }
   resource_page?: { query_input: string; cursor_input: string; size_input: string; page_size: number; cursor_path: string }
   pagination?: { items_path: string; cursor_path: string; cursor_param: string; max_pages: number; max_items: number }
   gateway?: { destination: string; operation: string }
@@ -101,7 +102,7 @@ function resource(value: unknown): CustomResource {
 }
 function operation(value: unknown): CustomOperation {
   const raw = object(value, 'Operation')
-  keys(raw, ['id', 'name', 'kind', 'method', 'path', 'scopes', 'inputs', 'pagination', 'resource_page', 'gateway'], 'Operation')
+  keys(raw, ['id', 'name', 'kind', 'method', 'path', 'scopes', 'inputs', 'pagination', 'resource_page', 'gateway', 'find_or_create'], 'Operation')
   requireValue(['action', 'search', 'trigger'].includes(String(raw.kind)), 'Unsupported operation kind')
   requireValue(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'].includes(String(raw.method)), 'Unsupported operation method')
   const inputs = object(raw.inputs, 'Operation inputs'), parsed: Record<string, CustomInput> = {}
@@ -146,6 +147,22 @@ function operation(value: unknown): CustomOperation {
     keys(gateway, ['destination', 'operation'], 'Gateway')
     result.gateway = { destination: identifier(gateway.destination, 'Gateway destination'), operation: identifier(gateway.operation, 'Gateway operation') }
   }
+  if (raw.find_or_create !== undefined) {
+    const pair = object(raw.find_or_create, 'Find or create')
+    keys(pair, ['operation', 'keys'], 'Find or create')
+    const fields = object(pair.keys, 'Search keys'), parsedKeys: NonNullable<CustomOperation['find_or_create']>['keys'] = {}
+    requireValue(Object.keys(fields).length > 0 && Object.keys(fields).length <= 8, 'Declare from one to eight search keys')
+    requireValue(result.kind === 'search' && result.method === 'GET' && result.gateway && !result.resource_page && !result.pagination, 'Find or create requires one bounded private GET search')
+    for (const [name, value] of Object.entries(fields)) {
+      const field = object(value, 'Search key')
+      keys(field, ['create_input', 'record_path', 'match'], 'Search key')
+      requireValue(parsed[name]?.required, 'Every search key must be a required typed input')
+      requireValue(['exact', 'case_insensitive', 'email'].includes(String(field.match)), 'Declare exact or case-insensitive key matching')
+      requireValue(field.match === 'exact' || parsed[name].type === 'string', 'Case-insensitive keys must be strings')
+      parsedKeys[name] = { create_input: identifier(field.create_input, 'Create key input'), record_path: dataPath(field.record_path, 'Record key path'), match: field.match as 'exact' | 'case_insensitive' | 'email' }
+    }
+    result.find_or_create = { operation: identifier(pair.operation, 'Create operation'), keys: parsedKeys }
+  }
   requireValue(result.gateway || result.kind==='trigger' || result.path.startsWith('https://'),'Public actions and searches require a literal HTTPS API URL')
   return result
 }
@@ -153,6 +170,13 @@ function operation(value: unknown): CustomOperation {
 function checkResources(operations: CustomOperation[]): void {
   const byId = new Map(operations.map(op => [op.id, op]))
   for (const op of operations) {
+    if (op.find_or_create) {
+      const create = byId.get(op.find_or_create.operation)
+      requireValue(create?.kind === 'action' && create.method === 'POST' && create.gateway && create.gateway.destination === op.gateway?.destination && !create.pagination, 'Pair the search with one private POST action on the same destination and version')
+      const names = Object.values(op.find_or_create.keys).map(key => key.create_input)
+      requireValue(new Set(names).size === names.length, 'Create key inputs must be distinct')
+      for (const [name, key] of Object.entries(op.find_or_create.keys)) requireValue(create.inputs[key.create_input]?.required && create.inputs[key.create_input].type === op.inputs[name].type, 'Create keys must retain the search input types')
+    }
     for (const input of Object.values(op.inputs)) {
       if (!input.resource) continue
       const list = byId.get(input.resource.operation)

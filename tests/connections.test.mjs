@@ -770,3 +770,7 @@ test('Native Orbit deals preserve scoped lookup, conditional update and readback
 test('Native Orbit snapshots admit watched deal changes and new records once, retaining pages and erasure fences', async () => {
  const {orbitPollJourney}=await import('./orbit-journey.mjs');await orbitPollJourney();
 });
+
+test('Private custom find or create retains exact approval, key ownership and accountable readback',async()=>{
+  const {customSearchJourney}=await import('./custom-search-journey.mjs');await customSearchJourney();
+});
