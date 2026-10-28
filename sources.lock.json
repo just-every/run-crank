@@ -6019,7 +6019,7 @@
       "executable": false
     },
     "tests/webhook-erasure.test.mjs": {
-      "sha256": "cebfd75cd1feb94ae418d7eac3121e21f68341b6240175ba923c30f0cf13f8e9",
+      "sha256": "0feffcd4e30f28212252fa480cf746b7b62ca3c842272136f61e530b869a4fa1",
       "executable": false
     },
     "tests/worker.ts": {
