@@ -95,13 +95,19 @@ export async function comparisonEvent(env:CrankEnv,actor:Actor,key:string,kind:'
   const eventDigest=await digest(canonical([row.source_system,row.source_workflow,row.source_revision,eventId]))
   const existing=await stmt(env,'SELECT * FROM crank_import_observations WHERE comparison_id=? AND event_id=?',key,eventId).first<Observation>()
   requireValue(!existing || existing.sequence===sequence,'This event already has a different source sequence',409)
+  if(kind==='evaluate' && existing?.native_json) {
+    requireValue(existing.input_digest===inputDigest,'An evaluation input is immutable; use a new event identity for a different event',409)
+    await guardedBatch(env,actor,'owner',[fence(env,row,actor),stmt(env,'DELETE FROM crank_authority_guards WHERE id=?',row.id)])
+    return comparisonReport(env,key)
+  }
   let value:unknown
   if(kind==='evaluate') value={input_digest:inputDigest,result:await evaluateImportShadow(env,JSON.parse(row.draft_json),input.input,row.id+':'+eventDigest)}
   else {
     const provenance=input.provenance as {kind?:unknown;label?:unknown}|undefined
     requireValue(provenance && ['synthetic','captured'].includes(String(provenance.kind)),'Explicit synthetic or captured source provenance is required',422)
     const label=text(provenance.label,'Source observation provenance',300)
-    requireValue(input.result && typeof input.result==='object' && !Array.isArray(input.result),'Supply the source mapped outputs and intended writes')
+    const result=input.result as Record<string,unknown>|undefined
+    requireValue(result && ['completed','stopped'].includes(String(result.outcome)) && result.outputs && typeof result.outputs==='object' && !Array.isArray(result.outputs) && Array.isArray(result.intents),'Supply the source outcome, mapped outputs and intended writes')
     value={input_digest:inputDigest,result:input.result,provenance:{kind:provenance.kind,label,verified:false}}
   }
   const raw=bounded(value),column=kind==='evaluate'?'native_json':'source_json',by=kind==='evaluate'?'evaluated_by':'source_by',at=kind==='evaluate'?'evaluated_at':'observed_at'
@@ -147,7 +153,7 @@ export async function eraseComparison(env:CrankEnv,actor:Actor,portability:Porta
     retain:[{table:'crank_import_erased_events',reason:'Value-free event digests prevent erased samples from being replayed.'}],
     beforeStatements:()=>[stmt(env,'INSERT OR IGNORE INTO crank_import_erased_events(workflow_id,event_digest) SELECT ?,event_digest FROM crank_import_observations WHERE comparison_id=?',row.workflow_id,key)],
   })]})
-  const prepared=await service.nativeStatements('import-comparison',{id:key}),guard='erase-comparison:'+id()
+  const prepared=await service.nativeStatements('import-comparison',{id:key}),guard='erase-comparison:'+key
   await guardedBatch(env,actor,'owner',[
     stmt(env,`INSERT INTO crank_authority_guards(id,ok) SELECT ?,CASE WHEN EXISTS(SELECT 1 FROM crank_import_comparisons c JOIN crank_workflows w ON w.id=c.workflow_id LEFT JOIN crank_import_observations o ON o.comparison_id=c.id WHERE c.id=? AND w.status IN ('draft','paused')) AND NOT EXISTS(SELECT 1 FROM crank_import_comparisons c LEFT JOIN crank_import_observations o ON o.comparison_id=c.id WHERE c.id=? AND ${HELD}) THEN 1 ELSE 0 END`,guard,key,key),
     ...prepared.statements.map(s=>stmt(env,s.sql,...s.params)),stmt(env,'DELETE FROM crank_authority_guards WHERE id=?',guard),auditStatement(env,actor.id,'data.erase','erasure',prepared.operationId,{entity:'import-comparison'}),

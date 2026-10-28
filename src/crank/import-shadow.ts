@@ -1,5 +1,6 @@
 import { prepareHttpRequest, httpRequest } from './connectors/http-step'
 import { branchesOf, validateGraph, type Graph } from './engine/graph'
+import { workspaceSettings } from './ops/settings'
 import { StepError } from './engine/errors'
 import { resolve, type Scope } from './engine/mapping'
 import { evaluatePaths } from './engine/path-conditions'
@@ -33,7 +34,7 @@ export function shadowGraph(value: unknown): Graph {
   const collect=(steps:Step[])=>steps.forEach(step=>{if(step.type==='http')httpIds.push(step.id);if(step.type==='paths')for(const branch of branchesOf(step))collect(branch.steps)})
   collect(graph.steps)
   const references=(value:unknown):void=>{
-    if(typeof value==='string' && httpIds.some(id=>value.includes('steps.'+id))) throw new StepError('validation','Comparison refuses mappings dependent on an HTTP response')
+    if(typeof value==='string' && httpIds.some(id=>new RegExp('steps\\.'+id+'(?:\\.|\\[|\\s*}}|$)').test(value))) throw new StepError('validation','Comparison refuses mappings dependent on an HTTP response')
     if(Array.isArray(value))value.forEach(references)
     else if(isObject(value) && !Object.hasOwn(value,'$literal'))Object.values(value).forEach(references)
   }
@@ -45,12 +46,13 @@ export function shadowGraph(value: unknown): Graph {
  * credential lookup, request admission, provider response or dispatch capability. */
 export async function evaluateImportShadow(env: CrankEnv, value: unknown, input: unknown, identity: string): Promise<ShadowResult> {
   const graph = shadowGraph(value), outputs: Record<string,unknown> = {}, intents: WriteIntent[] = []
-  const scope: Scope = { trigger: input, steps: {}, run: {} }
+  const settings = await workspaceSettings(env), time = Date.now()
+  const scope: Scope = { trigger: input, steps: {}, run: {id:identity} }
   const walk = async (steps: Step[], prefix: string): Promise<boolean> => {
     for (const step of steps) {
       const path = prefix + step.id
       const ctx: StepContext = { comparison:true, env, scope, path, operationKey:identity+':'+path,
-        run:{id:identity,mode:'comparison'} as RunRow, now:0, zone:String(graph.settings?.timezone ?? 'America/New_York'),
+        run:{id:identity,mode:'comparison'} as RunRow, now:time, zone:String(graph.settings?.timezone ?? settings.timezone),
         input:(resolve(step.input ?? {},scope) ?? {}) as Record<string,unknown>, requests:{next:0},
         respond:async()=>{throw new StepError('authority','Comparison cannot respond as a provider')},
       }

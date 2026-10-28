@@ -1,3 +1,4 @@
+import {shadowFixture,shadowInput,observation} from './migration-shadow-journey.mjs';
 /** MIG-001: installed move-in and native graph pages through owner HTTP doors. */
 import assert from 'node:assert/strict';
 import {createServer} from 'node:http';
@@ -224,5 +225,67 @@ try {
  console.log('MIG-001: embedded child Wait, inactive pinned draft, restart and once-only receiver continuation asserted at 1440 and inspected at 1440 and 390');
 
  await context.close();
+ server.closeAllConnections();await new Promise(resolve=>server.close(resolve));server=null;
+ await h.close();h=null;
+ h=await harness(declared,{emitted:true,edge:async request=>{const url=new URL(request.url);if(url.origin!==declared)return undefined;const headers=new Headers(request.headers);headers.delete('content-length');return fetch(receiverOrigin+url.pathname,{method:request.method,headers,body:await request.arrayBuffer()})}});
+ const shadowOrigin=h.origin;
+ server=createServer(async(req,res)=>{try{
+  const path=decodeURIComponent(new URL(req.url,shadowOrigin).pathname);let asset;
+  if(types[extname(path)])for(const root of ['./dist/client','public']){const base=resolve(root),file=resolve(root,'.'+path);if(file.startsWith(base+'/')){try{asset=await readFile(file);break}catch{}}}
+  if(asset){res.writeHead(200,{'content-type':types[extname(path)]});res.end(asset);return}
+  const chunks=[];for await(const chunk of req)chunks.push(chunk);
+  const response=await h.mf.dispatchFetch(shadowOrigin+req.url,{method:req.method,headers:req.headers,redirect:'manual',...(['GET','HEAD'].includes(req.method)?{}:{body:Buffer.concat(chunks)})});
+  res.writeHead(response.status,Object.fromEntries(response.headers));res.end(Buffer.from(await response.arrayBuffer()));
+ }catch{res.writeHead(500);res.end('Browser fixture transport failed')}});
+ await new Promise(resolve=>server.listen(Number(new URL(shadowOrigin).port),'127.0.0.1',resolve));
+ const shadowContext=await browser.newContext(),shadowCookie=h.owner.indexOf('=');
+ await shadowContext.addCookies([{name:h.owner.slice(0,shadowCookie),value:h.owner.slice(shadowCookie+1),url:shadowOrigin}]);page=await shadowContext.newPage();
+ await page.goto(shadowOrigin+'/setup');if(new URL(page.url()).pathname==='/setup'){await page.getByRole('checkbox').check();await page.getByRole('button',{name:'Finish setup',exact:true}).click();await page.waitForURL('**/app')}
+ // MIG-006: assert one desktop flow; retain the same changed screens at both release widths.
+ await page.setViewportSize({width:1440,height:1000});
+ const shadowBefore=effects.length,{workflow:shadowWorkflow}=await shadowFixture(h,declared);
+ await page.goto(shadowOrigin+'/app/import');await page.getByRole('link',{name:'Review no-write comparisons',exact:true}).click();
+ await page.getByText('Synthetic no-write migration comparison',{exact:true}).click();
+ await page.getByLabel('Source workflow',{exact:true}).fill('synthetic-crank-shadow');
+ await page.getByLabel('Source revision',{exact:true}).fill('synthetic-crank-browser-revision');
+ await page.getByRole('checkbox',{name:'I reviewed this exact draft and will supply only non-sensitive samples.'}).check();
+ await page.getByRole('button',{name:'Start no-write comparison',exact:true}).click();await page.waitForLoadState('networkidle');
+ const shadowKey=new URL(page.url()).pathname.split('/').at(-1);
+ const evaluate=page.locator('form[action$="/evaluate"]');
+ await evaluate.getByLabel('Source event id',{exact:true}).fill('synthetic-crank-event-6');
+ await evaluate.getByLabel('Source event sequence',{exact:true}).fill('6');
+ await evaluate.getByLabel('Exact event input JSON',{exact:true}).fill(JSON.stringify(shadowInput(6)));
+ await evaluate.getByRole('button',{name:'Evaluate without writes',exact:true}).click();await page.waitForLoadState('networkidle');
+ assert.equal((await h.get('imports/comparisons/'+shadowKey)).events[0].status,'unpaired');
+ const observe=page.locator('form[action$="/observe"]'),shadowObservation=observation(declared,6);
+ await observe.getByLabel('Source event id',{exact:true}).fill(shadowObservation.event_id);
+ await observe.getByLabel('Source event sequence',{exact:true}).fill('6');
+ await observe.getByLabel('Exact event input JSON',{exact:true}).fill(JSON.stringify(shadowObservation.input));
+ await observe.getByLabel('Observation provenance').selectOption('synthetic');
+ await observe.getByLabel('Provenance description',{exact:true}).fill(shadowObservation.provenance.label);
+ await observe.getByLabel('Source result JSON',{exact:true}).fill(JSON.stringify(shadowObservation.result));
+ await observe.getByRole('button',{name:'Retain source observation',exact:true}).click();await page.waitForLoadState('networkidle');
+ const mismatch=page.locator('[data-comparison-event="synthetic-crank-event-6"]');
+ const customerDifference=mismatch.locator('.comparison-difference').filter({has:page.getByRole('heading',{name:'$["result"]["outputs"]["mapped"]["customer"]',exact:true})});
+ assert.equal((await customerDifference.locator('pre').nth(0).innerText()).trim(),'"synthetic-crank-6"');
+ assert.equal((await customerDifference.locator('pre').nth(1).innerText()).trim(),'"synthetic-crank-wrong"');
+ assert.equal(await page.getByRole('button',{name:'Cutover unavailable',exact:true}).isDisabled(),true);
+ assert.equal(effects.length,shadowBefore,'browser comparison sends no destination request');
+ assert.deepEqual((await h.get('workflow-runs?workflow='+shadowWorkflow.id)).runs,[],'browser comparison never starts an ordinary test');
+ const shadowReport=await h.get('imports/comparisons/'+shadowKey);assert.equal(shadowReport.events[0].status,'mismatched');assert.equal(shadowReport.counts.consecutive,0);
+ const shadowShots=async state=>{for(const width of [1440,390]){await page.setViewportSize({width,height:1000});await shot(width,state)}};
+ await shadowShots('shadow-different-values');
+ await page.setViewportSize({width:1440,height:1000});await mismatch.getByLabel('Mismatch decision reason',{exact:true}).fill('Synthetic source difference retained for review, without cutover authority');
+ await mismatch.getByRole('button',{name:'Accept mismatch for review',exact:true}).click();await page.waitForLoadState('networkidle');
+ assert.ok((await page.locator('body').innerText()).includes('Synthetic source difference retained for review, without cutover authority'));
+ assert.equal((await h.get('imports/comparisons/'+shadowKey)).counts.consecutive,0);
+ await shadowShots('shadow-recorded-decision');
+ for(const width of [1440,390]) {
+  await page.setViewportSize({width,height:1000});
+  const search=page.getByRole('link',{name:'Search runs',exact:true});await search.focus();assert.equal(await page.locator('#search-tooltip').isVisible(),true);await page.locator('h1').click();await search.hover();await page.waitForTimeout(350);assert.equal(await page.locator('#search-tooltip').isVisible(),true);
+ }
+ console.log('MIG-006: no-write browser evaluation, labelled source pairing, both differing values, decision attribution and refused cutover asserted at 1440; screens inspected at 1440 and 390');
+
+ await shadowContext.close();
 }catch(error){if(page){await page.screenshot({path:join(evidence,'journey-error.png'),fullPage:true});console.error((await page.locator('body').innerText()).slice(0,800))}console.error(String(error.message).replace(/https?:\/\/\S+/g,'[redacted URL]'));process.exitCode=1}
 finally{await browser?.close();if(server){server.closeAllConnections();await new Promise(r=>server.close(r))}await h?.close();if(receiver){receiver.closeAllConnections();await new Promise(resolve=>receiver.close(resolve))}}
