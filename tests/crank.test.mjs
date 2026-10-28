@@ -1,3 +1,4 @@
+import {migrationShadowJourney} from './migration-shadow-journey.mjs';
 import {originalCodeJourney} from './n8n-code-journey.mjs';
 import {n8nBindingJourney} from './n8n-binding-journey.mjs';
 import {transformStreamJourney} from './n8n-stream-journey.mjs';
@@ -338,3 +339,5 @@ test('erasure deletes input and decisions, blocks redelivery, and fences an olde
 });
 
 test('Reviewed n8n Sheets triggers retain named columns and explicit fresh comparison bindings', async()=>{const {n8nSheetsTriggerJourney}=await import('./n8n-sheets-trigger-journey.mjs');await n8nSheetsTriggerJourney()});
+
+test('Migration comparisons retain exact no-write intents, immutable event pairing and inactive custody', migrationShadowJourney);

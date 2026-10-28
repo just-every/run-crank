@@ -344,3 +344,6 @@ export async function executeRun(env: CrankEnv, runId: string, time = Date.now()
   await flushUsageNotices(env)
   return settled
 }
+
+// A separate evaluator: never admits a production or ordinary draft-test run.
+export { evaluateImportShadow } from '../import-shadow'
