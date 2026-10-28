@@ -122,6 +122,7 @@ class Execution {
 
   private async step(step: Step, path: string): Promise<Outcome> {
     const type = STEP_TYPES[step.type], record = this.records.get(path)
+    if (!type) return { kind: 'failed', error: new StepError('validation', `Step ${step.id}: unknown type ${step.type}`).toJSON() }
     // HTTP's registry entry supports writes, but a statically declared read is
     // safe to repeat after interruption. Never reclassify a retained write.
     const method = isObject(step.input) ? String(step.input.method ?? 'GET').toUpperCase() : 'GET'

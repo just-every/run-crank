@@ -73,3 +73,38 @@ test('Anonymous import requests are refused before any of their body is read',as
   }
  }finally{await h.close()}
 });
+
+test('Inherited OAuth provider names are refused at the public door before storing credentials',async()=>{
+ const binding=fakeSecret('prototype-door-binding'),secret=fakeSecret('prototype-door-client');
+ const h=await harness('https://security-receiver.example',{bindings:{SESSION_SECRET:binding}});
+ try{
+  // This settings door requires a signed-in native owner, rather than a scoped builder.
+  const input={client_id:'prototype-door-client',client_secret:secret};
+  const unknown=await h.send('/api/crank/oauth/apps/unregistered-provider',input,h.owner);
+  assert.equal(unknown.status,400,'an unknown provider is a bad request');
+  const statuses=[];
+  for(const name of ['constructor','__proto__']){
+   const response=await h.send('/api/crank/oauth/apps/'+name,input,h.owner);
+   statuses.push(response.status);
+   assert.ok(!response.text.includes(binding)&&!response.text.includes(secret)&&!response.text.includes('SESSION_SECRET'),'provider refusal contains no binding or credential content');
+  }
+  // Only status codes enter failure output, never response bodies.
+  assert.deepEqual(statuses,[unknown.status,unknown.status],'inherited names must receive the unknown-provider response');
+  const registered=await h.send('/api/crank/oauth/apps/hubspot',input,h.owner);
+  assert.equal(registered.status,200,'a registered provider remains available');
+  assert.equal(registered.value.app,'hubspot');
+  assert.ok(!registered.text.includes(secret)&&!registered.text.includes(binding),'registration does not return credentials');
+  const consent=await h.send('/api/crank/oauth/start',{app:'hubspot',label:'Prototype door control',scopes:['crm.objects.contacts.read']},h.owner);
+  assert.equal(consent.status,201,'a legitimate registration still starts consent');
+  assert.equal(new URL(consent.value.authorize_url).hostname,'app.hubspot.com');
+  const stored=await h.db.prepare('SELECT app FROM crank_oauth_apps ORDER BY app').all();
+  assert.deepEqual(stored.results.map(row=>row.app),['hubspot'],'refused names leave no OAuth registration');
+  // Retain an old invalid registration to model an installation upgrading from main.
+  await h.db.prepare("INSERT INTO crank_oauth_apps SELECT 'constructor',client_id,secret_iv,secret_ciphertext,updated_by,updated_at FROM crank_oauth_apps WHERE app='hubspot'").run();
+  const report=await h.send('/api/crank/data/flows',undefined,h.owner);
+  assert.equal(report.status,200,'an old invalid registration cannot block the Data report');
+  const invalid=report.value.flows.find(flow=>flow.id==='oauth:constructor');
+  assert.equal(invalid?.state,'unsupported provider');
+  assert.deepEqual(invalid?.recipients,[],'unsupported registrations have no outgoing recipient');
+ }finally{await h.close()}
+});
