@@ -21,6 +21,8 @@ try {
   await context.addCookies([{name:restoredName,value:restoredValue.join('='),url:restored.origin}]);
   assert.equal((await restored.h.get('workflow-runs/'+runs.waiting)).status,'paused');
   await restored.h.tick();assert.equal((await restored.h.get('workflow-runs/'+runs.waiting)).status,'paused');
+  const table=await restored.h.get('tables/'+runs.table);assert.equal(table.table.active,0);assert.deepEqual(table.records.map(record=>({key:record.key,value:record.value})),[{key:'inspected_count',value:27}]);
+  const tableHistory=await restored.h.get('workflow-runs/'+runs.tableCreated);assert.equal(tableHistory.steps.find(step=>step.step_id==='lookup').output.outcome,'created');
   await page.goto(restored.origin+'/app/connections');
   if(new URL(page.url()).pathname==='/setup'){await page.getByRole('checkbox').check();await page.getByRole('button',{name:'Finish setup',exact:true}).click();await page.goto(restored.origin+'/app/connections')}
   assert.match(await page.locator('body').innerText(),/revoked/i);

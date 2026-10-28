@@ -615,6 +615,16 @@ and write requests are refused. A signed webhook uses the ordinary `webhook`
 trigger with `custom_connector_id`, `custom_connector_version`,
 `custom_operation`, `signing_connection_id` and `signature`. Custom workflow tests and publication require a current person session and the named workflow, connection and gateway-use scopes under TEAM-001 and TEAM-004. Connector installation, scope review, gateway enrollment and concrete grants remain owner-only; custom webhook installation remains owner-only.
 
+Search steps accept a whole-number `limit` from 1 to 500 and a declared
+`sort:{field,direction}` with direction `asc` or `desc`. In `multi_match:"all"`
+mode, a result beyond the declared bound has outcome `truncated`, the returned
+`count` and `truncated:true`; downstream paths can branch on that outcome.
+A complete set of matches has outcome `found` and `truncated:false`. An incomplete
+provider scan cannot establish `not found` or the sorted first match. Those
+decisions fail as `search incomplete`; only the explicit all mode releases a
+visibly incomplete set, including an empty one. An incomplete Slack channel
+scan never authorizes channel creation.
+
 A string input can declare `resource:{operation,items_path,value_path,label_path,parents?}`
 (or OpenAPI parameter `x-crank-resource`). The source is a reviewed GET/HEAD
 operation in the same immutable version; its scopes must be included in the
@@ -826,8 +836,8 @@ remain unproved and require Google OAuth and a QuickBooks Online sandbox.
 Native owner session and same-origin mutation protection are required. These tables hold non-sensitive operational safe integers or lists of up to 1000 safe integers, with at most 100 keyed records per table. General records, customer/financial/health data, strings/objects, intake forms and record-trigger events are not implemented. Data remains until explicit owner erasure.
 
 - `POST /api/crank/tables` with `name` and `confirm: "OPERATIONAL_NUMBERS_ONLY"`; `GET /api/crank/tables` lists tables; `GET /api/crank/tables/:id` returns records and a review digest.
-- `POST /api/crank/tables/:id/records` takes a fresh UUIDv4 `operation_id` retained for retries, a lower-case identifier `key`, and `operation`: `upsert` (`value`), `increment`/`decrement` (`by`, default 1), `append` (`value`), `pop_first` or `pop_last`. A matching retry returns the original receipt; changed reuse is refused. Counters return the new number; pops return the removed number or `list empty`.
-- `GET /api/crank/tables/:id/records/:key` reads one record. Native production steps `table.atomic` and `table.lookup` select a fixed `table_id`; exact-key lookup supports `no_match` halt/continue and the shared found/not-found shape. Find-or-create is refused. Only current native-owner publication in an unclassified workflow may invoke this state; no grants, sensitive flows or draft tests can use it.
+- `POST /api/crank/tables/:id/records` takes a fresh UUIDv4 `operation_id` retained for retries, a lower-case identifier `key`, and `operation`: `upsert` (`value`), `find_or_create` (`value`), `increment` or `decrement` (`by`, default 1), `append` (`value`), `pop_first` or `pop_last`. A matching retry returns the original receipt; changed reuse is refused. Counters return the new number; pops return the removed number or `list empty`. Find-or-create returns `created` or `found` and the exact record snapshot; finding never overwrites the existing value or advances its revision.
+- `GET /api/crank/tables/:id/records/:key` reads one record. Native production steps `table.atomic` and `table.lookup` select a fixed `table_id`; exact-key lookup supports `no_match:"halt"` or `no_match:"continue"` and the shared `found` or `not found` shape. A lookup may declare `create_if_not_found:{value:27}` or a mapped integer or integer list. It retains the stable operation identity and atomically commits one record and its receipt; concurrent runs return one `created` and the remaining `found` results. Only current native-owner publication in an unclassified workflow may invoke this state; no grants, sensitive flows or draft tests can use it.
 - `POST /api/crank/tables/:id/pause` fences writes. An inactive/restored table requires `POST /adopt` with its exact `digest` and `confirm: "ADOPT_OPERATIONAL_STATE"`; this never publishes a caller or reactivates old operation receipts.
 - On a paused table, `POST /records/:key/erase` with `confirm: "ERASE"` removes its state and receipts through the erasure journal. Opaque operation/key tombstones remain to prevent recreation and replay. Existing calling-run histories have their separate run erasure controls.
 
