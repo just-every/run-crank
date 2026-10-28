@@ -108,6 +108,7 @@ export async function quickbooksSearchJourney({inspect}={}) {
     assert.equal(JSON.parse(descriptor.row.response_json).headers.sealed,'crank-payload-v1');
     assert.ok(!snapshot.includes('synthetic-crank-104')&&!snapshot.includes(Buffer.from(JSON.stringify(full)).toString('base64')));
     const subject=await h.post('data/subject',{subject:'synthetic-crank-103'});assert.ok(subject.workflow_runs.some(r=>r.id===parked.id),'the only occurrence in an unfinished sealed page is indexed');assert.equal(subject.blocked,true);
+    const undeclared=await h.post('data/subject',{subject:'123456789012345678.01'});assert.ok(!undeclared.workflow_runs.some(r=>r.id===parked.id),'sealed pages never expose undeclared identifiers through plaintext matching');
     if(inspect)await inspect({h,run:parked,state:'invoice-search-waiting'});
     restored=await harness('http://127.0.0.1:9',{edge:fake.edge,clock});await restored.post('data/restore',{archive:snapshot,confirm:'RESTORE'});
     const received=inventory(await archive(restored)),source=new Set(inventory(snapshot)),additions=received.filter(row=>!source.has(row));assert.equal(additions.length,1);assert.equal(JSON.parse(additions[0]).row.action,'data.restore');assert.deepEqual(received.filter(row=>row!==additions[0]),[...source].sort(),'complete credential-free portable records round-trip');
