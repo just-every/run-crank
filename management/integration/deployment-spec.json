@@ -528,6 +528,12 @@
       "name": "0085_custom_search_keys.sql",
       "sha256": "be35508c8666989d5a7a5f09f84ac66febeea24810e71e289f82ed8425df31c3",
       "sql": "-- Value-free installation-local ownership; never restored as execution authority.\nCREATE TABLE crank_custom_search_keys (\n  name TEXT PRIMARY KEY,\n  run_id TEXT NOT NULL REFERENCES crank_wf_runs(id) ON DELETE CASCADE,\n  holder TEXT NOT NULL\n);\nCREATE INDEX crank_custom_search_keys_run ON crank_custom_search_keys(run_id);\n"
+    },
+    {
+      "binding": "DB",
+      "name": "0085_model_response_identity.sql",
+      "sha256": "e64f92bc122b5554cb98be23624201a521b0b7d2c74176059266cd4d588368db",
+      "sql": "-- A bounded provider response identifier survives interruption of the later\n-- step-result transaction. Model text and credentials never enter this field.\nALTER TABLE crank_wf_attempts ADD COLUMN response_identity TEXT;\n"
     }
   ],
   "compatibilityDate": "2026-09-08",
