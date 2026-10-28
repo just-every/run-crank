@@ -139,7 +139,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "72b3a4eabefe72719ee2f0f4806ca5e1b854737b625450a59bca895526744d4d",
+      "sha256": "16f1f577fe401cea78ff92524cdb98b377fce4bb61050f1bd758f105b2c86109",
       "executable": false
     },
     "AGENTS.md": {
@@ -163,7 +163,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "c618fd101090333745be9a5a0976beecfb131def86afa31465e6b6a75f5f6759",
+      "sha256": "e620af4214d22d5bf95f7c6183da8da14417be232b5938ff98f7df463ab1cdf4",
       "executable": false
     },
     "DEMO.md": {
@@ -203,7 +203,7 @@
       "executable": false
     },
     "docs/CLAIMS.md": {
-      "sha256": "8c0f8600c06e9d6dfc9f292632a4bf55b29fed0165f88fc7738391fb750d43bc",
+      "sha256": "960c16b1d78d657878dd213514ce40b4a225dc7d2a97cb5a0c93b48d618bcdb2",
       "executable": false
     },
     "docs/DATA-FLOWS.md": {
@@ -227,7 +227,7 @@
       "executable": false
     },
     "docs/IMPORTING.md": {
-      "sha256": "eced66d91f9aa398d872fba3fcce51df48760f41b7eb0766bd0bdef354bce5a7",
+      "sha256": "0d9bac88e2e10f819da30b6ca4f09e7c7f6c120641e95af9712e22ffb7825eb3",
       "executable": false
     },
     "docs/OPERATIONS.md": {
@@ -2935,7 +2935,7 @@
       "executable": false
     },
     "src/crank/n8n-graph.ts": {
-      "sha256": "eafc59dfa723c7a4123e067d3b316e0f35d6eef83314674c17047a4c9487b348",
+      "sha256": "7b0d263bd734aca2f1491132e824eece203a1ce1aac31a9db8ecb1712617192c",
       "executable": false
     },
     "src/crank/n8n-http.ts": {
@@ -5871,7 +5871,7 @@
       "executable": false
     },
     "tests/n8n-conversion-journey.mjs": {
-      "sha256": "97806f2b55c0ee23bedc4b95774296a863d0a5f761a15d2d930e1bb41bca9a0d",
+      "sha256": "d34f1a96310883e64aa66b26ee3a33e64ee326638085471e63ec88b0b06ee2a3",
       "executable": false
     },
     "tests/n8n-datetime-journey.mjs": {

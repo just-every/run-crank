@@ -204,9 +204,13 @@ export function n8nGraph(value: Json, sourceId: string, env: ImportTargetEnv, ow
           result.push(n8nDateTime(n,id,previous,at,settings.timezone,fields,mapped))
           previous='steps.'+id;break
         }
-        case 'n8n-nodes-base.wait':
-          fields(p,['resume','amount','unit'],at+'.parameters');if(n.typeVersion!==1.1||(p.resume??'timeInterval')!=='timeInterval'||!Number.isInteger(p.amount)||p.amount<0||!['seconds','minutes','hours','days'].includes(p.unit))throw Error('unsupported delay')
-          Object.assign(step,{type:'delay',mode:'for',input:{amount:p.amount,unit:p.unit}});result.push(step as Step);break
+        case 'n8n-nodes-base.wait': {
+          fields(p,['resume','amount','unit'],at+'.parameters')
+          const seconds=({seconds:1,minutes:60,hours:3600,days:86400} as Record<string,number>)[p.unit]
+          if(n.typeVersion!==1.1||(p.resume??'timeInterval')!=='timeInterval'||!Number.isSafeInteger(p.amount)||p.amount<0||!['seconds','minutes','hours','days'].includes(p.unit)||p.amount>366*86400/seconds)throw Error('unsupported delay: use a literal interval within 366 days')
+          // Source interval days are elapsed hours; native days follow the calendar.
+          Object.assign(step,{type:'delay',mode:'for',input:p.unit==='days'?{amount:p.amount*24,unit:'hours'}:{amount:p.amount,unit:p.unit}});result.push(step as Step);break
+        }
         case 'n8n-nodes-base.httpRequest': {
           result.push(n8nHttp(n,id,previous,at,env,conversions[n.id],fields,mapped));previous='steps.'+id+'.body'
           if(reviewedHttpBinding(n,conversions[n.id])){dispositions.push(conversionDisposition(n,conversions[n.id],true));coverage.push({field:at+'.credentials',reason:'Supported explicit fresh native connection binding; original credential references confer no authority and live connection scope is rechecked on dispatch'})}
