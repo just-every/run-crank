@@ -107,9 +107,10 @@ export function validateTrigger(trigger: Record<string, unknown>) {
     case 'app_poll': {
       const nativeTable = trigger.provider === 'crank_table'
       if (nativeTable ? trigger.connection_id !== undefined || trigger.resource !== 'records' || typeof trigger.table_id !== 'string' || !trigger.table_id.trim() || trigger.table_id.length > 200 : typeof trigger.connection_id !== 'string') fail('choose an app connection, or a native operational table without a connection')
-      if (!['hubspot', 'microsoft_graph', 'google_sheets', 'microsoft_excel', 'airtable', 'sharepoint', 'http_json', 'crank_table', ...COMMERCE_PROVIDERS, ...ACCOUNTING_PROVIDERS].includes(String(trigger.provider))) fail('choose a supported app provider')
+      if (!['orbit', 'hubspot', 'microsoft_graph', 'google_sheets', 'microsoft_excel', 'airtable', 'sharepoint', 'http_json', 'crank_table', ...COMMERCE_PROVIDERS, ...ACCOUNTING_PROVIDERS].includes(String(trigger.provider))) fail('choose a supported app provider')
       if ((COMMERCE_PROVIDERS as readonly string[]).includes(String(trigger.provider))) validateCommerceTrigger(trigger)
       if ((ACCOUNTING_PROVIDERS as readonly string[]).includes(String(trigger.provider))) validateAccountingTrigger(trigger)
+      if (trigger.provider === 'orbit' && (trigger.resource !== 'deals' || ['url','query','origin','record_ids','fields'].some(key => trigger[key] !== undefined) || Array.isArray(trigger.watched_fields) && trigger.watched_fields.some(field => !['title','stage_id','value_cents','company_id'].includes(String(field))))) fail('Orbit polls only the bound deals and allowed fields')
       if (trigger.provider === 'hubspot' && !['contacts', 'companies', 'deals'].includes(String(trigger.resource))) fail('choose contacts, companies or deals')
       if (trigger.provider === 'microsoft_graph' && trigger.resource !== 'messages') fail('choose messages')
       if (trigger.provider === 'google_sheets') {

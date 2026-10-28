@@ -13,7 +13,7 @@ const uncertainWrite = encode({ category: 'uncertain', message: 'Restore interru
 const deliveryFence = previous => encode({ status: 'failed', code: 'restore_fence', uncertain: true, previous });
 const fenced = (json, key, code) => json !== null && JSON.parse(json)[key] === code;
 const remoteWrite = row => row.status === 'running' &&
-  (row.type.startsWith('nook.') || row.type.startsWith('slack.') || row.type.startsWith('google_calendar.') || row.type.startsWith('quickbooks.') || row.type.startsWith('gusto.') || row.type === 'http' && !['GET', 'HEAD'].includes(String(JSON.parse(row.input_json ?? '{}').method ?? 'GET').toUpperCase()));
+  (row.type === 'orbit.update_deal' || row.type.startsWith('nook.') || row.type.startsWith('slack.') || row.type.startsWith('google_calendar.') || row.type.startsWith('quickbooks.') || row.type.startsWith('gusto.') || row.type === 'http' && !['GET', 'HEAD'].includes(String(JSON.parse(row.input_json ?? '{}').method ?? 'GET').toUpperCase()));
 
 /** Pure/idempotent export normalization: backups carry history, never execution authority. */
 export function fenceRow(table, row) {
@@ -180,8 +180,8 @@ export async function validateRestore({ read }) {
       const leaf = checkpoint.path.split('/').at(-1);
       const find = steps => steps.flatMap(step => [step, ...find(step.steps ?? []), ...(step.branches ?? []).flatMap(branch => find(branch.steps ?? [])), ...find(step.fallback?.steps ?? []), ...find(step.always?.steps ?? [])]);
       const step = graph && find(JSON.parse(graph).steps).find(step => step.id === leaf);
-      if (!step || !['http','file.fetch'].includes(step.type) && !step.type.startsWith('nook.') && !step.type.startsWith('slack.') && !step.type.startsWith('quickbooks.') && !step.type.startsWith('gusto.')) return false;
-      const bound = (step.type === 'file.fetch' || step.type === 'nook.send_message' ? 1 : step.type.startsWith('slack.') ? 4 : 2) * 1024 * 1024;
+      if (!step || !['http','file.fetch'].includes(step.type) && !step.type.startsWith('orbit.') && !step.type.startsWith('nook.') && !step.type.startsWith('slack.') && !step.type.startsWith('quickbooks.') && !step.type.startsWith('gusto.')) return false;
+      const bound = (step.type === 'file.fetch' || step.type === 'nook.send_message' || step.type.startsWith('orbit.') ? 1 : step.type.startsWith('slack.') ? 4 : 2) * 1024 * 1024;
       if (!Number.isSafeInteger(checkpoint.ordinal) || checkpoint.ordinal < 0 || !/^[a-f0-9]{64}$/.test(checkpoint.request_key) || typeof checkpoint.operation_key !== 'string' || !checkpoint.operation_key) return false;
       if (!Number.isInteger(response.status) || response.status < 100 || response.status > 599 || !['http:', 'https:'].includes(url.protocol) || url.username || url.password || url.search || url.hash) return false;
       if (!Number.isSafeInteger(response.body_bytes) || response.body_bytes < 0 || response.body_bytes > bound || response.chunk_count !== Math.ceil(response.body_bytes / 65536) || !Array.isArray(response.headers)) return false;

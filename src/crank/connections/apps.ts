@@ -6,6 +6,7 @@ export interface AppDefinition {
   test?: { method: string; url: string }
 }
 export const APPS: Record<string, AppDefinition> = {
+  orbit: { name: 'Orbit scoped deal API', kinds: ['bearer'], domains: 'declared' },
   nook: { name: 'Nook integration token', kinds: ['bearer'], domains: 'declared' },
   microsoft_graph: { name: 'Microsoft Graph', kinds: ['bearer'], domains: ['graph.microsoft.com'] },
   gusto: { name: 'Gusto company credentials', kinds: ['bearer', 'oauth2'], domains: ['api.gusto-demo.com', 'api.gusto.com'] },

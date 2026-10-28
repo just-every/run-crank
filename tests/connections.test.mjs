@@ -762,3 +762,11 @@ test('Native Nook delivery binds installation and conversation, retains one effe
   const {nookJourney}=await import('./nook-journey.mjs');
   await nookJourney();
 });
+
+test('Native Orbit deals preserve scoped lookup, conditional update and readback across loss, revocation and inactive custody', async () => {
+ const {orbitJourney}=await import('./orbit-journey.mjs');await orbitJourney();
+});
+
+test('Native Orbit snapshots admit watched deal changes and new records once, retaining pages and erasure fences', async () => {
+ const {orbitPollJourney}=await import('./orbit-journey.mjs');await orbitPollJourney();
+});

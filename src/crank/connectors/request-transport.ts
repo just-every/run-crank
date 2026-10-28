@@ -13,7 +13,7 @@ import type { AttemptPolicy } from './retry'
 export interface Prepared { url: URL; method: string; headers: Headers; body: Uint8Array<ArrayBuffer> | null; bodyIdentity?: string; timeout: number; maxBytes?: number; follow?: number; credentialIdentity?: (headers: Headers) => Promise<string> }
 export async function sendRequest(ctx: StepContext, prepared: Prepared, connectionId: string | undefined, policy: AttemptPolicy) {
   const headers = new Headers(prepared.headers), url = new URL(prepared.url)
-  if (connectionId) await authorizeRequest(ctx.env, connectionId, url, headers, prepared.body)
+  if (connectionId) await authorizeRequest(ctx.env, connectionId, url, headers, prepared.body, prepared.method)
   await assertDispatchAuthority(ctx.env, ctx.run.id)
   const release = await acquireRequest(ctx, connectionId, url.origin, policy.deadline, prepared.timeout)
   try {
@@ -21,7 +21,7 @@ export async function sendRequest(ctx: StepContext, prepared: Prepared, connecti
     // recording or dispatching a physical request with live credentials.
     await assertDispatchAuthority(ctx.env, ctx.run.id)
     await assertReportedBudget(ctx.env, ctx.run.id)
-    if (connectionId) await authorizeRequest(ctx.env, connectionId, url, headers, prepared.body)
+    if (connectionId) await authorizeRequest(ctx.env, connectionId, url, headers, prepared.body, prepared.method)
     if (!['GET','HEAD'].includes(prepared.method)) await assertDriftWriteAllowed(ctx.env,ctx.run.id)
     await ctx.beforeRequest?.()
     const credentialIdentity = await prepared.credentialIdentity?.(headers) ?? null

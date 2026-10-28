@@ -1,3 +1,4 @@
+import { orbitRecords } from './orbit-source'
 import { sharepointRecords, httpJsonRecords } from './list-sources'
 import { airtableFields, airtableRecords } from './airtable-poll'
 import { excelTableValues } from './excel-table'
@@ -15,7 +16,7 @@ interface AppReadOptions { beforePage?: () => Promise<unknown>; maxItems?: numbe
 export async function appRequest(env: CrankEnv, connection: string, url: URL, method = 'GET', body?: unknown) {
   const headers = new Headers({ accept: 'application/json', ...(body ? { 'content-type': 'application/json' } : {}) })
   const text = body ? JSON.stringify(body) : null
-  await authorizeRequest(env, connection, url, headers, text)
+  await authorizeRequest(env, connection, url, headers, text, method)
   const response = await boundedFetch(url.href, { method, headers, ...(text ? { body: text } : {}), maxBytes: 2 * 1024 * 1024, timeoutMs: 15000, follow: 0 })
   if (response.status < 200 || response.status > 299) throw new StepError('network', `App source returned ${response.status}; records and the last successful poll are retained`)
   try { return JSON.parse(utf8(response.bytes)) } catch { throw new StepError('validation', 'App source returned invalid JSON') }
@@ -58,6 +59,7 @@ export async function appRecords(env: CrankEnv, trigger: Record<string, any>, op
   const { row } = await credential(env, trigger.connection_id)
   if (row.app !== (trigger.provider === 'google_sheets' ? 'google' : ['microsoft_excel', 'sharepoint'].includes(trigger.provider) ? 'microsoft_graph' : trigger.provider === 'http_json' ? 'http' : trigger.provider)) throw new StepError('auth', 'Choose a connection for this app provider')
   if (['google_sheets', 'microsoft_excel'].includes(trigger.provider)) return sheetRows(env, trigger)
+  if (trigger.provider === 'orbit') return orbitRecords(env, trigger)
   if (trigger.provider === 'airtable') return airtableRecords(env, trigger)
   if (trigger.provider === 'sharepoint') return sharepointRecords(env, trigger)
   if (trigger.provider === 'http_json') return httpJsonRecords(env, trigger, options)

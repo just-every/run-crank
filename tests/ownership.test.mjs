@@ -85,7 +85,9 @@ test('BASE-001/BASE-004: an owned installation publishes and finishes every ship
     const driftTypes = await driftOwnership(h);
     const { recurringOwnership } = await import('./recurring-fixture.mjs');
     const recurringTypes = await recurringOwnership(h,fake);
-    const succeeded = new Set([...done.steps.filter(s => s.status === 'succeeded').map(s => s.type), ...financialTypes, ...driftTypes, ...recurringTypes]);
+    const { orbitOwnership } = await import('./orbit-fixture.mjs');
+    const orbitTypes = await orbitOwnership(h,fake,publish,startRun,stepOf);
+    const succeeded = new Set([...done.steps.filter(s => s.status === 'succeeded').map(s => s.type), ...financialTypes, ...driftTypes, ...recurringTypes, ...orbitTypes]);
     for (const type of [...Object.keys(STEP_TYPES), 'paths', 'loop']) assert.ok(succeeded.has(type), `BASE-004 needs a successful public-door journey for ${type}`);
     assert.deepEqual(refused, [], 'core operation never tries an author or other unconfigured host');
     assert.equal((await h.send('/app/workflow-runs/' + done.id, undefined, h.owner)).status, 200);
