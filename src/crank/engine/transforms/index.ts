@@ -11,7 +11,7 @@ import { n8nStream } from './n8n-stream'
 import { n8nItems, n8nJsonBody } from './n8n-items'
 
 /** WORK-012: deterministic built-in transforms; no code, model call or network request. */
-export const TRANSFORMS: Record<string, Transform> = { ...textTransforms, ...numberTransforms, ...dateTransforms, ...utilityTransforms, 'n8n.split': n8nSplit, 'n8n.stream': n8nStream, 'n8n.filter_stream': n8nFilterStream, 'n8n.json_body': n8nJsonBody, 'n8n.items': n8nItems, 'n8n.conditions': n8nConditions, 'n8n.switch_index': n8nSwitchIndex }
+export const TRANSFORMS: Record<string, Transform> = Object.assign(Object.create(null), { ...textTransforms, ...numberTransforms, ...dateTransforms, ...utilityTransforms, 'n8n.split': n8nSplit, 'n8n.stream': n8nStream, 'n8n.filter_stream': n8nFilterStream, 'n8n.json_body': n8nJsonBody, 'n8n.items': n8nItems, 'n8n.conditions': n8nConditions, 'n8n.switch_index': n8nSwitchIndex } satisfies Record<string, Transform>)
 
 export function runTransform(name: string, args: Args): unknown {
   const transform = TRANSFORMS[name]
