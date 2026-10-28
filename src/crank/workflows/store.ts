@@ -100,7 +100,7 @@ async function createWorkflowDraft(env: CrankEnv, actor: Actor, input: Record<st
   const receipt = committedReceipt(results, command)
   return savedWorkflow(env, receipt?.workflow_id ?? workflowId, receipt, receipt ? receipt.attempt_id !== command!.attempt : false)
 }
-export async function updateDraft(env: CrankEnv, actor: Actor, workflowId: string, input: Record<string, unknown>, idempotencyKey?: string | null, expectedDraftJson?: string, extraAudit?:{action:string;detail:Record<string,unknown>}) {
+export async function updateDraft(env: CrankEnv, actor: Actor, workflowId: string, input: Record<string, unknown>, idempotencyKey?: string | null, expectedDraftJson?: string, extraAudit?:{action:string;detail:Record<string,unknown>;guards?:D1PreparedStatement[]}) {
   requirePrepare(actor)
   workflowScope(actor, workflowId)
   const command = await workflowCommand(env, actor, idempotencyKey, 'draft', workflowId, input)
@@ -126,6 +126,7 @@ export async function updateDraft(env: CrankEnv, actor: Actor, workflowId: strin
   let results:D1Result[]
   try { results = await guardedBatch(env, actor, 'prepare', [
     ...(draftGuard ? [stmt(env,'INSERT INTO crank_authority_guards(id,ok) SELECT ?,CASE WHEN EXISTS(SELECT 1 FROM crank_workflows WHERE id=? AND draft_json=?) THEN 1 ELSE 0 END',draftGuard,workflowId,expectedDraftJson)] : []),
+    ...(extraAudit?.guards ?? []),
     ...(command ? [claimCommand(env, actor, command, workflowId, draftId)] : []),
     stmt(env, `UPDATE crank_workflows SET name=?,description=?,folder=?,draft_json=?,draft_updated_at=?,settings_json=? WHERE id=? AND ${condition.sql}`,
       metadata.name, metadata.description, metadata.folder, JSON.stringify(graph), at, JSON.stringify(metadata.settings), workflowId, ...condition.args),

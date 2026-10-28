@@ -5,8 +5,8 @@ Generated from [CONTRACT.md](../CONTRACT.md). Status reports implementation and 
 | Clauses | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
 | Published | 9 | 3 | 0 | 12 |
-| Target and push further | 23 | 28 | 23 | 74 |
-| All | 32 | 31 | 23 | 86 |
+| Target and push further | 23 | 29 | 22 | 74 |
+| All | 32 | 32 | 22 | 86 |
 
 | Clause | Status | Evidence | Gap |
 | --- | --- | --- | --- |
@@ -43,7 +43,7 @@ Generated from [CONTRACT.md](../CONTRACT.md). Status reports implementation and 
 | CONN-016 | missing |  | No delivered product workflow. |
 | CONN-017 | missing |  | No delivered product workflow. |
 | CONN-018 | missing |  | No delivered product workflow. |
-| CONN-019 | missing |  | No delivered product workflow. |
+| CONN-019 | partial | `tests/connections.test.mjs` — “Custom connector review, agent OpenAPI proposal and sandbox gates retain exact versions, scope refusals and signed duplicate-event proof”, via proveCustomPickers and provePagedPickers in `tests/custom-picker-fixture.mjs`: explicit read-only resource loads, reviewed provider query and cursor inputs, one bounded page per request over 1,206 synthetic resources, refreshed names, duplicate context and IDs, second-account permission omission, parent clearing, stale or revoked refusal and authority changes during provider reads or immediately before the selection commit. `tests/custom-browser.mjs` (picker mode, push Verify): named choices, disabled parents, search and page controls, load-time labels, dependent clearing and revoked refusal; screens at 1440 and 390. | Custom picker core only. Actual Sheets, Slack and HubSpot sandbox acceptance remains, including more than 1,000 real Slack channels and second-account permission omission; HubSpot developer sandbox is missing, while Sheets and Slack were historically held. Other connector adapters, typed field loading and refresh, removed or retyped field guards, custom and mapped values and provider URL resolution with runtime validation, inline WORK-011 searches, agent-derived schemas and chosen-resource migration coverage and parity remain required. Authorized source migration assets are not supplied. |
 | HTTP-001 | done | `src/crank/flows.ts`; `src/crank/runs.ts`; `src/crank/delivery.ts`; `tests/crank.test.mjs` |  |
 | HTTP-002 | partial | `src/crank/connectors/http-step.ts`; `src/crank/engine/egress.ts`; `tests/connections.test.mjs` | HubSpot raw API proof needs an account; DNS-rebinding needs an enforcing Worker egress binding (Base gap). |
 | TRIG-001 | done | `src/crank/triggers/webhook.ts`; `src/crank/triggers/webhook-admission.ts`; `src/crank/triggers/inbound.ts`; `src/crank/triggers/signatures.ts`; `src/crank/workflow-erasure.ts`; `tests/triggers.test.mjs`; `tests/webhook-erasure.test.mjs`; `tests/crank.test.mjs` (TRIG-001: formats/signatures, concurrent and interrupted admission, revocation, restart, erasure and restore fences) |  |
