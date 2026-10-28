@@ -92,7 +92,9 @@ export async function comparisonEvent(env:CrankEnv,actor:Actor,key:string,kind:'
   requireValue(Number.isSafeInteger(sequence) && Number(sequence)>0 && Number(sequence)<=1000000,'Event sequence must be a positive bounded integer')
   requireValue(Object.hasOwn(input,'input'),'Supply the exact input for this source event')
   const inputJson=bounded(input.input),inputDigest=await digest(inputJson)
-  const eventDigest=await digest(canonical([row.source_system,row.source_workflow,row.source_revision,eventId]))
+  // Pairing remains revision-scoped by the immutable comparison. Erasure fences
+  // the source event across revisions so relabelling an old capture cannot revive it.
+  const eventDigest=await digest(canonical([row.source_system,row.source_workflow,eventId]))
   const existing=await stmt(env,'SELECT * FROM crank_import_observations WHERE comparison_id=? AND event_id=?',key,eventId).first<Observation>()
   requireValue(!existing || existing.sequence===sequence,'This event already has a different source sequence',409)
   if(kind==='evaluate' && existing?.native_json) {
