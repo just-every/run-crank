@@ -209,7 +209,7 @@ test('TEAM-001: complete explicit grants authorize native work, delegation, scop
    assert.deepEqual(listed.map(row=>row.id).sort(),[visible.id,restricted.id,emptyKey.id].sort());
    assert.equal(listed.find(row=>row.id===visible.id).trigger.input.customer,'synthetic-crank-allowed-payload');
    const hidden=listed.find(row=>row.id===restricted.id);assert.equal(hidden.payload,'restricted');assert.equal(hidden.trigger,undefined);assert.equal(hidden.business_key,null);
-   assert.equal((await h.get('workflow-runs/'+restricted.id,person.cookie)).payload,'restricted');
+   const restrictedDetail=await h.get('workflow-runs/'+restricted.id,person.cookie);assert.equal(restrictedDetail.payload,'restricted');assert.equal(restrictedDetail.trigger,undefined);
    assert.deepEqual((await h.get('workflow-runs?q=synthetic-crank-restricted-payload',person.cookie)).runs,[]);
    assert.deepEqual((await h.get('workflow-runs?business_key=synthetic-crank-restricted-key',person.cookie)).runs,[]);
    assert.deepEqual((await h.get('workflow-runs?business_key=',person.cookie)).runs,[],'an empty business-key filter cannot probe a status-only workflow');
@@ -217,12 +217,14 @@ test('TEAM-001: complete explicit grants authorize native work, delegation, scop
    assert.deepEqual((await h.get('workflow-runs?q=synthetic-crank-allowed-payload',person.cookie)).runs.map(row=>row.id),[visible.id]);
    const state=await h.get('state',person.cookie);
    assert.equal(state.runs.find(row=>row.id===legacyRuns[0].id).input.customer,'synthetic-crank-legacy-allowed');
-   assert.equal(state.runs.find(row=>row.id===legacyRuns[1].id).payload,'restricted');
+   assert.equal(state.runs.find(row=>row.id===legacyRuns[1].id).payload,'restricted');assert.equal(state.runs.find(row=>row.id===legacyRuns[1].id).input,undefined);
    assert.ok(!JSON.stringify(state).includes('synthetic-crank-legacy-restricted'));
-   assert.equal((await h.get('runs/'+legacyRuns[1].id,person.cookie)).payload,'restricted');
+   const hiddenDetail=await h.get('runs/'+legacyRuns[1].id,person.cookie);assert.equal(hiddenDetail.payload,'restricted');assert.equal(hiddenDetail.input,undefined);
    assert.deepEqual((await h.get('runs/'+legacyRuns[0].id,person.cookie)).input,{customer:'synthetic-crank-legacy-allowed'});
   }
   await assign(admin,[grant('admin',[w.id],[c.id])]);
+  await assign(recipient,[grant('approver',[w.id],[c.id])],admin.cookie,403);
+  await assign(recipient,[grant('admin',[w.id],[c.id]),grant('approver',[w.id],[c.id])],admin.cookie,403);
   await assign(recipient,[grant('builder',[w.id],[c.id])],admin.cookie);
   await h.post(`workflows/${w.id}/draft`,{name:'Delegated builder draft'},recipient.cookie);
   await assign(recipient,[grant('builder',[other.id],[c.id])],admin.cookie,403);
