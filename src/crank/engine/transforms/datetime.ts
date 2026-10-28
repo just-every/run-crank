@@ -8,6 +8,12 @@ const zone = (args: Args, name = 'timezone') => requireZone(args[name])
 const instant = (args: Args, name = 'value') => requireDate(args[name], requireZone(args.input_timezone ?? args.timezone), name)
 
 export const dateTransforms: Record<string, Transform> = {
+  'date.n8n_format': args => {
+    const field = args.field
+    if (!args.input || typeof args.input !== 'object' || Array.isArray(args.input) || typeof field !== 'string' || !/^[_A-Za-z][_A-Za-z0-9]*$/.test(field) || ['__proto__', 'constructor', 'prototype'].includes(field)) throw new StepError('validation', 'Source date formatting requires a JSON object and a simple output field')
+    const value = args.value === null || args.value === undefined ? args.value : formatDate(instant(args), text(args, 'pattern'), zone(args))
+    return { ...args.input as Record<string, unknown>, [field]: value }
+  },
   'date.n8n_arithmetic': args => {
     const ms = n8nDateValue(args.value), tz = zone(args), amount = integer(args, 'amount'), unit = requireUnit(args.unit)
     const field = args.field

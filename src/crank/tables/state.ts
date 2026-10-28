@@ -30,7 +30,7 @@ export async function createStateTable(env:CrankEnv,actor:Actor,input:Record<str
   return stateTable(env,key)
 }
 type Guard={sql:string;args:unknown[]}
-export async function stateGuard(env:CrankEnv,tableId:string,actor?:Actor,ctx?:StepContext):Promise<Guard> {
+export async function stateGuard(env:CrankEnv,tableId:string,actor?:Actor,ctx?:Pick<StepContext, 'run'>):Promise<Guard> {
   const table=await stateTable(env,tableId)
   requireValue(table.active===1,'This table is paused or restored; explicit owner adoption is required',409)
   if(actor) {requireOwner(actor);requireValue(table.owner_id===actor.id,'Adopt the table before changing it',403);return {sql:`EXISTS(SELECT 1 FROM crank_state_tables t JOIN oa_operators o ON o.id=t.owner_id WHERE t.id=? AND t.active=1 AND o.id=? AND o.role='owner' AND o.status='active' AND o.version=?)`,args:[tableId,actor.id,actor.version]}}

@@ -1,3 +1,4 @@
+import { mappingTables } from '../tables/mapping'
 import { text as transformText } from './transforms/args'
 import { assertDriftWriteAllowed, recordDriftFailure } from '../agents/drift-step'
 import { assertAuthoringStep } from './authoring-authority'
@@ -151,6 +152,7 @@ class Execution {
     }
     try {
       const replay = record ? undefined : this.replays.get(path)
+      this.scope.tables = await mappingTables(this.env, step, { run: this.run })
       input = record?.input_json ? JSON.parse(record.input_json) : replay?.input_json ? JSON.parse(replay.input_json) : (resolve(step.input ?? {}, this.scope, 0, !!type.inputSchema) ?? {}) as Record<string, unknown>
       if (this.boundedChild) {
         if (new TextEncoder().encode(JSON.stringify(input)).byteLength > 65536) throw new StepError('validation','Subflow: mapped input exceeds 64 KiB')
@@ -284,6 +286,7 @@ class Execution {
     if (record?.status === 'succeeded') chosen = JSON.parse(record.output_json!).matched
     else if (record?.status === 'stopped') return { kind: 'stopped', reason: 'filter' }
     else {
+      this.scope.tables = await mappingTables(this.env, branches.filter(b => b.kind === 'rule').map(b => b.when), { run: this.run })
       const { matched, trace: results, error } = evaluatePaths(step, this.scope, this.zone, this.time)
       if (error) {
         await this.save(step, path, 'failed', { error: error.toJSON(), trace: results })

@@ -1,3 +1,4 @@
+import { mappingTableIds } from '../tables/mapping'
 import { pollRate, validateTrigger } from '../triggers/definition'
 import { validateGroups } from './conditions'
 import { requireZone } from './dates'
@@ -23,6 +24,7 @@ export function validateGraph(value: unknown): Validation {
   if (!isObject(value)) throw new StepError('validation', 'graph must be an object with trigger and steps')
   if (!isObject(value.trigger) || typeof value.trigger.type !== 'string') throw new StepError('validation', 'graph.trigger needs a type')
   if (!Array.isArray(value.steps)) throw new StepError('validation', 'graph.steps must be a list')
+  mappingTableIds(value.steps)
   const settings = isObject(value.settings) ? value.settings : {}
   if (settings.timezone !== undefined) requireZone(settings.timezone)
   if (settings.priority !== undefined && (!Number.isInteger(settings.priority) || (settings.priority as number) < -100 || (settings.priority as number) > 100)) throw new StepError('validation', 'settings.priority must be a whole number from -100 to 100')

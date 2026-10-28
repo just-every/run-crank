@@ -1,3 +1,4 @@
+import { mappingTableIds } from '../tables/mapping'
 import { authoringRecord } from '../agents/authoring-record'
 import { authoringTestScope } from '../agents/authoring-safety'
 import { customBindings } from '../custom/bindings'
@@ -48,7 +49,7 @@ export async function testWorkflow(env: CrankEnv, actor: Actor, workflowId: stri
   if (snapshotGraph !== undefined) requireOwner(actor)
   const draft = snapshotGraph === undefined ? currentDraft : validateGraph(structuredClone(snapshotGraph))
   const operationalState = (steps: Step[]): boolean => steps.some(step => ['table.atomic', 'table.lookup'].includes(step.type) || step.type === 'loop' && operationalState(step.steps as Step[]) || step.type === 'paths' && branchesOf(step).some(branch => operationalState(branch.steps)))
-  requireValue(!operationalState(draft.graph.steps), 'Operational tables have no isolated test bindings; draft tests are refused', 422)
+  requireValue(!mappingTableIds(draft.graph.steps).size && !operationalState(draft.graph.steps), 'Operational tables have no isolated test bindings; draft tests are refused', 422)
   requireCustomUse(actor,draft.graph)
   const gateways = customGatewayIds(draft.graph)
   await validateConnectionScopes(env, gateways.map(gatewayId => 'gateway:' + gatewayId), (workflow as typeof workflow & {environment:string}).environment)
