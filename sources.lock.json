@@ -139,7 +139,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "416174d81176d76d0c8f6b9f3323bb3e69462795855ce083a33465bc373828cb",
+      "sha256": "fdfa374b66a69cb48427db6e476637ac211f9dd9050f53d58d9c8fc7dd72ad03",
       "executable": false
     },
     "AGENTS.md": {
@@ -163,7 +163,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "aa036122437215c5845ffff2b36b08c2fad88578b1f2b371a72b4d1f4c14f120",
+      "sha256": "d20ecbb5fab21be3a0d4cb570f042908dc0c065e6053011bc89bb5093c31c594",
       "executable": false
     },
     "DEMO.md": {
@@ -203,7 +203,7 @@
       "executable": false
     },
     "docs/CLAIMS.md": {
-      "sha256": "1ee77b8814a1f698e52cc1413770cbabd55965e3c7fa0de8c9aa16b9ce79fe78",
+      "sha256": "e23a73c5955f288f30e45ad8300b7c6ff783a867c994fab3ac5e93395f263009",
       "executable": false
     },
     "docs/DATA-FLOWS.md": {
@@ -5559,7 +5559,7 @@
       "executable": false
     },
     "tests/ai-steps-journey.mjs": {
-      "sha256": "bc1f0323415193e6063424394028acbf07f95c982e80d52c2dfd87784574b5e5",
+      "sha256": "cbeeca9be769b511f80a00732a95b9a28d3eb649d93dddae30a32b0f176081de",
       "executable": false
     },
     "tests/airtable-poll-journey.mjs": {

@@ -155,7 +155,7 @@ export async function aiAuthorityJourney() {
 export async function aiCustodyJourney({onScreen}={}) {
   const {h,fake,c,secret}=await fixture();let restored,erasedRestore,inflightRestore,release,pending;
   try {
-    const w=await aiWorkflow(h,c.id,{before:[{id:'checkpoint',type:'map',input:{value:'completed once'}}]});
+    const w=await aiWorkflow(h,c.id,{before:[{id:'checkpoint',type:'map',input:{value:'completed once'}}],after:[{id:'acknowledged',type:'map',input:{category:'{{steps.classify.category}}'}}]});
     // Interrupt the real local result transaction after the model has answered.
     // A generic storage error must not make that billed call replayable.
     await h.db.exec(`CREATE TRIGGER interrupted_classification BEFORE UPDATE OF status ON crank_wf_steps WHEN NEW.type='ai.classify' AND NEW.status='succeeded' BEGIN SELECT RAISE(ABORT,'synthetic-crank-interrupted-result'); END;`);
@@ -170,12 +170,14 @@ export async function aiCustodyJourney({onScreen}={}) {
     await h.post(`workflow-runs/${interrupted.id}/replay`,{paths:['classify'],digest:interruptedPreview.digest},h.owner,409);
     assert.equal(fake.to('api.openai.com').length,interruptedCalls);
     const good=await startRun(h,w,{text:'synthetic-crank-retained-person'});
+    assert.deepEqual(stepOf(good,'acknowledged').output,{category:'support'},'acknowledged classification reaches downstream work');
     // An upstream outage after accepting a billed request is not a rejection.
     // Even Retry-After cannot authorize sending that request a second time.
     fake.routes.set('api.openai.com',()=>jsonResponse(modelReply({id:'synthetic-crank-outage'}),503,{'retry-after':'1'}));
     const beforeOutage=fake.to('api.openai.com').length;
     const outage=await startRun(h,w,{text:'synthetic-crank-upstream-outage'});
     assert.equal(outage.status,'uncertain');assert.equal(stepOf(outage,'classify').status,'uncertain');
+    assert.equal(stepOf(outage,'acknowledged'),undefined,'an unacknowledged classification cannot reach downstream work');
     assert.equal(outage.attempts.length,1);assert.equal(outage.attempts[0].http_status,503);
     assert.equal(outage.attempts[0].response_identity,'synthetic-crank-outage');
     assert.equal(fake.to('api.openai.com').length,beforeOutage+1,'a 503 never retries a potentially billed classification');
@@ -191,6 +193,7 @@ export async function aiCustodyJourney({onScreen}={}) {
     fake.routes.set('api.openai.com',async()=>{await new Promise(done=>setTimeout(done,1500));return jsonResponse(modelReply())});
     const lost=await startRun(h,w,{text:'synthetic-crank-lost'}),calls=fake.to('api.openai.com').length;
     assert.equal(lost.status,'uncertain');assert.equal(stepOf(lost,'classify').status,'uncertain');assert.equal(lost.error.category,'uncertain');
+    assert.equal(stepOf(lost,'acknowledged'),undefined);
     assert.equal(lost.attempts[0].error_category,'network','a response lost after dispatch remains a billed uncertainty');
     const operation=stepOf(lost,'classify').operation_key;
     await h.restart();await h.tick('2026-11-10T15:02:00Z');
