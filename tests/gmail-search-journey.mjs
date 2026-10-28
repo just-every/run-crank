@@ -14,6 +14,11 @@ function message(id,subject=hostileSubject){return {id:'message-'+id,threadId:id
 export async function gmailFixture(){
  const fake=fakeEdge(),token='synthetic-crank-601';let mode='normal',parked=false;
  fake.routes.set('gmail.googleapis.com',({url,method,headers})=>{
+  if(headers.authorization==='Bearer synthetic-crank-605'){
+   assert.equal(method,'GET');assert.ok(url.pathname.startsWith('/gmail/v1/users/me/threads'));
+   const other=message('thread-other','synthetic-crank-other-mailbox');other.payload.headers.find(item=>item.name==='From').value='synthetic-crank-other-person';
+   return jsonResponse(url.pathname.endsWith('/threads')?{threads:[{id:'thread-other'}]}:{id:'thread-other',messages:[other]});
+  }
   assert.equal(method,'GET','Gmail never writes');assert.equal(headers.authorization,'Bearer '+token);
   assert.ok(url.pathname.startsWith('/gmail/v1/users/me/threads'),'only the selected managed mailbox is read');
   if(url.pathname.endsWith('/threads')){
@@ -28,6 +33,7 @@ export async function gmailFixture(){
    if(q==='incomplete')return jsonResponse({threads:[],nextPageToken:'page-'+(Number(page?.slice(5)??0)+1)});
    if(q==='one')return jsonResponse({threads:[{id:'thread-a'}]});
    if(q==='headers'||q==='wrong-thread'||q==='duplicate-message')return jsonResponse({threads:[{id:'thread-a'}]});
+   if(q==='large-metadata')return jsonResponse({threads:[{id:'thread-a'},{id:'thread-b'},{id:'thread-c'}]});
    assert.equal(q,query,'the supported Gmail query reaches the provider without rewriting');
    return jsonResponse(page?{threads:[{id:'thread-a'},{id:'thread-b'}]}:{threads:[{id:'thread-a'}],nextPageToken:'second'});
   }
@@ -36,6 +42,7 @@ export async function gmailFixture(){
   assert.equal(url.searchParams.get('fields'),'id,messages(id,threadId,labelIds,internalDate,payload(headers(name,value)))');
   if(mode==='park'&&id==='thread-b'&&!parked){parked=true;return jsonResponse({},429,{'retry-after':'31'})}
   const item=message(id,mode==='headers'?'x'.repeat(2049):hostileSubject);
+  if(mode==='large-metadata')item.payload.headers=Array.from({length:100},()=>({name:'Subject',value:'x'.repeat(2048)}));
   if(mode==='wrong-thread')item.threadId='foreign-thread';
   return jsonResponse({id,messages:mode==='duplicate-message'?[item,item]:[item],snippet:'synthetic-crank-snippet'});
  });
@@ -93,7 +100,7 @@ export async function gmailSearchJourney({onScreen}={}){
    assert.equal(run.status,'failed');assert.match(run.error.message,/incomplete/i);assert.ok(!run.steps.some(item=>item.step_id==='outcome'));
    if(onScreen&&multi_match==='first')await onScreen({h,w,run,state:'incomplete'});
   }
-  for(const mode of ['cycle','provider','permission','malformed','bad-json','headers','wrong-thread','duplicate-message']){
+  for(const mode of ['cycle','provider','permission','malformed','bad-json','headers','large-metadata','wrong-thread','duplicate-message']){
    f.setMode(mode);const run=await startRun(h,draft,{query:mode});
    assert.ok(!['succeeded','stopped_by_search'].includes(run.status),mode+' never means no match');
    assert.ok(!run.steps.some(item=>item.step_id==='outcome'),mode+' sends no downstream work');
@@ -103,14 +110,19 @@ export async function gmailSearchJourney({onScreen}={}){
   for(const patch of [{create_if_not_found:{}},{sort:{field:'subject',direction:'desc'}},{metadata_headers:['Subject','subject']},{input:{query:'one',format:'full'}},{metadata_headers:['Subject\nInjected']}])await h.post('workflows',{name:'Unsupported Gmail search',graph:graph({...gmailStep(c.id),...patch})},h.owner,422);
   for(const account of [
    await connection(h,{app:'google',auth_kind:'oauth2',label:'Calendar scope only',scopes:['https://www.googleapis.com/auth/calendar.events'],secret:{access_token:'synthetic-crank-602'}}),
+   await connection(h,{app:'google',auth_kind:'oauth2',label:'Metadata scope cannot search',scopes:['https://www.googleapis.com/auth/gmail.metadata'],secret:{access_token:'synthetic-crank-606'}}),
    await connection(h,{app:'http',auth_kind:'bearer',label:'Arbitrary credential',domains:['gmail.googleapis.com'],secret:{token:'synthetic-crank-603'}}),
   ]){
    const w=await publish(h,'Missing Gmail consent',graph(gmailStep(account.id))),count=fake.requests.length,run=await startRun(h,w,{query:'one'});
    assert.notEqual(run.status,'succeeded');assert.equal(fake.requests.length,count,'wrong credential or insufficient read consent never dispatches');
   }
+  const other=await connection(h,{app:'google',auth_kind:'oauth2',label:'Second managed mailbox',scopes:[gmailScope],secret:{access_token:'synthetic-crank-605'}}),otherFlow=await publish(h,'Second mailbox search',graph(gmailStep(other.id)));
+  const second=await startRun(h,otherFlow,{query:'one'});assert.equal(second.status,'succeeded');assert.equal(stepOf(second,'mail').output.record.thread_id,'thread-other');assert.ok(!JSON.stringify(second).includes('synthetic-crank-person'),'a second connection never returns the first mailbox metadata');
+  f.setMode('park');const interrupted=await startRun(h,draft,{query});assert.equal(interrupted.status,'waiting');
   await h.post(`connections/${c.id}/revoke`);const count=fake.requests.length;
+  await h.restart({clock:later});await h.tick(Date.parse(later));assert.notEqual((await h.get('workflow-runs/'+interrupted.id)).status,'succeeded');assert.equal(fake.requests.length,count,'revocation fences a retained-page continuation before another physical request');
   assert.notEqual((await startRun(h,draft,{query:'one'})).status,'succeeded');assert.equal(fake.requests.length,count);
-  assert.ok(fake.requests.every(item=>item.method==='GET'),'there are zero writes, body fetches or file downloads');
+  assert.ok(fake.requests.every(item=>item.method==='GET'&&/^\/gmail\/v1\/users\/me\/threads(?:\/[A-Za-z0-9_-]+)?$/.test(item.url.pathname)),'there are zero writes, body fetches or file downloads');
  }finally{await h.close()}
 }
 

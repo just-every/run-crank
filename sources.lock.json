@@ -139,7 +139,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "554fe3f8809ddd7cf62d870073991a196650c6ca1147095380b373d0ae61ff2b",
+      "sha256": "8760a6dcd4d21a1e8a1129874fb3e0ca833ec75fc33f2483a068d168f231d741",
       "executable": false
     },
     "AGENTS.md": {
@@ -163,7 +163,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "00f20bdac44bd0d1fcfeecdc5b3f7d965f2f377203161e5708b73579870b185b",
+      "sha256": "07546b7aa9013c22bad210b81e974e9380f9abbbacf28ec42b447783487c5dfc",
       "executable": false
     },
     "DEMO.md": {
@@ -187,7 +187,7 @@
       "executable": false
     },
     "docs/API.md": {
-      "sha256": "93510aefa70887411ccbb3bf5688587d80c320ab9ce317f80240ad0f0c20b4aa",
+      "sha256": "947d910625ea7637dc7796a82b18be8507947882eaa56231a9d6045d416f5421",
       "executable": false
     },
     "docs/APP-TRIGGERS.md": {
@@ -203,7 +203,7 @@
       "executable": false
     },
     "docs/CLAIMS.md": {
-      "sha256": "f76533ad88b410bae1ec91680d980f0e7da8b01897f42db3cd12262f3fe55586",
+      "sha256": "548f55180b3ff60dced92cece9e2c3caae705f455e5ed5c23466f497458b0227",
       "executable": false
     },
     "docs/DATA-FLOWS.md": {
@@ -2503,7 +2503,7 @@
       "executable": false
     },
     "src/crank/connectors/gmail.ts": {
-      "sha256": "e9002dd681b1e70eb95cc6d8c1059530c22426f93cce9a8ddea74c398d345c01",
+      "sha256": "4c679cba959ff8d2d2bc390cdb24bfd5d3c674da61fddc2031d23483deba747b",
       "executable": false
     },
     "src/crank/connectors/google-calendar-policy.ts": {
@@ -5803,11 +5803,11 @@
       "executable": false
     },
     "tests/gmail-search-browser.mjs": {
-      "sha256": "c9e5893e165cb3cb70de4163078adc5841364772edebbc4bd401e0a32dec28f9",
+      "sha256": "0b3c48be3340e92201650bf282e52b1278b2544d50dfd6d7691a164a39124a20",
       "executable": false
     },
     "tests/gmail-search-journey.mjs": {
-      "sha256": "04a58a47f1cc00f479853545a73aa551409bbf5f86f6cec266be0a4b613e0c51",
+      "sha256": "68b6cd5767b3dab7d4d4074acc85cae6be5c76ca14a001a29430e9ef88de56dc",
       "executable": false
     },
     "tests/google-calendar-journey.mjs": {
