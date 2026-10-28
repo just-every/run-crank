@@ -1,3 +1,5 @@
+import { resourceSelectors } from './resources'
+import { expandGrant } from './grant-records'
 import { authorize, guardedBatch, requireOwner, requireWriteOrigin } from '../access'
 import { body, CrankError, id, json, now, requireValue, stmt, type CrankEnv } from '../model'
 import { auditStatement } from '../ops/audit'
@@ -23,9 +25,10 @@ export async function teamApi(request: Request, env: CrankEnv): Promise<Response
       requireValue(typeof input.workflow_id === 'string' && typeof input.new_owner_id === 'string', 'Choose a workflow and its new owner')
       const person = await stmt(env, "SELECT id FROM oa_operators WHERE id=? AND status='active'", input.new_owner_id).first()
       requireValue(person, 'The new owner must be an active person', 422)
-      requireValue(await stmt(env, 'SELECT id FROM crank_workflows WHERE id=?', input.workflow_id).first(), 'Workflow not found', 404)
+      const native=await stmt(env,'SELECT id FROM crank_workflows WHERE id=?',input.workflow_id).first()
+      requireValue(native || await stmt(env,'SELECT id FROM crank_flows WHERE id=?',input.workflow_id).first(),'Workflow not found',404)
       await guardedBatch(env, actor, 'owner', [
-        stmt(env, "UPDATE crank_workflows SET owner_id=? WHERE id=? AND EXISTS(SELECT 1 FROM oa_operators WHERE id=? AND status='active')", input.new_owner_id, input.workflow_id, input.new_owner_id),
+        stmt(env, `UPDATE ${native?'crank_workflows':'crank_flows'} SET owner_id=? WHERE id=? AND EXISTS(SELECT 1 FROM oa_operators WHERE id=? AND status='active')`, input.new_owner_id, input.workflow_id, input.new_owner_id),
         auditStatement(env, actor.id, 'workflow.transfer', 'workflow', input.workflow_id, {new_owner_id:input.new_owner_id}),
       ])
       return json({workflow_id:input.workflow_id,owner_id:input.new_owner_id})
@@ -53,12 +56,14 @@ export async function teamApi(request: Request, env: CrankEnv): Promise<Response
     for(const value of raw) {
       requireValue(value && ['admin','builder','operator','approver','viewer','auditor','billing'].includes(value.role),'Choose a product role',422)
       requireValue(value.actions===undefined,'Custom action limits are reserved for the migration',422)
-      const grant:TeamGrant={role:value.role,workflow_ids:await scope(value.workflow_ids??[],'crank_workflows'),connection_ids:await validateConnectionScopes(env,value.connection_ids??[])}
-      if(!owner) requireValue(actor.team?.grants.some(own=>grantsAction(own,'delegate') && grant.workflow_ids.every(id=>own.workflow_ids.includes(id)) && grant.connection_ids.every(id=>own.connection_ids.includes(id)) && ['read','prepare','test','publish','start','approve','replay','delegate','audit','billing','revoke'].every(action=>!grantsAction(grant,action as any)||grantsAction(own,action as any))), 'Delegation cannot exceed one of your own complete grants',403)
+      const grant:TeamGrant={role:value.role,workflow_ids:await scope(value.workflow_ids??[],'crank_workflows'),connection_ids:await validateConnectionScopes(env,value.connection_ids??[]),...await resourceSelectors(env,value)}
+      const expanded=await expandGrant(env,grant,'scope:delegation')
+      if(!owner) requireValue(actor.team?.grants.some(own=>grantsAction(own,'delegate') && expanded.workflow_ids.every(id=>own.workflow_ids.includes(id)) && grant.connection_ids.every(id=>own.connection_ids.includes(id)) && ['read','prepare','test','publish','start','approve','replay','delegate','audit','billing','revoke'].every(action=>!grantsAction(grant,action as any)||grantsAction(own,action as any))), 'Delegation cannot exceed one of your own complete grants',403)
       grants.push(grant)
     }
     if(!owner) {
-      requireValue(priorGrants.every(grant=>actor.team?.grants.some(own=>grant.workflow_ids.every(id=>own.workflow_ids.includes(id))&&grant.connection_ids.every(id=>own.connection_ids.includes(id))&&grantsAction(own,'delegate')&& ['read','prepare','test','publish','start','approve','replay','delegate','audit','billing','revoke'].every(action=>!grantsAction(grant,action as any)||grantsAction(own,action as any)))),'Existing access is outside your delegated authority',403)
+      const existing=await Promise.all(priorGrants.map(grant=>expandGrant(env,grant,'scope:delegation')))
+      requireValue(existing.every(grant=>actor.team?.grants.some(own=>grant.workflow_ids.every(id=>own.workflow_ids.includes(id))&&grant.connection_ids.every(id=>own.connection_ids.includes(id))&&grantsAction(own,'delegate')&& ['read','prepare','test','publish','start','approve','replay','delegate','audit','billing','revoke'].every(action=>!grantsAction(grant,action as any)||grantsAction(own,action as any)))),'Existing access is outside your delegated authority',403)
     }
     const workflowIds=[...new Set(grants.flatMap(g=>g.workflow_ids))],connectionIds=[...new Set(grants.flatMap(g=>g.connection_ids))],revision=id(),at=now(),role=grants[0]?.role??'viewer'
     await guardedBatch(env, actor, owner?'owner':'read', [

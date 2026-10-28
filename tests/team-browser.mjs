@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { spawn, execFileSync } from 'node:child_process';
 import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
-import { createWriteStream } from 'node:fs';
+import { createWriteStream, openSync, closeSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { chromium, expect } from '@playwright/test';
@@ -58,6 +58,13 @@ async function shot(width, state) {
 }
 
 try {
+  if (process.env.CI === 'true') {
+    // A fresh runner needs explicit local owner setup before the installed sign-in journey.
+    const setupLog = openSync(join(privateDir,'setup.log'),'w',0o600);
+    try { execFileSync('rer', ['setup','--owner-email','synthetic-crank-browser'+'@'+'example.test','--non-interactive'], { env:process.env,timeout:600000,stdio:['ignore',setupLog,setupLog] }); }
+    catch { throw new Error('Native team browser fixture setup failed'); }
+    finally { closeSync(setupLog); }
+  }
   const dev = startDev();
   let open;
   const deadline = Date.now() + 10 * 60000;
@@ -184,7 +191,31 @@ try {
       assert.equal(mixedRuns.find(run=>run.id===restrictedRun.id).payload,'restricted');
       assert.ok(!JSON.stringify(mixedRuns).includes('synthetic-crank-hidden-customer'));
     }
-    const ownerScreen=page;page=builderPage;await page.goto(origin+'/app/runs');await shot(width,'mixed-grant-history');
+    const ownerScreen=page;page=builderPage;await page.goto(origin+'/app/runs');
+    const runLinks=page.locator('.runs-table .row-open');
+    assert.ok(await runLinks.count(),'Run history has chevron links');
+    assert.ok(await runLinks.evaluateAll(links=>links.every(link=>{
+      const tooltip=document.getElementById(link.getAttribute('aria-describedby'));
+      return tooltip?.getAttribute('role')==='tooltip'&&link.contains(tooltip)&&tooltip.textContent.trim().split(/\s+/).length>=2&&tooltip.textContent.trim().split(/\s+/).length<=4;
+    })),'Every run chevron describes its tooltip');
+    const runLink=runLinks.first(),runTooltip=runLink.getByRole('tooltip');
+    await page.mouse.move(0,0);await expect(runTooltip).toBeHidden();
+    await runLink.evaluate(link=>link.addEventListener('mouseenter',()=>{
+      const tooltip=link.querySelector('[role="tooltip"]'),start=performance.now();
+      link.hoverTiming={initial:getComputedStyle(tooltip).visibility};
+      const sample=()=>{if(getComputedStyle(tooltip).visibility==='visible')link.hoverTiming.elapsed=performance.now()-start;else requestAnimationFrame(sample)};
+      requestAnimationFrame(sample);
+    },{once:true}));
+    await runLink.hover();
+    await expect(runTooltip).toBeVisible();
+    await expect.poll(()=>runLink.evaluate(link=>link.hoverTiming?.elapsed)).toBeGreaterThanOrEqual(250);
+    const hoverTiming=await runLink.evaluate(link=>link.hoverTiming);
+    assert.equal(hoverTiming.initial,'hidden','Hover begins with the tooltip hidden');
+    assert.ok(hoverTiming.elapsed>=250,'The hover tooltip waits approximately 300 milliseconds');
+    await page.mouse.move(0,0);await expect(runTooltip).toBeHidden();
+    assert.equal(await runLink.evaluate(link=>{link.focus();return getComputedStyle(link.querySelector('[role="tooltip"]')).visibility}),'visible','Keyboard focus shows the tooltip immediately');
+    await shot(width,'mixed-grant-history');
+    const runHref=await runLink.getAttribute('href');await runLink.press('Enter');await page.waitForURL(origin+runHref);
     await page.goto(origin+'/app/workflow-runs/'+restrictedRun.id);
     if(width===1440) {await expect(page.getByText('Restricted for your role.',{exact:true})).toBeVisible();assert.ok(!(await page.locator('main').innerText()).includes('synthetic-crank-hidden-customer'))}
     await shot(width,'mixed-grant-status-only');page=ownerScreen;

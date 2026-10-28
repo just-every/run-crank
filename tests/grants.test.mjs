@@ -133,5 +133,20 @@ test('TEAM-002 PLATFORM-001 BASE-001 DATA-001 BASE-003: owner-selected native de
   await h.restart();await h.tick(Date.parse(parked.waits[0].due_at)+1);const continued=await h.get('workflow-runs/'+parked.id);
   assert.equal(continued.status,'succeeded');assert.equal(continued.version_id,parked.version_id);assert.equal(edge.to('grants-ledger.example').filter(r=>r.url.pathname==='/before_wait').length,beforeWait,'restart never repeats a granted effect');assert.equal(edge.to('grants-ledger.example').filter(r=>r.url.pathname==='/after_wait').length,1);
 
+  const replacementGraph={trigger:{type:'manual'},steps:[{id:'review',type:'approval',input:{amount:'450.00'}},{id:'record',type:'map',input:{approved:true}}]};
+  await h.post(`workflows/${w.id}/draft`,{graph:replacementGraph});
+  const replacement=await h.post(`workflows/${w.id}/publish`,{},h.owner,201);
+  assert.notEqual(replacement.version.id,w.published.version.id);
+  const native=await startRun(h,w,{});
+  assert.equal(native.status,'awaiting_approval');
+  for(const person of [delegate,outsider]) {
+   await decide(h,native,'approve',{},person.cookie,403);
+   await decide(h,native,'reject',{},person.cookie,403);
+   await h.get('workflow-runs/'+native.id,person.cookie,403);
+  }
+  const unchanged=await h.get('workflow-runs/'+native.id);
+  assert.equal(unchanged.status,'awaiting_approval');assert.equal(unchanged.waits[0].resolution,null);
+  assert.equal((await decide(h,native)).status,'succeeded','a current independent owner can decide the replacement publication');
+
  }finally{await restored?.close();await h.close()}
 });

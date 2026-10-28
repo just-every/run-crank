@@ -43,6 +43,7 @@ export async function assertReviewer(env: CrankEnv, actor: Actor, runId: string,
   }
   if (actor.team) {
     workflowScope(actor, run.workflow_id)
+    actor.team={...actor.team,grants:actor.team.grants.filter(grant=>!grant.review_grant_id || grant.review_grant_id===run.grant_id)}
     requireValue(completeGrant(actor,'approve',run.workflow_id) && !actor.tokenId && !actor.grantId && actor.kind !== 'review', 'A named scoped approver is required', 403)
     // Inspect approval authority independently from complete read or preparation grants.
     await versionConnectionScope(env, {...actor,team:{...actor.team}}, run.version_id, 'approve')

@@ -1,6 +1,8 @@
 import { editNative, EditError } from './editor/native'
 import type { EditFeedback } from './editor/native-view'
 import { watchedFieldsPanel } from './watched-fields'
+import { resourcesApi } from '../team/resources'
+import { provisioningApi } from '../team/provisioning/index'
 import { unitsUsd } from '../ops/usage-money'
 import { mcpClientsPanel, mcpCredentialView } from './mcp-clients'
 import { clientApi } from '../mcp/client-api'
@@ -54,7 +56,7 @@ const redirect = (location:string) => new Response(null,{status:303,headers:{loc
 // A form may name where to return after its action: a path inside the app, nothing else.
 const safeReturn = (value:unknown) => typeof value==='string' && /^\/app(\/[A-Za-z0-9/_.-]*)?(\?[A-Za-z0-9=&%_.-]*)?$/.test(value) ? value : null
 export async function productApi(request:Request,env:CrankEnv,nativeBrowser=false):Promise<Response|null> {
-  return await recurringApi(request,env) ?? await clientApi(request,env) ?? await driftApi(request,env) ?? await customApi(request,env,nativeBrowser) ?? await followupApi(request,env) ?? await teamApi(request,env) ?? await versionedApi(request,env) ?? await importDoor(request,env) ?? await importApi(request,env) ?? await dataApi(request,env) ?? await workflowApi(request,env) ?? await crankApi(request,env)
+  return await provisioningApi(request,env) ?? await resourcesApi(request,env) ?? await recurringApi(request,env) ?? await clientApi(request,env) ?? await driftApi(request,env) ?? await customApi(request,env,nativeBrowser) ?? await followupApi(request,env) ?? await teamApi(request,env) ?? await versionedApi(request,env) ?? await importDoor(request,env) ?? await importApi(request,env) ?? await dataApi(request,env) ?? await workflowApi(request,env) ?? await crankApi(request,env)
 }
 async function formValues(request:Request) {
   if (!request.headers.get('content-type')?.startsWith('application/x-www-form-urlencoded')) throw new Error('Use a form submission.')

@@ -1,4 +1,5 @@
 import { authority, guardedBatch, requirePrepare } from './access'
+import { completeGrant } from './team/policy'
 import { getFlow, targetUrl } from './flows'
 import { canonical, digest, id, now, requireValue, stmt, text, type Actor, type CrankEnv, type Run } from './model'
 import { findLegacyHeldEvent, holdLegacyEvent, type HeldFlowEvent } from './ops/legacy-usage'
@@ -13,6 +14,7 @@ export async function getRun(env: CrankEnv, runId: string): Promise<Run> {
 export async function prepareRun(env: CrankEnv, actor: Actor, flowId: string, input: Record<string, unknown>): Promise<Run | HeldFlowEvent> {
   const trigger = actor.kind === 'trigger'
   if (trigger) requireValue(actor.flowId === flowId, 'Token is scoped to another flow', 403)
+  else if (actor.team) requireValue(completeGrant(actor, 'start', flowId), 'Starting a run requires a complete grant for this flow', 403)
   else requirePrepare(actor)
   const flow = await getFlow(env, flowId)
   requireValue(flow.status === 'active', 'Activate the flow before preparing a run', 409)
@@ -22,7 +24,7 @@ export async function prepareRun(env: CrankEnv, actor: Actor, flowId: string, in
   requireValue(input.input && typeof input.input === 'object' && !Array.isArray(input.input), 'input must be a JSON object')
   const inputJson = canonical(input.input), inputDigest = await digest(inputJson)
   const actionJson = canonical({ method: 'POST', target_url: flow.target_url, flow_revision: flow.revision, source_app: flow.source_app, destination_app: flow.destination_app, event_id: eventId, input: input.input })
-  const actionDigest = await digest(actionJson), runId = id(), at = now(), mode = trigger ? 'trigger' : 'prepare'
+  const actionDigest = await digest(actionJson), runId = id(), at = now(), mode = trigger ? 'trigger' : actor.team ? 'operate' : 'prepare'
   const fence = authority(actor, mode)
   try {
     await guardedBatch(env, actor, mode, [stmt(env, `INSERT INTO crank_runs(id,flow_id,event_id,input_json,input_digest,target_url,flow_revision,source_app,destination_app,action_json,action_digest,state,created_by,created_at,updated_at)

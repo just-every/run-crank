@@ -86,7 +86,7 @@ try {
   const people=await (await owner.request.get(origin+'/auth/operators')).json(),starterId=people.find(person=>person.email===starterEmail).id;
   const send = async (path, body, expected = 200) => {
     const start=/^(workflows|flows)\/([^/]+)\/(run|runs)$/.exec(path);
-    if(start) {const scope=await owner.request.post(origin+'/api/crank/team/'+starterId,{headers:{origin},data:{role:start[1]==='flows'?'builder':'operator',workflow_ids:[start[2]],connection_ids:[]}});assert.equal(scope.status(),200)}
+    if(start) {const scope=await owner.request.post(origin+'/api/crank/team/'+starterId,{headers:{origin},data:{role:'operator',workflow_ids:[start[2]],connection_ids:[]}});assert.equal(scope.status(),200)}
     const response = await (start?starterContext:owner).request.fetch(origin + '/api/crank/' + path, {
       method: body === undefined ? 'GET' : 'POST', headers: { origin },
       ...(body === undefined ? {} : { data: body }),
