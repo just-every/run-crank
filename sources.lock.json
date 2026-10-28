@@ -3355,7 +3355,7 @@
       "executable": false
     },
     "src/crank/ui/editor/native.ts": {
-      "sha256": "59b644dad8959d2af9513067d743890ee068f3b52aa3949ffebe5dd4b102c24e",
+      "sha256": "a5965d8196659dc02aeeaa2d14280909be93f9b67baa4ee375629b1262ea0c97",
       "executable": false
     },
     "src/crank/ui/editor/restore.ts": {
@@ -5559,7 +5559,7 @@
       "executable": false
     },
     "tests/app.test.mjs": {
-      "sha256": "71593df569ee6a5065fecaadfb398b720df3f411153452f95387a53f8012b09c",
+      "sha256": "48fea96e7053a3d7b2cad73f761062ab21b4258315a5671f3029e5cf83da435a",
       "executable": false
     },
     "tests/authoring-browser.mjs": {
