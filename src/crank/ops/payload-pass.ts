@@ -1,3 +1,4 @@
+import { checkpointTexts } from '../connectors/request-checkpoints'
 import { id, stmt, type CrankEnv } from '../model'
 import { activeKey, destroyUnreferenced, NEEDS_RESEAL, RESEAL_POSSIBLE } from './payload-keys'
 import { blindDigests, openText, SEALED_PREFIX, sealText, subjectDigests, targetFor, type Target } from './payload-seal'
@@ -41,6 +42,7 @@ export async function payloadPass(env: CrankEnv, time = Date.now()) {
     ...['input_json','output_json'].map(column=>({table:'crank_gateway_tasks',from:'crank_gateway_tasks i JOIN crank_wf_runs r ON r.id=i.run_id JOIN crank_workflows w ON w.id=r.workflow_id',workflow:'r.workflow_id',column})),
     { table: 'crank_hold_items', from: 'crank_hold_items i JOIN crank_holds h ON h.id=i.hold_id JOIN crank_workflows w ON w.id=h.workflow_id', workflow: 'h.workflow_id', column: 'payload_json' },
     { table: 'crank_historical_items', from: 'crank_historical_items i JOIN crank_historical_batches h ON h.id=i.batch_id JOIN crank_workflows w ON w.id=h.workflow_id', workflow: 'h.workflow_id', column: 'payload_json' },
+    { table: 'crank_request_checkpoint_chunks', from: 'crank_request_checkpoint_chunks i JOIN crank_wf_runs r ON r.id=i.run_id JOIN crank_workflows w ON w.id=r.workflow_id', workflow: 'r.workflow_id', column: 'content_base64', files: true },
     { table: 'crank_files', from: 'crank_files i JOIN crank_workflows w ON w.id=i.workflow_id', workflow: 'i.workflow_id', column: 'content_base64', files: true },
   ]
   for (const copy of copies) {
@@ -74,7 +76,7 @@ async function resealRun(env: CrankEnv, target: Target, runId: string, at: strin
   const w = target.workflowId, open = (text: string | null) => openText(env, w, text)
   const reseal = async (text: string | null) => sealText(target, await open(text))
   const trigger = await open(run.trigger_json), stepPlain = await Promise.all(steps.results.map(async s => ({ ...s, input: await open(s.input_json), output: await open(s.output_json) })))
-  const digests = await blindDigests(target, [trigger, ...stepPlain.flatMap(s => [s.input, s.output])])
+  const digests = await blindDigests(target, [trigger, ...stepPlain.flatMap(s => [s.input, s.output]), ...await checkpointTexts(env,runId)])
   const guard = id()
   const statements = [
     stmt(env, `INSERT INTO crank_authority_guards(id,ok) SELECT ?,CASE WHEN (${FINGERPRINT.replace('WHERE r.id=?', 'WHERE r.id=? AND (r.lease_id IS NULL OR r.lease_expires_at<?)')})=? THEN 1 ELSE 0 END`, guard, runId, at, fp.fp),
