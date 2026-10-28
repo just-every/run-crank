@@ -16,7 +16,9 @@ export async function assertDispatchAuthority(env: CrankEnv, runId: string) {
       (o.role='owner' AND json_extract(v.declared_json,'$.test_team_revision') IS NULL) OR
       EXISTS(SELECT 1 FROM crank_team_access t,json_each(COALESCE(t.grants_json,json_array(json_object('role',t.role,'workflow_ids',json(t.workflow_ids_json),'connection_ids',json(t.connection_ids_json))))) tg WHERE t.operator_id=o.id AND json_extract(tg.value,'$.role') IN ('admin','builder')
         AND t.revision=json_extract(v.declared_json,'$.test_team_revision')
-        AND EXISTS(SELECT 1 FROM json_each(tg.value,'$.workflow_ids') WHERE value=r.workflow_id))
+        AND (EXISTS(SELECT 1 FROM json_each(tg.value,'$.workflow_ids') WHERE value=r.workflow_id) OR (
+          EXISTS(SELECT 1 FROM json_each(tg.value,'$.workflow_ids') WHERE value='workspace:production')
+          AND EXISTS(SELECT 1 FROM json_each(tg.value,'$.created_workflow_ids') WHERE value=r.workflow_id))))
     )) AS test_member_current,
     (COALESCE(json_array_length(json_extract(v.declared_json,'$.custom_bindings')),0)=0 OR (${frozenCustomActorSql()})) AS custom_actor_current,
     r.version_id,r.workflow_id,r.continuation_authority,v.retired_at,r.error_json,

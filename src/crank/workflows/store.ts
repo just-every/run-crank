@@ -9,7 +9,7 @@ import { checkCustomPublication } from '../custom/store'
 import { customGatewayIds, validateConnectionScopes } from '../custom/use-scope'
 import { checkCustomTriggerPublication } from '../custom/triggers'
 import { isTableSource, tableSourceGuard } from '../triggers/table-source'
-import { workflowScope, connectionScope } from '../team/policy'
+import { workflowScope, connectionScope, createdRecordGrants } from '../team/policy'
 import { publishUsageStatements, readWorkflowEstimate } from '../ops/usage'
 import { guardedBatch, requireOwner, requirePrepare, requirePublish } from '../access'
 import { getConnection } from '../connections/store'
@@ -94,6 +94,7 @@ async function createWorkflowDraft(env: CrankEnv, actor: Actor, input: Record<st
     stmt(env, `INSERT INTO crank_workflows(id,name,description,folder,owner_id,draft_json,draft_updated_at,status,settings_json,created_by,created_at,environment) SELECT ?,?,?,?,?,?,?,'draft',?,?,?,? WHERE ${condition.sql}`,
       workflowId, metadata.name, metadata.description, metadata.folder, actor.id, JSON.stringify(graph), at, JSON.stringify(metadata.settings), actor.id, at, metadata.environment, ...condition.args),
     await savedDraft(env, actor, workflowId, draftId, null, graph, metadata, at, command),
+    ...createdRecordGrants(env, actor, workflowId, 'crank_workflows'),
     auditStatementWhen(env, condition.sql, condition.args, actor.id, 'workflow.create', 'workflow', workflowId),
     ...(command ? [commandReceipt(env, command)] : []),
   ])
