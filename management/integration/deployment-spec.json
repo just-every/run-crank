@@ -534,6 +534,12 @@
       "name": "0085_model_response_identity.sql",
       "sha256": "e64f92bc122b5554cb98be23624201a521b0b7d2c74176059266cd4d588368db",
       "sql": "-- A bounded provider response identifier survives interruption of the later\n-- step-result transaction. Model text and credentials never enter this field.\nALTER TABLE crank_wf_attempts ADD COLUMN response_identity TEXT;\n"
+    },
+    {
+      "binding": "DB",
+      "name": "0086_app_retention_progress.sql",
+      "sha256": "9ca6ee69af4b290bbe099ee0e8f4c0d877e042766d1105a1613dc62c68966618",
+      "sql": "-- Maintenance progress is independent of provider edits and local observations.\n-- Kept snapshots rotate behind unvisited rows without changing their payloads.\nALTER TABLE crank_app_snapshots ADD COLUMN retention_checked_at TEXT;\nCREATE INDEX crank_app_snapshot_retention_progress ON crank_app_snapshots(retention_checked_at,observed_at,workflow_id,version_id,record_id);\n"
     }
   ],
   "compatibilityDate": "2026-09-08",
