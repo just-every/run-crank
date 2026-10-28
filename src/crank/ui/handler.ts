@@ -327,15 +327,16 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
       if(path.startsWith('/auth/')) return redirect('/app/access')
       if(path.startsWith('/api/crank/data')) return page('Data operation complete',`<p class="notice">${path.endsWith('/erase')?'The run and its dependent data have been erased. Existing destination effects remain there.':'Your archive has been restored. Every workflow is paused or draft and waits for your review at publish; flows are drafts and connections need reconnecting.'}</p>${restoreSummary(result)}<a href="/app">Return to flows</a>`)
       if(path.startsWith('/api/crank/workflow-runs/') || /^\/api\/crank\/workflows\/[^/]+\/run$/.test(path)) return redirect('/app/workflow-runs/'+encodeURIComponent(result.id))
-      if(path==='/api/crank/workflows') return redirect('/app/workflows/'+encodeURIComponent(result.id))
+      if(path==='/api/crank/workflows' || /^\/api\/crank\/workflows\/[^/]+\/duplicate$/.test(path)) return redirect('/app/workflows/'+encodeURIComponent(result.id))
       if(result.flow_id) return redirect('/app/runs/'+result.id)
       return redirect('/app')
     }
     if(request.method !== 'GET') return page('Method not allowed','<a href="/app">Return to flows</a>',{},405)
     const state = await read('/api/crank/state'), owner = actor.role==='owner'
     if(url.pathname==='/app') {
-      const [workflows,connections] = await Promise.all([read('/api/crank/workflows'),read('/api/crank/connections')])
-      return page('Flows',flowsView(state,env.CRANK_TARGET_ORIGIN ?? (env.AUTH_LOCAL==='true'?'http://127.0.0.1:9051':'https://inbox.example.com'),workflows,connections),{state,intro:'Workflows run unattended once published; approval steps and approval flows wait for an owner.'})
+      const filters=new URLSearchParams();for(const key of ['q','folder'])if(url.searchParams.get(key))filters.set(key,url.searchParams.get(key)!)
+      const [workflows,connections] = await Promise.all([read('/api/crank/workflows?'+filters),read('/api/crank/connections')])
+      return page('Flows',flowsView(state,env.CRANK_TARGET_ORIGIN ?? (env.AUTH_LOCAL==='true'?'http://127.0.0.1:9051':'https://inbox.example.com'),workflows,connections,url.searchParams),{state,intro:'Workflows run unattended once published; approval steps and approval flows wait for an owner.'})
     }
     const workflowPath = /^\/app\/workflows\/([^/]+)$/.exec(url.pathname)
     if(workflowPath) return editorPage(decodeURIComponent(workflowPath[1]),url.searchParams)

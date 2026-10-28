@@ -73,12 +73,12 @@ export function nativeSettings(ctx: NativeContext, step: Step | null) {
   if(step.type==='paths') {
     settings+=(step.branches as any[]).map(branch=>{
       const rename=builder(ctx,'rename-branch',{step:step.id,branch:branch.id})
-      return `<details class="native-route"${ctx.feedback?.form.branch===branch.id?' open':''}><summary>${esc(branch.name??branch.id)}</summary>${rename.form(rename.input('branch_name','Route name',branch.name??branch.id,'maxlength="80" required'),'Rename route')}${conditionControls(ctx,step,branch,branch.id)}${builder(ctx,'remove-branch',{step:step.id,branch:branch.id}).form('<p>Removing this route also removes its draft steps.</p>','Remove route',true)}</details>`
+      return `<details class="native-route"${ctx.feedback?.form.branch===branch.id?' open':''}><summary>${esc(branch.name??branch.id)}</summary>${rename.form(rename.input('branch_name','Route name',branch.name??branch.id,'maxlength="80" required'),'Rename route')}${conditionControls(ctx,step,branch,branch.id)}${builder(ctx,'branch-up',{step:step.id,branch:branch.id}).form('','Route earlier')}${builder(ctx,'branch-down',{step:step.id,branch:branch.id}).form('','Route later')}${builder(ctx,'remove-branch',{step:step.id,branch:branch.id}).form('<p>Removing this route also removes its draft steps.</p>','Remove route',true)}</details>`
     }).join('')
     const branch=builder(ctx,'add-branch',{step:step.id})
     settings+=branch.form(branch.input('branch_name','New route name','','maxlength="80" required'),'Add route')
   }
   const move=builder(ctx,'move',{step:step.id})
   settings+=`<details><summary>Order and connections</summary>${move.form(move.select('after','Connect after',positionOf(ctx.graph,step.id),destinations(ctx.graph,step.id)),'Connect step')}<div class="native-actions">${builder(ctx,'up',{step:step.id}).form('','Move earlier')}${builder(ctx,'down',{step:step.id}).form('','Move later')}</div>${builder(ctx,'remove',{step:step.id}).form('<p>Remove this step and any routes it contains from the draft.</p>','Remove step',true)}</details>`
-  return `<section class="inspector-block native-settings"><h3>Step settings</h3><p>Saved changes do not run or change a published version.</p>${settings}</section>`
+  return `<section class="inspector-block native-settings" id="native-settings"><h3>Step settings</h3><p>Saved changes do not run or change a published version.</p>${settings}</section>`
 }
