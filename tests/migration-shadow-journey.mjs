@@ -119,6 +119,7 @@ export async function migrationShadowJourney() {
   const preview=await h.post('data/subject',{subject:'synthetic-crank-1'});assert.ok(preview.import_comparisons.length>=1);
   const erased=await h.post('data/erase',{subject:'synthetic-crank-1',digest:preview.digest,confirm:'ERASE'});assert.ok(erased.operations.length);
   const again=await create('synthetic-crank-revision-1');await h.post(base+again.id+'/observe',observation(target,1),h.owner,409);
+  const revised=await create('synthetic-crank-revision-2');await h.post(base+revised.id+'/observe',observation(target,1),h.owner,409);
   const later=await archive(h),empty=await harness(target,{edge});try{await empty.post('data/restore',{archive:saved,journal:later,confirm:'RESTORE'},empty.owner,409)}finally{await empty.close()}
   // Unsupported whole graphs are refused before evaluating a chosen branch.
   for(const extra of [{id:'delay',type:'delay',mode:'for',input:{amount:1,unit:'seconds'}},{id:'read',type:'http',input:{method:'GET',url:target+'/read'}}]) {
