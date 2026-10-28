@@ -24,6 +24,7 @@ import { cappedProposal } from './caps'
 import { claimQueuedRun } from './queue'
 import { requireZone } from './dates'
 import { StepError } from './errors'
+import { validateInput } from './input-schema'
 import { liveTestProposal } from './test-authority'
 import { branchesOf, type Graph } from './graph'
 import { executeLoop } from './loop'
@@ -174,6 +175,7 @@ class Execution {
       if (record?.status === 'waiting' && wait?.resolved_at && type.resume) {
         result = await type.resume(step, { ...ctx, wait })
       } else {
+        if (type.inputSchema) validateInput(type.inputSchema, input, step.id)
         if (type.required) requireFields(input, type.required, step.id)
         const boundary = await this.cap(step, path, input, wait, mutating)
         if (boundary) return boundary

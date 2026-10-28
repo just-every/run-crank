@@ -6,6 +6,7 @@ import { STEP_TYPES } from './steps'
 import { validateLoop } from './loop'
 import type { Step } from './types'
 import { isObject } from './values'
+import { validateInput } from './input-schema'
 import { validateCap } from './caps'
 import { validateRetryPolicy } from '../connectors/retry'
 
@@ -76,6 +77,7 @@ export function validateGraph(value: unknown): Validation {
         if (!declared.connections.includes(step.connection_id)) declared.connections.push(step.connection_id)
       }
       validateCap(step)
+      if (type.inputSchema) validateInput(type.inputSchema, step.input, step.id, true)
       type.validate?.(step)
       declared.steps.push({ path, id: step.id, type: step.type, ...(typeof step.connection_id === 'string' ? { connection_id: step.connection_id } : {}) })
     })
