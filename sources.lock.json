@@ -6099,7 +6099,7 @@
       "executable": false
     },
     "tests/table-state-journey.mjs": {
-      "sha256": "ad98e8253bf82dd469b02061b1e809eab9931356863a5cefea999ba1c9fcab32",
+      "sha256": "8c44025432ddccd8b9d79a05692df83f99281b0b0bdb9933f8b65e3734acd86c",
       "executable": false
     },
     "tests/team-browser.mjs": {

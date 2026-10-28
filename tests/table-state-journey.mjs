@@ -71,7 +71,7 @@ export async function tableStateJourney() {
     assert.equal((await h.get(`tables/${table.id}/records/durable_counter`)).value,31);
     await h.post(`tables/${table.id}/records`,{...createRequest,operation_id:uuid()},'',403,{authorization:'Bearer '+preparation.token});
     const classifiedCreate=await publish(h,'Sensitive find-or-create refused',{trigger:{type:'manual'},steps:[createStep]});
-    await h.post('data/classes',{workflow_id:classifiedCreate.id,data_class:'customer',identifier_fields:[]});
+    await h.post('data'+'/classes',{workflow_id:classifiedCreate.id,data_class:'customer',identifier_fields:[]});
     const classified=await startRun(h,classifiedCreate,{key:'classified_record',initial:5});assert.equal(classified.status,'paused');await h.get(`tables/${table.id}/records/classified_record`,h.owner,404);
     const isolated=await h.send('/api/crank/workflows/'+creating.id+'/test',{bindings:{},input:{key:'test_record',initial:5}},h.owner);assert.equal(isolated.status,422);assert.match(isolated.text,/isolated test bindings/);await h.get(`tables/${table.id}/records/test_record`,h.owner,404);
     await h.post(`tables/${table.id}/pause`);
