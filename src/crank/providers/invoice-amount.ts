@@ -1,6 +1,32 @@
 import { add, compare, multiply, negate, parseDecimal, type Decimal } from '../engine/decimal'
 import { StepError } from '../engine/errors'
 import { isObject } from '../engine/values'
+import { inputLiteral } from '../engine/input-schema'
+
+/** A known line must agree with its explicit quantity and price even without a total.
+ * Absent provider defaults and unresolved mappings are left intact. */
+export function requireInvoiceLines(payload: unknown, mapped = false) {
+  const node = (value: unknown, mappings: boolean) => mappings && isObject(value) && '$literal' in value
+    ? { value: value.$literal, mapped: false } : { value, mapped: mappings }
+  const literal = (value: unknown, mappings: boolean) => mappings ? inputLiteral(value) : { known: true, value }
+  const source = node(payload, mapped)
+  if (!isObject(source.value)) return
+  const lines = node(source.value.Line, source.mapped)
+  if (!Array.isArray(lines.value)) return
+  for (const [index, raw] of lines.value.entries()) {
+    const line = node(raw, lines.mapped)
+    if (!isObject(line.value) || literal(line.value.DetailType, line.mapped).value !== 'SalesItemLineDetail') continue
+    const detail = node(line.value.SalesItemLineDetail, line.mapped)
+    if (!isObject(detail.value)) continue
+    const price = literal(detail.value.UnitPrice, detail.mapped), quantity = literal(detail.value.Qty, detail.mapped), amount = literal(line.value.Amount, line.mapped)
+    if (![price, quantity, amount].every(part => part.known) || price.value === undefined || quantity.value === undefined) continue
+    const p = parseDecimal(price.value), q = parseDecimal(quantity.value), a = parseDecimal(amount.value)
+    if (p && q && a && compare(multiply(p, q), a) !== 0) {
+      const field = `input.payload.Line[${index}].Amount`
+      throw new StepError('validation', `Field "${field}": amount must equal its exact quantity and unit price product`, { field, input_schema: true })
+    }
+  }
+}
 
 /** A declared grant amount covers the actual invoice total, never a parallel label. */
 export function invoiceAmountMatches(payload: unknown, expected: unknown) {

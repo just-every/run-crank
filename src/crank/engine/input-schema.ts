@@ -1,4 +1,4 @@
-import { parseDecimal } from './decimal'
+import { normalize, parseDecimal } from './decimal'
 import { StepError } from './errors'
 import { isObject, kindOf } from './values'
 
@@ -13,6 +13,7 @@ export interface InputSchema {
   properties?: Record<string, InputSchema>
   items?: InputSchema
   minItems?: number
+  decimalPlaces?: number
   discriminator?: { field: string; variants: Record<string, Record<string, InputSchema>> }
 }
 
@@ -85,6 +86,7 @@ export function validateInput(schema: InputSchema, input: unknown, step: string,
     } else {
       const decimal = typeof value === 'number' || typeof value === 'string' && /^\d+(?:\.\d+)?$/.test(value) ? parseDecimal(value) : null
       if (!decimal || decimal.units < 0n) fail('must be a nonnegative exact decimal')
+      if (rule.decimalPlaces !== undefined && decimal && normalize(decimal).scale > rule.decimalPlaces) fail('must be exact USD cents')
     }
   }
   visit(schema, input, 'input', mapped, 0)
