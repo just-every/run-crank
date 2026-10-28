@@ -40,9 +40,25 @@ export async function quickbooksInputJourney({ inspect } = {}) {
     const defaults = { ...payload, Line: [sale('0.30')], TxnTaxDetail: undefined };
     assert.equal((await startRun(h, workflow, { ...runInput, payload: defaults, total: '0.30' })).status, 'succeeded');
     assert.deepEqual(payloads.at(-1).Line, defaults.Line);
+    const providerDefaults = { ...defaults, Line: [{ Amount: '0.30', DetailType: 'SalesItemLineDetail', SalesItemLineDetail: {} }] };
+    assert.equal((await startRun(h, workflow, { ...runInput, payload: providerDefaults, total: '0.30' })).status, 'succeeded');
+    assert.deepEqual(payloads.at(-1).Line, providerDefaults.Line, 'optional item, quantity and price defaults stay with the provider');
     const exact = { ...payload, Line: [sale('9007199254740993.01')], TxnTaxDetail: undefined };
     assert.equal((await startRun(h, workflow, { ...runInput, payload: exact, total: '9007199254740993.01' })).status, 'succeeded');
     assert.equal(payloads.at(-1).Line[0].Amount, '9007199254740993.01');
+    const mapped = await publish(h, 'Individual mapped accounting lines', { trigger: { type: 'manual' }, steps: [create(undefined, {
+      payload: { CustomerRef: { value: { $ref: 'trigger.input.customer' } },
+        Line: ['{{trigger.input.first}}', '{{trigger.input.middle}}', '{{trigger.input.last}}'],
+        PrivateNote: '{{trigger.input.note}}' },
+    })] });
+    const mappedInput = { key: 'synthetic-crank-4', customer: payload.CustomerRef.value, first: payload.Line[0], middle: payload.Line[1], last: payload.Line[2], note: '' };
+    assert.equal((await startRun(h, mapped, mappedInput)).status, 'succeeded');
+    assert.deepEqual(payloads.at(-1).Line, payload.Line); assert.equal(payloads.at(-1).PrivateNote, '');
+    const mappedWrites = payloads.length;
+    const missingLine = await startRun(h, mapped, { ...mappedInput, middle: undefined, note: undefined });
+    assert.equal(missingLine.status, 'failed', 'a missing mapped line cannot silently shorten an invoice');
+    assert.equal(missingLine.error.field, 'input.payload.Line[1]'); assert.equal(missingLine.error.kind, 'missing');
+    assert.equal(payloads.length, mappedWrites);
     const invalid = [
       [{ ...payload, CustomerRef: {} }, 'input.payload.CustomerRef.value', 'missing'],
       [{ ...payload, CustomerRef: { value: null } }, 'input.payload.CustomerRef.value', 'null'],

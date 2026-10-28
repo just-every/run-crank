@@ -150,7 +150,7 @@ class Execution {
     }
     try {
       const replay = record ? undefined : this.replays.get(path)
-      input = record?.input_json ? JSON.parse(record.input_json) : replay?.input_json ? JSON.parse(replay.input_json) : (resolve(step.input ?? {}, this.scope) ?? {}) as Record<string, unknown>
+      input = record?.input_json ? JSON.parse(record.input_json) : replay?.input_json ? JSON.parse(replay.input_json) : (resolve(step.input ?? {}, this.scope, 0, !!type.inputSchema) ?? {}) as Record<string, unknown>
       if (this.boundedChild) {
         if (new TextEncoder().encode(JSON.stringify(input)).byteLength > 65536) throw new StepError('validation','Subflow: mapped input exceeds 64 KiB')
         if (step.type === 'transform' && step.fn === 'text.replace') {
