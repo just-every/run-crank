@@ -163,7 +163,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "fe7c1cfc1f6e4f5fbac0bcd85e427b1fb955299d44ea865917c3ebe4ca32e722",
+      "sha256": "227e8df251db7164f1ec847e8f9875b58a41fc41bd7b6d2f7c5e655b8a0aa84a",
       "executable": false
     },
     "DEMO.md": {
@@ -2451,7 +2451,7 @@
       "executable": false
     },
     "src/crank/archive-policy.mjs": {
-      "sha256": "da7b306c7a9decb19c91de3edf25dd05540666a994e481323506fed379d79b85",
+      "sha256": "5c10501fea0ab12214c3e436a44d60fc3338455167c4cdb345d4ef8736e36655",
       "executable": false
     },
     "src/crank/connections/apps.ts": {
@@ -2523,7 +2523,7 @@
       "executable": false
     },
     "src/crank/connectors/request-checkpoints.ts": {
-      "sha256": "84b64851250f25802fd031fc56cd04fe4f02bcfe1ef7526abe73fe443032fa34",
+      "sha256": "8e778dfdd61b1973877c7366f7f271f985430de3958ba7476662f88539ae6371",
       "executable": false
     },
     "src/crank/connectors/request-transport.ts": {
@@ -3019,11 +3019,11 @@
       "executable": false
     },
     "src/crank/ops/payload-pass.ts": {
-      "sha256": "2cbab13e9b61a23220774c03aa32c2f3fae3c7cf3a3bf44a1322729468330dcc",
+      "sha256": "49c13f56cde5e03dab5a193894da2462e0d0b65549c9119f8f032cbc5be0a849",
       "executable": false
     },
     "src/crank/ops/payload-seal.ts": {
-      "sha256": "ba840dd3c95837f7a7f7b938b31333ac2aa3c1c12d47759fa2bb1ee8bea77195",
+      "sha256": "829401955e7a47bf9cea588f64ea94504f4231188e2b6edabcbfb4fa29252887",
       "executable": false
     },
     "src/crank/ops/recovery.ts": {
@@ -3112,6 +3112,10 @@
     },
     "src/crank/providers/quickbooks-compensation.ts": {
       "sha256": "076fcd3302a3faee1b24c362d837e25e6f3b23c3b7493c644a4b2ff0e0edc680",
+      "executable": false
+    },
+    "src/crank/providers/quickbooks-search.ts": {
+      "sha256": "c6bbba2edfc61c9a308c73e2422361b1bf863c8f29cff14e3b1e1cb5e499015b",
       "executable": false
     },
     "src/crank/providers/quickbooks.ts": {
@@ -5727,11 +5731,11 @@
       "executable": false
     },
     "tests/financial-browser.mjs": {
-      "sha256": "c278a3f9db25b534be8c6398220e4421cbe8508195f4e1dec03823518e654939",
+      "sha256": "84d389fd3522dbd22478b4d034b3b8af716da6e9738bb02570abb355a95faf0d",
       "executable": false
     },
     "tests/financial-ownership.mjs": {
-      "sha256": "0cdae247fc2c524aaa755ddc3bb364294d9f7d40d89b9e88a18c890a40d8a309",
+      "sha256": "84bf67de2ee3fd9a9564cfe64718e7f1d1c575cf15690f53a81ad30262426d37",
       "executable": false
     },
     "tests/followups-browser.mjs": {
@@ -5976,6 +5980,10 @@
     },
     "tests/quickbooks-sandbox.mjs": {
       "sha256": "38c10b5c8d874daff3ea815680617aadfed3269469ba3c80eb3077fb3c5fd481",
+      "executable": false
+    },
+    "tests/quickbooks-search-journey.mjs": {
+      "sha256": "26a1d06f1af5443415619b654197a8d8f1c555dd4e53c4ed72315ba0834049e2",
       "executable": false
     },
     "tests/recurring-browser.mjs": {

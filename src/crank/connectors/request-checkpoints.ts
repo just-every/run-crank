@@ -1,3 +1,4 @@
+import { SEALED_CLASSES } from '../ops/payload-keys'
 import { fileBase64, indexStatement, openText, sealFileBase64, sealJson, targetFor } from '../ops/payload-seal'
 import { StepError } from '../engine/errors'
 import type { BoundedResponse } from '../engine/egress'
@@ -77,13 +78,13 @@ export async function checkpointSubjects(env: CrankEnv, subject: string) {
   const runs = new Set<string>()
   let after = 0
   for (;;) {
-    const page = await stmt(env, 'SELECT rowid AS cursor,run_id,path,operation_key,ordinal,response_json FROM crank_request_checkpoints WHERE rowid>? ORDER BY rowid LIMIT 25', after)
-      .all<{ cursor: number; run_id: string; path: string; operation_key: string; ordinal: number; response_json: string }>()
+    const page = await stmt(env, 'SELECT c.rowid AS cursor,c.run_id,c.path,c.operation_key,c.ordinal,c.response_json,r.payload_key,w.data_class FROM crank_request_checkpoints c JOIN crank_wf_runs r ON r.id=c.run_id JOIN crank_workflows w ON w.id=r.workflow_id WHERE c.rowid>? ORDER BY c.rowid LIMIT 25', after)
+      .all<{ cursor: number; run_id: string; path: string; operation_key: string; ordinal: number; response_json: string; payload_key: string | null; data_class: string }>()
     if (!page.results.length) return [...runs]
     for (const row of page.results) {
       const response = JSON.parse(row.response_json)
       // Sealed pages match only declared identifiers through their blind index.
-      if (!Array.isArray(response.headers)) { after = row.cursor; continue }
+      if (row.payload_key || SEALED_CLASSES.includes(row.data_class) || !Array.isArray(response.headers)) { after = row.cursor; continue }
       const text = new TextDecoder().decode(await responseBytes(env, row, response.body_bytes)).toLowerCase()
       if (text.includes(subject) || text.includes(JSON.stringify(subject).slice(1, -1)) || JSON.stringify(response.headers).toLowerCase().includes(subject)) runs.add(row.run_id)
       after = row.cursor
@@ -102,7 +103,9 @@ export async function checkpointIndexTexts(env: CrankEnv, runId: string) {
   const texts: string[] = []
   for (const row of rows.results) {
     const response = JSON.parse(row.response_json)
-    texts.push(checkpointText(await responseBytes(env,row,response.body_bytes)))
+    const run = await stmt(env, 'SELECT workflow_id FROM crank_wf_runs WHERE id=?',runId).first<{workflow_id:string}>()
+    if (!run) throw new StepError('authority','The retained response no longer belongs to a run')
+    texts.push(checkpointText(await responseBytes(env,row,response.body_bytes)), (await openText(env,run.workflow_id,JSON.stringify(response.headers)))!)
   }
   return texts
 }

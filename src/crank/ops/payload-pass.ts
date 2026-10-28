@@ -48,7 +48,7 @@ export async function payloadPass(env: CrankEnv, time = Date.now()) {
   ]
   for (const copy of copies) {
     const rows = (await stmt(env, `SELECT i.rowid AS rid,i.${copy.column} AS value,${copy.workflow} AS workflow_id FROM ${copy.from}
-      WHERE i.${copy.column}!='{}' AND ${stale('i.' + copy.column)} AND ${plainOrHeld('i.' + copy.column)} LIMIT ${copy.files ? FILES_PER_PASS : ITEMS_PER_PASS}`).all<{ rid: number; value: string; workflow_id: string }>()).results
+      WHERE i.${copy.column}!='{}' AND ${stale(copy.headers ? "json_extract(i.response_json,'$.headers')" : 'i.' + copy.column)} AND ${plainOrHeld(copy.headers ? "json_extract(i.response_json,'$.headers')" : 'i.' + copy.column)} LIMIT ${copy.files ? FILES_PER_PASS : ITEMS_PER_PASS}`).all<{ rid: number; value: string; workflow_id: string }>()).results
     for (const row of rows) {
       try {
         const t = await target(row.workflow_id)
