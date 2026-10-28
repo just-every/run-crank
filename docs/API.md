@@ -1149,3 +1149,31 @@ labelled not tested. A saved output does not bypass an approval, delay, loop or
 subflow. Missing fields referenced from selected outputs are named in validation
 and publication warnings. Restored step samples stay unselected until adoption
 and explicit selection; history erasure removes their retained copies too.
+
+
+Selected samples can drive the native draft-test door with
+`{sample_id:"...",bindings:{...}}`, or `{use_sample:true,bindings:{...}}` for the
+selected trigger. The test run and its audit retain the source identities rather
+than describing captured data as manual. Successful outputs are retained as
+source-labelled samples at the checkpoint, including an action completed after
+its live-effect approval and restart. Paused or restored workflows and a changed
+draft cannot acquire a new selected response from an old test.
+
+For a top-level HTTP action or read, include `step_path` in the same test request.
+The server freezes earlier pure results and selected app outputs as test data,
+then executes only that HTTP step. Explicitly bind its declared connection in
+`bindings`; unrelated connections are not requested. A production write waits
+for the existing exact effect and account confirmation, while a read requires no
+write confirmation. Earlier approvals, waits and other unsupported controls are
+not bypassed by supplying their sample outputs. Authored workflows continue to
+use their complete sandbox test. Other native step kinds and general search
+semantics remain outside this direct-step door.
+
+Response samples retain a value-free schema fingerprint. A changed pinned custom
+connector version, operation, declared output schema or installed connection
+schema produces a stale-sample warning until the sample is reloaded; referenced
+missing fields are also named. Legacy samples without a fingerprint remain
+stale until reloaded. This does not claim provider field discovery or a live
+provider receipt. Sample values and frozen upstream results stay in the workflow's
+sealed run payload when its data class requires encryption; they are never
+inserted into graph metadata, and declared subject identifiers remain indexed.
