@@ -5,6 +5,8 @@ import {appResponse,productApi} from '../src/crank/ui/handler'
 import {publicHooks} from '../src/crank/triggers/public'
 import {healthResponse} from '../src/crank/health'
 import {schedulerPass} from '../src/crank/ops/scheduler'
+import {crankAgentDoor} from '../src/crank/agent-door'
+import {businessSettings} from '../src/crank/agent-door/business'
 import {emailHandler} from '../src/crank/triggers/email'
 export default {
   email: emailHandler,
@@ -18,7 +20,7 @@ export default {
       return Response.json({ rejection })
     }
     if (new URL(request.url).pathname === '/health') return healthResponse(env)
-    return await publicHooks(request,runtimeBindings(env),work=>ctx.waitUntil(work)) ?? await authResponse(request,env) ?? await productApi(request,runtimeBindings(env)) ?? await appResponse(request,runtimeBindings(env)) ?? new Response('Not found',{status:404})
+    return await businessSettings(runtimeBindings(env)).handle(request) ?? await crankAgentDoor(runtimeBindings(env)).handle(request) ?? await publicHooks(request,runtimeBindings(env),work=>ctx.waitUntil(work)) ?? await authResponse(request,env) ?? await productApi(request,runtimeBindings(env)) ?? await appResponse(request,runtimeBindings(env)) ?? new Response('Not found',{status:404})
   },
   async scheduled(controller:ScheduledController,env:any) { await schedulerPass(runtimeBindings(env),controller.scheduledTime) },
 }
