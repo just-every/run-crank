@@ -11,8 +11,63 @@ const graph=(id,patch={})=>({trigger:{type:'manual'},steps:[search(id,patch),{id
 const account=(h,realm='1234',token='synthetic-crank-104',scopes=[scope])=>connection(h,{app:'quickbooks',label:'Sandbox company '+realm,account_name:realm,auth_kind:'oauth2',scopes,secret:{access_token:token}});
 const page=(records,start=1)=>jsonResponse({QueryResponse:{Invoice:records,startPosition:start,maxResults:records.length}});
 
+/** Old installations already marked these runs indexed before pages joined the index. */
+async function legacyCheckpointErasure() {
+  const fake=fakeEdge(),h=await harness('http://127.0.0.1:9',{edge:fake.edge,clock});
+  const subject='synthetic-crank-107';let parked=false,restored;
+  const stepUp=async(h,action)=>{
+    const asked=await h.send('/auth/step-up',{action},h.owner);assert.equal(asked.status,202,asked.text);
+    const href=h.mail.at(-1).html.match(/href="([^"]*\/auth\/confirm\?token=[^"]+)"/)[1].replaceAll('&amp;','&');
+    assert.equal((await h.send('/auth/confirm',{token:new URL(href).searchParams.get('token')},h.owner)).status,303);
+  };
+  const records=Array.from({length:100},(_,i)=>({...invoice(String(i+1)),PrivateNote:subject}));
+  fake.routes.set(host,({url,method})=>{
+    assert.equal(method,'GET');const query=url.searchParams.get('query');
+    if(query.startsWith('select count(*)'))return jsonResponse({QueryResponse:{totalCount:parked?101:1}});
+    const start=Number(query.match(/startposition (\d+)/)?.[1]);
+    if(parked&&start>1)return jsonResponse({},429,{'retry-after':'60'});
+    return page(parked?records:[records[0]]);
+  });
+  try {
+    const c=await account(h),w=await publish(h,'Legacy retained invoice privacy',graph(c.id));
+    await h.post('data'+'/attestations',{data_class:'financial',agreements:['Synthetic provider-edge data only'],data_location:'Local test database',confirm:'ATTEST'},h.owner,201);
+    await h.post('data'+'/classes',{workflow_id:w.id,data_class:'financial',identifier_fields:['PrivateNote']});
+    const complete=await startRun(h,w,{key});assert.equal(complete.status,'succeeded');
+    parked=true;const waiting=await startRun(h,w,{key});assert.equal(waiting.status,'waiting');
+    // Model the pre-upgrade index: the run declaration is current, but the old page was not indexed.
+    await h.db.prepare('DELETE FROM crank_blind_index WHERE run_id=?').bind(waiting.id).run();
+    await h.post(`workflows/${w.id}/pause`);await h.restart();
+    const preview=await h.post('data'+'/subject',{subject});
+    assert.ok(preview.workflow_runs.some(r=>r.id===waiting.id),'legacy sealed page-only subject must be found before erasure');
+    assert.equal(preview.blocked,true);
+    await h.post('data'+'/erase',{subject,confirm:'ERASE',digest:preview.digest},h.owner,409);
+    await h.get('workflow-runs/'+complete.id);await h.get('workflow-runs/'+waiting.id);
+    assert.ok((await h.db.prepare('SELECT count(*) AS n FROM crank_request_checkpoint_chunks WHERE run_id=?').bind(waiting.id).first()).n>0,'refused erasure preserves the whole reviewed set');
+    const undeclared=await h.post('data'+'/subject',{subject:'123456789012345678.01'});
+    assert.ok(!undeclared.workflow_runs.some(r=>r.id===waiting.id),'opening a legacy sealed page must not widen declared identifiers');
+    // An older archive can arrive after upgrade too; its index marker is no proof of page coverage.
+    const snapshot=await archive(h),passphrase='synthetic-crank-108';
+    await stepUp(h,'export');const file=await h.post('data'+'/keys/export',{passphrase,confirm:'EXPORT KEYS'});
+    restored=await harness('http://127.0.0.1:9',{edge:fake.edge,clock});
+    await restored.post('data'+'/restore',{archive:snapshot,confirm:'RESTORE'});
+    const unread=await restored.post('data'+'/subject',{subject});assert.ok(unread.sealed_unmatched.length);assert.equal(unread.blocked,true);
+    await restored.post('data'+'/erase',{subject,confirm:'ERASE',digest:unread.digest},restored.owner,409);
+    await stepUp(restored,'credentials:mint');await restored.post('data'+'/keys/import',{file,passphrase});
+    const imported=await restored.post('data'+'/subject',{subject});
+    assert.ok(imported.workflow_runs.some(r=>r.id===waiting.id),'restored old page-only subject must be found with the imported key');assert.equal(imported.blocked,true);
+    await restored.post('data'+'/erase',{subject,confirm:'ERASE',digest:imported.digest},restored.owner,409);
+    await restored.get('workflow-runs/'+complete.id);
+    await h.post(`workflow-runs/${waiting.id}/cancel`);
+    const safe=await h.post('data'+'/subject',{subject});assert.equal(safe.blocked,false);
+    await h.post('data'+'/erase',{subject,confirm:'ERASE',digest:safe.digest});
+    await h.get('workflow-runs/'+complete.id,h.owner,404);
+    assert.equal((await h.db.prepare('SELECT count(*) AS n FROM crank_request_checkpoint_chunks WHERE run_id=?').bind(waiting.id).first()).n,0);
+  } finally {await restored?.close();await h.close()}
+}
+
 /** One native sanity journey: public workflows, current authority, restart and complete custody. */
 export async function quickbooksSearchJourney({inspect}={}) {
+  await legacyCheckpointErasure();
   const fake=fakeEdge(),h=await harness('http://127.0.0.1:9',{edge:fake.edge,clock});
   let mode='one',activeKey=key,park=true,restored,oldRestore;
   const reads=()=>fake.to(host);
@@ -22,7 +77,13 @@ export async function quickbooksSearchJourney({inspect}={}) {
     assert.equal(headers.authorization,'Bearer synthetic-crank-104');
     const query=url.searchParams.get('query'),start=Number(query.match(/startposition (\d+)/)?.[1]);
     const escaped=activeKey.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-    assert.equal(query,`select * from Invoice where DocNumber = '${escaped}' orderby Id asc startposition ${start} maxresults 100`);
+    if(query.startsWith('select count(*)')) {
+      assert.equal(query,`select count(*) from Invoice where DocNumber = '${escaped}'`);
+      return jsonResponse({QueryResponse:{totalCount:mode==='bad_count'?'invalid':mode==='zero'?0:mode==='multiple'?3:['paged','incomplete','repeated'].includes(mode)?201:mode==='truncated'?1001:mode==='parked'?101:1}});
+    }
+    assert.equal(query,`select * from Invoice where DocNumber = '${escaped}' orderby TxnDate asc startposition ${start} maxresults 100`,'invoice pagination must use a supported provider sort');
+    if(mode==='paged')return page(Array.from({length:201},(_,i)=>({...invoice(String(i+1).padStart(4,'0')),TxnDate:'2026-11-01'})).slice(start-1,start+99).reverse(),start);
+    if(mode==='incomplete')return page(start===1?full:[invoice('0101')],start);
     if(mode==='provider')return jsonResponse({Fault:{Error:[{Message:'synthetic-crank-provider'}]}},500);
     if(mode==='permission')return jsonResponse({},403);
     if(mode==='malformed')return new Response('{bad JSON');
@@ -71,6 +132,13 @@ export async function quickbooksSearchJourney({inspect}={}) {
     const limit=await publish(h,'Bound invoice results',graph(c.id,{limit:2}));
     const limited=await startRun(h,limit,{key});assert.equal(stepOf(limited,'search').output.outcome,'truncated');assert.equal(stepOf(limited,'search').output.count,2);
     if(inspect)await inspect({h,run:limited,state:'invoice-search-truncated'});
+    mode='paged';
+    const paged=await publish(h,'Complete duplicate-date invoice pages',graph(c.id,{limit:500}));
+    const completePages=await startRun(h,paged,{key}),pageOutput=stepOf(completePages,'search').output;
+    assert.equal(completePages.status,'succeeded');assert.equal(pageOutput.count,201);assert.equal(pageOutput.truncated,false);
+    assert.deepEqual(pageOutput.records.map(r=>r.Id),Array.from({length:201},(_,i)=>String(i+1).padStart(4,'0')),'provider date ties are ordered locally only after complete pagination');
+    const firstPage=await publish(h,'First of duplicate-date invoice pages',graph(c.id,{multi_match:'first'}));
+    assert.equal(stepOf(await startRun(h,firstPage,{key}),'search').output.record.Id,'0001');
     mode='truncated';const bounded=await startRun(h,w,{key});assert.equal(stepOf(bounded,'search').output.outcome,'truncated');
     assert.equal(stepOf(bounded,'search').output.count,100);
     const incomplete=await publish(h,'Refuse incomplete first invoice',graph(c.id,{multi_match:'first'}));const refusedFirst=await startRun(h,incomplete,{key});assert.equal(refusedFirst.status,'failed');assert.equal(refusedFirst.error.outcome,'search incomplete');
@@ -82,7 +150,7 @@ export async function quickbooksSearchJourney({inspect}={}) {
     for(const patch of [{create_if_not_found:{}},{sort:{field:'DocNumber',direction:'desc'}},{input:{realm_id:'1234',doc_number:12}},{input:{realm_id:'1234',doc_number:key,query:'select *'}}]) {
       const refused=await h.send('/api/crank/workflows',{name:'Unsupported invoice search',graph:graph(c.id,patch)},h.owner);assert.equal(refused.status,422,refused.text);
     }
-    for(mode of ['provider','permission','malformed','shape','null','foreign','repeated','metadata','fault']) {
+    for(mode of ['provider','permission','malformed','shape','null','foreign','repeated','metadata','fault','incomplete','bad_count']) {
       const failed=await startRun(h,w,{key});assert.ok(['failed','paused'].includes(failed.status),mode+': '+failed.status);assert.notEqual(stepOf(failed,'search').output?.outcome,'not found');assert.equal(stepOf(failed,'result'),undefined);
     }
     mode='one';
@@ -91,16 +159,16 @@ export async function quickbooksSearchJourney({inspect}={}) {
       const refused=await startRun(h,foreign,{key});assert.ok(['failed','paused'].includes(refused.status));assert.equal(reads().length,calls);
     }
     const two=await account(h,'5678','synthetic-crank-105');
-    fake.routes.set(host,({url,headers,method})=>{assert.equal(method,'GET');const realm=url.pathname.split('/')[3];assert.equal(headers.authorization,'Bearer '+(realm==='1234'?'synthetic-crank-104':'synthetic-crank-105'));return page([invoice(realm)])});
+    fake.routes.set(host,({url,headers,method})=>{assert.equal(method,'GET');const realm=url.pathname.split('/')[3];if(url.searchParams.get('query').startsWith('select count(*)'))return jsonResponse({QueryResponse:{totalCount:1}});assert.equal(headers.authorization,'Bearer '+(realm==='1234'?'synthetic-crank-104':'synthetic-crank-105'));return page([invoice(realm)])});
     const second=await publish(h,'Second exact selected company',graph(two.id,{input:{realm_id:'5678',doc_number:key}}));
     assert.equal(stepOf(await startRun(h,second,{}),'search').output.record.Id,'5678');assert.equal(stepOf(await startRun(h,w,{key}),'search').output.record.Id,'1234');
     // The next subjourney keeps a complete first page while a later page parks.
     const provider=fake.routes.get(host);
-    fake.routes.set(host,({url,method,headers})=>{assert.equal(method,'GET');assert.equal(headers.authorization,'Bearer synthetic-crank-104');const start=Number(url.searchParams.get('query').match(/startposition (\d+)/)[1]);if(start===1)return page(full);return park?jsonResponse({},429,{'retry-after':'60'}):page([invoice('0101')],101)});
+    fake.routes.set(host,({url,method,headers})=>{assert.equal(method,'GET');assert.equal(headers.authorization,'Bearer synthetic-crank-104');if(url.searchParams.get('query').startsWith('select count(*)'))return jsonResponse({QueryResponse:{totalCount:101}});const start=Number(url.searchParams.get('query').match(/startposition (\d+)/)[1]);if(start===1)return page(full);return park?jsonResponse({},429,{'retry-after':'60'}):page([invoice('0101')],101)});
     await h.post('data/attestations',{data_class:'financial',agreements:['Synthetic provider-edge data only'],data_location:'Local test database',confirm:'ATTEST'},h.owner,201);
     const privateFlow=await publish(h,'Sealed invoice continuation',graph(c.id));
     await h.post('data/classes',{workflow_id:privateFlow.id,data_class:'financial',identifier_fields:['PrivateNote']});
-    const parked=await startRun(h,privateFlow,{key});assert.equal(parked.status,'waiting');assert.equal(parked.attempts.length,2);
+    const parked=await startRun(h,privateFlow,{key});assert.equal(parked.status,'waiting');assert.equal(parked.attempts.length,3);
     const snapshot=await archive(h),rows=inventory(snapshot).map(JSON.parse);
     const chunks=rows.filter(i=>i.table==='crank_request_checkpoint_chunks'&&i.row.run_id===parked.id);
     assert.ok(chunks.length);assert.ok(chunks.every(i=>JSON.parse(i.row.content_base64).sealed==='crank-payload-v1'));
@@ -134,7 +202,7 @@ export async function quickbooksSearchJourney({inspect}={}) {
     for(let pass=0;pass<3;pass++)await h.tick('2026-11-12T15:02:00Z');assert.ok((await h.get('workflow-runs/'+expiring.id)).payload_expired_at);
     assert.equal(stepOf(await h.get('workflow-runs/'+expiring.id),'search').output,null);
     // Revocation while parked refuses the next page without disclosing a result.
-    park=true;fake.routes.set(host,({url})=>/startposition 1 maxresults/.test(url.searchParams.get('query'))?page(full):jsonResponse({},429,{'retry-after':'60'}));
+    park=true;fake.routes.set(host,({url})=>url.searchParams.get('query').startsWith('select count(*)')?jsonResponse({QueryResponse:{totalCount:101}}):/startposition 1 maxresults/.test(url.searchParams.get('query'))?page(full):jsonResponse({},429,{'retry-after':'60'}));
     const revoked=await startRun(h,w,{key});assert.equal(revoked.status,'waiting');const last=reads().length;
     await h.post(`connections/${c.id}/revoke`);await h.restart({clock:'2026-11-10T15:02:02Z'});await h.tick('2026-11-10T15:02:02Z');
     assert.equal((await h.get('workflow-runs/'+revoked.id)).status,'paused');assert.equal(reads().length,last);

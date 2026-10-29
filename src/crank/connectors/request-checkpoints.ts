@@ -1,4 +1,4 @@
-import { fileBase64, indexStatement, isSealed, openText, sealFileBase64, sealJson, targetFor } from '../ops/payload-seal'
+import { fileBase64, identifierValues, indexStatement, isSealed, openText, sealFileBase64, sealJson, targetFor } from '../ops/payload-seal'
 import { StepError } from '../engine/errors'
 import type { BoundedResponse } from '../engine/egress'
 import type { RequestContext } from './retry'
@@ -74,18 +74,29 @@ export async function saveRequestCheckpoint(ctx: RequestContext, ordinal: number
 /** DATA-002 also finds a subject whose only retained occurrence is in an
  * unfinished page. Scan in small batches; cancellation drops these responses. */
 export async function checkpointSubjects(env: CrankEnv, subject: string) {
-  const runs = new Set<string>()
+  const runs = new Set<string>(), unread = new Set<string>()
   let after = 0
   for (;;) {
-    const page = await stmt(env, 'SELECT c.rowid AS cursor,c.run_id,c.path,c.operation_key,c.ordinal,c.response_json FROM crank_request_checkpoints c JOIN crank_wf_runs r ON r.id=c.run_id WHERE c.rowid>? ORDER BY c.rowid LIMIT 25', after)
-      .all<{ cursor: number; run_id: string; path: string; operation_key: string; ordinal: number; response_json: string }>()
-    if (!page.results.length) return [...runs]
+    const page = await stmt(env, 'SELECT c.rowid AS cursor,c.run_id,c.path,c.operation_key,c.ordinal,c.response_json,r.workflow_id,r.payload_key,w.data_class,w.identifier_fields_json FROM crank_request_checkpoints c JOIN crank_wf_runs r ON r.id=c.run_id JOIN crank_workflows w ON w.id=r.workflow_id WHERE c.rowid>? ORDER BY c.rowid LIMIT 25', after)
+      .all<{ cursor: number; run_id: string; path: string; operation_key: string; ordinal: number; response_json: string; workflow_id: string; payload_key: string | null; data_class: string; identifier_fields_json: string }>()
+    if (!page.results.length) return { runs: [...runs], unmatched: unread.size ? [`${unread.size} run${unread.size === 1 ? ' has' : 's have'} retained connector pages that cannot be read under the declared identifiers; import the owner's key file or resolve these pages before erasing a subject.`] : [] }
     for (const row of page.results) {
       const response = JSON.parse(row.response_json)
-      // Legacy plaintext pages remain discoverable even on an already sealed run.
-      // Sealed pages use only the declared-field blind index, without opening keys.
+      // Older parked pages can predate checkpoint indexing while their run is already
+      // marked indexed. Read them here too, including pages restored from old archives.
+      // Sealed content still matches only exact declared identifier values.
+      // A sealed run can still carry legacy plaintext pages: retain main's
+      // plaintext discovery, and use declared identifiers only for sealed content.
       const chunk = await stmt(env, 'SELECT content_base64 FROM crank_request_checkpoint_chunks WHERE run_id=? AND path=? AND operation_key=? AND ordinal=? ORDER BY chunk_index LIMIT 1', row.run_id, row.path, row.operation_key, row.ordinal).first<{content_base64: string}>()
-      if (isSealed(chunk?.content_base64)) { after = row.cursor; continue }
+      if (isSealed(chunk?.content_base64) || !Array.isArray(response.headers)) {
+        try {
+          const fields: string[] = JSON.parse(row.identifier_fields_json)
+          const values = identifierValues(JSON.parse(checkpointText(await responseBytes(env, row, response.body_bytes))), fields)
+          identifierValues(JSON.parse((await openText(env, row.workflow_id, JSON.stringify(response.headers)))!), fields, values)
+          if (values.has(subject)) runs.add(row.run_id)
+        } catch { unread.add(row.run_id) }
+        after = row.cursor; continue
+      }
       const text = new TextDecoder().decode(await responseBytes(env, row, response.body_bytes)).toLowerCase()
       if (text.includes(subject) || text.includes(JSON.stringify(subject).slice(1, -1)) || JSON.stringify(response.headers).toLowerCase().includes(subject)) runs.add(row.run_id)
       after = row.cursor
