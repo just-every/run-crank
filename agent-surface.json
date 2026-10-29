@@ -546,6 +546,7 @@
       "prepare": [
         "create"
       ]
-    }
+    },
+    "journey": "tests/agent-door/journey.mjs"
   }
 }
