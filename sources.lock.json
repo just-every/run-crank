@@ -6696,7 +6696,7 @@
       "executable": false
     },
     "tests/agent-door/journey.mjs": {
-      "sha256": "e8c760a3b7d84893ef5c9146ae6dfbb0512cceb39fbcf1cb05963274fa189239",
+      "sha256": "1e12e5184c5a39733d467a7c01509771a2754096022d56c2745564a4ec237998",
       "executable": false
     },
     "tests/ai-steps-browser.mjs": {
