@@ -13,7 +13,7 @@ const uncertainWrite = encode({ category: 'uncertain', message: 'Restore interru
 const deliveryFence = previous => encode({ status: 'failed', code: 'restore_fence', uncertain: true, previous });
 const fenced = (json, key, code) => json !== null && JSON.parse(json)[key] === code;
 const remoteWrite = row => row.status === 'running' &&
-  (row.type === 'ai.classify' || row.type === 'orbit.update_deal' || row.type.startsWith('nook.') || row.type.startsWith('slack.') || row.type.startsWith('google_calendar.') || row.type.startsWith('quickbooks.') || row.type.startsWith('gusto.') || row.type === 'http' && !['GET', 'HEAD'].includes(String(JSON.parse(row.input_json ?? '{}').method ?? 'GET').toUpperCase()));
+  (row.type === 'ai.classify' || row.type === 'orbit.update_deal' || row.type.startsWith('nook.') || row.type.startsWith('slack.') || row.type === 'google_calendar.create_event' || row.type.startsWith('quickbooks.') || row.type.startsWith('gusto.') || row.type === 'http' && !['GET', 'HEAD'].includes(String(JSON.parse(row.input_json ?? '{}').method ?? 'GET').toUpperCase()));
 
 /** Pure/idempotent export normalization: backups carry history, never execution authority. */
 export function fenceRow(table, row) {
@@ -189,8 +189,9 @@ export async function validateRestore({ read }) {
         const allowed=[search?.id,search?.find_or_create?.operation].filter(Boolean)
         if (!step.gateway_id || !search?.gateway || response.body_bytes>65536 || !allowed.some(operation=>url.pathname===`/api/crank/gateways/${encodeURIComponent(step.gateway_id)}/operations/${encodeURIComponent(operation)}/pages/0`)) return false;
       }
-      if (!step || !['http','file.fetch','custom.request','gmail.search_threads'].includes(step.type) && !step.type.startsWith('orbit.') && !step.type.startsWith('nook.') && !step.type.startsWith('slack.') && !step.type.startsWith('quickbooks.') && !step.type.startsWith('gusto.')) return false;
-      const bound = (step.type === 'file.fetch' || step.type === 'nook.send_message' || step.type.startsWith('orbit.') ? 1 : step.type.startsWith('slack.') ? 4 : 2) * 1024 * 1024;
+      if (!step || !['http','file.fetch','custom.request','gmail.search_threads'].includes(step.type) && !step.type.startsWith('orbit.') && !step.type.startsWith('nook.') && !step.type.startsWith('slack.') && !step.type.startsWith('quickbooks.') && !step.type.startsWith('gusto.') && !step.type.startsWith('google_calendar.')) return false;
+      if (step.type === 'google_calendar.search_events' && url.href !== 'https://www.googleapis.com/calendar/v3/events') return false;
+      const bound = (step.type === 'file.fetch' || step.type === 'nook.send_message' || step.type.startsWith('orbit.') || step.type === 'google_calendar.search_events' ? 1 : step.type.startsWith('slack.') ? 4 : 2) * 1024 * 1024;
       if (!Number.isSafeInteger(checkpoint.ordinal) || checkpoint.ordinal < 0 || !/^[a-f0-9]{64}$/.test(checkpoint.request_key) || typeof checkpoint.operation_key !== 'string' || !checkpoint.operation_key) return false;
       if (!Number.isInteger(response.status) || response.status < 100 || response.status > 599 || !['http:', 'https:'].includes(url.protocol) || url.username || url.password || url.search || url.hash) return false;
       if (!Number.isSafeInteger(response.body_bytes) || response.body_bytes < 0 || response.body_bytes > bound || response.chunk_count !== Math.ceil(response.body_bytes / 65536) || !Array.isArray(response.headers)) return false;

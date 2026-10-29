@@ -16,6 +16,7 @@ const FINGERPRINT = `SELECT COALESCE(r.trigger_json,'')||'|'||COALESCE(r.respons
   COALESCE((SELECT group_concat(x,'#') FROM (SELECT path||'|'||status||'|'||COALESCE(input_json,'')||'|'||COALESCE(output_json,'')||'|'||COALESCE(trace_json,'')||'|'||COALESCE(error_json,'') AS x FROM crank_wf_steps WHERE run_id=r.id ORDER BY path)),'')||'|'||
   COALESCE((SELECT group_concat(x,'#') FROM (SELECT path||'|'||revision||'|'||COALESCE(input_json,'')||'|'||COALESCE(prior_input_json,'')||'|'||COALESCE(prior_error_json,'') AS x FROM crank_wf_step_revisions WHERE run_id=r.id ORDER BY path,revision)),'')||'|'||
   COALESCE((SELECT group_concat(x,'#') FROM (SELECT path||'|'||COALESCE(proposal_json,'')||'|'||COALESCE(resolution_json,'') AS x FROM crank_waits WHERE run_id=r.id ORDER BY path)),'')||'|'||
+  COALESCE((SELECT group_concat(x,'#') FROM (SELECT path||'|'||operation_key||'|'||ordinal||'|'||response_json AS x FROM crank_request_checkpoints WHERE run_id=r.id ORDER BY path,operation_key,ordinal)),'')||'|'||
   COALESCE((SELECT group_concat(x,'#') FROM (SELECT path||'|'||operation_key||'|'||ordinal||'|'||chunk_index||'|'||content_base64 AS x FROM crank_request_checkpoint_chunks WHERE run_id=r.id ORDER BY path,operation_key,ordinal,chunk_index)),'') AS fp
   FROM crank_wf_runs r WHERE r.id=?`
 

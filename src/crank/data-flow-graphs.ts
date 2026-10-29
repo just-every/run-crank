@@ -35,6 +35,7 @@ export async function graphDataFlows(env: CrankEnv, credential: (id: unknown) =>
         else if ((step.type.startsWith('nook.') || step.type.startsWith('orbit.'))) emit(path,step.type,input,step.connection_id,[siblingOrigin(step.connection_id)])
         else if (step.type.startsWith('quickbooks.')) emit(path,step.type,input,step.connection_id,['https://sandbox-quickbooks.api.intuit.com'])
         else if (step.type.startsWith('gusto.')) emit(path,step.type,input,step.connection_id,['https://api.gusto-demo.com','https://api.gusto.com'])
+        else if (step.type === 'google_calendar.search_events') emit(path,step.type,{calendar_id:'exact calendar identifier',time_min:'interval lower bound',time_max:'interval upper bound',time_zone:'explicit IANA timezone',...(input.query === undefined ? {} : {query:'declared search text'}),page_token:'provider pagination token'},step.connection_id,['https://www.googleapis.com'])
         else if (step.type.startsWith('google_calendar.')) emit(path,step.type,input,step.connection_id,['https://www.googleapis.com'])
         else if (step.type === 'http' || step.type === 'file.fetch' || step.type.startsWith('slack.')) {
           const readback = isObject(step.readback) ? step.readback : {}
