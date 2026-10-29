@@ -195,6 +195,10 @@
       "sha256": "a80fdc64c9599df2337a7ddaf252fb378ebf960458657524f7e45ea16353bd87",
       "executable": false
     },
+    "docs/AGENT-DOOR.md": {
+      "sha256": "b2b3210d68e0a87fc488bf56a5c175b4b692f84cb7ea131f3685a039ec03153a",
+      "executable": false
+    },
     "docs/API.md": {
       "sha256": "10d5712f492c3ff95aad18af2a7bbe8f0a0a84c6fa9c903cbaeb60d02fa49919",
       "executable": false
