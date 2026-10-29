@@ -313,6 +313,48 @@
       ]
     },
     {
+      "path": "migrations/core/0089_business_settings.sql",
+      "originPath": "modules/business-settings/schema/0001_business_settings.sql",
+      "revision": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": {
+        "migrations/core/0089_business_settings.sql": "a16f736a781aa3fe02a2e090c993f8c360c904f9fb6d86126acdab6e1f24e773"
+      },
+      "modes": {
+        "migrations/core/0089_business_settings.sql": "100644"
+      },
+      "originFiles": [
+        "modules/business-settings/schema/0001_business_settings.sql"
+      ]
+    },
+    {
+      "path": "migrations/core/0090_business_people.sql",
+      "originPath": "modules/business-settings/schema/0002_business_people.sql",
+      "revision": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": {
+        "migrations/core/0090_business_people.sql": "51aa39622d866b987d71b6e37c9a8300e7f24c54a55611edaab669ed051b01cd"
+      },
+      "modes": {
+        "migrations/core/0090_business_people.sql": "100644"
+      },
+      "originFiles": [
+        "modules/business-settings/schema/0002_business_people.sql"
+      ]
+    },
+    {
+      "path": "migrations/core/0091_agent_door.sql",
+      "originPath": "modules/agent-door/schema/agent-door.sql",
+      "revision": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": {
+        "migrations/core/0091_agent_door.sql": "016d8a98b964385f5c4a13447361c3c783910a76aaf4606b0e0081482bc819cc"
+      },
+      "modes": {
+        "migrations/core/0091_agent_door.sql": "100644"
+      },
+      "originFiles": [
+        "modules/agent-door/schema/agent-door.sql"
+      ]
+    },
+    {
       "path": "ONBOARDING.md",
       "originPath": "foundation/template/ONBOARDING.md",
       "revision": "114ef7a61f080da053af783c5fbe06f625d692cc",
@@ -724,6 +766,20 @@
       },
       "originFiles": [
         "edition-authoring/copy-checkout.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/copy-namespaces.mjs",
+      "originPath": "edition-authoring/copy-namespaces.mjs",
+      "revision": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": {
+        "scripts/edition-authoring/copy-namespaces.mjs": "2e7f2bcd34c575e9b7ac72ee41f5e676fd6ac22ab27d5b64a313326fd9b42ed9"
+      },
+      "modes": {
+        "scripts/edition-authoring/copy-namespaces.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/copy-namespaces.mjs"
       ]
     },
     {
@@ -1455,6 +1511,20 @@
       ]
     },
     {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/types.mjs",
+      "originPath": "edition-authoring/vendor/babel-parser/babel-parser/types.mjs",
+      "revision": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-parser/types.mjs": "7220719c4d56a39b2b63d28ebe4131f2b59e55c7de96533cd4b1dcdc3a2e02d0"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/babel-parser/babel-parser/types.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/babel-parser/babel-parser/types.mjs"
+      ]
+    },
+    {
       "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/util/class-scope.mjs",
       "originPath": "edition-authoring/vendor/babel-parser/babel-parser/util/class-scope.mjs",
       "revision": "114ef7a61f080da053af783c5fbe06f625d692cc",
@@ -1564,6 +1634,34 @@
       },
       "originFiles": [
         "edition-authoring/vendor/babel-parser/babel-parser/util/whitespace.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/LICENSE",
+      "originPath": "edition-authoring/vendor/babel-parser/LICENSE",
+      "revision": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": {
+        "scripts/edition-authoring/vendor/babel-parser/LICENSE": "117da2af0d4ce0fe1c8e19b5cff9dcd806adf973d328d27b11d4448c4ff24f76"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/babel-parser/LICENSE": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/babel-parser/LICENSE"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/README.md",
+      "originPath": "edition-authoring/vendor/babel-parser/README.md",
+      "revision": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": {
+        "scripts/edition-authoring/vendor/babel-parser/README.md": "e7ee8625baac8ac14c2d458dd719de1551317ba8b640614bfcadd6dc4b6af857"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/babel-parser/README.md": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/babel-parser/README.md"
       ]
     },
     {
@@ -1889,6 +1987,20 @@
       ]
     },
     {
+      "path": "scripts/edition-authoring/vendor/yaml/LICENSE",
+      "originPath": "edition-authoring/vendor/yaml/LICENSE",
+      "revision": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": {
+        "scripts/edition-authoring/vendor/yaml/LICENSE": "5bba27375d93e9119f76c1015f7672cf9ad5f70952296e0842fb2243d6376869"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/yaml/LICENSE": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/yaml/LICENSE"
+      ]
+    },
+    {
       "path": "scripts/edition-authoring/vendor/yaml/log.mjs",
       "originPath": "edition-authoring/vendor/yaml/log.mjs",
       "revision": "114ef7a61f080da053af783c5fbe06f625d692cc",
@@ -2152,6 +2264,20 @@
       },
       "originFiles": [
         "edition-authoring/vendor/yaml/public-api.mjs"
+      ]
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/README.md",
+      "originPath": "edition-authoring/vendor/yaml/README.md",
+      "revision": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": {
+        "scripts/edition-authoring/vendor/yaml/README.md": "7d1979439cb82d413f9e97c6c0cfd0ca3027e662e2ce574fddc7ec7860363d01"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/yaml/README.md": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/yaml/README.md"
       ]
     },
     {
@@ -2561,6 +2687,20 @@
       ]
     },
     {
+      "path": "scripts/edition-authoring/vendor/yaml/util.mjs",
+      "originPath": "edition-authoring/vendor/yaml/util.mjs",
+      "revision": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": {
+        "scripts/edition-authoring/vendor/yaml/util.mjs": "365dc12f67de4e3a8d31ceb6f86986879d745e4d65fa3e6f3b6df577ef0ca667"
+      },
+      "modes": {
+        "scripts/edition-authoring/vendor/yaml/util.mjs": "100644"
+      },
+      "originFiles": [
+        "edition-authoring/vendor/yaml/util.mjs"
+      ]
+    },
+    {
       "path": "scripts/edition-authoring/vendor/yaml/visit.mjs",
       "originPath": "edition-authoring/vendor/yaml/visit.mjs",
       "revision": "114ef7a61f080da053af783c5fbe06f625d692cc",
@@ -2600,6 +2740,20 @@
       },
       "originFiles": [
         "edition-authoring/workflow-scripts.mjs"
+      ]
+    },
+    {
+      "path": "scripts/install-chromium-deps.py",
+      "originPath": "export/install-chromium-deps.py",
+      "revision": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": {
+        "scripts/install-chromium-deps.py": "d3027108ad8e08ceeddb0ed477d967b1207e40bb6bf5ae941854c534c2cf4004"
+      },
+      "modes": {
+        "scripts/install-chromium-deps.py": "100644"
+      },
+      "originFiles": [
+        "export/install-chromium-deps.py"
       ]
     },
     {
@@ -2686,6 +2840,43 @@
       "acknowledged": {
         "scripts/verify-ci.mjs": {
           "sha256": "c9f9bb71880c632028a1cab9fb484e454767c6f47eeb61bc7a25bd1e1a3f909b",
+          "mode": "100644"
+        }
+      }
+    },
+    {
+      "path": "scripts/verify-evidence.mjs",
+      "originPath": "export/verify-evidence.mjs",
+      "revision": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": {
+        "scripts/verify-evidence.mjs": "9224f772d6a17f043448694eca3c149df83070417b995a2840497e36a9ad0100"
+      },
+      "modes": {
+        "scripts/verify-evidence.mjs": "100644"
+      },
+      "originFiles": [
+        "export/verify-evidence.mjs"
+      ]
+    },
+    {
+      "path": "scripts/verify-light.mjs",
+      "originPath": "export/verify-light.mjs",
+      "revision": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": {
+        "scripts/verify-light.mjs": "f9b126130837144e43a65d10d370d602b63daad2be7ff66c93178d461a7521d9"
+      },
+      "modes": {
+        "scripts/verify-light.mjs": "100644"
+      },
+      "originFiles": [
+        "export/verify-light.mjs"
+      ],
+      "adapted": {
+        "scripts/verify-light.mjs": "f96363bf919ea3e7ed1837daba6894810a50e4a6"
+      },
+      "acknowledged": {
+        "scripts/verify-light.mjs": {
+          "sha256": "5a1dd608747df0e728159bd62463fa47c06586a3587de242eee7d8027ee4dab7",
           "mode": "100644"
         }
       }
@@ -5390,155 +5581,6 @@
       },
       "originFiles": [
         "export/VERIFY-WORKFLOW.md"
-      ]
-    },
-    {
-      "path": "scripts/install-chromium-deps.py",
-      "originPath": "export/install-chromium-deps.py",
-      "revision": "114ef7a61f080da053af783c5fbe06f625d692cc",
-      "files": {
-        "scripts/install-chromium-deps.py": "d3027108ad8e08ceeddb0ed477d967b1207e40bb6bf5ae941854c534c2cf4004"
-      },
-      "modes": {
-        "scripts/install-chromium-deps.py": "100644"
-      },
-      "originFiles": [
-        "export/install-chromium-deps.py"
-      ]
-    },
-    {
-      "path": "scripts/verify-light.mjs",
-      "originPath": "export/verify-light.mjs",
-      "revision": "114ef7a61f080da053af783c5fbe06f625d692cc",
-      "files": {
-        "scripts/verify-light.mjs": "f9b126130837144e43a65d10d370d602b63daad2be7ff66c93178d461a7521d9"
-      },
-      "modes": {
-        "scripts/verify-light.mjs": "100644"
-      },
-      "originFiles": [
-        "export/verify-light.mjs"
-      ],
-      "adapted": {
-        "scripts/verify-light.mjs": "f96363bf919ea3e7ed1837daba6894810a50e4a6"
-      },
-      "acknowledged": {
-        "scripts/verify-light.mjs": {
-          "sha256": "5a1dd608747df0e728159bd62463fa47c06586a3587de242eee7d8027ee4dab7",
-          "mode": "100644"
-        }
-      }
-    },
-    {
-      "path": "scripts/verify-evidence.mjs",
-      "originPath": "export/verify-evidence.mjs",
-      "revision": "114ef7a61f080da053af783c5fbe06f625d692cc",
-      "files": {
-        "scripts/verify-evidence.mjs": "9224f772d6a17f043448694eca3c149df83070417b995a2840497e36a9ad0100"
-      },
-      "modes": {
-        "scripts/verify-evidence.mjs": "100644"
-      },
-      "originFiles": [
-        "export/verify-evidence.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/copy-namespaces.mjs",
-      "originPath": "edition-authoring/copy-namespaces.mjs",
-      "revision": "114ef7a61f080da053af783c5fbe06f625d692cc",
-      "files": {
-        "scripts/edition-authoring/copy-namespaces.mjs": "2e7f2bcd34c575e9b7ac72ee41f5e676fd6ac22ab27d5b64a313326fd9b42ed9"
-      },
-      "modes": {
-        "scripts/edition-authoring/copy-namespaces.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/copy-namespaces.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/babel-parser/LICENSE",
-      "originPath": "edition-authoring/vendor/babel-parser/LICENSE",
-      "revision": "114ef7a61f080da053af783c5fbe06f625d692cc",
-      "files": {
-        "scripts/edition-authoring/vendor/babel-parser/LICENSE": "117da2af0d4ce0fe1c8e19b5cff9dcd806adf973d328d27b11d4448c4ff24f76"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/babel-parser/LICENSE": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/babel-parser/LICENSE"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/babel-parser/README.md",
-      "originPath": "edition-authoring/vendor/babel-parser/README.md",
-      "revision": "114ef7a61f080da053af783c5fbe06f625d692cc",
-      "files": {
-        "scripts/edition-authoring/vendor/babel-parser/README.md": "e7ee8625baac8ac14c2d458dd719de1551317ba8b640614bfcadd6dc4b6af857"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/babel-parser/README.md": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/babel-parser/README.md"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/types.mjs",
-      "originPath": "edition-authoring/vendor/babel-parser/babel-parser/types.mjs",
-      "revision": "114ef7a61f080da053af783c5fbe06f625d692cc",
-      "files": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-parser/types.mjs": "7220719c4d56a39b2b63d28ebe4131f2b59e55c7de96533cd4b1dcdc3a2e02d0"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/babel-parser/babel-parser/types.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/babel-parser/babel-parser/types.mjs"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/yaml/LICENSE",
-      "originPath": "edition-authoring/vendor/yaml/LICENSE",
-      "revision": "114ef7a61f080da053af783c5fbe06f625d692cc",
-      "files": {
-        "scripts/edition-authoring/vendor/yaml/LICENSE": "5bba27375d93e9119f76c1015f7672cf9ad5f70952296e0842fb2243d6376869"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/yaml/LICENSE": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/yaml/LICENSE"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/yaml/README.md",
-      "originPath": "edition-authoring/vendor/yaml/README.md",
-      "revision": "114ef7a61f080da053af783c5fbe06f625d692cc",
-      "files": {
-        "scripts/edition-authoring/vendor/yaml/README.md": "7d1979439cb82d413f9e97c6c0cfd0ca3027e662e2ce574fddc7ec7860363d01"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/yaml/README.md": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/yaml/README.md"
-      ]
-    },
-    {
-      "path": "scripts/edition-authoring/vendor/yaml/util.mjs",
-      "originPath": "edition-authoring/vendor/yaml/util.mjs",
-      "revision": "114ef7a61f080da053af783c5fbe06f625d692cc",
-      "files": {
-        "scripts/edition-authoring/vendor/yaml/util.mjs": "365dc12f67de4e3a8d31ceb6f86986879d745e4d65fa3e6f3b6df577ef0ca667"
-      },
-      "modes": {
-        "scripts/edition-authoring/vendor/yaml/util.mjs": "100644"
-      },
-      "originFiles": [
-        "edition-authoring/vendor/yaml/util.mjs"
       ]
     }
   ]
