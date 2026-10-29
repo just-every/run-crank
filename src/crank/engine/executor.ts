@@ -24,6 +24,7 @@ import { cappedProposal } from './caps'
 import { claimQueuedRun } from './queue'
 import { requireZone } from './dates'
 import { StepError } from './errors'
+import { validateInput } from './input-schema'
 import { liveTestProposal } from './test-authority'
 import { branchesOf, type Graph } from './graph'
 import { executeLoop } from './loop'
@@ -122,6 +123,7 @@ class Execution {
 
   private async step(step: Step, path: string): Promise<Outcome> {
     const type = STEP_TYPES[step.type], record = this.records.get(path)
+    if (!type) return { kind: 'failed', error: new StepError('validation', `Step ${step.id}: unknown type ${step.type}`).toJSON() }
     // HTTP's registry entry supports writes, but a statically declared read is
     // safe to repeat after interruption. Never reclassify a retained write.
     const method = isObject(step.input) ? String(step.input.method ?? 'GET').toUpperCase() : 'GET'
@@ -149,7 +151,7 @@ class Execution {
     }
     try {
       const replay = record ? undefined : this.replays.get(path)
-      input = record?.input_json ? JSON.parse(record.input_json) : replay?.input_json ? JSON.parse(replay.input_json) : (resolve(step.input ?? {}, this.scope) ?? {}) as Record<string, unknown>
+      input = record?.input_json ? JSON.parse(record.input_json) : replay?.input_json ? JSON.parse(replay.input_json) : (resolve(step.input ?? {}, this.scope, 0, !!type.inputSchema) ?? {}) as Record<string, unknown>
       if (this.boundedChild) {
         if (new TextEncoder().encode(JSON.stringify(input)).byteLength > 65536) throw new StepError('validation','Subflow: mapped input exceeds 64 KiB')
         if (step.type === 'transform' && step.fn === 'text.replace') {
@@ -175,6 +177,7 @@ class Execution {
       if (record?.status === 'waiting' && wait?.resolved_at && type.resume) {
         result = await type.resume(step, { ...ctx, wait })
       } else {
+        if (type.inputSchema) validateInput(type.inputSchema, input, step.id)
         if (type.required) requireFields(input, type.required, step.id)
         const boundary = await this.cap(step, path, input, wait, mutating)
         if (boundary) return boundary

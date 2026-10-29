@@ -19,7 +19,7 @@ test('BASE-001/BASE-004: an owned installation publishes and finishes every ship
     assert.equal(setup.status, 303);
     const slack = await connection(h, { app: 'slack', label: 'Harbor sales team', auth_kind: 'bearer', secret: { token: fakeSecret('slack') } });
     const calendar=await connection(h,{app:'google',auth_kind:'oauth2',label:'Harbor calendar',scopes:['https://www.googleapis.com/auth/calendar.events'],secret:{access_token:'synthetic-crank-20'}});
-    const calendarEvents=new Map();fake.routes.set('www.googleapis.com',({method,url,body})=>{if(method==='POST'){const event=JSON.parse(body);calendarEvents.set(event.id,event);return jsonResponse(event)}return jsonResponse(calendarEvents.get(url.pathname.split('/').at(-1)))});
+    const calendarEvents=new Map();fake.routes.set('www.googleapis.com',({method,url,body})=>{if(method==='POST'){const event=JSON.parse(body);calendarEvents.set(event.id,{...event,status:'confirmed'});return jsonResponse(event)}if(url.pathname.endsWith('/events'))return jsonResponse({items:[...calendarEvents.values()]});return jsonResponse(calendarEvents.get(url.pathname.split('/').at(-1)))});
     const executor=await connection(h,{app:'http',label:'Owner code executor',auth_kind:'bearer',domains:['executor.example'],secret:{token:fakeSecret('executor')}});
     const {preparePublicCustom}=await import('./custom-fixture.mjs');
     fake.routes.set('custom.example',()=>jsonResponse({id:'stock-24',quantity:24}));
@@ -34,7 +34,8 @@ test('BASE-001/BASE-004: an owned installation publishes and finishes every ship
       {id:'digest_find',type:'digest.find',digest_name:'Owned digest',retention_days:30},
       {id:'digest_release',type:'digest.release',digest_name:'Owned digest',retention_days:30},
       {id:'nook_message',type:'nook.send_message',connection_id:nook.id,input:{body:'Owned operations message'}},
-      {id:'calendar_event',type:'google_calendar.create_event',connection_id:calendar.id,input:{calendar_id:'synthetic-crank-21@example.test',summary:'Harbor appointment',start:{dateTime:'2026-11-03T09:00:00+10:00',timeZone:'Australia'+'/'+'Brisbane'},end:{dateTime:'2026-11-03T09:30:00+10:00',timeZone:'Australia'+'/'+'Brisbane'}}},
+      {id:'calendar_event',type:'google_calendar.create_event',connection_id:calendar.id,input:{calendar_id:'synthetic-crank-calendar',summary:'Harbor appointment',start:{dateTime:'2026-11-03T09:00:00+10:00',timeZone:'Australia'+'/'+'Brisbane'},end:{dateTime:'2026-11-03T09:30:00+10:00',timeZone:'Australia'+'/'+'Brisbane'}}},
+      {id:'calendar_search',type:'google_calendar.search_events',connection_id:calendar.id,sort:{field:'id',direction:'asc'},input:{calendar_id:'synthetic-crank-calendar',time_min:'2026-11-03T00:00:00+10:00',time_max:'2026-11-04T00:00:00+10:00',time_zone:['Australia','Brisbane'].join('/')}},
       { id: 'component', type: 'subflow', subflow_id: component.subflow_id, subflow_version: 1, input: { value: ' Owned installation ' } },
       { id: 'counter', type: 'table.atomic', table_id: table.id, input: { key: 'count', operation: 'increment', by: 1 } },
       { id: 'create_counter', type: 'table.lookup', table_id: table.id, input: { key: 'next_count' }, create_if_not_found: { value: 7 } },
@@ -73,6 +74,7 @@ test('BASE-001/BASE-004: an owned installation publishes and finishes every ship
     assert.equal(stepOf(done,'digest_find').output.count,1);
     assert.equal(stepOf(done,'digest_release').output.text,'Owned installation');
     assert.equal(stepOf(done, 'nook_message').output.id, 'synthetic-crank-303');
+    assert.equal(stepOf(done,'calendar_search').output.record.summary,'Harbor appointment');assert.equal(stepOf(done,'calendar_search').output.record.event_id,stepOf(done,'calendar_event').output.event_id);
     assert.equal(stepOf(done, 'component').output.value, 'Owned installation');
     assert.equal(stepOf(done, 'lookup_count').output.record.value, 1);
     assert.equal(stepOf(done, 'create_counter').output.outcome, 'created');assert.equal(stepOf(done, 'find_counter').output.outcome, 'found');assert.equal(stepOf(done, 'find_counter').output.record.value, 7);
@@ -92,7 +94,9 @@ test('BASE-001/BASE-004: an owned installation publishes and finishes every ship
     const orbitTypes = await orbitOwnership(h,fake,publish,startRun,stepOf);
     const { aiOwnership } = await import('./ai-steps-journey.mjs');
     const aiTypes = await aiOwnership(h,fake);
-    const succeeded = new Set([...done.steps.filter(s => s.status === 'succeeded').map(s => s.type), ...financialTypes, ...driftTypes, ...recurringTypes, ...orbitTypes, ...aiTypes]);
+    const {gmailOwnership}=await import('./gmail-search-journey.mjs');
+    const gmailTypes=await gmailOwnership(h,fake);
+    const succeeded = new Set([...done.steps.filter(s => s.status === 'succeeded').map(s => s.type), ...financialTypes, ...driftTypes, ...recurringTypes, ...orbitTypes, ...aiTypes, ...gmailTypes]);
     for (const type of [...Object.keys(STEP_TYPES), 'paths', 'loop']) assert.ok(succeeded.has(type), `BASE-004 needs a successful public-door journey for ${type}`);
     assert.deepEqual(refused, [], 'core operation never tries an author or other unconfigured host');
     assert.equal((await h.send('/app/workflow-runs/' + done.id, undefined, h.owner)).status, 200);

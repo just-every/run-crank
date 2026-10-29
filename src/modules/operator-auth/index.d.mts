@@ -10,7 +10,7 @@ export interface AuthPresentation { readonly productName: string; readonly accen
 export interface LinkPreview { kind: 'magic' | 'invite' | 'step_up' | 'owner'; expiresInMinutes: number }
 /** A step-up confirmation proves the session's operator again; it issues no new session. */
 export interface StepUpConfirmed { stepUp: StepUpAction; returnTo: string; cookie?: undefined }
-export type StepUpAction = 'providers:unlink' | 'providers:relink' | 'domains:change' | 'owner:transfer' | 'export' | 'delete' | 'credentials:mint' | 'email:change';
+export type StepUpAction = 'providers:unlink' | 'providers:relink' | 'domains:change' | 'owner:transfer' | 'export' | 'delete' | 'credentials:mint' | 'email:change' | 'business:stop';
 export const STEP_UP_ACTIONS: readonly StepUpAction[];
 export type ProviderPreset = 'auth' | 'google' | 'microsoft' | 'okta' | 'legacy-rs256';
 /** One identity provider. Secrets and the private key are server bindings, never source text. */
@@ -84,14 +84,47 @@ export interface VerifiedIdentity extends VerifiedPrincipal { email: string; ema
 /** Deployment-owned association, never populated from token claims or HTTP input. */
 export interface IdentityAdmissionConfig { issuer: string; subjectEmails?: Record<string, string> }
 export type IdentityAdmission<R extends string = Role> = (request: Request, identity: VerifiedPrincipal, input?: { returnTo?: string }) => Promise<CompletedSession<R>>;
+export type AuthAuditAction = 'operators.invite' | 'operators.cancel-invite' | 'operators.deactivate' | 'operators.reactivate' | 'operators.role' | 'sessions.revoke' | 'domains.rule.set' | 'domains.rule.lift' | 'providers.unlink' | 'providers.relink';
+/** OA administrative mutation metadata only; no private identity, record or file data. */
+export interface AuthAuditEvent {
+  action: AuthAuditAction;
+  /** Opaque oa_operators.id of the authenticated actor. */
+  actorId: string;
+  /** Target oa_operators.id; null for domain and provider actions. */
+  subjectId: string | null;
+  /** New role/status, normalized domain, provider id, or null for session revocation. */
+  detail: string | null;
+  /** Action clock time in milliseconds since the Unix epoch. */
+  now: number;
+}
+export type AuthAuditStatement = [sql: string, args: unknown[]];
 export interface AuthHooks<R extends string = Role> {
   /** Before an email link is sent to an active operator. Return false to send nothing; the public answer is unchanged. */
   beforeMagicLink?(input: { request: Request; email: string; operator: Operator<R> }): boolean | void | Promise<boolean | void>;
   /** After an email-link or provider sign-in completes. Return a returnTo to redirect; throw to refuse (the new session is revoked). */
   afterConfirm?(input: { request: Request; operator: Operator<R>; session: CompletedSession<R>['session']; method: 'email' | 'oidc'; returnTo: string }): void | { returnTo?: string } | Promise<void | { returnTo?: string }>;
+  /** OA administration only: pure SQL generation for the same mutation batch. Failure refuses the action; no external writes. */
+  audit?(input: AuthAuditEvent): AuthAuditStatement[] | Promise<AuthAuditStatement[]>;
 }
 export type { ScheduledPolicy, ScheduledPolicyDoor, PolicyApproval, PolicyRun } from './scheduled/index.mjs';
+export interface BusinessSettingsIntegration {
+  publicBrand(): Promise<{ displayName?: string; logo?: string }>;
+  read(): Promise<{ document: { business: string } | null; rev: number; appliedAt: string | null; stopped: boolean }>;
+  /** The OA actor fence is supplied for an atomic owner-authority check. */
+  stop(actor: string, guard?: { sql: string; args: unknown[] }): Promise<void>;
+}
+export interface BusinessTeamRow { email: string; operatorId: string | null; invite: number; state: 'invited' | 'active' | 'inactive' | 'conflict' }
+export interface BusinessTeamAdapter {
+  ownerEmail(): Promise<string | null>;
+  prepare(input: {
+    members: Array<{ email: string; name: string; role: 'admin' | 'member'; invite: number }>;
+    managed: BusinessTeamRow[]; ownerEmail: string; roles: { admin: string; member: string };
+    /** Evaluated after the Business revision/nonce CAS in the same D1 batch. */
+    guard: { sql: string; args: unknown[] };
+  }): Promise<{ statements: Statement[]; rows: BusinessTeamRow[]; afterCommit(): Promise<void> }>;
+}
 export interface AuthOptions<R extends string = Role> {
+  businessSettings?: BusinessSettingsIntegration;
   /** OA store only: trusted source, re-read at approval/run/action time. */
   scheduledPolicies?: () => import('./scheduled/index.mjs').ScheduledPolicy[];
   db: Database; config: AuthConfig; mailSender?: MailSender; clientIp: (request: Request) => string | Promise<string>; rolePolicy?: RolePolicy; clock?: () => number;
@@ -145,6 +178,12 @@ export interface IdentityProviders {
 }
 export interface DomainRule { domain: string; providerId: string; createdAt: number }
 export interface OperatorAuth<R extends string = Role> {
+  /** OA accounts only. Signed Business documents must be verified before calling. */
+  readonly businessTeam?: BusinessTeamAdapter;
+  readonly businessSettings?: BusinessSettingsIntegration;
+  publicPresentation?(): Promise<AuthPresentation>;
+  businessSettingsInfo?(request: Request): Promise<{ business: string | null; rev: number; appliedAt: string | null; stopped: boolean }>;
+  stopBusinessSettings?(request: Request): Promise<{ stopped: true }>;
   readonly scheduledPolicies?: import('./scheduled/index.mjs').ScheduledPolicyDoor;
   /** Key-gated local development or an isolated hosted demo; unavailable in production. */
   readonly oneClick?: {
@@ -181,6 +220,13 @@ export interface OperatorAuth<R extends string = Role> {
   cancelInvitation(request: Request, operatorId: string): Promise<Operator<R>>;
   setOperatorStatus(request: Request, operatorId: string, status: 'active' | 'inactive'): Promise<Operator<R>>;
   setRole(request: Request, operatorId: string, role: Role): Promise<Operator<R>>;
+  /** Trusted server only: caller admits the delegated principal; native policy
+   * and sponsor authority are checked again in each mutation transaction. */
+  delegatedAdministration(input: { personId: string; auditLabel: string; agentId: string }): {
+    invite(input: { email: string; displayName: string; role?: 'admin' | 'member'; returnTo?: string }): Promise<{ status: 'accepted' }>;
+    setRole(operatorId: string, role: 'admin' | 'member'): Promise<Operator<R>>;
+    listOperators(): Promise<Operator<R>[]>;
+  };
   listSessions(request: Request, operatorId?: string): Promise<Array<{ id: string; kind: SessionKind; createdAt: number; expiresAt: number; active: boolean }>>;
   revokeSession(request: Request, sessionId: string): Promise<void>;
   issueReviewSession(request: Request, input?: { returnTo?: string }): Promise<CompletedSession<R>>;

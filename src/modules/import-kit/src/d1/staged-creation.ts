@@ -3,7 +3,7 @@ import type { ImportPlan } from '../types.ts';
 import type { D1ImportContext, D1Sql } from './types.ts';
 import type { StoredPlan } from './plans.ts';
 import { atomic, atomicCount, guard, prepare, sql } from './database.ts';
-import { D1RequestLimitError, remaining } from './budget.ts';
+import { batchExecutions, D1RequestLimitError, remaining } from './budget.ts';
 import { stagingStatements } from './staging-statements.ts';
 import { batchBytes } from './transport.ts';
 import { bindingPredicate, stageClear, type StageBinding } from './staging-transport.ts';
@@ -142,7 +142,7 @@ async function resumable(context: D1ImportContext, prior: any, expected: Layout)
  * own fences, and never more than STAGED_BATCH_BYTES on the wire. */
 async function stagedBatch(context: D1ImportContext, statements: D1Sql[]): Promise<void> {
   const packed = stagingStatements(context, 'create', statements);
-  if (packed.length > remaining(context)) throw new D1RequestLimitError();
+  if (batchExecutions(context, packed.length) > remaining(context)) throw new D1RequestLimitError();
   if (batchBytes(packed) > STAGED_BATCH_BYTES) throw new Error('IMPORT_STAGE_TRANSPORT_LIMIT');
   await context.storage.database.batch(packed.map(s => prepare(context.storage.database, s)));
 }
@@ -192,7 +192,7 @@ export function preflightStagedCreation(plan: ImportPlan, context: D1ImportConte
 }
 /** Statements the creation spends in this request, excluding its return reads. */
 export const stagedCreationCost = (context: D1ImportContext, creation: StagedCreation): number =>
-  creation.batches.reduce((n, batch) => n + stagingStatements(context, 'create', batch).length, 0) + atomicCount(context, 'create', creation.publication, 0);
+  creation.batches.reduce((n, batch) => n + batchExecutions(context, stagingStatements(context, 'create', batch).length), 0) + atomicCount(context, 'create', creation.publication, 0);
 export async function runStagedCreation(context: D1ImportContext, creation: StagedCreation, returnReads: number): Promise<string> {
   if (stagedCreationCost(context, creation) + returnReads > remaining(context)) throw new D1RequestLimitError();
   for (const batch of creation.batches) await stagedBatch(context, batch);

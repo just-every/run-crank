@@ -11,12 +11,24 @@ import { tableSourceGuard } from '../triggers/table-source'
 export async function assertDispatchAuthority(env: CrankEnv, runId: string) {
   await assertRecurringAuthority(env, runId)
   await assertGrantAuthority(env, runId)
+  const email = await stmt(env, `SELECT r.id FROM crank_wf_runs r WHERE r.id=? AND r.source_id LIKE 'email:%'
+    AND NOT EXISTS(SELECT 1 FROM crank_email_receipts e JOIN crank_email_aliases a ON a.id=e.alias_id
+      JOIN crank_workflows w ON w.id=a.workflow_id JOIN oa_operators o ON o.id=a.owner_id
+      WHERE e.workflow_id=r.workflow_id AND e.event_key=r.source_id AND (
+        (e.decision='admitted' AND e.run_id=COALESCE(r.repair_of,r.id)) OR
+        (e.decision='held' AND EXISTS(SELECT 1 FROM crank_hold_items i WHERE i.hold_id=e.hold_id AND i.item_key=e.event_key AND i.run_id=COALESCE(r.repair_of,r.id))))
+      AND a.active=1 AND a.revoked_at IS NULL AND a.workflow_id=r.workflow_id
+      AND w.owner_id=a.owner_id AND o.status='active' AND o.role='owner' AND o.version=a.owner_version)`, runId).first()
+  if (email) throw new StepError('authority', 'Email alias or its owner authority is no longer current')
   const state = await stmt(env, `SELECT w.status,w.published_version_id,r.mode,r.grant_id,v.mode AS version_mode,
     EXISTS(SELECT 1 FROM oa_operators o WHERE o.id=v.published_by AND o.status='active' AND o.version=r.test_owner_version AND (
       (o.role='owner' AND json_extract(v.declared_json,'$.test_team_revision') IS NULL) OR
       EXISTS(SELECT 1 FROM crank_team_access t,json_each(COALESCE(t.grants_json,json_array(json_object('role',t.role,'workflow_ids',json(t.workflow_ids_json),'connection_ids',json(t.connection_ids_json))))) tg WHERE t.operator_id=o.id AND json_extract(tg.value,'$.role') IN ('admin','builder')
         AND t.revision=json_extract(v.declared_json,'$.test_team_revision')
-        AND EXISTS(SELECT 1 FROM json_each(tg.value,'$.workflow_ids') WHERE value=r.workflow_id))
+        AND EXISTS(SELECT 1 FROM json_each(tg.value,'$.workflow_ids') WHERE value=r.workflow_id OR
+          (value='workspace:production' AND w.environment='production' AND w.created_by=o.id AND
+            EXISTS(SELECT 1 FROM crank_audit a WHERE a.action='workflow.create' AND a.subject_kind='workflow' AND a.subject_id=w.id
+              AND a.actor_id=o.id AND json_extract(a.detail_json,'$.team_revision')=t.revision))))
     )) AS test_member_current,
     (COALESCE(json_array_length(json_extract(v.declared_json,'$.custom_bindings')),0)=0 OR (${frozenCustomActorSql()})) AS custom_actor_current,
     r.version_id,r.workflow_id,r.continuation_authority,v.retired_at,r.error_json,

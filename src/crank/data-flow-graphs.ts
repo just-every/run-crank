@@ -30,10 +30,12 @@ export async function graphDataFlows(env: CrankEnv, credential: (id: unknown) =>
         if (step.type === 'paths') for (const b of branchesOf(step)) walk(b.steps, `${path}/${b.id}/`)
         else if (step.type === 'loop') walk(step.steps as Step[], `${path}/items/*/`)
         else if (step.type === 'ai.classify') emit(path, 'ai.classify', { text: 'declared text only', categories: 'builder-selected category enum', model: 'pinned model identity' }, step.connection_id, ['https://api.openai.com'])
+        else if (step.type === 'gmail.search_threads') emit(path, step.type, { query: 'Gmail search text', metadata_headers: 'declared header names', mailbox: 'selected managed connection' }, step.connection_id, ['https://gmail.googleapis.com'])
         else if (step.type === 'code') emit(path,'code',{source:step.source,language:step.language,input},step.connection_id,[step.executor_url])
         else if ((step.type.startsWith('nook.') || step.type.startsWith('orbit.'))) emit(path,step.type,input,step.connection_id,[siblingOrigin(step.connection_id)])
         else if (step.type.startsWith('quickbooks.')) emit(path,step.type,input,step.connection_id,['https://sandbox-quickbooks.api.intuit.com'])
         else if (step.type.startsWith('gusto.')) emit(path,step.type,input,step.connection_id,['https://api.gusto-demo.com','https://api.gusto.com'])
+        else if (step.type === 'google_calendar.search_events') emit(path,step.type,{calendar_id:'exact calendar identifier',time_min:'interval lower bound',time_max:'interval upper bound',time_zone:'explicit IANA timezone',...(input.query === undefined ? {} : {query:'declared search text'}),page_token:'provider pagination token'},step.connection_id,['https://www.googleapis.com'])
         else if (step.type.startsWith('google_calendar.')) emit(path,step.type,input,step.connection_id,['https://www.googleapis.com'])
         else if (step.type === 'http' || step.type === 'file.fetch' || step.type.startsWith('slack.')) {
           const readback = isObject(step.readback) ? step.readback : {}

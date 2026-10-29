@@ -153,9 +153,9 @@ export async function aiAuthorityJourney() {
 }
 
 export async function aiCustodyJourney({onScreen}={}) {
-  const {h,fake,c,secret}=await fixture();let restored,erasedRestore;
+  const {h,fake,c,secret}=await fixture();let restored,erasedRestore,inflightRestore,release,pending;
   try {
-    const w=await aiWorkflow(h,c.id,{before:[{id:'checkpoint',type:'map',input:{value:'completed once'}}]});
+    const w=await aiWorkflow(h,c.id,{before:[{id:'checkpoint',type:'map',input:{value:'completed once'}}],after:[{id:'acknowledged',type:'map',input:{category:'{{steps.classify.category}}'}}]});
     // Interrupt the real local result transaction after the model has answered.
     // A generic storage error must not make that billed call replayable.
     await h.db.exec(`CREATE TRIGGER interrupted_classification BEFORE UPDATE OF status ON crank_wf_steps WHEN NEW.type='ai.classify' AND NEW.status='succeeded' BEGIN SELECT RAISE(ABORT,'synthetic-crank-interrupted-result'); END;`);
@@ -170,11 +170,30 @@ export async function aiCustodyJourney({onScreen}={}) {
     await h.post(`workflow-runs/${interrupted.id}/replay`,{paths:['classify'],digest:interruptedPreview.digest},h.owner,409);
     assert.equal(fake.to('api.openai.com').length,interruptedCalls);
     const good=await startRun(h,w,{text:'synthetic-crank-retained-person'});
+    assert.deepEqual(stepOf(good,'acknowledged').output,{category:'support'},'acknowledged classification reaches downstream work');
+    // An upstream outage after accepting a billed request is not a rejection.
+    // Even Retry-After cannot authorize sending that request a second time.
+    fake.routes.set('api.openai.com',()=>jsonResponse(modelReply({id:'synthetic-crank-outage'}),503,{'retry-after':'1'}));
+    const beforeOutage=fake.to('api.openai.com').length;
+    const outage=await startRun(h,w,{text:'synthetic-crank-upstream-outage'});
+    assert.equal(outage.status,'uncertain');assert.equal(stepOf(outage,'classify').status,'uncertain');
+    assert.equal(stepOf(outage,'acknowledged'),undefined,'an unacknowledged classification cannot reach downstream work');
+    assert.equal(outage.attempts.length,1);assert.equal(outage.attempts[0].http_status,503);
+    assert.equal(outage.attempts[0].response_identity,'synthetic-crank-outage');
+    assert.equal(fake.to('api.openai.com').length,beforeOutage+1,'a 503 never retries a potentially billed classification');
+    await h.restart();await h.tick('2026-11-10T15:01:00Z');
+    const outagePreview=await h.get(`workflow-runs/${outage.id}/replay`);
+    assert.deepEqual(outagePreview.eligible,[]);
+    assert.equal(outagePreview.uncertain[0].operation_key,stepOf(outage,'classify').operation_key);
+    await h.post(`workflow-runs/${outage.id}/replay`,{paths:['classify'],digest:outagePreview.digest},h.owner,409);
+    assert.equal(fake.to('api.openai.com').length,beforeOutage+1,'restart and replay cannot repeat an upstream-uncertain request');
+    assert.deepEqual(stepOf(await h.get('workflow-runs/'+outage.id),'checkpoint'),stepOf(outage,'checkpoint'));
     // The model accepts the request, but its response arrives after the native
     // transport deadline. The billed effect has no acknowledged local result.
     fake.routes.set('api.openai.com',async()=>{await new Promise(done=>setTimeout(done,1500));return jsonResponse(modelReply())});
     const lost=await startRun(h,w,{text:'synthetic-crank-lost'}),calls=fake.to('api.openai.com').length;
     assert.equal(lost.status,'uncertain');assert.equal(stepOf(lost,'classify').status,'uncertain');assert.equal(lost.error.category,'uncertain');
+    assert.equal(stepOf(lost,'acknowledged'),undefined);
     assert.equal(lost.attempts[0].error_category,'network','a response lost after dispatch remains a billed uncertainty');
     const operation=stepOf(lost,'classify').operation_key;
     await h.restart();await h.tick('2026-11-10T15:02:00Z');
@@ -191,12 +210,53 @@ export async function aiCustodyJourney({onScreen}={}) {
     assert.ok((await restored.get('workflows')).every(row=>['draft','paused'].includes(row.status)));assert.ok((await restored.get('connections')).every(row=>row.status!=='active'));
     assert.deepEqual(stepOf(await restored.get('workflow-runs/'+good.id),'classify').output,stepOf(good,'classify').output);
     await restored.restart();await restored.tick('2026-11-10T15:03:00Z');assert.equal(fake.to('api.openai.com').length,calls,'inactive receiving history never calls the model');
+    // Capture an archive while a real native attempt is awaiting the model.
+    // Its receiving installation must retain uncertainty even after adoption.
+    const inFlightWorkflow=await aiWorkflow(h,c.id,{name:'Classification captured in flight',step:{timeout_ms:30000},before:[{id:'checkpoint',type:'map',input:{value:'completed before capture'}}]});
+    const blocked=new Promise(resolve=>{release=resolve});
+    fake.routes.set('api.openai.com',async()=>{await blocked;return jsonResponse(modelReply())});
+    const beforeCapture=fake.to('api.openai.com').length;
+    pending=startRun(h,inFlightWorkflow,{text:'synthetic-crank-inflight-capture'});
+    await until(()=>fake.to('api.openai.com').length===beforeCapture+1,'one pending classification to capture');
+    const inFlight=(await h.get(`workflow-runs?workflow=${inFlightWorkflow.id}`)).runs[0];
+    const sourceRun=await h.get('workflow-runs/'+inFlight.id);
+    assert.equal(sourceRun.status,'running');assert.equal(stepOf(sourceRun,'classify').status,'running');
+    assert.equal(sourceRun.attempts.length,1);assert.equal(sourceRun.attempts[0].finished_at,null);
+    const capture=await archive(h);assert.ok(!capture.includes(secret));
+    release();assert.equal((await pending).status,'succeeded');
+    inflightRestore=await harness('http://127.0.0.1:9',{clock,quoteCosts:false,edge:fake.edge});
+    await inflightRestore.post('data/restore',{archive:capture,confirm:'RESTORE'});
+    const capturedRows=inventory(capture),restoredRows=inventory(await archive(inflightRestore));
+    const added=restoredRows.filter(row=>!capturedRows.includes(row));
+    assert.equal(added.length,1);assert.equal(JSON.parse(added[0]).table,'crank_audit');assert.equal(JSON.parse(added[0]).row.action,'data.restore');
+    assert.deepEqual(restoredRows.filter(row=>row!==added[0]),capturedRows,'all in-flight AI custody records round-trip without gaining authority');
+    let capturedRun=await inflightRestore.get('workflow-runs/'+inFlight.id);
+    assert.equal(capturedRun.status,'paused');assert.equal(capturedRun.error.category,'restore_fence');
+    assert.equal(stepOf(capturedRun,'classify').status,'uncertain');
+    assert.equal(stepOf(capturedRun,'classify').operation_key,stepOf(sourceRun,'classify').operation_key);
+    assert.deepEqual(stepOf(capturedRun,'checkpoint'),stepOf(sourceRun,'checkpoint'));
+    assert.deepEqual(capturedRun.attempts,sourceRun.attempts);
+    await inflightRestore.restart();await inflightRestore.tick('2026-11-10T15:04:00Z');
+    await inflightRestore.post(`workflow-runs/${inFlight.id}/resume`,{},inflightRestore.owner,409);
+    assert.equal(fake.to('api.openai.com').length,beforeCapture+1,'restored receiving state never dispatches the pending request');
+    await inflightRestore.post(`connections/${c.id}/rotate`,{secret:{token:fakeSecret('synthetic-crank-406')}});
+    const review=(await inflightRestore.get(`workflows/${inFlightWorkflow.id}`)).restore;
+    await inflightRestore.post(`workflows/${inFlightWorkflow.id}/publish`,{restore_snapshot:review.snapshot,restore_decisions:{[inFlight.id]:'resume'}},inflightRestore.owner,201);
+    await inflightRestore.tick('2026-11-10T15:05:00Z');
+    capturedRun=await inflightRestore.get('workflow-runs/'+inFlight.id);
+    assert.equal(capturedRun.status,'uncertain');assert.equal(stepOf(capturedRun,'classify').status,'uncertain');
+    assert.deepEqual(stepOf(capturedRun,'checkpoint'),stepOf(sourceRun,'checkpoint'));
+    assert.equal(fake.to('api.openai.com').length,beforeCapture+1,'fresh credentials and explicit adoption cannot rebill the captured operation');
+    const capturedPreview=await inflightRestore.get(`workflow-runs/${inFlight.id}/replay`);
+    assert.deepEqual(capturedPreview.eligible,[]);
+    await inflightRestore.post(`workflow-runs/${inFlight.id}/replay`,{paths:['classify'],digest:capturedPreview.digest},inflightRestore.owner,409);
+    assert.equal(fake.to('api.openai.com').length,beforeCapture+1);
     await h.post(`workflows/${w.id}/pause`);await h.post('data/erase',{workflow_run_id:good.id,confirm:'ERASE'});await h.get('workflow-runs/'+good.id,h.owner,404);
     const journal=await archive(h);assert.ok(!journal.includes('synthetic-crank-retained-person'));
     erasedRestore=await harness('http://127.0.0.1:9',{clock,edge:fake.edge});
     await erasedRestore.post('data/restore',{archive:exported,journal,confirm:'RESTORE'},erasedRestore.owner,409);
     assert.deepEqual(await erasedRestore.get('workflows'),[],'later erasure journal prevents old AI capture resurrection');
-  } finally {await erasedRestore?.close();await restored?.close();await h.close()}
+  } finally {release?.();await pending?.catch(()=>{});await inflightRestore?.close();await erasedRestore?.close();await restored?.close();await h.close()}
 }
 
 export async function aiOwnership(h,fake) {

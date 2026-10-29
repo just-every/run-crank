@@ -1,3 +1,4 @@
+import { adminProviderChange } from './admin-audit.mjs';
 import { check, fail } from './errors.mjs';
 
 const linkColumns = `provider_id AS id, preset, status, issuer, client_id AS clientId, jwks_uri AS jwks, authorization_endpoint AS authorization, token_endpoint AS token,
@@ -14,6 +15,7 @@ export function storage(db) {
     (SELECT 'exchange:' || provider_id || ':' || linked_at FROM oa_identity_providers WHERE provider_id=? AND status='linked')`).bind(`exchange:${id}:%`, id);
   const guarded = async operation => { try { return await operation(); } catch { fail('oidc_storage_unavailable', 503); } };
   return {
+    adminChange: (...args) => adminProviderChange(db, ...args),
     async limit(bucket, expiresAt, maximum) {
       try {
         const row = await db.prepare('INSERT INTO oa_oidc_limits (bucket,count,expires_at) VALUES (?,1,?) ON CONFLICT(bucket) DO UPDATE SET count=count+1 RETURNING count').bind(bucket, expiresAt).first();

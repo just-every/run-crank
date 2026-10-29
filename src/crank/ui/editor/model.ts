@@ -3,7 +3,7 @@ import { branchesOf, type Graph } from '../../engine/graph'
 import type { Step } from '../../engine/types'
 import { canonical } from '../../model'
 
-export interface Connection { id: string; app: string; label: string; status: string; domains: string[]; account_name: string }
+export interface Connection { purpose?: string; id: string; app: string; label: string; status: string; domains: string[]; account_name: string }
 export interface StepRecord { path: string; step_id: string; type: string; status: string; started_at: string; finished_at: string | null; input?: unknown; output?: unknown; error?: any; trace?: unknown; operation_key?: string }
 export interface RunDetail {
   gateway_tasks?: {id:string;path:string;ordinal:number;status:string;expires_at:string}[]; executor_tasks?: {id:string;path:string;status:string;active:number}[]; grant_id?: string | null; escalations?: {path:string;escalated_at:string;recipient_ids_json:string}[]; mode?: 'production' | 'test'; repair_of?: string | null; repairs?: { id: string; status: string }[]; id: string; workflow_id: string; version_id: string; status: string; trigger_kind: string; business_key: string | null; received_at: string; started_at: string | null; finished_at: string | null; error: any; trigger?: unknown; steps: StepRecord[]; attempts?: any[]; waits: any[]; business_outcome?: string; source_id?: string | null; source_time?: string | null; version: { number: number; published_by?: string; published_at?: string; authority?: string; declared?: unknown } | null }
@@ -29,7 +29,7 @@ export function flatten(list: Node[]): Node[] {
 export const findNode = (graph: Graph, path: string) => flatten(nodes(graph)).find(node => node.path === path) ?? null
 
 const titleCase = (text: string) => text.charAt(0).toUpperCase() + text.slice(1)
-const TRIGGERS: Record<string, string> = { webhook: 'Webhooks', schedule: 'Schedule', feed: 'RSS, Atom and JSON Feed', url_poll: 'URL poll', app_poll: 'App records', slack_event: 'Slack', manual: 'Manual start' }
+const TRIGGERS: Record<string, string> = { email: 'Inbound email', webhook: 'Webhooks', schedule: 'Schedule', feed: 'RSS, Atom and JSON Feed', url_poll: 'URL poll', app_poll: 'App records', slack_event: 'Slack', manual: 'Manual start' }
 const STEPS: Record<string, string> = { 'ai.classify':'AI classification', 'custom.request':'Custom connector', code: 'Code executor', filter: 'Filter', paths: 'Paths', transform: 'Formatter', map: 'Formatter', delay: 'Delay', wait_for_callback: 'Delay', approval: 'Approval', 'file.fetch': 'Files', respond: 'Webhooks', http: 'Webhooks' }
 
 /** The app or tool a card names: the connection's label for API requests, Slack for Slack steps,
@@ -42,6 +42,7 @@ export function appOf(node: Node, connections: Connection[]): { title: string; t
     return { title: TRIGGERS[t.type] ?? titleCase(String(t.type)), tile: t.type === 'slack_event' ? 'slack' : 'tool', glyph: ({ schedule: 'schedule', feed: 'feed', url_poll: 'http', manual: 'play' } as Record<string, string>)[t.type] ?? 'hook' }
   }
   const step = node.step!, c = connection(step.connection_id)
+  if (step.type === 'gmail.search_threads') return { title: 'Gmail', tile: 'google', glyph: 'search' }
   if (step.type.startsWith('quickbooks.')) return { title: 'QuickBooks sandbox', tile: 'quickbooks', glyph: 'invoice' }
   if (step.type.startsWith('gusto.')) return { title: 'Gusto', tile: 'tool', glyph: 'account' }
   if (step.type === 'nook.send_message') return { title: 'Nook', tile: 'tool', glyph: 'chat' }
@@ -67,6 +68,7 @@ export function triggerWords(kind: string, graph: Graph | undefined, connections
 export function summaryOf(node: Node): string {
   if (node.trigger) return String((node.trigger as any).name ?? ({ webhook: 'Catch hook', schedule: 'On a schedule', feed: 'New feed item', url_poll: 'New record', slack_event: 'New Slack event', manual: 'Started by hand' } as Record<string, string>)[String(node.trigger.type)] ?? '')
   const step = node.step!
+  if (step.type === 'gmail.search_threads') return 'Search thread metadata'
   if (typeof step.name === 'string') return step.name
   if (step.type.startsWith('slack.')) return titleCase(step.type.slice(6).replace(/_/g, ' '))
   const native: Record<string,string> = { 'ai.classify':'Classify text into a category', 'nook.send_message':'Post message to the connected conversation', 'quickbooks.invoice_outcome':'Verify invoice outcome', 'quickbooks.create_invoice':'Create invoice', 'quickbooks.create_refund_receipt':'Record refund receipt', 'quickbooks.void_invoice':'Void invoice after approval', 'gusto.contractor_1099_handoff':'Send contractor data for 1099 preparation', 'gusto.employee_w2_handoff':'Send employee data for W-2 preparation', 'gusto.contractor_payment':'Pay contractor by ACH', 'gusto.contractor_forms':'Read contractor tax forms', 'gusto.employee_forms':'Read employee tax forms', 'gusto.payment_readback':'Read contractor payment' }

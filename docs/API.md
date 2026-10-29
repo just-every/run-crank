@@ -1124,6 +1124,11 @@ Authorized payload readers use `GET /api/crank/workflows/:id/samples`.
 Preparation callers save a manual trigger sample with
 `POST /api/crank/workflows/:id/samples` and `{source:"manual",sample:{...}}`,
 or select retained workflow history with `{source:"history",run_id:"..."}`.
+Include `step_path` to select that step's successful retained output instead of
+the trigger. The source keeps the run ID, step path and completion time. Missing
+or expired outputs, foreign workflows and callers without payload access are
+refused. Manual step outputs also use `step_path`; unlike trigger payloads,
+step outputs may be any JSON value, including a scalar or an array.
 A schema example uses `{source:"schema",step_path:"...",sample:{...}}` and
 always remains explicitly not tested. Use the same route with a `select` or
 `delete` suffix and `{sample_id:"..."}` to choose or remove a record. Deletion
@@ -1138,3 +1143,45 @@ not connected-provider field discovery. The workflow preview accepts
 `{sample_id:"..."}` or the selected trigger sample by default, and carries its
 source identity and time through pure mapping, transform and condition results.
 An explicit `{sample:{...}}` preview is always labelled manual.
+Selected step outputs carry previews past app steps without executing them.
+Each result names all sample sources consumed so far, and schema sources remain
+labelled not tested. A saved output does not bypass an approval, delay, loop or
+subflow. Missing fields referenced from selected outputs are named in validation
+and publication warnings. Restored step samples stay unselected until adoption
+and explicit selection; history erasure removes their retained copies too.
+
+
+Selected samples can drive the native draft-test door with
+`{sample_id:"...",bindings:{...}}`, or `{use_sample:true,bindings:{...}}` for the
+selected trigger. The test run and its audit retain the source identities rather
+than describing captured data as manual. Successful outputs are retained as
+source-labelled samples at the checkpoint, including an action completed after
+its live-effect approval and restart. Paused or restored workflows and a changed
+draft cannot acquire a new selected response from an old test.
+
+For a top-level HTTP action or read, include `step_path` in the same test request.
+The server freezes earlier pure results and selected app outputs as test data,
+then executes only that HTTP step. Explicitly bind its declared connection in
+`bindings`; unrelated connections are not requested. A production write waits
+for the existing exact effect and account confirmation, while a read requires no
+write confirmation. Earlier approvals, waits and other unsupported controls are
+not bypassed by supplying their sample outputs. Authored workflows continue to
+use their complete sandbox test. Other native step kinds and general search
+semantics remain outside this direct-step door.
+
+Response samples retain a value-free schema fingerprint. A changed pinned custom
+connector version, operation, declared output schema or installed connection
+schema produces a stale-sample warning until the sample is reloaded; referenced
+missing fields are also named. Legacy samples without a fingerprint remain
+stale until reloaded. This does not claim provider field discovery or a live
+provider receipt. Sample values and frozen upstream results stay in the workflow's
+sealed run payload when its data class requires encryption; they are never
+inserted into graph metadata, and declared subject identifiers remain indexed.
+
+## Gmail thread metadata search
+
+The native `gmail.search_threads` step uses one fixed managed Google connection and its already-consented Gmail read scope. It searches only that connection's mailbox. Supply `input.query` as nonempty Gmail search text, including supported provider operators such as `from:billing has:attachment label:invoices`; the text is forwarded unchanged. Declare `metadata_headers` with 1 to 16 unique header names and `sort` with `field` equal to `id` or `latest_internal_date` and `direction` equal to `asc` or `desc`.
+
+The ordinary draft test, publication and run APIs apply. Searches use the shared `no_match`, `multi_match`, `on_multiple` and `limit` settings. Results retain stable thread IDs, message IDs, provider internal dates, labels and arrays of the declared headers. Equal sort values use thread ID order. Reads scan at most 10 pages of 25 IDs and at most 100 distinct threads; result limits are applied after scanning and sorting. An incomplete scan reports `truncated` in all-results mode and refuses a first-match or multiple-match decision. Cyclic tokens, malformed metadata, denied access and provider errors fail explicitly, with no false no-match result. Thread metadata is limited to 100 messages, 100 headers per message and 2048 characters per header value; each response is bounded to 256 KiB and combined retained metadata to 512 KiB. Oversized results fail before downstream work.
+
+Only fixed Gmail GET endpoints are admitted. This operation never fetches message bodies, snippets or attachment bytes and cannot create, draft, send or update mail. Read access is rechecked for retained pages and at physical dispatch. Completed reads survive a parked rate-limit wait and restart. Classified workflow results and unfinished page chunks use existing data-class encryption, subject holds, erasure and retention; archives carry inactive history without credentials. For subject matching of metadata, declare the applicable header field names, for example `from`, in the workflow's identifier fields. Actual Google console setup, mailbox consent and live-provider readback remain required; this native operation supplies no Outlook capability or customer-contact authority.

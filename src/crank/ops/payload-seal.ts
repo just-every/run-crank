@@ -75,8 +75,10 @@ export const sealFileBase64 = (target: Target, content: string) => target.key ? 
 export function identifierValues(value: unknown, fields: string[], out = new Set<string>(), depth = 0): Set<string> {
   if (depth > 64 || value === null || typeof value !== 'object') return out
   for (const [name, item] of Object.entries(value as Record<string, unknown>)) {
-    if (fields.includes(name.toLowerCase()) && (typeof item === 'string' || typeof item === 'number')) { const v = String(item).trim().toLowerCase(); if (v) out.add(v) }
-    else identifierValues(item, fields, out, depth + 1)
+    if (fields.includes(name.toLowerCase())) {
+      for (const entry of Array.isArray(item) ? item : [item]) if (typeof entry === 'string' || typeof entry === 'number') { const v = String(entry).trim().toLowerCase(); if (v) out.add(v) }
+    }
+    identifierValues(item, fields, out, depth + 1)
   }
   return out
 }

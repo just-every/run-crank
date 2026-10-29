@@ -23,7 +23,7 @@ jobs:
           node-version: '22.20.0'
           package-manager-cache: false
       - run: npm install --global pnpm@10.12.4
-      - run: pnpm install --frozen-lockfile
+      - run: pnpm config set store-dir "$RUNNER_TEMP/pnpm-store" && pnpm install --frozen-lockfile
       - run: npm ci --prefix gateways/node --ignore-scripts
       - run: node tests/storage-gateway-journey.mjs
       - run: node --test tests/retry-backoff-journey.mjs
@@ -39,7 +39,7 @@ jobs:
           node-version: '22.20.0'
           package-manager-cache: false
       - run: npm install --global pnpm@10.12.4
-      - run: pnpm install --frozen-lockfile
+      - run: pnpm config set store-dir "$RUNNER_TEMP/pnpm-store" && pnpm install --frozen-lockfile
       - run: npm ci --prefix gateways/node --ignore-scripts
       - run: node tests/database-gateway-journey.mjs
       - run: node tests/postgres-write-journey.mjs
@@ -58,7 +58,7 @@ jobs:
           node-version: '22.20.0'
           package-manager-cache: false
       - run: npm install --global pnpm@10.12.4
-      - run: pnpm install --frozen-lockfile
+      - run: pnpm config set store-dir "$RUNNER_TEMP/pnpm-store" && pnpm install --frozen-lockfile
       - run: node tests/run-notices-journey.mjs
 
   operational-tables:
@@ -72,5 +72,5 @@ jobs:
           node-version: '22.20.0'
           package-manager-cache: false
       - run: npm install --global pnpm@10.12.4
-      - run: pnpm install --frozen-lockfile
+      - run: pnpm config set store-dir "$RUNNER_TEMP/pnpm-store" && pnpm install --frozen-lockfile
       - run: node tests/table-state-journey.mjs

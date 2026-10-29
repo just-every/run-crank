@@ -2,7 +2,15 @@ import { Buffer } from 'node:buffer';
 import { wireDatabase } from '../../../d1-transport/index.mjs';
 import { guard, guardPredicate } from './guards.ts';
 import type { D1Database, D1ImportContext, D1Sql } from './types.ts';
-const budgets = new WeakMap<D1Database, { used: number; limit: number }>();
+export const D1_REQUEST_QUERY_LIMIT = 1000;
+const D1_BATCH_QUERY_COST = 1;
+const budgets = new WeakMap<D1Database, { used: number; statements: number; statementLimit?: number }>();
+/** Paid D1 counts one batch call as one query, regardless of its members.
+ * An explicit erasure work ceiling still counts each executed statement. */
+export function batchExecutions(context: { storage?: Pick<D1ImportContext['storage'], 'database'> }, statements: number): number {
+  const budget = context.storage ? budgets.get(context.storage.database) : undefined;
+  return budget?.statementLimit === undefined ? D1_BATCH_QUERY_COST : statements;
+}
 const reservedTail = Symbol('import request return queries');
 type ReservedContext = D1ImportContext & { [reservedTail]?: number };
 /** Distinguish this request's measured exhaustion from adapter/provider errors. */
@@ -14,13 +22,13 @@ export function checkSql(s: D1Sql): void {
   if (Buffer.byteLength(s.sql) > 100000 || (s.params?.length ?? 0) > 100) throw new Error('IMPORT_D1_STATEMENT_LIMIT');
   if ((s.params ?? []).some(p => valueBytes(p) > 2000000) || (s.params ?? []).reduce((n, p) => n + valueBytes(p), 0) > 2000000) throw new Error('IMPORT_D1_VALUE_LIMIT');
 }
-export function remaining(context: D1ImportContext): number { const budget=budgets.get(context.storage.database);return (budget?.limit??1000)-(budget?.used??0)-((context as ReservedContext)[reservedTail]??0); }
+export function remaining(context: D1ImportContext): number { const budget=budgets.get(context.storage.database);return Math.min(D1_REQUEST_QUERY_LIMIT-(budget?.used??0), budget?.statementLimit === undefined ? Infinity : budget.statementLimit-budget.statements)-((context as ReservedContext)[reservedTail]??0); }
 /** A smaller public-operation budget also stops reads, before execution. Nested
  * calls can only tighten the shared request's existing execution ceiling. */
 export function limitStatements(context:D1ImportContext,max:number):D1ImportContext {
   const budget=budgets.get(context.storage.database);
-  if(!budget||!Number.isSafeInteger(max)||max<1||max>1000)throw new Error('INVALID_ERASURE_STATEMENT_LIMIT');
-  budget.limit=Math.min(budget.limit,budget.used+max);
+  if(!budget||!Number.isSafeInteger(max)||max<1||max>D1_REQUEST_QUERY_LIMIT)throw new Error('INVALID_ERASURE_STATEMENT_LIMIT');
+  budget.statementLimit=Math.min(budget.statementLimit??D1_REQUEST_QUERY_LIMIT,budget.statements+max);
   return context;
 }
 /** A nested operation leaves the outer operation's exact bounded return path
@@ -36,11 +44,11 @@ export function requestDatabase(database: D1Database): D1Database {
   return requestContext({ storage: { database } } as D1ImportContext).storage.database;
 }
 /** A fresh wrapper belongs to the outer public invocation; nested resume calls
- * reuse it. It counts individual executed SQL statements, including batches. */
+ * reuse it. It counts D1 calls; every batch is one query. Statement work limits are separate. */
 export function requestContext(context: D1ImportContext): D1ImportContext {
   if (budgets.has(context.storage.database)) return context;
-  const db = wireDatabase(context.storage.database), budget = { used: 0, limit: 1000 };
-  const consume = (n: number) => { if (budget.used + n > budget.limit) throw new D1RequestLimitError(); budget.used += n; };
+  const db = wireDatabase(context.storage.database), budget: { used: number; statements: number; statementLimit?: number } = { used: 0, statements: 0 };
+  const consume = (n: number) => { const queries = D1_BATCH_QUERY_COST; if (budget.used + queries > D1_REQUEST_QUERY_LIMIT || budget.statements + n > (budget.statementLimit ?? Infinity)) throw new D1RequestLimitError(); budget.used += queries; budget.statements += n; };
   const raw = new WeakMap<object, any>();
   const wrap = (statement: any, query: D1Sql): any => {
     checkSql(query);

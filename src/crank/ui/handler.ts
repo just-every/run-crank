@@ -1,4 +1,7 @@
+import { editNative, EditError } from './editor/native'
+import type { EditFeedback } from './editor/native-view'
 import { watchedFieldsPanel } from './watched-fields'
+import { emailHistory, emailSettings } from './email'
 import { unitsUsd } from '../ops/usage-money'
 import { mcpClientsPanel, mcpCredentialView } from './mcp-clients'
 import { clientApi } from '../mcp/client-api'
@@ -16,6 +19,7 @@ import { followupsPanel, inboxPanel } from './followups'
 import { decisionEdits } from './decision-fields'
 import { teamApi } from '../team/api'
 import { teamPanel } from './team'
+import { completeGrant } from '../team/policy'
 import { grantsPanel } from './grants'
 import { usageView, usageHoldView } from './usage'
 import { operationsView } from './operations'
@@ -77,7 +81,7 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
       const state = options.state ?? await read('/api/crank/state'), waiting = await read('/api/crank/workflow-runs?status=awaiting_approval&limit=100')
       return document(title,content,actor,status,{...options,state:undefined,approvals:state.runs.filter((r:any)=>r.state==='pending').length+waiting.runs.length})
     }
-    const editorPage = async (id:string,params:URLSearchParams,preview?:unknown) => {
+    const editorPage = async (id:string,params:URLSearchParams,preview?:unknown,editFeedback?:EditFeedback,status=200) => {
       const [data,state,waiting] = await Promise.all([workflowData(read,id,params,actor),read('/api/crank/state'),read('/api/crank/workflow-runs?status=awaiting_approval&limit=100')])
       let customPicker=''
       const selected=findNode(data.workflow.draft,params.get('step')??'')??flatten(nodes(data.workflow.draft)).at(-1)
@@ -99,8 +103,8 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
         if(params.get('watch_fields')) { const response=await call(`/api/crank/workflows/${encodeURIComponent(id)}/trigger/fields`);const value:any=await response.json();if(response.ok)result=value;else error=value.error }
         customPicker += watchedFieldsPanel(id,data.workflow.draft.trigger,result,error)
       }
-      const view = editorView({...data,preview,customPicker,tokens:state.tokens ?? [],people:state.people ?? [],approvals:state.runs.filter((r:any)=>r.state==='pending').length+waiting.runs.length})
-      return document(data.workflow.name,view.content,actor,200,view.page)
+      const view = editorView({...data,preview,editFeedback,customPicker,tokens:state.tokens ?? [],people:state.people ?? [],approvals:state.runs.filter((r:any)=>r.state==='pending').length+waiting.runs.length})
+      return document(data.workflow.name,view.content,actor,status,view.page)
     }
     if (request.method === 'POST') {
       requireWriteOrigin(request,env,actor)
@@ -110,6 +114,27 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
         return new Response(null,{status:303,headers:{location:'/signin','cache-control':'no-store',...(cookie?{'set-cookie':cookie}:{})}})
       }
       const form = await formValues(request)
+      if (url.pathname === '/app/workflows/create') {
+        const response=await call('/api/crank/workflows',{name:form.name,description:form.description??'',folder:form.folder??'',graph:{trigger:{type:'manual',name:'Started by hand'},steps:[]}})
+        const result:any=await response.json()
+        if(!response.ok)return page('Workflow refused',`<p class="notice">${esc(result.error)}</p><a href="/app">Return to workflows</a>`,{},response.status)
+        return redirect('/app/workflows/'+encodeURIComponent(result.id)+'?step=trigger')
+      }
+      const nativeEdit=/^\/app\/workflows\/([^/]+)\/edit$/.exec(url.pathname)
+      if(nativeEdit) {
+        const workflowId=decodeURIComponent(nativeEdit[1]), workflow=await read('/api/crank/workflows/'+encodeURIComponent(workflowId))
+        if(form.draft_digest!==workflow.draft_digest)return page('Draft changed',`<p class="notice">The draft changed. Reload it before saving; your changes were not applied.</p><a href="/app/workflows/${esc(workflowId)}">Reload draft</a>`,{},409)
+        try {
+          const edited=editNative(workflow.draft,form)
+          const response=await call('/api/crank/workflows/'+encodeURIComponent(workflowId)+'/draft',{graph:edited.graph,draft_digest:form.draft_digest}), result:any=await response.json()
+          if(!response.ok)return page('Save refused',`<p class="notice">${esc(result.error)}</p><a href="/app/workflows/${esc(workflowId)}">Reload draft</a>`,{},response.status)
+          return redirect('/app/workflows/'+encodeURIComponent(workflowId)+'?step='+encodeURIComponent(edited.selected))
+        } catch(error) {
+          if(!(error instanceof EditError))throw error
+          const selected=flatten(nodes(workflow.draft)).find(node=>node.step?.id===form.step)?.path??'trigger'
+          return editorPage(workflowId,new URLSearchParams({step:selected}),undefined,{form,field:error.field,message:error.message},422)
+        }
+      }
       if(url.pathname==='/app/custom-connectors/pickers' || url.pathname==='/app/custom-connectors/selection') {
         requireOwner(actor)
         const input=Object.fromEntries(['workflow_id','step_path','input_name','value','draft_digest','source_run_id','query','cursor_run_id'].filter(key=>form[key]!==undefined && form[key]!=='').map(key=>[key,form[key]]))
@@ -194,8 +219,9 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
         input.watched_fields=Object.entries(form).filter(([key])=>/^watch_\d+$/.test(key)).map(([,value])=>value);input.any_field=form.watch_mode==='any'
         for(const key of Object.keys(input))if(key.startsWith('watch_'))delete input[key]
       }
-      if (/\/workflows\/[^/]+\/samples(?:\/[^/]+)?$/.test(path)) {
-        try { if(form.source !== 'schema' && form.sample) input.step_path='trigger'; if(form.sample) input.sample=JSON.parse(form.sample); if(form.fields !== undefined) input.fields=form.fields.split(',').map(field=>field.trim()).filter(Boolean) }
+      const sampleRequest = /\/workflows\/[^/]+\/samples(?:\/[^/]+)?$/.test(path)
+      if (sampleRequest) {
+        try { if(form.sample) input.sample=JSON.parse(form.sample); if(form.fields !== undefined) input.fields=form.fields.split(',').map(field=>field.trim()).filter(Boolean) }
         catch { return page('Invalid sample','<p>Enter a JSON object for the sample.</p>',{},422) }
       }
       if(path.startsWith('/api/crank/gateways/') || path.startsWith('/api/crank/custom-connectors/')) {
@@ -264,7 +290,7 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
       if(form.sink_token) { input.secret={token:form.sink_token}; delete input.sink_token }
       if(form.disclosure_confirmed==='true')input.disclosure_confirmed=true
       if(form.confirm_business_outcome==='true') input.confirm_business_outcome=true
-      if(form.step_path!==undefined) { input.path=form.step_path; delete input.step_path }
+      if(form.step_path!==undefined && !sampleRequest && !/^\/api\/crank\/workflows\/[^/]+\/test$/.test(path)) { input.path=form.step_path; delete input.step_path }
       if (form.all !== undefined) input.all = form.all === 'true'
       if (Object.keys(form).some(key => /^hold_item_\d+$/.test(key))) {
         input.items = Object.entries(form).filter(([key]) => /^hold_item_\d+$/.test(key)).map(([,value]) => value)
@@ -277,6 +303,11 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
       }
       if(input.reason==='') delete input.reason
       if(input.flow_id==='') delete input.flow_id
+      if(input.rotate==='') delete input.rotate
+      if (/^\/api\/crank\/workflows\/[^/]+\/test$/.test(path) && form.step_path) {
+        input.bindings = form.test_binding ? { [form.test_binding]: form.test_connection } : {}
+        delete input.test_binding; delete input.test_connection
+      }
       const response = await call(path,input)
       if(path==='/api/crank/data/export' && response.ok) return response
       const result:any = await response.json()
@@ -284,6 +315,7 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
       if(!response.ok) return page('Action refused',`<p class="notice">${esc(result.error)}</p><p>No success was reported. Review the latest state before retrying.</p><a href="${back ?? (path.includes('/imports')?'/app/import':'/app')}">Return to workspace</a>`,{},response.status)
       if(result.url && /\/samples\/listen$/.test(path)) return page('Waiting for webhook',`<section class="panel"><h2>Waiting for one sample</h2><p>Send a POST to this draft URL before ${esc(result.expires_at)}. The URL is shown once and never starts a production run.</p><label>Draft sample URL<input readonly value="${esc(result.url)}"></label><a class="btn btn-secondary" href="${esc(back ?? '/app')}">Refresh captured samples</a></section>`)
       if(result.code && path==='/api/crank/gateways')return page('Gateway enrollment',`<section class="panel"><h2>Enroll your gateway</h2><p>This code is shown once and expires ${esc(result.expires_at)}. Its authority is bound to environment ${esc(result.gateway.environment)}. Use the customer gateway CLI and save its state in a private file.</p><label>Single-use enrollment code<input type="text" autocomplete="off" readonly aria-label="Enrollment code" value="${esc(result.code)}"></label><p>Private database and storage credentials stay in the gateway manifest.</p><a href="/app/connections">Return to connections</a></section>`)
+      if(result.address && /\/email-aliases$/.test(path)) return page('Inbound address created',`<section class="panel"><h2>Save this address</h2><label>Inbound address<input readonly autocomplete="off" value="${esc(result.address)}"></label><p>${esc(result.routing)}</p><a href="/app/settings/email">Return to email settings</a></section>`)
       if(result.credential && path==='/api/crank/mcp-clients') return page('Client server created',mcpCredentialView(result))
       if(result.credential) result.token=result.credential
       if(result.token) {
@@ -303,16 +335,17 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
       if(path.startsWith('/api/crank/tokens')) return redirect('/app/access')
       if(path.startsWith('/auth/')) return redirect('/app/access')
       if(path.startsWith('/api/crank/data')) return page('Data operation complete',`<p class="notice">${path.endsWith('/erase')?'The run and its dependent data have been erased. Existing destination effects remain there.':'Your archive has been restored. Every workflow is paused or draft and waits for your review at publish; flows are drafts and connections need reconnecting.'}</p>${restoreSummary(result)}<a href="/app">Return to flows</a>`)
-      if(path.startsWith('/api/crank/workflow-runs/') || /^\/api\/crank\/workflows\/[^/]+\/run$/.test(path)) return redirect('/app/workflow-runs/'+encodeURIComponent(result.id))
-      if(path==='/api/crank/workflows') return redirect('/app/workflows/'+encodeURIComponent(result.id))
+      if(path.startsWith('/api/crank/workflow-runs/') || /^\/api\/crank\/workflows\/[^/]+\/(?:run|test)$/.test(path)) return redirect('/app/workflow-runs/'+encodeURIComponent(result.id))
+      if(path==='/api/crank/workflows' || /^\/api\/crank\/workflows\/[^/]+\/duplicate$/.test(path)) return redirect('/app/workflows/'+encodeURIComponent(result.id))
       if(result.flow_id) return redirect('/app/runs/'+result.id)
       return redirect('/app')
     }
     if(request.method !== 'GET') return page('Method not allowed','<a href="/app">Return to flows</a>',{},405)
     const state = await read('/api/crank/state'), owner = actor.role==='owner'
     if(url.pathname==='/app') {
-      const [workflows,connections] = await Promise.all([read('/api/crank/workflows'),read('/api/crank/connections')])
-      return page('Flows',flowsView(state,env.CRANK_TARGET_ORIGIN ?? (env.AUTH_LOCAL==='true'?'http://127.0.0.1:9051':'https://inbox.example.com'),workflows,connections),{state,intro:'Workflows run unattended once published; approval steps and approval flows wait for an owner.'})
+      const filters=new URLSearchParams();for(const key of ['q','folder'])if(url.searchParams.get(key))filters.set(key,url.searchParams.get(key)!)
+      const [workflows,connections] = await Promise.all([read('/api/crank/workflows?'+filters),read('/api/crank/connections')])
+      return page('Flows',flowsView(state,env.CRANK_TARGET_ORIGIN ?? (env.AUTH_LOCAL==='true'?'http://127.0.0.1:9051':'https://inbox.example.com'),workflows,connections,url.searchParams),{state,intro:'Workflows run unattended once published; approval steps and approval flows wait for an owner.'})
     }
     const workflowPath = /^\/app\/workflows\/([^/]+)$/.exec(url.pathname)
     if(workflowPath) return editorPage(decodeURIComponent(workflowPath[1]),url.searchParams)
@@ -321,7 +354,8 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
       const search = new URLSearchParams({limit:'50'}); if(q) search.set('q',q); if(status) search.set('status',status); if(workflow) search.set('workflow',workflow); for (const key of ['before','business_key','from','to','error']) { const value = url.searchParams.get(key); if(value) search.set(key,value) }
       const [runs,workflows] = await Promise.all([read('/api/crank/workflow-runs?'+search),read('/api/crank/workflows')])
       const {graphs,live} = await runGraphs(read,runs.runs)
-      return page('Runs',runsView(state,url.searchParams.get('flow'),{runs:runs.runs,next:runs.next,workflows,q,status,workflow,graphs,live,params:url.searchParams}),{state,intro:'Every run keeps its own record: workflow runs step by step, approval flow runs with their decision and delivery.'})
+      const mail = owner && workflows.some((w:any)=>w.trigger==='email' && (!workflow || w.id===workflow)) ? emailHistory(await read('/api/crank/settings/email'+(workflow?'?workflow_id='+encodeURIComponent(workflow):'')),workflows) : ''
+      return page('Runs',runsView(state,url.searchParams.get('flow'),{runs:runs.runs,next:runs.next,workflows,q,status,workflow,graphs,live,params:url.searchParams})+mail,{state,intro:'Every run keeps its own record: workflow runs step by step, approval flow runs with their decision and delivery.'})
     }
     if(/^\/app\/runs\/[^/]+$/.test(url.pathname)) return page('Run details',runView(state,url.pathname.split('/')[3]),{state,crumbs:[['Runs','/app/runs']]})
     const runPath = /^\/app\/workflow-runs\/([^/]+)$/.exec(url.pathname)
@@ -340,9 +374,9 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
       const details = await Promise.all(waiting.runs.map(async (r:any)=>({run:await read('/api/crank/workflow-runs/'+r.id),workflow:await read('/api/crank/workflows/'+encodeURIComponent(r.workflow_id))})))
       return page('Approvals',approvalsView(state,details),{state,intro:'Decisions that only a person can make. Everything else runs on its own.'})
     }
-    if(url.pathname==='/app/audit' && actor.team?.role==='auditor') return page('Audit history',`<section class="panel"><h2>Value-free audit history</h2><ul class="list">${(await read('/api/crank/audit')).map((row:any)=>`<li>${esc(row.at)} · ${esc(row.action)} · ${esc(row.subject_kind)}</li>`).join('')}</ul></section>`,{state})
-    if(url.pathname==='/app/billing' && actor.team?.role==='billing') return page('Billing usage',`<section class="panel"><h2>Aggregate usage</h2><ul class="list">${(await read('/api/crank/reports/usage')).map((row:any)=>`<li>${esc(row.month)} · ${row.runs} runs · USD ${esc(unitsUsd(BigInt(row.accounted_units??'0')))} accounted usage</li>`).join('')}</ul></section>`,{state})
-    if(url.pathname==='/app/account') { const session = await read('/auth/session'); return page('Account',accountView(session,owner,actor.team?.role),{state,intro:'Who is signed in on this browser, and what that role may do.'}) }
+    if(url.pathname==='/app/audit' && completeGrant(actor,'audit')) return page('Audit history',`<section class="panel"><h2>Value-free audit history</h2><ul class="list">${(await read('/api/crank/audit')).map((row:any)=>`<li>${esc(row.at)} · ${esc(row.action)} · ${esc(row.subject_kind)}</li>`).join('')}</ul></section>`,{state})
+    if(url.pathname==='/app/billing' && completeGrant(actor,'billing')) return page('Billing usage',`<section class="panel"><h2>Aggregate usage</h2><ul class="list">${(await read('/api/crank/reports/usage')).map((row:any)=>`<li>${esc(row.month)} · ${row.runs} runs · USD ${esc(unitsUsd(BigInt(row.accounted_units??'0')))} accounted usage</li>`).join('')}</ul></section>`,{state})
+    if(url.pathname==='/app/account') { const session = await read('/auth/session'); return page('Account',accountView(session,owner,actor.team),{state,intro:'Who is signed in on this browser, and what that role may do.'}) }
     if(url.pathname==='/app/gateway-confirmation')return page('Confirm by email',gatewayConfirmation(),{state})
     if(url.pathname==='/app/connections') {
       const nativeOwner=actor.role==='owner' && ['native','dev'].includes(actor.kind)
@@ -363,6 +397,7 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
     const driftWorkflow=/^\/app\/workflows\/([^/]+)\/drift$/.exec(url.pathname), driftReview=/^\/app\/drift\/([^/]+)$/.exec(url.pathname)
     if(driftWorkflow) { const workflow=await read('/api/crank/workflows/'+driftWorkflow[1]); return page('Provider drift',driftListView(workflow,await read('/api/crank/drift')),{state,crumbs:[['Workflow','/app/workflows/'+workflow.id]]}) }
     if(driftReview) { const review=await read('/api/crank/drift/'+driftReview[1]); return page(review.proposal.kind==='scope'?'Review requested scopes':'Review mapping repair',driftReviewView(review,await read('/api/crank/connections')),{state}) }
+    if(url.pathname==='/app/settings/email') return page('Email settings',emailSettings(await read('/api/crank/settings/email'),await read('/api/crank/workflows')),{state,section:'Account',crumbs:[['Account','/app/account']]})
     if(url.pathname==='/app/settings/mcp') {
       const selected=url.searchParams.get('client') ?? undefined
       const [clients,workflows,calls]=await Promise.all([read('/api/crank/mcp-clients'),read('/api/crank/workflows'),selected?read('/api/crank/mcp-clients/'+encodeURIComponent(selected)+'/calls'):[]])

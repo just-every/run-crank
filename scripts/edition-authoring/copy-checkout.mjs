@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import {git, raw, safe, noLinks} from './files.mjs';
+import {git, raw, safe, noLinks, requirePhysical, freedEntries} from './files.mjs';
 const quote = value => "'" + value.replaceAll("'", "'\\''") + "'";
 
 // -v marks assume-unchanged; -f marks fsmonitor-valid. Read them separately
@@ -44,7 +44,7 @@ export function requireMaterializedCopies(root, record, files) {
         const prefix = path.relative(root, path.join(directory, link[0])).split(path.sep).join('/');
         const child = path.join(root, prefix);
         let initialized = false;
-        try { initialized = fs.realpathSync(git(child, 'rev-parse', '--show-toplevel')) === fs.realpathSync(child); } catch {}
+        try { initialized = fs.realpathSync(git(child, 'rev-parse', '--show-toplevel')) === fs.realpathSync(child); } catch { initialized = false; }
         if (!initialized) throw Error(`Base copy ${name} is beneath the uninitialized Git submodule ${prefix}. Run git -C ${quote(directory)} submodule update --init -- ${quote(link[0])}, then repeat refresh-base. No copy record was changed.`);
         relative = relative.slice(link[0].length + 1);
         directory = child;
@@ -66,4 +66,42 @@ export function requireMaterializedCopies(root, record, files) {
       break;
     }
   }
+}
+
+// Inspect real filesystem facts in apply order without opening or changing any
+// file. This cannot see later races, disk-space or I/O failures, umask on newly
+// created directories, or two new names differing only in case on an insensitive
+// volume. Only earlier removals are remembered; no future directory is modelled.
+export function preflightRefresh(root, plans, recordPath, seedFiles) {
+  const uid = process.geteuid?.(), freed = freedEntries(root);
+  const writable = (target, stat, directory = false) => {
+    if (uid === 0 && !(stat.mode & 0o222)) throw Error('no write permission bits');
+    fs.accessSync(target, fs.constants.W_OK | (directory ? fs.constants.X_OK : 0));
+  };
+  const cache = new Map();
+  function inspect(name) {
+    return requirePhysical(root, name, {cache, freed: freed.has});
+  }
+  function check(name, operation) {
+    try {
+      const found = inspect(name), {parent, parentStat, target, stat} = found;
+      if (operation === 'remove') {
+        if (!stat) return;
+        writable(parent, parentStat, true);
+        if (uid !== undefined && uid !== 0 && (parentStat.mode & 0o1000) && uid !== parentStat.uid && uid !== stat.uid) throw Error('sticky parent and file are owned by another user');
+        freed.add(name, stat);
+      } else if (stat) {
+        if (operation !== 'record' && !seedFiles.has(name)) throw Error('existing destination is ignored');
+        writable(target, stat);
+        if (operation !== 'record' && uid !== undefined && uid !== 0 && uid !== stat.uid) throw Error('file is owned by another user; cannot set its mode');
+      } else writable(parent, parentStat, true);
+    } catch (error) {
+      throw Error(`Cannot refresh ${name}: ${error.message}. Fix the named path and its parent permissions before refreshing; no files were refreshed.`);
+    }
+  }
+  for (const {copy, sources, removed} of plans) {
+    for (const name of removed) check(name, 'remove');
+    for (const [source] of [...sources].sort(([a], [b]) => a.localeCompare(b))) check(copy.path + source.slice(copy.originPath.length), 'write');
+  }
+  check(recordPath, 'record');
 }

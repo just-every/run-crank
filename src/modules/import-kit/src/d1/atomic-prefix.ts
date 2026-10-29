@@ -1,7 +1,7 @@
 import type { ImportAction } from '../types.ts';
 import type { D1ImportContext, D1Sql } from './types.ts';
 import type { NativeStagingScope } from './native-staging-context.ts';
-import { GuardPacking, valueBytes } from './budget.ts';
+import { batchExecutions, GuardPacking, valueBytes } from './budget.ts';
 import { authority, finalAuthority, postConditions, sql } from './database.ts';
 
 /** Unbounded publication has append-only SQL and final checks. Bounded native
@@ -56,7 +56,7 @@ export function atomicPrefix(context: D1ImportContext, action: ImportAction, sta
       const writes = this.writes.count([...tail, authority(context, action), sql('DELETE FROM ik_d1_assertions')]);
       const checks = tail.flatMap(s => s.finalChecks ?? []), post = this.post.count(checks);
       if (this.postLength + checks.length) finalAuthority(context, action);
-      return writes + post + Number(this.postLength + checks.length > 0) + returnReads;
+      return batchExecutions(context, writes + post + Number(this.postLength + checks.length > 0)) + returnReads;
     }
   }
   const post = postConditions(context, statements, scope, action);

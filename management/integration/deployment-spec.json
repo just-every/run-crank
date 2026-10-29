@@ -537,19 +537,37 @@
     },
     {
       "binding": "DB",
-      "name": "0086_business_settings.sql",
+      "name": "0086_inbound_email.sql",
+      "sha256": "ebc59b93d48d5bd0757bc7862ccc144e39903053fe6f444bb177be1b0842759f",
+      "sql": "CREATE TABLE crank_email_aliases (\n  id TEXT PRIMARY KEY,\n  workflow_id TEXT NOT NULL REFERENCES crank_workflows(id),\n  address_hash TEXT NOT NULL UNIQUE,\n  domain TEXT NOT NULL,\n  owner_id TEXT NOT NULL,\n  owner_version INTEGER NOT NULL,\n  active INTEGER NOT NULL DEFAULT 1 CHECK(active IN (0,1)),\n  created_at TEXT NOT NULL,\n  revoked_at TEXT\n);\nCREATE TABLE crank_email_receipts (\n  id TEXT PRIMARY KEY,\n  workflow_id TEXT NOT NULL REFERENCES crank_workflows(id),\n  alias_id TEXT NOT NULL REFERENCES crank_email_aliases(id),\n  received_at TEXT NOT NULL,\n  decision TEXT NOT NULL,\n  event_key TEXT,\n  run_id TEXT,\n  hold_id TEXT\n);\nCREATE INDEX crank_email_receipts_workflow ON crank_email_receipts(workflow_id,received_at);\n"
+    },
+    {
+      "binding": "DB",
+      "name": "0087_step_test_samples.sql",
+      "sha256": "041f00b01f9a56b7827dfddc6481138398e692607b40179cd859646a1b97f373",
+      "sql": "-- Retained output schemas are value-free. Test responses copy the sealed checkpoint atomically.\nALTER TABLE crank_workflow_samples ADD COLUMN schema_digest TEXT;\n\nCREATE TRIGGER crank_test_sample_insert AFTER INSERT ON crank_wf_steps\nWHEN NEW.status='succeeded' AND NEW.output_json IS NOT NULL AND EXISTS (\n  SELECT 1 FROM crank_wf_runs r JOIN crank_workflow_versions v ON v.id=r.version_id\n  JOIN crank_workflows w ON w.id=r.workflow_id\n  WHERE r.id=NEW.run_id AND r.mode='test' AND r.payload_expired_at IS NULL\n    AND json_extract(v.declared_json,'$.sample_capture')=1\n    AND (json_extract(v.declared_json,'$.test_step_path') IS NULL OR json_extract(v.declared_json,'$.test_step_path')=NEW.path)\n    AND w.draft_json=json_extract(v.declared_json,'$.sample_draft_json')\n    AND w.status!='paused' AND w.owner_id!='restore:awaiting-adoption'\n)\nBEGIN\n  UPDATE crank_workflow_samples SET selected=0\n    WHERE workflow_id=(SELECT workflow_id FROM crank_wf_runs WHERE id=NEW.run_id) AND step_path=NEW.path;\n  INSERT INTO crank_workflow_samples(id,workflow_id,step_path,source,source_id,source_time,payload_json,selected,created_by,created_at,schema_digest)\n    SELECT 'test-sample:'||r.id||':'||NEW.path,r.workflow_id,NEW.path,'history',r.id,NEW.finished_at,NEW.output_json,1,r.created_by,NEW.finished_at,\n      json_extract(v.declared_json,'$.sample_schemas.\"'||NEW.path||'\"')\n    FROM crank_wf_runs r JOIN crank_workflow_versions v ON v.id=r.version_id WHERE r.id=NEW.run_id\n    ON CONFLICT(id) DO UPDATE SET payload_json=excluded.payload_json,source_time=excluded.source_time,selected=1;\nEND;\n\nCREATE TRIGGER crank_test_sample_update AFTER UPDATE OF status,output_json ON crank_wf_steps\nWHEN NEW.status='succeeded' AND NEW.output_json IS NOT NULL AND EXISTS (\n  SELECT 1 FROM crank_wf_runs r JOIN crank_workflow_versions v ON v.id=r.version_id\n  JOIN crank_workflows w ON w.id=r.workflow_id\n  WHERE r.id=NEW.run_id AND r.mode='test' AND r.payload_expired_at IS NULL\n    AND json_extract(v.declared_json,'$.sample_capture')=1\n    AND (json_extract(v.declared_json,'$.test_step_path') IS NULL OR json_extract(v.declared_json,'$.test_step_path')=NEW.path)\n    AND w.draft_json=json_extract(v.declared_json,'$.sample_draft_json')\n    AND w.status!='paused' AND w.owner_id!='restore:awaiting-adoption'\n)\nBEGIN\n  UPDATE crank_workflow_samples SET selected=0\n    WHERE workflow_id=(SELECT workflow_id FROM crank_wf_runs WHERE id=NEW.run_id) AND step_path=NEW.path;\n  INSERT INTO crank_workflow_samples(id,workflow_id,step_path,source,source_id,source_time,payload_json,selected,created_by,created_at,schema_digest)\n    SELECT 'test-sample:'||r.id||':'||NEW.path,r.workflow_id,NEW.path,'history',r.id,NEW.finished_at,NEW.output_json,1,r.created_by,NEW.finished_at,\n      json_extract(v.declared_json,'$.sample_schemas.\"'||NEW.path||'\"')\n    FROM crank_wf_runs r JOIN crank_workflow_versions v ON v.id=r.version_id WHERE r.id=NEW.run_id\n    ON CONFLICT(id) DO UPDATE SET payload_json=excluded.payload_json,source_time=excluded.source_time,selected=1;\nEND;\n"
+    },
+    {
+      "binding": "DB",
+      "name": "0088_checkpoint_subjects.sql",
+      "sha256": "b8ceff1fef6192af88a3f6740d0205f3d18ec44822b3c7c31caaeb368fed389a",
+      "sql": "-- Earlier maintenance sealed checkpoint chunks independently of their subject\n-- index. Rebuild the index for retained sealed runs, including already-sealed\n-- pages, before subject erasure can report a complete preview.\nUPDATE crank_wf_runs SET payload_index=NULL\nWHERE payload_key IS NOT NULL\n  AND EXISTS(SELECT 1 FROM crank_request_checkpoint_chunks p WHERE p.run_id=crank_wf_runs.id);\n"
+    },
+    {
+      "binding": "DB",
+      "name": "0089_business_settings.sql",
       "sha256": "a16f736a781aa3fe02a2e090c993f8c360c904f9fb6d86126acdab6e1f24e773",
       "sql": "CREATE TABLE bs_settings (\n  singleton INTEGER PRIMARY KEY CHECK(singleton=1),\n  rev INTEGER NOT NULL DEFAULT 0,\n  document TEXT,\n  applied_at TEXT,\n  stopped INTEGER NOT NULL DEFAULT 0 CHECK(stopped IN(0,1)),\n  token TEXT NOT NULL DEFAULT ''\n);\nCREATE TABLE bs_overrides (\n  field TEXT PRIMARY KEY CHECK(field IN('display_name','owner_name','brand_color','logo','timezone')),\n  value TEXT NOT NULL,\n  actor TEXT NOT NULL,\n  changed_at TEXT NOT NULL\n);\nCREATE TABLE bs_logo (\n  singleton INTEGER PRIMARY KEY CHECK(singleton=1),\n  sha256 TEXT NOT NULL,\n  type TEXT NOT NULL,\n  bytes BLOB NOT NULL\n);\nCREATE TABLE bs_team (\n  email TEXT PRIMARY KEY,\n  operator_id TEXT,\n  invite INTEGER NOT NULL,\n  state TEXT NOT NULL CHECK(state IN('invited','active','inactive','conflict'))\n);\nCREATE TABLE bs_audit (\n  id INTEGER PRIMARY KEY,\n  actor TEXT NOT NULL,\n  action TEXT NOT NULL,\n  field TEXT,\n  changed_at TEXT NOT NULL\n);\n-- An INSERT of NULL fails the transaction if a concurrent write invalidated its fence.\nCREATE TABLE bs_assert (value INTEGER NOT NULL);\n"
     },
     {
       "binding": "DB",
-      "name": "0087_business_people.sql",
+      "name": "0090_business_people.sql",
       "sha256": "51aa39622d866b987d71b6e37c9a8300e7f24c54a55611edaab669ed051b01cd",
       "sql": "ALTER TABLE bs_settings ADD COLUMN owner_id TEXT CHECK(owner_id IS NULL OR owner_id <> '');\nALTER TABLE bs_team ADD COLUMN business_id TEXT CHECK(business_id IS NULL OR business_id <> '');\nALTER TABLE bs_team ADD COLUMN business_role TEXT CHECK(business_role IS NULL OR business_role IN('admin','member'));\nCREATE UNIQUE INDEX bs_team_business_id ON bs_team(business_id) WHERE business_id IS NOT NULL;\n"
     },
     {
       "binding": "DB",
-      "name": "0088_agent_door.sql",
+      "name": "0091_agent_door.sql",
       "sha256": "016d8a98b964385f5c4a13447361c3c783910a76aaf4606b0e0081482bc819cc",
       "sql": "CREATE TABLE IF NOT EXISTS agent_door_state (\n  id INTEGER PRIMARY KEY CHECK(id=1), envelope TEXT, local_document TEXT,\n  local_revision INTEGER NOT NULL DEFAULT 0, local_paused INTEGER NOT NULL DEFAULT 0,\n  decision_lock TEXT, decision_until INTEGER\n);\nCREATE TABLE IF NOT EXISTS agent_door_agents (\n  id TEXT PRIMARY KEY, name TEXT NOT NULL, specialist TEXT, sponsor TEXT NOT NULL,\n  sponsor_name TEXT NOT NULL, revoked INTEGER NOT NULL DEFAULT 0,\n  window INTEGER NOT NULL DEFAULT 0, requests INTEGER NOT NULL DEFAULT 0\n);\nCREATE TABLE IF NOT EXISTS agent_door_audit (\n  sequence INTEGER PRIMARY KEY AUTOINCREMENT, id TEXT NOT NULL UNIQUE, at TEXT NOT NULL,\n  agent TEXT NOT NULL, classes TEXT NOT NULL, row TEXT NOT NULL, evidence TEXT\n);\nCREATE INDEX IF NOT EXISTS agent_door_audit_agent ON agent_door_audit(agent,sequence);\nCREATE TABLE IF NOT EXISTS agent_door_calls (\n  agent TEXT NOT NULL, key TEXT NOT NULL, digest TEXT NOT NULL, decision_id TEXT NOT NULL,\n  created_at INTEGER NOT NULL, state TEXT NOT NULL, outcome TEXT, PRIMARY KEY(agent,key)\n);\nCREATE TABLE IF NOT EXISTS agent_door_approvals (\n  id TEXT PRIMARY KEY, state TEXT NOT NULL, saved TEXT NOT NULL, approvals TEXT NOT NULL DEFAULT '[]',\n  result TEXT, version INTEGER NOT NULL DEFAULT 0\n);\nCREATE TABLE IF NOT EXISTS agent_door_reviews (\n  id TEXT PRIMARY KEY, state TEXT NOT NULL, saved TEXT NOT NULL, marked_by TEXT, marked_at TEXT\n);\nCREATE TABLE IF NOT EXISTS agent_door_events (\n  sequence INTEGER PRIMARY KEY AUTOINCREMENT, id TEXT NOT NULL UNIQUE, uri TEXT NOT NULL, event TEXT NOT NULL\n);\nCREATE INDEX IF NOT EXISTS agent_door_events_uri ON agent_door_events(uri,sequence);\nCREATE TABLE IF NOT EXISTS agent_door_usage (\n  decision_id TEXT PRIMARY KEY, at INTEGER NOT NULL, seed TEXT NOT NULL, specialist TEXT, agent TEXT NOT NULL,\n  classes TEXT NOT NULL\n);\nCREATE INDEX IF NOT EXISTS agent_door_usage_day ON agent_door_usage(at);\n"
     }
@@ -565,8 +583,7 @@
     "MAIL_PROVIDER": "",
     "MAIL_FROM": "",
     "MAIL_RELAY_URL": "",
-    "MAIL_ACCOUNT_ID": "",
-    "OWNER_EMAIL": ""
+    "MAIL_ACCOUNT_ID": ""
   },
   "secretNames": [
     "SESSION_SECRET",

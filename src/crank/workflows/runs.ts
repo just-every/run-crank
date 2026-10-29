@@ -1,9 +1,9 @@
-import { previewSample } from './samples'
+import { previewSample, previewStepSamples } from './samples'
 import { collectAnswers, collectFields } from '../engine/steps/collect'
 import { collectDeadlines } from '../ops/collect-deadlines'
 import { guardedBatch } from '../access'
 import { cancelExecutorTasks } from '../executors/scheduler'
-import { grantsAction, workflowScope, versionConnectionScope } from '../team/policy'
+import { workflowScope, versionConnectionScope, mayReadPayload, payloadWorkflowIds } from '../team/policy'
 import { grantFence } from '../grants/authority'
 import { assertReviewer } from '../grants/reviews'
 import { isBudgetExceeded, flushUsageNotices } from '../ops/usage'
@@ -32,7 +32,7 @@ import { getWorkflow } from './store'
 /** DATA-003: free text search reads only plaintext payloads. */
 export const TEXT_SEARCH = 'Text search does not reach encrypted payloads of customer, financial or health workflows; find those runs by business key, or by a declared identifier on the Data screen.'
 /** Payload access requires a complete read grant for this workflow with an operational role. */
-export const canReadPayload = (actor: Actor, workflowId?: string) => actor.team ? actor.team.grants.some(grant => !grant.review_grant_id && ['admin','builder','operator'].includes(grant.role) && grantsAction(grant,'read') && (!workflowId || grant.workflow_ids.includes(workflowId))) : actor.role === 'owner' || actor.role === 'admin' || actor.kind === 'agent'
+export const canReadPayload = (actor: Actor, workflowId?: string) => actor.team ? payloadWorkflowIds(actor).some(id => !workflowId || id === workflowId) : mayReadPayload(actor, workflowId ?? '')
 const BUSINESS_COMPLETE = `status='succeeded' AND EXISTS(SELECT 1 FROM crank_obligations o WHERE o.run_id=crank_wf_runs.id) AND NOT EXISTS(SELECT 1 FROM crank_obligations o WHERE o.run_id=crank_wf_runs.id AND o.verified_at IS NULL) AND NOT EXISTS(SELECT 1 FROM crank_wf_steps s WHERE s.run_id=crank_wf_runs.id AND (s.status='uncertain' OR COALESCE(json_extract(s.error_json,'$.category'),'')='uncertain'))`
 function presentRun(run: RunRow & { business_complete?: number }, payload: boolean) {
   const base = { id: run.id, mode: run.mode ?? 'production', workflow_id: run.workflow_id, version_id: run.version_id, trigger_kind: run.trigger_kind, business_outcome: run.business_complete ? 'owner_verified' : 'unverified', status: run.business_complete ? 'business_complete' : run.status === 'failed' && run.error_json && JSON.parse(run.error_json).category === 'uncertain' ? 'uncertain' : run.status, business_key: payload ? run.business_key : null,
@@ -48,22 +48,23 @@ export async function searchRuns(env: CrankEnv, actor: Actor, params: URLSearchP
   const limit = Math.min(requested, 100)
   for (const key of ['from', 'to']) if (params.get(key)) requireValue(Number.isFinite(Date.parse(params.get(key)!)), `${key} must be an ISO date`, 422)
   const q = params.get('q'), before = params.get('before')
-  const payloadWorkflows = actor.team ? JSON.stringify([...new Set(actor.team.grants.filter(grant => !grant.review_grant_id && ['admin','builder','operator'].includes(grant.role) && grantsAction(grant,'read')).flatMap(grant => grant.workflow_ids))]) : null
-  const rows = await stmt(env, `SELECT *, CASE WHEN (${BUSINESS_COMPLETE}) THEN 1 ELSE 0 END AS business_complete FROM crank_wf_runs WHERE ((?3 IS NULL AND ?7 IS NULL) OR ?12 IS NULL OR workflow_id IN (SELECT value FROM json_each(?12))) AND (?11 IS NULL OR workflow_id IN (SELECT value FROM json_each(?11))) AND (?1 IS NULL OR workflow_id=?1) AND (?2 IS NULL OR (?2='business_complete' AND (${BUSINESS_COMPLETE})) OR (?2='uncertain' AND json_extract(error_json,'$.category')='uncertain') OR (status=?2 AND (?2!='succeeded' OR NOT (${BUSINESS_COMPLETE})) AND (?2!='failed' OR COALESCE(json_extract(error_json,'$.category'),'')!='uncertain'))) AND (?3 IS NULL OR business_key=?3)
+  const rows = await stmt(env, `SELECT *, CASE WHEN (${BUSINESS_COMPLETE}) THEN 1 ELSE 0 END AS business_complete FROM crank_wf_runs WHERE (?12 IS NULL OR workflow_id IN (SELECT value FROM json_each(?12))) AND (?11 IS NULL OR workflow_id IN (SELECT value FROM json_each(?11))) AND (?1 IS NULL OR workflow_id=?1) AND (?2 IS NULL OR (?2='business_complete' AND (${BUSINESS_COMPLETE})) OR (?2='uncertain' AND json_extract(error_json,'$.category')='uncertain') OR (status=?2 AND (?2!='succeeded' OR NOT (${BUSINESS_COMPLETE})) AND (?2!='failed' OR COALESCE(json_extract(error_json,'$.category'),'')!='uncertain'))) AND (?3 IS NULL OR business_key=?3)
     AND (?4 IS NULL OR received_at>=?4) AND (?5 IS NULL OR received_at<=?5) AND (?6 IS NULL OR json_extract(error_json,'$.category')=?6)
     AND (?7 IS NULL OR (${plain('trigger_json')} AND trigger_json LIKE ?8) OR source_id LIKE ?8 OR business_key LIKE ?8 OR (${plain('error_json')} AND error_json LIKE ?8)) AND (?9 IS NULL OR received_at||'|'||id < ?9)
     ORDER BY received_at DESC,id DESC LIMIT ?10`,
-  params.get('workflow'), params.get('status'), params.get('business_key'), params.get('from'), params.get('to')?.length === 10 ? params.get('to') + 'T23:59:59.999Z' : params.get('to'), params.get('error'), q, `%${q}%`, before, limit + 1, actor.team ? JSON.stringify(actor.team.workflow_ids) : null, payloadWorkflows).all<RunRow & {business_complete: number}>()
+  params.get('workflow'), params.get('status'), params.get('business_key'), params.get('from'), params.get('to')?.length === 10 ? params.get('to') + 'T23:59:59.999Z' : params.get('to'), params.get('error'), q, `%${q}%`, before, limit + 1, actor.team ? JSON.stringify(actor.team.workflow_ids) : null, actor.team && (q !== null || params.has('business_key')) ? JSON.stringify(payloadWorkflowIds(actor)) : null).all<RunRow & {business_complete: number}>()
   const page = rows.results.slice(0, limit), last = page.at(-1)
-  const payload = canReadPayload(actor)
-  return { runs: await Promise.all(page.map(async run => { const readable = canReadPayload(actor,run.workflow_id); return presentRun(readable ? await openRow(env, run.workflow_id, run, ['trigger_json', 'response_json', 'error_json'], 'display') : run, readable) })), next: rows.results.length > limit && last ? `${last.received_at}|${last.id}` : null,
-    ...(q && payload ? { text_search: TEXT_SEARCH } : {}) }
+  return { runs: await Promise.all(page.map(async run => {
+    const payload = mayReadPayload(actor, run.workflow_id)
+    return presentRun(payload ? await openRow(env, run.workflow_id, run, ['trigger_json', 'response_json', 'error_json'], 'display') : run, payload)
+  })), next: rows.results.length > limit && last ? `${last.received_at}|${last.id}` : null,
+    ...(q && (!actor.team || payloadWorkflowIds(actor).length) ? { text_search: TEXT_SEARCH } : {}) }
 }
 export async function runDetail(env: CrankEnv, actor: Actor, runId: string) {
   const run = await stmt(env, `SELECT *, CASE WHEN (${BUSINESS_COMPLETE}) THEN 1 ELSE 0 END AS business_complete FROM crank_wf_runs WHERE id=?`, runId).first<RunRow & {business_complete: number}>()
   requireValue(run, 'Run not found', 404)
   workflowScope(actor, run.workflow_id)
-  const payload = canReadPayload(actor,run.workflow_id)
+  const payload = mayReadPayload(actor, run.workflow_id)
   const [steps, waits, version, attempts, revisions] = await Promise.all([
     stmt(env, 'SELECT * FROM crank_wf_steps WHERE run_id=? ORDER BY started_at,path', runId).all<Record<string, string | null>>(),
     stmt(env, 'SELECT path,kind,due_at,expires_at,proposal_json,proposal_digest,reason,created_at,resolved_at,resolution_json,decided_by FROM crank_waits WHERE run_id=? ORDER BY created_at', runId).all<Record<string, string | null>>(),
@@ -224,22 +225,35 @@ export async function startRun(env: CrankEnv, actor: Actor, workflowId: string, 
   }
 }
 
-/** WORK-012 and WORK-013 preview: pure steps run on a source-labelled sample; the
- * walk stops before the first step that would call an app. */
-export async function previewWorkflow(env: CrankEnv, actor: Actor, workflowId: string, input: Record<string, unknown>) {
+/** Pure previews carry retained source provenance. An app step can supply a saved
+ * output, but preview never calls the app or starts a run. */
+export async function evaluatePreview(env: CrankEnv, actor: Actor, workflowId: string, input: Record<string, unknown>, stopBefore?: string) {
   const workflow = await getWorkflow(env, workflowId), graph = JSON.parse(workflow.draft_json) as Graph
   const zone = requireZone(graph.settings?.timezone ?? (await workspaceSettings(env)).timezone)
   const selected = await previewSample(env, actor, workflowId, input)
+  const saved = await previewStepSamples(env, actor, workflowId)
   const scope: Scope = { trigger: selected.payload, steps: {}, run: { id: 'preview', workflow_id: workflowId } }
   const results: Record<string, unknown>[] = [], time = Date.now()
+  let reached = false
+  type Source = { label: string; source: string; tested: boolean; id?: string }
+  const sources: Source[] = [selected.source]
+  const record = (result: Record<string, unknown>) => results.push({ ...result, source: sources.at(-1), sources: [...sources] })
   type PreviewOutcome = 'completed' | 'stopped' | 'blocked' | 'failed'
   const walk = (steps: Step[], prefix: string): PreviewOutcome => {
     for (const step of steps) {
       const path = prefix + step.id
+      if (path === stopBefore) { reached = true; return 'blocked' }
       try {
+        const sample = saved.get(path)
+        if (sample && !['approval','collect','delay','wait_for_callback','join','loop','subflow','filter','paths'].includes(step.type)) {
+          scope.steps[step.id] = sample.payload
+          sources.push(sample.source)
+          record({ path, type: step.type, output: sample.payload, outcome: 'saved sample; step not run' })
+          continue
+        }
         if (step.type === 'paths') {
           const { matched, trace, error } = evaluatePaths(step, scope, zone, time)
-          results.push({ path, type: 'paths', matched, evaluations: trace.map(result => ({ branch: result.branch, ...result.trace })), trace, ...(error ? { error: error.toJSON() } : {}), outcome: error ? 'type mismatch' : matched.length ? 'routed' : 'stopped by filter' })
+          record({ path, type: 'paths', output: { matched }, matched, evaluations: trace.map(result => ({ branch: result.branch, ...result.trace })), trace, ...(error ? { error: error.toJSON() } : {}), outcome: error ? 'type mismatch' : matched.length ? 'routed' : 'stopped by filter' })
           if (error) return 'failed'
           if (!matched.length) return 'stopped'
           scope.steps[step.id] = { matched }
@@ -254,7 +268,7 @@ export async function previewWorkflow(env: CrankEnv, actor: Actor, workflowId: s
         }
         if (step.type === 'filter') {
           const evaluation = evaluate(step.when as Groups, scope, zone, time)
-          results.push({ path, type: 'filter', pass: evaluation.pass, outcome: evaluation.mismatch ? 'type mismatch' : evaluation.pass ? 'passed' : 'stopped by filter', trace: evaluation })
+          record({ path, type: 'filter', pass: evaluation.pass, outcome: evaluation.mismatch ? 'type mismatch' : evaluation.pass ? 'passed' : 'stopped by filter', trace: evaluation })
           if (!evaluation.pass) return evaluation.mismatch ? 'failed' : 'stopped'
           scope.steps[step.id] = { passed: true }
           continue
@@ -263,18 +277,22 @@ export async function previewWorkflow(env: CrankEnv, actor: Actor, workflowId: s
           const resolved = resolve(step.input ?? {}, scope) as Record<string, unknown>
           const output = step.type === 'map' ? resolved : runTransform(String(step.fn), resolved)
           scope.steps[step.id] = output
-          results.push({ path, type: step.type, output })
+          record({ path, type: step.type, output })
           continue
         }
-        results.push({ path, type: step.type, outcome: 'not run in preview', note: `${step.type} would act on an app or wait; test it from a run` })
+        record({ path, type: step.type, outcome: 'not run in preview', note: `${step.type} would act on an app or wait; test it from a run` })
         return 'blocked'
       } catch (error) {
-        results.push({ path, type: step.type, outcome: 'validation failure', error: error instanceof StepError ? error.toJSON() : { message: 'Preview failed' } })
+        record({ path, type: step.type, outcome: 'validation failure', error: error instanceof StepError ? error.toJSON() : { message: 'Preview failed' } })
         return 'failed'
       }
     }
     return 'completed'
   }
   walk(graph.steps, '')
-  return { sample_source: selected.source.label, source: selected.source, digest: await digest(canonical(selected.payload)), steps: results.map(step => ({ ...step, source: selected.source })) }
+  return { scope, reached, result: { sample_source: sources.map(source => source.label).join(' + '), source: selected.source, sources, digest: await digest(canonical([selected.payload, ...[...saved].map(([path, sample]) => [path, sample.payload])])), steps: results } }
+}
+
+export async function previewWorkflow(env: CrankEnv, actor: Actor, workflowId: string, input: Record<string, unknown>) {
+  return (await evaluatePreview(env, actor, workflowId, input)).result
 }

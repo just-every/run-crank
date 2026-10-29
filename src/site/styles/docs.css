@@ -7,7 +7,7 @@
 .docs-sidebar { position: sticky; top: 0; padding: 40px 0 48px; }
 .docs-nav-home { display: block; margin-bottom: 26px; padding: 0 14px; font-size: 15px; font-weight: 600; text-decoration: none; }
 .docs-nav-group + .docs-nav-group { margin-top: 28px; }
-.docs-nav-section { margin: 0 0 8px; padding: 0 14px; font-size: 12.5px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--blue); }
+.docs-nav-section { margin: 0 0 8px; padding: 0 14px; font-size: 13px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--blue); }
 .docs-sidebar ul, .docs-menu ul { display: grid; gap: 2px; }
 .docs-sidebar a, .docs-menu-list a { display: block; padding: 7px 14px; border-radius: 10px; font-size: 15.5px; line-height: 1.4; text-decoration: none; color: #2f3650; }
 .docs-sidebar a:hover, .docs-menu-list a:hover { background: rgba(16, 26, 51, .05); }
@@ -21,7 +21,7 @@
 .title-dots span:nth-child(2) { background: var(--brass); } .title-dots span:nth-child(3) { background: var(--crank); }
 .docs-summary { margin-top: 22px; max-width: 62ch; font-size: 21px; line-height: 1.5; color: var(--body); text-wrap: pretty; }
 .docs-toc { position: sticky; top: 0; padding: 52px 0 40px; }
-.docs-toc p { margin: 0 0 14px; font-size: 12.5px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--blue); }
+.docs-toc p { margin: 0 0 14px; font-size: 13px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--blue); }
 .docs-toc ul { display: grid; gap: 10px; padding-left: 14px; border-left: 2px solid var(--line); }
 .docs-toc a { font-size: 14.5px; line-height: 1.35; text-decoration: none; color: #4a5170; }
 .docs-toc a:hover { color: var(--ink); text-decoration: underline; text-underline-offset: 4px; }
@@ -43,10 +43,13 @@
 .docs-prose ol > li::before { content: counter(step); position: absolute; left: 0; top: -1px; display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: var(--navy); color: #fff; font: 700 15px/1 var(--font-body); }
 .docs-prose code { font-family: var(--font-mono); font-size: .86em; padding: 2px 6px; border-radius: 6px; background: #e8eef8; color: var(--ink); }
 .docs-code { position: relative; border-radius: 14px; overflow: hidden; background: var(--terminal); color: var(--rer-code-text); box-shadow: 0 18px 36px -22px rgba(17, 25, 44, .6); }
-.docs-code-label { display: flex; align-items: center; justify-content: space-between; min-height: 42px; padding: 0 12px 0 18px; background: var(--terminal-bar); font: 500 12.5px/1 var(--font-body); letter-spacing: .08em; text-transform: uppercase; color: #8c97b0; }
+.docs-code-label { display: flex; align-items: center; justify-content: space-between; min-height: 42px; padding: 0 12px 0 18px; background: var(--terminal-bar); font: 500 13px/1 var(--font-body); letter-spacing: .08em; text-transform: uppercase; color: #8c97b0; }
 .docs-code pre { margin: 0; padding: 18px 22px 20px; overflow-x: auto; font: 400 15px/1.75 var(--font-mono); }
 .docs-code pre code { padding: 0; background: none; color: inherit; font-size: inherit; }
-.docs-copy { min-height: 28px; padding: 0 12px; border: 1px solid rgba(255, 255, 255, .25); border-radius: 999px; background: transparent; color: #e6ebf5; font: 500 12.5px/1 var(--font-body); letter-spacing: 0; text-transform: none; cursor: pointer; }
+.docs-recipe pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+.docs-recipe .code-word { white-space: nowrap; }
+.docs-recipe .code-repo { display: inline-block; max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+.docs-copy { min-height: 28px; padding: 0 12px; border: 1px solid rgba(255, 255, 255, .25); border-radius: 999px; background: transparent; color: #e6ebf5; font: 500 13px/1 var(--font-body); letter-spacing: 0; text-transform: none; cursor: pointer; }
 .docs-copy:hover { background: rgba(255, 255, 255, .1); }
 .docs-table { overflow-x: auto; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); box-shadow: var(--shadow-card); }
 .docs-prose table { width: 100%; border-collapse: collapse; font-size: 15.5px; }

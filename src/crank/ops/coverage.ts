@@ -16,7 +16,7 @@ export function assess(item: InventoryItem) {
     if (match) return { ...item, status: 'native', clause: entry.clauses.join(', '), operation_id: match.id }
     return { ...item, status: 'agent-buildable', clause: 'CONN-011', reason: `${entry.name} is native, but "${item.operation}" is not one of its built operations` }
   }
-  const planned = PLANNED[app]
+  const planned = Object.hasOwn(PLANNED, app) ? PLANNED[app] : undefined
   if (planned) return { ...item, status: 'agent-buildable', clause: 'CONN-011', reason: `${planned.name} has a public ${planned.api === 'openapi' ? 'OpenAPI-described' : 'REST'} API; its native connector (${planned.clause}) is not built in this installation yet` }
   if (item.public_api === 'openapi' || item.public_api === 'rest') return { ...item, status: 'agent-buildable', clause: 'CONN-011', reason: `Public ${item.public_api === 'openapi' ? 'OpenAPI description' : 'REST documentation'}; an agent can build the connector` }
   if (item.public_api === 'partner') return { ...item, status: 'blocked', reason: 'Partner-only API: use an HTTP-002 request with partner access, or ask the provider for partner enrolment' }
@@ -51,7 +51,7 @@ export function inventory(input: Record<string, unknown>): InventoryItem[] {
       const type = String(node.type ?? ''), params = node.parameters ?? {}
       if (type === 'n8n-nodes-base.slack') return { app: 'slack', operation: N8N_SLACK[`${params.resource ?? 'message'}.${params.operation ?? 'post'}`] ?? `${params.resource}.${params.operation}`, source: `n8n ${workflow.name ?? ''}`.trim() }
       if (type === 'n8n-nodes-base.slackTrigger') return { app: 'slack', operation: params.trigger?.includes?.('reaction_added') ? 'new_reaction' : params.trigger?.includes?.('app_mention') ? 'app_mention' : 'new_message', source: `n8n ${workflow.name ?? ''}`.trim() }
-      const known = N8N[type]
+      const known = Object.hasOwn(N8N, type) ? N8N[type] : undefined
       if (known) return { app: known[0], operation: known[1], source: `n8n ${workflow.name ?? ''}`.trim() }
       const app = type.replace(/^n8n-nodes-base\./, '').replace(/Trigger$/, '').replace(/([a-z])([A-Z])/g, '$1_$2')
       return { app, operation: `${params.resource ?? ''}${params.resource ? '.' : ''}${params.operation ?? (type.endsWith('Trigger') ? 'trigger' : 'action')}`, source: `n8n ${workflow.name ?? ''}`.trim() }
@@ -62,7 +62,7 @@ export function inventory(input: Record<string, unknown>): InventoryItem[] {
     const walk = (flow: unknown) => { if (Array.isArray(flow)) for (const m of flow) { modules.push(m); for (const route of m?.routes ?? []) walk(route.flow) } }
     walk((input.make as any).flow)
     return modules.map(m => {
-      const known = MAKE[String(m.module)]
+      const key = String(m.module), known = Object.hasOwn(MAKE, key) ? MAKE[key] : undefined
       if (known) return { app: known[0], operation: known[1], source: 'Make blueprint' }
       const [app, action] = String(m.module ?? 'unknown:unknown').split(':')
       return { app, operation: action ?? 'unknown', source: 'Make blueprint' }
