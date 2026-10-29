@@ -121,8 +121,9 @@ export function tracked(root, allowMissing = false) {
 export const digest = files => hash(json(files));
 // The complete tool in `dir`, as sorted relative paths: its non-test modules and
 // every vendored parser file with its licence. Copies and the lock identity use it.
+export const toolFile = name => name.startsWith('vendor/') || !name.includes('/') && name.endsWith('.mjs') && !name.endsWith('.test.mjs');
 export function toolFiles(dir) {
-  const modules = fs.readdirSync(dir).filter(p => p.endsWith('.mjs') && !p.endsWith('.test.mjs'));
+  const modules = fs.readdirSync(dir).filter(toolFile);
   const vendored = fs.readdirSync(path.join(dir, 'vendor'), {recursive: true, withFileTypes: true}).filter(entry => {
     if (!entry.isFile() && !entry.isDirectory()) throw Error(`Unsupported vendored tool entry: ${entry.name}`);
     return entry.isFile();

@@ -16,7 +16,7 @@ export function schemaErrors(schema, value, root = schema, path = '$', depth = 0
   if (typeof schema.$ref !== 'string' || !schema.$ref.startsWith('#')) add(false, 'only local schema references are supported');
   else { const target = schema.$ref === '#' ? root : pointer(root, schema.$ref.slice(1)); if (target === undefined) add(false, `unresolved ${schema.$ref}`); else errors.push(...check(target)); }
  }
- if (schema.type !== undefined) add((Array.isArray(schema.type) ? schema.type : [schema.type]).some(type => types[type]?.(value)), `expected ${JSON.stringify(schema.type)}`);
+ if (schema.type !== undefined) add((Array.isArray(schema.type) ? schema.type : [schema.type]).some(type => Object.hasOwn(types, type) && types[type](value)), `expected ${JSON.stringify(schema.type)}`);
  if (schema.const !== undefined) add(isDeepStrictEqual(value, schema.const), 'const mismatch');
  if (schema.enum) add(schema.enum.some(item => isDeepStrictEqual(item, value)), 'enum mismatch');
  if (schema.allOf) for (const sub of schema.allOf) errors.push(...check(sub));

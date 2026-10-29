@@ -27,6 +27,15 @@ Owner history and undo must include jobs from either authority.
    `modules/import-kit/schema`, and sibling `./modules/d1-transport` with relative
    paths intact; record copies using the
    seed's existing Base provenance workflow. Never rename applied migrations.
+   Refresh the recorded kit copies together with `rer refresh-base`. For example,
+   `atomic-prefix.ts` and `budget.ts` must agree on the `batchExecutions` export.
+   Unadapted recorded dependencies advance together. If a dependency is marked
+   adapted or is unrecorded seed source, refresh preserves it and refuses before
+   writing when an incoming module needs an export it lacks. Use the printed
+   comparison command, merge the required exports while preserving seed edits,
+   and remove the comparison file. For a recorded adaptation, run the printed
+   `adapt-base` acknowledgement after the merge, then repeat refresh. Acknowledging
+   the old bytes alone does not resolve a missing export.
    Apply these in new numbered seed migrations, in this order,
    skipping any the seed already applied:
    - the D1 kit schemas, in the order `initializeD1ImportStorage` in

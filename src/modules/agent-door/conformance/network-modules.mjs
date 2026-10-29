@@ -29,7 +29,7 @@ export function validateNetworkAdapter(config) {
  return { module: config.module, origins };
 }
 
-function imports(source) {
+function imports(source, builtins) {
  let ast;
  try { ast = parse(source, { sourceType: 'module', createImportExpressions: true }); }
  catch { throw invalid('the adapter or a relative helper is not valid ES module JavaScript.'); }
@@ -41,7 +41,7 @@ function imports(source) {
    if (node.source.type !== 'StringLiteral') throw invalid('adapter imports must use literal relative module paths.');
    specifier = node.source.value;
   }
-  if (specifier !== undefined) {
+  if (specifier !== undefined && !builtins.includes(specifier)) {
    if (!(specifier.startsWith('./') || specifier.startsWith('../')) || specifier.includes('\\') || specifier.includes('?') || specifier.includes('#')) {
     throw invalid('adapter imports must be relative JavaScript modules; packages, Node APIs and runtime built-ins are unavailable.');
    }
@@ -57,7 +57,7 @@ function imports(source) {
 
 // Supply only snapshotted, checked module bytes to workerd. It has no filesystem
 // loader, so an unresolved or computed import cannot read another host file.
-export async function networkAdapterModules(root, entry) {
+export async function networkAdapterModules(root, entry, { builtins = [] } = {}) {
  let directory;
  try { directory = await realpath(root); }
  catch { throw invalid('the seed root is unreadable.'); }
@@ -80,7 +80,7 @@ export async function networkAdapterModules(root, entry) {
   }
   seen.add(path);
   modules.push({ type: 'ESModule', path, contents });
-  pending.push(...imports(contents).map(specifier => resolve(dirname(path), specifier)));
+  pending.push(...imports(contents, builtins).map(specifier => resolve(dirname(path), specifier)));
  }
  return { root: directory, modules };
 }

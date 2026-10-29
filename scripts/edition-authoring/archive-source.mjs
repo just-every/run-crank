@@ -54,6 +54,12 @@ export function archiveReader(directory, revision) {
     },
     digests(ids) { return new Map([...this.blobs(ids)].map(([object, data]) => [object, hash(data)])); },
     contains: history,
-    history,
+    // A single observed snapshot can match current template bytes; it cannot
+    // establish older revisions or ancestry.
+    history(pin, name) {
+      if (pin !== revision) return history();
+      const entry = orderedTree.get(safe(name));
+      return entry ? [{revision, object: entry.object}] : [];
+    },
   };
 }

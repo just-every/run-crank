@@ -1,7 +1,12 @@
+import { offers } from '../capabilities.mjs';
 import { randomUUID } from 'node:crypto';
 import { isDeepStrictEqual } from 'node:util';
 import { classIds, subset, errorCode, APPROVAL } from './protocol.mjs';
+import { grantSet, narrowingTargets } from './narrowing.mjs';
 import { schemaErrors } from './schema.mjs';
+import { checkTarget } from './target.mjs';
+import { nativeStepHook } from './step-hooks.mjs';
+import { injectionArgs } from './injection.mjs';
 
 export function checkClasses(c, step, answer, phase) {
  const actual = answer.decision?.classes;
@@ -15,7 +20,7 @@ function checkOutput(c, step, answer, phase) {
 async function checkResources(c, step, answer, phase, held) {
  const links = answer.result?.content?.filter(item => item.type === 'resource_link') ?? [];
  for (const [i, link] of links.entries()) {
-  const read = await c.mcp('resources/read', { uri: link.uri });
+  const read = await c.mcp('resources/read', { uri: link.uri }, step.client === undefined ? {} : { client: step.client });
   const classes = read.decision?.classes, needsApproval = held && classes?.some(item => item.class !== 'standard');
   c.add(`BASE-AGENT-006.2.resource.${phase}.${step.id}.${i}`, Array.isArray(classes) && classes.length > 0 && read.decision.revision === c.revision && classes.every(item => item.do === (held ? item.class === 'standard' ? 'review' : 'approval' : 'autonomous')), `${link.uri} must apply the policy to its computed resource classes.`);
   c.add(`BASE-AGENT-003.4.${phase}.${step.id}.${i}`, read.status === 200 && (needsApproval
@@ -36,9 +41,24 @@ export async function runJourney(c, phase, { held = false, injections = false, r
  try {
   for (const step of c.surface.journey) {
    const args = c.args(step, outputs), needsApproval = held && step.expect.some(item => item.class !== 'standard');
+   await nativeStepHook(c, 'beforeStep', phase, step, args, outputs);
+   const narrowing = !held && c.surface.narrowings?.find(fixture => fixture.step === step.id);
+   const grantsBefore = narrowing ? await grantSet(c, narrowing.witness, outputs) : null;
    const before = needsApproval ? await c.witness() : undefined;
-   let answer = await c.tool(step.tool, args);
+   const declared = c.surface.tools.find(tool => tool.name === step.tool);
+   let proof = {};
+   if (declared.proof) {
+    if (!held) {
+     const original = await c.witness(), challenge = await c.stepTool(step, args), bogus = await c.stepTool(step, args, { proofReference: 'bogus-native-proof' });
+     const fields = challenge.result?._meta?.['com.runeditrun/error'];
+     c.add(`BASE-AGENT-004.native-proof.${step.id}.challenge`, errorCode(challenge) === 'native_proof_required' && fields?.kind === declared.proofKind && typeof fields?.handoff === 'string' && new URL(fields.handoff).origin === c.origin, `${step.tool} requires its named native proof and a local human handoff.`);
+     c.add(`BASE-AGENT-004.native-proof.${step.id}.bogus`, errorCode(bogus) === 'native_proof_required' && isDeepStrictEqual(original, await c.witness()), `${step.tool} must refuse bogus proof with no native effect.`);
+     proof = await c.proof(step.tool, args, fields?.handoff, step.client);
+    } else proof = await c.proof(step.tool, args, undefined, step.client);
+   }
+   let answer = await c.stepTool(step, args, proof);
    checkClasses(c, step, answer, phase);
+   await checkTarget(c, step, outputs, answer, phase);
    const expectedDisposition = held ? needsApproval ? 'approval' : 'review' : 'autonomous';
    c.add(`BASE-AGENT-007.1.${phase}.${step.id}`, answer.decision?.disposition === expectedDisposition && answer.decision.revision === c.revision && answer.decision.classes.every(item => item.do === (held ? item.class === 'standard' ? 'review' : 'approval' : 'autonomous')), `${step.tool} must receive ${expectedDisposition} under revision ${c.revision}.`);
    if (needsApproval) {
@@ -48,8 +68,9 @@ export async function runJourney(c, phase, { held = false, injections = false, r
     c.add(`BASE-AGENT-007.5.no-effect.${step.id}`, isDeepStrictEqual(before, after), `${step.tool} changed native state before approval.`);
     if (!approval?.id) continue;
     const approved = await c.decideApproval(answer);
+    await checkTarget(c, step, outputs, answer, phase, true);
     c.add(`BASE-AGENT-008.5.approver.${step.id}`, approved.ok, `Signed-in sponsor approval returned HTTP ${approved.status}.`);
-    answer = await c.tool(step.tool, args, { requestState: answer.result.requestState });
+    answer = await c.stepTool(step, args, { ...proof, requestState: answer.result.requestState });
     checkClasses(c, step, answer, `${phase}.approved`);
     c.add(`BASE-AGENT-007.5.receipt.${step.id}`, !answer.result?.isError && answer.result?.resultType !== 'input_required' && Boolean(answer.result?._meta?.['com.runeditrun/receipt']) && answer.decision?.disposition === 'approval', 'The approved retry must complete with an approval receipt.');
    }
@@ -58,22 +79,37 @@ export async function runJourney(c, phase, { held = false, injections = false, r
    outputs.set(step.id, answer.result.structuredContent);
    checkOutput(c, step, answer, phase);
    await checkResources(c, step, answer, phase, held);
+   if (narrowing) {
+    const witnessArgs = c.resolve(narrowing.witness.args, outputs);
+    c.add(`BASE-AGENT-005.narrowing.${step.tool}.target`, narrowingTargets(declared).every(target => isDeepStrictEqual(witnessArgs[target], args[target])), `${step.tool} must witness every identifier of the same targeted subject.`);
+    const after = await grantSet(c, narrowing.witness, outputs);
+    c.add(`BASE-AGENT-005.narrowing.${step.tool}.subset`, after.length < grantsBefore.length && after.every(grant => grantsBefore.includes(grant)), `${step.tool} must strictly reduce the targeted subject's native grant set.`);
+    const beforeInjection = await c.witness();
+    const smuggled = await c.stepTool(step, { ...args, idempotency_key: randomUUID(), grant_to_add: 'admin' });
+    c.add(`BASE-AGENT-005.narrowing.${step.tool}.undeclared`, errorCode(smuggled) === 'invalid_arguments' && isDeepStrictEqual(beforeInjection, await c.witness()), `${step.tool} must refuse an undeclared widening argument without an effect.`);
+   }
+   if (offers(c.surface.capabilities, 'events') && !c.surface.tools.find(tool => tool.name === step.tool)?.readOnly) {
+    const snapshot = await c.tool(`${c.surface.seed}.events.list`, { limit: 200 }, { client: step.client });
+    if (!Array.isArray(snapshot.result?.structuredContent?.events)) throw new Error('Post-effect events.list must return events');
+    (c.effectEvents ??= []).push(...snapshot.result.structuredContent.events);
+   }
    if (injections && step.inject) {
-    const injected = { ...args, ...c.resolve(step.inject, outputs), ...(!c.surface.tools.find(tool => tool.name === step.tool)?.readOnly ? { idempotency_key: randomUUID() } : {}) };
-    const checked = await c.tool(step.tool, injected);
+    const injected = await injectionArgs(c, step, outputs);
+    const checked = await c.stepTool(step, injected, proof);
     c.add(`BASE-AGENT-005.5.${phase}.${step.id}`, isDeepStrictEqual(checked.decision?.classes, answer.decision?.classes) && checked.decision?.disposition === answer.decision?.disposition && !checked.result?.isError, `${step.tool} changed class, facts or decision for additional arguments.`);
    }
    if (replay && !replayed && !c.surface.tools.find(tool => tool.name === step.tool)?.readOnly) {
     replayed = true;
-    const beforeReplay = await c.witness(), repeated = await c.tool(step.tool, args), afterReplay = await c.witness();
+    const beforeReplay = await c.witness(), repeated = await c.stepTool(step, args, proof), afterReplay = await c.witness();
     c.add(`BASE-AGENT-012.1.${phase}`, !repeated.result?.isError && isDeepStrictEqual(answer.result.structuredContent, repeated.result?.structuredContent) && isDeepStrictEqual(beforeReplay, afterReplay), `${step.tool} replay changed native state or returned a different result.`);
 
    }
+   await nativeStepHook(c, 'afterStep', phase, step, args, outputs, answer.result.structuredContent);
   }
  } finally {
   if (!held) for (const step of c.surface.escalations ?? []) await c.phase(`BASE-AGENT-005.escalation.${step.id}`, async () => {
    const args = c.args(step, outputs), before = await c.witness();
-   const answer = await c.tool(step.tool, args), after = await c.witness();
+   const answer = await c.stepTool(step, args), after = await c.witness();
    c.add(`BASE-AGENT-005.1.${step.id}`, errorCode(answer) === 'self_escalation', `${step.tool} must refuse sponsor escalation with self_escalation (${errorCode(answer) ?? answer.status}).`);
    c.add(`BASE-AGENT-005.2.${step.id}`, isDeepStrictEqual(before, after), `${step.tool} changed native state while attempting sponsor escalation.`);
   });

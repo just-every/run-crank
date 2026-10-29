@@ -1,3 +1,4 @@
+import { offers } from '../capabilities.mjs';
 import { isDeepStrictEqual } from 'node:util';
 import { webcrypto } from 'node:crypto';
 import { accessToken, autonomousPolicy, policyEnvelope, seconds, signJws } from './crypto.mjs';
@@ -5,7 +6,10 @@ import { errorCode, VERSION } from './protocol.mjs';
 
 export async function negativePhase(c) {
  await c.adopt(autonomousPolicy());
+ await c.prepare('negative');
  const before = await c.witness(), iat = seconds(c.now);
+ const unavailable = await c.mcp('resources/read', { uri: `unregistered://${crypto.randomUUID()}` });
+ c.add('BASE-AGENT-003.refusal-code', unavailable.message?.error?.data?.code === (offers(c.surface.capabilities, 'resources') ? 'tool_not_found' : 'capability_not_declared') && unavailable.result === undefined, 'An unregistered resource must refuse with JSON-RPC error.data.code and no content.');
  const noToken = await c.mcp('tools/list', {}, { token: null });
  c.add('BASE-AGENT-004.1.challenge', noToken.status === 401 && /resource_metadata=/.test(noToken.headers.get('www-authenticate') ?? ''), 'An unauthenticated call must return 401 and a resource_metadata challenge.');
  for (const [name, overrides] of [

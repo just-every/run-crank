@@ -24,8 +24,9 @@ const empty = (text: string) => `<p class="muted">${escape(text)}</p>`
 
 function actionSummary(summary: ApprovalDisplaySummary | undefined): string {
   if (!summary) return '<p data-approval-summary>No action summary was recorded.</p>'
-  if ('arguments' in summary) return `<div data-approval-summary><pre>${pretty(summary.arguments)}</pre></div>`
-  if ('uri' in summary) return `<div data-approval-summary><dl><dt>Resource</dt><dd>${escape(summary.uri)}</dd></dl></div>`
+  const native = summary.nativeTarget ? `<dl data-native-target><dt>Native record</dt><dd>${escape(summary.nativeTarget.kind)} · ${escape(summary.nativeTarget.id)}</dd></dl>` : ''
+  if ('arguments' in summary) return `<div data-approval-summary>${native}<pre>${pretty(summary.arguments)}</pre></div>`
+  if ('uri' in summary) return `<div data-approval-summary>${native}<dl><dt>Resource</dt><dd>${escape(summary.uri)}</dd></dl></div>`
   const fields: Array<[string, unknown]> = []
   if (summary.target) {
     for (const [key, label] of [['name', 'Target name'], ['id', 'Target ID'], ['email', 'Target email']] as const) {
@@ -36,7 +37,7 @@ function actionSummary(summary: ApprovalDisplaySummary | undefined): string {
   if (summary.amount) fields.push(['Amount', `${summary.amount.value} ${summary.amount.currency}`])
   if (summary.payee) fields.push(['Payee', summary.payee])
   if (summary.role) fields.push(['Role', summary.role])
-  return `<div data-approval-summary><dl>${fields.map(([label, value]) => `<dt>${escape(label)}</dt><dd>${escape(value)}</dd>`).join('')}</dl>${summary.items?.length ? `<p>Items</p><ul>${summary.items.map(item => `<li>${escape(item)}</li>`).join('')}</ul>` : ''}</div>`
+  return `<div data-approval-summary>${native}<dl>${fields.map(([label, value]) => `<dt>${escape(label)}</dt><dd>${escape(value)}</dd>`).join('')}</dl>${summary.items?.length ? `<p>Items</p><ul>${summary.items.map(item => `<li>${escape(item)}</li>`).join('')}</ul>` : ''}</div>`
 }
 
 function shell(rt: Runtime, title: string, content: string, status = 200): Response {

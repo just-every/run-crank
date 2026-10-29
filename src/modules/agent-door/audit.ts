@@ -1,20 +1,26 @@
 import { decide, scopeMatches } from './policy/decide.ts'
 import type { Rule, PolicyDocument } from './policy/document.ts'
 import type { ClassId } from './policy/catalogue.ts'
-import type { ClassAndFacts, DecisionMeta, Principal, Runtime } from './types.ts'
+import type { ClassAndFacts, DecisionMeta, NativeTarget, Principal, Runtime } from './types.ts'
 import { preparedBy } from './people.ts'
 
 export interface AuditRow {
+  authority?: 'none'
   sequence?: number; id: string; at: string; door: 'mcp' | 'embedded'; agent: Principal['agent']; sponsor: { id: string; name: string }; label: string
-  tool: string; resource: string | null; decision_id: string | null; classes: ClassAndFacts[]; revision: number | null; rules: Array<{ class: string; rule: string | null; do: string }>
+  operation_id: string; scopes: string[]; client_id: string | null
+  continuation_item_id?: string
+  consent: string | null; tool: string; resource: string | NativeTarget | null; decision_id: string | null; classes: ClassAndFacts[]; revision: number | null; rules: Array<{ class: string; rule: string | null; do: string }>
   decision: string; outcome: 'running' | 'done' | 'refused' | 'pending' | 'failed' | 'replayed'; code: string | null
   approval: { id: string; by: string[] } | null; review: { id: string; by: string | null } | null
   idempotency_key: string | null; trace: string | null; ignored_arguments: string[]; replay_of: string | null
+  classification_refusal?: string
 }
 export interface Evidence { document: PolicyDocument; usage: Record<string, number>; classes: ClassAndFacts[]; result: string; rules: unknown }
 export function newAudit(rt: Runtime, principal: Principal, tool: string, door: AuditRow['door'], trace: unknown): AuditRow {
-  return { id: crypto.randomUUID(), at: new Date(rt.now()).toISOString(), door, agent: { ...principal.agent, specialist: principal.agent.specialist ?? null }, sponsor: { id: principal.person.id, name: principal.person.name }, label: preparedBy(principal).label,
-    tool, resource: null, decision_id: null, classes: [], revision: null, rules: [], decision: 'none', outcome: 'refused', code: null, approval: null, review: null, idempotency_key: null,
+  const id = crypto.randomUUID()
+  return { id, operation_id: principal.operationId ?? id, scopes: [...principal.scopes], client_id: principal.clientId ?? null, at: new Date(rt.now()).toISOString(), door, agent: { ...principal.agent, specialist: principal.agent.specialist ?? null }, sponsor: { id: principal.person.id, name: principal.person.name }, label: preparedBy(principal).label,
+    ...(principal.continuationItemId === undefined ? {} : { continuation_item_id: principal.continuationItemId }),
+    consent: principal.consent ?? null, tool, resource: null, decision_id: null, classes: [], revision: null, rules: [], decision: 'none', outcome: 'refused', code: null, approval: null, review: null, idempotency_key: null,
     trace: typeof trace === 'string' ? trace.slice(0, 512) : null, ignored_arguments: [], replay_of: null }
 }
 export function recordDecision(row: AuditRow, decision: DecisionMeta) {

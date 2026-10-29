@@ -16,8 +16,8 @@ export interface Claim { key: string; digest: string }
 /** The execution's audit, usage and idempotency ownership commit together. */
 export async function startExecution(rt: Runtime, row: AuditRow, principal: Principal, classes: ClassAndFacts[], state: PolicyState, evidence: Evidence, claim?: Claim): Promise<boolean> {
   const reserve = rt.options.db.prepare(`INSERT INTO agent_door_usage(decision_id,at,seed,specialist,agent,classes)
-    SELECT ?,?,?,?,?,? WHERE EXISTS(SELECT 1 FROM agent_door_state WHERE id=1 AND decision_lock=? AND decision_until>? AND local_paused=0 AND ${rt.options.trust ? "json_extract(envelope,'$.revision') IS ? AND json_extract(envelope,'$.paused')=0 AND json_extract(envelope,'$.exp')*1000>?" : 'local_revision IS ?'})`)
-    .bind(row.id, rt.now(), rt.options.seed, principal.agent.specialist ?? null, principal.agent.id, JSON.stringify(classes), row.id, rt.now(), state.revision, ...(rt.options.trust ? [rt.now()] : []))
+    SELECT ?,?,?,?,?,? WHERE EXISTS(SELECT 1 FROM agent_door_state WHERE id=1 AND decision_lock=? AND decision_until>? AND local_paused=0 AND ${rt.options.trust ? "json_extract(envelope,'$.revision') IS ? AND json_extract(envelope,'$.paused')=0 AND json_extract(envelope,'$.exp')*1000>? AND NOT EXISTS (SELECT 1 FROM json_each(envelope,'$.revoked.consents') WHERE value=?)" : 'local_revision IS ?'})`)
+    .bind(row.id, rt.now(), rt.options.seed, principal.agent.specialist ?? null, principal.agent.id, JSON.stringify(classes), row.id, rt.now(), state.revision, ...(rt.options.trust ? [rt.now(), principal.consent ?? null] : []))
   row.outcome = 'running'
   const statements = [reserve, auditInsert(rt, row, evidence, row.id)]
   if (claim) statements.push(callClaim(rt, row, principal, claim, true))

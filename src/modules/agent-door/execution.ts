@@ -1,4 +1,4 @@
-import type { ClassAndFacts, CallResult, Principal, Runtime, ToolContext, ToolDefinition, UndoContext, ApprovalDisplaySummary } from './types.ts'
+import type { ClassAndFacts, CallResult, NativeTarget, Principal, Runtime, ToolContext, ToolDefinition, UndoContext, ApprovalDisplaySummary } from './types.ts'
 import { validateSchema } from './json-schema.ts'
 import { ToolRefusal } from './errors.ts'
 import { canonical } from './policy/document.ts'
@@ -6,11 +6,23 @@ import { preparedBy } from './people.ts'
 import { classDefinition } from './policy/catalogue.ts'
 import { removeUsage } from './counting.ts'
 import { policyState } from './policy-store.ts'
+import { nativeTarget } from './target.ts'
+import { nativeProof } from './native-proof.ts'
+import { narrowPrincipal } from './principal.ts'
+import { continuationItem } from './operation.ts'
 
 export interface Effect { type: string; uri: string; data?: Record<string, unknown> }
 export function context(rt: Runtime, principal: Principal, door: ToolContext['door'], effects: Effect[], approvers: ToolContext['approvers'] = []): ToolContext {
-  return { db: rt.options.db, person: principal.person, agent: principal.agent, actor: preparedBy(principal), seed: rt.options.seed, origin: rt.options.origin, now: rt.now, door, approvers,
-    emit(type, uri, data) { effects.push({ type, uri, data }) } }
+  const actor = preparedBy(principal)
+  return Object.freeze({ db: rt.options.db, person: Object.freeze({ ...principal.person }), agent: Object.freeze({ ...principal.agent, specialist: principal.agent.specialist ?? null }),
+    consent: principal.consent, scopes: Object.freeze([...principal.scopes]), clientId: principal.clientId,
+    operationId: principal.operationId!, idempotencyKey: principal.idempotencyKey ?? null,
+    continuationItemId: principal.continuationItemId,
+    nativeProof: principal.nativeProof && Object.freeze({ ...principal.nativeProof }),
+    actor: Object.freeze({ ...actor, agent: Object.freeze(actor.agent), for: Object.freeze(actor.for) }),
+    seed: rt.options.seed, origin: rt.options.origin, now: rt.now, door,
+    approvers: Object.freeze(approvers.map(person => Object.freeze({ ...person }))),
+    emit(type: string, uri: string, data?: Record<string, unknown>) { effects.push({ type, uri, data }) } })
 }
 export async function classify(tool: ToolDefinition, args: Record<string, unknown>, ctx: ToolContext): Promise<ClassAndFacts[]> {
   const classes = await tool.classify(args, ctx)
@@ -24,11 +36,19 @@ export async function livePrincipal(rt: Runtime, saved: Principal): Promise<Prin
   const agent = await rt.options.db.prepare('SELECT revoked FROM agent_door_agents WHERE id=?').bind(saved.agent.id).first<{ revoked: number }>()
   const state = await policyState(rt)
   if (revoked(state, saved)) return null
-  return person?.active && person.id === saved.person.id && !agent?.revoked ? { ...saved, person } : null
+  return person?.active && person.id === saved.person.id && !agent?.revoked ? narrowPrincipal(rt, { ...saved, person }) : null
 }
 export async function runTool(rt: Runtime, tool: ToolDefinition, args: Record<string, unknown>, principal: Principal, result: CallResult, door: ToolContext['door'], approvers: ToolContext['approvers'] = [], usageId = result.decision!.id): Promise<{ result: CallResult; effects: Effect[]; undo?: unknown }> {
   const effects: Effect[] = []
   try {
+    const current = await narrowPrincipal(rt, principal)
+    // Preserve the admission snapshot exactly; a removed grant requires fresh work.
+    if (principal.scopes.some(scope => !current.scopes.includes(scope))) throw new ToolRefusal('insufficient_scope')
+    principal = current
+    if (principal.consent && (await policyState(rt)).revoked.consents.includes(principal.consent)) throw new ToolRefusal('consent_revoked')
+    if (tool.scope && !principal.scopes.includes(tool.scope)) throw new ToolRefusal('insufficient_scope')
+    principal = await nativeProof(rt, tool, args, principal, principal.nativeProof?.reference)
+    if (await continuationItem(tool, args, context(rt, principal, door, [], approvers), principal.operationId) !== principal.continuationItemId) throw new ToolRefusal('operation_mismatch')
     const value = await tool.run(args, context(rt, principal, door, effects, approvers))
     if (!validateSchema(tool.outputSchema, value.result)) return { result: { ...result, outcome: 'refused', code: 'output_invalid' }, effects, undo: value.undo }
     return { result: { ...result, outcome: 'done', result: value.result, resources: value.resources, untrusted: tool.untrusted }, effects, undo: value.undo }
@@ -52,8 +72,10 @@ export function undoContext(rt: Runtime, person: Principal['person'], door: Tool
   return { db: rt.options.db, person, agent: null, actor: { kind: 'person', person: { id: person.id, name: person.name }, label: person.name }, seed: rt.options.seed, origin: rt.options.origin, now: rt.now, door,
     emit(type, uri, data) { effects.push({ type, uri, data }) } }
 }
-export async function summary(tool: ToolDefinition, args: Record<string, unknown>, ctx: ToolContext): Promise<ApprovalDisplaySummary> {
-  if (tool.readOnly) return tool.name === 'resources/read' ? { uri: String(args.uri) } : { arguments: args }
+export async function summary(tool: ToolDefinition, args: Record<string, unknown>, ctx: ToolContext, target?: NativeTarget | null): Promise<ApprovalDisplaySummary> {
+  target = target === undefined ? await nativeTarget(tool, args, ctx) : target
+  const attribution = target ? { nativeTarget: target } : {}
+  if (tool.readOnly) return { ...(tool.name === 'resources/read' ? { uri: String(args.uri) } : { arguments: args }), ...attribution }
   const value = await tool.summary!(args, ctx)
   const schema = { type: 'object', additionalProperties: false, properties: {
     target: { type: 'object', additionalProperties: false, properties: { id: { type: 'string' }, name: { type: 'string' }, email: { type: 'string' } } },
@@ -61,5 +83,5 @@ export async function summary(tool: ToolDefinition, args: Record<string, unknown
     payee: { type: 'string' }, role: { type: 'string' }, items: { type: 'array', items: { type: 'string' } },
   } }
   if (!validateSchema(schema, value)) throw new Error('summary_invalid')
-  return value
+  return { ...value, ...attribution }
 }

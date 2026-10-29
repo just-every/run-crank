@@ -13,12 +13,12 @@ export function resourceTool(rt: Runtime, uri: string): ToolDefinition | undefin
     inputSchema: { type: 'object', properties: { uri: { type: 'string' } }, required: ['uri'], additionalProperties: false },
     outputSchema: { type: 'object', properties: { contents: { type: 'array', items: { type: 'object' } } }, required: ['contents'], additionalProperties: false },
     async classify(_args, ctx) {
-      try { record = await resource.read(uri, { person: ctx.person, db: ctx.db }) } catch { record = null }
+      try { record = await resource.read(uri, { person: ctx.person, agent: ctx.agent, scopes: [...ctx.scopes], clientId: ctx.clientId, db: ctx.db }) } catch { record = null }
       if (!record) throw new ToolRefusal('resource_unavailable')
-      return resource.classify(record, { person: ctx.person, db: ctx.db })
+      return resource.classify(record, { person: ctx.person, agent: ctx.agent, scopes: [...ctx.scopes], clientId: ctx.clientId, db: ctx.db })
     },
-    async run() {
-      if (!record) throw new ToolRefusal('resource_unavailable')
+    async run(_args, ctx) {
+      if (!record || !await resource.read(uri, { person: ctx.person, agent: ctx.agent, scopes: [...ctx.scopes], clientId: ctx.clientId, db: ctx.db })) throw new ToolRefusal('resource_unavailable')
       return { result: { contents: [{ uri, mimeType: resource.mimeType ?? 'application/json', text: record.text ?? JSON.stringify(record.json),
         ...(record.untrusted ? { _meta: { 'com.runeditrun/untrusted': true } } : {}) }] } }
     },
