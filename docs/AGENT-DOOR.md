@@ -80,7 +80,8 @@ Signed Business settings enter through `POST /api/rer/business-settings`, using
 
 Business access-token `sub` resolves through durable settings bindings:
 `bs_settings.owner_id` binds the Business owner to the installation's native
-owner in `oa_operators`; `bs_team.business_id` binds a teammate to its retained
+owner recorded by `oa_bootstrap.claim_id`, reread in `oa_operators`;
+native owner-role transfers cannot move this Business binding; `bs_team.business_id` binds a teammate to its retained
 `operator_id`, with the signed `business_role` retained separately. Business
 must send the signed owner/team identifiers before using them as token subjects.
 Email is not the token-subject lookup key. Established bindings survive email
