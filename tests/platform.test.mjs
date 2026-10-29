@@ -9,34 +9,36 @@ const graph={trigger:{type:'manual'},steps:[{id:'receipt',type:'http',input:{met
 const costs={cost:{components:['orchestration','connectors','models','executors'].map(kind=>({kind,usd_per_run:'0',assumption:'Owner-reviewed synthetic network edge; no paid operations'}))}};
 const client=(h,authority={cookie:h.owner})=>new CrankClient({baseUrl:h.origin,...authority,fetch:(url,init)=>h.mf.dispatchFetch(url,init)});
 const mcp=(h,authority={cookie:h.owner})=>async(method,params={},id=crypto.randomUUID())=>{
- const response=await h.mf.dispatchFetch(h.origin+'/api/crank/v1/mcp',{method:'POST',headers:{origin:h.origin,accept:'application/json, text/event-stream','content-type':'application/json','mcp-protocol-version':'2025-06-18',...(authority.cookie?{cookie:authority.cookie}:{}),...(authority.token?{authorization:'Bearer '+authority.token}:{})},body:JSON.stringify({jsonrpc:'2.0',...(id===undefined?{}:{id}),method,params})});
+ const response=await h.mf.dispatchFetch(h.origin+'/api/crank/v1/mcp',{method:'POST',headers:{origin:h.origin,accept:'application/json, text/event-stream','content-type':'application/json','mcp-protocol-version':'2026-07-28',...(authority.cookie?{cookie:authority.cookie}:{}),...(authority.token?{authorization:'Bearer '+authority.token}:{})},body:JSON.stringify({jsonrpc:'2.0',...(id===undefined?{}:{id}),method,params})});
  return {status:response.status,value:response.status===202?null:await response.json()};
 };
 const call=async(rpc,name,args={})=>{const r=await rpc('tools/call',{name,arguments:args});assert.equal(r.status,200);assert.ok(!r.value.error,JSON.stringify(r.value));return r.value.result};
 const issue=async(h,w)=>h.post('grants',{label:'Harbor supplier receipt agent',workflow_id:w.id,version_id:w.published_version_id,expires_at:new Date(Date.now()+3600000).toISOString(),policy:{rules:[{step_id:'receipt',type:'http',connection_id:null,app:'none',fields:['method','url','body'],recipients:['operations@harbor.example'],recipient_field:'body.to',amount_field:'body.amount',max_usd:'100.00',max_per_minute:50}],approval:{timeout_seconds:60,delegate_ids:[],escalate_to:[]}}},h.owner,201);
 
-test('PLATFORM-001: SDK and MCP draft lifecycle, granted execution/progress, paginated reads and out-of-grant denial share native approval and audit',async()=>{
+test('PLATFORM-001: SDK and CORE door draft lifecycle, native granted execution/progress, paginated reads and out-of-grant denial share native approval and audit',async()=>{
  const edge=fakeEdge();edge.routes.set('platform-ledger.example',({body})=>jsonResponse({id:crypto.randomUUID(),receipt:JSON.parse(body)}));
  const h=await harness('http://127.0.0.1:9',{edge:edge.edge});
  try{
-  const sdk=client(h),rpc=mcp(h);
-  const initialized=await rpc('initialize',{protocolVersion:'2025-06-18',capabilities:{},clientInfo:{name:'Crank public-door acceptance',version:'1'}});
+  const sdk=client(h);
+  const preparer=await h.post('tokens',{label:'Harbor integrations preparation',scope:'agent'},h.owner,201), prep=client(h,{token:preparer.token}),rpc=mcp(h,{token:preparer.token});
+  const policy=await h.mf.dispatchFetch(h.origin+'/agents/api/policy',{method:'PUT',headers:{cookie:h.owner,origin:h.origin,'content-type':'application/json'},body:JSON.stringify({document:{schema:'rer-agent-policy/1',catalogue:'rer-agent-classes/1',rules:[{id:'all',class:'*',do:'autonomous'}],spend:{none:true}}})});
+  assert.equal(policy.status,200);
+  const initialized=await rpc('initialize',{protocolVersion:'2026-07-28',capabilities:{},clientInfo:{name:'Crank public-door acceptance',version:'1'}});
   assert.equal(initialized.value.result.capabilities.tools.listChanged,false);
-  const notification=await h.mf.dispatchFetch(h.origin+'/api/crank/v1/mcp',{method:'POST',headers:{origin:h.origin,cookie:h.owner,accept:'application/json, text/event-stream','content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',method:'notifications/initialized'})});assert.equal(notification.status,202);assert.equal(await notification.text(),'');
+  const notification=await h.mf.dispatchFetch(h.origin+'/api/crank/v1/mcp',{method:'POST',headers:{origin:h.origin,authorization:'Bearer '+preparer.token,accept:'application/json, text/event-stream','content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',method:'notifications/initialized'})});assert.equal(notification.status,202);assert.equal(await notification.text(),'');
   const hostile=await h.mf.dispatchFetch(h.origin+'/api/crank/v1/mcp',{method:'POST',headers:{origin:'https://foreign.example',cookie:h.owner,accept:'application/json, text/event-stream','content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:1,method:'tools/list'})});assert.equal(hostile.status,403);
   const malformed=await h.mf.dispatchFetch(h.origin+'/api/crank/v1/mcp',{method:'POST',headers:{origin:h.origin,cookie:h.owner,accept:'application/json, text/event-stream','content-type':'application/json'},body:'{'});assert.equal(malformed.status,400);assert.equal((await malformed.json()).error.code,-32700);
-  const listed=await rpc('tools/list');assert.ok(listed.value.result.tools.some(t=>t.name==='start_task'));
+  const listed=await rpc('tools/list');assert.ok(listed.value.result.tools.some(t=>t.name==='crank.workflows.create'));
   assert.equal((await rpc('invented')).value.error.code,-32601);
-  assert.equal((await rpc('tools/call',{name:'get_run',arguments:{run_id:'x',url:'https://untrusted.example'}})).value.error.code,-32602);
+  assert.equal((await rpc('tools/call',{name:'crank.runs.get',arguments:{run_id:7}})).value.result._meta['com.runeditrun/error'].code,'invalid_arguments');
   const draft=await sdk.createDraft({name:'Harbor Workshop — supplier receipt integration',graph},{idempotencyKey:'sdk-create'});
   assert.equal(draft.status,'draft');assert.equal(edge.requests.length,0);
   assert.equal((await sdk.validateDraft(draft.id)).ok,true);
-  const mcpDraft=await call(rpc,'create_draft',{input:{name:'Harbor Workshop — MCP draft only',graph},idempotency_key:'mcp-create'});
-  const duplicate=await call(rpc,'create_draft',{input:{name:'Harbor Workshop — MCP draft only',graph},idempotency_key:'mcp-create'});
-  assert.equal(mcpDraft.structuredContent.value.id,duplicate.structuredContent.value.id);
+  const mcpDraft=await call(rpc,'crank.workflows.create',{name:'Harbor Workshop — MCP draft only',graph,idempotency_key:'mcp-create'});
+  const duplicate=await call(rpc,'crank.workflows.create',{name:'Harbor Workshop — MCP draft only',graph,idempotency_key:'mcp-create'});
+  assert.equal(mcpDraft.structuredContent.id,duplicate.structuredContent.id);
   assert.equal(edge.requests.length,0,'remote draft creation/validation never dispatches actions');
-  assert.equal((await call(rpc,'validate_draft',{workflow_id:mcpDraft.structuredContent.value.id})).structuredContent.value.ok,true);
-  const preparer=await h.post('tokens',{label:'Harbor integrations preparation',scope:'agent'},h.owner,201), prep=client(h,{token:preparer.token});
+  assert.equal((await call(rpc,'crank.workflows.validate',{workflow_id:mcpDraft.structuredContent.id})).structuredContent.ok,true);
   assert.equal((await prep.createDraft({name:'Agent-prepared inert draft',graph})).status,'draft');
   await assert.rejects(()=>prep.publishDraft(draft.id),e=>e instanceof CrankApiError&&e.status===403&&e.code==='forbidden');
   await h.post(`workflows/${draft.id}/estimate`,costs);
@@ -69,25 +71,26 @@ test('PLATFORM-001: SDK and MCP draft lifecycle, granted execution/progress, pag
    await restored.restart();await restored.tick();assert.equal(edge.requests.length,1);
   }finally{await restored.close()}
 
-  const second=await call(agentRpc,'start_task',{input:{...input,task_id:'mcp-receipt'},idempotency_key:'mcp-task'});assert.equal(second.structuredContent.value.status,'succeeded');
-  const secondRetry=await call(agentRpc,'start_task',{input:{...input,task_id:'mcp-receipt'},idempotency_key:'mcp-task'});assert.equal(secondRetry.structuredContent.value.id,second.structuredContent.value.id);assert.equal(edge.requests.length,2);
-  assert.equal((await call(agentRpc,'get_task',{run_id:second.structuredContent.value.id})).structuredContent.value.grant_id,grant.id);
+  assert.equal((await agentRpc('tools/list')).status,401,'Execution credentials keep their own native task door');
+  const second=await exec.startTask({...input,task_id:'second-receipt'},{idempotencyKey:'second-task'});assert.equal(second.status,'succeeded');
+  const secondRetry=await exec.startTask({...input,task_id:'second-receipt'},{idempotencyKey:'second-task'});assert.equal(secondRetry.id,second.id);assert.equal(edge.requests.length,2);
+  assert.equal((await exec.readTask(second.id)).grant_id,grant.id);
   const count=edge.requests.length;
   await assert.rejects(()=>exec.startTask({task_id:'foreign',actions:[{step_id:'foreign',input:{}}]}),e=>e.status===422&&e.code==='invalid_operation');
-  assert.equal((await call(agentRpc,'create_draft',{input:{name:'Escalate',graph}})).isError,true);
-  assert.equal((await call(agentRpc,'list_connections')).isError,true);
+  await assert.rejects(()=>exec.createDraft({name:'Escalate',graph}),e=>e.status===403);
+  assert.equal((await h.send('/api/crank/v1/connections',undefined,'',{authorization:'Bearer '+grant.credential})).status,403);
   const heldInput={task_id:'outside-limit',actions:[{step_id:'receipt',input:{body:{to:'outsider@example.test',amount:'100.01'}}}]};
-  const held=await call(agentRpc,'start_task',{input:heldInput,idempotency_key:'needs-review'});
-  assert.equal(held.structuredContent.value.status,'awaiting_approval');assert.equal(edge.requests.length,count,'grant limit cannot bypass exact human approval');
-  const waiting=held.structuredContent.value;
+  const held=await exec.startTask(heldInput,{idempotencyKey:'needs-review'});
+  assert.equal(held.status,'awaiting_approval');assert.equal(edge.requests.length,count,'grant limit cannot bypass exact human approval');
+  const waiting=held;
   const pendingRetry=await exec.startTask(heldInput,{idempotencyKey:'needs-review'});assert.equal(pendingRetry.id,waiting.id);assert.equal(pendingRetry.status,'awaiting_approval');assert.equal(pendingRetry.waits[0].proposal_digest,waiting.waits[0].proposal_digest);assert.equal(edge.requests.length,count);
   assert.equal((await h.post(`workflow-runs/${waiting.id}/reject`,{path:waiting.waits[0].path,digest:waiting.waits[0].proposal_digest})).status,'rejected');
   assert.equal(edge.requests.length,count);
   const rejectedRetry=await exec.startTask(heldInput,{idempotencyKey:'needs-review'});assert.equal(rejectedRetry.id,waiting.id);assert.equal(rejectedRetry.status,'rejected');assert.equal(edge.requests.length,count);
   const seen=[];for await(const r of sdk.iterateRuns({workflow:draft.id,limit:1}))seen.push(r.id);
-  assert.deepEqual(new Set(seen),new Set([run.id,second.structuredContent.value.id,waiting.id]));assert.equal(seen.length,3);
-  const page=await call(rpc,'list_runs',{workflow:draft.id,limit:1});assert.ok(page.structuredContent.value.next);
-  const next=await call(rpc,'list_runs',{workflow:draft.id,limit:1,before:page.structuredContent.value.next});assert.notEqual(next.structuredContent.value.runs[0].id,page.structuredContent.value.runs[0].id);
+  assert.deepEqual(new Set(seen),new Set([run.id,second.id,waiting.id]));assert.equal(seen.length,3);
+  const page=await call(rpc,'crank.runs.list',{workflow:draft.id,limit:1});assert.ok(page.structuredContent.next);
+  const next=await call(rpc,'crank.runs.list',{workflow:draft.id,limit:1,before:page.structuredContent.next});assert.notEqual(next.structuredContent.runs[0].id,page.structuredContent.runs[0].id);
   const audit=await h.get('audit');for(const action of ['workflow.create','workflow.publish','grant.task','run.reject'])assert.ok(audit.some(a=>a.action===action),action);
   assert.equal((await h.send('/api/crank/v1/workflows')).value.code,'unauthenticated');
   const independent=await issue(h,current), other=client(h,{token:independent.credential});
@@ -130,8 +133,8 @@ test('PLATFORM-001: concurrent and restarted draft/publication/rollback retries 
   const published=publications.slice(1).map(r=>{assert.equal(r.status,'fulfilled',r.reason?.message);return r.value});
   assert.equal(new Set(published.map(r=>r.version.id)).size,1);
   const first=published[0];assert.equal(first.workflow.versions.length,1);
-  const rpc=mcp(h),mcpRetry=await call(rpc,'publish_workflow',{workflow_id:id,idempotency_key:'publication-one'});
-  assert.equal(mcpRetry.structuredContent.value.version.id,first.version.id);
+  const publicationRetry=await sdk.publishDraft(id,{}, {idempotencyKey:'publication-one'});
+  assert.equal(publicationRetry.version.id,first.version.id);
   await sdk.updateDraft(id,{graph:{trigger:{type:'schedule',at:'09:00',timezone:'America/New_York'},steps:[{id:'receipt',type:'map',input:{supplier:'Northshore Fabrication',amount:'782.25'}}]}});
   await h.post(`workflows/${id}/estimate`,costs);
   const second=await sdk.publishDraft(id,{}, {idempotencyKey:'publication-two'});assert.notEqual(second.version.id,first.version.id);
@@ -199,7 +202,7 @@ test('PLATFORM-001: lost, concurrent and restarted duplicate requests keep one i
   assert.equal((await h.send(`/api/crank/workflows/${copy.id}/run`,{},h.owner)).status,409);
   await sdk.updateDraft(source.id,{graph:{...graph,steps:[{...graph.steps[0],input:{...graph.steps[0].input,body:{to:'operations@harbor.example',amount:'89.00'}}}]}});
   await h.restart();
-  const retried=(await call(mcp(h),'duplicate_workflow',{workflow_id:source.id,idempotency_key:'supplier-copy'})).structuredContent.value;
+  const retried=await sdk.duplicateWorkflow(source.id,{idempotencyKey:'supplier-copy'});
   assert.deepEqual(retried.draft,copy.draft,'retry preserves the reviewed copy even after its source changes');
   const edited={...graph,steps:[{...graph.steps[0],input:{...graph.steps[0].input,body:{to:'operations@harbor.example',amount:'42.00'}}}]};
   await sdk.updateDraft(copy.id,{description:'Owner customized this preparation',graph:edited});
