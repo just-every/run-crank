@@ -24,8 +24,8 @@ export function context(rt: Runtime, principal: Principal, door: ToolContext['do
     approvers: Object.freeze(approvers.map(person => Object.freeze({ ...person }))),
     emit(type: string, uri: string, data?: Record<string, unknown>) { effects.push({ type, uri, data }) } })
 }
-export async function classify(tool: ToolDefinition, args: Record<string, unknown>, ctx: ToolContext): Promise<ClassAndFacts[]> {
-  const classes = await tool.classify(args, ctx)
+export async function classify(tool: ToolDefinition, args: Record<string, unknown>, ctx: ToolContext, completed?: readonly ClassAndFacts[]): Promise<ClassAndFacts[]> {
+  const classes = await tool.classify(args, ctx, completed && Object.freeze(structuredClone(completed)))
   if (!Array.isArray(classes) || !classes.length || new Set(classes.map(item => item.class)).size !== classes.length || classes.some(item => !tool.classes.includes(item.class) || !item.facts || !Number.isSafeInteger(item.facts.measure) || item.facts.measure < 0 || classDefinition(item.class).facts.some(field => typeof item.facts[field as keyof typeof item.facts] !== 'string') || (item.facts.currency !== undefined && !/^[A-Z]{3}$/.test(item.facts.currency)) || (item.facts.counterparty !== undefined && !['internal','known','new','public'].includes(item.facts.counterparty)) || (item.facts.direction !== undefined && !['widens','narrows'].includes(item.facts.direction)))) throw new Error('classification_invalid')
   return classes
 }

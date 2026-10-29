@@ -31,3 +31,12 @@ export function crankAgentDoor(bindings: Bindings) {
     ],
   })
 }
+
+/** Construct native adapters only for paths owned by the shared door. */
+export async function crankAgentResponse(request: Request, env: Bindings): Promise<Response | null> {
+  const path = new URL(request.url).pathname
+  if (!['/.well-known/oauth-protected-resource', '/.well-known/oauth-protected-resource/mcp',
+    '/api/rer/agent-policy', '/mcp', '/api/crank/v1/mcp', '/agents'].includes(path)
+    && !path.startsWith('/agents/api/') && !/^\/agents\/approvals\/[^/]+$/.test(path)) return null
+  return crankAgentDoor(env).handle(request)
+}

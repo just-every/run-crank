@@ -67,12 +67,18 @@ export async function runJourney(c, phase, { held = false, injections = false, r
     const after = await c.witness();
     c.add(`BASE-AGENT-007.5.no-effect.${step.id}`, isDeepStrictEqual(before, after), `${step.tool} changed native state before approval.`);
     if (!approval?.id) continue;
-    const approved = await c.decideApproval(answer);
+    const heldDecision = answer.decision, approved = await c.decideApproval(answer);
     await checkTarget(c, step, outputs, answer, phase, true);
     c.add(`BASE-AGENT-008.5.approver.${step.id}`, approved.ok, `Signed-in sponsor approval returned HTTP ${approved.status}.`);
     answer = await c.stepTool(step, args, { ...proof, requestState: answer.result.requestState });
-    checkClasses(c, step, answer, `${phase}.approved`);
-    c.add(`BASE-AGENT-007.5.receipt.${step.id}`, !answer.result?.isError && answer.result?.resultType !== 'input_required' && Boolean(answer.result?._meta?.['com.runeditrun/receipt']) && answer.decision?.disposition === 'approval', 'The approved retry must complete with an approval receipt.');
+    const receipt = answer.result?._meta?.['com.runeditrun/receipt'];
+    // Older receipts carry only the original id; their current decision's
+    // computed facts may change after the effect.
+    const hasDecision = receipt && Object.hasOwn(receipt, 'decision');
+    const approvedDecision = hasDecision ? receipt.decision : answer.decision;
+    const originalEvidence = hasDecision ? isDeepStrictEqual(approvedDecision, heldDecision) : receipt?.decision_id === heldDecision.id;
+    checkClasses(c, step, { decision: approvedDecision }, `${phase}.approved`);
+    c.add(`BASE-AGENT-007.5.receipt.${step.id}`, !answer.result?.isError && answer.result?.resultType !== 'input_required' && receipt && approvedDecision?.disposition === 'approval' && originalEvidence && answer.decision?.revision === c.revision && answer.decision?.disposition === 'approval' && isDeepStrictEqual(answer.decision.classes, approvedDecision.classes), 'The approved retry must retain its exact original approval evidence and pass current policy admission.');
    }
    c.add(`BASE-AGENT-013.4.${phase}.${step.id}`, answer.status === 200 && answer.result && !answer.result.isError && answer.result.resultType !== 'input_required', `${step.tool} did not complete (${errorCode(answer) ?? answer.status}).`);
    if (answer.result?.isError || answer.result?.structuredContent === undefined) continue;

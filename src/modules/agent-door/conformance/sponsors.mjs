@@ -6,12 +6,19 @@ import { createProtocol, errorCode, APPROVAL } from './protocol.mjs';
 
 /** Additional principals use real native sessions and signed credentials. All
  * record and approval probes cross the same public doors as the main journey. */
-export async function crossSponsorPhase(c, sponsors) {
+export async function crossSponsorPhase(c, sponsors, initializeAgent) {
  const declaration = c.surface.verification?.crossSponsor;
  if (!declaration || !Array.isArray(declaration.prepare) || !declaration.prepare.length || !declaration.read || !declaration.change) throw new Error('Multiple sponsors require verification.crossSponsor {prepare,read,change} fixtures.');
  for (const person of sponsors.slice(1)) {
   const b = createProtocol({ fetch: c.fetch, origin: c.origin, surface: c.surface, signer: c.signer, person,
    business: c.business, consent: randomUUID(), now: c.now, points: c.points, agentId: `rer-conformance-${randomUUID()}`, seq: c.seq, revision: c.revision, listed: c.listed });
+  if (initializeAgent) {
+   try { await initializeAgent({ agentId: b.agentId, person }); }
+   catch {
+    c.add('BASE-AGENT-001.agent-initializer', false, 'Native agent initialization failed; no captured mail, credentials or fixture values are logged.');
+    return;
+   }
+  }
   const prefix = `BASE-AGENT-004.cross-sponsor.${person.label}`;
   await c.adopt(autonomousPolicy());
   b.revision = c.revision;

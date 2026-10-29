@@ -81,8 +81,9 @@ export function createProtocol(context) {
   if (!valid) throw new Error('Cannot decide an approval without its exact summary evidence');
   const response = await context.personRequest(`${path}/${action}`, { method: 'POST', body: JSON.stringify({ revision: approval.revision, summary_sha256: approval.summary_sha256 }) });
   const body = await responseBody(response);
-  if (response.ok && action === 'approve' && body.approval?.state === 'executed') context.calls.push({
+  if (response.ok && action === 'approve' && approval.state === 'pending' && ['executed', 'refused'].includes(body.approval?.state)) context.calls.push({
    kind: 'approval/execute', name: approval.tool, decision: structuredClone(pending.decision), approvalId: handle.id, principal: pending.principal,
+   state: body.approval.state, code: body.approval.code ?? null,
   });
   return { ok: response.ok, status: response.status, body };
  };
