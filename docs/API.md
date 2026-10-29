@@ -455,7 +455,10 @@ Connect to canonical `/mcp` or its `/api/crank/v1/mcp` alias. Both are served
 by the copied Base agent door and the same native registry. Supported MCP eras
 are `2026-07-28` and `2025-11-25`; initialize and send the matching
 `MCP-Protocol-Version`, JSON-RPC 2.0 and
-`Accept: application/json, text/event-stream`. Business tokens use the canonical
+`Accept: application/json, text/event-stream`. The 2026 era also requires
+`Mcp-Method`, `Mcp-Name` for named operations, and matching
+`params._meta["io.modelcontextprotocol/protocolVersion"]`; modern client
+capabilities belong in that metadata. Business tokens use the canonical
 `/mcp` audience and bind their signed subject to a current native person through
 signed Business settings. Native cookies are for person controls. Existing
 non-flow-bound preparation bearer credentials retain their narrow scopes.

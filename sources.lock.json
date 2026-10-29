@@ -200,7 +200,7 @@
       "executable": false
     },
     "docs/API.md": {
-      "sha256": "79864b145bcbef8801d03a0bf36a4ec344c013a24840e705046a43c3bfc516a0",
+      "sha256": "99de8a49e538305e2cc429bc043ef56f6a52317c2cac1ca64b06c687cdc14160",
       "executable": false
     },
     "docs/APP-TRIGGERS.md": {
@@ -7152,7 +7152,7 @@
       "executable": false
     },
     "tests/platform.test.mjs": {
-      "sha256": "cc9f21b6e2ea6997718e6ea5c097f28203e46670f5331ef81354e669d3d0b015",
+      "sha256": "e50e8e2cacb0f819c98f8ba8fbd9c5294b1a750ee880c4536a7db767d6b05e2f",
       "executable": false
     },
     "tests/postgres-write-fixture.mjs": {
