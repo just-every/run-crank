@@ -2960,7 +2960,7 @@
       "executable": false
     },
     "src/crank/agent-door/people.ts": {
-      "sha256": "c9b9f800533d62c9d3474b0c8c8237b1dc1134596575e4219788e9ca1ba6f7b7",
+      "sha256": "37a3b5dd42bd33b3e991c0f7d4013e6a607b609365af4343b7e75e77e02ee3d8",
       "executable": false
     },
     "src/crank/agent-door/tool-metadata.ts": {
