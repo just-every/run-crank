@@ -74,6 +74,10 @@ replacement for your business apps.
 
 ## Connect a source or agent
 
+Company agents use the shared `/mcp` door under signed policy; its current
+[CORE surface and limits](docs/AGENT-DOOR.md) cover inert drafts and redacted
+metadata. The following credentials keep their native source/preparation purposes.
+
 In **Access**, create a flow-scoped **Trigger** credential for your sending app,
 or an **Agent** credential for preparation. Save the one-time value in a regular,
 mode-0600 file outside source control. Agents cannot activate flows, approve,

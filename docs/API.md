@@ -391,7 +391,7 @@ and separate execution bearer credentials. It creates, saves, reads, validates
 and publishes drafts, reads run pages and starts/inspects granted tasks. It
 never retries a write automatically. Publish still requires a native owner and
 the existing reviewed USD estimate; execution still requires an owner-issued
-grant. The SDK and MCP add no external recipient or execution class: the same
+grant. The SDK preserves the native API authority: the same
 published destinations, input/file limits, audit, sealing, erasure, recovery
 and inactive archive rules apply.
 
@@ -416,8 +416,9 @@ must still authorize the request. `task_id` is a source label, not a unique key.
 Changed reuse returns 409. Task receipts follow the same hash/ID-only local custody
 and operator erasure policy; history erasure leaves a receipt that refuses reuse
 with 409, so a retry cannot resurrect effects. Archives omit task receipts and grants.
-The SDK accepts `startTask(input, {idempotencyKey, signal})`; MCP `start_task`
-accepts `idempotency_key`. Clients never retry automatically.
+The SDK accepts `startTask(input, {idempotencyKey, signal})`. Task execution
+credentials retain this native API purpose and are refused by the CORE agent door.
+Clients never retry automatically.
 
 Publish and rollback use separate operation namespaces and the same credential,
 workflow, key and canonical-body rules. They atomically retain the receipt with
@@ -429,9 +430,9 @@ Current publish authority and workflow scope still apply to every retry. Publica
 receipts share the draft receipt's local hash/ID-only custody and operator erasure;
 restoring an archive still requires the native owner's adoption review. The SDK
 accepts `publishDraft(id, input, {idempotencyKey, signal})` and
-`rollbackWorkflow(id, versionNumber, {idempotencyKey, signal})`. MCP
-`publish_workflow` accepts `idempotency_key`. Other writes keep their existing
-semantics; neither client retries automatically.
+`rollbackWorkflow(id, versionNumber, {idempotencyKey, signal})`. The CORE agent
+door does not expose publication or rollback. Other writes keep their existing
+semantics; clients do not retry automatically.
 
 Duplication (`POST /workflows/:id/duplicate`, body `{}`) supports the same optional
 key under a separate operation and the source workflow as target. The first
@@ -446,38 +447,47 @@ Without a key, each request continues to create a fresh draft. Receipt custody,
 operator erasure and archive exclusion follow the rules above. Restored data
 has no local receipts, and duplication there prepares a fresh inactive draft.
 Use SDK `duplicateWorkflow(sourceId, {idempotencyKey, signal})` or MCP
-`duplicate_workflow({workflow_id, idempotency_key})`. No client retries automatically.
+`crank.workflows.duplicate({workflow_id, idempotency_key})`. No client retries automatically.
 
 ### MCP client connection
 
-Connect a Streamable HTTP MCP client to `/api/crank/v1/mcp`, using the same
-native or bearer credential as the JSON API. The stateless server implements
-protocol `2025-06-18` with JSON responses: `initialize`, `ping`, `tools/list`
-and `tools/call`; initialized/cancelled notifications return 202. Send
-`Accept: application/json, text/event-stream`, JSON-RPC 2.0 and, after
-initialization, `MCP-Protocol-Version: 2025-06-18`. GET returns 405; the server
-does not provide an SSE notification stream or retain MCP sessions. Origin
-checks and authentication apply to every request. The transport follows the
-[MCP Streamable HTTP specification](https://modelcontextprotocol.io/specification/2025-06-18/basic/transports).
+Connect to canonical `/mcp` or its `/api/crank/v1/mcp` alias. Both are served
+by the copied Base agent door and the same native registry. Supported MCP eras
+are `2026-07-28` and `2025-11-25`; initialize and send the matching
+`MCP-Protocol-Version`, JSON-RPC 2.0 and
+`Accept: application/json, text/event-stream`. Business tokens use the canonical
+`/mcp` audience and bind their signed subject to a current native person through
+signed Business settings. Native cookies are for person controls. Existing
+non-flow-bound preparation bearer credentials retain their narrow scopes.
+Trigger, execution-grant, SDK and connector credentials keep their native purposes.
 
-Tools are `create_draft`, `update_draft`, `validate_draft`, `publish_workflow`,
-`duplicate_workflow`, `get_workflow`, `list_workflows`, `list_runs`, `get_run`, `list_connections`,
-`start_task` and `get_task`. Discover their argument schemas with `tools/list`.
-Create/update/publish/start-task take `input` and optional `idempotency_key`; workflow tools take
-`workflow_id`, run/task reads take `run_id`. `start_task` takes `input` containing
-`task_id` and `actions`. `list_runs` returns the normal `{runs,next}` page;
-pass `next` as `before` on the next call. Tool responses include text JSON and
-`structuredContent:{status,value}`; native refusal sets `isError:true`.
-Protocol/argument errors use JSON-RPC errors. Draft tools cannot execute work,
-preparation credentials cannot publish or start tasks, and an execution
-credential can only start/read its own tasks. Above-limit proposals wait for
-normal exact human review, and unknown tools/transport changes are refused.
-MCP tool metadata is descriptive; the native API enforces every permission.
+The declared CORE families are tools, policy, pause, audit and idempotency.
+Resources, prompts, events and subscriptions are undeclared: their lists and
+discovery do not offer them, and calls return `capability_not_declared` with the
+family name. Unknown tool calls have typed `tool_not_found` errors. This is a
+PARTIAL adoption of the full specialist surface.
 
-Outgoing signed completion subscriptions, webhook retry history and secret
-rotation are not shipped. PLATFORM-001 remains partial, including the Base
-egress door requirement for owner-entered destinations. This MCP server does
-not claim the connected-app MCP capabilities of PLATFORM-002.
+[Agent door documentation](AGENT-DOOR.md) lists the twelve exact `crank.*` tools,
+scopes, native projections and limits. Discover argument and output schemas
+with `tools/list` after company policy is answered. Tools prepare inert workflow
+drafts or read redacted native metadata; they do not publish, execute providers
+or expose full graphs, run payloads, hook URLs or credentials. `crank.custom.propose`
+accepts a supplied OpenAPI document and returns an uninstalled proposal.
+
+Every mutation requires `idempotency_key`; edits and duplication support native
+revision preconditions. Replies carry structured output plus decision metadata;
+refusals use `_meta["com.runeditrun/error"]`. Caller confirmations and imported
+instructions cannot lower the server-computed class. Unset, expired, blocked
+or paused policy makes no effect. A policy approval is a handoff to a named
+person at the supplied URL, never the agent's own confirmation.
+
+The signed receiver is `/api/rer/agent-policy`; native people use `/agents`
+and its approval/audit controls. The existing publication-bound connector MCP
+under `/api/crank/v1/mcp/:client` retains its separate grant lifecycle. Its
+migration into the shared door remains an explicit one-surface gap. Outgoing
+completion subscriptions and the broader provider execution journey are not
+claimed by this CORE declaration. PLATFORM-001 and the Base agent clauses remain
+partial; spend caps and omitted lifecycle families are not proved.
 
 ### Scoped workflow teams (TEAM-001 partial slice)
 
@@ -590,7 +600,7 @@ it does not claim an enforcing Base egress service or hosted deployment qualific
 
 The native owner installs and consents to custom versions. Preparation agents can
 call `POST /api/crank/custom-connectors/propose` with `{openapi: <OpenAPI 3 object>}`
-or `{definition: <typed declaration>}`; MCP's `propose_connector` takes `openapi`.
+or `{definition: <typed declaration>}`; the CORE tool `crank.custom.propose` takes `openapi`.
 The result is inert `{definition,digest,requires_owner_review:true}`. It fetches
 nothing and creates no credential or production authority. Unsupported schemas,
 security alternatives and remote/recursive references fail visibly. The owner

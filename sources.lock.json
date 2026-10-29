@@ -200,7 +200,7 @@
       "executable": false
     },
     "docs/API.md": {
-      "sha256": "10d5712f492c3ff95aad18af2a7bbe8f0a0a84c6fa9c903cbaeb60d02fa49919",
+      "sha256": "79864b145bcbef8801d03a0bf36a4ec344c013a24840e705046a43c3bfc516a0",
       "executable": false
     },
     "docs/APP-TRIGGERS.md": {
@@ -2012,7 +2012,7 @@
       "executable": false
     },
     "README.md": {
-      "sha256": "583fec6b69027570f8ffa027e2698c170750e9bf3a0c8f00e786ca7b04fb8a00",
+      "sha256": "17ee4f7ea9911d082d8596caaf6a5e68878712d13dbbd5a7df997d336db3a9f6",
       "executable": false
     },
     "RELEASE.json": {
