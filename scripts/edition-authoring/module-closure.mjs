@@ -1,16 +1,21 @@
 // All recorded code uses the same source graph and seed ownership boundary.
 import fs from 'node:fs';
 import path from 'node:path';
-import {raw, safe, requirePhysical, testSource, freedEntries} from './files.mjs';
+import {raw, safe, requirePhysical, testSource, freedEntries, toolFile} from './files.mjs';
 import {dependencies, resolve, external, bindings, lexicalExports} from './runtime-dependencies.mjs';
+import {relocateDependencies} from './module-edges.mjs';
+import {sharedNamespaces} from './copy-namespaces.mjs';
+import {acknowledgementCommand} from './base-acknowledgements.mjs';
 const code = name => /\.(?:[cm]?[jt]s|[jt]sx)$/.test(name) && !testSource(name);
 const inside = (name, prefix) => prefix === '.' ? !name.startsWith('../') && !path.posix.isAbsolute(name) : name === prefix || name.startsWith(prefix + '/');
 const mapped = (source, copy) => copy.path + source.slice(copy.originPath.length);
 const quote = value => "'" + value.replaceAll("'", "'\\''") + "'";
 
-export function completeModuleCopies(root, plans, {tree, read, revision, base, deliveries = [], ownerSources = new Map()}) {
+export function completeModuleCopies(root, plans, {tree, read, revision, base, baseArchive, recordPath, deliveries = [], ownerSources = new Map(), relocations = new Map()}) {
   const index = new Set(raw(root, 'ls-files', '-z').toString('utf8').split('\0').filter(Boolean));
   const required = new Set();
+  const mappings = plans.filter(plan => !plan.retired).map(({copy}) => ({copy, ...namespace(copy)})).filter(mapping => mapping.from);
+  const shared = sharedNamespaces(mappings);
   const cache = new Map(), planned = new Map(), recorded = new Map(), queue = [], withheld = [];
   const disk = {has: name => {
     try { return fs.lstatSync(path.join(root, name)).isFile(); }
@@ -37,14 +42,29 @@ export function completeModuleCopies(root, plans, {tree, read, revision, base, d
     for (const target of Object.keys(plan.copy.adapted ?? {})) enqueue(plan, plan.copy.originPath + target.slice(plan.copy.path.length), null, true);
   }
   const directoryAdditions = new Set([...planned].filter(([target, {plan}]) => !Object.hasOwn(plan.copy.files, target) && !tree.has(plan.copy.originPath)).map(([target]) => target));
+  function namespace(copy) {
+    const file = Object.hasOwn(copy.files, copy.path) || tree.has(copy.originPath);
+    if (file && path.posix.basename(copy.path) !== path.posix.basename(copy.originPath)) return {};
+    return {directory: !file, to: file ? path.posix.dirname(copy.path) : copy.path,
+      from: file ? path.posix.dirname(copy.originPath) : copy.originPath};
+  }
   function witness(target, source) {
-    return plans.some(({copy}) => {
-      const file = Object.hasOwn(copy.files, copy.path) || tree.has(copy.originPath);
-      if (file && path.posix.basename(copy.path) !== path.posix.basename(copy.originPath)) return false;
-      const to = file ? path.posix.dirname(copy.path) : copy.path;
-      const from = file ? path.posix.dirname(copy.originPath) : copy.originPath;
-      return inside(target, to) && path.posix.join(from, path.posix.relative(to, target)) === source;
-    });
+    if (plans.some(({copy}) => {
+      const {to, from} = namespace(copy);
+      return from && inside(target, to) && path.posix.join(from, path.posix.relative(to, target)) === source;
+    })) return true;
+    return recordedDestination(source).includes(target);
+  }
+  function recordedDestination(source) {
+    // Prefer the explicitly selected subtree over a broader, sparse runtime
+    // copy. Never choose between equally specific namespaces for the seed.
+    let candidates = [...mappings, ...shared].filter(({from}) => inside(source, from));
+    const specificity = Math.max(...candidates.map(({from}) => from.length));
+    candidates = candidates.filter(({from}) => from.length === specificity);
+    const destination = ({from, to}) => path.posix.join(to, path.posix.relative(from, source));
+    const members = candidates.filter(mapping => mapping.copy && Object.hasOwn(mapping.copy.files, destination(mapping)));
+    if (members.length) candidates = members;
+    return [...new Set(candidates.map(destination))];
   }
   function include(source, target) {
     required.add(target);
@@ -115,7 +135,24 @@ export function completeModuleCopies(root, plans, {tree, read, revision, base, d
       const source = planned.get(destination)?.source ?? (owner && owner.copy.originPath + destination.slice(owner.copy.path.length)) ?? dependency;
       return {...request, dependency: source, destination, satisfied: true};
     }
-    return {...request, manifests, dependency, destination: dependency && path.posix.join(path.posix.dirname(target), path.posix.relative(path.posix.dirname(source), dependency))};
+    const expected = dependency && path.posix.join(path.posix.dirname(target), path.posix.relative(path.posix.dirname(source), dependency));
+    // Relocate only new deliveries. Existing files and acknowledged adaptations
+    // retain their current imports and ownership, including old missing edges.
+    if (specifier.startsWith('.') && dependency && !recorded.has(target) && !witness(expected, dependency)) {
+      const destinations = recordedDestination(dependency);
+      if (destinations.length > 1) return {...request, manifests, dependency, destination: expected,
+        reason: `ambiguous Base copy mappings for ${dependency}: ${destinations.join(', ')}`};
+      if (destinations.length === 1) {
+        const destination = destinations[0];
+        // Preserve extensionless TS and emitted-JS spellings by moving the
+        // original request path by the same displacement as its resolved file.
+        const requested = path.posix.join(path.posix.dirname(source), request.kind === 'require' ? specifier : decodeURIComponent(specifier));
+        let relocation = path.posix.relative(path.posix.dirname(target), path.posix.join(path.posix.dirname(destination), path.posix.relative(path.posix.dirname(dependency), requested)));
+        if (!relocation.startsWith('.')) relocation = './' + relocation;
+        return {...request, manifests, dependency, destination, relocation};
+      }
+    }
+    return {...request, manifests, dependency, destination: expected};
   }
   const key = (target, request) => JSON.stringify([target, request.kind, request.types, request.specifier]);
   const bootstrap = source => /^(?:edition-authoring|(?:default-seed|export)\/scripts\/base-cli\/edition-authoring)\//.test(source);
@@ -177,6 +214,14 @@ export function completeModuleCopies(root, plans, {tree, read, revision, base, d
     const imports = bindings(bytes), oldBindings = bindings(before);
     const typeImports = bindings(bytes, true), oldTypes = bindings(before, true);
     const edges = requests(bytes, source, target).map(request => edge(source, target, request));
+    // lock.mjs reads the whole tool dynamically to identify it. Deliver that
+    // same file set, including parser notices and modules outside its imports.
+    if (/^(?:edition-authoring|(?:default-seed|export)\/scripts\/base-cli\/edition-authoring)\/lock\.mjs$/.test(source)) {
+      const from = source.slice(0, -'lock.mjs'.length), to = target.slice(0, -'lock.mjs'.length);
+      for (const dependency of tree.keys()) if (dependency.startsWith(from) && toolFile(dependency.slice(from.length))) {
+        edges.push({dependency, destination: to + dependency.slice(from.length)});
+      }
+    }
     for (const {manifests = []} of [...edges]) for (const dependency of manifests) {
       edges.push({dependency, destination: path.posix.join(path.posix.dirname(target), path.posix.relative(path.posix.dirname(source), dependency))});
     }
@@ -192,7 +237,7 @@ export function completeModuleCopies(root, plans, {tree, read, revision, base, d
       if (!dependency) refuse(target, edge.reason ?? `no Base source for ${specifier}`, `\${EDITOR:-vi} ${quote(target)}`);
       if (!witness(destination, dependency)) {
         if (novel) { hold = {path: target, originPath: source, dependency}; break; }
-        refuse(target, `no copy mapping witnesses ${destination} from ${dependency}`, '${EDITOR:-vi} base-copies.json');
+        refuse(target, edge.reason ?? `no copy mapping witnesses ${destination} from ${dependency}`, '${EDITOR:-vi} base-copies.json');
       }
     }
     if (hold) {
@@ -208,11 +253,21 @@ export function completeModuleCopies(root, plans, {tree, read, revision, base, d
         for (const [types, current, previous] of [[false, imports, oldBindings], [true, typeImports, oldTypes]]) {
           const exported = exportsAt(destination, types);
           for (const name of current.get(specifier) ?? []) if (exported && !exported.has(name) && !previous.get(specifier)?.has(name)) {
-            refuse(target, `${destination} does not export ${name}; merge Base ${dependency} at ${revision} into that seed-owned file`, `git -C ${quote(base)} show ${quote(revision + ':' + dependency)} > ${quote(destination + '.base')}`);
+            const comparison = destination + '.base';
+            const extract = baseArchive ? `cp ${quote(path.join(baseArchive, dependency))} ${quote(comparison)}` :
+              `git -C ${quote(base)} show ${quote(revision + ':' + dependency)} > ${quote(comparison)}`;
+            throw Error([
+              `Cannot refresh module ${target}: ${destination} does not export ${name} required by Base ${dependency} at ${revision}. No files were refreshed.`,
+              'Save the incoming dependency for comparison:', extract,
+              `Merge the required exports from ${quote(comparison)} into ${quote(destination)}, preserving seed edits.`,
+              ...(owner?.copy.adapted?.[destination] ? ['Review the reconciled bytes and mode, then acknowledge this adaptation:', acknowledgementCommand(root, destination, recordPath)] : []),
+              `Remove ${quote(comparison)} after reconciliation, then repeat refresh-base.`,
+            ].join('\n'));
           }
         }
       }
     }
+    if (!adapted && edges.some(edge => edge.relocation)) relocations.set(target, Buffer.from(relocateDependencies(bytes, edges)));
   }
   return withheld;
 }

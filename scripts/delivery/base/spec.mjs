@@ -4,7 +4,7 @@ import {createHash} from 'node:crypto';
 import {array, object, keys, string, strings, bindingPattern, wranglerBindings, validateEmailSending, validateDurableMigrations} from './bindings.mjs';
 import {sourcePath, decodeUtf8, collectMigrations} from './migrations.mjs';
 import {validateDeclarations} from './declarations.mjs';
-import {validateMailSpec} from './mail.mjs';
+import {validateMailSpec, validateMailSenders} from './mail.mjs';
 import {validateNativeExport} from './native-export.mjs';
 import {seedSignIn} from './sign-in.mjs';
 const reserved = new Set(['ASSETS','RER_RELEASE_DIGEST','RER_PREVIEW_TOKEN','RER_VERSION_METADATA','RER_INSTALLATION_ID','RER_MANAGEMENT_ORIGIN']);
@@ -141,6 +141,14 @@ export async function deploymentSpec(root, options = {}) {
     if (!publicVariableNames.includes(name)) throw Error(`Undeclared public build variable: ${name}`);
     if (typeof value !== 'string') throw Error(`Public variable must be a string: ${name}`);
     Object.defineProperty(publicVariables, name, {value, enumerable:true, writable:true, configurable:true});
+  }
+  const deployPath = await sourcePath(root, 'deploy.json', {optional:true});
+  if (deployPath) {
+    const declaration = JSON.parse(decodeUtf8(await readFile(deployPath), 'deploy declaration'));
+    validateMailSenders([
+      {source:'deploy.json vars.MAIL_FROM', value:declaration.vars?.MAIL_FROM},
+      {source:`${wranglerFile} vars.MAIL_FROM`, value:publicVariables.MAIL_FROM},
+    ]);
   }
   const triggers = config.triggers === undefined ? {} : keys(config.triggers, ['crons'], 'triggers');
   const spec = {schema:1,resources:bindings.resources,migrations,compatibilityDate:config.compatibility_date,compatibilityFlags:config.compatibility_flags === undefined ? [] : config.compatibility_flags,durableObjects:bindings.durableObjects,durableObjectMigrations:bindings.durableObjectMigrations,publicVariables,secretNames:[...secretNames],optionalSecretNames:[...optionalSecretNames],schedules:triggers.crons === undefined ? [] : triggers.crons,queueConsumers:bindings.queueConsumers,healthPath,recovery,...(bindings.emailSending ? {emailSending:bindings.emailSending} : {})};
