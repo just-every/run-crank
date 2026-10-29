@@ -20,6 +20,31 @@ export async function negativePhase(c) {
   const answer = await c.mcp('tools/list', {}, { token: await accessToken(c, overrides) });
   c.add(`BASE-AGENT-004.${name === 'audience' ? '2' : '3'}.${name}`, answer.status === 401, `${name} token returned HTTP ${answer.status}, expected 401.`);
  }
+ const sponsorProbes = [
+  ['unknown', { sub: crypto.randomUUID() }],
+  ['changed-email', { email: `changed-${crypto.randomUUID()}@example.invalid` }],
+  ...Object.entries(c.fixtureSponsors),
+ ];
+ const undeclared = ['inactive', 'excluded'].filter(kind => !Object.hasOwn(c.fixtureSponsors, kind));
+ if (undeclared.length) console.error(`Agent sponsor probes: undeclared=${undeclared.join(',')}; no points run for these states.`);
+ for (const [kind, sponsor] of sponsorProbes) {
+  // Give each probe an unused agent, so a prior agent/sponsor binding cannot
+  // mask missing sponsor admission. Only sponsor claims override its valid
+  // token. Signing authority stays in the verifier.
+  let ok = false, status;
+  try {
+   const native = await c.witness();
+   const token = await accessToken({ ...c, agentId: `rer-sponsor-probe-${crypto.randomUUID()}` }, sponsor);
+   const answer = await c.mcp('tools/list', {}, { token });
+   const after = await c.witness(), code = errorCode(answer);
+   status = answer.status;
+   ok = [401, 403].includes(status)
+    && (answer.message?.error?.code === -32001 || typeof code === 'string' && code.length > 0)
+    && answer.result === undefined && isDeepStrictEqual(native, after);
+  } catch { /* Native and fixture diagnostics may contain private identities. */ }
+  c.add(`BASE-AGENT-004.sponsor.${kind}`, ok,
+   `Sponsor ${kind} must return HTTP 401 or 403 with a typed error and leave native state unchanged${status === undefined ? '' : ` (HTTP ${status})`}.`);
+ }
  const write = c.surface.journey.find(step => !c.surface.tools.find(tool => tool.name === step.tool)?.readOnly);
  if (write) {
   const answer = await c.tool(write.tool, c.args(write, new Map(), { unresolved: true }), { token: await accessToken(c, { scope: 'events:read' }) });

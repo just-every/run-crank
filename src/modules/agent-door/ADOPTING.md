@@ -4,6 +4,8 @@ The edition owns its tools, native adapters, migrations and release evidence. Th
 module provides the shared transport, credentials, policy and review machinery.
 Keep the edition's existing interface and authorization decisions authoritative.
 
+A review-disposition call that completes must retain its linked review; a native refusal must audit `refused` with the returned code, open no review, and preserve any bracketing native witness.
+
 ## Copy committed runtime source
 
 Choose an immutable full Base commit containing the module. A released or
@@ -210,7 +212,7 @@ edition with a different domain. Use `door.invoke` for embedded agents and
 
 Expose resources through explicit readers and treat imported or external
 content as untrusted. Every resource declares non-empty catalogue `classes`
-and `classify(record,ctx)`, based on the record itself. Resource readers and classifiers receive `{person, agent, clientId, scopes, db}`.
+and `classify(record,ctx)`, based on the record itself. Resource adapters receive consent and operation identity (`consent`, `operationId`, `idempotencyKey`, and optional `continuationItemId`) alongside `{person, agent, clientId, scopes, db}`; a resource that changes between check and read refuses `resource_changed`.
 Use this authenticated authority for service and client fences, including events
 and subscriptions; a sponsor's administrator role never bypasses a registered
 resource's reader. `ToolContext` carries the same scopes and client id.
@@ -299,6 +301,12 @@ claiming, replaying or executing it. It resolves the item again before the nativ
 effect, including delayed approval execution. The resolver must use persisted
 native identity, never a caller-selected replay suffix. Such tools require the
 trusted worker's saved `operationId`; an ordinary MCP call cannot execute them.
+
+After current scope and revocation checks, an unset, removed or unavailable policy
+or Business Pause refuses before continuation input validation or native item
+resolution, including calls without an operation. Refusal-path target and
+classification remain best-effort as for other tools; a native `ToolRefusal` is
+recorded as `classification_refusal` without replacing the policy refusal.
 
 Each native item has its own once-only claim under the original operation, tool
 and public key, so replay returns that item's recorded result rather than the
@@ -601,6 +609,34 @@ Hooks cannot skip mandatory steps or alter the runner's arguments and outputs.
 Failed hooks fail the current phase with the same redacted diagnostic. A step
 that fails or yields no structured output does not receive `afterStep`.
 
+## Disposable history context
+
+Phase preparation and native `beforeStep`/`afterStep` hooks receive the
+same `database(binding)` state reader as the owner initializer, plus `now`
+(the current verifier time in Unix milliseconds). For example:
+
+```js
+export default async function ({ database, now }) {
+ const db = await database('DB');
+ const prior = await db.prepare('SELECT id FROM native_records WHERE created_at < ?')
+  .bind(now - 86_400_000).first();
+ return { values: { prior } };
+}
+```
+
+This context exists only in disposable conformance tooling; `rer dev` and
+`rer demo` do not receive it. Preparation runs afresh for each policy phase.
+Database refusals fail that phase with
+`agent_fixtures_database_unavailable`, without logging values, records or SQL.
+The reader remains SELECT-only, including for every `agent_door_*` table.
+
+Backdated writes are pending: `cli/hosted-output.mjs` currently rejects all
+non-SELECT statements. Enabling native history requires a separate, explicit
+conformance-only write capability at that boundary, with protection against
+direct and trigger-mediated writes to agent-door tables. Native HTTP calls must
+retain their genuine protocol receipts. A history hook must not change the
+runtime clock.
+
 ## Native clients and fresh phase fixtures
 
 Declare `verification.fixtures: {"module":"tests/agent-phase-fixtures.mjs"}`
@@ -612,12 +648,43 @@ session to issue clients, then their real credentials to create native records
 and retained operation receipts. No signer, writable database or production
 fixture route is supplied.
 
-Return `{values, clients}`. `values` is an object of named phase-local JSON
+Return `{values, clients, sponsors}` (each member is optional). `values` is an object of named phase-local JSON
 values. `clients` maps names to `{token, clientId, agent:{id,name,specialist}}`
 returned by the native credential lifecycle. The specialist must match the
 surface. Credentials and identities must belong to the signed-in owner and
 retain their actual native scope checks. Generate secret-shaped values at
 runtime and never log them.
+
+During `negative`, optionally return
+`sponsors: {inactive: {sub, email}, excluded: {sub, email}}`. Either kind may be
+omitted. These are Business subjects and their native email addresses, prepared
+through the seed's own person lifecycle: suspend the inactive person, and keep
+the excluded person outside the seed's allow-list. Return only those two identity
+fields; no token, signing key or token minter is passed to the fixture. Sponsor
+handles are replaced on every preparation, just like values and clients.
+
+If the Business subject must be registered before preparation, add that person
+to `verification.sponsors` with `negativeOnly: true` and its normal native
+initializer. The initializer receives the verifier-assigned `sub` and can retain
+`{sub,email}` for the phase fixture. These additional persons complete the same
+native bootstrap and Business binding, but do not run the successful
+cross-sponsor journey after suspension or exclusion. The first owner cannot be
+negative-only. Regular sponsors keep their cross-sponsor checks.
+
+The verifier itself signs otherwise valid access tokens for each declared
+person, using an unused agent identity for each probe so an earlier sponsor
+binding cannot supply the refusal. It also always probes an unknown subject and the current subject with
+a changed email. `BASE-AGENT-004.sponsor.unknown`, `.changed-email`, `.inactive`
+and `.excluded` require HTTP 401 or 403 with a typed door error and an unchanged
+native witness before and after each call. Undeclared optional states are
+reported as undeclared and run no point; they never count as a pass. Diagnostics
+name only the state and HTTP status, never fixture values, subjects or emails.
+
+Resolving a Business subject to a native person is only part of admission. The
+token's email must also match that person's current native email. A valid
+signature and a known subject do not establish that match. An implementation
+that accepts the changed-email probe fails this requirement even when its
+unknown, inactive and excluded sponsor checks pass.
 
 A journey step can select `client:"local"`; its MCP calls, proof challenges,
 approval retries, replay, resource reads and post-write event snapshots then use
@@ -687,20 +754,66 @@ TypeScript without excluding any copied files.
 ## Current admission on replay
 
 Idempotency keys retain outcomes, not authority. Every retry rechecks the current
-credential, sponsor, agent and consent revocation, scope, pause, native
-classification and policy before returning saved content. A refusal has its own
+credential, sponsor, agent and consent revocation, scope, pause and policy before
+returning saved content. Read-only retries re-run native target, classification
+and visibility checks. A completed mutation instead uses its retained native
+target and effect facts: deletion, a consumed schedule/draft, changed risk or a
+restore/grant/role that is now a no-op must not rerun preparation callbacks. A refusal has its own
 audit row and never includes the saved result. A new approval or review
 requirement returns `approval_required` or `review_required`; an old approval
-cannot authorize a newer policy revision. Accepted replay does not execute or
-count the native effect again. Record revision preconditions guard first
+cannot authorize a newer policy revision. Accepted mutation replay does not
+execute or count the native effect again. Record revision preconditions guard first
 execution; they do not reject a successful replay merely because that execution
-advanced the record revision.
+advanced the record revision. Changing `expected_revision` changes the request
+and still returns `idempotency_conflict`. Pending, rejected and refused outcomes
+never become completed receipts, and approval execution still rechecks the native
+revision, exact summary and classification before making its one effect.
+
+Known limitation (A1, deferred): an approved native DELETE retried with its
+original key can return `not_found` when its classifier reads the deleted target.
+The classifier must still enforce current native authority; authority-preserving
+replay for deleted targets follows.
+
+The response decision and replay audit describe current policy admission against
+the recorded effect facts. For approved calls, `_meta["com.runeditrun/receipt"].decision` retains the original
+decision, including classes/facts, revision and approval/review disposition;
+the existing review metadata retains the original review when present. The native output
+retains its consumed version. Conformance checks original class evidence against
+that receipt separately from current admission; refresh runtime and conformance
+together. Receipt access still requires current scopes (including `currentScopes`
+for native grants) and any required native proof. Do not put mutations into a
+scope or proof resolver.
+
+Completed read-only approval replays, including aggregate tools, execute the
+native read again with the caller's current identity and grants. Target and
+classification checks alone cannot establish aggregate row visibility. The
+response carries only the current native payload, or the native refusal without
+saved content; unchanged visible data returns the same result and approval
+receipt. The original approval outcome remains recorded, and pending approvals
+remain pending. Keep native read implementations free of mutations: once-only
+effect replay applies to mutating tools, while read visibility is always current.
 
 For an explicit current-authority proof, declare
 `verification.replayAdmission: {prepare:['create']}`. Preparation names existing
 journey steps and must end with an idempotent write. Its public-door phase
 proves identical once-only replay, pause and changed-policy refusal, a newly
 required approval, current scope and the refused replay's complete audit.
+
+## Initialize each conformance agent
+
+Declare `verification.agent: {"initializer":"tests/initialize-agent.mjs"}` when
+native verification or a grant must bind to the conformance agent ID. The
+contained module default-exports an async function receiving
+`{agentId, request, origin, email, sub, mail, fixtures}`. After owner admission
+and fixture setup, it runs exactly once for each chosen agent ID, before that
+agent's first phase or MCP request, including each additional sponsor's agent.
+`request(absoluteURL, init)` is restricted to the disposable origin and carries
+that sponsor's native person session and Origin; use existing person doors to
+create the binding. Native writes retain person attribution. No signing key,
+token minter or setup token is supplied. Invalid declarations fail with
+`agent_initializer_invalid` before installation; an initializer failure stops
+the run with `BASE-AGENT-001.agent-initializer` and a fixed private-data-free
+diagnostic. Without this declaration the existing flow and audit checks apply.
 
 ## Verify multiple sponsors
 
@@ -918,6 +1031,20 @@ disables the runtime's self-widening refusal. Checked `widens: false` tools stil
 need their narrowing schema and grant-subset witness; this flag cannot waive
 those checks. Owner-to-admin is a native demotion, never a widening operation.
 
+## Runtime audit rows beyond harness calls
+
+Conformance records approval executions that return either `executed` or
+`refused`, checking their own audit link, approval id, outcome and code. An
+honestly refused execution does not satisfy its journey's completion or receipt
+checks. Native continuations are checked separately from ordered harness calls:
+an `embedded` row must carry a nonempty `continuation_item_id` and the
+`operation_id` of an earlier harness row with the same agent, sponsor, consent
+and client. It must retain a recorded policy decision, matching rules, a `done`
+or coded `refused` outcome, and zero `differs_from_policy`. Other extra rows
+still fail the audit count; a continuation marker alone cannot hide one.
+Harness rows match their recorded decision identities in native order, so an
+unexpected row remains a distinct failure without shifting later comparisons.
+
 ## Contract clauses
 
 [`CLAUSES.md`](CLAUSES.md) is the single canonical source for
@@ -1024,13 +1151,13 @@ journey hook runs after the standard phases; it cannot prepare a mandatory step
 that has already run. Keep native receipt ownership and service-grant checks.
 
 An idempotent native creation can consume its own preparation precondition
-(for example, an unused schedule identity or revision zero). Native target and
-classification callbacks currently run again before returning a saved outcome.
-If those callbacks reject already-completed work, the adapter must distinguish
-current replay authorization from fresh-effect preparation. Returning a cached
-result before native authorization or current policy would remove required
-admission checks. This needs a native replay-admission contract; the shared
-runtime does not infer one from a revision refusal.
+(for example, an unused schedule identity or revision zero). Completed mutation
+retries use the retained effect facts for current policy and the original native
+target for audit. Fresh and pending calls still execute target, classification,
+authority and revision checks. Use `currentScopes` for current native grants and
+native proof for a required recent human authentication: these admission checks
+run on completed retries as well. A retained receipt never executes the mutation
+again. See [current admission on replay](#current-admission-on-replay).
 
 ## Declare a door subset
 

@@ -1,6 +1,6 @@
 import { offers } from './capabilities.mjs'
 import type { CallResult, DecisionMeta, Principal, Runtime, ToolContext } from './types.ts'
-import { audit, newAudit, recordDecision, outcomeRow, recoverAudit, usage, usageToday, type Evidence } from './audit.ts'
+import { audit, newAudit, recordDecision, outcomeRow, recoverAudit, usage, usageToday, type Evidence, type AuditRow } from './audit.ts'
 import { policyRefusal, policyState, setupUrl } from './policy-store.ts'
 import { classify, context, digest, runTool, saveCall, selfEscalation, summary, revoked } from './execution.ts'
 import { decide } from './policy/decide.ts'
@@ -53,15 +53,10 @@ export async function callTool(rt: Runtime, name: string, input: unknown, princi
     const agent = await rt.options.db.prepare('SELECT revoked,sponsor FROM agent_door_agents WHERE id=?').bind(principal.agent.id).first<{ revoked: number; sponsor: string }>()
     if (revoked(state, principal) || agent?.revoked || agent && agent.sponsor !== principal.person.id) { status = 401; return refuse('unauthenticated') }
     const { idempotency_key: _key, expected_revision: expected, ...args } = declared
-    if (tool.continuationItem && (!raw || !validateSchema(tool.inputSchema, declared))) return refuse('invalid_arguments')
-    const item = await continuationItem(tool, args, context(rt, principal, door, [], approvers), operationId)
-    principal = { ...principal, continuationItemId: item }
-    if (item !== undefined) row.continuation_item_id = item
-    claimKey = key === null ? null : operationId === undefined ? key : operationKey(operationId, name, key, item)
-    const ctx = context(rt, principal, door, [], approvers)
     const validInput = raw && validateSchema(tool.inputSchema, declared)
     const refusal = policyRefusal(rt, state, tool.classes)
     if (refusal) {
+      const ctx = context(rt, principal, door, [], approvers)
       const disposition = { agents_paused: 'paused', policy_unset: 'unset', policy_unavailable: 'unavailable' }[refusal.code] ?? 'none'
       let classes: Awaited<ReturnType<typeof classify>> = []
       if (validInput) try {
@@ -75,8 +70,12 @@ export async function callTool(rt: Runtime, name: string, input: unknown, princi
       result.decision = { id: row.id, disposition, revision: state.revision, classes: classes.map(item => ({ ...item, rule: null, do: disposition })) }
       return refuse(refusal.code, refusal.fields)
     }
-    const target = validInput ? await nativeTarget(tool, args, ctx) : null
-    if (name !== 'resources/read') row.resource = target
+    if (tool.continuationItem && (!raw || !validateSchema(tool.inputSchema, declared))) return refuse('invalid_arguments')
+    const item = await continuationItem(tool, args, context(rt, principal, door, [], approvers), operationId)
+    principal = { ...principal, continuationItemId: item }
+    if (item !== undefined) row.continuation_item_id = item
+    claimKey = key === null ? null : operationId === undefined ? key : operationKey(operationId, name, key, item)
+    const ctx = context(rt, principal, door, [], approvers)
     if (!tool.readOnly && !key) return refuse('idempotency_key_required')
     if (tool.widens === false && row.ignored_arguments.length) return refuse('invalid_arguments')
     if (tool.authority === 'none' && row.ignored_arguments.length) return refuse('undeclared_arguments')
@@ -98,17 +97,30 @@ export async function callTool(rt: Runtime, name: string, input: unknown, princi
       }
     }
     if (!raw || !validateSchema(tool.inputSchema, declared)) return refuse('invalid_arguments')
+    const cached = previous?.outcome ? await approvalReplay(rt, JSON.parse(previous.outcome)) : undefined
+    // Completed mutations retain their effect evidence after preparation is
+    // consumed. Native classification must still admit the current sponsor.
+    const completed = !tool.readOnly && cached?.outcome === 'done'
+    let original: AuditRow | undefined
+    if (completed) {
+      const saved = await rt.options.db.prepare('SELECT row FROM agent_door_audit WHERE id=?').bind(previous!.decision_id).first<{ row: string }>()
+      if (!saved) throw new Error('audit_missing')
+      original = JSON.parse(saved.row)
+    }
+    const target = completed ? null : await nativeTarget(tool, args, ctx)
+    if (name !== 'resources/read') row.resource = original?.resource ?? target
     if (!previous && tool.revision && expected !== undefined) {
       const current = await tool.revision(args, ctx)
       if (expected !== current) return refuse('revision_conflict', { current_revision: current })
     }
-    const authority = typeof tool.authority === 'function' ? await tool.authority(args, ctx) : null
+    const authority = !completed && typeof tool.authority === 'function' ? await tool.authority(args, ctx) : null
     if (tool.widens === false && authority?.widens) return refuse('narrowing_contract_violation')
     if (selfEscalation(authority, principal)) {
       result.decision = { id: row.id, disposition: 'self_escalation', revision: state.revision, classes: [] }
       return refuse('self_escalation')
     }
-    const classes = await classify(tool, args, ctx)
+    const currentClasses = await classify(tool, args, ctx, original?.classes)
+    const classes = original?.classes ?? currentClasses
     locked = await acquireDecision(rt, row.id)
     if (!locked) return refuse('decision_busy')
     const sums = await usage(rt, state.document!, principal)
@@ -120,15 +132,30 @@ export async function callTool(rt: Runtime, name: string, input: unknown, princi
     if (decision.result === 'unset') return refuse('policy_unset', { unanswered: decision.unset, setup_url: setupUrl(rt, state) })
     if (decision.result === 'blocked') return refuse('policy_blocked', { class: decision.deciding!.class, rule: decision.deciding!.rule, revision: state.revision })
     principal = await nativeProof(rt, tool, args, principal, proofReference)
-    if (previous?.outcome) {
-      const cached = await approvalReplay(rt, JSON.parse(previous.outcome))
+    if (previous?.outcome && cached) {
       // A newly required review or approval cannot be satisfied by an older receipt.
       if (decision.result === 'approval' && (cached.decision?.disposition !== 'approval' || cached.decision.revision !== state.revision)) return refuse('approval_required')
       if (decision.result === 'review' && cached.decision?.disposition !== 'review') return refuse('review_required')
+      if (cached.outcome === 'done' && cached.receipt) cached.receipt = { ...cached.receipt, decision: cached.decision,
+        ...(cached.review ? { review: cached.review } : {}) }
       await recoverAudit(rt, previous.decision_id, JSON.parse(previous.outcome))
-      result = { ...cached, decision: { ...meta, id: row.id } }
       const original = await rt.options.db.prepare('SELECT row FROM agent_door_audit WHERE id=?').bind(previous.decision_id).first<{ row: string }>()
       row.operation_id = original ? JSON.parse(original.row).operation_id ?? previous.decision_id : previous.decision_id
+      if (tool.readOnly && cached.outcome === 'done') {
+        // Aggregate visibility can live inside the native read rather than its
+        // target/classifier. A retained approval cannot authorize old rows.
+        // Start without cached content so a native refusal cannot expose it.
+        const readApprovers = []
+        for (const id of cached.receipt?.approved_by as string[] ?? []) {
+          const person = await rt.options.people.person(id)
+          if (!person?.active) return refuse('sponsor_unavailable')
+          readApprovers.push({ id: person.id, name: person.name })
+        }
+        await releaseDecision(rt, row.id); locked = false
+        const fresh = await runTool(rt, tool, args, { ...principal, operationId: row.operation_id }, { outcome: 'refused', decision: meta }, door, readApprovers, row.id)
+        if (fresh.result.outcome !== 'done') { result = fresh.result; return { result } }
+        result = { ...cached, ...fresh.result }
+      } else result = { ...cached, decision: { ...meta, id: row.id } }
       row.replay_of = previous.decision_id; row.outcome = 'replayed'
       return { result }
     }

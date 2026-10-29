@@ -1,7 +1,8 @@
 import type { ToolContext } from '../../modules/agent-door/types'
+import { ToolRefusal } from '../../modules/agent-door/index.ts'
 import { runtimeBindings } from '../../auth.server'
 import { admitTeamRequest, teamAccess } from '../team/policy'
-import { requireValue, stmt, type Actor, type CrankEnv, type Role } from '../model'
+import { CrankError, requireValue, stmt, type Actor, type CrankEnv, type Role } from '../model'
 import { LOCAL_AGENT_PREFIX, peopleAdapter } from './people'
 
 interface NativePerson { id: string; display_name: string; role: Role; version: number; status: string }
@@ -42,7 +43,7 @@ async function admittedActor(env: CrankEnv, actor: Actor): Promise<Actor> {
 }
 
 /** Resolve the current native person, without creating or impersonating a session. */
-export async function resolveActor(original: CrankEnv, ctx: ToolContext): Promise<Actor> {
+async function currentActor(original: CrankEnv, ctx: ToolContext): Promise<Actor> {
   const env = runtimeBindings(original) as CrankEnv
   const person = await stmt(env, 'SELECT id,display_name,role,version,status FROM oa_operators WHERE id=?', ctx.person.id).first<NativePerson>()
   requireValue(person?.status === 'active', 'The sponsoring person is no longer active', 403)
@@ -60,6 +61,16 @@ export async function resolveActor(original: CrankEnv, ctx: ToolContext): Promis
   requireValue(member, 'The sponsoring person is no longer bound to the Business', 403)
   return admittedActor(env, { id: person.id, name: person.display_name, role: person.role, kind: 'company', version: person.version,
     local: env.AUTH_LOCAL === 'true', agentDoor: Object.freeze({ ...identity, businessPersonId: member.id }) })
+}
+
+/** Classification may run for refusal audit while policy is unset or paused.
+ * Keep the native fence and report its refusal through the shared door type. */
+export async function resolveActor(original: CrankEnv, ctx: ToolContext): Promise<Actor> {
+  try { return await currentActor(original, ctx) }
+  catch (error) {
+    if (error instanceof CrankError) throw new ToolRefusal(error.status === 403 ? 'native_authority_refused' : 'native_operation_refused')
+    throw error
+  }
 }
 
 /** Every native route rechecks the bound identity and selects its current product grant. */

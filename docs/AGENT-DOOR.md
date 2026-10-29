@@ -2,14 +2,14 @@
 
 Crank exposes a bounded preparation and redacted metadata surface for the
 **Automation operations lead**. This is a **PARTIAL** adoption of Crank's full
-Agent surface. It does not establish full contract coverage or green
-conformance. The declared registry is [agent-surface.json](../agent-surface.json);
+Agent surface. The declared CORE journey passes integrated conformance; full contract
+coverage remains partial. The declared registry is [agent-surface.json](../agent-surface.json);
 the implementation is [src/crank/agent-door](../src/crank/agent-door/index.ts).
 
 The shared runtime source is adopted from Base commit
-`114ef7a61f080da053af783c5fbe06f625d692cc`; the corresponding released CLI is
-`0.2.88`. Runtime availability and a released conformance runner are not evidence
-that this edition has passed its conformance journey.
+`2135c394939f4a737adabdc8003b0e667b31ac5a`; the corresponding released CLI is
+`0.2.91`. The released runner passes 1,021/1,021 hosted CORE points, including the
+seed native journey. This proves only the declared preparation boundary.
 
 ## Routes and capability boundary
 
@@ -190,7 +190,8 @@ prepares a connector proposal. It includes hostile instruction/confirmation
 injections, workflow/run targets and a fixture run read. It does not construct,
 test and publish the full lead-to-invoice service, dispatch paid provider work,
 reconcile a lost external response, repair a live mapping or complete recurring
-overdue-invoice contact. Declaring that journey does not mean it has passed.
+overdue-invoice contact. This bounded journey passes under autonomous and held policy, with the native
+attribution, changed-key conflict, stale revision and local Pause checks.
 
 Full native provider dispatch, publications and active-service controls, grants
 and authority changes, client MCP administration and the other native tools
@@ -209,6 +210,12 @@ gap against SURFACE-001's shared-registry requirement. Aliasing the old generic
 `/api/crank/v1/mcp` path to this door does not close that gap or establish
 native/provider classification parity through every wrapper.
 
-This document records the implemented boundary. Integrated conformance,
-native/browser parity, the complete ct registry and the seeded specialist week
-remain acceptance work; no green conformance status is claimed here.
+This document records the implemented boundary. Integrated CORE conformance passes 1,021/1,021 points on rer 0.2.91. Native
+Agents and pending/executed approval pages have browser proof at 1440 and 390.
+The complete ct registry, native UI parity for its omitted jobs and the seeded
+specialist week remain acceptance work. No optional capability is promoted.
+
+Ordinary health, setup and application requests do not construct Business or
+agent adapters. On door paths, native classification refusals use the shared
+`ToolRefusal` type; policy-unset and Pause preserve their machine codes while
+the native authority fence still prevents reads or effects.

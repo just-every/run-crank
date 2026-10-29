@@ -14,8 +14,8 @@ import { appResponse, productApi } from './crank/ui/handler'
 import { publicHooks } from './crank/triggers/public'
 import { schedulerPass } from './crank/ops/scheduler'
 import { emailHandler } from './crank/triggers/email'
-import { crankAgentDoor } from './crank/agent-door'
-import { businessSettings } from './crank/agent-door/business'
+import { crankAgentResponse } from './crank/agent-door'
+import { businessSettingsResponse } from './crank/agent-door/business'
 
 const api = new Hono<{ Bindings: Bindings }>()
 api.get('/health', (context) => healthResponse(context.env))
@@ -35,9 +35,9 @@ export default withDemo({
     const asset = await staticAssetResponse(request, env)
     if (asset) return asset
     const bindings = runtimeBindings(env)
-    const business = await businessSettings(bindings).handle(request)
+    const business = await businessSettingsResponse(request, bindings)
     if (business) return business
-    const door = await crankAgentDoor(bindings).handle(request)
+    const door = await crankAgentResponse(request, bindings)
     if (door) return rejectedResponse(request, door)
     const auth = await authResponse(request, env)
     if (auth) return auth

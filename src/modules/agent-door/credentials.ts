@@ -87,7 +87,8 @@ export async function authenticate(
         claims.exp <= now || claims.exp <= claims.iat || claims.exp - claims.iat > 900) return null
       if (!nonempty(claims.consent)) return null
       const person = await options.people.sponsor({ sub: claims.sub })
-      if (!person?.active) return null
+      // A token outlives no change of address: its email must still be the subject's current native email.
+      if (!person?.active || person.email.trim().toLowerCase() !== claims.email) return null
       return {
         person,
         agent: { id: claims.act.sub, name: claims.act.name, specialist: claims.act.specialist as string | null | undefined },

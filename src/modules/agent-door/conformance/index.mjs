@@ -19,13 +19,20 @@ import { invocationPhase } from './invocation.mjs';
 export { validateAgentSurface } from './surface.mjs';
 
 /** Run against a fresh, real installation using its HTTP and person doors. */
-export async function runAgentDoorConformance({ fetch, invoke, origin, surface, signer, person, sponsors = [person], webhooks, business = 'rer-agent-conformance', consent = randomUUID(), now, prove, nativeJourney, nativeStep, prepare }) {
+export async function runAgentDoorConformance({ fetch, invoke, origin, surface, signer, person, sponsors = [person], webhooks, business = 'rer-agent-conformance', consent = randomUUID(), now, prove, nativeJourney, nativeStep, prepare, initializeAgent }) {
  const validation = validateAgentSurface(surface), points = [...validation.points];
  if (!validation.ok) return { ok: false, points };
  const capabilities = capabilitySet(surface.capabilities);
  surface = scopedSurface(surface);
  if (typeof fetch !== 'function' || !signer?.privateKey || !signer.issuer || !signer.installationId || !signer.kid || !person?.email || !person.cookie || typeof person.sub !== 'string' || !person.sub.trim() || typeof consent !== 'string' || !consent.trim() || new URL(origin).origin !== origin) throw new TypeError('Conformance requires fetch, canonical origin, signer, consent and signed-in person {email,cookie,sub}');
  const c = createProtocol({ fetch, origin, surface, signer, person, business, consent, now, prove, nativeStep, prepare, points, agentId: `rer-conformance-${randomUUID()}`, seq: 0, revision: 0, listed: new Map() });
+ if (initializeAgent) {
+  try { await initializeAgent({ agentId: c.agentId, person }); }
+  catch {
+   c.add('BASE-AGENT-001.agent-initializer', false, 'Native agent initialization failed; no captured mail, credentials or fixture values are logged.');
+   return { ok: false, points, capabilities };
+  }
+ }
  await c.phase('BASE-AGENT-001.transport', () => discoverDoor(c));
  await c.phase('BASE-AGENT-007.phase0', () => unsetPolicy(c, true));
  await c.phase('BASE-AGENT-007.phase1', () => removalPhase(c));
@@ -43,6 +50,6 @@ export async function runAgentDoorConformance({ fetch, invoke, origin, surface, 
  await c.phase('BASE-AGENT-subset.refusals', () => refusalPhase(c));
  if (capabilities.mode === 'declared' && offers(surface.capabilities, 'subscriptions')) await c.phase('BASE-AGENT-subset.subscriptions', () => subscriptionPhase(c));
  await c.phase('BASE-AGENT-009.phase7', () => auditPhase(c));
- if (sponsors.length > 1) await c.phase('BASE-AGENT-004.cross-sponsor', () => crossSponsorPhase(c, sponsors));
+ if (sponsors.length > 1) await c.phase('BASE-AGENT-004.cross-sponsor', () => crossSponsorPhase(c, sponsors, initializeAgent));
  return { ok: points.every(point => point.ok), points, capabilities };
 }

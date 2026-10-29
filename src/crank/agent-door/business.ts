@@ -9,3 +9,10 @@ export function businessSettings(env: Bindings) {
     team: operatorAuth(env).businessTeam,
   })
 }
+
+/** Leave health, setup and ordinary app routes independent of Business auth. */
+export async function businessSettingsResponse(request: Request, env: Bindings): Promise<Response | null> {
+  const path = new URL(request.url).pathname
+  if (!['/api/rer/business-settings', '/rer-business-logo', '/rer-business.css'].includes(path)) return null
+  return businessSettings(env).handle(request)
+}
