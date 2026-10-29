@@ -3,6 +3,25 @@ import {keys, strings} from './bindings.mjs';
 const publicNames = ['MAIL_PROVIDER', 'MAIL_FROM', 'MAIL_RELAY_URL'];
 const providerLabels = {rer: 'RER managed mail', resend: 'Resend', sendgrid: 'SendGrid', cloudflare: 'Cloudflare Email Sending'};
 
+/** Empty defaults leave the single MAIL_FROM input unconfigured. Never choose between senders. */
+export function validateMailSenders(sources) {
+  let sender;
+  for (const source of sources) {
+    if (typeof source.value !== 'string' || !source.value.trim()) continue;
+    if (sender && sender.value !== source.value) {
+      throw Object.assign(Error(`Conflicting MAIL_FROM senders: ${sender.source} (${JSON.stringify(sender.value)}) and ${source.source} (${JSON.stringify(source.value)}). Declare one sender consistently.`), {code:'mail_sender_conflict'});
+    }
+    sender = source;
+  }
+}
+
+/** The delivery policy owns classification; a deploy input may supply this same public binding. */
+export function publicMailSender(spec) {
+  if (!usesManagedMail(spec.mail)) return false;
+  const names = spec.publicVariableNames ?? Object.keys(spec.publicVariables ?? {});
+  return names.includes('MAIL_FROM') && ![...(spec.secretNames ?? []), ...(spec.optionalSecretNames ?? [])].includes('MAIL_FROM');
+}
+
 /** Managed mail is an explicit capability, independent of direct provider adapters. */
 export function usesManagedMail(mail) {
   if (mail === undefined) return false;
@@ -35,6 +54,7 @@ export function generateMailSetupFields(mail) {
 
 export function validateMailSpec(spec) {
   if (!usesManagedMail(spec.mail)) return;
+  if (!publicMailSender(spec)) throw Error('Managed mail requires one public MAIL_FROM sender, not a secret MAIL_FROM');
   for (const name of publicNames) {
     if (!Object.hasOwn(spec.publicVariables, name)) throw Error(`Managed mail requires public ${name}`);
   }

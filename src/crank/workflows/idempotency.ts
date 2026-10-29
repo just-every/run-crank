@@ -14,7 +14,9 @@ export interface WorkflowCommand {
 export async function workflowCommand(env: CrankEnv, actor: Actor, key: string | null | undefined, operation: WorkflowCommand['operation'], target: string, input: Record<string, unknown>): Promise<WorkflowCommand | null> {
   if (key === undefined || key === null) return null
   requireValue(/^[\x21-\x7e]{1,200}$/.test(key), 'Idempotency-Key must contain 1 to 200 visible ASCII characters')
-  const credential = actor.tokenId ? ['token', actor.tokenId] : ['session', actor.sessionId]
+  const credential = actor.agentDoor
+    ? ['agent-door', actor.agentDoor.agentId, actor.agentDoor.consent ?? null, actor.agentDoor.clientId ?? null]
+    : actor.tokenId ? ['token', actor.tokenId] : ['session', actor.sessionId]
   requireValue(credential[1], 'A current credential is required', 403)
   const [scope, keyHash, request] = await Promise.all([
     digest(canonical([actor.id, actor.kind, actor.version, credential])), digest(key), digest(canonical(input)),

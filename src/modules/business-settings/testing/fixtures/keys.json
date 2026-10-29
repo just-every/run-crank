@@ -1,0 +1,24 @@
+{
+  "kid": "business-test-only",
+  "publicKey": {
+    "key_ops": [
+      "verify"
+    ],
+    "ext": true,
+    "kty": "EC",
+    "x": "4M_yV3jO4sZbyYDZ3BSiPDo1nrqDKhD8uQ8B4-V0eso",
+    "y": "IH8GGFutrqjITNdC9UxFQ6lJGfxpHTK0pmpgMUJjfoY",
+    "crv": "P-256"
+  },
+  "privateKey": {
+    "key_ops": [
+      "sign"
+    ],
+    "ext": true,
+    "kty": "EC",
+    "x": "4M_yV3jO4sZbyYDZ3BSiPDo1nrqDKhD8uQ8B4-V0eso",
+    "y": "IH8GGFutrqjITNdC9UxFQ6lJGfxpHTK0pmpgMUJjfoY",
+    "crv": "P-256",
+    "d": "5arNrCFbH0QUDJVc-jfmvmIN7BN3R1bEh8TJIyvi01s"
+  }
+}

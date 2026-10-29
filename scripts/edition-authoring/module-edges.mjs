@@ -66,8 +66,9 @@ export function dependencies(source, filename = 'module.mjs') {
     }
   } while (changed);
   const add = (node, kind, types = false) => {
-    const specifier = literal(unwrap(node));
-    if (specifier) result.push({specifier: canonical(specifier, kind), kind, types});
+    node = unwrap(node);
+    const specifier = literal(node);
+    if (specifier) result.push({specifier: canonical(specifier, kind), kind, types, start: node.start, end: node.end, literal: specifier});
   };
   for (const node of all) {
     if (node.type === 'ImportDeclaration') {
@@ -97,4 +98,14 @@ export function dependencies(source, filename = 'module.mjs') {
   if (!versions) parsed.set(filename, versions = new Map());
   versions.set(source, result);
   return result;
+}
+
+// Only parsed dependency literals are rewritten: comments, strings and JSX
+// text that happen to contain the same path remain edition source.
+export function relocateDependencies(source, requests) {
+  const replacements = new Map(requests.filter(request => request.relocation).map(request => [request.start, request]));
+  for (const {start, end, literal, specifier, relocation} of [...replacements.values()].sort((a, b) => b.start - a.start)) {
+    source = source.slice(0, start) + JSON.stringify(relocation + literal.slice(specifier.length)) + source.slice(end);
+  }
+  return source;
 }

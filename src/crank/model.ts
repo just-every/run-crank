@@ -1,13 +1,30 @@
 import type { Bindings } from '../auth.server'
 
-export type CrankEnv = Bindings & { CRANK_TARGET_ORIGIN?: string; CRANK_TARGET_TOKEN?: string }
+export interface AgentDoorAttribution {
+  readonly agent: { readonly id: string; readonly name: string }
+  readonly for: { readonly id: string; readonly name: string }
+  readonly label: string
+  readonly operation_id: string
+  readonly consent?: string
+  readonly client_id?: string
+}
+export type CrankEnv = Bindings & {
+  CRANK_TARGET_ORIGIN?: string; CRANK_TARGET_TOKEN?: string
+  /** Present only on a cloned tool-invocation environment, never a Worker binding. */
+  CRANK_AGENT_ATTRIBUTION?: Readonly<AgentDoorAttribution>
+}
 export type Role = 'owner' | 'admin' | 'member'
-export type ActorKind = 'native' | 'dev' | 'oidc' | 'password' | 'review' | 'agent' | 'trigger' | 'service'
+export type ActorKind = 'native' | 'dev' | 'oidc' | 'password' | 'review' | 'agent' | 'trigger' | 'service' | 'company'
+export interface AgentDoorAuthority {
+  agentId: string; scopes: readonly string[]; operationId: string
+  consent?: string; clientId?: string; businessPersonId?: string
+}
 export interface Actor {
   id: string; name: string; role: Role; kind: ActorKind; version: number
   team?: import('./team/policy').TeamAccess
   serviceAccountId?:string; serviceOwnerId?:string; serviceEnvironment?:string; serviceWorkflowIds?:string[]; serviceConnectionIds?:string[]
   sessionId?: string; tokenId?: string; grantId?: string; flowId?: string | null; local: boolean
+  agentDoor?: Readonly<AgentDoorAuthority>
 }
 export interface Flow {
   id: string; name: string; source_app: string; destination_app: string; target_url: string
