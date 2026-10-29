@@ -196,7 +196,7 @@
       "executable": false
     },
     "docs/AGENT-DOOR.md": {
-      "sha256": "b2b3210d68e0a87fc488bf56a5c175b4b692f84cb7ea131f3685a039ec03153a",
+      "sha256": "c72d8f5800dcdb889af5cee7d514ddcc4ad6e3e35d12eb1624b210da5e26fd8b",
       "executable": false
     },
     "docs/API.md": {
@@ -2956,11 +2956,11 @@
       "executable": false
     },
     "src/crank/agent-door/native.ts": {
-      "sha256": "07944ea5e13a792250e39e7af86f38f724b2d8f1efa952c9cd299caeac8b9298",
+      "sha256": "7c2464957b5dca0e3c414a5fe587ea83247bfb1e06a72b84f518b070a00d7927",
       "executable": false
     },
     "src/crank/agent-door/people.ts": {
-      "sha256": "e6f7e66e163902292517e9845c07ac9ca1a75fa6c86bdda79123a8329c2d75a1",
+      "sha256": "c9b9f800533d62c9d3474b0c8c8237b1dc1134596575e4219788e9ca1ba6f7b7",
       "executable": false
     },
     "src/crank/agent-door/tool-metadata.ts": {

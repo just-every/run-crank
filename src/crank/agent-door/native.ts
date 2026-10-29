@@ -22,8 +22,7 @@ export function agentDoorFence(actor: Actor): { sql: string; args: unknown[] } {
     AND NOT EXISTS(SELECT 1 FROM json_each(s.envelope,'$.revoked.agents') WHERE value=?)
     AND NOT EXISTS(SELECT 1 FROM json_each(s.envelope,'$.revoked.consents') WHERE value=?)`
   const business = identity.consent ? ` AND EXISTS(SELECT 1 FROM bs_settings b WHERE b.singleton=1 AND b.stopped=0 AND (
-    (b.owner_id=? AND ?=(SELECT o.id FROM oa_operators o LEFT JOIN oa_bootstrap boot ON boot.claim_id=o.id
-      WHERE o.role='owner' ORDER BY boot.claim_id IS NULL,o.created_at,o.id LIMIT 1))
+    (b.owner_id=? AND ?=(SELECT claim_id FROM oa_bootstrap WHERE singleton=1))
     OR EXISTS(SELECT 1 FROM bs_team m WHERE m.business_id=? AND m.operator_id=? AND m.state<>'conflict')))` : ''
   return {
     sql: `EXISTS(SELECT 1 FROM agent_door_agents a WHERE a.id=? AND a.sponsor=? AND a.revoked=0)

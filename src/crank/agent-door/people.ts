@@ -9,7 +9,26 @@ const localScopes = ['workflows:read', 'workflows:prepare', 'runs:read', 'connec
 /** Business subjects retain the settings module's durable native-operator bindings. */
 export function peopleAdapter(original: CrankEnv): PeopleAdapter {
   const env = runtimeBindings(original) as CrankEnv
-  return operatorAuthPeople({ db: env.DB, session: request => operatorAuth(env).getSession(request) })
+  const native = operatorAuthPeople({ db: env.DB, session: request => operatorAuth(env).getSession(request) })
+  // A native role transfer cannot move an already-bound Business subject.
+  const owner = () => stmt(env, 'SELECT claim_id AS id FROM oa_bootstrap WHERE singleton=1').first<{ id: string }>()
+  return {
+    ...native,
+    async sponsor(claim) {
+      const settings = await stmt(env, 'SELECT owner_id FROM bs_settings WHERE singleton=1 AND stopped=0').first<{ owner_id: string | null }>()
+      if (settings?.owner_id === claim.sub) {
+        const bound = await owner()
+        return bound ? native.person(bound.id) : null
+      }
+      return native.sponsor(claim)
+    },
+    async businessMember(person) {
+      const settings = await stmt(env, 'SELECT owner_id FROM bs_settings WHERE singleton=1 AND stopped=0').first<{ owner_id: string | null }>()
+      if (settings?.owner_id && (await owner())?.id === person.id) return { id: settings.owner_id, role: 'owner' }
+      const row = await stmt(env, "SELECT business_id,business_role FROM bs_team WHERE operator_id=? AND state<>'conflict' AND business_id IS NOT NULL", person.id).first<{ business_id: string; business_role: string }>()
+      return row ? { id: row.business_id, role: row.business_role === 'admin' ? 'editor' : null } : null
+    },
+  }
 }
 
 /** Only existing preparation credentials enter this door; execution grants and
