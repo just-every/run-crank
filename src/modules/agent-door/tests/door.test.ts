@@ -184,13 +184,13 @@ test('credentials, pause, embedded calls, subscriptions and the generic conforma
  try {
   assert.equal((await local.adopt()).status,404)
   assert.equal((await local.person('/agents/api/pause',{paused:true})).body.paused.local,true)
-  assert.equal(code(await local.tool('records.list',{}, {token:'synthetic-base-local'})),'agents_paused')
+  assert.equal(code(await local.tool('records.list',{}, {token:local.localToken})),'agents_paused')
   await local.person('/agents/api/pause',{paused:false})
   assert.equal((await local.mcp('tools/list')).status,401)
   assert.equal((await local.person('/agents/api/policy',{document:autonomousPolicy()})).status,405)
   const incomplete=await local.fetch('/agents/api/policy',{method:'PUT',headers:{origin:local.c.origin,cookie:local.c.person.cookie,'content-type':'application/json'},body:JSON.stringify({document:{...autonomousPolicy(),rules:[],spend:undefined}})}); assert.equal(incomplete.status,409); assert.ok((await incomplete.json()).problems.some(p=>p.kind==='spend'))
   const saved=await local.fetch('/agents/api/policy',{method:'PUT',headers:{origin:local.c.origin,cookie:local.c.person.cookie,'content-type':'application/json'},body:JSON.stringify({document:autonomousPolicy()})}); assert.equal(saved.status,200)
-  assert.equal((await local.mcp('tools/list',{}, {token:'synthetic-base-local'})).status,200)
+  assert.equal((await local.mcp('tools/list',{}, {token:local.localToken})).status,200)
  } finally { await local.close() }
  const fresh=await runtime({resourceScope:'resources:read'})
  try {
@@ -207,7 +207,8 @@ test('credentials, pause, embedded calls, subscriptions and the generic conforma
     {id:'access',tool:'synthetic.access.change',args:{id:'synthetic-base-other'},expect:[{class:'access'}]},
     {id:'erase',tool:'synthetic.records.erase',args:{id:'synthetic-base-1'},expect:[{class:'destructive'}]},
     {id:'events',tool:'synthetic.events.list',args:{},expect:[{class:'standard'}]}]}
-  const result=await runAgentDoorConformance({fetch:fresh.fetch,origin:fresh.c.origin,surface,signer:fresh.c.signer,person:fresh.c.person,now:()=>fresh.c.now})
+  const result=await runAgentDoorConformance({fetch:fresh.fetch,origin:fresh.c.origin,surface,signer:fresh.c.signer,person:fresh.c.person,now:()=>fresh.c.now,
+   invoke: async (name: string, args: Record<string, unknown>, who: any) => (await fresh.person('/__embedded',{name,args,agent:who.agent,consent:who.consent,scopes:who.scopes})).body })
   assert.deepEqual(result.points.filter((p:any)=>!p.ok),[])
  } finally { await fresh.close() }
 })

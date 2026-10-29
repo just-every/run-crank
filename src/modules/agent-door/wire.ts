@@ -1,3 +1,4 @@
+import { capabilitySet, offers } from './capabilities.mjs'
 import { json } from './errors.ts'
 import type { CallResult, Runtime } from './types.ts'
 
@@ -10,9 +11,15 @@ export const resourceMetadata = (rt: Runtime) => `${rt.options.origin}/.well-kno
 export const challenge = (rt: Runtime, scope?: string) => ({ 'www-authenticate': `Bearer ${scope ? `error="insufficient_scope", scope="${scope}", ` : ''}resource_metadata="${resourceMetadata(rt)}"` })
 export const cache = { resultType: 'complete', ttlMs: 0, cacheScope: 'private' }
 export const capabilities = { tools: { listChanged: true }, resources: { subscribe: true, listChanged: false }, prompts: { listChanged: false } }
+export function doorCapabilities(rt: Runtime) {
+  if (rt.options.capabilities === undefined) return capabilities
+  return { tools: { listChanged: offers(rt.options.capabilities, 'subscriptions') },
+    ...(offers(rt.options.capabilities, 'resources') ? { resources: { subscribe: offers(rt.options.capabilities, 'subscriptions'), listChanged: false } } : {}),
+    ...(offers(rt.options.capabilities, 'prompts') ? { prompts: { listChanged: false } } : {}) }
+}
 export function discovery(rt: Runtime) {
-  return { ...cache, supportedVersions: versions, capabilities, instructions: `${rt.options.name}: tools for the ${rt.options.specialist} specialist. Act for the sponsoring person under their company policy; people decide approvals at the supplied URL.`,
-    _meta: { 'io.modelcontextprotocol/serverInfo': { name: rt.options.name, version: rt.options.version ?? '1' }, 'com.runeditrun/limits': rt.options.limits, 'com.runeditrun/notTools': rt.options.notTools ?? [] } }
+  return { ...cache, supportedVersions: versions, capabilities: doorCapabilities(rt), instructions: `${rt.options.name}: tools for the ${rt.options.specialist} specialist. Act for the sponsoring person under their company policy; people decide approvals at the supplied URL.`,
+    _meta: { 'com.runeditrun/capabilities': capabilitySet(rt.options.capabilities), 'io.modelcontextprotocol/serverInfo': { name: rt.options.name, version: rt.options.version ?? '1' }, 'com.runeditrun/limits': rt.options.limits, 'com.runeditrun/notTools': rt.options.notTools ?? [] } }
 }
 export function toolResult(result: CallResult, version: string, clientCapabilities: unknown) {
   const meta: Record<string, unknown> = { 'com.runeditrun/decision': result.decision }

@@ -58,8 +58,16 @@ External content can carry untrusted result metadata:
 ```json
 {"_meta":{"com.runeditrun/untrusted":true}}
 ```
- Embedded calls
-use the same execution pipeline and audit attribution.
+Embedded calls supply explicit principal scopes and use the same execution
+pipeline and audit attribution. Resource authorization, events and subscriptions
+retain the originating agent/client and scopes; `currentScopes` can intersect
+these with current native grants, including at approval execution.
+
+Access/security tools may declare a checked target-only `widens: false` contract
+with a native grant-subset journey instead of sponsor escalation. Tools declaring
+`proof: 'native'` require the seed's named proof verifier and human handoff, even
+under autonomous policy or after approval. See [adoption](ADOPTING.md) for the
+runtime hooks, wire reference and test module declarations.
 
 Business access tokens are ES256 `at+jwt` credentials verified against existing
 owner-claim trust, with the canonical MCP audience, sponsor, agent, scopes and
@@ -173,7 +181,7 @@ They are not evidence that every clause or every adopting edition has passed.
 Module tests under `tests/`, this reusable journey and an edition's integrated
 browser and native journey are separate evidence.
 
-Remaining work includes full clause and tier and role and UI parity, grant narrowing,
+Remaining work includes full clause and tier and role and UI parity, Business delivery of grant narrowing,
 Business revocation delivery, provider-spend caps and byte budgets, long jobs,
 outside-mail attribution, standalone credential issuance,
 self-host delivery, stranger-specialist completion, generated agent docs, and

@@ -41,7 +41,7 @@ test('Business subjects, sponsor approvals and Business refs retain their people
   const embedded = createAgentDoor({seed:'synthetic',name:'Synthetic',specialist:'operations',db:r.db,origin:r.c.origin,trust:{issuer:r.c.signer.issuer,installationId:r.c.signer.installationId,appOrigin:r.c.origin,publicKeys:{[r.c.signer.kid]:await crypto.subtle.exportKey('jwk',r.c.ring.publicKey)}},people:operatorAuthPeople({db:r.db,session:async()=>null}),tools:[{
    name:'synthetic.person.read',title:'Read sponsor',description:'Read the current native sponsor.',scope:'records:read',readOnly:true,inputSchema:{type:'object',additionalProperties:false},outputSchema:{type:'object'},classes:['standard'],clauses:['BASE-AGENT-005'],classify:()=>[{class:'standard',facts:{measure:1}}],run:async(_args,ctx)=>({result:{id:ctx.person.id,email:ctx.person.email}}),
   }]})
-  const invoked=await embedded.invoke('synthetic.person.read',{}, {person:{id:x,email,name:'Synthetic A',role:'admin',active:true},agent:{id:'synthetic-base-embedded-identity',name:'Synthetic Embedded'}})
+  const invoked=await embedded.invoke('synthetic.person.read',{}, {person:{id:x,email,name:'Synthetic A',role:'admin',active:true},agent:{id:'synthetic-base-embedded-identity',name:'Synthetic Embedded'},scopes:['records:read']})
   assert.deepEqual(invoked.result,{id:x,email:'synthetic-base-x-new@example.com'})
   const embeddedRow=(await r.person('/agents/api/audit')).body.rows.find((row:any)=>row.agent.id==='synthetic-base-embedded-identity')
   assert.equal(embeddedRow.door,'embedded');assert.equal(embeddedRow.sponsor.id,x)

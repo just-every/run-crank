@@ -1,4 +1,5 @@
 import { verifyJws } from './credentials.ts'
+import { offers } from './capabilities.mjs'
 import { answered, completeness, document_sha256, validateDocument, DocumentInvalid } from './policy/document.ts'
 import { CATALOGUE, classIds } from './policy/catalogue.ts'
 import { error, json } from './errors.ts'
@@ -13,7 +14,7 @@ export async function policyState(rt: Runtime): Promise<PolicyState> {
     document: rt.options.trust ? envelope?.document ?? null : row?.local_document ? JSON.parse(row.local_document) : null,
     expires: rt.options.trust ? envelope?.exp * 1000 || null : null, iat: envelope?.iat ?? null }
 }
-export const declaredClasses = (rt: Runtime) => classIds.filter(cls => rt.tools.some(tool => tool.classes.includes(cls)) || rt.options.resources?.some(resource => resource.classes.includes(cls)))
+export const declaredClasses = (rt: Runtime) => classIds.filter(cls => rt.tools.some(tool => tool.classes.includes(cls)) || offers(rt.options.capabilities, 'resources') && rt.options.resources?.some(resource => resource.classes.includes(cls)))
 export const unanswered = (rt: Runtime, state: PolicyState) => declaredClasses(rt).filter(cls => !answered(state.document, cls))
 export const setupUrl = (rt: Runtime, state: PolicyState) => rt.options.trust && state.business
   ? `${rt.options.trust.issuer}/business/${encodeURIComponent(state.business)}/settings/policy` : `${rt.options.origin}/agents`

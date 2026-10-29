@@ -1,5 +1,7 @@
+import { offers } from '../capabilities.mjs';
 import { isDeepStrictEqual } from 'node:util';
 import { accessToken } from './crypto.mjs';
+import { narrowingContract } from './narrowing.mjs';
 import { VERSION } from './protocol.mjs';
 
 export async function discoverDoor(c) {
@@ -30,18 +32,29 @@ export async function listedDoor(c) {
  c.add('BASE-AGENT-001.4', isDeepStrictEqual(first.result, second.result) && typeof first.result?.ttlMs === 'number' && first.result.ttlMs >= 0 && first.result.cacheScope === 'private', 'Repeated tools/list results must have deterministic order, ttlMs and private cache scope.');
  for (const declared of c.surface.tools) {
   const tool = c.listed.get(declared.name);
+  if (declared.proof) c.add(`BASE-AGENT-004.proof.${declared.name}.declaration`, tool?._meta?.['com.runeditrun/proof'] === declared.proof && tool?._meta?.['com.runeditrun/proof-kind'] === declared.proofKind, `${declared.name} must expose its native proof requirement.`);
+  if (declared.widens === false) {
+   const { idempotency_key: _key, expected_revision: _revision, ...properties } = tool?.inputSchema?.properties ?? {};
+   const schema = { ...tool?.inputSchema, properties, required: tool?.inputSchema?.required?.filter(key => !['idempotency_key', 'expected_revision'].includes(key)) };
+   c.add(`BASE-AGENT-005.narrowing.${declared.name}.schema`, narrowingContract({ ...declared, inputSchema: schema }) && tool?._meta?.['com.runeditrun/widens'] === false && isDeepStrictEqual(tool?._meta?.['com.runeditrun/narrowing'], declared.narrowing) && isDeepStrictEqual(schema, declared.inputSchema), `${declared.name} narrowing check requires the runtime's exact closed target-only schema and effect.`);
+  }
+  if (declared.authority === 'none') c.add(`BASE-AGENT-005.no-subject.schema.${declared.name}`, tool?._meta?.['com.runeditrun/authority'] === 'none' && isDeepStrictEqual(tool?._meta?.['com.runeditrun/effect'], declared.effect) && isDeepStrictEqual(Object.fromEntries(Object.entries(tool?.inputSchema?.properties ?? {}).filter(([key]) => !['idempotency_key', 'expected_revision'].includes(key))), declared.inputSchema.properties), 'No-subject declarations must match the actual runtime schema and record effect.');
   c.add(`BASE-AGENT-002.2.schema.${declared.name}`, tool?.inputSchema?.type === 'object' && tool.outputSchema !== undefined, `${declared.name} must carry input and output schemas.`);
   c.add(`BASE-AGENT-002.3.${declared.name}`, tool?.annotations?.readOnlyHint === declared.readOnly && tool?.annotations?.destructiveHint === declared.classes.includes('destructive') && tool?.annotations?.openWorldHint === declared.classes.includes('external'), `${declared.name} annotations differ from its declared behavior.`);
   c.add(`BASE-AGENT-006.1.${declared.name}`, isDeepStrictEqual([...(tool?._meta?.['com.runeditrun/classes'] ?? [])].sort(), [...declared.classes].sort()) && tool?._meta?.['com.runeditrun/scope'] === declared.scope && isDeepStrictEqual([...(tool?._meta?.['com.runeditrun/clauses'] ?? [])].sort(), [...declared.clauses].sort()), `${declared.name} classes, scope or clauses differ from the Agent surface.`);
  }
- const initialized = await c.mcp('initialize', { protocolVersion: '2025-11-25', capabilities: {}, clientInfo: { name: 'rer-agent-conformance-legacy', version: '1' } }, { version: '2025-11-25' });
- const session = initialized.headers.get('mcp-session-id');
- const legacy = await c.mcp('tools/list', {}, { version: '2025-11-25', headers: session ? { 'Mcp-Session-Id': session } : {} });
- c.add('BASE-AGENT-001.2', !session && initialized.result?.protocolVersion === '2025-11-25' && isDeepStrictEqual(legacy.result?.tools?.map(tool => tool.name), names), 'A 2025-11-25 client must initialize and list the same tools as a handshake-free modern client.');
+ for (const version of [VERSION, '2025-11-25']) {
+  const initialized = await c.mcp('initialize', { protocolVersion: version, capabilities: {}, clientInfo: { name: 'rer-agent-conformance', version: '1' } }, { version });
+  const listed = await c.mcp('tools/list', {}, { version });
+  c.add(`BASE-AGENT-001.2.${version}`, !initialized.headers.has('mcp-session-id') && initialized.result?.protocolVersion === version && isDeepStrictEqual(listed.result?.tools?.map(tool => tool.name), names), `${version} must negotiate and expose the same tools.`);
+ }
+ const march = await c.mcp('initialize', { protocolVersion: '2025-03-26', capabilities: {} }, { version: '2025-03-26' });
+ c.add('BASE-AGENT-001.3.2025-03-26', march.status === 400 && march.message?.error?.code === -32022 && march.message.error.message === 'UnsupportedProtocolVersion', 'March 2025 batching is not implemented; refuse its negotiation explicitly.');
  const templates = await c.mcp('resources/templates/list');
  c.add('BASE-AGENT-003.1', isDeepStrictEqual((templates.result?.resourceTemplates ?? []).map(item => item.uriTemplate).sort(), [...c.surface.resources].sort()), 'resources/templates/list must match the Agent surface.');
  const prompts = await c.mcp('prompts/list');
  c.add('BASE-AGENT-013.5.prompts', Array.isArray(prompts.result?.prompts), 'prompts/list must list the declared specialist prompts.');
+ if (c.surface.capabilities !== undefined && offers(c.surface.capabilities, 'prompts')) c.add('BASE-AGENT-subset.prompts.offered', prompts.result?.prompts?.length > 0, 'Declared prompts must offer a specialist prompt.');
  if (prompts.result?.prompts?.length) {
   const prompt = await c.mcp('prompts/get', { name: prompts.result.prompts[0].name });
   c.add('BASE-AGENT-001.1.prompts', Array.isArray(prompt.result?.messages) && prompt.result.messages.length > 0, 'A specialist prompt must be retrievable with Mcp-Name.');

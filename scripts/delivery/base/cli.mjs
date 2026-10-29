@@ -21,9 +21,9 @@ export async function packaging(args) {
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
-  packaging(process.argv.slice(2)).then(result => console.log(JSON.stringify(result))).catch(() => {
+  packaging(process.argv.slice(2)).then(result => console.log(JSON.stringify(result))).catch(error => {
     // Source configuration and child errors may contain credential values.
-    console.error('Packaging failed; check source policy and bounded build inputs.');
+    console.error(error.code === 'mail_sender_conflict' ? error.message : 'Packaging failed; check source policy and bounded build inputs.');
     process.exitCode = 1;
   });
 }
