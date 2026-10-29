@@ -6768,7 +6768,7 @@
       "executable": false
     },
     "tests/connections.test.mjs": {
-      "sha256": "fa0e5e3a86e53d2c3eecb8b8dedf5d4e9f714e9e0e83d817f58bc5ad8ec3ba05",
+      "sha256": "6171ea0c0418d522c8ea315a6b0785771cbff25e6f64c199b300877f64065e6f",
       "executable": false
     },
     "tests/crank.test.mjs": {
