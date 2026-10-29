@@ -69,7 +69,7 @@
       },
       "acknowledged": {
         ".github/workflows/verify.yml": {
-          "sha256": "077330def4e27398a9c2c7b8cce72a87171bde955d03ab5e399dd9d52d9d51ad",
+          "sha256": "6372479025acc34fcc6d577f06553c4e65d48e856ecd56166ecf1f3be4d9e243",
           "mode": "100644"
         }
       }
@@ -2685,7 +2685,7 @@
       },
       "acknowledged": {
         "scripts/verify-ci.mjs": {
-          "sha256": "b141048c47dc1a7017634253fe36006210ac1ba7d826ba7a00d0d45125b7d7e8",
+          "sha256": "c9f9bb71880c632028a1cab9fb484e454767c6f47eeb61bc7a25bd1e1a3f909b",
           "mode": "100644"
         }
       }
@@ -5019,7 +5019,7 @@
       },
       "acknowledged": {
         "VERIFY-WORKFLOW.md": {
-          "sha256": "cfad93915174052655736fa220764686b0baab194ea0610fda7ebdac4d0e4706",
+          "sha256": "6ce5a5998c1aae1fc79a88dc09403382facd77bea5d787a63e6daafec07bbdf4",
           "mode": "100644"
         }
       },

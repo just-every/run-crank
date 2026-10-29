@@ -109,6 +109,13 @@ prepared when a selected reader requires it. Source locks are never rewritten
 in CI. The aggregate rejects failed, cancelled or unauthorized skipped jobs;
 empty nightly selections succeed without manufacturing nightly proof.
 
+Source-lock checks use the installed pinned package after frozen dependency
+installation, matching the tool that writes the lock. The retained authoring
+copy is a sparse runtime closure; its unused vendored parser files and licenses
+can differ from the complete package's tool identity. The complete installed
+tool still checks every declared source and the full tool identity; CI does not
+rewrite or relax the lock.
+
 ## Nightly proof and runner caches
 
 Main's complete scheduled or manual nightly coverage can save
@@ -143,6 +150,7 @@ must grant `contents: read` and `actions: read`; actionlint alone does not check
 that permission ceiling.
 
 Before committing, stage new files, inspect
-`node scripts/edition-authoring/cli.mjs changes`, regenerate with
-`node scripts/edition-authoring/cli.mjs lock`, and run
-`node scripts/edition-authoring/cli.mjs check`. Never edit lock hashes manually.
+`node node_modules/@runeditrun/rer/edition-authoring/cli.mjs changes`, regenerate
+with `node node_modules/@runeditrun/rer/edition-authoring/cli.mjs lock`, and run
+`node node_modules/@runeditrun/rer/edition-authoring/cli.mjs check`. Never edit
+lock hashes manually.

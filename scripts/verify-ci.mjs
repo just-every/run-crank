@@ -101,7 +101,7 @@ if (invokedDirectly()) {
   const { run } = await import('./verify-app.mjs');
   const readers = JSON.parse(process.env.LIGHT_READERS);
   if (!Array.isArray(readers) || readers.some(command => typeof command !== 'string')) throw Error('Invalid light readers');
-  run('node scripts/edition-authoring/cli.mjs check');
+  run('node node_modules/@runeditrun/rer/edition-authoring/cli.mjs check');
   run('pnpm run typecheck');
   run('pnpm exec rer check --profile first-party');
   run('pnpm exec rer build --site');

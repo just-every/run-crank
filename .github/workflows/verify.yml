@@ -46,8 +46,16 @@ jobs:
         with:
           node-version: '22.20.0'
           package-manager-cache: false
-      - name: Check edition source lock freshness
-        run: node scripts/edition-authoring/cli.mjs check
+      - run: npm install --global pnpm@10.12.4
+      - name: Set runner-owned pnpm store
+        run: pnpm config set store-dir "$RUNNER_TEMP/pnpm-store"
+      - uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684
+        with:
+          path: ${{ runner.temp }}/pnpm-store
+          key: seed-ubuntu24-temp-store-${{ runner.arch }}-browser-false-${{ hashFiles('pnpm-lock.yaml', 'package.json') }}
+      - run: pnpm install --frozen-lockfile
+      - name: Check edition source lock with the installed tool
+        run: node node_modules/@runeditrun/rer/edition-authoring/cli.mjs check
       - name: Check reusable workflow permissions
         run: node scripts/verify-ci.mjs --check-workflows
       - name: Check verification helpers
@@ -129,9 +137,6 @@ jobs:
         with:
           node-version: '22.20.0'
           package-manager-cache: false
-      - name: Check edition source lock freshness
-        if: ${{ hashFiles('edition.json', 'sources.lock.json') != '' }}
-        run: node scripts/edition-authoring/cli.mjs check
       - run: npm install --global pnpm@10.12.4
       - name: Set runner-owned pnpm store
         run: pnpm config set store-dir "$RUNNER_TEMP/pnpm-store"
@@ -158,6 +163,9 @@ jobs:
           # Old snapshots contain absolute HOME paths; do not restore them here.
           key: seed-ubuntu24-temp-store-${{ runner.arch }}-browser-${{ matrix.browser }}-${{ hashFiles('pnpm-lock.yaml', 'package.json') }}
       - run: pnpm install --frozen-lockfile
+      - name: Check edition source lock with the installed tool
+        if: ${{ hashFiles('edition.json', 'sources.lock.json') != '' }}
+        run: node node_modules/@runeditrun/rer/edition-authoring/cli.mjs check
       - run: pnpm run deps
       - run: npm ci --prefix gateways/node --ignore-scripts
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
