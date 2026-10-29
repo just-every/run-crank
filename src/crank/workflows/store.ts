@@ -48,7 +48,10 @@ export async function getWorkflow(env: CrankEnv, workflowId: string): Promise<Wo
 export async function presentWorkflow(env: CrankEnv, row: WorkflowRow) {
   const versions = await stmt(env, "SELECT id,number,graph_digest,declared_json,published_by,published_at,retired_at FROM crank_workflow_versions WHERE workflow_id=? AND mode='production' ORDER BY number DESC", row.id).all<Omit<VersionRow, 'graph_json' | 'workflow_id'>>()
   const owner = await stmt(env, 'SELECT display_name FROM oa_operators WHERE id=?', row.owner_id).first<{ display_name: string }>()
+  const preparation = await stmt(env, "SELECT detail_json FROM crank_audit WHERE subject_kind='workflow' AND subject_id=? AND action IN('workflow.create','workflow.duplicate','workflow.draft') ORDER BY at DESC,id DESC LIMIT 1", row.id).first<{ detail_json: string }>()
+  const preparedBy = preparation ? JSON.parse(preparation.detail_json).agent_door ?? null : null
   return {
+    prepared_by: preparedBy,
     id: row.id, environment:(row as WorkflowRow & {environment:string}).environment, name: row.name, description: row.description, folder: row.folder, data_class: (row as { data_class?: string }).data_class ?? 'none', owner: { id: row.owner_id, name: owner?.display_name ?? null }, status: row.status,
     enabled: row.status === 'published', draft: JSON.parse(row.draft_json), poll_rate: pollRate(JSON.parse(row.draft_json).trigger), draft_updated_at: row.draft_updated_at, draft_digest: await digest(canonical(JSON.parse(row.draft_json))), published_version_id: row.published_version_id,
     created_by: row.created_by, created_at: row.created_at,

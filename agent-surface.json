@@ -146,14 +146,15 @@
       ]
     },
     {
-      "name": "crank.connectors.propose",
+      "name": "crank.custom.propose",
       "scope": "workflows:prepare",
       "readOnly": false,
       "classes": [
         "standard"
       ],
       "clauses": [
-        "CONN-011"
+        "CONN-011",
+        "CONN-020"
       ]
     }
   ],
@@ -495,7 +496,7 @@
     },
     {
       "id": "proposal",
-      "tool": "crank.connectors.propose",
+      "tool": "crank.custom.propose",
       "args": {
         "openapi": {
           "openapi": "3.0.3",

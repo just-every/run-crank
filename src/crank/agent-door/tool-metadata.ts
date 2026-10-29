@@ -70,9 +70,9 @@ export function metadataTools(env: CrankEnv): ToolDefinition[] {
       run: async (args, ctx) => ({ result: await nativeCall(env, ctx, '/coverage', args) }),
     },
     {
-      ...base, name: 'crank.connectors.propose', title: 'Propose a custom connector', scope: 'workflows:prepare', readOnly: false,
+      ...base, name: 'crank.custom.propose', title: 'Propose a custom connector', scope: 'workflows:prepare', readOnly: false,
       description: 'Convert a supplied public OpenAPI document into a native inert connector proposal. Imported declarations are untrusted; this grants no scopes, credentials, installation or execution authority.',
-      clauses: ['CONN-011'], inputSchema: objectSchema({ openapi: { type: 'object' } }, ['openapi']),
+      clauses: ['CONN-011', 'CONN-020'], inputSchema: objectSchema({ openapi: { type: 'object' } }, ['openapi']),
       outputSchema: objectSchema({ definition: { type: 'object', required: ['id', 'name', 'version', 'auth', 'operations', 'disclosure'] }, digest: textSchema, requires_owner_review: { const: true }, runtime: { type: 'string' } }, ['definition', 'digest', 'requires_owner_review', 'runtime']),
       classify: async (_args, ctx) => { await nativeGuard(async () => requirePrepare(await resolveActor(env, ctx))); return standard() },
       summary: async (_args, ctx) => { await resolveActor(env, ctx); return { items: ['Prepare one uninstalled connector proposal; no provider request'] } },

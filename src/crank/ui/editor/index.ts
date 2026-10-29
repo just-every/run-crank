@@ -34,6 +34,8 @@ function changesPanel(current: Graph, previous: Version, changed: Set<string>, n
  * it have done since, and the agent credentials. Crank runs no model; agents are outside programs. */
 function agentCard(d: EditorData, changed: Set<string>, undo: string) {
   const agents = d.tokens.filter(t => t.scope === 'agent'), current = d.current, previous = d.previous
+  const prepared = d.workflow.prepared_by
+  const preparation = prepared ? `<p class="agent-line">${esc(prepared.label)} prepared this draft. An owner reviews publication.</p>` : ''
   let change = ''
   if (current && previous) {
     const renames = renamesBetween(previous.graph, current.graph, changed), since = d.runs.filter(r => r.version?.number === current.number)
@@ -43,7 +45,7 @@ function agentCard(d: EditorData, changed: Set<string>, undo: string) {
       ${since.length ? `<p class="agent-since">The latest ${since.length === 1 ? 'run' : `${since.length} runs`} on version ${current.number}: ${counts.map(([n, words]) => `${n} ${words}`).join(', ')}.</p>` : ''}
       <div class="agent-actions"><a class="btn btn-secondary btn-small" href="?changes=1#changes">View changes</a>${undo}</div></div>`
   }
-  return `<section class="panel agent-card" aria-labelledby="agent-title"><h2 id="agent-title">${icon('spark')}Agents</h2>${change}<p class="agent-note">Agents with an Access credential draft changes and start runs; an owner publishes.</p><ul class="agent-list">${agents.length ? agents.map(t => `<li>${icon('key')}<span>${esc(t.label)}</span>${chip(t.revoked_at ? 'revoked' : 'active', t.revoked_at ? 'Revoked' : 'Active')}</li>`).join('') : '<li class="muted">No agent credentials yet.</li>'}</ul><a class="agent-link" href="/app/access">Manage agent credentials ${icon('chevron')}</a></section>`
+  return `<section class="panel agent-card" aria-labelledby="agent-title"><h2 id="agent-title">${icon('spark')}Agents</h2>${preparation}${change}<p class="agent-note">Company agents prepare inert drafts under policy. Granted execution keeps its separate credential; an owner publishes.</p><ul class="agent-list">${agents.length ? agents.map(t => `<li>${icon('key')}<span>${esc(t.label)}</span>${chip(t.revoked_at ? 'revoked' : 'active', t.revoked_at ? 'Revoked' : 'Active')}</li>`).join('') : '<li class="muted">No agent credentials yet.</li>'}</ul><a class="agent-link" href="/app/access">Manage agent credentials ${icon('chevron')}</a></section>`
 }
 
 export function editorView(d: EditorData): { content: string; page: Page } {
