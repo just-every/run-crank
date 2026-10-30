@@ -24,6 +24,12 @@ function validate(step: Step) {
   }
 }
 
+/** Keep decimal lexemes (including trailing zeros) and large integers exact.
+ * Quoted JSON strings pass through unchanged; JSON.parse still validates syntax. */
+function decodeInvoices(text: string) {
+  return JSON.parse(text.replace(/"(?:[^"\\]|\\.)*"|-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?/g, token => token.startsWith('"') || !/[.eE]/.test(token) && Number.isSafeInteger(Number(token)) ? token : JSON.stringify(token)))
+}
+
 /** Fixed sandbox query, with complete ordered pages before shared search decisions. */
 export const quickbooksFindInvoice: StepType = {
   mutating: false, connection: 'required', required: ['realm_id','doc_number'], validate,
@@ -43,9 +49,9 @@ export const quickbooksFindInvoice: StepType = {
       await current()
       if (response.status !== 200) throw new StepError([401,403].includes(response.status) ? 'connection' : response.status === 429 ? 'rate_limit' : 'provider', `QuickBooks invoice search failed with status ${response.status}`, { status: response.status, ...([401,403].includes(response.status) ? { connection_id: connectionId, reconnect: true } : {}) })
       let body: any
-      try { body = JSON.parse(utf8(response.bytes).replace(/"(?:[^"\\]|\\.)*"|-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?/g, token => token.startsWith('"') || !/[.eE]/.test(token) && Number.isSafeInteger(Number(token)) ? token : JSON.stringify(token))) } catch { throw new StepError('provider', 'QuickBooks invoice search returned invalid JSON') }
+      try { body = decodeInvoices(utf8(response.bytes)) } catch { throw new StepError('provider', 'QuickBooks invoice search returned invalid JSON') }
       if (!isObject(body) || body.Fault || !isObject(body.QueryResponse)) throw new StepError('provider', 'QuickBooks invoice search returned no valid query response')
-      const result = body.QueryResponse, items = result.Invoice ?? []
+      const result = body.QueryResponse, items = result.Invoice === undefined ? [] : result.Invoice
       if (!Array.isArray(items) || items.length > PAGE_SIZE || result.startPosition !== undefined && result.startPosition !== start || result.maxResults !== undefined && result.maxResults !== items.length || result.Invoice === undefined && Object.keys(result).some(name => !['startPosition','maxResults','totalCount'].includes(name)))
         throw new StepError('provider', 'QuickBooks invoice search returned an invalid page')
       for (const record of items) {

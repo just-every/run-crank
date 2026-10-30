@@ -104,7 +104,9 @@ export async function checkpointIndexTexts(env: CrankEnv, runId: string) {
   const texts: string[] = []
   for (const row of rows.results) {
     const response = JSON.parse(row.response_json)
-    texts.push(checkpointText(await responseBytes(env,row,response.body_bytes)))
+    const run = await stmt(env, 'SELECT workflow_id FROM crank_wf_runs WHERE id=?',runId).first<{workflow_id:string}>()
+    if (!run) throw new StepError('authority','The retained response no longer belongs to a run')
+    texts.push(checkpointText(await responseBytes(env,row,response.body_bytes)), (await openText(env,run.workflow_id,JSON.stringify(response.headers)))!)
   }
   return texts
 }

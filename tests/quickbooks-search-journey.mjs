@@ -26,6 +26,7 @@ export async function quickbooksSearchJourney({inspect}={}) {
     if(mode==='provider')return jsonResponse({Fault:{Error:[{Message:'synthetic-crank-provider'}]}},500);
     if(mode==='permission')return jsonResponse({},403);
     if(mode==='malformed')return new Response('{bad JSON');
+    if(mode==='null')return jsonResponse({QueryResponse:{Invoice:null}});
     if(mode==='shape')return jsonResponse({QueryResponse:{Invoice:{Id:'1'}}});
     if(mode==='foreign')return page([invoice('1','another-key')]);
     if(mode==='repeated')return page(full,start);
@@ -45,7 +46,7 @@ export async function quickbooksSearchJourney({inspect}={}) {
     const run=await startRun(h,w,{key});assert.equal(run.status,'succeeded',JSON.stringify(run.error));
     assert.deepEqual(stepOf(run,'search').output.records,[invoice('1')]);
     const disclosure=(await h.get('data/flows')).flows.find(f=>f.kind==='quickbooks.find_invoice'&&f.id.includes(run.version_id));
-    assert.deepEqual(disclosure.recipients,['https://'+host]);assert.ok(disclosure.fields.includes('doc_number'));assert.match(disclosure.retention,/unverified/i);
+    assert.deepEqual(disclosure.recipients,['https://'+host]);assert.ok(disclosure.fields.includes('doc_number'));assert.match(disclosure.retention,/not verified|unverified/i);
     await h.get('workflow-runs/'+run.id,'',401);
     if(inspect)await inspect({h,run,state:'invoice-search-found'});
     mode='decimal';const decimal=await startRun(h,w,{key});
@@ -70,6 +71,9 @@ export async function quickbooksSearchJourney({inspect}={}) {
     const limit=await publish(h,'Bound invoice results',graph(c.id,{limit:2}));
     const limited=await startRun(h,limit,{key});assert.equal(stepOf(limited,'search').output.outcome,'truncated');assert.equal(stepOf(limited,'search').output.count,2);
     if(inspect)await inspect({h,run:limited,state:'invoice-search-truncated'});
+    mode='truncated';const bounded=await startRun(h,w,{key});assert.equal(stepOf(bounded,'search').output.outcome,'truncated');
+    assert.equal(stepOf(bounded,'search').output.count,100);
+    const incomplete=await publish(h,'Refuse incomplete first invoice',graph(c.id,{multi_match:'first'}));const refusedFirst=await startRun(h,incomplete,{key});assert.equal(refusedFirst.status,'failed');assert.equal(refusedFirst.error.outcome,'search incomplete');
     const before=reads().length;
     for(const invalid of ['',null,123,{},' '.repeat(2),'x'.repeat(22)]) {
       const failed=await startRun(h,w,{key:invalid});assert.equal(failed.status,'failed');assert.equal(stepOf(failed,'result'),undefined);
@@ -78,7 +82,7 @@ export async function quickbooksSearchJourney({inspect}={}) {
     for(const patch of [{create_if_not_found:{}},{sort:{field:'DocNumber',direction:'desc'}},{input:{realm_id:'1234',doc_number:12}},{input:{realm_id:'1234',doc_number:key,query:'select *'}}]) {
       const refused=await h.send('/api/crank/workflows',{name:'Unsupported invoice search',graph:graph(c.id,patch)},h.owner);assert.equal(refused.status,422,refused.text);
     }
-    for(mode of ['provider','permission','malformed','shape','foreign','repeated','metadata','fault']) {
+    for(mode of ['provider','permission','malformed','shape','null','foreign','repeated','metadata','fault']) {
       const failed=await startRun(h,w,{key});assert.ok(['failed','paused'].includes(failed.status),mode+': '+failed.status);assert.notEqual(stepOf(failed,'search').output?.outcome,'not found');assert.equal(stepOf(failed,'result'),undefined);
     }
     mode='one';
@@ -126,13 +130,18 @@ export async function quickbooksSearchJourney({inspect}={}) {
     fake.routes.set(host,provider);
     const expiring=await startRun(h,w,{key}),policy={payload_days:1,attachment_days:null,history_days:30};assert.equal(expiring.status,'succeeded');
     const preview=await h.post('data/retention/preview',policy);await h.post('data/retention',{...policy,digest:preview.digest});
-    await h.tick('2026-11-12T15:02:00Z');assert.ok((await h.get('workflow-runs/'+expiring.id)).payload_expired_at);
+    for(let pass=0;pass<3;pass++)await h.tick('2026-11-12T15:02:00Z');assert.ok((await h.get('workflow-runs/'+expiring.id)).payload_expired_at);
     assert.equal(stepOf(await h.get('workflow-runs/'+expiring.id),'search').output,null);
     // Revocation while parked refuses the next page without disclosing a result.
     park=true;fake.routes.set(host,({url})=>/startposition 1 maxresults/.test(url.searchParams.get('query'))?page(full):jsonResponse({},429,{'retry-after':'60'}));
     const revoked=await startRun(h,w,{key});assert.equal(revoked.status,'waiting');const last=reads().length;
     await h.post(`connections/${c.id}/revoke`);await h.restart({clock:'2026-11-10T15:02:02Z'});await h.tick('2026-11-10T15:02:02Z');
     assert.equal((await h.get('workflow-runs/'+revoked.id)).status,'paused');assert.equal(reads().length,last);
+    await h.post(`connections/${c.id}/rotate`,{secret:{access_token:'synthetic-crank-104'},scopes:[scope]});
+    const scopeRevoked=await startRun(h,w,{key});assert.equal(scopeRevoked.status,'waiting');const scopeCalls=reads().length;
+    await h.post(`connections/${c.id}/rotate`,{secret:{access_token:'synthetic-crank-104'},scopes:[]});
+    await h.restart({clock:'2026-11-10T15:03:03Z'});await h.tick('2026-11-10T15:03:03Z');
+    assert.ok(['failed','paused'].includes((await h.get('workflow-runs/'+scopeRevoked.id)).status));assert.equal(reads().length,scopeCalls,'scope removed after the first page refuses continuation');
     assert.ok(fake.to(host).every(r=>r.method==='GET'),'the whole journey performs zero accounting writes');
   } finally {await oldRestore?.close();await restored?.close();await h.close()}
 }
