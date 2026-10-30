@@ -85,9 +85,9 @@ export async function checkpointSubjects(env: CrankEnv, subject: string) {
       // Legacy plaintext pages remain discoverable even on an already sealed run.
       // Sealed pages use only the declared-field blind index, without opening keys.
       const chunk = await stmt(env, 'SELECT content_base64 FROM crank_request_checkpoint_chunks WHERE run_id=? AND path=? AND operation_key=? AND ordinal=? ORDER BY chunk_index LIMIT 1', row.run_id, row.path, row.operation_key, row.ordinal).first<{content_base64: string}>()
-      if (isSealed(chunk?.content_base64) || !Array.isArray(response.headers)) { after = row.cursor; continue }
+      if (isSealed(chunk?.content_base64)) { after = row.cursor; continue }
       const text = new TextDecoder().decode(await responseBytes(env, row, response.body_bytes)).toLowerCase()
-      if (text.includes(subject) || text.includes(JSON.stringify(subject).slice(1, -1)) || JSON.stringify(response.headers).toLowerCase().includes(subject)) runs.add(row.run_id)
+      if (text.includes(subject) || text.includes(JSON.stringify(subject).slice(1, -1)) || (Array.isArray(response.headers) && JSON.stringify(response.headers).toLowerCase().includes(subject))) runs.add(row.run_id)
       after = row.cursor
     }
   }
