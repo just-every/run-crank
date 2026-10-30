@@ -1,3 +1,4 @@
+import { mappingTables } from '../tables/mapping'
 import { previewSample, previewStepSamples } from './samples'
 import { collectAnswers, collectFields } from '../engine/steps/collect'
 import { collectDeadlines } from '../ops/collect-deadlines'
@@ -239,7 +240,7 @@ export async function evaluatePreview(env: CrankEnv, actor: Actor, workflowId: s
   const sources: Source[] = [selected.source]
   const record = (result: Record<string, unknown>) => results.push({ ...result, source: sources.at(-1), sources: [...sources] })
   type PreviewOutcome = 'completed' | 'stopped' | 'blocked' | 'failed'
-  const walk = (steps: Step[], prefix: string): PreviewOutcome => {
+  const walk = async (steps: Step[], prefix: string): Promise<PreviewOutcome> => {
     for (const step of steps) {
       const path = prefix + step.id
       if (path === stopBefore) { reached = true; return 'blocked' }
@@ -251,6 +252,7 @@ export async function evaluatePreview(env: CrankEnv, actor: Actor, workflowId: s
           record({ path, type: step.type, output: sample.payload, outcome: 'saved sample; step not run' })
           continue
         }
+        scope.tables = await mappingTables(env, step, { actor, workflowId })
         if (step.type === 'paths') {
           const { matched, trace, error } = evaluatePaths(step, scope, zone, time)
           record({ path, type: 'paths', output: { matched }, matched, evaluations: trace.map(result => ({ branch: result.branch, ...result.trace })), trace, ...(error ? { error: error.toJSON() } : {}), outcome: error ? 'type mismatch' : matched.length ? 'routed' : 'stopped by filter' })
@@ -259,7 +261,7 @@ export async function evaluatePreview(env: CrankEnv, actor: Actor, workflowId: s
           scope.steps[step.id] = { matched }
           const outcomes: PreviewOutcome[] = []
           for (const branch of branchesOf(step).filter(b => matched.includes(b.id))) {
-            const outcome = walk(branch.steps, `${path}/${branch.id}/`)
+            const outcome = await walk(branch.steps, `${path}/${branch.id}/`)
             if (outcome === 'blocked' || outcome === 'failed') return outcome
             outcomes.push(outcome)
           }
@@ -289,7 +291,7 @@ export async function evaluatePreview(env: CrankEnv, actor: Actor, workflowId: s
     }
     return 'completed'
   }
-  walk(graph.steps, '')
+  await walk(graph.steps, '')
   return { scope, reached, result: { sample_source: sources.map(source => source.label).join(' + '), source: selected.source, sources, digest: await digest(canonical([selected.payload, ...[...saved].map(([path, sample]) => [path, sample.payload])])), steps: results } }
 }
 

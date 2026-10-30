@@ -1185,3 +1185,29 @@ The native `gmail.search_threads` step uses one fixed managed Google connection 
 The ordinary draft test, publication and run APIs apply. Searches use the shared `no_match`, `multi_match`, `on_multiple` and `limit` settings. Results retain stable thread IDs, message IDs, provider internal dates, labels and arrays of the declared headers. Equal sort values use thread ID order. Reads scan at most 10 pages of 25 IDs and at most 100 distinct threads; result limits are applied after scanning and sorting. An incomplete scan reports `truncated` in all-results mode and refuses a first-match or multiple-match decision. Cyclic tokens, malformed metadata, denied access and provider errors fail explicitly, with no false no-match result. Thread metadata is limited to 100 messages, 100 headers per message and 2048 characters per header value; each response is bounded to 256 KiB and combined retained metadata to 512 KiB. Oversized results fail before downstream work.
 
 Only fixed Gmail GET endpoints are admitted. This operation never fetches message bodies, snippets or attachment bytes and cannot create, draft, send or update mail. Read access is rechecked for retained pages and at physical dispatch. Completed reads survive a parked rate-limit wait and restart. Classified workflow results and unfinished page chunks use existing data-class encryption, subject holds, erasure and retention; archives carry inactive history without credentials. For subject matching of metadata, declare the applicable header field names, for example `from`, in the workflow's identifier fields. Actual Google console setup, mailbox consent and live-provider readback remain required; this native operation supplies no Outlook capability or customer-contact authority.
+
+
+### Stored operational lookup values
+
+A built-in `utility.lookup` transform, including an inline function in a mapped
+input, accepts `table: {"$table": "<native-table-id>"}` instead of a static object.
+The reference is fixed in the draft. It reads the current complete WORK-007
+operational table; its lower-case record keys map to safe integers or integer
+lists. The transform keeps its existing case matching and explicit `default`
+behavior. Each run reads fresh values; retained step inputs and completed
+checkpoints keep their recorded values.
+
+The existing table owner creates and updates records through the native table
+API with `OPERATIONAL_NUMBERS_ONLY` confirmation and stable operation IDs. No
+customer, financial or health data, strings or general records are accepted.
+Preview requires that table owner and a non-sensitive workflow. Production
+requires that owner's current native publication and all existing dispatch
+authority checks. A paused or restored table supplies no values. Draft execution
+is refused because operational tables have no isolated test bindings; a pure
+preview performs no mutation or downstream request. Table records, receipts and
+spent-key fences remain portable, with receiving tables inactive until explicit
+owner adoption. Erased keys cannot be recreated by replay. The Data inventory
+discloses local custody and retention without record values.
+
+This bounded numeric lookup does not complete general WORK-007 records, scoped
+builder access, sensitive custody or isolated table test bindings.

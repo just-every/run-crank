@@ -16,7 +16,11 @@ export function n8nDateTime(node: Obj, id: string, previous: string, at: string,
     const patterns: Obj = { 'yyyy-MM-dd': 'date', 'MM/dd/yyyy': 'MM/DD/YYYY', 'yyyy/MM/dd': 'YYYY/MM/DD', 'MMMM dd yyyy': 'MMMM DD YYYY', 'MM-dd-yyyy': 'MM-DD-YYYY' }
     const key = p.format === 'custom' ? p.customFormat : (p.format ?? 'MM/dd/yyyy')
     const pattern = Object.hasOwn(patterns, key) ? patterns[key] : undefined
-    if (!pattern || options.timezone !== true || options.includeInputFields === true) throw Error('date formatting requires a supported calendar format and replacement output field')
+    if (!pattern || options.timezone !== true || (options.includeInputFields !== undefined && typeof options.includeInputFields !== 'boolean')) throw Error('date formatting requires a supported calendar format, explicit workflow zone and boolean input retention')
+    if (options.includeInputFields === true) return { id, name: node.name, type: 'transform', fn: 'date.n8n_format', input: {
+      value: mapped(p.date, previous, at + '.parameters.date'), input: { $ref: previous },
+      pattern: { $literal: pattern }, timezone: { $literal: timezone }, field: { $literal: field },
+    } } as Step
     return { id, name: node.name, type: 'map', input: { [field]: { $fn: 'date.format', args: { value: mapped(p.date, previous, at + '.parameters.date'), pattern: { $literal: pattern }, timezone: { $literal: timezone }, nullable: true } } } } as Step
   }
   fields(p, ['operation', 'magnitude', 'timeUnit', 'duration', 'outputFieldName', 'options'], at + '.parameters')
