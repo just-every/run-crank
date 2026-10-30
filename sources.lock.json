@@ -6539,7 +6539,7 @@
       "executable": false
     },
     "tests/logic.test.mjs": {
-      "sha256": "d9543101de489daa4f0db2779926fca332e4724fbdba6f484ef4d065e9045487",
+      "sha256": "6316f26be07a18ef91e8ffa13e3a50dfaa81f5f8737cc5e8b40b3a95f03c9661",
       "executable": false
     },
     "tests/mcp-browser-runtime.mjs": {

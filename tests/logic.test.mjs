@@ -156,7 +156,7 @@ test('BASE-003 WORK-004: business-day delays, callback waits and a shared delay 
   const done = await settled(h, asked.id);
   assert.deepEqual(stepOf(done, 'record').output, { answer: 'PO-7731', timed_out: false });
   const silent = await startRun(h, callback, {});
-  await h.tick(Date.now() + 2 * DAY + MINUTE);
+  await h.tick(Date.parse(silent.waits[0].due_at) + MINUTE);
   assert.equal(stepOf(await h.get('workflow-runs/' + silent.id), 'record').output.timed_out, true, 'the timeout route runs when the deadline passes');
 
   const lateUrl = crmBodies().at(-1).reply_to;
