@@ -4,10 +4,12 @@ import {connection,jsonResponse,publish,startRun} from './kit.mjs';
 /** Add the financial classes to the owned installation, with provider edges only. */
 export async function financialOwnership(h,fake) {
  const invoice={Id:'synthetic-crank-20',SyncToken:'0',DocNumber:'synthetic-crank-23',CurrencyRef:{value:'USD'},CustomerRef:{value:'synthetic-crank-21'},TotalAmt:19.99};
- fake.routes.set('sandbox-quickbooks.api.intuit.com',({url,method})=>method==='GET'?jsonResponse({QueryResponse:{Invoice:[invoice]}}):jsonResponse(url.pathname.endsWith('/refundreceipt')?{RefundReceipt:invoice}:{Invoice:{...invoice,...(url.searchParams.get('operation')==='void'?{TotalAmt:0}:{})}}));
+ fake.routes.set('sandbox-quickbooks.api.intuit.com',({url,method})=>method==='GET'?jsonResponse({QueryResponse:url.searchParams.get('query')?.startsWith('select count(*)')?{totalCount:1}:{Invoice:[invoice]}}):jsonResponse(url.pathname.endsWith('/refundreceipt')?{RefundReceipt:invoice}:{Invoice:{...invoice,...(url.searchParams.get('operation')==='void'?{TotalAmt:0}:{})}}));
  fake.routes.set('financial-failure.example',()=>jsonResponse({refused:true},400));
  const qbo=await connection(h,{app:'quickbooks',label:'Owned QuickBooks sandbox',account_name:'1234',auth_kind:'oauth2',scopes:['com.intuit.quickbooks.accounting'],secret:{access_token:'synthetic-crank-22'}});
  const input={realm_id:'1234',business_key:'synthetic-crank-23',payload:{CustomerRef:invoice.CustomerRef,Line:[{Amount:19.99,DetailType:'SalesItemLineDetail',SalesItemLineDetail:{ItemRef:{value:'1'}}}]}};
+ const found=await publish(h,'Owned exact invoice search',{trigger:{type:'manual'},steps:[{id:'search',type:'quickbooks.find_invoice',connection_id:qbo.id,input:{realm_id:'1234',doc_number:invoice.DocNumber}}]});
+ const searched=await startRun(h,found,{});assert.equal(searched.status,'succeeded');assert.deepEqual(searched.steps[0].output.record,{...invoice,TotalAmt:'19.99'});
  const source=await publish(h,'Owned invoice and refund intents',{trigger:{type:'manual'},steps:[{id:'invoice',type:'quickbooks.create_invoice',connection_id:qbo.id,input},{id:'refund',type:'quickbooks.create_refund_receipt',connection_id:qbo.id,input},{id:'fail',type:'http',input:{url:'https://financial-failure.example/fail'}}]});
  const original=await startRun(h,source,{});assert.equal(original.status,'failed');
  const compensation=await publish(h,'Owned separate compensation authority',{trigger:{type:'manual'},steps:[{id:'void_invoice',type:'quickbooks.void_invoice',connection_id:qbo.id,input:{source_run_id:original.id,source_path:'invoice'}}]});
@@ -41,5 +43,5 @@ export async function financialOwnership(h,fake) {
  ]}},h.owner,201);
  await h.post(`workflows/${workflow.id}/publish`,{},h.owner,201);
  const complete=await startRun(h,workflow,{});assert.equal(complete.status,'succeeded',JSON.stringify(complete.error));
- return [...original.steps,...compensated.steps,...complete.steps,...outcome.steps].filter(s=>s.status==='succeeded').map(s=>s.type);
+ return [...original.steps,...compensated.steps,...complete.steps,...outcome.steps,...searched.steps].filter(s=>s.status==='succeeded').map(s=>s.type);
 }

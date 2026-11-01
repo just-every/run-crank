@@ -763,6 +763,8 @@ test('Connection credentials are never resent past a redirect that leaves the AP
 test('Native financial effects reconcile after restart, continue once and require separate compensation approval', async () => {
   await quickbooksInputJourney();
   await quickbooksReconciliationJourney();
+  const { quickbooksSearchJourney } = await import('./quickbooks-search-journey.mjs');
+  await quickbooksSearchJourney();
 });
 test('Regulated Gusto handoffs retain obligations until exact provider agreement and scope consent', gustoHandoffJourney);
 

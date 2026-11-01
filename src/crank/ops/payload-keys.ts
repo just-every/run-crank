@@ -107,7 +107,10 @@ export const NEEDS_RESEAL = `r.payload_expired_at IS NULL AND CASE WHEN w.data_c
   THEN r.payload_key IS NULL OR r.payload_key IS NOT (SELECT id FROM crank_payload_keys k WHERE k.data_class=w.data_class AND k.status='active') OR r.payload_index IS NOT w.identifier_fields_json
     OR EXISTS(SELECT 1 FROM crank_request_checkpoint_chunks p WHERE p.run_id=r.id AND NOT EXISTS(
       SELECT 1 FROM crank_payload_keys k WHERE k.data_class=w.data_class AND k.status='active' AND instr(p.content_base64,'"k":"'||k.id||'"')>0))
-  ELSE r.payload_key IS NOT NULL OR EXISTS(SELECT 1 FROM crank_request_checkpoint_chunks p WHERE p.run_id=r.id AND instr(p.content_base64,'{"sealed":"crank-payload-v1"')=1) END`
+    OR EXISTS(SELECT 1 FROM crank_request_checkpoints p WHERE p.run_id=r.id AND NOT EXISTS(
+      SELECT 1 FROM crank_payload_keys k WHERE k.data_class=w.data_class AND k.status='active' AND instr(json_extract(p.response_json,'$.headers'),'"k":"'||k.id||'"')>0))
+  ELSE r.payload_key IS NOT NULL OR EXISTS(SELECT 1 FROM crank_request_checkpoint_chunks p WHERE p.run_id=r.id AND instr(p.content_base64,'{"sealed":"crank-payload-v1"')=1)
+    OR EXISTS(SELECT 1 FROM crank_request_checkpoints p WHERE p.run_id=r.id AND json_extract(p.response_json,'$.headers.sealed')='crank-payload-v1') END`
 export const RESEAL_POSSIBLE = `(r.payload_key IS NULL OR EXISTS(SELECT 1 FROM crank_payload_keys x WHERE x.id=r.payload_key AND x.sealed_key IS NOT NULL))`
 export async function pendingRuns(env: CrankEnv) {
   return (await stmt(env, `SELECT COUNT(*) AS n FROM crank_wf_runs r JOIN crank_workflows w ON w.id=r.workflow_id WHERE ${NEEDS_RESEAL} AND ${RESEAL_POSSIBLE}`).first<{ n: number }>())?.n ?? 0
@@ -170,6 +173,7 @@ export async function destroyUnreferenced(env: CrankEnv, time = Date.now()) {
   for (const key of retiring) {
     const marker = `"k":"${key.id}"`
     const used = await stmt(env, `SELECT 1 WHERE EXISTS(SELECT 1 FROM crank_wf_runs WHERE payload_key=?1 OR instr(trigger_json,?2)>0 OR instr(COALESCE(response_json,''),?2)>0 OR instr(COALESCE(error_json,''),?2)>0)
+      OR EXISTS(SELECT 1 FROM crank_request_checkpoints WHERE instr(response_json,?2)>0)
       OR EXISTS(SELECT 1 FROM crank_request_checkpoint_chunks WHERE instr(content_base64,?2)>0)
       OR EXISTS(SELECT 1 FROM crank_workflow_samples WHERE instr(payload_json,?2)>0 OR instr(uploads_json,?2)>0)
       OR EXISTS(SELECT 1 FROM crank_gateway_tasks WHERE instr(COALESCE(input_json,''),?2)>0 OR instr(COALESCE(output_json,''),?2)>0)
