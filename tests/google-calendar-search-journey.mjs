@@ -142,9 +142,12 @@ export async function googleCalendarSearchCustodyJourney({onScreen}={}) {
   await h.db.exec(`CREATE TRIGGER interrupt_checkpoint_index BEFORE INSERT ON crank_blind_index WHEN NEW.run_id='${parked.id}' BEGIN SELECT RAISE(ABORT,'synthetic-crank-index-interruption'); END;`);
   await h.tick('2026-11-10T15:00:10Z');
   assert.ok((await chunks(parked.id)).every(row=>!row.content_base64.startsWith('{')),'failed indexing rolls back checkpoint sealing');
+  assert.equal((await h.db.prepare('SELECT response_json FROM crank_request_checkpoints WHERE run_id=?').bind(parked.id).first()).response_json,metadata.response_json,'failed indexing rolls back checkpoint headers with page bytes');
   await h.db.exec('DROP TRIGGER interrupt_checkpoint_index');
   await h.restart();await h.tick('2026-11-10T15:00:20Z');
   assert.ok((await chunks(parked.id)).every(row=>JSON.parse(row.content_base64).sealed==='crank-payload-v1'),'restart seals all legacy chunks with their subject index');
+  const sealedHeaders=JSON.parse((await h.db.prepare('SELECT response_json FROM crank_request_checkpoints WHERE run_id=?').bind(parked.id).first()).response_json).headers;
+  assert.equal(sealedHeaders.k,(await h.db.prepare('SELECT payload_key FROM crank_wf_runs WHERE id=?').bind(parked.id).first()).payload_key,'checkpoint headers follow the same run key after atomic maintenance');
   assert.equal((await h.post('data/subject',{subject:events[0].id})).sealed_unmatched.length,0);
   // The upgrade migration also marks pages already sealed by older maintenance
   // for re-indexing; losing that index must block erasure until the pass finishes.

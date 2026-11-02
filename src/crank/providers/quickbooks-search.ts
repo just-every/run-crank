@@ -30,7 +30,7 @@ function decodeInvoices(text: string) {
   return JSON.parse(text.replace(/"(?:[^"\\]|\\.)*"|-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?/g, token => token.startsWith('"') || !/[.eE]/.test(token) && Number.isSafeInteger(Number(token)) ? token : JSON.stringify(token)))
 }
 
-/** Fixed sandbox query, with complete ordered pages before shared search decisions. */
+/** Fixed sandbox queries, with complete pages before local ordering and search decisions. */
 export const quickbooksFindInvoice: StepType = {
   mutating: false, connection: 'required', required: ['realm_id','doc_number'], validate,
   async execute(step, ctx) {
@@ -39,26 +39,36 @@ export const quickbooksFindInvoice: StepType = {
     const base = await quickbooksAccount(ctx.env, connectionId, ctx.input.realm_id)
     const current = async () => { await quickbooksAccount(ctx.env, connectionId, ctx.input.realm_id) }
     const context = { ...ctx, beforeRequest: async () => { await current(); await ctx.beforeRequest?.() } }
-    const records: Record<string, unknown>[] = [], ids = new Set<string>()
-    for (let page = 0; page < MAX_PAGES; page++) {
+    const escaped = key.replace(/\\/g, '\\\\').replace(/'/g, "\\'")
+    const where = `from Invoice where DocNumber = '${escaped}'`
+    const query = async (text: string) => {
       await current()
-      const start = page * PAGE_SIZE + 1, url = new URL(base + '/query')
-      const escaped = key.replace(/\\/g, '\\\\').replace(/'/g, "\\'")
-      url.searchParams.set('query', `select * from Invoice where DocNumber = '${escaped}' orderby Id asc startposition ${start} maxresults ${PAGE_SIZE}`)
+      const url = new URL(base + '/query'); url.searchParams.set('query', text)
       const { response } = await retryRequest(context, { method: 'GET', url, body: null, idempotent: false, reconnectStatuses: [401,403] }, policy => sendRequest(context, { url, method: 'GET', headers: new Headers({ accept: 'application'+'/'+'json' }), body: null, timeout: Number(step.timeout_ms ?? 15000), maxBytes: 1024 * 1024, follow: 0 }, connectionId, policy))
       await current()
       if (response.status !== 200) throw new StepError([401,403].includes(response.status) ? 'connection' : response.status === 429 ? 'rate_limit' : 'provider', `QuickBooks invoice search failed with status ${response.status}`, { status: response.status, ...([401,403].includes(response.status) ? { connection_id: connectionId, reconnect: true } : {}) })
       let body: any
       try { body = decodeInvoices(utf8(response.bytes)) } catch { throw new StepError('provider', 'QuickBooks invoice search returned invalid JSON') }
       if (!isObject(body) || body.Fault || !isObject(body.QueryResponse)) throw new StepError('provider', 'QuickBooks invoice search returned no valid query response')
-      const result = body.QueryResponse, items = result.Invoice === undefined ? [] : result.Invoice
+      return body.QueryResponse
+    }
+    // Id is not sortable at the provider. TxnDate is supported but can tie, so
+    // require the complete unique set before selecting the local Id-first result.
+    const count = await query(`select count(*) ${where}`), expected = count.totalCount
+    if (typeof expected !== 'number' || !Number.isSafeInteger(expected) || expected < 0 || count.Invoice !== undefined) throw new StepError('provider', 'QuickBooks invoice search returned an invalid match count')
+    const records: Record<string, unknown>[] = [], ids = new Set<string>()
+    for (let page = 0; page < MAX_PAGES; page++) {
+      const start = page * PAGE_SIZE + 1
+      const result = await query(`select * ${where} orderby TxnDate asc startposition ${start} maxresults ${PAGE_SIZE}`)
+      const items = result.Invoice === undefined ? [] : result.Invoice
       if (!Array.isArray(items) || items.length > PAGE_SIZE || result.startPosition !== undefined && result.startPosition !== start || result.maxResults !== undefined && result.maxResults !== items.length || result.Invoice === undefined && Object.keys(result).some(name => !['startPosition','maxResults','totalCount'].includes(name)))
         throw new StepError('provider', 'QuickBooks invoice search returned an invalid page')
       for (const record of items) {
         if (!isObject(record) || typeof record.Id !== 'string' || !record.Id || record.DocNumber !== key || ids.has(record.Id)) throw new StepError('provider', 'QuickBooks invoice search returned an inconsistent invoice identity or key')
         ids.add(record.Id); records.push(record)
       }
-      if (items.length < PAGE_SIZE) return searchOutcome({ ...step, sort: { field: 'Id', direction: 'asc' } }, records)
+      if (records.length > expected || items.length < PAGE_SIZE && records.length !== expected) throw new StepError('provider', 'QuickBooks invoice search pages do not match the complete count', { outcome: 'search incomplete' })
+      if (records.length === expected) return searchOutcome({ ...step, sort: { field: 'Id', direction: 'asc' } }, records)
     }
     return searchOutcome({ ...step, sort: { field: 'Id', direction: 'asc' } }, records, true)
   },
