@@ -4,7 +4,7 @@ import {connection,jsonResponse,publish,startRun} from './kit.mjs';
 /** Add the financial classes to the owned installation, with provider edges only. */
 export async function financialOwnership(h,fake) {
  const invoice={Id:'synthetic-crank-20',SyncToken:'0',DocNumber:'synthetic-crank-23',CurrencyRef:{value:'USD'},CustomerRef:{value:'synthetic-crank-21'},TotalAmt:19.99};
- fake.routes.set('sandbox-quickbooks.api.intuit.com',({url,method})=>method==='GET'?jsonResponse({QueryResponse:{Invoice:[invoice]}}):jsonResponse(url.pathname.endsWith('/refundreceipt')?{RefundReceipt:invoice}:{Invoice:{...invoice,...(url.searchParams.get('operation')==='void'?{TotalAmt:0}:{})}}));
+ fake.routes.set('sandbox-quickbooks.api.intuit.com',({url,method})=>method==='GET'?jsonResponse({QueryResponse:url.searchParams.get('query')?.startsWith('select count(*)')?{totalCount:1}:{Invoice:[invoice]}}):jsonResponse(url.pathname.endsWith('/refundreceipt')?{RefundReceipt:invoice}:{Invoice:{...invoice,...(url.searchParams.get('operation')==='void'?{TotalAmt:0}:{})}}));
  fake.routes.set('financial-failure.example',()=>jsonResponse({refused:true},400));
  const qbo=await connection(h,{app:'quickbooks',label:'Owned QuickBooks sandbox',account_name:'1234',auth_kind:'oauth2',scopes:['com.intuit.quickbooks.accounting'],secret:{access_token:'synthetic-crank-22'}});
  const input={realm_id:'1234',business_key:'synthetic-crank-23',payload:{CustomerRef:invoice.CustomerRef,Line:[{Amount:19.99,DetailType:'SalesItemLineDetail',SalesItemLineDetail:{ItemRef:{value:'1'}}}]}};
