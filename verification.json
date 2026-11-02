@@ -14,7 +14,7 @@
       "hosted": false,
       "commands": [
         "node --test --test-concurrency=1 --test-skip-pattern='^(Regulated Gusto handoffs|Managed Calendar creation|Native Nook delivery)' tests/connections.test.mjs",
-        "node --test --test-concurrency=1 tests/request-limits.test.mjs tests/webhook-erasure.test.mjs tests/team.test.mjs"
+        "node --test --test-concurrency=1 tests/crank.test.mjs tests/ownership.test.mjs tests/skills.test.mjs"
       ]
     },
     {
@@ -31,7 +31,7 @@
       "browser": false,
       "hosted": false,
       "commands": [
-        "node --test --test-concurrency=1 tests/crank.test.mjs tests/ownership.test.mjs tests/skills.test.mjs"
+        "node --test --test-concurrency=1 tests/request-limits.test.mjs tests/webhook-erasure.test.mjs tests/team.test.mjs"
       ]
     },
     {
