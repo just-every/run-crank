@@ -504,6 +504,26 @@ Before shipping added capabilities, this clause inherits BASE-001: prove owned o
 
 **Acceptance evidence:** For each provider’s test workspace, trigger on a new item, update a custom field, move it to a done status and comment, reading each change back; create a Google Doc from a template with mapped USD and date fields and verify its text by readback; repeat the triggering event and verify no duplicate item, comment or document. With a trigger watching status, edit an item’s description and verify no run, then move it to done and verify one run carrying the previous and new status.
 
+#### CONN-021 — Bounded Asana API-relative pagination
+
+*Tier:* Core · *From:* new
+
+**Requirement.** Asana task reads follow the documented API-relative `next_page.path` to later pages within the existing pagination and request bounds, preserving the connected workspace and account scope.
+
+**Acceptance.**
+1. A permitted API-relative `next_page.path` retrieves page two and subsequent pages within the existing bounds, retaining the task results from each accepted page.
+2. Off-host or unbounded continuations are refused before they are applied: the refused continuation is not requested, previously accepted results stay unchanged, and no provider write occurs.
+
+#### CONN-022 — Canonical Asana task permalinks
+
+*Tier:* Core · *From:* new
+
+**Requirement.** A canonical Asana task permalink in the form `https://app.asana.com/1/<workspace>/task/<id>` resolves to the task's stable URL and supports lookup within the connected workspace.
+
+**Acceptance.**
+1. A canonical `/1/<workspace>/task/<id>` permalink for the connected workspace maps to the stable task URL, and lookup succeeds for that same task.
+2. Non-task URLs and task URLs for a foreign workspace are refused without changing the selection, retained results or provider data.
+
 #### CONN-015 — Marketing and sales pipelines.
 
 Mailchimp (audiences, tags, campaigns), LeadConnector/HighLevel (contacts, opportunities, pipelines, appointments, workflows) and Pipedrive (persons, organizations, deals, activities, pipelines) connectors trigger on new subscribers, contacts, opportunities and deals and on changes to chosen watched fields, pipelines or stages with optional changed-to values (TRIG-008), search them with custom fields and WORK-011 find-or-create and match outcomes, and add/update subscribers and tags, create/update contacts, deals and opportunities, move pipeline stages and create activities. Mailchimp subscription consent status and unsubscribes are preserved, never overwritten to subscribed, in line with CAN-SPAM norms. Facebook Pages, Instagram for Business and LinkedIn company-page connectors post text, links and images (including an AI-001 generated image) to a chosen Page, Instagram business account or LinkedIn organization, and trigger on new posts and comments there; the Meta app review and LinkedIn Community Management API access these require are BOUND-001 engineering deliverables, and until each is granted, the coverage report names the connector and the pending review as its reason, never a bare blocked.
@@ -1266,8 +1286,8 @@ Judged from the code and tests at commit `a8e5b875ab6d413d7d510ed64bd1071ee9188d
 | Clauses | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
 | Published | 9 | 3 | 0 | 12 |
-| Target and push further | 23 | 46 | 18 | 87 |
-| All | 32 | 49 | 18 | 99 |
+| Target and push further | 23 | 46 | 20 | 89 |
+| All | 32 | 49 | 20 | 101 |
 
 BASE-003 was completed on 20 October 2026 with the named emitted-service and public-door recovery journeys below.
 
@@ -1304,6 +1324,8 @@ MIG-006, BASE-004 and BASE-005 were added on 17 October 2026 so every homepage c
 | `CONN-012` | Lead capture and form apps | target | missing |  | No delivered product workflow. |
 | `CONN-013` | Calendars, scheduling and meetings | target | partial | `migrations/core/0088_checkpoint_subjects.sql` rebuilds retained sealed-page subject indexes atomically with maintenance; `tests/google-calendar-search-journey.mjs` — googleCalendarSearchJourney and googleCalendarSearchCustodyJourney, invoked by the existing Managed Calendar registration in `tests/connections.test.mjs`: exact managed calendar and explicit zoned interval, read-only consent on every request, complete bounded pages, stable recurring instances, all-day dates and DST offsets, cancellation status, deterministic WORK-011 outcomes and incomplete-scan refusal, account isolation, malformed and provider failures, parked restart without repeated completed pages, sealed pages and results, legal holds, erasure, expiry and complete credential-free inactive restoration. `tests/google-calendar-search-browser.mjs` (push Verify): retained identities and literal results at 1440 and 390. `tests/ownership.test.mjs` — owned installation completes every shipped step and projects value-free outgoing disclosures. | Native bounded Google Calendar event search only. Missing Calendly and Zoom test accounts; actual Google Calendar owner-console consent, redirect URI and test-user setup, exact calendar authorization and independent real-provider readback remain prerequisites. Calendar triggers, free and busy searches, update and cancellation operations and remaining attendee, conferencing and reminder support; Calendly created, canceled and rescheduled invitees, questions, UTM and payment fields and lookups; Zoom registration, ended and recording triggers and meeting, registrant and link actions; resource pickers and samples and the complete live booking, same-object reschedule and cancellation and duplicate-delivery provider journey remain required. This native slice releases no PLATFORM-002 hold. |
 | `CONN-014` | Work management and documents | target | missing |  | No delivered product workflow. |
+| `CONN-021` | Bounded Asana API-relative pagination | target | missing |  | API-relative Asana continuation through page two and beyond, with bounded/off-host refusal, is unbuilt or unproved. |
+| `CONN-022` | Canonical Asana task permalinks | target | missing |  | Canonical Asana task-permalink resolution and successful same-workspace lookup, with non-task/foreign-workspace refusal, are unbuilt or unproved. |
 | `CONN-015` | Marketing and sales pipelines | target | missing |  | No delivered product workflow. |
 | `CONN-016` | File storage and e-signature | target | missing |  | No delivered product workflow. |
 | `CONN-017` | Twilio SMS | target | missing |  | No delivered product workflow. |
