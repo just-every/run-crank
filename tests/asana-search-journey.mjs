@@ -128,6 +128,10 @@ export async function asanaSearchJourney({onScreen}={}) {
   const other=await connection(h,{app:'asana',auth_kind:'bearer',label:'Separate Asana account',scopes:[scope],secret:{token:'synthetic-crank-asana-704'}});
   fake.routes.set('app.asana.com',request=>{assertRead(request,'synthetic-crank-asana-704','12002');return jsonResponse(page([{gid:'12021',resource_type:'task',name:hostileName}]))});
   const isolated=await startRun(h,await flow(h,other,{input:{project_id:'12002',name:hostileName}}),{});assert.equal(isolated.status,'succeeded');assert.equal(found(isolated).record.id,'12021');assert.equal(found(isolated).record.project_id,'12002');assert.ok(!JSON.stringify(complete).includes('12021'));
+  // A completed page cannot be combined with a replacement token's results.
+  fake.routes.set('app.asana.com',async request=>{assertRead(request);await h.post(`connections/${c.id}/rotate`,{secret:{token:'synthetic-crank-705'},scopes:[scope]});return jsonResponse(page([tasks[0]],nextPage(request)))});
+  const priorCalls=fake.requests.length;const changed=await startRun(h,draft,{name:hostileName});assert.equal(changed.status,'paused');assert.equal(found(changed),null);assert.equal(fake.requests.length,priorCalls+1,'replacement credentials never dispatch a later page of the old scan');
+  await h.post(`connections/${c.id}/rotate`,{secret:{token},scopes:[scope]});
   const disclosure=(await h.get('data/flows')).flows.find(item=>item.kind==='asana.find_task');assert.deepEqual(disclosure.recipients,['https://app.asana.com']);for(const field of ['project_id','name','offset'])assert.ok(disclosure.fields.includes(field));assert.match(disclosure.region,/not verified/);assert.ok(!JSON.stringify(disclosure).includes(hostileName));
   assert.ok(fake.requests.every(request=>request.method==='GET'&&request.url.pathname.match(/^\/api\/1\.0\/projects\/\d+\/tasks$/)),'native search dispatches only the fixed read endpoint');
  }finally{await h.close()}

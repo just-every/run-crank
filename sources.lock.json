@@ -172,7 +172,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "dbb36f3e9c5a1e124607ea160d00e8b43b543bb8b8e16f706f4635bd5966a915",
+      "sha256": "e23bbb1e43f3890733f9995f81bde835c8ae4ee1a9fc498267ff3361f58084ef",
       "executable": false
     },
     "DEMO.md": {
@@ -3128,7 +3128,7 @@
       "executable": false
     },
     "src/crank/connectors/asana.ts": {
-      "sha256": "f453dc39d8521d263ec3b83cec550bb077ab95c7003ae3e3a6c40cea776e2852",
+      "sha256": "07b52c6d10c94fb5c4d1ca5c3f7c35aaad234d6d5c855a03036cddfc7fb11940",
       "executable": false
     },
     "src/crank/connectors/files.ts": {
@@ -3999,6 +3999,10 @@
       "sha256": "693185c47243775144ed022fe6948697d783fd457e0a5a6227ef1369e756a956",
       "executable": false
     },
+    "src/crank/ui/editor/asana-view.ts": {
+      "sha256": "086652ff44bcd4fccf5993323cbfc512b05faa140c4ec7d4dd937ee6ff6e75dd",
+      "executable": false
+    },
     "src/crank/ui/editor/canvas.ts": {
       "sha256": "8729c59a34cfa436e46bfc9e26dda87c1ef178aaef71c9bbef50c19c88bbad8e",
       "executable": false
@@ -4008,7 +4012,7 @@
       "executable": false
     },
     "src/crank/ui/editor/inspector.ts": {
-      "sha256": "02db38f4ddef49be67cff7a8a0e6082d282494495d93bba5ca5a123d99c72556",
+      "sha256": "1c432a0d9ff3b49f4a97727f302504e7ae679eebf17c928a17100759511dc17d",
       "executable": false
     },
     "src/crank/ui/editor/model.ts": {
@@ -6708,7 +6712,7 @@
       "executable": false
     },
     "test-budget.json": {
-      "sha256": "01adbd299d3c921e5a0d71aa2e73b56c08efe378a97edded1b1ccad0d452c179",
+      "sha256": "be13e322bd11d3494b5e6dd20be9d0064ca625dfc12317082bbb7396022405ca",
       "executable": false
     },
     "tests/accounting-poll-journey.mjs": {
@@ -6768,7 +6772,7 @@
       "executable": false
     },
     "tests/asana-search-journey.mjs": {
-      "sha256": "7a0741a794b9b921a7bfdef67c5b0da607aeaa93eb72721bdc23f000a871a924",
+      "sha256": "8f68bb02f42e99748457373c160c7985737dee62729357c102868ee9895d877f",
       "executable": false
     },
     "tests/authoring-browser.mjs": {
@@ -7180,7 +7184,7 @@
       "executable": false
     },
     "tests/pagination.test.mjs": {
-      "sha256": "95b902ff5f1f040d5d76420bd60c7194cce1ff542165587ed7c796b88743a5fb",
+      "sha256": "f95655b55ee8e73783ff64b089797cb4574f85bc2ae7322dd87e16116d24d63e",
       "executable": false
     },
     "tests/platform-browser.mjs": {
@@ -7376,7 +7380,7 @@
       "executable": false
     },
     "tests/version-comparison.test.mjs": {
-      "sha256": "b8bfc369741f6c6c1ae1d38ac567b6bc1f76237ff0af2c3c81456d11fe12e627",
+      "sha256": "bea1f2bc4fd493de14301a7045bffea3801fe7a0dedd602ec335516b0438bb3e",
       "executable": false
     },
     "tests/webhook-erasure.test.mjs": {
@@ -7392,7 +7396,7 @@
       "executable": false
     },
     "verification.json": {
-      "sha256": "eab798a0a366bbea43e07a026ea256f71913f4b3ed37e8bc270c733a0b9a8ef1",
+      "sha256": "09c3aa35e43e58571272b4e1c5a9a9d14d0405177f02d67cdf1f085900db2e68",
       "executable": false
     },
     "VERIFY-WORKFLOW.md": {

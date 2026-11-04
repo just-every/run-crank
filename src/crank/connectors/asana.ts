@@ -4,7 +4,7 @@ import { StepError } from '../engine/errors'
 import { searchOutcome, validateSearch } from '../engine/search'
 import type { Step, StepContext, StepType } from '../engine/types'
 import { isObject } from '../engine/values'
-import { canonical } from '../model'
+import { canonical, digest, stmt } from '../model'
 import { asanaInput, asanaNextPage, asanaPageUrl, asanaTask, ASANA_CHECKPOINT_URL, malformedAsana } from './asana-policy'
 import { retryRequest } from './retry'
 import { sendRequest } from './request-transport'
@@ -22,8 +22,14 @@ function validate(step: Step) {
   asanaInput({ ...step.input, name: typeof step.input.name === 'string' && step.input.name.includes('{{') ? 'mapped name' : step.input.name })
 }
 async function readAccount(ctx: StepContext, connectionId: string) {
-  const { row } = await credential(ctx.env, connectionId)
+  const { row, secret } = await credential(ctx.env, connectionId)
   if (row.app !== 'asana' || row.auth_kind !== 'bearer' || !JSON.parse(row.scopes_json).includes('tasks:read')) throw new StepError('authority', 'Choose a native Asana bearer connection with explicit current tasks:read consent')
+  await sameCredential(ctx, await digest(ctx.operationKey + ':Bearer ' + secret.token))
+}
+async function sameCredential(ctx: StepContext, identity: string) {
+  const prior = await stmt(ctx.env, 'SELECT credential_identity FROM crank_wf_attempts WHERE run_id=? AND path=? AND http_status=200', ctx.run.id, ctx.path).all<{ credential_identity: string | null }>()
+  if (prior.results.some(attempt => attempt.credential_identity !== identity)) throw new StepError('authority', 'Asana credential changed after a completed page; start a new scan instead of mixing account reads')
+  return identity
 }
 
 /** Complete bounded exact-name lookup. Provider pages are sealed shared request
@@ -41,6 +47,7 @@ export const asanaFindTask: StepType = {
       await beforeRequest()
       const url = asanaPageUrl(input.project_id, offset)
       const result = await retryRequest(context, { method: 'GET', url, body: null, idempotent: false, reconnectStatuses: [401, 403] }, policy => sendRequest(context, {
+        credentialIdentity: async headers => sameCredential(ctx, await digest(ctx.operationKey + ':' + headers.get('authorization'))),
         url, method: 'GET', body: null, headers: new Headers({ accept: 'application' + '/' + 'json' }), timeout: Number(step.timeout_ms ?? 15000), maxBytes: 1024 * 1024, follow: 0,
         sanitizeResponse: async response => ({ ...response, url: ASANA_CHECKPOINT_URL, headers: new Headers([...response.headers].filter(([name]) => ['content-type', 'retry-after'].includes(name))) }),
       }, connectionId, policy))
@@ -60,6 +67,7 @@ export const asanaFindTask: StepType = {
     } while (offset && pages < Number(step.max_pages ?? 20))
     // Even all mode must not release a partial set as an exact-name answer.
     if (offset) throw new StepError('provider', 'Asana search is incomplete; no search outcome was decided', { outcome: 'search incomplete' })
+    await beforeRequest()
     const direction = (step.sort as Record<string, unknown>).direction === 'desc' ? -1 : 1
     const matches = [...records.values()].filter(record => record.name === input.name).sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0) * direction)
     const result = searchOutcome({ ...step, sort: undefined }, matches)

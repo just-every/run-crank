@@ -64,12 +64,7 @@ test('WORK-008: compare exact published, draft and retained graphs with mapping,
     assert.deepEqual(reverse.before, draft);
     assert.deepEqual(reverse.after, before);
     assert.equal((await h.get(`workflow-runs?workflow=${workflow.id}`)).runs.length, 0, 'comparison starts no runs');
-  } finally { await h.close(); }
-});
-
-test('WORK-008: comparison rejects invalid selectors, absent versions and missing workflows', async () => {
-  const h = await harness('http://127.0.0.1:9');
-  try {
+    {
     const workflow = await publish(h, 'Retained comparison validation', { trigger: { type: 'manual' }, steps: [] });
     for (const query of ['from=unknown', 'to=0', 'from=-1', 'to=1.5', 'from=', 'to=9007199254740992', 'from=1&from=2']) {
       await h.get(`workflows/${workflow.id}/compare?${query}`, h.owner, 422);
@@ -81,5 +76,7 @@ test('WORK-008: comparison rejects invalid selectors, absent versions and missin
     await h.get(`workflows/${unpublished.id}/compare`, h.owner, 404);
     assert.deepEqual((await h.get(`workflows/${unpublished.id}/compare?from=draft&to=draft`)).changes, []);
     await h.get(`workflows/${workflow.id}/compare`, '', 401);
+    }
   } finally { await h.close(); }
 });
+

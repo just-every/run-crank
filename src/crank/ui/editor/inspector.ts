@@ -1,4 +1,5 @@
 import { nativeSettings, type EditFeedback } from './native-view'
+import { asanaSettings } from './asana-view'
 import { chip, esc, hidden, json, timestamp } from '../document'
 import { icon } from '../icons'
 import { STEP_STATE, tile } from './canvas'
@@ -63,6 +64,7 @@ function setup(ctx: InspectorContext) {
   const connection = ctx.connections.find(c => c.id === step!.connection_id)
   const mapping = step!.input && typeof step!.input === 'object' ? mappingRows(step!.input).filter(([key]) => key && !(step!.type === 'http' && ['method', 'url'].includes(key))) : []
   const parts = [
+    asanaSettings(step!),
     step!.type === 'gmail.search_threads' ? `<section class="inspector-block"><h3>Thread metadata search</h3>${field('Mailbox','Selected managed Google connection',false)}${field('Read scope','Already-consented Gmail read access',false)}${field('Metadata headers',esc((step!.metadata_headers as string[]).join(', ')),false)}${field('Result order',esc(`${(step!.sort as any).field} ${(step!.sort as any).direction}`),false)}${field('No match',esc(step!.no_match ?? 'continue'),false)}${field('Multiple matches',esc(step!.multi_match ?? 'first'),false)}${field('Result bound',esc(step!.limit ?? 100),false)}<p class="inspector-note">Reads at most 10 pages and 100 threads. Message bodies and attachment bytes are excluded. Incomplete searches cannot choose a first match or report no match.</p></section>` : '',
     connection ? `<section class="inspector-block connection-line"><h3>Connection</h3>${chip(connection.status, connection.status === 'active' ? 'Connected' : connection.status.replace('_', ' '))}<span class="muted" title="${esc(connection.label)}">${esc(connection.account_name || connection.label)}</span></section>` : '',
     step!.type === 'filter' ? `<section class="inspector-block"><h3>Continue only if</h3>${rules(step!.when)}</section>` : '',
