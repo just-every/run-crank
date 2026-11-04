@@ -190,7 +190,8 @@ export async function validateRestore({ read }) {
         const allowed=[search?.id,search?.find_or_create?.operation].filter(Boolean)
         if (!step.gateway_id || !search?.gateway || response.body_bytes>65536 || !allowed.some(operation=>url.pathname===`/api/crank/gateways/${encodeURIComponent(step.gateway_id)}/operations/${encodeURIComponent(operation)}/pages/0`)) return false;
       }
-      if (!step || !['http','file.fetch','custom.request','gmail.search_threads'].includes(step.type) && !step.type.startsWith('orbit.') && !step.type.startsWith('nook.') && !step.type.startsWith('slack.') && !step.type.startsWith('quickbooks.') && !step.type.startsWith('gusto.') && !step.type.startsWith('google_calendar.')) return false;
+      if (!step || !['http','file.fetch','custom.request','gmail.search_threads','hubspot.find_contact'].includes(step.type) && !step.type.startsWith('orbit.') && !step.type.startsWith('nook.') && !step.type.startsWith('slack.') && !step.type.startsWith('quickbooks.') && !step.type.startsWith('gusto.') && !step.type.startsWith('google_calendar.')) return false;
+      if (step.type === 'hubspot.find_contact' && (url.href !== 'https://api.hubapi.com/crm/v3/objects/contacts' || response.body_bytes > 262144)) return false;
       if (step.type === 'google_calendar.search_events' && url.href !== 'https://www.googleapis.com/calendar/v3/events') return false;
       const bound = (step.type === 'file.fetch' || step.type === 'nook.send_message' || step.type.startsWith('orbit.') || step.type === 'google_calendar.search_events' ? 1 : step.type.startsWith('slack.') ? 4 : 2) * 1024 * 1024;
       if (!Number.isSafeInteger(checkpoint.ordinal) || checkpoint.ordinal < 0 || !/^[a-f0-9]{64}$/.test(checkpoint.request_key) || typeof checkpoint.operation_key !== 'string' || !checkpoint.operation_key) return false;

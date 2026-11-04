@@ -1,3 +1,4 @@
+import { hubspotFindContact } from '../../connectors/hubspot'
 import { aiClassify } from './ai'
 import { orbitSteps } from '../../connectors/orbit'
 import { digestSteps } from './digest'
@@ -26,6 +27,7 @@ import { join } from './join'
 
 /** Every step a published version may declare; `paths` groups are handled by the executor. */
 export const STEP_TYPES: Record<string, StepType> = Object.assign(Object.create(null), {
+  'hubspot.find_contact': hubspotFindContact,
   'gmail.search_threads': gmailSearchThreads,
   'ai.classify': aiClassify, ...orbitSteps, 'nook.send_message': nookSendMessage, 'quickbooks.followup_invoice': invoiceFollowup,
   'drift.map': driftMap, 'table.atomic': tableAtomic, 'table.lookup': tableLookup, subflow, collect, 'custom.request':customRequest, code, filter, transform, map, respond, delay, wait_for_callback: waitForCallback, approval, join,

@@ -140,6 +140,8 @@ test('CONN-002: OAuth consent, refresh and accounts per step; secrets never leav
     assert.ok(flows.length > 0 && flows.every(f => f.status === 'paused' || f.status === 'draft'), 'restored workflows do not dispatch');
   } finally { await other.close() }
   await oauthRenewalJourney();
+  const {hubspotSearchJourney,hubspotCustodyJourney}=await import('./hubspot-search-journey.mjs');
+  await hubspotSearchJourney();await hubspotCustodyJourney();
 });
 
 const slackSign = (secret, body, t = Math.floor(Date.now() / 1000)) => ({ 'x-slack-request-timestamp': String(t), 'x-slack-signature': 'v0=' + createHmac('sha256', secret).update(`v0:${t}:${body}`).digest('hex'), 'content-type': 'application/json' });

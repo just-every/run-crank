@@ -172,7 +172,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "dbb36f3e9c5a1e124607ea160d00e8b43b543bb8b8e16f706f4635bd5966a915",
+      "sha256": "f9eddf45dc4760a1b6d6236a726613d38214c4c46d366abb8cf63817878fc4a2",
       "executable": false
     },
     "DEMO.md": {
@@ -200,7 +200,7 @@
       "executable": false
     },
     "docs/API.md": {
-      "sha256": "179148bded6a44865fc78c509c2bcc81e2092fee97d78161b11653354b044a84",
+      "sha256": "611b39e4901ae7294beb6ae6552843f3d8c5d9f0de4e36d6bb5a552bb5b53ee3",
       "executable": false
     },
     "docs/APP-TRIGGERS.md": {
@@ -3096,7 +3096,7 @@
       "executable": false
     },
     "src/crank/connections/catalog.ts": {
-      "sha256": "47dfcec5b32bed700bf00a6311a4c16b974ac4b491674eba70b8627b254b7fe5",
+      "sha256": "259cea30b383a778615d4dc696955a8e96c7301ce912411f80e77a99e9841ded",
       "executable": false
     },
     "src/crank/connections/oauth.ts": {
@@ -3141,6 +3141,10 @@
     },
     "src/crank/connectors/http-step.ts": {
       "sha256": "b31c787eeef1708b3d0a4bc4e6cdee8e9e67ceb7d8c6160fb241cf3ed5d74f39",
+      "executable": false
+    },
+    "src/crank/connectors/hubspot.ts": {
+      "sha256": "b4a034c2bf6bcdfb28bf50a16f98bd6c56527d0afae822e56f41988e556eff16",
       "executable": false
     },
     "src/crank/connectors/multipart.ts": {
@@ -3264,7 +3268,7 @@
       "executable": false
     },
     "src/crank/data-flow-graphs.ts": {
-      "sha256": "0dfc1fda5d61ddd27a1b5291fd3d0ced6d64a96b54e338a6572a2d36a210459b",
+      "sha256": "2961e30fe5fad314aaeb028aa9a3c6ec6d509dc6927c55feef0190f5781f29b8",
       "executable": false
     },
     "src/crank/data-flow-types.ts": {
@@ -3388,7 +3392,7 @@
       "executable": false
     },
     "src/crank/engine/steps/index.ts": {
-      "sha256": "a9a4736a6e79bae30c31efc18b412ba0c2c5104bd104f5668e132815ad71fcaf",
+      "sha256": "32685d82fe98d4b69c24f1fd158d7ae5f3a19349352415abfd0142ef1fefbd7f",
       "executable": false
     },
     "src/crank/engine/steps/join.ts": {
@@ -3768,7 +3772,7 @@
       "executable": false
     },
     "src/crank/restore-policy.mjs": {
-      "sha256": "926dd70531d87cec40a651d6414a8a0121a22ef45ac8a912ef2db811812b2359",
+      "sha256": "c4b6530ec0ce61f52c6921278754f84c607e08b27b18299c2de1a539120c2ec3",
       "executable": false
     },
     "src/crank/runs.ts": {
@@ -6776,7 +6780,7 @@
       "executable": false
     },
     "tests/connections.test.mjs": {
-      "sha256": "77d9cbbfb9614ace7af558d4c1a9b7e0c54c0ebc7010cda396d5f2c229f7027d",
+      "sha256": "0d45b79181884c543b69e43daed21b041194252ff611735e7028404f84cd4a54",
       "executable": false
     },
     "tests/crank.test.mjs": {
@@ -6956,7 +6960,7 @@
       "executable": false
     },
     "tests/gmail-search-browser.mjs": {
-      "sha256": "0b3c48be3340e92201650bf282e52b1278b2544d50dfd6d7691a164a39124a20",
+      "sha256": "40cf2492347160bcf6d704c7dd6fa857e6e1c1600c96abd31ac1deaa7eacca88",
       "executable": false
     },
     "tests/gmail-search-journey.mjs": {
@@ -7029,6 +7033,14 @@
     },
     "tests/hosted-mail.test.mjs": {
       "sha256": "f8807d7ebbc676064608cb833d201151acbef0e4af2605f0dee8a165e0fe4422",
+      "executable": false
+    },
+    "tests/hubspot-search-browser.mjs": {
+      "sha256": "44335e462754eb81c7f6d0825387c166bb61757278f4340b0caceca3f50772ce",
+      "executable": false
+    },
+    "tests/hubspot-search-journey.mjs": {
+      "sha256": "05ff9fe89aeae0ef79f40a3be3636e3fd7456c19f8ecd917585cf3848ec480ca",
       "executable": false
     },
     "tests/inbound-email-browser.mjs": {
@@ -7156,7 +7168,7 @@
       "executable": false
     },
     "tests/ownership.test.mjs": {
-      "sha256": "4f78c7cd1658070ff0dcb576879b663326117dab8afd9f89e7a4ea6620aca4a5",
+      "sha256": "d38b18e7c7669a2d8a09bd7489c216dc43c602b6a75bc3250f94038e2e318c1e",
       "executable": false
     },
     "tests/pagination.test.mjs": {
