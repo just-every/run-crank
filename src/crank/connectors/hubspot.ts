@@ -1,4 +1,5 @@
 import { credential } from '../connections/store'
+import { assertDispatchAuthority } from '../engine/authority'
 import { utf8, type BoundedResponse } from '../engine/egress'
 import { StepError } from '../engine/errors'
 import { searchOutcome, validateSearch } from '../engine/search'
@@ -70,7 +71,7 @@ export const hubspotFindContact: StepType = {
   async execute(step,ctx) {
     validate({...step,input:ctx.input})
     const key = email(ctx.input.email), connectionId = String(step.connection_id)
-    const beforeRequest = async () => { await account(ctx,connectionId); await ctx.beforeRequest?.() }
+    const beforeRequest = async () => { await assertDispatchAuthority(ctx.env,ctx.run.id); await account(ctx,connectionId); await ctx.beforeRequest?.() }
     const context: StepContext = {...ctx,beforeRequest}
     const contacts = new Map<string,ReturnType<typeof contact>>(), cursors = new Set<string>()
     let after = '', pages = 0, bytes = 0
@@ -88,6 +89,9 @@ export const hubspotFindContact: StepType = {
           return {...response,url:ENDPOINT,headers:new Headers([...response.headers].filter(([name]) => ['content-type','retry-after'].includes(name))),bytes}
         },
       },connectionId,policy))
+      // A read grant may change while a response or sealed checkpoint is opened.
+      // Recheck before any retained contact is consumed or released downstream.
+      await beforeRequest()
       const status = result.response.status
       if (status !== 200) throw new StepError(status === 401 || status === 403 ? 'auth' : status === 429 ? 'rate_limit' : 'provider',`HubSpot contact search refused with status ${status}`,{status,...(result.exhausted ? {exhausted:true} : {})})
       const projected = page(result.response.bytes)
