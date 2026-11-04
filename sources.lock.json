@@ -3120,7 +3120,7 @@
       "executable": false
     },
     "src/crank/connectors/asana-policy.ts": {
-      "sha256": "eec51edbf61fef29af11bff810106473a1e46d0f8d30f6d160e362f1ba2f4e4e",
+      "sha256": "46c15fbb14051562a58bd62a309b54111e8a68d5af3edd780c3cccb083c0979c",
       "executable": false
     },
     "src/crank/connectors/asana-restore-policy.mjs": {
@@ -6772,7 +6772,7 @@
       "executable": false
     },
     "tests/asana-search-journey.mjs": {
-      "sha256": "8f68bb02f42e99748457373c160c7985737dee62729357c102868ee9895d877f",
+      "sha256": "5460a5fc85e1d2f1e874b3fbec9bc46303471eda37a2ff1be621205dcc8471b2",
       "executable": false
     },
     "tests/authoring-browser.mjs": {

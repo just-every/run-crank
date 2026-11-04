@@ -45,9 +45,11 @@ export function asanaNextPage(value: unknown, project: string, seen: Set<string>
   for (const field of ['path', 'uri'] as const) {
     if (value[field] === undefined) continue
     if (typeof value[field] !== 'string' || value[field].length > 8192 || /[\x00-\x20\x7f\\]/.test(value[field])) return malformedAsana()
-    if (field === 'path' && !value[field].startsWith('/api/1.0/')) return malformedAsana()
+    if (field === 'path' && !value[field].startsWith('/')) return malformedAsana()
     let supplied: URL
-    try { supplied = new URL(value[field], 'https://app.asana.com') } catch { return malformedAsana() }
+    // Asana paths are relative to the API root; retain full API paths too.
+    const link = field === 'path' && !value[field].startsWith('/api/1.0/') ? '/api/1.0' + value[field] : value[field]
+    try { supplied = new URL(link, 'https://app.asana.com') } catch { return malformedAsana() }
     if (supplied.origin !== expected.origin || supplied.pathname !== expected.pathname || supplied.username || supplied.password || supplied.hash ||
         supplied.searchParams.size !== expected.searchParams.size || [...expected.searchParams].some(([key, text]) => supplied.searchParams.get(key) !== text)) return malformedAsana()
   }
@@ -78,9 +80,9 @@ export function asanaTask(value: unknown, project: string) {
       if (typeof value.permalink_url !== 'string' || value.permalink_url.length > 2048 || /[\x00-\x20\x7f\\]/.test(value.permalink_url)) return malformedAsana()
       let link: URL
       try { link = new URL(value.permalink_url) } catch { return malformedAsana() }
-      // Both legacy project links and current workspace/project task links exist.
+      // Both legacy project links and current workspace task links exist.
       if (link.origin !== 'https://app.asana.com' || link.username || link.password || link.search || link.hash ||
-          !new RegExp(`^/(?:0/[0-9]+|1/[0-9]+/project/[0-9]+/task)/${value.gid}(?:/f)?$`).test(link.pathname)) return malformedAsana()
+          !new RegExp(`^/(?:0/[0-9]+|1/[0-9]+/(?:project/[0-9]+/)?task)/${value.gid}(?:/f)?$`).test(link.pathname)) return malformedAsana()
     }
     result.permalink_url = value.permalink_url
   }
