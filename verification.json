@@ -13,8 +13,10 @@
       "browser": false,
       "hosted": false,
       "commands": [
-        "node --test --test-concurrency=1 --test-skip-pattern='^(Regulated Gusto handoffs|Managed Calendar creation|Native Nook delivery)' tests/connections.test.mjs",
-        "node --test --test-concurrency=1 tests/followups.test.mjs tests/ops.test.mjs tests/platform.test.mjs"
+        [
+          "node --test --test-concurrency=1 --test-skip-pattern='^(Regulated Gusto handoffs|Managed Calendar creation|Native Nook delivery)' tests/connections.test.mjs",
+          "node --test --test-concurrency=1 tests/followups.test.mjs tests/ops.test.mjs tests/platform.test.mjs"
+        ]
       ]
     },
     {
@@ -22,10 +24,14 @@
       "browser": true,
       "hosted": false,
       "commands": [
-        "node --test --test-concurrency=1 --test-name-pattern='^(Regulated Gusto handoffs|Managed Calendar creation|Native Nook delivery)' tests/connections.test.mjs",
-        "node --test --test-concurrency=1 tests/logic.test.mjs",
-        "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/inbound-email\" node tests/inbound-email-browser.mjs",
-        "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/calendar-search\" node tests/google-calendar-search-browser.mjs"
+        [
+          "node --test --test-concurrency=1 --test-name-pattern='^(Regulated Gusto handoffs|Managed Calendar creation|Native Nook delivery)' tests/connections.test.mjs",
+          "node --test --test-concurrency=1 tests/logic.test.mjs"
+        ],
+        [
+          "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/inbound-email\" node tests/inbound-email-browser.mjs",
+          "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/calendar-search\" node tests/google-calendar-search-browser.mjs"
+        ]
       ]
     },
     {
@@ -33,8 +39,10 @@
       "browser": false,
       "hosted": false,
       "commands": [
-        "node --test --test-concurrency=1 tests/crank.test.mjs tests/ownership.test.mjs tests/skills.test.mjs",
-        "node --test --test-concurrency=1 tests/webhook-erasure.test.mjs"
+        [
+          "node --test --test-concurrency=1 tests/crank.test.mjs",
+          "node --test --test-concurrency=1 tests/ownership.test.mjs tests/skills.test.mjs tests/webhook-erasure.test.mjs"
+        ]
       ]
     },
     {
@@ -42,7 +50,10 @@
       "browser": true,
       "hosted": true,
       "commands": [
-        "node --test --test-concurrency=1 tests/hold-cost.test.mjs tests/usage.test.mjs tests/app.test.mjs tests/batch.test.mjs tests/pagination.test.mjs tests/historical.test.mjs tests/publish-authority.test.mjs tests/execution-queue.test.mjs tests/dispatch-authority.test.mjs tests/version-comparison.test.mjs tests/deployment.test.mjs tests/grants.test.mjs tests/security.test.mjs tests/service-accounts.test.mjs tests/executors.test.mjs tests/hosted-mail.test.mjs tests/drift.test.mjs",
+        [
+          "node --test --test-concurrency=1 tests/hold-cost.test.mjs tests/usage.test.mjs tests/app.test.mjs tests/batch.test.mjs tests/pagination.test.mjs tests/historical.test.mjs tests/publish-authority.test.mjs tests/execution-queue.test.mjs tests/dispatch-authority.test.mjs tests/version-comparison.test.mjs tests/deployment.test.mjs",
+          "node --test --test-concurrency=1 tests/grants.test.mjs tests/security.test.mjs tests/service-accounts.test.mjs tests/executors.test.mjs tests/hosted-mail.test.mjs tests/drift.test.mjs"
+        ],
         "pnpm run test:site",
         "pnpm run test:runtime",
         "pnpm run test:email-link"
@@ -53,17 +64,30 @@
       "browser": true,
       "hosted": false,
       "commands": [
-        "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/recurring\" node tests/recurring-browser.mjs",
-        "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/sibling\" node tests/sibling-browser.mjs",
-        "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/decision\" node tests/decision-browser.mjs",
-        "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/executor-schema\" node tests/executor-schema-browser.mjs",
-        "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/digests\" node tests/digest-browser.mjs",
-        "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/subflows\" node tests/run-notices-browser.mjs",
-        "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/team\" node tests/team-browser.mjs",
-        "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/samples\" node tests/sample-browser.mjs",
-        "node --test --test-concurrency=1 tests/team.test.mjs",
-        "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/mcp-client\" node tests/mcp-client-browser.mjs",
-        "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/authoring\" node tests/authoring-browser.mjs"
+        [
+          "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/sibling\" node tests/sibling-browser.mjs",
+          "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/recurring\" node tests/recurring-browser.mjs"
+        ],
+        [
+          "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/decision\" node tests/decision-browser.mjs",
+          "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/drift\" node tests/drift-browser.mjs"
+        ],
+        [
+          "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/digests\" node tests/digest-browser.mjs",
+          "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/executor-schema\" node tests/executor-schema-browser.mjs"
+        ],
+        [
+          "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/samples\" node tests/sample-browser.mjs",
+          "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/subflows\" node tests/run-notices-browser.mjs"
+        ],
+        [
+          "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/team\" node tests/team-browser.mjs",
+          "node --test --test-concurrency=1 tests/team.test.mjs"
+        ],
+        [
+          "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/mcp-client\" node tests/mcp-client-browser.mjs",
+          "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/authoring\" node tests/authoring-browser.mjs"
+        ]
       ]
     },
     {
@@ -79,25 +103,34 @@
       "browser": true,
       "hosted": false,
       "commands": [
-        "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/financial\" node tests/financial-browser.mjs",
-        "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/invoice-outcome\" node tests/invoice-outcome-browser.mjs",
-        "CRANK_PICKER_ONLY=1 CRANK_EVIDENCE=\"$CRANK_EVIDENCE/pickers\" node tests/custom-browser.mjs",
-        "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/custom-search\" node tests/custom-search-browser.mjs",
-        "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/ai\" node tests/ai-steps-browser.mjs",
-        "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/editor\" node tests/editor-browser.mjs",
-        "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/gmail\" node tests/gmail-search-browser.mjs",
-        "node --test --test-concurrency=1 tests/request-limits.test.mjs"
+        [
+          "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/financial\" node tests/financial-browser.mjs",
+          "node --test --test-concurrency=1 tests/request-limits.test.mjs"
+        ],
+        [
+          "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/invoice-outcome\" node tests/invoice-outcome-browser.mjs",
+          "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/migration\" node tests/migration-browser.mjs"
+        ],
+        [
+          "CRANK_PICKER_ONLY=1 CRANK_EVIDENCE=\"$CRANK_EVIDENCE/pickers\" node tests/custom-browser.mjs",
+          "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/custom-search\" node tests/custom-search-browser.mjs"
+        ],
+        [
+          "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/ai\" node tests/ai-steps-browser.mjs",
+          "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/editor\" node tests/editor-browser.mjs"
+        ],
+        "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/gmail\" node tests/gmail-search-browser.mjs"
       ]
     },
     {
       "name": "agent-executor",
-      "browser": true,
+      "browser": false,
       "hosted": false,
       "commands": [
-        "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/drift\" node tests/drift-browser.mjs",
-        "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/migration\" node tests/migration-browser.mjs",
-        "sudo \"$(command -v node)\" tests/executor-linux.mjs",
-        "node --test --test-concurrency=1 tests/triggers.test.mjs"
+        [
+          "node --test --test-concurrency=1 tests/triggers.test.mjs",
+          "sudo \"$(command -v node)\" tests/executor-linux.mjs"
+        ]
       ]
     }
   ],

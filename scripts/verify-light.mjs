@@ -54,7 +54,7 @@ export async function lightReaders(files, { cwd = process.cwd(), plan } = {}) {
  for (const path of ['edition.json', 'sources.lock.json', 'scripts/edition-authoring/cli.mjs']) await access(join(cwd, path));
  if (files.some(path => /^(?:evidence|\.artifacts)\//.test(path) && !/\.(?:md|txt|png|jpe?g|pdf)$/.test(path))) return;
  const commands = new Set(), changed = new Set(files);
- for (const shard of [...plan.push, ...plan.nightly]) for (const command of shard.commands) {
+ for (const shard of [...plan.push, ...plan.nightly]) for (const command of shard.commands.flat()) {
   const paths = commandTests(command);
   if (!paths) return;
   for (const path of paths) {
@@ -76,5 +76,5 @@ export async function lightReaders(files, { cwd = process.cwd(), plan } = {}) {
 }
 
 export function lightNeedsBrowser(readers, plan) {
- return [...plan.push, ...plan.nightly].some(shard => shard.browser && shard.commands.some(command => readers.includes(command)));
+ return [...plan.push, ...plan.nightly].some(shard => shard.browser && shard.commands.flat().some(command => readers.includes(command)));
 }

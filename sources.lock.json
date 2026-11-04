@@ -2760,7 +2760,7 @@
       "executable": false
     },
     "scripts/verify-app.mjs": {
-      "sha256": "53d32df18fc683c843d980a06e5e92b4c4029af9e307027307678ea28cf888e4",
+      "sha256": "e05e0b1f041293e77595a08562df1452ef5873802ca314de257b4849991b434e",
       "executable": false
     },
     "scripts/verify-ci.mjs": {
@@ -2772,7 +2772,7 @@
       "executable": false
     },
     "scripts/verify-light.mjs": {
-      "sha256": "5a1dd608747df0e728159bd62463fa47c06586a3587de242eee7d8027ee4dab7",
+      "sha256": "bdb663b07fd0c1832b50e7d37ba5cbef191c9f66706949130c7ae05933392a40",
       "executable": false
     },
     "scripts/verify-plan.mjs": {
@@ -7396,7 +7396,7 @@
       "executable": false
     },
     "verification.json": {
-      "sha256": "17046439d4e4faf49d644dcbb2e9c67b8ee1c75de37407d51f6e906afb432a84",
+      "sha256": "9a15f8929005bf03017002cf3eacdb6f04c129bd59b2d87ae23a1992f7dd749e",
       "executable": false
     },
     "VERIFY-WORKFLOW.md": {
