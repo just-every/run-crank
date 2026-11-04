@@ -35,7 +35,8 @@ export async function dropboxFixture(){
   if(mode==='bad-revision')return page([{...file('bad'),rev:''}]);
   if(mode==='bad-size')return page([{...file('bad'),size:-1}]);
   if(mode==='bad-date')return page([{...file('bad'),server_modified:'2026-02-30T00:00:00Z'}]);
-  if(mode==='oversized')return page(Array(101).fill(file('a')));
+  if(mode==='overshoot')return jsonResponse({entries:[...Array.from({length:100},(_,i)=>file((continuation?'later':'initial')+i,'synthetic-crank-'+i+'.pdf')),file(continuation?'b':'a')],cursor:'synthetic-crank-page',has_more:!continuation});
+  if(mode==='oversized')return page([{...file('a'),content:'x'.repeat(262144)}]);
   if(mode==='conflict'&&continuation)return page([{...file('a'),rev:'000000002'}]);
   if(mode==='park'&&continuation)return jsonResponse({},429,{'retry-after':'60'});
   if(mode==='lost'&&continuation&&!lost){lost=true;return new Promise(resolve=>setTimeout(()=>resolve(page([file('b'),file('a')])),600))}
@@ -65,6 +66,10 @@ export async function dropboxSearchJourney({onScreen}={}){
   const halt=await check({no_match:'halt'},'empty',filename,'not found','stopped_by_search');assert.ok(!stepOf(halt,'outcome'));
   const one=await check({},'one',filename,'found','succeeded');assert.equal(output(one).record.id,'id:synthetic-crank-a');
   await check({},'pages','IMG','not found','succeeded');await check({},'pages',filename.toLowerCase(),'not found','succeeded');
+  const overshoot=await check({},'overshoot',filename,'found','succeeded');
+  assert.deepEqual(output(overshoot).records.map(record=>record.id),['id:synthetic-crank-a','id:synthetic-crank-b'],'matches beyond the requested limit on both pages are retained');
+  assert.equal(output(overshoot).pages,2);assert.equal(output(overshoot).complete,true);assert.equal(output(overshoot).truncated,false);
+  assert.deepEqual(overshoot.response.body,{outcome:'found',count:2});
   const first=await check({multi_match:'first',sort:{field:'server_modified',direction:'desc'}},'pages',filename,'found','succeeded');assert.equal(output(first).record.id,'id:synthetic-crank-a');assert.equal(output(first).count,2);
   const stop=await check({multi_match:'stop'},'pages',filename,'multiple matches','stopped_by_search');assert.ok(!stepOf(stop,'outcome'));
   const multi=await check({multi_match:'stop',on_multiple:'continue'},'pages',filename,'multiple matches','succeeded');assert.equal(multi.response.body.outcome,'multiple matches');

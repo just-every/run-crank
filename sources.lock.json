@@ -3120,7 +3120,7 @@
       "executable": false
     },
     "src/crank/connectors/dropbox.ts": {
-      "sha256": "2980a1f0da85affc33d13f50acfe71e8e965a9bf822760d82461a678f93bf24f",
+      "sha256": "ce7459dc61c8d5369e932a3f3eef2940a07544cdd6d34b644626b88859169211",
       "executable": false
     },
     "src/crank/connectors/files.ts": {
@@ -6884,7 +6884,7 @@
       "executable": false
     },
     "tests/dropbox-search-journey.mjs": {
-      "sha256": "4b2602474c5cf2d25cf93ec2060e8fe1a98cd0470f51d73fa3c05299de73c9cf",
+      "sha256": "b743dba6d08a3a1133d4cde12e4ef54dfbddb61c88bedde2442e642c1ce39014",
       "executable": false
     },
     "tests/editor-browser.mjs": {

@@ -52,8 +52,10 @@ function decode(bytes: Uint8Array<ArrayBuffer>) {
   try { const value = JSON.parse(utf8(bytes)); if (isObject(value)) return value } catch { /* no raw provider text in diagnostics */ }
   return malformed('JSON response')
 }
+// Dropbox may slightly exceed the requested limit. The transport byte bound and
+// maximum page count bound the scan; every returned entry still needs validation.
 function project(value: Record<string, unknown>, selected: string) {
-  if (!Array.isArray(value.entries) || value.entries.length > PAGE_SIZE || typeof value.has_more !== 'boolean' || !text(value.cursor, 2048) || /\s/.test(value.cursor)) return malformed('folder page or cursor')
+  if (!Array.isArray(value.entries) || typeof value.has_more !== 'boolean' || !text(value.cursor, 2048) || /\s/.test(value.cursor)) return malformed('folder page or cursor')
   const files = []
   for (const entry of value.entries) {
     if (!isObject(entry) || !['file', 'folder', 'deleted'].includes(String(entry['.tag']))) return malformed('folder entry')
@@ -86,7 +88,7 @@ export const dropboxFindFile: StepType = {
       }, connectionId, policy))
       if (response.status !== 200) throw new StepError([401, 403].includes(response.status) ? 'auth' : response.status === 429 ? 'rate_limit' : 'provider', `Dropbox search refused with status ${response.status}`, { status: response.status })
       const page = decode(response.bytes)
-      if (!Array.isArray(page.files) || page.files.length > PAGE_SIZE || typeof page.has_more !== 'boolean' || !text(page.cursor, 2048) || /\s/.test(page.cursor)) return malformed('retained folder page')
+      if (!Array.isArray(page.files) || typeof page.has_more !== 'boolean' || !text(page.cursor, 2048) || /\s/.test(page.cursor)) return malformed('retained folder page')
       for (const value of page.files) {
         if (!isObject(value)) return malformed('retained file metadata')
         const record = file(value), prior = records.get(record.id)
