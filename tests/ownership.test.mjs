@@ -18,6 +18,8 @@ test('BASE-001/BASE-004: an owned installation publishes and finishes every ship
     const setup = await h.mf.dispatchFetch(h.origin + '/setup', { method: 'POST', redirect: 'manual', headers: { origin: h.origin, cookie: h.owner, 'content-type': 'application/x-www-form-urlencoded' }, body: 'confirm=yes' });
     assert.equal(setup.status, 303);
     const slack = await connection(h, { app: 'slack', label: 'Harbor sales team', auth_kind: 'bearer', secret: { token: fakeSecret('slack') } });
+    const asana=await connection(h,{app:'asana',auth_kind:'bearer',label:'Harbor task reads',scopes:['tasks:read'],secret:{token:'synthetic-crank-601'}});
+    fake.routes.set('app.asana.com',({method,url,headers})=>{assert.equal(method,'GET');assert.equal(url.pathname,'/api/1.0/projects/12001/tasks');assert.equal(headers.authorization,'Bearer synthetic-crank-601');return jsonResponse({data:[{gid:'12002',resource_type:'task',name:'Harbor delivery',completed:false,due_on:'2026-11-05',due_at:null,permalink_url:'https://app.asana.com/0/12001/12002'}],next_page:null})});
     const calendar=await connection(h,{app:'google',auth_kind:'oauth2',label:'Harbor calendar',scopes:['https://www.googleapis.com/auth/calendar.events'],secret:{access_token:'synthetic-crank-20'}});
     const calendarEvents=new Map();fake.routes.set('www.googleapis.com',({method,url,body})=>{if(method==='POST'){const event=JSON.parse(body);calendarEvents.set(event.id,{...event,status:'confirmed'});return jsonResponse(event)}if(url.pathname.endsWith('/events'))return jsonResponse({items:[...calendarEvents.values()]});return jsonResponse(calendarEvents.get(url.pathname.split('/').at(-1)))});
     const executor=await connection(h,{app:'http',label:'Owner code executor',auth_kind:'bearer',domains:['executor.example'],secret:{token:fakeSecret('executor')}});
@@ -30,6 +32,7 @@ test('BASE-001/BASE-004: an owned installation publishes and finishes every ship
     const nook=await connection(h,{app:'nook',label:'Owned Nook conversation',auth_kind:'bearer',scopes:['messages:write'],binding:{origin:'https://nook.example',conversation_id:'synthetic-crank-301'},secret:{token:'synthetic-crank-302'}});
     fake.routes.set('nook.example',({body})=>jsonResponse({id:'synthetic-crank-303',body:JSON.parse(body).body}));
     const graph = ownershipGraph(slack.id,executor.id);graph.steps.unshift(custom.step,
+      {id:'asana_task',type:'asana.find_task',connection_id:asana.id,sort:{field:'id',direction:'asc'},input:{project_id:'12001',name:'Harbor delivery'}},
       {id:'digest_append',type:'digest.append',digest_name:'Owned digest',retention_days:30,input:{entry:'Owned installation'}},
       {id:'digest_find',type:'digest.find',digest_name:'Owned digest',retention_days:30},
       {id:'digest_release',type:'digest.release',digest_name:'Owned digest',retention_days:30},
@@ -74,6 +77,7 @@ test('BASE-001/BASE-004: an owned installation publishes and finishes every ship
     assert.equal(stepOf(done,'digest_find').output.count,1);
     assert.equal(stepOf(done,'digest_release').output.text,'Owned installation');
     assert.equal(stepOf(done, 'nook_message').output.id, 'synthetic-crank-303');
+    assert.equal(stepOf(done,'asana_task').output.record.id,'12002');assert.equal(stepOf(done,'asana_task').output.record.due_on,'2026-11-05');assert.equal(stepOf(done,'asana_task').output.complete,true);
     assert.equal(stepOf(done,'calendar_search').output.record.summary,'Harbor appointment');assert.equal(stepOf(done,'calendar_search').output.record.event_id,stepOf(done,'calendar_event').output.event_id);
     assert.equal(stepOf(done, 'component').output.value, 'Owned installation');
     assert.equal(stepOf(done, 'lookup_count').output.record.value, 1);

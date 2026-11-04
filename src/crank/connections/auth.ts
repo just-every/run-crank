@@ -1,4 +1,5 @@
 import { orbitBinding, assertOrbitDestination } from './orbit-binding'
+import { assertAsanaDestination } from '../connectors/asana-policy'
 import { siblingBinding, assertSiblingDestination } from './sibling-binding'
 import { boundedFetch, utf8 } from '../engine/egress'
 import { StepError } from '../engine/errors'
@@ -34,6 +35,7 @@ async function clientCredentials(env: CrankEnv, row: ConnectionRow, secret: Secr
  * connection's declared API domains. Credentials never enter the graph or run history. */
 export async function authorizeRequest(env: CrankEnv, connectionId: string, url: URL, headers: Headers, body: string | Uint8Array<ArrayBuffer> | null, method = 'GET', nativeOrbit = false) {
   const { row, secret: stored } = await credential(env, connectionId)
+  if (row.app === 'asana') assertAsanaDestination(url, method, body, JSON.parse(row.scopes_json))
   if (row.app === 'nook') {
     assertSiblingDestination(siblingBinding(JSON.parse(row.sibling_binding_json ?? 'null')), url)
     if (!JSON.parse(row.scopes_json).includes('messages:write')) throw new StepError('connection', 'Nook posting requires messages:write on the current connection', { connection_id: row.id, reconnect: true })

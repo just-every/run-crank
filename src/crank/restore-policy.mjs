@@ -1,5 +1,6 @@
 import { validatePureRecipe } from './workflows/recipe-definition.mjs';
 import { validateSubflowDefinition } from './workflows/subflow-definition.mjs';
+import { validAsanaGraph } from './connectors/asana-restore-policy.mjs';
 const sealedValue = value => value?.sealed === 'crank-payload-v1' && typeof value.k === 'string' && ['customer','financial','health'].includes(value.c) && typeof value.iv === 'string' && atob(value.iv).length === 12 && typeof value.ct === 'string' && atob(value.ct).length >= 16;
 const unfinished = ['queued', 'running', 'waiting', 'awaiting_approval', 'paused'];
 const distant = '9999-12-31T00:00:00.000Z';
@@ -152,10 +153,10 @@ export async function validateRestore({ read }) {
   for (const row of await rows('crank_app_pending_rows')) if (versions.get(row.version_id)?.workflow_id !== row.workflow_id) return false;
   for (const workflow of workflows.values()) {
     const graph = JSON.parse(workflow.draft_json);
-    if (!graph.trigger || !Array.isArray(graph.steps) || workflow.published_version_id && versions.get(workflow.published_version_id)?.workflow_id !== workflow.id) return false;
+    if (!validAsanaGraph(graph.steps) || !graph.trigger || !Array.isArray(graph.steps) || workflow.published_version_id && versions.get(workflow.published_version_id)?.workflow_id !== workflow.id) return false;
   }
   for (const version of versions.values()) {
-    if (!subflowRefs(JSON.parse(version.graph_json).steps)) return false;
+    if (!validAsanaGraph(JSON.parse(version.graph_json).steps) || !subflowRefs(JSON.parse(version.graph_json).steps)) return false;
     if (!workflows.has(version.workflow_id) || version.grant_source_version_id && versions.get(version.grant_source_version_id)?.workflow_id !== version.workflow_id) return false;
     const policy = JSON.parse(version.retry_policy_json);
     if (!policy || typeof policy !== 'object' || Array.isArray(policy) || Object.keys(policy).some(key => !['read_attempts','base_delay_ms','write_base_delay_ms','idempotent_write_attempts','elapsed_ms','jitter_ms','max_wait_ms','run_parked_ms'].includes(key) || !Number.isSafeInteger(policy[key]) || policy[key] < 0)) return false;
@@ -164,6 +165,7 @@ export async function validateRestore({ read }) {
     if (Array.from(new Uint8Array(hash), byte => byte.toString(16).padStart(2, '0')).join('') !== version.graph_digest) return false;
   }
   for (const draft of await rows('crank_workflow_drafts')) {
+    if (!validAsanaGraph(JSON.parse(draft.graph_json).steps)) return false;
     if (!workflows.has(draft.workflow_id) || draft.base_version_id && versions.get(draft.base_version_id)?.workflow_id !== draft.workflow_id) return false;
     const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(draft.graph_json));
     if (Array.from(new Uint8Array(hash), byte => byte.toString(16).padStart(2, '0')).join('') !== draft.graph_digest) return false;
@@ -190,9 +192,10 @@ export async function validateRestore({ read }) {
         const allowed=[search?.id,search?.find_or_create?.operation].filter(Boolean)
         if (!step.gateway_id || !search?.gateway || response.body_bytes>65536 || !allowed.some(operation=>url.pathname===`/api/crank/gateways/${encodeURIComponent(step.gateway_id)}/operations/${encodeURIComponent(operation)}/pages/0`)) return false;
       }
-      if (!step || !['http','file.fetch','custom.request','gmail.search_threads'].includes(step.type) && !step.type.startsWith('orbit.') && !step.type.startsWith('nook.') && !step.type.startsWith('slack.') && !step.type.startsWith('quickbooks.') && !step.type.startsWith('gusto.') && !step.type.startsWith('google_calendar.')) return false;
+      if (!step || !['http','file.fetch','custom.request','gmail.search_threads','asana.find_task'].includes(step.type) && !step.type.startsWith('orbit.') && !step.type.startsWith('nook.') && !step.type.startsWith('slack.') && !step.type.startsWith('quickbooks.') && !step.type.startsWith('gusto.') && !step.type.startsWith('google_calendar.')) return false;
+      if (step.type === 'asana.find_task' && (url.href !== 'https://app.asana.com/api/1.0/tasks' || checkpoint.ordinal >= (step.max_pages ?? 20))) return false;
       if (step.type === 'google_calendar.search_events' && url.href !== 'https://www.googleapis.com/calendar/v3/events') return false;
-      const bound = (step.type === 'file.fetch' || step.type === 'nook.send_message' || step.type.startsWith('orbit.') || step.type === 'google_calendar.search_events' ? 1 : step.type.startsWith('slack.') ? 4 : 2) * 1024 * 1024;
+      const bound = (step.type === 'file.fetch' || step.type === 'nook.send_message' || step.type.startsWith('orbit.') || step.type === 'google_calendar.search_events' || step.type === 'asana.find_task' ? 1 : step.type.startsWith('slack.') ? 4 : 2) * 1024 * 1024;
       if (!Number.isSafeInteger(checkpoint.ordinal) || checkpoint.ordinal < 0 || !/^[a-f0-9]{64}$/.test(checkpoint.request_key) || typeof checkpoint.operation_key !== 'string' || !checkpoint.operation_key) return false;
       if (!Number.isInteger(response.status) || response.status < 100 || response.status > 599 || !['http:', 'https:'].includes(url.protocol) || url.username || url.password || url.search || url.hash) return false;
       if (!Number.isSafeInteger(response.body_bytes) || response.body_bytes < 0 || response.body_bytes > bound || response.chunk_count !== Math.ceil(response.body_bytes / 65536) || !(Array.isArray(response.headers) || sealedValue(response.headers))) return false;

@@ -6,7 +6,7 @@
   "toolchain": {
     "id": "runeditrun/edition-authoring",
     "version": "1.1.0",
-    "sha256": "b546ef04830f935ee2493a5bc08ef43a0f7d5905aeb8549fb75670c19890af99"
+    "sha256": "3f7b56f3ae1e70588fb35c49e75b639c2360ceed550182b9caf8adc33021abb8"
   },
   "components": [
     {
@@ -3088,15 +3088,15 @@
       "executable": false
     },
     "src/crank/connections/apps.ts": {
-      "sha256": "11d915b236d20d2a7f27c1ebac99cfca34dfd02c8d548526aabd1c4f8d40fcb7",
+      "sha256": "f37e4305723e05d939019f4435f0844c6e01cf232ad3414a85a29a19a22e88bb",
       "executable": false
     },
     "src/crank/connections/auth.ts": {
-      "sha256": "905deb0ed1398a713d041a8997d6c719e2b1e4aadf7a8ddcf235e9bb4491a04d",
+      "sha256": "96879754b884e24b4538106bdeda075b115dc853c44fc899367f34c544c6cb03",
       "executable": false
     },
     "src/crank/connections/catalog.ts": {
-      "sha256": "47dfcec5b32bed700bf00a6311a4c16b974ac4b491674eba70b8627b254b7fe5",
+      "sha256": "72a81ed167a77cb9d753f15a2ba36af71f9b469ab8f9606d7138869360830dc7",
       "executable": false
     },
     "src/crank/connections/oauth.ts": {
@@ -3117,6 +3117,18 @@
     },
     "src/crank/connections/vault.ts": {
       "sha256": "a5722b6033d8de01d27a614d3172879fc51183a56689c7f5737c18188ff39c56",
+      "executable": false
+    },
+    "src/crank/connectors/asana-policy.ts": {
+      "sha256": "eec51edbf61fef29af11bff810106473a1e46d0f8d30f6d160e362f1ba2f4e4e",
+      "executable": false
+    },
+    "src/crank/connectors/asana-restore-policy.mjs": {
+      "sha256": "b25a0ad88028443a42507f9ee7a22f2993c8e9b3b46007f8e2c0884da5dc6db5",
+      "executable": false
+    },
+    "src/crank/connectors/asana.ts": {
+      "sha256": "f453dc39d8521d263ec3b83cec550bb077ab95c7003ae3e3a6c40cea776e2852",
       "executable": false
     },
     "src/crank/connectors/files.ts": {
@@ -3264,7 +3276,7 @@
       "executable": false
     },
     "src/crank/data-flow-graphs.ts": {
-      "sha256": "0dfc1fda5d61ddd27a1b5291fd3d0ced6d64a96b54e338a6572a2d36a210459b",
+      "sha256": "496339a9462774a9765bf636973ca0b129e8a88534b9d71788e4ea3f65f03bbf",
       "executable": false
     },
     "src/crank/data-flow-types.ts": {
@@ -3388,7 +3400,7 @@
       "executable": false
     },
     "src/crank/engine/steps/index.ts": {
-      "sha256": "a9a4736a6e79bae30c31efc18b412ba0c2c5104bd104f5668e132815ad71fcaf",
+      "sha256": "7468b6edc5baa0a518835547435aefdff8926eba854099af9422eeba7b73a703",
       "executable": false
     },
     "src/crank/engine/steps/join.ts": {
@@ -3768,7 +3780,7 @@
       "executable": false
     },
     "src/crank/restore-policy.mjs": {
-      "sha256": "926dd70531d87cec40a651d6414a8a0121a22ef45ac8a912ef2db811812b2359",
+      "sha256": "384a188bf532a50d8b1141411edeae4d2f018f1e61d84135e351dee5c6230e0a",
       "executable": false
     },
     "src/crank/runs.ts": {
@@ -6751,6 +6763,14 @@
       "sha256": "71593df569ee6a5065fecaadfb398b720df3f411153452f95387a53f8012b09c",
       "executable": false
     },
+    "tests/asana-search-browser.mjs": {
+      "sha256": "33efb61759d3b4f74ca66a7a1486fb243a241191aa172687b6472518122768b0",
+      "executable": false
+    },
+    "tests/asana-search-journey.mjs": {
+      "sha256": "7a0741a794b9b921a7bfdef67c5b0da607aeaa93eb72721bdc23f000a871a924",
+      "executable": false
+    },
     "tests/authoring-browser.mjs": {
       "sha256": "4df010bc5875a96f8304c21bce4254a9e4565d7e6c4d38cec69a73770bd00588",
       "executable": false
@@ -6776,7 +6796,7 @@
       "executable": false
     },
     "tests/connections.test.mjs": {
-      "sha256": "77d9cbbfb9614ace7af558d4c1a9b7e0c54c0ebc7010cda396d5f2c229f7027d",
+      "sha256": "0451ead325a797c6f2a0340bd14d94a0d57d7a0452049b42e6872042717c368b",
       "executable": false
     },
     "tests/crank.test.mjs": {
@@ -7156,7 +7176,7 @@
       "executable": false
     },
     "tests/ownership.test.mjs": {
-      "sha256": "4f78c7cd1658070ff0dcb576879b663326117dab8afd9f89e7a4ea6620aca4a5",
+      "sha256": "25a7c251fe55c70379f8ceacf1ff8b4630927ec031150d9924a71a5189664efa",
       "executable": false
     },
     "tests/pagination.test.mjs": {
