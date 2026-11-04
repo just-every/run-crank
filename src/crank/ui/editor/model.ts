@@ -42,6 +42,7 @@ export function appOf(node: Node, connections: Connection[]): { title: string; t
     return { title: TRIGGERS[t.type] ?? titleCase(String(t.type)), tile: t.type === 'slack_event' ? 'slack' : 'tool', glyph: ({ schedule: 'schedule', feed: 'feed', url_poll: 'http', manual: 'play' } as Record<string, string>)[t.type] ?? 'hook' }
   }
   const step = node.step!, c = connection(step.connection_id)
+  if (step.type === 'zendesk.search_tickets') return { title: 'Zendesk', tile: 'tool', glyph: 'search' }
   if (step.type === 'gmail.search_threads') return { title: 'Gmail', tile: 'google', glyph: 'search' }
   if (step.type.startsWith('quickbooks.')) return { title: 'QuickBooks sandbox', tile: 'quickbooks', glyph: 'invoice' }
   if (step.type.startsWith('gusto.')) return { title: 'Gusto', tile: 'tool', glyph: 'account' }
@@ -68,6 +69,7 @@ export function triggerWords(kind: string, graph: Graph | undefined, connections
 export function summaryOf(node: Node): string {
   if (node.trigger) return String((node.trigger as any).name ?? ({ webhook: 'Catch hook', schedule: 'On a schedule', feed: 'New feed item', url_poll: 'New record', slack_event: 'New Slack event', manual: 'Started by hand' } as Record<string, string>)[String(node.trigger.type)] ?? '')
   const step = node.step!
+  if (step.type === 'zendesk.search_tickets') return 'Search ticket metadata'
   if (step.type === 'gmail.search_threads') return 'Search thread metadata'
   if (typeof step.name === 'string') return step.name
   if (step.type.startsWith('slack.')) return titleCase(step.type.slice(6).replace(/_/g, ' '))

@@ -12,6 +12,8 @@ const fake = fakeEdge();
 test('Gmail thread metadata search retains declared outcomes, consent, parked pages and inactive sealed custody', async () => {
   const {gmailSearchJourney,gmailCustodyJourney}=await import('./gmail-search-journey.mjs');
   await gmailSearchJourney();await gmailCustodyJourney();
+  const {zendeskSearchJourney,zendeskCustodyJourney}=await import('./zendesk-search-journey.mjs');
+  await zendeskSearchJourney();await zendeskCustodyJourney();
 });
 let h;
 before(async () => {

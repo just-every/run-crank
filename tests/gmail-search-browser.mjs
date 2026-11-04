@@ -45,5 +45,5 @@ async function onScreen({h,w,run,state}){
   }
  }finally{await context.close();server.closeAllConnections();await new Promise(done=>server.close(done))}
 }
-try{await gmailSearchJourney({onScreen})}finally{await browser.close()}
+try{await gmailSearchJourney({onScreen}); const {zendeskSearchBrowser}=await import('./zendesk-search-browser.mjs'); await zendeskSearchBrowser(browser)}finally{await browser.close()}
 console.log('Gmail metadata identities, literal headers, declared outcomes and tooltips PASS; screens at 1440 and 390');

@@ -172,7 +172,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "dbb36f3e9c5a1e124607ea160d00e8b43b543bb8b8e16f706f4635bd5966a915",
+      "sha256": "295e33845c1bd32c89ef7d635d0856d2d0eaf9c119e6ff179ba9ba2974d14df8",
       "executable": false
     },
     "DEMO.md": {
@@ -200,7 +200,7 @@
       "executable": false
     },
     "docs/API.md": {
-      "sha256": "179148bded6a44865fc78c509c2bcc81e2092fee97d78161b11653354b044a84",
+      "sha256": "66b08039380fcc6907f7ba021f4ea54b4d762a1b4d63f2e39523166ea6861221",
       "executable": false
     },
     "docs/APP-TRIGGERS.md": {
@@ -3191,6 +3191,10 @@
       "sha256": "2938a9c34dab12e347203755312245fac1ddd3045a278ef065b20a53c70760ba",
       "executable": false
     },
+    "src/crank/connectors/zendesk.ts": {
+      "sha256": "c178b7b60c5f740edbddff29f0a61b73ca15472195d979c47f98aa3b24d31e17",
+      "executable": false
+    },
     "src/crank/custom/api.ts": {
       "sha256": "c70d82468aa36bb02c96018d48e5f2985152bde5eae5e52e30d70e150a5737d9",
       "executable": false
@@ -3996,11 +4000,11 @@
       "executable": false
     },
     "src/crank/ui/editor/inspector.ts": {
-      "sha256": "02db38f4ddef49be67cff7a8a0e6082d282494495d93bba5ca5a123d99c72556",
+      "sha256": "3085a4ac17f3200264979f10b71b897da8a6fbefe8188784d6bb44f3b64f1ded",
       "executable": false
     },
     "src/crank/ui/editor/model.ts": {
-      "sha256": "833b9148191a6f52d938a276efb6e616f972123d6d4fded1a280f8789afcdb10",
+      "sha256": "53b8641d687d43f717bb5dd0d467c8ddcc6add45436d69c5c7a179944b6311a0",
       "executable": false
     },
     "src/crank/ui/editor/native-view.ts": {
@@ -6776,7 +6780,7 @@
       "executable": false
     },
     "tests/connections.test.mjs": {
-      "sha256": "77d9cbbfb9614ace7af558d4c1a9b7e0c54c0ebc7010cda396d5f2c229f7027d",
+      "sha256": "1289763c135767b948b27a579ae6c42c2fd13852186a25409fa54ae65cbc8dde",
       "executable": false
     },
     "tests/crank.test.mjs": {
@@ -6956,7 +6960,7 @@
       "executable": false
     },
     "tests/gmail-search-browser.mjs": {
-      "sha256": "0b3c48be3340e92201650bf282e52b1278b2544d50dfd6d7691a164a39124a20",
+      "sha256": "9305ae1b08413f5f68655bf771cb09c2e0d1f628bd7d3cc871715b7615e6ed95",
       "executable": false
     },
     "tests/gmail-search-journey.mjs": {
@@ -7156,7 +7160,7 @@
       "executable": false
     },
     "tests/ownership.test.mjs": {
-      "sha256": "4f78c7cd1658070ff0dcb576879b663326117dab8afd9f89e7a4ea6620aca4a5",
+      "sha256": "ca168876e9ca08b8f23a46e158435dfc74830c661eb8597e244d14c940570068",
       "executable": false
     },
     "tests/pagination.test.mjs": {
@@ -7365,6 +7369,14 @@
     },
     "tests/worker.ts": {
       "sha256": "d33636da6188ba6b98235732d7d08ec54555f2c4f45aea1cab1992f4ded859a0",
+      "executable": false
+    },
+    "tests/zendesk-search-browser.mjs": {
+      "sha256": "d2baef5230659ece0faec83ef4aada471cc48756329d2dcf0b5807ee2a6e3b03",
+      "executable": false
+    },
+    "tests/zendesk-search-journey.mjs": {
+      "sha256": "1e290c02a3f98d0d5fe41e14ee95b8bb5a0374386cfab677a80e42bf16012ace",
       "executable": false
     },
     "tsconfig.json": {

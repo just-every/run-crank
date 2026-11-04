@@ -67,7 +67,7 @@ function ticket(value: unknown, host: string, names: string[]) {
     if (field === undefined) return malformed('missing declared ticket metadata')
     if (name.endsWith('_id')) { if (field !== null) ticketId(field) }
     else if (name === 'tags') { if (!Array.isArray(field) || field.length > 100 || field.some(tag => typeof tag !== 'string' || tag.length > 256 || /[\x00-\x1f\x7f]/.test(tag))) return malformed('invalid ticket tags') }
-    else if (name.endsWith('_at')) { if (typeof field !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/.test(field) || !Number.isFinite(Date.parse(field))) return malformed('invalid ticket timestamp') }
+    else if (name.endsWith('_at')) { if (typeof field !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/.test(field) || !Number.isFinite(Date.parse(field)) || new Date(field).toISOString().slice(0, 19) !== field.slice(0, 19)) return malformed('invalid ticket timestamp') }
     else if (field !== null && (typeof field !== 'string' || field.length > (name === 'subject' ? 4096 : 256) || /[\x00-\x1f\x7f]/.test(field))) return malformed('invalid ticket metadata text')
     if (name === 'subject' && typeof field !== 'string' || name === 'status' && !['new', 'open', 'pending', 'hold', 'solved', 'closed'].includes(String(field)) || name === 'priority' && field !== null && !['low', 'normal', 'high', 'urgent'].includes(String(field)) || name === 'type' && field !== null && !['problem', 'incident', 'question', 'task'].includes(String(field))) return malformed('invalid ticket metadata value')
     out[name] = field
@@ -110,9 +110,12 @@ export const zendeskSearchTickets: StepType = {
             const raw = decode(response)
             if (!Number.isSafeInteger(raw.count) || Number(raw.count) < 0 || !Array.isArray(raw.results) || raw.results.length > PAGE_SIZE || raw.results.length > Number(raw.count)) return malformed('invalid provider count or result page')
             const more = nextPage(raw.next_page, pageUrl(host, q, number + 1))
+            if (raw.previous_page !== undefined && raw.previous_page !== null && (number === 1 || !nextPage(raw.previous_page, pageUrl(host, q, number - 1)))) return malformed('invalid previous-page link')
             projected = { count: raw.count, more, results: raw.results.map(value => ticket(value, host, names)) }
           }
-          return { ...response, url: `https://${host}/api/v2/search.json`, headers: new Headers([...response.headers].filter(([name]) => ['content-type', 'retry-after'].includes(name))), bytes: new TextEncoder().encode(JSON.stringify(projected)) }
+          const bytes = new TextEncoder().encode(JSON.stringify(projected))
+          if (bytes.length > MAX_BYTES) return malformed('projected metadata page exceeds the retained-page bound')
+          return { ...response, url: `https://${host}/api/v2/search.json`, headers: new Headers([...response.headers].filter(([name]) => ['content-type', 'retry-after'].includes(name))), bytes }
         },
       }, connectionId, policy))
       if (result.response.status !== 200) throw new StepError([401, 403].includes(result.response.status) ? 'auth' : result.response.status === 429 ? 'rate_limit' : 'provider', `Zendesk search refused with status ${result.response.status}`, { status: result.response.status })

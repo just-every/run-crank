@@ -1224,3 +1224,15 @@ discloses local custody and retention without record values.
 
 This bounded numeric lookup does not complete general WORK-007 records, scoped
 builder access, sensitive custody or isolated table test bindings.
+
+## Zendesk ticket metadata search
+
+The native `zendesk.search_tickets` step reads one exact tenant using an existing Zendesk bearer or basic connection. Set a fixed `subdomain` and `connection_id`; the connection must consent to `read` and declare exactly that tenant's domain. Read authority is checked when consuming cached pages and again at physical dispatch. This operation neither acquires additional consent nor creates or updates anything.
+
+Set `input.query` to `type:ticket`, optionally followed by supported space-separated AND filters. The supported fields are `status`, `priority`, `tags`, `subject`, `external_id`, `requester`, `assignee`, `group`, `organization`, `created` and `updated`. Use `:` for equality; dates also accept `>`, `>=`, `<` and `<=` and require a valid ISO date. Identity filters require numeric IDs. Text values can be quoted, without embedded quotes or escapes. For example, `type:ticket tags:bug subject:"billing question"` is supported. OR, negative terms, other resource types, arbitrary fields and expressions are refused. The query is forwarded unchanged.
+
+Declare unique `metadata_fields` from `subject`, `status`, `priority`, `type`, `requester_id`, `assignee_id`, `group_id`, `organization_id`, `ticket_form_id`, `brand_id`, `tags`, `created_at`, `updated_at` and `external_id`. Stable numeric `id`, `ticket_id` and a tenant-bound `ticket_url` are always returned. Descriptions, comments, attachment bytes and undeclared fields never enter search results or unfinished checkpoints. Set `sort.field` to `id` or a declared `created_at` or `updated_at` timestamp, with `sort.direction` equal to `asc` or `desc`; equal values use ticket ID order.
+
+WORK-011 no-match and multi-match settings apply. `max_pages` accepts 1 to 10; each page contains at most 100 tickets and the retained metadata set is bounded to 512 KiB. `limit` bounds the released results. Counts, ticket identities and pagination links must remain consistent with the fixed search endpoint, tenant and query. Incomplete scans can release an explicitly truncated set only in `all` mode; they cannot establish absence or choose a first result. Provider errors remain errors, rather than empty matches.
+
+Completed pages survive rate-limit parking and restart through the existing checkpoint path. Classified metadata uses the existing sealing, subject holds, erasure and retention policy; declare the relevant metadata identifiers in the workflow's identifier fields. Restoration retains complete history inactive without connection credentials. Search changes no polling baseline or view-membership state. Real Zendesk sandbox proof, Jira capabilities, other searches, triggers, writes and migration parity remain unfinished.
