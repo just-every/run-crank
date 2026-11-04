@@ -90,6 +90,13 @@ export async function hubspotSearchJourney({onScreen}={}) {
   // Scope reduction between pages refuses the next dispatch.
   fake.routes.set('api.hubapi.com',async request=>{assertRead(request);await h.post(`connections/${c.id}/rotate`,{secret:{access_token:'synthetic-crank-701'},scopes:['crm.objects.contacts.write']});return jsonResponse({results:[contact('synthetic-crank-a')],paging:{next:{after:'next'}}})});
   const denied=await startRun(h,draft,{email:address});assert.notEqual(denied.status,'succeeded');assert.equal(fake.requests.length,count+1);
+  // Consent withdrawn while the last response is in flight cannot release it.
+  await h.post(`connections/${c.id}/rotate`,{secret:{access_token:'synthetic-crank-701'},scopes:[contactScope]});
+  fake.routes.set('api.hubapi.com',async request=>{assertRead(request);await h.post(`connections/${c.id}/rotate`,{secret:{access_token:'synthetic-crank-701'},scopes:['crm.objects.contacts.write']});return jsonResponse({results:[contact('synthetic-crank-last-page')]})});
+  const last=await startRun(h,draft,{email:address});assert.notEqual(last.status,'succeeded','read consent must still hold when the final page is consumed');assert.ok(!last.steps.some(s=>s.step_id==='outcome'));assert.equal(result(last),null,'a withdrawn read grant releases no contact result');
+  await h.post(`connections/${c.id}/rotate`,{secret:{access_token:'synthetic-crank-701'},scopes:[contactScope]});
+  fake.routes.set('api.hubapi.com',async request=>{assertRead(request);await h.post(`workflows/${draft.id}/pause`);return jsonResponse({results:[contact('synthetic-crank-paused')]})});
+  const paused=await startRun(h,draft,{email:address});assert.notEqual(paused.status,'succeeded');assert.equal(result(paused),null,'pausing an in-flight lookup releases no result');assert.ok(!paused.steps.some(s=>s.step_id==='outcome'));
   assert.ok(fake.requests.every(r=>r.method==='GET'&&r.url.pathname==='/crm/v3/objects/contacts'),'zero provider mutations or other resource reads');
  }finally{await h.close()}
 }
@@ -108,8 +115,14 @@ export async function hubspotCustodyJourney() {
   receiving=await harness('http://127.0.0.1:9',{edge:fake.edge,clock});await receiving.post('data/restore',{archive:saved,confirm:'RESTORE'});
   const original=inventory(saved),returned=inventory(await archive(receiving)),extra=returned.filter(row=>!new Set(original).has(row));assert.equal(extra.length,1);assert.equal(JSON.parse(extra[0]).row.action,'data.restore');assert.deepEqual(returned.filter(row=>row!==extra[0]),original,'every unfinished page and portable record restores unchanged');
   const before=fake.requests.length;await receiving.restart();await receiving.tick(Date.parse(later));assert.equal(fake.requests.length,before);assert.ok((await receiving.get('connections')).every(row=>row.status==='needs_reconnect'));assert.ok((await receiving.get('workflows')).every(row=>['paused','draft'].includes(row.status)));
-  for(const change of [row=>{const value=JSON.parse(row.response_json);value.url='https://evil.example/contacts';row.response_json=JSON.stringify(value)},row=>{const value=JSON.parse(row.response_json);value.body_bytes=262145;row.response_json=JSON.stringify(value)}]) {
-   bad=await harness('http://127.0.0.1:9',{edge:fake.edge,clock});const corrupt=await rewritten(saved,(table,row)=>{if(table==='crank_request_checkpoints')change(row)});await bad.post('data/restore',{archive:corrupt,confirm:'RESTORE'},bad.owner,400);assert.deepEqual(await bad.get('workflows'),[]);await bad.close();bad=null;
+  for(const [label,change,movePage] of [
+   ['foreign endpoint',row=>{const value=JSON.parse(row.response_json);value.url='https://evil.example/contacts';row.response_json=JSON.stringify(value)}],
+   ['oversized page',row=>{const value=JSON.parse(row.response_json);value.body_bytes=262145;row.response_json=JSON.stringify(value)}],
+   ['followed redirect',row=>{const value=JSON.parse(row.response_json);value.redirects=1;row.response_json=JSON.stringify(value)}],
+   ['page outside declared scan',row=>{row.ordinal=3},true],
+   ['unselected header',row=>{const value=JSON.parse(row.response_json);value.headers=[['x-unselected','synthetic-crank-private']];row.response_json=JSON.stringify(value)}],
+  ]) {
+   bad=await harness('http://127.0.0.1:9',{edge:fake.edge,clock});const corrupt=await rewritten(saved,(table,row)=>{if(table==='crank_request_checkpoints')change(row);else if(movePage&&table==='crank_request_checkpoint_chunks')row.ordinal=3});await bad.post('data/restore',{archive:corrupt,confirm:'RESTORE'},bad.owner,400);assert.deepEqual(await bad.get('workflows'),[],label+' restore is atomic');await bad.close();bad=null;
   }
   // Cached-page consumption is also refused when current read scope is gone.
   await h.post(`connections/${c.id}/rotate`,{secret:{access_token:'synthetic-crank-701'},scopes:['crm.objects.contacts.write']});await h.restart({clock:later});await h.tick(Date.parse(later));assert.notEqual((await h.get('workflow-runs/'+parked.id)).status,'succeeded');assert.equal(fake.requests.length,before);
