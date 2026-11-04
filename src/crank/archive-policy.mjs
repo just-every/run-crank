@@ -4,6 +4,8 @@ import { fenceRow, importRow, importSafety, validateRestore } from './restore-po
 // Read-only invoice searches retain sealed unfinished pages in the existing request
 // checkpoint inventory; final search results use sealed step values. Restore keeps
 // the original bytes and identities with credentials and execution authority absent.
+// Migration comparisons retain their complete draft, input, observation and decision history;
+// restoration clears comparison activity and grants no production cutover authority.
 // AI classifications retain validated outputs, model provenance and bounded response
 // checkpoints in the existing step, attempt and usage inventory, without model keys.
 // App subject indexes, pending-row digests, field-value digests and erased-record fences use the default portable

@@ -1,3 +1,4 @@
+import { comparisonSubjects, eraseComparison } from './import-comparison'
 import type { PortabilityFence } from '@runeditrun/rer/internal/modules/erasure/index.mjs'
 import { guardedBatch, requireOwner } from './access'
 import { canonical, digest, id, requireValue, stmt, type Actor, type CrankEnv } from './model'
@@ -20,7 +21,7 @@ const FINISHED_FLOW = ['succeeded', 'failed', 'rejected']
 export async function previewSubject(env: CrankEnv, subject: unknown) {
   requireValue(typeof subject === 'string' && subject.trim().length >= 3 && subject.length <= 500, 'Enter the exact identifier to erase (3 to 500 characters)')
   const value = subject.trim().toLowerCase(), encoded = JSON.stringify(value).slice(1, -1)
-  const [continuationRuns, digests, app] = await Promise.all([checkpointSubjects(env, value), subjectDigests(env, value), previewAppSubjects(env, value)])
+  const [continuationRuns, digests, app, comparisons] = await Promise.all([checkpointSubjects(env, value), subjectDigests(env, value), previewAppSubjects(env, value), comparisonSubjects(env,value)])
   const [workflowRuns, flowRuns, pending, unavailable] = await Promise.all([
     stmt(env, `SELECT r.id,r.workflow_id,r.status,w.status AS workflow_status,CASE WHEN ${HELD_WORKFLOW_RUN} THEN 1 ELSE 0 END AS held FROM crank_wf_runs r JOIN crank_workflows w ON w.id=r.workflow_id
       WHERE lower(COALESCE(r.business_key,''))=?1 OR (${plain('r.trigger_json')} AND instr(lower(r.trigger_json),?2)>0)
@@ -43,13 +44,14 @@ export async function previewSubject(env: CrankEnv, subject: unknown) {
   ]
   const preview = {
     subject_digest: await digest(value), sealed_unmatched: sealed,
+    import_comparisons:comparisons.records, comparison_state_digest:comparisons.digest,
     app_records: app.app_records, app_state_digest: app.state_digest,
     workflow_runs: workflowRuns.results.map(r => ({ id: r.id, workflow_id: r.workflow_id, status: r.status,
       blocked: r.held ? 'Under a legal hold: release it first.' : !FINISHED_WORKFLOW.includes(r.status) ? 'Finish or cancel this run first.' : r.workflow_status !== 'paused' ? 'Pause its workflow first.' : null })),
     flow_runs: flowRuns.results.map(r => ({ id: r.id, flow_id: r.flow_id, status: r.state,
       blocked: r.held ? 'Under a legal hold: release it first.' : !FINISHED_FLOW.includes(r.state) ? 'Finish or reject this run first.' : r.flow_status !== 'draft' ? 'Pause its flow first.' : null })),
   }
-  return { ...preview, blocked: sealed.length > 0 || [...preview.workflow_runs, ...preview.flow_runs, ...preview.app_records].some(r => r.blocked), digest: await digest(canonical(preview)) }
+  return { ...preview, blocked: sealed.length > 0 || [...preview.workflow_runs, ...preview.flow_runs, ...preview.app_records, ...preview.import_comparisons].some(r => r.blocked), digest: await digest(canonical(preview)) }
 }
 
 /** Erases every matching run through the ordinary run erasure (event fences, value-free receipts,
@@ -60,12 +62,15 @@ export async function eraseSubject(env: CrankEnv, actor: Actor, portability: Por
   requireValue(preview.digest === reviewed, 'The matching runs changed since the preview. Review the current preview and confirm again.', 409)
   requireValue(!preview.sealed_unmatched.length, preview.sealed_unmatched.join(' '), 409)
   requireValue(!preview.blocked, 'Some matching runs are unfinished or their workflow or flow is still active; the preview names them.', 409)
-  requireValue(preview.workflow_runs.length + preview.flow_runs.length + preview.app_records.length > 0, 'No retained run or app record matches this identifier', 404)
+  requireValue(preview.workflow_runs.length + preview.flow_runs.length + preview.app_records.length + preview.import_comparisons.length > 0, 'No retained run or app record matches this identifier', 404)
   const operations: string[] = await eraseAppSubjects(env, actor, portability, subject.trim().toLowerCase(), preview.app_state_digest)
+  const latestComparisons=await comparisonSubjects(env,subject.trim().toLowerCase())
+  requireValue(latestComparisons.digest===preview.comparison_state_digest,'Comparison samples changed; preview again',409)
+  for(const comparison of preview.import_comparisons) operations.push((await eraseComparison(env,actor,portability,comparison.id)).id)
   for (const run of preview.workflow_runs) operations.push((await eraseWorkflowRun(env, actor, portability, run.id))!.id)
   for (const run of preview.flow_runs) operations.push((await eraseFlowRun(env, actor, portability, run.id))!.id)
   const receipt = id()
   await guardedBatch(env, actor, 'owner', [auditStatement(env, actor.id, 'data.erase_subject', 'erasure', receipt,
-    { subject_digest: preview.subject_digest, workflow_runs: preview.workflow_runs.length, flow_runs: preview.flow_runs.length, app_records: preview.app_records.length, operations })])
-  return { receipt, subject_digest: preview.subject_digest, workflow_runs: preview.workflow_runs.length, flow_runs: preview.flow_runs.length, app_records: preview.app_records.length, operations }
+    { subject_digest: preview.subject_digest, workflow_runs: preview.workflow_runs.length, flow_runs: preview.flow_runs.length, app_records: preview.app_records.length, import_comparisons:preview.import_comparisons.length, operations })])
+  return { receipt, subject_digest: preview.subject_digest, workflow_runs: preview.workflow_runs.length, flow_runs: preview.flow_runs.length, app_records: preview.app_records.length, import_comparisons:preview.import_comparisons.length, operations }
 }

@@ -20,6 +20,13 @@ allow a 128 KiB source in a 256 KiB JSON envelope. Errors are JSON `{error}`.
 | POST `/tokens/:id/revoke` | Native/dev owner | Immediately revoke |
 | GET `/imports` | Native/dev owner | Import history: door plans with approval captions, then jobs from the earlier importer |
 | POST `/imports/:id/undo` | Native/dev owner | Undo a job from the earlier importer, refusing target drift |
+| GET and POST `/imports/comparisons` | Native owner | List retained comparisons or freeze a reviewed imported draft using workflow_id, draft_digest, source_system, source_workflow, source_revision and non_sensitive=true |
+| GET `/imports/comparisons/:id` | Native owner | Read matched, mismatched and unpaired observations, field differences and an always-false cutover_eligible |
+| POST `/imports/comparisons/:id/evaluate` | Owning native owner | Evaluate event_id, sequence and input through the no-write subtype; caller mode or effect flags confer no authority |
+| POST `/imports/comparisons/:id/observe` | Owning native owner | Retain event_id, sequence, input, result and explicit provenance with kind synthetic or captured and label; unverified source evidence only |
+| POST `/imports/comparisons/:id/decisions` | Owning native owner | Record an attributable reason for event_id without changing its mismatch or match count |
+| POST `/imports/comparisons/:id/cutover` | Native owner | Always refuse: captured or synthetic observations cannot qualify live cutover |
+| POST `/imports/comparisons/:id/erase` | Native owner | Explicit ERASE confirmation removes retained comparison values under legal holds, with archive and event replay fences |
 | POST `/data/export` | Native/dev owner | Download installation archive |
 | GET `/data/transfers` | Native/dev owner | Latest 30 archive transfer IDs, kinds, phases and retained part counts |
 | POST `/data/transfers` | Native/dev owner | Create a resumable `{kind:"export"}` snapshot |

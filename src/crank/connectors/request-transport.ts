@@ -12,6 +12,7 @@ import type { AttemptPolicy } from './retry'
 
 export interface Prepared { responseIdentity?: (response: BoundedResponse) => string | null; sanitizeResponse?: (response: BoundedResponse) => Promise<BoundedResponse>; nativeOrbit?: boolean; url: URL; method: string; headers: Headers; body: Uint8Array<ArrayBuffer> | null; bodyIdentity?: string; timeout: number; maxBytes?: number; follow?: number; credentialIdentity?: (headers: Headers) => Promise<string> }
 export async function sendRequest(ctx: StepContext, prepared: Prepared, connectionId: string | undefined, policy: AttemptPolicy) {
+  if (ctx.comparison || ctx.run.mode === 'comparison') throw new StepError('authority', 'Migration comparison cannot dispatch any request')
   const headers = new Headers(prepared.headers), url = new URL(prepared.url)
   if (connectionId) await authorizeRequest(ctx.env, connectionId, url, headers, prepared.body, prepared.method, prepared.nativeOrbit)
   await assertDispatchAuthority(ctx.env, ctx.run.id)

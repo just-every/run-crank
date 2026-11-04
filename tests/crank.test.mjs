@@ -1,3 +1,4 @@
+import {migrationShadowJourney} from './migration-shadow-journey.mjs';
 import {originalCodeJourney} from './n8n-code-journey.mjs';
 import {n8nBindingJourney} from './n8n-binding-journey.mjs';
 import {transformStreamJourney} from './n8n-stream-journey.mjs';
@@ -212,13 +213,13 @@ test('Native n8n stream transforms process the complete bounded stream before re
 
 test('Native n8n fresh account binding keeps source references inactive and enforces revocation', n8nBindingJourney);
 
-test('Native n8n condition operators preserve source types and short circuit receiver dispatch', n8nConditionsJourney);
-test('Native n8n date arithmetic preserves calendar results and retained JSON through reviewed migration', n8nDateTimeJourney);
 
 test('Native n8n multi-item batches retain node barriers and replay only failed receiver work', batchLoopJourney);
 
 test('MIG-001 native graph review, exact apply, restart, branch outcomes and protected undo',async()=>{
  await conversionJourney();
+ await n8nConditionsJourney();
+ await n8nDateTimeJourney();
  const local=await harness(target);try{
   const input=graphExport(target),unsupported=structuredClone(input);
   unsupported.nodes.push({id:'child',name:'child',type:'n8n-nodes-base.executeWorkflow',typeVersion:1,position:[100,200],parameters:{workflowId:'synthetic-crank-child'}});
@@ -338,3 +339,5 @@ test('erasure deletes input and decisions, blocks redelivery, and fences an olde
 });
 
 test('Reviewed n8n Sheets triggers retain named columns and explicit fresh comparison bindings', async()=>{const {n8nSheetsTriggerJourney}=await import('./n8n-sheets-trigger-journey.mjs');await n8nSheetsTriggerJourney()});
+
+test('Migration comparisons retain exact no-write intents, immutable event pairing and inactive custody', migrationShadowJourney);
