@@ -3096,7 +3096,7 @@
       "executable": false
     },
     "src/crank/connections/catalog.ts": {
-      "sha256": "47dfcec5b32bed700bf00a6311a4c16b974ac4b491674eba70b8627b254b7fe5",
+      "sha256": "1dc00af244c3ca769bd7f6901c7dd512e1bd9a224853c4d3eb018d1164212238",
       "executable": false
     },
     "src/crank/connections/oauth.ts": {
@@ -3264,7 +3264,7 @@
       "executable": false
     },
     "src/crank/data-flow-graphs.ts": {
-      "sha256": "0dfc1fda5d61ddd27a1b5291fd3d0ced6d64a96b54e338a6572a2d36a210459b",
+      "sha256": "1a131d5204112e4d9c1a14e30cd73138e4a413a8e30604e928861cf51eb1b039",
       "executable": false
     },
     "src/crank/data-flow-types.ts": {
@@ -3388,7 +3388,7 @@
       "executable": false
     },
     "src/crank/engine/steps/index.ts": {
-      "sha256": "a9a4736a6e79bae30c31efc18b412ba0c2c5104bd104f5668e132815ad71fcaf",
+      "sha256": "7ca6fcb985dabbd49c018d2b86bbb28b93f5e965e8e843ca113d05142b14b4f7",
       "executable": false
     },
     "src/crank/engine/steps/join.ts": {
@@ -3768,7 +3768,7 @@
       "executable": false
     },
     "src/crank/restore-policy.mjs": {
-      "sha256": "926dd70531d87cec40a651d6414a8a0121a22ef45ac8a912ef2db811812b2359",
+      "sha256": "7adfa8445accabcc4fe11b93dba04f3480b4d8ae5db2f97cfeff6d2cfa749737",
       "executable": false
     },
     "src/crank/runs.ts": {
