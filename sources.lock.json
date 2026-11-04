@@ -172,7 +172,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "e23bbb1e43f3890733f9995f81bde835c8ae4ee1a9fc498267ff3361f58084ef",
+      "sha256": "46613d42509b54ed6add164eb9b87265dfe203981d54c0d4c363e0e15b5ee275",
       "executable": false
     },
     "DEMO.md": {
@@ -3120,7 +3120,7 @@
       "executable": false
     },
     "src/crank/connectors/asana-policy.ts": {
-      "sha256": "eec51edbf61fef29af11bff810106473a1e46d0f8d30f6d160e362f1ba2f4e4e",
+      "sha256": "62c9fb4be2e45b08702ce9a4e1df26a300248533e6d6a63f8094a144d136200c",
       "executable": false
     },
     "src/crank/connectors/asana-restore-policy.mjs": {
@@ -3128,7 +3128,7 @@
       "executable": false
     },
     "src/crank/connectors/asana.ts": {
-      "sha256": "07b52c6d10c94fb5c4d1ca5c3f7c35aaad234d6d5c855a03036cddfc7fb11940",
+      "sha256": "80434af6a6e040c7ef3a2e4a833c9e98acf4868092c999c64177b8bf18a98293",
       "executable": false
     },
     "src/crank/connectors/files.ts": {
@@ -6772,7 +6772,7 @@
       "executable": false
     },
     "tests/asana-search-journey.mjs": {
-      "sha256": "8f68bb02f42e99748457373c160c7985737dee62729357c102868ee9895d877f",
+      "sha256": "ec7763719b95946ea0def8e33169294f4d9f6fbb694f28a896912c1a06655cc3",
       "executable": false
     },
     "tests/authoring-browser.mjs": {

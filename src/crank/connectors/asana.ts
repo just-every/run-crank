@@ -5,7 +5,7 @@ import { searchOutcome, validateSearch } from '../engine/search'
 import type { Step, StepContext, StepType } from '../engine/types'
 import { isObject } from '../engine/values'
 import { canonical, digest, stmt } from '../model'
-import { asanaInput, asanaNextPage, asanaPageUrl, asanaTask, ASANA_CHECKPOINT_URL, malformedAsana } from './asana-policy'
+import { asanaInput, asanaPage, asanaPageUrl, asanaTask, ASANA_CHECKPOINT_URL, malformedAsana } from './asana-policy'
 import { retryRequest } from './retry'
 import { sendRequest } from './request-transport'
 
@@ -49,19 +49,27 @@ export const asanaFindTask: StepType = {
       const result = await retryRequest(context, { method: 'GET', url, body: null, idempotent: false, reconnectStatuses: [401, 403] }, policy => sendRequest(context, {
         credentialIdentity: async headers => sameCredential(ctx, await digest(ctx.operationKey + ':' + headers.get('authorization'))),
         url, method: 'GET', body: null, headers: new Headers({ accept: 'application' + '/' + 'json' }), timeout: Number(step.timeout_ms ?? 15000), maxBytes: 1024 * 1024, follow: 0,
-        sanitizeResponse: async response => ({ ...response, url: ASANA_CHECKPOINT_URL, headers: new Headers([...response.headers].filter(([name]) => ['content-type', 'retry-after'].includes(name))) }),
+        sanitizeResponse: async response => {
+          let bytes = new Uint8Array(0)
+          if (response.status === 200) {
+            let page: unknown
+            try { page = JSON.parse(utf8(response.bytes)) } catch { return malformedAsana() }
+            bytes = new TextEncoder().encode(JSON.stringify(asanaPage(page, input.project_id, offsets)))
+          }
+          return { ...response, bytes, url: ASANA_CHECKPOINT_URL, headers: new Headers([...response.headers].filter(([name]) => ['content-type', 'retry-after'].includes(name))) }
+        },
       }, connectionId, policy))
       const status = result.response.status
       if (status !== 200) throw new StepError(status === 401 || status === 403 ? 'auth' : status === 429 ? 'rate_limit' : 'provider', `Asana search refused the request with status ${status}`, { status, ...(result.exhausted ? { exhausted: true } : {}) })
       let page: unknown
       try { page = JSON.parse(utf8(result.response.bytes)) } catch { return malformedAsana() }
-      if (!isObject(page) || !Array.isArray(page.data) || page.data.length > 100 || !('next_page' in page)) return malformedAsana()
-      for (const item of page.data) {
+      const projected = asanaPage(page, input.project_id, offsets)
+      for (const item of projected.data) {
         const record = asanaTask(item, input.project_id), previous = records.get(record.id)
         if (previous && canonical(previous) !== canonical(record)) return malformedAsana()
         records.set(record.id, record)
       }
-      offset = asanaNextPage(page.next_page, input.project_id, offsets)
+      offset = projected.next_page?.offset ?? ''
       if (offset) offsets.add(offset)
       pages++
     } while (offset && pages < Number(step.max_pages ?? 20))

@@ -8,6 +8,7 @@ const clock='2026-11-10T15:00:00Z',later='2026-11-10T15:01:01Z';
 const project='12001',scope='tasks:read',token='synthetic-crank-asana-701';
 const offset='synthetic-crank-page+/=&?%';
 const fields='gid,resource_type,name,completed,due_on,due_at,permalink_url';
+const undeclared='synthetic-crank-undeclared-provider-field';
 export const hostileName='<img src=x onerror="globalThis.asanaInjected=true"> synthetic-crank-task';
 export const asanaStep=connection_id=>({id:'search',name:'Asana exact task search',type:'asana.find_task',connection_id,multi_match:'all',limit:10,sort:{field:'id',direction:'asc'},retry_policy:{read_attempts:2,base_delay_ms:1},input:{project_id:project,name:hostileName}});
 const tasks=[
@@ -37,7 +38,7 @@ async function fixture() {
  return {h,c,fake};
 }
 function installPages(fake) {
- fake.routes.set('app.asana.com',request=>{assertRead(request);return jsonResponse(request.url.searchParams.has('offset')?page([tasks[0],tasks[1],tasks[2]]):page([unrelated,tasks[2]],nextPage(request)))});
+ fake.routes.set('app.asana.com',request=>{assertRead(request);const response=request.url.searchParams.has('offset')?page([tasks[0],tasks[1],tasks[2]]):page([unrelated,tasks[2]],nextPage(request));return jsonResponse({...response,workspace:{name:undeclared},data:response.data.map(task=>({...task,notes:undeclared}))})});
 }
 function assertNoDecision(run,label) {
  assert.equal(run.status,'failed',label);assert.equal(found(run),null,label);assert.equal(stepOf(run,'outcome'),undefined,label);
@@ -129,8 +130,16 @@ export async function asanaSearchJourney({onScreen}={}) {
   fake.routes.set('app.asana.com',request=>{assertRead(request,'synthetic-crank-asana-704','12002');return jsonResponse(page([{gid:'12021',resource_type:'task',name:hostileName}]))});
   const isolated=await startRun(h,await flow(h,other,{input:{project_id:'12002',name:hostileName}}),{});assert.equal(isolated.status,'succeeded');assert.equal(found(isolated).record.id,'12021');assert.equal(found(isolated).record.project_id,'12002');assert.ok(!JSON.stringify(complete).includes('12021'));
   // A completed page cannot be combined with a replacement token's results.
-  fake.routes.set('app.asana.com',async request=>{assertRead(request);await h.post(`connections/${c.id}/rotate`,{secret:{token:'synthetic-crank-705'},scopes:[scope]});return jsonResponse(page([tasks[0]],nextPage(request)))});
+  fake.routes.set('app.asana.com',async request=>{assertRead(request);await h.post(`connections/${c.id}/rotate`,{secret:{token:'synthetic-crank-705'},scopes:[scope]});return jsonResponse({...page([{...tasks[0],notes:undeclared}],nextPage(request)),workspace:{name:undeclared}})});
   const priorCalls=fake.requests.length;const changed=await startRun(h,draft,{name:hostileName});assert.equal(changed.status,'paused');assert.equal(found(changed),null);assert.equal(fake.requests.length,priorCalls+1,'replacement credentials never dispatch a later page of the old scan');
+  const retainedPages=inventory(await archive(h)).map(JSON.parse).filter(item=>item.table==='crank_request_checkpoint_chunks'&&item.row.run_id===changed.id).map(item=>item.row);
+  assert.equal(retainedPages.length,1);
+  const retained=JSON.parse(Buffer.from(retainedPages[0].content_base64,'base64').toString());
+  assert.ok(!JSON.stringify(retained).includes(undeclared),'undeclared fields never enter retained pages');
+  assert.deepEqual(Object.keys(retained).sort(),['data','next_page']);
+  for(const task of retained.data)assert.ok(Object.keys(task).every(field=>fields.split(',').includes(field)));
+  assert.deepEqual(retained.next_page,{offset},'provider links are validated then discarded');
+
   await h.post(`connections/${c.id}/rotate`,{secret:{token},scopes:[scope]});
   const disclosure=(await h.get('data/flows')).flows.find(item=>item.kind==='asana.find_task');assert.deepEqual(disclosure.recipients,['https://app.asana.com']);for(const field of ['project_id','name','offset'])assert.ok(disclosure.fields.includes(field));assert.match(disclosure.region,/not verified/);assert.ok(!JSON.stringify(disclosure).includes(hostileName));
   assert.ok(fake.requests.every(request=>request.method==='GET'&&request.url.pathname.match(/^\/api\/1\.0\/projects\/\d+\/tasks$/)),'native search dispatches only the fixed read endpoint');
@@ -143,10 +152,12 @@ export async function asanaSearchRecoveryJourney({onScreen}={}) {
  try {
   const w=await flow(h,c,{input:{project_id:project,name:'{{trigger.input.name}}'}});await h.post(`workflows/${w.id}/pause`);await h.post('data/classes',{workflow_id:w.id,data_class:'customer',identifier_fields:['id','gid','name']});await h.post(`workflows/${w.id}/resume`);
   const subject=tasks[2].gid,privateNotes='synthetic-crank-private-note'+'x'.repeat(70000);
-  fake.routes.set('app.asana.com',request=>{assertRead(request);return request.url.searchParams.has('offset')?jsonResponse({},429,{'retry-after':'60'}):jsonResponse(page([{...tasks[2],notes:privateNotes}],nextPage(request)))});
+  // Keep the existing multi-chunk custody coverage using declared task names.
+  const firstPage=[{...tasks[2],notes:privateNotes},...Array.from({length:9},(_,index)=>({gid:String(12100+index),resource_type:'task',name:'synthetic-crank-unmatched-'+'x'.repeat(7900)}))];
+  fake.routes.set('app.asana.com',request=>{assertRead(request);return request.url.searchParams.has('offset')?jsonResponse({},429,{'retry-after':'60'}):jsonResponse(page(firstPage,nextPage(request)))});
   const parked=await startRun(h,w,{name:hostileName});assert.equal(parked.status,'waiting',JSON.stringify(parked.error));assert.equal(found(parked),null);const operation=stepOf(parked,'search').operation_key;
   const chunks=async id=>(await h.db.prepare('SELECT content_base64 FROM crank_request_checkpoint_chunks WHERE run_id=? ORDER BY ordinal,chunk_index').bind(id).all()).results;
-  const retained=await chunks(parked.id);assert.equal(retained.length,2);assert.ok(retained.every(row=>JSON.parse(row.content_base64).sealed==='crank-payload-v1'));
+  const retained=await chunks(parked.id);assert.equal(retained.length,2,'declared names retain multi-chunk sealed custody while undeclared provider fields are discarded');assert.ok(retained.every(row=>JSON.parse(row.content_base64).sealed==='crank-payload-v1'));
   const metadata=await h.db.prepare('SELECT response_json FROM crank_request_checkpoints WHERE run_id=?').bind(parked.id).first();assert.ok(!metadata.response_json.includes('/12001/'));assert.ok(!metadata.response_json.includes(offset));
   const preview=await h.post('data/subject',{subject});assert.ok(preview.workflow_runs.some(run=>run.id===parked.id));assert.equal(preview.blocked,true,'unfinished pages are discoverable and cannot be erased while active');
   const hold=await h.post('data/holds',{kind:'subject',subject,reason:'Asana retained page review'},h.owner,201);

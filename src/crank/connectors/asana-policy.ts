@@ -86,3 +86,15 @@ export function asanaTask(value: unknown, project: string) {
   }
   return result
 }
+
+/** Keep only the declared task fields and the checked continuation token. Provider
+ * extras must not enter retained pages, archives or subject indexes. */
+export function asanaPage(value: unknown, project: string, seen: Set<string>) {
+  if (!isObject(value) || !Array.isArray(value.data) || value.data.length > 100 || !('next_page' in value)) return malformedAsana()
+  const offset = asanaNextPage(value.next_page, project, seen)
+  const data = value.data.map(item => {
+    const { id, project_id, ...task } = asanaTask(item, project)
+    return task
+  })
+  return { data, next_page: offset ? { offset } : null }
+}
