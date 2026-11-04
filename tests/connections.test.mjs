@@ -9,9 +9,11 @@ import { oauthRenewalJourney } from './oauth-renewal-journey.mjs';
 import { connection, deliver, fakeEdge, fakeSecret, jsonResponse, publish, runs, settled, startRun, stepOf, until } from './kit.mjs';
 
 const fake = fakeEdge();
-test('Gmail thread metadata search retains declared outcomes, consent, parked pages and inactive sealed custody', async () => {
+test('Native read-only Gmail and Pipedrive searches retain declared outcomes, consent, parked pages and inactive sealed custody', async () => {
   const {gmailSearchJourney,gmailCustodyJourney}=await import('./gmail-search-journey.mjs');
   await gmailSearchJourney();await gmailCustodyJourney();
+  const {pipedriveSearchJourney,pipedriveSearchCustodyJourney}=await import('./pipedrive-search-journey.mjs');
+  await pipedriveSearchJourney();await pipedriveSearchCustodyJourney();
 });
 let h;
 before(async () => {
@@ -345,9 +347,10 @@ test('EXEC-002: two accounts progress independently through 429, backoff, perman
   const page = await h.send('/app/workflow-runs/' + exhausted.id, undefined, h.owner);
   assert.equal(page.status, 200); assert.ok(page.text.includes(exhausted.error.next_owner_action), 'exhaustion shows the owner the next action');
   for (const attempt of exhausted.attempts.filter(a => a.retry_at)) assert.ok(page.text.includes(`datetime="${attempt.retry_at}"`), 'attempt history shows the stored earliest retry instant');
+  await nativeSlackRetryJourney();
 });
 
-test('EXEC-002: native Slack reads honor retry timing and account isolation; permanent auth and lost writes stop', async () => {
+async function nativeSlackRetryJourney() {
   const [slowToken, healthyToken] = [fakeSecret('slack-throttled'), fakeSecret('slack-healthy')];
   const times = new Map(); let writes = 0;
   fake.routes.set('slack.com', ({ url, body, headers }) => {
@@ -419,7 +422,7 @@ test('EXEC-002: native Slack reads honor retry timing and account isolation; per
   assert.equal(queue.runs.find(r => r.id === uncertain.id).state, 'dead_letter');
   const history = JSON.stringify([bad, good, limited, exhausted, deadline, uncertain]);
   for (const token of [slowToken, healthyToken]) assert.ok(!history.includes(token), 'native attempts do not retain credentials');
-});
+}
 
 test('EXEC-002: executor loss during a retry wait retains the original request budget and earliest retry time', async () => {
   let calls = 0;
