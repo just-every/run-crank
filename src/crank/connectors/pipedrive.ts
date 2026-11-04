@@ -24,7 +24,7 @@ function validate(step: Step) {
   if (step.filter_id !== undefined && (typeof step.filter_id !== 'string' || !/^[1-9][0-9]{0,15}$/.test(step.filter_id))) invalid('filter_id must be one fixed saved-filter identifier')
   if (!isObject(step.input) || Object.keys(step.input).some(key => key !== 'title')) return invalid('input accepts only title')
   if (!mapped(step.input.title)) title(step.input.title)
-  if (!isObject(step.sort) || step.sort.field !== 'id') invalid('declare deterministic sorting by id with a direction')
+  if (!isObject(step.sort) || step.sort.field !== 'id' || typeof step.sort.direction !== 'string' || !['asc','desc'].includes(step.sort.direction)) invalid('declare deterministic sorting by id with a direction')
   if (step.max_pages !== undefined && (!Number.isInteger(step.max_pages) || Number(step.max_pages) < 1 || Number(step.max_pages) > 10)) invalid('max_pages must be 1 to 10')
   if (step.timeout_ms !== undefined && (!Number.isInteger(step.timeout_ms) || Number(step.timeout_ms) < 100 || Number(step.timeout_ms) > 30000)) invalid('timeout_ms must be 100 to 30000')
 }
