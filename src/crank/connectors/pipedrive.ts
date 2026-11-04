@@ -34,8 +34,8 @@ function identity(value: unknown): string {
   return malformed('stable deal or stage identity')
 }
 function deal(value: unknown) {
-  if (!isObject(value) || typeof value.title !== 'string' || value.title.length > 2048 || !value.title.trim() || /[\x00-\x1f\x7f]/.test(value.title) || !['open','won','lost','deleted'].includes(String(value.status))) return malformed('deal fields')
-  return {id:identity(value.id),title:value.title,status:value.status as string,stage_id:identity(value.stage_id)}
+  if (!isObject(value) || typeof value.title !== 'string' || value.title.length > 2048 || !value.title.trim() || /[\x00-\x1f\x7f]/.test(value.title) || typeof value.status !== 'string' || !['open','won','lost','deleted'].includes(value.status)) return malformed('deal fields')
+  return {id:identity(value.id),title:value.title,status:value.status,stage_id:identity(value.stage_id)}
 }
 function page(bytes: Uint8Array<ArrayBuffer>) {
   let value: unknown
