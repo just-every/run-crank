@@ -292,6 +292,26 @@ Current evidence: None recorded.
 
 Remaining gap: No delivered product workflow.
 
+## CONN-021 — Bounded Asana API-relative pagination
+
+Status: missing.
+
+*Tier:* Core · *From:* new **Requirement.** Bounded Asana pagination follows the documented API-relative `next_page.path` to later pages within the existing pagination and request bounds, preserving the connected workspace and account scope. **Acceptance.** 1. A permitted API-relative `next_page.path` retrieves page two and subsequent pages within the existing bounds, retaining the results from each accepted page. 2. Off-host or unbounded continuations are refused before they are applied: the refused continuation is not requested, previously accepted results stay unchanged, and no provider write occurs.
+
+Current evidence: None recorded.
+
+Remaining gap: API-relative Asana continuation through page two and beyond, with bounded/off-host refusal, is unbuilt or unproved.
+
+## CONN-022 — Canonical Asana task permalinks
+
+Status: missing.
+
+*Tier:* Core · *From:* new **Requirement.** A canonical Asana task permalink in the form `https://app.asana.com/1/<workspace>/task/<id>` resolves to the task's stable URL and supports lookup within the connected workspace. **Acceptance.** 1. A canonical `/1/<workspace>/task/<id>` permalink for the connected workspace maps to the stable task URL, and lookup succeeds for that same task. 2. Non-task URLs and task URLs for a foreign workspace are refused without changing the selection, retained results or provider data.
+
+Current evidence: None recorded.
+
+Remaining gap: Canonical Asana task-permalink resolution and successful same-workspace lookup, with non-task/foreign-workspace refusal, are unbuilt or unproved.
+
 ## CONN-015 — Marketing and sales pipelines
 
 Status: missing.
