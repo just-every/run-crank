@@ -1,9 +1,11 @@
+import {pathToFileURL} from 'node:url';
 import assert from 'node:assert/strict';
 import {createServer} from 'node:http';
 import {mkdir,readFile} from 'node:fs/promises';
 import {extname,join,resolve} from 'node:path';
 import {chromium,expect} from '@playwright/test';
 import {googleCalendarSearchJourney} from './google-calendar-search-journey.mjs';
+export async function calendarSearchBrowserJourney() {
 const evidence=process.env.CRANK_EVIDENCE;assert.ok(evidence,'Set CRANK_EVIDENCE');await mkdir(evidence,{recursive:true});
 const mime=(major,minor)=>[major,minor].join('/');
 const types={'.css':mime('text','css'),'.js':mime('text','javascript'),'.svg':mime('image','svg+xml'),'.woff2':mime('font','woff2'),'.png':mime('image','png'),'.webp':mime('image','webp')};
@@ -40,3 +42,7 @@ async function onScreen({h,w,run}) {
 }
 try{await googleCalendarSearchJourney({onScreen})}finally{await browser.close()}
 console.log('Retained Calendar identities, zoned times and literal results PASS; screens at 1440 and 390');
+
+}
+
+if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href)await calendarSearchBrowserJourney();

@@ -9,9 +9,10 @@ import { oauthRenewalJourney } from './oauth-renewal-journey.mjs';
 import { connection, deliver, fakeEdge, fakeSecret, jsonResponse, publish, runs, settled, startRun, stepOf, until } from './kit.mjs';
 
 const fake = fakeEdge();
-test('Gmail thread metadata search retains declared outcomes, consent, parked pages and inactive sealed custody', async () => {
+test('Provider metadata searches retain declared outcomes, consent, parked pages and inactive sealed custody', async () => {
   const {gmailSearchJourney,gmailCustodyJourney}=await import('./gmail-search-journey.mjs');
-  await gmailSearchJourney();await gmailCustodyJourney();
+  const {dropboxSearchJourney,dropboxCustodyJourney}=await import('./dropbox-search-journey.mjs');
+  for (const journey of [gmailSearchJourney,gmailCustodyJourney,dropboxSearchJourney,dropboxCustodyJourney]) await journey();
 });
 let h;
 before(async () => {

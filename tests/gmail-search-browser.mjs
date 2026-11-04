@@ -1,3 +1,4 @@
+import {pathToFileURL} from 'node:url';
 import assert from 'node:assert/strict';
 import {createServer} from 'node:http';
 import {mkdir,readFile} from 'node:fs/promises';
@@ -5,6 +6,7 @@ import {extname,join,resolve} from 'node:path';
 import {chromium,expect} from '@playwright/test';
 import {gmailSearchJourney,hostileSubject} from './gmail-search-journey.mjs';
 
+export async function gmailBrowserJourney() {
 const evidence=process.env.CRANK_EVIDENCE;assert.ok(evidence,'Set CRANK_EVIDENCE outside the repository');await mkdir(evidence,{recursive:true});
 const types={'.css':'text'+'/'+'css','.js':'text'+'/'+'javascript','.svg':'image'+'/'+'svg+xml','.woff2':'font'+'/'+'woff2','.png':'image'+'/'+'png','.webp':'image'+'/'+'webp'};
 const browser=await chromium.launch({headless:true,...(process.env.CRANK_CHROMIUM?{executablePath:process.env.CRANK_CHROMIUM}:{}),args:['--no-sandbox','--use-mock-keychain','--password-store=basic']});
@@ -47,3 +49,7 @@ async function onScreen({h,w,run,state}){
 }
 try{await gmailSearchJourney({onScreen})}finally{await browser.close()}
 console.log('Gmail metadata identities, literal headers, declared outcomes and tooltips PASS; screens at 1440 and 390');
+
+}
+
+if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href)await gmailBrowserJourney();
