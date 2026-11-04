@@ -6,9 +6,9 @@ import {connection,fakeEdge,jsonResponse,publish,startRun,stepOf} from './kit.mj
 const clock='2026-11-10T15:00:00Z',later='2026-11-10T15:02:00Z';
 const host='synthetic-crank.zendesk.com',query='type:ticket tags:bug';
 export const hostileTicketSubject='<img src=x onerror="globalThis.zendeskInjected=true"> synthetic-crank-subject';
-export const zendeskStep=connectionId=>({id:'tickets',type:'zendesk.search_tickets',connection_id:connectionId,subdomain:'synthetic-crank',metadata_fields:['subject','status','priority','requester_id','updated_at'],no_match:'continue',multi_match:'all',limit:10,sort:{field:'id',direction:'desc'},retry_policy:{read_attempts:2,base_delay_ms:1},input:{query:'{{trigger.input.query}}'}});
+export const zendeskStep=connectionId=>({id:'tickets',type:'zendesk.search_tickets',connection_id:connectionId,subdomain:'synthetic-crank',metadata_fields:['subject','status','priority','requester_id','updated_at','external_id'],no_match:'continue',multi_match:'all',limit:10,sort:{field:'id',direction:'desc'},retry_policy:{read_attempts:2,base_delay_ms:1},input:{query:'{{trigger.input.query}}'}});
 const graph=step=>({trigger:{type:'manual'},steps:[step,{id:'outcome',type:'map',input:{outcome:'{{steps.tickets.outcome}}',count:'{{steps.tickets.count}}'}}]});
-const ticket=(id,subject=hostileTicketSubject)=>({id,result_type:'ticket',url:`https://${host}/api/v2/tickets/${id}.json`,subject,status:'open',priority:'high',requester_id:701,updated_at:'2026-11-10T14:00:00Z',description:'synthetic-crank-description',comments:[{body:'synthetic-crank-comment'}],attachments:[{content_url:'https://files.example/private'}]});
+const ticket=(id,subject=hostileTicketSubject)=>({id,result_type:'ticket',url:`https://${host}/api/v2/tickets/${id}.json`,subject,status:'open',priority:'high',requester_id:701,external_id:id===2?null:'CRM-42',updated_at:'2026-11-10T14:00:00Z',description:'synthetic-crank-description',comments:[{body:'synthetic-crank-comment'}],attachments:[{content_url:'https://files.example/private'}]});
 const next=(url,page)=>{const value=new URL(url);value.searchParams.set('page',String(page));return value.href};
 export async function zendeskFixture(){
  const fake=fakeEdge(),token='synthetic-crank-701';let mode='normal',parked=false;
@@ -30,6 +30,9 @@ export async function zendeskFixture(){
   if(q==='type:ticket tags:short')return jsonResponse({count:2,results:[],next_page:null});
   if(q==='type:ticket tags:non-ticket')return jsonResponse({count:1,results:[{...ticket(1),result_type:'user'}],next_page:null});
   if(q==='type:ticket tags:bad-id')return jsonResponse({count:1,results:[{...ticket(1),id:'1'}],next_page:null});
+  if(q==='type:ticket tags:bad-requester-id')return jsonResponse({count:1,results:[{...ticket(1),requester_id:'701'}],next_page:null});
+  for(const [kind,value]of [['number',42],['object',{id:'CRM-42'}],['control','CRM-42\n'],['oversized','x'.repeat(257)]])
+   if(q==='type:ticket tags:external-'+kind)return jsonResponse({count:1,results:[{...ticket(1),external_id:value}],next_page:null});
   if(q==='type:ticket tags:wrong-url')return jsonResponse({count:1,results:[{...ticket(1),url:`https://${host}/api/v2/tickets/2.json`}],next_page:null});
   if(q==='type:ticket tags:bad-time')return jsonResponse({count:1,results:[{...ticket(1),updated_at:'2026-02-30T14:00:00Z'}],next_page:null});
   if(q==='type:ticket tags:missing-field')return jsonResponse({count:1,results:[{...ticket(1),subject:undefined}],next_page:null});
@@ -71,6 +74,7 @@ export async function zendeskSearchJourney({onScreen}={}){
   assert.equal(good.status,'succeeded',JSON.stringify(good.error));assert.equal(output.count,2);assert.equal(output.provider_count,2);
   assert.deepEqual(output.records.map(item=>item.ticket_id),[2,1]);assert.equal(output.record.subject,hostileTicketSubject);assert.equal(output.record.requester_id,701);
   assert.equal(output.record.ticket_url,`https://${host}/agent/tickets/2`);assert.equal(output.record.status,'open');assert.equal(output.record.priority,'high');assert.equal(output.record.updated_at,'2026-11-10T14:00:00Z');
+  assert.deepEqual(output.records.map(item=>item.external_id),[null,'CRM-42'],'external business identifiers retain text and null values');
   assert.deepEqual(stepOf(good,'outcome').output,{outcome:'found',count:2});
   for(const excluded of ['synthetic-crank-description','synthetic-crank-comment','content_url',token])assert.ok(!JSON.stringify(good).includes(excluded));
   assert.equal(fake.requests.length,beforeSearch+4,'draft test and published run each scan both pages');
@@ -106,7 +110,7 @@ export async function zendeskSearchJourney({onScreen}={}){
    assert.equal(run.status,'failed');assert.match(run.error.message,/incomplete/);assert.ok(!run.steps.some(item=>item.step_id==='outcome'));
    if(onScreen&&multi_match==='first')await onScreen({h,w,run,state:'incomplete'});
   }
-  for(const mode of ['permission','provider','bad-json','oversized','bad-count','negative-count','short','non-ticket','bad-id','wrong-url','bad-time','missing-field','oversized-subject','changed-count','conflict','link-tenant','link-query','link-cycle','link-path','link-credentials','link-extra','link-sort','link-previous']){
+  for(const mode of ['permission','provider','bad-json','oversized','bad-count','negative-count','short','non-ticket','bad-id','bad-requester-id','external-number','external-object','external-control','external-oversized','wrong-url','bad-time','missing-field','oversized-subject','changed-count','conflict','link-tenant','link-query','link-cycle','link-path','link-credentials','link-extra','link-sort','link-previous']){
    const before=fake.requests.length,run=await startRun(h,draft,{query:'type:ticket tags:'+mode});
    assert.ok(!['succeeded','stopped_by_search'].includes(run.status),mode+' never means not found');assert.ok(!run.steps.some(item=>item.step_id==='outcome'));
    if(mode.startsWith('link-'))assert.equal(fake.requests.length,before+1,'invalid pagination refuses before any credential-bearing continuation');

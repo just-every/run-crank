@@ -65,7 +65,7 @@ function ticket(value: unknown, host: string, names: string[]) {
   for (const name of names) {
     const field = value[name]
     if (field === undefined) return malformed('missing declared ticket metadata')
-    if (name.endsWith('_id')) { if (field !== null) ticketId(field) }
+    if (name !== 'external_id' && name.endsWith('_id')) { if (field !== null) ticketId(field) }
     else if (name === 'tags') { if (!Array.isArray(field) || field.length > 100 || field.some(tag => typeof tag !== 'string' || tag.length > 256 || /[\x00-\x1f\x7f]/.test(tag))) return malformed('invalid ticket tags') }
     else if (name.endsWith('_at')) { if (typeof field !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/.test(field) || !Number.isFinite(Date.parse(field)) || new Date(field).toISOString().slice(0, 19) !== field.slice(0, 19)) return malformed('invalid ticket timestamp') }
     else if (field !== null && (typeof field !== 'string' || field.length > (name === 'subject' ? 4096 : 256) || /[\x00-\x1f\x7f]/.test(field))) return malformed('invalid ticket metadata text')

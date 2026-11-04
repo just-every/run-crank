@@ -6,7 +6,7 @@
   "toolchain": {
     "id": "runeditrun/edition-authoring",
     "version": "1.1.0",
-    "sha256": "b546ef04830f935ee2493a5bc08ef43a0f7d5905aeb8549fb75670c19890af99"
+    "sha256": "3f7b56f3ae1e70588fb35c49e75b639c2360ceed550182b9caf8adc33021abb8"
   },
   "components": [
     {
@@ -3192,7 +3192,7 @@
       "executable": false
     },
     "src/crank/connectors/zendesk.ts": {
-      "sha256": "c178b7b60c5f740edbddff29f0a61b73ca15472195d979c47f98aa3b24d31e17",
+      "sha256": "9477899560fcd80a78f72faa832e43639f2d96288a923d146b5d364689cdafaa",
       "executable": false
     },
     "src/crank/custom/api.ts": {
@@ -7376,7 +7376,7 @@
       "executable": false
     },
     "tests/zendesk-search-journey.mjs": {
-      "sha256": "1e290c02a3f98d0d5fe41e14ee95b8bb5a0374386cfab677a80e42bf16012ace",
+      "sha256": "35b6595838d7b8274bb37268919ea6da68e4d6b077c71ecd443b801fe549744c",
       "executable": false
     },
     "tsconfig.json": {
