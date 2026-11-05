@@ -29,12 +29,13 @@ async function onScreen({h,w,run,state,cookie=h.owner}) {
   for(const width of [1440,390]) {
    await page.setViewportSize({width,height:1000});await page.goto(h.origin+`/app/workflow-runs/${run.id}`);
    const search=page.locator('.timeline-item').filter({hasText:'Teams directory lookup'}).first();
-   if(!['restricted','expired'].includes(state))await search.getByText('Input and output',{exact:true}).click();
+   if(state!=='restricted')await search.getByText('Input and output',{exact:true}).click();
    if(width===1440) {
     if(state==='found'||state==='sealed'){for(const text of ['synthetic-crank-a',state==='sealed'?'synthetic-crank-c':'synthetic-crank-b','found','synthetic-crank-name','userPrincipalName'])await expect(search).toContainText(text);const output=JSON.parse(await search.locator('pre').nth(1).innerText());assert.equal(output.records[0].displayName,hostileName);assert.equal(await page.evaluate(()=>globalThis.teamsInjected),undefined);await expect(search.locator('img')).toHaveCount(0)}
     else if(state==='incomplete'){await expect(search).toContainText('incomplete');await expect(page.locator('.timeline-item[data-state="succeeded"]')).toHaveCount(0)}
     else if(state==='restored'){await expect(search).toContainText('sealed');assert.ok(!(await page.locator('body').innerText()).includes(hostileName));}
-    else {await expect(page.getByText('Input and output',{exact:true})).toHaveCount(0);assert.ok(!(await page.locator('body').innerText()).includes(hostileName));if(state==='restricted')await expect(page.getByText('Restricted for your role.',{exact:true})).toBeVisible();}
+    else if(state==='expired'){assert.equal(JSON.parse(await search.locator('pre').innerText()),null);assert.ok(!(await page.locator('body').innerText()).includes(hostileName));}
+    else {await expect(page.getByText('Input and output',{exact:true})).toHaveCount(0);assert.ok(!(await page.locator('body').innerText()).includes(hostileName));await expect(page.getByText('Restricted for your role.',{exact:true})).toBeVisible();}
     const small=await page.locator('body').evaluate(root=>[...root.querySelectorAll('*')].filter(el=>el.getClientRects().length&&getComputedStyle(el).visibility==='visible'&&[...el.childNodes].some(n=>n.nodeType===3&&n.textContent.trim())&&parseFloat(getComputedStyle(el).fontSize)<13).map(el=>el.tagName));assert.deepEqual(small,[]);
     for(const [id,label] of [['search-tooltip','Search runs'],['account-tooltip','Your account']]) {
      const control=page.locator(`[aria-describedby="${id}"]`),tooltip=page.getByRole('tooltip',{name:label,exact:true});await page.mouse.move(0,0);await control.blur();await expect(tooltip).toBeHidden();await control.hover();await page.waitForTimeout(150);await expect(tooltip).toBeHidden();await expect(tooltip).toBeVisible();await page.mouse.move(0,0);await control.focus();await expect(tooltip).toBeVisible({timeout:100});await control.blur();
@@ -42,6 +43,12 @@ async function onScreen({h,w,run,state,cookie=h.owner}) {
    }
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`${width} retained results fit`);
    await page.screenshot({path:join(evidence,`teams-${state}-${width}.png`),fullPage:true});
+   if(state==='found'){
+    await page.goto(h.origin+'/app/data');
+    const disclosure=page.locator('details.inline-disclosure').filter({hasText:'Teams exact email review'}).first();await disclosure.locator('summary').click();
+    if(width===1440){for(const text of ['graph.microsoft.com','email','projection','bearer','not verified'])await expect(disclosure).toContainText(text);assert.ok(!(await disclosure.innerText()).includes(hostileName));}
+    await page.screenshot({path:join(evidence,`teams-disclosure-${width}.png`),fullPage:true});
+   }
   }
  }finally{await context.close();server.closeAllConnections();await new Promise(done=>server.close(done))}
 }
