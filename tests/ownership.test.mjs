@@ -98,7 +98,9 @@ test('BASE-001/BASE-004: an owned installation publishes and finishes every ship
     const gmailTypes=await gmailOwnership(h,fake);
     const {hubspotOwnership}=await import('./hubspot-search-journey.mjs');
     const hubspotTypes=await hubspotOwnership(h,fake);
-    const succeeded = new Set([...done.steps.filter(s => s.status === 'succeeded').map(s => s.type), ...financialTypes, ...driftTypes, ...recurringTypes, ...orbitTypes, ...aiTypes, ...gmailTypes, ...hubspotTypes]);
+    const {teamsOwnership}=await import('./teams-search-journey.mjs');
+    const teamsTypes=await teamsOwnership(h,fake);
+    const succeeded = new Set([...done.steps.filter(s => s.status === 'succeeded').map(s => s.type), ...financialTypes, ...driftTypes, ...recurringTypes, ...orbitTypes, ...aiTypes, ...gmailTypes, ...hubspotTypes, ...teamsTypes]);
     for (const type of [...Object.keys(STEP_TYPES), 'paths', 'loop']) assert.ok(succeeded.has(type), `BASE-004 needs a successful public-door journey for ${type}`);
     assert.deepEqual(refused, [], 'core operation never tries an author or other unconfigured host');
     assert.equal((await h.send('/app/workflow-runs/' + done.id, undefined, h.owner)).status, 200);

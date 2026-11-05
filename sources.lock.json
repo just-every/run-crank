@@ -172,7 +172,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "4d770dc6967b9d8c8deb1046af04a5b2e077b6f91fc59190e83cf04060888435",
+      "sha256": "aac2d3d2ae3f5062bea791377b189e5eb86834bd3f7a1d043ac176b60e5d43c9",
       "executable": false
     },
     "DEMO.md": {
@@ -3096,7 +3096,7 @@
       "executable": false
     },
     "src/crank/connections/catalog.ts": {
-      "sha256": "259cea30b383a778615d4dc696955a8e96c7301ce912411f80e77a99e9841ded",
+      "sha256": "c8762cdbe7532b76f4084157a364b8abbf655ed9795607c06a1a32da399cfdbf",
       "executable": false
     },
     "src/crank/connections/oauth.ts": {
@@ -3145,6 +3145,10 @@
     },
     "src/crank/connectors/hubspot.ts": {
       "sha256": "ad0229322524a1f538c5e98957140ad637c4eaef78a54d5e1deb50d04a06852d",
+      "executable": false
+    },
+    "src/crank/connectors/microsoft-teams.ts": {
+      "sha256": "bbc746226e838cd058e4578185d85115d4f377916535863840cffecb4cd2c298",
       "executable": false
     },
     "src/crank/connectors/multipart.ts": {
@@ -3268,7 +3272,7 @@
       "executable": false
     },
     "src/crank/data-flow-graphs.ts": {
-      "sha256": "2961e30fe5fad314aaeb028aa9a3c6ec6d509dc6927c55feef0190f5781f29b8",
+      "sha256": "8a1d5f10b7319baf9ca897c5d01b39aad03f185f740cb927ee4d4b8372d5b170",
       "executable": false
     },
     "src/crank/data-flow-types.ts": {
@@ -3392,7 +3396,7 @@
       "executable": false
     },
     "src/crank/engine/steps/index.ts": {
-      "sha256": "32685d82fe98d4b69c24f1fd158d7ae5f3a19349352415abfd0142ef1fefbd7f",
+      "sha256": "12dc047720273297abac13c98163584fd46ae227a72f0b833123794c3dc41d68",
       "executable": false
     },
     "src/crank/engine/steps/join.ts": {
@@ -3772,7 +3776,7 @@
       "executable": false
     },
     "src/crank/restore-policy.mjs": {
-      "sha256": "44fb39ec2a87efa1f8464d9e1734138232ec34bea8e8d965c154ca13a761ed45",
+      "sha256": "6fcbeca54518248c09c2ecf0960c52691856dc47d050bb0276ca17253d400a51",
       "executable": false
     },
     "src/crank/runs.ts": {
@@ -6700,7 +6704,7 @@
       "executable": false
     },
     "test-budget.json": {
-      "sha256": "01adbd299d3c921e5a0d71aa2e73b56c08efe378a97edded1b1ccad0d452c179",
+      "sha256": "728eda3c89c2d2d41a4f1591709fb847157d7b9ad3d2ac89a1ebad08d1770ec8",
       "executable": false
     },
     "tests/accounting-poll-journey.mjs": {
@@ -6780,7 +6784,7 @@
       "executable": false
     },
     "tests/connections.test.mjs": {
-      "sha256": "0d45b79181884c543b69e43daed21b041194252ff611735e7028404f84cd4a54",
+      "sha256": "245df7188aa132769a96a06ee796d818c9c4234ce4314f04ca4e1cca7afeceb2",
       "executable": false
     },
     "tests/crank.test.mjs": {
@@ -7168,7 +7172,7 @@
       "executable": false
     },
     "tests/ownership.test.mjs": {
-      "sha256": "d38b18e7c7669a2d8a09bd7489c216dc43c602b6a75bc3250f94038e2e318c1e",
+      "sha256": "d6f0685e5a01dd7b318d542c43e4ffd1a57d143b2305841b3f998bf7627e1360",
       "executable": false
     },
     "tests/pagination.test.mjs": {
@@ -7296,7 +7300,7 @@
       "executable": false
     },
     "tests/sibling-browser.mjs": {
-      "sha256": "1ee4da39510411b164514eb54f6daca7f7b7dfb9129a8bc94b22a5124c60a6e1",
+      "sha256": "1b365ccd3a39770a49708ad4f2b4d189a7737e47fe5951f34753731f3e3794ae",
       "executable": false
     },
     "tests/site.test.mjs": {
@@ -7357,6 +7361,14 @@
     },
     "tests/team.test.mjs": {
       "sha256": "0378c9d587b8de2cf9424c42a06ce5fdd83250b747d128c58b3eb4081c20023e",
+      "executable": false
+    },
+    "tests/teams-search-browser.mjs": {
+      "sha256": "90d7e0a555ef3c37560c229a421c37fe8738536de66c2568536ce54f8096d679",
+      "executable": false
+    },
+    "tests/teams-search-journey.mjs": {
+      "sha256": "bbd27c68354e1df40ad3edb380f7769c9e813160f4d062e6602b290491e59b62",
       "executable": false
     },
     "tests/triggers.test.mjs": {

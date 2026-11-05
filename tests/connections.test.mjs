@@ -146,6 +146,8 @@ test('CONN-002: OAuth consent, refresh and accounts per step; secrets never leav
 
 const slackSign = (secret, body, t = Math.floor(Date.now() / 1000)) => ({ 'x-slack-request-timestamp': String(t), 'x-slack-signature': 'v0=' + createHmac('sha256', secret).update(`v0:${t}:${body}`).digest('hex'), 'content-type': 'application/json' });
 test('CONN-004: Slack posts by channel name and user email, applies search outcomes, finds or creates once, and admits signed events once', async () => {
+  const {teamsSearchJourney,teamsCustodyJourney}=await import('./teams-search-journey.mjs');
+  await teamsSearchJourney();await teamsCustodyJourney();
   const channels = [{ id: 'C01', name: 'general' }, { id: 'C02', name: 'sales' }], posts = [];
   let failUsers = false;
   fake.routes.set('slack.com', ({ url, body }) => {

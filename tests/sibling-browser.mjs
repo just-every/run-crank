@@ -92,3 +92,6 @@ try {
  }});
  console.log('Native Nook and Orbit scoped operations, readback and authority screens proved at 1440 and captured at 390');
 } finally {await context?.close();await browser.close();if(server){server.closeAllConnections();await new Promise(done=>server.close(done))}}
+
+const {teamsSearchBrowser}=await import('./teams-search-browser.mjs');
+await teamsSearchBrowser();
