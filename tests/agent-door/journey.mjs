@@ -87,12 +87,24 @@ export async function documentationJourney({request, origin, cookie, token}) {
   assert.deepEqual((await rpc(['resources', 'templates', 'list'].join('/'))).resourceTemplates,doc.resourceTemplates);
   assert.deepEqual((await rpc(['prompts', 'list'].join('/'))).prompts,doc.prompts);
   assert.deepEqual(Object.keys(discovered.capabilities),['tools']);
+  const refused=await rpc(['tools','call'].join('/'),{name:'crank.runs.get',arguments:{run_id:7}});
+  assert.equal(refused.isError,true);assert.ok(doc.errorCodes[refused._meta['com.runeditrun/error'].code],'the live refusal is documented');
+  const limitText=decode(html.split('aria-labelledby="limits"')[1].split('</section>')[0]);
+  for(const value of Object.values(discovered._meta['com.runeditrun/limits']))assert.ok(limitText.includes(String(value)),'capacity is visible on the page');
+  const errors=decode(html.split('aria-labelledby="errors"')[1].split('</section>')[0]);
+  for(const [code,description] of Object.entries(doc.errorCodes)){assert.ok(errors.includes(code));assert.ok(errors.includes(description));}
+  const guidance=decode(html.split('aria-labelledby="guidance"')[1].split('</section>')[0]);
+  for(const text of doc.guidance)assert.ok(guidance.includes(text),'specialist guidance is visible');
   for(const item of listed) {
    const documented=doc.tools.find(tool=>tool.name===item.name),{job,classificationTests,...descriptor}=documented;
    assert.deepEqual(descriptor,item,'reference uses the actual enriched descriptor');assert.ok(job);
    const article=html.split('data-tool-name="'+item.name+'"')[1].split('</article>')[0];
    const schemas=[...article.matchAll(/<pre[^>]*>([\s\S]*?)<\/pre>/g)].map(match=>JSON.parse(decode(match[1])));
    assert.deepEqual(schemas,[item.inputSchema,item.outputSchema]);
+   const visible=decode(article);
+   assert.ok(visible.includes(item._meta['com.runeditrun/scope']),'the page shows the actual tool scope');
+   for(const cls of item._meta['com.runeditrun/classes'])assert.ok(visible.includes(cls),'the page shows the actual class');
+   for(const reference of classificationTests)for(const value of [reference.path,reference.name,...reference.cases])assert.ok(visible.includes(value),'the page exposes each named classification case');
    const declared=surface.tools.find(tool=>tool.name===item.name);
    assert.deepEqual(classificationTests,declared.classificationTests);
    for(const cls of item._meta['com.runeditrun/classes']) {
