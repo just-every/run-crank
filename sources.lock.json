@@ -3163,6 +3163,10 @@
       "sha256": "493c6048c184540c8690cdf55fc50e57e14160eb3a67066421732ed0cff6b909",
       "executable": false
     },
+    "src/crank/connectors/paypal.ts": {
+      "sha256": "bbb97d6a1e771c6577262b4727a6ec3dce07291a294435bab7f23bdeb0d0b0c2",
+      "executable": false
+    },
     "src/crank/connectors/rate-limit.ts": {
       "sha256": "bd81319f45e7bcb0fa483960e77d8f980247ade8afbcc9799153c06525d20331",
       "executable": false
@@ -7173,6 +7177,14 @@
     },
     "tests/pagination.test.mjs": {
       "sha256": "95b902ff5f1f040d5d76420bd60c7194cce1ff542165587ed7c796b88743a5fb",
+      "executable": false
+    },
+    "tests/paypal-search-browser.mjs": {
+      "sha256": "f94c2de1809042a6c3da396dede8d70e9b1522f45b926b50e011e5514c719209",
+      "executable": false
+    },
+    "tests/paypal-search-journey.mjs": {
+      "sha256": "894116236c9682942bec1c93aea0025e5e95d8ee4607883d3013f561e3c6d026",
       "executable": false
     },
     "tests/platform-browser.mjs": {
