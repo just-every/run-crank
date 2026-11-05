@@ -238,7 +238,10 @@ Policy facts and historical agent and sponsor names come from the original
 record; current human approval and review marks enrich their retained IDs.
 An absent local specialist remains null.
 
-`GET /agents/api/activity/export` accepts the same filters and cursor. Each
+`GET /agents/api/activity/export` accepts the same filters and cursor. The Agents page adds
+`download=all` to stream every matching page into one NDJSON attachment, keeping
+the initial snapshot and checking the person’s current session for each page.
+The paginated API remains available without that option. Each
 bounded response is NDJSON, with every audit field and a closed native metadata
 projection. Follow `X-Activity-Next-Cursor` or the `Link` header to the next
 page until absent. `X-Activity-Total` reports the matching audit row count and

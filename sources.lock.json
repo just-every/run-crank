@@ -196,7 +196,7 @@
       "executable": false
     },
     "docs/AGENT-DOOR.md": {
-      "sha256": "1b59a84fc4c789edd2ec4497642803bd446ceab2d81802ffaf108cc7ffaf7c1e",
+      "sha256": "b07872164db514c01a3a1f2dfae89cba51c2c0dea956da075f03d852652ab474",
       "executable": false
     },
     "docs/API.md": {
@@ -2948,7 +2948,7 @@
       "executable": false
     },
     "src/crank/agent-door/activity.ts": {
-      "sha256": "5af04aac5118e62dd6dd26f4d0961a32d2bb68588afb6a465940fcaf70f4b875",
+      "sha256": "6c0812ce49abad4c9e3c0166541784ce184cb74d2744247ed5d2a314def09f64",
       "executable": false
     },
     "src/crank/agent-door/business.ts": {
@@ -6716,11 +6716,11 @@
       "executable": false
     },
     "tests/agent-door/activity-browser.mjs": {
-      "sha256": "a27eacca6370d4cb2cc51428dcb22dfb17e791f79d9e41c32a4e180bf4415806",
+      "sha256": "dc4ed886545ad92e0885e894e2f422f48903caeaa240902c346d150aa75a9388",
       "executable": false
     },
     "tests/agent-door/activity-journey.mjs": {
-      "sha256": "22ca447b58be2e61459ad0b29204954fa2b8e95dd581f60851d49e299acc1873",
+      "sha256": "93bdc2a88e03257c1e4e00158803741041b7e3c19336fc40aeff3d9f81798efb",
       "executable": false
     },
     "tests/agent-door/fixtures.mjs": {

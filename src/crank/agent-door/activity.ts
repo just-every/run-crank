@@ -109,6 +109,31 @@ export async function activityResponse(env: CrankEnv, request: Request): Promise
     }
     const page = await activityPage(env, request, actor)
     if (path.endsWith('/export')) {
+      if (new URL(request.url).searchParams.get('download') === 'all') {
+        requireValue(!new URL(request.url).searchParams.has('cursor'), 'Period downloads start at the first page')
+        const encoder = new TextEncoder()
+        const encode = (rows: typeof page.rows) => encoder.encode(rows.map(row => JSON.stringify(row)).join('\n') + (rows.length ? '\n' : ''))
+        let cursor = page.cursor
+        // Stream bounded pages from one snapshot into the person's complete file.
+        const body = new ReadableStream<Uint8Array>({
+          start(controller) {
+            controller.enqueue(encode(page.rows))
+            if (!cursor) controller.close()
+          },
+          async pull(controller) {
+            const next = new URL(request.url)
+            next.search = query(page.filters, cursor)
+            const nextRequest = new Request(next, { headers: request.headers })
+            const batch = await activityPage(env, nextRequest, await reader(env, nextRequest))
+            controller.enqueue(encode(batch.rows))
+            cursor = batch.cursor
+            if (!cursor) controller.close()
+          },
+        })
+        return new Response(body, { headers: { ...headers, 'content-type': 'application'+'/'+'x-ndjson',
+          'content-disposition': 'attachment; filename="agent-activity.ndjson"',
+          'x-activity-total': String(page.total), 'x-activity-through': String(page.through) } })
+      }
       const next = page.cursor ? '/agents/api/activity/export?' + query(page.filters, page.cursor) : null
       return new Response(page.rows.map(row => JSON.stringify(row)).join('\n') + (page.rows.length ? '\n' : ''), {
         headers: { ...headers, 'content-type': 'application'+'/'+'x-ndjson', 'content-disposition': 'attachment; filename="agent-activity.ndjson"',
@@ -135,5 +160,5 @@ export async function activityHtml(env: CrankEnv, request: Request, _person: Per
   const field = (name: string, label: string, type = 'text') => `<div class="field"><label for="activity-${name}">${label}</label><input id="activity-${name}" name="${name}" type="${type}" value="${escape(filters[name as keyof Filters])}"${type === 'text' ? ' maxlength="200"' : ''}></div>`
   const counts = page.counts.map(row => `<tr><th scope="row">${escape(className(row.class))}</th><td>${escape(decisionName(row.decision))}</td><td data-agents-count data-class="${escape(row.class)}" data-decision="${escape(row.decision)}">${row.count}</td></tr>`).join('')
   const rows = page.rows.map(row => `<li data-activity-id="${escape(row.id)}"><p class="row-title">${escape(titles.get(row.tool) ?? words(row.tool))}</p><p>${escape(row.label)}</p><p class="meta">${escape(activityOutcome(row.decision, row.outcome, row.code))} · <time datetime="${escape(row.at)}">${escape(row.at)}</time></p><p class="meta">${escape(row.classes.map(item => className(item.class)).join(', ') || 'No class recorded')}</p>${row.native.map(effect => `<p>${escape(words(effect.action))}${effect.href ? ` · <a href="${escape(effect.href)}">Open workflow</a>` : ''}</p>`).join('')}${row.approval ? `<a href="/agents/approvals/${encodeURIComponent(row.approval.id)}">View approval</a>` : ''}</li>`).join('')
-  return `<section aria-labelledby="activity-title"><h2 id="activity-title">Activity</h2><form action="/agents" method="get" aria-label="Filter activity">${field('agent', 'Agent ID')}<div class="field"><label for="activity-class">Class</label><select id="activity-class" name="class"><option value="">All classes</option>${classes.map(item => `<option value="${escape(item.id)}"${filters.class === item.id ? ' selected' : ''}>${escape(className(item.id))}</option>`).join('')}</select></div>${field('from', 'From date', 'date')}${field('to', 'Before date', 'date')}<p><button type="submit">Apply filters</button></p></form><p data-activity-total>${page.total} calls in this period</p>${counts ? `<table aria-label="Calls by class and decision"><thead><tr><th scope="col">Class</th><th scope="col">Decision</th><th scope="col">Calls</th></tr></thead><tbody>${counts}</tbody></table>` : ''}<p><a href="/agents/api/activity/export?${escape(query(filters))}">Export this period</a></p>${rows ? `<ul class="stack">${rows}</ul>` : '<p>No activity matches these filters.</p>'}${page.cursor ? `<a href="/agents?${escape(query(filters, page.cursor))}">Next activity page</a>` : ''}</section>`
+  return `<section aria-labelledby="activity-title"><h2 id="activity-title">Activity</h2><form action="/agents" method="get" aria-label="Filter activity">${field('agent', 'Agent ID')}<div class="field"><label for="activity-class">Class</label><select id="activity-class" name="class"><option value="">All classes</option>${classes.map(item => `<option value="${escape(item.id)}"${filters.class === item.id ? ' selected' : ''}>${escape(className(item.id))}</option>`).join('')}</select></div>${field('from', 'From date', 'date')}${field('to', 'Before date', 'date')}<p><button type="submit">Apply filters</button></p></form><p data-activity-total>${page.total} calls in this period</p>${counts ? `<table aria-label="Calls by class and decision"><thead><tr><th scope="col">Class</th><th scope="col">Decision</th><th scope="col">Calls</th></tr></thead><tbody>${counts}</tbody></table>` : ''}<p><a href="/agents/api/activity/export?${escape(query(filters))}&amp;download=all">Export this period</a></p>${rows ? `<ul class="stack">${rows}</ul>` : '<p>No activity matches these filters.</p>'}${page.cursor ? `<a href="/agents?${escape(query(filters, page.cursor))}">Next activity page</a>` : ''}</section>`
 }

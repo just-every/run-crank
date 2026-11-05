@@ -111,9 +111,14 @@ export default async function activityJourney(h) {
   const response=await page(h,query);assert.ok([200,400].includes(response.status));if(response.status===200)assert.equal(response.value.total,0);
  }
  for(const exported of [false,true]){
-  assert.equal((await page(h,period,exported,'')).status,401);
-  assert.equal((await page(h,period,exported,h.owner,{authorization:'Bearer '+a.token})).status,403);
+  for(const query of [period,...(exported?[period+'&download=all']:[])]){
+   assert.equal((await page(h,query,exported,'')).status,401);
+   assert.equal((await page(h,query,exported,h.owner,{authorization:'Bearer '+a.token})).status,403);
+  }
  }
+ const emptyDownload=await page(h,period+'&class=money&download=all',true);
+ assert.equal(emptyDownload.status,200);assert.equal(emptyDownload.text,'');
+ assert.equal(emptyDownload.headers.get('x-activity-total'),'0');
  const href=original.native[0].href;assert.ok(href);
  assert.equal((await h.send(href,undefined,h.owner)).status,303);
  assert.equal((await h.send(href,undefined,'')).status,401);
