@@ -42,7 +42,8 @@ function document(bytes: Uint8Array<ArrayBuffer>): Record<string, unknown> {
 function invoice(value: Record<string, unknown>, expected: string) {
   if (value.id !== expected || !isObject(value.detail) || typeof value.detail.invoice_number !== 'string' || !value.detail.invoice_number.trim() || value.detail.invoice_number.length > 127 || /[\x00-\x1f\x7f]/.test(value.detail.invoice_number) || !statuses.has(String(value.status)) || !isObject(value.amount) || typeof value.amount.currency_code !== 'string' || !/^[A-Z]{3}$/.test(value.amount.currency_code) || typeof value.amount.value !== 'string' || value.amount.value.length > 32 || !/^(0|[1-9]\d*)(\.\d+)?$/.test(value.amount.value)) return malformed()
   // Retain provider decimal text verbatim, including trailing zeroes; never float it.
-  return {id:expected,detail:{invoice_number:value.detail.invoice_number},status:String(value.status),amount:{currency_code:value.amount.currency_code,value:value.amount.value}}
+  // Index unfinished responses by the same number field exposed in search results.
+  return {id:expected,number:value.detail.invoice_number,detail:{invoice_number:value.detail.invoice_number},status:String(value.status),amount:{currency_code:value.amount.currency_code,value:value.amount.value}}
 }
 
 /** Fixed sandbox GET only. Owner-declared consent is not verified merchant identity.
@@ -75,6 +76,6 @@ export const paypalFindInvoice: StepType = {
     if (status === 404 && document(bytes).name === 'RESOURCE_NOT_FOUND') return searchOutcome(step,[])
     if (status !== 200) throw new StepError(status === 401 || status === 403 ? 'auth' : status === 429 ? 'rate_limit' : 'provider',`PayPal invoice search refused with status ${status}`,{status,...(result.exhausted ? {exhausted:true} : {})})
     const record = invoice(document(bytes),key)
-    return searchOutcome(step,[{id:record.id,number:record.detail.invoice_number,status:record.status,currency:record.amount.currency_code,total:record.amount.value}])
+    return searchOutcome(step,[{id:record.id,number:record.number,status:record.status,currency:record.amount.currency_code,total:record.amount.value}])
   },
 }
