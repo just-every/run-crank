@@ -190,10 +190,11 @@ export async function validateRestore({ read }) {
         const allowed=[search?.id,search?.find_or_create?.operation].filter(Boolean)
         if (!step.gateway_id || !search?.gateway || response.body_bytes>65536 || !allowed.some(operation=>url.pathname===`/api/crank/gateways/${encodeURIComponent(step.gateway_id)}/operations/${encodeURIComponent(operation)}/pages/0`)) return false;
       }
-      if (!step || !['http','file.fetch','custom.request','gmail.search_threads','hubspot.find_contact'].includes(step.type) && !step.type.startsWith('orbit.') && !step.type.startsWith('nook.') && !step.type.startsWith('slack.') && !step.type.startsWith('quickbooks.') && !step.type.startsWith('gusto.') && !step.type.startsWith('google_calendar.')) return false;
+      if (!step || !['http','file.fetch','custom.request','gmail.search_threads','hubspot.find_contact','paypal.find_invoice'].includes(step.type) && !step.type.startsWith('orbit.') && !step.type.startsWith('nook.') && !step.type.startsWith('slack.') && !step.type.startsWith('quickbooks.') && !step.type.startsWith('gusto.') && !step.type.startsWith('google_calendar.')) return false;
       // A CRM page can only come from the pinned no-redirect reader, inside its
       // declared scan. Opaque sealed bodies remain intact without importing keys.
       if (step.type === 'hubspot.find_contact' && (url.href !== 'https://api.hubapi.com/crm/v3/objects/contacts' || response.body_bytes > 262144 || response.redirects !== 0 || checkpoint.ordinal >= (step.max_pages ?? 20))) return false;
+      if (step.type === 'paypal.find_invoice' && (url.href !== 'https://api-m.sandbox.paypal.com/v2/invoicing/invoices/' || response.body_bytes > 262144 || response.redirects !== 0 || checkpoint.ordinal !== 0 || ![200,404,429,502,503,504].includes(response.status))) return false;
       if (step.type === 'google_calendar.search_events' && url.href !== 'https://www.googleapis.com/calendar/v3/events') return false;
       const bound = (step.type === 'file.fetch' || step.type === 'nook.send_message' || step.type.startsWith('orbit.') || step.type === 'google_calendar.search_events' ? 1 : step.type.startsWith('slack.') ? 4 : 2) * 1024 * 1024;
       if (!Number.isSafeInteger(checkpoint.ordinal) || checkpoint.ordinal < 0 || !/^[a-f0-9]{64}$/.test(checkpoint.request_key) || typeof checkpoint.operation_key !== 'string' || !checkpoint.operation_key) return false;
@@ -214,7 +215,7 @@ export async function validateRestore({ read }) {
       if (length !== response.body_bytes) return false;
       chunks.delete(key);
       if (Array.isArray(response.headers) && response.headers.some(pair => !Array.isArray(pair) || pair.length !== 2 || pair.some(value => typeof value !== 'string') || /authorization|cookie|api[-_]?key|token|secret|password|signature/i.test(pair[0]))) return false;
-      if (step.type === 'hubspot.find_contact' && Array.isArray(response.headers) && response.headers.some(([name]) => !['content-type','retry-after'].includes(name.toLowerCase()))) return false;
+      if (['hubspot.find_contact','paypal.find_invoice'].includes(step.type) && Array.isArray(response.headers) && response.headers.some(([name]) => !['content-type','retry-after'].includes(name.toLowerCase()))) return false;
     } catch { return false; }
   }
   if (chunks.size) return false;

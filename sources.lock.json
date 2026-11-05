@@ -6,7 +6,7 @@
   "toolchain": {
     "id": "runeditrun/edition-authoring",
     "version": "1.1.0",
-    "sha256": "b546ef04830f935ee2493a5bc08ef43a0f7d5905aeb8549fb75670c19890af99"
+    "sha256": "3f7b56f3ae1e70588fb35c49e75b639c2360ceed550182b9caf8adc33021abb8"
   },
   "components": [
     {
@@ -172,7 +172,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "4d770dc6967b9d8c8deb1046af04a5b2e077b6f91fc59190e83cf04060888435",
+      "sha256": "65c3350a5ce154d99d8cb469b2f5ee5372db3288cd479043c8ddc43e9d6e8cc8",
       "executable": false
     },
     "DEMO.md": {
@@ -3088,7 +3088,7 @@
       "executable": false
     },
     "src/crank/connections/apps.ts": {
-      "sha256": "11d915b236d20d2a7f27c1ebac99cfca34dfd02c8d548526aabd1c4f8d40fcb7",
+      "sha256": "701114ab2761b5d1435c322f5cc3aabcbff12cbddbc3eb41e75f89224caa751f",
       "executable": false
     },
     "src/crank/connections/auth.ts": {
@@ -3096,7 +3096,7 @@
       "executable": false
     },
     "src/crank/connections/catalog.ts": {
-      "sha256": "259cea30b383a778615d4dc696955a8e96c7301ce912411f80e77a99e9841ded",
+      "sha256": "4a575157d6bebe91cfb33e6dfd5b714245990f6dc27d860657e20cb8cd19c25c",
       "executable": false
     },
     "src/crank/connections/oauth.ts": {
@@ -3268,7 +3268,7 @@
       "executable": false
     },
     "src/crank/data-flow-graphs.ts": {
-      "sha256": "2961e30fe5fad314aaeb028aa9a3c6ec6d509dc6927c55feef0190f5781f29b8",
+      "sha256": "e363964b6028e6209c3e407dc30465a5b266157624c2fc2ce8f359c450d817cd",
       "executable": false
     },
     "src/crank/data-flow-types.ts": {
@@ -3392,7 +3392,7 @@
       "executable": false
     },
     "src/crank/engine/steps/index.ts": {
-      "sha256": "32685d82fe98d4b69c24f1fd158d7ae5f3a19349352415abfd0142ef1fefbd7f",
+      "sha256": "80cee4bf2ca1eae1adc87cb21ec1e080417326b5b2e29f24da624d1943947b8a",
       "executable": false
     },
     "src/crank/engine/steps/join.ts": {
@@ -3772,7 +3772,7 @@
       "executable": false
     },
     "src/crank/restore-policy.mjs": {
-      "sha256": "44fb39ec2a87efa1f8464d9e1734138232ec34bea8e8d965c154ca13a761ed45",
+      "sha256": "ad024d5e394be3bb52fe3e0cd522c969dd4e1d2bb31bfc7f05c94c44b471ade6",
       "executable": false
     },
     "src/crank/runs.ts": {
@@ -6780,7 +6780,7 @@
       "executable": false
     },
     "tests/connections.test.mjs": {
-      "sha256": "0d45b79181884c543b69e43daed21b041194252ff611735e7028404f84cd4a54",
+      "sha256": "82df6792d3845bf217b18f489d8b3aee8137b20657a6a32b97ed8910459cb066",
       "executable": false
     },
     "tests/crank.test.mjs": {
@@ -6960,7 +6960,7 @@
       "executable": false
     },
     "tests/gmail-search-browser.mjs": {
-      "sha256": "40cf2492347160bcf6d704c7dd6fa857e6e1c1600c96abd31ac1deaa7eacca88",
+      "sha256": "11ae3815586af4a2767d54a7f362b49d8924e0fc612d168be7e847e6be84d992",
       "executable": false
     },
     "tests/gmail-search-journey.mjs": {
@@ -7168,7 +7168,7 @@
       "executable": false
     },
     "tests/ownership.test.mjs": {
-      "sha256": "d38b18e7c7669a2d8a09bd7489c216dc43c602b6a75bc3250f94038e2e318c1e",
+      "sha256": "466ba1e8332770cc46942e5ac98b46ccaf0daa87e058af2d9ac449000f8ebd63",
       "executable": false
     },
     "tests/pagination.test.mjs": {

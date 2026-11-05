@@ -30,6 +30,7 @@ export async function graphDataFlows(env: CrankEnv, credential: (id: unknown) =>
         if (step.type === 'paths') for (const b of branchesOf(step)) walk(b.steps, `${path}/${b.id}/`)
         else if (step.type === 'loop') walk(step.steps as Step[], `${path}/items/*/`)
         else if (step.type === 'ai.classify') emit(path, 'ai.classify', { text: 'declared text only', categories: 'builder-selected category enum', model: 'pinned model identity' }, step.connection_id, ['https://api.openai.com'])
+        else if (step.type === 'paypal.find_invoice') emit(path,step.type,{invoice_id:'exact invoice identity in the fixed resource path'},step.connection_id,['https://api-m.sandbox.paypal.com'])
         else if (step.type === 'hubspot.find_contact') emit(path,step.type,{email:'local exact comparison; not sent to provider',properties:'email, firstname and lastname projection',after:'opaque page cursor'},step.connection_id,['https://api.hubapi.com'])
         else if (step.type === 'gmail.search_threads') emit(path, step.type, { query: 'Gmail search text', metadata_headers: 'declared header names', mailbox: 'selected managed connection' }, step.connection_id, ['https://gmail.googleapis.com'])
         else if (step.type === 'code') emit(path,'code',{source:step.source,language:step.language,input},step.connection_id,[step.executor_url])
