@@ -120,6 +120,9 @@ async function reviewUndoJourney(h,seeded) {
  assert.equal((await h.get('audit')).filter(row=>row.action==='workflow.agent_undo'&&row.subject_id===workflowId).length,1);
  // Later metadata-only saves must be preserved even with a frozen clock and unchanged graph.
  const stale=await seedReversibleEdit(h,seeded);
+ await h.post('workflows/'+workflowId+'/draft',{description:stale.after.description});
+ assert.equal((await h.send('/agents/api/reviews/'+stale.review.id+'/undo',{},h.owner)).status,409,'a later identical save invalidates the exact reversal');
+ await unchanged(stale.after);
  await h.post('workflows/'+workflowId+'/draft',{description:'Later person edit'});
  const later=await h.get('workflows/'+workflowId);
  assert.equal((await h.send('/agents/api/reviews/'+stale.review.id+'/undo',{},h.owner)).status,409);
@@ -233,6 +236,8 @@ export default async function activityJourney(h) {
  const refused=await h.mf.dispatchFetch(h.origin+'/mcp',{method:'POST',headers:{authorization:'Bearer '+a.token,origin:h.origin,accept:'application'+'/'+'json, text'+'/'+'event-stream','content-type':'application'+'/'+'json','mcp-protocol-version':'2025-11-25'},body:JSON.stringify({jsonrpc:'2.0',id:1,method:['tools','call'].join('/'),params:{name:'crank.workflows.create',arguments:input}})});
  assert.equal(refused.status,401,await refused.text());
  assert.equal((await h.get('workflows')).filter(item=>item.id===created.structuredContent.id).length,1);
+ const calls=(await allPages(h,period)).rows,reviews=(await h.send('/agents/api/reviews',undefined,h.owner)).value.reviews;
+ assert.deepEqual(reviews.map(item=>item.id).sort(),[...new Set(calls.filter(row=>row.decision==='review'&&row.review).map(row=>row.review.id))].sort(),'review feed contains exactly reviewed calls without duplicated replays');
  console.log('PROBE BASE-AGENT-009 native activity: more than 200 real MCP calls -> filtered pages, equal NDJSON, exact counts, one correlated native effect, restart and revocation retained, unauthorized reads refused');
  return seeded;
 }
