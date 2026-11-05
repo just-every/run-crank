@@ -81,6 +81,8 @@ Every returned record carries `com.runeditrun/untrusted: true` on its content.
 The reader rechecks native authority around the awaited read and retains the
 selected authority and current policy envelope between classification and execution. The shared runtime
 also compares the full classified bytes with the final read and fences consent.
+The final native authority check follows revision hashing, so scope withdrawal
+during that asynchronous work cannot release the record.
 The authority binding belongs to the current request, including an approved
 read that resumes an older operation identity. A native role change during
 that replay is refused even when its visible record bytes stay unchanged.

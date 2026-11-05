@@ -30,7 +30,7 @@ export default async function resourcesJourney({report=()=>{}}={}) {
  const edge=async request=>{
   assert.equal(new URL(request.url).hostname,'resource-read-boundary.example','resource reads never fetch providers');
   if(new URL(request.url).pathname==='/classified') {const action=boundary;boundary=null;if(action)await action()}
-  if(new URL(request.url).pathname==='/loaded'&&lateBoundary&&--lateBoundary.remaining===0) {const {action}=lateBoundary;lateBoundary=null;await action()}
+  if(lateBoundary&&new URL(request.url).pathname===(lateBoundary.phase??'/loaded')&&--lateBoundary.remaining===0) {const {action}=lateBoundary;lateBoundary=null;await action()}
   return new Response('{}');
  };
  const h=await harness('http://127.0.0.1:9',{bindings,edge,agentResourceBarrier:true});
@@ -219,6 +219,11 @@ export default async function resourcesJourney({report=()=>{}}={}) {
    }
    await adopt(h,c,autonomousPolicy());
 
+   for(const uri of [link(await h.get('workflows/'+workflow.id)),latestDraft,currentVersion]) {
+    lateBoundary={phase:'/digested',remaining:2,action:()=>h.post('team/'+viewer.id,{role:'viewer',workflow_ids:[],connection_ids:[]})};
+    const revoked=await read(uri,v);noContent(revoked);assert.equal(code(revoked),'resource_unavailable');await grant();
+   }
+
    // The native record changes while classification is suspended.
    boundary=()=>h.post('workflows/'+workflow.id+'/draft',{description:'Changed while classifying'});
    const changed=await read(link(await h.get('workflows/'+workflow.id)));noContent(changed);assert.equal(code(changed),'resource_unavailable');
@@ -252,12 +257,15 @@ export default async function resourcesJourney({report=()=>{}}={}) {
 
   await h.post('workflows/'+workflow.id+'/publish',{},h.owner,201);
   assert.equal((await h.get('workflows/'+workflow.id)).status,'published');
+  const beforeRestore=await h.get('workflows/'+workflow.id),historicalRecords=new Map();
+  for(const path of beforeRestore.draft_versions.map(draft=>'workflows/'+workflow.id+'/drafts/'+draft.id).concat(beforeRestore.versions.map(version=>'workflows/'+workflow.id+'/versions/'+version.number)))historicalRecords.set(path,await h.get(path));
   const saved=await archive(h);
   restored=await harness('http://127.0.0.1:9',{bindings,edge,agentResourceBarrier:true});
   await restored.post('data/restore',{archive:saved,confirm:'RESTORE'});
   await pairBusiness(restored,null,2);
   const r={...context(restored),seq:c.seq,revision:c.revision};await adopt(restored,r,autonomousPolicy());
   const native=await restored.get('workflows/'+workflow.id);assert.equal(native.status,'paused');
+  for(const [path,before] of historicalRecords)assert.deepEqual(await restored.get(path),before,'complete native history survives inactive restoration');
   const old=await rpc(restored,r,'resources/read',{uri:link(native)});assert.equal(old.status,401);noContent(old);
   r.agentId+='-fresh';r.consent+='-fresh';
   const uri=link(native),reply=await rpc(restored,r,'resources/read',{uri});assert.deepEqual(content(reply),native);
@@ -277,11 +285,11 @@ export default async function resourcesJourney({report=()=>{}}={}) {
   report('PROBE BASE-AGENT-003 visibility: cross-sponsor out-of-scope and missing URI reads -> identical resource_unavailable responses');
   report('PROBE BASE-AGENT-003 links: workflow create, update, duplicate, get and validate -> exact new state readback; stale revisions and held approvals refused');
   report('PROBE BASE-AGENT-003 classification: hostile draft values with data_class none -> sensitive policy required and untrusted marker retained');
-  report('PROBE BASE-AGENT-003 authority: record, role, product scope and consent changed during classification -> no content returned');
+  report('PROBE BASE-AGENT-003 authority: record, role, product scope and consent changed during classification, or scope withdrawn after final digest -> no content returned');
   report('PROBE BASE-AGENT-003 history: saved drafts and published versions -> exact role parity under both policies; later drafts preserve saved content; retired version links refuse; fresh links read current state');
   report('PROBE BASE-AGENT-003 policy refresh: policy blocked during the final read, including approved replay -> all three resource families withhold content');
   report('PROBE BASE-AGENT-003 erasure: deactivate and erase the sponsoring viewer -> captured approved history reads refuse with 401, including after restart');
-  report('PROBE BASE-AGENT-003 restore: exported published workflow -> paused restoration; old agent refused; fresh autonomous and approved held reads preserve inactivity');
+  report('PROBE BASE-AGENT-003 restore: exported published workflow -> complete historical records retained in paused restoration; old agent refused; fresh autonomous and approved held reads preserve inactivity');
  } finally {await restored?.close();await h.close()}
 }
 

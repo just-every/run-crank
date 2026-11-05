@@ -37,10 +37,11 @@ async function pickerBarrierBundle() {
 async function resourceBarrierBundle() {
   return (await build({...bundleOptions,plugins:[{name:'workflow-resource-read-boundary',setup(plugin){
     plugin.onLoad({filter:/agent-door[\/]resources\.ts$/},async({path})=>{
-      const contents=await readFile(path,'utf8'),boundary='classify(value) {',readBoundary='const value = record(await nativeCall(env, ctx, definition.path(match)))';
+      const contents=await readFile(path,'utf8'),boundary='classify(value) {',readBoundary='const value = record(await nativeCall(env, ctx, definition.path(match)))',digestBoundary='const linked = await definition.link(match, value)';
       assert.equal(contents.split(boundary).length,2);
       assert.equal(contents.split(readBoundary).length,2);
-      return {contents:contents.replace(boundary,"async classify(value) { await fetch('https://resource-read-boundary.example/classified');").replace(readBoundary,readBoundary+"; await fetch('https://resource-read-boundary.example/loaded');"),loader:'ts'};
+      assert.equal(contents.split(digestBoundary).length,2);
+      return {contents:contents.replace(boundary,"async classify(value) { await fetch('https://resource-read-boundary.example/classified');").replace(readBoundary,readBoundary+"; await fetch('https://resource-read-boundary.example/loaded');").replace(digestBoundary,digestBoundary+"; await fetch('https://resource-read-boundary.example/digested');"),loader:'ts'};
     });
   }}]})).outputFiles[0].text;
 }

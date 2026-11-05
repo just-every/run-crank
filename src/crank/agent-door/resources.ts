@@ -75,7 +75,8 @@ export function crankResources(env: CrankEnv): ResourceDefinition[] {
           const before = await authority(ctx)
           if (selectedAuthority !== undefined && selectedAuthority !== before) return null
           const value = record(await nativeCall(env, ctx, definition.path(match)))
-          if (await authority(ctx) !== before || (await definition.link(match, value)).uri !== uri) return null
+          const linked = await definition.link(match, value)
+          if (linked.uri !== uri || await authority(ctx) !== before) return null
           selectedAuthority = before
           return { json: value, untrusted: true }
         } catch (error) {
