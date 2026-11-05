@@ -99,7 +99,7 @@ try {
   const workflow = await send('workflows', {
     name: 'Harbor Workshop — supplier purchase review',
     graph: { trigger: { type: 'manual' }, steps: [
-      { id: 'review', type: 'approval', instructions: 'Review the replacement valve purchase before recording it.', input: { supplier: '{{trigger.input.supplier}}', amount: '{{trigger.input.amount}}' } },
+      { id: 'review', type: 'approval', timezone: 'America/Chicago', calendar: 'us_federal', reminders: [{amount:1,unit:'business_days'}], timeout: {amount:2,unit:'business_days'}, on_timeout: 'stop', instructions: 'Review the replacement valve purchase before recording it.', input: { supplier: '{{trigger.input.supplier}}', amount: '{{trigger.input.amount}}' } },
       { id: 'record', type: 'map', input: { supplier: '{{trigger.input.supplier}}', approved: '{{steps.review.approved}}' } },
     ] },
   }, 201);
@@ -194,6 +194,12 @@ try {
     await page.goto(origin + '/app/workflow-runs/' + approved.id); await shot(width, 'reconciled-approved');
 
     await page.goto(origin + '/app/workflow-runs/' + rejected.id);
+    if (!touch) {
+      await expect(page.getByText(/Review deadline:/)).toBeVisible();
+      await expect(page.getByText(/Reminder:/)).toBeVisible();
+      await expect(page.getByText(/it never approves or rejects for a person/)).toBeVisible();
+    }
+    await shot(width, 'deadline-pending');
     const rejectionNote = 'Declined duplicate supplier request.';
     await formFor(page, rejected.id).locator('input[name="reason"]').fill(rejectionNote);
     postMode = 'lose'; committed = false;

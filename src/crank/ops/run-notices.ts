@@ -1,3 +1,4 @@
+import { approvalReminderCurrent } from './approval-deadlines'
 import { operatorMail } from '../../mail.server.mjs'
 import { guardedBatch, requireOwner } from '../access'
 import { authorizeRequest } from '../connections/auth'
@@ -6,7 +7,7 @@ import { boundedFetch, utf8 } from '../engine/egress'
 import { id, now, requireValue, stmt, text, type Actor, type CrankEnv } from '../model'
 import { auditStatement } from './audit'
 
-type Notice = { key: string; workflowId: string; runId: string; kind: string; subject: string; category?: string; text?: string; link?: string }
+type Notice = { guard?: {sql: string; args: unknown[]}; slackRevision?: string | null; time?: number; key: string; workflowId: string; runId: string; kind: string; subject: string; category?: string; text?: string; link?: string }
 type Delivery = { id: string; notice_key: string; run_id: string; owner_id: string; channel: 'email' | 'slack'; route_revision: string | null; state: string; active: number; attempts: number; created_at: string; kind: string; subject: string; workflow_id: string; category: string }
 type Outcome = { state: 'delivered' | 'suppressed' | 'retry' | 'uncertain' | 'cancelled'; failure?: string; receipt?: string | null }
 
@@ -45,15 +46,16 @@ export async function notifyRun(env: CrankEnv, notice: Notice) {
   const owner = await stmt(env, `SELECT o.id,o.email FROM crank_workflows w JOIN oa_operators o ON o.id=w.owner_id
     JOIN crank_wf_runs r ON r.workflow_id=w.id WHERE w.id=? AND r.id=? AND r.mode='production' AND o.status='active'`, notice.workflowId, notice.runId).first<{ id: string; email: string }>()
   if (!owner) return
-  const at = now(), route = await stmt(env, 'SELECT revision FROM crank_notice_routes WHERE workflow_id=? AND owner_id=? AND enabled=1', notice.workflowId, owner.id).first<{ revision: string }>()
+  const at = new Date(notice.time ?? Date.now()).toISOString(), route = await stmt(env, 'SELECT revision FROM crank_notice_routes WHERE workflow_id=? AND owner_id=? AND enabled=1', notice.workflowId, owner.id).first<{ revision: string }>()
+  const slack = route && (notice.slackRevision === undefined || notice.slackRevision === route.revision)
   // Only the winner of this transaction creates channel intents. Re-evaluation
   // after a later consent cannot retroactively send an old event to Slack.
   await env.DB.batch([
-    stmt(env, 'INSERT INTO crank_notices(dedupe_key,workflow_id,kind,subject,recipient,created_at) VALUES(?,?,?,?,?,?) ON CONFLICT DO NOTHING', notice.key, notice.workflowId, notice.kind, notice.subject, owner.email, at),
-    ...(['email', ...(route ? ['slack'] : [])] as ('email' | 'slack')[]).map(channel => stmt(env, `INSERT INTO crank_notice_deliveries(id,notice_key,run_id,owner_id,channel,route_revision,next_attempt_at,created_at,category)
+    stmt(env, `INSERT INTO crank_notices(dedupe_key,workflow_id,kind,subject,recipient,created_at) SELECT ?,?,?,?,?,? WHERE ${notice.guard?.sql ?? '1'} ON CONFLICT DO NOTHING`, notice.key, notice.workflowId, notice.kind, notice.subject, owner.email, at, ...(notice.guard?.args ?? [])),
+    ...(['email', ...(slack ? ['slack'] : [])] as ('email' | 'slack')[]).map(channel => stmt(env, `INSERT INTO crank_notice_deliveries(id,notice_key,run_id,owner_id,channel,route_revision,next_attempt_at,created_at,category)
       SELECT ?,?,?,?,?,?,?,?,? WHERE changes()=1 ON CONFLICT DO NOTHING`, id(), notice.key, notice.runId, owner.id, channel, channel === 'slack' ? route!.revision : null, at, at, notice.category && /^[a-z_]{1,40}$/.test(notice.category) ? notice.category : notice.kind)),
   ])
-  await flushRunNotices(env, Date.now(), notice.key)
+  await flushRunNotices(env, notice.time ?? Date.now(), notice.key)
 }
 
 export async function noticeDeliveries(env: CrankEnv, runId?: string | null) {
@@ -65,7 +67,8 @@ export async function noticeDeliveries(env: CrankEnv, runId?: string | null) {
   }))
 }
 
-async function dispatch(env: CrankEnv, delivery: Delivery): Promise<Outcome> {
+async function dispatch(env: CrankEnv, delivery: Delivery, time: number): Promise<Outcome> {
+  if (delivery.kind === 'approval_reminder' && !await approvalReminderCurrent(env, delivery.notice_key, time)) return {state: 'cancelled', failure: 'approval_no_longer_current'}
   const owner = await stmt(env, `SELECT o.email FROM crank_workflows w JOIN oa_operators o ON o.id=w.owner_id
     JOIN crank_wf_runs r ON r.workflow_id=w.id WHERE w.id=? AND r.id=? AND w.owner_id=? AND o.status='active' AND o.email=(SELECT recipient FROM crank_notices WHERE dedupe_key=?) AND r.mode='production'
     AND (? NOT IN ('approval','collect') OR EXISTS(SELECT 1 FROM crank_waits a WHERE a.run_id=r.id AND a.kind='approval' AND a.resolved_at IS NULL))`, delivery.workflow_id, delivery.run_id, delivery.owner_id, delivery.notice_key, delivery.kind).first<{ email: string }>()
@@ -123,7 +126,7 @@ export async function flushRunNotices(env: CrankEnv, time = Date.now(), key?: st
       stmt(env, `INSERT INTO crank_notice_attempts(id,delivery_id,number,started_at,outcome) SELECT ?,?,?,?,'sending' WHERE EXISTS(SELECT 1 FROM crank_notice_deliveries WHERE id=? AND lease_id=?)`, attemptId, row.id, attempt, now(), row.id, lease),
     ])
     if (claim[0].meta.changes !== 1) continue
-    const outcome = await dispatch(env, row), finished = now(), state = outcome.state === 'retry' && attempt >= 5 ? 'exhausted' : outcome.state
+    const outcome = await dispatch(env, row, time), finished = now(), state = outcome.state === 'retry' && attempt >= 5 ? 'exhausted' : outcome.state
     await env.DB.batch([
       stmt(env, `UPDATE crank_notice_attempts SET finished_at=?,outcome=?,failure=? WHERE id=? AND EXISTS(SELECT 1 FROM crank_notice_deliveries WHERE id=? AND lease_id=?)`, finished, state, outcome.failure ?? null, attemptId, row.id, lease),
       stmt(env, `UPDATE crank_notice_deliveries SET state=?,failure=?,provider_receipt=?,delivered_at=?,next_attempt_at=?,lease_id=NULL,lease_expires_at=NULL WHERE id=? AND lease_id=?`, state, outcome.failure ?? null, outcome.receipt ?? null, state === 'delivered' ? finished : null, new Date(time + 60000 * 2 ** (attempt - 1)).toISOString(), row.id, lease),

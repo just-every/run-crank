@@ -14,6 +14,7 @@ test('WORK-010: durable named digest releases survive concurrency, Chicago DST a
 
 import { tableStateJourney } from './table-state-journey.mjs';
 import { subflowsJourney } from './subflows-journey.mjs';
+import { approvalDeadlinesJourney } from './approval-deadlines-journey.mjs';
 import { collectJourney } from './collect-journey.mjs';
 import { runNoticesJourney } from './run-notices-journey.mjs';
 
@@ -255,6 +256,7 @@ test('TEAM-004: publishing authorizes declared steps unattended; caps pause only
 });
 
 test('TEAM-005: reviewers edit allowed fields within caps; rejection routes or stops', async () => {
+  await approvalDeadlinesJourney();
   const review = on_reject => ({ id: 'review', type: 'approval', input: { amount: '{{trigger.input.amount}}', note: 'Refund for {{trigger.input.order}}' }, editable: ['amount'], caps: { amount: { max_usd: '500.00' } }, on_reject });
   const branches = { id: 'outcome', type: 'paths', mode: 'exclusive', branches: [{ id: 'yes', when: [[{ field: 'steps.review.approved', op: 'boolean.is_true' }]], steps: [{ id: 'pay', type: 'http', input: { method: 'POST', url: 'https://ledger.example/refunds', body: { amount: '{{steps.review.proposal.amount}}' } } }] }],
     fallback: { steps: [{ id: 'tell', type: 'http', input: { method: 'POST', url: 'https://crm.example/emails', body: { reason: '{{steps.review.reason}}' } } }] } };

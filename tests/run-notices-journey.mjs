@@ -75,6 +75,46 @@ export async function runNoticesJourney() {
     mailStatus = 200; slackStatus = 200;
     await h.tick(Date.now() + 180000);
     assert.ok((await deliveries(answered)).every(row => row.state === 'cancelled'));
+    // TEAM-005 reminder occurrences reuse only the original owner-consented routes.
+    const timedReview = await publish(h, 'Bounded reviewer reminders', {trigger:{type:'manual'},steps:[{
+      id:'review',type:'approval',input:{amount:'120.00'},timezone:'UTC',calendar:'weekends',
+      reminders:[{amount:1,unit:'minutes'},{amount:2,unit:'minutes'}],timeout:{amount:10,unit:'minutes'},on_timeout:'stop',
+    }]});
+    await h.post('notices/slack',consent(timedReview));
+    const remind = await startRun(h,timedReview,{});
+    const dueAt = remind.approval_deadlines.filter(d=>d.kind==='reminder').map(d=>Date.parse(d.due_at));
+    const reminderStart = [h.mail.length,slack.length];
+    await Promise.all([h.tick(dueAt[0]),h.tick(dueAt[0])]);
+    assert.deepEqual([h.mail.length,slack.length],reminderStart.map(n=>n+1));
+    const firstReminder = (await deliveries(remind)).filter(d=>d.kind==='approval_reminder');
+    assert.equal(firstReminder.length,2); assert.ok(firstReminder.every(d=>d.state==='delivered' && d.attempts===1));
+    assert.ok(!slack.at(-1).text.includes('120.00'));
+    mailStatus=429;slackStatus=429;await h.tick(dueAt[1]);
+    assert.ok((await deliveries(remind)).filter(d=>d.kind==='approval_reminder' && d.notice_key!==firstReminder[0].notice_key).every(d=>d.state==='retry'));
+    await h.post('notices/slack',{workflow_id:timedReview.id,enabled:false});
+    const slackBeforeWithdrawal=slack.length;mailStatus=200;slackStatus=200;
+    await h.restart();await h.tick(dueAt[1]+120000);
+    assert.equal(slack.length,slackBeforeWithdrawal,'withdrawn consent cancels queued reminder retries');
+    assert.ok((await deliveries(remind)).some(d=>d.kind==='approval_reminder' && d.channel==='slack' && d.state==='cancelled'));
+    // Reconsenting a different revision never redirects an old scheduled occurrence.
+    await h.post('notices/slack',consent(timedReview));
+    const replacedRoute = await startRun(h,timedReview,{});
+    await h.post('notices/slack',consent(timedReview));
+    const beforeReplacement=slack.length;
+    await h.tick(Date.parse(replacedRoute.approval_deadlines[0].due_at));
+    assert.equal(slack.length,beforeReplacement);
+    assert.deepEqual((await deliveries(replacedRoute)).filter(d=>d.kind==='approval_reminder').map(d=>d.channel),['email']);
+    // A workflow owner who started the run has no self-approval authority to notify.
+    const selfStarted=await h.send(`/api/crank/workflows/${timedReview.id}/run`,{input:{}},h.owner);
+    assert.equal(selfStarted.status,201);
+    const beforeSelf=[h.mail.length,slack.length];
+    await h.tick(Date.parse(selfStarted.value.approval_deadlines[0].due_at));
+    assert.deepEqual([h.mail.length,slack.length],beforeSelf);
+    assert.equal((await deliveries(selfStarted.value)).filter(d=>d.kind==='approval_reminder').length,0);
+    await h.post(`workflow-runs/${selfStarted.value.id}/approve`,{path:'review',digest:selfStarted.value.waits[0].proposal_digest},h.owner,403);
+    await h.post(`workflow-runs/${remind.id}/cancel`);
+    await h.post(`workflow-runs/${replacedRoute.id}/cancel`);
+    await h.post(`workflow-runs/${selfStarted.value.id}/cancel`);
     // Lost provider acknowledgements never become safe retries after restart.
     await h.post('notices/slack', consent(approval)); mailStatus = 503; slackStatus = 503;
     const unknown = await startRun(h, approval, {}), beforeUnknown = [h.mail.length, slack.length];

@@ -1,6 +1,7 @@
 import { mappingTables } from '../tables/mapping'
 import { previewSample, previewStepSamples } from './samples'
 import { collectAnswers, collectFields } from '../engine/steps/collect'
+import { approvalDeadlinePass } from '../ops/approval-deadlines'
 import { collectDeadlines } from '../ops/collect-deadlines'
 import { guardedBatch } from '../access'
 import { cancelExecutorTasks } from '../executors/scheduler'
@@ -87,6 +88,7 @@ export async function runDetail(env: CrankEnv, actor: Actor, runId: string) {
     grant_id: run.grant_id ?? null,
     gateway_tasks: payload ? (await stmt(env,'SELECT id,path,ordinal,status,created_at,dispatched_at,completed_at,expires_at FROM crank_gateway_tasks WHERE run_id=? ORDER BY path,ordinal',runId).all()).results : [],
     executor_tasks: (await stmt(env,'SELECT id,path,status,next_poll_at,active FROM crank_executor_tasks WHERE run_id=?',runId).all()).results,
+    approval_deadlines: (await stmt(env, 'SELECT path,kind,due_at,state,active FROM crank_approval_deadlines WHERE run_id=? ORDER BY due_at,occurrence', runId).all()).results,
     escalations: (await stmt(env,'SELECT path,escalated_at,recipient_ids_json FROM crank_grant_escalations WHERE run_id=?',runId).all()).results,
     children: (await stmt(env,'SELECT id,path,subflow_version_id,status,created_at,started_at,finished_at FROM crank_subflow_calls WHERE run_id=? ORDER BY created_at,id',runId).all()).results,
     repair_of: run.repair_of ?? null, repair_paths: payload && run.repair_paths_json ? JSON.parse(run.repair_paths_json) : null,
@@ -133,6 +135,7 @@ export function stepAt(graph: Graph, path: string): Step | null {
 export async function decideApproval(env: CrankEnv, actor: Actor, runId: string, decision: 'approve' | 'reject', input: Record<string, unknown>) {
   const path = String(input.path ?? '')
   await assertReviewer(env, actor, runId, path, decision==='reject')
+  await approvalDeadlinePass(env, Date.now(), runId)
   await collectDeadlines(env, Date.now(), runId)
   const wait = await stmt(env, "SELECT w.*,(SELECT type FROM crank_wf_steps s WHERE s.run_id=w.run_id AND s.path=w.path) AS step_type FROM crank_waits w WHERE run_id=? AND path=? AND kind='approval'", runId, path).first<{ proposal_json: string; proposal_digest: string; resolved_at: string | null; step_type: string }>()
   requireValue(wait, 'No approval is waiting at that step', 404)
@@ -164,7 +167,8 @@ export async function decideApproval(env: CrankEnv, actor: Actor, runId: string,
   const sessionFence=authority(actor,run!.grant_id || actor.team ? 'read':'owner')
   const executionFence=run!.grant_id ? grantFence(env,run!.grant_id,run!.workflow_id,run!.version_id) : {sql:'1',args:[]}
   const selfFence = decision==='approve' && step.type !== 'collect' ? {sql:'EXISTS(SELECT 1 FROM crank_wf_runs WHERE id=? AND created_by!=?)',args:[runId,actor.id]} : {sql:'1',args:[]}
-  const guard={sql:`(${sessionFence.sql}) AND (${executionFence.sql}) AND (${selfFence.sql})`,args:[...sessionFence.args,...executionFence.args,...selfFence.args]}
+  const deadlineFence = {sql: `NOT EXISTS(SELECT 1 FROM crank_approval_deadlines d WHERE d.run_id=? AND d.path=? AND d.kind='timeout') OR EXISTS(SELECT 1 FROM crank_waits w JOIN crank_wf_runs r ON r.id=w.run_id JOIN crank_workflows f ON f.id=r.workflow_id WHERE w.run_id=? AND w.path=? AND w.expires_at>? AND r.status='awaiting_approval' AND f.status='published' AND f.published_version_id=r.version_id)`, args:[runId,path,runId,path,now()]}
+  const guard={sql:`(${sessionFence.sql}) AND (${executionFence.sql}) AND (${selfFence.sql}) AND (${deadlineFence.sql})`,args:[...sessionFence.args,...executionFence.args,...selfFence.args,...deadlineFence.args]}
   const resolved = await resolveWait(env, runId, path, resolution, actor.id, { digest: wait.proposal_digest,guard,
     audit: auditStatementWhen(env,"changes()=1",[],actor.id,step.type === 'collect' ? 'collect.answer' : decision==='approve'?'run.approve':'run.reject','run',runId,{path,edited:resolution.edited??false,reason},run!.version_id)
   })

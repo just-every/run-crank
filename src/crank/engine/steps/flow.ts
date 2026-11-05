@@ -1,3 +1,4 @@
+import { approvalDeadlines, validateApprovalDeadlines } from '../approval-deadline'
 import { compare, parseDecimal } from '../decimal'
 import { addTime, parseDate, requireUnit, requireZone } from '../dates'
 import { businessCalendar } from '../calendar'
@@ -84,16 +85,21 @@ export function checkCaps(step: Record<string, unknown>, proposal: Record<string
 export const approval: StepType = {
   mutating: false,
   validate(step) {
+    validateApprovalDeadlines(step)
     const input = isObject(step.input) ? step.input : {}
     if (step.editable !== undefined && (!Array.isArray(step.editable) || step.editable.some(field => typeof field !== 'string' || !(field in input)))) throw new StepError('validation', `Approval ${step.id}: editable fields must be fields of its proposal`)
     if (step.on_reject !== undefined && !['stop', 'continue'].includes(step.on_reject as string)) throw new StepError('validation', `Approval ${step.id}: on_reject must be stop or continue`)
   },
   async execute(step, ctx) {
     checkCaps(step, ctx.input)
-    return { status: 'waiting', wait: { kind: 'approval', proposal: ctx.input, reason: typeof step.instructions === 'string' ? step.instructions.slice(0, 500) : 'approval step' } }
+    return { status: 'waiting', wait: { ...approvalDeadlines(step, ctx.now, ctx.zone), kind: 'approval', proposal: ctx.input, reason: typeof step.instructions === 'string' ? step.instructions.slice(0, 500) : 'approval step' } }
   },
   async resume(step, ctx) {
     const resolution = JSON.parse(ctx.wait.resolution_json ?? '{}')
+    if (resolution.timed_out) {
+      if (step.on_timeout === 'continue') return { status: 'succeeded', output: { timed_out: true, proposal: null } }
+      return { status: 'timed_out', reason: 'The approval timed out without a decision' }
+    }
     if (resolution.approved) return { status: 'succeeded', output: resolution }
     if (step.on_reject === 'continue') return { status: 'succeeded', output: { ...resolution, proposal: resolution.original } }
     return { status: 'rejected', reason: resolution.reason ?? 'rejected' }

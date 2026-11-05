@@ -83,3 +83,50 @@ and [HTTP API](API.md) for configuration and request details.
 Continue with [Access](ACCESS.md), [Move in](IMPORTING.md) or
 [Backup, restore and erasure](BACKUP-RESTORE.md). For a local walkthrough, see
 [Get started](GETTING-STARTED.md).
+
+## Optional approval deadlines
+
+A published graph can explicitly configure an approval step's `timeout` offset,
+up to twelve `reminders` offsets, `timezone` and `calendar`. Each offset has a
+positive whole `amount` and a time `unit`, including `business_days`. There are
+no automatic reminders or timeout when those fields are absent. For example:
+
+```json
+{
+  "id": "review",
+  "type": "approval",
+  "input": {"amount": "120.00"},
+  "editable": ["amount"],
+  "caps": {"amount": {"max_usd": "500.00"}},
+  "timezone": "America/Chicago",
+  "calendar": "us_federal",
+  "reminders": [{"amount": 1, "unit": "business_days"}],
+  "timeout": {"amount": 2, "unit": "business_days"},
+  "on_timeout": "continue"
+}
+```
+
+Offsets start when the step waits. Calendar units preserve local wall time
+across daylight saving changes; a nonworking due date moves to the next working
+date at that time. Reminders must increase, precede expiry and fall within 366
+days. The run retains its exact published version, proposal digest and occurrence
+identities across restarts. A standing grant's earlier deadline still limits the
+configured wait; grant-only escalation retains its existing internal-task policy.
+
+`on_timeout` defaults to `stop`: the run is cancelled with a timeout record,
+without a human rejection or downstream work. With `continue`, the step returns
+`{"timed_out":true,"proposal":null}`. Route this result separately from an
+approved or rejected proposal. A deadline never approves, supplies a reviewer
+identity or executes the rejection branch on a person's behalf. Late decisions
+are refused even before the next Cron pass.
+
+Reminder email uses the current workflow owner, only when that person can review
+and did not start the run. Slack also needs the existing exact workflow notice
+consent; replacing or withdrawing its route cannot redirect a scheduled reminder.
+No new recipient or reviewer authority is created. Resolution, cancellation,
+pause and authority loss suppress unsent reminders. Only definite non-delivery
+retries; uncertain provider acknowledgements retain their uncertainty. Required
+live Teams, Nook and mobile notices remain unfinished.
+
+Backups retain occurrence history inactive, with no receiving consent or automatic
+reminder dispatch. Run erasure removes occurrences and delivery attempts together.

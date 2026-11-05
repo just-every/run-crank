@@ -5,8 +5,9 @@ import type { InputSchema } from './input-schema'
 export type Step = Record<string, unknown> & { id: string; type: string }
 export type ExecutionOutcome =
   | { kind: 'completed' } | { kind: 'stopped'; reason: 'filter' | 'search' } | { kind: 'waiting'; approval: boolean }
-  | { kind: 'paused'; reason: string; connectionId?: string; authority?: boolean } | { kind: 'failed'; error: unknown } | { kind: 'rejected'; reason: string }
+  | { kind: 'paused'; reason: string; connectionId?: string; authority?: boolean } | { kind: 'failed'; error: unknown } | { kind: 'rejected'; reason: string } | { kind: 'timed_out'; reason: string }
 export interface WaitSpec {
+  deadlines?: {kind: 'reminder' | 'timeout'; at: string}[]
   kind: 'delay' | 'callback' | 'queue' | 'approval'
   dueAt?: string | null; expiresAt?: string | null; proposal?: unknown; reason?: string; queue?: { name: string; spacingSeconds: number }
 }
@@ -21,6 +22,7 @@ export type StepResult =
   | { status: 'stopped'; reason: 'filter' | 'search'; trace?: unknown; output?: unknown }
   | { status: 'paused'; reason: string; connectionId?: string; output?: unknown; trace?: unknown }
   | { status: 'rejected'; reason: string }
+  | { status: 'timed_out'; reason: string }
 
 export interface RunRow {
   grant_id?: string | null
