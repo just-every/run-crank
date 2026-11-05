@@ -87,6 +87,8 @@ export interface AgentDoorOptions {
     handoff(input: { kind: string; tool: string; principal: Principal }): string | Promise<string>
     verify(input: { kind: string; tool: string; args: Record<string, unknown>; principal: Principal; reference: string }): Promise<boolean>
   }
+  /** Seed-owned, person-authorized activity view; the shared review and approval feeds stay intact. */
+  activity?(request: Request, person: Person): Promise<string>
   currentScopes?(principal: Principal): Promise<string[]>
   paths?: string[]; limits?: { requestsPerMinute?: number; maxBodyBytes?: number }
   onEvent?(event: AgentEvent): void | Promise<void>; now?(): number

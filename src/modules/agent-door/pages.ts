@@ -129,9 +129,9 @@ async function dashboard(rt: Runtime, request: Request, person: Person): Promise
   const today = Math.floor(rt.now() / 86400000), weekStart = (today - (new Date(rt.now()).getUTCDay() + 6) % 7) * 86400000
   const [state, approvalResponse, reviewResponse, counts, recent] = await Promise.all([
     policyState(rt), approvalDoor(rt, request, person), reviewDoor(rt, request, person),
-    canAudit ? rt.options.db.prepare("SELECT c.value AS class,json_extract(a.row,'$.decision') AS decision,count(*) AS count FROM agent_door_audit a,json_each(a.classes) c WHERE a.at>=? AND a.at<=? GROUP BY c.value,json_extract(a.row,'$.decision') ORDER BY c.value,decision")
+    canAudit && !rt.options.activity ? rt.options.db.prepare("SELECT c.value AS class,json_extract(a.row,'$.decision') AS decision,count(*) AS count FROM agent_door_audit a,json_each(a.classes) c WHERE a.at>=? AND a.at<=? GROUP BY c.value,json_extract(a.row,'$.decision') ORDER BY c.value,decision")
       .bind(new Date(weekStart).toISOString(), new Date(rt.now()).toISOString()).all<Count>() : null,
-    canAudit ? rt.options.db.prepare('SELECT row FROM agent_door_audit ORDER BY sequence DESC LIMIT 20').all<{ row: string }>() : null,
+    canAudit && !rt.options.activity ? rt.options.db.prepare('SELECT row FROM agent_door_audit ORDER BY sequence DESC LIMIT 20').all<{ row: string }>() : null,
   ])
   if (!approvalResponse.ok || !reviewResponse.ok) return shell(rt, 'Agents', '<h1>Agents</h1><p>Agent work could not load. Reload to try again.</p>', 503, true)
   const approvals = await approvalResponse.json() as { approvals: Approval[] }
@@ -141,6 +141,7 @@ async function dashboard(rt: Runtime, request: Request, person: Person): Promise
   let content = `<div class="heading"><div><h1>Agents</h1><p data-agents-state>${paused ? 'Agents are paused.' : 'Agents are on.'}</p>${state.paused ? '<p>Paused in Business.</p>' : ''}</div>${role === 'owner' ? `<div class="actions">${action('/agents/api/pause', state.localPaused ? 'Resume agents' : 'Pause agents', 'data-agents-pause', `<input type="hidden" name="paused" value="${!state.localPaused}">`)}</div>` : ''}</div>`
   if (!complete) content += policy
   content += approvalFeed(rt, approvals.approvals) + reviewFeed(rt, reviews.reviews) || '<section aria-label="Waiting for you"><p>Nothing is waiting for you.</p></section>'
+  if (canAudit && rt.options.activity) content += await rt.options.activity(request, person)
   if (recent) content += activity(rt, recent.results.map(record => JSON.parse(record.row) as AuditRow))
   if (counts) content += countTable(counts.results, weekStart)
   if (complete) content += policy

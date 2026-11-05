@@ -48,4 +48,18 @@ export default async function journey({request, origin, cookie, tool}) {
   await person('/agents/api/pause', {paused: false});
  }
  assert.equal(output(await tool('crank.workflows.create', args)).id, created.id);
+ let activity, activityQuery = 'limit=100&agent=' + encodeURIComponent(row.agent.id);
+ do {
+  activity = await person('/agents/api/activity?' + activityQuery);
+  if (activity.rows.some(item => item.id === admitted.decision.id) || !activity.cursor) break;
+  activityQuery = 'limit=100&agent=' + encodeURIComponent(row.agent.id) + '&cursor=' + encodeURIComponent(activity.cursor);
+ } while (true);
+ const correlated = activity.rows.find(item => item.id === admitted.decision.id);
+ assert.ok(correlated);
+ assert.equal(correlated.native.length, 1);
+ assert.equal(correlated.native[0].operation_id, correlated.operation_id);
+ assert.equal(correlated.native[0].subject_id, created.id);
+ const exported = await request(origin + '/agents/api/activity/export?' + activityQuery, {headers: {cookie}});
+ assert.equal(exported.status, 200);
+ assert.deepEqual((await exported.text()).trim().split('\n').map(JSON.parse), activity.rows);
 }

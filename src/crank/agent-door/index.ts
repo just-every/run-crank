@@ -2,6 +2,7 @@ import { createAgentDoor, type Trust } from '../../modules/agent-door/index.ts'
 import { runtimeBindings, type Bindings } from '../../auth.server'
 import { peopleAdapter, localCredentials } from './people'
 import { crankTools } from './tools'
+import { activityHtml, activityResponse } from './activity'
 
 export const capabilities = ['tools', 'policy', 'pause', 'audit', 'idempotency'] as const
 
@@ -17,12 +18,13 @@ function installationTrust(env: Bindings): Trust | null {
 /** One registry and policy pipeline for Business, local preparation and person review. */
 export function crankAgentDoor(bindings: Bindings) {
   const env = runtimeBindings(bindings)
-  return createAgentDoor({
+  const door = createAgentDoor({
     seed: 'crank', name: 'Crank', specialist: 'Automation operations lead',
     db: env.DB, origin: env.AUTH_ORIGIN, trust: installationTrust(env),
     capabilities: [...capabilities], people: peopleAdapter(env),
     tools: crankTools(env), resources: [],
     paths: ['/api/crank/v1/mcp'],
+    activity: (request, person) => activityHtml(env, request, person),
     localCredentials: request => localCredentials(env, request),
     notTools: [
       { clauses: ['PLATFORM-002'], reason: 'connector' },
@@ -30,6 +32,9 @@ export function crankAgentDoor(bindings: Bindings) {
       { clauses: ['BASE-002'], reason: 'installation' },
     ],
   })
+  return { ...door, async handle(request: Request) {
+    return await activityResponse(env, request) ?? door.handle(request)
+  } }
 }
 
 /** Construct native adapters only for paths owned by the shared door. */

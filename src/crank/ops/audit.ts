@@ -24,3 +24,16 @@ export async function readAudit(env: CrankEnv, subjectKind?: string, subjectId?:
     : await stmt(env, 'SELECT * FROM crank_audit ORDER BY at DESC,id LIMIT 500').all()
   return rows.results.map((row: any) => ({ ...row, detail: JSON.parse(row.detail_json), detail_json: undefined }))
 }
+
+export interface NativeAgentAudit {
+  id: string; at: string; actor_id: string; action: string; subject_kind: string; subject_id: string; version_id: string | null; operation_id: string
+}
+/** Closed metadata projection: native graph values, arguments and credentials stay out. */
+export async function readAgentOperationAudit(env: CrankEnv, operations: string[]): Promise<NativeAgentAudit[]> {
+  if (!operations.length) return []
+  const rows = await stmt(env, `SELECT id,at,actor_id,action,subject_kind,subject_id,version_id,
+    json_extract(detail_json,'$.agent_door.operation_id') AS operation_id FROM crank_audit
+    WHERE json_extract(detail_json,'$.agent_door.operation_id') IN (SELECT value FROM json_each(?)) ORDER BY at,id`,
+  JSON.stringify([...new Set(operations)])).all<NativeAgentAudit>()
+  return rows.results
+}
