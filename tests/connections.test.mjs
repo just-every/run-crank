@@ -141,7 +141,7 @@ test('CONN-002: OAuth consent, refresh and accounts per step; secrets never leav
     assert.ok(flows.length > 0 && flows.every(f => f.status === 'paused' || f.status === 'draft'), 'restored workflows do not dispatch');
   } finally { await other.close() }
   await oauthRenewalJourney();
-  const {connectionTransferJourney}=await import('./connection-transfer-journey.mjs');await connectionTransferJourney();
+  const {connectionTransferJourney,connectionOwnershipOauthJourney}=await import('./connection-transfer-journey.mjs');await connectionTransferJourney();await connectionOwnershipOauthJourney();
   const {hubspotSearchJourney,hubspotCustodyJourney}=await import('./hubspot-search-journey.mjs');
   await hubspotSearchJourney();await hubspotCustodyJourney();
 });

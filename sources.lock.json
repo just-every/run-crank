@@ -172,7 +172,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "b0e9c693cb5d4a4d7ef053a7b7a3e3ea1a58bd320e186532b6f135496de242c4",
+      "sha256": "196b30fdfc9160d0143f5c215702eea94283347c50a99365015b4dc36ddbe3bb",
       "executable": false
     },
     "DEMO.md": {
@@ -200,7 +200,7 @@
       "executable": false
     },
     "docs/API.md": {
-      "sha256": "145801e277a7baf5d16417b9335ac72e8fc253a8ce6bae6f8acfe2bcfcb0c887",
+      "sha256": "133c457c3aa724052df96885c87d2e2d83f73f547be0caede8544b4e5ba16233",
       "executable": false
     },
     "docs/APP-TRIGGERS.md": {
@@ -6796,11 +6796,11 @@
       "executable": false
     },
     "tests/connection-transfer-journey.mjs": {
-      "sha256": "05dab8f63417cf1050d9b76677e3368cc9720089fa8b0396df43a98567ac9cdb",
+      "sha256": "abbace3b12244f4df4460c8a392233aa7aeda070f5353a571c0dffbeaa1f10f4",
       "executable": false
     },
     "tests/connections.test.mjs": {
-      "sha256": "e186c46528d1b7658f28f3625a52b18136fedefc9cb0b714930b5b1ecba06084",
+      "sha256": "b80806cea2486f94cbec0dbcb970897258dfccf0daa68d2955c0f11f35f7b78c",
       "executable": false
     },
     "tests/crank.test.mjs": {
