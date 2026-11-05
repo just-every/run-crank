@@ -172,7 +172,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "a6b8f6f04b57643413fa6edebfb359a4d4f563aca1527c05514dec98494fd535",
+      "sha256": "036c51d648a3f394f7ef65e593fbff75652776c91a8530b746e4652b60983cb1",
       "executable": false
     },
     "DEMO.md": {
@@ -196,7 +196,7 @@
       "executable": false
     },
     "docs/AGENT-DOOR.md": {
-      "sha256": "621ab4810fb60e6b463836c7bb595a55159308f3c14d19ed02869abbcf7ab6da",
+      "sha256": "853c654904467fae144356cfe500da65f9eee9bc1467ead4e03b1deb3f4ffe3f",
       "executable": false
     },
     "docs/API.md": {
@@ -7412,7 +7412,7 @@
       "executable": false
     },
     "vite.config.ts": {
-      "sha256": "8b20eacac4d6971222866f9515fbefa2185970bc504606603a4641e60a913b12",
+      "sha256": "97300d4a4685f731964def81f819d756043e1d49217b46e0ffd57e43f44a3121",
       "executable": false
     },
     "vite.site.config.ts": {

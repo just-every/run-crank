@@ -43,6 +43,11 @@ It also states the current resource-template boundary, capacity limits, typed
 errors and specialist preparation guidance. The same route accepts an explicit
 JSON Accept header for its machine-readable reference representation.
 
+The local development server admits the public `agent-surface.json` declaration
+explicitly, so the same reference and registry load through `rer dev` as in the
+emitted Worker. Private settings, archives and installer state retain their
+existing exclusions.
+
 The edition wrapper uses the shared registry enrichment and descriptors for both
 this reference and MCP lists. Discovery and initialization instructions are built
 from that registry and link to the page. Public documentation contains declarations
