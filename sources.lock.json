@@ -172,7 +172,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "4d770dc6967b9d8c8deb1046af04a5b2e077b6f91fc59190e83cf04060888435",
+      "sha256": "899fb4b8d0e94fb2d6697f6b9c3b1437b99c5084bfb83d490554a2941624f1bb",
       "executable": false
     },
     "DEMO.md": {
@@ -3948,11 +3948,11 @@
       "executable": false
     },
     "src/crank/triggers/twilio-policy.ts": {
-      "sha256": "3ef09135f4fab2a13a0616b06680376aed7d56774e7d0c55bcb977d3f74df344",
+      "sha256": "abe248b479a42e71992dc19dd9f6a5ad1a6efebe78d60f778e2fb292313c2bdc",
       "executable": false
     },
     "src/crank/triggers/twilio.ts": {
-      "sha256": "7f6f410c48f4c5772f458999c6b59eac7e7769327d86eb62a22fc2d7d6d85382",
+      "sha256": "163b9a6d10b45b611e61aeb87deb3d9a6354b78d1f88355bd1c752df6f6e9287",
       "executable": false
     },
     "src/crank/triggers/watched-fields.ts": {
@@ -4228,7 +4228,7 @@
       "executable": false
     },
     "src/crank/workflows/store.ts": {
-      "sha256": "6694243677d88007f279ac9c63260ac6fc0ca30cae6bb2a4ed959245701afa86",
+      "sha256": "8f9e0f47cc878a2d607d3a93678bde3961772ee15c9888742491bb8ee10a70f5",
       "executable": false
     },
     "src/crank/workflows/subflow-calls.ts": {
@@ -7380,7 +7380,7 @@
       "executable": false
     },
     "tests/twilio-inbound-journey.mjs": {
-      "sha256": "ad0f3d81d067625bdefa6e32584074710474eca20f73cbac763cd3571cc25830",
+      "sha256": "cb9606d60ba8b12b7acb839c415692f1fb4ae37ee271c2084b537cf9da66f539",
       "executable": false
     },
     "tests/usage.test.mjs": {
@@ -7404,7 +7404,7 @@
       "executable": false
     },
     "verification.json": {
-      "sha256": "e019ebd904d3d7a889c6e2f3cf9e8b32126b9dd4017bebe079903fb9e15e54c4",
+      "sha256": "1fd6cf959aa1fe2be77174cc4ddb62e6079ba149cbc024ed65122a9149e7ce6f",
       "executable": false
     },
     "VERIFY-WORKFLOW.md": {

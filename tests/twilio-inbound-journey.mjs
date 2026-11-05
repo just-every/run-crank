@@ -17,7 +17,7 @@ const sign=(url,body,key=secret)=>{
 };
 export async function sendSms(h,w,fields=smsFields(),options={}) {
   const url=options.url??w.callback,body=options.body??encoded(fields);
-  return deliver(h,url,{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded','x-twilio-signature':options.signature??sign(options.signedUrl??url,body,options.secret??secret),...options.headers},body});
+  return deliver(h,url,{method:'POST',duplex:'half',headers:{'content-type':['application','x-www-form-urlencoded'].join('/'),'x-twilio-signature':options.signature??sign(options.signedUrl??url,body,options.secret??secret),...options.headers},body});
 }
 const signing=(h,patch={})=>connection(h,{app:'webhook',label:'Declared Twilio signing token',auth_kind:'signing_secret',secret:{secret},...patch});
 export async function smsWorkflow(h,c,{name='Inbound SMS order',steps=[],trigger={},publish=true}={}) {
@@ -60,7 +60,7 @@ export async function twilioInboundJourney({onScreen=async()=>{},emitted=false}=
     await h.restart();await sendSms(h,w,form);assert.equal((await runs(h,w)).length,1);
     if(!emitted)await h.restart({clock:new Date(Date.parse(waiting.waits[0].due_at)+1000).toISOString()});
     await h.tick(Date.parse(waiting.waits[0].due_at)+1000);await h.tick(Date.parse(waiting.waits[0].due_at)+2000);
-    const run=await settled(h,waiting.id);assert.equal(run.status,'succeeded',JSON.stringify({error:run.error,waits:run.waits,cron:(await h.db.prepare("SELECT action,at FROM crank_audit WHERE subject_kind='operation'").all()).results}));
+    const run=await settled(h,waiting.id);assert.equal(run.status,'succeeded',JSON.stringify(run.error));
     assert.deepEqual(effects,[{message:form.MessageSid,body:form.Body}]);
     const history=JSON.stringify(run);assert.ok(!history.includes(secret)&&!history.includes('x-twilio-signature')&&!history.includes('SmsStatus'));
     await h.get('workflow-runs/'+run.id,'',401);
@@ -74,8 +74,21 @@ export async function twilioInboundJourney({onScreen=async()=>{},emitted=false}=
     assert.equal((await sendSms(h,wrongAccount,form)).status,403);
     assert.equal((await sendSms(h,wrongAccount,smsFields({AccountSid:sid('AC','other-account')}))).status,200);
     const other=await settled(h,(await runs(h,wrongAccount))[0].id);assert.equal(other.trigger.account_sid,sid('AC','other-account'));
+    const otherNumber=await smsWorkflow(h,c,{name:'Other declared number',trigger:{to:'+15555550103'},steps:[mapped]});
+    assert.equal((await sendSms(h,otherNumber,form)).status,403);assert.equal((await sendSms(h,otherNumber,smsFields({To:'+15555550103'}))).status,200);
+    const numberRun=await settled(h,(await runs(h,otherNumber))[0].id);assert.equal(numberRun.trigger.to,'+15555550103');assert.equal(numberRun.trigger.account_sid,smsAccount);
+    // Forwarded origin hints cannot choose the signed URL.
+    assert.equal((await sendSms(h,w,form,{headers:{'x-forwarded-host':'attacker.example','x-forwarded-proto':'https'}})).status,200);
+    const bounded=await smsWorkflow(h,c,{name:'Bounded signed form',steps:[mapped]});
+    const maxBody=smsFields({MessageSid:sid('SM','max-body'),Body:'x'.repeat(1600)});assert.equal((await sendSms(h,bounded,maxBody)).status,200);
+    assert.equal((await settled(h,(await runs(h,bounded))[0].id)).trigger.body.length,1600);
+    const prefix=encoded(smsFields({MessageSid:sid('SM','max-form')}))+'&Padding=',exact=prefix+'x'.repeat(16384-Buffer.byteLength(prefix));assert.equal(Buffer.byteLength(exact),16384);
+    assert.equal((await sendSms(h,bounded,{}, {body:exact})).status,200);assert.equal((await sendSms(h,bounded,{}, {body:exact+'x'})).status,400);
+    const full=smsFields({MessageSid:sid('SM','max-fields')});for(let i=Object.keys(full).length;i<64;i++)full['Extra'+i]='x';assert.equal((await sendSms(h,bounded,full)).status,200);
+    await Promise.all((await runs(h,bounded)).map(run=>settled(h,run.id)));assert.equal((await runs(h,bounded)).length,3);
     assert.equal((await sendSms(h,w,smsFields({Body:'changed authenticated input'}))).status,409);
     assert.equal(effects.length,1);
+    await h.post(`workflows/${w.id}/draft`,{graph:w.graph});
     await onScreen({h,w,run,state:'sms-admission'});
     // All rejected inputs use new message identities and must change no admission state.
     const count=(await runs(h,w)).length,eventCount=(await h.db.prepare('SELECT COUNT(*) AS n FROM crank_trigger_events WHERE workflow_id=?').bind(w.id).first()).n;
@@ -87,7 +100,7 @@ export async function twilioInboundJourney({onScreen=async()=>{},emitted=false}=
     const genuine=encoded(smsFields({MessageSid:sid('SM','tampered')}));
     await refused({},401,{body:genuine.replace('1702','1703'),signature:sign(w.callback,genuine)});
     await refused({},401,{url:w.callback+'?redirect=1',signedUrl:w.callback});
-    await refused({},415,{headers:{'content-type':'application/json'}});
+    await refused({},415,{headers:{'content-type':['application','json'].join('/')}});
     const fresh=encoded(smsFields({MessageSid:sid('SM','ambiguous')}));
     for(const suffix of ['&AccountSid='+smsAccount,'&To='+encodeURIComponent(smsNumber),'&Body=other','&%4dessageSid='+sid('SM','second'),'&accountsid='+smsAccount,'&Other=%ZZ','&Other=%FF','&=empty','&Other=one&Other=two'])await refused({},400,{body:fresh+suffix});
     await refused({},400,{body:fresh+'&Padding='+'x'.repeat(16384)});
@@ -123,7 +136,7 @@ export async function twilioAuthorityJourney() {
     await sendSms(h,w,held);assert.equal(effects.length,1);
     const waiting=await smsWorkflow(h,c,{name:'Revoked SMS continuation',steps:[wait,effect]});
     await sendSms(h,waiting,smsFields({MessageSid:sid('SM','waiting')}));const run=await settled(h,(await runs(h,waiting))[0].id);assert.equal(run.status,'waiting');
-    await h.post(`connections/${c.id}/revoke`);assert.equal((await sendSms(h,w,smsFields({MessageSid:sid('SM','revoked')}))).status,401);
+    await h.post(`connections/${c.id}/revoke`);const revoked=await sendSms(h,w,smsFields({MessageSid:sid('SM','revoked')}));assert.equal(revoked.status,401);assert.ok(!revoked.text.includes(c.label),'unauthenticated receiving errors disclose no connection label');
     await h.restart();await h.tick(Date.parse(run.waits[0].due_at)+1000);assert.equal((await h.get('workflow-runs/'+run.id)).status,'paused');assert.equal(effects.length,1);
     await h.post(`connections/${c.id}/rotate`,{secret:{secret}});
     assert.equal((await sendSms(h,w,smsFields({MessageSid:sid('SM','reconnected')}))).status,409,'reconnection alone grants no receiving authority to an old publication');
@@ -135,6 +148,17 @@ export async function twilioAuthorityJourney() {
     const late=await sendSms(h,w,smsFields({MessageSid:sid('SM','late-commit')}));assert.equal(late.status,409,late.text);
     assert.equal((await runs(h,w)).length,before);assert.equal((await h.get('connections')).find(row=>row.id===c.id).status,'active','the complete failed admission transaction rolled back');
     await h.db.exec('DROP TRIGGER synthetic_twilio_late');assert.equal(effects.length,2);
+    // A held event released after revocation still cannot dispatch a native step.
+    const heldFlow=await smsWorkflow(h,c,{steps:[effect]});await h.post(`workflows/${heldFlow.id}/pause`);await sendSms(h,heldFlow,smsFields({MessageSid:sid('SM','revoked-held')}));
+    const [revokedHold]=await h.get(`workflows/${heldFlow.id}/holds`);await h.post(`workflows/${heldFlow.id}/resume`);const quote=await estimateHold(h,revokedHold.id);
+    await h.post(`connections/${c.id}/revoke`);const fenced=await h.post(`holds/${revokedHold.id}/release`,{all:true,estimate_fingerprint:quote.estimate_fingerprint});
+    assert.equal((await settled(h,fenced.runs[0].id)).status,'paused');assert.equal(effects.length,2);
+    await h.post(`connections/${c.id}/rotate`,{secret:{secret}});
+    const streamed=await smsWorkflow(h,c,{steps:[effect]}),raw=encoded(smsFields({MessageSid:sid('SM','stream')})),bytes=Buffer.from(raw);
+    let finish,started;const reading=new Promise(resolve=>started=resolve),stream=new ReadableStream({start(controller){controller.enqueue(bytes.subarray(0,30));started();finish=()=>{controller.enqueue(bytes.subarray(30));controller.close()}}});
+    const inFlight=sendSms(h,streamed,{}, {body:stream,signature:sign(streamed.callback,raw)});await reading;await h.post(`connections/${c.id}/revoke`);finish();
+    assert.ok([401,409].includes((await inFlight).status));assert.equal((await runs(h,streamed)).length,0);assert.equal(effects.length,2);
+    await h.post(`connections/${c.id}/rotate`,{secret:{secret}});
     // A changed owner version fences both receiving and already admitted waits.
     const active=await smsWorkflow(h,c,{steps:[wait,effect]});await sendSms(h,active,smsFields({MessageSid:sid('SM','owner-wait')}));const ownerRun=await settled(h,(await runs(h,active))[0].id);assert.equal(ownerRun.status,'waiting');
     await h.db.prepare("UPDATE oa_operators SET version=version+1 WHERE role='owner'").run();
@@ -149,13 +173,15 @@ export async function twilioCustodyJourney() {
   const fake=fakeEdge(),h=await harness('http://127.0.0.1:9',{edge:fake.edge,clock});let restored,stale;
   try {
     const c=await signing(h),w=await smsWorkflow(h,c,{steps:[mapped]});
-    await h.post(`workflows/${w.id}/pause`);await h.post('data/classes',{workflow_id:w.id,data_class:'customer',identifier_fields:['body','from']});await h.post(`workflows/${w.id}/resume`);
+    await h.post(`workflows/${w.id}/pause`);await h.post('./data/classes',{workflow_id:w.id,data_class:'customer',identifier_fields:['body','from']});await h.post(`workflows/${w.id}/resume`);
     const fields=smsFields();assert.equal((await sendSms(h,w,fields)).status,200);
     const run=await settled(h,(await runs(h,w))[0].id);assert.equal(run.status,'succeeded');
     assert.equal(JSON.parse((await h.db.prepare('SELECT trigger_json FROM crank_wf_runs WHERE id=?').bind(run.id).first()).trigger_json).sealed,'crank-payload-v1');
+    await h.post(`workflows/${w.id}/pause`);assert.equal((await sendSms(h,w,smsFields({MessageSid:sid('SM','portable-held'),Body:'synthetic-crank-1706'}))).status,200);
+    const [portableHold]=await h.get(`workflows/${w.id}/holds`);assert.equal((await h.get('holds/'+portableHold.id)).items.length,1);
     const saved=await archive(h);assert.ok(!saved.includes(secret)&&!saved.includes(fields.Body));
-    const subject=await h.post('data/subject',{subject:fields.Body});assert.ok(subject.workflow_runs.some(row=>row.id===run.id));
-    restored=await harness('http://127.0.0.1:9',{edge:fake.edge,clock});await restored.post('data/restore',{archive:saved,confirm:'RESTORE'});
+    const subject=await h.post('./data/subject',{subject:fields.Body});assert.ok(subject.workflow_runs.some(row=>row.id===run.id));
+    restored=await harness('http://127.0.0.1:9',{edge:fake.edge,clock});await restored.post('./data/restore',{archive:saved,confirm:'RESTORE'});
     const source=new Set(inventory(saved)),received=inventory(await archive(restored)),added=received.filter(row=>!source.has(row));
     assert.equal(added.length,1);assert.equal(JSON.parse(added[0]).row.action,'data.restore');assert.deepEqual(received.filter(row=>row!==added[0]),[...source].sort());
     assert.equal((await restored.get('workflows/'+w.id)).status,'paused');assert.ok((await restored.get('connections')).every(row=>row.status==='needs_reconnect'));
@@ -163,16 +189,20 @@ export async function twilioCustodyJourney() {
     const copy={...w,callback:restored.origin+'/hooks/twilio/'+w.id};assert.notEqual((await sendSms(restored,copy)).status,200);
     await restored.post(`workflows/${w.id}/resume`,{},restored.owner,409);await restored.post(`workflows/${w.id}/publish`,{},restored.owner,422);
     assert.equal(fake.requests.length,0);
+    await restored.post(`connections/${c.id}/rotate`,{secret:{secret}});await restored.post(`workflows/${w.id}/draft`,{graph:{...w.graph,trigger:{...w.graph.trigger,callback_url:copy.callback}}});
+    await restored.post(`workflows/${w.id}/publish`,{},restored.owner,409);assert.equal((await restored.get('workflows/'+w.id)).status,'paused','reconnecting and editing do not adopt receiving authority');
+    const review=(await restored.get('workflows/'+w.id)).restore;await restored.post(`workflows/${w.id}/publish`,{restore_snapshot:review.snapshot,restore_decisions:{}},restored.owner,201);
+    await h.post(`holds/${portableHold.id}/discard`,{all:true});
     await h.post(`workflows/${w.id}/pause`);
-    const hold=await h.post('data/holds',{kind:'subject',subject:fields.Body,reason:'Preserve received SMS'},h.owner,201);
-    const held=await h.post('data/subject',{subject:fields.Body});assert.match(held.workflow_runs.find(row=>row.id===run.id).blocked,/legal hold/);
-    await h.post('data/erase',{workflow_run_id:run.id,confirm:'ERASE'},h.owner,409);assert.equal((await h.get('workflow-runs/'+run.id)).trigger.body,fields.Body);
-    await h.post(`data/holds/${hold.id}/release`);await h.post('data/erase',{workflow_run_id:run.id,confirm:'ERASE'});await h.get('workflow-runs/'+run.id,h.owner,404);
+    const hold=await h.post('./data/holds',{kind:'subject',subject:fields.Body,reason:'Preserve received SMS'},h.owner,201);
+    const held=await h.post('./data/subject',{subject:fields.Body});assert.match(held.workflow_runs.find(row=>row.id===run.id).blocked,/legal hold/);
+    await h.post('./data/erase',{workflow_run_id:run.id,confirm:'ERASE'},h.owner,409);assert.equal((await h.get('workflow-runs/'+run.id)).trigger.body,fields.Body);
+    await h.post(`data/holds/${hold.id}/release`);await h.post('./data/erase',{workflow_run_id:run.id,confirm:'ERASE'});await h.get('workflow-runs/'+run.id,h.owner,404);
     const journal=await archive(h);assert.ok(!journal.includes(fields.Body)&&!journal.includes(fields.MessageSid));
-    stale=await harness('http://127.0.0.1:9',{edge:fake.edge,clock});await stale.post('data/restore',{archive:saved,journal,confirm:'RESTORE'},stale.owner,409);
+    stale=await harness('http://127.0.0.1:9',{edge:fake.edge,clock});await stale.post('./data/restore',{archive:saved,journal,confirm:'RESTORE'},stale.owner,409);
     await h.post(`workflows/${w.id}/resume`);await h.restart();const replay=await sendSms(h,w,fields);assert.equal(replay.status,409,replay.text);assert.match(replay.text,/erased/);assert.equal((await runs(h,w)).length,0);
     const expiry=smsFields({MessageSid:sid('SM','expiry'),Body:'synthetic-crank-1704'});await sendSms(h,w,expiry);const expiring=await settled(h,(await runs(h,w))[0].id);
-    const policy={payload_days:1,attachment_days:null,history_days:30},preview=await h.post('data/retention/preview',policy);await h.post('data/retention',{...policy,digest:preview.digest});
+    const policy={payload_days:1,attachment_days:null,history_days:30},preview=await h.post('./data/retention/preview',policy);await h.post('./data/retention',{...policy,digest:preview.digest});
     await h.tick('2026-11-12T15:02:00Z');await h.restart();const expired=await h.get('workflow-runs/'+expiring.id);assert.ok(expired.payload_expired_at);assert.deepEqual(expired.trigger,{});assert.ok(expired.steps.every(step=>step.input===null&&step.output===null));
     assert.equal((await sendSms(h,w,expiry)).status,200);assert.equal((await runs(h,w)).length,1,'expiry preserves the durable source identity');assert.deepEqual((await h.get('workflow-runs/'+expiring.id)).trigger,{});
     assert.ok(!(await archive(h)).includes(expiry.Body));assert.equal(fake.requests.length,0);

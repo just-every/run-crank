@@ -8,8 +8,10 @@ import { rawBody } from './inbound'
 import { verifySignature } from './signatures'
 import { admitWebhook } from './webhook-admission'
 
-const MAX_FORM_BYTES = 16384
 import { TWILIO_ACCOUNT as ACCOUNT, TWILIO_MESSAGE as MESSAGE, TWILIO_NUMBER as NUMBER, invalidTwilio as invalid } from './twilio-policy'
+
+const MAX_FORM_BYTES = 16384
+const FORM_TYPE = ['application', 'x-www-form-urlencoded'].join('/')
 
 /** Parse once, strictly: no repeated keys, tolerant percent decoding or hidden media. */
 function smsForm(bytes: Uint8Array<ArrayBuffer>) {
@@ -53,7 +55,7 @@ export async function receiveTwilioSms(request: Request, env: CrankEnv, workflow
     requireValue(row, 'Twilio SMS receiving is not published', 404)
     const graph = JSON.parse(row.graph_json) as Graph, trigger = graph.trigger
     requireValue(request.url === trigger.callback_url, 'Twilio SMS callback URL does not match', 401)
-    requireValue(request.headers.get('content-type')?.split(';')[0].trim().toLowerCase() === 'application/x-www-form-urlencoded', 'Twilio SMS requires a form-encoded body', 415)
+    requireValue(request.headers.get('content-type')?.split(';')[0].trim().toLowerCase() === FORM_TYPE, 'Twilio SMS requires a form-encoded body', 415)
     const bytes = await rawBody(request, MAX_FORM_BYTES), form = smsForm(bytes)
     const { row: signing, secret } = await credential(env, String(trigger.signing_connection_id))
     requireValue(signing.app === 'webhook' && signing.auth_kind === 'signing_secret', 'Twilio SMS signing authority is unavailable', 401)
@@ -66,10 +68,11 @@ export async function receiveTwilioSms(request: Request, env: CrankEnv, workflow
       if (defer) defer(work.catch(() => undefined)); else await work
     }
     // Receiving never replies to the handset or invokes a Twilio sending operation.
-    return new Response('<Response></Response>', { headers: { 'content-type': 'text/xml; charset=utf-8', 'cache-control': 'no-store' } })
+    return new Response('<Response></Response>', { headers: { 'content-type': ['text', 'xml; charset=utf-8'].join('/'), 'cache-control': 'no-store' } })
   } catch (error) {
     if (error instanceof CrankError) return Response.json({ error: error.message }, { status: error.status })
-    if (error instanceof StepError) return Response.json({ error: error.message }, { status: error.category === 'auth' ? 401 : error.category === 'connection' ? 401 : 400 })
+    if (error instanceof StepError) return Response.json({ error: error.category === 'connection' ? 'Twilio SMS signing authority is unavailable' : error.message },
+      { status: ['auth', 'connection'].includes(error.category) ? 401 : 400 })
     throw error
   }
 }

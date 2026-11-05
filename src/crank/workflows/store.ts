@@ -267,11 +267,11 @@ async function publishVersion(env: CrankEnv, actor: Actor, workflowId: string, i
   ]
   statements.push(...await publishUsageStatements(env, workflowId, versionId, graphJson, rollback?.estimateVersionId))
   statements.push(...await triggerSetup(env, workflowId, versionId, graph))
+  statements.push(...adoption)
   if (twilio) statements.push(stmt(env, `INSERT INTO crank_authority_guards(id,ok) SELECT ?,CASE WHEN EXISTS(
     SELECT 1 FROM crank_workflows w JOIN crank_workflow_versions v ON v.id=w.published_version_id
     WHERE w.id=? AND v.id=? AND ${twilioAuthoritySql()}) THEN 1 ELSE 0 END`, 'twilio-publish:'+versionId, workflowId, versionId, at),
     stmt(env, 'DELETE FROM crank_authority_guards WHERE id=?', 'twilio-publish:'+versionId))
-  statements.push(...adoption)
   if (tableGuard) statements.push(stmt(env, `INSERT INTO crank_authority_guards(id,ok) SELECT ?,CASE WHEN ${tableGuard.sql} THEN 1 ELSE 0 END`, 'table-publish:'+versionId, ...tableGuard.params), stmt(env, 'DELETE FROM crank_authority_guards WHERE id=?', 'table-publish:'+versionId))
   if (!pendingRestore(current) && current.published_version_id && await waitingPolicy(env, current.published_version_id) === 'cancel_on_new_version') statements.push(...await cancellations(env, actor, workflowId, current.published_version_id, 'A new version was published'))
   await guardedBatch(env, actor, 'publish', statements)

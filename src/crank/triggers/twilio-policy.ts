@@ -46,4 +46,3 @@ export async function twilioPublication(env: CrankEnv, workflow: WorkflowRow, gr
     (!row.expires_at || row.expires_at > now()), 'Twilio SMS needs a current signing-secret connection in this workflow environment', 422)
   return { signing_iv: row.secret_iv }
 }
-
