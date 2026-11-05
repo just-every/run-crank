@@ -89,8 +89,11 @@ A graph's `settings` set its `timezone`, `burst_threshold` (1 to 10,000, default
 | GET `/historical/:id` | Native/dev owner | Reviewed snapshot, remaining items and real per-item run outcomes |
 | POST `/historical/:id/run` | Native/dev owner | `{fingerprint,items:[sourceIds]}` or `{fingerprint,all:true}`; once per source ID in this batch |
 | GET `/queues` | Person or agent | Delay queues: depth, oldest item, next release |
-| GET/POST `/connections`; POST `/connections/:id/rotate`, `/revoke`, `/test` | Native/dev owner for writes | Credentials are encrypted and never returned |
-| POST `/oauth/apps/:app`, `/oauth/start`; GET `/oauth/callback` | Native/dev owner | Your provider OAuth app, consent start and redirect |
+| GET `/connections` | Current read grant | Credentials are encrypted and never returned |
+| POST `/connections`, `/connections/:id/test` | Native installation owner | Creation and connection testing remain installation controls |
+| POST `/connections/:id/rotate`, `/connections/:id/revoke` | Native installation owner or current responsible person with a complete management grant | Live ownership and grant revisions fence the credential change |
+| POST `/oauth/apps/:app` | Native installation owner | Configure the installation’s provider OAuth app |
+| POST `/oauth/start`; GET `/oauth/callback` | Native installation owner or current responsible person reconnecting an existing connection | Fresh provider consent, bound to the connection revision |
 | GET `/catalog`; POST `/coverage` | Person or agent | Native operations; classify `{items}`, `{n8n}` or `{make}` inventories |
 | GET/POST `/settings` | Owner for writes | Timezone, category USD/recipient caps, auto-pause policy |
 | GET `/reports/latency`, `/audit`, `/notices` | Person or agent; audit and notices owner | Trigger latency, poll lag and causes; append-only audit; owner notices |

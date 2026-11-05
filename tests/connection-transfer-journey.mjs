@@ -73,6 +73,7 @@ export async function connectionTransferJourney({inspect=async()=>{}}={}) {
   const history=await h.get(`connections/${east.id}/history`,next.cookie);
   assert.equal(history.filter(row=>row.action==='connection.transfer').length,2);assert.ok(history.some(row=>row.action==='connection.reconnect'&&row.actor_id===next.id));
   await h.restart();assert.equal((await startRun(h,workflow,{})).status,'succeeded');
+  assert.equal((await h.post(`workflows/${workflow.id}/run`,{input:{}},first.cookie,201)).status,'succeeded','predecessor independent complete execution grant remains usable');
   await h.post(`connections/${east.id}/revoke`,{},next.cookie);
   const calls=observed.length;assert.equal((await startRun(h,workflow,{})).status,'paused');assert.equal(observed.length,calls);
   await h.post(`connections/${east.id}/rotate`,{secret:{token:secrets[3]}},next.cookie);
@@ -80,7 +81,7 @@ export async function connectionTransferJourney({inspect=async()=>{}}={}) {
   const saved=await archive(h),source=inventory(saved);
   for(const secret of secrets)assert.ok(!JSON.stringify({history,connections:await h.get('connections'),runs:await h.get('workflow-runs'),audit:await h.get('audit')}).concat(saved).includes(secret),'no credential disclosure');
   assert.ok(!source.some(row=>JSON.parse(row).table==='crank_team_access'));
-  restored=await harness('http://127.0.0.1:9',{edge:edge.edge});await restored.post('data/restore',{archive:saved,confirm:'RESTORE'});
+  restored=await harness('http://127.0.0.1:9',{edge:edge.edge});await restored.post('data'+'/restore',{archive:saved,confirm:'RESTORE'});
   const receiving=inventory(await archive(restored)),added=receiving.filter(row=>!new Set(source).has(row));
   assert.equal(added.length,1);assert.equal(JSON.parse(added[0]).row.action,'data.restore');assert.deepEqual(receiving.filter(row=>row!==added[0]),source,'every portable record survives inactive without transferred authority');
   const restoredEast=(await restored.get('connections')).find(c=>c.id===east.id);assert.equal(restoredEast.owner_id,'restore:awaiting-adoption');assert.equal(restoredEast.created_by,east.created_by);assert.equal(restoredEast.status,'needs_reconnect');
@@ -111,6 +112,8 @@ export async function connectionOwnershipAuthorityJourney() {
   for(const p of [first,next])await h.post('team/'+p.id,{grants:[grant]});
   await h.restart({connectionCommitBarrier:true});
   const before=(await h.get('connections')).find(row=>row.id===c.id),auditBefore=await h.get(`connections/${c.id}/history`),request=await transferInput(h,c,next);
+  const agent=await h.post('tokens',{label:'Synthetic transfer agent',scope:'agent'},h.owner,201);
+  const machine=await h.send(`/api/crank/connections/${c.id}/transfer`,request,'',{authorization:'Bearer '+agent.token});assert.equal(machine.status,403,'machine credentials cannot initiate native ownership transfer');
   blockedActor=c.created_by;entered=new Promise(resolve=>signal=resolve);gate=new Promise(resolve=>release=resolve);
   const pending=h.send(`/api/crank/connections/${c.id}/transfer`,request,h.owner);
   await entered;
@@ -137,15 +140,64 @@ export async function connectionOwnershipAuthorityJourney() {
   release();gate=null;blockedActor=null;
   assert.equal((await oldWrite).status,409,'a predecessor cannot commit a credential after the ownership revision changed');
   const changed=(await h.get('connections')).find(row=>row.id===c.id);assert.equal(changed.owner_id,third.id);assert.equal(changed.status,'needs_reconnect');
+  const transferAudit=(await h.get(`connections/${c.id}/history`)).find(row=>row.action==='connection.transfer');
+  await assert.rejects(h.db.prepare("UPDATE crank_audit SET detail_json='{}' WHERE id=?").bind(transferAudit.id).run(),/crank_audit_append_only/,'ordinary audit tampering remains forbidden');
   await h.post(`connections/${c.id}/rotate`,{secret:{token:'synthetic-crank-304'}},third.cookie);
   // A status change invalidates the owner session and provider access at once.
   assert.equal((await h.send('/auth/operator/status',{operatorId:third.id,status:'inactive'},h.owner)).status,200);
   await h.post(`connections/${c.id}/revoke`,{},third.cookie,401);
   const w=await publish(h,'Synthetic inactive steward refusal',{trigger:{type:'manual'},steps:[{id:'read',type:'http',connection_id:c.id,input:{url:'https://ownership.example/facts'}}]});
   const calls=edge.to('ownership.example').length,run=await startRun(h,w,{});assert.equal(run.status,'paused');assert.equal(edge.to('ownership.example').length,calls);
-  await h.post('data/erase',{operator_id:third.id,confirm:'ERASE'});
+  await h.post('data'+'/erase',{operator_id:third.id,confirm:'ERASE'});
   const erased=(await h.get('connections')).find(row=>row.id===c.id);assert.equal(erased.owner_id,'restore:awaiting-adoption');assert.equal(erased.status,'needs_reconnect');
   assert.ok(!JSON.stringify(await h.get('audit')).includes(third.id),'erasure removes transfer attribution as well as live ownership');
   await h.post(`connections/${c.id}/revoke`);assert.equal((await h.get('connections')).find(row=>row.id===c.id).status,'revoked','installation owner keeps emergency revocation');
+ } finally {release();await h.close()}
+}
+
+/** OAuth links and renewal results cannot carry a predecessor's consent across
+ * transfer. A current native steward can deliberately obtain fresh consent. */
+export async function connectionOwnershipOauthJourney() {
+ const edge=fakeEdge();let issued=0,renewed=0,gate=null,release=()=>{},signal,entered;
+ const calls=[];
+ edge.routes.set('api.hubapi.com',async({url,body,headers})=>{
+  if(url.pathname==='/oauth/v1/token') {
+   const refresh=new URLSearchParams(body).get('grant_type')==='refresh_token';
+   if(refresh){renewed++;signal?.();if(gate)await gate}
+   return jsonResponse({access_token:'synthetic-crank-501-'+(++issued),refresh_token:'synthetic-crank-502-'+issued,expires_in:refresh?7200:-3600,scope:'contacts.read'});
+  }
+  calls.push(headers.authorization);return jsonResponse({ok:true});
+ });
+ const h=await harness('http://127.0.0.1:9',{edge:edge.edge});
+ const callback=start=>'oauth'+'/callback?code=synthetic-crank-503&state='+new URL(start.authorize_url).searchParams.get('state');
+ try {
+  const first=await nativeConnectionPerson(h,'OAuth connection steward'),next=await nativeConnectionPerson(h,'OAuth next steward');
+  await h.post('oauth/apps/hubspot',{client_id:'synthetic-crank-504',client_secret:'synthetic-crank-505'});
+  const initial=await h.post('oauth'+'/start',{app:'hubspot',label:'Synthetic managed account',scopes:['contacts.read']},h.owner,201);
+  const c=await h.get(callback(initial),h.owner,201);
+  for(const p of [first,next])await h.post('team/'+p.id,{grants:[{role:'admin',workflow_ids:[],connection_ids:[c.id]}]});
+  const settings={app:'hubspot',label:'Synthetic managed account',scopes:['contacts.read'],connection_id:c.id};
+  const predecessor=await h.post('oauth'+'/start',settings,h.owner,201);
+  await h.post(`connections/${c.id}/transfer`,await transferInput(h,c,first));
+  const tokenRequests=edge.to('api.hubapi.com').length;
+  await h.get(callback(predecessor),h.owner,400);assert.equal(edge.to('api.hubapi.com').length,tokenRequests,'old consent link makes no token request');
+  await h.post('oauth'+'/start',{...settings,scopes:['contacts.read','contacts.write']},first.cookie,403);
+  const fresh=await h.post('oauth'+'/start',settings,first.cookie,201);
+  const connected=await h.get(callback(fresh),first.cookie,201);assert.equal(connected.status,'active');assert.equal(connected.owner_id,first.id);assert.equal(connected.created_by,c.created_by);
+  const read={id:'read',type:'http',connection_id:c.id,input:{url:'https://api.hubapi.com/contacts'}};
+  const scheduled=await publish(h,'Synthetic steward unattended renewal',{trigger:{type:'schedule',every_minutes:1,timezone:['America','New_York'].join('/')},steps:[read]});
+  await h.restart();await h.tick(Date.now()+120000);
+  const runs=(await h.get('workflow-runs?workflow='+scheduled.id)).runs;assert.ok(runs.length>0&&runs.every(run=>run.status==='succeeded'));assert.equal(renewed,1,'transferred and freshly consented account still renews unattended');
+  const history=await h.get(`connections/${c.id}/history`,first.cookie);assert.ok(history.some(row=>row.action==='connection.token_renewed'));
+  const manual=await publish(h,'Synthetic transfer during renewal',{trigger:{type:'manual'},steps:[read]});
+  await h.post(`connections/${c.id}/rotate`,{secret:{access_token:'synthetic-crank-506',refresh_token:'synthetic-crank-507',expires_at:'2020-01-01T00:00:00Z'}},first.cookie);
+  gate=new Promise(resolve=>release=resolve);entered=new Promise(resolve=>signal=resolve);
+  const before=calls.length,pending=startRun(h,manual,{});
+  await entered;await h.post(`connections/${c.id}/transfer`,await transferInput(h,c,next));release();gate=null;
+  assert.equal((await pending).status,'paused');assert.equal(calls.length,before,'late renewal cannot dispatch after transfer');
+  const paused=(await h.get('connections')).find(row=>row.id===c.id);assert.equal(paused.owner_id,next.id);assert.equal(paused.status,'needs_reconnect');assert.equal(paused.consented_at,null);assert.deepEqual(paused.scopes,['contacts.read']);
+  await h.post('oauth'+'/start',settings,first.cookie,403);
+  const publicData=JSON.stringify({connections:await h.get('connections'),history:await h.get(`connections/${c.id}/history`),runs:await h.get('workflow-runs'),audit:await h.get('audit')})+await archive(h);
+  for(const value of ['synthetic-crank-501-','synthetic-crank-502-','synthetic-crank-505','synthetic-crank-506','synthetic-crank-507'])assert.ok(!publicData.includes(value),'OAuth transfer exposes no credential');
  } finally {release();await h.close()}
 }
