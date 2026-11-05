@@ -16,7 +16,7 @@ export function peopleAdapter(original: CrankEnv): PeopleAdapter {
     const settings = await stmt(env, 'SELECT owner_id FROM bs_settings WHERE singleton=1 AND stopped=0').first<{ owner_id: string | null }>()
     if (!settings) return null
     if (settings.owner_id && (await owner())?.id === person.id) return { id: settings.owner_id, role: 'owner' }
-    const row = await stmt(env, "SELECT business_id,business_role FROM bs_team WHERE operator_id=? AND state<>'conflict' AND business_id IS NOT NULL", person.id).first<{ business_id: string; business_role: string }>()
+    const row = await stmt(env, "SELECT business_id,business_role FROM bs_team WHERE operator_id=? AND state IN('active','invited') AND business_id IS NOT NULL", person.id).first<{ business_id: string; business_role: string }>()
     return row ? { id: row.business_id, role: row.business_role === 'admin' ? 'editor' : null } : null
   }
   // Person-page policy roles follow signed Business membership too. Native roles
@@ -42,8 +42,8 @@ export function peopleAdapter(original: CrankEnv): PeopleAdapter {
         const bound = await owner()
         return bound ? read(bound.id) : null
       }
-      const person = await native.sponsor(claim)
-      return person ? read(person.id) : null
+      const row = await stmt(env, "SELECT operator_id FROM bs_team WHERE business_id=? AND state IN('active','invited')", claim.sub).first<{ operator_id: string | null }>()
+      return row?.operator_id ? read(row.operator_id) : null
     },
   }
 }

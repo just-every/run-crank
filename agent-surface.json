@@ -548,6 +548,96 @@
         "create"
       ]
     },
-    "journey": "tests/agent-door/journey.mjs"
+    "journey": "tests/agent-door/journey.mjs",
+    "owner": {
+      "initializer": "tests/agent-door/sponsors.mjs"
+    },
+    "sponsors": [
+      {
+        "label": "owner"
+      },
+      {
+        "label": "builder-one",
+        "email": "synthetic-crank-builder-one\u0040example.invalid",
+        "initializer": "tests/agent-door/sponsors.mjs"
+      },
+      {
+        "label": "builder-two",
+        "email": "synthetic-crank-builder-two\u0040example.invalid",
+        "initializer": "tests/agent-door/sponsors.mjs"
+      },
+      {
+        "label": "inactive",
+        "email": "synthetic-crank-inactive\u0040example.invalid",
+        "initializer": "tests/agent-door/sponsors.mjs",
+        "negativeOnly": true
+      }
+    ],
+    "reviewers": [
+      {
+        "label": "builder-one",
+        "email": "synthetic-crank-builder-one\u0040example.invalid",
+        "initializer": "tests/agent-door/sponsors.mjs"
+      },
+      {
+        "label": "builder-two",
+        "email": "synthetic-crank-builder-two\u0040example.invalid",
+        "initializer": "tests/agent-door/sponsors.mjs"
+      },
+      {
+        "label": "inactive",
+        "email": "synthetic-crank-inactive\u0040example.invalid",
+        "initializer": "tests/agent-door/sponsors.mjs"
+      }
+    ],
+    "crossSponsor": {
+      "prepare": [
+        "create",
+        "read",
+        "update",
+        "current"
+      ],
+      "read": {
+        "tool": "crank.workflows.get",
+        "args": {
+          "workflow_id": {
+            "$from": "create",
+            "pointer": "/id"
+          }
+        },
+        "target": {
+          "kind": "workflow",
+          "id": {
+            "$from": "create",
+            "pointer": "/id"
+          }
+        }
+      },
+      "change": {
+        "tool": "crank.workflows.update",
+        "args": {
+          "workflow_id": {
+            "$from": "create",
+            "pointer": "/id"
+          },
+          "draft_digest": {
+            "$from": "current",
+            "pointer": "/draft_digest"
+          },
+          "expected_revision": {
+            "$from": "current",
+            "pointer": "/revision"
+          },
+          "description": "Supplier intake prepared for the native owner to review"
+        },
+        "target": {
+          "kind": "workflow",
+          "id": {
+            "$from": "create",
+            "pointer": "/id"
+          }
+        }
+      }
+    }
   }
 }

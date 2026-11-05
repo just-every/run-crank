@@ -1,3 +1,4 @@
+import {verifySponsorLifecycle} from './sponsor-lifecycle.mjs';
 import assert from 'node:assert/strict';
 import promptsJourney, {promptGuards} from './prompts-journey.mjs';
 
@@ -54,4 +55,5 @@ export default async function journey({request, origin, cookie, tool}) {
   await person('/agents/api/pause', {paused: false});
  }
  assert.equal(output(await tool('crank.workflows.create', args)).id, created.id);
+ await verifySponsorLifecycle();
 }
