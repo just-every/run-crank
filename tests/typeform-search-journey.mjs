@@ -82,7 +82,23 @@ export async function typeformSearchJourney({onScreen}={}){
   const projected=JSON.parse(Buffer.from(plainChunks[0].content_base64,'base64').toString());assert.deepEqual(projected.records,[stepOf(good,'response').output.record],'private checkpoint retains only the validated projection');
   const badProjection={records:[{...projected.records[0],file_url:'https://uploads.example/private-file'}]},badBytes=Buffer.from(JSON.stringify(badProjection));
   const badArchive=await rewritten(await archive(h),(table,row)=>{if(row.run_id!==lostConsent.id)return;if(table==='crank_request_checkpoint_chunks')row.content_base64=badBytes.toString('base64');if(table==='crank_request_checkpoints'){const response=JSON.parse(row.response_json);response.body_bytes=badBytes.length;response.chunk_count=1;row.response_json=JSON.stringify(response)}});
-  const rejected=await harness('http://127.0.0.1:9',{edge:fake.edge,clock});try{await rejected.post('data/restore',{archive:badArchive,confirm:'RESTORE'},rejected.owner,400);assert.deepEqual(await rejected.get('workflows'),[],'checksummed out-of-projection plaintext is refused atomically')}finally{await rejected.close()}
+  const foreignProjection={records:[{...projected.records[0],id:'synthetic-crank-foreign',response_id:'synthetic-crank-foreign'}]},foreignBytes=Buffer.from(JSON.stringify(foreignProjection));
+  const saved=await archive(h),foreignArchive=await rewritten(saved,(table,row)=>{if(row.run_id!==lostConsent.id)return;if(table==='crank_request_checkpoint_chunks')row.content_base64=foreignBytes.toString('base64');if(table==='crank_request_checkpoints'){const response=JSON.parse(row.response_json);response.body_bytes=foreignBytes.length;response.chunk_count=1;row.response_json=JSON.stringify(response)}});
+  const rejected=await harness('http://127.0.0.1:9',{edge:fake.edge,clock});try{
+   for(const invalid of [badArchive,foreignArchive]){await rejected.post('data/restore',{archive:invalid,confirm:'RESTORE'},rejected.owner,400);assert.deepEqual(await rejected.get('workflows'),[],'checksummed projection and mapped response identity mismatches are refused atomically')}
+  }finally{await rejected.close()}
+  await h.post(`connections/${c.id}/rotate`,{secret:{token:'synthetic-crank-701'},scopes:[scope]});
+  const mismatched=await startRun(h,draft,{response_id:responseId});assert.equal(mismatched.status,'paused');
+  const checkpoint=await h.db.prepare('SELECT request_key,response_json FROM crank_request_checkpoints WHERE run_id=?').bind(mismatched.id).first();
+  const metadata=JSON.parse(checkpoint.response_json);metadata.body_bytes=foreignBytes.length;metadata.chunk_count=1;
+  await h.db.prepare('UPDATE crank_request_checkpoint_chunks SET content_base64=? WHERE run_id=?').bind(foreignBytes.toString('base64'),mismatched.id).run();
+  await h.db.prepare('UPDATE crank_request_checkpoints SET response_json=? WHERE run_id=?').bind(JSON.stringify(metadata),mismatched.id).run();
+  assert.equal((await h.db.prepare('SELECT request_key FROM crank_request_checkpoints WHERE run_id=?').bind(mismatched.id).first()).request_key,checkpoint.request_key);
+  assert.equal(JSON.parse((await h.db.prepare('SELECT input_json FROM crank_wf_steps WHERE run_id=? AND step_id=?').bind(mismatched.id,'response').first()).input_json).response_id,responseId);
+  await h.post(`connections/${c.id}/rotate`,{secret:{token:'synthetic-crank-701'},scopes:[scope]});
+  const beforeMismatch=fake.requests.length;await h.restart();
+  const refused=await h.post(`workflow-runs/${mismatched.id}/resume`);assert.equal(refused.status,'failed');assert.equal(refused.error.category,'provider');assert.match(refused.error.message,/response ID binding/);assert.equal(stepOf(refused,'response').output,null);assert.ok(!stepOf(refused,'mapped'));assert.equal(fake.requests.length,beforeMismatch,'a foreign cached response is refused without another provider read');
+  await h.post(`connections/${c.id}/rotate`,{secret:{token:'synthetic-crank-701'},scopes:['forms:read']});
   const cachedCount=fake.requests.length;await h.restart();
   const noConsent=await h.post(`workflow-runs/${lostConsent.id}/resume`);assert.notEqual(noConsent.status,'succeeded');assert.equal(fake.requests.length,cachedCount,'cached consumption cannot bypass removed consent');
   await h.post(`connections/${c.id}/rotate`,{secret:{token:'synthetic-crank-701'},scopes:[scope]});
