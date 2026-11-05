@@ -37,9 +37,10 @@ async function pickerBarrierBundle() {
 async function resourceBarrierBundle() {
   return (await build({...bundleOptions,plugins:[{name:'workflow-resource-read-boundary',setup(plugin){
     plugin.onLoad({filter:/agent-door[\/]resources\.ts$/},async({path})=>{
-      const contents=await readFile(path,'utf8'),boundary='classify(value) {';
+      const contents=await readFile(path,'utf8'),boundary='classify(value) {',readBoundary='const value = record(await nativeCall(env, ctx, definition.path(match)))';
       assert.equal(contents.split(boundary).length,2);
-      return {contents:contents.replace(boundary,"async classify(value) { await fetch('https://resource-read-boundary.example/classified');"),loader:'ts'};
+      assert.equal(contents.split(readBoundary).length,2);
+      return {contents:contents.replace(boundary,"async classify(value) { await fetch('https://resource-read-boundary.example/classified');").replace(readBoundary,readBoundary+"; await fetch('https://resource-read-boundary.example/loaded');"),loader:'ts'};
     });
   }}]})).outputFiles[0].text;
 }

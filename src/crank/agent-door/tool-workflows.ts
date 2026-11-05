@@ -3,7 +3,7 @@ import { requirePrepare } from '../access.ts'
 import { canonical, digest, type CrankEnv } from '../model.ts'
 import { validateGraph } from '../engine/graph.ts'
 import { resolveActor } from './native.ts'
-import { workflowResourceLink } from './resources.ts'
+import { workflowResourceLink, workflowHistoryLinks } from './resources.ts'
 import { arraySchema, nativeCall, nativeGuard, nullableText, objectSchema, pathPart, pick, query, record, standard, textSchema } from './tool-native.ts'
 
 const properties = {
@@ -40,7 +40,7 @@ async function view(value: Record<string, unknown>) {
 
 async function linked(env: CrankEnv, ctx: ToolContext, value: Record<string, unknown>) {
   const visible = record(await nativeCall(env, ctx, '/workflows/' + encodeURIComponent(String(value.id))))
-  return { result: await view(value), resources: [await workflowResourceLink(visible)] }
+  return { result: await view(value), resources: [await workflowResourceLink(visible), ...await workflowHistoryLinks(env, ctx, visible, record(value.idempotency ?? {}).draft_id as string | undefined)] }
 }
 
 export function workflowTools(env: CrankEnv): ToolDefinition[] {

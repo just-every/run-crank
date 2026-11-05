@@ -6,7 +6,7 @@
   "toolchain": {
     "id": "runeditrun/edition-authoring",
     "version": "1.1.0",
-    "sha256": "b546ef04830f935ee2493a5bc08ef43a0f7d5905aeb8549fb75670c19890af99"
+    "sha256": "3f7b56f3ae1e70588fb35c49e75b639c2360ceed550182b9caf8adc33021abb8"
   },
   "components": [
     {
@@ -148,7 +148,7 @@
       "executable": false
     },
     "agent-surface.json": {
-      "sha256": "0ab9046ce67aa9275aaa0f90e7bda7371b99d37bbbfcd4f9855f0cd4b9998251",
+      "sha256": "e059a589b404a3a3a5f990357bc50006939b7eeb29a61995d2d43bed2405a332",
       "executable": false
     },
     "AGENTS.md": {
@@ -172,7 +172,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "ad87ef200c30b7773613bf0defe1730452be47e89726a2a3ab4e028dce513b65",
+      "sha256": "dc1d66cf84add02c21be5747d028de2a9f5e370f2c214aa9b2640c6ca6f9993f",
       "executable": false
     },
     "DEMO.md": {
@@ -196,7 +196,7 @@
       "executable": false
     },
     "docs/AGENT-DOOR.md": {
-      "sha256": "4b6dbd4aa7ec2478793211da839297193e4c3ff4fda9b4973ee9f428733740bc",
+      "sha256": "9c5f669dfacf9d01f9009b0d07a0b03a71a8f261ae5cd32d6266e8535abb124e",
       "executable": false
     },
     "docs/API.md": {
@@ -2964,7 +2964,7 @@
       "executable": false
     },
     "src/crank/agent-door/resources.ts": {
-      "sha256": "f644b10ae3b6b3318395319c359d35784dd2b7a025993eaa31e91cc0453fc80e",
+      "sha256": "ee1c390f57538caf8b2be2716abea9a8b0843cc98b6eee72422aabd32d77d985",
       "executable": false
     },
     "src/crank/agent-door/tool-metadata.ts": {
@@ -2976,7 +2976,7 @@
       "executable": false
     },
     "src/crank/agent-door/tool-workflows.ts": {
-      "sha256": "c4b6bcc72028455d386df8e550b885f5e730a9d99edc5c78d1297bbc6ad65a49",
+      "sha256": "624b36cbb0e1ec4ff295a1259e42f9b501603fceacda294593dbdf12233c007c",
       "executable": false
     },
     "src/crank/agent-door/tools.ts": {
@@ -6724,7 +6724,7 @@
       "executable": false
     },
     "tests/agent-door/resources-journey.mjs": {
-      "sha256": "3f4ce32b67355708ef9681bc0f6cd4452fd6d9efa2f8ab27e20df14ed391517c",
+      "sha256": "0ec65d1c5703c3e80ac3eb80964d28f31256a591249977ee4dd9e84b5d96a551",
       "executable": false
     },
     "tests/ai-steps-browser.mjs": {
@@ -7032,7 +7032,7 @@
       "executable": false
     },
     "tests/harness.mjs": {
-      "sha256": "e9566df5b7c31695c841bd9fad4512bb30e088231fc0c3693020e6f7f3f53e0b",
+      "sha256": "3d8583fb5df1db696c0f5976e352df45707f4c24cdca327a20157b5e704523cd",
       "executable": false
     },
     "tests/historical.test.mjs": {

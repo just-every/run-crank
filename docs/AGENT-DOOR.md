@@ -20,13 +20,13 @@ tokens retain the canonical `/mcp` audience. Protected-resource discovery is at
 `/.well-known/oauth-protected-resource/mcp`.
 
 The explicit capability declaration contains the CORE duties `tools`, `policy`,
-`pause`, `audit` and `idempotency`, plus one real `resources` family.
+`pause`, `audit` and `idempotency`, plus three native workflow `resources` templates.
 Optional `prompts`, `events` and `subscriptions` remain undeclared and
 typed-refused. No event-list tool is injected.
 
-The surface declares one workflow URI template, `escalations: []` and
+The surface declares workflow, saved-draft and published-version URI templates, `escalations: []` and
 `spend: { "none": true }`. No paid or provider call is reachable from these
-twelve tools or the workflow reader. This no-spend boundary comes from the
+twelve tools or the workflow readers. This no-spend boundary comes from the
 admitted native operations; provider-spend-cap enforcement remains unclaimed.
 Other native routes and connectors have broader purposes outside this registry.
 
@@ -37,6 +37,24 @@ workflow presentation. The revision is a SHA-256 over the canonical returned
 record, including draft, history, receiving and restore state. Workflow get,
 create, update, duplicate and validate replies return resource links. Their
 structured results retain the existing metadata projection.
+
+`crank://workflows/{id}/drafts/{draft}/revisions/{revision}` exposes one saved
+native draft, including its graph, metadata and attributable save information.
+`crank://workflows/{id}/versions/{version}/revisions/{revision}` exposes one
+published native version, including its graph and estimate. Both call the same
+native history routes the editor uses and return exactly those presentations.
+Each revision hashes the complete returned record. A later edit does not replace
+an immutable saved draft; retiring a publication changes its native presentation
+and requires a fresh link.
+
+Historical reads require the separately consented
+`workflows:history-resource-read` scope. Existing workflow-resource credentials
+and native preparation tokens never gain history access. With that fresh scope,
+workflow get and draft writes also link the selected saved draft and current
+publication, when present. A write links its own native draft receipt, retaining
+that exact draft even if another save follows. Historical links disclose no graph
+content until their reader admits the current person and policy.
+
 
 Reading requires the explicit new `workflows:resource-read` scope in a fresh
 Business credential. Neither existing metadata scopes nor owner-issued native
@@ -53,19 +71,23 @@ change; they never serve an archived revision.
 Full workflow records can contain arbitrary customer and imported draft values,
 history and receiving details, even when `data_class` says `none`. The server
 therefore classifies the actual full projection conservatively as `sensitive`,
-with one record and kind `workflow_record`, independently of its declared data
+with one record and kind `workflow_record`, `workflow_draft` or
+`workflow_version`, independently of its declared data
 class. The policy must explicitly answer this newly reachable class. Under a
 held policy, content stays withheld until the native person approves the exact
 read. Classification proves neither provider consent nor permission to dispatch.
 
 Every returned record carries `com.runeditrun/untrusted: true` on its content.
 The reader rechecks native authority around the awaited read and retains the
-selected authority between classification and execution. The shared runtime
+selected authority and current policy envelope between classification and execution. The shared runtime
 also compares the full classified bytes with the final read and fences consent.
 The authority binding belongs to the current request, including an approved
 read that resumes an older operation identity. A native role change during
 that replay is refused even when its visible record bytes stay unchanged.
-Record, role, scope or consent changes cannot release stale content. Restored
+Record, role, scope, policy or consent changes cannot release stale content. A policy
+change during the final native read also withholds content, including replay of
+an already approved read. Erased sponsors cannot replay captured historical reads
+or recover access after restart. Restored
 records retain their native inactive state; reading does not adopt or activate
 them.
 
@@ -223,8 +245,8 @@ through SURFACE-013. It is a target, not evidence of implemented behavior.
 | --- | --- | --- |
 | Tools | 224 exact tool names | 12 exact-name overlaps; 212 draft names absent. |
 | Proposal mapping | `crank.custom.propose`, citing CONN-020 | Same name; native OpenAPI preparation cites CONN-011 and CONN-020. |
-| Record resources | 34 URI templates | One native workflow template with exact-revision links from the workflow preparation tools and metadata get. |
-| Classes | All 11 fleet classes, including computed combinations | `standard` metadata and preparation, plus `sensitive` full workflow reads; other classes and computed combinations remain outside this declaration. |
+| Record resources | 34 URI templates | Three native workflow, saved-draft and published-version templates, with exact-revision links from workflow preparation and metadata get. |
+| Classes | All 11 fleet classes, including computed combinations | `standard` metadata and preparation, plus `sensitive` native workflow and history reads; other classes and computed combinations remain outside this declaration. |
 | Specialist guidance | Six specialist prompts, typed events and handoffs | No prompt/event/subscription capability. |
 | Journey | SURFACE-013's seeded business week under All-autonomous and Held policies | 13 declared steps covering these 12 tools, with a second workflow read; preparation, metadata and separately scoped workflow records. |
 
@@ -237,7 +259,7 @@ reconcile a lost external response, repair a live mapping or complete recurring
 overdue-invoice contact. This bounded journey passes under autonomous and held policy, with the native
 attribution, changed-key conflict, stale revision and local Pause checks.
 
-Every other primary record type, broader tool links, file-byte resources and grant byte-budget enforcement, provider-content reads, remaining resource-refresh conformance and the full specialist and provider journeys remain required.
+Other primary record types, broader tool links, file-byte resources and grant byte-budget enforcement, provider-content reads, remaining resource-refresh conformance and the full specialist and provider journeys remain required.
 
 Full native provider dispatch, publications and active-service controls, grants
 and authority changes, client MCP administration and the other native tools
@@ -256,7 +278,9 @@ gap against SURFACE-001's shared-registry requirement. Aliasing the old generic
 `/api/crank/v1/mcp` path to this door does not close that gap or establish
 native/provider classification parity through every wrapper.
 
-This document records the implemented boundary. The extended hosted CORE journey passes 1,117/1,117 points on rer 0.2.91, including classified workflow links and the native resource sanity journey. Native
+This document records the implemented boundary. The extended hosted CORE journey passes 1,117/1,117 points on rer 0.2.91, including classified workflow links and the original native resource sanity journey.
+The expanded native resource journey additionally covers saved drafts, publications,
+separate historical consent, policy refresh during reads and erased sponsors. Native
 Agents and pending/executed approval pages have browser proof at 1440 and 390.
 The complete ct registry, native UI parity for its omitted jobs and the seeded
 specialist week remain acceptance work. No optional capability is promoted.

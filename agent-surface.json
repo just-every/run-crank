@@ -180,7 +180,9 @@
     }
   ],
   "resources": [
-    "crank://workflows/{id}/revisions/{revision}"
+    "crank://workflows/{id}/revisions/{revision}",
+    "crank://workflows/{id}/drafts/{draft}/revisions/{revision}",
+    "crank://workflows/{id}/versions/{version}/revisions/{revision}"
   ],
   "escalations": [],
   "spend": {
