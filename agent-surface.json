@@ -182,7 +182,9 @@
   "resources": [
     "crank://workflows/{id}/revisions/{revision}",
     "crank://workflows/{id}/drafts/{draft}/revisions/{revision}",
-    "crank://workflows/{id}/versions/{version}/revisions/{revision}"
+    "crank://workflows/{id}/versions/{version}/revisions/{revision}",
+    "crank://workflow-runs/{id}/revisions/{revision}",
+    "crank://connections/{id}/revisions/{revision}"
   ],
   "escalations": [],
   "spend": {

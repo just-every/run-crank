@@ -20,13 +20,14 @@ tokens retain the canonical `/mcp` audience. Protected-resource discovery is at
 `/.well-known/oauth-protected-resource/mcp`.
 
 The explicit capability declaration contains the CORE duties `tools`, `policy`,
-`pause`, `audit` and `idempotency`, plus three native workflow `resources` templates.
+`pause`, `audit` and `idempotency`, plus five native record `resources` templates.
 Optional `prompts`, `events` and `subscriptions` remain undeclared and
 typed-refused. No event-list tool is injected.
 
-The surface declares workflow, saved-draft and published-version URI templates, `escalations: []` and
+The surface declares workflow, saved-draft, published-version, native-run and
+credential-free connection URI templates, `escalations: []` and
 `spend: { "none": true }`. No paid or provider call is reachable from these
-twelve tools or the workflow readers. This no-spend boundary comes from the
+twelve tools or the resource readers. This no-spend boundary comes from the
 admitted native operations; provider-spend-cap enforcement remains unclaimed.
 Other native routes and connectors have broader purposes outside this registry.
 
@@ -35,7 +36,8 @@ Other native routes and connectors have broader purposes outside this registry.
 `crank://workflows/{id}/revisions/{revision}` names the exact complete native
 workflow presentation. The revision is a SHA-256 over the canonical returned
 record, including draft, history, receiving and restore state. Workflow get,
-create, update, duplicate and validate replies return resource links. Their
+create, update, duplicate and validate replies return resource links. Workflow
+list also links its visible records when the explicit workflow resource scope is present. Their
 structured results retain the existing metadata projection.
 
 `crank://workflows/{id}/drafts/{draft}/revisions/{revision}` exposes one saved
@@ -101,6 +103,41 @@ approvals, hostile text, record and authority changes during classification,
 revoked consent and native agents, inactive sponsors, approved-read replay, and
 inactive restoration. The existing platform sanity journey
 and `tests/agent-door/journey.mjs` both invoke it without a new registration.
+
+## Native run and connection resources
+
+`crank://workflow-runs/{id}/revisions/{revision}` returns the exact current native
+run-detail presentation. The current person's native product role determines
+which fields exist: an owner sees inputs and outputs, while a scoped viewer sees
+the same restricted record as the native run screen. Reusing an owner's link
+never grants a viewer payload access. The immutable execution graph must have a
+manual trigger and only mapping, transforms, filters, paths, loops, delays or
+responses; every nested branch, fallback and always-run branch is checked.
+Provider operations, files, child graphs, shared operational tables, retained
+sample inputs and other trigger kinds remain unavailable through this reader.
+A provider-free graph alone does not convert sampled provider data into manual
+input consent. Existing provider content is not fetched or exposed.
+
+`crank://connections/{id}/revisions/{revision}` returns exactly one visible row
+from the native Connections route. It includes account binding and lifecycle
+metadata, including the current revoked or reconnect state; it contains neither
+credentials nor vault ciphertext. Reading a revoked connection record never
+reconnects it. A changed purpose, rotation, revocation or other visible edit
+requires a fresh link.
+
+These families require separately consented `runs:resource-read` and
+`connections:resource-read` scopes in fresh Business credentials. Existing native
+metadata tokens and previous workflow-resource scopes gain neither. Run get
+links supported native records; run list and connection list add links only with
+the corresponding resource scope. Structured metadata results stay unchanged.
+Both readers classify the actual returned record as `sensitive`, with kind
+`native_run` or `connection_record`, and require an explicit policy answer.
+Customer text and connection labels remain untrusted. They share the workflow
+reader's revision, current authority, policy refresh and held-approval fences.
+Missing and out-of-scope records remain indistinguishable. Captured approved run
+reads refuse after erasure, including after restart. Complete native run and
+credential-free connection records survive inactive restoration; fresh reads
+under autonomous and held policies grant no execution or reconnection authority.
 
 ## The twelve declared tools
 
@@ -261,7 +298,7 @@ reconcile a lost external response, repair a live mapping or complete recurring
 overdue-invoice contact. This bounded journey passes under autonomous and held policy, with the native
 attribution, changed-key conflict, stale revision and local Pause checks.
 
-Other primary record types, broader tool links, file-byte resources and grant byte-budget enforcement, provider-content reads, remaining resource-refresh conformance and the full specialist and provider journeys remain required.
+Other primary record types, run kinds outside the bounded native family, broader tool links, file-byte resources and grant byte-budget enforcement, provider-content reads, remaining resource-refresh conformance and the full specialist and provider journeys remain required.
 
 Full native provider dispatch, publications and active-service controls, grants
 and authority changes, client MCP administration and the other native tools

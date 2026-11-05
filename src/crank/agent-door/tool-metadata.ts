@@ -1,6 +1,7 @@
 import type { ToolContext, ToolDefinition } from '../../modules/agent-door/types.ts'
 import { requirePrepare } from '../access.ts'
 import type { CrankEnv } from '../model.ts'
+import { connectionResourceLink, connectionResourceScope, runResourceLink, runResourceScope } from './resources.ts'
 import { resolveActor } from './native.ts'
 import { arraySchema, nativeCall, nativeGuard, nullableText, objectSchema, pathPart, pick, query, record, standard, strings, textSchema } from './tool-native.ts'
 
@@ -21,7 +22,7 @@ export function metadataTools(env: CrankEnv): ToolDefinition[] {
     return { runs: (result.runs as Record<string, unknown>[]).map(run => pick(run, runKeys)), next: result.next }
   }
   const runDetail = async (args: Record<string, unknown>, ctx: ToolContext) => record(await nativeCall(env, ctx, '/workflow-runs/' + pathPart(args, 'run_id')))
-  const connections = async (ctx: ToolContext) => (await nativeCall(env, ctx, '/connections') as Record<string, unknown>[]).map(value => pick(value, connectionKeys))
+  const connections = async (ctx: ToolContext) => await nativeCall(env, ctx, '/connections') as Record<string, unknown>[]
   const catalog = async (ctx: ToolContext) => {
     const value = record(await nativeCall(env, ctx, '/catalog'))
     return (value.apps as Record<string, unknown>[]).map(app => ({
@@ -36,7 +37,14 @@ export function metadataTools(env: CrankEnv): ToolDefinition[] {
       clauses: ['EXEC-005'], inputSchema: objectSchema({ workflow: textSchema, status: textSchema, before: textSchema, limit: { type: 'integer', minimum: 1, maximum: 100 }, from: textSchema, to: textSchema }),
       outputSchema: objectSchema({ runs: arraySchema(runSchema), next: nullableText }, ['runs', 'next']),
       classify: async (args, ctx) => standard((await listRuns(args, ctx)).runs.length),
-      run: async (args, ctx) => ({ result: await listRuns(args, ctx) }),
+      run: async (args, ctx) => {
+        const result = await listRuns(args, ctx), resources = []
+        if (ctx.scopes.includes(runResourceScope)) for (const run of result.runs) {
+          const linked = await runResourceLink(env, await runDetail({ run_id: run.id }, ctx))
+          if (linked) resources.push(linked)
+        }
+        return { result, resources }
+      },
     },
     {
       ...base, name: 'crank.runs.get', title: 'Read run metadata', scope: 'runs:read', readOnly: true,
@@ -45,14 +53,21 @@ export function metadataTools(env: CrankEnv): ToolDefinition[] {
       outputSchema: objectSchema({ ...runProperties, step_count: { type: 'integer', minimum: 0 }, wait_count: { type: 'integer', minimum: 0 }, attempt_count: { type: 'integer', minimum: 0 } }, ['id', 'workflow_id', 'version_id', 'status', 'business_outcome', 'step_count', 'wait_count', 'attempt_count']),
       target: async (args, ctx) => ({ kind: 'run', id: String((await runDetail(args, ctx)).id) }),
       classify: async (args, ctx) => { await runDetail(args, ctx); return standard() },
-      run: async (args, ctx) => { const value = await runDetail(args, ctx); return { result: { ...pick(value, runKeys), step_count: (value.steps as unknown[]).length, wait_count: (value.waits as unknown[]).length, attempt_count: (value.attempts as unknown[]).length } } },
+      run: async (args, ctx) => {
+        const value = await runDetail(args, ctx), linked = await runResourceLink(env, value)
+        return { result: { ...pick(value, runKeys), step_count: (value.steps as unknown[]).length, wait_count: (value.waits as unknown[]).length, attempt_count: (value.attempts as unknown[]).length }, resources: linked ? [linked] : [] }
+      },
     },
     {
       ...base, name: 'crank.connections.list', title: 'List connection metadata', scope: 'connections:read', readOnly: true,
       description: 'Read credential-free native connection metadata within current native scope. Secrets, connection tokens, encrypted material and provider calls are excluded.',
       clauses: ['CONN-002'], inputSchema: objectSchema(), outputSchema: objectSchema({ connections: arraySchema(connectionSchema) }, ['connections']),
       classify: async (_args, ctx) => standard((await connections(ctx)).length),
-      run: async (_args, ctx) => ({ result: { connections: await connections(ctx) } }),
+      run: async (_args, ctx) => {
+        const values = await connections(ctx)
+        return { result: { connections: values.map(value => pick(value, connectionKeys)) },
+          resources: ctx.scopes.includes(connectionResourceScope) ? await Promise.all(values.map(connectionResourceLink)) : [] }
+      },
     },
     {
       ...base, name: 'crank.catalog.list', title: 'Read native connector catalogue', scope: 'catalog:read', readOnly: true,

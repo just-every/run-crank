@@ -1,8 +1,15 @@
 import type { ResourceDefinition, ToolContext } from '../../modules/agent-door/types.ts'
 import { ToolRefusal } from '../../modules/agent-door/index.ts'
 import { canonical, digest, stmt, type CrankEnv } from '../model.ts'
+import { branchesOf } from '../engine/graph.ts'
+import type { Step } from '../engine/types.ts'
 import { resolveActor, resourceToolContext } from './native.ts'
 import { nativeCall, record } from './tool-native.ts'
+
+export const runResourceScope = 'runs:resource-read'
+export const connectionResourceScope = 'connections:resource-read'
+export const runResourceTemplate = 'crank://workflow-runs/{id}/revisions/{revision}'
+export const connectionResourceTemplate = 'crank://connections/{id}/revisions/{revision}'
 
 export const workflowResourceScope = 'workflows:resource-read'
 export const workflowHistoryResourceScope = 'workflows:history-resource-read'
@@ -12,8 +19,8 @@ export const workflowVersionResourceTemplate = 'crank://workflows/{id}/versions/
 
 /** Hash the complete native presentation, including history and custody state.
  * A link names one exact visible revision, never a mutable alias or authority. */
-async function resourceLink(path: string, name: string, value: Record<string, unknown>) {
-  return { uri: 'crank://workflows/' + path + '/revisions/' + await digest(canonical(value)), name }
+async function resourceLink(path: string, name: string, value: Record<string, unknown>, family = 'workflows') {
+  return { uri: 'crank://' + family + '/' + path + '/revisions/' + await digest(canonical(value)), name }
 }
 export const workflowResourceLink = (value: Record<string, unknown>) => resourceLink(encodeURIComponent(String(value.id)), String(value.name), value)
 export const workflowDraftResourceLink = (id: string, value: Record<string, unknown>) => resourceLink(encodeURIComponent(id) + '/drafts/' + encodeURIComponent(String(value.id)), 'Saved workflow draft', value)
@@ -32,8 +39,36 @@ export async function workflowHistoryLinks(env: CrankEnv, ctx: ToolContext, valu
   return links
 }
 
+/** Read only runs whose immutable execution graph cannot have fetched provider
+ * content, file bytes, child graphs or persisted shared-state values. This is
+ * a bounded native family, not permission for the remaining provider readers. */
+async function nativeRun(env: CrankEnv, value: Record<string, unknown>) {
+  const row = await stmt(env, 'SELECT graph_json,declared_json,mode FROM crank_workflow_versions WHERE id=?', value.version_id).first<{ graph_json: string; declared_json: string; mode: string }>()
+  if (!row) return false
+  const graph = JSON.parse(row.graph_json), declared = JSON.parse(row.declared_json)
+  // A retained sample may carry provider data even through a pure graph.
+  if (row.mode === 'test' && (declared.sample_capture !== false || declared.sample_sources?.length !== 0)) return false
+  const steps = (items: Record<string, unknown>[]): boolean => Array.isArray(items) && items.every(step => {
+    if (step.type === 'loop') return steps(step.steps as Record<string, unknown>[])
+    if (step.type === 'paths') return branchesOf(step as Step).every(branch => steps(branch.steps))
+    return ['map', 'transform', 'filter', 'delay', 'respond'].includes(String(step.type))
+  })
+  return ['manual', 'test'].includes(String(value.trigger_kind)) && graph.trigger?.type === 'manual' && !graph.trigger.connection_id && steps(graph.steps)
+}
+export async function runResourceLink(env: CrankEnv, value: Record<string, unknown>) {
+  return await nativeRun(env, value) ? resourceLink(encodeURIComponent(String(value.id)), 'Native workflow run', value, 'workflow-runs') : null
+}
+export const connectionResourceLink = (value: Record<string, unknown>) => resourceLink(encodeURIComponent(String(value.id)), String(value.label), value, 'connections')
+
+interface ResourceFamily {
+  uriTemplate: string; name: string; scope: string; kind: string; pattern: RegExp; field: string
+  path: (match: RegExpExecArray) => string
+  select?: (match: RegExpExecArray, value: Record<string, unknown>) => Record<string, unknown> | undefined
+  link: (match: RegExpExecArray, value: Record<string, unknown>) => Promise<{ uri: string; name: string } | null>
+}
+
 export function crankResources(env: CrankEnv): ResourceDefinition[] {
-  const definitions = [
+  const definitions: ResourceFamily[] = [
     { uriTemplate: workflowResourceTemplate, name: 'Workflow record', scope: workflowResourceScope, kind: 'workflow_record',
       pattern: /^crank:\/\/workflows\/([A-Za-z0-9_-]+)\/revisions\/([a-f0-9]{64})$/,
       path: (match: RegExpExecArray) => '/workflows/' + match[1],
@@ -46,6 +81,15 @@ export function crankResources(env: CrankEnv): ResourceDefinition[] {
       pattern: /^crank:\/\/workflows\/([A-Za-z0-9_-]+)\/versions\/([1-9][0-9]{0,14})\/revisions\/([a-f0-9]{64})$/,
       path: (match: RegExpExecArray) => '/workflows/' + match[1] + '/versions/' + match[2],
       link: (match: RegExpExecArray, value: Record<string, unknown>) => workflowVersionResourceLink(match[1], value), field: 'graph' },
+    { uriTemplate: runResourceTemplate, name: 'Native workflow run', scope: runResourceScope, kind: 'native_run',
+      pattern: /^crank:\/\/workflow-runs\/([A-Za-z0-9_-]+)\/revisions\/([a-f0-9]{64})$/,
+      path: (match: RegExpExecArray) => '/workflow-runs/' + match[1],
+      link: (_match: RegExpExecArray, value: Record<string, unknown>) => runResourceLink(env, value), field: 'steps' },
+    { uriTemplate: connectionResourceTemplate, name: 'Connection record', scope: connectionResourceScope, kind: 'connection_record',
+      pattern: /^crank:\/\/connections\/([A-Za-z0-9_-]+)\/revisions\/([a-f0-9]{64})$/,
+      path: () => '/connections',
+      select: (match: RegExpExecArray, value: Record<string, unknown>) => (value as unknown as Record<string, unknown>[]).find(item => item.id === match[1]),
+      link: (_match: RegExpExecArray, value: Record<string, unknown>) => connectionResourceLink(value), field: 'id' },
   ]
   return definitions.map(definition => {
     // One reader per request and family. Approved replay resumes an older
@@ -58,11 +102,11 @@ export function crankResources(env: CrankEnv): ResourceDefinition[] {
     }
     return {
       uriTemplate: definition.uriTemplate, name: definition.name, mimeType: 'application/json',
-      description: 'The native workflow presentation at an exact revision. Requires explicit resource-read consent; customer and imported text is untrusted.',
+      description: 'The native role-specific record presentation at an exact revision. Requires explicit resource-read consent; customer and imported text is untrusted.',
       scope: definition.scope, classes: ['sensitive'],
       classify(value) {
-        // Actual native graph content can be sensitive regardless of its
-        // declared data class. Reading it proves no provider consent.
+        // Native records can include customer text and account metadata.
+        // Classify the full returned projection, never its claimed data class.
         const presented = record(value.json)
         if (!presented?.[definition.field]) throw new ToolRefusal('resource_unavailable')
         return [{ class: 'sensitive', facts: { measure: 1, kind: definition.kind } }]
@@ -75,10 +119,12 @@ export function crankResources(env: CrankEnv): ResourceDefinition[] {
           const before = await authority(ctx)
           if (selectedAuthority !== undefined && selectedAuthority !== before) return null
           const value = record(await nativeCall(env, ctx, definition.path(match)))
-          const linked = await definition.link(match, value)
-          if (linked.uri !== uri || await authority(ctx) !== before) return null
+          const presented = definition.select ? definition.select(match, value) : value
+          if (!presented) return null
+          const linked = await definition.link(match, presented)
+          if (linked?.uri !== uri || await authority(ctx) !== before) return null
           selectedAuthority = before
-          return { json: value, untrusted: true }
+          return { json: presented, untrusted: true }
         } catch (error) {
           // Missing records and every native visibility refusal have one result.
           if (error instanceof ToolRefusal) return null
