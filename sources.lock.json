@@ -3195,6 +3195,10 @@
       "sha256": "2938a9c34dab12e347203755312245fac1ddd3045a278ef065b20a53c70760ba",
       "executable": false
     },
+    "src/crank/connectors/typeform.ts": {
+      "sha256": "16ff529b8206b1e607f40c79be0c83218361906225a9521b4d2368fb1eb724df",
+      "executable": false
+    },
     "src/crank/custom/api.ts": {
       "sha256": "c70d82468aa36bb02c96018d48e5f2985152bde5eae5e52e30d70e150a5737d9",
       "executable": false
@@ -7361,6 +7365,14 @@
     },
     "tests/triggers.test.mjs": {
       "sha256": "e726b292dbcf8998937cb7d1d9c4abbf3a91ae351a4f5c58f29c30c0dd51645c",
+      "executable": false
+    },
+    "tests/typeform-search-browser.mjs": {
+      "sha256": "5bcce52574102448ef64731d9dcda803a0863b940e97b51cd751559223ca4922",
+      "executable": false
+    },
+    "tests/typeform-search-journey.mjs": {
+      "sha256": "2cd2bb277738a6c9efeffb9eb97140a741872c7080ccde764e273917d40ff405",
       "executable": false
     },
     "tests/usage.test.mjs": {
