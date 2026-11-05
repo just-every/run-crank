@@ -508,10 +508,10 @@ Before shipping added capabilities, this clause inherits BASE-001: prove owned o
 
 *Tier:* Core · *From:* new
 
-**Requirement.** Asana task reads follow the documented API-relative `next_page.path` to later pages within the existing pagination and request bounds, preserving the connected workspace and account scope.
+**Requirement.** Bounded Asana pagination follows the documented API-relative `next_page.path` to later pages within the existing pagination and request bounds, preserving the connected workspace and account scope.
 
 **Acceptance.**
-1. A permitted API-relative `next_page.path` retrieves page two and subsequent pages within the existing bounds, retaining the task results from each accepted page.
+1. A permitted API-relative `next_page.path` retrieves page two and subsequent pages within the existing bounds, retaining the results from each accepted page.
 2. Off-host or unbounded continuations are refused before they are applied: the refused continuation is not requested, previously accepted results stay unchanged, and no provider write occurs.
 
 #### CONN-022 — Canonical Asana task permalinks
