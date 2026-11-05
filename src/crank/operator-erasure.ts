@@ -1,6 +1,8 @@
 import { guardedBatch } from './access'
+import type { PortabilityFence } from '@runeditrun/rer/internal/modules/erasure/index.mjs'
 import { requireValue, stmt, type Actor, type CrankEnv } from './model'
 import { auditStatement } from './ops/audit'
+import { reviewerErasureStatements } from './agent-door/erasure'
 
 /** Every Crank column that records which person acted or created something. */
 const ATTRIBUTION: [table: string, column: string][] = [
@@ -23,7 +25,7 @@ const ATTRIBUTION: [table: string, column: string][] = [
 /** DATA-002 operator erasure: a deactivated non-owner's id becomes one stable
  * random label everywhere Crank attributes work, their sessions are revoked, and
  * their email address and display name are removed. Chronology and actions stay. */
-export async function eraseOperator(env: CrankEnv, actor: Actor, operatorId: string) {
+export async function eraseOperator(env: CrankEnv, actor: Actor, operatorId: string, portability: PortabilityFence) {
   const person = await stmt(env, 'SELECT id,email,role,status FROM oa_operators WHERE id=?', operatorId).first<{ id: string; email: string; role: string; status: string }>()
   requireValue(person, 'Person not found.', 404)
   requireValue(person.role !== 'owner' && person.status === 'inactive', 'Deactivate this person (never the owner) before erasing them.', 409)
@@ -35,6 +37,14 @@ export async function eraseOperator(env: CrankEnv, actor: Actor, operatorId: str
     stmt(env,'DELETE FROM crank_mcp_clients WHERE owner_id=?',person.id),
     stmt(env,'DELETE FROM crank_service_accounts WHERE owner_id=?',person.id),
     ...ATTRIBUTION.map(([table, column]) => stmt(env, `UPDATE ${table} SET ${column}=? WHERE ${column}=?`, label, person.id)),
+    // Reviewer snapshots are separate from the sponsoring audit actor. Redact only
+    // this person's identity, retaining the agent, sponsor and action chronology.
+    stmt(env, `UPDATE crank_audit SET detail_json=json_set(detail_json,'$.agent_door.approvers',json((
+      SELECT json_group_array(json(CASE WHEN json_extract(j.value,'$.id')=?1
+        THEN json_set(j.value,'$.id',?2,'$.name','Removed person') ELSE j.value END))
+      FROM json_each(detail_json,'$.agent_door.approvers') j
+    ))) WHERE EXISTS(SELECT 1 FROM json_each(detail_json,'$.agent_door.approvers') j WHERE json_extract(j.value,'$.id')=?1)`, person.id, label),
+    ...await reviewerErasureStatements(env, person.id, label, guard),
     stmt(env, "UPDATE crank_audit SET detail_json='{}' WHERE action IN ('followup.create','followup.contact') AND EXISTS(SELECT 1 FROM json_tree(detail_json) j WHERE j.type='text' AND j.value=?)",person.id),
     stmt(env, 'DELETE FROM crank_agent_followup_people WHERE person_id=?',person.id),
     stmt(env, 'DELETE FROM crank_agent_followup_authorizations WHERE recipient_id=? OR owner_id=?',person.id,person.id),
@@ -46,6 +56,8 @@ export async function eraseOperator(env: CrankEnv, actor: Actor, operatorId: str
     stmt(env, 'UPDATE oa_sessions SET revoked_at=? WHERE operator_id=? AND revoked_at IS NULL', at, person.id),
     stmt(env, 'DELETE FROM oa_external_identities WHERE operator_id=?', person.id),
     stmt(env, "UPDATE oa_operators SET email=?,display_name='Removed person' WHERE id=?", `${label}@removed.invalid`, person.id),
+    ...await portability.redactionStatements!(),
+    ...await portability.invalidateTransfersStatements(),
     stmt(env, 'DELETE FROM crank_authority_guards WHERE id=?', guard),
     auditStatement(env, actor.id, 'operator.erase', 'operator', label),
   ])

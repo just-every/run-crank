@@ -92,7 +92,7 @@ export async function dataApi(request:Request,env:CrankEnv):Promise<Response|nul
       }
       if (value.operator_id !== undefined) {
         if (value.confirm !== 'ERASE' || typeof value.operator_id !== 'string' || !value.operator_id) return Response.json({error:'Confirm ERASE and select one deactivated person.'},{status:400})
-        return Response.json(await eraseOperator(env,actor,value.operator_id),{headers:{'cache-control':'no-store'}})
+        return Response.json(await eraseOperator(env,actor,value.operator_id,store),{headers:{'cache-control':'no-store'}})
       }
       if (value.subject !== undefined) {
         if (value.confirm !== 'ERASE' || typeof value.subject !== 'string' || typeof value.digest !== 'string') return Response.json({error:'Confirm ERASE with the subject and its preview digest.'},{status:400})

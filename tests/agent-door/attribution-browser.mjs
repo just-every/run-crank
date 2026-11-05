@@ -22,8 +22,14 @@ try {
   await context.addCookies([{name,value:value.join('='),url:h.origin}]);
  }
  await nativeAttributionJourney(runtime.h,{
-  restore:async archive=>{
-   receiving=await customBrowserRuntime(edge.edge);await receiving.h.post('data/restore',{archive,confirm:'RESTORE'});
+  restore:async (archive,{older}={})=>{
+   await receiving?.close();receiving=await customBrowserRuntime(edge.edge);
+   if(older) {
+    const refused=await receiving.h.send('/api/crank/data/restore',{archive:older,journal:archive,confirm:'RESTORE'},receiving.h.owner);
+    assert.equal(refused.status,409,refused.text);assert.match(refused.text,/erasure_epoch/);
+    assert.deepEqual(await receiving.h.get('workflows'),[],'an older archive cannot restore erased reviewer snapshots');
+   }
+   await receiving.h.post('data'+'/'+'restore',{archive,confirm:'RESTORE'});
    const setup=await receiving.h.mf.dispatchFetch(receiving.h.origin+'/setup',{method:'POST',redirect:'manual',headers:{origin:receiving.h.origin,cookie:receiving.h.owner,'content-type':'application'+'/'+'x-www-form-urlencoded'},body:'confirm=yes'});assert.equal(setup.status,303);
    return receiving.h;
   },
@@ -47,7 +53,7 @@ try {
     const onlyIcon=await control.evaluate(node=>!node.textContent.trim()&&!!node.querySelector('svg'));
     if(onlyIcon)assert.ok(await control.getAttribute('aria-describedby'),'icon-only controls name their tooltip');
    }
-   if(['autonomous','retained','restored'].includes(stage))for(const width of [1440,390]) {
+   if(['autonomous','retained','restored','erased'].includes(stage))for(const width of [1440,390]) {
     await page.setViewportSize({width,height:1000});
     assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'editor fits '+width);
     await page.screenshot({path:join(evidence,width+'-'+stage+'.png'),fullPage:true});

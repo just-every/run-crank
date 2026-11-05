@@ -172,7 +172,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "1a28d0fdbc3869331bf6f21622a96deb4c1570e7a5b3c2ecb4bdc220894d512e",
+      "sha256": "e0b1a30d1286e97fac5eba7382d56d702957755362ca0a937ea7dc212e6f9bf3",
       "executable": false
     },
     "DEMO.md": {
@@ -1328,7 +1328,7 @@
       "executable": false
     },
     "management/integration/deployment-spec.json": {
-      "sha256": "ea6640f3310329c4c5873a400e8a826143ec7b4b8d436ce43a398d70d565d797",
+      "sha256": "e05440bc48daed49cf14357ede184bc03a2b98b85f5ce293b0b191de2c13839c",
       "executable": false
     },
     "migrations/core/0001_owner.sql": {
@@ -1705,6 +1705,10 @@
     },
     "migrations/core/0091_agent_door.sql": {
       "sha256": "016d8a98b964385f5c4a13447361c3c783910a76aaf4606b0e0081482bc819cc",
+      "executable": false
+    },
+    "migrations/core/0092_preparation_reviewer_erasure.sql": {
+      "sha256": "827a8662dc0a567f6d1f44b8da57cf2fbd49db079fa24b4b65fc82bac6db8adf",
       "executable": false
     },
     "ONBOARDING.md": {
@@ -2951,6 +2955,10 @@
       "sha256": "ada220adf2c63a88766fc37f4013eaf1b2d7b675d88d44d3408246e577aa38d6",
       "executable": false
     },
+    "src/crank/agent-door/erasure.ts": {
+      "sha256": "951d40f1714d6aae2394b1cba74e2a5df425d58f56813d89df5c7f9615d86333",
+      "executable": false
+    },
     "src/crank/agent-door/index.ts": {
       "sha256": "1420bf0ee787d7f28bea0645d9f375c0f0ec323656800f6c1b95ad9bc7e90bb6",
       "executable": false
@@ -3284,7 +3292,7 @@
       "executable": false
     },
     "src/crank/data.ts": {
-      "sha256": "012c3e88883823f317658c0f51363ecdd2ea6d5d7239e527cf8b59da61b245a2",
+      "sha256": "e174e30b0e6243df9ab55770c3838252ae6c2d16df0d4bc107c0058aba8e88b1",
       "executable": false
     },
     "src/crank/delivery-window.ts": {
@@ -3608,7 +3616,7 @@
       "executable": false
     },
     "src/crank/operator-erasure.ts": {
-      "sha256": "2f5dcaea7f039e9e8910a41a2780c5faa6cd603d304f6bcdaf5b4145ce4628ac",
+      "sha256": "29425cc0d336e092fb79c58be567387fab65952e68e715c89be4e147399e49c2",
       "executable": false
     },
     "src/crank/ops/audit.ts": {
@@ -6712,11 +6720,11 @@
       "executable": false
     },
     "tests/agent-door/attribution-browser.mjs": {
-      "sha256": "dc5f157798a8d0d6cfac3b40d7853d49d352db08b7b658eb2ae4ee992c4b963b",
+      "sha256": "55be45bbab3352763d515f007701c6d8f81bf487358191c26faf8c992315476d",
       "executable": false
     },
     "tests/agent-door/attribution-journey.mjs": {
-      "sha256": "ec12fdc98e53ad6b841e842d4e099ea185d421c6814e89c5b2d223a30a1d4f12",
+      "sha256": "6c8239f8d9b0092bb88433480d78601326feeb0f7e45a76c1a567d57b895b5ab",
       "executable": false
     },
     "tests/agent-door/fixtures.mjs": {

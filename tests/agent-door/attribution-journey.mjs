@@ -114,7 +114,10 @@ export async function nativeAttributionJourney(h,{inspect=async()=>{},restore}={
  const revokedArgs=args('Synthetic revoked reviewer preparation'),revoked=await pending('create',revokedArgs),revokedDecision=await decide(revoked);
  const renamed=await person('/auth/display-name',{displayName:'Synthetic current reviewer'},signed.cookie);assert.equal(renamed.status,200,renamed.text);
  await check(updated,[reviewer]);
- const revokedState=await snapshot();const deactivated=await person('/auth/operator/status',{operatorId:reviewer.id,status:'inactive'});assert.equal(deactivated.status,200,deactivated.text);
+ const revokedState=await snapshot();
+ await h.post('data'+'/'+'erase',{operator_id:reviewer.id,confirm:'ERASE'},h.owner,409);
+ assert.deepEqual(await snapshot(),revokedState,'an active reviewer cannot be erased or lose attribution');
+ const deactivated=await person('/auth/operator/status',{operatorId:reviewer.id,status:'inactive'});assert.equal(deactivated.status,200,deactivated.text);
  const revokedResponse=await person('/agents/api/approvals/'+revoked.approval.id+'/approve',revokedDecision,signed.cookie);
  assert.equal(revokedResponse.status,401);assert.deepEqual(await snapshot(),revokedState,'a revoked reviewer cannot mutate a draft');
  await h.post('tokens/'+credential.id+'/revoke');
@@ -141,6 +144,40 @@ export async function nativeAttributionJourney(h,{inspect=async()=>{},restore}={
   assert.deepEqual((await receiving.get('workflows/'+created.id)).prepared_by,current.prepared_by);
   await inspect({stage:'restored',h:receiving,workflow:updated,native:received,agent,sponsor,reviewer});
  }
+ // Erasure must reach the retained reviewer snapshots, not just audit actors.
+ const beforeErasure=(await h.get('audit')).filter(row=>rows.some(saved=>saved.id===row.id));
+ await assert.rejects(h.db.prepare("UPDATE crank_audit SET detail_json=json_set(detail_json,'$.agent_door.approvers[0].name',?) WHERE id=?").bind('Unverified replacement',beforeErasure[0].id).run(),/crank_audit_append_only/,'reviewer snapshots remain immutable outside guarded erasure');
+ const erased=await h.post('data'+'/'+'erase',{operator_id:reviewer.id,confirm:'ERASE'});
+ const removed={id:erased.label,name:'Removed person'};
+ const checkErased=async receiving=>{
+  for(const workflow of [updated,copy]) {
+   const retained=await receiving.get('workflows/'+workflow.id);
+   assert.deepEqual(retained.prepared_by.approvers,[removed],'operator erasure anonymizes the independently verified reviewer');
+   assert.deepEqual(retained.prepared_by.agent,agent);
+   assert.deepEqual(retained.prepared_by.for,sponsor);
+   assert.ok(retained.preparations.filter(row=>row.prepared_by?.approvers?.length).every(row=>JSON.stringify(row.prepared_by.approvers)===JSON.stringify([removed])));
+   assert.ok(retained.drafts.filter(row=>row.agent_door?.approvers?.length).every(row=>JSON.stringify(row.agent_door.approvers)===JSON.stringify([removed])));
+  }
+  const audit=await receiving.get('audit');
+  const activity=await receiving.send('/agents/api/audit',undefined,receiving.owner);
+  assert.equal(activity.status,200,activity.text);assert.equal(activity.value.differs_from_policy,0,'anonymizing reviewer references preserves historical policy decisions');
+  assert.deepEqual(audit.filter(row=>beforeErasure.some(saved=>saved.id===row.id)).map(({detail,...row})=>row),beforeErasure.map(({detail,...row})=>row),'erasure preserves action chronology and unrelated attribution');
+  const exported=await receiving.send('/api/crank/audit/export',undefined,receiving.owner);
+  assert.equal(exported.status,200,exported.text);
+  const portable=await archive(receiving);
+  for(const text of [JSON.stringify(audit),activity.text,exported.text,portable])for(const value of [reviewer.id,reviewer.name,'Synthetic current reviewer',email])assert.ok(!text.includes(value),'erased reviewer identity is absent from history and exports');
+  return portable;
+ };
+ await person('/auth/session',undefined,signed.cookie).then(response=>assert.equal(response.status,401));
+ const erasedArchive=await checkErased(h);
+ await h.restart();await checkErased(h);
+ if(restore) {
+  const receiving=await restore(erasedArchive,{older:exported});
+  await receiving.restart();await receiving.tick();await checkErased(receiving);
+  assert.deepEqual((await receiving.get('workflow-runs')).runs,[]);
+  await inspect({stage:'erased',h:receiving,workflow:updated,native:await receiving.get('workflows/'+updated.id),agent,sponsor,reviewer:removed});
+ }
+ console.log('PROBE DATA-002 reviewer erasure: approve draft, deactivate and erase reviewer -> anonymized workflow history and exports across restart and inactive restore');
  assert.deepEqual((await h.get('workflow-runs')).runs,[],'preparation never publishes or executes a workflow');
  return {workflow:updated,copy,agent,sponsor,reviewer};
 }
