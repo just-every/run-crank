@@ -143,4 +143,11 @@ Native-session/runtime evidence: https://github.com/runeditrun/base/tree/fc0e104
 CONTRACT.md is the source of acceptance text and status. After editing it, run
 `node src/base/contract-docs.mjs write`, then `node src/base/contract-docs.mjs check`.
 These commands regenerate ACCEPTANCE.md, docs/CLAIMS.md and the Status summary.
-Regenerate the edition source lock after the final source and documentation edit.
+Verify checks the edition source lock with the pinned installed package. After the
+final source and documentation edit, stage any new source files, then regenerate
+and check with the same tool:
+
+```sh
+node node_modules/@runeditrun/rer/edition-authoring/cli.mjs lock
+node node_modules/@runeditrun/rer/edition-authoring/cli.mjs check
+```

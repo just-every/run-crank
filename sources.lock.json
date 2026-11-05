@@ -6,7 +6,7 @@
   "toolchain": {
     "id": "runeditrun/edition-authoring",
     "version": "1.1.0",
-    "sha256": "3f7b56f3ae1e70588fb35c49e75b639c2360ceed550182b9caf8adc33021abb8"
+    "sha256": "b546ef04830f935ee2493a5bc08ef43a0f7d5905aeb8549fb75670c19890af99"
   },
   "components": [
     {
@@ -152,7 +152,7 @@
       "executable": false
     },
     "AGENTS.md": {
-      "sha256": "798c071d2df25f85a2906fcce545a6e3a9572d73e9930fc79b5c6c370730b620",
+      "sha256": "af1bec3e0aa76a67e3f774398bf209416754aaec7905e7ece6a9ce98675491bb",
       "executable": false
     },
     "base-copies.json": {
