@@ -20,7 +20,7 @@ export async function definitionResourcesJourney({h,c,v,viewer,rpc,adopt,decide,
    steps:[{id:'trim',fn:'text.trim',input:{value:'{{trigger.input.text}}'}}],
    result:{text:'{{steps.trim}}'},
   }},h.owner,201);
-  const connector=await installDefinition(h,{...customDefinition('synthetic-crank-definitions-'+mode),name:hostile},['records.read']);
+  const connector=await installDefinition(h,{...customDefinition('synthetic-crank.definitions-'+mode),name:hostile},['records.read']);
   const connection=await h.post('connections',{app:'http',label:'Synthetic inert binding',auth_kind:'bearer',secret:{token:'synthetic-crank-2'},domains:['custom.example']},h.owner,201);
   const graph={trigger:{type:'manual'},steps:[
    {id:'normalize',type:'subflow',subflow_id:subflow.subflow_id,subflow_version:1,input:{text:hostile}},
@@ -36,9 +36,22 @@ export async function definitionResourcesJourney({h,c,v,viewer,rpc,adopt,decide,
    {path:'custom-connectors/'+connector.id+'/versions/1',scope:connectorScope,kind:'connector_definition',
     revoke:()=>h.post('custom-connectors/'+connector.id+'/versions/1/revoke-scopes',{scopes:['records.read']})},
   ];
-  const original=[];
+  // Every preparation door returns the pinned records it actually touched.
+  // A duplicate reference in another branch still produces one definition link.
+  const repeated=structuredClone(graph);
+  repeated.steps[1].always={steps:[...repeated.steps[1].fallback.steps,{id:'repeat',type:'subflow',subflow_id:subflow.subflow_id,subflow_version:1,input:{text:hostile}}]};
+  delete repeated.steps[1].fallback;
+  const updated=await tool('crank.workflows.update',{workflow_id:workflow.id,draft_digest:workflow.draft_digest,graph:repeated,idempotency_key:randomUUID()});
+  const replies=[created,updated,await tool('crank.workflows.get',{workflow_id:workflow.id}),
+   await tool('crank.workflows.validate',{workflow_id:workflow.id}),
+   await tool('crank.workflows.duplicate',{workflow_id:workflow.id,idempotency_key:randomUUID()})];
+  for(const reply of replies) {
+   const actual=reply.content.filter(link=>link.type==='resource_link'&&/crank:\/\/(subflows|custom-connectors)\//.test(link.uri)).map(link=>link.uri);
+   const expected=await Promise.all(cases.map(async item=>uriFor(item.path,await h.get(item.path))));
+   assert.deepEqual(actual.sort(),expected.sort(),'all workflow preparation and read doors link each exact pinned definition once');
+  }
   for(const item of cases) {
-   const native=await h.get(item.path),uri=uriFor(item.path,native);original.push(uri);
+   const native=await h.get(item.path),uri=uriFor(item.path,native);
    assert.ok(created.content.some(link=>link.type==='resource_link'&&link.uri===uri),'a prepared graph links its pinned definition, including fallback branches');
    const missing=uri.replace(/(subflows|custom-connectors)\/[^/]+/,'$1/synthetic-crank-missing');
    const nativeDenied=await h.send('/api/crank/'+item.path,undefined,viewer.cookie);assert.equal(nativeDenied.status,403);
@@ -77,6 +90,13 @@ export async function definitionResourcesJourney({h,c,v,viewer,rpc,adopt,decide,
    await adopt(h,c,autonomousPolicy());
    setLateBoundary({remaining:2,action:()=>adopt(h,c,{...autonomousPolicy(),rules:[{id:'blocked',class:'sensitive',do:'blocked'}]})});
    const blocked=await rpc(h,c,'resources/read',{uri:freshUri});noContent(blocked);assert.equal(code(blocked),'resource_unavailable');
+   await adopt(h,c,heldPolicy());
+   const pending=await rpc(h,c,'resources/read',{uri:freshUri});assert.equal(code(pending),'approval_required');noContent(pending);
+   if(item.scope===subflowScope)await h.post(item.path+'/review',{definition_digest:current.definition_digest,confirm:'REVIEW_PURE_SUBFLOW'});
+   else await h.post(item.path+'/revoke',{});
+   assert.equal((await decide(h,pending.value.error.data.approval,h.owner)).state,'refused','pending definition approval refuses after native record changes');
+   const replay=await rpc(h,c,'resources/read',{uri:freshUri,requestState:pending.value.error.data.requestState});noContent(replay);
+   if(item.scope===subflowScope)await item.revoke();
    await adopt(h,c,autonomousPolicy());
    receipts.push({path:item.path,scope:item.scope});
   }
@@ -93,14 +113,15 @@ export async function definitionResourcesJourney({h,c,v,viewer,rpc,adopt,decide,
   assert.deepEqual(content(await rpc(h,c,'resources/read',{uri:uriFor(cases[0].path,first)})),first);
   await h.restart();
   const current=await h.get(cases[1].path),uri=uriFor(cases[1].path,current);
-  setLateBoundary({phase:'/digested',remaining:2,action:()=>h.post(cases[1].path+'/revoke',{})});
+  setLateBoundary({phase:'/digested',remaining:2,action:()=>h.post(cases[1].path+'/review',{reviewed_digest:current.digest,disclosure_confirmed:true,granted_scopes:[]})});
   const changed=await rpc(h,c,'resources/read',{uri});noContent(changed);assert.equal(code(changed),'resource_unavailable','a definition changed after final hashing cannot release stale bytes');
   const native=await h.get(cases[1].path);
   assert.deepEqual(content(await rpc(h,c,'resources/read',{uri:uriFor(cases[1].path,native)})),native);
-  assert.equal(native.status,'revoked');
+  assert.equal(native.status,'sandbox');
+  await h.post(cases[1].path+'/revoke',{});
   assert.equal((await h.get(cases[0].path)).active,0,'reads never reactivate a pinned definition');
  }
- report('PROBE BASE-AGENT-003 definition records: prepared workflow with pinned subflow and fallback connector -> fresh-scope links read exact native owner fields; scoped viewer and missing records are indistinguishable; old metadata credentials gain nothing');
+ report('PROBE BASE-AGENT-003 definition records: workflow create, update, duplicate, get and validate with pinned definitions and fallback references -> fresh-scope links read exact native owner fields; scoped viewer and missing records are indistinguishable; old metadata credentials gain nothing');
  report('PROBE BASE-AGENT-003 definition authority: autonomous and held reads -> sensitive policy and untrusted markers; stale approvals, revoked consent, final-read policy changes and mutation attempts disclose no content or extra authority');
  report('PROBE BASE-AGENT-003 definition refresh: added subflow version and changed connector after final digest -> old immutable version stays exact; changed record refuses and fresh workflow links return current state');
  return receipts;

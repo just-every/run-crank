@@ -163,7 +163,9 @@ interim floor; broader delegated definition access remains unfinished.
 
 Workflow creation, updates, duplication, metadata reads and validation link the
 pinned subflow and connector versions they reference, including nested loops,
-branches, fallback and always-run branches. Links are emitted only with the new
+branches, fallback and always-run branches. Repeated references yield one link
+per pinned definition. A draft write links the definitions in its own saved
+graph even if a later edit changes the workflow. Links are emitted only with the new
 scope and current native visibility. Inert drafts with unavailable references
 remain editable without gaining a link. An uninstalled connector proposal has
 no persisted record to link. Existing metadata credentials acquire no scope.

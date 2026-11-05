@@ -75,7 +75,7 @@ export const connectorResourceLink = (value: Record<string, unknown>) => resourc
 /** Link only pinned definitions the current native person can open. Inert
  * drafts may reference absent or inaccessible definitions; a link grants none. */
 export async function workflowDefinitionLinks(env: CrankEnv, ctx: ToolContext, value: Record<string, unknown>) {
-  const links = new Map<string, { uri: string; name: string }>()
+  const links = new Map<string, { uri: string; name: string }>(), visited = new Set<string>()
   const visit = async (steps: Step[]) => {
     for (const step of steps) {
       let path: string | undefined, link: typeof connectorResourceLink | typeof subflowResourceLink | undefined
@@ -87,7 +87,8 @@ export async function workflowDefinitionLinks(env: CrankEnv, ctx: ToolContext, v
         path = '/custom-connectors/' + encodeURIComponent(String(step.connector_id)) + '/versions/' + String(step.connector_version)
         link = connectorResourceLink
       }
-      if (path && link) {
+      if (path && link && !visited.has(path)) {
+        visited.add(path)
         try {
           const linked = await link(record(await nativeCall(env, ctx, path)))
           if (linked) links.set(linked.uri, linked)
@@ -133,7 +134,7 @@ export function crankResources(env: CrankEnv): ResourceDefinition[] {
       path: (match: RegExpExecArray) => '/subflows/' + match[1] + '/versions/' + match[2],
       link: (_match: RegExpExecArray, value: Record<string, unknown>) => subflowResourceLink(value), field: 'definition' },
     { uriTemplate: connectorResourceTemplate, name: 'Reviewed connector definition', scope: connectorResourceScope, kind: 'connector_definition',
-      pattern: /^crank:\/\/custom-connectors\/([A-Za-z0-9_-]+)\/versions\/([1-9][0-9]{0,14})\/revisions\/([a-f0-9]{64})$/,
+      pattern: /^crank:\/\/custom-connectors\/([A-Za-z][A-Za-z0-9_.-]*)\/versions\/([1-9][0-9]{0,14})\/revisions\/([a-f0-9]{64})$/,
       path: (match: RegExpExecArray) => '/custom-connectors/' + match[1] + '/versions/' + match[2],
       link: (_match: RegExpExecArray, value: Record<string, unknown>) => connectorResourceLink(value), field: 'definition' },
     { uriTemplate: connectionResourceTemplate, name: 'Connection record', scope: connectionResourceScope, kind: 'connection_record',

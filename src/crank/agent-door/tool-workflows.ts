@@ -40,7 +40,7 @@ async function view(value: Record<string, unknown>) {
 
 async function linked(env: CrankEnv, ctx: ToolContext, value: Record<string, unknown>) {
   const visible = record(await nativeCall(env, ctx, '/workflows/' + encodeURIComponent(String(value.id))))
-  return { result: await view(value), resources: [await workflowResourceLink(visible), ...await workflowHistoryLinks(env, ctx, visible, record(value.idempotency ?? {}).draft_id as string | undefined), ...await workflowDefinitionLinks(env, ctx, visible)] }
+  return { result: await view(value), resources: [await workflowResourceLink(visible), ...await workflowHistoryLinks(env, ctx, visible, record(value.idempotency ?? {}).draft_id as string | undefined), ...await workflowDefinitionLinks(env, ctx, value)] }
 }
 
 export function workflowTools(env: CrankEnv): ToolDefinition[] {
