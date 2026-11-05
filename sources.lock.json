@@ -172,7 +172,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "e0b1a30d1286e97fac5eba7382d56d702957755362ca0a937ea7dc212e6f9bf3",
+      "sha256": "b8009697e5038c180e818478f9506389796b2c1b453c2179e2c5f17c1e4aa972",
       "executable": false
     },
     "DEMO.md": {
@@ -196,7 +196,7 @@
       "executable": false
     },
     "docs/AGENT-DOOR.md": {
-      "sha256": "0c807071119e9fa399b07301a45ca2d811b44cddb2264395cfb9a7d41d74da53",
+      "sha256": "5ac1a98c059859f8329ea2248b8f0591390edba56c17b73846ec7385080a6d4b",
       "executable": false
     },
     "docs/API.md": {
@@ -2964,7 +2964,7 @@
       "executable": false
     },
     "src/crank/agent-door/native.ts": {
-      "sha256": "a8f465fe1c0b638f08b39e8781cda79901852263ccdb35fd73fba89b29dff65a",
+      "sha256": "dd6991d8d97cf25edbfc31c87e0db3ac5760fb142f41e98d20f42487ba5dfc0f",
       "executable": false
     },
     "src/crank/agent-door/people.ts": {
@@ -3572,7 +3572,7 @@
       "executable": false
     },
     "src/crank/model.ts": {
-      "sha256": "7ea0f4ec2d30386a149c50261f47fa5dba1635185183a53af699bbfe299558e9",
+      "sha256": "814a9acea22d3cf2f6c58fc4dfcdaf3caf58188cc8ac0ced9ccb261ee5711714",
       "executable": false
     },
     "src/crank/n8n-code.ts": {
@@ -6712,7 +6712,7 @@
       "executable": false
     },
     "test-budget.json": {
-      "sha256": "af0729d28f69eeb540fdc0be916b98c9edb53799ef0f05da9aaa00fdd747a9bb",
+      "sha256": "c9e603366d0f7b37820b6bbcbd47ff0373d79bb5814137d15392c16eeca855cb",
       "executable": false
     },
     "tests/accounting-poll-journey.mjs": {
@@ -6724,7 +6724,7 @@
       "executable": false
     },
     "tests/agent-door/attribution-journey.mjs": {
-      "sha256": "6c8239f8d9b0092bb88433480d78601326feeb0f7e45a76c1a567d57b895b5ab",
+      "sha256": "a5a1ceda57d0179473762889d59820a16dd466eb0d4ba2bfe96ba0e95f984efd",
       "executable": false
     },
     "tests/agent-door/fixtures.mjs": {
@@ -7040,7 +7040,7 @@
       "executable": false
     },
     "tests/harness.mjs": {
-      "sha256": "2fda941aa549dddeee79f87941ef2857c166833723ad6e12d9adb988e8ae2b52",
+      "sha256": "ea9924f48d521abb2cfe0350cfa2332206612d32665a3d523d6dd95fdef4d409",
       "executable": false
     },
     "tests/historical.test.mjs": {
@@ -7200,7 +7200,7 @@
       "executable": false
     },
     "tests/platform.test.mjs": {
-      "sha256": "60dd9236d8a6a43d630303727e7859b912f1e6d72728d78f6c21885da81a6eab",
+      "sha256": "4cd631fbac0c799ba6342c433fa812862da230cbde876603daea54026cba50de",
       "executable": false
     },
     "tests/postgres-write-fixture.mjs": {

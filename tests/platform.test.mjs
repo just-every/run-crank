@@ -4,6 +4,7 @@ import {harness} from './harness.mjs';
 import {fakeEdge,jsonResponse,settled} from './kit.mjs';
 import {CrankClient,CrankApiError} from '../sdk/index.js';
 import {archive} from './restore-journey.mjs';
+import {nativeAttributionJourney} from './agent-door/attribution-journey.mjs';
 
 const graph={trigger:{type:'manual'},steps:[{id:'receipt',type:'http',input:{method:'POST',url:'https://platform-ledger.example/receipts',body:{to:'operations@harbor.example',amount:'25.00'}}}]};
 const costs={cost:{components:['orchestration','connectors','models','executors'].map(kind=>({kind,usd_per_run:'0',assumption:'Owner-reviewed synthetic network edge; no paid operations'}))}};
@@ -104,10 +105,32 @@ test('PLATFORM-001: SDK and CORE door draft lifecycle, native granted execution/
  }finally{await h.close()}
 });
 
-test('PLATFORM-001: draft, publication and duplicate retries preserve one native preparation through restart and inactive custody',async()=>{
+test('PLATFORM-001: draft, publication and duplicate preparations preserve retries, reviewer authority and inactive custody',async()=>{
  await draftRetryJourney();
  await duplicateRetryJourney();
+ await reviewerRevocationJourney();
 });
+
+async function reviewerRevocationJourney() {
+ let arrive,release;
+ const reached=new Promise(resolve=>{arrive=resolve}),resume=new Promise(resolve=>{release=resolve});
+ let pause=false;
+ const h=await harness('http://127.0.0.1:9',{nativePreparationBarrier:true,edge:async request=>{
+  if(new URL(request.url).hostname!=='native-preparation.example')return;
+  if(pause){arrive();await resume}
+  return new Response('continue');
+ }});
+ try {
+  await nativeAttributionJourney(h,{duringPreparation:async(approve,deactivate)=>{
+   pause=true;const decision=approve();
+   try {
+    await Promise.race([reached,decision.then(()=>{throw Error('approval completed before the native commit boundary')})]);
+    await deactivate();
+   } finally {release()}
+   return decision;
+  }});
+ } finally {release();await h.close()}
+}
 
 async function draftRetryJourney() {
  const h=await harness('http://127.0.0.1:9');let restored;

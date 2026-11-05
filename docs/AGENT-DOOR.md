@@ -165,7 +165,11 @@ an agent argument cannot select an approver. The native workflow response's
 archive restoration. The editor shows the preparer, sponsor and actual human
 approver for each preparation. Autonomous and older records without approval
 evidence show no human approval; preparation approval grants no publication or
-execution authority. Historical names render as escaped text.
+execution authority. Historical names render as escaped text. Native admission
+also binds each verified reviewer's current operator generation. The same native
+transaction fence checks that generation and active status before committing a
+preparation, so revocation during an in-flight decision changes no draft or
+native preparation audit. This does not change retained historical attribution.
 
 The installed native editor journey in
 `tests/agent-door/attribution-browser.mjs` keeps the existing construction proof
