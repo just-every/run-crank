@@ -172,7 +172,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "4d770dc6967b9d8c8deb1046af04a5b2e077b6f91fc59190e83cf04060888435",
+      "sha256": "6bf2effc22793aac50842b08d4b9c5d7c6837cf1da8a4a1a93630f23e63d20c2",
       "executable": false
     },
     "DEMO.md": {
@@ -217,6 +217,14 @@
     },
     "docs/CLAIMS.md": {
       "sha256": "60c8eae29017e0b49dadeb0ed59ae203a2d2e890fdd28fb643bd36a880afb2d8",
+      "executable": false
+    },
+    "docs/contract/CONN-021-rubric.md": {
+      "sha256": "df32d3d3689354a5a3d70daff1656893fe93a2704c678a3e3ec7ff3eb185d2ed",
+      "executable": false
+    },
+    "docs/contract/CONN-022-rubric.md": {
+      "sha256": "3ebb8fff7947c035549bec738ac19e4143704675a97582d8214a620ce7428e4a",
       "executable": false
     },
     "docs/DATA-FLOWS.md": {
@@ -2025,6 +2033,10 @@
     },
     "rer-setup.json": {
       "sha256": "7b732167c116658045bb28764772f976f91de884269987b24d3df1ac5459cf58",
+      "executable": false
+    },
+    "RULINGS.md": {
+      "sha256": "88d2d24398c259b7ebb9b14b364eb07f0657f603ed638fecd86567cc4ed3b81c",
       "executable": false
     },
     "RUN-LOCALLY.md": {
