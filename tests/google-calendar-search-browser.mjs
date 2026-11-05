@@ -40,3 +40,7 @@ async function onScreen({h,w,run}) {
 }
 try{await googleCalendarSearchJourney({onScreen})}finally{await browser.close()}
 console.log('Retained Calendar identities, zoned times and literal results PASS; screens at 1440 and 390');
+
+// One installed read-connector browser entry point retains all existing assertions.
+await import('./gmail-search-browser.mjs');
+await import('./typeform-search-browser.mjs');
