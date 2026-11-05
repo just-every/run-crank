@@ -3164,7 +3164,7 @@
       "executable": false
     },
     "src/crank/connectors/paypal.ts": {
-      "sha256": "bbb97d6a1e771c6577262b4727a6ec3dce07291a294435bab7f23bdeb0d0b0c2",
+      "sha256": "72c93028924f8cf772879265a7b5952e88c62489747a84b012e06995f0801f3b",
       "executable": false
     },
     "src/crank/connectors/rate-limit.ts": {
@@ -7184,7 +7184,7 @@
       "executable": false
     },
     "tests/paypal-search-journey.mjs": {
-      "sha256": "894116236c9682942bec1c93aea0025e5e95d8ee4607883d3013f561e3c6d026",
+      "sha256": "891e796b032ec456272b140760aa5f223085ec3a8c7dc2bc67163eb8433edd57",
       "executable": false
     },
     "tests/platform-browser.mjs": {
