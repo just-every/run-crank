@@ -98,7 +98,9 @@ export const typeformFindResponse: StepType = {
     }, connectionId, policy))
     if (response.status !== 200) throw new StepError([401,403].includes(response.status) ? 'auth' : response.status === 429 ? 'rate_limit' : 'provider', `Typeform lookup refused with status ${response.status}`, { status: response.status })
     await beforeRequest()
-    const result = searchOutcome(step, decode(response.bytes).records as Record<string, unknown>[])
+    const records = decode(response.bytes).records
+    if (!Array.isArray(records) || records.length > 1 || records.some(record => !isObject(record) || record.id !== expected || record.response_id !== expected || record.form_id !== step.form_id)) return malformed('completed response or response ID binding')
+    const result = searchOutcome(step, records as Record<string, unknown>[])
     if ('output' in result && isObject(result.output)) result.output = { ...result.output, freshness: TYPEFORM_FRESHNESS }
     return result
   },
