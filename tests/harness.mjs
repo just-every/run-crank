@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import {AsyncLocalStorage} from 'node:async_hooks';
 import {createServer} from 'node:net';
 import {mkdtemp,readFile,readdir,rm} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
@@ -8,6 +9,9 @@ import {Miniflare,convertV4MiniflareOptions} from 'miniflare';
 import {unstable_splitSqlQuery} from 'wrangler';
 
 export async function freePort() { const s=createServer();await new Promise(r=>s.listen(0,'127.0.0.1',r)); const port=s.address().port; await new Promise(r=>s.close(r));return port; }
+const publicOrigin=new AsyncLocalStorage();
+// Browser journeys supply an already-listening origin, including nested restore harnesses.
+export function withHarnessOrigin(origin,run) { return publicOrigin.run(origin,run); }
 let bundle;
 const bundleOptions={entryPoints:['tests/worker.ts'],bundle:true,write:false,format:'esm',platform:'neutral',conditions:['workerd','worker','browser'],external:['node:*','cloudflare:*'],target:'es2023'};
 async function installedGustoBundle(version) {
@@ -53,7 +57,7 @@ async function appCustodyBarrierBundle() {
 /** `edge` fakes third-party APIs at the network edge: a function from Request to a Response, or undefined to use the real network. */
 export async function harness(target,{emitted=false,edge,mailEdge,quoteCosts=true,bindings={},clock,digestCommitBarrier=false,appCustodyBarrier=false,beforeTeamMigration=false,emailTransport=false}={}) {
   bundle ??= (await build(bundleOptions)).outputFiles[0].text;
-  const port=await freePort(),origin=`http://127.0.0.1:${port}`,directory=await mkdtemp(join(tmpdir(),'crank-tests-'));
+  const origin=publicOrigin.getStore()??`http://127.0.0.1:${await freePort()}`,directory=await mkdtemp(join(tmpdir(),'crank-tests-'));
   const mail=[];
   const emittedModules=emitted?[{type:'ESModule',path:resolve('dist/server/index.js')},...(await readdir('dist/server/assets')).filter(p=>p.endsWith('.js')).map(p=>({type:'ESModule',path:resolve('dist/server/assets',p)}))]:null;
   // Keep URL and Host on the stable public origin across restarts, while workerd
