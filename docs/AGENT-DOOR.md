@@ -158,6 +158,23 @@ and approval/review attribution. Native product audit receives the same
 invocation attribution through a cloned environment. Reading the audit does not
 turn an agent into the approving person or expose credentials.
 
+Native create, update and duplicate preparation audits retain the door's verified
+`ctx.approvers` as separate identity snapshots. The sponsor remains the sponsor;
+an agent argument cannot select an approver. The native workflow response's
+`prepared_by` and `preparations` retain those snapshots across restart and inactive
+archive restoration. The editor shows the preparer, sponsor and actual human
+approver for each preparation. Autonomous and older records without approval
+evidence show no human approval; preparation approval grants no publication or
+execution authority. Historical names render as escaped text.
+
+The installed native editor journey in
+`tests/agent-door/attribution-browser.mjs` keeps the existing construction proof
+and exercises the separate-session approval and refusal paths through
+`tests/agent-door/attribution-journey.mjs`. The shared hosted CORE journey also
+uses the same native preparation projection assertions. This proves the inert
+draft boundary only: provider actions, outside messages, signatures, certificates,
+Undo attribution and broader specialist acts remain unproved.
+
 All four mutating tools require `idempotency_key`. The same agent/key and
 unchanged declared arguments return the retained outcome; changed arguments
 return `idempotency_conflict`. The runtime durably claims the call before

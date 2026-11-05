@@ -104,7 +104,12 @@ test('PLATFORM-001: SDK and CORE door draft lifecycle, native granted execution/
  }finally{await h.close()}
 });
 
-test('PLATFORM-001: concurrent and restarted draft/publication/rollback retries retain identities and audit without changing later state or restoring authority',async()=>{
+test('PLATFORM-001: draft, publication and duplicate retries preserve one native preparation through restart and inactive custody',async()=>{
+ await draftRetryJourney();
+ await duplicateRetryJourney();
+});
+
+async function draftRetryJourney() {
  const h=await harness('http://127.0.0.1:9');let restored;
  try{
   const sdk=client(h), input={name:'Harbor Workshop — durable draft write',graph};
@@ -176,9 +181,9 @@ test('PLATFORM-001: concurrent and restarted draft/publication/rollback retries 
   assert.notEqual(adopted.version.id,first.version.id);assert.equal(adopted.workflow.versions.length,4);
 
  }finally{await restored?.close();await h.close()}
-});
+}
 
-test('PLATFORM-001: lost, concurrent and restarted duplicate requests keep one inert preparation without overwriting later work',async()=>{
+async function duplicateRetryJourney() {
  const edge=fakeEdge();edge.routes.set('platform-ledger.example',({body})=>jsonResponse({id:crypto.randomUUID(),receipt:JSON.parse(body)}));
  const h=await harness('http://127.0.0.1:9',{edge:edge.edge});let restored;
  try{
@@ -235,8 +240,7 @@ test('PLATFORM-001: lost, concurrent and restarted duplicate requests keep one i
   assert.equal((await restored.send(`/api/crank/workflows/${fresh.id}/run`,{},restored.owner)).status,409);
   await restored.restart();await restored.tick();assert.equal(edge.requests.length,1,'receipt-free restoration and fresh duplication stay inactive');
  }finally{await restored?.close();await h.close()}
-});
-
+}
 
 test('Per-client MCP connector tools enforce exact grants, approvals, history, restart and revocation',async()=>{
  const {mcpClientJourney}=await import('./mcp-client-journey.mjs');await mcpClientJourney();

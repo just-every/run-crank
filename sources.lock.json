@@ -172,7 +172,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "aac2d3d2ae3f5062bea791377b189e5eb86834bd3f7a1d043ac176b60e5d43c9",
+      "sha256": "1a28d0fdbc3869331bf6f21622a96deb4c1570e7a5b3c2ecb4bdc220894d512e",
       "executable": false
     },
     "DEMO.md": {
@@ -196,7 +196,7 @@
       "executable": false
     },
     "docs/AGENT-DOOR.md": {
-      "sha256": "7418c518e7505e79eeb56bd768b93e2b422c01c8425c9e87b5d3b11a566c5287",
+      "sha256": "0c807071119e9fa399b07301a45ca2d811b44cddb2264395cfb9a7d41d74da53",
       "executable": false
     },
     "docs/API.md": {
@@ -2956,7 +2956,7 @@
       "executable": false
     },
     "src/crank/agent-door/native.ts": {
-      "sha256": "991ad8ef6e274d78acbfaf97a312d22adb9430b2eb31bdeafb2d1cd1f28c9b23",
+      "sha256": "a8f465fe1c0b638f08b39e8781cda79901852263ccdb35fd73fba89b29dff65a",
       "executable": false
     },
     "src/crank/agent-door/people.ts": {
@@ -3564,7 +3564,7 @@
       "executable": false
     },
     "src/crank/model.ts": {
-      "sha256": "7a89b8e7d6b81b68c047fa758c6ab117b34124317fe00efddb63d93b8f629c46",
+      "sha256": "7ea0f4ec2d30386a149c50261f47fa5dba1635185183a53af699bbfe299558e9",
       "executable": false
     },
     "src/crank/n8n-code.ts": {
@@ -3612,7 +3612,7 @@
       "executable": false
     },
     "src/crank/ops/audit.ts": {
-      "sha256": "ad28789314470c42cd985470f090edd73061cb0a14fdb436e9f9bee7592c763d",
+      "sha256": "06a55d78dc4f5594b33701f425466c2d8b1437985ff2edd80a8e71d812191b72",
       "executable": false
     },
     "src/crank/ops/collect-deadlines.ts": {
@@ -4000,7 +4000,7 @@
       "executable": false
     },
     "src/crank/ui/editor/index.ts": {
-      "sha256": "d79b62d91d8746d50ab929799fe6866847fd7aeee49a5f0c907dcd214d28c9a2",
+      "sha256": "b3b7805d95346b6406189122a3ea8c4d31a5c1ea170af3eca699335859a08801",
       "executable": false
     },
     "src/crank/ui/editor/inspector.ts": {
@@ -4220,7 +4220,7 @@
       "executable": false
     },
     "src/crank/workflows/store.ts": {
-      "sha256": "b44f0efd7565e198be3af76a0aa27fd61d815b29108d12f782fbae2d01ee41cb",
+      "sha256": "4dbbd93f15e40069c4bcbce57edf50208410c8747c20c9047128268cb149e6f5",
       "executable": false
     },
     "src/crank/workflows/subflow-calls.ts": {
@@ -6704,11 +6704,19 @@
       "executable": false
     },
     "test-budget.json": {
-      "sha256": "728eda3c89c2d2d41a4f1591709fb847157d7b9ad3d2ac89a1ebad08d1770ec8",
+      "sha256": "af0729d28f69eeb540fdc0be916b98c9edb53799ef0f05da9aaa00fdd747a9bb",
       "executable": false
     },
     "tests/accounting-poll-journey.mjs": {
       "sha256": "0c09db04c84b104431dfca05ab12604ae51308f7359f368bcb70240329043ac0",
+      "executable": false
+    },
+    "tests/agent-door/attribution-browser.mjs": {
+      "sha256": "dc5f157798a8d0d6cfac3b40d7853d49d352db08b7b658eb2ae4ee992c4b963b",
+      "executable": false
+    },
+    "tests/agent-door/attribution-journey.mjs": {
+      "sha256": "ec12fdc98e53ad6b841e842d4e099ea185d421c6814e89c5b2d223a30a1d4f12",
       "executable": false
     },
     "tests/agent-door/fixtures.mjs": {
@@ -6716,7 +6724,7 @@
       "executable": false
     },
     "tests/agent-door/journey.mjs": {
-      "sha256": "1e12e5184c5a39733d467a7c01509771a2754096022d56c2745564a4ec237998",
+      "sha256": "f81b806fd38c2b8c08b5119108cdee4092b9df012b66d408ac609a996c7957f5",
       "executable": false
     },
     "tests/ai-steps-browser.mjs": {
@@ -7184,7 +7192,7 @@
       "executable": false
     },
     "tests/platform.test.mjs": {
-      "sha256": "e50e8e2cacb0f819c98f8ba8fbd9c5294b1a750ee880c4536a7db767d6b05e2f",
+      "sha256": "60dd9236d8a6a43d630303727e7859b912f1e6d72728d78f6c21885da81a6eab",
       "executable": false
     },
     "tests/postgres-write-fixture.mjs": {
@@ -7396,7 +7404,7 @@
       "executable": false
     },
     "verification.json": {
-      "sha256": "eab798a0a366bbea43e07a026ea256f71913f4b3ed37e8bc270c733a0b9a8ef1",
+      "sha256": "f93406e59cac6492022bf929b5af5bbcdf700954a7c1d4f78c40aefe6c408f7e",
       "executable": false
     },
     "VERIFY-WORKFLOW.md": {

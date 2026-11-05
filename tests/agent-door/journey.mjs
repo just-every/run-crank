@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import attribution from './attribution-journey.mjs';
 
 const code = answer => answer.result?._meta?.['com.runeditrun/error']?.code ?? answer.body?.error?.data?.code;
 const output = answer => { assert.equal(answer.status, 200); assert.ok(!answer.result?.isError); assert.ok(answer.result?.structuredContent); return answer.result.structuredContent; };
@@ -29,6 +30,7 @@ export default async function journey({request, origin, cookie, tool}) {
  assert.equal(native.prepared_by.agent.id, row.agent.id);
  assert.equal(native.prepared_by.for.id, row.sponsor.id);
  assert.equal(native.prepared_by.label, row.agent.name + ' for ' + row.sponsor.name);
+ await attribution({request,origin,cookie,workflow:created,agent:{id:row.agent.id,name:row.agent.name},sponsor:{id:row.sponsor.id,name:row.sponsor.name}});
 
  const conflict = await tool('crank.workflows.create', {...args, name: 'Changed supplier intake'});
  assert.equal(code(conflict), 'idempotency_conflict');

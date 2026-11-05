@@ -95,6 +95,7 @@ export function attributionEnv(env: CrankEnv, ctx: ToolContext): CrankEnv {
   return { ...env, CRANK_AGENT_ATTRIBUTION: Object.freeze({
     agent: Object.freeze({ id: ctx.agent.id, name: ctx.agent.name }),
     for: Object.freeze({ id: ctx.person.id, name: ctx.person.name }), label: ctx.actor.label,
+    approvers: Object.freeze(ctx.approvers.map(person => Object.freeze({ id: person.id, name: person.name }))),
     operation_id: ctx.operationId, ...(ctx.consent ? { consent: ctx.consent } : {}), ...(ctx.clientId ? { client_id: ctx.clientId } : {}),
   }) }
 }

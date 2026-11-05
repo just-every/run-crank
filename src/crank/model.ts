@@ -4,6 +4,8 @@ export interface AgentDoorAttribution {
   readonly agent: { readonly id: string; readonly name: string }
   readonly for: { readonly id: string; readonly name: string }
   readonly label: string
+  /** Signed-in people verified by the policy door, separate from the sponsor. */
+  readonly approvers?: readonly Readonly<{ id: string; name: string }>[]
   readonly operation_id: string
   readonly consent?: string
   readonly client_id?: string

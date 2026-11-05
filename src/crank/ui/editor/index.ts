@@ -2,7 +2,7 @@ import { workflowEstimateView } from '../usage'
 import { validateGraph, type Graph } from '../../engine/graph'
 import { completeGrant } from '../../team/policy'
 import { customGatewayIds } from '../../custom/use-scope'
-import { canonical } from '../../model'
+import { canonical, type AgentDoorAttribution } from '../../model'
 import { action, chip, clock, esc, hidden, personName } from '../document'
 import { renameOf, renamesBetween } from '../failure'
 import { icon } from '../icons'
@@ -32,10 +32,18 @@ function changesPanel(current: Graph, previous: Version, changed: Set<string>, n
 
 /** The agents card: the live version's change in words (with View changes and Undo), what runs on
  * it have done since, and the agent credentials. Crank runs no model; agents are outside programs. */
+function preparationLine(prepared: AgentDoorAttribution) {
+  return `${esc(prepared.label)} prepared this draft. Sponsor: ${esc(prepared.for.name)}. ${prepared.approvers?.length
+    ? `Approved by ${prepared.approvers.map(person => esc(person.name)).join(', ')} for this preparation.`
+    : 'No human approval recorded for this preparation.'}`
+}
+
 function agentCard(d: EditorData, changed: Set<string>, undo: string) {
   const agents = d.tokens.filter(t => t.scope === 'agent'), current = d.current, previous = d.previous
   const prepared = d.workflow.prepared_by
-  const preparation = prepared ? `<p class="agent-line">${esc(prepared.label)} prepared this draft. An owner reviews publication.</p>` : ''
+  const preparation = prepared ? `<p class="agent-line" data-preparation>${preparationLine(prepared)} Publication requires separate authority.</p>` : ''
+  const activity = (d.workflow.preparations ?? []).filter((record: any) => record.prepared_by)
+  const history = activity.length ? `<details class="preparation-activity"><summary>Preparation activity</summary><ul>${activity.map((record: any) => `<li>${clock(record.at)}<p>${preparationLine(record.prepared_by)}</p></li>`).join('')}</ul></details>` : ''
   let change = ''
   if (current && previous) {
     const renames = renamesBetween(previous.graph, current.graph, changed), since = d.runs.filter(r => r.version?.number === current.number)
@@ -45,7 +53,7 @@ function agentCard(d: EditorData, changed: Set<string>, undo: string) {
       ${since.length ? `<p class="agent-since">The latest ${since.length === 1 ? 'run' : `${since.length} runs`} on version ${current.number}: ${counts.map(([n, words]) => `${n} ${words}`).join(', ')}.</p>` : ''}
       <div class="agent-actions"><a class="btn btn-secondary btn-small" href="?changes=1#changes">View changes</a>${undo}</div></div>`
   }
-  return `<section class="panel agent-card" aria-labelledby="agent-title"><h2 id="agent-title">${icon('spark')}Agents</h2>${preparation}${change}<p class="agent-note">Company agents prepare inert drafts under policy. Granted execution keeps its separate credential; an owner publishes.</p><ul class="agent-list">${agents.length ? agents.map(t => `<li>${icon('key')}<span>${esc(t.label)}</span>${chip(t.revoked_at ? 'revoked' : 'active', t.revoked_at ? 'Revoked' : 'Active')}</li>`).join('') : '<li class="muted">No agent credentials yet.</li>'}</ul><a class="agent-link" href="/app/access">Manage agent credentials ${icon('chevron')}</a></section>`
+  return `<section class="panel agent-card" aria-labelledby="agent-title"><h2 id="agent-title">${icon('spark')}Agents</h2>${preparation}${history}${change}<p class="agent-note">Company agents prepare inert drafts under policy. Granted execution keeps its separate credential; an owner publishes.</p><ul class="agent-list">${agents.length ? agents.map(t => `<li>${icon('key')}<span>${esc(t.label)}</span>${chip(t.revoked_at ? 'revoked' : 'active', t.revoked_at ? 'Revoked' : 'Active')}</li>`).join('') : '<li class="muted">No agent credentials yet.</li>'}</ul><a class="agent-link" href="/app/access">Manage agent credentials ${icon('chevron')}</a></section>`
 }
 
 export function editorView(d: EditorData): { content: string; page: Page } {
