@@ -2,8 +2,9 @@ import { createAgentDoor, type Trust } from '../../modules/agent-door/index.ts'
 import { runtimeBindings, type Bindings } from '../../auth.server'
 import { peopleAdapter, localCredentials } from './people'
 import { crankTools } from './tools'
+import { crankResources } from './resources'
 
-export const capabilities = ['tools', 'policy', 'pause', 'audit', 'idempotency'] as const
+export const capabilities = ['tools', 'policy', 'pause', 'audit', 'idempotency', 'resources'] as const
 
 function installationTrust(env: Bindings): Trust | null {
   const issuer = env.RER_OWNER_CLAIM_ISSUER
@@ -21,7 +22,7 @@ export function crankAgentDoor(bindings: Bindings) {
     seed: 'crank', name: 'Crank', specialist: 'Automation operations lead',
     db: env.DB, origin: env.AUTH_ORIGIN, trust: installationTrust(env),
     capabilities: [...capabilities], people: peopleAdapter(env),
-    tools: crankTools(env), resources: [],
+    tools: crankTools(env), resources: crankResources(env),
     paths: ['/api/crank/v1/mcp'],
     localCredentials: request => localCredentials(env, request),
     notTools: [

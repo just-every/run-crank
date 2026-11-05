@@ -1,4 +1,4 @@
-import type { ToolContext } from '../../modules/agent-door/types'
+import type { ResourceContext, ToolContext } from '../../modules/agent-door/types'
 import { ToolRefusal } from '../../modules/agent-door/index.ts'
 import { runtimeBindings } from '../../auth.server'
 import { admitTeamRequest, teamAccess } from '../team/policy'
@@ -97,4 +97,16 @@ export function attributionEnv(env: CrankEnv, ctx: ToolContext): CrankEnv {
     for: Object.freeze({ id: ctx.person.id, name: ctx.person.name }), label: ctx.actor.label,
     operation_id: ctx.operationId, ...(ctx.consent ? { consent: ctx.consent } : {}), ...(ctx.clientId ? { client_id: ctx.clientId } : {}),
   }) }
+}
+
+/** Resource reads retain the admitted principal; they create no native session
+ * and carry no mutation, approval or execution authority. */
+export function resourceToolContext(env: CrankEnv, ctx: ResourceContext): ToolContext {
+  return {
+    ...ctx, scopes: Object.freeze([...ctx.scopes]),
+    operationId: ctx.operationId ?? crypto.randomUUID(), idempotencyKey: null,
+    actor: { agent: ctx.agent, for: ctx.person, label: ctx.agent.name + ' for ' + ctx.person.name },
+    seed: 'crank', origin: runtimeBindings(env).AUTH_ORIGIN, door: 'mcp',
+    approvers: [], now: Date.now, emit: () => {},
+  }
 }

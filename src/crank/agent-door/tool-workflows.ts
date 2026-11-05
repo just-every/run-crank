@@ -3,6 +3,7 @@ import { requirePrepare } from '../access.ts'
 import { canonical, digest, type CrankEnv } from '../model.ts'
 import { validateGraph } from '../engine/graph.ts'
 import { resolveActor } from './native.ts'
+import { workflowResourceLink } from './resources.ts'
 import { arraySchema, nativeCall, nativeGuard, nullableText, objectSchema, pathPart, pick, query, record, standard, textSchema } from './tool-native.ts'
 
 const properties = {
@@ -37,6 +38,11 @@ async function view(value: Record<string, unknown>) {
   }
 }
 
+async function linked(env: CrankEnv, ctx: ToolContext, value: Record<string, unknown>) {
+  const visible = record(await nativeCall(env, ctx, '/workflows/' + encodeURIComponent(String(value.id))))
+  return { result: await view(value), resources: [await workflowResourceLink(visible)] }
+}
+
 export function workflowTools(env: CrankEnv): ToolDefinition[] {
   const source = async (args: Record<string, unknown>, ctx: ToolContext) => ({ kind: 'workflow', id: String((await current(env, args, ctx)).id) })
   const snapshot = async (args: Record<string, unknown>, ctx: ToolContext) => revision(await current(env, args, ctx))
@@ -63,7 +69,7 @@ export function workflowTools(env: CrankEnv): ToolDefinition[] {
       description: 'Read native workflow status, draft digest/revision and step count. Graph values, workflow settings, credentials and hook URLs are withheld.',
       inputSchema: objectSchema(workflowId, ['workflow_id']), outputSchema: workflowSchema, clauses: ['WORK-001', 'WORK-008'],
       target: source, classify: async (args, ctx) => { await current(env, args, ctx); return standard() },
-      run: async (args, ctx) => ({ result: await view(await current(env, args, ctx)) }),
+      run: async (args, ctx) => linked(env, ctx, await current(env, args, ctx)),
     },
     {
       ...base, name: 'crank.workflows.create', title: 'Create workflow draft', scope: 'workflows:prepare', readOnly: false,
@@ -71,7 +77,7 @@ export function workflowTools(env: CrankEnv): ToolDefinition[] {
       inputSchema: objectSchema(draftFields, ['name', 'graph']), outputSchema: workflowSchema, clauses: ['WORK-001', 'WORK-002', 'WORK-003', 'WORK-004', 'WORK-013'],
       classify: classifyDraft,
       summary: async (args, ctx) => { await prepare(ctx); return { target: { name: String(args.name) }, items: ['Create one inert workflow draft'] } },
-      run: async (args, ctx) => ({ result: await view(record(await nativeCall(env, ctx, '/workflows', args))) }),
+      run: async (args, ctx) => linked(env, ctx, record(await nativeCall(env, ctx, '/workflows', args))),
     },
     {
       ...base, name: 'crank.workflows.update', title: 'Save workflow draft', scope: 'workflows:prepare', readOnly: false,
@@ -81,7 +87,7 @@ export function workflowTools(env: CrankEnv): ToolDefinition[] {
       summary: async (args, ctx) => { const value = await current(env, args, ctx); return { target: { id: String(value.id), name: String(args.name ?? value.name) }, items: ['Save one inert workflow draft'] } },
       run: async (args, ctx) => {
         const { workflow_id: _id, ...input } = args
-        return { result: await view(record(await nativeCall(env, ctx, sourcePath(args) + '/draft', input))) }
+        return linked(env, ctx, record(await nativeCall(env, ctx, sourcePath(args) + '/draft', input)))
       },
     },
     {
@@ -90,7 +96,7 @@ export function workflowTools(env: CrankEnv): ToolDefinition[] {
       inputSchema: objectSchema(workflowId, ['workflow_id']), outputSchema: workflowSchema, clauses: ['WORK-001'],
       revisionType: 'string', revision: snapshot, target: source, classify: classifyDraft,
       summary: async (args, ctx) => { const value = await current(env, args, ctx); return { target: { id: String(value.id), name: String(value.name) }, items: ['Create one inert draft copy'] } },
-      run: async (args, ctx) => ({ result: await view(record(await nativeCall(env, ctx, sourcePath(args) + '/duplicate', {}))) }),
+      run: async (args, ctx) => linked(env, ctx, record(await nativeCall(env, ctx, sourcePath(args) + '/duplicate', {}))),
     },
     {
       ...base, name: 'crank.workflows.validate', title: 'Validate saved draft', scope: 'workflows:prepare', readOnly: true,
@@ -100,7 +106,7 @@ export function workflowTools(env: CrankEnv): ToolDefinition[] {
       clauses: ['WORK-002', 'WORK-003', 'WORK-013'], target: source, classify: classifyDraft,
       run: async (args, ctx) => {
         const value = record(await nativeCall(env, ctx, sourcePath(args) + '/validate', {})), declared = record(value.declared)
-        return { result: { ok: true, warnings: (value.warnings as unknown[]).length, steps: (declared.steps as unknown[]).length, connections: (declared.connections as unknown[]).length } }
+        return { result: { ok: true, warnings: (value.warnings as unknown[]).length, steps: (declared.steps as unknown[]).length, connections: (declared.connections as unknown[]).length }, resources: [await workflowResourceLink(await current(env, args, ctx))] }
       },
     },
   ]

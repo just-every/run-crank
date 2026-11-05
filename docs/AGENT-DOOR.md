@@ -9,7 +9,7 @@ the implementation is [src/crank/agent-door](../src/crank/agent-door/index.ts).
 The shared runtime source is adopted from Base commit
 `2135c394939f4a737adabdc8003b0e667b31ac5a`; the corresponding released CLI is
 `0.2.91`. The released runner passes 1,021/1,021 hosted CORE points, including the
-seed native journey. This proves only the declared preparation boundary.
+seed native journey. This historical receipt proves only the former preparation boundary; the new workflow reader has its own native sanity journey.
 
 ## Routes and capability boundary
 
@@ -19,20 +19,60 @@ tokens retain the canonical `/mcp` audience. Protected-resource discovery is at
 `/.well-known/oauth-protected-resource` and
 `/.well-known/oauth-protected-resource/mcp`.
 
-The explicit capability declaration contains only the indivisible CORE duties:
-`tools`, `policy`, `pause`, `audit` and `idempotency`. Optional `resources`,
-`prompts`, `events` and `subscriptions` are undeclared and typed-refused. Their
-discovery lists are empty where the protocol supplies a list; they are not
-advertised as working families. No event-list tool is injected and tool replies
-emit no MCP resource links. A person's approval URL remains part of the policy
-handoff; it does not imply record-resource support.
+The explicit capability declaration contains the CORE duties `tools`, `policy`,
+`pause`, `audit` and `idempotency`, plus one real `resources` family.
+Optional `prompts`, `events` and `subscriptions` remain undeclared and
+typed-refused. No event-list tool is injected.
 
-The surface declares `resources: []`, `escalations: []` and
+The surface declares one workflow URI template, `escalations: []` and
 `spend: { "none": true }`. No paid or provider call is reachable from these
-twelve declared tools. This no-spend boundary comes from the admitted native
-operations; it does not claim provider-spend-cap enforcement. Other native
-Crank routes, execution paths and connectors have broader purposes outside this
-registry.
+twelve tools or the workflow reader. This no-spend boundary comes from the
+admitted native operations; provider-spend-cap enforcement remains unclaimed.
+Other native routes and connectors have broader purposes outside this registry.
+
+## Workflow record resources
+
+`crank://workflows/{id}/revisions/{revision}` names the exact complete native
+workflow presentation. The revision is a SHA-256 over the canonical returned
+record, including draft, history, receiving and restore state. Workflow get,
+create, update, duplicate and validate replies return resource links. Their
+structured results retain the existing metadata projection.
+
+Reading requires the explicit new `workflows:resource-read` scope in a fresh
+Business credential. Neither existing metadata scopes nor owner-issued native
+preparation tokens acquire it. Discovery advertises the new scope; templates
+are visible only to a credential carrying it. A link grants no authority.
+
+The reader calls the same native workflow route that supplies the editor,
+through the current sponsoring person, role and complete product grant. It
+returns that route's fields without adding file bytes, provider reads, or
+execution authority. Missing and inaccessible records return the same
+`resource_unavailable` response. Old links refuse after any visible record
+change; they never serve an archived revision.
+
+Full workflow records can contain arbitrary customer and imported draft values,
+history and receiving details, even when `data_class` says `none`. The server
+therefore classifies the actual full projection conservatively as `sensitive`,
+with one record and kind `workflow_record`, independently of its declared data
+class. The policy must explicitly answer this newly reachable class. Under a
+held policy, content stays withheld until the native person approves the exact
+read. Classification proves neither provider consent nor permission to dispatch.
+
+Every returned record carries `com.runeditrun/untrusted: true` on its content.
+The reader rechecks native authority around the awaited read and retains the
+selected authority between classification and execution. The shared runtime
+also compares the full classified bytes with the final read and fences consent.
+Record, role, scope or consent changes cannot release stale content. Restored
+records retain their native inactive state; reading does not adopt or activate
+them.
+
+`tests/agent-door/resources-journey.mjs` exercises production MCP and native
+person doors under autonomous and held policies: owner and scoped viewer field
+parity, exact write readback, missing and cross-sponsor scope equivalence,
+unanswered sensitive policy, old metadata credentials, stale revisions and
+approvals, hostile text, record and authority changes during classification,
+revoked consent, and inactive restoration. The existing platform sanity journey
+and `tests/agent-door/journey.mjs` both invoke it without a new registration.
 
 ## The twelve declared tools
 
@@ -140,7 +180,7 @@ The server classifies the declared operation. Agent-provided confirmation,
 policy-class labels or instructions supply no authority. Policy can select
 autonomous execution, execution with review, named-person approval, or blocking
 for the same `standard` operation. Unanswered classes refuse. Across carried
-classes the strictest result wins; this slice carries only `standard`.
+classes the strictest result wins; metadata and preparation carry `standard`; full workflow reads carry `sensitive`.
 
 Approval retains the exact server summary and SHA-256, target and revision.
 The named person decides through the person door with the saved revision and
@@ -179,10 +219,10 @@ through SURFACE-013. It is a target, not evidence of implemented behavior.
 | --- | --- | --- |
 | Tools | 224 exact tool names | 12 exact-name overlaps; 212 draft names absent. |
 | Proposal mapping | `crank.custom.propose`, citing CONN-020 | Same name; native OpenAPI preparation cites CONN-011 and CONN-020. |
-| Record resources | 34 URI templates | 0; no record-resource links. |
-| Classes | All 11 fleet classes, including computed combinations | Only `standard`; ten class families and the draft's computed-class pairs remain outside this declaration. |
+| Record resources | 34 URI templates | One native workflow template with exact-revision links from the workflow preparation tools and metadata get. |
+| Classes | All 11 fleet classes, including computed combinations | `standard` metadata and preparation, plus `sensitive` full workflow reads; other classes and computed combinations remain outside this declaration. |
 | Specialist guidance | Six specialist prompts, typed events and handoffs | No prompt/event/subscription capability. |
-| Journey | SURFACE-013's seeded business week under All-autonomous and Held policies | 13 declared steps covering these 12 tools, with a second workflow read; preparation and metadata only. |
+| Journey | SURFACE-013's seeded business week under All-autonomous and Held policies | 13 declared steps covering these 12 tools, with a second workflow read; preparation, metadata and separately scoped workflow records. |
 
 The current journey creates, lists, reads, updates, rereads, duplicates and
 validates a draft, reads run/connection/catalogue metadata, reports coverage and
@@ -192,6 +232,8 @@ test and publish the full lead-to-invoice service, dispatch paid provider work,
 reconcile a lost external response, repair a live mapping or complete recurring
 overdue-invoice contact. This bounded journey passes under autonomous and held policy, with the native
 attribution, changed-key conflict, stale revision and local Pause checks.
+
+Every other primary record type, broader tool links, file-byte resources and grant byte-budget enforcement, provider-content reads, remaining resource-refresh conformance and the full specialist and provider journeys remain required.
 
 Full native provider dispatch, publications and active-service controls, grants
 and authority changes, client MCP administration and the other native tools
@@ -210,7 +252,7 @@ gap against SURFACE-001's shared-registry requirement. Aliasing the old generic
 `/api/crank/v1/mcp` path to this door does not close that gap or establish
 native/provider classification parity through every wrapper.
 
-This document records the implemented boundary. Integrated CORE conformance passes 1,021/1,021 points on rer 0.2.91. Native
+This document records the implemented boundary. The extended hosted CORE journey passes 1,117/1,117 points on rer 0.2.91, including classified workflow links and the native resource sanity journey. Native
 Agents and pending/executed approval pages have browser proof at 1440 and 390.
 The complete ct registry, native UI parity for its omitted jobs and the seeded
 specialist week remain acceptance work. No optional capability is promoted.
