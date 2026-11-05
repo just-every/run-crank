@@ -731,9 +731,36 @@ Teams/Nook, failure calendar escalation/resolution, compensation and the full
 failure-route acceptance remain unfinished. This slice does not claim EXEC-003 DONE.
 
 
+### Connection responsibility (CONN-002)
+
+A native installation owner reads `GET /api/crank/connections/:id/ownership`,
+then submits `POST /api/crank/connections/:id/transfer` with `new_owner_id`,
+`revision`, `recipient_version` and `grant_revision` from that current response.
+The recipient must be an active native person with one explicit admin grant
+covering the connection. The transaction rechecks the connection, person and
+grant revisions. Separate grants cannot supply a missing management permission.
+Connections expose separate `owner_id` and immutable `created_by` provenance.
+
+Transfer does not change any independent grant, environment, scope or immutable
+workflow binding. It clears the old credential and pending consent links and
+leaves the connection needing fresh consent. The current responsible person,
+using a native session and the pinned management grant, may rotate or reconnect
+at `/connections/:id/rotate`, revoke at `/connections/:id/revoke` and read its
+history. Only the installation owner configures OAuth apps, connection purpose
+or a fresh request for broader scopes. OAuth reconnect uses the existing
+`/oauth/start` with `connection_id`; its callback is fenced to that connection
+revision. This supplies no provider-verified account identity.
+
+A previous owner retains only independently granted powers. Replacing a grant
+or deactivating the responsible person stops management and credential use;
+regrant alone cannot revive them. Erasure clears live responsibility and
+anonymizes transfer attribution. Archives retain portable history with secrets
+and team grants absent, and responsibility awaits receiving-owner adoption.
+The existing Connections screen offers transfer and fresh credential controls.
+
 ### Automatic OAuth renewal history (CONN-002)
 
-`GET /api/crank/connections/:id/history` is an owner-only connection audit.
+`GET /api/crank/connections/:id/history` is available to the native installation owner and the currently authorized responsible connection owner.
 Public connection state includes `previous_expires_at`, `renewed_at` and
 `expires_at`; the `connection.token_renewed` audit records the automatic actor,
 previous/new expiry and granted scope names, never credential values. Scheduled

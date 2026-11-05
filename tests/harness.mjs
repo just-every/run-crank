@@ -25,6 +25,15 @@ async function digestBarrierBundle() {
     });
   }}]})).outputFiles[0].text;
 }
+async function connectionBarrierBundle() {
+  return (await build({...bundleOptions,plugins:[{name:'connection-lifecycle-commit-barrier',setup(plugin){
+    plugin.onLoad({filter:/connections[\\/]ownership\.ts$/},async({path})=>{
+      const contents=await readFile(path,'utf8'),boundary='    return await guardedBatch(env, actor,';
+      assert.equal(contents.split(boundary).length,2,'one native management commit boundary');
+      return {contents:contents.replace(boundary,"    await fetch('https://connection-commit.example/'+actor.id);\n"+boundary),loader:'ts'};
+    });
+  }}]})).outputFiles[0].text;
+}
 async function pickerBarrierBundle() {
   return (await build({...bundleOptions,plugins:[{name:'picker-selection-commit-barrier',setup(plugin){
     plugin.onLoad({filter:/workflows[\/]store\.ts$/},async({path})=>{
@@ -119,6 +128,6 @@ export async function harness(target,{emitted=false,edge,mailEdge,quoteCosts=tru
     const run=async(f,event='ticket-'+crypto.randomUUID(),input={customer:'Harbour Workshop',task:'Book a callback'})=>post('flows/'+f.id+'/runs',{event_id:event,input},owner,201);
     // The Worker's per-minute Cron pass, at a chosen scheduled time.
     const tick=async(time=Date.now())=>{const worker=await mf.getWorker();await worker.scheduled({scheduledTime:new Date(time),cron:'* * * * *'})};
-    return {get mf(){return mf},get db(){return db},mail,origin,owner,independentStarter,send,post,get,flow,run,tick,async migrateTeam(){await db.batch(unstable_splitSqlQuery(await readFile('migrations/core/0080_team_grants.sql','utf8')).map(sql=>db.prepare(sql)))},async restart({gustoDefinitionVersion,clock:nextClock,pickerCommitBarrier=false}={}){if(pickerCommitBarrier){assert.equal(emitted,false);currentBundle=await pickerBarrierBundle()}if(nextClock!==undefined){assert.equal(emitted,false);assert.ok(Number.isFinite(Date.parse(nextClock)));currentBundle=atClock(selectedBundle,nextClock)}if(gustoDefinitionVersion!==undefined){assert.equal(emitted,false);currentBundle=await installedGustoBundle(gustoDefinitionVersion)}await mf.dispose();mf=new Miniflare(optionsFor(currentBundle));await mf.ready;db=await mf.getD1Database('DB')},async close(){await mf.dispose();await rm(directory,{recursive:true,force:true})}};
+    return {get mf(){return mf},get db(){return db},mail,origin,owner,independentStarter,send,post,get,flow,run,tick,async migrateTeam(){await db.batch(unstable_splitSqlQuery(await readFile('migrations/core/0080_team_grants.sql','utf8')).map(sql=>db.prepare(sql)))},async restart({gustoDefinitionVersion,clock:nextClock,pickerCommitBarrier=false,connectionCommitBarrier=false}={}){if(pickerCommitBarrier){assert.equal(emitted,false);currentBundle=await pickerBarrierBundle()}if(connectionCommitBarrier){assert.equal(emitted,false);currentBundle=await connectionBarrierBundle()}if(nextClock!==undefined){assert.equal(emitted,false);assert.ok(Number.isFinite(Date.parse(nextClock)));currentBundle=atClock(selectedBundle,nextClock)}if(gustoDefinitionVersion!==undefined){assert.equal(emitted,false);currentBundle=await installedGustoBundle(gustoDefinitionVersion)}await mf.dispose();mf=new Miniflare(optionsFor(currentBundle));await mf.ready;db=await mf.getD1Database('DB')},async close(){await mf.dispose();await rm(directory,{recursive:true,force:true})}};
   } catch(error){await mf.dispose();await rm(directory,{recursive:true,force:true});throw error}
 }

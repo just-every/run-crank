@@ -47,7 +47,7 @@ export const importSafety = {
   crank_usage_allowances: { active: [0] },
   crank_usage_notices: { active: [0] },
   crank_workflows: { status: ['paused'], owner_id: [RESTORED_OWNER] },
-  crank_connections: { status: ['needs_reconnect'] },
+  crank_connections: { status: ['needs_reconnect'], owner_id: [RESTORED_OWNER], owner_version: [0], owner_team_revision: [null] },
   crank_wf_runs: { status: ['paused'], error_json: unfinished.map(status => runFence(status)), lease_id: [null], lease_expires_at: [null], continuation_authority: [0] },
   crank_wf_steps: { status: ['uncertain'], error_json: [uncertainWrite] },
   crank_runs: { state: ['failed'], outcome_json: [deliveryFence(null)], replay_count: [1], lease_id: [null], lease_expires_at: [null] },
@@ -79,7 +79,7 @@ export function importRow(table, row) {
   if (table === 'crank_usage_budgets' || table === 'crank_usage_allowances' || table === 'crank_usage_notices') return { ...row, active: 0 };
   if (table === 'crank_flows') return { ...row, status: 'draft' };
   if (table === 'crank_workflows') return { ...row, status: row.status === 'draft' ? 'draft' : 'paused', owner_id: RESTORED_OWNER };
-  if (table === 'crank_connections') return { ...row, status: row.status === 'revoked' ? 'revoked' : 'needs_reconnect' };
+  if (table === 'crank_connections') return { ...row, status: row.status === 'revoked' ? 'revoked' : 'needs_reconnect', owner_id: RESTORED_OWNER, owner_version: 0, owner_team_revision: null };
   if (table === 'crank_wf_runs') return { ...row, lease_id: null, lease_expires_at: null, continuation_authority: 0,
     ...(unfinished.includes(row.status) && !fenced(row.error_json, 'category', 'restore_fence') ? { status: 'paused', error_json: runFence(row.status) } : {}) };
   if (table === 'crank_wf_steps' && remoteWrite(row)) return { ...row, status: 'uncertain', error_json: uncertainWrite };

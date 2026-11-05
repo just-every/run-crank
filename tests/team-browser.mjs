@@ -10,6 +10,7 @@ import { chromium, expect } from '@playwright/test';
 const evidence = process.env.CRANK_EVIDENCE;
 assert.ok(evidence, 'Set CRANK_EVIDENCE');
 await mkdir(evidence, { recursive: true });
+const {connectionTransferBrowser}=await import('./connection-transfer-browser.mjs');await connectionTransferBrowser();
 const privateDir = await mkdtemp(join(tmpdir(), 'crank-team-'));
 const devLog = join(privateDir, 'dev.log'), children = [], report = [];
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
