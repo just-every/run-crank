@@ -3620,7 +3620,7 @@
       "executable": false
     },
     "src/crank/ops/approval-deadlines.ts": {
-      "sha256": "88b3c5d9ed0b4eb103a8ed4de02b635fd89b62c01e2d4ad0846b5d6e4d603013",
+      "sha256": "717d265f92e21df14d8983a6cb5c011e12f57f7ee800c43f44d38bc7869f95d9",
       "executable": false
     },
     "src/crank/ops/audit.ts": {
@@ -3696,7 +3696,7 @@
       "executable": false
     },
     "src/crank/ops/run-notices.ts": {
-      "sha256": "406846067bbf87d19db8f953e55cf2dd95f6bc68088a123698913bd4dcbed73d",
+      "sha256": "15972b5aad7d89ecad37092f444d98a1bd1e35af3eca1b6a228e9be295ddc8eb",
       "executable": false
     },
     "src/crank/ops/scheduler.ts": {
@@ -4216,7 +4216,7 @@
       "executable": false
     },
     "src/crank/workflows/runs.ts": {
-      "sha256": "9ec4d673ef71d898027344492b408edbd0f5e09c367298fa6b38dee8f3912e3d",
+      "sha256": "2ad13e407db67a366d8749614ccd26ca1fb66ffc5881b5119e870f9bf2ac57ea",
       "executable": false
     },
     "src/crank/workflows/sample-schema.ts": {
@@ -6772,7 +6772,7 @@
       "executable": false
     },
     "tests/approval-deadlines-journey.mjs": {
-      "sha256": "95e7d052d12fff8bc186ca9dd4ad8fc02e9fd8c29b7e0b4eea158a8585ea088f",
+      "sha256": "3705268348afe958780569be046eda5c7e7acc5aba8435cc57a6b5494f363962",
       "executable": false
     },
     "tests/authoring-browser.mjs": {

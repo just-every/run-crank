@@ -79,6 +79,7 @@ async function dispatch(env: CrankEnv, delivery: Delivery, time: number): Promis
     const sender = operatorMail(env)
     if (!sender) return { state: 'retry', failure: 'mail_not_configured' }
     try {
+      if (delivery.kind === 'approval_reminder' && !await approvalReminderCurrent(env, delivery.notice_key, time)) return {state: 'cancelled', failure: 'approval_no_longer_current'}
       const result = await sender.send({ deliveryId: delivery.id, from: env.MAIL_FROM ?? 'Crank <crank@localhost.invalid>', to: [owner.email], subject: delivery.subject, text: body, html: `<p>${body.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!)).replace(/\n/g, '<br>')}</p>`, headers: { 'Auto-Submitted': 'auto-generated' } })
       if (result.status === 'accepted') return { state: 'delivered', receipt: result.providerMessageId }
       if (result.status === 'development') return { state: 'suppressed', failure: 'development_mail_not_sent' }
@@ -94,6 +95,7 @@ async function dispatch(env: CrankEnv, delivery: Delivery, time: number): Promis
     if (row.app !== 'slack' || row.purpose !== 'production' || !JSON.parse(row.scopes_json).includes('chat:write')) return { state: 'cancelled', failure: 'slack_consent_missing' }
   } catch { return { state: 'cancelled', failure: 'slack_reconnect_required' } }
   try {
+    if (delivery.kind === 'approval_reminder' && (!await approvalReminderCurrent(env, delivery.notice_key, time) || !await stmt(env, 'SELECT 1 FROM crank_notice_routes WHERE workflow_id=? AND revision=? AND enabled=1', delivery.workflow_id, delivery.route_revision).first())) return {state: 'cancelled', failure: 'approval_or_slack_consent_changed'}
     const response = await boundedFetch(url.href, { method: 'POST', headers, body: JSON.stringify({ channel: route.channel_id, text: body, unfurl_links: false, unfurl_media: false }), timeoutMs: 15000, maxBytes: 65536 })
     if (response.status === 429) return { state: 'retry', failure: 'slack_rate_limited' }
     if (response.status === 401 || response.status === 403) return { state: 'cancelled', failure: 'slack_reconnect_required' }

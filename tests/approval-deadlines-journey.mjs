@@ -95,10 +95,31 @@ export async function approvalDeadlinesJourney() {
 
     const paused = await startRun(h,workflow,{}); await h.post(`workflows/${workflow.id}/pause`);
     await h.tick(Date.parse(monday));
-    assert.ok((await detail(paused)).approval_deadlines.every(d=>d.state==='cancelled'));
+    assert.equal((await detail(paused)).approval_deadlines.find(d=>d.kind==='reminder').state,'cancelled');
+    assert.equal((await detail(paused)).waits[0].resolved_at,null);
     const oldCount = h.mail.filter(m=>m.subject.includes('Approval reminder')).length;
     await h.post(`workflows/${workflow.id}/resume`); await h.tick(Date.parse(tuesday));
     assert.equal(h.mail.filter(m=>m.subject.includes('Approval reminder')).length,oldCount,'pause cancellation never rearms old occurrences');
+    assert.deepEqual(stepOf(await detail(paused),'route').output.matched,['expired'],'resuming after the deadline follows the timeout route');
+    const versioned = await publish(h,'Pinned review version',graph(review));
+    const oldVersion = await startRun(h,versioned,{});
+    await h.post(`workflows/${versioned.id}/draft`,{graph:graph({...review,input:{amount:'30.00'},timeout:{amount:5,unit:'business_days'}})});
+    assert.deepEqual((await detail(oldVersion)).waits[0].proposal,{amount:'120.00'},'draft edits do not change a frozen proposal');
+    await h.post(`workflows/${versioned.id}/publish`,{},h.owner,201);
+    await h.tick(Date.parse(monday));
+    assert.equal((await detail(oldVersion)).waits[0].expires_at,tuesday,'an explicitly authorized old version retains its original deadline');
+    assert.equal((await detail(oldVersion)).approval_deadlines.find(d=>d.kind==='reminder').state,'notified');
+    await h.tick(Date.parse(tuesday));
+    assert.deepEqual(stepOf(await detail(oldVersion),'route').output.matched,['expired']);
+    const revokedVersion = await startRun(h,versioned,{});
+    await h.post(`workflows/${versioned.id}/unpublish`);await h.tick(Date.parse(monday));
+    assert.equal((await detail(revokedVersion)).approval_deadlines.find(d=>d.kind==='reminder').state,'cancelled','unpublished authority cancels old occurrences');
+    assert.equal((await h.get('notices/deliveries?run_id='+revokedVersion.id)).filter(n=>n.kind==='approval_reminder').length,0);
+    // A nested approval timeout stops its parent rather than falling through as success.
+    const nested = await publish(h,'Nested timeout',{trigger:{type:'manual'},steps:[{id:'items',type:'loop',input:{items:[1]},max_items:1,concurrency:1,order:'input',empty:'allow',item_errors:'continue',result:{done:true},steps:[{...review,on_timeout:'stop'}]},{id:'must_not_run',type:'map',input:{wrong:true}}]});
+    const nestedRun = await startRun(h,nested,{});
+    await h.tick(Date.parse(nestedRun.waits[0].expires_at));
+    const nestedDone=await detail(nestedRun);assert.equal(nestedDone.status,'cancelled');assert.equal(nestedDone.error.category,'timeout');assert.equal(stepOf(nestedDone,'must_not_run'),undefined);
     const portableRun = await startRun(h,workflow,{}), exported = await archive(h);
     const saved = portable(exported); assert.ok(saved.length>0); assert.ok(saved.every(d=>d.active===0));
     restored = await harness('http://127.0.0.1:9',{edge:fake.edge,clock:friday});

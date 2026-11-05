@@ -12,12 +12,13 @@ type Deadline = { id: string; run_id: string; path: string; version_id: string; 
 const binding = `d.active=1 AND EXISTS(SELECT 1 FROM crank_waits w JOIN crank_wf_runs r ON r.id=w.run_id
   JOIN crank_workflows f ON f.id=r.workflow_id JOIN oa_operators o ON o.id=f.owner_id
   WHERE w.run_id=d.run_id AND w.path=d.path AND w.kind='approval' AND w.resolved_at IS NULL
-  AND w.proposal_digest=d.proposal_digest AND r.version_id=d.version_id AND f.published_version_id=d.version_id
-  AND r.mode='production' AND r.status IN ('queued','running','waiting','awaiting_approval') AND f.status='published'
+  AND w.proposal_digest=d.proposal_digest AND r.version_id=d.version_id AND (f.published_version_id=d.version_id OR (r.continuation_authority&2)!=0)
+  AND r.mode='production' AND (r.status IN ('queued','running','waiting','awaiting_approval') OR d.kind='timeout' AND r.status='paused')
+  AND (f.status='published' OR d.kind='timeout' AND f.status='paused')
   AND o.id=d.owner_id AND o.version=d.owner_version AND o.status='active' AND o.role='owner'
   AND (d.kind='timeout' OR r.created_by!=o.id)
   AND COALESCE(json_extract(r.error_json,'$.category'),'')!='restore_fence')`
-const current = `${binding} AND EXISTS(SELECT 1 FROM crank_wf_runs r WHERE r.id=d.run_id AND r.status='awaiting_approval')`
+const current = `${binding} AND EXISTS(SELECT 1 FROM crank_wf_runs r JOIN crank_workflows f ON f.id=r.workflow_id WHERE r.id=d.run_id AND r.status='awaiting_approval' AND f.status='published')`
 
 export async function deadlineStatements(env: CrankEnv, run: RunRow, path: string, spec: WaitSpec, createdAt: string): Promise<D1PreparedStatement[]> {
   if (!spec.deadlines?.length || run.mode === 'test') return []
@@ -63,7 +64,7 @@ export async function approvalDeadlinePass(env: CrankEnv, time: number, runId?: 
     ORDER BY CASE d.kind WHEN 'timeout' THEN 0 ELSE 1 END,d.due_at,d.id LIMIT 200`, at, runId ?? null, runId ?? null).all<Deadline>()
   for (const row of due.results) {
     try { await assertDispatchAuthority(env, row.run_id) } catch {
-      await stmt(env, "UPDATE crank_approval_deadlines SET state='cancelled' WHERE id=? AND state='pending'", row.id).run()
+      if (row.kind === 'reminder') await stmt(env, "UPDATE crank_approval_deadlines SET state='cancelled' WHERE id=? AND state='pending'", row.id).run()
       continue
     }
     const live = fence(env, row)
