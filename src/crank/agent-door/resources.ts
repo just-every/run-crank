@@ -11,6 +11,11 @@ export const connectionResourceScope = 'connections:resource-read'
 export const runResourceTemplate = 'crank://workflow-runs/{id}/revisions/{revision}'
 export const connectionResourceTemplate = 'crank://connections/{id}/revisions/{revision}'
 
+export const subflowResourceScope = 'subflows:resource-read'
+export const connectorResourceScope = 'connectors:resource-read'
+export const subflowResourceTemplate = 'crank://subflows/{id}/versions/{version}/revisions/{revision}'
+export const connectorResourceTemplate = 'crank://custom-connectors/{id}/versions/{version}/revisions/{revision}'
+
 export const workflowResourceScope = 'workflows:resource-read'
 export const workflowHistoryResourceScope = 'workflows:history-resource-read'
 export const workflowResourceTemplate = 'crank://workflows/{id}/revisions/{revision}'
@@ -60,6 +65,44 @@ export async function runResourceLink(env: CrankEnv, value: Record<string, unkno
 }
 export const connectionResourceLink = (value: Record<string, unknown>) => resourceLink(encodeURIComponent(String(value.id)), String(value.label), value, 'connections')
 
+/** Version links name native definition records and value-free acceptance
+ * receipts, never provider payloads or permission to execute the definition. */
+export const subflowResourceLink = (value: Record<string, unknown>) => resourceLink(
+  encodeURIComponent(String(value.subflow_id)) + '/versions/' + String(value.version), 'Pinned subflow definition', value, 'subflows')
+export const connectorResourceLink = (value: Record<string, unknown>) => resourceLink(
+  encodeURIComponent(String(value.id)) + '/versions/' + String(value.version), 'Reviewed connector definition', value, 'custom-connectors')
+
+/** Link only pinned definitions the current native person can open. Inert
+ * drafts may reference absent or inaccessible definitions; a link grants none. */
+export async function workflowDefinitionLinks(env: CrankEnv, ctx: ToolContext, value: Record<string, unknown>) {
+  const links = new Map<string, { uri: string; name: string }>()
+  const visit = async (steps: Step[]) => {
+    for (const step of steps) {
+      let path: string | undefined, link: typeof connectorResourceLink | typeof subflowResourceLink | undefined
+      if (step.type === 'subflow' && ctx.scopes.includes(subflowResourceScope)) {
+        path = '/subflows/' + encodeURIComponent(String(step.subflow_id)) + '/versions/' + String(step.subflow_version)
+        link = subflowResourceLink
+      }
+      if (step.type === 'custom.request' && ctx.scopes.includes(connectorResourceScope)) {
+        path = '/custom-connectors/' + encodeURIComponent(String(step.connector_id)) + '/versions/' + String(step.connector_version)
+        link = connectorResourceLink
+      }
+      if (path && link) {
+        try {
+          const linked = await link(record(await nativeCall(env, ctx, path)))
+          if (linked) links.set(linked.uri, linked)
+        } catch (error) {
+          if (!(error instanceof ToolRefusal)) throw error
+        }
+      }
+      if (step.type === 'loop') await visit(step.steps as Step[])
+      if (step.type === 'paths') for (const branch of branchesOf(step)) await visit(branch.steps)
+    }
+  }
+  await visit(record(value.draft).steps as Step[])
+  return [...links.values()].sort((a, b) => a.uri.localeCompare(b.uri))
+}
+
 interface ResourceFamily {
   uriTemplate: string; name: string; scope: string; kind: string; pattern: RegExp; field: string
   path: (match: RegExpExecArray) => string
@@ -85,6 +128,14 @@ export function crankResources(env: CrankEnv): ResourceDefinition[] {
       pattern: /^crank:\/\/workflow-runs\/([A-Za-z0-9_-]+)\/revisions\/([a-f0-9]{64})$/,
       path: (match: RegExpExecArray) => '/workflow-runs/' + match[1],
       link: (_match: RegExpExecArray, value: Record<string, unknown>) => runResourceLink(env, value), field: 'steps' },
+    { uriTemplate: subflowResourceTemplate, name: 'Pinned subflow definition', scope: subflowResourceScope, kind: 'subflow_definition',
+      pattern: /^crank:\/\/subflows\/([A-Za-z0-9_-]+)\/versions\/([1-9][0-9]{0,14})\/revisions\/([a-f0-9]{64})$/,
+      path: (match: RegExpExecArray) => '/subflows/' + match[1] + '/versions/' + match[2],
+      link: (_match: RegExpExecArray, value: Record<string, unknown>) => subflowResourceLink(value), field: 'definition' },
+    { uriTemplate: connectorResourceTemplate, name: 'Reviewed connector definition', scope: connectorResourceScope, kind: 'connector_definition',
+      pattern: /^crank:\/\/custom-connectors\/([A-Za-z0-9_-]+)\/versions\/([1-9][0-9]{0,14})\/revisions\/([a-f0-9]{64})$/,
+      path: (match: RegExpExecArray) => '/custom-connectors/' + match[1] + '/versions/' + match[2],
+      link: (_match: RegExpExecArray, value: Record<string, unknown>) => connectorResourceLink(value), field: 'definition' },
     { uriTemplate: connectionResourceTemplate, name: 'Connection record', scope: connectionResourceScope, kind: 'connection_record',
       pattern: /^crank:\/\/connections\/([A-Za-z0-9_-]+)\/revisions\/([a-f0-9]{64})$/,
       path: () => '/connections',
@@ -122,7 +173,12 @@ export function crankResources(env: CrankEnv): ResourceDefinition[] {
           const presented = definition.select ? definition.select(match, value) : value
           if (!presented) return null
           const linked = await definition.link(match, presented)
-          if (linked?.uri !== uri || await authority(ctx) !== before) return null
+          if (linked?.uri !== uri) return null
+          // Hashing yields. Reopen through the same native door so a record
+          // changed during that wait cannot release the previously loaded bytes.
+          const latest = record(await nativeCall(env, ctx, definition.path(match)))
+          const current = definition.select ? definition.select(match, latest) : latest
+          if (!current || canonical(current) !== canonical(presented) || await authority(ctx) !== before) return null
           selectedAuthority = before
           return { json: presented, untrusted: true }
         } catch (error) {

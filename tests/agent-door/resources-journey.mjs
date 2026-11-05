@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {createHash, randomUUID, webcrypto} from 'node:crypto';
 import {pathToFileURL} from 'node:url';
 import {harness} from '../harness.mjs';
+import {definitionResourcesJourney,subflowScope,connectorScope,subflowTemplate,connectorTemplate} from './definition-resources-journey.mjs';
 import {archive} from '../restore-journey.mjs';
 import {canonical, signJws, accessToken, policyEnvelope, autonomousPolicy, heldPolicy} from '../../src/modules/agent-door/conformance/crypto.mjs';
 
@@ -61,7 +62,7 @@ export default async function resourcesJourney({report=()=>{}}={}) {
    assert.equal(response.status,200,response.text);ctx.seq=envelope.payload.seq;ctx.revision=envelope.payload.revision;
   };
   const rpc=async(target,ctx,method,params={},options={})=>{
-   const token=options.token??await accessToken(ctx,{scope:options.scope??'workflows:read workflows:prepare runs:read connections:read '+scope+' '+historyScope+' '+runScope+' '+connectionScope,...options.claims});
+   const token=options.token??await accessToken(ctx,{scope:options.scope??'workflows:read workflows:prepare runs:read connections:read '+scope+' '+historyScope+' '+runScope+' '+connectionScope+' '+subflowScope+' '+connectorScope,...options.claims});
    const r=await target.send('/mcp',{jsonrpc:'2.0',id:randomUUID(),method,params},'',{authorization:'Bearer '+token,
     accept:'application/json, text/event-stream','mcp-protocol-version':'2025-11-25'});
    return r;
@@ -195,6 +196,8 @@ export default async function resourcesJourney({report=()=>{}}={}) {
    const staleConnection=await read(connectionUri);noContent(staleConnection);assert.equal(code(staleConnection),'resource_unavailable');
    const freshConnection=(await h.get('connections')).find(item=>item.id===connection.id),freshConnectionUri=recordLink('connections',freshConnection);
    assert.deepEqual(content(await read(freshConnectionUri)),freshConnection);
+   lateBoundary={phase:'/digested',remaining:2,action:()=>h.post('connections/'+connection.id+'/purpose',{purpose:'production'})};
+   const lateEdit=await read(freshConnectionUri);noContent(lateEdit);assert.equal(code(lateEdit),'resource_unavailable');
    await h.post('connections/'+connection.id+'/revoke');assert.equal(code(await read(freshConnectionUri)),'resource_unavailable');
    assert.equal(content(await read(recordLink('connections',(await h.get('connections')).find(item=>item.id===connection.id)))).status,'revoked');
    // Provider graphs, including an unexecuted fallback, stay outside this family.
@@ -227,7 +230,7 @@ export default async function resourcesJourney({report=()=>{}}={}) {
    const created=await tool('crank.workflows.create',{name:'Synthetic workflow '+mode,description:hostile,graph:recordGraph(hostile),idempotency_key:randomUUID()});
    workflow=created.structuredContent;
    const grant=()=>h.post('team/'+viewer.id,{role:'viewer',workflow_ids:[workflow.id],connection_ids:[]});await grant();
-   const templates=await rpc(h,c,'resources/templates/list');assert.deepEqual(templates.value.result.resourceTemplates.map(t=>t.uriTemplate),[connectionTemplate,runTemplate,draftTemplate,template,versionTemplate]);
+   const templates=await rpc(h,c,'resources/templates/list');assert.deepEqual(templates.value.result.resourceTemplates.map(t=>t.uriTemplate),[connectionTemplate,connectorTemplate,subflowTemplate,runTemplate,draftTemplate,template,versionTemplate]);
    const ordinaryTemplates=await rpc(h,c,'resources/templates/list',{}, {scope:'workflows:read workflows:prepare '+scope});
    assert.deepEqual(ordinaryTemplates.value.result.resourceTemplates.map(t=>t.uriTemplate),[template],'existing workflow-read consent never expands to history');
    const metadata=await h.post('tokens',{label:'Existing metadata preparer',scope:'agent'},h.owner,201);
@@ -359,6 +362,9 @@ export default async function resourcesJourney({report=()=>{}}={}) {
    // The native record changes while classification is suspended.
    boundary=()=>h.post('workflows/'+workflow.id+'/draft',{description:'Changed while classifying'});
    const changed=await read(link(await h.get('workflows/'+workflow.id)));noContent(changed);assert.equal(code(changed),'resource_unavailable');
+   const beforeLateEdit=link(await h.get('workflows/'+workflow.id));
+   lateBoundary={phase:'/digested',remaining:2,action:()=>h.post('workflows/'+workflow.id+'/draft',{description:'Changed after final resource hash'})};
+   const lateEdit=await read(beforeLateEdit);noContent(lateEdit);assert.equal(code(lateEdit),'resource_unavailable');
    const liveUri=link(await h.get('workflows/'+workflow.id));
    boundary=()=>h.post('team/'+viewer.id,{role:'operator',workflow_ids:[workflow.id],connection_ids:[]});
    const changedRole=await read(liveUri,v);noContent(changedRole);assert.equal(code(changedRole),'resource_unavailable');await grant();
@@ -374,6 +380,8 @@ export default async function resourcesJourney({report=()=>{}}={}) {
    assert.deepEqual(content(await read(liveUri)),await h.get('workflows/'+workflow.id));
    nativeRecordReceipts.push(await nativeRecords(mode,workflow));
   }
+  const definitionReceipts=await definitionResourcesJourney({h,c,v,viewer,rpc,adopt,decide,content,noContent,code,tool,
+   setBoundary:action=>{boundary=action},setLateBoundary:value=>{lateBoundary=value},report});
   const liveUri=link(await h.get('workflows/'+workflow.id));
   const revokedAgent={...c,agentId:c.agentId+'-revoked'};
   assert.deepEqual(content(await rpc(h,revokedAgent,'resources/read',{uri:liveUri})),await h.get('workflows/'+workflow.id));
@@ -397,6 +405,8 @@ export default async function resourcesJourney({report=()=>{}}={}) {
    nativeRecordsBefore.set('workflow-runs/'+receipt.runId,await h.get('workflow-runs/'+receipt.runId));
    nativeRecordsBefore.set('connections/'+receipt.connectionId,(await h.get('connections')).find(item=>item.id===receipt.connectionId));
   }
+  const definitionsBefore=new Map();
+  for(const {path} of definitionReceipts)definitionsBefore.set(path,await h.get(path));
   const saved=await archive(h);
   restored=await harness('http://127.0.0.1:9',{bindings,edge,agentResourceBarrier:true});
   await restored.post('data/restore',{archive:saved,confirm:'RESTORE'});
@@ -427,6 +437,24 @@ export default async function resourcesJourney({report=()=>{}}={}) {
     else assert.equal((await restored.get('workflows/'+current.workflow_id)).status,'paused');
    }
   }
+  for(const mode of ['autonomous','held']) {
+   await adopt(restored,r,mode==='held'?heldPolicy():autonomousPolicy());
+   for(const [path,before] of definitionsBefore) {
+    const current=await restored.get(path);
+    assert.deepEqual(current.definition,before.definition,'complete native definitions survive inactive custody');
+    if(path.startsWith('subflows/'))assert.equal(current.active,0);
+    else {assert.equal(current.status,'needs_review');assert.deepEqual(current.granted_scopes,[]);assert.equal(current.sandbox,null)}
+    const uri='crank://'+path+'/revisions/'+createHash('sha256').update(canonical(current)).digest('hex');
+    let answer=await rpc(restored,r,'resources/read',{uri});
+    if(mode==='held') {
+     assert.equal(code(answer),'approval_required');noContent(answer);
+     assert.equal((await decide(restored,answer.value.error.data.approval,restored.owner)).state,'executed');
+     answer=await rpc(restored,r,'resources/read',{uri,requestState:answer.value.error.data.requestState});
+    }
+    assert.deepEqual(content(answer),current);
+   }
+  }
+  report('PROBE BASE-AGENT-003 definition custody: exported pinned definitions -> exact definition bytes after inactive restore; subflows stay inactive, connector consent and acceptance stay cleared, both policies read without adoption');
   await restored.restart();await restored.tick();assert.equal((await restored.get('workflows/'+workflow.id)).status,'paused');
   await adopt(restored,r,heldPolicy());
   const held=await rpc(restored,r,'resources/read',{uri});assert.equal(code(held),'approval_required');noContent(held);
@@ -434,7 +462,7 @@ export default async function resourcesJourney({report=()=>{}}={}) {
   const readback=await rpc(restored,r,'resources/read',{uri,requestState:held.value.error.data.requestState});
   assert.deepEqual(content(readback),await restored.get('workflows/'+workflow.id));
   assert.equal((await restored.get('workflows/'+workflow.id)).status,'paused','reading never restores execution authority');
-  report('PROBE BASE-AGENT-003 templates and scope: MCP discovery and explicit workflow resource scope -> five real templates; metadata-only and existing workflow-only credentials cannot read historical records');
+  report('PROBE BASE-AGENT-003 templates and scope: MCP discovery and explicit workflow resource scope -> seven real templates; metadata-only and existing workflow-only credentials cannot read historical records');
   report('PROBE BASE-AGENT-003 role parity: owner and scoped viewer MCP reads -> complete native UI record equality under autonomous and held policies');
   report('PROBE BASE-AGENT-003 visibility: cross-sponsor out-of-scope and missing URI reads -> identical resource_unavailable responses');
   report('PROBE BASE-AGENT-003 links: workflow create, update, duplicate, get and validate -> exact new state readback; stale revisions and held approvals refused');

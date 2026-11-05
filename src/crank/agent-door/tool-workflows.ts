@@ -3,7 +3,7 @@ import { requirePrepare } from '../access.ts'
 import { canonical, digest, type CrankEnv } from '../model.ts'
 import { validateGraph } from '../engine/graph.ts'
 import { resolveActor } from './native.ts'
-import { workflowResourceLink, workflowResourceScope, workflowHistoryLinks } from './resources.ts'
+import { workflowResourceLink, workflowResourceScope, workflowHistoryLinks, workflowDefinitionLinks } from './resources.ts'
 import { arraySchema, nativeCall, nativeGuard, nullableText, objectSchema, pathPart, pick, query, record, standard, textSchema } from './tool-native.ts'
 
 const properties = {
@@ -40,7 +40,7 @@ async function view(value: Record<string, unknown>) {
 
 async function linked(env: CrankEnv, ctx: ToolContext, value: Record<string, unknown>) {
   const visible = record(await nativeCall(env, ctx, '/workflows/' + encodeURIComponent(String(value.id))))
-  return { result: await view(value), resources: [await workflowResourceLink(visible), ...await workflowHistoryLinks(env, ctx, visible, record(value.idempotency ?? {}).draft_id as string | undefined)] }
+  return { result: await view(value), resources: [await workflowResourceLink(visible), ...await workflowHistoryLinks(env, ctx, visible, record(value.idempotency ?? {}).draft_id as string | undefined), ...await workflowDefinitionLinks(env, ctx, visible)] }
 }
 
 export function workflowTools(env: CrankEnv): ToolDefinition[] {
@@ -111,7 +111,8 @@ export function workflowTools(env: CrankEnv): ToolDefinition[] {
       clauses: ['WORK-002', 'WORK-003', 'WORK-013'], target: source, classify: classifyDraft,
       run: async (args, ctx) => {
         const value = record(await nativeCall(env, ctx, sourcePath(args) + '/validate', {})), declared = record(value.declared)
-        return { result: { ok: true, warnings: (value.warnings as unknown[]).length, steps: (declared.steps as unknown[]).length, connections: (declared.connections as unknown[]).length }, resources: [await workflowResourceLink(await current(env, args, ctx))] }
+        const visible = await current(env, args, ctx)
+        return { result: { ok: true, warnings: (value.warnings as unknown[]).length, steps: (declared.steps as unknown[]).length, connections: (declared.connections as unknown[]).length }, resources: [await workflowResourceLink(visible), ...await workflowDefinitionLinks(env, ctx, visible)] }
       },
     },
   ]

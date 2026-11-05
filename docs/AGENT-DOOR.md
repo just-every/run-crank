@@ -20,12 +20,12 @@ tokens retain the canonical `/mcp` audience. Protected-resource discovery is at
 `/.well-known/oauth-protected-resource/mcp`.
 
 The explicit capability declaration contains the CORE duties `tools`, `policy`,
-`pause`, `audit` and `idempotency`, plus five native record `resources` templates.
+`pause`, `audit` and `idempotency`, plus seven native record `resources` templates.
 Optional `prompts`, `events` and `subscriptions` remain undeclared and
 typed-refused. No event-list tool is injected.
 
-The surface declares workflow, saved-draft, published-version, native-run and
-credential-free connection URI templates, `escalations: []` and
+The surface declares workflow, saved-draft, published-version, native-run,
+credential-free connection and two pinned-definition URI templates, `escalations: []` and
 `spend: { "none": true }`. No paid or provider call is reachable from these
 twelve tools or the resource readers. This no-spend boundary comes from the
 admitted native operations; provider-spend-cap enforcement remains unclaimed.
@@ -84,7 +84,9 @@ The reader rechecks native authority around the awaited read and retains the
 selected authority and current policy envelope between classification and execution. The shared runtime
 also compares the full classified bytes with the final read and fences consent.
 The final native authority check follows revision hashing, so scope withdrawal
-during that asynchronous work cannot release the record.
+during that asynchronous work cannot release the record. After hashing, the
+reader also reopens the same native record and compares its complete presentation.
+A record changed during the final hash cannot release the previously loaded bytes.
 The authority binding belongs to the current request, including an approved
 read that resumes an older operation identity. A native role change during
 that replay is refused even when its visible record bytes stay unchanged.
@@ -140,6 +142,49 @@ continuation invalidates its old URI and held approval; the same run metadata
 tool supplies a fresh role-specific link to the exact completed state. Complete native run and
 credential-free connection records survive inactive restoration; fresh reads
 under autonomous and held policies grant no execution or reconnection authority.
+
+## Pinned native definitions
+
+`crank://subflows/{id}/versions/{version}/revisions/{revision}` and
+`crank://custom-connectors/{id}/versions/{version}/revisions/{revision}` name
+the full native definition presentations at an exact visible revision. Subflow
+records retain typed definitions, recipes and current review state. Connector
+records retain reviewed definitions, current scopes and value-free acceptance
+receipt references; the reader loads no provider result, file or credential.
+
+These readers require fresh `subflows:resource-read` and
+`connectors:resource-read` consent respectively, plus the current native owner's
+role. A workflow grant alone gives no access to these owner records. Scoped
+viewers get the same unavailable response for an existing definition and a
+missing definition. The narrow native GET checks admit a currently sponsored
+owner with the exact new scope; every mutation and all other owner doors retain
+their existing native-session requirement. This owner-only read default is an
+interim floor; broader delegated definition access remains unfinished.
+
+Workflow creation, updates, duplication, metadata reads and validation link the
+pinned subflow and connector versions they reference, including nested loops,
+branches, fallback and always-run branches. Links are emitted only with the new
+scope and current native visibility. Inert drafts with unavailable references
+remain editable without gaining a link. An uninstalled connector proposal has
+no persisted record to link. Existing metadata credentials acquire no scope.
+
+Both families classify the full returned definition as `sensitive` and mark
+customer and imported text untrusted. Autonomous and held reads share the same
+revision, authority, policy and final-content fences as workflow records.
+Adding a new definition version does not redirect an existing version link.
+Revoking a review or changing connector scopes invalidates its old visible
+revision and any held read; a fresh workflow metadata reply links current state.
+A read never reviews, publishes, executes, reconnects or grants provider consent.
+Restored subflows stay inactive; restored connectors keep consent and acceptance
+cleared and require separate native re-review.
+
+`tests/agent-door/definition-resources-journey.mjs` extends the existing
+resource sanity journey with both families through production MCP and native
+person doors. It proves exact owner presentation, scoped-viewer and missing
+equivalence, fresh-scope and sensitive-policy refusal, hostile text, stale held
+reads, version pinning, revoked consent, policy refresh, final-hash changes,
+native mutation refusal and complete inactive definition custody under both
+policies. No test registration or Base pin changes.
 
 ## The twelve declared tools
 

@@ -1,3 +1,4 @@
+import { requireOwnerRecordRead } from '../agent-door/native'
 import { validateSubflowGraph } from '../engine/graph'
 import { childCallApi, queuePureChild, executeGraphChild } from './subflow-calls'
 import { guardedBatch, requireOwner } from '../access'
@@ -42,7 +43,9 @@ async function createVersion(env: CrankEnv, actor: Actor, input: Record<string,u
 export async function subflowApi(request: Request, env: CrankEnv, actor: Actor) {
   const path = new URL(request.url).pathname, root = '/api/crank/subflows'
   if (path !== root && !path.startsWith(root + '/')) return null
-  requireOwner(actor)
+  const definitionRead = /^\/api\/crank\/subflows\/[^/]+\/versions\/\d+$/.test(path) && request.method === 'GET'
+  if (definitionRead) requireOwnerRecordRead(actor, 'subflows:resource-read')
+  else requireOwner(actor)
   const childResponse = await childCallApi(request, env, actor)
   if (childResponse) return childResponse
   const m = /^\/api\/crank\/subflows\/([^/]+)\/versions(?:\/(\d+)(?:\/(review|revoke))?)?$/.exec(path)

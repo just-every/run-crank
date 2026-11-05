@@ -110,3 +110,11 @@ export function resourceToolContext(env: CrankEnv, ctx: ResourceContext): ToolCo
     approvers: [], now: Date.now, emit: () => {},
   }
 }
+
+/** Read a definition as its current native owner, under a separately consented
+ * resource scope. This does not authorize owner mutations or other owner doors. */
+export function requireOwnerRecordRead(actor: Actor, scope: string): void {
+  const native = actor.kind === 'native' || actor.kind === 'dev'
+  const resource = actor.kind === 'company' && actor.agentDoor?.scopes.includes(scope)
+  requireValue(actor.role === 'owner' && (native || resource), 'A current owner with explicit definition-read consent is required', 403)
+}

@@ -184,7 +184,9 @@
     "crank://workflows/{id}/drafts/{draft}/revisions/{revision}",
     "crank://workflows/{id}/versions/{version}/revisions/{revision}",
     "crank://workflow-runs/{id}/revisions/{revision}",
-    "crank://connections/{id}/revisions/{revision}"
+    "crank://connections/{id}/revisions/{revision}",
+    "crank://subflows/{id}/versions/{version}/revisions/{revision}",
+    "crank://custom-connectors/{id}/versions/{version}/revisions/{revision}"
   ],
   "escalations": [],
   "spend": {

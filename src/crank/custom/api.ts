@@ -1,3 +1,4 @@
+import { requireOwnerRecordRead } from '../agent-door/native'
 import { recoverGatewayTask } from './gateway-recovery'
 import { authenticateGateway, signedGatewayJob, verifyEnrollment } from './gateway-identity'
 import { proposeEnterpriseRecipe } from './enterprise-recipes'
@@ -59,11 +60,16 @@ export async function customApi(request:Request,env:CrankEnv,nativeBrowser=false
       await body(request,4096)
       return json(path.includes('/grants/')?await revokeGatewayGrant(env,actor,decodeURIComponent(revoke[1])):await revokeGateway(env,actor,decodeURIComponent(revoke[1])))
     }
-    try {requireOwner(actor)} catch(error) {
+    const definitionRead = /^\/api\/crank\/custom-connectors\/([^/]+)\/versions\/(\d+)$/.exec(path)
+    try {
+      if (request.method === 'GET' && definitionRead) requireOwnerRecordRead(actor, 'connectors:resource-read')
+      else requireOwner(actor)
+    } catch(error) {
       await auditStatement(env,actor.id,'custom.owner_denied','workspace','custom_connectors',{session_kind:actor.kind,role:actor.role}).run()
       throw error
     }
     if(request.method==='GET') {
+      if (definitionRead) return json(presentCustom(await customVersion(env, decodeURIComponent(definitionRead[1]), Number(definitionRead[2]))))
       const picker=/^\/api\/crank\/custom-connectors\/pickers\/([^/]+)$/.exec(path)
       if(picker) {
         const query=new URL(request.url).searchParams
@@ -72,8 +78,6 @@ export async function customApi(request:Request,env:CrankEnv,nativeBrowser=false
       }
       if(path==='/api/crank/custom-connectors')return json(await listCustom(env))
       if(path==='/api/crank/gateways')return json(await listGateways(env))
-      const version=/^\/api\/crank\/custom-connectors\/([^/]+)\/versions\/(\d+)$/.exec(path)
-      if(version)return json(presentCustom(await customVersion(env,decodeURIComponent(version[1]),Number(version[2]))))
       return json({error:'Route not found'},404)
     }
     requireValue(request.method==='POST','Method not allowed',405)
