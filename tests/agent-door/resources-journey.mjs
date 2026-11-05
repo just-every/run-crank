@@ -125,6 +125,10 @@ export default async function resourcesJourney({report=()=>{}}={}) {
      assert.ok(!JSON.stringify(native).includes(hostile),'scoped viewer cannot see customer values');
      const refused=await read(runOwnerUri,v);noContent(refused);assert.equal(code(refused),'resource_unavailable','an owner presentation link grants no payload access');
     }
+    const metadata=await rpc(h,ctx,'tools/call',{name:'crank.runs.get',arguments:{run_id:run.id}});
+    assert.equal(metadata.value.result.content.find(item=>item.type==='resource_link').uri,uri,'each role receives its own usable run link');
+    const listing=await rpc(h,ctx,'tools/call',{name:'crank.runs.list',arguments:{workflow:workflow.id}});
+    assert.ok(listing.value.result.content.some(item=>item.type==='resource_link'&&item.uri===uri));
     await historyRead(uri,ctx,cookie,mode);
     const visibleConnection=(await h.get('connections',cookie)).find(item=>item.id===connection.id);
     let answer=await read(recordLink('connections',visibleConnection),ctx);
@@ -164,6 +168,25 @@ export default async function resourcesJourney({report=()=>{}}={}) {
     lateBoundary={remaining:2,action:()=>adopt(h,c,{...autonomousPolicy(),rules:[{id:'blocked',class:'sensitive',do:'blocked'},{id:'standard',class:'standard',do:'autonomous'}]})};
     const refreshed=await rpc(h,c,'resources/read',{uri,...(requestState?{requestState}:{})});noContent(refreshed);assert.equal(code(refreshed),'resource_unavailable');
    }
+   await adopt(h,c,autonomousPolicy());
+   // A native continuation changes the record, so a client must obtain a
+   // fresh role-specific link; an old approval never serves the old bytes.
+   await adopt(h,c,autonomousPolicy());
+   const waitingWorkflow=await h.post('workflows',{name:'Native resource refresh',graph:{trigger:{type:'manual'},steps:[{id:'wait',type:'delay',mode:'for',input:{amount:0,unit:'seconds'}},{id:'result',type:'map',input:{message:hostile}}]}},h.owner,201);
+   const waiting=await h.post('workflows/'+waitingWorkflow.id+'/test',{input:{},bindings:{}},h.owner,201);assert.equal(waiting.status,'waiting');
+   const waitingUri=recordLink('workflow-runs',await h.get('workflow-runs/'+waiting.id));
+   await h.restart();await adopt(h,c,mode==='held'?heldPolicy():autonomousPolicy());
+   if(mode==='held') {
+    const pending=await read(waitingUri);assert.equal(code(pending),'approval_required');noContent(pending);
+    await h.tick();assert.equal((await decide(h,pending.value.error.data.approval,h.owner)).state,'refused');
+    const replay=await rpc(h,c,'resources/read',{uri:waitingUri,requestState:pending.value.error.data.requestState});noContent(replay);
+   } else {
+    boundary=()=>h.tick();const changed=await read(waitingUri);noContent(changed);assert.equal(code(changed),'resource_unavailable');
+   }
+   assert.equal(code(await read(waitingUri)),'resource_unavailable');
+   const refreshed=await tool('crank.runs.get',{run_id:waiting.id}),freshUri=refreshed.content.find(item=>item.type==='resource_link').uri;
+   assert.notEqual(freshUri,waitingUri);const current=await historyRead(freshUri,c,h.owner,mode);
+   assert.equal(content(current).status,'succeeded');assert.equal(content(current).steps.at(-1).output.message,hostile);
    await adopt(h,c,autonomousPolicy());
    // An unchanged native metadata tool remains usable without any new scope.
    const oldList=await rpc(h,c,'tools/call',{name:'crank.connections.list',arguments:{}},{scope:metadataScope});
@@ -421,6 +444,7 @@ export default async function resourcesJourney({report=()=>{}}={}) {
   report('PROBE BASE-AGENT-003 policy refresh: policy blocked during the final read, including approved replay -> all five resource families withhold content');
   report('PROBE BASE-AGENT-003 erasure: deactivate and erase the sponsoring viewer -> captured approved history reads refuse with 401, including after restart');
   report('PROBE BASE-AGENT-003 native records: manual run and connection MCP links -> exact owner and scoped-viewer fields, sensitive held policy, scope and consent refusal, final-read policy and grant fences, revoked credentials and captured-read erasure refusal');
+  report('PROBE BASE-AGENT-003 resource refresh: waiting native run after restart and Cron continuation -> stale URI and held approval refuse; fresh per-role metadata links return the exact completed state');
   report('PROBE BASE-AGENT-003 provider boundary: unexecuted provider fallback -> native run reader refuses without fetching any provider');
   report('PROBE BASE-AGENT-003 native custody: complete run and credential-free connection records -> unchanged inactive restore under autonomous and held policies; revoked connections remain revoked');
   report('PROBE BASE-AGENT-003 restore: exported published workflow -> complete historical records retained in paused restoration; old agent refused; fresh autonomous and approved held reads preserve inactivity');

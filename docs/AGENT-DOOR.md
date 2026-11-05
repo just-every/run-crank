@@ -135,7 +135,9 @@ Both readers classify the actual returned record as `sensitive`, with kind
 Customer text and connection labels remain untrusted. They share the workflow
 reader's revision, current authority, policy refresh and held-approval fences.
 Missing and out-of-scope records remain indistinguishable. Captured approved run
-reads refuse after erasure, including after restart. Complete native run and
+reads refuse after erasure, including after restart. A restarted native delay
+continuation invalidates its old URI and held approval; the same run metadata
+tool supplies a fresh role-specific link to the exact completed state. Complete native run and
 credential-free connection records survive inactive restoration; fresh reads
 under autonomous and held policies grant no execution or reconnection authority.
 
@@ -317,7 +319,7 @@ gap against SURFACE-001's shared-registry requirement. Aliasing the old generic
 `/api/crank/v1/mcp` path to this door does not close that gap or establish
 native/provider classification parity through every wrapper.
 
-This document records the implemented boundary. The extended hosted CORE journey passes 1,117/1,117 points on rer 0.2.91, including classified workflow links and the original native resource sanity journey.
+This document records the implemented boundary. The extended hosted CORE journey passes 1,409/1,409 points on rer 0.2.91, including classified workflow and native-run links and the expanded native resource sanity journey.
 The expanded native resource journey additionally covers saved drafts, publications,
 separate historical consent, policy refresh during reads and erased sponsors. Native
 Agents and pending/executed approval pages have browser proof at 1440 and 390.
