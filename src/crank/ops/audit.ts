@@ -27,13 +27,17 @@ export async function readAudit(env: CrankEnv, subjectKind?: string, subjectId?:
 
 export interface NativeAgentAudit {
   id: string; at: string; actor_id: string; action: string; subject_kind: string; subject_id: string; version_id: string | null; operation_id: string
+  review_id: string | null; reviewed_by: string | null
 }
 /** Closed metadata projection: native graph values, arguments and credentials stay out. */
 export async function readAgentOperationAudit(env: CrankEnv, operations: string[]): Promise<NativeAgentAudit[]> {
   if (!operations.length) return []
-  const rows = await stmt(env, `SELECT id,at,actor_id,action,subject_kind,subject_id,version_id,
-    json_extract(detail_json,'$.agent_door.operation_id') AS operation_id FROM crank_audit
-    WHERE json_extract(detail_json,'$.agent_door.operation_id') IN (SELECT value FROM json_each(?)) ORDER BY at,id`,
+  const rows = await stmt(env, `SELECT a.id,a.at,a.actor_id,a.action,a.subject_kind,a.subject_id,a.version_id,
+    coalesce(json_extract(a.detail_json,'$.agent_door.operation_id'),json_extract(a.detail_json,'$.agent_review.operation_id')) AS operation_id,
+    json_extract(a.detail_json,'$.agent_review.review_id') AS review_id,
+    CASE WHEN a.action='workflow.agent_undo' THEN coalesce(p.display_name,'Removed person') ELSE NULL END AS reviewed_by
+    FROM crank_audit a LEFT JOIN oa_operators p ON p.id=a.actor_id
+    WHERE coalesce(json_extract(a.detail_json,'$.agent_door.operation_id'),json_extract(a.detail_json,'$.agent_review.operation_id')) IN (SELECT value FROM json_each(?)) ORDER BY a.rowid`,
   JSON.stringify([...new Set(operations)])).all<NativeAgentAudit>()
   return rows.results
 }

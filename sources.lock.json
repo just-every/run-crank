@@ -156,7 +156,7 @@
       "executable": false
     },
     "base-copies.json": {
-      "sha256": "da8762f873edccc6041c2f5dcc725419cd25f1851497ed8fa0fd3cc570160d6f",
+      "sha256": "8d294a2dfef45f3f533d74146590dec0209127c43c85efd3211cbad7a95ae71e",
       "executable": false
     },
     "CHANGELOG.md": {
@@ -172,7 +172,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "3cde7bb3f2aa2a9a5e8178159c6d94e8f7d52b8536b11edc08b180c7f2e6bc55",
+      "sha256": "b8b892b8a9a0ce70693ecead979714f11d45031b9ef9bc1b1828d4f04fb9bb27",
       "executable": false
     },
     "DEMO.md": {
@@ -196,7 +196,7 @@
       "executable": false
     },
     "docs/AGENT-DOOR.md": {
-      "sha256": "b07872164db514c01a3a1f2dfae89cba51c2c0dea956da075f03d852652ab474",
+      "sha256": "e9088b522c8596e7050bdae33c4cbc3e1365117410a3cc6648eb2ba05750381b",
       "executable": false
     },
     "docs/API.md": {
@@ -2948,11 +2948,15 @@
       "executable": false
     },
     "src/crank/agent-door/activity.ts": {
-      "sha256": "6c0812ce49abad4c9e3c0166541784ce184cb74d2744247ed5d2a314def09f64",
+      "sha256": "f0ca1ee354356db2d55c1f899b1e23e39941ceb95ad291ed4766662f77cbef04",
       "executable": false
     },
     "src/crank/agent-door/business.ts": {
       "sha256": "ada220adf2c63a88766fc37f4013eaf1b2d7b675d88d44d3408246e577aa38d6",
+      "executable": false
+    },
+    "src/crank/agent-door/draft-undo.ts": {
+      "sha256": "7bff78c83e679a8ac5df251a4a9fe793f04b8d576b9a2dc99f374bf1cf6c89f6",
       "executable": false
     },
     "src/crank/agent-door/index.ts": {
@@ -2976,7 +2980,7 @@
       "executable": false
     },
     "src/crank/agent-door/tool-workflows.ts": {
-      "sha256": "5f4c1cd797022aa2b4c94e86a71a26ba254123474c2b0db2eb02049ff197a75c",
+      "sha256": "b77db8baa3b5d8f77694aefe7c5e4e01f22add7d7bcb9c58e111f9e1fbcece8f",
       "executable": false
     },
     "src/crank/agent-door/tools.ts": {
@@ -3612,11 +3616,11 @@
       "executable": false
     },
     "src/crank/operator-erasure.ts": {
-      "sha256": "2f5dcaea7f039e9e8910a41a2780c5faa6cd603d304f6bcdaf5b4145ce4628ac",
+      "sha256": "5430144f2e0e11c62f2c0be22427b261b270839e54f1c73072601baee4281887",
       "executable": false
     },
     "src/crank/ops/audit.ts": {
-      "sha256": "b4d8372f6a3921d93d78086c1dc9ed46aec98909f9c71f486b52f49ec1034018",
+      "sha256": "3575ef24f1efc51d9b0ac09a169c6aef0c3abfa30092d2c0174d2866e33dc4a4",
       "executable": false
     },
     "src/crank/ops/collect-deadlines.ts": {
@@ -4224,7 +4228,7 @@
       "executable": false
     },
     "src/crank/workflows/store.ts": {
-      "sha256": "b44f0efd7565e198be3af76a0aa27fd61d815b29108d12f782fbae2d01ee41cb",
+      "sha256": "c234f4ab790981953f6cf728ead7a8bbb1a6ffec0836aa32e7319fdd73cea4eb",
       "executable": false
     },
     "src/crank/workflows/subflow-calls.ts": {
@@ -4560,7 +4564,7 @@
       "executable": false
     },
     "src/modules/agent-door/reviews.ts": {
-      "sha256": "9884027e619179eba540fc8d9ffce871facc898c77d78479e0e16a9c37922f9b",
+      "sha256": "6d46e45640455b7c9ca915a099a67e4662a2b68e1ec3adbc41509533f94eb583",
       "executable": false
     },
     "src/modules/agent-door/schema/agent-door.sql": {
@@ -4644,7 +4648,7 @@
       "executable": false
     },
     "src/modules/agent-door/types.ts": {
-      "sha256": "0c72bb1f0b3354366bd74856ee14910d0ba7d4ade4debf3fd63ed153284b0a4d",
+      "sha256": "1e4639f68e647a8eea88e02e7298e3d6d97f8664c64ac797f03e5cc800d4489b",
       "executable": false
     },
     "src/modules/agent-door/wire.ts": {
@@ -6716,11 +6720,11 @@
       "executable": false
     },
     "tests/agent-door/activity-browser.mjs": {
-      "sha256": "dc4ed886545ad92e0885e894e2f422f48903caeaa240902c346d150aa75a9388",
+      "sha256": "69ff2406dafa3cd7ad500ed599b9c5aea20318c29cb6e4fea60b59730d89608e",
       "executable": false
     },
     "tests/agent-door/activity-journey.mjs": {
-      "sha256": "93bdc2a88e03257c1e4e00158803741041b7e3c19336fc40aeff3d9f81798efb",
+      "sha256": "ccba9ba228e07442d1b41a888f00dc03e0840a5a6af91278f39cd51f967e5913",
       "executable": false
     },
     "tests/agent-door/fixtures.mjs": {

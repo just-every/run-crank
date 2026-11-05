@@ -272,6 +272,39 @@ their existing doors. The Base and rer pins are unchanged.
 
 This closes the native preparation activity slice of BASE-AGENT-009. It does
 not establish cross-provider execution timelines, Business-wide aggregation,
-reversible native Undo or omitted specialist jobs. Provider-account and consent
+Undo for omitted reversible jobs or omitted specialist jobs. Provider-account and consent
 requirements, the enforcing Worker egress hold, and existing owner, ct and
 device restrictions remain.
+
+
+## Review Undo for inert draft edits
+
+A reviewed `crank.workflows.update` on an unpublished inert draft offers Undo.
+The original graph, name, description, folder and settings stay in immutable
+native draft snapshots. The shared review saves only their identifiers and the
+original operation identity; graph values never enter activity or its export.
+
+Undo reauthorizes the actual signed-in person's request against current native
+preparation grants. The shared review selects the named reviewer, but supplies
+no product access. The native transaction refuses a later workflow edit, even
+one with identical graph bytes and the same timestamp, or a changed publication
+state. Undo creates a new draft-history entry and a `workflow.agent_undo` audit
+entry with the person's actor identity, original operation, decision and review
+identifiers. It never publishes, dispatches, deletes a workflow or restores an
+agent credential. Repeated Undo and replay of the original agent call cannot
+reapply the edit. A current person may reverse preparation after its agent's
+credential is revoked.
+
+Activity correlates the human reversal with the original call without adding a
+second call to its counts. Person erasure replaces both the native audit actor
+and the shared review mark with the existing stable erasure label; activity and
+exports show Removed person and retain the operation chronology. The erasure
+revokes the person's sessions. No separate copy of their display name is stored
+in the new audit detail.
+
+The shared review and context types have a local adaptation: Undo receives the
+actual person request and original review identity for native reauthorization.
+The pinned shared runtime and rer version remain unchanged. Existing reviewed
+calls made before native snapshot capture have no Undo evidence. Creation,
+duplication, connector proposals and omitted execution jobs do not acquire a
+destructive reversal through this preparation-only edit door.

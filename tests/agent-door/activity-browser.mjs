@@ -5,7 +5,7 @@ import {resolve,extname,join} from 'node:path';
 import {chromium,expect} from '@playwright/test';
 import {createRequire} from 'node:module';
 import {harness} from '../harness.mjs';
-import {seedActivity,period,allPages} from './activity-journey.mjs';
+import {seedActivity,seedReversibleEdit,period,allPages} from './activity-journey.mjs';
 
 const evidence=process.env.CRANK_EVIDENCE;assert.ok(evidence,'Set CRANK_EVIDENCE');await mkdir(evidence,{recursive:true});
 const h=await harness('http://127.0.0.1:9',{clock:'2026-11-02T12:00:00.000Z'});
@@ -26,11 +26,15 @@ const browser=await chromium.launch({headless:true,...(process.env.CRANK_CHROMIU
 let page;
 try{
  const seeded=await seedActivity(h);
+ const edit=await seedReversibleEdit(h,seeded);
  const context=await browser.newContext({viewport:{width:1440,height:1000},acceptDownloads:true});
  const [name,...value]=h.owner.split('=');await context.addCookies([{name,value:value.join('='),url:h.origin}]);page=await context.newPage();
  await page.goto(h.origin+'/agents?'+period);
  await expect(page.getByRole('heading',{name:'Activity',exact:true})).toBeVisible();
  await expect(page.getByRole('heading',{name:'Waiting for approval',exact:true})).toBeVisible();
+ const review=page.locator('[data-review-id="'+edit.review.id+'"]');
+ await expect(review.getByRole('button',{name:'Undo',exact:true})).toBeVisible();
+ await expect(review).toContainText('Harbour preparation assistant for Harbour owner');
  await page.getByLabel('Agent ID',{exact:true}).fill('crank-token:'+seeded.a.id);
  await page.getByLabel('Class',{exact:true}).selectOption('standard');
  await page.getByRole('button',{name:'Apply filters',exact:true}).focus();await page.keyboard.press('Enter');
@@ -65,6 +69,18 @@ try{
   await page.screenshot({path:join(evidence,width+'-activity.png'),fullPage:true});
   console.log('PROBE BASE-AGENT-009 browser '+width+': populated Agents page -> correct attribution, no overflow, serious and critical axe findings=0');
  }
+ await page.setViewportSize({width:1440,height:1000});
+ await review.getByRole('button',{name:'Undo',exact:true}).focus();await page.keyboard.press('Enter');
+ await expect(review).toHaveCount(0);
+ const restored=await h.get('workflows/'+edit.before.id);
+ for(const key of ['name','folder','description','draft','status','published_version_id'])assert.deepEqual(restored[key],edit.before[key]);
+ const undone=(await allPages(h,period)).rows.find(row=>row.idempotency_key===edit.args.idempotency_key);
+ assert.equal(undone.review.by,(await h.get()).actor.id);
+ assert.equal(undone.native.find(item=>item.action==='workflow.agent_undo').reviewed_by,'Harbour owner');
+ const afterDownload=await context.request.get(h.origin+'/agents/api/activity/export?'+period+'&download=all');
+ const afterRows=(await afterDownload.text()).trim().split('\n').map(JSON.parse);
+ assert.deepEqual(afterRows.find(row=>row.id===undone.id),undone,'opened export retains the person reversal and original call');
+ console.log('PROBE BASE-AGENT-009 browser Undo: owner uses keyboard Undo in review feed -> exact original inert draft restored; human identity and original operation retained in opened export');
  await page.getByLabel('Class',{exact:true}).selectOption('money');await page.getByRole('button',{name:'Apply filters',exact:true}).click();
  await expect(page.getByText('No activity matches these filters.',{exact:true})).toBeVisible();
  await context.close();

@@ -3,6 +3,7 @@ import { requirePrepare } from '../access.ts'
 import { canonical, digest, type CrankEnv } from '../model.ts'
 import { validateGraph } from '../engine/graph.ts'
 import { resolveActor } from './native.ts'
+import { draftUndo, undoDraft } from './draft-undo'
 import { arraySchema, nativeCall, nativeGuard, nullableText, objectSchema, pathPart, pick, query, record, standard, textSchema } from './tool-native.ts'
 
 const properties = {
@@ -81,8 +82,10 @@ export function workflowTools(env: CrankEnv): ToolDefinition[] {
       summary: async (args, ctx) => { const value = await current(env, args, ctx); return { target: { id: String(value.id), name: String(args.name ?? value.name) }, items: ['Save one inert workflow draft'] } },
       run: async (args, ctx) => {
         const { workflow_id: _id, ...input } = args
-        return { result: await view(record(await nativeCall(env, ctx, sourcePath(args) + '/draft', input))) }
+        const result = await view(record(await nativeCall(env, ctx, sourcePath(args) + '/draft', input)))
+        return { result, undo: await draftUndo(env, ctx.operationId) }
       },
+      undo: (saved, ctx) => undoDraft(env, saved, ctx),
     },
     {
       ...base, name: 'crank.workflows.duplicate', title: 'Duplicate workflow draft', scope: 'workflows:prepare', readOnly: false,

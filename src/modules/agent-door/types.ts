@@ -45,6 +45,9 @@ export interface ApprovalSummary {
 }
 export type ApprovalDisplaySummary = (ApprovalSummary | { arguments: Record<string, unknown> } | { uri: string }) & { nativeTarget?: NativeTarget }
 export interface UndoContext {
+  /** Native adapters reauthorize the real person request; never a fabricated session. */
+  request?: Request
+  review?: { id: string; decisionId: string; operationId: string }
   db: D1Database; person: Person; agent: null; actor: { kind: 'person'; person: { id: string; name: string }; label: string }
   seed: string; origin: string; now(): number; door: 'mcp' | 'embedded'
   emit(type: string, uri: string, data?: Record<string, unknown>): void

@@ -35,6 +35,7 @@ export async function eraseOperator(env: CrankEnv, actor: Actor, operatorId: str
     stmt(env,'DELETE FROM crank_mcp_clients WHERE owner_id=?',person.id),
     stmt(env,'DELETE FROM crank_service_accounts WHERE owner_id=?',person.id),
     ...ATTRIBUTION.map(([table, column]) => stmt(env, `UPDATE ${table} SET ${column}=? WHERE ${column}=?`, label, person.id)),
+    stmt(env, 'UPDATE agent_door_reviews SET marked_by=? WHERE marked_by=?', label, person.id),
     stmt(env, "UPDATE crank_audit SET detail_json='{}' WHERE action IN ('followup.create','followup.contact') AND EXISTS(SELECT 1 FROM json_tree(detail_json) j WHERE j.type='text' AND j.value=?)",person.id),
     stmt(env, 'DELETE FROM crank_agent_followup_people WHERE person_id=?',person.id),
     stmt(env, 'DELETE FROM crank_agent_followup_authorizations WHERE recipient_id=? OR owner_id=?',person.id,person.id),

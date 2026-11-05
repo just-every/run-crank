@@ -48,7 +48,7 @@ export async function getWorkflow(env: CrankEnv, workflowId: string): Promise<Wo
 export async function presentWorkflow(env: CrankEnv, row: WorkflowRow) {
   const versions = await stmt(env, "SELECT id,number,graph_digest,declared_json,published_by,published_at,retired_at FROM crank_workflow_versions WHERE workflow_id=? AND mode='production' ORDER BY number DESC", row.id).all<Omit<VersionRow, 'graph_json' | 'workflow_id'>>()
   const owner = await stmt(env, 'SELECT display_name FROM oa_operators WHERE id=?', row.owner_id).first<{ display_name: string }>()
-  const preparation = await stmt(env, "SELECT detail_json FROM crank_audit WHERE subject_kind='workflow' AND subject_id=? AND action IN('workflow.create','workflow.duplicate','workflow.draft') ORDER BY at DESC,id DESC LIMIT 1", row.id).first<{ detail_json: string }>()
+  const preparation = await stmt(env, "SELECT detail_json FROM crank_audit WHERE subject_kind='workflow' AND subject_id=? AND action IN('workflow.create','workflow.duplicate','workflow.draft') ORDER BY rowid DESC LIMIT 1", row.id).first<{ detail_json: string }>()
   const preparedBy = preparation ? JSON.parse(preparation.detail_json).agent_door ?? null : null
   return {
     prepared_by: preparedBy,
@@ -57,9 +57,9 @@ export async function presentWorkflow(env: CrankEnv, row: WorkflowRow) {
     created_by: row.created_by, created_at: row.created_at,
     versions: versions.results.map(v => ({ id: v.id, number: v.number, graph_digest: v.graph_digest, authority: JSON.parse(v.declared_json), published_by: v.published_by, published_at: v.published_at, retired_at: v.retired_at })),
     // WORK-008: every saved draft edit, newest first, with its author, time and changed fields.
-    drafts: (await stmt(env, "SELECT actor_id,at,version_id,detail_json FROM crank_audit WHERE subject_kind='workflow' AND subject_id=? AND action='workflow.draft' ORDER BY at DESC,id LIMIT 100", row.id).all<{ actor_id: string; at: string; version_id: string | null; detail_json: string }>())
+    drafts: (await stmt(env, "SELECT actor_id,at,version_id,detail_json FROM crank_audit WHERE subject_kind='workflow' AND subject_id=? AND action='workflow.draft' ORDER BY rowid DESC LIMIT 100", row.id).all<{ actor_id: string; at: string; version_id: string | null; detail_json: string }>())
       .results.map(d => ({ author: d.actor_id, at: d.at, base_version_id: d.version_id, ...JSON.parse(d.detail_json) })),
-    draft_versions: (await stmt(env, 'SELECT id,base_version_id,graph_digest,created_by AS author,created_at AS at FROM crank_workflow_drafts WHERE workflow_id=? ORDER BY created_at DESC,id DESC LIMIT 100', row.id).all()).results,
+    draft_versions: (await stmt(env, 'SELECT id,base_version_id,graph_digest,created_by AS author,created_at AS at FROM crank_workflow_drafts WHERE workflow_id=? ORDER BY rowid DESC LIMIT 100', row.id).all()).results,
     hooks: await listHooks(env, row.id),
     restore: await restoreReview(env, row),
     estimate: await readWorkflowEstimate(env, row.id),
@@ -131,15 +131,21 @@ export async function updateDraft(env: CrankEnv, actor: Actor, workflowId: strin
   const changed = [['name', current.name], ['description', current.description], ['folder', current.folder], ['graph', null], ['settings', null]]
     .filter(([field, before]) => field === 'graph' ? canonical(graph) !== canonical(JSON.parse(current.draft_json)) : field === 'settings' ? isObject(input.settings) : input[field as string] !== undefined && input[field as string] !== before)
     .map(([field]) => field)
+  // Keep reversal bytes in the existing immutable native history, never in the
+  // shared review record or its metadata export. Active workflows are not reversible here.
+  const beforeDraftId = actor.agentDoor && current.status === 'draft' && !current.published_version_id ? id() : null
   let results:D1Result[]
   try { results = await guardedBatch(env, actor, 'prepare', [
     ...(draftGuard ? [stmt(env,'INSERT INTO crank_authority_guards(id,ok) SELECT ?,CASE WHEN EXISTS(SELECT 1 FROM crank_workflows WHERE id=? AND draft_json=?) THEN 1 ELSE 0 END',draftGuard,workflowId,expectedDraftJson)] : []),
     ...(extraAudit?.guards ?? []),
     ...(command ? [claimCommand(env, actor, command, workflowId, draftId)] : []),
+    ...(beforeDraftId ? [await savedDraft(env, actor, workflowId, beforeDraftId, null, JSON.parse(current.draft_json),
+      { name: current.name, description: current.description, folder: current.folder, settings: JSON.parse(current.settings_json) }, at, command)] : []),
     stmt(env, `UPDATE crank_workflows SET name=?,description=?,folder=?,draft_json=?,draft_updated_at=?,settings_json=? WHERE id=? AND ${condition.sql}`,
       metadata.name, metadata.description, metadata.folder, JSON.stringify(graph), at, JSON.stringify(metadata.settings), workflowId, ...condition.args),
     await savedDraft(env, actor, workflowId, draftId, current.published_version_id, graph, metadata, at, command),
-    auditStatementWhen(env, condition.sql, condition.args, actor.id, 'workflow.draft', 'workflow', workflowId, { draft_digest: await digest(JSON.stringify(graph)), changed }, current.published_version_id),
+    auditStatementWhen(env, condition.sql, condition.args, actor.id, 'workflow.draft', 'workflow', workflowId, { draft_digest: await digest(JSON.stringify(graph)), changed,
+      ...(beforeDraftId ? { before_draft_id: beforeDraftId, after_draft_id: draftId } : {}) }, current.published_version_id),
     ...(extraAudit?[auditStatementWhen(env,condition.sql,condition.args,actor.id,extraAudit.action,'workflow',workflowId,extraAudit.detail)]:[]),
     ...(draftGuard ? [stmt(env,'DELETE FROM crank_authority_guards WHERE id=?',draftGuard)] : []),
     ...(command ? [commandReceipt(env, command)] : []),

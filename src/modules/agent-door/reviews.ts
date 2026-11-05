@@ -41,7 +41,11 @@ export async function reviewDoor(rt: Runtime, request: Request, person: Person, 
     if (!current?.active || current.id !== person.id) return error('forbidden', 403)
     const changed = await rt.options.db.prepare("UPDATE agent_door_reviews SET state='undoing' WHERE id=? AND state=?").bind(id, row.state).run()
     if (!changed.meta.changes) return error('review_conflict', 409)
-    try { const ctx = undoContext(rt, current, saved.door, effects); await tool.undo(saved.undo, ctx) }
+    try {
+      const ctx = { ...undoContext(rt, current, saved.door, effects), request,
+        review: { id, decisionId: saved.decision_id, operationId: saved.principal.operationId ?? saved.decision_id } }
+      await tool.undo(saved.undo, ctx)
+    }
     catch (cause) { await rt.options.db.prepare('UPDATE agent_door_reviews SET state=? WHERE id=?').bind(row.state, id).run(); if (cause instanceof ToolRefusal) return error(cause.code, 409, cause.details); throw cause }
   }
   if (action !== 'undo') {
