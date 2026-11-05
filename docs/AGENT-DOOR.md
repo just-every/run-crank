@@ -8,7 +8,7 @@ the implementation is [src/crank/agent-door](../src/crank/agent-door/index.ts).
 
 The shared runtime source is adopted from Base commit
 `2135c394939f4a737adabdc8003b0e667b31ac5a`; the corresponding released CLI is
-`0.2.91`. The released runner passes 1,021/1,021 hosted CORE points, including the
+`0.2.91`. The released runner passes 1,073/1,073 hosted CORE points, including the
 seed native journey. This proves only the declared preparation boundary.
 
 ## Routes and capability boundary
@@ -110,6 +110,38 @@ grants and flow-bound trigger credentials keep their separate native purposes;
 they do not qualify as preparation credentials. A rejected recognizable
 Business token cannot fall through to local credential admission.
 
+## Disposable sponsor lifecycle verification
+
+The declaration registers the owner, two independent native builders and one
+negative-only sponsor. Signed Business roster invitations are confirmed through
+ordinary native email links; declared disposable reviewer mailboxes capture only
+the accepted mail provider edge. Each builder receives one complete native grant
+for inert production-workspace preparation. No direct SQL creates a person,
+session, grant or draft, and no production credential is used.
+
+The shared cross-sponsor journey creates, reads, edits and rereads each sponsor's
+own inert draft. Both builders are refused the owner's private draft and pending
+approval, through their person sessions and agent credentials. The native witness
+stays unchanged; audit attribution retains each acting agent and sponsor. The
+negative phase suspends the declared inactive sponsor through native owner
+administration before probing its signed Business token.
+
+`tests/agent-door/sponsor-lifecycle.mjs` also runs through the existing native
+journey in push Verify. Its separate disposable production installation proves
+that changing an email invalidates the old token without changing the subject's
+native identity; native owner-role changes do not move the Business owner's
+binding. Suspension refuses the next call. A newer signed roster removing a
+member refuses that Business subject even after independent native reactivation;
+a stale signed roster cannot restore access. The retained native draft remains
+unchanged. Both admission and native mutation fences exclude inactive roster
+bindings while retaining pending invitations that complete normally.
+
+Native allow-list exclusion, remaining timed token and consent lifecycle, real
+Business propagation and dual-host verification remain unproved. Real enterprise
+IdP interoperability remains dependent on the owner's tenant. This evidence
+changes no TEAM-001 policy, creation-revision work or existing hold and does not
+promote BASE-AGENT-004 from PARTIAL.
+
 ## First owner and person controls
 
 First-owner setup uses the native setup-token bootstrap. Provision independent
@@ -210,7 +242,7 @@ gap against SURFACE-001's shared-registry requirement. Aliasing the old generic
 `/api/crank/v1/mcp` path to this door does not close that gap or establish
 native/provider classification parity through every wrapper.
 
-This document records the implemented boundary. Integrated CORE conformance passes 1,021/1,021 points on rer 0.2.91. Native
+This document records the implemented boundary. Integrated CORE conformance passes 1,073/1,073 points on rer 0.2.91. Native
 Agents and pending/executed approval pages have browser proof at 1440 and 390.
 The complete ct registry, native UI parity for its omitted jobs and the seeded
 specialist week remain acceptance work. No optional capability is promoted.

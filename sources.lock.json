@@ -148,7 +148,7 @@
       "executable": false
     },
     "agent-surface.json": {
-      "sha256": "dc7a0189533b875553ebf0db80baeb2bf4482bcc5bf41056e1e8eeebfee76ed3",
+      "sha256": "0e64f7985d107394a41245ca98703e869554b60cde0a7befb1f0cefb27941801",
       "executable": false
     },
     "AGENTS.md": {
@@ -172,7 +172,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "aac2d3d2ae3f5062bea791377b189e5eb86834bd3f7a1d043ac176b60e5d43c9",
+      "sha256": "84a4ef2a6f57c6c1a06a3f05d114f1f070172b84ad698044b2ff7b8566c09e86",
       "executable": false
     },
     "DEMO.md": {
@@ -196,7 +196,7 @@
       "executable": false
     },
     "docs/AGENT-DOOR.md": {
-      "sha256": "7418c518e7505e79eeb56bd768b93e2b422c01c8425c9e87b5d3b11a566c5287",
+      "sha256": "6b3d2c4dc07cc1a2f503fd08b77a77b9a68261339748a551324c6de0fa061117",
       "executable": false
     },
     "docs/API.md": {
@@ -2956,11 +2956,11 @@
       "executable": false
     },
     "src/crank/agent-door/native.ts": {
-      "sha256": "991ad8ef6e274d78acbfaf97a312d22adb9430b2eb31bdeafb2d1cd1f28c9b23",
+      "sha256": "fc23f9d89f8baf2b2d87288099a49bb60164025cc2f6cd9c2754943e847c90f8",
       "executable": false
     },
     "src/crank/agent-door/people.ts": {
-      "sha256": "37a3b5dd42bd33b3e991c0f7d4013e6a607b609365af4343b7e75e77e02ee3d8",
+      "sha256": "0450d8c6ac6f241f5c5e4f832ed7f228657f275cb425d1ab763c00b406519332",
       "executable": false
     },
     "src/crank/agent-door/tool-metadata.ts": {
@@ -6712,11 +6712,19 @@
       "executable": false
     },
     "tests/agent-door/fixtures.mjs": {
-      "sha256": "ae9cddd16c5be7f5290b7e44198a322d03495840e9b0b8f8eab3c4475a0e7e0e",
+      "sha256": "62066251f0273f07d4d0a43f529cc846e674d44189aba7daf8415de8972a95b1",
       "executable": false
     },
     "tests/agent-door/journey.mjs": {
-      "sha256": "1e12e5184c5a39733d467a7c01509771a2754096022d56c2745564a4ec237998",
+      "sha256": "8afbcc9f870563f12352e62590a393b8105d251483701faebb4d0dfd14ae7c56",
+      "executable": false
+    },
+    "tests/agent-door/sponsor-lifecycle.mjs": {
+      "sha256": "6d594444384456880e818041c9d097473c3c3f6b8dffcf192d15b75625fc6fe3",
+      "executable": false
+    },
+    "tests/agent-door/sponsors.mjs": {
+      "sha256": "d45425bf49b8fabf92a8d1333760f8a39b6e382f786ec47e0dcba3f5a65ab6c0",
       "executable": false
     },
     "tests/ai-steps-browser.mjs": {

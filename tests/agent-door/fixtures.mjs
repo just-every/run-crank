@@ -1,3 +1,4 @@
+import {suspendFixture} from './sponsors.mjs';
 // Disposable native records, prepared through the owner's real public HTTP doors.
 // No providers, credentials, direct SQL or application-only fixture routes.
 export default async function prepare({phase, request, origin, cookie}) {
@@ -11,5 +12,5 @@ export default async function prepare({phase, request, origin, cookie}) {
  const graph = {trigger: {type: 'manual'}, steps: [{id: 'shape', type: 'map', input: {supplier: 'Harbour Workshop', status: 'received'}}]};
  const workflow = await post('/workflows', {name: 'Harbour Workshop — ' + phase, folder: 'Agent conformance fixtures', graph});
  const run = await post('/workflows/' + workflow.id + '/test', {input: {supplier: 'Harbour Workshop'}, bindings: {}});
- return {values: {run: {id: run.id}}};
+ return {values: {run: {id: run.id}}, ...(phase === 'negative' ? {sponsors: await suspendFixture({request, origin, cookie})} : {})};
 }
