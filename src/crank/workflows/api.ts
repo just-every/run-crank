@@ -13,6 +13,7 @@ import { generateAuthoring, readAuthoring, reviseAuthoring, testAuthoring, promo
 import { usageApi } from '../ops/usage-api'
 import { isBudgetExceeded } from '../ops/usage'
 import { authorize, guardedBatch, requireOwner, requireWriteOrigin } from '../access'
+import { ownershipOptions, transferConnection, requireConnectionManager } from '../connections/ownership'
 import { APPS, hostAllowed } from '../connections/apps'
 import { CATALOG } from '../connections/catalog'
 import { finishOauth, setOauthApp, startOauth } from '../connections/oauth'
@@ -167,7 +168,8 @@ export async function workflowApi(request: Request, env: CrankEnv): Promise<Resp
       if ((m = match(path, /^\/api\/crank\/holds\/([^/]+)$/))) return json(await getHold(env, m[0]))
       if (path === '/api/crank/queues') return json((await stmt(env, `SELECT q.name,q.spacing_seconds,q.last_release_at,COUNT(i.seq) AS depth,MIN(i.arrived_at) AS oldest_arrived_at FROM crank_delay_queues q
         LEFT JOIN crank_queue_items i ON i.queue=q.name AND i.released_at IS NULL GROUP BY q.name ORDER BY q.name`).all<any>()).results.map(q => ({ ...q, next_release_at: q.depth ? new Date(Math.max(Date.now(), q.last_release_at ? Date.parse(q.last_release_at) + q.spacing_seconds * 1000 : 0)).toISOString() : null })))
-      if ((m = match(path, /^\/api\/crank\/connections\/([^/]+)\/history$/))) { requireOwner(actor); await getConnection(env, m[0]); return json(await readAudit(env, 'connection', m[0])) }
+      if ((m = match(path, /^\/api\/crank\/connections\/([^/]+)\/ownership$/))) return json(await ownershipOptions(env, actor, m[0]))
+      if ((m = match(path, /^\/api\/crank\/connections\/([^/]+)\/history$/))) { requireConnectionManager(actor, await getConnection(env, m[0])); return json(await readAudit(env, 'connection', m[0])) }
       if (path === '/api/crank/connections') return json(await listConnections(env, actor))
       if (path === '/api/crank/catalog') return json({ apps: CATALOG })
       if (path === '/api/crank/oauth/callback') return json(await finishOauth(env, actor, url.searchParams), 201)
@@ -238,6 +240,7 @@ export async function workflowApi(request: Request, env: CrankEnv): Promise<Resp
       if (m[1] === 'approve' || m[1] === 'reject') return json(await decideApproval(env, actor, m[0], m[1], input))
       return json(m[1] === 'resume' ? await resumeRun(env, actor, m[0]) : await cancelRun(env, actor, m[0]))
     }
+    if ((m = match(path, /^\/api\/crank\/connections\/([^/]+)\/transfer$/))) return json(await transferConnection(env, actor, m[0], input))
     if (path === '/api/crank/connections') return json(await createConnection(env, actor, input), 201)
     if ((m = match(path, /^\/api\/crank\/connections\/([^/]+)\/(rotate|revoke|test|purpose)$/))) {
       if (m[1] === 'purpose') return json(await setConnectionPurpose(env, actor, m[0], input))

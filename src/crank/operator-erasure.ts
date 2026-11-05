@@ -34,6 +34,11 @@ export async function eraseOperator(env: CrankEnv, actor: Actor, operatorId: str
     stmt(env,'DELETE FROM crank_sample_listeners WHERE created_by=?',person.id),
     stmt(env,'DELETE FROM crank_mcp_clients WHERE owner_id=?',person.id),
     stmt(env,'DELETE FROM crank_service_accounts WHERE owner_id=?',person.id),
+    stmt(env, `UPDATE crank_connections SET revision=revision+1,owner_id='restore:awaiting-adoption',owner_version=0,owner_team_revision=NULL,
+      status=CASE WHEN status='revoked' THEN 'revoked' ELSE 'needs_reconnect' END,secret_iv=NULL,secret_ciphertext=NULL,consented_at=NULL WHERE owner_id=?`, person.id),
+    stmt(env, `UPDATE crank_audit SET detail_json=json_set(detail_json,'$.previous_owner_id',CASE WHEN json_extract(detail_json,'$.previous_owner_id')=?1 THEN ?2 ELSE json_extract(detail_json,'$.previous_owner_id') END,
+      '$.new_owner_id',CASE WHEN json_extract(detail_json,'$.new_owner_id')=?1 THEN ?2 ELSE json_extract(detail_json,'$.new_owner_id') END)
+      WHERE action='connection.transfer' AND (json_extract(detail_json,'$.previous_owner_id')=?1 OR json_extract(detail_json,'$.new_owner_id')=?1)`,person.id,label),
     ...ATTRIBUTION.map(([table, column]) => stmt(env, `UPDATE ${table} SET ${column}=? WHERE ${column}=?`, label, person.id)),
     stmt(env, "UPDATE crank_audit SET detail_json='{}' WHERE action IN ('followup.create','followup.contact') AND EXISTS(SELECT 1 FROM json_tree(detail_json) j WHERE j.type='text' AND j.value=?)",person.id),
     stmt(env, 'DELETE FROM crank_agent_followup_people WHERE person_id=?',person.id),

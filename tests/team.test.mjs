@@ -15,6 +15,7 @@ async function invite(h,name,baseRole='member') {
 }
 
 test('TEAM-001: product scopes fence direct reads, lists, publication, review and next-request changes; transfer survives departure',async()=>{
+ const {connectionOwnershipAuthorityJourney}=await import('./connection-transfer-journey.mjs');await connectionOwnershipAuthorityJourney();
  const edge=fakeEdge();edge.routes.set('other.example',()=>jsonResponse({id:'settlement-receipt'}));
  const h=await harness('http://127.0.0.1:9',{edge:edge.edge});
  try{

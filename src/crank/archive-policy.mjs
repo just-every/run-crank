@@ -10,6 +10,8 @@ import { fenceRow, importRow, importSafety, validateRestore } from './restore-po
 // inventory. Polls restore inactive; no receiving authority travels with history.
 // Digest definitions, entries, release receipts and erased-name fences use the
 // default portable inventory; the restore policy clears their receiving authority.
+// Connection creator and transfer audit travel as history; current responsibility
+// is reset to adoption and team management grants never travel.
 // Credentials, data-class keys (DATA-003: an archive carries sealed values and blind-index
 // digests only), receiving authority and active execution never travel; older
 // archives are normalized to the same inactive state on import (DATA-001).

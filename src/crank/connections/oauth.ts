@@ -1,3 +1,4 @@
+import { installationOwner, managedConnectionBatch, requireConnectionManager } from './ownership'
 import { guardedBatch, requireOwner } from '../access'
 import { boundedFetch, utf8 } from '../engine/egress'
 import { StepError } from '../engine/errors'
@@ -49,17 +50,24 @@ async function oauthApp(env: CrankEnv, app: string) {
 
 /** Starts consent: exact scopes are shown at the provider; state and PKCE bind the callback. */
 export async function startOauth(env: CrankEnv, actor: Actor, input: Record<string, unknown>) {
-  requireOwner(actor)
   const app = text(input.app, 'app', 40), provider = oauthProvider(app)
   requireValue(!provider.managedOnly, 'Gusto managed renewal is sandbox only; add the company access and refresh tokens through Connections')
   const scopes = Array.isArray(input.scopes) ? input.scopes.map(scope => text(scope, 'scope', 200)) : []
   requireValue(scopes.length > 0, 'Choose the scopes to request')
-  const client = await oauthApp(env, app), state = randomToken(), verifier = randomToken(48), at = Date.now()
-  let connectionId: string | null = null
-  if (input.connection_id !== undefined) { connectionId = text(input.connection_id, 'connection_id'); requireValue((await getConnection(env, connectionId)).app === app, 'That connection is for another app') }
+  const state = randomToken(), verifier = randomToken(48), at = Date.now()
+  let connectionId: string | null = null, connection: ConnectionRow | undefined
+  if (input.connection_id !== undefined) {
+    connectionId = text(input.connection_id, 'connection_id'); connection = await getConnection(env, connectionId)
+    requireConnectionManager(actor, connection)
+    requireValue(connection.app === app, 'That connection is for another app')
+    if (!installationOwner(actor)) requireValue(scopes.every(scope => JSON.parse(connection!.scopes_json).includes(scope)), 'Only the installation owner may request new scopes with fresh consent', 403)
+  } else requireOwner(actor)
+  const client = await oauthApp(env, app)
   const sealed = await seal(env, `crank-oauth-state:${await digest(state)}`, { verifier })
-  await guardedBatch(env, actor, 'owner', [stmt(env, 'INSERT INTO crank_oauth_states(state_hash,app,label,scopes_json,connection_id,verifier_iv,verifier_ciphertext,actor_id,created_at,expires_at) VALUES(?,?,?,?,?,?,?,?,?,?)',
-    await digest(state), app, text(input.label, 'label'), JSON.stringify(scopes), connectionId, sealed.iv, sealed.ciphertext, actor.id, new Date(at).toISOString(), new Date(at + 600000).toISOString())])
+  const jobs = [stmt(env, 'INSERT INTO crank_oauth_states(state_hash,app,label,scopes_json,connection_id,verifier_iv,verifier_ciphertext,actor_id,created_at,expires_at,connection_revision) VALUES(?,?,?,?,?,?,?,?,?,?,?)',
+    await digest(state), app, text(input.label, 'label'), JSON.stringify(scopes), connectionId, sealed.iv, sealed.ciphertext, actor.id, new Date(at).toISOString(), new Date(at + 600000).toISOString(), connection?.revision ?? null)]
+  if (connection) await managedConnectionBatch(env, actor, connection, jobs)
+  else await guardedBatch(env, actor, 'owner', jobs)
   const url = new URL(provider.authorize)
   url.searchParams.set('client_id', client.client_id); url.searchParams.set('redirect_uri', redirectUri(env)); url.searchParams.set('response_type', 'code')
   url.searchParams.set('scope', scopes.join(provider.separator)); url.searchParams.set('state', state)
@@ -89,12 +97,16 @@ async function tokenRequest(app: string, form: Record<string, string>) {
 
 /** The redirect back from the provider; one use, ten minutes, the starting owner only. */
 export async function finishOauth(env: CrankEnv, actor: Actor, params: URLSearchParams) {
-  requireOwner(actor)
   const state = params.get('state') ?? '', code = params.get('code') ?? ''
   requireValue(state && !params.get('error'), `The provider did not grant access${params.get('error') ? ` (${params.get('error')!.slice(0, 80)})` : ''}`, 400)
   const hash = await digest(state)
-  const row = await stmt(env, 'SELECT * FROM crank_oauth_states WHERE state_hash=?', hash).first<{ app: string; label: string; scopes_json: string; connection_id: string | null; verifier_iv: string; verifier_ciphertext: string; actor_id: string; expires_at: string; used_at: string | null }>()
+  const row = await stmt(env, 'SELECT * FROM crank_oauth_states WHERE state_hash=?', hash).first<{ app: string; label: string; scopes_json: string; connection_id: string | null; verifier_iv: string; verifier_ciphertext: string; actor_id: string; expires_at: string; used_at: string | null; connection_revision: number | null }>()
   requireValue(row && !row.used_at && row.actor_id === actor.id && row.expires_at > now(), 'This authorization link is expired, used or belongs to someone else', 400)
+  if (row.connection_id) {
+    const connection = await getConnection(env, row.connection_id)
+    requireConnectionManager(actor, connection)
+    requireValue(connection.revision === row.connection_revision, 'Connection changed; start fresh consent again', 409)
+  } else requireOwner(actor)
   const claimed = await stmt(env, 'UPDATE crank_oauth_states SET used_at=? WHERE state_hash=? AND used_at IS NULL', now(), hash).run()
   requireValue(claimed.meta.changes === 1, 'This authorization link was already used', 409)
   requireValue(code, 'The provider returned no authorization code', 400)
@@ -108,7 +120,7 @@ export async function finishOauth(env: CrankEnv, actor: Actor, params: URLSearch
   if (row.app === 'quickbooks' && row.connection_id) requireValue((await getConnection(env, row.connection_id)).account_name === realm, 'Reconnect the original QuickBooks company; use a new connection for another company', 409)
   const token = await tokenRequest(row.app, form)
   const scopes = token.granted ?? JSON.parse(row.scopes_json)
-  const input = { app: row.app, label: row.label, auth_kind: 'oauth2', secret: token.secret }
+  const input = { app: row.app, label: row.label, auth_kind: 'oauth2', secret: token.secret, ...(row.connection_id ? {revision:row.connection_revision} : {}) }
   return row.connection_id
     ? rotateConnection(env, actor, row.connection_id, input, { scopes, expiresAt: token.expires })
     : createConnection(env, actor, input, { scopes, account: realm ?? token.team, expiresAt: token.expires })
@@ -136,7 +148,7 @@ export async function freshToken(env: CrankEnv, initialRow: ConnectionRow, initi
         await stmt(env, 'DELETE FROM crank_oauth_refresh_leases WHERE connection_id=? AND lease_id=?', row.id, prior.lease_id).run()
         continue
       }
-      await stmt(env, `UPDATE crank_connections SET status='needs_reconnect' WHERE id=? AND status='active' AND secret_ciphertext=?
+      await stmt(env, `UPDATE crank_connections SET revision=revision+1,status='needs_reconnect' WHERE id=? AND status='active' AND secret_ciphertext=?
         AND EXISTS(SELECT 1 FROM crank_oauth_refresh_leases WHERE connection_id=? AND lease_id=? AND expires_at<=?)`, row.id, row.secret_ciphertext, row.id, prior.lease_id, at).run()
       throw new StepError('connection', 'Token renewal was interrupted; reconnect before another provider operation', { connection_id: row.id, reconnect: true })
     }
@@ -155,12 +167,12 @@ export async function freshToken(env: CrankEnv, initialRow: ConnectionRow, initi
       let token: Awaited<ReturnType<typeof tokenRequest>>
       try { token = await tokenRequest(row.app, { grant_type: 'refresh_token', refresh_token: secret.refresh_token, client_id: client.client_id, client_secret: client.client_secret }) }
       catch {
-        await stmt(env, "UPDATE crank_connections SET status='needs_reconnect' WHERE id=? AND status='active' AND secret_ciphertext=?", row.id, row.secret_ciphertext).run()
+        await stmt(env, "UPDATE crank_connections SET revision=revision+1,status='needs_reconnect' WHERE id=? AND status='active' AND secret_ciphertext=?", row.id, row.secret_ciphertext).run()
         throw new StepError('connection', 'Token renewal could not be confirmed; reconnect before another provider operation', { connection_id: row.id, reconnect: true })
       }
       const scopes: string[] = JSON.parse(row.scopes_json)
       if (token.granted && token.granted.some(scope => !scopes.includes(scope))) {
-        await stmt(env, "UPDATE crank_connections SET status='needs_reconnect' WHERE id=? AND status='active' AND secret_ciphertext=?", row.id, row.secret_ciphertext).run()
+        await stmt(env, "UPDATE crank_connections SET revision=revision+1,status='needs_reconnect' WHERE id=? AND status='active' AND secret_ciphertext=?", row.id, row.secret_ciphertext).run()
         throw new StepError('connection', 'The provider returned new scopes during renewal; fresh owner consent is required', { connection_id: row.id, reconnect: true })
       }
       const next: Secret = { ...secret, ...token.secret, refresh_token: token.secret.refresh_token ?? secret.refresh_token }

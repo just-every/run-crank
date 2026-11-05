@@ -112,6 +112,7 @@ test('CONN-002: OAuth consent, refresh and accounts per step; secrets never leav
   await h.get(callback, h.owner, 400);
   const w = await publish(h, 'Find contacts', { trigger: { type: 'manual' }, steps: [{ id: 'list', type: 'http', connection_id: hub.id, input: { url: 'https://api.hubapi.com/crm/v3/objects/contacts' } }] });
   const run = await startRun(h, w, {});
+  assert.equal(run.status, 'succeeded', JSON.stringify(run.error));
   assert.equal(tokens[1].grant_type, 'refresh_token'); assert.equal(tokens[1].refresh_token, refresh1);
   assert.equal(stepOf(run, 'list').output.body.fresh, true, 'the token is refreshed before expiry');
 
@@ -140,6 +141,7 @@ test('CONN-002: OAuth consent, refresh and accounts per step; secrets never leav
     assert.ok(flows.length > 0 && flows.every(f => f.status === 'paused' || f.status === 'draft'), 'restored workflows do not dispatch');
   } finally { await other.close() }
   await oauthRenewalJourney();
+  const {connectionTransferJourney}=await import('./connection-transfer-journey.mjs');await connectionTransferJourney();
   const {hubspotSearchJourney,hubspotCustodyJourney}=await import('./hubspot-search-journey.mjs');
   await hubspotSearchJourney();await hubspotCustodyJourney();
 });

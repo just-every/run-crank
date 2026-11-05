@@ -1,11 +1,11 @@
 import { requireValue, stmt, type Actor, type CrankEnv } from '../model'
 
 export type TeamRole = 'admin' | 'builder' | 'operator' | 'approver' | 'viewer' | 'auditor' | 'billing'
-export type TeamAction = 'read' | 'test' | 'prepare' | 'publish' | 'start' | 'approve' | 'replay' | 'delegate' | 'audit' | 'billing' | 'revoke'
+export type TeamAction = 'read' | 'test' | 'prepare' | 'publish' | 'start' | 'approve' | 'replay' | 'delegate' | 'audit' | 'billing' | 'revoke' | 'manage_connection'
 export interface TeamGrant { role: TeamRole; workflow_ids: string[]; connection_ids: string[]; actions?: TeamAction[]; review_grant_id?: string }
 export interface TeamAccess extends TeamGrant { grants: TeamGrant[]; revision: string }
 const powers: Record<TeamRole, TeamAction[]> = {
-  admin: ['read','test','prepare','publish','start','replay','delegate','revoke'], builder: ['read','test','prepare','publish'],
+  admin: ['read','test','prepare','publish','start','replay','delegate','revoke','manage_connection'], builder: ['read','test','prepare','publish'],
   operator: ['read','start','replay'], approver: ['read','approve'], viewer: ['read'], auditor: ['audit'], billing: ['billing'],
 }
 export const grantsAction = (grant: TeamGrant, action: TeamAction) => powers[grant.role].includes(action) && (!grant.actions || grant.actions.includes(action))
@@ -86,6 +86,9 @@ export async function admitTeamRequest(request: Request, env: CrankEnv, actor: A
   if (read && path==='/api/crank/reports/usage') action='billing'
   const revoke=/^\/api\/crank\/gateways\/(grants\/)?([^/]+)\/revoke$/.exec(path)
   if(!read && revoke) {action='revoke';let gateway=decodeURIComponent(revoke[2]);if(revoke[1]) {const row=await stmt(env,'SELECT gateway_id FROM crank_gateway_grants WHERE id=?',gateway).first<{gateway_id:string}>();requireValue(row,'Grant not found',404);gateway=row.gateway_id}connections=['gateway:'+gateway]}
+  if(path==='/api/crank/oauth/start' || read && path==='/api/crank/oauth/callback') action='manage_connection'
+  const lifecycle=/^\/api\/crank\/connections\/([^/]+)\/(rotate|revoke|history)$/.exec(path)
+  if(lifecycle && (read ? lifecycle[2]==='history' : lifecycle[2]!=='history')) {action='manage_connection';connections=[decodeURIComponent(lifecycle[1])]}
   const connection=/^\/api\/crank\/connections\/([^/]+)$/.exec(path)
   if(connection && read) {action='read';connections=[decodeURIComponent(connection[1])]}
   const wf = /^\/api\/crank\/workflows\/([^/]+)(?:\/(.*))?$/.exec(path)

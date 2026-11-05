@@ -237,6 +237,17 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
         if(form.business_meaning_confirmed) input.business_meaning_confirmed=form.business_meaning_confirmed==='true'
         try { for(const key of ['bindings','scopes']) if(form[key]) input[key]=JSON.parse(form[key]) } catch { return page('Invalid repair choices','<p>Review the account bindings and scopes.</p>',{},422) }
       }
+      if(form.connection_recipient) {
+        const recipient=JSON.parse(form.connection_recipient)
+        input.new_owner_id=recipient.id; input.recipient_version=recipient.version; input.grant_revision=recipient.grant_revision
+        delete input.connection_recipient
+      }
+      if(form.connection_revision!==undefined) {input.revision=Number(form.connection_revision);delete input.connection_revision}
+      if(form.connection_credentials==='true') {
+        input.secret=Object.fromEntries(Object.entries(form).filter(([key,value])=>key.startsWith('credential_') && value!=='').map(([key,value])=>[key.slice(11),value]))
+        for(const key of Object.keys(input))if(key.startsWith('credential_') || key==='connection_credentials')delete input[key]
+      }
+      if(path==='/api/crank/oauth/start') input.scopes=JSON.parse(form.scopes)
       if(form.team_scope_form==='true') {
         for(const key of Object.keys(input)) if(key==='team_scope_form' || key.startsWith('workflow_') || key.startsWith('connection_')) delete input[key]
         input.workflow_ids=Object.keys(form).filter(key=>key.startsWith('workflow_') && form[key]==='true').map(key=>key.slice('workflow_'.length))
@@ -314,6 +325,7 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
       if(response.status===403 && result.error==='step_up_required')return page('Confirm by email',gatewayConfirmation(),{},403)
       if(!response.ok) return page('Action refused',`<p class="notice">${esc(result.error)}</p><p>No success was reported. Review the latest state before retrying.</p><a href="${back ?? (path.includes('/imports')?'/app/import':'/app')}">Return to workspace</a>`,{},response.status)
       if(result.url && /\/samples\/listen$/.test(path)) return page('Waiting for webhook',`<section class="panel"><h2>Waiting for one sample</h2><p>Send a POST to this draft URL before ${esc(result.expires_at)}. The URL is shown once and never starts a production run.</p><label>Draft sample URL<input readonly value="${esc(result.url)}"></label><a class="btn btn-secondary" href="${esc(back ?? '/app')}">Refresh captured samples</a></section>`)
+      if(result.authorize_url && path==='/api/crank/oauth/start')return page('Authorize connection',`<section class="panel"><h2>Fresh provider consent</h2><p>Review the requested scopes with your provider. Ownership alone does not authorize account access.</p><a class="btn btn-primary" href="${esc(result.authorize_url)}">Continue to provider</a></section>`)
       if(result.code && path==='/api/crank/gateways')return page('Gateway enrollment',`<section class="panel"><h2>Enroll your gateway</h2><p>This code is shown once and expires ${esc(result.expires_at)}. Its authority is bound to environment ${esc(result.gateway.environment)}. Use the customer gateway CLI and save its state in a private file.</p><label>Single-use enrollment code<input type="text" autocomplete="off" readonly aria-label="Enrollment code" value="${esc(result.code)}"></label><p>Private database and storage credentials stay in the gateway manifest.</p><a href="/app/connections">Return to connections</a></section>`)
       if(result.address && /\/email-aliases$/.test(path)) return page('Inbound address created',`<section class="panel"><h2>Save this address</h2><label>Inbound address<input readonly autocomplete="off" value="${esc(result.address)}"></label><p>${esc(result.routing)}</p><a href="/app/settings/email">Return to email settings</a></section>`)
       if(result.credential && path==='/api/crank/mcp-clients') return page('Client server created',mcpCredentialView(result))
@@ -381,7 +393,8 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
     if(url.pathname==='/app/connections') {
       const nativeOwner=actor.role==='owner' && ['native','dev'].includes(actor.kind)
       const [connections,custom,gateways,accounts,workflows]=await Promise.all([read('/api/crank/connections'),nativeOwner?read('/api/crank/custom-connectors'):[],nativeOwner?read('/api/crank/gateways'):{gateways:[],grants:[]},nativeOwner?read('/api/crank/service-accounts'):[],nativeOwner?read('/api/crank/workflows'):[]])
-      return page('Connections',connectionsView(connections,owner)+(nativeOwner?customConnectionsPanel(custom,gateways,true)+serviceAccountsPanel(accounts,workflows,[...connections,...gateways.gateways.filter((g:any)=>g.status==='active').map((g:any)=>({...g,id:gatewayScopeId(g.id)}))]):''),{state,intro:'The apps your workflows act on, each with one stored credential.'})
+      const ownership=nativeOwner?Object.fromEntries(await Promise.all(connections.map(async(c:any)=>[c.id,await read('/api/crank/connections/'+encodeURIComponent(c.id)+'/ownership')]))):{}
+      return page('Connections',connectionsView(connections,owner,ownership)+(nativeOwner?customConnectionsPanel(custom,gateways,true)+serviceAccountsPanel(accounts,workflows,[...connections,...gateways.gateways.filter((g:any)=>g.status==='active').map((g:any)=>({...g,id:gatewayScopeId(g.id)}))]):''),{state,intro:'The apps your workflows act on, each with one stored credential.'})
     }
     if(url.pathname==='/app/inbox') return page('Inbox',inboxPanel(await read('/api/crank/inbox')),{state,intro:'In-app requests addressed to you. The original workflow controls access and every decision.'})
     requireOwner(actor)
