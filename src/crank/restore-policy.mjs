@@ -94,15 +94,18 @@ export function importRow(table, row) {
 }
 
 // Typeform checkpoints contain only the declared projection, never provider uploads.
-function validTypeformProjection(step, value) {
+function validTypeformProjection(step, value, input) {
   const object = v => v && typeof v === 'object' && !Array.isArray(v);
   const keys = (v, allowed) => object(v) && Object.keys(v).every(key => allowed.includes(key));
   const identity = v => typeof v === 'string' && /^[A-Za-z0-9_-]{1,128}$/.test(v);
   const time = v => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/.test(v) && Number.isFinite(Date.parse(v)) && new Date(v).toISOString().slice(0,19) === v.slice(0,19);
   if (!keys(value,['records']) || !Array.isArray(value.records) || value.records.length > 1 || !Array.isArray(step.fields) || !Array.isArray(step.hidden_fields)) return false;
+  // Resolved inputs bind mapped lookups too. Opaque inputs are checked on consumption.
+  const expected = typeof step.input?.response_id === 'string' && !step.input.response_id.includes('{{') ? step.input.response_id : sealedValue(input) ? null : input?.response_id;
+  if (expected !== null && !identity(expected)) return false;
   return value.records.every(record => {
     if (!keys(record,['id','response_id','form_id','submitted_at','landed_at','answers','hidden']) || !identity(record.id) || record.id !== record.response_id || record.form_id !== step.form_id || !time(record.submitted_at) || record.landed_at !== undefined && !time(record.landed_at) || !Array.isArray(record.answers) || record.answers.length > step.fields.length || !keys(record.hidden,step.hidden_fields)) return false;
-    if (typeof step.input?.response_id === 'string' && !step.input.response_id.includes('{{') && record.id !== step.input.response_id) return false;
+    if (expected !== null && record.id !== expected) return false;
     const seen = new Set();
     for (const answer of record.answers) {
       if (!keys(answer,['field','type','value']) || !keys(answer.field,['id','ref']) || !identity(answer.field.id) || answer.field.ref !== undefined && !identity(answer.field.ref) || seen.has(answer.field.id) || !Object.hasOwn(answer,'value') || !step.fields.some(field => field.id === answer.field.id && field.type === answer.type)) return false;
@@ -238,7 +241,9 @@ export async function validateRestore({ read }) {
         if (body.some(chunk => chunk.content_base64.startsWith('{'))) return false;
         const bytes = Uint8Array.from(body.map(chunk => atob(chunk.content_base64)).join(''), c => c.charCodeAt(0));
         const value = JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(bytes));
-        if (response.status === 200 ? !validTypeformProjection(step,value) : Object.keys(value).length !== 0) return false;
+        const retained = (await rows('crank_wf_steps')).find(row => row.run_id === checkpoint.run_id && row.path === checkpoint.path && row.operation_key === checkpoint.operation_key);
+        const input = retained?.input_json ? JSON.parse(retained.input_json) : null;
+        if (response.status === 200 ? !validTypeformProjection(step,value,input) : Object.keys(value).length !== 0) return false;
       }
       chunks.delete(key);
       if (Array.isArray(response.headers) && response.headers.some(pair => !Array.isArray(pair) || pair.length !== 2 || pair.some(value => typeof value !== 'string') || /authorization|cookie|api[-_]?key|token|secret|password|signature/i.test(pair[0]))) return false;
