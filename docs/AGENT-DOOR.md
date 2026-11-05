@@ -62,6 +62,9 @@ Every returned record carries `com.runeditrun/untrusted: true` on its content.
 The reader rechecks native authority around the awaited read and retains the
 selected authority between classification and execution. The shared runtime
 also compares the full classified bytes with the final read and fences consent.
+The authority binding belongs to the current request, including an approved
+read that resumes an older operation identity. A native role change during
+that replay is refused even when its visible record bytes stay unchanged.
 Record, role, scope or consent changes cannot release stale content. Restored
 records retain their native inactive state; reading does not adopt or activate
 them.
@@ -71,7 +74,8 @@ person doors under autonomous and held policies: owner and scoped viewer field
 parity, exact write readback, missing and cross-sponsor scope equivalence,
 unanswered sensitive policy, old metadata credentials, stale revisions and
 approvals, hostile text, record and authority changes during classification,
-revoked consent, and inactive restoration. The existing platform sanity journey
+revoked consent and native agents, inactive sponsors, approved-read replay, and
+inactive restoration. The existing platform sanity journey
 and `tests/agent-door/journey.mjs` both invoke it without a new registration.
 
 ## The twelve declared tools

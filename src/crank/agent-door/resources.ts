@@ -16,7 +16,9 @@ export async function workflowResourceLink(value: Record<string, unknown>) {
 export function crankResources(env: CrankEnv): ResourceDefinition[] {
   // One door is constructed per request. Retain the authority selected during
   // classification so a mid-read grant change cannot serve the same bytes.
-  const authorities = new Map<string, string>()
+  // Approved-read replay resumes an older operation identity. Bind to this
+  // request's reader instead of that mutable continuation identity.
+  let selectedAuthority: string | undefined
   const authority = async (ctx: ToolContext) => {
     const actor = await resolveActor(env, ctx)
     return canonical({ id: actor.id, role: actor.role, version: actor.version, token: actor.tokenId, team: actor.team })
@@ -39,11 +41,10 @@ export function crankResources(env: CrankEnv): ResourceDefinition[] {
       const ctx = resourceToolContext(env, principal)
       try {
         const before = await authority(ctx)
-        const previous = authorities.get(ctx.operationId)
-        if (previous !== undefined && previous !== before) return null
+        if (selectedAuthority !== undefined && selectedAuthority !== before) return null
         const value = record(await nativeCall(env, ctx, '/workflows/' + encodeURIComponent(match[1])))
         if (await authority(ctx) !== before || (await workflowResourceLink(value)).uri !== uri) return null
-        authorities.set(ctx.operationId, before)
+        selectedAuthority = before
         return { json: value, untrusted: true }
       } catch (error) {
         // Missing records and every native visibility refusal have one result.

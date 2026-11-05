@@ -89,19 +89,26 @@ export default async function resourcesJourney({report=()=>{}}={}) {
    await adopt(h,c,{...autonomousPolicy(),rules:[{id:'standard',class:'standard',do:'autonomous'}]});
    const unanswered=await read(createdUri);assert.equal(code(unanswered),'policy_unset');noContent(unanswered);
    await adopt(h,c,mode==='held'?heldPolicy():autonomousPolicy());
+   let viewerRead;
    for(const [ctx,personCookie] of [[c,h.owner],[v,viewer.cookie]]) {
     const ordinary=await h.get('workflows/'+workflow.id,personCookie);
     let answer=await read(createdUri,ctx);
     if(mode==='held') {
      assert.equal(code(answer),'approval_required');noContent(answer);
      assert.equal(answer.value.error.data._meta['com.runeditrun/decision'].classes[0].class,'sensitive');
+     const requestState=answer.value.error.data.requestState;
      const approval=await decide(h,answer.value.error.data.approval,personCookie);assert.equal(approval.state,'executed');
-     answer=await rpc(h,ctx,'resources/read',{uri:createdUri,requestState:answer.value.error.data.requestState});
+     answer=await rpc(h,ctx,'resources/read',{uri:createdUri,requestState});
+     if(ctx===v)viewerRead={uri:createdUri,requestState};
     }
     assert.deepEqual(content(answer),ordinary,'native role field parity, including nested draft and custody fields');
     assert.equal(content(answer).data_class,'none','declared data class is not used to downgrade full content');
     assert.equal(content(answer).draft.steps[0].input.text,hostile);
     assert.equal(answer.value.result._meta['com.runeditrun/decision'].classes[0].class,'sensitive');
+   }
+   if(viewerRead) {
+    boundary=()=>h.post('team/'+viewer.id,{role:'operator',workflow_ids:[workflow.id],connection_ids:[]});
+    const replay=await rpc(h,v,'resources/read',viewerRead);noContent(replay);assert.equal(code(replay),'resource_unavailable');await grant();
    }
    // Distinct sponsoring people cannot borrow the owner's native record scope.
    const privateRecord=await h.post('workflows',{name:'Synthetic private workflow',graph:recordGraph('private')},h.owner,201);
@@ -125,7 +132,9 @@ export default async function resourcesJourney({report=()=>{}}={}) {
    const updated=await tool('crank.workflows.update',{workflow_id:workflow.id,draft_digest:workflow.draft_digest,
     description:'Reviewed new state',graph:recordGraph('synthetic-crank-new-state'),idempotency_key:randomUUID()});
    const updatedUri=updated.content.find(item=>item.type==='resource_link').uri;
-   assert.notEqual(updatedUri,createdUri);assert.deepEqual(content(await read(updatedUri)),await h.get('workflows/'+workflow.id));
+   const updatedRecord=content(await read(updatedUri));
+   assert.notEqual(updatedUri,createdUri);assert.deepEqual(updatedRecord,await h.get('workflows/'+workflow.id));
+   assert.equal(updatedRecord.description,'Reviewed new state');assert.equal(updatedRecord.draft.steps[0].input.text,'synthetic-crank-new-state');
    assert.equal(code(await read(createdUri)),'resource_unavailable');
    for(const name of ['crank.workflows.get','crank.workflows.validate','crank.workflows.duplicate']) {
     const result=await tool(name,{workflow_id:workflow.id,...(name.endsWith('duplicate')?{idempotency_key:randomUUID()}:{})});
@@ -141,7 +150,7 @@ export default async function resourcesJourney({report=()=>{}}={}) {
    boundary=()=>h.post('team/'+viewer.id,{role:'viewer',workflow_ids:[],connection_ids:[]});
    const revoked=await read(liveUri,v);noContent(revoked);assert.equal(code(revoked),'resource_unavailable');await grant();
    boundary=()=>adopt(h,c,autonomousPolicy(),{revoked:{agents:[],consents:[v.consent]}});
-   const consent=await read(liveUri,v);noContent(consent);assert.ok(code(consent)||consent.status===401);
+   const consent=await read(liveUri,v);noContent(consent);assert.equal(code(consent),'consent_revoked');
    const afterConsent=await read(liveUri,v);assert.equal(afterConsent.status,401);noContent(afterConsent);
    await adopt(h,c,autonomousPolicy());
    await h.post('team/'+viewer.id,{role:'viewer',workflow_ids:[],connection_ids:[]});
@@ -149,6 +158,13 @@ export default async function resourcesJourney({report=()=>{}}={}) {
    const narrower=await read(liveUri,v,{scope:'workflows:read'});assert.equal(code(narrower),'insufficient_scope');noContent(narrower);
    assert.deepEqual(content(await read(liveUri)),await h.get('workflows/'+workflow.id));
   }
+  const liveUri=link(await h.get('workflows/'+workflow.id));
+  const revokedAgent={...c,agentId:c.agentId+'-revoked'};
+  assert.deepEqual(content(await rpc(h,revokedAgent,'resources/read',{uri:liveUri})),await h.get('workflows/'+workflow.id));
+  const revoked=await h.send('/agents/api/agents/'+encodeURIComponent(revokedAgent.agentId)+'/revoke',{},h.owner);assert.equal(revoked.status,200,revoked.text);
+  const revokedRead=await rpc(h,revokedAgent,'resources/read',{uri:liveUri});assert.equal(revokedRead.status,401);noContent(revokedRead);
+  const inactive=await h.send('/auth/operator/status',{operatorId:viewer.id,status:'inactive'},h.owner);assert.equal(inactive.status,200,inactive.text);
+  const inactiveRead=await read(liveUri,v);assert.equal(inactiveRead.status,401);noContent(inactiveRead);
   await h.post('workflows/'+workflow.id+'/publish',{},h.owner,201);
   assert.equal((await h.get('workflows/'+workflow.id)).status,'published');
   const saved=await archive(h);

@@ -172,7 +172,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "2986ace197df6d2db477f91c8166740e49425b5cd33f08aac54e5423623cc597",
+      "sha256": "ad87ef200c30b7773613bf0defe1730452be47e89726a2a3ab4e028dce513b65",
       "executable": false
     },
     "DEMO.md": {
@@ -196,7 +196,7 @@
       "executable": false
     },
     "docs/AGENT-DOOR.md": {
-      "sha256": "cbaccd9efaaa7364b2444b26e12c52861eea94ecaaaf1af45ddd60100b3d727d",
+      "sha256": "4b6dbd4aa7ec2478793211da839297193e4c3ff4fda9b4973ee9f428733740bc",
       "executable": false
     },
     "docs/API.md": {
@@ -2964,7 +2964,7 @@
       "executable": false
     },
     "src/crank/agent-door/resources.ts": {
-      "sha256": "3ca32674e5afebc263aa8afc8829e6e3ed94677ea155a170e8d4af68e172e6db",
+      "sha256": "f644b10ae3b6b3318395319c359d35784dd2b7a025993eaa31e91cc0453fc80e",
       "executable": false
     },
     "src/crank/agent-door/tool-metadata.ts": {
@@ -6724,7 +6724,7 @@
       "executable": false
     },
     "tests/agent-door/resources-journey.mjs": {
-      "sha256": "a9055cfd4dda3cd57525721fc3c0e81fdf7005c8996eb1ad8e0f39ddffd0e3a7",
+      "sha256": "3f4ce32b67355708ef9681bc0f6cd4452fd6d9efa2f8ab27e20df14ed391517c",
       "executable": false
     },
     "tests/ai-steps-browser.mjs": {
