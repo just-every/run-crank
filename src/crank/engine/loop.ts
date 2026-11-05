@@ -11,7 +11,7 @@ export interface LoopExecution {
   fork(steps: Step[], prefix: string, item: unknown, index: number): Promise<LoopExecution>
   walk(steps: Step[], prefix: string): Promise<ExecutionOutcome>
 }
-interface ItemResult { index: number; status: 'succeeded' | 'failed' | 'stopped' | 'waiting' | 'paused' | 'rejected'; output?: unknown; error?: unknown }
+interface ItemResult { index: number; status: 'succeeded' | 'failed' | 'stopped' | 'waiting' | 'paused' | 'rejected' | 'timed_out'; output?: unknown; error?: unknown }
 
 export function validateLoop(step: Step) {
   if (step.on_error !== undefined) throw new StepError('validation', `Loop ${step.id}: use item_errors to declare item failure behavior`)
@@ -58,6 +58,7 @@ export async function executeLoop(step: Step, path: string, host: LoopExecution)
         items[index] = JSON.parse(old.output_json!)
         if (step.empty_result === 'stop' && items[index].status === 'succeeded' && Array.isArray(items[index].output) && items[index].output.length === 0) { emptyResultAt = index; halted = true }
         if (items[index].status === 'failed' && step.item_errors === 'stop') { outcomes[index] = { kind: 'failed', error: items[index].error }; halted = true }
+        if (items[index].status === 'timed_out') { outcomes[index] = { kind: 'timed_out', reason: 'An item approval timed out' }; halted = true }
         if (items[index].status === 'rejected') { outcomes[index] = { kind: 'rejected', reason: 'An item approval was rejected' }; halted = true }
         continue
       }
@@ -71,12 +72,12 @@ export async function executeLoop(step: Step, path: string, host: LoopExecution)
       const status = outcome.kind === 'completed' ? 'succeeded' : outcome.kind
       const result: ItemResult = { index, status, ...(outcome.kind === 'completed' ? { output } : {}), ...(outcome.kind === 'failed' ? { error: outcome.error } : {}) }
       items[index] = result; outcomes[index] = outcome
-      await host.save(step, itemPath, status === 'paused' ? 'waiting' : status === 'rejected' ? 'stopped' : status, { input: { item: input.items[index] }, output: result, ...(outcome.kind === 'failed' ? { error: outcome.error } : {}) })
+      await host.save(step, itemPath, status === 'paused' ? 'waiting' : status === 'rejected' || status === 'timed_out' ? 'stopped' : status, { input: { item: input.items[index] }, output: result, ...(outcome.kind === 'failed' ? { error: outcome.error } : {}) })
       // An empty source back edge never invokes its batch node again. Keep prior
       // checkpoints, stop remaining source items and emit no completion stream.
       if (step.empty_result === 'stop' && outcome.kind === 'completed' && Array.isArray(output) && output.length === 0) { emptyResultAt = index; halted = true }
       // Workers already in flight finish and checkpoint before the run is settled.
-      if (['waiting', 'paused', 'rejected'].includes(outcome.kind) || outcome.kind === 'failed' && step.item_errors === 'stop') halted = true
+      if (['waiting', 'paused', 'rejected', 'timed_out'].includes(outcome.kind) || outcome.kind === 'failed' && step.item_errors === 'stop') halted = true
     }
   }
   const workers = await Promise.allSettled(Array.from({ length: Math.min(Number(step.concurrency), input.items.length) }, worker))
@@ -86,6 +87,7 @@ export async function executeLoop(step: Step, path: string, host: LoopExecution)
   const output = { items: retained, results: emptyResultAt === null ? retained.filter(item => item.status === 'succeeded').map(item => item.output) : [], total: input.items.length,
     ...(emptyResultAt === null ? {} : { empty_result_at: emptyResultAt }) }
   const blocking = outcomes.find(outcome => outcome?.kind === 'failed' && step.item_errors === 'stop')
+    ?? outcomes.find(outcome => outcome?.kind === 'timed_out')
     ?? outcomes.find(outcome => outcome?.kind === 'rejected')
     ?? outcomes.find(outcome => outcome?.kind === 'paused')
     ?? (outcomes.some(outcome => outcome?.kind === 'waiting') ? { kind: 'waiting' as const, approval: outcomes.some(outcome => outcome?.kind === 'waiting' && outcome.approval) } : undefined)

@@ -132,7 +132,7 @@ class Execution {
     let mutating = type.mutating && !(step.type === 'http' && ['GET', 'HEAD'].includes(method) && ['GET', 'HEAD'].includes(priorMethod))
     const output = (r: StepRecord) => r.output_json ? JSON.parse(r.output_json) : null
     if (record?.status === 'succeeded' || record?.status === 'skipped' || (record?.status === 'failed' && step.on_error === 'continue')) { this.scope.steps[step.id] = output(record); return { kind: 'completed' } }
-    if (record?.status === 'stopped') { const value = output(record); return value?.rejected ? { kind: 'rejected', reason: value.reason } : { kind: 'stopped', reason: value?.reason ?? 'filter' } }
+    if (record?.status === 'stopped') { const value = output(record); return value?.timed_out ? {kind: 'timed_out', reason: value.reason} : value?.rejected ? { kind: 'rejected', reason: value.reason } : { kind: 'stopped', reason: value?.reason ?? 'filter' } }
     if (record?.status === 'failed' || record?.status === 'uncertain') return { kind: 'failed', error: record.error_json ? JSON.parse(record.error_json) : { category: 'uncertain' } }
     const wait = this.waits.get(path)
     if (record?.status === 'waiting' && wait && !wait.resolved_at) return { kind: 'waiting', approval: wait.kind === 'approval' }
@@ -238,12 +238,15 @@ class Execution {
         this.scope.steps[step.id] = result.output
         return { kind: 'completed' }
       case 'waiting':
-        await insertWait(this.env, this.run, path, result.wait.kind === 'approval' ? await approvalSpec(this.env, this.run, result.wait.proposal, result.wait.reason ?? 'approval step', step.type === 'collect' ? result.wait.expiresAt : null) : result.wait)
+        await insertWait(this.env, this.run, path, result.wait.kind === 'approval' ? { ...await approvalSpec(this.env, this.run, result.wait.proposal, result.wait.reason ?? 'approval step', ['approval', 'collect'].includes(step.type) ? result.wait.expiresAt : null), deadlines: result.wait.deadlines } : result.wait)
         await this.save(step, path, 'waiting', { input })
         return { kind: 'waiting', approval: result.wait.kind === 'approval' }
       case 'stopped':
         await this.save(step, path, 'stopped', { input, output: { reason: result.reason, ...(isObject(result.output) ? result.output : {}) }, trace: result.trace })
         return { kind: 'stopped', reason: result.reason }
+      case 'timed_out':
+        await this.save(step, path, 'stopped', { input, output: { timed_out: true, reason: result.reason } })
+        return { kind: 'timed_out', reason: result.reason }
       case 'rejected':
         await this.save(step, path, 'stopped', { input, output: { rejected: true, reason: result.reason } })
         return { kind: 'rejected', reason: result.reason }
@@ -310,7 +313,7 @@ class Execution {
   }
 }
 
-const STATUS: Record<Outcome['kind'], string> = { completed: 'succeeded', stopped: 'stopped_by_filter', waiting: 'waiting', paused: 'paused', failed: 'failed', rejected: 'rejected' }
+const STATUS: Record<Outcome['kind'], string> = { completed: 'succeeded', stopped: 'stopped_by_filter', waiting: 'waiting', paused: 'paused', failed: 'failed', rejected: 'rejected', timed_out: 'cancelled' }
 
 /** Claims a queued run, walks its version's graph from the checkpoints and settles it. */
 export async function executeRun(env: CrankEnv, runId: string, time = Date.now()): Promise<RunRow | null> {
@@ -332,7 +335,7 @@ export async function executeRun(env: CrankEnv, runId: string, time = Date.now()
   if (outcome.kind === 'stopped' && outcome.reason === 'search') status = 'stopped_by_search'
   if (outcome.kind === 'waiting' && outcome.approval) status = 'awaiting_approval'
   const terminal = !['waiting', 'awaiting_approval', 'paused'].includes(status)
-  const error = outcome.kind === 'failed' ? outcome.error : outcome.kind === 'paused' ? { category: outcome.authority ? 'authority' : 'connection', message: outcome.reason, connection_id: outcome.connectionId, reconnect: !outcome.authority } : outcome.kind === 'rejected' ? { category: 'rejected', message: outcome.reason } : null
+  const error = outcome.kind === 'failed' ? outcome.error : outcome.kind === 'paused' ? { category: outcome.authority ? 'authority' : 'connection', message: outcome.reason, connection_id: outcome.connectionId, reconnect: !outcome.authority } : outcome.kind === 'timed_out' ? { category: 'timeout', message: outcome.reason } : outcome.kind === 'rejected' ? { category: 'rejected', message: outcome.reason } : null
   // A callback/approval can resolve while another item is still running. Queue
   // only waits whose child checkpoint remains waiting, so old completed waits
   // cannot spin an otherwise parked run.

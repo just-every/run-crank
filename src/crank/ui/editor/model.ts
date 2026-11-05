@@ -6,6 +6,7 @@ import { canonical } from '../../model'
 export interface Connection { purpose?: string; id: string; app: string; label: string; status: string; domains: string[]; account_name: string }
 export interface StepRecord { path: string; step_id: string; type: string; status: string; started_at: string; finished_at: string | null; input?: unknown; output?: unknown; error?: any; trace?: unknown; operation_key?: string }
 export interface RunDetail {
+  approval_deadlines?: {path: string;kind: string;due_at: string;state: string;active: number}[]
   gateway_tasks?: {id:string;path:string;ordinal:number;status:string;expires_at:string}[]; executor_tasks?: {id:string;path:string;status:string;active:number}[]; grant_id?: string | null; escalations?: {path:string;escalated_at:string;recipient_ids_json:string}[]; mode?: 'production' | 'test'; repair_of?: string | null; repairs?: { id: string; status: string }[]; id: string; workflow_id: string; version_id: string; status: string; trigger_kind: string; business_key: string | null; received_at: string; started_at: string | null; finished_at: string | null; error: any; trigger?: unknown; steps: StepRecord[]; attempts?: any[]; waits: any[]; business_outcome?: string; source_id?: string | null; source_time?: string | null; version: { number: number; published_by?: string; published_at?: string; authority?: string; declared?: unknown } | null }
 export interface Version { number: number; graph: Graph; published_at: string; published_by: string }
 

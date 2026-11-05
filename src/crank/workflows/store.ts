@@ -316,6 +316,12 @@ export async function setWorkflowState(env: CrankEnv, actor: Actor, workflowId: 
   const cancelStatements = (await Promise.all(cancelVersions.map(version => cancellations(env, actor, workflowId, version.id, 'The workflow was paused')))).flat()
   await guardedBatch(env, actor, 'publish', [
     ...(state === 'paused' ? [
+      // Persist reminder cancellation with the pause, even if resume precedes Cron.
+      stmt(env, `UPDATE crank_approval_deadlines SET state='cancelled' WHERE kind='reminder' AND state IN ('pending','notified')
+        AND run_id IN (SELECT id FROM crank_wf_runs WHERE workflow_id=?)`, workflowId),
+      stmt(env, `UPDATE crank_notice_deliveries SET state='cancelled',failure='approval_no_longer_current'
+        WHERE state IN ('pending','retry') AND notice_key IN (SELECT 'approval-reminder:'||d.id FROM crank_approval_deadlines d
+          JOIN crank_wf_runs r ON r.id=d.run_id WHERE r.workflow_id=? AND d.kind='reminder' AND d.state='cancelled')`, workflowId),
       stmt(env, 'UPDATE crank_wf_runs SET continuation_authority=continuation_authority&~1 WHERE workflow_id=?', workflowId),
       stmt(env, `UPDATE crank_wf_runs SET continuation_authority=continuation_authority|1 WHERE workflow_id=? AND status IN ('waiting','awaiting_approval')
         AND COALESCE(json_extract((SELECT graph_json FROM crank_workflow_versions WHERE id=version_id),'$.settings.waiting_runs'),'continue') IN ('continue','cancel_on_new_version')`, workflowId),

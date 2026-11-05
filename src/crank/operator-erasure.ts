@@ -7,7 +7,7 @@ const ATTRIBUTION: [table: string, column: string][] = [
   ['crank_recurring_skills','created_by'], ['crank_recurring_skill_versions','created_by'], ['crank_recurring_objective_versions','created_by'], ['crank_recurring_tasks','owner_id'],
   ['crank_state_tables','owner_id'], ['crank_state_tables','created_by'],
   ['crank_subflow_versions','created_by'], ['crank_workflow_samples','created_by'],
-  ['crank_notice_deliveries','owner_id'], ['crank_notice_routes','owner_id'],
+  ['crank_approval_deadlines','owner_id'], ['crank_notice_deliveries','owner_id'], ['crank_notice_routes','owner_id'],
   ['crank_agent_followups','created_by'], ['crank_agent_followup_recipients','recipient_id'], ['crank_agent_followup_contacts','recipient_id'], ['crank_agent_followup_people','changed_by'],
   ['crank_drift_proposals','created_by'], ['crank_skills', 'created_by'], ['crank_team_access', 'changed_by'],
   ['crank_usage_workflow_estimates', 'quoted_by'], ['crank_usage_version_estimates', 'quoted_by'], ['crank_usage_budgets', 'updated_by'], ['crank_usage_allowances', 'created_by'],

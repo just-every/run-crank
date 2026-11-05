@@ -27,6 +27,7 @@ export function fenceRow(table, row) {
 
 /** Every value importRow may write. Base refuses any other change to a staged row. */
 export const importSafety = {
+  crank_approval_deadlines: { active: [0] },
   crank_email_aliases: { active: [0] },
   crank_digests: { active: [0] },
   crank_digest_operations: { active: [0] },
@@ -61,6 +62,7 @@ export const importSafety = {
  * bounded value, so an unfenced unfinished run keeps only its previous status and
  * a failed delivery keeps its outcome with its single replay marked used. */
 export function importRow(table, row) {
+  if (table === 'crank_approval_deadlines') return {...row,active:0};
   if (table === 'crank_email_aliases') return {...row,active:0};
   if (table === 'crank_digests' || table === 'crank_digest_operations') return {...row,active:0};
   if (table === 'crank_workflow_samples') return {...row,selected:0};
@@ -148,6 +150,12 @@ export async function validateRestore({ read }) {
     erasedAppRecords.add(JSON.stringify([row.workflow_id,row.record_id]));
   }
   for (const table of ['crank_app_field_values','crank_app_snapshots','crank_app_pending_rows','crank_app_subjects']) for (const row of await rows(table)) if (erasedAppRecords.has(JSON.stringify([row.workflow_id,row.record_id]))) return false;
+  const runsForDeadlines = new Map((await rows('crank_wf_runs')).map(row => [row.id, row]));
+  const waitsForDeadlines = new Map((await rows('crank_waits')).map(row => [JSON.stringify([row.run_id,row.path]), row]));
+  for (const row of await rows('crank_approval_deadlines')) {
+    const run = runsForDeadlines.get(row.run_id), wait = waitsForDeadlines.get(JSON.stringify([row.run_id,row.path]));
+    if (row.active !== 0 || !run || run.version_id !== row.version_id || !wait || wait.kind !== 'approval' || wait.proposal_digest !== row.proposal_digest || !Number.isFinite(Date.parse(row.due_at))) return false;
+  }
   const versions = new Map((await rows('crank_workflow_versions')).map(row => [row.id, row]));
   for (const row of await rows('crank_app_pending_rows')) if (versions.get(row.version_id)?.workflow_id !== row.workflow_id) return false;
   for (const workflow of workflows.values()) {

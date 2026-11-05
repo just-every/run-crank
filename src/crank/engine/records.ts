@@ -1,3 +1,4 @@
+import { deadlineStatements } from '../ops/approval-deadlines'
 import { canonical, digest, id, now, stmt, type CrankEnv } from '../model'
 import type { RunRow, WaitRow, WaitSpec } from './types'
 import { isObject } from './values'
@@ -53,6 +54,7 @@ export async function insertWait(env: CrankEnv, run: RunRow, path: string, spec:
     statements.push(stmt(env, 'INSERT INTO crank_delay_queues(name,spacing_seconds,created_at) VALUES(?,?,?) ON CONFLICT(name) DO UPDATE SET spacing_seconds=excluded.spacing_seconds', spec.queue.name, spec.queue.spacingSeconds, at))
     statements.push(stmt(env, 'INSERT INTO crank_queue_items(queue,run_id,path,arrived_at) VALUES(?,?,?,?) ON CONFLICT(run_id,path) DO NOTHING', spec.queue.name, run.id, path, at))
   }
+  statements.push(...await deadlineStatements(env, run, path, spec, at))
   try { await env.DB.batch(statements) } catch (error) {
     if (spec.queue && String(error).includes('queue_spacing_conflict')) throw new StepError('validation', `Delay queue "${spec.queue.name}" already uses a different spacing; choose the same spacing or a new queue name`)
     throw error
