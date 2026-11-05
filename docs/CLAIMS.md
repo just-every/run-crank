@@ -5,8 +5,8 @@ Generated from [CONTRACT.md](../CONTRACT.md). Status reports implementation and 
 | Clauses | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
 | Published | 9 | 3 | 0 | 12 |
-| Target and push further | 23 | 47 | 17 | 87 |
-| All | 32 | 50 | 17 | 99 |
+| Target and push further | 23 | 47 | 19 | 89 |
+| All | 32 | 50 | 19 | 101 |
 
 | Clause | Status | Evidence | Gap |
 | --- | --- | --- | --- |
@@ -39,6 +39,8 @@ Generated from [CONTRACT.md](../CONTRACT.md). Status reports implementation and 
 | CONN-012 | missing |  | No delivered product workflow. |
 | CONN-013 | partial | `migrations/core/0088_checkpoint_subjects.sql` rebuilds retained sealed-page subject indexes atomically with maintenance; `tests/google-calendar-search-journey.mjs` — googleCalendarSearchJourney and googleCalendarSearchCustodyJourney, invoked by the existing Managed Calendar registration in `tests/connections.test.mjs`: exact managed calendar and explicit zoned interval, read-only consent on every request, complete bounded pages, stable recurring instances, all-day dates and DST offsets, cancellation status, deterministic WORK-011 outcomes and incomplete-scan refusal, account isolation, malformed and provider failures, parked restart without repeated completed pages, sealed pages and results, legal holds, erasure, expiry and complete credential-free inactive restoration. `tests/google-calendar-search-browser.mjs` (push Verify): retained identities and literal results at 1440 and 390. `tests/ownership.test.mjs` — owned installation completes every shipped step and projects value-free outgoing disclosures. | Native bounded Google Calendar event search only. Missing Calendly and Zoom test accounts; actual Google Calendar owner-console consent, redirect URI and test-user setup, exact calendar authorization and independent real-provider readback remain prerequisites. Calendar triggers, free and busy searches, update and cancellation operations and remaining attendee, conferencing and reminder support; Calendly created, canceled and rescheduled invitees, questions, UTM and payment fields and lookups; Zoom registration, ended and recording triggers and meeting, registrant and link actions; resource pickers and samples and the complete live booking, same-object reschedule and cancellation and duplicate-delivery provider journey remain required. This native slice releases no PLATFORM-002 hold. |
 | CONN-014 | missing |  | No delivered product workflow. |
+| CONN-021 | missing |  | API-relative Asana continuation through page two and beyond, with bounded/off-host refusal, is unbuilt or unproved. |
+| CONN-022 | missing |  | Canonical Asana task-permalink resolution and successful same-workspace lookup, with non-task/foreign-workspace refusal, are unbuilt or unproved. |
 | CONN-015 | missing |  | No delivered product workflow. |
 | CONN-016 | missing |  | No delivered product workflow. |
 | CONN-017 | missing |  | No delivered product workflow. |

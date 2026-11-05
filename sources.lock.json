@@ -144,7 +144,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "0d99db5c51c253528503f6ab8cd693a23921915f24133290eb4f0f1622287b5b",
+      "sha256": "07d7a25cb0f402db53e46ea8263de49a82d2630d10ebe09df8050e63d78cfdaa",
       "executable": false
     },
     "agent-surface.json": {
@@ -216,7 +216,7 @@
       "executable": false
     },
     "docs/CLAIMS.md": {
-      "sha256": "60c8eae29017e0b49dadeb0ed59ae203a2d2e890fdd28fb643bd36a880afb2d8",
+      "sha256": "bf90112c73f4b0396efc16e744ffee22bce806ef5fa1db7cea9411113d0ed6fa",
       "executable": false
     },
     "docs/contract/CONN-021-rubric.md": {
