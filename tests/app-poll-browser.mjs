@@ -12,18 +12,14 @@ import {appRetentionJourney} from './app-retention-journey.mjs';
 import {tablePollJourney} from './table-poll-journey.mjs';
 import {commercePollJourney} from './commerce-poll-journey.mjs';
 import {accountingPollJourney} from './accounting-poll-journey.mjs';
-import {harness} from './harness.mjs';
+import {harness,withHarnessOrigin} from './harness.mjs';
 import {fakeEdge,jsonResponse,runs} from './kit.mjs';
 const evidence=process.env.CRANK_EVIDENCE;
 assert.ok(evidence,'Set CRANK_EVIDENCE');await mkdir(evidence,{recursive:true});
-const browser=await chromium.launch({headless:true,...(process.env.CRANK_CHROMIUM?{executablePath:process.env.CRANK_CHROMIUM}:{}),args:['--use-mock-keychain','--password-store=basic',...(process.env.CRANK_CHROMIUM?['--no-sandbox']:[])]});
-let server,context,page,active;
+let browser,context,page,active;
 const types={'.css':'text/css','.js':'text/javascript','.svg':'image/svg+xml','.woff2':'font/woff2','.png':'image/png'};
-async function attach(h,width) {
- if(active===h)return;
- await context?.close();if(server){server.closeAllConnections();await new Promise(done=>server.close(done))}
- active=h;
- server=createServer(async(req,res)=>{try{
+const server=createServer(async(req,res)=>{try{
+  const h=active;
   const pathname=new URL(req.url,h.origin).pathname;
   if(types[extname(pathname)])for(const root of ['public','dist/client']){
    const dir=resolve(root),file=resolve(dir,'.'+decodeURIComponent(pathname));if(!file.startsWith(dir+'/'))continue;
@@ -34,7 +30,10 @@ async function attach(h,width) {
   const response=await h.mf.dispatchFetch(h.origin+req.url,{method:req.method,headers,redirect:'manual',...(!['GET','HEAD'].includes(req.method)?{body:Buffer.concat(chunks)}:{})});
   res.writeHead(response.status,Object.fromEntries(response.headers));res.end(Buffer.from(await response.arrayBuffer()));
  }catch{res.writeHead(503);res.end('Browser transport failed')}});
- await new Promise(done=>server.listen(Number(new URL(h.origin).port),'127.0.0.1',done));
+async function attach(h,width) {
+ if(active===h)return;
+ await context?.close();server.closeAllConnections();
+ active=h;
  context=await browser.newContext({viewport:{width,height:1000}});
  const [name,...value]=h.owner.split('=');await context.addCookies([{name,value:value.join('='),url:h.origin}]);page=await context.newPage();
  await page.goto(h.origin+'/setup');
@@ -87,6 +86,10 @@ async function rateScreens(width) {
  } finally {await h.close()}
 }
 try {
+ // Own the public socket before any Worker starts; never probe then rebind it.
+ await new Promise((done,fail)=>{server.once('error',fail);server.listen(0,'127.0.0.1',()=>{server.off('error',fail);done()})});
+ browser=await chromium.launch({headless:true,...(process.env.CRANK_CHROMIUM?{executablePath:process.env.CRANK_CHROMIUM}:{}),args:['--use-mock-keychain','--password-store=basic',...(process.env.CRANK_CHROMIUM?['--no-sandbox']:[])]});
+ await withHarnessOrigin(`http://127.0.0.1:${server.address().port}`,async()=>{
  for(const width of [1440,390]) await rateScreens(width);
  for(const width of [1440,390]) for(const journey of [crmPollJourney,subscriptionPollJourney,comparisonPollJourney,sheetPollJourney,appHistoryJourney,appSubjectJourney,appSubjectConcurrencyJourney,appRetentionJourney,tablePollJourney,commercePollJourney,accountingPollJourney]) {
   await journey({inspect:async({h,w,state,run,provider,resource})=>{
@@ -145,4 +148,5 @@ try {
   }});
  }
  console.log('App poll screens passed at 1440 and 390');
-} finally {await context?.close();await browser.close();if(server){server.closeAllConnections();await new Promise(done=>server.close(done))}}
+ });
+} finally {await context?.close();await browser?.close();server.closeAllConnections();await new Promise(done=>server.close(done))}

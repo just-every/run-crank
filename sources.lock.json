@@ -6748,7 +6748,7 @@
       "executable": false
     },
     "tests/app-poll-browser.mjs": {
-      "sha256": "4689e630d656f98f1c5a42515175392b64334374aba04acb1b3f7e4750326607",
+      "sha256": "445615568e48a22c2fe77ea7ef3e3621d5bc79160244446ad749a979f48fbb29",
       "executable": false
     },
     "tests/app-poll-interruption.mjs": {
@@ -7036,7 +7036,7 @@
       "executable": false
     },
     "tests/harness.mjs": {
-      "sha256": "2fda941aa549dddeee79f87941ef2857c166833723ad6e12d9adb988e8ae2b52",
+      "sha256": "ee29e355c3df1e461ff723fbcc0ab7f53b24e09f007a5649b818398a5b929bfc",
       "executable": false
     },
     "tests/historical.test.mjs": {
