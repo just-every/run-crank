@@ -5,12 +5,17 @@ import { now, stmt, type CrankEnv } from '../model'
 import { StepError } from './errors'
 import { frozenCustomActorSql } from '../custom/use-scope'
 import { tableSourceGuard } from '../triggers/table-source'
+import { twilioAuthoritySql } from '../triggers/twilio-policy'
 
 /** TEAM-004: every step and remote attempt checks the live version and bindings.
  * A recorded wait exception permits only that run's immutable original graph. */
 export async function assertDispatchAuthority(env: CrankEnv, runId: string) {
   await assertRecurringAuthority(env, runId)
   await assertGrantAuthority(env, runId)
+  const twilio = await stmt(env, `SELECT r.id FROM crank_wf_runs r JOIN crank_workflows w ON w.id=r.workflow_id
+    JOIN crank_workflow_versions v ON v.id=r.version_id WHERE r.id=? AND json_extract(v.graph_json,'$.trigger.type')='twilio_sms'
+    AND NOT (${twilioAuthoritySql()})`, runId, now()).first()
+  if (twilio) throw new StepError('authority', 'Twilio SMS signing connection, published binding or owner authority is no longer current; publish a fresh receiving version')
   const email = await stmt(env, `SELECT r.id FROM crank_wf_runs r WHERE r.id=? AND r.source_id LIKE 'email:%'
     AND NOT EXISTS(SELECT 1 FROM crank_email_receipts e JOIN crank_email_aliases a ON a.id=e.alias_id
       JOIN crank_workflows w ON w.id=a.workflow_id JOIN oa_operators o ON o.id=a.owner_id

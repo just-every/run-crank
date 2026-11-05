@@ -8,6 +8,7 @@ import { SIGNATURE_PRESETS } from './signatures'
 import { COMMERCE_PROVIDERS, validateCommerceTrigger } from './commerce-sources'
 import { ACCOUNTING_PROVIDERS, validateAccountingTrigger } from './accounting-sources'
 import { validateEmailTrigger } from './email'
+import { validateTwilioTrigger } from './twilio-policy'
 
 /** TRIG-007: what a URL poll's header and query values may map. */
 export const POLL_FIELDS = ['poll.since', 'poll.now', 'poll.interval_minutes']
@@ -63,6 +64,7 @@ export function validateTrigger(trigger: Record<string, unknown>) {
   switch (trigger.type) {
     case 'manual': return
     case 'email': validateEmailTrigger(trigger); return
+    case 'twilio_sms': validateTwilioTrigger(trigger); return
     case 'webhook': {
       if (trigger.methods !== undefined && (!Array.isArray(trigger.methods) || !trigger.methods.length || trigger.methods.some(m => !['POST', 'PUT', 'GET'].includes(m as string)))) fail('methods may be POST, PUT and GET')
       if (trigger.signature !== undefined) {

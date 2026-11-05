@@ -3,6 +3,7 @@ import { receiveCallback } from './callbacks'
 import { receiveSlackEvent } from './slack-events'
 import { receiveSample } from '../workflows/samples'
 import { receiveHook } from './webhook'
+import { receiveTwilioSms } from './twilio'
 
 /** Unauthenticated inbound doors under /hooks/. Each admits events only. */
 export async function publicHooks(request: Request, env: CrankEnv, defer?: (work: Promise<unknown>) => void): Promise<Response | null> {
@@ -18,6 +19,7 @@ async function route(request: Request, env: CrankEnv, path: string, defer?: (wor
   if (kind === 'w') return receiveHook(request, env, token, defer)
   if (kind === 'resume') return receiveCallback(request, env, token, defer)
   if (kind === 'slack') return receiveSlackEvent(request, env, token, defer)
+  if (kind === 'twilio') return receiveTwilioSms(request, env, token, defer)
   return Response.json({ error: 'Not found' }, { status: 404 })
 }
 

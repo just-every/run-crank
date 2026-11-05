@@ -4,18 +4,24 @@ import { notify } from '../ops/notices'
 import { indexStatement, sealFileBase64, sealText, targetFor } from '../ops/payload-seal'
 import type { InboundUpload } from './inbound'
 import type { WorkflowRow } from './admission'
+import { twilioAuthoritySql } from './twilio-policy'
 
 interface SlackEventAdmission { connectionId: string; signingConnectionId: string; signingIv: string | null; sourceTime: string | null }
 interface EmailAdmission { aliasId: string; receiptId: string }
+interface TwilioAdmission { signingIv: string | null }
 
 /** D1 serializes the whole batch: an event identity is committed with exactly one
  * queued run or held item. The admission ID distinguishes this request's claim. */
-export async function admitWebhook(env: CrankEnv, workflow: WorkflowRow, hookId: string, key: string, payloadDigest: string, payload: unknown, threshold: number, windowMinutes: number | null, files: InboundUpload[] = [], budgetHold = false, appEvent?: SlackEventAdmission, email?: EmailAdmission) {
+export async function admitWebhook(env: CrankEnv, workflow: WorkflowRow, hookId: string, key: string, payloadDigest: string, payload: unknown, threshold: number, windowMinutes: number | null, files: InboundUpload[] = [], budgetHold = false, appEvent?: SlackEventAdmission, email?: EmailAdmission, twilio?: TwilioAdmission) {
   const token = id(), candidateHold = id(), guard = id(), at = now(), eventDigest = await digest(key)
   const windowStart = windowMinutes === null ? '' : new Date(Date.now() - windowMinutes * 60000).toISOString()
   const settings = JSON.parse(workflow.settings_json || '{}')
   const expiry = Number.isInteger(settings.hold_expiry_hours) ? new Date(Date.now() + settings.hold_expiry_hours * 3600000).toISOString() : null
-  const authority = email ? `EXISTS(SELECT 1 FROM crank_email_aliases a JOIN crank_workflows w ON w.id=a.workflow_id
+  const authority = twilio ? `EXISTS(SELECT 1 FROM crank_workflows w JOIN crank_workflow_versions v ON v.id=w.published_version_id
+    WHERE w.id=? AND v.id=? AND w.status IN ('published','paused') AND json_extract(v.graph_json,'$.trigger.type')='twilio_sms'
+    AND ${twilioAuthoritySql()} AND json_extract(v.declared_json,'$.twilio.signing_iv')=?)
+    AND NOT EXISTS(SELECT 1 FROM crank_erased_webhook_events WHERE workflow_id=? AND event_digest=?)`
+    : email ? `EXISTS(SELECT 1 FROM crank_email_aliases a JOIN crank_workflows w ON w.id=a.workflow_id
     JOIN crank_workflow_versions v ON v.id=w.published_version_id JOIN oa_operators o ON o.id=a.owner_id
     WHERE a.id=? AND a.workflow_id=? AND a.active=1 AND a.revoked_at IS NULL
     AND w.owner_id=a.owner_id AND o.status='active' AND o.role='owner' AND o.version=a.owner_version
@@ -33,7 +39,8 @@ export async function admitWebhook(env: CrankEnv, workflow: WorkflowRow, hookId:
     WHERE h.id=? AND h.workflow_id=? AND h.revoked_at IS NULL AND (h.expires_at IS NULL OR h.expires_at>?)
     AND w.status IN ('published','paused') AND v.id=? AND v.retired_at IS NULL)
     AND NOT EXISTS(SELECT 1 FROM crank_erased_webhook_events WHERE workflow_id=? AND event_digest=?)`
-  const args = email ? [email.aliasId, workflow.id, workflow.published_version_id, workflow.id, eventDigest]
+  const args = twilio ? [workflow.id, workflow.published_version_id, at, twilio.signingIv, workflow.id, eventDigest]
+    : email ? [email.aliasId, workflow.id, workflow.published_version_id, workflow.id, eventDigest]
     : appEvent ? [appEvent.connectionId, appEvent.signingConnectionId, workflow.id, workflow.published_version_id, appEvent.signingIv, workflow.id, eventDigest]
     : [hookId, workflow.id, at, workflow.published_version_id, workflow.id, eventDigest]
   const claimed = `EXISTS(SELECT 1 FROM crank_trigger_events WHERE workflow_id=? AND dedup_key=? AND admission_id=?)`
@@ -61,7 +68,7 @@ export async function admitWebhook(env: CrankEnv, workflow: WorkflowRow, hookId:
       stmt(env, `INSERT INTO crank_wf_runs(id,workflow_id,version_id,trigger_kind,source_id,trigger_json,status,received_at,created_by,business_key,payload_key,payload_index,source_time)
         SELECT ?,?,?,?,?,?,'queued',?,'trigger',?,?,?,? WHERE ${claimed}
         AND NOT EXISTS(SELECT 1 FROM crank_trigger_events WHERE workflow_id=? AND dedup_key=? AND hold_id IS NOT NULL)`,
-      token, workflow.id, workflow.published_version_id, email ? 'email' : appEvent ? 'slack_event' : 'webhook', key, sealedTrigger, at, key, target.key?.id ?? null, target.key ? target.fieldsJson : null, appEvent?.sourceTime ?? null, workflow.id, key, token, workflow.id, key),
+      token, workflow.id, workflow.published_version_id, twilio ? 'twilio_sms' : email ? 'email' : appEvent ? 'slack_event' : 'webhook', key, sealedTrigger, at, key, target.key?.id ?? null, target.key ? target.fieldsJson : null, appEvent?.sourceTime ?? null, workflow.id, key, token, workflow.id, key),
       ...(index ? [index] : []),
       stmt(env, `UPDATE crank_trigger_events SET run_id=? WHERE workflow_id=? AND dedup_key=? AND admission_id=? AND hold_id IS NULL`, token, workflow.id, key, token),
       stmt(env, `INSERT INTO crank_hold_items(hold_id,item_key,payload_json,received_at,source_time,status)
@@ -74,7 +81,7 @@ export async function admitWebhook(env: CrankEnv, workflow: WorkflowRow, hookId:
       stmt(env, 'DELETE FROM crank_authority_guards WHERE id=?', guard),
     ])
   } catch (error) {
-    if ((isBudgetExceeded(error) || /crank_usage_estimate_required/.test(String(error))) && !budgetHold) return admitWebhook(env, workflow, hookId, key, payloadDigest, payload, threshold, windowMinutes, files, true, appEvent, email)
+    if ((isBudgetExceeded(error) || /crank_usage_estimate_required/.test(String(error))) && !budgetHold) return admitWebhook(env, workflow, hookId, key, payloadDigest, payload, threshold, windowMinutes, files, true, appEvent, email, twilio)
     if (/crank_authority_guards|CHECK constraint failed: ok/.test(String(error))) throw new CrankError(409, 'Webhook authority changed or this event was erased; no event was admitted')
     throw error
   }

@@ -100,6 +100,7 @@ test('BASE-001/BASE-004: an owned installation publishes and finishes every ship
     const hubspotTypes=await hubspotOwnership(h,fake);
     const succeeded = new Set([...done.steps.filter(s => s.status === 'succeeded').map(s => s.type), ...financialTypes, ...driftTypes, ...recurringTypes, ...orbitTypes, ...aiTypes, ...gmailTypes, ...hubspotTypes]);
     for (const type of [...Object.keys(STEP_TYPES), 'paths', 'loop']) assert.ok(succeeded.has(type), `BASE-004 needs a successful public-door journey for ${type}`);
+    const {twilioOwnership}=await import('./twilio-inbound-journey.mjs');await twilioOwnership(h);
     assert.deepEqual(refused, [], 'core operation never tries an author or other unconfigured host');
     assert.equal((await h.send('/app/workflow-runs/' + done.id, undefined, h.owner)).status, 200);
   } finally { await h.close(); }

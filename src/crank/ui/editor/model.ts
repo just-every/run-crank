@@ -29,7 +29,7 @@ export function flatten(list: Node[]): Node[] {
 export const findNode = (graph: Graph, path: string) => flatten(nodes(graph)).find(node => node.path === path) ?? null
 
 const titleCase = (text: string) => text.charAt(0).toUpperCase() + text.slice(1)
-const TRIGGERS: Record<string, string> = { email: 'Inbound email', webhook: 'Webhooks', schedule: 'Schedule', feed: 'RSS, Atom and JSON Feed', url_poll: 'URL poll', app_poll: 'App records', slack_event: 'Slack', manual: 'Manual start' }
+const TRIGGERS: Record<string, string> = { twilio_sms: 'Twilio SMS', email: 'Inbound email', webhook: 'Webhooks', schedule: 'Schedule', feed: 'RSS, Atom and JSON Feed', url_poll: 'URL poll', app_poll: 'App records', slack_event: 'Slack', manual: 'Manual start' }
 const STEPS: Record<string, string> = { 'ai.classify':'AI classification', 'custom.request':'Custom connector', code: 'Code executor', filter: 'Filter', paths: 'Paths', transform: 'Formatter', map: 'Formatter', delay: 'Delay', wait_for_callback: 'Delay', approval: 'Approval', 'file.fetch': 'Files', respond: 'Webhooks', http: 'Webhooks' }
 
 /** The app or tool a card names: the connection's label for API requests, Slack for Slack steps,
@@ -58,7 +58,7 @@ export function appOf(node: Node, connections: Connection[]): { title: string; t
 
 /** How a run started, in words: "Stripe webhook", "Run now", "Schedule". */
 export function triggerWords(kind: string, graph: Graph | undefined, connections: Connection[]) {
-  const words: Record<string, string> = { webhook: 'Webhook', manual: 'Run now', test: 'Draft test', historical: 'Historical run', schedule: 'Schedule', feed: 'New feed item', url_poll: 'URL poll', app_poll: 'App records', slack_event: 'Slack event' }
+  const words: Record<string, string> = { twilio_sms: 'Inbound SMS', webhook: 'Webhook', manual: 'Run now', test: 'Draft test', historical: 'Historical run', schedule: 'Schedule', feed: 'New feed item', url_poll: 'URL poll', app_poll: 'App records', slack_event: 'Slack event' }
   const app = graph ? appOf({ path: 'trigger', step: null, trigger: graph.trigger }, connections).title : ''
   if (kind === 'webhook' && app && app !== TRIGGERS.webhook) return `${app} webhook`
   return words[kind] ?? titleCase(kind.replace(/_/g, ' '))
@@ -66,7 +66,7 @@ export function triggerWords(kind: string, graph: Graph | undefined, connections
 
 /** The card's second line: the step's own name, or what its type does. */
 export function summaryOf(node: Node): string {
-  if (node.trigger) return String((node.trigger as any).name ?? ({ webhook: 'Catch hook', schedule: 'On a schedule', feed: 'New feed item', url_poll: 'New record', slack_event: 'New Slack event', manual: 'Started by hand' } as Record<string, string>)[String(node.trigger.type)] ?? '')
+  if (node.trigger) return String((node.trigger as any).name ?? ({ twilio_sms: 'New inbound SMS', webhook: 'Catch hook', schedule: 'On a schedule', feed: 'New feed item', url_poll: 'New record', slack_event: 'New Slack event', manual: 'Started by hand' } as Record<string, string>)[String(node.trigger.type)] ?? '')
   const step = node.step!
   if (step.type === 'gmail.search_threads') return 'Search thread metadata'
   if (typeof step.name === 'string') return step.name

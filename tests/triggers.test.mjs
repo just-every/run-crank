@@ -2,6 +2,7 @@ import { before, after, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash, createHmac } from 'node:crypto';
 import { harness } from './harness.mjs';
+import {twilioInboundJourney,twilioAuthorityJourney,twilioCustodyJourney} from './twilio-inbound-journey.mjs';
 import {inboundEmailJourney,inboundEmailBoundsJourney,inboundEmailCustodyJourney} from './inbound-email-journey.mjs';
 import { estimateHold, connection, deliver, fakeEdge, fakeSecret, hookUrl, jsonResponse, publish, runs, settled, stepOf, until } from './kit.mjs';
 
@@ -49,6 +50,7 @@ test('TRIG-001: a secret URL admits form posts once per dedup window, verifies S
   assert.equal((await deliver(h, rotated.url, form('customer=New'))).status, 200);
   await h.post(`hooks/${rotated.id}/revoke`);
   assert.equal((await deliver(h, rotated.url, form('customer=Revoked'))).status, 404);
+  await headerCredentialJourney();
 });
 
 test('TRIG-001: raw GET and multipart files are mappable, and a synchronous response comes from the workflow', async () => {
@@ -70,6 +72,7 @@ test('TRIG-001: raw GET and multipart files are mappable, and a synchronous resp
     { id: 'reply', type: 'respond', input: { status: 201, body: { greeting: '{{steps.upper}}' } } }] });
   const answer = await deliver(h, await hookUrl(h, sync), { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: 'Ada' }) });
   assert.equal(answer.status, 201); assert.deepEqual(answer.value, { greeting: 'ADA' });
+  await confinedResponseJourney();
 });
 
 test('Twilio-signed webhooks authenticate the delivered body, so a reused signature cannot carry other content', async () => {
@@ -92,9 +95,10 @@ test('Twilio-signed webhooks authenticate the delivered body, so a reused signat
     assert.equal(forged.status, 401, forged.text);
   }
   assert.equal((await runs(h, w)).length, accepted, 'an unsigned body starts no run');
+  await twilioInboundJourney();await twilioAuthorityJourney();await twilioCustodyJourney();
 });
 
-test('A webhook header credential admits deliveries but is never kept in run history', async () => {
+async function headerCredentialJourney() {
   const secret = fakeSecret('hook-header');
   const signing = await connection(h, { app: 'webhook', label: 'Partner header secret', auth_kind: 'signing_secret', secret: { secret } });
   const w = await publish(h, 'Partner orders', { trigger: { type: 'webhook', header_auth: { header: 'X-Hook-Secret', connection_id: signing.id } }, steps: [{ id: 'order', type: 'map', input: { ref: '{{trigger.body.ref}}', partner: '{{trigger.headers.x-partner}}' } }] });
@@ -106,9 +110,9 @@ test('A webhook header credential admits deliveries but is never kept in run his
   assert.deepEqual(stepOf(run, 'order').output, { ref: 'A1', partner: 'Northline' }, 'other delivery headers stay mappable');
   assert.ok(!JSON.stringify(run).includes(secret), 'the run keeps no copy of the header credential');
   assert.ok(!JSON.stringify(await runs(h, w)).includes(secret));
-});
+}
 
-test('Webhook responses with workflow-chosen content render sandboxed, without script or app-origin authority', async () => {
+async function confinedResponseJourney() {
   const markup = '<p>Order delayed</p><script>globalThis.crankInjected=1</script>';
   const status = await publish(h, 'Order status page', { trigger: { type: 'webhook', methods: ['GET'], response: { mode: 'sync', timeout_ms: 5000 } }, steps: [
     { id: 'reply', type: 'respond', input: { headers: { 'content-type': 'text/html', 'content-security-policy': "script-src 'unsafe-inline'" }, body: '{{trigger.query.message}}' } }] });
@@ -120,7 +124,7 @@ test('Webhook responses with workflow-chosen content render sandboxed, without s
     assert.match(policy, /(^|;)\s*sandbox\s*(;|$)/); assert.doesNotMatch(policy, /allow-|unsafe-inline/);
     assert.equal(page.headers.get('x-content-type-options'), 'nosniff');
   }
-});
+}
 
 const rss = items => `<?xml version="1.0"?><rss version="2.0"><channel><title>Harbour news</title>${items.map(i => `<item><guid>${i.guid}</guid><title>${i.title}</title><link>https://news.example/${i.guid}</link><pubDate>Fri, 16 Oct 2026 12:00:00 GMT</pubDate></item>`).join('')}</channel></rss>`;
 test('BASE-003: interrupted poll admission retries unseen items after restart and closes the abandoned attempt without duplicate work', async () => {

@@ -6,7 +6,7 @@
   "toolchain": {
     "id": "runeditrun/edition-authoring",
     "version": "1.1.0",
-    "sha256": "b546ef04830f935ee2493a5bc08ef43a0f7d5905aeb8549fb75670c19890af99"
+    "sha256": "3f7b56f3ae1e70588fb35c49e75b639c2360ceed550182b9caf8adc33021abb8"
   },
   "components": [
     {
@@ -265,6 +265,10 @@
     },
     "docs/TEAM-ACCESS.md": {
       "sha256": "273a1348be788a5f9d54c84848495dd9b8fa3321132eed8aa8ee9f39eb09ed25",
+      "executable": false
+    },
+    "docs/TWILIO-SMS.md": {
+      "sha256": "d6f310dbc5b5e591e7d454fc00ad23efd5953fa449394bff224eb87e9a6e3cdd",
       "executable": false
     },
     "edition.json": {
@@ -3096,7 +3100,7 @@
       "executable": false
     },
     "src/crank/connections/catalog.ts": {
-      "sha256": "259cea30b383a778615d4dc696955a8e96c7301ce912411f80e77a99e9841ded",
+      "sha256": "23f63d0632e9eb72fa0f4c960f76283a5739ff4fab057f2cfd835848764dff9b",
       "executable": false
     },
     "src/crank/connections/oauth.ts": {
@@ -3296,7 +3300,7 @@
       "executable": false
     },
     "src/crank/engine/authority.ts": {
-      "sha256": "e866336964de75acb1681e148e5157cbbd6f6b48d3a8c1beba478677ad81744b",
+      "sha256": "b4404ce1970a3c469e5ba9b2c7a98038f6cc2d8d0a4530b89830ab9bba01a8a2",
       "executable": false
     },
     "src/crank/engine/calendar.ts": {
@@ -3860,7 +3864,7 @@
       "executable": false
     },
     "src/crank/triggers/definition.ts": {
-      "sha256": "5b046d26ccd8baa11f34c45338f1bbbdcaf7e0063fca8a9524768ae8088e65fd",
+      "sha256": "e92c65ff354c9d3b7b10dc1fa3f4c41f29956549b29c6741106113909ba26903",
       "executable": false
     },
     "src/crank/triggers/email-mime.ts": {
@@ -3916,7 +3920,7 @@
       "executable": false
     },
     "src/crank/triggers/public.ts": {
-      "sha256": "1e20406247e28698fb362c5475cf605e7cc17670b2d2d5eebfdb68bb194896dc",
+      "sha256": "e3abc52c16a4777ffa146ea0ce7bc2b96dfefaf9626ab1731d396b53aece03d7",
       "executable": false
     },
     "src/crank/triggers/row-settle.ts": {
@@ -3943,12 +3947,20 @@
       "sha256": "72ed3774963d3d68b06eaa455c7f1d6c03cf3317bf55ff80104c28ecdc28cc1f",
       "executable": false
     },
+    "src/crank/triggers/twilio-policy.ts": {
+      "sha256": "3ef09135f4fab2a13a0616b06680376aed7d56774e7d0c55bcb977d3f74df344",
+      "executable": false
+    },
+    "src/crank/triggers/twilio.ts": {
+      "sha256": "7f6f410c48f4c5772f458999c6b59eac7e7769327d86eb62a22fc2d7d6d85382",
+      "executable": false
+    },
     "src/crank/triggers/watched-fields.ts": {
       "sha256": "4377c509e5558c0059e8b64965df3900b6fa9e234277750c4bfc642636fe3781",
       "executable": false
     },
     "src/crank/triggers/webhook-admission.ts": {
-      "sha256": "fe8fb5953b162a84877dd6bf1085199cf2d1a2b0312394e218c3db6e76e47d1e",
+      "sha256": "52b028f06bf157ca962af60f2fee4dce72fc6e20dc85a23ea32182fdddcc37ca",
       "executable": false
     },
     "src/crank/triggers/webhook.ts": {
@@ -4000,11 +4012,11 @@
       "executable": false
     },
     "src/crank/ui/editor/inspector.ts": {
-      "sha256": "02db38f4ddef49be67cff7a8a0e6082d282494495d93bba5ca5a123d99c72556",
+      "sha256": "0b69ba28bbbff30645a65dae41b1f7ee6525962c668a56d7a8a8709cdf9a197e",
       "executable": false
     },
     "src/crank/ui/editor/model.ts": {
-      "sha256": "833b9148191a6f52d938a276efb6e616f972123d6d4fded1a280f8789afcdb10",
+      "sha256": "4972041ecef22d9822d67e7fc532dabb9434fa90f7daf74d5f58a8e5d3e21a13",
       "executable": false
     },
     "src/crank/ui/editor/native-view.ts": {
@@ -4216,7 +4228,7 @@
       "executable": false
     },
     "src/crank/workflows/store.ts": {
-      "sha256": "b44f0efd7565e198be3af76a0aa27fd61d815b29108d12f782fbae2d01ee41cb",
+      "sha256": "6694243677d88007f279ac9c63260ac6fc0ca30cae6bb2a4ed959245701afa86",
       "executable": false
     },
     "src/crank/workflows/subflow-calls.ts": {
@@ -6700,7 +6712,7 @@
       "executable": false
     },
     "test-budget.json": {
-      "sha256": "01adbd299d3c921e5a0d71aa2e73b56c08efe378a97edded1b1ccad0d452c179",
+      "sha256": "513a836eb4e9f615aefa8c3b166b452e8b148360033c13f351abe68e18146957",
       "executable": false
     },
     "tests/accounting-poll-journey.mjs": {
@@ -7168,7 +7180,7 @@
       "executable": false
     },
     "tests/ownership.test.mjs": {
-      "sha256": "d38b18e7c7669a2d8a09bd7489c216dc43c602b6a75bc3250f94038e2e318c1e",
+      "sha256": "bd2e32bd6f0ab8198aec45b1b03c6e3fa870fdae672b57c574cb7c410420b291",
       "executable": false
     },
     "tests/pagination.test.mjs": {
@@ -7360,7 +7372,15 @@
       "executable": false
     },
     "tests/triggers.test.mjs": {
-      "sha256": "e726b292dbcf8998937cb7d1d9c4abbf3a91ae351a4f5c58f29c30c0dd51645c",
+      "sha256": "cd40f62889295fb1815aa886980b2ad7829c1a5d16a07aac84c46b701151a5ba",
+      "executable": false
+    },
+    "tests/twilio-inbound-browser.mjs": {
+      "sha256": "94be3e4570978374119d73ed362fc3e6044705833d2af1153ca98519374a0157",
+      "executable": false
+    },
+    "tests/twilio-inbound-journey.mjs": {
+      "sha256": "ad0f3d81d067625bdefa6e32584074710474eca20f73cbac763cd3571cc25830",
       "executable": false
     },
     "tests/usage.test.mjs": {
@@ -7384,7 +7404,7 @@
       "executable": false
     },
     "verification.json": {
-      "sha256": "eab798a0a366bbea43e07a026ea256f71913f4b3ed37e8bc270c733a0b9a8ef1",
+      "sha256": "e019ebd904d3d7a889c6e2f3cf9e8b32126b9dd4017bebe079903fb9e15e54c4",
       "executable": false
     },
     "VERIFY-WORKFLOW.md": {

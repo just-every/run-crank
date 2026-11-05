@@ -28,6 +28,7 @@ import { claimCommand, commandCondition, commandReceipt, committedReceipt, recei
 import { snapshotBindings } from './snapshot'
 import { adoptionStatements, pendingRestore, restoreReview } from './restore'
 import { RETRY_POLICY } from '../connectors/retry-policy'
+import { twilioPublication, twilioAuthoritySql } from '../triggers/twilio-policy'
 
 export interface VersionRow { id: string; workflow_id: string; number: number; graph_json: string; graph_digest: string; declared_json: string; published_by: string; published_at: string; retired_at: string | null; retry_policy_json: string }
 
@@ -228,7 +229,12 @@ async function publishVersion(env: CrankEnv, actor: Actor, workflowId: string, i
   const subflows = await subflowPublication(env, actor, graph)
   await checkCustomPublication(env,graph,actor)
   await checkCustomTriggerPublication(env,graph)
-  if (isTableSource(graph.trigger) || graph.trigger.type === 'email') requireOwner(actor)
+  if (isTableSource(graph.trigger) || ['email', 'twilio_sms'].includes(graph.trigger.type)) requireOwner(actor)
+  const twilio = await twilioPublication(env, current, graph)
+  if (twilio) {
+    requireValue(current.owner_id === actor.id || pendingRestore(current), 'Only this workflow’s native owner may bind Twilio receiving', 403)
+    warnings.push('Twilio receiving uses an owner-declared account and number; ownership and provisioning are unverified. Text-only receiving sends no automatic message.')
+  }
   const tableGuard = isTableSource(graph.trigger) ? await tableSourceGuard(env, graph.trigger, { workflowId, ...(pendingRestore(current) ? { adoptingOwnerId: actor.id } : {}) }) : null
   const gateways = customGatewayIds(graph)
   await validateConnectionScopes(env, gateways.map(gatewayId => 'gateway:' + gatewayId), (current as WorkflowRow & {environment:string}).environment)
@@ -241,7 +247,7 @@ async function publishVersion(env: CrankEnv, actor: Actor, workflowId: string, i
   const previous = await stmt(env, 'SELECT MAX(number) AS n FROM crank_workflow_versions WHERE workflow_id=?', workflowId).first<{ n: number | null }>()
   const versionId = id(), at = now(), number = (previous?.n ?? 0) + 1, graphJson = canonical(graph)
   const authoring = await authoringPublication(env, actor, workflowId, graph, input, versionId)
-  const authority = { ...(authoring.length ? { authoring: true } : {}), subflows, custom_bindings: await customBindings(env,graph), gateways, publisher: actor.id, publisher_version: actor.version, publisher_team_revision: actor.team?.revision ?? null, published_at: at, workflow_settings: JSON.parse(current.settings_json), steps: declared.steps, connections: declared.connections, bindings: await snapshotBindings(env, declared.connections), trigger: graph.trigger.type, ...(rollback ? { rollback_of: rollback.rollback_of } : {}) }
+  const authority = { ...(authoring.length ? { authoring: true } : {}), ...(twilio ? { twilio } : {}), subflows, custom_bindings: await customBindings(env,graph), gateways, publisher: actor.id, publisher_version: actor.version, publisher_team_revision: actor.team?.revision ?? null, published_at: at, workflow_settings: JSON.parse(current.settings_json), steps: declared.steps, connections: declared.connections, bindings: await snapshotBindings(env, declared.connections), trigger: graph.trigger.type, ...(rollback ? { rollback_of: rollback.rollback_of } : {}) }
   const adoption = await adoptionStatements(env, actor, current, input)
   const guard = `attested:${versionId}`
   const statements = [
@@ -261,6 +267,10 @@ async function publishVersion(env: CrankEnv, actor: Actor, workflowId: string, i
   ]
   statements.push(...await publishUsageStatements(env, workflowId, versionId, graphJson, rollback?.estimateVersionId))
   statements.push(...await triggerSetup(env, workflowId, versionId, graph))
+  if (twilio) statements.push(stmt(env, `INSERT INTO crank_authority_guards(id,ok) SELECT ?,CASE WHEN EXISTS(
+    SELECT 1 FROM crank_workflows w JOIN crank_workflow_versions v ON v.id=w.published_version_id
+    WHERE w.id=? AND v.id=? AND ${twilioAuthoritySql()}) THEN 1 ELSE 0 END`, 'twilio-publish:'+versionId, workflowId, versionId, at),
+    stmt(env, 'DELETE FROM crank_authority_guards WHERE id=?', 'twilio-publish:'+versionId))
   statements.push(...adoption)
   if (tableGuard) statements.push(stmt(env, `INSERT INTO crank_authority_guards(id,ok) SELECT ?,CASE WHEN ${tableGuard.sql} THEN 1 ELSE 0 END`, 'table-publish:'+versionId, ...tableGuard.params), stmt(env, 'DELETE FROM crank_authority_guards WHERE id=?', 'table-publish:'+versionId))
   if (!pendingRestore(current) && current.published_version_id && await waitingPolicy(env, current.published_version_id) === 'cancel_on_new_version') statements.push(...await cancellations(env, actor, workflowId, current.published_version_id, 'A new version was published'))
