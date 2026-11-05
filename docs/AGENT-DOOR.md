@@ -219,3 +219,56 @@ Ordinary health, setup and application requests do not construct Business or
 agent adapters. On door paths, native classification refusals use the shared
 `ToolRefusal` type; policy-unset and Pause preserve their machine codes while
 the native authority fence still prevents reads or effects.
+
+
+## Native preparation activity
+
+The Agents page now filters retained calls by exact agent ID, class and UTC
+calendar dates. The initial period starts on Monday and includes today. From is
+inclusive and Before is exclusive; one request covers at most 366 days. Page
+sizes range from 1 to 100, defaulting to 50. These are read capacity bounds, not
+company policy limits.
+
+`GET /agents/api/activity` returns the same filtered records, total and counts
+by class and decision. Filters are `agent`, `class`, `from`, `to` and
+`limit`. Follow its opaque `cursor` with unchanged filters until it is null.
+Filters run in the database before pagination. A cursor retains the upper audit
+sequence, so newly appended calls cannot move into an in-progress export.
+Policy facts and historical agent and sponsor names come from the original
+record; current human approval and review marks enrich their retained IDs.
+An absent local specialist remains null.
+
+`GET /agents/api/activity/export` accepts the same filters and cursor. Each
+bounded response is NDJSON, with every audit field and a closed native metadata
+projection. Follow `X-Activity-Next-Cursor` or the `Link` header to the next
+page until absent. `X-Activity-Total` reports the matching audit row count and
+`X-Activity-Through` the upper sequence. Each HTTP request still checks the
+current person session. Appended calls need a new export; human marks can change
+while pages are read.
+
+Native preparation audit rows join on their original `operation_id`. They
+enrich a call instead of adding a second call to the counts. Replayed requests
+retain their distinct audit rows and reference the original effect IDs; they do
+not create another native effect. An original pending or refused row shows no
+native effect, even if a later approved continuation executes that operation.
+The continuation's own audit row carries that effect. Counts follow the shared
+audit records, including their distinct replay and continuation records.
+
+Activity and export require the same current owner or Business editor role as
+the shared audit. Bearer credentials never authorize this person door. Native
+target links additionally require a current complete product read grant with
+payload visibility. Following a previously displayed link repeats those checks
+before redirecting to the ordinary workflow page. Audit metadata contains no
+graph values, sample data, provider responses or credentials. Revocation never
+deletes historical attribution or restores agent execution authority.
+
+The maintained shared page and options type have a documented local adaptation:
+an optional seed-owned activity renderer replaces only its recent activity and
+count sections. Shared approval, review, policy and Pause controls remain on
+their existing doors. The Base and rer pins are unchanged.
+
+This closes the native preparation activity slice of BASE-AGENT-009. It does
+not establish cross-provider execution timelines, Business-wide aggregation,
+reversible native Undo or omitted specialist jobs. Provider-account and consent
+requirements, the enforcing Worker egress hold, and existing owner, ct and
+device restrictions remain.

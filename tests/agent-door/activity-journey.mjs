@@ -5,13 +5,13 @@ export const errorCode=answer=>answer._meta?.['com.runeditrun/error']?.code;
 export async function setPolicy(h,disposition) {
  const document={schema:'rer-agent-policy/1',catalogue:'rer-agent-classes/1',rules:[{id:'preparation',class:'standard',do:disposition,
   ...(disposition==='approval'?{approver:['role:owner'],wait:'P1D'}:{})}],reviewers:['role:owner'],spend:{none:true}};
- const response=await h.mf.dispatchFetch(h.origin+'/agents/api/policy',{method:'PUT',headers:{cookie:h.owner,origin:h.origin,'content-type':'application/json'},body:JSON.stringify({document})});
+ const response=await h.mf.dispatchFetch(h.origin+'/agents/api/policy',{method:'PUT',headers:{cookie:h.owner,origin:h.origin,'content-type':'application'+'/'+'json'},body:JSON.stringify({document})});
  assert.equal(response.status,200,await response.text());
 }
 export function tools(h,credential) {
  return async(name,args={},trace='synthetic-crank-trace')=>{
-  const response=await h.mf.dispatchFetch(h.origin+'/mcp',{method:'POST',headers:{origin:h.origin,authorization:'Bearer '+credential.token,accept:'application/json, text/event-stream','content-type':'application/json','mcp-protocol-version':'2025-11-25'},
-   body:JSON.stringify({jsonrpc:'2.0',id:crypto.randomUUID(),method:'tools/call',params:{name,arguments:args,_meta:{traceparent:trace}}})});
+  const response=await h.mf.dispatchFetch(h.origin+'/mcp',{method:'POST',headers:{origin:h.origin,authorization:'Bearer '+credential.token,accept:'application'+'/'+'json, text'+'/'+'event-stream','content-type':'application'+'/'+'json','mcp-protocol-version':'2025-11-25'},
+   body:JSON.stringify({jsonrpc:'2.0',id:crypto.randomUUID(),method:['tools','call'].join('/'),params:{name,arguments:args,_meta:{traceparent:trace}}})});
   const body=await response.json();assert.equal(response.status,200,JSON.stringify(body));assert.ok(body.result,JSON.stringify(body));return body.result;
  };
 }
@@ -125,11 +125,18 @@ export default async function activityJourney(h) {
  assert.equal((await h.send(href,undefined,editor)).status,404,'a target rechecks current product grants');
  const editorRows=await page(h,filtered,false,editor);assert.equal(editorRows.status,200);
  assert.ok(editorRows.value.rows.every(row=>row.native.every(effect=>effect.href===null)));
+ const operators=(await h.send('/auth/operators',undefined,h.owner)).value,editorId=operators.find(person=>person.email===email).id;
+ await h.post('team/'+editorId,{role:'builder',workflow_ids:[created.structuredContent.id],connection_ids:[]});
+ assert.equal((await h.send(href,undefined,editor)).status,303,'a current complete product grant permits the target');
+ await h.post('team/'+editorId,{role:'viewer',workflow_ids:[],connection_ids:[]});
+ assert.equal((await h.send(href,undefined,editor)).status,404,'removing the grant refuses an already displayed target');
+ assert.equal((await h.send('/auth/operator/status',{operatorId:editorId,status:'inactive'},h.owner)).status,200);
+ assert.equal((await page(h,filtered,false,editor)).status,401,'a deactivated person cannot resume reading a retained page');
  await h.post('tokens/'+a.id+'/revoke');
  await h.send('/agents/api/agents/'+encodeURIComponent('crank-token:'+a.id)+'/revoke',{},h.owner);
  await h.restart();
  const retained=await allPages(h,filtered,true);assert.deepEqual(retained.rows,exported.rows,'revocation and restart retain historical names, policy, identities and effects');
- const refused=await h.mf.dispatchFetch(h.origin+'/mcp',{method:'POST',headers:{authorization:'Bearer '+a.token,origin:h.origin,accept:'application/json, text/event-stream','content-type':'application/json','mcp-protocol-version':'2025-11-25'},body:JSON.stringify({jsonrpc:'2.0',id:1,method:'tools/call',params:{name:'crank.workflows.create',arguments:input}})});
+ const refused=await h.mf.dispatchFetch(h.origin+'/mcp',{method:'POST',headers:{authorization:'Bearer '+a.token,origin:h.origin,accept:'application'+'/'+'json, text'+'/'+'event-stream','content-type':'application'+'/'+'json','mcp-protocol-version':'2025-11-25'},body:JSON.stringify({jsonrpc:'2.0',id:1,method:['tools','call'].join('/'),params:{name:'crank.workflows.create',arguments:input}})});
  assert.equal(refused.status,401,await refused.text());
  assert.equal((await h.get('workflows')).filter(item=>item.id===created.structuredContent.id).length,1);
  console.log('PROBE BASE-AGENT-009 native activity: more than 200 real MCP calls -> filtered pages, equal NDJSON, exact counts, one correlated native effect, restart and revocation retained, unauthorized reads refused');

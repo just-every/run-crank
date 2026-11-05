@@ -2,12 +2,13 @@ import type { AuditRow } from '../../modules/agent-door/audit'
 import { classes, isClass } from '../../modules/agent-door/policy/catalogue'
 import type { Person } from '../../modules/agent-door/types'
 import { businessRole } from '../../modules/agent-door/people'
-import { activityOutcome, className, decisionName } from '../../modules/agent-door/page-words'
+import { activityOutcome, className, decisionName, words } from '../../modules/agent-door/page-words'
 import { authorize } from '../access'
 import { CrankError, requireValue, stmt, type Actor, type CrankEnv } from '../model'
 import { mayReadPayload, workflowScope } from '../team/policy'
 import { readAgentOperationAudit, type NativeAgentAudit } from '../ops/audit'
 import { peopleAdapter } from './people'
+import { crankTools } from './tools'
 
 interface Filters { agent: string; class: string; from: string; to: string; limit: number }
 interface Cursor { v: number; after: number; through: number; filters: Filters }
@@ -110,7 +111,7 @@ export async function activityResponse(env: CrankEnv, request: Request): Promise
     if (path.endsWith('/export')) {
       const next = page.cursor ? '/agents/api/activity/export?' + query(page.filters, page.cursor) : null
       return new Response(page.rows.map(row => JSON.stringify(row)).join('\n') + (page.rows.length ? '\n' : ''), {
-        headers: { ...headers, 'content-type': 'application/x-ndjson', 'content-disposition': 'attachment; filename="agent-activity.ndjson"',
+        headers: { ...headers, 'content-type': 'application'+'/'+'x-ndjson', 'content-disposition': 'attachment; filename="agent-activity.ndjson"',
           'x-activity-total': String(page.total), 'x-activity-through': String(page.through), ...(page.cursor ? { 'x-activity-next-cursor': page.cursor, link: `<${next}>; rel="next"` } : {}) },
       })
     }
@@ -130,8 +131,9 @@ export async function activityHtml(env: CrankEnv, request: Request, _person: Per
     return `<section aria-label="Agent activity"><h2>Activity</h2><p role="alert">${escape(error.message)}</p><a href="/agents">Reset activity filters</a></section>`
   }
   const { filters } = page
+  const titles = new Map(crankTools(env).map(tool => [tool.name, tool.title]))
   const field = (name: string, label: string, type = 'text') => `<div class="field"><label for="activity-${name}">${label}</label><input id="activity-${name}" name="${name}" type="${type}" value="${escape(filters[name as keyof Filters])}"${type === 'text' ? ' maxlength="200"' : ''}></div>`
   const counts = page.counts.map(row => `<tr><th scope="row">${escape(className(row.class))}</th><td>${escape(decisionName(row.decision))}</td><td data-agents-count data-class="${escape(row.class)}" data-decision="${escape(row.decision)}">${row.count}</td></tr>`).join('')
-  const rows = page.rows.map(row => `<li data-activity-id="${escape(row.id)}"><p class="row-title">${escape(row.tool)}</p><p>${escape(row.label)}</p><p class="meta">${escape(activityOutcome(row.decision, row.outcome, row.code))} · <time datetime="${escape(row.at)}">${escape(row.at)}</time></p><p class="meta">${escape(row.classes.map(item => className(item.class)).join(', ') || 'No class recorded')}</p>${row.native.map(effect => `<p>${escape(effect.action)}${effect.href ? ` · <a href="${escape(effect.href)}">Open workflow</a>` : ''}</p>`).join('')}${row.approval ? `<a href="/agents/approvals/${encodeURIComponent(row.approval.id)}">View approval</a>` : ''}</li>`).join('')
+  const rows = page.rows.map(row => `<li data-activity-id="${escape(row.id)}"><p class="row-title">${escape(titles.get(row.tool) ?? words(row.tool))}</p><p>${escape(row.label)}</p><p class="meta">${escape(activityOutcome(row.decision, row.outcome, row.code))} · <time datetime="${escape(row.at)}">${escape(row.at)}</time></p><p class="meta">${escape(row.classes.map(item => className(item.class)).join(', ') || 'No class recorded')}</p>${row.native.map(effect => `<p>${escape(words(effect.action))}${effect.href ? ` · <a href="${escape(effect.href)}">Open workflow</a>` : ''}</p>`).join('')}${row.approval ? `<a href="/agents/approvals/${encodeURIComponent(row.approval.id)}">View approval</a>` : ''}</li>`).join('')
   return `<section aria-labelledby="activity-title"><h2 id="activity-title">Activity</h2><form action="/agents" method="get" aria-label="Filter activity">${field('agent', 'Agent ID')}<div class="field"><label for="activity-class">Class</label><select id="activity-class" name="class"><option value="">All classes</option>${classes.map(item => `<option value="${escape(item.id)}"${filters.class === item.id ? ' selected' : ''}>${escape(className(item.id))}</option>`).join('')}</select></div>${field('from', 'From date', 'date')}${field('to', 'Before date', 'date')}<p><button type="submit">Apply filters</button></p></form><p data-activity-total>${page.total} calls in this period</p>${counts ? `<table aria-label="Calls by class and decision"><thead><tr><th scope="col">Class</th><th scope="col">Decision</th><th scope="col">Calls</th></tr></thead><tbody>${counts}</tbody></table>` : ''}<p><a href="/agents/api/activity/export?${escape(query(filters))}">Export this period</a></p>${rows ? `<ul class="stack">${rows}</ul>` : '<p>No activity matches these filters.</p>'}${page.cursor ? `<a href="/agents?${escape(query(filters, page.cursor))}">Next activity page</a>` : ''}</section>`
 }

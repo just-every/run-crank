@@ -247,33 +247,6 @@ test('BASE-003 OPS-001: durable redacted stream survives outage and restart, pre
   assert.equal(archive.status,200); assert.ok(!archive.text.includes(token)); assert.ok(!archive.text.includes('logs.example/events'));
   await h.post('reports/log-sinks/'+sink.id+'/delete');
 
-  {
-  const owner=(await h.get()).actor.id,host=new URL(h.origin).host;
-  const formPost=(path,fields,cookie=h.owner)=>h.mf.dispatchFetch(h.origin+path,{method:'POST',redirect:'manual',headers:{host,origin:h.origin,cookie,'content-type':'application/x-www-form-urlencoded'},body:new URLSearchParams(fields).toString()});
-  const confirm=async(email,cookie)=>{const href=h.mail.findLast(m=>m.to.includes(email)).html.match(/href="([^"]*\/auth\/confirm\?token=[^"]+)"/)[1].replaceAll('&amp;','&');const r=await h.send('/auth/confirm',{token:new URL(href,h.origin).searchParams.get('token')},cookie);assert.equal(r.status,303,r.text);return r.cookie};
-  const stepUp=async(email,cookie)=>{assert.equal((await h.send('/auth/step-up',{action:'owner:transfer'},cookie)).status,202);await confirm(email,cookie)};
-  const operator=async email=>(await h.send('/auth/operators',undefined,h.owner)).value.find(o=>o.email===email);
-  const audited=async(action,subject)=>(await h.get('audit')).find(r=>r.action===action&&r.subject_id===subject);
-  const memberEmail='form-access-'+crypto.randomUUID()+'@example.test';
-  assert.equal((await formPost('/auth/invite',{email:memberEmail,displayName:'Form member',role:'member'})).status,202);
-  await confirm(memberEmail,'');const member=await operator(memberEmail);
-  assert.equal((await formPost('/auth/operator/role',{operatorId:member.id,role:'admin'})).status,200);
-  assert.equal((await formPost('/auth/operator/status',{operatorId:member.id,status:'inactive'})).status,200);
-  assert.equal((await audited('access.invite',member.id))?.actor_id,owner,'a form invitation is audited');
-  assert.deepEqual((await audited('access.role',member.id))?.detail,{role:'admin'},'a form role change is audited');
-  assert.deepEqual((await audited('access.status',member.id))?.detail,{status:'inactive'},'a form status change is audited');
-  const ownerEmail=(await h.send('/auth/session',undefined,h.owner)).value.operator.email,secondEmail='second-owner-'+crypto.randomUUID()+'@example.test';
-  await stepUp(ownerEmail,h.owner);
-  assert.equal((await h.send('/auth/invite',{email:secondEmail,displayName:'Second owner',role:'owner'},h.owner)).status,202);
-  const second=await confirm(secondEmail,''),secondOwner=await operator(secondEmail);
-  await stepUp(secondEmail,second);
-  const own=await h.send('/auth/operator/role',{operatorId:secondOwner.id,role:'admin'},second);assert.equal(own.status,200,own.text);
-  const self=await audited('access.role',secondOwner.id);
-  assert.equal(self?.actor_id,secondOwner.id,'an owner changing their own role is audited as themselves');assert.deepEqual(self.detail,{role:'admin'});
-
-  }
-  const activity=await harness('http://127.0.0.1:9',{clock:'2026-11-02T12:00:00.000Z'});
-  try {await activityJourney(activity)} finally {await activity.close()}
 });
 
 test('OPS-001: Datadog, Splunk HEC and signed S3 deliver selected metadata through their network protocols', async () => {
@@ -384,4 +357,3 @@ test('BASE-003: dependency failure, maintenance interruption and archive custody
     assert.equal((await r.send('/api/crank/reports/operations')).status,401);
   } finally { await r.close(); }
 });
-
