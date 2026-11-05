@@ -6,6 +6,7 @@ export interface AppDefinition {
   test?: { method: string; url: string }
 }
 export const APPS: Record<string, AppDefinition> = Object.assign(Object.create(null), {
+  paypal: { name: 'PayPal sandbox invoices', kinds: ['bearer'], domains: ['api-m.sandbox.paypal.com'] },
   openai: { name: 'OpenAI text classification', kinds: ['bearer'], domains: ['api.openai.com'] },
   orbit: { name: 'Orbit scoped deal API', kinds: ['bearer'], domains: 'declared' },
   nook: { name: 'Nook integration token', kinds: ['bearer'], domains: 'declared' },

@@ -51,3 +51,6 @@ console.log('Gmail metadata identities, literal headers, declared outcomes and t
 // The existing read-only provider browser entry also covers CRM result custody.
 const {hubspotSearchBrowser}=await import('./hubspot-search-browser.mjs');
 await hubspotSearchBrowser();
+
+const {paypalSearchBrowser}=await import('./paypal-search-browser.mjs');
+await paypalSearchBrowser();
