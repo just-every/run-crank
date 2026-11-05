@@ -6724,7 +6724,7 @@
       "executable": false
     },
     "tests/agent-door/activity-journey.mjs": {
-      "sha256": "ccba9ba228e07442d1b41a888f00dc03e0840a5a6af91278f39cd51f967e5913",
+      "sha256": "d0ade49b3a6f70ac1fcbcbafe2d6e311466db9622072cc297b720f5244703f0d",
       "executable": false
     },
     "tests/agent-door/fixtures.mjs": {
