@@ -1,0 +1,37 @@
+{
+  "head": "9d50d955b78048cc9e0150d98a70d800984990c7",
+  "runtime": "emitted Worker with real D1; synthetic native and Business fixtures; no provider dispatch",
+  "exit": 0,
+  "probes": [
+    {
+      "id": "BASE-AGENT-002",
+      "point": "4 invalid saved graphs",
+      "door": "native JSON actions and canonical /mcp",
+      "observed": "invalid_graph matches for validation, duplication and metadata-only edit; nested metadata step count 4; explicit valid repair succeeds; refused records and success audit remain unchanged"
+    },
+    {
+      "id": "BASE-AGENT-002",
+      "point": "4 stale drafts",
+      "door": "native draft action and canonical /mcp",
+      "observed": "revision_conflict matches with valid or invalid replacement content; no record change"
+    },
+    {
+      "id": "BASE-AGENT-002",
+      "point": "4 inaccessible and missing workflows",
+      "door": "native read, validate, duplicate and draft actions plus /mcp alias",
+      "observed": "identical missing and inaccessible refusals for each action; no record or native audit change"
+    },
+    {
+      "id": "BASE-AGENT-002",
+      "point": "4 current authority",
+      "door": "Business-bound MCP principal and matching native session after builder becomes viewer",
+      "observed": "native_authority_refused for all five preparation tools before invalid graph validation; all workflow records unchanged"
+    },
+    {
+      "id": "BASE-AGENT-002",
+      "point": "5 existing write controls",
+      "door": "native create and draft actions and /mcp",
+      "observed": "matching workflow.create and workflow.draft event types; matching persisted graph and metadata; no graph values, private validation text or credentials in MCP refusals"
+    }
+  ]
+}

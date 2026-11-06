@@ -1,0 +1,150 @@
+{
+  "head": "9d50d955b78048cc9e0150d98a70d800984990c7",
+  "current": {
+    "conclusion": "failure",
+    "head_sha": "9d50d955b78048cc9e0150d98a70d800984990c7",
+    "html_url": "https://github.com/just-every/run-crank/actions/runs/42155868782",
+    "status": "completed",
+    "id": 42155868782,
+    "event": "push",
+    "jobs": [
+      {
+        "conclusion": "success",
+        "id": 127689727867,
+        "name": "plan",
+        "status": "completed",
+        "steps": []
+      },
+      {
+        "conclusion": "failure",
+        "id": 127689929248,
+        "name": "build",
+        "status": "completed",
+        "steps": [
+          {
+            "conclusion": "failure",
+            "name": "Build once and check the edition"
+          }
+        ]
+      },
+      {
+        "conclusion": "skipped",
+        "id": 127689931502,
+        "name": "light",
+        "status": "completed",
+        "steps": []
+      },
+      {
+        "conclusion": "failure",
+        "id": 127690250728,
+        "name": "verify",
+        "status": "completed",
+        "steps": [
+          {
+            "conclusion": "failure",
+            "name": "Require the selected coverage and its proof"
+          }
+        ]
+      },
+      {
+        "conclusion": "skipped",
+        "id": 127690251452,
+        "name": "shards (${{ matrix.name }})",
+        "status": "completed",
+        "steps": []
+      },
+      {
+        "conclusion": "skipped",
+        "id": 127690251566,
+        "name": "full-push-proof",
+        "status": "completed",
+        "steps": []
+      },
+      {
+        "conclusion": "skipped",
+        "id": 127690251995,
+        "name": "nightly-proof",
+        "status": "completed",
+        "steps": []
+      }
+    ],
+    "classification": "permitted_generated_view_failure",
+    "only_actionable_failure": "node src/base/contract-docs.mjs check: ACCEPTANCE.md is stale",
+    "code_test_shards": "skipped after generated-view check",
+    "application_build": "passed",
+    "run_site_build": "passed",
+    "typecheck": "passed",
+    "first_party": "passed"
+  },
+  "previous": {
+    "id": 42155121458,
+    "conclusion": "failure",
+    "head_sha": "d7ccebbb2ca30d8a3a9f1f2ead8a866709867831",
+    "html_url": "https://github.com/just-every/run-crank/actions/runs/42155121458",
+    "status": "completed",
+    "jobs": [
+      {
+        "conclusion": "failure",
+        "id": 127687323201,
+        "name": "plan",
+        "status": "completed",
+        "steps": [
+          {
+            "conclusion": "failure",
+            "name": "Check edition source lock with the installed tool"
+          }
+        ]
+      },
+      {
+        "conclusion": "failure",
+        "id": 127687456921,
+        "name": "verify",
+        "status": "completed",
+        "steps": [
+          {
+            "conclusion": "failure",
+            "name": "Require the selected coverage and its proof"
+          }
+        ]
+      },
+      {
+        "conclusion": "skipped",
+        "id": 127687457526,
+        "name": "light",
+        "status": "completed",
+        "steps": []
+      },
+      {
+        "conclusion": "skipped",
+        "id": 127687457664,
+        "name": "shards (${{ matrix.name }})",
+        "status": "completed",
+        "steps": []
+      },
+      {
+        "conclusion": "skipped",
+        "id": 127687457851,
+        "name": "build",
+        "status": "completed",
+        "steps": []
+      },
+      {
+        "conclusion": "skipped",
+        "id": 127687458166,
+        "name": "full-push-proof",
+        "status": "completed",
+        "steps": []
+      },
+      {
+        "conclusion": "skipped",
+        "id": 127687458249,
+        "name": "nightly-proof",
+        "status": "completed",
+        "steps": []
+      }
+    ],
+    "classification": "reproduced_and_repaired_source_lock",
+    "reproduction": "VERIFY-REPRODUCED.json"
+  },
+  "reruns_or_dispatches": 0
+}

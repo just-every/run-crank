@@ -1,0 +1,8 @@
+▲ [WARNING] Proxy environment variables detected. We'll use your proxy for fetch requests.
+
+
+PROBE BASE-AGENT-002 4 invalid saved graphs: native JSON actions and canonical /mcp -> invalid_graph matches for validation, duplication and metadata-only edit; nested metadata step count 4; explicit valid repair succeeds; refused records and success audit remain unchanged
+PROBE BASE-AGENT-002 4 stale drafts: native draft action and canonical /mcp -> revision_conflict matches with valid or invalid replacement content; no record change
+PROBE BASE-AGENT-002 4 inaccessible and missing workflows: native read, validate, duplicate and draft actions plus /mcp alias -> identical missing and inaccessible refusals for each action; no record or native audit change
+PROBE BASE-AGENT-002 4 current authority: Business-bound MCP principal and matching native session after builder becomes viewer -> native_authority_refused for all five preparation tools before invalid graph validation; all workflow records unchanged
+PROBE BASE-AGENT-002 5 existing write controls: native create and draft actions and /mcp -> matching workflow.create and workflow.draft event types; matching persisted graph and metadata; no graph values, private validation text or credentials in MCP refusals

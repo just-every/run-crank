@@ -1,0 +1,78 @@
+build	Build once and check the edition	﻿2026-11-06T03:20:52.7492889Z ##[group]Run node scripts/verify-ci.mjs --build
+build	Build once and check the edition	2026-11-06T03:20:52.7493635Z node scripts/verify-ci.mjs --build
+build	Build once and check the edition	2026-11-06T03:20:52.7520137Z shell: /usr/bin/bash -e {0}
+[Workflow environment context omitted from this excerpt]
+build	Build once and check the edition	2026-11-06T03:20:52.7521630Z ##[endgroup]
+build	Build once and check the edition	2026-11-06T03:20:52.7843141Z > pnpm run build
+build	Build once and check the edition	2026-11-06T03:20:53.0639006Z 
+build	Build once and check the edition	2026-11-06T03:20:53.0639928Z > @automation/crank@0.1.0 build /home/runner/work/run-crank/run-crank
+build	Build once and check the edition	2026-11-06T03:20:53.0640642Z > rer build
+build	Build once and check the edition	2026-11-06T03:20:53.0640849Z 
+build	Build once and check the edition	2026-11-06T03:20:53.6956292Z Checking pinned pnpm
+build	Build once and check the edition	2026-11-06T03:20:53.9512376Z 10.12.4
+build	Build once and check the edition	2026-11-06T03:20:54.0255264Z Building your application
+build	Build once and check the edition	2026-11-06T03:20:54.4096547Z build:app
+build	Build once and check the edition	2026-11-06T03:20:56.4137705Z vite v8.2.2 building client environment for production...
+build	Build once and check the edition	2026-11-06T03:20:56.4284595Z transforming...
+build	Build once and check the edition	2026-11-06T03:20:56.5294841Z ✓ 135 modules transformed.
+build	Build once and check the edition	2026-11-06T03:20:56.5545591Z rendering chunks...
+build	Build once and check the edition	2026-11-06T03:20:56.6111957Z computing gzip size...
+build	Build once and check the edition	2026-11-06T03:20:56.6169338Z dist/client/.assetsignore               0.02 kB
+build	Build once and check the edition	2026-11-06T03:20:56.6170207Z dist/client/assets/index-DgoNPDnv.js  311.20 kB │ gzip: 100.86 kB
+build	Build once and check the edition	2026-11-06T03:20:56.6170550Z 
+build	Build once and check the edition	2026-11-06T03:20:56.7642459Z ✓ built in 351ms
+build	Build once and check the edition	2026-11-06T03:20:56.7643288Z vite v8.2.2 building ssr environment for production...
+build	Build once and check the edition	2026-11-06T03:20:56.7731828Z transforming...
+build	Build once and check the edition	2026-11-06T03:20:57.5969839Z ✓ 983 modules transformed.
+build	Build once and check the edition	2026-11-06T03:20:57.6831536Z rendering chunks...
+build	Build once and check the edition	2026-11-06T03:20:57.8098121Z computing gzip size...
+build	Build once and check the edition	2026-11-06T03:20:57.8462012Z dist/server/wrangler.json                                      1.52 kB │ gzip:   0.77 kB
+build	Build once and check the edition	2026-11-06T03:20:57.8463399Z dist/server/.vite/manifest.json                                3.02 kB │ gzip:   0.63 kB
+build	Build once and check the edition	2026-11-06T03:20:57.8464667Z dist/server/assets/empty-plugin-adapters-D_0twvAa.js           0.28 kB │ gzip:   0.18 kB
+build	Build once and check the edition	2026-11-06T03:20:57.8465969Z dist/server/assets/start-D8qDT34V.js                           0.28 kB │ gzip:   0.21 kB
+build	Build once and check the edition	2026-11-06T03:20:57.8467680Z dist/server/assets/_tanstack-start-manifest_v-DVoN4ie7.js      0.36 kB │ gzip:   0.26 kB
+build	Build once and check the edition	2026-11-06T03:20:57.8469107Z dist/server/assets/font-head-HgDHZCdz.js                       0.44 kB │ gzip:   0.30 kB
+build	Build once and check the edition	2026-11-06T03:20:57.8470622Z dist/server/assets/storage-DIFNL99I.js                         4.87 kB │ gzip:   1.93 kB
+build	Build once and check the edition	2026-11-06T03:20:57.8472067Z dist/server/assets/hash-DzlUKWoV.js                            6.07 kB │ gzip:   2.70 kB
+build	Build once and check the edition	2026-11-06T03:20:57.8473526Z dist/server/assets/router-wm_agP18.js                         37.24 kB │ gzip:  10.08 kB
+build	Build once and check the edition	2026-11-06T03:20:57.8474871Z dist/server/assets/Match-Da0RQ5kP.js                         161.09 kB │ gzip:  40.31 kB
+build	Build once and check the edition	2026-11-06T03:20:57.8476563Z dist/server/assets/access-7TmNBI9h.js                      1,821.43 kB │ gzip: 465.90 kB
+build	Build once and check the edition	2026-11-06T03:20:57.8477894Z dist/server/index.js                                       2,340.02 kB │ gzip: 579.67 kB
+build	Build once and check the edition	2026-11-06T03:20:57.8478456Z 
+build	Build once and check the edition	2026-11-06T03:20:57.8717714Z [INEFFECTIVE_DYNAMIC_IMPORT] src/crank/connections/catalog.ts is dynamically imported by src/crank/workflows/snapshot.ts but also statically imported by src/crank/ops/coverage.ts, src/crank/workflows/api.ts, dynamic import will not move module into another chunk.
+build	Build once and check the edition	2026-11-06T03:20:57.8766676Z 
+build	Build once and check the edition	2026-11-06T03:20:57.8769530Z [INEFFECTIVE_DYNAMIC_IMPORT] src/modules/import-kit/src/d1/undo-snapshot.ts is dynamically imported by src/modules/import-kit/src/d1/apply.ts but also statically imported by src/modules/import-kit/src/d1/preserved-preview.ts, src/modules/import-kit/src/d1/preserved-reverse.ts, dynamic import will not move module into another chunk.
+build	Build once and check the edition	2026-11-06T03:20:57.8771565Z 
+build	Build once and check the edition	2026-11-06T03:20:57.8774438Z [INEFFECTIVE_DYNAMIC_IMPORT] src/crank/engine/executor.ts is dynamically imported by src/crank/workflows/subflow-calls.ts but also statically imported by src/crank/agents/drift-approval.ts, src/crank/agents/drift-permission.ts, src/crank/agents/drift-testing.ts, src/crank/agents/recurring-dispatch.ts, src/crank/custom/api.ts, ..., dynamic import will not move module into another chunk.
+build	Build once and check the edition	2026-11-06T03:20:57.8777312Z 
+build	Build once and check the edition	2026-11-06T03:20:57.8780157Z [INEFFECTIVE_DYNAMIC_IMPORT] src/crank/access.ts is dynamically imported by src/crank/agent-door/people.ts but also statically imported by src/crank/agent-door/tool-metadata.ts, src/crank/agent-door/tool-workflows.ts, src/crank/agents/authoring-promotion.ts, src/crank/agents/authoring-record.ts, src/crank/agents/authoring.ts, ..., dynamic import will not move module into another chunk.
+build	Build once and check the edition	2026-11-06T03:20:57.8782481Z 
+build	Build once and check the edition	2026-11-06T03:20:57.8782918Z ✓ built in 1.11s
+build	Build once and check the edition	2026-11-06T03:20:58.3366975Z Your application is built
+build	Build once and check the edition	2026-11-06T03:20:58.3757280Z build: complete (exit 0)
+build	Build once and check the edition	2026-11-06T03:20:58.3957975Z > pnpm exec rer build --site
+build	Build once and check the edition	2026-11-06T03:20:59.4681124Z Checking pinned pnpm
+build	Build once and check the edition	2026-11-06T03:20:59.7261806Z 10.12.4
+build	Build once and check the edition	2026-11-06T03:20:59.7993815Z Building the run site
+build	Build once and check the edition	2026-11-06T03:21:00.2937798Z {"pages":13,"assets":7,"styles":1}
+build	Build once and check the edition	2026-11-06T03:21:01.3315717Z Run site written to dist/site (13 pages, 75 files): /home/runner/work/run-crank/run-crank/dist/site
+build	Build once and check the edition	2026-11-06T03:21:01.3320928Z build: complete (exit 0)
+build	Build once and check the edition	2026-11-06T03:21:01.3525019Z > pnpm run typecheck
+build	Build once and check the edition	2026-11-06T03:21:01.6180077Z 
+build	Build once and check the edition	2026-11-06T03:21:01.6181054Z > @automation/crank@0.1.0 typecheck /home/runner/work/run-crank/run-crank
+build	Build once and check the edition	2026-11-06T03:21:01.6181634Z > tsc --build --incremental
+build	Build once and check the edition	2026-11-06T03:21:01.6181828Z 
+build	Build once and check the edition	2026-11-06T03:21:11.2366028Z > pnpm exec rer check --profile first-party
+build	Build once and check the edition	2026-11-06T03:21:12.1486975Z > node src/base/contract-docs.mjs check
+build	Build once and check the edition	2026-11-06T03:21:12.2029092Z file:///home/runner/work/run-crank/run-crank/src/base/contract-docs.mjs:23
+build	Build once and check the edition	2026-11-06T03:21:12.2030812Z   else if(!existsSync(path)||readFileSync(path,'utf8')!==expected)throw Error(`${path} is stale; run node src/base/contract-docs.mjs write`)
+build	Build once and check the edition	2026-11-06T03:21:12.2032106Z                                                                         ^
+build	Build once and check the edition	2026-11-06T03:21:12.2032435Z 
+build	Build once and check the edition	2026-11-06T03:21:12.2032756Z Error: ACCEPTANCE.md is stale; run node src/base/contract-docs.mjs write
+build	Build once and check the edition	2026-11-06T03:21:12.2033385Z     at file:///home/runner/work/run-crank/run-crank/src/base/contract-docs.mjs:23:73
+build	Build once and check the edition	2026-11-06T03:21:12.2033968Z     at ModuleJob.run (node:internal/modules/esm/module_job:345:25)
+build	Build once and check the edition	2026-11-06T03:21:12.2034562Z     at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+build	Build once and check the edition	2026-11-06T03:21:12.2035218Z     at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)
+build	Build once and check the edition	2026-11-06T03:21:12.2035568Z 
+build	Build once and check the edition	2026-11-06T03:21:12.2035663Z Node.js v22.20.0
+build	Build once and check the edition	2026-11-06T03:21:12.2097489Z ##[error]Process completed with exit code 1.

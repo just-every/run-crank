@@ -1,0 +1,53 @@
+{
+  "head": "9d50d955b78048cc9e0150d98a70d800984990c7",
+  "command": "CRANK_CHROMIUM=/usr/bin/chromium perl -e 'alarm 1200; exec @ARGV' -- node tests/editor-browser.mjs",
+  "exit": 0,
+  "widths": [
+    1440,
+    390
+  ],
+  "screens": [
+    {
+      "file": "browser/1440-constructed-draft.png",
+      "bytes": 510142,
+      "sha256": "50d494f18fa636dfe6dae1e5d11843f513ba9d8a492a66897d0fa1eb14922e8a"
+    },
+    {
+      "file": "browser/1440-published-fallback-output.png",
+      "bytes": 399260,
+      "sha256": "7eed006cfcebbf9df132dbe0fb65b021aedeadfa62cb8050f31bee6915c2f6c5"
+    },
+    {
+      "file": "browser/1440-published-priority-output.png",
+      "bytes": 405815,
+      "sha256": "8b1b35c3abe2ca009042e36b18e85a85c5feac6aeb5b757784d28c6fddbf6c79"
+    },
+    {
+      "file": "browser/1440-required-field-error.png",
+      "bytes": 417475,
+      "sha256": "77365705c36314294498e4b14bafcf1f0e5cf8b8c59f2098df00bd0eeb38a00c"
+    },
+    {
+      "file": "browser/390-constructed-draft.png",
+      "bytes": 387070,
+      "sha256": "b8617332f7a1bfd3c68c9b247b61e3c01cd26bc84b3c45eed3538ba9524ca30c"
+    },
+    {
+      "file": "browser/390-published-fallback-output.png",
+      "bytes": 262302,
+      "sha256": "33bbc7ce6a0a770e3a880bcba3ad721ff80f35a0041a946d93358615b7e571ec"
+    },
+    {
+      "file": "browser/390-published-priority-output.png",
+      "bytes": 266260,
+      "sha256": "51466b3d1b5a5cab8078de9cd4d4a0d6f9632f7aee588020e04982ea5fb7914b"
+    },
+    {
+      "file": "browser/390-required-field-error.png",
+      "bytes": 287697,
+      "sha256": "eb6311bba9582faf522c99dfdf20842fc8ee6a526f2d1c1fa834783ceb34724b"
+    }
+  ],
+  "screen_source_changed": false,
+  "result": "Installed editor proof passes native construction, correction, stale and revoked refusals, publication and exact branch outputs"
+}

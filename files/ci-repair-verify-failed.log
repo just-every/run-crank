@@ -1,0 +1,25 @@
+verify	Require the selected coverage and its proof	﻿2026-11-06T03:21:18.6049416Z ##[group]Run set -euo pipefail
+verify	Require the selected coverage and its proof	2026-11-06T03:21:18.6050290Z set -euo pipefail
+verify	Require the selected coverage and its proof	2026-11-06T03:21:18.6051009Z test "$PLAN" = success
+verify	Require the selected coverage and its proof	2026-11-06T03:21:18.6051873Z case "$PUSH_PROOF:$NIGHTLY_PROOF" in
+verify	Require the selected coverage and its proof	2026-11-06T03:21:18.6052640Z   *failure*|*cancelled*) exit 1 ;;
+verify	Require the selected coverage and its proof	2026-11-06T03:21:18.6053453Z esac
+verify	Require the selected coverage and its proof	2026-11-06T03:21:18.6054074Z case "$COVERAGE" in
+verify	Require the selected coverage and its proof	2026-11-06T03:21:18.6055108Z   reuse) test "$SKIP" = true && test "$BUILD" = skipped && test "$SHARDS" = skipped && test "$LIGHT" = skipped ;;
+verify	Require the selected coverage and its proof	2026-11-06T03:21:18.6056500Z   light) test "$SKIP" = false && test "$LIGHT" = success && test "$BUILD" = skipped && test "$SHARDS" = skipped ;;
+verify	Require the selected coverage and its proof	2026-11-06T03:21:18.6057993Z   full)
+verify	Require the selected coverage and its proof	2026-11-06T03:21:18.6058681Z     test "$SKIP" = false && test "$LIGHT" = skipped
+verify	Require the selected coverage and its proof	2026-11-06T03:21:18.6059468Z     if [ "$HAS_SHARDS" = true ]; then
+verify	Require the selected coverage and its proof	2026-11-06T03:21:18.6060317Z       test "$BUILD" = success && test "$SHARDS" = success
+verify	Require the selected coverage and its proof	2026-11-06T03:21:18.6061223Z     else
+verify	Require the selected coverage and its proof	2026-11-06T03:21:18.6061949Z       test "$BUILD" = skipped && test "$SHARDS" = skipped
+verify	Require the selected coverage and its proof	2026-11-06T03:21:18.6062742Z     fi
+verify	Require the selected coverage and its proof	2026-11-06T03:21:18.6063505Z     if [ "$REQUIRE_PUSH" = true ]; then test "$PUSH_PROOF" = success; fi
+verify	Require the selected coverage and its proof	2026-11-06T03:21:18.6064550Z     if [ "$REQUIRE_NIGHTLY" = true ]; then test "$NIGHTLY_PROOF" = success; fi
+verify	Require the selected coverage and its proof	2026-11-06T03:21:18.6065383Z     ;;
+verify	Require the selected coverage and its proof	2026-11-06T03:21:18.6066018Z   *) exit 1 ;;
+verify	Require the selected coverage and its proof	2026-11-06T03:21:18.6066593Z esac
+verify	Require the selected coverage and its proof	2026-11-06T03:21:18.6335700Z shell: /usr/bin/bash -e {0}
+[Workflow environment context omitted from this excerpt]
+verify	Require the selected coverage and its proof	2026-11-06T03:21:18.6344141Z ##[endgroup]
+verify	Require the selected coverage and its proof	2026-11-06T03:21:18.6617938Z ##[error]Process completed with exit code 1.

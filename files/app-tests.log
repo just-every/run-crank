@@ -1,0 +1,29 @@
+TAP version 13
+# ▲ [WARNING] Proxy environment variables detected. We'll use your proxy for fetch requests.
+# Subtest: the flow editor shows the steps and runs; an approval decided from its form continues the run
+ok 1 - the flow editor shows the steps and runs; an approval decided from its form continues the run
+  ---
+  duration_ms: 3496.713889
+  type: 'test'
+  ...
+# Subtest: EXEC-005: older business-key history, date/error filters, mapping decisions, comparison and restricted payloads through API and app
+ok 2 - EXEC-005: older business-key history, date/error filters, mapping decisions, comparison and restricted payloads through API and app
+  ---
+  duration_ms: 529.622395
+  type: 'test'
+  ...
+# Subtest: Native visual drafting builds named branches, fences stale and unauthorized saves, and preserves published execution
+ok 3 - Native visual drafting builds named branches, fences stale and unauthorized saves, and preserves published execution
+  ---
+  duration_ms: 6561.100993
+  type: 'test'
+  ...
+1..3
+# tests 3
+# suites 0
+# pass 3
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 11687.535527

@@ -1,0 +1,194 @@
+{
+  "head": "9d50d955b78048cc9e0150d98a70d800984990c7",
+  "base": "8a93c7867963528acc8f42c2b9dce55c4adaa61a",
+  "branch": "cloud/sx-crank-c-f83",
+  "repository": "just-every/run-crank",
+  "setup": {
+    "command": "cloud_run npx -y @runeditrun/rer setup --owner-email fleet@runeditrun.com --non-interactive",
+    "exit": 0
+  },
+  "tests": {
+    "command": "node --test --test-concurrency=1 tests/app.test.mjs",
+    "exit": 0,
+    "tests": 3,
+    "failed": 0,
+    "receipt": "app-tests.log",
+    "source_matches_head": true
+  },
+  "typecheck": {
+    "command": "pnpm typecheck",
+    "exit": 0,
+    "receipt": "typecheck.log",
+    "source_matches_head": true
+  },
+  "build": {
+    "command": "cloud_run npx -y @runeditrun/rer build",
+    "exit": 0,
+    "receipt": "build.log"
+  },
+  "first_party": {
+    "command": "npx -y @runeditrun/rer check --profile first-party",
+    "exit": 0,
+    "receipt": "first-party.log",
+    "node": "22.20.0"
+  },
+  "views": {
+    "write": "node src/base/contract-docs.mjs write",
+    "write_exit": 0,
+    "check": "node src/base/contract-docs.mjs check",
+    "check_exit": 0,
+    "generated_views_restored_from": "origin/main",
+    "generated_views_committed": false,
+    "restored_candidate_check_exit": 1,
+    "restored_candidate_check_expected_stale": true
+  },
+  "lock": {
+    "write": "node node_modules/@runeditrun/rer/edition-authoring/cli.mjs lock",
+    "write_exit": 0,
+    "check": "node node_modules/@runeditrun/rer/edition-authoring/cli.mjs check",
+    "check_exit": 0,
+    "ok": true
+  },
+  "ledger": {
+    "command": null,
+    "exit": 0,
+    "reason": "No migration changed"
+  },
+  "counts": {
+    "before": {
+      "done": 32,
+      "partial": 50,
+      "missing": 17
+    },
+    "after": {
+      "done": 32,
+      "partial": 50,
+      "missing": 17
+    },
+    "status_rows_before": 99,
+    "status_rows_after": 99,
+    "test_registrations_added": 0,
+    "inherited_budget_current": 201
+  },
+  "product_push": {
+    "branch": "cloud/sx-crank-c-f83",
+    "head": "9d50d955b78048cc9e0150d98a70d800984990c7",
+    "guard": "cloud-push.py",
+    "exit": 0,
+    "attempts": 1
+  },
+  "save_push": {
+    "head": "1ecd830f0a1f5c4107b2489769fb8950e41787b4",
+    "guard": "cloud-push.py",
+    "exit": 0,
+    "attempts": 1
+  },
+  "pre_push_main": {
+    "command": "git fetch origin main; git merge --no-commit origin/main",
+    "result": "Already up to date",
+    "main": "e2c146dc38eb64e685cf01d2c56e798404b3936e"
+  },
+  "unchanged_acceptance": true,
+  "publication_scan": {
+    "status": "NOT_RUN",
+    "reason": "Cloud branch only; maintained Mac lander performs exact-tree full-history publication scan"
+  },
+  "browser": {
+    "command": "node tests/editor-browser.mjs",
+    "exit": 0,
+    "widths": [
+      1440,
+      390
+    ],
+    "receipt": "BROWSER.json"
+  },
+  "runtime_node": "22.20.0",
+  "repair": {
+    "round": 1,
+    "failed_head": "d7ccebbb2ca30d8a3a9f1f2ead8a866709867831",
+    "failed_run": 42155121458,
+    "failed_job": 127687323201,
+    "reproduced_exit": 1,
+    "changed_files": [
+      "sources.lock.json"
+    ],
+    "code_and_test_bytes_changed": false
+  },
+  "full_history": true,
+  "ci": {
+    "conclusion": "failure",
+    "head_sha": "9d50d955b78048cc9e0150d98a70d800984990c7",
+    "html_url": "https://github.com/just-every/run-crank/actions/runs/42155868782",
+    "status": "completed",
+    "id": 42155868782,
+    "event": "push",
+    "jobs": [
+      {
+        "conclusion": "success",
+        "id": 127689727867,
+        "name": "plan",
+        "status": "completed",
+        "steps": []
+      },
+      {
+        "conclusion": "failure",
+        "id": 127689929248,
+        "name": "build",
+        "status": "completed",
+        "steps": [
+          {
+            "conclusion": "failure",
+            "name": "Build once and check the edition"
+          }
+        ]
+      },
+      {
+        "conclusion": "skipped",
+        "id": 127689931502,
+        "name": "light",
+        "status": "completed",
+        "steps": []
+      },
+      {
+        "conclusion": "failure",
+        "id": 127690250728,
+        "name": "verify",
+        "status": "completed",
+        "steps": [
+          {
+            "conclusion": "failure",
+            "name": "Require the selected coverage and its proof"
+          }
+        ]
+      },
+      {
+        "conclusion": "skipped",
+        "id": 127690251452,
+        "name": "shards (${{ matrix.name }})",
+        "status": "completed",
+        "steps": []
+      },
+      {
+        "conclusion": "skipped",
+        "id": 127690251566,
+        "name": "full-push-proof",
+        "status": "completed",
+        "steps": []
+      },
+      {
+        "conclusion": "skipped",
+        "id": 127690251995,
+        "name": "nightly-proof",
+        "status": "completed",
+        "steps": []
+      }
+    ],
+    "classification": "permitted_generated_view_failure",
+    "only_actionable_failure": "node src/base/contract-docs.mjs check: ACCEPTANCE.md is stale",
+    "code_test_shards": "skipped after generated-view check",
+    "application_build": "passed",
+    "run_site_build": "passed",
+    "typecheck": "passed",
+    "first_party": "passed"
+  }
+}

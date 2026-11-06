@@ -1,0 +1,15 @@
+{
+  "verified_at": "2026-11-06T03:26:29.647388+00:00",
+  "branch": "cloud/sx-crank-c-f83",
+  "head": "9d50d955b78048cc9e0150d98a70d800984990c7",
+  "remote_ref": "refs/heads/cloud/sx-crank-c-f83",
+  "remote_head": "9d50d955b78048cc9e0150d98a70d800984990c7",
+  "clean": true,
+  "commit_identity_and_trailers": "9d50d955b78048cc9e0150d98a70d800984990c7\nRun Edit Run fleet <fleet@runeditrun.com>\nRun Edit Run fleet <fleet@runeditrun.com>\n\nd7ccebbb2ca30d8a3a9f1f2ead8a866709867831\nRun Edit Run fleet <fleet@runeditrun.com>\nRun Edit Run fleet <fleet@runeditrun.com>\n\n1ecd830f0a1f5c4107b2489769fb8950e41787b4\nRun Edit Run fleet <fleet@runeditrun.com>\nRun Edit Run fleet <fleet@runeditrun.com>\n\n8a93c7867963528acc8f42c2b9dce55c4adaa61a\nRun Edit Run fleet <fleet@runeditrun.com>\nRun Edit Run fleet <fleet@runeditrun.com>\n\ne1a08179c43829c34b1078ca7800733af6d7d6e6\nRun Edit Run fleet <fleet@runeditrun.com>\nRun Edit Run fleet <fleet@runeditrun.com>\n\n",
+  "pr": null,
+  "base": "8a93c7867963528acc8f42c2b9dce55c4adaa61a",
+  "preserved_predecessor_commits": [
+    "e1a08179c43829c34b1078ca7800733af6d7d6e6",
+    "8a93c7867963528acc8f42c2b9dce55c4adaa61a"
+  ]
+}
