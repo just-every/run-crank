@@ -1,0 +1,15 @@
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProxy environment variables detected. We'll use your proxy for fetch requests.[0m
+
+
+✔ PLATFORM-001: SDK and CORE door draft lifecycle, native granted execution/progress, paginated reads and out-of-grant denial share native approval and audit (25148.651047ms)
+✔ PLATFORM-001: concurrent and restarted draft/publication/rollback retries retain identities and audit without changing later state or restoring authority (13531.694704ms)
+✔ PLATFORM-001: lost, concurrent and restarted duplicate requests keep one inert preparation without overwriting later work (10607.921903ms)
+✔ Per-client MCP connector tools enforce exact grants, approvals, history, restart and revocation (12520.475992ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 4
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 62870.360028

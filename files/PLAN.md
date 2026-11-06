@@ -1,0 +1,9 @@
+# sx-crank-c-f87 plan
+
+The FIX round overrides the broader campaign. Address only blocking B from the refused f81 candidate d8623c31cf359634b9516a57754ede47e02fa8e8: removal of runs:read must prevent aggregate state from exposing run payloads, immediately and after restart. BASE-AGENT-005 stays PARTIAL with all existing holds and acceptance text retained.
+
+1. Use a full-history clone and fleet identities and hooks. Start at the named f81 candidate. Read the native scope admission, aggregate state implementation and the existing public-door narrowing proof.
+2. Extend the existing platform journey with an actual native legacy run. Establish positive aggregate access with both read scopes, remove runs:read through the native owner control, check aggregate and direct run refusal while retaining workflow metadata, then restart and repeat. Include run-only direct-read success and aggregate refusal as the complementary scope control.
+3. Run the new assertion against unchanged candidate code and retain its actual nonzero failure. Require both workflow and run read scopes at aggregate-route admission. Re-run the affected platform tests and typecheck. Add no test registrations or unrelated feature work.
+4. Fetch and integrate origin/main before the final push, retaining newer contract judgments. Generate and check contract views locally, restore the generated view files from origin/main, regenerate source lock last and check it. Check first-party evidence and parent contract row retention.
+5. Inspect every candidate identity and trailer, push only cloud/sx-crank-c-f87 with the fleet guard, discover exact-SHA Verify through REST and respect the polling budget. Publish the complete selected non-secret evidence packet to the separate evidence ref. Leave landing and publication scanning to the Mac fleet; remove the successful clone only after evidence transfer.

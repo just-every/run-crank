@@ -1,0 +1,9 @@
+{
+  "head": "d8623c31cf359634b9516a57754ede47e02fa8e8",
+  "command": "node --test --test-concurrency=1 --test-name-pattern='^PLATFORM-001: SDK and CORE door draft lifecycle' tests/platform.test.mjs",
+  "test": "PLATFORM-001: SDK and CORE door draft lifecycle, native granted execution/progress, paginated reads and out-of-grant denial share native approval and audit",
+  "exit": 1,
+  "failure": "Removed run authority must refuse state: 200 !== 403",
+  "job": "sx-crank-c-f81-gate-1 blocking B",
+  "worktree": "added regression assertions; unchanged production code"
+}

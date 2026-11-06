@@ -1,0 +1,3 @@
+60fb60c691440430e2c0bcd7f8aee3461e954edd	refs/heads/cloud/sx-crank-c-f87
+full_history=true
+worktree=clean

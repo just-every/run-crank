@@ -1,0 +1,12 @@
+[
+  {
+    "command": "gh run view 42165704318 --repo just-every/run-crank --job 127721717098 --log-failed",
+    "exit": 0,
+    "log": "ci-failed-job-127721717098.log"
+  },
+  {
+    "command": "gh run view 42165704318 --repo just-every/run-crank --job 127721998601 --log-failed",
+    "exit": 0,
+    "log": "ci-failed-job-127721998601.log"
+  }
+]

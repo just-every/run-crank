@@ -1,0 +1,187 @@
+{
+  "schema": 1,
+  "tag": "sx-crank-c-f87",
+  "repository": "just-every/run-crank",
+  "branch": "cloud/sx-crank-c-f87",
+  "head": "60fb60c691440430e2c0bcd7f8aee3461e954edd",
+  "base": "d8623c31cf359634b9516a57754ede47e02fa8e8",
+  "scope": "FIX blocking B only: aggregate state must enforce removed run read scope",
+  "product_push": {
+    "status": "success",
+    "attempts": 1,
+    "log": "product-push.log",
+    "remote_verified": true
+  },
+  "checks": [
+    {
+      "command": "node --test --test-concurrency=1 --test-name-pattern='^PLATFORM-001: SDK and CORE door draft lifecycle' tests/platform.test.mjs",
+      "head": "d8623c31cf359634b9516a57754ede47e02fa8e8",
+      "worktree": "added regression assertions; unchanged production code",
+      "exit": 1,
+      "test": "PLATFORM-001: SDK and CORE door draft lifecycle, native granted execution/progress, paginated reads and out-of-grant denial share native approval and audit",
+      "failure": "Removed run authority must refuse state: 200 !== 403",
+      "log": "reproduction.log"
+    },
+    {
+      "command": "node --test --test-concurrency=1 tests/platform.test.mjs",
+      "exit": 0,
+      "tests": 4,
+      "pass": 4,
+      "fail": 0,
+      "node": "24.19.0",
+      "log": "platform-tests.log",
+      "tree_matches_candidate": true
+    },
+    {
+      "command": "pnpm run typecheck",
+      "exit": 0,
+      "log": "typecheck.log",
+      "tree_matches_candidate": true
+    },
+    {
+      "command": "pnpm exec rer check --profile first-party",
+      "exit": 0,
+      "log": "first-party.log"
+    },
+    {
+      "command": "node src/base/contract-docs.mjs write",
+      "exit": 0,
+      "log": "views-write.log"
+    },
+    {
+      "command": "node src/base/contract-docs.mjs check",
+      "exit": 0,
+      "log": "views-check.log",
+      "generated_views_restored_from": "origin/main"
+    },
+    {
+      "command": "node node_modules/@runeditrun/rer/edition-authoring/cli.mjs lock",
+      "exit": 0,
+      "log": "lock-write.log"
+    },
+    {
+      "command": "node node_modules/@runeditrun/rer/edition-authoring/cli.mjs check",
+      "exit": 0,
+      "log": "candidate-lock-check.log"
+    },
+    {
+      "command": "node --test --test-concurrency=1 --test-name-pattern='^PLATFORM-001: SDK and CORE door draft lifecycle' tests/platform.test.mjs",
+      "head": "60fb60c691440430e2c0bcd7f8aee3461e954edd",
+      "node": "22.20.0",
+      "exit": 0,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "log": "candidate-probe.log"
+    },
+    {
+      "command": "node src/base/contract-docs.mjs check",
+      "head": "60fb60c691440430e2c0bcd7f8aee3461e954edd",
+      "exit": 1,
+      "log": "candidate-views-check.log",
+      "expected": "Generated views restored from origin/main; Mac lander owns regeneration"
+    }
+  ],
+  "mechanical": {
+    "lock": 0,
+    "views_write": 0,
+    "views_check": 0,
+    "ledger": "none; FIX adds no migration",
+    "generated_view_files_committed": false,
+    "candidate_commits_identity_and_trailers": "passed all three candidate commits including parents",
+    "status_rows": 99,
+    "table_lines_before": 153,
+    "table_lines_after": 153
+  },
+  "counts": {
+    "before": {
+      "done": 32,
+      "partial": 50,
+      "missing": 17
+    },
+    "after": {
+      "done": 32,
+      "partial": 50,
+      "missing": 17
+    },
+    "registered_tests_before": 201,
+    "registered_tests_after": 201,
+    "new_test_registrations": 0
+  },
+  "clauses": [
+    {
+      "id": "BASE-AGENT-005",
+      "before": "partial",
+      "after": "partial",
+      "acceptance_text_changed": false,
+      "remaining_gap_changed": false
+    }
+  ],
+  "probe": "PROBE BASE-AGENT-005 B: owner mints both read scopes, reads populated aggregate, removes runs:read; GET /api/crank/state and direct run -> 403 immediately and after restart; workflow metadata -> 200; owner run payload unchanged; run-only credential reads direct run but aggregate -> 403.",
+  "ci": {
+    "total_count": 1,
+    "workflow_runs": [
+      {
+        "conclusion": null,
+        "event": "push",
+        "head_sha": "60fb60c691440430e2c0bcd7f8aee3461e954edd",
+        "html_url": "https://github.com/just-every/run-crank/actions/runs/42165704318",
+        "id": 42165704318,
+        "name": "Verify",
+        "status": "in_progress"
+      }
+    ]
+  },
+  "github_api_calls": 6,
+  "github_api_note": "One initial discovery query used a mistyped SHA and returned no runs; corrected exact-SHA discovery is recorded. No CI run was dispatched or rerun.",
+  "publication_scan": {
+    "status": "not run in cloud",
+    "responsibility": "Mac guarded lander"
+  },
+  "run_site": {
+    "status": "pending landing",
+    "responsibility": "Mac guarded lander"
+  },
+  "pr": null,
+  "files": [
+    {
+      "path": "src/crank/access.ts",
+      "sha256": "4ba142dfd07f1721ea4e3d0ed3624bb819c34dbe53666afbe0f611ba1efc764e"
+    },
+    {
+      "path": "tests/platform.test.mjs",
+      "sha256": "3f7e95b6cf8ad29932a8edc043013d01b129a5d27d786456580228136a7e9b27"
+    },
+    {
+      "path": "sources.lock.json",
+      "sha256": "004afb5200c31be49f0452fa218175035aed0982bb20fda522af632df183cf30"
+    }
+  ],
+  "full_history": true,
+  "worktree": "clean",
+  "ci_final": {
+    "conclusion": "failure",
+    "head_sha": "60fb60c691440430e2c0bcd7f8aee3461e954edd",
+    "html_url": "https://github.com/just-every/run-crank/actions/runs/42165704318",
+    "status": "completed",
+    "run_id": 42165704318,
+    "root_cause_job": 127721717098,
+    "dependent_verify_job": 127721998601,
+    "classification": "permitted generated-view-only failure",
+    "product_test_failure": false
+  },
+  "ci_log_receipts": [
+    {
+      "command": "gh run view 42165704318 --repo just-every/run-crank --job 127721717098 --log-failed",
+      "exit": 0,
+      "log": "ci-failed-job-127721717098.log"
+    },
+    {
+      "command": "gh run view 42165704318 --repo just-every/run-crank --job 127721998601 --log-failed",
+      "exit": 0,
+      "log": "ci-failed-job-127721998601.log"
+    }
+  ],
+  "readiness": "READY under explicitly permitted generated-view exception",
+  "fix_blockers": []
+}
