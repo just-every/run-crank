@@ -1,0 +1,116 @@
+{
+  "schema": 1,
+  "tag": "sx-crank-f89fix1",
+  "repository": "just-every/run-crank",
+  "branch": "cloud/sx-crank-f89fix1",
+  "head": "534a9088cebe5c956b09028ff8b3ad464bad747f",
+  "generated_at": "2026-11-06T12:19:13.168859+00:00",
+  "base": "e2c146dc38eb64e685cf01d2c56e798404b3936e",
+  "refused_head": "184178d3ca7b499818b5982021559c472a7a56dc",
+  "checks": [
+    {
+      "name": "touched usage suite",
+      "command": "node --test --test-concurrency=1 tests/usage.test.mjs",
+      "exit": 0,
+      "tests": 4,
+      "passed": 4,
+      "log": "usage-tests.log"
+    },
+    {
+      "name": "typecheck",
+      "command": "pnpm typecheck",
+      "exit": 0,
+      "log": "typecheck.log"
+    },
+    {
+      "name": "build",
+      "command": "cloud_run npx -y @runeditrun/rer build",
+      "exit": 0,
+      "log": "build.log"
+    },
+    {
+      "name": "first-party",
+      "command": "pnpm exec rer check --profile first-party",
+      "exit": 0,
+      "log": "first-party.log"
+    },
+    {
+      "name": "browser",
+      "command": "CRANK_CHROMIUM=/usr/bin/chromium CRANK_EVIDENCE=<packet>/browser cloud_run timeout -k 10 1200 node tests/agent-usage-browser.mjs",
+      "exit": 0,
+      "widths": [
+        1440,
+        390
+      ],
+      "log": "browser.log"
+    },
+    {
+      "name": "contract generation",
+      "command": "node src/base/contract-docs.mjs write; node src/base/contract-docs.mjs check",
+      "exit": 0,
+      "restored": [
+        "ACCEPTANCE.md",
+        "docs/CLAIMS.md"
+      ],
+      "log": "contract-check.log"
+    },
+    {
+      "name": "canonical lock",
+      "command": "node node_modules/@runeditrun/rer/edition-authoring/cli.mjs lock; node node_modules/@runeditrun/rer/edition-authoring/cli.mjs check",
+      "exit": 0,
+      "log": "lock-check.json"
+    },
+    {
+      "name": "candidate generated views",
+      "command": "node src/base/contract-docs.mjs check",
+      "exit": 1,
+      "expected": true,
+      "error": "ACCEPTANCE.md is stale",
+      "log": "candidate-views.log"
+    },
+    {
+      "name": "legacy checker diagnostic",
+      "command": "node scripts/edition-authoring/cli.mjs check",
+      "exit": 1,
+      "required_by_verify": false,
+      "log": "local-lock-check.json"
+    }
+  ],
+  "counts_before": {
+    "done": 32,
+    "partial": 50,
+    "missing": 17
+  },
+  "counts_after": {
+    "done": 32,
+    "partial": 50,
+    "missing": 17
+  },
+  "status_rows": {
+    "before": 99,
+    "after": 99,
+    "parent_table_rows": 153,
+    "candidate_table_rows": 153
+  },
+  "clause": {
+    "id": "BASE-AGENT-011",
+    "before": "partial",
+    "after": "partial",
+    "findings_fixed": 2
+  },
+  "ci": [
+    {
+      "conclusion": null,
+      "event": "push",
+      "head_sha": "534a9088cebe5c956b09028ff8b3ad464bad747f",
+      "html_url": "https://github.com/just-every/run-crank/actions/runs/42216502769",
+      "id": 42216502769,
+      "name": "Verify",
+      "status": "in_progress"
+    }
+  ],
+  "github_calls": 2,
+  "publication_scan": "Cloud-exempt; required from fleet lander",
+  "landing": "pending fleet gates",
+  "pr": null
+}

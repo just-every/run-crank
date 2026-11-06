@@ -1,0 +1,6 @@
+{
+  "command": "node scripts/edition-authoring/cli.mjs check",
+  "exit": 1,
+  "error": "Stale lock or source/tool integrity mismatch; run changes to inspect intentional edits before lock",
+  "note": "The repository copy has a different tool integrity digest. Verify uses the installed pinned tool, whose lock and check both pass. This pre-existing tool choice is retained from the refused candidate."
+}

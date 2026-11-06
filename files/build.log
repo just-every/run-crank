@@ -1,0 +1,46 @@
+Heavy job admitted: Crank build:workflow [2f5234ef4605]
+Checking pinned pnpm
+10.12.4
+Building your application
+build:app
+▲ [WARNING] Proxy environment variables detected. We'll use your proxy for fetch requests.
+
+
+vite v8.2.2 building client environment for production...
+transforming...
+✓ 135 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/client/.assetsignore               0.02 kB
+dist/client/assets/index-DgoNPDnv.js  311.20 kB │ gzip: 100.86 kB
+
+✓ built in 498ms
+vite v8.2.2 building ssr environment for production...
+transforming...
+✓ 985 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/server/wrangler.json                                      1.50 kB │ gzip:   0.77 kB
+dist/server/.vite/manifest.json                                3.02 kB │ gzip:   0.63 kB
+dist/server/assets/empty-plugin-adapters-D_0twvAa.js           0.28 kB │ gzip:   0.18 kB
+dist/server/assets/start-D8qDT34V.js                           0.28 kB │ gzip:   0.21 kB
+dist/server/assets/_tanstack-start-manifest_v-0R7YXsfq.js      0.35 kB │ gzip:   0.26 kB
+dist/server/assets/font-head-HgDHZCdz.js                       0.44 kB │ gzip:   0.30 kB
+dist/server/assets/storage-DIFNL99I.js                         4.87 kB │ gzip:   1.93 kB
+dist/server/assets/hash-DzlUKWoV.js                            6.07 kB │ gzip:   2.70 kB
+dist/server/assets/router-wm_agP18.js                         37.24 kB │ gzip:  10.08 kB
+dist/server/assets/Match-Da0RQ5kP.js                         161.09 kB │ gzip:  40.31 kB
+dist/server/assets/access-D8uNIsJ3.js                      1,825.19 kB │ gzip: 467.15 kB
+dist/server/index.js                                       2,341.25 kB │ gzip: 579.88 kB
+
+[INEFFECTIVE_DYNAMIC_IMPORT] src/crank/connections/catalog.ts is dynamically imported by src/crank/workflows/snapshot.ts but also statically imported by src/crank/ops/coverage.ts, src/crank/workflows/api.ts, dynamic import will not move module into another chunk.
+
+[INEFFECTIVE_DYNAMIC_IMPORT] src/modules/import-kit/src/d1/undo-snapshot.ts is dynamically imported by src/modules/import-kit/src/d1/apply.ts but also statically imported by src/modules/import-kit/src/d1/preserved-preview.ts, src/modules/import-kit/src/d1/preserved-reverse.ts, dynamic import will not move module into another chunk.
+
+[INEFFECTIVE_DYNAMIC_IMPORT] src/crank/engine/executor.ts is dynamically imported by src/crank/workflows/subflow-calls.ts but also statically imported by src/crank/agents/drift-approval.ts, src/crank/agents/drift-permission.ts, src/crank/agents/drift-testing.ts, src/crank/agents/recurring-dispatch.ts, src/crank/custom/api.ts, ..., dynamic import will not move module into another chunk.
+
+[INEFFECTIVE_DYNAMIC_IMPORT] src/crank/access.ts is dynamically imported by src/crank/agent-door/people.ts but also statically imported by src/crank/agent-door/tool-metadata.ts, src/crank/agent-door/tool-workflows.ts, src/crank/agents/authoring-promotion.ts, src/crank/agents/authoring-record.ts, src/crank/agents/authoring.ts, ..., dynamic import will not move module into another chunk.
+
+✓ built in 973ms
+Your application is built
+build: complete (exit 0)

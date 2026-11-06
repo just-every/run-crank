@@ -1,0 +1,9 @@
+{
+  "head": "184178d3ca7b499818b5982021559c472a7a56dc",
+  "job": "sx-crank-c-f89-gate-1 blocking A findings",
+  "command": "node .cache/approval-probe.mjs",
+  "test": "approvalUsageJourney: Approval completion must update the held request without adding an attempt",
+  "exit": 1,
+  "failure": "request_attempts: 5 expected 4; pending requests: 4 expected 3",
+  "worktree": "Product at the refused SHA in a detached worktree; only the regression journey and its entry script overlaid"
+}

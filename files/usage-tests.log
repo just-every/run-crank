@@ -1,0 +1,39 @@
+TAP version 13
+# [33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProxy environment variables detected. We'll use your proxy for fetch requests.[0m
+# Subtest: OPS-002: owner estimates, budget admissions, reported spend and rollback remain attributable
+ok 1 - OPS-002: owner estimates, budget admissions, reported spend and rollback remain attributable
+  ---
+  duration_ms: 6242.966323
+  type: 'test'
+  ...
+# Subtest: OPS-002: workflow and team caps retain triggered and scheduled work until reviewed release
+ok 2 - OPS-002: workflow and team caps retain triggered and scheduled work until reviewed release
+  ---
+  duration_ms: 6737.283041
+  type: 'test'
+  ...
+# Subtest: OPS-002 DATA-001 DATA-002: native and legacy usage restore inactive and erasure cannot fund more work
+ok 3 - OPS-002 DATA-001 DATA-002: native and legacy usage restore inactive and erasure cannot fund more work
+  ---
+  duration_ms: 24700.93538
+  type: 'test'
+  ...
+# PROBE BASE-AGENT-011 native usage: 212 attempts, 211 originals, 1 replay, two agents, complete UTC month, restarted authority and retained attribution PASS
+# PROBE BASE-AGENT-011 AP5 approval completion: {"totals":{"request_attempts":4,"replays":0,"original_operations":4},"decisions":[{"decision":"approval","outcome":"done","request_attempts":1,"replays":0},{"decision":"approval","outcome":"pending","request_attempts":3,"replays":0}],"classes":[{"class":"standard","decision":"approval","outcome":"done","request_attempts":1,"replays":0},{"class":"standard","decision":"approval","outcome":"pending","request_attempts":3,"replays":0}]}
+# PROBE BASE-AGENT-011 AP5 monthly totals: four November requests, two approvals including one in December, no invented December call; one actual December replay PASS
+# PROBE BASE-AGENT-011 AP5 resolved outcomes: two done, two refused after rejection and expiry, zero pending in decisions and classes after restart PASS
+# Subtest: Native agent usage reports the complete UTC month with actual decisions, replay and current owner authority
+ok 4 - Native agent usage reports the complete UTC month with actual decisions, replay and current owner authority
+  ---
+  duration_ms: 11681.13114
+  type: 'test'
+  ...
+1..4
+# tests 4
+# suites 0
+# pass 4
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 50333.281915

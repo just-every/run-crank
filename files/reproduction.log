@@ -1,0 +1,116 @@
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProxy environment variables detected. We'll use your proxy for fetch requests.[0m
+
+
+PROBE BASE-AGENT-011 AP5 approval completion: {"totals":{"request_attempts":5,"replays":0,"original_operations":4},"decisions":[{"decision":"approval","outcome":"done","request_attempts":1,"replays":0},{"decision":"approval","outcome":"pending","request_attempts":4,"replays":0}],"classes":[{"class":"standard","decision":"approval","outcome":"done","request_attempts":1,"replays":0},{"class":"standard","decision":"approval","outcome":"pending","request_attempts":4,"replays":0}]}
+node:internal/modules/run_main:123
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: Approval completion must update the held request without adding an attempt
++ actual - expected
+... Skipped lines
+
+  {
+    classes: [
+      {
+        class: 'standard',
+        decision: 'approval',
+...
+        replays: 0,
++       request_attempts: 4
+-       request_attempts: 3
+      }
+    ],
+    decisions: [
+      {
+        decision: 'approval',
+...
+        replays: 0,
++       request_attempts: 4
+-       request_attempts: 3
+      }
+    ],
+    totals: {
+      original_operations: 4,
+      replays: 0,
++     request_attempts: 5
+-     request_attempts: 4
+    }
+  }
+
+    at approvalUsageJourney (file:///workspace/crank-f89-reproduction/tests/agent-door/usage-journey.mjs:149:10)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async file:///workspace/crank-f89-reproduction/.cache/approval-probe.mjs:2:1 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: {
+    totals: { request_attempts: 5, replays: 0, original_operations: 4 },
+    decisions: [
+      {
+        decision: 'approval',
+        outcome: 'done',
+        request_attempts: 1,
+        replays: 0
+      },
+      {
+        decision: 'approval',
+        outcome: 'pending',
+        request_attempts: 4,
+        replays: 0
+      }
+    ],
+    classes: [
+      {
+        class: 'standard',
+        decision: 'approval',
+        outcome: 'done',
+        request_attempts: 1,
+        replays: 0
+      },
+      {
+        class: 'standard',
+        decision: 'approval',
+        outcome: 'pending',
+        request_attempts: 4,
+        replays: 0
+      }
+    ]
+  },
+  expected: {
+    totals: { request_attempts: 4, replays: 0, original_operations: 4 },
+    decisions: [
+      {
+        decision: 'approval',
+        outcome: 'done',
+        request_attempts: 1,
+        replays: 0
+      },
+      {
+        decision: 'approval',
+        outcome: 'pending',
+        request_attempts: 3,
+        replays: 0
+      }
+    ],
+    classes: [
+      {
+        class: 'standard',
+        decision: 'approval',
+        outcome: 'done',
+        request_attempts: 1,
+        replays: 0
+      },
+      {
+        class: 'standard',
+        decision: 'approval',
+        outcome: 'pending',
+        request_attempts: 3,
+        replays: 0
+      }
+    ]
+  },
+  operator: 'deepStrictEqual',
+  diff: 'simple'
+}
+
+Node.js v22.20.0

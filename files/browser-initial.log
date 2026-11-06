@@ -1,0 +1,337 @@
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProxy environment variables detected. We'll use your proxy for fetch requests.[0m
+
+
+node:internal/modules/run_main:123
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
++ actual - expected
+... Skipped lines
+
+  {
+    accounting: 'Requests in this UTC month; retained current outcomes. Replays are attempts, not new original operations. Class counts overlap when a call has several classes. Calls refused before agent authentication are not attributed.',
+    agents: [
+      {
+        agent_id: 'crank-token:6a590811-3cf9-4953-931d-bc4b66c57f96',
+...
+            decision: 'approval',
++           outcome: 'refused',
+-           outcome: 'pending',
+            replays: 0,
+            request_attempts: 1
+          },
+          {
+            agent_id: 'crank-token:f8d0c4a0-58d0-4c45-b0ac-9bd54d2c6c97',
+...
+            decision: 'approval',
++           outcome: 'refused',
+-           outcome: 'pending',
+            replays: 0,
+            request_attempts: 1
+          },
+          {
+            agent_id: 'crank-token:f8d0c4a0-58d0-4c45-b0ac-9bd54d2c6c97',
+
+    at agentUsageJourney (file:///workspace/crank-sx-f89fix1/tests/agent-door/usage-journey.mjs:97:10)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async file:///workspace/crank-sx-f89fix1/tests/agent-usage-browser.mjs:13:2 {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: {
+    month: '2026-11',
+    start: '2026-11-01T00:00:00.000Z',
+    end: '2026-12-01T00:00:00.000Z',
+    watermark: 422,
+    scope: 'All native agent calls; workflow and team filters do not apply',
+    accounting: 'Requests in this UTC month; retained current outcomes. Replays are attempts, not new original operations. Class counts overlap when a call has several classes. Calls refused before agent authentication are not attributed.',
+    boundary: 'The admitted native registry rejects provider-cost tools. Provider spend and money moved are not reported here; unknown amounts are not zero. Workflow budget accounting is separate.',
+    totals: { request_attempts: 212, replays: 1, original_operations: 211 },
+    agents: [
+      {
+        agent_id: 'crank-token:6a590811-3cf9-4953-931d-bc4b66c57f96',
+        request_attempts: 107,
+        replays: 1,
+        original_operations: 106,
+        name: 'Harbour records assistant',
+        specialist: null,
+        revoked: true,
+        decisions: [
+          {
+            agent_id: 'crank-token:6a590811-3cf9-4953-931d-bc4b66c57f96',
+            decision: 'autonomous',
+            outcome: 'done',
+            request_attempts: 104,
+            replays: 0
+          },
+          {
+            agent_id: 'crank-token:6a590811-3cf9-4953-931d-bc4b66c57f96',
+            decision: 'autonomous',
+            outcome: 'replayed',
+            request_attempts: 1,
+            replays: 1
+          },
+          {
+            agent_id: 'crank-token:6a590811-3cf9-4953-931d-bc4b66c57f96',
+            decision: 'none',
+            outcome: 'refused',
+            request_attempts: 1,
+            replays: 0
+          },
+          {
+            agent_id: 'crank-token:6a590811-3cf9-4953-931d-bc4b66c57f96',
+            decision: 'paused',
+            outcome: 'refused',
+            request_attempts: 1,
+            replays: 0
+          }
+        ],
+        classes: [
+          {
+            agent_id: 'crank-token:6a590811-3cf9-4953-931d-bc4b66c57f96',
+            class: 'standard',
+            decision: 'autonomous',
+            outcome: 'done',
+            request_attempts: 104,
+            replays: 0
+          },
+          {
+            agent_id: 'crank-token:6a590811-3cf9-4953-931d-bc4b66c57f96',
+            class: 'standard',
+            decision: 'autonomous',
+            outcome: 'replayed',
+            request_attempts: 1,
+            replays: 1
+          }
+        ],
+        money_moved: null,
+        provider_spend_usd: null
+      },
+      {
+        agent_id: 'crank-token:f8d0c4a0-58d0-4c45-b0ac-9bd54d2c6c97',
+        request_attempts: 105,
+        replays: 0,
+        original_operations: 105,
+        name: 'Coastal review assistant',
+        specialist: null,
+        revoked: false,
+        decisions: [
+          {
+            agent_id: 'crank-token:f8d0c4a0-58d0-4c45-b0ac-9bd54d2c6c97',
+            decision: 'approval',
+            outcome: 'refused',
+            request_attempts: 1,
+            replays: 0
+          },
+          {
+            agent_id: 'crank-token:f8d0c4a0-58d0-4c45-b0ac-9bd54d2c6c97',
+            decision: 'autonomous',
+            outcome: 'done',
+            request_attempts: 102,
+            replays: 0
+          },
+          {
+            agent_id: 'crank-token:f8d0c4a0-58d0-4c45-b0ac-9bd54d2c6c97',
+            decision: 'blocked',
+            outcome: 'refused',
+            request_attempts: 1,
+            replays: 0
+          },
+          {
+            agent_id: 'crank-token:f8d0c4a0-58d0-4c45-b0ac-9bd54d2c6c97',
+            decision: 'review',
+            outcome: 'done',
+            request_attempts: 1,
+            replays: 0
+          }
+        ],
+        classes: [
+          {
+            agent_id: 'crank-token:f8d0c4a0-58d0-4c45-b0ac-9bd54d2c6c97',
+            class: 'standard',
+            decision: 'approval',
+            outcome: 'refused',
+            request_attempts: 1,
+            replays: 0
+          },
+          {
+            agent_id: 'crank-token:f8d0c4a0-58d0-4c45-b0ac-9bd54d2c6c97',
+            class: 'standard',
+            decision: 'autonomous',
+            outcome: 'done',
+            request_attempts: 102,
+            replays: 0
+          },
+          {
+            agent_id: 'crank-token:f8d0c4a0-58d0-4c45-b0ac-9bd54d2c6c97',
+            class: 'standard',
+            decision: 'blocked',
+            outcome: 'refused',
+            request_attempts: 1,
+            replays: 0
+          },
+          {
+            agent_id: 'crank-token:f8d0c4a0-58d0-4c45-b0ac-9bd54d2c6c97',
+            class: 'standard',
+            decision: 'review',
+            outcome: 'done',
+            request_attempts: 1,
+            replays: 0
+          }
+        ],
+        money_moved: null,
+        provider_spend_usd: null
+      }
+    ]
+  },
+  expected: {
+    month: '2026-11',
+    start: '2026-11-01T00:00:00.000Z',
+    end: '2026-12-01T00:00:00.000Z',
+    watermark: 422,
+    scope: 'All native agent calls; workflow and team filters do not apply',
+    accounting: 'Requests in this UTC month; retained current outcomes. Replays are attempts, not new original operations. Class counts overlap when a call has several classes. Calls refused before agent authentication are not attributed.',
+    boundary: 'The admitted native registry rejects provider-cost tools. Provider spend and money moved are not reported here; unknown amounts are not zero. Workflow budget accounting is separate.',
+    totals: { request_attempts: 212, replays: 1, original_operations: 211 },
+    agents: [
+      {
+        agent_id: 'crank-token:6a590811-3cf9-4953-931d-bc4b66c57f96',
+        request_attempts: 107,
+        replays: 1,
+        original_operations: 106,
+        name: 'Harbour records assistant',
+        specialist: null,
+        revoked: true,
+        decisions: [
+          {
+            agent_id: 'crank-token:6a590811-3cf9-4953-931d-bc4b66c57f96',
+            decision: 'autonomous',
+            outcome: 'done',
+            request_attempts: 104,
+            replays: 0
+          },
+          {
+            agent_id: 'crank-token:6a590811-3cf9-4953-931d-bc4b66c57f96',
+            decision: 'autonomous',
+            outcome: 'replayed',
+            request_attempts: 1,
+            replays: 1
+          },
+          {
+            agent_id: 'crank-token:6a590811-3cf9-4953-931d-bc4b66c57f96',
+            decision: 'none',
+            outcome: 'refused',
+            request_attempts: 1,
+            replays: 0
+          },
+          {
+            agent_id: 'crank-token:6a590811-3cf9-4953-931d-bc4b66c57f96',
+            decision: 'paused',
+            outcome: 'refused',
+            request_attempts: 1,
+            replays: 0
+          }
+        ],
+        classes: [
+          {
+            agent_id: 'crank-token:6a590811-3cf9-4953-931d-bc4b66c57f96',
+            class: 'standard',
+            decision: 'autonomous',
+            outcome: 'done',
+            request_attempts: 104,
+            replays: 0
+          },
+          {
+            agent_id: 'crank-token:6a590811-3cf9-4953-931d-bc4b66c57f96',
+            class: 'standard',
+            decision: 'autonomous',
+            outcome: 'replayed',
+            request_attempts: 1,
+            replays: 1
+          }
+        ],
+        money_moved: null,
+        provider_spend_usd: null
+      },
+      {
+        agent_id: 'crank-token:f8d0c4a0-58d0-4c45-b0ac-9bd54d2c6c97',
+        request_attempts: 105,
+        replays: 0,
+        original_operations: 105,
+        name: 'Coastal review assistant',
+        specialist: null,
+        revoked: false,
+        decisions: [
+          {
+            agent_id: 'crank-token:f8d0c4a0-58d0-4c45-b0ac-9bd54d2c6c97',
+            decision: 'approval',
+            outcome: 'pending',
+            request_attempts: 1,
+            replays: 0
+          },
+          {
+            agent_id: 'crank-token:f8d0c4a0-58d0-4c45-b0ac-9bd54d2c6c97',
+            decision: 'autonomous',
+            outcome: 'done',
+            request_attempts: 102,
+            replays: 0
+          },
+          {
+            agent_id: 'crank-token:f8d0c4a0-58d0-4c45-b0ac-9bd54d2c6c97',
+            decision: 'blocked',
+            outcome: 'refused',
+            request_attempts: 1,
+            replays: 0
+          },
+          {
+            agent_id: 'crank-token:f8d0c4a0-58d0-4c45-b0ac-9bd54d2c6c97',
+            decision: 'review',
+            outcome: 'done',
+            request_attempts: 1,
+            replays: 0
+          }
+        ],
+        classes: [
+          {
+            agent_id: 'crank-token:f8d0c4a0-58d0-4c45-b0ac-9bd54d2c6c97',
+            class: 'standard',
+            decision: 'approval',
+            outcome: 'pending',
+            request_attempts: 1,
+            replays: 0
+          },
+          {
+            agent_id: 'crank-token:f8d0c4a0-58d0-4c45-b0ac-9bd54d2c6c97',
+            class: 'standard',
+            decision: 'autonomous',
+            outcome: 'done',
+            request_attempts: 102,
+            replays: 0
+          },
+          {
+            agent_id: 'crank-token:f8d0c4a0-58d0-4c45-b0ac-9bd54d2c6c97',
+            class: 'standard',
+            decision: 'blocked',
+            outcome: 'refused',
+            request_attempts: 1,
+            replays: 0
+          },
+          {
+            agent_id: 'crank-token:f8d0c4a0-58d0-4c45-b0ac-9bd54d2c6c97',
+            class: 'standard',
+            decision: 'review',
+            outcome: 'done',
+            request_attempts: 1,
+            replays: 0
+          }
+        ],
+        money_moved: null,
+        provider_spend_usd: null
+      }
+    ]
+  },
+  operator: 'deepStrictEqual',
+  diff: 'simple'
+}
+
+Node.js v22.20.0
