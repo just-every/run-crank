@@ -1,0 +1,195 @@
+{
+  "schema": 1,
+  "tag": "sx-crank-c-f91",
+  "repository": "just-every/run-crank",
+  "branch": "cloud/sx-crank-c-f91",
+  "head": "e84518d7cd85e61dfd0f68f6eec9cb3dd9fce190",
+  "base_main": "c16d7b09492b2c61c4cbfb4c0f892be6b0e9c1ef",
+  "checks": [
+    {
+      "name": "touched-test",
+      "command": "node --test --test-concurrency=1 --test-name-pattern='^PLATFORM-001: SDK and CORE door draft lifecycle' tests/platform.test.mjs",
+      "exit": 0,
+      "log": "platform-final.log",
+      "binding": "exact final committed candidate",
+      "log_sha256": "480de5676a564415de47734c2b5ec7fa8735906f5a2d44f2566c0d9ce66ad055",
+      "head": "e84518d7cd85e61dfd0f68f6eec9cb3dd9fce190"
+    },
+    {
+      "name": "browser",
+      "command": "node tests/agent-door/named-approvals-browser.mjs",
+      "exit": 0,
+      "log": "browser-final.log",
+      "binding": "exact final committed candidate",
+      "log_sha256": "8ed042edfc72c9bf623b01c05b3c1bcf57b68cdb418b26cab3c4e3443c4db32f",
+      "head": "e84518d7cd85e61dfd0f68f6eec9cb3dd9fce190"
+    },
+    {
+      "name": "typecheck",
+      "command": "pnpm run typecheck",
+      "exit": 0,
+      "log": "typecheck.log",
+      "binding": "before commit; candidate TypeScript source unchanged",
+      "log_sha256": "f4777a3cae5402046e2f355cc85ef196db6a1e20f27ac99f726e5653951d6cec"
+    },
+    {
+      "name": "build",
+      "command": "npx -y @runeditrun/rer build",
+      "exit": 0,
+      "log": "build.log",
+      "binding": "before commit; candidate production source unchanged",
+      "log_sha256": "b4babe80b2df8fd9e64020a884b6b243b755b42215e29e5752b4f733c21c42f3"
+    },
+    {
+      "name": "first-party",
+      "command": "npx -y @runeditrun/rer check --profile first-party",
+      "exit": 0,
+      "log": "first-party.log",
+      "binding": "before commit; candidate production source unchanged",
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "views-write",
+      "command": "node src/base/contract-docs.mjs write",
+      "exit": 0,
+      "log": "contract-write.log",
+      "binding": "exact final committed candidate",
+      "log_sha256": "540b168efe390f92191c4c47be4676a9db640b8f3c00b2bea4c20a224c0e80cf",
+      "head": "e84518d7cd85e61dfd0f68f6eec9cb3dd9fce190"
+    },
+    {
+      "name": "views-check",
+      "command": "node src/base/contract-docs.mjs check",
+      "exit": 0,
+      "log": "contract-check.log",
+      "binding": "exact final committed candidate",
+      "log_sha256": "41be670e8514d35d3059536f54f0a1ff875aa0cf719cdfa33febe6c30584d084",
+      "head": "e84518d7cd85e61dfd0f68f6eec9cb3dd9fce190"
+    },
+    {
+      "name": "agent-door-conformance",
+      "command": "node node_modules/@runeditrun/rer/cli/agent-door.mjs .",
+      "exit": 0,
+      "points_passed": 1020,
+      "points_total": 1020,
+      "log": "core-conformance-final.log",
+      "binding": "exact final committed candidate",
+      "log_sha256": "c3ddfbddc48da740fd36f2fa9db1d6f7f8abc156ec9ca893bbf4ddba23c8315a",
+      "head": "e84518d7cd85e61dfd0f68f6eec9cb3dd9fce190"
+    },
+    {
+      "name": "installed-source-lock",
+      "command": "node node_modules/@runeditrun/rer/edition-authoring/cli.mjs check",
+      "head": "e84518d7cd85e61dfd0f68f6eec9cb3dd9fce190",
+      "exit": 0,
+      "binding": "exact final committed candidate",
+      "log": "installed-source-lock-final-check.log",
+      "log_sha256": "d9fb2f3cf1660c1e10d2f42e3558a02d9c082932009031abcbb396b498e6ffbe"
+    }
+  ],
+  "migrations": "none",
+  "generated_views_committed": false,
+  "status_table_changed": false,
+  "new_node_test_registrations": 0,
+  "browser_script_added": 1,
+  "declared_test_budget": {
+    "maximum": 200,
+    "before": 200,
+    "after": 200
+  },
+  "product_push": {
+    "status": "success",
+    "attempts": 1,
+    "log": "product-push.log",
+    "heads": [
+      "8af0ed1a6c0fd2743e101dba878b31b877b23bcc",
+      "d60357bbece16bdfd49e8ffb65a4cfa9dc9a0656",
+      "e84518d7cd85e61dfd0f68f6eec9cb3dd9fce190"
+    ],
+    "attempts_per_head": [
+      1,
+      1,
+      1
+    ]
+  },
+  "publication_scan": {
+    "commit": "e84518d7cd85e61dfd0f68f6eec9cb3dd9fce190",
+    "complete": false,
+    "historyScanned": null,
+    "findings": null,
+    "status": "not run in cloud; fleet lander owns scan"
+  },
+  "landing": {
+    "main_equals_candidate": false,
+    "status": "branch only; no main push"
+  },
+  "ci": {
+    "id": 42238086547,
+    "event": "push",
+    "head_sha": "e84518d7cd85e61dfd0f68f6eec9cb3dd9fce190",
+    "status": "in_progress",
+    "conclusion": null,
+    "html_url": "https://github.com/just-every/run-crank/actions/runs/42238086547"
+  },
+  "proof_source_head": "e84518d7cd85e61dfd0f68f6eec9cb3dd9fce190",
+  "historical_checks": [
+    {
+      "name": "source-lock",
+      "command": "node scripts/edition-authoring/cli.mjs check",
+      "exit": 0,
+      "log": "source-lock-check.log",
+      "binding": "exact committed candidate",
+      "log_sha256": "873a7216c9f8c6b4dc1c4c4c106d50e27cf235afac4654c2ca3bd68d30525126",
+      "head": "8af0ed1a6c0fd2743e101dba878b31b877b23bcc"
+    },
+    {
+      "name": "installed-source-lock",
+      "command": "node node_modules/@runeditrun/rer/edition-authoring/cli.mjs check",
+      "exit": 1,
+      "log": "installed-source-lock-check.log",
+      "binding": "exact committed candidate",
+      "log_sha256": "094e687ba271a25c76bc1a88d6526a83f1456d524196bf79c77ef44db7884533",
+      "head": "8af0ed1a6c0fd2743e101dba878b31b877b23bcc"
+    }
+  ],
+  "ci_history": [
+    {
+      "id": 42236087751,
+      "event": "push",
+      "head_sha": "8af0ed1a6c0fd2743e101dba878b31b877b23bcc",
+      "status": "completed",
+      "conclusion": "failure",
+      "cause": "installed source-lock tool digest mismatch",
+      "jobs": [
+        127953945502,
+        127954142620
+      ]
+    },
+    {
+      "id": 42237121462,
+      "event": "push",
+      "head_sha": "d60357bbece16bdfd49e8ffb65a4cfa9dc9a0656",
+      "last_observed_status": "in_progress",
+      "conclusion": null,
+      "disposition": "superseded by explicit elicitation proof commit; no green claim"
+    }
+  ],
+  "repairs": [
+    {
+      "round": 1,
+      "failed_head": "8af0ed1a6c0fd2743e101dba878b31b877b23bcc",
+      "head": "d60357bbece16bdfd49e8ffb65a4cfa9dc9a0656",
+      "command": "node node_modules/@runeditrun/rer/edition-authoring/cli.mjs check",
+      "reproduced_exit": 1,
+      "failure": "Stale lock or source/tool integrity mismatch; run changes to inspect intentional edits before lock",
+      "change": "Regenerated source lock with installed release CLI; only toolchain digest differs",
+      "repaired_check_exit": 0
+    }
+  ],
+  "github_call_count": 9,
+  "source_lock_generator": "node node_modules/@runeditrun/rer/edition-authoring/cli.mjs lock",
+  "handoff": {
+    "status": "PUSHED",
+    "reason": "Exact-SHA Verify remains in progress; local gates pass; GitHub budget has one call remaining"
+  }
+}

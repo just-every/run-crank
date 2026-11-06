@@ -1,0 +1,10 @@
+{
+  "main": "c16d7b09492b2c61c4cbfb4c0f892be6b0e9c1ef",
+  "counts": {
+    "done": 32,
+    "partial": 50,
+    "missing": 17
+  },
+  "status_rows": 99,
+  "test_registrations": 200
+}

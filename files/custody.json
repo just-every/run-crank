@@ -1,0 +1,14 @@
+{
+  "repository": "just-every/run-crank",
+  "product_branch": "cloud/sx-crank-c-f91",
+  "product_ref": "refs/heads/cloud/sx-crank-c-f91",
+  "local_head": "e84518d7cd85e61dfd0f68f6eec9cb3dd9fce190",
+  "remote_head": "e84518d7cd85e61dfd0f68f6eec9cb3dd9fce190",
+  "remote_match": true,
+  "worktree_clean": true,
+  "ci_run": 42238086547,
+  "ci_last_status": "in_progress",
+  "main_landed": false,
+  "evidence_ref": "refs/heads/evidence/sx-crank-c-f91",
+  "terminal_status": "PUSHED"
+}

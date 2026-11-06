@@ -1,0 +1,6 @@
+{
+  "command": "node /tmp/crank-run-named.mjs",
+  "source": "origin/main policy-store.ts, all other candidate journey bytes retained",
+  "exit": 1,
+  "expected_failure": "Invalid local person reference must return 400 and retain the prior revision; main returns 200"
+}

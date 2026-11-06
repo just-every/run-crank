@@ -1,0 +1,10 @@
+{
+  "round": 1,
+  "failed_head": "8af0ed1a6c0fd2743e101dba878b31b877b23bcc",
+  "head": "d60357bbece16bdfd49e8ffb65a4cfa9dc9a0656",
+  "command": "node node_modules/@runeditrun/rer/edition-authoring/cli.mjs check",
+  "reproduced_exit": 1,
+  "failure": "Stale lock or source/tool integrity mismatch; run changes to inspect intentional edits before lock",
+  "change": "Regenerated source lock with installed release CLI; only toolchain digest differs",
+  "repaired_check_exit": 0
+}

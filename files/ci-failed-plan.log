@@ -1,0 +1,6 @@
+plan	Check edition source lock with the installed tool	﻿2026-11-06T14:41:18.0689984Z ##[group]Run node node_modules/@runeditrun/rer/edition-authoring/cli.mjs check
+plan	Check edition source lock with the installed tool	2026-11-06T14:41:18.0690963Z [36;1mnode node_modules/@runeditrun/rer/edition-authoring/cli.mjs check[0m
+plan	Check edition source lock with the installed tool	2026-11-06T14:41:18.0719767Z shell: /usr/bin/bash -e {0}
+plan	Check edition source lock with the installed tool	2026-11-06T14:41:18.0720235Z ##[endgroup]
+plan	Check edition source lock with the installed tool	2026-11-06T14:41:18.5098593Z Stale lock or source/tool integrity mismatch; run changes to inspect intentional edits before lock
+plan	Check edition source lock with the installed tool	2026-11-06T14:41:18.5340908Z ##[error]Process completed with exit code 1.

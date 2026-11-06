@@ -1,0 +1,5 @@
+{"conclusion":"success","event":"dynamic","head_sha":"c16d7b09492b2c61c4cbfb4c0f892be6b0e9c1ef","html_url":"https://github.com/just-every/run-crank/actions/runs/42231003096","id":42231003096,"name":"Push on main","status":"completed"}
+{"conclusion":"success","event":"push","head_sha":"c16d7b09492b2c61c4cbfb4c0f892be6b0e9c1ef","html_url":"https://github.com/just-every/run-crank/actions/runs/42231003408","id":42231003408,"name":"Verify","status":"completed"}
+{"conclusion":"success","event":"push","head_sha":"c16d7b09492b2c61c4cbfb4c0f892be6b0e9c1ef","html_url":"https://github.com/just-every/run-crank/actions/runs/42231003149","id":42231003149,"name":"Run site","status":"completed"}
+{"conclusion":"skipped","event":"push","head_sha":"c16d7b09492b2c61c4cbfb4c0f892be6b0e9c1ef","html_url":"https://github.com/just-every/run-crank/actions/runs/42231003076","id":42231003076,"name":"Run demo","status":"completed"}
+{"conclusion":"success","event":"push","head_sha":"c16d7b09492b2c61c4cbfb4c0f892be6b0e9c1ef","html_url":"https://github.com/just-every/run-crank/actions/runs/42228077816","id":42228077816,"name":"Verify","status":"completed"}

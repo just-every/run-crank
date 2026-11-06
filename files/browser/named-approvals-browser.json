@@ -1,0 +1,88 @@
+{
+  "journey": "local named references and independent human approvals retain exact evidence and once-only inert effects",
+  "status": "pass",
+  "states": [
+    "pending",
+    "first-approved",
+    "executed",
+    "rejected",
+    "refused",
+    "expired"
+  ],
+  "people": 3,
+  "effects": 3,
+  "screens": [
+    {
+      "width": 1440,
+      "state": "pending",
+      "file": "1440-pending.png",
+      "authority": "independent native person session"
+    },
+    {
+      "width": 390,
+      "state": "pending",
+      "file": "390-pending.png",
+      "authority": "independent native person session"
+    },
+    {
+      "width": 1440,
+      "state": "first-approved",
+      "file": "1440-first-approved.png",
+      "authority": "independent native person session"
+    },
+    {
+      "width": 390,
+      "state": "first-approved",
+      "file": "390-first-approved.png",
+      "authority": "independent native person session"
+    },
+    {
+      "width": 1440,
+      "state": "executed",
+      "file": "1440-executed.png",
+      "authority": "independent native person session"
+    },
+    {
+      "width": 390,
+      "state": "executed",
+      "file": "390-executed.png",
+      "authority": "independent native person session"
+    },
+    {
+      "width": 1440,
+      "state": "rejected",
+      "file": "1440-rejected.png",
+      "authority": "independent native person session"
+    },
+    {
+      "width": 390,
+      "state": "rejected",
+      "file": "390-rejected.png",
+      "authority": "independent native person session"
+    },
+    {
+      "width": 1440,
+      "state": "refused",
+      "file": "1440-refused.png",
+      "authority": "independent native person session"
+    },
+    {
+      "width": 390,
+      "state": "refused",
+      "file": "390-refused.png",
+      "authority": "independent native person session"
+    },
+    {
+      "width": 1440,
+      "state": "expired",
+      "file": "1440-expired.png",
+      "authority": "independent native person session"
+    },
+    {
+      "width": 390,
+      "state": "expired",
+      "file": "390-expired.png",
+      "authority": "independent native person session"
+    }
+  ]
+}

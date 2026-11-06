@@ -1,0 +1,4 @@
+
+> @automation/crank@0.1.0 typecheck /workspace/run-crank-sx-crank-c-f91
+> tsc --build --incremental
+

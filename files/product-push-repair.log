@@ -1,0 +1,12 @@
+fleet Git: removed 0 credential-bearing GitHub URL rewrite sections
+PUSH attempt=1/5 command=git push --porcelain origin HEAD:refs/heads/cloud/sx-crank-c-f91
+PUSH_CREDENTIAL sha256_16=8addacf6ac95b0bc bundle_file_age_seconds=1388 token_issue_age=unknown
+fleet Git: removed 0 credential-bearing GitHub URL rewrite sections
+To https://github.com/just-every/run-crank.git
+ 	HEAD:refs/heads/cloud/sx-crank-c-f91	8af0ed1..d60357b
+Done
+remote: 
+remote: GitHub found 31 vulnerabilities on just-every/run-crank's default branch (15 high, 14 moderate, 2 low). To find out more, visit:        
+remote:      https://github.com/just-every/run-crank/security/dependabot        
+remote: 
+PUSH_OK branch=cloud/sx-crank-c-f91
