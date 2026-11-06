@@ -2,6 +2,7 @@ import { before, after, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { harness } from './harness.mjs';
 import { fakeEdge, jsonResponse, publish, startRun } from './kit.mjs';
+import errorParity, {scopedErrorParity} from './agent-door/error-parity.mjs';
 
 // The app's pages through their HTTP doors: the Flow editor reads a published
 // workflow's steps and runs, and an approval decided from the Approvals form
@@ -173,4 +174,16 @@ test('Native visual drafting builds named branches, fences stale and unauthorize
   assert.equal(detail.steps.find(s=>s.step_id===fallback.id).output.body,'not qualified');
   assert.ok(!detail.steps.some(s=>s.step_id===qualified.id));
   assert.equal(version.number,published.version.number);
+  const credential=await h.post('tokens',{label:'synthetic-crank-parity',scope:'agent'},h.owner,201);
+  const policy=await h.mf.dispatchFetch(h.origin+'/agents/api/policy',{method:'PUT',headers:{cookie:h.owner,origin:h.origin,'content-type':'application/json'},body:JSON.stringify({document:{schema:'rer-agent-policy/1',catalogue:'rer-agent-classes/1',rules:[{id:'all',class:'*',do:'autonomous'}],spend:{none:true}}})});
+  assert.equal(policy.status,200);
+  const tool=async(name,args)=>{
+    const response=await h.mf.dispatchFetch(h.origin+'/api/crank/v1/mcp',{method:'POST',headers:{origin:h.origin,authorization:'Bearer '+credential.token,accept:'application/json, text/event-stream','content-type':'application/json','mcp-protocol-version':'2025-11-25'},body:JSON.stringify({jsonrpc:'2.0',id:crypto.randomUUID(),method:'tools/call',params:{name,arguments:args}})});
+    const body=await response.json();return {status:response.status,result:body.result,body};
+  };
+  await errorParity({request:(url,init)=>h.mf.dispatchFetch(url,init),origin:h.origin,cookie:h.owner,tool,privateValues:[credential.token,h.owner],
+    invalidateSaved:(id,graph)=>h.db.prepare('UPDATE crank_workflows SET draft_json=? WHERE id=?').bind(JSON.stringify(graph),id).run()});
+  await scopedErrorParity(harness);
+
 });
+

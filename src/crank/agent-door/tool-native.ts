@@ -1,6 +1,6 @@
 import { ToolRefusal } from '../../modules/agent-door/errors.ts'
 import type { ClassAndFacts, JsonSchema, JsonSchemaObject, ToolContext } from '../../modules/agent-door/types.ts'
-import { CrankError, type CrankEnv } from '../model.ts'
+import { CrankError, crankErrorCode, isCrankErrorCode, type CrankEnv } from '../model.ts'
 import { productApi } from '../ui/handler.ts'
 import { attributionEnv, bindNativeRequest, resolveActor } from './native.ts'
 
@@ -30,12 +30,11 @@ export async function nativeCall(env: CrankEnv, ctx: ToolContext, path: string, 
   const response = await productApi(request, attributionEnv(env, ctx))
   if (!response) throw new ToolRefusal('native_operation_unavailable')
   if (!response.ok) {
-    await response.body?.cancel()
-    // Native validation messages may interpolate private graph/payload values.
-    throw new ToolRefusal(response.status === 401 || response.status === 403 ? 'native_authority_refused'
-      : response.status === 404 ? 'resource_unavailable'
-      : response.status === 409 ? 'revision_conflict' : 'native_operation_refused',
-    'The native operation was refused', { status: response.status })
+    // Read only the closed native code. Messages can contain private graph values.
+    let code: unknown
+    try { code = (await response.json() as { code?: unknown }).code } catch { /* Closed fallback for non-JSON refusals. */ }
+    throw new ToolRefusal(isCrankErrorCode(code) ? code : crankErrorCode(response.status),
+      'The native operation was refused', { status: response.status })
   }
   return await response.json() as unknown
 }
@@ -43,7 +42,7 @@ export async function nativeCall(env: CrankEnv, ctx: ToolContext, path: string, 
 export async function nativeGuard<T>(work: () => Promise<T>): Promise<T> {
   try { return await work() }
   catch (error) {
-    if (error instanceof CrankError) throw new ToolRefusal(error.status === 403 ? 'native_authority_refused' : error.status === 404 ? 'resource_unavailable' : 'native_operation_refused')
+    if (error instanceof CrankError) throw new ToolRefusal(error.code)
     throw error
   }
 }

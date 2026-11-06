@@ -46,8 +46,8 @@ export function workflowTools(env: CrankEnv): ToolDefinition[] {
   const classifyDraft = async (args: Record<string, unknown>, ctx: ToolContext) => {
     await prepare(ctx)
     if (args.workflow_id !== undefined) await current(env, args, ctx)
-    // Saving a provider graph is inert. Its leaf effects are neither run nor granted by a draft.
-    if (args.graph !== undefined) await nativeGuard(async () => { validateGraph(args.graph) })
+    // Preparation is inert. The native action validates in its own order after
+    // current authority, idempotency and draft revision checks.
     return standard()
   }
   return [

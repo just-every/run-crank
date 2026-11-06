@@ -172,7 +172,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "aac2d3d2ae3f5062bea791377b189e5eb86834bd3f7a1d043ac176b60e5d43c9",
+      "sha256": "acb0e5d5e3cb5a052f1d55a0a9053ee4c20d1384729051925a322ac0df0623dd",
       "executable": false
     },
     "DEMO.md": {
@@ -2956,7 +2956,7 @@
       "executable": false
     },
     "src/crank/agent-door/native.ts": {
-      "sha256": "991ad8ef6e274d78acbfaf97a312d22adb9430b2eb31bdeafb2d1cd1f28c9b23",
+      "sha256": "fafd6ecc263b78c22ebec2369d6b264cf8f2b47163c647b8299795b73e038bbd",
       "executable": false
     },
     "src/crank/agent-door/people.ts": {
@@ -2968,11 +2968,11 @@
       "executable": false
     },
     "src/crank/agent-door/tool-native.ts": {
-      "sha256": "13dd474ab7efffc3c6dd467bd6fdf690d8a65eae21e98930e1253c1547c4583c",
+      "sha256": "f56ec640551d79bf1b53c78d7f149219443d4119fd0653fc6512f386f78e293c",
       "executable": false
     },
     "src/crank/agent-door/tool-workflows.ts": {
-      "sha256": "5f4c1cd797022aa2b4c94e86a71a26ba254123474c2b0db2eb02049ff197a75c",
+      "sha256": "b9804cc359759f03acbb386973e2a2a4d43eff190cba727ec743a6a5cdd852cd",
       "executable": false
     },
     "src/crank/agent-door/tools.ts": {
@@ -3200,7 +3200,7 @@
       "executable": false
     },
     "src/crank/custom/api.ts": {
-      "sha256": "c70d82468aa36bb02c96018d48e5f2985152bde5eae5e52e30d70e150a5737d9",
+      "sha256": "4c328ca2357403f4890bdce4757ef0332f73081e5af13b59795db0d12b10e08b",
       "executable": false
     },
     "src/crank/custom/bindings.ts": {
@@ -3564,7 +3564,7 @@
       "executable": false
     },
     "src/crank/model.ts": {
-      "sha256": "7a89b8e7d6b81b68c047fa758c6ab117b34124317fe00efddb63d93b8f629c46",
+      "sha256": "f4b687e5e1a1630e8713576d0f5ce3ab8827430c970c826bd0c506f0eb64cdec",
       "executable": false
     },
     "src/crank/n8n-code.ts": {
@@ -4164,7 +4164,7 @@
       "executable": false
     },
     "src/crank/workflows/api.ts": {
-      "sha256": "122fe8cfbb901a9f89314464e345c4d016c08923a20409d619b2c34c3103b4f0",
+      "sha256": "f6bd6a00dbe16a99b31312918cb52d886bf9f0a77cdd83ea3ed21e3ad2f17362",
       "executable": false
     },
     "src/crank/workflows/comparison.ts": {
@@ -4220,7 +4220,7 @@
       "executable": false
     },
     "src/crank/workflows/store.ts": {
-      "sha256": "b44f0efd7565e198be3af76a0aa27fd61d815b29108d12f782fbae2d01ee41cb",
+      "sha256": "ab820d1add8b899031defabf7dc660cb5dd30c06f3973b95afe87cb507784523",
       "executable": false
     },
     "src/crank/workflows/subflow-calls.ts": {
@@ -6711,12 +6711,16 @@
       "sha256": "0c09db04c84b104431dfca05ab12604ae51308f7359f368bcb70240329043ac0",
       "executable": false
     },
+    "tests/agent-door/error-parity.mjs": {
+      "sha256": "c16c2ca51969fe0f41dea5785aa9f04349c0dfb4dc6dd3ed971f9fbf32bde9d3",
+      "executable": false
+    },
     "tests/agent-door/fixtures.mjs": {
       "sha256": "ae9cddd16c5be7f5290b7e44198a322d03495840e9b0b8f8eab3c4475a0e7e0e",
       "executable": false
     },
     "tests/agent-door/journey.mjs": {
-      "sha256": "1e12e5184c5a39733d467a7c01509771a2754096022d56c2745564a4ec237998",
+      "sha256": "58b33c1a64f97db5ba7250a7a5c1a9d7b636fb9cb7f0d79f65413a90bcdcad30",
       "executable": false
     },
     "tests/ai-steps-browser.mjs": {
@@ -6756,7 +6760,7 @@
       "executable": false
     },
     "tests/app.test.mjs": {
-      "sha256": "71593df569ee6a5065fecaadfb398b720df3f411153452f95387a53f8012b09c",
+      "sha256": "bc1ba967dec66963daa24b3f731535d7a157e271685b44b2af6e522b35c5e0ad",
       "executable": false
     },
     "tests/authoring-browser.mjs": {

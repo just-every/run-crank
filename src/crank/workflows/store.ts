@@ -33,7 +33,7 @@ export interface VersionRow { id: string; workflow_id: string; number: number; g
 
 function checked(graph: unknown) {
   try { return validateGraph(graph) } catch (error) {
-    if (error instanceof StepError) throw new CrankError(422, error.message)
+    if (error instanceof StepError) throw new CrankError(422, error.message, 'invalid_graph')
     throw error
   }
 }

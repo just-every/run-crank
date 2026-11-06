@@ -5,7 +5,7 @@ import { authorize, guardedBatch, requireOwner, requirePrepare, requireWriteOrig
 import { executeRun } from '../engine/executor'
 import { StepError } from '../engine/errors'
 import { checkEgress } from '../engine/egress'
-import { body, canonical, CrankError, digest, json, requireValue, stmt, type CrankEnv } from '../model'
+import { body, canonical, crankErrorCode, CrankError, digest, json, requireValue, stmt, type CrankEnv } from '../model'
 import { auditStatement } from '../ops/audit'
 import { parseDefinition } from './definition'
 import { enroll, enrollment, grantGateway, listGateways, revokeGateway, revokeGatewayGrant } from './gateways'
@@ -93,9 +93,10 @@ export async function customApi(request:Request,env:CrankEnv,nativeBrowser=false
     if(action)return json(action[3]==='sandbox'?await acceptSandbox(env,actor,decodeURIComponent(action[1]),Number(action[2]),input):await revokeCustomScopes(env,actor,decodeURIComponent(action[1]),Number(action[2]),input))
     return json({error:'Route not found'},404)
   } catch(error) {
-    if(error instanceof CrankError)return json({error:error.message},error.status)
-    if(error instanceof StepError)return json({error:error.message,category:error.category},422)
+    if(error instanceof CrankError)return json({error:error.message,code:error.code},error.status)
+    if(error instanceof StepError)return json({error:error.message,category:error.category,code:'validation_failed'},422)
     const status=(error as {status?:number}).status
-    return json({error:status && status<500?'Authentication or request was refused':'Custom connector operation could not be confirmed'},status && status>=400 && status<500?status:503)
+    const refusedStatus=status && status>=400 && status<500?status:503
+    return json({error:refusedStatus<500?'Authentication or request was refused':'Custom connector operation could not be confirmed',code:crankErrorCode(refusedStatus)},refusedStatus)
   }
 }

@@ -68,7 +68,7 @@ async function currentActor(original: CrankEnv, ctx: ToolContext): Promise<Actor
 export async function resolveActor(original: CrankEnv, ctx: ToolContext): Promise<Actor> {
   try { return await currentActor(original, ctx) }
   catch (error) {
-    if (error instanceof CrankError) throw new ToolRefusal(error.status === 403 ? 'native_authority_refused' : 'native_operation_refused')
+    if (error instanceof CrankError) throw new ToolRefusal(error.code)
     throw error
   }
 }

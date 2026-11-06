@@ -22,7 +22,7 @@ import { slackCall } from '../connectors/slack'
 import { boundedFetch } from '../engine/egress'
 import { StepError } from '../engine/errors'
 import { validateGraph } from '../engine/graph'
-import { body, CrankError, json, requireValue, stmt, type Actor, type CrankEnv } from '../model'
+import { body, crankErrorCode, CrankError, json, requireValue, stmt, type Actor, type CrankEnv } from '../model'
 import { auditStatement, exportAudit, readAudit } from '../ops/audit'
 import { coverageReport } from '../ops/coverage'
 import { latencyReport, operationsReport, operationsCsv, configureOperations, createObligation, verifyObligation } from '../ops/report'
@@ -105,7 +105,7 @@ export async function workflowApi(request: Request, env: CrankEnv): Promise<Resp
       }
       const task = /^\/api\/crank\/agent-tasks\/([^/]+)$/.exec(path)
       if (request.method === 'GET' && task) return json(await readTask(env, actor, decodeURIComponent(task[1])))
-      return json({error:'This execution credential only starts and reads its own agent tasks'},403)
+      return json({error:'This execution credential only starts and reads its own agent tasks',code:'native_authority_refused'},403)
     }
     requireValue(!path.startsWith('/api/crank/agent-tasks'), 'Agent tasks require a separate execution credential',403)
     requireValue(actor.kind !== 'trigger', 'Trigger tokens only admit events', 403)
@@ -181,7 +181,7 @@ export async function workflowApi(request: Request, env: CrankEnv): Promise<Resp
       }
       if (path === '/api/crank/reports/log-sinks') { requireOwner(actor); return json(await listLogSinks(env)) }
       if (path === '/api/crank/reports/latency') return json(await latencyReport(env, url.searchParams))
-      return json({ error: 'Route not found' }, 404)
+      return json({ error: 'Route not found', code: 'resource_unavailable' }, 404)
     }
     requireValue(request.method === 'POST', 'Method not allowed', 405)
     requireWriteOrigin(request, env, actor)
@@ -216,7 +216,7 @@ export async function workflowApi(request: Request, env: CrankEnv): Promise<Resp
       if (action === 'draft') return json(await updateDraft(env, actor, workflowId, input, request.headers.get('Idempotency-Key')))
       if (action === 'validate') {
         try { const { warnings, declared } = validateGraph(input.graph ?? JSON.parse((await getWorkflow(env, workflowId)).draft_json)); return json({ ok: true, warnings: [...warnings, ...await sampleWarnings(env, actor, workflowId, input.graph as any ?? JSON.parse((await getWorkflow(env, workflowId)).draft_json))], declared }) }
-        catch (error) { if (error instanceof StepError) return json({ ok: false, error: error.message }, 422); throw error }
+        catch (error) { if (error instanceof StepError) return json({ ok: false, error: error.message, code: 'invalid_graph' }, 422); throw error }
       }
       if (action === 'publish') return json(await publishWorkflow(env, actor, workflowId, input, request.headers.get('Idempotency-Key')), 201)
       if (action === 'rollback') return json(await rollbackWorkflow(env, actor, workflowId, input, request.headers.get('Idempotency-Key')), 201)
@@ -250,13 +250,13 @@ export async function workflowApi(request: Request, env: CrankEnv): Promise<Resp
     if (path === '/api/crank/coverage') return json(coverageReport(input))
     if (path === '/api/crank/notices/slack') return json(await configureNoticeRoute(env, actor, input))
     if (path === '/api/crank/settings') return json(await updateSettings(env, actor, input))
-    return json({ error: 'Route not found' }, 404)
+    return json({ error: 'Route not found', code: 'resource_unavailable' }, 404)
   } catch (error) {
-    if (isBudgetExceeded(error)) return json({ error: 'USD budget exhausted. Work remains held or in its existing preview; replenish the budget or record an owner allowance before release.' }, 409)
-    if (error instanceof CrankError) return json({ error: error.message }, error.status)
-    if (error instanceof StepError) return json({ error: error.message, category: error.category }, error.category === 'auth' ? 502 : 422)
+    if (isBudgetExceeded(error)) return json({ error: 'USD budget exhausted. Work remains held or in its existing preview; replenish the budget or record an owner allowance before release.', code: 'budget_exhausted' }, 409)
+    if (error instanceof CrankError) return json({ error: error.message, code: error.code }, error.status)
+    if (error instanceof StepError) return json({ error: error.message, category: error.category, code: 'validation_failed' }, error.category === 'auth' ? 502 : 422)
     const authError = error as { status?: unknown }
-    if (typeof authError.status === 'number' && authError.status >= 400 && authError.status < 500) return json({ error: 'Authentication or request was refused' }, authError.status)
-    return json({ error: 'Workflow operation could not be confirmed' }, 503)
+    if (typeof authError.status === 'number' && authError.status >= 400 && authError.status < 500) return json({ error: 'Authentication or request was refused', code: crankErrorCode(authError.status) }, authError.status)
+    return json({ error: 'Workflow operation could not be confirmed', code: 'native_operation_unavailable' }, 503)
   }
 }

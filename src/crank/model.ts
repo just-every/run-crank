@@ -38,8 +38,27 @@ export interface Run {
   created_at: string; updated_at: string; replay_count: number
   lease_id: string | null; lease_expires_at: string | null; outcome_json: string | null
 }
+/** Closed, value-free native refusal vocabulary shared by person actions and tools. */
+export const CRANK_ERROR_CODES = [
+  'invalid_input', 'invalid_graph', 'validation_failed', 'native_authority_refused',
+  'resource_unavailable', 'revision_conflict', 'budget_exhausted',
+  'native_operation_unavailable', 'native_operation_refused',
+] as const
+export type CrankErrorCode = typeof CRANK_ERROR_CODES[number]
+export function crankErrorCode(status: number): CrankErrorCode {
+  if (status === 401 || status === 403) return 'native_authority_refused'
+  if (status === 404) return 'resource_unavailable'
+  if (status === 409) return 'revision_conflict'
+  if (status === 422) return 'validation_failed'
+  if ([400, 413, 415].includes(status)) return 'invalid_input'
+  if (status >= 500) return 'native_operation_unavailable'
+  return 'native_operation_refused'
+}
+export function isCrankErrorCode(value: unknown): value is CrankErrorCode {
+  return typeof value === 'string' && (CRANK_ERROR_CODES as readonly string[]).includes(value)
+}
 export class CrankError extends Error {
-  constructor(readonly status: number, message: string) { super(message) }
+  constructor(readonly status: number, message: string, readonly code: CrankErrorCode = crankErrorCode(status)) { super(message) }
 }
 export function requireValue(value: unknown, message: string, status = 400): asserts value {
   if (!value) throw new CrankError(status, message)
