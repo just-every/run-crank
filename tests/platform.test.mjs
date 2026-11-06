@@ -102,6 +102,29 @@ test('PLATFORM-001: SDK and CORE door draft lifecycle, native granted execution/
   const next=await call(rpc,'crank.runs.list',{workflow:draft.id,limit:1,before:page.structuredContent.next});assert.notEqual(next.structuredContent.runs[0].id,page.structuredContent.runs[0].id);
   const audit=await h.get('audit');for(const action of ['workflow.create','workflow.publish','grant.task','run.reject'])assert.ok(audit.some(a=>a.action===action),action);
   assert.equal((await h.send('/api/crank/v1/workflows')).value.code,'unauthenticated');
+
+  const legacyFlow=await h.flow('Scope-bound aggregate read'),sensitiveInput={supplier:'synthetic-crank-1',note:'Run payload requires retained run authority'};
+  const legacyRun=await h.run(legacyFlow,'synthetic-crank-scope-read',sensitiveInput);
+  const reader=await h.post('tokens',{label:'Aggregate read scope ceiling',scope:'agent',tool_scopes:['workflows:read','runs:read']},h.owner,201);
+  const readHeaders={authorization:'Bearer '+reader.token};
+  const allowed=await h.get('state','',200,readHeaders);
+  assert.deepEqual(allowed.runs.find(row=>row.id===legacyRun.id)?.input,sensitiveInput,'The aggregate positive control contains a real run payload');
+  await h.post('agent-access/'+encodeURIComponent(reader.agent_access.agent_id),{scopes:['workflows:read'],revision:0});
+  const assertReadCeiling=async()=>{
+   assert.equal((await h.get('workflows/'+draft.id,'',200,readHeaders)).id,draft.id,'Retained workflow metadata remains readable');
+   for(const path of ['state','runs/'+legacyRun.id]) {
+    const refused=await h.send('/api/crank/'+path,undefined,'',readHeaders);
+    assert.equal(refused.status,403,'Removed run authority must refuse '+path);
+    assert.ok(!refused.text.includes(sensitiveInput.note),'Refusals must not disclose the run payload');
+   }
+   assert.deepEqual((await h.get('state')).runs.find(row=>row.id===legacyRun.id)?.input,sensitiveInput,'Scope removal leaves owner-visible run data intact');
+  };
+  await assertReadCeiling();await h.restart();await assertReadCeiling();
+  const runReader=await h.post('tokens',{label:'Run-only aggregate scope ceiling',scope:'agent',tool_scopes:['runs:read']},h.owner,201);
+  const runHeaders={authorization:'Bearer '+runReader.token};
+  assert.deepEqual((await h.get('runs/'+legacyRun.id,'',200,runHeaders)).input,sensitiveInput);
+  assert.equal((await h.send('/api/crank/state',undefined,'',runHeaders)).status,403,'The aggregate also requires retained workflow metadata authority');
+
   await narrowingJourney({origin:h.origin,cookie:h.owner,request:(url,init)=>h.mf.dispatchFetch(url,init),restart:()=>h.restart(),configurePolicy:true,commitBarrier,
    restore:async({archive,token,grant,full})=>{
     const receiving=await harness('http://127.0.0.1:9');

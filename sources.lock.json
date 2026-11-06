@@ -2948,7 +2948,7 @@
       "executable": false
     },
     "src/crank/access.ts": {
-      "sha256": "93c675fc7f6e79a8d4fa3985c64ba4736994823fff6b799d1684896b2315ec6e",
+      "sha256": "4ba142dfd07f1721ea4e3d0ed3624bb819c34dbe53666afbe0f611ba1efc764e",
       "executable": false
     },
     "src/crank/agent-door/business.ts": {
@@ -7208,7 +7208,7 @@
       "executable": false
     },
     "tests/platform.test.mjs": {
-      "sha256": "d18dc10a525a3ee67de55b7e043acf476608f063b33f1b449ddb57072c347363",
+      "sha256": "3f7e95b6cf8ad29932a8edc043013d01b129a5d27d786456580228136a7e9b27",
       "executable": false
     },
     "tests/postgres-write-fixture.mjs": {
