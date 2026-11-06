@@ -868,9 +868,9 @@ Status: partial.
 
 *Tier:* Agent surface **Requirement.** Every seed, hosted or self-hosted, serves one remote MCP endpoint at `/mcp` over Streamable HTTP. It speaks the current revision (2026-07-28) and accepts 2025-11-25 clients through the twelve-month deprecation window. It implements `server / discover`, tools, resources and prompts. Lists are deterministic and carry `ttlMs` and `cacheScope: "private"`. Roots, Sampling and Logging are not served. **Acceptance.** 1. `server / discover` returns the supported versions, capabilities, `serverInfo` and instructions. 2. A 2026-07-28 request works with no handshake, and a 2025-11-25 client completes `initialize` and lists the same tools. 3. An unsupported version returns `UnsupportedProtocolVersion`. 4. Two `tools / list` calls return the same order, with cache fields. 5. A foreign Origin returns 403, and a header and body method mismatch returns `HeaderMismatch`. 6. An oversized body returns 413 with no effect.
 
-Current evidence: rer 0.2.91 hosted CORE conformance: 1,021/1,021 points (29 Oct 2026); `agent-surface.json`; `tests/agent-door/journey.mjs`; `docs/AGENT-DOOR.md`.
+Current evidence: `agent-surface.json`; `tests/agent-door/journey.mjs` native CORE journey; `tests/agent-door/prompts-journey.mjs` bounded draft preparation and redacted run inspection under autonomous and held policies, private discovery and refusal guards; `docs/AGENT-DOOR.md`.
 
-Remaining gap: Publication-bound client connector MCP remains a separate native door; full one-surface adoption is PARTIAL.
+Remaining gap: Publication-bound client connector MCP remains a separate native door; full one-surface adoption is PARTIAL. Resources remain with BASE-AGENT-003. Broader specialist and provider jobs, optional events and subscriptions, full hosted and self-hosted compatibility and complete specialist acceptance remain required. Existing owner, account, ct, enforcing-egress and device holds remain unchanged; this prompt-only slice releases no provider, Business, IdP or queued-clause prerequisite.
 
 ## BASE-AGENT-002 — The seed's jobs are tools, through the UI's own actions
 
