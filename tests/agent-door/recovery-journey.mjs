@@ -7,7 +7,7 @@ import {accessToken,autonomousPolicy,policyEnvelope,signJws} from '../../src/mod
 const code=r=>r.value?.result?._meta?.['com.runeditrun/error']?.code??r.value?.error?.data?.code;
 const value=r=>{assert.equal(r.status,200,JSON.stringify(r.value));assert.equal(r.value.result.isError,false,JSON.stringify(r.value));return r.value.result.structuredContent};
 const graph={trigger:{type:'manual'},steps:[{id:'shape',type:'map',input:{record:'synthetic-crank-1',private_marker:'synthetic-crank-2'}}]};
-const policy=(doAction='autonomous')=>({schema:'rer-agent-policy/1',catalogue:'rer-agent-classes/1',rules:[{id:'all',class:'*',do:doAction}],...(doAction==='review'?{reviewers:['sponsor']}:{}) ,spend:{none:true}});
+const policy=(doAction='autonomous')=>({schema:'rer-agent-policy/1',catalogue:'rer-agent-classes/1',rules:[{id:'all',class:'*',do:doAction,...(doAction==='approval'?{approver:['sponsor'],wait:'PT1H'}:{})}],...(doAction==='review'?{reviewers:['sponsor']}:{}) ,spend:{none:true}});
 const setPolicy=async(h,document)=>{
  const r=await h.mf.dispatchFetch(h.origin+'/agents/api/policy',{method:'PUT',headers:{cookie:h.owner,origin:h.origin,'content-type':'application/json'},body:JSON.stringify({document})});
  assert.equal(r.status,200,await r.text());
@@ -81,6 +81,9 @@ export async function recoveryJourney(){
    await setPolicy(h,policy('review'));
    assert.equal(code(await call('crank.workflows.'+operation,args)),'review_required');
    assert.equal((await receipt(h,key)).outcome,null,'a native receipt grants no new review authority');
+   await setPolicy(h,policy('approval'));
+   assert.equal(code(await call('crank.workflows.'+operation,args)),'approval_required');
+   assert.equal((await receipt(h,key)).outcome,null,'an old native receipt cannot satisfy a newly required approval');
    await setPolicy(h,policy());
    const changed=operation==='duplicate'?{workflow_id:frozen.id===source.id?'synthetic-crank-foreign':frozen.id}:operation==='update'?{description:'Changed arguments'}:{name:'Changed arguments'};
    assert.equal(code(await call('crank.workflows.'+operation,{...args,...changed})),'idempotency_conflict');
@@ -149,8 +152,8 @@ async function businessRecovery(probes){
  const keys=await webcrypto.subtle.generateKey({name:'ECDSA',namedCurve:'P-256'},true,['sign','verify']);
  const publicKey=await webcrypto.subtle.exportKey('jwk',keys.publicKey),kid='synthetic-crank-1';
  const issuer='https://synthetic-crank-1.invalid',installationId='synthetic-crank-2';
- let interrupt=true;
- const h=await harness('http://127.0.0.1:9',{agentRecoveryFault:true,bindings:origin=>({RER_OWNER_CLAIM_ISSUER:issuer,RER_OWNER_CLAIM_INSTALLATION_ID:installationId,RER_OWNER_CLAIM_PUBLIC_KEYS:JSON.stringify({[kid]:publicKey}),RER_BUSINESS_TRUST:JSON.stringify({v:1,issuer,audience:origin,subject:installationId,keys:{[kid]:publicKey}})}),edge:async request=>new URL(request.url).hostname==='agent-recovery.example'?new Response(null,{status:new URL(request.url).pathname==='/outcome'&&interrupt?503:204}):undefined});
+ let interrupt=true;const recoveryFaults=new Set();
+ const h=await harness('http://127.0.0.1:9',{agentRecoveryFault:true,bindings:origin=>({RER_OWNER_CLAIM_ISSUER:issuer,RER_OWNER_CLAIM_INSTALLATION_ID:installationId,RER_OWNER_CLAIM_PUBLIC_KEYS:JSON.stringify({[kid]:publicKey}),RER_BUSINESS_TRUST:JSON.stringify({v:1,issuer,audience:origin,subject:installationId,keys:{[kid]:publicKey}})}),edge:async request=>new URL(request.url).hostname==='agent-recovery.example'?new Response(null,{status:new URL(request.url).pathname==='/outcome'&&(interrupt||recoveryFaults.has(await request.text()))?503:204}):undefined});
  try{
   const person=await h.db.prepare('SELECT id,email FROM oa_operators WHERE id=(SELECT claim_id FROM oa_bootstrap WHERE singleton=1)').first();
   const c={origin:h.origin,signer:{issuer,installationId,kid,privateKey:keys.privateKey},person:{sub:'synthetic-crank-3',email:person.email},business:'synthetic-crank-4',agentId:'synthetic-crank-5',consent:'synthetic-crank-6',surface:{specialist:'Automation operations lead',tools:[{scope:'workflows:read'},{scope:'workflows:prepare'}]},now:Date.now(),seq:0,revision:0};
@@ -178,6 +181,71 @@ async function businessRecovery(probes){
   assert.equal(code(await otherConsent('crank.workflows.create',args)),'idempotency_conflict','completed recovery stays bound to the original consent');
   await adopt(autonomousPolicy(),{revoked:{agents:[c.agentId],consents:[]}});
   assert.equal((await call('crank.workflows.create',args)).status,401,'completed recovery retains current agent revocation');
+  await adopt(autonomousPolicy());
+  await scopedRecovery(h,c,adopt,person,recoveryFaults,probes);
   probes.push('PROBE BASE-AGENT-012 authority: signed Business MCP retries with changed consent, client, foreign sponsor and revoked consent -> refused without completion; original current consent returns frozen metadata');
  }finally{await h.close()}
+}
+
+/** A current read grant and an unrelated builder grant cannot be combined to
+ * recover a mutation whose original preparation authority has been withdrawn. */
+async function scopedRecovery(h,owner,adopt,person,faults,probes){
+ const member={id:'synthetic-crank-10',email:['synthetic-crank-10','example.test'].join('@'),name:'Synthetic scoped preparer',role:'member',invite:1};
+ const iat=Math.floor(Date.now()/1000);
+ const settings=await signJws(owner.signer.privateKey,owner.signer.kid,'rer-business-settings+jwt',{v:1,iss:owner.signer.issuer,aud:h.origin,sub:owner.signer.installationId,business:owner.business,email:person.email,jti:crypto.randomUUID(),iat,exp:iat+3600,rev:2,values:{display_name:'Synthetic recovery business'},logo:null,team:[member],owner_id:owner.person.sub});
+ const synced=await h.send('/api/rer/business-settings',{settings});assert.equal(synced.status,200,JSON.stringify(synced.value));
+ const link=h.mail.at(-1).html.match(/href="([^"]*\/auth\/confirm\?token=[^"]+)"/)[1].replaceAll('&amp;','&');
+ const signed=await h.send('/auth/confirm',{token:new URL(link,h.origin).searchParams.get('token')});assert.equal(signed.status,303,signed.text);
+ const operators=await h.send('/auth/operators',undefined,h.owner),native=operators.value.find(p=>p.displayName===member.name);assert.ok(native);
+ const context={...owner,person:{sub:member.id,email:member.email},agentId:'synthetic-crank-11',consent:'synthetic-crank-12'};
+ const call=rpc(h,()=>{context.now=Date.now();return accessToken(context)});
+ const source=await h.post('workflows',{name:'Synthetic scoped source',graph},h.owner,201);
+ const unrelated=await h.post('workflows',{name:'Synthetic unrelated source',graph},h.owner,201);
+ const grant=(role,workflow_ids)=>({role,workflow_ids,connection_ids:[]});
+ const assign=grants=>h.post('team/'+native.id,{grants});
+ let completed;
+ for(const operation of ['create','update']){
+  const target=operation==='create'?'workspace:production':source.id;
+  await assign([grant('builder',[source.id,'workspace:production'])]);
+  const before=value(await call('crank.workflows.get',{workflow_id:source.id}));
+  const args={...(operation==='create'?{name:'Synthetic scoped recovered draft',graph}:{workflow_id:source.id,draft_digest:before.draft_digest,expected_revision:before.revision,description:'Synthetic scoped edit'}),idempotency_key:'synthetic-crank-scoped-'+operation};
+  // Recovery's fixture interrupts outcome persistence for this key.
+  faults.add(args.idempotency_key);
+  assert.equal((await call('crank.workflows.'+operation,args)).status,500);
+  faults.delete(args.idempotency_key);
+  const retained=await receipt(h,args.idempotency_key),frozen=JSON.parse(retained.agent_receipt_json).outcome.result;
+  await assign([grant('builder',[unrelated.id]),grant('viewer',[source.id,frozen.id])]);
+  assert.equal(value(await call('crank.workflows.get',{workflow_id:frozen.id})).id,frozen.id,'read access remains current');
+  const direct=await h.send('/api/crank/workflows'+(operation==='create'?'':'/'+source.id+'/draft'),operation==='create'?{name:'Synthetic forbidden create',graph}:{description:'Synthetic forbidden update'},signed.cookie);
+  assert.equal(direct.status,403,'the native mutation requires one grant for its action and resource');
+  const witness=await h.get('workflows');
+  await h.restart();await adopt(autonomousPolicy());
+  const refused=await call('crank.workflows.'+operation,args);
+  assert.equal(code(refused),'native_authority_refused','unrelated preparation and target read grants cannot authorize recovery');
+  assert.equal((await receipt(h,args.idempotency_key)).outcome,null);
+  assert.deepEqual(await h.get('workflows'),witness);
+  await assign([grant('builder',[target,source.id,frozen.id])]);
+  assert.deepEqual(value(await call('crank.workflows.'+operation,args)),frozen,'an explicit current complete grant permits evidence-only recovery');
+  await assign([grant('builder',[unrelated.id]),grant('viewer',[source.id,frozen.id])]);
+  assert.equal(code(await call('crank.workflows.'+operation,args)),'native_authority_refused','completed replay retains the same current preparation boundary');
+  assert.deepEqual(await h.get('workflows'),witness);
+  completed={operation,args};
+ }
+ await assign([grant('builder',['workspace:production',source.id])]);
+ const pending={name:'Synthetic departing preparer draft',graph,idempotency_key:'synthetic-crank-departing'};
+ faults.add(pending.idempotency_key);assert.equal((await call('crank.workflows.create',pending)).status,500);faults.clear();
+ assert.ok((await receipt(h,pending.idempotency_key)).agent_receipt_json);
+ const count=(await h.get('workflows')).length;
+ assert.equal((await h.send('/auth/operator/status',{operatorId:native.id,status:'inactive'},h.owner)).status,200);
+ assert.equal((await call('crank.workflows.create',pending)).status,401);
+ assert.equal((await receipt(h,pending.idempotency_key)).outcome,null);
+ await h.post('data/erase',{operator_id:native.id,confirm:'ERASE'});
+ assert.equal((await receipt(h,pending.idempotency_key)).agent_receipt_json,null,'person erasure removes native recovery evidence');
+ await h.restart();await adopt(autonomousPolicy());
+ for(const [operation,args] of [['create',pending],[completed.operation,completed.args]]){
+  const refused=await call('crank.workflows.'+operation,args);assert.equal(refused.status,401);assert.equal(refused.value.result?.structuredContent,undefined);
+ }
+ assert.equal((await h.get('workflows')).length,count,'erasure and replay cannot recreate drafts');
+ probes.push('PROBE BASE-AGENT-012 erased sponsor: committed uncertain draft, deactivation, person erasure and restart -> native recovery evidence removed, pending and completed retries unauthenticated, no metadata or second effect');
+ probes.push('PROBE BASE-AGENT-012 scoped authority: withdrawn creation or target preparation with current read access and an unrelated builder grant -> native write, recovery and completed replay refused; explicit complete grant recovers the frozen result without another effect');
 }

@@ -2,7 +2,7 @@ import type { CallResult, ToolContext } from '../../modules/agent-door/types'
 import { requirePrepare, guardedBatch } from '../access'
 import { canonical, digest, type CrankEnv } from '../model'
 import { validateGraph } from '../engine/graph'
-import { workflowScope } from '../team/policy'
+import { admitTeamRequest, workflowScope } from '../team/policy'
 import { commandReceipt, workflowCommand, type WorkflowRecoveryBinding } from '../workflows/idempotency'
 import { resolveActor } from './native'
 import { nativeGuard, pick, record } from './tool-native'
@@ -26,12 +26,22 @@ export async function workflowView(value: Record<string, unknown>) {
   return { ...projection, revision: await workflowRevision(projection) }
 }
 
+/** Retained results require the same complete current grant as the native door.
+ * Selecting authority dispatches no request and never repeats the mutation. */
+export async function workflowPreparation(env: CrankEnv, args: Record<string, unknown>, ctx: ToolContext, tool: 'create' | 'update' | 'duplicate' | 'validate') {
+  const actor = await resolveActor(env, ctx)
+  requirePrepare(actor)
+  const path = '/api/crank/workflows' + (tool === 'create' ? ''
+    : '/' + encodeURIComponent(String(args.workflow_id)) + '/' + (tool === 'update' ? 'draft' : tool))
+  await admitTeamRequest(new Request(ctx.origin + path, { method: 'POST' }), env, actor)
+  return actor
+}
+
 /** Recover only an exact native inert-write receipt. No route is dispatched and
  * no missing outcome, job, review or provider completion is inferred. */
 export async function recoverWorkflow(env: CrankEnv, tool: 'create' | 'update' | 'duplicate', args: Record<string, unknown>, ctx: ToolContext, claim: { decisionId: string; requestDigest: string }): Promise<CallResult | null> {
   return nativeGuard(async () => {
-    const actor = await resolveActor(env, ctx)
-    requirePrepare(actor)
+    const actor = await workflowPreparation(env, args, ctx, tool)
     const { workflow_id, ...input } = args
     const operation = tool === 'update' ? 'draft' : tool
     const target = tool === 'create' ? '' : String(workflow_id)

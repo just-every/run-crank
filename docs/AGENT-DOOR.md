@@ -243,7 +243,13 @@ then the door applies its current Pause, revocation, classification and policy
 checks. A changed client or consent cannot reuse a completed recovery. A newly
 required review or approval is refused; recovery never creates either lifecycle
 from a draft receipt. Only original autonomous inert writes are recoverable.
-No receipt proves a provider effect, starts a job or grants execution authority.
+No receipt proves a provider effect, starts a job or grants execution authority. Recovery and completed
+replay select the same current complete preparation grant as the native write
+route, including workspace creation authority. A read grant on the target and
+a builder grant on another workflow cannot be combined. Explicitly restoring
+the complete grant permits recovery of the original result without another
+write. Deactivated or erased sponsors cannot recover pending or completed
+results, and person erasure removes their native recovery receipts.
 
 The seed adapts the shared door types with an optional evidence-only recovery
 callback, and the pipeline with claim-bound recovery before ordinary completed
