@@ -1,0 +1,13 @@
+{
+  "product_head": "1f1db87c49472d9f7e0db584da4201b67ae77d4b",
+  "test_extension_uncommitted": true,
+  "command": "timeout 600 node /tmp/rer-recovery.mjs",
+  "entrypoint": "import { recoveryJourney } from '/workspace/run-crank/tests/agent-door/recovery-journey.mjs'; await recoveryJourney();",
+  "exit": 1,
+  "test": "recoveryJourney transient create",
+  "assertion": "assert.equal(retained.outcome,null)",
+  "file": "tests/agent-door/recovery-journey.mjs",
+  "line": 55,
+  "failure": "Expected null; actual persisted outcome had outcome refused and code execution_failed after the native draft committed.",
+  "log": "transient-before-fix.log"
+}

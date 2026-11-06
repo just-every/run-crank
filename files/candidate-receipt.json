@@ -1,0 +1,40 @@
+{
+  "head": "ff071f1e55bf22bd4e19052dc48f676bd1e4e053",
+  "phase": "candidate",
+  "clean": true,
+  "files": {
+    "src/modules/agent-door/pipeline.ts": "7f3b7fe3c9d5095da588339813df89380e8c54127a48eb6d107fb0d5b0e4db4c",
+    "tests/agent-door/recovery-journey.mjs": "00f70956e7d23c2d6aa93c21c62e4f08ea09c1d13d9187c7dd4f6d8f02a1300f",
+    "src/crank/agent-door/native-recovery.ts": "93de1e0d95aaea421c2d3f8128b2025467c1ed62cf3abddfc534768f426514fb",
+    "src/crank/workflows/idempotency.ts": "4ebd639e6c3ff6883f56cc67035ad7d5486277bfd078a504ab549df09fa3877b",
+    "src/crank/workflows/store.ts": "6623011f9a6655df90d344c93c4d03d70139907de25e71daf4bac26ad47040f5"
+  },
+  "checks": [
+    {
+      "name": "platform",
+      "command": [
+        "timeout",
+        "600",
+        "node",
+        "--test",
+        "--test-concurrency=1",
+        "--test-name-pattern=^PLATFORM-001: SDK",
+        "tests/platform.test.mjs"
+      ],
+      "exit": 0,
+      "seconds": 27.363,
+      "log": "candidate-platform.log"
+    },
+    {
+      "name": "candidate-lock",
+      "command": [
+        "node",
+        "node_modules/@runeditrun/rer/edition-authoring/cli.mjs",
+        "check"
+      ],
+      "exit": 0,
+      "seconds": 0.805,
+      "log": "candidate-candidate-lock.log"
+    }
+  ]
+}

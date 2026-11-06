@@ -1,0 +1,25 @@
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProxy environment variables detected. We'll use your proxy for fetch requests.[0m
+
+
+node:internal/modules/run_main:123
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
++ actual - expected
+
++ '{"outcome":"refused","decision":{"id":"a3ecc298-c412-4bdd-a4f4-85b76e018acf","disposition":"autonomous","revision":4,"classes":[{"class":"standard","rule":"all","do":"autonomous","facts":{"measure":1}}]},"result":{"id":"0f7e5f09-c6db-41a4-88dc-fe95aedb3d4c","name":"Synthetic recovered draft","description":"","folder":"","environment":"production","status":"draft","published_version_id":null,"draft_updated_at":"2026-11-07T12:00:01.000Z","data_class":"none","draft_digest":"cdc142ff588e75bffade8058225c70cb1d4c1e769c1012cdc51922d479301f04","owner_id":"3a8dcd69-b6bd-478b-842f-2849d4677855","trigger":"manual","step_count":1,"revision":"a305cb6fdec3a82f38ac7cbe88598dd084346fc86c50a0246c075ce9dd5b5666"},"untrusted":true,"code":"execution_failed"}'
+- null
+
+    at recoveryJourney (file:///workspace/run-crank/tests/agent-door/recovery-journey.mjs:55:11)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async file:///tmp/rer-recovery.mjs:2:1 {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: '{"outcome":"refused","decision":{"id":"a3ecc298-c412-4bdd-a4f4-85b76e018acf","disposition":"autonomous","revision":4,"classes":[{"class":"standard","rule":"all","do":"autonomous","facts":{"measure":1}}]},"result":{"id":"0f7e5f09-c6db-41a4-88dc-fe95aedb3d4c","name":"Synthetic recovered draft","description":"","folder":"","environment":"production","status":"draft","published_version_id":null,"draft_updated_at":"2026-11-07T12:00:01.000Z","data_class":"none","draft_digest":"cdc142ff588e75bffade8058225c70cb1d4c1e769c1012cdc51922d479301f04","owner_id":"3a8dcd69-b6bd-478b-842f-2849d4677855","trigger":"manual","step_count":1,"revision":"a305cb6fdec3a82f38ac7cbe88598dd084346fc86c50a0246c075ce9dd5b5666"},"untrusted":true,"code":"execution_failed"}',
+  expected: null,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v22.20.0

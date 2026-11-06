@@ -1,0 +1,100 @@
+{
+  "repository": "just-every/run-crank",
+  "tag": "sx-crank-c-f84",
+  "head": "ff071f1e55bf22bd4e19052dc48f676bd1e4e053",
+  "branch": "cloud/sx-crank-c-f84",
+  "base": "1f1db87c49472d9f7e0db584da4201b67ae77d4b",
+  "main_at_final_merge": "e2c146dc38eb64e685cf01d2c56e798404b3936e",
+  "source_and_journey_hashes_match_precommit_checks": true,
+  "candidate_receipt": "candidate-receipt.json",
+  "prepare_receipt": "prepare-receipt.json",
+  "target": {
+    "id": "BASE-AGENT-012",
+    "before": "partial",
+    "after": "partial"
+  },
+  "counts": {
+    "before": {
+      "done": 32,
+      "partial": 50,
+      "missing": 17
+    },
+    "after": {
+      "done": 32,
+      "partial": 50,
+      "missing": 17
+    },
+    "status_rows_before": 99,
+    "status_rows_after": 99,
+    "recorded_test_registrations_before": 201,
+    "recorded_test_registrations_after": 201
+  },
+  "pushes": [
+    {
+      "head": "17698ed5ed0cad94c21bbd2fa973e02f0f9ab1e9",
+      "branch": "cloud/sx-crank-c-f84",
+      "exit": 0,
+      "attempts": 1,
+      "save": true
+    },
+    {
+      "head": "ff071f1e55bf22bd4e19052dc48f676bd1e4e053",
+      "branch": "cloud/sx-crank-c-f84",
+      "exit": 0,
+      "attempts": 1,
+      "save": false
+    }
+  ],
+  "probe_lines": [
+    "PROBE BASE-AGENT-012 create: committed native draft, outcome interruption, restart and concurrent new RPC IDs after 24 hours -> one effect, frozen original result, later edits preserved",
+    "PROBE BASE-AGENT-012 create transient: committed native draft, outcome interruption, restart and concurrent new RPC IDs after 24 hours -> one effect, frozen original result, later edits preserved",
+    "PROBE BASE-AGENT-012 update: committed native draft, outcome interruption, restart and concurrent new RPC IDs after 24 hours -> one effect, frozen original result, later edits preserved",
+    "PROBE BASE-AGENT-012 update transient: committed native draft, outcome interruption, restart and concurrent new RPC IDs after 24 hours -> one effect, frozen original result, later edits preserved",
+    "PROBE BASE-AGENT-012 duplicate: committed native draft, outcome interruption, restart and concurrent new RPC IDs after 24 hours -> one effect, frozen original result, later edits preserved",
+    "PROBE BASE-AGENT-012 duplicate transient: committed native draft, outcome interruption, restart and concurrent new RPC IDs after 24 hours -> one effect, frozen original result, later edits preserved",
+    "PROBE BASE-AGENT-012 unmatched: interrupted admission without a native receipt, with outcome storage available or failed -> call_in_progress, no invented result or mutation replay",
+    "PROBE BASE-AGENT-012 restore: public export and restore -> no native receipts or credentials; inert drafts without owners; no execution after restart",
+    "PROBE BASE-AGENT-012 authority: signed Business MCP retries with changed consent, client, foreign sponsor and revoked consent -> refused without completion; original current consent returns frozen metadata"
+  ],
+  "scan": {
+    "status": "not_run_in_cloud",
+    "reason": "publication scan belongs to maintained lander"
+  },
+  "run_site": {
+    "status": "pending_landing"
+  },
+  "mechanical": {
+    "views_write_exit": 0,
+    "views_check_exit": 0,
+    "generated_views_committed": false,
+    "installed_pinned_lock_check_exit": 0,
+    "ledger": "none; no migration edited in this continuation"
+  },
+  "blockers": [],
+  "ci": {
+    "runs": [
+      {
+        "conclusion": null,
+        "event": "push",
+        "head_sha": "ff071f1e55bf22bd4e19052dc48f676bd1e4e053",
+        "html_url": "https://github.com/just-every/run-crank/actions/runs/42155448075",
+        "id": 42155448075,
+        "name": "Verify",
+        "status": "in_progress"
+      }
+    ],
+    "latest_status": {
+      "conclusion": "failure",
+      "head_sha": "ff071f1e55bf22bd4e19052dc48f676bd1e4e053",
+      "html_url": "https://github.com/just-every/run-crank/actions/runs/42155448075",
+      "status": "completed"
+    },
+    "generated_view_only_exception": true,
+    "failed_build_job": 127688554946,
+    "failed_summary_job": 127688829757,
+    "remote_journeys": "skipped after generated-view-only build failure",
+    "api_invocations": 4,
+    "archive_command_exit": 0
+  },
+  "handoff": "READY under explicit generated-view exception; no product blocker"
+}
