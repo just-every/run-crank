@@ -101,15 +101,20 @@ export async function recoveryJourney(){
    assert.equal(audit.outcome,'done');assert.equal(audit.code,null,'recovered native effect has truthful original audit');
    probes.push(`PROBE BASE-AGENT-012 ${operation}${transient?' transient':''}: committed native draft, outcome interruption, restart and concurrent new RPC IDs after 24 hours -> one effect, frozen original result, later edits preserved`);
   }
-  const unmatched={name:'Synthetic uncertain draft',graph,idempotency_key:'synthetic-crank-uncertain'};
-  const count=(await h.get('workflows')).length;
-  faults.add(unmatched.idempotency_key);beforeNative.add(unmatched.idempotency_key);
-  assert.equal((await call('crank.workflows.create',unmatched)).status,500);
-  assert.equal((await receipt(h,unmatched.idempotency_key)).agent_receipt_json,null);
-  faults.clear();beforeNative.clear();await h.restart();
-  assert.equal(code(await call('crank.workflows.create',unmatched)),'call_in_progress');
-  assert.equal((await h.get('workflows')).length,count);
-  probes.push('PROBE BASE-AGENT-012 unmatched: interrupted admission without a native receipt -> call_in_progress, no mutation replay');
+  for(const storageAvailable of [false,true]){
+   const unmatched={name:'Synthetic uncertain draft',graph,idempotency_key:'synthetic-crank-uncertain-'+storageAvailable};
+   const count=(await h.get('workflows')).length;
+   if(!storageAvailable)faults.add(unmatched.idempotency_key);
+   beforeNative.add(unmatched.idempotency_key);
+   assert.equal((await call('crank.workflows.create',unmatched)).status,500);
+   const uncertain=await receipt(h,unmatched.idempotency_key);
+   assert.equal(uncertain.agent_receipt_json,null);
+   assert.equal(uncertain.outcome,null,'working outcome storage cannot invent an uncertain native result');
+   faults.clear();beforeNative.clear();await h.restart();
+   assert.equal(code(await call('crank.workflows.create',unmatched)),'call_in_progress');
+   assert.equal((await h.get('workflows')).length,count);
+  }
+  probes.push('PROBE BASE-AGENT-012 unmatched: interrupted admission without a native receipt, with outcome storage available or failed -> call_in_progress, no invented result or mutation replay');
   const revoked={name:'Synthetic revoked recovery',graph,idempotency_key:'synthetic-crank-revoked'};
   faults.add(revoked.idempotency_key);assert.equal((await call('crank.workflows.create',revoked)).status,500);faults.clear();
   await h.post('tokens/'+credential.id+'/revoke',{});
