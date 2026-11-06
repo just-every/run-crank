@@ -978,9 +978,9 @@ Status: partial.
 
 *Tier:* Agent surface **Requirement.** Every mutating tool requires an idempotency key and takes an optional expected revision. The same key with the same arguments returns the first outcome for at least 24 hours; the same key with different arguments returns `idempotency_conflict`; a stale revision returns `revision_conflict` with the current revision. Long work returns a job handle and a status tool, with no dependence on the Tasks extension. **Acceptance.** 1. Two calls with one key give one effect and equal results. 2. A retry with a new JSON-RPC id and the same key, after a dropped stream, returns the recorded outcome. 3. The same key with different arguments returns a conflict and no effect. 4. A stale revision returns a conflict naming the current revision. 5. A job handle used by another person's token reads as not found.
 
-Current evidence: rer 0.2.91 hosted CORE conformance: 1,021/1,021 points (29 Oct 2026); `agent-surface.json`; `tests/agent-door/journey.mjs`; `docs/AGENT-DOOR.md`.
+Current evidence: rer 0.2.91 hosted CORE conformance: 1,021/1,021 points (29 Oct 2026); `tests/agent-door/recovery-journey.mjs` recoveryJourney: atomic frozen inert create, update and duplicate outcomes, interrupted door persistence, concurrent new RPC IDs after restart and 24 hours, later-edit preservation, current authority and policy refusals, unmatched uncertainty and inactive restore; invoked by `tests/platform.test.mjs` SDK and CORE draft lifecycle and `tests/agent-door/journey.mjs`; `docs/AGENT-DOOR.md`.
 
-Remaining gap: Native draft idempotency and revision fences are wired. Durable queued/provider uncertainty and replay remain unscoped and unproved.
+Remaining gap: Native draft idempotency and revision fences include receipt-backed autonomous inert-write recovery only. Interrupted review and approval lifecycles, other mutating tools, durable queued and provider uncertainty and replay, long-work handles and status, and cross-person handle indistinguishability remain required. Existing owner and account, ct, enforcing-egress and device holds remain unchanged; DATA-001 adoption fences remain in force.
 
 ## BASE-AGENT-013 — Manifest, docs and the conformance journey
 
