@@ -71,6 +71,31 @@ Catalogue presence is inventory, not dispatch authority or a claim that a planne
 connector is built. Names, descriptions and imported declarations remain
 untrusted content; every tool marks its results accordingly.
 
+## Native refusal codes
+
+The native JSON action returns a stable `code` alongside its existing `error`
+message. The tool returns that same code in `com.runeditrun/error` with
+`isError: true`. Graph values and private validation messages stay in the native
+response; the MCP adapter copies only codes from the closed native vocabulary
+and a numeric HTTP status. It never derives a code from message text.
+
+Invalid graphs return `invalid_graph`, other invalid inputs return
+`invalid_input` or `validation_failed`, stale draft revisions return
+`revision_conflict`, missing records return `resource_unavailable`, and current
+native authority refusals return `native_authority_refused`. A scoped caller's
+missing and inaccessible workflow reads keep identical refusals. The native
+action retains its validation order: a stale draft or revoked preparation grant
+is refused before inspecting graph content. Shared-door policy and protocol
+refusals keep their own existing codes.
+
+The error-parity journey in [the public-door fixture](../tests/agent-door/error-parity.mjs)
+compares native and MCP codes, complete unchanged workflow records and native
+audit event types. It exercises allowed writes as well as refused writes,
+including invalid saved drafts from a previous installation. The existing native
+editing registration in [the app tests](../tests/app.test.mjs) and the hosted
+agent journey invoke it. This is proof for the existing registry only; the
+remaining contract obligations below are unchanged.
+
 ## Native people and authority
 
 Signed Business settings enter through `POST /api/rer/business-settings`, using

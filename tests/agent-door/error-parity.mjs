@@ -123,6 +123,12 @@ export async function scopedErrorParity(harness) {
   const remote=await tool('crank.workflows.update',{workflow_id:allowed.id,...input,expected_revision:current.revision,idempotency_key:crypto.randomUUID()});
   assert.equal(native.status,403);assert.equal(native.value.code,'native_authority_refused');
   assert.equal(remote.status,200);assert.equal(remote.result.isError,true);assert.equal(errorCode(remote),native.value.code);
+  // Invalid graph content cannot outrank a current authority refusal.
+  const invalidNative=await h.send('/api/crank/workflows/'+allowed.id+'/draft',{...input,graph:invalidGraph},cookie);
+  const invalidRemote=await tool('crank.workflows.update',{workflow_id:allowed.id,...input,graph:invalidGraph,expected_revision:current.revision,idempotency_key:crypto.randomUUID()});
+  assert.equal(invalidNative.status,403);assert.equal(invalidNative.value.code,'native_authority_refused');
+  assert.equal(invalidRemote.status,200);assert.equal(invalidRemote.result.isError,true);assert.equal(errorCode(invalidRemote),invalidNative.value.code);
+  for(const value of [secret,credential,cookie])assert.ok(!JSON.stringify(invalidRemote).includes(value));
   assert.deepEqual(await h.get('workflows/'+allowed.id),frozen);assert.deepEqual(await h.get('audit'),afterRevocation);
   assert.ok(history.some(row=>row.action==='workflow.draft'&&row.subject_id===allowed.id));
  } finally {await h.close()}

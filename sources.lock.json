@@ -196,7 +196,7 @@
       "executable": false
     },
     "docs/AGENT-DOOR.md": {
-      "sha256": "7418c518e7505e79eeb56bd768b93e2b422c01c8425c9e87b5d3b11a566c5287",
+      "sha256": "02f71fac6727976fcfadf64b4f9fc338b33e6b3d53afb9b5406f3e5337d52c37",
       "executable": false
     },
     "docs/API.md": {
@@ -6712,7 +6712,7 @@
       "executable": false
     },
     "tests/agent-door/error-parity.mjs": {
-      "sha256": "c16c2ca51969fe0f41dea5785aa9f04349c0dfb4dc6dd3ed971f9fbf32bde9d3",
+      "sha256": "a654bb3ba06671c7df752e90b61495575d4d60765938255782b6475c18ef05f2",
       "executable": false
     },
     "tests/agent-door/fixtures.mjs": {
