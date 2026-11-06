@@ -11,16 +11,31 @@ const projection = event => {
  assert.ok(common.every(key => Object.hasOwn(event,key)));
  assert.match(event.id,/^[a-f0-9-]{36}$/);
  assert.ok(Number.isFinite(Date.parse(event.at)));
- assert.ok(['approval.pending','approval.decided','review.flagged','policy.adopted'].includes(event.type));
+ assert.ok(['approval.pending','approval.decided','review.opened','review.flagged','policy.adopted'].includes(event.type));
  assert.ok(['person','agent'].includes(event.actor.kind));
+ assert.deepEqual(Object.keys(event.actor).sort(),event.actor.kind==='person'?['kind','person']:['agent','for','kind','label']);
+ const person=event.actor.kind==='person'?event.actor.person:event.actor.for;
+ assert.deepEqual(Object.keys(person).sort(),['id','name']);
+ if(event.actor.kind==='agent'){
+  assert.deepEqual(Object.keys(event.actor.agent).sort(),['id','name']);
+  assert.equal(event.actor.label,event.actor.agent.name+' for '+person.name);
+ }
  if (event.type !== 'policy.adopted') {
   assert.deepEqual(event.classes,[{class:'standard'}]);
-  assert.equal(event.decision,event.type === 'review.flagged' ? 'review' : 'approval');
+  assert.equal(event.decision,event.type.startsWith('review.') ? 'review' : 'approval');
  }
 };
 
 /** Shared hosted journey: actual retained decisions, never an empty feed. */
 export default async function eventsJourney({request,origin,cookie,tool}) {
+ const stateResponse = await request(origin+'/agents/api/state',{headers:{cookie}});
+ assert.equal(stateResponse.status,200);
+ const {policy} = await stateResponse.json();
+ const adopted = await request(origin+'/agents/api/policy/adopt',{
+  method:'POST',headers:{cookie,origin,'content-type':'application/json'},
+  body:JSON.stringify({revision:policy.revision,seq:policy.seq}),
+ });
+ assert.equal(adopted.status,200);
  const reviews = await request(origin+'/agents/api/reviews',{headers:{cookie}});
  assert.equal(reviews.status,200);
  const review = (await reviews.json()).reviews[0];
@@ -140,7 +155,18 @@ export async function nativeEventsProof() {
    context.seq=envelope.payload.seq;context.revision=envelope.payload.revision;
   };
   await adopt(autonomousPolicy());
+  const stateBefore=await person('/agents/api/state');
+  await person('/agents/api/policy/adopt',{revision:context.revision,seq:context.seq});
+  assert.deepEqual(await person('/agents/api/state'),stateBefore,'person adoption acknowledges policy without changing authority');
+  await person('/agents/api/policy/adopt',{revision:context.revision+1,seq:context.seq},{status:409});
   const reader=await token({scope:'events:read'});
+  await person('/agents/api/policy/adopt',{revision:context.revision,seq:context.seq},{cookie:reviewerCookie,status:403});
+  const agentAdoption=await h.mf.dispatchFetch(h.origin+'/agents/api/policy/adopt',{
+   method:'POST',headers:{origin:h.origin,authorization:'Bearer '+reader,'content-type':'application/json'},
+   body:JSON.stringify({revision:context.revision,seq:context.seq}),
+  });
+  assert.equal(agentAdoption.status,403);
+  await agentAdoption.body.cancel();
   assert.equal((await tool('crank.events.list',{},await token({scope:'workflows:prepare'}))).status,403);
   assert.equal((await tool('crank.events.list',{},local.token)).status,403);
   const discovery = await rpc('tools/list',{},reader);
@@ -151,6 +177,7 @@ export async function nativeEventsProof() {
   assert.equal(errorCode(await tool('crank.events.list',{limit:201},reader)),'invalid_arguments');
   assert.equal(errorCode(await tool('crank.events.list',{after:'not-a-retained-position'},reader)),'invalid_cursor');
   assert.equal(errorCode(await tool('crank.events.list',{after:'v1.9007199254740992'},reader)),'invalid_cursor');
+  assert.equal(errorCode(await tool('crank.events.list',{after:'v1.9007199254740991'},reader)),'invalid_cursor');
   const first=value(await tool('crank.events.list',{limit:2},reader));
   assert.equal(first.events.length,2);
   const second=value(await tool('crank.events.list',{limit:2,after:first.cursor},reader));
@@ -169,7 +196,7 @@ export async function nativeEventsProof() {
    assert.fail('feed did not reach its retained end');
   };
   const initial=await readAll(reader);
-  for(const type of ['approval.pending','approval.decided','review.flagged','policy.adopted'])
+  for(const type of ['approval.pending','approval.decided','review.opened','review.flagged','policy.adopted'])
    assert.ok(initial.events.some(event=>event.type===type),type);
   const opened=initial.events.find(event=>event.type==='approval.pending');
   assert.equal(opened.actor.kind,'agent');assert.equal(opened.actor.for.id,owner.id);
@@ -203,7 +230,7 @@ export async function nativeEventsProof() {
   // More than a storage page of subsequently hidden rows must still advance.
   for(let i=0;i<201;i++) await person('/agents/api/reviews/'+signedReviewId+'/flag',{},{cookie:reviewerCookie});
   const authorized=await readAll(reviewerToken,beforeFlagCursor);
-  assert.equal(authorized.events.filter(event=>event.uri.endsWith('/'+signedReviewId)).length,202);
+  assert.equal(authorized.events.filter(event=>event.type==='review.flagged'&&event.uri.endsWith('/'+signedReviewId)).length,202);
   assert.equal(new Set(authorized.events.map(event=>event.id)).size,authorized.events.length);
   await settings('member');
   const noLongerVisible=await readAll(reviewerToken,beforeFlagCursor);
@@ -226,7 +253,7 @@ export async function nativeEventsProof() {
   await h.post('data/erase',{operator_id:reviewer.id,confirm:'ERASE'});
   const erasureReader=await token({scope:'events:read',act:{sub:'synthetic-crank-erasure-reader',name:'Synthetic custody reader'}});
   const erasedFeed=await readAll(erasureReader,beforeFlagCursor);
-  const erasedFlags=erasedFeed.events.filter(event=>event.uri.endsWith('/'+signedReviewId));
+  const erasedFlags=erasedFeed.events.filter(event=>event.type==='review.flagged'&&event.uri.endsWith('/'+signedReviewId));
   assert.equal(erasedFlags.length,202);
   assert.ok(erasedFlags.every(event=>event.actor.person.name==='Removed person'));
   assert.ok(!JSON.stringify(erasedFeed.events).includes('Synthetic reviewer'));

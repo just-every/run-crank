@@ -23,6 +23,21 @@ export async function personDoor(rt: Runtime, request: Request): Promise<Respons
     }
     return response
   }
+  if (path === '/agents/api/policy/adopt') {
+    if (role !== 'owner') return error('forbidden', 403)
+    if (request.method !== 'POST') return error('method_not_allowed', 405)
+    let body: { revision?: unknown; seq?: unknown }
+    try { body = await request.json() } catch { return error('invalid_arguments') }
+    const state = await policyState(rt)
+    if (!state.document || state.revision === null || state.expires !== null && state.expires <= rt.now()) return error('policy_unavailable', 409)
+    if (!body || Object.keys(body).some(key => !['revision', 'seq'].includes(key))) return error('invalid_arguments')
+    if (body.revision !== state.revision || body.seq !== state.seq) return error('revision_conflict', 409)
+    // A person's explicit adoption acknowledges this exact installed policy.
+    // It changes no Business policy, scopes, approval or execution authority.
+    await appendEvents(rt, [{ type: 'policy.adopted', uri: `${rt.options.origin}/agents/policy/${state.seq ?? state.revision}`,
+      actor: { kind: 'person', person: { id: person.id, name: person.name } }, data: { revision: state.revision } }])
+    return json({ adopted: { revision: state.revision, seq: state.seq } })
+  }
   if (path === '/agents/api/state') return role && request.method === 'GET' ? json(publicState(rt, await policyState(rt))) : error('forbidden', 403)
   if (path === '/agents/api/pause') {
     if (role !== 'owner') return error('forbidden', 403)

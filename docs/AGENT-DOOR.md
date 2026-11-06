@@ -228,17 +228,24 @@ the native authority fence still prevents reads or effects.
 preparation credentials retain exactly their prior scopes and cannot read the
 feed; execution and trigger credentials retain their separate purposes.
 
-The feed covers `approval.pending`, `approval.decided`, `review.flagged` and
+The feed covers `approval.pending`, `approval.decided`, `review.opened`,
+`review.flagged` and
 native, signed-in-person `policy.adopted`. Each carries its retained identity,
 record URI, time and a person or agent-for-person actor. Approval and review
 events include class identifiers and the decision, plus the decision identity;
 decided approvals include their lifecycle state. Native policy adoption includes
-its revision and the adoption decision; it has no tool class. Graph values,
+its revision and the adoption decision; it has no tool class. A native owner
+can explicitly acknowledge the exact installed policy through
+`POST /agents/api/policy/adopt` with its current `revision` and `seq`;
+stale identities are refused. This acknowledgment changes no policy, scope,
+approval or execution authority, including when Business manages that policy.
+A review-opened event records the actual agent-created review record; it does
+not claim primary workflow resources or general record-change coverage. Graph values,
 summaries, class facts, policy documents, notes, errors and credentials are
 excluded by a closed projection at storage and again on read. Current native
 actor names replace retained snapshots, so erasure cannot revive a former name.
 
-A call returns at most 200 visible events and scans at most 200 retained rows.
+A call returns at most 200 visible events and scans at most 100 retained rows.
 `limit` defaults to 100. Return the response's `cursor` as `after` to continue;
 an empty page can still advance past hidden rows. Continue until the cursor
 stops advancing. Cursors contain only a versioned sequence position, confer no

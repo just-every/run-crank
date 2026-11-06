@@ -1,4 +1,4 @@
-import type { AgentEvent, EventActor, Principal, Runtime, ToolDefinition } from './types.ts'
+import type { AgentEvent, EventActor, Person, Principal, Runtime, ToolDefinition } from './types.ts'
 import { templateMatches } from './registry.ts'
 import { businessRole, matchingRefs } from './people.ts'
 import { ToolRefusal } from './errors.ts'
@@ -25,7 +25,7 @@ function lifecycle(rt: Runtime, event: AgentEvent): AgentEvent | null {
     if (typeof event.decision_id !== 'string' || !Array.isArray(event.classes)) return null
     result.decision_id = event.decision_id
     result.classes = event.classes.flatMap(item => item && classIds.includes(item.class) ? [{ class: item.class }] : [])
-    result.decision = event.type === 'review.flagged' ? 'review' : 'approval'
+    result.decision = event.type.startsWith('review.') ? 'review' : 'approval'
     if (event.type === 'approval.decided' && ['pending', 'executing', 'executed', 'refused', 'done', 'failed', 'rejected', 'expired'].includes(String(event.state))) result.state = event.state
   }
   return result
@@ -38,8 +38,8 @@ export async function appendEvents(rt: Runtime, drafts: Array<{ type: string; ur
   await rt.options.db.batch(events.map(event => rt.options.db.prepare('INSERT INTO agent_door_events(id,uri,event) VALUES(?,?,?)').bind(event.id, event.uri, JSON.stringify(event))))
   for (const event of events) await rt.options.onEvent?.(event)
 }
-export async function eventVisible(rt: Runtime, principal: Principal, event: AgentEvent): Promise<boolean> {
-  const person = await rt.options.people.person(principal.person.id)
+export async function eventVisible(rt: Runtime, principal: Principal, event: AgentEvent, currentPerson?: Person): Promise<boolean> {
+  const person = currentPerson ?? await rt.options.people.person(principal.person.id)
   if (!person?.active || !principal.scopes.includes('events:read')) return false
   const resource = rt.options.resources?.find(resource => templateMatches(resource.uriTemplate, event.uri))
   if (resource) {
@@ -67,6 +67,7 @@ export async function listEvents(rt: Runtime, principal: Principal, after: strin
     if (/^v1\.[0-9]+$/.test(after)) {
       sequence = Number(after.slice(3))
       if (!Number.isSafeInteger(sequence)) throw new ToolRefusal('invalid_cursor')
+      if (sequence && !await rt.options.db.prepare('SELECT sequence FROM agent_door_events WHERE sequence=?').bind(sequence).first()) throw new ToolRefusal('invalid_cursor')
     } else {
       // Previously issued event identities remain valid positions.
       const position = await rt.options.db.prepare('SELECT sequence FROM agent_door_events WHERE id=?').bind(after).first<{ sequence: number }>()
@@ -75,19 +76,26 @@ export async function listEvents(rt: Runtime, principal: Principal, after: strin
     }
   }
   const events: AgentEvent[] = []
+  const currentPerson = await rt.options.people.person(principal.person.id)
+  if (!currentPerson?.active) throw new ToolRefusal('sponsor_unavailable')
+  const actors = new Map<string, Person | null>([[currentPerson.id, currentPerson]])
   let cursor = after ?? null
   // One bounded storage page per request. A value-free position advances past
   // hidden rows without disclosing their event identities or record URIs.
-  const rows = (await rt.options.db.prepare('SELECT sequence,id,event FROM agent_door_events WHERE sequence>? ORDER BY sequence LIMIT 200').bind(sequence).all<{ sequence: number; id: string; event: string }>()).results
+  // Current native people and membership reads also consume database work.
+  // The scoped feed bounds those reads even when every event has another actor.
+  const scanLimit = rt.options.eventTypes ? 100 : 200
+  const rows = (await rt.options.db.prepare('SELECT sequence,id,event FROM agent_door_events WHERE sequence>? ORDER BY sequence LIMIT ?').bind(sequence, scanLimit).all<{ sequence: number; id: string; event: string }>()).results
   for (const row of rows) {
     cursor = `v1.${row.sequence}`
     const event = lifecycle(rt, JSON.parse(row.event))
-    if (event && await eventVisible(rt, principal, event)) {
+    if (event && await eventVisible(rt, principal, event, currentPerson)) {
       if (rt.options.eventTypes) {
         // A retained actor snapshot must not resurrect an erased person's name.
         const actor = event.actor
         const id = actor.kind === 'person' ? actor.person.id : actor.kind === 'agent' ? actor.for.id : null
-        const current = id ? await rt.options.people.person(id) : null
+        if (id && !actors.has(id)) actors.set(id, await rt.options.people.person(id))
+        const current = id ? actors.get(id) : null
         if (!current) continue
         if (actor.kind === 'person') actor.person.name = current.name
         if (actor.kind === 'agent') { actor.for.name = current.name; actor.label = `${actor.agent.name} for ${current.name}` }

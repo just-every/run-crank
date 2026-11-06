@@ -2,7 +2,7 @@ import type { Evidence } from './audit.ts'
 import type { ClassAndFacts, Principal, Runtime, Person, ToolContext, ApprovalDisplaySummary } from './types.ts'
 import { undoContext, type Effect } from './execution.ts'
 import { error, json, ToolRefusal } from './errors.ts'
-import { matchingRefs } from './people.ts'
+import { matchingRefs, preparedBy } from './people.ts'
 import { appendEvents } from './events.ts'
 
 interface SavedReview { decision_id: string; tool: string; classes: ClassAndFacts[]; principal: Principal; reviewers: string[]; undo?: unknown; door: ToolContext['door']; summary?: ApprovalDisplaySummary }
@@ -11,6 +11,8 @@ export async function openReview(rt: Runtime, tool: string, principal: Principal
   const id = crypto.randomUUID()
   const saved: SavedReview = { decision_id, tool, classes: evidence.classes, principal, reviewers: evidence.document.reviewers ?? [], undo, door, summary }
   await rt.options.db.prepare('INSERT INTO agent_door_reviews(id,state,saved) VALUES(?,?,?)').bind(id, 'open', JSON.stringify(saved)).run()
+  await appendEvents(rt, [{ type: 'review.opened', uri: `${rt.options.origin}/agents/reviews/${id}`,
+    actor: { kind: 'agent', ...preparedBy(principal) }, data: { decision_id, classes: evidence.classes } }])
   return { id }
 }
 export function reviewView(rt: Runtime, row: ReviewRecord) {
