@@ -1,7 +1,9 @@
 import type { ToolContext, ToolDefinition } from '../../modules/agent-door/types.ts'
 import { requirePrepare } from '../access.ts'
 import { canonical, digest, type CrankEnv } from '../model.ts'
-import { validateGraph } from '../engine/graph.ts'
+import { branchesOf } from '../engine/graph.ts'
+import { isObject } from '../engine/values.ts'
+import type { Step } from '../engine/types.ts'
 import { resolveActor } from './native.ts'
 import { arraySchema, nativeCall, nativeGuard, nullableText, objectSchema, pathPart, pick, query, record, standard, textSchema } from './tool-native.ts'
 
@@ -27,13 +29,20 @@ async function revision(value: Record<string, unknown>) {
   // Include the native metadata as well as graph bytes: a rename invalidates an approval too.
   return digest(canonical(pick(value, ['id', 'name', 'description', 'folder', 'draft_digest', 'draft_updated_at', 'published_version_id', 'status'])))
 }
+// Metadata reads do not validate a saved draft. Older graphs must remain
+// inspectable so a caller can obtain the digest and explicitly repair them.
+function stepCount(steps: unknown): number {
+  if (!Array.isArray(steps)) return 0
+  return steps.reduce((count, step) => count + 1 + (!isObject(step) ? 0
+    : step.type === 'loop' ? stepCount(step.steps)
+    : step.type === 'paths' ? branchesOf(step as Step).reduce((total, branch) => total + stepCount(branch.steps), 0) : 0), 0)
+}
 async function view(value: Record<string, unknown>) {
   const graph = record(value.draft)
-  const declared = validateGraph(graph).declared
   return {
     ...pick(value, ['id', 'name', 'description', 'folder', 'environment', 'status', 'published_version_id', 'draft_digest', 'draft_updated_at', 'data_class']),
     owner_id: record(value.owner).id, trigger: record(graph.trigger).type ?? null,
-    step_count: declared.steps.length, revision: await revision(value),
+    step_count: stepCount(graph.steps), revision: await revision(value),
   }
 }
 

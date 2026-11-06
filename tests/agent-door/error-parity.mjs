@@ -72,6 +72,19 @@ export default async function errorParity(context) {
   assert.ok(native.body.error.includes(secret),'the fixture actually produces private validation detail');
   assert.ok(!JSON.stringify(answer).includes(secret));assert.ok(!JSON.stringify(answer).includes(native.body.error));
   assert.deepEqual(await read(),before);assert.deepEqual(await audit(),beforeAudit);
+  // Metadata remains readable when an older saved graph needs repair.
+  const metadata=result(await tool('crank.workflows.get',{workflow_id:remote.id}));
+  assert.equal(metadata.id,before.id);assert.equal(metadata.draft_digest,before.draft_digest);
+  assert.equal(metadata.trigger,before.draft.trigger.type);assert.equal(metadata.step_count,before.draft.steps.length);
+  for(const value of [secret,...privateValues])assert.ok(!JSON.stringify(metadata).includes(value));
+  await pair('/api/crank/workflows/'+remote.id+'/duplicate',{},'crank.workflows.duplicate',{workflow_id:remote.id},'invalid_graph',422);
+  await pair('/api/crank/workflows/'+remote.id+'/draft',{description:'Must not apply',draft_digest:metadata.draft_digest},'crank.workflows.update',{workflow_id:remote.id,description:'Must not apply',draft_digest:metadata.draft_digest,expected_revision:metadata.revision},'invalid_graph',422);
+  const repairAudit=await audit(),fixed=graph('synthetic-crank-repaired');
+  const repaired=result(await tool('crank.workflows.update',{workflow_id:remote.id,graph:fixed,draft_digest:metadata.draft_digest,expected_revision:metadata.revision,idempotency_key:crypto.randomUUID()}));
+  assert.deepEqual((await read()).draft,fixed);assert.notEqual(repaired.draft_digest,metadata.draft_digest);
+  assert.deepEqual(changedTypes(repairAudit,await audit()),['workflow.draft']);
+  assert.equal((await ok('/api/crank/workflows/'+remote.id+'/validate',{})).ok,true);
+  assert.equal(result(await tool('crank.workflows.validate',{workflow_id:remote.id})).ok,true);
  }
  return {remoteId:remote.id};
 }
@@ -107,14 +120,20 @@ export async function scopedErrorParity(harness) {
   result(await tool('crank.workflows.update',{workflow_id:allowed.id,description:'synthetic-crank-edit',draft_digest:current.draft_digest,expected_revision:current.revision,idempotency_key:crypto.randomUUID()}));
   assert.equal((await h.get('workflows/'+allowed.id,cookie)).description,'synthetic-crank-edit');
   const frozen=await h.get('workflows/'+allowed.id),history=await h.get('audit');
-  const denied=[];
-  for(const id of [hidden.id,'synthetic-crank-missing']) {
-   const native=await h.send('/api/crank/workflows/'+id,undefined,cookie),remote=await tool('crank.workflows.get',{workflow_id:id});
-   assert.equal(native.status,403);assert.equal(remote.status,200);assert.equal(remote.result.isError,true);assert.equal(errorCode(remote),native.value.code);
-   denied.push({native:{status:native.status,body:native.value},remote:remote.result});
-   for(const value of [secret,credential,cookie])assert.ok(!JSON.stringify(remote).includes(value));
+  for(const [suffix,name] of [['','crank.workflows.get'],['/validate','crank.workflows.validate'],['/duplicate','crank.workflows.duplicate'],['/draft','crank.workflows.update']]) {
+   const denied=[];
+   for(const id of [hidden.id,'synthetic-crank-missing']) {
+    const input=suffix==='/draft'?{graph:invalidGraph,draft_digest:allowed.draft_digest}:suffix?{}:undefined;
+    const native=await h.send('/api/crank/workflows/'+id+suffix,input,cookie);
+    const remote=await tool(name,{workflow_id:id,...input,...(suffix?{idempotency_key:crypto.randomUUID()}:{})});
+    assert.equal(native.status,403);assert.equal(native.value.code,'native_authority_refused');
+    assert.equal(remote.status,200);assert.equal(remote.result.isError,true);assert.equal(errorCode(remote),native.value.code);
+    denied.push({native:{status:native.status,body:native.value},remote:remote.result});
+    for(const value of [secret,credential,cookie])assert.ok(!JSON.stringify(remote).includes(value));
+   }
+   assert.deepEqual(denied[0],denied[1],'missing and out-of-scope records remain indistinguishable for '+name);
   }
-  assert.deepEqual(denied[0],denied[1],'missing and out-of-scope records remain indistinguishable');
+  assert.deepEqual(await h.get('workflows/'+allowed.id),frozen);assert.deepEqual(await h.get('audit'),history);
   current=result(await tool('crank.workflows.get',{workflow_id:allowed.id}));
   await h.post('team/'+member.id,{role:'viewer',workflow_ids:[allowed.id],connection_ids:[]});
   const afterRevocation=await h.get('audit');
@@ -129,6 +148,17 @@ export async function scopedErrorParity(harness) {
   assert.equal(invalidNative.status,403);assert.equal(invalidNative.value.code,'native_authority_refused');
   assert.equal(invalidRemote.status,200);assert.equal(invalidRemote.result.isError,true);assert.equal(errorCode(invalidRemote),invalidNative.value.code);
   for(const value of [secret,credential,cookie])assert.ok(!JSON.stringify(invalidRemote).includes(value));
+  for(const [path,name,args] of [
+   ['/api/crank/workflows','crank.workflows.create',{name:'Must not apply',graph:invalidGraph}],
+   ['/api/crank/workflows/'+allowed.id+'/validate','crank.workflows.validate',{workflow_id:allowed.id}],
+   ['/api/crank/workflows/'+allowed.id+'/duplicate','crank.workflows.duplicate',{workflow_id:allowed.id}],
+   ['/api/crank/custom-connectors/propose','crank.custom.propose',{openapi:{}}],
+  ]) {
+   const native=await h.send(path,args,cookie),remote=await tool(name,{...args,idempotency_key:crypto.randomUUID()});
+   assert.equal(native.status,403);assert.equal(native.value.code,'native_authority_refused');
+   assert.equal(remote.status,200);assert.equal(remote.result.isError,true);assert.equal(errorCode(remote),native.value.code);
+   for(const value of [secret,credential,cookie])assert.ok(!JSON.stringify(remote).includes(value));
+  }
   assert.deepEqual(await h.get('workflows/'+allowed.id),frozen);assert.deepEqual(await h.get('audit'),afterRevocation);
   assert.ok(history.some(row=>row.action==='workflow.draft'&&row.subject_id===allowed.id));
  } finally {await h.close()}

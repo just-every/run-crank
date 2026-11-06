@@ -6,7 +6,7 @@
   "toolchain": {
     "id": "runeditrun/edition-authoring",
     "version": "1.1.0",
-    "sha256": "b546ef04830f935ee2493a5bc08ef43a0f7d5905aeb8549fb75670c19890af99"
+    "sha256": "3f7b56f3ae1e70588fb35c49e75b639c2360ceed550182b9caf8adc33021abb8"
   },
   "components": [
     {
@@ -2972,7 +2972,7 @@
       "executable": false
     },
     "src/crank/agent-door/tool-workflows.ts": {
-      "sha256": "b9804cc359759f03acbb386973e2a2a4d43eff190cba727ec743a6a5cdd852cd",
+      "sha256": "30cfa8ade480748621214c5bf8a19b1c764e86e61b8b267c8c3c10da5e6c18b4",
       "executable": false
     },
     "src/crank/agent-door/tools.ts": {
@@ -6712,7 +6712,7 @@
       "executable": false
     },
     "tests/agent-door/error-parity.mjs": {
-      "sha256": "a654bb3ba06671c7df752e90b61495575d4d60765938255782b6475c18ef05f2",
+      "sha256": "474a5b6fece5af9d14be3180c22ae82a908e68011f4fea85484fbe0aead3e779",
       "executable": false
     },
     "tests/agent-door/fixtures.mjs": {
