@@ -1,3 +1,4 @@
+import { agentUsageView } from './agent-usage'
 import type { usageReport } from '../ops/usage'
 import type { readWorkflowEstimate } from '../ops/usage'
 import { action, esc, hidden, timestamp } from './document'
@@ -70,7 +71,7 @@ export function usageView(report: UsageReport, workflows: Workflow[]) {
     <h3>Budget notices</h3><ul>${report.notices.map(n => `<li>${esc(scopeLabel(n.scope, n.scope_id))} · ${esc(n.threshold)}% · recorded ${timestamp(n.created_at)}${n.delivered_at ? ` · delivered ${timestamp(n.delivered_at)}` : !n.active ? ' · restored inactive' : ' · delivery pending'}</li>`).join('') || '<li>No budget notices for this month.</li>'}</ul>
     <h3>Owner overage history</h3><ul>${report.allowances.map(a => `<li>${esc(scopeLabel(a.scope, a.scope_id))} · ${usd(a.usd)} · ${esc(a.reason)} · by ${esc(a.created_by)} · ${timestamp(a.created_at)}</li>`).join('') || '<li>No owner overages for this month.</li>'}</ul>
     <h3>Held work awaiting review</h3><ul>${report.holds.map(h => `<li><a href="/app/holds/${esc(h.id)}">Review held work</a> · ${esc(workflows.find(w => w.id === h.workflow_id)?.name ?? h.workflow_id)} · ${esc(h.source)} · ${timestamp(h.created_at)}</li>`).join('') || '<li>No open admission holds match this report.</li>'}</ul>
-  </section>${budgetControls(report, workflows, back)}`
+  </section>${agentUsageView(report.agent_usage)}${budgetControls(report, workflows, back)}`
 }
 
 export function workflowEstimateView(workflow: Workflow, estimate: Estimate) {

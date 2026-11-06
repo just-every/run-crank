@@ -1,4 +1,5 @@
 import { requireValue, stmt, type CrankEnv } from '../model'
+import { agentUsage } from './agent-usage'
 import { notify } from './notices'
 import { budgetRows, presentBudget, type BudgetScope } from './usage-budgets'
 import { readWorkflowEstimate } from './usage-estimates'
@@ -62,6 +63,7 @@ export async function usageReport(env: CrankEnv, query = new URLSearchParams()) 
     totals: { runs: reservations.length, estimated_usd: unitsUsd(estimated), observed_steps: observations.length, observed_requests: requests.length,
       provider_reported_usd: charges.length ? unitsUsd(sum(charges.map(row => row.usd_units))) : null, provider_reported_entries: charges.length,
       budget_accounted_usd: unitsUsd(sum(reservations.map(row => row.accounted_units))), forecast_usd: forecast(estimated, month) },
+    agent_usage: await agentUsage(env, month),
     workflows, observations, requests, reporting_errors: reportingErrors, provider_charges: charges.map(({ usd_units, ...row }) => ({ ...row, usd: unitsUsd(usd_units) })),
     allowances: (result[4].results as unknown as Allowance[]).map(({ usd_units, ...row }) => ({ ...row, usd: unitsUsd(usd_units) })),
     notices: result[5].results as unknown as Notice[],

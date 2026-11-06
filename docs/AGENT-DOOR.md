@@ -255,3 +255,35 @@ Ordinary health, setup and application requests do not construct Business or
 agent adapters. On door paths, native classification refusals use the shared
 `ToolRefusal` type; policy-unset and Pause preserve their machine codes while
 the native authority fence still prevents reads or effects.
+
+## Native monthly call reporting
+
+The owner reads native agent call reporting at `GET /api/crank/reports/usage?month=2026-11`
+or the Native agent calls panel in Operations. The selected UTC calendar month
+is inclusive at its start and exclusive at the next month's start. SQL
+aggregation covers all retained calls in that window independently of the
+200-row audit page. A sequence watermark excludes newly admitted requests from
+the report. Outcomes describe the retained current state of requests made in
+that month, including pending approvals and failures, rather than a historical
+snapshot of their state at month end.
+
+Each agent is identified by its stable agent ID and its latest retained audit
+name in the selected month. Revoking an agent does not relabel or erase that
+history. Request attempts include refusals and replays; original operations
+count distinct non-replay operation identities. Class counts are request
+counts, can overlap for multi-class calls, and show each class's actual policy
+decision with the retained outcome. Refusals without classification stay in
+the overall decision totals. Requests rejected before agent authentication
+have no attributable audit call and are excluded.
+
+These totals cover all native agent calls. Workflow and team filters continue
+to govern workflow budget accounting, and do not narrow native agent call
+reporting. Existing team billing access returns only its existing aggregate;
+agent credentials and non-billing viewers cannot read the owner's report.
+
+The admitted registry rejects provider-cost tools. Its native preparation and
+metadata calls establish neither money moved nor provider spend. Both remain
+Not reported, with null amounts in the API; an unknown cost is never zero.
+Workflow estimates, reported charges and budget accounting remain separate.
+This reporting slice does not complete BASE-AGENT-011 or authorize a broader
+tool registry, paid execution, spend-cap enforcement or Business Pause proof.
