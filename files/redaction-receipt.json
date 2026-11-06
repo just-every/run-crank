@@ -1,23 +1,7 @@
 {
   "status": "passed",
   "private_sign_in_links_excluded": true,
-  "files_sanitized": [
-    {
-      "file": "candidate-committed-instructions.txt",
-      "private_url_suffixes_removed": 0,
-      "private_markers_removed": 1
-    },
-    {
-      "file": "main-committed-instructions.txt",
-      "private_url_suffixes_removed": 0,
-      "private_markers_removed": 1
-    },
-    {
-      "file": "main-owner-decisions-dev-startup.log",
-      "private_url_suffixes_removed": 1,
-      "private_markers_removed": 0
-    }
-  ],
+  "files_sanitized": [],
   "credential_and_environment_files_selected": false,
   "runtime_secret_values_printed_in_packet": false
 }
