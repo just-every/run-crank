@@ -1,0 +1,61 @@
+COMMAND timeout 1200 env CRANK_EVIDENCE=/home/agent/rer-consolidation/work/sx-crank-f64-ci-triage-1-setup1/packet/main-artifacts node scripts/verify-ci.mjs owner-decisions
+PRELUDE set -euo pipefail; . /tmp/rer-f64-env.sh; cloud_run
+rer toolchain: node v24.19.0 pnpm 10.12.4 (pins 22.20.0 / 10.12.4)
+v22.20.0
+10.12.4
+/home/agent/.rer/toolchain/node-22.20.0/node_modules/node/bin/node
+> pnpm run verify:app
+
+> @automation/crank@0.1.0 verify:app /home/agent/rer-consolidation/work/sx-crank-f64-ci-triage-1-setup1/main
+> node scripts/verify-app.mjs
+
+> CRANK_EVIDENCE="$CRANK_EVIDENCE/recurring" node tests/recurring-browser.mjs
+▲ [WARNING] Proxy environment variables detected. We'll use your proxy for fetch requests.
+
+
+recurring browser width=1440 state=skills
+recurring browser width=1440 state=pinned-objective
+recurring browser width=1440 state=blocked-contact
+recurring browser width=1440 state=native-run
+recurring browser width=1440 state=adopted-next-run
+recurring browser width=1440 state=paused
+recurring browser width=1440 state=tool-revoked
+recurring browser width=1440 state=recurring-list
+recurring browser width=390 state=skills
+recurring browser width=390 state=pinned-objective
+recurring browser width=390 state=blocked-contact
+recurring browser width=390 state=native-run
+recurring browser width=390 state=adopted-next-run
+recurring browser width=390 state=paused
+recurring browser width=390 state=tool-revoked
+recurring browser width=390 state=recurring-list
+recurring-browser: PASS widths=1440,390 customer_sends=0 frozen_open_versions=true
+> CRANK_EVIDENCE="$CRANK_EVIDENCE/sibling" node tests/sibling-browser.mjs
+▲ [WARNING] Proxy environment variables detected. We'll use your proxy for fetch requests.
+
+
+Native Nook and Orbit scoped operations, readback and authority screens proved at 1440 and captured at 390
+Teams directory retained identities, exact outcomes, literal names and tooltips PASS; screens at 1440 and 390
+> CRANK_EVIDENCE="$CRANK_EVIDENCE/decision" node tests/decision-browser.mjs
+UX-001 1440: offline input retained; all decisions frozen; authoritative GET recovery; one approve and one committed-response-lost reject; no POST replay; legacy hidden-path rejection passed; bounded timeout passed.
+UX-001 390: offline input retained; all decisions frozen; authoritative GET recovery; one approve and one committed-response-lost reject; no POST replay; legacy hidden-path rejection passed.
+> CRANK_EVIDENCE="$CRANK_EVIDENCE/executor-schema" node tests/executor-schema-browser.mjs
+WORK-005 PASS: installed output declaration and succeeded/failed schema results at 1440/390; invalid nested amounts never continue. Remote executor network edge only is faked.
+> CRANK_EVIDENCE="$CRANK_EVIDENCE/digests" node tests/digest-browser.mjs
+▲ [WARNING] Proxy environment variables detected. We'll use your proxy for fetch requests.
+
+
+Digest release history and tooltips PASS at 1440 and 390
+> CRANK_EVIDENCE="$CRANK_EVIDENCE/subflows" node tests/run-notices-browser.mjs
+EXEC-003 installed notice history and tooltips PASS at 1440/390
+> CRANK_EVIDENCE="$CRANK_EVIDENCE/team" node tests/team-browser.mjs
+TEAM-001: scoped role selection, builder draft-test completion/revocation and owner handover passed at 1440 and 390.
+> CRANK_EVIDENCE="$CRANK_EVIDENCE/samples" node tests/sample-browser.mjs
+▲ [WARNING] Proxy environment variables detected. We'll use your proxy for fetch requests.
+
+
+1440 sample refresh contrast 17.10:1
+Retained sample screens and isolated step tests passed at 1440 and 390
+Retained sample and operational lookup screens passed at 1440 and 390
+
+PHASE_RECEIPT {"captured_dev_logs": ["/tmp/crank-decisions-I63KJ4/dev.log"], "command": ["timeout", "1200", "env", "CRANK_EVIDENCE=/home/agent/rer-consolidation/work/sx-crank-f64-ci-triage-1-setup1/packet/main-artifacts", "node", "scripts/verify-ci.mjs", "owner-decisions"], "cwd": "/home/agent/rer-consolidation/work/sx-crank-f64-ci-triage-1-setup1/main", "duration_seconds": 546.493, "exit": 0, "finished_utc": "2026-11-06T03:50:47.803634+00:00", "literal_wrapper_pid": 4210, "log_file": "main-owner-decisions.log", "phase": "main-owner-decisions", "shell_prelude": "set -euo pipefail; . /tmp/rer-f64-env.sh; cloud_run", "started_utc": "2026-11-06T03:41:41.310215+00:00", "time_limit_seconds": 1200}

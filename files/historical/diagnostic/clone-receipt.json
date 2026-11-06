@@ -1,0 +1,40 @@
+[
+  {
+    "phase": "candidate-clone",
+    "command": [
+      "git",
+      "clone",
+      "--depth",
+      "1",
+      "--filter=blob:none",
+      "--single-branch",
+      "--branch",
+      "cloud/sx-crank-c-f64-rebase-2b7186c1c3ef673f610070a9c0b2a3a34f43b310",
+      "https://github.com/just-every/run-crank.git",
+      "/home/agent/rer-consolidation/work/sx-crank-f64-ci-triage-1-setup1/candidate"
+    ],
+    "exit": 0,
+    "duration_seconds": 15.987,
+    "head": "2b7186c1c3ef673f610070a9c0b2a3a34f43b310",
+    "git_status": ""
+  },
+  {
+    "phase": "main-clone",
+    "command": [
+      "git",
+      "clone",
+      "--depth",
+      "1",
+      "--filter=blob:none",
+      "--single-branch",
+      "--branch",
+      "main",
+      "https://github.com/just-every/run-crank.git",
+      "/home/agent/rer-consolidation/work/sx-crank-f64-ci-triage-1-setup1/main"
+    ],
+    "exit": 0,
+    "duration_seconds": 16.082,
+    "head": "e2c146dc38eb64e685cf01d2c56e798404b3936e",
+    "git_status": ""
+  }
+]

@@ -1,0 +1,25 @@
+{
+  "head": "2b7186c1c3ef673f610070a9c0b2a3a34f43b310",
+  "job": 127671299542,
+  "reproduced": false,
+  "required_command": [
+    "timeout",
+    "1200",
+    "env",
+    "CRANK_EVIDENCE=/home/agent/rer-consolidation/work/sx-crank-f64-ci-repair-1/packet/before-artifacts",
+    "node",
+    "scripts/verify-ci.mjs",
+    "owner-decisions"
+  ],
+  "test": "tests/decision-browser.mjs: rer dev --foreground startup",
+  "nonzeroexit": 1,
+  "quotedfailure": "Local migrations, owner or local authentication/mail settings are missing. Run rer setup first.",
+  "duration_seconds": 195.183,
+  "required_json_load_failure_reached_by_shard": false,
+  "setup_json_load_failure_observed": true,
+  "probe_json_load_failure_observed": true,
+  "after_repair_executed": false,
+  "host": "Debian 13 x86_64; historical CI Ubuntu 24.04; no host equivalence claimed",
+  "runtime": "Node 22.20.0 / pnpm 10.12.4 / Playwright Chromium headless shell revision 1243",
+  "build_exit": 0
+}

@@ -1,0 +1,32 @@
+[
+  {
+    "path": "src/crank/agent-door/index.ts",
+    "unchanged": true,
+    "sha256": "844d0683574929dc7d1cc98b6f2859f1486a786337bebd4094a6d2b510db6738"
+  },
+  {
+    "path": "vite.config.ts",
+    "unchanged": true,
+    "sha256": "8b20eacac4d6971222866f9515fbefa2185970bc504606603a4641e60a913b12"
+  },
+  {
+    "path": "verification.json",
+    "unchanged": true,
+    "sha256": "eab798a0a366bbea43e07a026ea256f71913f4b3ed37e8bc270c733a0b9a8ef1"
+  },
+  {
+    "path": "scripts/verify-ci.mjs",
+    "unchanged": true,
+    "sha256": "c9f9bb71880c632028a1cab9fb484e454767c6f47eeb61bc7a25bd1e1a3f909b"
+  },
+  {
+    "path": "scripts/verify-app.mjs",
+    "unchanged": true,
+    "sha256": "53d32df18fc683c843d980a06e5e92b4c4029af9e307027307678ea28cf888e4"
+  },
+  {
+    "path": "tests/decision-browser.mjs",
+    "unchanged": true,
+    "sha256": "6f91f5b701e9238fcaa48327956e2ca94c79abb88e5317ef97046c5bc51a00a6"
+  }
+]

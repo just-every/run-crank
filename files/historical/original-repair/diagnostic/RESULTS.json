@@ -1,0 +1,361 @@
+{
+  "tag": "sx-crank-f64-ci-triage-1-setup1",
+  "result": "TRIAGE COMPLETE",
+  "classification": "candidate-only reproduction of introduced dev Worker JSON module-load failure",
+  "candidate_head": "2b7186c1c3ef673f610070a9c0b2a3a34f43b310",
+  "fresh_main_head": "e2c146dc38eb64e685cf01d2c56e798404b3936e",
+  "historical_source_branch": "cloud/sx-crank-c-f64-rebase-2b7186c1c3ef673f610070a9c0b2a3a34f43b310",
+  "product_commits": 0,
+  "product_pushes": 0,
+  "prs": 0,
+  "ci_reruns_or_dispatches": 0,
+  "candidate_original_failure_reached": true,
+  "candidate_decision_ui_assertions_reached": false,
+  "main_original_failure_reached": false,
+  "main_original_decision_assertions_passed_at": [
+    1440,
+    390
+  ],
+  "main_full_owner_decisions_exit": 0,
+  "phase_results": [
+    {
+      "phase": "candidate-frozen-deps",
+      "cwd": "/home/agent/rer-consolidation/work/sx-crank-f64-ci-triage-1-setup1/candidate",
+      "command": [
+        "timeout",
+        "1200",
+        "pnpm",
+        "install",
+        "--frozen-lockfile"
+      ],
+      "shell_prelude": "set -euo pipefail; . /tmp/rer-f64-env.sh; cloud_run",
+      "started_utc": "2026-11-06T03:34:21.335605+00:00",
+      "time_limit_seconds": 1200,
+      "literal_wrapper_pid": 867,
+      "exit": 0,
+      "duration_seconds": 6.432,
+      "finished_utc": "2026-11-06T03:34:27.767616+00:00",
+      "log_file": "candidate-frozen-deps.log"
+    },
+    {
+      "phase": "candidate-committed-deps",
+      "cwd": "/home/agent/rer-consolidation/work/sx-crank-f64-ci-triage-1-setup1/candidate",
+      "command": [
+        "timeout",
+        "1200",
+        "pnpm",
+        "run",
+        "deps"
+      ],
+      "shell_prelude": "set -euo pipefail; . /tmp/rer-f64-env.sh; cloud_run",
+      "started_utc": "2026-11-06T03:34:40.895999+00:00",
+      "time_limit_seconds": 1200,
+      "literal_wrapper_pid": 983,
+      "exit": 0,
+      "duration_seconds": 5.175,
+      "finished_utc": "2026-11-06T03:34:46.071122+00:00",
+      "log_file": "candidate-committed-deps.log"
+    },
+    {
+      "phase": "candidate-gateway-deps",
+      "cwd": "/home/agent/rer-consolidation/work/sx-crank-f64-ci-triage-1-setup1/candidate",
+      "command": [
+        "timeout",
+        "1200",
+        "npm",
+        "ci",
+        "--prefix",
+        "gateways/node",
+        "--ignore-scripts"
+      ],
+      "shell_prelude": "set -euo pipefail; . /tmp/rer-f64-env.sh; cloud_run",
+      "started_utc": "2026-11-06T03:35:10.505208+00:00",
+      "time_limit_seconds": 1200,
+      "literal_wrapper_pid": 1175,
+      "exit": 0,
+      "duration_seconds": 3.837,
+      "finished_utc": "2026-11-06T03:35:14.341945+00:00",
+      "log_file": "candidate-gateway-deps.log"
+    },
+    {
+      "phase": "candidate-chromium-install",
+      "cwd": "/home/agent/rer-consolidation/work/sx-crank-f64-ci-triage-1-setup1/candidate",
+      "command": [
+        "timeout",
+        "1200",
+        "pnpm",
+        "exec",
+        "playwright",
+        "install",
+        "chromium"
+      ],
+      "shell_prelude": "set -euo pipefail; . /tmp/rer-f64-env.sh; cloud_run",
+      "started_utc": "2026-11-06T03:35:24.850155+00:00",
+      "time_limit_seconds": 1200,
+      "literal_wrapper_pid": 1254,
+      "exit": 0,
+      "duration_seconds": 19.101,
+      "finished_utc": "2026-11-06T03:35:43.951667+00:00",
+      "log_file": "candidate-chromium-install.log"
+    },
+    {
+      "phase": "candidate-chromium-probe",
+      "cwd": "/home/agent/rer-consolidation/work/sx-crank-f64-ci-triage-1-setup1/candidate",
+      "command": [
+        "timeout",
+        "1200",
+        "env",
+        "DEBUG=pw:browser",
+        "node",
+        "--input-type=module",
+        "-e",
+        "import { chromium } from \"@playwright/test\"; import { access } from \"node:fs/promises\"; const executable=chromium.executablePath(); await access(executable); console.log(JSON.stringify({executable,probe:\"launch-close only\"})); const browser=await chromium.launch({headless:true}); console.log(JSON.stringify({version:browser.version()})); await browser.close();"
+      ],
+      "shell_prelude": "set -euo pipefail; . /tmp/rer-f64-env.sh; cloud_run",
+      "started_utc": "2026-11-06T03:35:56.110786+00:00",
+      "time_limit_seconds": 1200,
+      "literal_wrapper_pid": 1395,
+      "exit": 0,
+      "duration_seconds": 1.876,
+      "finished_utc": "2026-11-06T03:35:57.987299+00:00",
+      "log_file": "candidate-chromium-probe.log"
+    },
+    {
+      "phase": "candidate-build",
+      "cwd": "/home/agent/rer-consolidation/work/sx-crank-f64-ci-triage-1-setup1/candidate",
+      "command": [
+        "timeout",
+        "1200",
+        "node",
+        "scripts/verify-ci.mjs",
+        "--build"
+      ],
+      "shell_prelude": "set -euo pipefail; . /tmp/rer-f64-env.sh; cloud_run",
+      "started_utc": "2026-11-06T03:37:16.895283+00:00",
+      "time_limit_seconds": 1200,
+      "literal_wrapper_pid": 2061,
+      "exit": 0,
+      "duration_seconds": 15.98,
+      "finished_utc": "2026-11-06T03:37:32.874871+00:00",
+      "log_file": "candidate-build.log"
+    },
+    {
+      "phase": "candidate-owner-decisions",
+      "cwd": "/home/agent/rer-consolidation/work/sx-crank-f64-ci-triage-1-setup1/candidate",
+      "command": [
+        "timeout",
+        "1200",
+        "env",
+        "CRANK_EVIDENCE=/home/agent/rer-consolidation/work/sx-crank-f64-ci-triage-1-setup1/packet/candidate-artifacts",
+        "node",
+        "scripts/verify-ci.mjs",
+        "owner-decisions"
+      ],
+      "shell_prelude": "set -euo pipefail; . /tmp/rer-f64-env.sh; cloud_run",
+      "started_utc": "2026-11-06T03:37:51.944836+00:00",
+      "time_limit_seconds": 1200,
+      "literal_wrapper_pid": 2434,
+      "captured_dev_logs": [
+        "/tmp/crank-decisions-nUjft1/dev.log"
+      ],
+      "exit": 1,
+      "duration_seconds": 212.371,
+      "finished_utc": "2026-11-06T03:41:24.315667+00:00",
+      "log_file": "candidate-owner-decisions.log"
+    },
+    {
+      "phase": "main-frozen-deps",
+      "cwd": "/home/agent/rer-consolidation/work/sx-crank-f64-ci-triage-1-setup1/main",
+      "command": [
+        "timeout",
+        "1200",
+        "pnpm",
+        "install",
+        "--frozen-lockfile"
+      ],
+      "shell_prelude": "set -euo pipefail; . /tmp/rer-f64-env.sh; cloud_run",
+      "started_utc": "2026-11-06T03:36:02.363430+00:00",
+      "time_limit_seconds": 1200,
+      "literal_wrapper_pid": 1516,
+      "exit": 0,
+      "duration_seconds": 8.558,
+      "finished_utc": "2026-11-06T03:36:10.921066+00:00",
+      "log_file": "main-frozen-deps.log"
+    },
+    {
+      "phase": "main-committed-deps",
+      "cwd": "/home/agent/rer-consolidation/work/sx-crank-f64-ci-triage-1-setup1/main",
+      "command": [
+        "timeout",
+        "1200",
+        "pnpm",
+        "run",
+        "deps"
+      ],
+      "shell_prelude": "set -euo pipefail; . /tmp/rer-f64-env.sh; cloud_run",
+      "started_utc": "2026-11-06T03:36:23.542697+00:00",
+      "time_limit_seconds": 1200,
+      "literal_wrapper_pid": 1612,
+      "exit": 0,
+      "duration_seconds": 5.412,
+      "finished_utc": "2026-11-06T03:36:28.954462+00:00",
+      "log_file": "main-committed-deps.log"
+    },
+    {
+      "phase": "main-gateway-deps",
+      "cwd": "/home/agent/rer-consolidation/work/sx-crank-f64-ci-triage-1-setup1/main",
+      "command": [
+        "timeout",
+        "1200",
+        "npm",
+        "ci",
+        "--prefix",
+        "gateways/node",
+        "--ignore-scripts"
+      ],
+      "shell_prelude": "set -euo pipefail; . /tmp/rer-f64-env.sh; cloud_run",
+      "started_utc": "2026-11-06T03:36:34.478431+00:00",
+      "time_limit_seconds": 1200,
+      "literal_wrapper_pid": 1742,
+      "exit": 0,
+      "duration_seconds": 2.987,
+      "finished_utc": "2026-11-06T03:36:37.465406+00:00",
+      "log_file": "main-gateway-deps.log"
+    },
+    {
+      "phase": "main-chromium-install",
+      "cwd": "/home/agent/rer-consolidation/work/sx-crank-f64-ci-triage-1-setup1/main",
+      "command": [
+        "timeout",
+        "1200",
+        "pnpm",
+        "exec",
+        "playwright",
+        "install",
+        "chromium"
+      ],
+      "shell_prelude": "set -euo pipefail; . /tmp/rer-f64-env.sh; cloud_run",
+      "started_utc": "2026-11-06T03:36:46.672483+00:00",
+      "time_limit_seconds": 1200,
+      "literal_wrapper_pid": 1821,
+      "exit": 0,
+      "duration_seconds": 1.486,
+      "finished_utc": "2026-11-06T03:36:48.158741+00:00",
+      "log_file": "main-chromium-install.log"
+    },
+    {
+      "phase": "main-chromium-probe",
+      "cwd": "/home/agent/rer-consolidation/work/sx-crank-f64-ci-triage-1-setup1/main",
+      "command": [
+        "timeout",
+        "1200",
+        "env",
+        "DEBUG=pw:browser",
+        "node",
+        "--input-type=module",
+        "-e",
+        "import { chromium } from \"@playwright/test\"; import { access } from \"node:fs/promises\"; const executable=chromium.executablePath(); await access(executable); console.log(JSON.stringify({executable,probe:\"launch-close only\"})); const browser=await chromium.launch({headless:true}); console.log(JSON.stringify({version:browser.version()})); await browser.close();"
+      ],
+      "shell_prelude": "set -euo pipefail; . /tmp/rer-f64-env.sh; cloud_run",
+      "started_utc": "2026-11-06T03:37:01.301156+00:00",
+      "time_limit_seconds": 1200,
+      "literal_wrapper_pid": 1936,
+      "exit": 0,
+      "duration_seconds": 1.243,
+      "finished_utc": "2026-11-06T03:37:02.543942+00:00",
+      "log_file": "main-chromium-probe.log"
+    },
+    {
+      "phase": "main-build",
+      "cwd": "/home/agent/rer-consolidation/work/sx-crank-f64-ci-triage-1-setup1/main",
+      "command": [
+        "timeout",
+        "1200",
+        "node",
+        "scripts/verify-ci.mjs",
+        "--build"
+      ],
+      "shell_prelude": "set -euo pipefail; . /tmp/rer-f64-env.sh; cloud_run",
+      "started_utc": "2026-11-06T03:41:24.383366+00:00",
+      "time_limit_seconds": 1200,
+      "literal_wrapper_pid": 3839,
+      "captured_dev_logs": [],
+      "exit": 0,
+      "duration_seconds": 16.899,
+      "finished_utc": "2026-11-06T03:41:41.282188+00:00",
+      "log_file": "main-build.log"
+    },
+    {
+      "phase": "main-owner-decisions",
+      "cwd": "/home/agent/rer-consolidation/work/sx-crank-f64-ci-triage-1-setup1/main",
+      "command": [
+        "timeout",
+        "1200",
+        "env",
+        "CRANK_EVIDENCE=/home/agent/rer-consolidation/work/sx-crank-f64-ci-triage-1-setup1/packet/main-artifacts",
+        "node",
+        "scripts/verify-ci.mjs",
+        "owner-decisions"
+      ],
+      "shell_prelude": "set -euo pipefail; . /tmp/rer-f64-env.sh; cloud_run",
+      "started_utc": "2026-11-06T03:41:41.310215+00:00",
+      "time_limit_seconds": 1200,
+      "literal_wrapper_pid": 4210,
+      "captured_dev_logs": [
+        "/tmp/crank-decisions-I63KJ4/dev.log"
+      ],
+      "exit": 0,
+      "duration_seconds": 546.493,
+      "finished_utc": "2026-11-06T03:50:47.803634+00:00",
+      "log_file": "main-owner-decisions.log"
+    }
+  ],
+  "clauses_changed": [],
+  "before_counts": [
+    32,
+    50,
+    17
+  ],
+  "after_counts": [
+    32,
+    50,
+    17
+  ],
+  "BASE-AGENT-013_before": "PARTIAL",
+  "BASE-AGENT-013_after": "PARTIAL",
+  "holds_changed": false,
+  "github_calls": [
+    {
+      "call": 1,
+      "command": [
+        "gh",
+        "api",
+        "repos/just-every/run-crank/actions/runs/42150056848/jobs?per_page=100",
+        "--jq",
+        ".jobs[] | {id,name,status,conclusion,head_sha,html_url,steps:[.steps[]|select(.conclusion==\"failure\")|{name,conclusion}]}"
+      ],
+      "exit": 0,
+      "utc": "2026-11-06T03:35:44.353739+00:00",
+      "log": "historical-jobs-meta.log"
+    },
+    {
+      "call": 2,
+      "command": [
+        "gh",
+        "run",
+        "view",
+        "42150056848",
+        "--repo",
+        "just-every/run-crank",
+        "--job",
+        "127671299542",
+        "--log-failed"
+      ],
+      "exit": 0,
+      "utc": "2026-11-06T03:36:06.897630+00:00",
+      "log": "historical-owner-decisions-failed.log"
+    }
+  ],
+  "no_additional_pair_or_suite_run": true,
+  "report_utc": "2026-11-06T03:51:15.174625+00:00"
+}

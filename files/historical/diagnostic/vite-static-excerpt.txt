@@ -1,0 +1,73 @@
+path=/home/agent/rer-consolidation/work/sx-crank-f64-ci-triage-1-setup1/candidate/node_modules/.pnpm/vite@8.2.2_@types+node@22.18.6_esbuild@0.28.1_jiti@2.7.0/node_modules/vite/dist/node/chunks/node.js
+sha256=f64038f08022030b77efee87b6baa81933a7b77d820aaa64bc3262fda44d80b0
+
+Vite 8.2.2 installed source lines 20475-20514
+20475: function isFileServingAllowed(configOrUrl, urlOrServer) {
+20476: 	const config = typeof urlOrServer === "string" ? configOrUrl : urlOrServer.config;
+20477: 	const url = typeof urlOrServer === "string" ? urlOrServer : configOrUrl;
+20478: 	if (!config.server.fs.strict) return true;
+20479: 	return isFileLoadingAllowed(config, fsPathFromUrl(url));
+20480: }
+20481: /**
+20482: * Warning: parameters are not validated, only works with normalized absolute paths
+20483: *
+20484: * @param targetPath - normalized absolute path
+20485: * @param filePath - normalized absolute path
+20486: */
+20487: function isFileInTargetPath(targetPath, filePath) {
+20488: 	return isSameFilePath(targetPath, filePath) || isParentDirectory(targetPath, filePath);
+20489: }
+20490: const windowsDriveRE = /^[A-Z]:/i;
+20491: const windowsShortNameSegmentRE = /^[^~.]{1,6}~\d+(?:\.[^~.]{0,3})?$/;
+20492: /**
+20493: * Warning: parameters are not validated, only works with normalized absolute paths
+20494: */
+20495: function looksLikeWindowsShortNamePath(filePath) {
+20496: 	return filePath.includes("~") && filePath.split("/").some((segment) => windowsShortNameSegmentRE.test(segment));
+20497: }
+20498: /**
+20499: * Warning: parameters are not validated, only works with normalized absolute paths
+20500: */
+20501: function isFileLoadingAllowed(config, filePath) {
+20502: 	const { fs } = config.server;
+20503: 	if (!fs.strict) return true;
+20504: 	if (isWindows && looksLikeWindowsShortNamePath(filePath)) return false;
+20505: 	if ((isWindows && windowsDriveRE.test(filePath) ? filePath.slice(2) : filePath).includes(":")) return false;
+20506: 	const filePathWithoutTrailingSlash = filePath.endsWith("/") ? filePath.slice(0, -1) : filePath;
+20507: 	if (config.fsDenyGlob(filePathWithoutTrailingSlash)) return false;
+20508: 	if (config.safeModulePaths.has(filePath)) return true;
+20509: 	if (fs.allow.some((uri) => isFileInTargetPath(uri, filePath))) return true;
+20510: 	return false;
+20511: }
+20512: function checkLoadingAccess(config, path) {
+20513: 	if (isFileLoadingAllowed(config, slash(path))) return "allowed";
+20514: 	if (isFileReadable(path)) return "denied";
+Vite 8.2.2 installed source lines 28146-28160
+28146: 					if ((isExternalUrl(specifier) && !specifier.startsWith("file://") || isDataUrl(specifier)) && !matchAlias(specifier)) return;
+28147: 					if (ssr && !matchAlias(specifier)) {
+28148: 						if (shouldExternalize(environment, specifier, importer)) return;
+28149: 						if (isBuiltin(environment.config.resolve.builtins, specifier)) return;
+28150: 					}
+28151: 					if (specifier === clientPublicPath) return;
+28152: 					if (specifier[0] === "/" && !(config.assetsInclude(cleanUrl(specifier)) || urlRE$1.test(specifier)) && checkPublicFile(specifier, config)) throw new Error(`Cannot import non-asset file ${specifier} which is inside /public. JS/CSS files inside /public are copied as-is on build and can only be referenced via <script src> or <link href> in html. If you want to get the URL of that file, use ${injectQuery(specifier, "url")} instead.`);
+28153: 					let [url, resolvedId] = await normalizeUrl(specifier, start);
+28154: 					resolvedId = resolvedId || url;
+28155: 					config.safeModulePaths.add(fsPathFromUrl(stripBase(url, base)));
+28156: 					if (url !== specifier) {
+28157: 						let rewriteDone = false;
+28158: 						if (!(depsOptimizer?.isOptimizedDepFile(importer) && specifier[0] === ".") && depsOptimizer?.isOptimizedDepFile(resolvedId) && !optimizedDepChunkRE.test(resolvedId)) {
+28159: 							const file = cleanUrl(resolvedId);
+28160: 							const depInfo = optimizedDepInfoFromFile(depsOptimizer.metadata, file);
+Vite 8.2.2 installed source lines 35517-35528
+35517: 		const resolveEntries = async () => {
+35518: 			const resolvedEntries = await Promise.all(entries.map((entry) => this.pluginContainer.resolveId(entry, void 0, {
+35519: 				isEntry: true,
+35520: 				scan: true
+35521: 			})));
+35522: 			for (const resolved of resolvedEntries) if (resolved && !resolved.external) {
+35523: 				const resolvedId = cleanUrl(resolved.id);
+35524: 				if (path.isAbsolute(resolvedId)) this.getTopLevelConfig().safeModulePaths.add(resolvedId);
+35525: 			}
+35526: 		};
+35527: 		if (input == null) await resolveEntries().catch(() => {});
+35528: 		else await resolveEntries();

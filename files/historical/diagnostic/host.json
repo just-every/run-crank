@@ -1,0 +1,10 @@
+{
+  "admitted_utc": "2026-11-06T03:30:48.308921+00:00",
+  "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+  "machine": "x86_64",
+  "os_release": "PRETTY_NAME=\"Debian GNU/Linux 13 (trixie)\"\nNAME=\"Debian GNU/Linux\"\nVERSION_ID=\"13\"\nVERSION=\"13 (trixie)\"\nVERSION_CODENAME=trixie\nDEBIAN_VERSION_FULL=13.6\nID=debian\nHOME_URL=\"https://www.debian.org/\"\nSUPPORT_URL=\"https://www.debian.org/support\"\nBUG_REPORT_URL=\"https://bugs.debian.org/\"\n",
+  "owned_server_pids_at_start": [],
+  "host_difference_limitation": "Historical Ubuntu 24.04; compare recorded current OS.",
+  "historical_run": 42150056848,
+  "historical_failed_job": 127671299542
+}

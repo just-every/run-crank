@@ -1,0 +1,22 @@
+{
+  "phase": "candidate-chromium-probe",
+  "cwd": "/home/agent/rer-consolidation/work/sx-crank-f64-ci-triage-1-setup1/candidate",
+  "command": [
+    "timeout",
+    "1200",
+    "env",
+    "DEBUG=pw:browser",
+    "node",
+    "--input-type=module",
+    "-e",
+    "import { chromium } from \"@playwright/test\"; import { access } from \"node:fs/promises\"; const executable=chromium.executablePath(); await access(executable); console.log(JSON.stringify({executable,probe:\"launch-close only\"})); const browser=await chromium.launch({headless:true}); console.log(JSON.stringify({version:browser.version()})); await browser.close();"
+  ],
+  "shell_prelude": "set -euo pipefail; . /tmp/rer-f64-env.sh; cloud_run",
+  "started_utc": "2026-11-06T03:35:56.110786+00:00",
+  "time_limit_seconds": 1200,
+  "literal_wrapper_pid": 1395,
+  "exit": 0,
+  "duration_seconds": 1.876,
+  "finished_utc": "2026-11-06T03:35:57.987299+00:00",
+  "log_file": "candidate-chromium-probe.log"
+}

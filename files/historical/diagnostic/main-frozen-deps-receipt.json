@@ -1,0 +1,19 @@
+{
+  "phase": "main-frozen-deps",
+  "cwd": "/home/agent/rer-consolidation/work/sx-crank-f64-ci-triage-1-setup1/main",
+  "command": [
+    "timeout",
+    "1200",
+    "pnpm",
+    "install",
+    "--frozen-lockfile"
+  ],
+  "shell_prelude": "set -euo pipefail; . /tmp/rer-f64-env.sh; cloud_run",
+  "started_utc": "2026-11-06T03:36:02.363430+00:00",
+  "time_limit_seconds": 1200,
+  "literal_wrapper_pid": 1516,
+  "exit": 0,
+  "duration_seconds": 8.558,
+  "finished_utc": "2026-11-06T03:36:10.921066+00:00",
+  "log_file": "main-frozen-deps.log"
+}

@@ -1,0 +1,22 @@
+{
+  "phase": "setup-gateway-deps",
+  "cwd": "/home/agent/rer-consolidation/work/sx-crank-f64-ci-repair-1-prep1/run-crank",
+  "command": [
+    "timeout",
+    "1200",
+    "npm",
+    "ci",
+    "--prefix",
+    "gateways/node",
+    "--ignore-scripts"
+  ],
+  "shell_prelude": "set -euo pipefail; . /tmp/rer-f64-env.sh; cloud_run",
+  "started_utc": "2026-11-06T04:56:25.464411+00:00",
+  "time_limit_seconds": 1200,
+  "literal_wrapper_pid": 2145,
+  "captured_dev_logs": [],
+  "exit": 0,
+  "duration_seconds": 2.609,
+  "finished_utc": "2026-11-06T04:56:28.073943+00:00",
+  "log_file": "setup-gateway-deps.log"
+}

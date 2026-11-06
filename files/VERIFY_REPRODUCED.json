@@ -1,0 +1,28 @@
+{
+  "head": "2b7186c1c3ef673f610070a9c0b2a3a34f43b310",
+  "job": 127671299542,
+  "historical_run": 42150056848,
+  "reproduced": false,
+  "required_command": [
+    "timeout",
+    "1200",
+    "env",
+    "CRANK_EVIDENCE=/home/agent/rer-consolidation/work/sx-crank-f64-ci-repair-1-prep1/packet/before-artifacts",
+    "node",
+    "scripts/verify-ci.mjs",
+    "owner-decisions"
+  ],
+  "test": "tests/recurring-browser.mjs:31:10 (shot), called from :62:86; 390 recurring-list",
+  "nonzeroexit": 1,
+  "quotedfailure": "AssertionError [ERR_ASSERTION]: 390 recurring-list overflow",
+  "duration_seconds": 28.755,
+  "all_exact_prerequisites_passed": true,
+  "required_json_load_failure_reached_by_shard": false,
+  "decision_browser_reached": false,
+  "dev_worker_started": false,
+  "after_repair_executed": false,
+  "product_edit": false,
+  "host": "Debian 13 x86_64; historical CI Ubuntu 24.04; no host equivalence claimed",
+  "runtime": "Node 22.20.0 / pnpm 10.12.4 / default Playwright Chromium headless shell revision 1243, version 153.0.8010.12",
+  "build_exit": 0
+}

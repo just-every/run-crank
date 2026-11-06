@@ -1,0 +1,25 @@
+{
+  "2b7186c1c3ef673f610070a9c0b2a3a34f43b310": {
+    "CONTRACT.md": "0dd647b27f39742fc4eb4c3b83cde9acb120355e",
+    "ACCEPTANCE.md": "4fc2f34d3040a1ce48f2fe6abbb19626b8ae1b57",
+    "docs/CLAIMS.md": "dee7b4e243fee8df5a492f3cfb9cfe00e5283a46",
+    "agent-surface.json": "3f02c46a5c0864094b1be62537d1a5835b1cbe72",
+    "src/crank/agent-door/index.ts": "d9118264078a3636b973feaea3fdb3fa43c5ccbd",
+    "src/crank/agent-door/documentation.ts": "bbfb6f43d12315baacd680a3166b6ff39afa0297",
+    "src/crank/agent-door/tools.ts": "df97e5dd087cd44ee5a1e270688ff0f647dfd721",
+    "vite.config.ts": "601392200c32a38307c4ba0157387d1624a5a25f",
+    "verification.json": "9b779eaf97073a43eba8a41e55620cfa7604a9ef",
+    "tests/decision-browser.mjs": "0395a55e550012f821f16e7b3752422042ccf0c0"
+  },
+  "origin/main": {
+    "CONTRACT.md": "c63147ef599e9b21724a6882278098c11e1429f8",
+    "ACCEPTANCE.md": "3bebe6ae2dab9ff3b6f63ba7c70f1eaecd12c322",
+    "docs/CLAIMS.md": "8625e581a0b4845fa78adf0207c6b3eca205ebca",
+    "agent-surface.json": "91558cca318752b85689b3fdd66a7667ca49da75",
+    "src/crank/agent-door/index.ts": "e4c29123db761492b43054616b7cb99dec3678ee",
+    "src/crank/agent-door/tools.ts": "3439ec1729737c6302514079096acde4b86eb3d4",
+    "vite.config.ts": "601392200c32a38307c4ba0157387d1624a5a25f",
+    "verification.json": "9b779eaf97073a43eba8a41e55620cfa7604a9ef",
+    "tests/decision-browser.mjs": "0395a55e550012f821f16e7b3752422042ccf0c0"
+  }
+}

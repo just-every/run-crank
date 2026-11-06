@@ -1,0 +1,10 @@
+COMMAND timeout 1200 npm ci --prefix gateways/node --ignore-scripts
+[runtime binding line omitted]
+rer toolchain: node v24.19.0 pnpm 10.12.4 (pins 22.20.0 / 10.12.4)
+v22.20.0
+10.12.4
+/home/agent/.rer/toolchain/node-22.20.0/node_modules/node/bin/node
+
+added 108 packages in 4s
+
+[runtime binding line omitted]

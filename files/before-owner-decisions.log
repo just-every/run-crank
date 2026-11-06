@@ -1,0 +1,99 @@
+COMMAND timeout 1200 env CRANK_EVIDENCE=/home/agent/rer-consolidation/work/sx-crank-f64-ci-repair-1-prep1/packet/before-artifacts node scripts/verify-ci.mjs owner-decisions
+PRELUDE set -euo pipefail; . /tmp/rer-f64-env.sh; cloud_run
+rer toolchain: node v24.19.0 pnpm 10.12.4 (pins 22.20.0 / 10.12.4)
+v22.20.0
+10.12.4
+/home/agent/.rer/toolchain/node-22.20.0/node_modules/node/bin/node
+> pnpm run verify:app
+
+> @automation/crank@0.1.0 verify:app /home/agent/rer-consolidation/work/sx-crank-f64-ci-repair-1-prep1/run-crank
+> node scripts/verify-app.mjs
+
+> CRANK_EVIDENCE="$CRANK_EVIDENCE/recurring" node tests/recurring-browser.mjs
+▲ [WARNING] Proxy environment variables detected. We'll use your proxy for fetch requests.
+
+
+recurring browser width=1440 state=skills
+recurring browser width=1440 state=pinned-objective
+recurring browser width=1440 state=blocked-contact
+recurring browser width=1440 state=native-run
+recurring browser width=1440 state=adopted-next-run
+recurring browser width=1440 state=paused
+recurring browser width=1440 state=tool-revoked
+recurring browser width=1440 state=recurring-list
+recurring browser width=390 state=skills
+recurring browser width=390 state=pinned-objective
+recurring browser width=390 state=blocked-contact
+recurring browser width=390 state=native-run
+recurring browser width=390 state=adopted-next-run
+recurring browser width=390 state=paused
+recurring browser width=390 state=tool-revoked
+screen path: /app/recurring Crank
+Skills
+/
+Recurring invoice skills
+HO
+Flows
+Runs
+Connections
+Approvals
+Operations
+Skills
+Move in
+Access
+Data
+Inbox
+Follow-ups
+Account
+Recurring invoice skills
+Recurring invoice objectives
+
+Pin a reusable skill and an immutable objective to an existing owner-issued execution grant. Each live check uses the ordinary workflow engine, connection permissions and cost controls.
+
+External customer contact is unavailable in this release. An open invoice pauses visibly for the owner; Crank never reports a message as sent. Paid, closed and void invoices stop.
+
+Review execution grants · Review workflow templates
+
+Harbour Workshop — wholesale equipment invoice and outstanding maintenance
+Paused
+
+Harbour Workshop overdue invoice skill · version 3 · invoice synthetic-crank-390 · every 60 elapsed minutes
+
+Next eligible live check Nov 7, 2026, 4:59 AM · tool authority permanently revoked.
+
+Harbour Workshop — wholesale equipment invoice and outstanding maintenance
+Paused
+
+Harbour Workshop overdue invoice skill · version 3 · invoice synthetic-crank-1440 · every 60 elapsed minutes
+
+Next eligible live check Nov 7, 2026, 4:59 AM · tool authority permanently revoked.
+
+Create a recurring objective
+Objective name
+Exact skill version
+Choose a published skill version
+Harbour Workshop overdue invoice skill · version 3 · bbfe7b9a-54ea-4e1c-b9e3-e9cad315c08c
+Harbour Workshop overdue invoice skill · version 2 · 9fa41056-3b38-4ea8-a9be-a6b3b82c8756
+Harbour Workshop overdue invoice skill · version 1 · 6402e0fa-2ae5-47ee-89fd-27874e7cc761
+Harbour Workshop overdue invoice skill · version 3 · af5568c7-7069-4b94-b52d-994e9d6df20d
+Harbour Workshop overdue invoice skill · version 2 · 3fe9a949-9dd5-4924-8e43-4657197dc88e
+Harbour Workshop overdue invoice skill · version 1 · b48da845-a9a6-4456-8cc1-eb923f
+node:internal/modules/run_main:123
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: 390 recurring-list overflow
+    at shot (file:///home/agent/rer-consolidation/work/sx-crank-f64-ci-repair-1-prep1/run-crank/tests/recurring-browser.mjs:31:10)
+    at async file:///home/agent/rer-consolidation/work/sx-crank-f64-ci-repair-1-prep1/run-crank/tests/recurring-browser.mjs:62:86 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: false,
+  expected: true,
+  operator: '==',
+  diff: 'simple'
+}
+
+Node.js v22.20.0
+ ELIFECYCLE  Command failed with exit code 1.
+
+PHASE_RECEIPT {"captured_dev_logs": [], "command": ["timeout", "1200", "env", "CRANK_EVIDENCE=/home/agent/rer-consolidation/work/sx-crank-f64-ci-repair-1-prep1/packet/before-artifacts", "node", "scripts/verify-ci.mjs", "owner-decisions"], "cwd": "/home/agent/rer-consolidation/work/sx-crank-f64-ci-repair-1-prep1/run-crank", "duration_seconds": 28.755, "exit": 1, "finished_utc": "2026-11-06T04:59:44.166489+00:00", "literal_wrapper_pid": 4307, "log_file": "before-owner-decisions.log", "phase": "before-owner-decisions", "shell_prelude": "set -euo pipefail; . /tmp/rer-f64-env.sh; cloud_run", "started_utc": "2026-11-06T04:59:15.411394+00:00", "time_limit_seconds": 1200}

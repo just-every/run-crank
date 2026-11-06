@@ -1,0 +1,1 @@
+COMMAND gh run view 42150056848 --repo just-every/run-crank --job 127671299542 --log-failed

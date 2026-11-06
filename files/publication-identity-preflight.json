@@ -1,0 +1,9 @@
+{
+  "product_head": "2b7186c1c3ef673f610070a9c0b2a3a34f43b310",
+  "product_commit_created": false,
+  "fleet_names_and_emails_only": true,
+  "ai_coauthor_trailers": false,
+  "push_scope": "evidence/sx-crank-f64-ci-repair-1-prep1 only; no product push",
+  "product_index_unchanged": true,
+  "audit_command": "git log origin/main..HEAD --format=\"%an <%ae>%n%cn <%ce>%n%(trailers:only,unfold)\""
+}

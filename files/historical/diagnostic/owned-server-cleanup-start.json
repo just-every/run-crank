@@ -1,0 +1,50 @@
+[
+  {
+    "pid": 6350,
+    "ppid": 4281,
+    "cwd": "/home/agent/rer-consolidation/work/sx-crank-f64-ci-triage-1-setup1/main",
+    "executable": "/home/agent/.rer/toolchain/node-22.20.0/node_modules/node/bin/node",
+    "program_and_script": [
+      "/home/agent/.rer/toolchain/node-22.20.0/node_modules/node/bin/node",
+      "/home/agent/rer-consolidation/work/sx-crank-f64-ci-triage-1-setup1/main/node_modules/.pnpm/@runeditrun+rer@0.2.91/node_modules/@runeditrun/rer/bin/rer.mjs"
+    ],
+    "start_ticks": 114414,
+    "observed_utc": "2026-11-06T03:50:41.743190+00:00"
+  },
+  {
+    "pid": 6426,
+    "ppid": 6350,
+    "cwd": "/home/agent/rer-consolidation/work/sx-crank-f64-ci-triage-1-setup1/main",
+    "executable": "/home/agent/.rer/toolchain/node-22.20.0/node_modules/node/bin/node",
+    "program_and_script": [
+      "/home/agent/.rer/toolchain/node-22.20.0/node_modules/node/bin/node",
+      "/home/agent/rer-consolidation/work/sx-crank-f64-ci-triage-1-setup1/main/node_modules/.pnpm/@runeditrun+rer@0.2.91/node_modules/@runeditrun/rer/onboarding/development-runtime.mjs"
+    ],
+    "start_ticks": 115161,
+    "observed_utc": "2026-11-06T03:50:41.743297+00:00"
+  },
+  {
+    "pid": 6451,
+    "ppid": 6426,
+    "cwd": "/home/agent/rer-consolidation/work/sx-crank-f64-ci-triage-1-setup1/main",
+    "executable": "/home/agent/rer-consolidation/work/sx-crank-f64-ci-triage-1-setup1/main/node_modules/.pnpm/@esbuild+linux-x64@0.28.1/node_modules/@esbuild/linux-x64/bin/esbuild",
+    "program_and_script": [
+      "/home/agent/rer-consolidation/work/sx-crank-f64-ci-triage-1-setup1/main/node_modules/.pnpm/@esbuild+linux-x64@0.28.1/node_modules/@esbuild/linux-x64/bin/esbuild",
+      "--service=0.28.1"
+    ],
+    "start_ticks": 115290,
+    "observed_utc": "2026-11-06T03:50:41.743369+00:00"
+  },
+  {
+    "pid": 6456,
+    "ppid": 6426,
+    "cwd": "/home/agent/rer-consolidation/work/sx-crank-f64-ci-triage-1-setup1/main",
+    "executable": "/home/agent/rer-consolidation/work/sx-crank-f64-ci-triage-1-setup1/main/node_modules/.pnpm/@cloudflare+workerd-linux-64@1.20260907.1/node_modules/@cloudflare/workerd-linux-64/bin/workerd",
+    "program_and_script": [
+      "/home/agent/rer-consolidation/work/sx-crank-f64-ci-triage-1-setup1/main/node_modules/.pnpm/@cloudflare+workerd-linux-64@1.20260907.1/node_modules/@cloudflare/workerd-linux-64/bin/workerd",
+      "serve"
+    ],
+    "start_ticks": 115339,
+    "observed_utc": "2026-11-06T03:50:41.743431+00:00"
+  }
+]

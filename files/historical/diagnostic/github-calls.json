@@ -1,0 +1,32 @@
+[
+  {
+    "call": 1,
+    "command": [
+      "gh",
+      "api",
+      "repos/just-every/run-crank/actions/runs/42150056848/jobs?per_page=100",
+      "--jq",
+      ".jobs[] | {id,name,status,conclusion,head_sha,html_url,steps:[.steps[]|select(.conclusion==\"failure\")|{name,conclusion}]}"
+    ],
+    "exit": 0,
+    "utc": "2026-11-06T03:35:44.353739+00:00",
+    "log": "historical-jobs-meta.log"
+  },
+  {
+    "call": 2,
+    "command": [
+      "gh",
+      "run",
+      "view",
+      "42150056848",
+      "--repo",
+      "just-every/run-crank",
+      "--job",
+      "127671299542",
+      "--log-failed"
+    ],
+    "exit": 0,
+    "utc": "2026-11-06T03:36:06.897630+00:00",
+    "log": "historical-owner-decisions-failed.log"
+  }
+]

@@ -1,0 +1,9 @@
+2b7186c1c3ef673f610070a9c0b2a3a34f43b310
+Regenerate contract views from CONTRACT.md
+
+598f9307bd61093d260ae2f8bdf9bd1947f85cd4
+Prove visible reference metadata against native MCP discovery
+
+862198ed3c42d259d1c4e7f491b09bfe621d64ae
+Generate the admitted agent reference from the MCP registry
+

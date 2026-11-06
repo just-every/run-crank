@@ -1,0 +1,36 @@
+{
+  "unchanged": true,
+  "before": {
+    "head": "2b7186c1c3ef673f610070a9c0b2a3a34f43b310",
+    "main": "e2c146dc38eb64e685cf01d2c56e798404b3936e",
+    "status": "",
+    "files": {
+      "src/crank/agent-door/index.ts": "844d0683574929dc7d1cc98b6f2859f1486a786337bebd4094a6d2b510db6738",
+      "agent-surface.json": "05856b153904d58868ef2703b4073c7a7d1e66dd701df4fef5f27ba53396e983",
+      "vite.config.ts": "8b20eacac4d6971222866f9515fbefa2185970bc504606603a4641e60a913b12",
+      "verification.json": "eab798a0a366bbea43e07a026ea256f71913f4b3ed37e8bc270c733a0b9a8ef1",
+      "scripts/verify-ci.mjs": "c9f9bb71880c632028a1cab9fb484e454767c6f47eeb61bc7a25bd1e1a3f909b",
+      "scripts/verify-app.mjs": "53d32df18fc683c843d980a06e5e92b4c4029af9e307027307678ea28cf888e4",
+      "tests/decision-browser.mjs": "6f91f5b701e9238fcaa48327956e2ca94c79abb88e5317ef97046c5bc51a00a6",
+      "CONTRACT.md": "a6b8f6f04b57643413fa6edebfb359a4d4f563aca1527c05514dec98494fd535",
+      "ACCEPTANCE.md": "a6ae8878a23d7147776bc6226372507ca3df4dd14280e09ed702ec082c0db0b1",
+      "docs/CLAIMS.md": "9c5a8e8d70f13a719f4c1c174f10a24697264b655d163b3ee53218c3b40640cc"
+    }
+  },
+  "after": {
+    "head": "2b7186c1c3ef673f610070a9c0b2a3a34f43b310",
+    "status": "",
+    "files": {
+      "src/crank/agent-door/index.ts": "844d0683574929dc7d1cc98b6f2859f1486a786337bebd4094a6d2b510db6738",
+      "agent-surface.json": "05856b153904d58868ef2703b4073c7a7d1e66dd701df4fef5f27ba53396e983",
+      "vite.config.ts": "8b20eacac4d6971222866f9515fbefa2185970bc504606603a4641e60a913b12",
+      "verification.json": "eab798a0a366bbea43e07a026ea256f71913f4b3ed37e8bc270c733a0b9a8ef1",
+      "scripts/verify-ci.mjs": "c9f9bb71880c632028a1cab9fb484e454767c6f47eeb61bc7a25bd1e1a3f909b",
+      "scripts/verify-app.mjs": "53d32df18fc683c843d980a06e5e92b4c4029af9e307027307678ea28cf888e4",
+      "tests/decision-browser.mjs": "6f91f5b701e9238fcaa48327956e2ca94c79abb88e5317ef97046c5bc51a00a6",
+      "CONTRACT.md": "a6b8f6f04b57643413fa6edebfb359a4d4f563aca1527c05514dec98494fd535",
+      "ACCEPTANCE.md": "a6ae8878a23d7147776bc6226372507ca3df4dd14280e09ed702ec082c0db0b1",
+      "docs/CLAIMS.md": "9c5a8e8d70f13a719f4c1c174f10a24697264b655d163b3ee53218c3b40640cc"
+    }
+  }
+}

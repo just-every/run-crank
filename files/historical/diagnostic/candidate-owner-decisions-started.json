@@ -1,0 +1,17 @@
+{
+  "phase": "candidate-owner-decisions",
+  "cwd": "/home/agent/rer-consolidation/work/sx-crank-f64-ci-triage-1-setup1/candidate",
+  "command": [
+    "timeout",
+    "1200",
+    "env",
+    "CRANK_EVIDENCE=/home/agent/rer-consolidation/work/sx-crank-f64-ci-triage-1-setup1/packet/candidate-artifacts",
+    "node",
+    "scripts/verify-ci.mjs",
+    "owner-decisions"
+  ],
+  "shell_prelude": "set -euo pipefail; . /tmp/rer-f64-env.sh; cloud_run",
+  "started_utc": "2026-11-06T03:37:51.944836+00:00",
+  "time_limit_seconds": 1200,
+  "literal_wrapper_pid": 2434
+}

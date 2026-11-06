@@ -1,0 +1,22 @@
+{
+  "status": "complete",
+  "admitted_host": "Debian 13 x86_64",
+  "node": "22.20.0",
+  "pnpm": "10.12.4",
+  "browser_revision": 1243,
+  "all_setup_exits": 0,
+  "phases": [
+    "candidate-frozen-deps",
+    "candidate-committed-deps",
+    "candidate-gateway-deps",
+    "candidate-chromium-install",
+    "candidate-chromium-probe",
+    "main-frozen-deps",
+    "main-committed-deps",
+    "main-gateway-deps",
+    "main-chromium-install",
+    "main-chromium-probe"
+  ],
+  "completed_utc": "2026-11-06T03:37:16.873363+00:00",
+  "app_assertions_before_setup_complete": false
+}

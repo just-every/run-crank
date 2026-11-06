@@ -1,0 +1,14 @@
+[
+  {
+    "path": "/home/agent/rer-consolidation/work/sx-crank-f64-ci-repair-1/browser-cache/chromium-1243/chrome-linux64/chrome",
+    "bytes": 293285184,
+    "executable": true,
+    "sha256": "8c599d43aec53f2460a31ae2f4af6bd863f8258b34ff519564bc5d4726bfaa1e"
+  },
+  {
+    "path": "/home/agent/rer-consolidation/work/sx-crank-f64-ci-repair-1/browser-cache/chromium_headless_shell-1243/chrome-headless-shell-linux64/chrome-headless-shell",
+    "bytes": 197422408,
+    "executable": true,
+    "sha256": "ded93a9c9a53a1ae040f08124badcca95c938e9d5015ff340c3b5538c41bf39e"
+  }
+]

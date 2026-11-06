@@ -1,0 +1,14 @@
+COMMAND timeout 1200 pnpm run deps
+PRELUDE set -euo pipefail; . /tmp/rer-f64-env.sh; cloud_run
+rer toolchain: node v24.19.0 pnpm 10.12.4 (pins 22.20.0 / 10.12.4)
+
+> @automation/crank@0.1.0 deps /home/agent/rer-consolidation/work/sx-crank-f64-ci-triage-1-setup1/main
+> rer install
+
+Checking pinned pnpm
+10.12.4
+Installing frozen dependencies
+Run this project's package scripts with rer run SCRIPT (it uses the pnpm this project pins).
+install: complete (exit 0)
+
+PHASE_RECEIPT {"command": ["timeout", "1200", "pnpm", "run", "deps"], "cwd": "/home/agent/rer-consolidation/work/sx-crank-f64-ci-triage-1-setup1/main", "duration_seconds": 5.412, "exit": 0, "finished_utc": "2026-11-06T03:36:28.954462+00:00", "literal_wrapper_pid": 1612, "log_file": "main-committed-deps.log", "phase": "main-committed-deps", "shell_prelude": "set -euo pipefail; . /tmp/rer-f64-env.sh; cloud_run", "started_utc": "2026-11-06T03:36:23.542697+00:00", "time_limit_seconds": 1200}

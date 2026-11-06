@@ -1,0 +1,7 @@
+{
+  "status": "passed",
+  "private_sign_in_links_excluded": true,
+  "files_sanitized": [],
+  "credential_and_environment_files_selected": false,
+  "runtime_secret_values_printed_in_packet": false
+}

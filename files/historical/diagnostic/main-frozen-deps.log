@@ -1,0 +1,35 @@
+COMMAND timeout 1200 pnpm install --frozen-lockfile
+PRELUDE set -euo pipefail; . /tmp/rer-f64-env.sh; cloud_run
+rer toolchain: node v24.19.0 pnpm 10.12.4 (pins 22.20.0 / 10.12.4)
+Lockfile is up to date, resolution step is skipped
+Progress: resolved 1, reused 0, downloaded 0, added 0
+Packages: +156
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Progress: resolved 156, reused 156, downloaded 0, added 156, done
+
+dependencies:
++ @tanstack/react-router 1.170.41
++ @tanstack/react-start 1.168.60
++ hono 4.13.7
++ marked 18.0.14
++ react 19.2.8
++ react-dom 19.2.8
+
+devDependencies:
++ @cloudflare/vite-plugin 1.54.5
++ @cloudflare/workers-types 5.20260908.1
++ @playwright/test 1.63.0
++ @runeditrun/rer 0.2.91
++ @types/node 22.18.6
++ @types/react 19.2.18
++ @types/react-dom 19.2.7
++ @vitejs/plugin-react 6.1.1
++ esbuild 0.28.1
++ miniflare 5.20260907.0-alpha
++ typescript 5.9.3
++ vite 8.2.2
++ wrangler 4.129.1
+
+Done in 7.6s using pnpm v10.12.4
+
+PHASE_RECEIPT {"command": ["timeout", "1200", "pnpm", "install", "--frozen-lockfile"], "cwd": "/home/agent/rer-consolidation/work/sx-crank-f64-ci-triage-1-setup1/main", "duration_seconds": 8.558, "exit": 0, "finished_utc": "2026-11-06T03:36:10.921066+00:00", "literal_wrapper_pid": 1516, "log_file": "main-frozen-deps.log", "phase": "main-frozen-deps", "shell_prelude": "set -euo pipefail; . /tmp/rer-f64-env.sh; cloud_run", "started_utc": "2026-11-06T03:36:02.363430+00:00", "time_limit_seconds": 1200}

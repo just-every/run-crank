@@ -1,0 +1,12 @@
+{
+  "selected_files_scanned": 223,
+  "no_injected_secret_value_found": true,
+  "no_token_shaped_content_found": true,
+  "no_unredacted_RER_OPEN_link_found": true,
+  "regular_files_only": true,
+  "symlinks": false,
+  "environment_dump_selected": false,
+  "private_held_out_gate_material_selected": false,
+  "historical_files_copied_without_modification": true,
+  "local_sign_in_query_redaction": "Phase runner sanitized links/query strings and labelled runtime binding lines before storing logs."
+}

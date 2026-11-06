@@ -1,0 +1,13 @@
+{
+  "disposable_checkout_removed": "/home/agent/rer-consolidation/work/sx-crank-f64-ci-repair-1-prep1/run-crank",
+  "checkout_exists": false,
+  "checkout_dependencies_and_private_state_removed": true,
+  "task_browser_cache_removed": "/home/agent/rer-consolidation/work/sx-crank-f64-ci-repair-1-prep1/browser-cache",
+  "browser_cache_exists": false,
+  "preserved_git_transport": "/home/agent/rer-consolidation/work/sx-crank-f64-ci-repair-1-prep1/return-transport.git",
+  "head": "2b7186c1c3ef673f610070a9c0b2a3a34f43b310",
+  "branch": "cloud/sx-crank-f64-ci-repair-1-prep1",
+  "index_sha256_unchanged": "d9b67323903ba76753e468242e79e1b63c01d925a360b8f0ebf5f4e4b2b9f4c0",
+  "remaining_active_runtime_processes": [],
+  "task_side_kills": []
+}

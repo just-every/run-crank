@@ -1,0 +1,16 @@
+{
+  "refs": {
+    "original_repair": "fba6c4bdbfed2a1079bd5243c8ba913e64d8d785",
+    "diagnostic": "6dabfd37ec460c3d5d3f3f14f5ffaa41ed0ff2a7"
+  },
+  "rejected": "2b7186c1c3ef673f610070a9c0b2a3a34f43b310",
+  "original_f64": [
+    "862198ed3c42d259d1c4e7f491b09bfe621d64ae",
+    "598f9307bd61093d260ae2f8bdf9bd1947f85cd4"
+  ],
+  "historical_run": 42150056848,
+  "historical_job": 127671299542,
+  "continuation_not_new_campaign": true,
+  "original_result_unchanged": "BLOCKED",
+  "same_original_frozen_independent_regate_required": true
+}

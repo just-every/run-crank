@@ -1,0 +1,12 @@
+{
+  "utc": "2026-11-06T03:51:14.926173+00:00",
+  "literal_owned_server_pid": 6350,
+  "command": "kill -TERM 6350",
+  "exit": 0,
+  "ownership_proof": "owned-server-cleanup-start.json; task clone cwd, exact Node22, descendant of task subreaper",
+  "stopped_after_all_original_assertions_finished": true,
+  "recorded_at_cleanup_start": true,
+  "recorded_processes_absent_after_stop": true,
+  "no_computed_pid_kill": true,
+  "main_phase_exit_after_subreaper_cleanup": 0
+}

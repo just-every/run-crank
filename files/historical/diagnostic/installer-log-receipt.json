@@ -1,0 +1,26 @@
+[
+  {
+    "input": "candidate",
+    "source": "task-created clone/.seed/installer/install.log",
+    "original_bytes": 1901135,
+    "original_sha256": "b838c1d89ee3617d7d1fb84fb91125de8b95595cb1c36df0a9ac0d24cae0d994",
+    "sanitized_file": "candidate-installer-sanitized.log",
+    "sanitized_bytes": 1901135,
+    "sanitized_sha256": "b838c1d89ee3617d7d1fb84fb91125de8b95595cb1c36df0a9ac0d24cae0d994",
+    "sensitive_label_lines_omitted": 0,
+    "private_url_lines_omitted": 0,
+    "no_environment_or_secret_files_read": true
+  },
+  {
+    "input": "main",
+    "source": "task-created clone/.seed/installer/install.log",
+    "original_bytes": 755,
+    "original_sha256": "65896d277ab1fe4905b0ecfb6a967f188723aa5180670a7cb3d24cb215a8bd16",
+    "sanitized_file": "main-installer-sanitized.log",
+    "sanitized_bytes": 755,
+    "sanitized_sha256": "65896d277ab1fe4905b0ecfb6a967f188723aa5180670a7cb3d24cb215a8bd16",
+    "sensitive_label_lines_omitted": 0,
+    "private_url_lines_omitted": 0,
+    "no_environment_or_secret_files_read": true
+  }
+]

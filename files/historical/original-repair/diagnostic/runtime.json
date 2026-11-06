@@ -1,0 +1,7 @@
+{
+  "node_path": "/home/agent/.rer/toolchain/node-22.20.0/node_modules/node/bin/node",
+  "node_version": "v22.20.0",
+  "node_probe_exit": 0,
+  "required_node": "v22.20.0",
+  "required_pnpm": "10.12.4"
+}

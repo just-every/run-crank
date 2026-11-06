@@ -1,0 +1,7 @@
+{
+  "product_range_command": "git log origin/main..HEAD --format=\"%an <%ae>%n%cn <%ce>%n%(trailers:only,unfold)\"",
+  "product_range_output": "",
+  "product_candidate_commits": 0,
+  "evidence_audit": "Git shim inspects every report candidate commit and side parent immediately before its evidence push, requiring fleet author/committer and allowed trailers; OpenAI/Codex co-authors refused",
+  "utc": "2026-11-06T03:53:47.203429+00:00"
+}
