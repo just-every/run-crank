@@ -1,0 +1,20 @@
+{
+  "phase": "main-build",
+  "cwd": "/home/agent/rer-consolidation/work/sx-crank-f64-ci-triage-1-setup1/main",
+  "command": [
+    "timeout",
+    "1200",
+    "node",
+    "scripts/verify-ci.mjs",
+    "--build"
+  ],
+  "shell_prelude": "set -euo pipefail; . /tmp/rer-f64-env.sh; cloud_run",
+  "started_utc": "2026-11-06T03:41:24.383366+00:00",
+  "time_limit_seconds": 1200,
+  "literal_wrapper_pid": 3839,
+  "captured_dev_logs": [],
+  "exit": 0,
+  "duration_seconds": 16.899,
+  "finished_utc": "2026-11-06T03:41:41.282188+00:00",
+  "log_file": "main-build.log"
+}

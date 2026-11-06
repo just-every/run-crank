@@ -1,0 +1,48 @@
+CAPTURE task-generated diagnostic log /tmp/crank-decisions-I63KJ4/dev.log
+Allow roughly 500 MB–1 GB of downloads and 1–3 GB of disk space for a first run, including Node, rer, the app and its dependencies. The app and your computer can need more; later runs reuse downloads.
+rer dev: checking the server limit
+rer dev: setting up a local owner (owner@main.test) on port 8787
+rer dev: using port 8787
+rer dev: still setting up a local owner (owner@main.test) on port 8787 (21s). Allow up to 10 minutes; if this command is stopped, run rer dev again to reattach.
+Checking pinned pnpm
+10.12.4
+Applying database migrations
+Applying database migrations
+▲ [WARNING] Proxy environment variables detected. We'll use your proxy for fetch requests.
+
+
+
+ ⛅️ wrangler 4.129.1
+────────────────────
+Resource location: local 
+
+Use --remote if you want to access the remote instance.
+
+✅ No migrations to apply!
+Starting your application on this computer
+Starting your application on this computer
+▲ [WARNING] Proxy environment variables detected. We'll use your proxy for fetch requests.
+
+
+Using secrets defined in .dev.vars
+  ➜  Local:   http://127.0.0.1:42765/
+Opening your application
+Your application is running locally
+Building the run site
+{"pages":13,"assets":7,"styles":1}
+Open your app, already signed in on this computer: http://127.0.0.1:8787/__dev/key [PRIVATE URL SUFFIX REDACTED]
+Help and public site preview (secondary): http://127.0.0.1:8788
+App address (without sign-in): http://127.0.0.1:8787
+Keep the sign-in link private.
+Downloads this run (archive payloads): Node installer: not measured; rer installer: not measured.
+Other downloads: project Node, clone and dependencies: not measured. Package-manager caches and metadata are not included in archive counts.
+Disk use now (allocated space, not download sizes): rer: 11202560 bytes; clone (Git objects): 83599360 bytes; dependencies: 479354880 bytes.
+Details for tools and troubleshooting:
+RER_READY http://127.0.0.1:8787
+RER_SIGNED_IN owner@main.test
+RER_OPEN [PRIVATE LOCAL SIGN-IN URL REDACTED]
+RER_SITE http://127.0.0.1:8788
+Running the scheduled trigger locally: * * * * *
+RER_SCHEDULED 2026-11-06T03:46:00Z "* * * * *" ok 89ms
+Stopped by SIGTERM after owned children were stopped.
+dev: failed (exit 143)

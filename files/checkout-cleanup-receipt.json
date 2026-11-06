@@ -1,0 +1,13 @@
+{
+  "utc": "2026-11-06T03:52:38.304175+00:00",
+  "candidate_checkout_deleted": true,
+  "main_checkout_deleted": true,
+  "all_checkout_node_modules_deleted": true,
+  "task_browser_cache_deleted": true,
+  "no_task_server_processes_remaining": true,
+  "temporary_report_transport": "/home/agent/rer-consolidation/work/sx-crank-f64-ci-triage-1-setup1/return-transport.git",
+  "temporary_report_transport_origin": "original main clone .git moved, not a third clone",
+  "transport_head": "e2c146dc38eb64e685cf01d2c56e798404b3936e",
+  "temporary_git_storage_will_be_removed_after_publication": true,
+  "product_commits_or_unpushed_work_discarded": false
+}

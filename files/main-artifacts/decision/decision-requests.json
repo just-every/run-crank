@@ -1,0 +1,174 @@
+[
+  {
+    "width": 1440,
+    "input": "keyboard Enter",
+    "requests": [
+      {
+        "method": "GET",
+        "path": "/app/approvals"
+      },
+      {
+        "method": "GET",
+        "path": "/app/approvals"
+      },
+      {
+        "method": "GET",
+        "path": "/app/approvals"
+      },
+      {
+        "method": "POST",
+        "path": "/api/crank/workflow-runs/dbe6f714-6bc8-4268-84bd-c4c8e88af34e/approve"
+      },
+      {
+        "method": "GET",
+        "path": "/app/approvals"
+      },
+      {
+        "method": "GET",
+        "path": "/app/approvals"
+      },
+      {
+        "method": "GET",
+        "path": "/app/workflow-runs/dbe6f714-6bc8-4268-84bd-c4c8e88af34e"
+      },
+      {
+        "method": "GET",
+        "path": "/app/workflow-runs/9f1a89ef-29b3-4674-acb5-d21b69d1e8a9"
+      },
+      {
+        "method": "POST",
+        "path": "/api/crank/workflow-runs/9f1a89ef-29b3-4674-acb5-d21b69d1e8a9/reject"
+      },
+      {
+        "method": "GET",
+        "path": "/app/workflow-runs/9f1a89ef-29b3-4674-acb5-d21b69d1e8a9"
+      },
+      {
+        "method": "GET",
+        "path": "/app/workflow-runs/9f1a89ef-29b3-4674-acb5-d21b69d1e8a9"
+      },
+      {
+        "method": "GET",
+        "path": "/app/workflow-runs/9f1a89ef-29b3-4674-acb5-d21b69d1e8a9"
+      },
+      {
+        "method": "GET",
+        "path": "/app/workflow-runs/55502ac4-eb06-407d-8df9-4356f9308bd1"
+      },
+      {
+        "method": "POST",
+        "path": "/api/crank/workflow-runs/55502ac4-eb06-407d-8df9-4356f9308bd1/approve"
+      },
+      {
+        "method": "GET",
+        "path": "/app/workflow-runs/55502ac4-eb06-407d-8df9-4356f9308bd1"
+      },
+      {
+        "method": "POST",
+        "path": "/api/crank/workflow-runs/55502ac4-eb06-407d-8df9-4356f9308bd1/reject"
+      },
+      {
+        "method": "GET",
+        "path": "/app/workflow-runs/55502ac4-eb06-407d-8df9-4356f9308bd1"
+      },
+      {
+        "method": "GET",
+        "path": "/app/workflow-runs/55502ac4-eb06-407d-8df9-4356f9308bd1"
+      },
+      {
+        "method": "GET",
+        "path": "/app/runs/5d6a31ac-e7bf-423e-b118-5011c4ec54ae"
+      },
+      {
+        "method": "GET",
+        "path": "/app/runs/5d6a31ac-e7bf-423e-b118-5011c4ec54ae"
+      },
+      {
+        "method": "POST",
+        "path": "/api/crank/runs/5d6a31ac-e7bf-423e-b118-5011c4ec54ae/reject"
+      },
+      {
+        "method": "GET",
+        "path": "/app/runs/5d6a31ac-e7bf-423e-b118-5011c4ec54ae"
+      },
+      {
+        "method": "GET",
+        "path": "/app/runs/5d6a31ac-e7bf-423e-b118-5011c4ec54ae"
+      }
+    ]
+  },
+  {
+    "width": 390,
+    "input": "Playwright touch emulation",
+    "requests": [
+      {
+        "method": "GET",
+        "path": "/app/approvals"
+      },
+      {
+        "method": "GET",
+        "path": "/app/approvals"
+      },
+      {
+        "method": "GET",
+        "path": "/app/approvals"
+      },
+      {
+        "method": "POST",
+        "path": "/api/crank/workflow-runs/2b854e9e-3e8d-4c39-aa84-07e3717d9082/approve"
+      },
+      {
+        "method": "GET",
+        "path": "/app/approvals"
+      },
+      {
+        "method": "GET",
+        "path": "/app/approvals"
+      },
+      {
+        "method": "GET",
+        "path": "/app/workflow-runs/2b854e9e-3e8d-4c39-aa84-07e3717d9082"
+      },
+      {
+        "method": "GET",
+        "path": "/app/workflow-runs/7dcd5917-7368-424a-8c96-38166e201e14"
+      },
+      {
+        "method": "POST",
+        "path": "/api/crank/workflow-runs/7dcd5917-7368-424a-8c96-38166e201e14/reject"
+      },
+      {
+        "method": "GET",
+        "path": "/app/workflow-runs/7dcd5917-7368-424a-8c96-38166e201e14"
+      },
+      {
+        "method": "GET",
+        "path": "/app/workflow-runs/7dcd5917-7368-424a-8c96-38166e201e14"
+      },
+      {
+        "method": "GET",
+        "path": "/app/workflow-runs/7dcd5917-7368-424a-8c96-38166e201e14"
+      },
+      {
+        "method": "GET",
+        "path": "/app/runs/ce64d6aa-51a3-4a06-9538-4668a73e8157"
+      },
+      {
+        "method": "GET",
+        "path": "/app/runs/ce64d6aa-51a3-4a06-9538-4668a73e8157"
+      },
+      {
+        "method": "POST",
+        "path": "/api/crank/runs/ce64d6aa-51a3-4a06-9538-4668a73e8157/reject"
+      },
+      {
+        "method": "GET",
+        "path": "/app/runs/ce64d6aa-51a3-4a06-9538-4668a73e8157"
+      },
+      {
+        "method": "GET",
+        "path": "/app/runs/ce64d6aa-51a3-4a06-9538-4668a73e8157"
+      }
+    ]
+  }
+]

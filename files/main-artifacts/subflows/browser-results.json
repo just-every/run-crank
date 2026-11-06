@@ -1,0 +1,82 @@
+[
+  {
+    "width": 1440,
+    "kind": "subflow",
+    "status": "waiting",
+    "notice": "development suppression and retained attempt visible",
+    "tooltips": "300ms hover / immediate focus",
+    "overflow": false
+  },
+  {
+    "width": 1440,
+    "kind": "table",
+    "status": "awaiting_approval",
+    "notice": "development suppression and retained attempt visible",
+    "tooltips": "300ms hover / immediate focus",
+    "overflow": false
+  },
+  {
+    "width": 1440,
+    "kind": "failure",
+    "status": "failed",
+    "notice": "development suppression and retained attempt visible",
+    "tooltips": "300ms hover / immediate focus",
+    "overflow": false
+  },
+  {
+    "width": 1440,
+    "kind": "approval",
+    "status": "awaiting_approval",
+    "notice": "development suppression and retained attempt visible",
+    "tooltips": "300ms hover / immediate focus",
+    "overflow": false
+  },
+  {
+    "width": 1440,
+    "kind": "collect",
+    "status": "awaiting_approval",
+    "notice": "development suppression and retained attempt visible",
+    "tooltips": "300ms hover / immediate focus",
+    "overflow": false
+  },
+  {
+    "width": 390,
+    "kind": "subflow",
+    "status": "waiting",
+    "notice": "development suppression and retained attempt visible",
+    "tooltips": "300ms hover / immediate focus",
+    "overflow": false
+  },
+  {
+    "width": 390,
+    "kind": "table",
+    "status": "awaiting_approval",
+    "notice": "development suppression and retained attempt visible",
+    "tooltips": "300ms hover / immediate focus",
+    "overflow": false
+  },
+  {
+    "width": 390,
+    "kind": "failure",
+    "status": "failed",
+    "notice": "development suppression and retained attempt visible",
+    "tooltips": "300ms hover / immediate focus",
+    "overflow": false
+  },
+  {
+    "width": 390,
+    "kind": "approval",
+    "status": "awaiting_approval",
+    "notice": "development suppression and retained attempt visible",
+    "tooltips": "300ms hover / immediate focus",
+    "overflow": false
+  },
+  {
+    "width": 390,
+    "kind": "collect",
+    "status": "awaiting_approval",
+    "notice": "development suppression and retained attempt visible",
+    "tooltips": "300ms hover / immediate focus",
+    "overflow": false
+  }
+]

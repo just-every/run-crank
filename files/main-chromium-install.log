@@ -1,0 +1,5 @@
+COMMAND timeout 1200 pnpm exec playwright install chromium
+PRELUDE set -euo pipefail; . /tmp/rer-f64-env.sh; cloud_run
+rer toolchain: node v24.19.0 pnpm 10.12.4 (pins 22.20.0 / 10.12.4)
+
+PHASE_RECEIPT {"command": ["timeout", "1200", "pnpm", "exec", "playwright", "install", "chromium"], "cwd": "/home/agent/rer-consolidation/work/sx-crank-f64-ci-triage-1-setup1/main", "duration_seconds": 1.486, "exit": 0, "finished_utc": "2026-11-06T03:36:48.158741+00:00", "literal_wrapper_pid": 1821, "log_file": "main-chromium-install.log", "phase": "main-chromium-install", "shell_prelude": "set -euo pipefail; . /tmp/rer-f64-env.sh; cloud_run", "started_utc": "2026-11-06T03:36:46.672483+00:00", "time_limit_seconds": 1200}

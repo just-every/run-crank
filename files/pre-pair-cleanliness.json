@@ -1,0 +1,16 @@
+[
+  {
+    "input": "candidate",
+    "head": "2b7186c1c3ef673f610070a9c0b2a3a34f43b310",
+    "status": "",
+    "tracked_manifest_present": true,
+    "no_product_branch_or_commit_created": true
+  },
+  {
+    "input": "main",
+    "head": "e2c146dc38eb64e685cf01d2c56e798404b3936e",
+    "status": "",
+    "tracked_manifest_present": true,
+    "no_product_branch_or_commit_created": true
+  }
+]

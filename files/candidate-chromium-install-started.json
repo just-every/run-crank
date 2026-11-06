@@ -1,0 +1,17 @@
+{
+  "phase": "candidate-chromium-install",
+  "cwd": "/home/agent/rer-consolidation/work/sx-crank-f64-ci-triage-1-setup1/candidate",
+  "command": [
+    "timeout",
+    "1200",
+    "pnpm",
+    "exec",
+    "playwright",
+    "install",
+    "chromium"
+  ],
+  "shell_prelude": "set -euo pipefail; . /tmp/rer-f64-env.sh; cloud_run",
+  "started_utc": "2026-11-06T03:35:24.850155+00:00",
+  "time_limit_seconds": 1200,
+  "literal_wrapper_pid": 1254
+}

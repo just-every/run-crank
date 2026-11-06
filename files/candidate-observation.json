@@ -1,0 +1,18 @@
+{
+  "input": "candidate",
+  "utc": "2026-11-06T03:41:58.070597+00:00",
+  "head": "2b7186c1c3ef673f610070a9c0b2a3a34f43b310",
+  "git_status_porcelain": "",
+  "manifest_exists": true,
+  "manifest_sha256": "05856b153904d58868ef2703b4073c7a7d1e66dd701df4fef5f27ba53396e983",
+  "manifest_git_blob": "3f02c46a5c0864094b1be62537d1a5835b1cbe72",
+  "original_failure_reached": true,
+  "preceding_journeys_passed": [
+    "recurring",
+    "Nook/Orbit sibling",
+    "Teams"
+  ],
+  "decision_browser_ui_assertions_reached": false,
+  "failure": "Failed to load url /agent-surface.json from src/crank/agent-door/index.ts; listener handshake failed",
+  "classification_pending_fresh_main": true
+}
