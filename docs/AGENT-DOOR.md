@@ -91,7 +91,14 @@ refusals keep their own existing codes.
 The error-parity journey in [the public-door fixture](../tests/agent-door/error-parity.mjs)
 compares native and MCP codes, complete unchanged workflow records and native
 audit event types. It exercises allowed writes as well as refused writes,
-including invalid saved drafts from a previous installation. The existing native
+including invalid saved drafts from a previous installation. Metadata reads
+count nested steps without revalidating those drafts, so an authorized caller can
+read the current digest and submit an explicit graph repair. Validation,
+duplication and metadata-only edits still refuse an invalid saved graph with
+`invalid_graph`; a valid replacement graph succeeds with the native draft audit.
+Missing and inaccessible workflows remain indistinguishable through read,
+validation, duplication and update tools. Revoked preparation authority precedes
+graph validation for every existing preparation tool. The existing native
 editing registration in [the app tests](../tests/app.test.mjs) and the hosted
 agent journey invoke it. This is proof for the existing registry only; the
 remaining contract obligations below are unchanged.

@@ -63,7 +63,15 @@ export default async function errorParity(context) {
  await pair('/api/crank/custom-connectors/propose',{openapi:{}},'crank.custom.propose',{openapi:{}},'invalid_input',400);
  if(invalidateSaved) {
   // A previous installation may retain a draft that its new validator refuses.
-  await invalidateSaved(remote.id,invalidGraph);
+  const savedGraph={trigger:{type:'manual'},steps:[{
+   id:'choose',type:'paths',mode:'exclusive',
+   branches:[{id:'selected',when:[[{field:'trigger.input.enabled',op:'boolean.is_true'}]],steps:[{
+    id:'repeat',type:'loop',input:{items:[]},max_items:1,concurrency:1,
+    order:'input',empty:'allow',item_errors:'stop',result:{},steps:invalidGraph.steps,
+   }]}],
+   fallback:{steps:[{id:'other',type:'map',input:{}}]},
+  }]};
+  await invalidateSaved(remote.id,savedGraph);
   const before=await read(),beforeAudit=await audit();
   const native=await person('/api/crank/workflows/'+remote.id+'/validate',{});
   const answer=await tool('crank.workflows.validate',{workflow_id:remote.id});
@@ -75,7 +83,7 @@ export default async function errorParity(context) {
   // Metadata remains readable when an older saved graph needs repair.
   const metadata=result(await tool('crank.workflows.get',{workflow_id:remote.id}));
   assert.equal(metadata.id,before.id);assert.equal(metadata.draft_digest,before.draft_digest);
-  assert.equal(metadata.trigger,before.draft.trigger.type);assert.equal(metadata.step_count,before.draft.steps.length);
+  assert.equal(metadata.trigger,before.draft.trigger.type);assert.equal(metadata.step_count,4,'metadata counts the path group, loop, nested step and fallback step without validating them');
   for(const value of [secret,...privateValues])assert.ok(!JSON.stringify(metadata).includes(value));
   await pair('/api/crank/workflows/'+remote.id+'/duplicate',{},'crank.workflows.duplicate',{workflow_id:remote.id},'invalid_graph',422);
   await pair('/api/crank/workflows/'+remote.id+'/draft',{description:'Must not apply',draft_digest:metadata.draft_digest},'crank.workflows.update',{workflow_id:remote.id,description:'Must not apply',draft_digest:metadata.draft_digest,expected_revision:metadata.revision},'invalid_graph',422);
@@ -119,7 +127,8 @@ export async function scopedErrorParity(harness) {
   let current=result(await tool('crank.workflows.get',{workflow_id:allowed.id}));
   result(await tool('crank.workflows.update',{workflow_id:allowed.id,description:'synthetic-crank-edit',draft_digest:current.draft_digest,expected_revision:current.revision,idempotency_key:crypto.randomUUID()}));
   assert.equal((await h.get('workflows/'+allowed.id,cookie)).description,'synthetic-crank-edit');
-  const frozen=await h.get('workflows/'+allowed.id),history=await h.get('audit');
+  const records=async()=>Promise.all((await h.get('workflows')).map(row=>h.get('workflows/'+row.id)));
+  const frozen=await h.get('workflows/'+allowed.id),allRecords=await records(),history=await h.get('audit');
   for(const [suffix,name] of [['','crank.workflows.get'],['/validate','crank.workflows.validate'],['/duplicate','crank.workflows.duplicate'],['/draft','crank.workflows.update']]) {
    const denied=[];
    for(const id of [hidden.id,'synthetic-crank-missing']) {
@@ -133,7 +142,7 @@ export async function scopedErrorParity(harness) {
    }
    assert.deepEqual(denied[0],denied[1],'missing and out-of-scope records remain indistinguishable for '+name);
   }
-  assert.deepEqual(await h.get('workflows/'+allowed.id),frozen);assert.deepEqual(await h.get('audit'),history);
+  assert.deepEqual(await records(),allRecords);assert.deepEqual(await h.get('audit'),history);
   current=result(await tool('crank.workflows.get',{workflow_id:allowed.id}));
   await h.post('team/'+member.id,{role:'viewer',workflow_ids:[allowed.id],connection_ids:[]});
   const afterRevocation=await h.get('audit');
@@ -159,7 +168,7 @@ export async function scopedErrorParity(harness) {
    assert.equal(remote.status,200);assert.equal(remote.result.isError,true);assert.equal(errorCode(remote),native.value.code);
    for(const value of [secret,credential,cookie])assert.ok(!JSON.stringify(remote).includes(value));
   }
-  assert.deepEqual(await h.get('workflows/'+allowed.id),frozen);assert.deepEqual(await h.get('audit'),afterRevocation);
+  assert.deepEqual(await h.get('workflows/'+allowed.id),frozen);assert.deepEqual(await records(),allRecords);assert.deepEqual(await h.get('audit'),afterRevocation);
   assert.ok(history.some(row=>row.action==='workflow.draft'&&row.subject_id===allowed.id));
  } finally {await h.close()}
 }
