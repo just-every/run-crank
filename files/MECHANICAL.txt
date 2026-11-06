@@ -1,0 +1,1 @@
+MECHANICAL lock=node node_modules/@runeditrun/rer/edition-authoring/cli.mjs lock then check exit=0; views=node src/base/contract-docs.mjs write then check, generated views restored from origin/main exit=0; ledger=python3 /tmp/crank-migration-ledger.py exit=0

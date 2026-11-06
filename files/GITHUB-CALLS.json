@@ -1,0 +1,90 @@
+[
+  {
+    "at": "2026-11-06T02:26:19.384787+00:00",
+    "command": [
+      "gh",
+      "api",
+      "repos/just-every/run-crank/actions/runs?head_sha=e2c146dc38eb64e685cf01d2c56e798404b3936e&per_page=100",
+      "--jq",
+      ".workflow_runs | map({id,name,head_sha,status,conclusion,event,html_url})"
+    ]
+  },
+  {
+    "at": "2026-11-06T02:26:49.818567+00:00",
+    "command": [
+      "gh",
+      "api",
+      "repos/just-every/run-crank/actions/runs?head_sha=e2c146dc38eb64e685cf01d2c56e798404b3936e&per_page=100",
+      "--jq",
+      ".workflow_runs | map({id,name,head_sha,status,conclusion,event,html_url})"
+    ]
+  },
+  {
+    "at": "2026-11-06T02:28:16.719745+00:00",
+    "command": [
+      "gh",
+      "api",
+      "repos/just-every/run-crank/actions/runs?head_sha=e2c146dc38eb64e685cf01d2c56e798404b3936e&per_page=100",
+      "--jq",
+      ".workflow_runs | map({id,name,head_sha,status,conclusion,event,html_url})"
+    ]
+  },
+  {
+    "at": "2026-11-06T02:29:53.576833+00:00",
+    "command": [
+      "gh",
+      "api",
+      "repos/just-every/run-crank/actions/runs?head_sha=1f1db87c49472d9f7e0db584da4201b67ae77d4b&per_page=100",
+      "--jq",
+      ".workflow_runs | map({id,name,head_sha,status,conclusion,event,html_url})"
+    ]
+  },
+  {
+    "at": "2026-11-06T02:34:53.603082+00:00",
+    "command": [
+      "gh",
+      "api",
+      "repos/just-every/run-crank/actions/runs/42150677806",
+      "--jq",
+      "{status,conclusion,head_sha,html_url}"
+    ]
+  },
+  {
+    "at": "2026-11-06T02:35:45.069432+00:00",
+    "command": [
+      "gh",
+      "api",
+      "repos/just-every/run-crank/actions/runs/42150677806/jobs",
+      "--jq",
+      ".jobs | map({id,name,status,conclusion,steps:[.steps[]|{name,status,conclusion}]})"
+    ]
+  },
+  {
+    "at": "2026-11-06T02:35:56.158527+00:00",
+    "command": [
+      "gh",
+      "run",
+      "view",
+      "42150677806",
+      "--repo",
+      "just-every/run-crank",
+      "--job",
+      "127673079560",
+      "--log-failed"
+    ]
+  },
+  {
+    "at": "2026-11-06T02:35:56.161845+00:00",
+    "command": [
+      "gh",
+      "run",
+      "view",
+      "42150677806",
+      "--repo",
+      "just-every/run-crank",
+      "--job",
+      "127673353792",
+      "--log-failed"
+    ]
+  }
+]

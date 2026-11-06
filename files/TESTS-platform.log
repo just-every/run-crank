@@ -1,0 +1,41 @@
+TAP version 13
+# ▲ [WARNING] Proxy environment variables detected. We'll use your proxy for fetch requests.
+# PROBE BASE-AGENT-012 create: committed native draft, outcome interruption, restart and concurrent new RPC IDs after 24 hours -> one effect, frozen original result, later edits preserved
+# PROBE BASE-AGENT-012 update: committed native draft, outcome interruption, restart and concurrent new RPC IDs after 24 hours -> one effect, frozen original result, later edits preserved
+# PROBE BASE-AGENT-012 duplicate: committed native draft, outcome interruption, restart and concurrent new RPC IDs after 24 hours -> one effect, frozen original result, later edits preserved
+# PROBE BASE-AGENT-012 unmatched: interrupted admission without a native receipt -> call_in_progress, no mutation replay
+# PROBE BASE-AGENT-012 restore: public export and restore -> no native receipts or credentials; inert drafts without owners; no execution after restart
+# PROBE BASE-AGENT-012 authority: signed Business MCP retries with changed consent, client, foreign sponsor and revoked consent -> refused without completion; original current consent returns frozen metadata
+# Subtest: PLATFORM-001: SDK and CORE door draft lifecycle, native granted execution/progress, paginated reads and out-of-grant denial share native approval and audit
+ok 1 - PLATFORM-001: SDK and CORE door draft lifecycle, native granted execution/progress, paginated reads and out-of-grant denial share native approval and audit
+  ---
+  duration_ms: 25668.737266
+  type: 'test'
+  ...
+# Subtest: PLATFORM-001: concurrent and restarted draft/publication/rollback retries retain identities and audit without changing later state or restoring authority
+ok 2 - PLATFORM-001: concurrent and restarted draft/publication/rollback retries retain identities and audit without changing later state or restoring authority
+  ---
+  duration_ms: 10734.226855
+  type: 'test'
+  ...
+# Subtest: PLATFORM-001: lost, concurrent and restarted duplicate requests keep one inert preparation without overwriting later work
+ok 3 - PLATFORM-001: lost, concurrent and restarted duplicate requests keep one inert preparation without overwriting later work
+  ---
+  duration_ms: 9518.122201
+  type: 'test'
+  ...
+# Subtest: Per-client MCP connector tools enforce exact grants, approvals, history, restart and revocation
+ok 4 - Per-client MCP connector tools enforce exact grants, approvals, history, restart and revocation
+  ---
+  duration_ms: 11341.494699
+  type: 'test'
+  ...
+1..4
+# tests 4
+# suites 0
+# pass 4
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 58272.448212

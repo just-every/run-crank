@@ -1,0 +1,9 @@
+{
+  "head": "1f1db87c49472d9f7e0db584da4201b67ae77d4b",
+  "job": "127673079560 build: Build once and check the edition",
+  "command": "node src/base/contract-docs.mjs check",
+  "test": "contract-docs generated view freshness",
+  "exit": 1,
+  "failure": "Error: ACCEPTANCE.md is stale; run node src/base/contract-docs.mjs write",
+  "exception": "The task forbids committing generated views; the maintained lander regenerates them."
+}

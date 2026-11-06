@@ -1,0 +1,415 @@
+{
+  "tag": "sx-crank-c-f82",
+  "repository": "just-every/run-crank",
+  "branch": "cloud/sx-crank-c-f82",
+  "head": "1f1db87c49472d9f7e0db584da4201b67ae77d4b",
+  "base": "e2c146dc38eb64e685cf01d2c56e798404b3936e",
+  "created_at": "2026-11-06T02:32:06.344084+00:00",
+  "status_before": "partial",
+  "status_after": "partial",
+  "counts_before": {
+    "done": 32,
+    "partial": 50,
+    "missing": 17,
+    "total": 99
+  },
+  "counts_after": {
+    "done": 32,
+    "partial": 50,
+    "missing": 17,
+    "total": 99
+  },
+  "test_budget_record_before": 201,
+  "test_budget_record_after": 201,
+  "new_registrations": 0,
+  "commands": [
+    {
+      "name": "platform",
+      "command": "node --test --test-concurrency=1 tests/platform.test.mjs",
+      "exit": 0,
+      "tests_passed": 4,
+      "output": "TESTS-platform.log",
+      "sha256": "8dd4ffdc00ac32e64f5aec151b8e7795a507394b29928839270747d66f7548cf",
+      "head": null,
+      "source_equivalence": "Relevant production and assertion bytes unchanged; final harness binding selection was moved onto its own line to avoid republishing inherited address literals."
+    },
+    {
+      "name": "custody",
+      "command": "node --test --test-concurrency=1 --test-name-pattern='^BASE-003 DATA-001: complete portable inventory|^BASE-001: disconnected native' tests/crank.test.mjs tests/ownership.test.mjs",
+      "exit": 0,
+      "tests_passed": 2,
+      "output": "TESTS-custody.log",
+      "sha256": "b758e2296bff04a7fc22e13c730637dbdcf742ff444269a9319446b063199316",
+      "head": null,
+      "source_equivalence": "Relevant production and assertion bytes unchanged; final harness binding selection was moved onto its own line to avoid republishing inherited address literals."
+    },
+    {
+      "name": "exact-head-recovery",
+      "command": "node --test --test-concurrency=1 --test-name-pattern='^PLATFORM-001: SDK and CORE' tests/platform.test.mjs",
+      "exit": 0,
+      "tests_passed": 1,
+      "output": "TESTS-final-recovery.log",
+      "sha256": "ce1d57fdcd096e48d2ec2bd71c1397afdc3dbecaaceb62c2aed5325b6817dbb9",
+      "head": "1f1db87c49472d9f7e0db584da4201b67ae77d4b",
+      "source_equivalence": null
+    },
+    {
+      "name": "build",
+      "command": "cloud_run npx -y @runeditrun/rer build",
+      "exit": 0,
+      "tests_passed": null,
+      "output": "BUILD.log",
+      "sha256": "5ed452530c4bcb25c0d458a1c9113a55c8deaddfb38bee5a0c754af3066af34c",
+      "head": null,
+      "source_equivalence": null
+    },
+    {
+      "name": "typecheck",
+      "command": "pnpm typecheck",
+      "exit": 0,
+      "tests_passed": null,
+      "output": "TYPECHECK.log",
+      "sha256": "4dfa8f976ace66e19afbb2b709c889eb3da46ea232269dadab620aaabc76bd22",
+      "head": "1f1db87c49472d9f7e0db584da4201b67ae77d4b",
+      "source_equivalence": null
+    },
+    {
+      "name": "first-party",
+      "command": "pnpm exec rer check --profile first-party",
+      "exit": 0,
+      "tests_passed": null,
+      "output": "FIRST-PARTY.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "head": "1f1db87c49472d9f7e0db584da4201b67ae77d4b",
+      "source_equivalence": null
+    },
+    {
+      "name": "views",
+      "command": "node src/base/contract-docs.mjs write && node src/base/contract-docs.mjs check; restore ACCEPTANCE.md and docs/CLAIMS.md from origin/main",
+      "exit": 0,
+      "tests_passed": null,
+      "output": "GENERATOR.log",
+      "sha256": "e1f1915b593219b374d9dc92f3482ade63b516e4587cbac89016ea3206be924d",
+      "head": "1f1db87c49472d9f7e0db584da4201b67ae77d4b",
+      "source_equivalence": null
+    },
+    {
+      "name": "source-lock",
+      "command": "node node_modules/@runeditrun/rer/edition-authoring/cli.mjs lock; node node_modules/@runeditrun/rer/edition-authoring/cli.mjs check",
+      "exit": 0,
+      "tests_passed": null,
+      "output": "LOCK-CHECK.log",
+      "sha256": "507aee7cb647f7d465b234ebce765c9bdea57fc85ffbb12ec184ca503320ec00",
+      "head": "1f1db87c49472d9f7e0db584da4201b67ae77d4b",
+      "source_equivalence": null
+    },
+    {
+      "name": "deployment",
+      "command": "node scripts/build-deployment-spec.mjs --check",
+      "exit": 0,
+      "tests_passed": null,
+      "output": "DEPLOYMENT-CHECK.log",
+      "sha256": "018168b042814e9ae1eedf6a6457cc80d32ab70ed26953f451df81377d615b3c",
+      "head": "1f1db87c49472d9f7e0db584da4201b67ae77d4b",
+      "source_equivalence": null
+    },
+    {
+      "name": "migration-ledger",
+      "command": "python3 /tmp/crank-migration-ledger.py",
+      "exit": 0,
+      "tests_passed": null,
+      "output": "MIGRATION-CHECK.log",
+      "sha256": "9bfcea9521e755fc135f95e69bd4b44f9c0904d92d3e7632d450ac2f81e4fe2b",
+      "head": "1f1db87c49472d9f7e0db584da4201b67ae77d4b",
+      "source_equivalence": null
+    }
+  ],
+  "probes": [
+    "PROBE BASE-AGENT-012 create: committed native draft, outcome interruption, restart and concurrent new RPC IDs after 24 hours -> one effect, frozen original result, later edits preserved",
+    "PROBE BASE-AGENT-012 update: committed native draft, outcome interruption, restart and concurrent new RPC IDs after 24 hours -> one effect, frozen original result, later edits preserved",
+    "PROBE BASE-AGENT-012 duplicate: committed native draft, outcome interruption, restart and concurrent new RPC IDs after 24 hours -> one effect, frozen original result, later edits preserved",
+    "PROBE BASE-AGENT-012 unmatched: interrupted admission without a native receipt -> call_in_progress, no mutation replay",
+    "PROBE BASE-AGENT-012 restore: public export and restore -> no native receipts or credentials; inert drafts without owners; no execution after restart",
+    "PROBE BASE-AGENT-012 authority: signed Business MCP retries with changed consent, client, foreign sponsor and revoked consent -> refused without completion; original current consent returns frozen metadata"
+  ],
+  "candidate_ci": [
+    {
+      "conclusion": null,
+      "event": "push",
+      "head_sha": "1f1db87c49472d9f7e0db584da4201b67ae77d4b",
+      "html_url": "https://github.com/just-every/run-crank/actions/runs/42150677806",
+      "id": 42150677806,
+      "name": "Verify",
+      "status": "in_progress"
+    }
+  ],
+  "publication_scan": {
+    "status": "not run in cloud",
+    "owner": "maintained Mac lander"
+  },
+  "run_site": {
+    "candidate": "pending landing",
+    "baseline": 42017109210
+  },
+  "product_push": {
+    "status": "pushed",
+    "head": "1f1db87c49472d9f7e0db584da4201b67ae77d4b",
+    "receipt": "PUSH.txt"
+  },
+  "blockers": [],
+  "remaining_obligations": [
+    "Interrupted review and approval lifecycles",
+    "Other mutating tools",
+    "Durable queued and provider uncertainty and replay",
+    "Long-work job handles and status",
+    "Cross-person handle indistinguishability",
+    "Existing owner and account, ct, enforcing-egress and device holds"
+  ],
+  "candidate_ci_completed": {
+    "conclusion": "failure",
+    "head_sha": "1f1db87c49472d9f7e0db584da4201b67ae77d4b",
+    "html_url": "https://github.com/just-every/run-crank/actions/runs/42150677806",
+    "status": "completed"
+  },
+  "candidate_ci_jobs": [
+    {
+      "conclusion": "success",
+      "id": 127672907874,
+      "name": "plan",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Run actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1",
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Run npm install --global pnpm@10.12.4",
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Set runner-owned pnpm store",
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Run actions/cache@5a3ec84eff668545956fd18022155c47e93e2684",
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Run pnpm install --frozen-lockfile",
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Check edition source lock with the installed tool",
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Check reusable workflow permissions",
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Check verification helpers",
+          "status": "completed"
+        },
+        {
+          "conclusion": "skipped",
+          "name": "Look up complete nightly marker",
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Run node scripts/verify-ci.mjs --plan",
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Post Run actions/cache@5a3ec84eff668545956fd18022155c47e93e2684",
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Post Run actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1",
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Complete job",
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "conclusion": "failure",
+      "id": 127673079560,
+      "name": "build",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Run actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1",
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Run npm install --global pnpm@10.12.4",
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Set runner-owned pnpm store",
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Run actions/cache@5a3ec84eff668545956fd18022155c47e93e2684",
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Run pnpm install --frozen-lockfile",
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Run pnpm run deps",
+          "status": "completed"
+        },
+        {
+          "conclusion": "failure",
+          "name": "Build once and check the edition",
+          "status": "completed"
+        },
+        {
+          "conclusion": "skipped",
+          "name": "Run tar -czf \"$RUNNER_TEMP/crank-build.tar.gz\" dist",
+          "status": "completed"
+        },
+        {
+          "conclusion": "skipped",
+          "name": "Run actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
+          "status": "completed"
+        },
+        {
+          "conclusion": "skipped",
+          "name": "Post Run actions/cache@5a3ec84eff668545956fd18022155c47e93e2684",
+          "status": "completed"
+        },
+        {
+          "conclusion": "skipped",
+          "name": "Post Run actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1",
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Complete job",
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "conclusion": "skipped",
+      "id": 127673081386,
+      "name": "light",
+      "status": "completed",
+      "steps": []
+    },
+    {
+      "conclusion": "failure",
+      "id": 127673353792,
+      "name": "verify",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "status": "completed"
+        },
+        {
+          "conclusion": "failure",
+          "name": "Require the selected coverage and its proof",
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Complete job",
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "conclusion": "skipped",
+      "id": 127673354956,
+      "name": "shards (${{ matrix.name }})",
+      "status": "completed",
+      "steps": []
+    },
+    {
+      "conclusion": "skipped",
+      "id": 127673355414,
+      "name": "full-push-proof",
+      "status": "completed",
+      "steps": []
+    },
+    {
+      "conclusion": "skipped",
+      "id": 127673355892,
+      "name": "nightly-proof",
+      "status": "completed",
+      "steps": []
+    }
+  ],
+  "readiness": {
+    "eligible": true,
+    "rule": "generated-view-only failure exception",
+    "expected_failure": "ACCEPTANCE.md is stale",
+    "build_job": 127673079560,
+    "dependent_verify_job": 127673353792,
+    "runtime_shards": "skipped after the exempt build failure",
+    "product_failure": false,
+    "lander_remaining": [
+      "regenerate views",
+      "exact-SHA Verify after regeneration",
+      "full-history complete publication scan",
+      "guarded landing",
+      "Run site"
+    ]
+  },
+  "github_invocations": 8
+}
