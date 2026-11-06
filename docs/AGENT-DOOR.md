@@ -229,11 +229,14 @@ preparation credentials retain exactly their prior scopes and cannot read the
 feed; execution and trigger credentials retain their separate purposes.
 
 The feed covers `approval.pending`, `approval.decided`, `review.opened`,
-`review.flagged` and
+`review.flagged`, `review.reviewed` and
 native, signed-in-person `policy.adopted`. Each carries its retained identity,
 record URI, time and a person or agent-for-person actor. Approval and review
 events include class identifiers and the decision, plus the decision identity;
-decided approvals include their lifecycle state. Native policy adoption includes
+decided approvals include their lifecycle state. Mark reviewed emits a
+`review.reviewed` event naming the signed-in person; an agent token cannot
+perform that person action. The same current reviewer eligibility filters
+flagged and reviewed events on every replay. Native policy adoption includes
 its revision and the adoption decision; it has no tool class. A native owner
 can explicitly acknowledge the exact installed policy through
 `POST /agents/api/policy/adopt` with its current `revision` and `seq`;
@@ -258,7 +261,8 @@ policy and Pause. Delivery is at least once; consumers deduplicate by event id.
 
 `tests/agent-door/events-journey.mjs` exercises actual native decisions, multiple
 pages, restart, withheld values, explicit scopes, revoked consent and agents,
-reviewer demotion, deactivation and erased actor names. The existing platform
+Mark reviewed, refused agent impersonation, reviewer demotion, deactivation
+and erased actor names. The existing platform
 journey invokes that proof in push Verify, and the hosted native journey invokes
 the feed replay checks. Signed issuer fixtures establish native protocol
 behavior only. Real Business propagation and signed policy actor provenance

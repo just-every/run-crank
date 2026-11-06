@@ -11,7 +11,7 @@ const projection = event => {
  assert.ok(common.every(key => Object.hasOwn(event,key)));
  assert.match(event.id,/^[a-f0-9-]{36}$/);
  assert.ok(Number.isFinite(Date.parse(event.at)));
- assert.ok(['approval.pending','approval.decided','review.opened','review.flagged','policy.adopted'].includes(event.type));
+ assert.ok(['approval.pending','approval.decided','review.opened','review.flagged','review.reviewed','policy.adopted'].includes(event.type));
  assert.ok(['person','agent'].includes(event.actor.kind));
  assert.deepEqual(Object.keys(event.actor).sort(),event.actor.kind==='person'?['kind','person']:['agent','for','kind','label']);
  const person=event.actor.kind==='person'?event.actor.person:event.actor.for;
@@ -117,6 +117,7 @@ export async function nativeEventsProof() {
   const reviewed = await tool('crank.workflows.create',draft());
   const reviewId = reviewed.result._meta['com.runeditrun/review'].id;
   await person('/agents/api/reviews/'+reviewId+'/flag',{});
+  assert.equal((await person('/agents/api/reviews/'+reviewId+'/reviewed',{})).review.state,'reviewed');
 
   const keys = await webcrypto.subtle.generateKey({name:'ECDSA',namedCurve:'P-256'},true,['sign','verify']);
   const kid='synthetic-crank-80',issuer='https://synthetic-crank-80.invalid',installationId='synthetic-crank-80';
@@ -196,7 +197,7 @@ export async function nativeEventsProof() {
    assert.fail('feed did not reach its retained end');
   };
   const initial=await readAll(reader);
-  for(const type of ['approval.pending','approval.decided','review.opened','review.flagged','policy.adopted'])
+  for(const type of ['approval.pending','approval.decided','review.opened','review.flagged','review.reviewed','policy.adopted'])
    assert.ok(initial.events.some(event=>event.type===type),type);
   const opened=initial.events.find(event=>event.type==='approval.pending');
   assert.equal(opened.actor.kind,'agent');assert.equal(opened.actor.for.id,owner.id);
@@ -222,16 +223,38 @@ export async function nativeEventsProof() {
   const signedReview=await tool('crank.workflows.create',draft(),writer);
   const signedReviewId=signedReview.result._meta['com.runeditrun/review'].id;
   await person('/agents/api/reviews/'+signedReviewId+'/flag',{},{cookie:reviewerCookie});
+  assert.equal((await person('/agents/api/reviews/'+signedReviewId+'/reviewed',{},{cookie:reviewerCookie})).review.state,'reviewed');
   const reviewerToken=await token({sub:'synthetic-crank-reviewer',email:reviewerEmail,scope:'events:read',
    act:{sub:'synthetic-crank-reviewer-agent',name:'Synthetic reviewer agent'}});
   const reviewerFeed=await readAll(reviewerToken);
   assert.ok(reviewerFeed.events.some(event=>event.uri.endsWith('/'+signedReviewId)));
+  const marked=reviewerFeed.events.filter(event=>event.type==='review.reviewed'&&event.uri.endsWith('/'+signedReviewId));
+  assert.equal(marked.length,1,'Mark reviewed emits one native lifecycle event');
+  projection(marked[0]);
+  assert.equal(marked[0].actor.kind,'person');
+  assert.equal(marked[0].actor.person.name,'Synthetic reviewer');
+  const reviewer=(await h.send('/auth/operators',undefined,h.owner)).value.find(person=>person.email===reviewerEmail);
+  assert.equal(marked[0].actor.person.id,reviewer.id);
+  const agentMark=await h.mf.dispatchFetch(h.origin+'/agents/api/reviews/'+signedReviewId+'/reviewed',{
+   method:'POST',headers:{origin:h.origin,authorization:'Bearer '+reviewerToken,'content-type':'application/json'},body:'{}',
+  });
+  assert.equal(agentMark.status,403,'an event reader cannot impersonate the person marking a review');
+  await agentMark.body.cancel();
+  assert.deepEqual(await readAll(reviewerToken),reviewerFeed,'refused person impersonation emits nothing and changes no visible review');
+  const reviewState=(await person('/agents/api/reviews',undefined,{cookie:reviewerCookie})).reviews;
+  assert.equal(reviewState.find(review=>review.id===signedReviewId).state,'reviewed');
+  await h.restart();
+  assert.deepEqual(await readAll(reviewerToken),reviewerFeed,'Mark reviewed retains its event identity after restart');
   const beforeFlagCursor=initial.cursor;
   // More than a storage page of subsequently hidden rows must still advance.
   for(let i=0;i<201;i++) await person('/agents/api/reviews/'+signedReviewId+'/flag',{},{cookie:reviewerCookie});
   const authorized=await readAll(reviewerToken,beforeFlagCursor);
   assert.equal(authorized.events.filter(event=>event.type==='review.flagged'&&event.uri.endsWith('/'+signedReviewId)).length,202);
   assert.equal(new Set(authorized.events.map(event=>event.id)).size,authorized.events.length);
+  assert.deepEqual(authorized.events.filter(event=>event.type==='review.reviewed'&&event.uri.endsWith('/'+signedReviewId)),marked);
+  const signedDecision=(await readAll(reader,beforeFlagCursor)).events.find(event=>event.type==='approval.decided'&&event.uri.endsWith('/'+signedHandle.id));
+  assert.equal(signedDecision.state,'rejected');
+  assert.equal(signedDecision.actor.kind,'person');
   await settings('member');
   const noLongerVisible=await readAll(reviewerToken,beforeFlagCursor);
   assert.deepEqual(noLongerVisible.events,[],'current reviewer eligibility filters every replay');
@@ -247,7 +270,6 @@ export async function nativeEventsProof() {
   await adopt(autonomousPolicy());
   await person('/agents/api/agents/'+context.agentId+'/revoke',{});
   assert.equal((await tool('crank.events.list',{after:first.cursor},reader)).status,401,'revoked agent refuses retained cursor reads');
-  const reviewer=(await h.send('/auth/operators',undefined,h.owner)).value.find(person=>person.email===reviewerEmail);
   assert.equal((await h.send('/auth/operator/status',{operatorId:reviewer.id,status:'inactive'},h.owner)).status,200);
   assert.equal((await tool('crank.events.list',{after:beforeFlagCursor},reviewerToken)).status,401);
   await h.post('data/erase',{operator_id:reviewer.id,confirm:'ERASE'});
@@ -260,7 +282,7 @@ export async function nativeEventsProof() {
   await h.restart();
   assert.ok(!(await readAll(erasureReader,beforeFlagCursor)).events.some(event=>event.actor.person?.name==='Synthetic reviewer'));
   assert.equal((await tool('crank.events.list',{after:beforeFlagCursor},reviewerToken)).status,401);
-  const summary={erasedActorWithheld:true,nativeTypes:[...new Set(initial.events.map(event=>event.type))],stableRestart:true,explicitScope:true,
+  const summary={erasedActorWithheld:true,markedReviewed:true,personImpersonationRefused:true,nativeTypes:[...new Set(initial.events.map(event=>event.type))],stableRestart:true,explicitScope:true,
    hiddenEvents:202,reviewerReplayFiltered:true,consentRevoked:true,agentRevoked:true,personInactive:true};
   console.log('PROBE BASE-AGENT-010 lifecycle: production MCP and person decisions -> '+JSON.stringify(summary));
   return summary;

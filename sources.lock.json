@@ -156,7 +156,7 @@
       "executable": false
     },
     "base-copies.json": {
-      "sha256": "4f6969900dc6c62eefdc3e777ef3916a341b2e4637f048c2a007f79448b28f94",
+      "sha256": "1be57ea0e45469a1e6925e84c1daa0fbe9ff19043d46c0cb29b3a34a60faf3ce",
       "executable": false
     },
     "CHANGELOG.md": {
@@ -172,7 +172,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "2d1e6ec31ca3fd6fc10f59a10944f7f1b58711e039dacd1eb451e44a880f77ca",
+      "sha256": "c613a395f5a92db35b1f0423b33248121c1349c6620d9afaee70024d9202b48c",
       "executable": false
     },
     "DEMO.md": {
@@ -196,7 +196,7 @@
       "executable": false
     },
     "docs/AGENT-DOOR.md": {
-      "sha256": "f3c30bd46989ba2a44f2e1fa5301eb7c16212381ec8a668ef8c8262205b50dd4",
+      "sha256": "7f673c9e9ef204fb3331e35911474616add7ca1066a6198cda3d8560bb764df9",
       "executable": false
     },
     "docs/API.md": {
@@ -2952,7 +2952,7 @@
       "executable": false
     },
     "src/crank/agent-door/index.ts": {
-      "sha256": "35173832e2d3894f2a1380d86a9d6f79d795ab99e1a9deab775377bbcda3b729",
+      "sha256": "501607cd79b9542242aa8cb59d9b357b8a9ad989b930a8a8e62f67fbdc057465",
       "executable": false
     },
     "src/crank/agent-door/native.ts": {
@@ -4556,7 +4556,7 @@
       "executable": false
     },
     "src/modules/agent-door/reviews.ts": {
-      "sha256": "f311bd52b22fd43f4dea79470afa88ad731ecc2648fa53123235cd79640b4d23",
+      "sha256": "f1125fbac676048e8cf3a631c6c9fd9d34287b0f0883866dc6be48d3587fcebb",
       "executable": false
     },
     "src/modules/agent-door/schema/agent-door.sql": {
@@ -4640,7 +4640,7 @@
       "executable": false
     },
     "src/modules/agent-door/types.ts": {
-      "sha256": "0533a596c293f5f3dfa33f88d61ae58a8ef579847b0e4fb3b7fe8e5ff3f2cc74",
+      "sha256": "f69a9b7fe618a4b4614aa2a4e2de28806d6ca3e80115034aa61aa2d20de1b89e",
       "executable": false
     },
     "src/modules/agent-door/wire.ts": {
@@ -6712,7 +6712,7 @@
       "executable": false
     },
     "tests/agent-door/events-journey.mjs": {
-      "sha256": "dbd182ef2827ccae2bb123eaca33c37f84a97bdda3201b3d24a03fce176c9878",
+      "sha256": "2b40fe9f88649723394a9526eaf4902050b281135f93f8e7746e6693f93c1935",
       "executable": false
     },
     "tests/agent-door/fixtures.mjs": {

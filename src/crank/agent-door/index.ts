@@ -22,7 +22,7 @@ export function crankAgentDoor(bindings: Bindings) {
     db: env.DB, origin: env.AUTH_ORIGIN, trust: installationTrust(env),
     capabilities: [...capabilities], people: peopleAdapter(env),
     tools: crankTools(env), resources: [],
-    eventTypes: ['approval.pending', 'approval.decided', 'review.opened', 'review.flagged', 'policy.adopted'],
+    eventTypes: ['approval.pending', 'approval.decided', 'review.opened', 'review.flagged', 'review.reviewed', 'policy.adopted'],
     paths: ['/api/crank/v1/mcp'],
     localCredentials: request => localCredentials(env, request),
     notTools: [

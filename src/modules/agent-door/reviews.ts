@@ -53,7 +53,7 @@ export async function reviewDoor(rt: Runtime, request: Request, person: Person, 
   row.state = action === 'flag' ? 'flagged' : action === 'undo' ? 'undone' : 'reviewed'
   row.marked_by = person.id; row.marked_at = new Date(rt.now()).toISOString()
   await rt.options.db.prepare('UPDATE agent_door_reviews SET state=?,marked_by=?,marked_at=? WHERE id=?').bind(row.state, person.id, row.marked_at, id).run()
-  if (action === 'flag') effects.push({ type: 'review.flagged', uri: `${rt.options.origin}/agents/reviews/${id}`, data: { classes: saved.classes, decision_id: saved.decision_id } })
+  if (action === 'flag' || action === 'reviewed') effects.push({ type: action === 'flag' ? 'review.flagged' : 'review.reviewed', uri: `${rt.options.origin}/agents/reviews/${id}`, data: { classes: saved.classes, decision_id: saved.decision_id } })
   await appendEvents(rt, effects.map(effect => ({ ...effect, actor: { kind: 'person', person: { id: person.id, name: person.name } } })))
   return json({ review: reviewView(rt, row) })
 }
