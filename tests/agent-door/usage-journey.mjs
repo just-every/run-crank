@@ -92,10 +92,65 @@ export async function agentUsageJourney({inspect}={}) {
   for(const agent of revoked.agents)assert.ok(screen.text.includes(agent.name));
   assert.ok(screen.text.includes('Money moved: Not reported'));
   assert.equal((await report('2026-10')).agent_usage.totals.request_attempts,1);
-  if(inspect)await inspect({h,cookie,report:revoked,month});
-  await restart('2026-12-01T00:00:00.000Z');assert.ok(!(await call(1)).value.result.isError);
-  assert.deepEqual((await report()).agent_usage,revoked);
-  assert.equal((await report('2026-12')).agent_usage.totals.request_attempts,1);
-  console.log('PROBE BASE-AGENT-011 native usage: 212 attempts, 211 originals, 1 replay, two agents, complete UTC month, restarted authority and retained attribution PASS');
+  // A person's decision resolves the retained request; it is not another agent call.
+  await restart('2026-11-30T23:59:59.999Z');
+  await policy('approval');
+  const heldArgs=[4,5,6,7].map(n=>({...create,name:'Monthly approval '+n,idempotency_key:'synthetic-crank-'+n}));
+  const held=[];
+  for(const args of heldArgs) {
+   const response=await call(1,'crank.workflows.create',args);
+   assert.equal(response.value.result._meta['com.runeditrun/decision'].disposition,'approval',response.text);
+   const approvals=(await person('/agents/api/approvals')).approvals;
+   held.push(approvals.find(a=>a.decision_id===response.value.result._meta['com.runeditrun/decision'].id));
+   assert.ok(held.at(-1));
+  }
+  const heldTotals={request_attempts:216,replays:1,original_operations:215};
+  assert.deepEqual((await report()).agent_usage.totals,heldTotals);
+  const sameMonth=held[3];
+  assert.equal((await person('/agents/api/approvals/'+sameMonth.id+'/approve',{revision:sameMonth.revision,summary_sha256:sameMonth.summary_sha256})).approval.state,'executed');
+  assert.deepEqual((await report()).agent_usage.totals,heldTotals,'same-month owner approval must not count another agent request');
+  const workflowsBefore=await h.get('workflows',cookie);
+  await restart('2026-12-01T00:00:00.000Z');
+  for(const [index,action] of ['approve','reject'].entries()) {
+   const view=held[index];
+   const decided=await person('/agents/api/approvals/'+view.id+'/'+action,{revision:view.revision,summary_sha256:view.summary_sha256});
+   assert.equal(decided.approval.state,index===0?'executed':'rejected');
+  }
+  const workflowsAfter=await h.get('workflows',cookie);
+  assert.equal(workflowsAfter.length,workflowsBefore.length+1);
+  const approved=workflowsAfter.find(w=>w.name===heldArgs[0].name);assert.ok(approved);
+  for(const args of heldArgs.slice(1,3))assert.ok(!workflowsAfter.some(w=>w.name===args.name));
+  const completed=(await report()).agent_usage;
+  assert.deepEqual(completed.totals,heldTotals,'owner approval must not count another request in the original month');
+  const nextMonth=(await report('2026-12')).agent_usage;
+  assert.deepEqual(nextMonth.totals,{request_attempts:0,replays:0,original_operations:0},'owner decisions must not invent a next-month agent call');
+  assert.deepEqual(nextMonth.agents,[]);
+  const approvalCounts=usage=>Object.fromEntries(usage.agents.find(a=>a.agent_id===ids[1]).decisions.filter(d=>d.decision==='approval').map(d=>[d.outcome,d.request_attempts]));
+  assert.deepEqual(approvalCounts(completed),{done:2,pending:1,refused:2},'approval completion, rejection and earlier expiry must resolve the original requests');
+  // A real keyed retry is a December attempt, never a second original operation.
+  const retried=await call(1,'crank.workflows.create',heldArgs[0]);
+  assert.equal(retried.value.result.structuredContent.id,approved.id);
+  assert.equal((await h.get('workflows',cookie)).length,workflowsAfter.length);
+  const replayMonth=(await report('2026-12')).agent_usage;
+  assert.deepEqual(replayMonth.totals,{request_attempts:1,replays:1,original_operations:0});
+  assert.deepEqual(replayMonth.agents[0].decisions.map(({decision,outcome,request_attempts,replays})=>({decision,outcome,request_attempts,replays})),[{decision:'approval',outcome:'replayed',request_attempts:1,replays:1}]);
+  await restart('2026-12-01T23:59:59.999Z');
+  assert.equal((await person('/agents/api/approvals/'+held[2].id)).approval.state,'expired');
+  const resolved=(await report()).agent_usage;
+  assert.deepEqual(resolved.totals,heldTotals);
+  assert.deepEqual(approvalCounts(resolved),{done:2,refused:3},'expired held calls must no longer appear pending');
+  const standard=resolved.agents.find(a=>a.agent_id===ids[1]).classes.filter(c=>c.class==='standard'&&c.decision==='approval');
+  assert.deepEqual(standard.map(({outcome,request_attempts})=>({outcome,request_attempts})),[{outcome:'done',request_attempts:2},{outcome:'refused',request_attempts:3}]);
+  const resolvedScreen=await h.send('/app/operations?month='+month,undefined,cookie);assert.equal(resolvedScreen.status,200);
+  assert.ok(resolvedScreen.text.includes('216 request attempts · 215 original operations · 1 replays'));
+  assert.ok(resolvedScreen.text.includes('approval · done: 2 attempts (0 replays)'));
+  assert.ok(resolvedScreen.text.includes('approval · refused: 3 attempts (0 replays)'));
+  assert.ok(!resolvedScreen.text.includes('approval · pending:'));
+  await h.restart();
+  assert.deepEqual((await report()).agent_usage,resolved);
+  assert.deepEqual((await report('2026-12')).agent_usage,replayMonth);
+  if(inspect)await inspect({h,cookie,report:resolved,month});
+  console.log('PROBE BASE-AGENT-011 totals: November held calls approved in December -> 216 attempts, 215 originals, 1 replay; zero December calls until a real keyed retry, then 1 attempt and 1 replay PASS');
+  console.log('PROBE BASE-AGENT-011 outcomes: owner completion, rejection and expiry -> November approval outcomes done 2, refused 3, pending 0; API and rendered class totals survive restart PASS');
  } finally {await h.close()}
 }

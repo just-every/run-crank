@@ -31,7 +31,7 @@ try {
     const panel=page.locator('#agent-usage');
     for(const summary of await panel.locator('summary').all())await summary.click();
     if(width===1440) {
-     await expect(panel.locator('[data-agent-totals]')).toHaveText('212 request attempts · 211 original operations · 1 replays');
+     await expect(panel.locator('[data-agent-totals]')).toHaveText('216 request attempts · 215 original operations · 1 replays');
      for(const agent of report.agents) {
       const row=panel.locator('[data-agent-id="'+agent.agent_id+'"]');
       await expect(row).toContainText(agent.name);

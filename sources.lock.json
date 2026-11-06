@@ -3616,7 +3616,7 @@
       "executable": false
     },
     "src/crank/ops/agent-usage.ts": {
-      "sha256": "4ec34897f0871251d9f9e6ec85faeb9c09a3e669b926bb7193967c3950ed1240",
+      "sha256": "0bfcd2bc14cdebb10cedd85ee65f19991de80d44943ca62cfe35e43a4df0a352",
       "executable": false
     },
     "src/crank/ops/audit.ts": {
@@ -6736,11 +6736,11 @@
       "executable": false
     },
     "tests/agent-door/usage-journey.mjs": {
-      "sha256": "bd3f36a7d30ac5bdfb0cf230e92403f2c74e2aeec0468a6342515bd7690687dd",
+      "sha256": "043264faf42ff9819eb851068ef2df2d901a8a66a91d486f19a52880db1aa644",
       "executable": false
     },
     "tests/agent-usage-browser.mjs": {
-      "sha256": "cd00243249534b5826afcdd7b2b615c90c4b0239b360f0c61f95b222f0f294e0",
+      "sha256": "28115efdfdf1b76fb2eefbc04fd5f0a1914f37b1f4e22f632e4d6b141a53ee83",
       "executable": false
     },
     "tests/ai-steps-browser.mjs": {
