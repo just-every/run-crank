@@ -172,7 +172,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "aac2d3d2ae3f5062bea791377b189e5eb86834bd3f7a1d043ac176b60e5d43c9",
+      "sha256": "2075542f73dd25c6157d02e1077decc4a653231830e47b6ff7926ccc43896f51",
       "executable": false
     },
     "DEMO.md": {
@@ -3088,7 +3088,7 @@
       "executable": false
     },
     "src/crank/connections/apps.ts": {
-      "sha256": "11d915b236d20d2a7f27c1ebac99cfca34dfd02c8d548526aabd1c4f8d40fcb7",
+      "sha256": "701114ab2761b5d1435c322f5cc3aabcbff12cbddbc3eb41e75f89224caa751f",
       "executable": false
     },
     "src/crank/connections/auth.ts": {
@@ -3096,7 +3096,7 @@
       "executable": false
     },
     "src/crank/connections/catalog.ts": {
-      "sha256": "c8762cdbe7532b76f4084157a364b8abbf655ed9795607c06a1a32da399cfdbf",
+      "sha256": "f58243715ac08df03a8ab1b254fc5bc212f461a492f99e66b127d00845cc1729",
       "executable": false
     },
     "src/crank/connections/oauth.ts": {
@@ -3165,6 +3165,10 @@
     },
     "src/crank/connectors/pagination.ts": {
       "sha256": "493c6048c184540c8690cdf55fc50e57e14160eb3a67066421732ed0cff6b909",
+      "executable": false
+    },
+    "src/crank/connectors/paypal.ts": {
+      "sha256": "72c93028924f8cf772879265a7b5952e88c62489747a84b012e06995f0801f3b",
       "executable": false
     },
     "src/crank/connectors/rate-limit.ts": {
@@ -3272,7 +3276,7 @@
       "executable": false
     },
     "src/crank/data-flow-graphs.ts": {
-      "sha256": "8a1d5f10b7319baf9ca897c5d01b39aad03f185f740cb927ee4d4b8372d5b170",
+      "sha256": "0d5b08d2b42653701a46347013732ad15852339b3d9b50637fc140417d712dd8",
       "executable": false
     },
     "src/crank/data-flow-types.ts": {
@@ -3396,7 +3400,7 @@
       "executable": false
     },
     "src/crank/engine/steps/index.ts": {
-      "sha256": "12dc047720273297abac13c98163584fd46ae227a72f0b833123794c3dc41d68",
+      "sha256": "be7d71078bfb6cd5a7534fd7b18070aeced79fcec8b91929f5c2e2c442bf5249",
       "executable": false
     },
     "src/crank/engine/steps/join.ts": {
@@ -3776,7 +3780,7 @@
       "executable": false
     },
     "src/crank/restore-policy.mjs": {
-      "sha256": "6fcbeca54518248c09c2ecf0960c52691856dc47d050bb0276ca17253d400a51",
+      "sha256": "01c265d7ebe3aa95cb744b57a01cec82e356a09a277167b279a45ac727ba407e",
       "executable": false
     },
     "src/crank/runs.ts": {
@@ -6784,7 +6788,7 @@
       "executable": false
     },
     "tests/connections.test.mjs": {
-      "sha256": "245df7188aa132769a96a06ee796d818c9c4234ce4314f04ca4e1cca7afeceb2",
+      "sha256": "a79cb30f92107303e1102525119677cf2193503d0aa703e4ce3bf81c2db36539",
       "executable": false
     },
     "tests/crank.test.mjs": {
@@ -6964,7 +6968,7 @@
       "executable": false
     },
     "tests/gmail-search-browser.mjs": {
-      "sha256": "40cf2492347160bcf6d704c7dd6fa857e6e1c1600c96abd31ac1deaa7eacca88",
+      "sha256": "11ae3815586af4a2767d54a7f362b49d8924e0fc612d168be7e847e6be84d992",
       "executable": false
     },
     "tests/gmail-search-journey.mjs": {
@@ -7172,11 +7176,19 @@
       "executable": false
     },
     "tests/ownership.test.mjs": {
-      "sha256": "d6f0685e5a01dd7b318d542c43e4ffd1a57d143b2305841b3f998bf7627e1360",
+      "sha256": "d45d68e354b4cd243504cac3a80224e31b36d8dc81ea1787fbb78e744097aed7",
       "executable": false
     },
     "tests/pagination.test.mjs": {
       "sha256": "95b902ff5f1f040d5d76420bd60c7194cce1ff542165587ed7c796b88743a5fb",
+      "executable": false
+    },
+    "tests/paypal-search-browser.mjs": {
+      "sha256": "f94c2de1809042a6c3da396dede8d70e9b1522f45b926b50e011e5514c719209",
+      "executable": false
+    },
+    "tests/paypal-search-journey.mjs": {
+      "sha256": "891e796b032ec456272b140760aa5f223085ec3a8c7dc2bc67163eb8433edd57",
       "executable": false
     },
     "tests/platform-browser.mjs": {
