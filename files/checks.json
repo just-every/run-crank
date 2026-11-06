@@ -1,0 +1,188 @@
+{
+  "tag": "sx-crank-c-f88",
+  "repository": "just-every/run-crank",
+  "branch": "cloud/sx-crank-c-f88",
+  "head": "143eb18c2431229d1ca8741e07eb0abd0745f793",
+  "base": "e2c146dc38eb64e685cf01d2c56e798404b3936e",
+  "checks": [
+    {
+      "command": "cloud_run npx -y @runeditrun/rer build",
+      "exit": 0,
+      "proof": "build.log",
+      "basis": "Product source bytes match the committed candidate; only integration assertions changed after the build."
+    },
+    {
+      "command": "node --test --test-concurrency=1 --test-name-pattern='^PLATFORM-001: SDK and CORE door draft lifecycle' tests/platform.test.mjs",
+      "exit": 0,
+      "passed": 1,
+      "proof": "platform.log",
+      "basis": "Product and platform test bytes match the committed candidate."
+    },
+    {
+      "command": "pnpm typecheck",
+      "exit": 0,
+      "head": "143eb18c2431229d1ca8741e07eb0abd0745f793",
+      "proof": "typecheck.log"
+    },
+    {
+      "command": "pnpm exec rer check --profile first-party",
+      "exit": 0,
+      "head": "143eb18c2431229d1ca8741e07eb0abd0745f793",
+      "proof": "first-party.log"
+    },
+    {
+      "command": "node src/base/contract-docs.mjs write && node src/base/contract-docs.mjs check",
+      "exit": 0,
+      "proof": [
+        "views-write.log",
+        "views-check.log"
+      ],
+      "basis": "Views checked locally, then restored whole from origin/main and excluded from every product commit."
+    },
+    {
+      "command": "node node_modules/@runeditrun/rer/edition-authoring/cli.mjs lock; node node_modules/@runeditrun/rer/edition-authoring/cli.mjs check",
+      "exit": 0,
+      "head": "143eb18c2431229d1ca8741e07eb0abd0745f793"
+    }
+  ],
+  "counts_before": {
+    "done": 32,
+    "partial": 50,
+    "missing": 17
+  },
+  "counts_after": {
+    "done": 32,
+    "partial": 50,
+    "missing": 17
+  },
+  "status_rows_before": 99,
+  "status_rows_after": 99,
+  "target": {
+    "id": "BASE-AGENT-001",
+    "before": "partial",
+    "after": "partial"
+  },
+  "files": [
+    "CONTRACT.md",
+    "agent-surface.json",
+    "docs/AGENT-DOOR.md",
+    "sources.lock.json",
+    "src/crank/agent-door/index.ts",
+    "src/crank/agent-door/prompts.ts",
+    "tests/agent-door/fixtures.mjs",
+    "tests/agent-door/journey.mjs",
+    "tests/agent-door/prompts-journey.mjs"
+  ],
+  "test_registrations": {
+    "recorded_current_before": 201,
+    "recorded_current_after": 201,
+    "new_node_registrations": 0,
+    "new_independent_assertion_commands": 0
+  },
+  "identity": "Every candidate author and committer is the fleet identity; no trailers. Both guarded product pushes succeeded on their first attempt.",
+  "publication_scan": {
+    "status": "NOT RUN",
+    "reason": "Cloud branch scan is delegated to the maintained fleet lander; no complete or zero-findings claim is made."
+  },
+  "run_site": {
+    "status": "PENDING LANDING",
+    "baseline_run": 42017109210
+  },
+  "migration_ledger": {
+    "command": "none",
+    "exit": 0,
+    "reason": "No migration changed"
+  },
+  "ui": {
+    "changed_screens": [],
+    "browser_proof": "not applicable; no UI changes"
+  },
+  "source_lock_sha256": "1d305a91676ed47fad9a02490fe6393657cd892f3e9bc14e26386803cfb72018",
+  "worktree_clean": true,
+  "new_email_shaped_additions": 0,
+  "packet_selection": [
+    "REPORT.md",
+    "checks.json",
+    "agent-door-receipt.json",
+    "agent-door.log",
+    "build.log",
+    "platform.log",
+    "typecheck.log",
+    "first-party.log",
+    "views-write.log",
+    "views-check.log",
+    "slash-token-review.json",
+    "main-ci.jsonl",
+    "candidate-ci.jsonl",
+    "views-restored-check.log",
+    "candidate-ci-final.json",
+    "candidate-jobs.jsonl",
+    "ci-job-127864113450.log",
+    "ci-job-127864437762.log"
+  ],
+  "provenance": {
+    "candidate_head": "143eb18c2431229d1ca8741e07eb0abd0745f793",
+    "remote_product_ref_verified": true,
+    "main_at_last_fetch": "e2c146dc38eb64e685cf01d2c56e798404b3936e",
+    "published_history_rewritten": false,
+    "publication_scan_complete_claimed": false
+  },
+  "restored_views_check": {
+    "command": "node src/base/contract-docs.mjs check",
+    "exit": 1,
+    "expected": true,
+    "reason": "Generated views were deliberately restored from origin/main; the lander regenerates them."
+  },
+  "source_files": {
+    "CONTRACT.md": "e3dec2a78eefc32866d3992e41160474ea2719ffc9c83eba3258a43a30927470",
+    "agent-surface.json": "b7a19f619ebc33d3e1f594779c1621699f2d625219d5d40936d6422185e6a7a0",
+    "docs/AGENT-DOOR.md": "5a7551fdd1e365a315887da8946234ab27d15472d5c23fc5f10f027355489666",
+    "sources.lock.json": "1d305a91676ed47fad9a02490fe6393657cd892f3e9bc14e26386803cfb72018",
+    "src/crank/agent-door/index.ts": "66937b3c0c9899c125dba074fbd6d090ebd27c8f233d3ce45c5bf573ba754671",
+    "src/crank/agent-door/prompts.ts": "8681a1dcd0d4abd2f766d7c6f7ffff66881df5b6454d6f65d4c4c7c49dad4810",
+    "tests/agent-door/fixtures.mjs": "14a6ebcdee1003d9632e77cf4cf1259bc3d003fc8204d74040790244557038fa",
+    "tests/agent-door/journey.mjs": "91ea323836579ae179f75b7cff5a6f012422dc8ef2c3ec29ed76815acd9e8c81",
+    "tests/agent-door/prompts-journey.mjs": "99aca54be85153bc667b25eff4d97954294448ded233cafd8d5137b9b4cf8357"
+  },
+  "product_commits": [
+    "143eb18c2431229d1ca8741e07eb0abd0745f793 Prove prompt guidance preserves native authority",
+    "33d184b5eb3ef23878c715e9867c67de0b80788c Add bounded agent specialist prompts [skip ci]"
+  ],
+  "ci": {
+    "conclusion": "failure",
+    "head_sha": "143eb18c2431229d1ca8741e07eb0abd0745f793",
+    "html_url": "https://github.com/just-every/run-crank/actions/runs/42209366841",
+    "status": "completed",
+    "run_id": 42209366841,
+    "event": "push",
+    "classification": "permitted generated-view-only failure",
+    "failed_jobs": [
+      {
+        "id": 127864113450,
+        "name": "build",
+        "cause": "node src/base/contract-docs.mjs check: ACCEPTANCE.md is stale"
+      },
+      {
+        "id": 127864437762,
+        "name": "verify",
+        "cause": "summary depends on the failed build"
+      }
+    ],
+    "skipped_jobs": [
+      "light",
+      "shards",
+      "full-push-proof",
+      "nightly-proof"
+    ],
+    "locally_reproduced_expected_failure": {
+      "command": "node src/base/contract-docs.mjs check",
+      "exit": 1,
+      "failure": "ACCEPTANCE.md is stale"
+    },
+    "workflow_dispatches": 0,
+    "reruns": 0,
+    "github_invocations": 6,
+    "read_logs_once_per_failed_job": true,
+    "ready_basis": "Explicit cloud generated-view exception; raw Verify conclusion is failure, not success."
+  }
+}

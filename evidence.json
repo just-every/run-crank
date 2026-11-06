@@ -1,0 +1,118 @@
+{
+  "files": [
+    {
+      "blob": "2967dea222b02e81ddd9a116c5c81e172f5e3639",
+      "bytes": 14481,
+      "path": "REPORT.md",
+      "sha256": "f4f6883a8a795482e0dca86f1160e51207e1913155b6812206def60d36f94ac5"
+    },
+    {
+      "blob": "6559de4a3e586cd4a663fde193667eb07ce0137b",
+      "bytes": 86954,
+      "path": "agent-door-receipt.json",
+      "sha256": "dd587a69f50d8bab17e580aa96aaa1f84ee4034fd7285376c134dcb48f42c6e4"
+    },
+    {
+      "blob": "efc714d9fc9abe421f3e6b18feee40ffc62b3bdc",
+      "bytes": 38181,
+      "path": "agent-door.log",
+      "sha256": "f76c79bdb9d04442c3fed001940c59fde05a7dd4888aa9e97fdaa7869c7f6550"
+    },
+    {
+      "blob": "2c82e99fbf76e9665b180c800c94cc955be77a13",
+      "bytes": 3235,
+      "path": "build.log",
+      "sha256": "ff3383b02096663299405daba9994ce0be7b327b299815fdd42a54914d5d0b78"
+    },
+    {
+      "blob": "ad3b26297ce4cbcfef503b1b965328ea7e3ad7df",
+      "bytes": 178,
+      "path": "candidate-ci-final.json",
+      "sha256": "9227b49ddfff80a465d47ba518edc57ad73537067e6e6510a409a553a4e649bf"
+    },
+    {
+      "blob": "394ad6ebe9b04e1ee087855ab449bb64b77a6801",
+      "bytes": 223,
+      "path": "candidate-ci.jsonl",
+      "sha256": "ee7e366abec2f9852176332ff8b2f22173940c6ca946dce1120f4147472582ea"
+    },
+    {
+      "blob": "6461988d2e4549e54139cbe711f6a84569862543",
+      "bytes": 1262,
+      "path": "candidate-jobs.jsonl",
+      "sha256": "b4a22ed9af09a74c2980b6b7657ab06cf5c8e378617ddff0bf1b4668c1b39af4"
+    },
+    {
+      "blob": "a726fec858788e7b25b4c851dab9e4e9618d14cb",
+      "bytes": 6513,
+      "path": "checks.json",
+      "sha256": "76fe5a16434536836a3b3732bbc4359581eaf6a1399f403f83b07f01c2fac222"
+    },
+    {
+      "blob": "397e4c961e50f9cc73929db54a12116e84f02295",
+      "bytes": 9765,
+      "path": "ci-job-127864113450.log",
+      "sha256": "c0074f363bf496448ade48373766fa6362b756fa79ebb564a5209de12430b5f9"
+    },
+    {
+      "blob": "3b146e6004560c74f96ad44b4f51a2adcbef0aa9",
+      "bytes": 2885,
+      "path": "ci-job-127864437762.log",
+      "sha256": "cb021d4128379c2f6aa4e4bba34e0db05623bfff2d1f660ddc13ec99f39e222c"
+    },
+    {
+      "blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "bytes": 0,
+      "path": "first-party.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "blob": "953f7e66cf0b4c469e85bb935c730076cd329901",
+      "bytes": 1143,
+      "path": "main-ci.jsonl",
+      "sha256": "60b97bf6ca6f92a4442ed0c16be0e11729518f6a12436cc52f084b694fe76f86"
+    },
+    {
+      "blob": "7d758119646c87af14a2c1a088ed5e3eab0fea0c",
+      "bytes": 389,
+      "path": "platform.log",
+      "sha256": "daf3987ebbc7fbc2977456b34b83854619baa1aecddf5f17c4be5db0ced9f7c0"
+    },
+    {
+      "blob": "2f3828dea6913174d00c47553565d92116bb81c6",
+      "bytes": 7009,
+      "path": "slash-token-review.json",
+      "sha256": "811c774b9612597b8bc7b51243c1f6b29540bc4992b94d7bc4d3cb426d7eb574"
+    },
+    {
+      "blob": "e7701e5436be09f8dd1ab94e1a213a5bed34ef3b",
+      "bytes": 232,
+      "path": "typecheck.log",
+      "sha256": "d477730b05cfd98ad6dedc61bc5f7c9aa97ef1db9f9f7286bca8423545756912"
+    },
+    {
+      "blob": "79dd0b129bd8170bc0b3ac0a0c2186314ebf42e3",
+      "bytes": 43,
+      "path": "views-check.log",
+      "sha256": "41be670e8514d35d3059536f54f0a1ff875aa0cf719cdfa33febe6c30584d084"
+    },
+    {
+      "blob": "a6eef939a16b8f9d533f564e89213f8efa800c23",
+      "bytes": 715,
+      "path": "views-restored-check.log",
+      "sha256": "37b38e78def07294cb40f392ea3f5f53bebd732cdea9514d740f37ae7a84a527"
+    },
+    {
+      "blob": "ab92292705a601d5509c82e28a33e53c210ae892",
+      "bytes": 43,
+      "path": "views-write.log",
+      "sha256": "540b168efe390f92191c4c47be4676a9db640b8f3c00b2bea4c20a224c0e80cf"
+    }
+  ],
+  "product_branch": "cloud/sx-crank-c-f88",
+  "product_head": "143eb18c2431229d1ca8741e07eb0abd0745f793",
+  "ref": "refs/heads/evidence/sx-crank-c-f88",
+  "repository": "just-every/run-crank",
+  "schema": 1,
+  "tag": "sx-crank-c-f88"
+}

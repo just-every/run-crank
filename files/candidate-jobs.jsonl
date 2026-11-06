@@ -1,0 +1,7 @@
+{"conclusion":"success","failed_steps":[],"head_sha":"143eb18c2431229d1ca8741e07eb0abd0745f793","id":127863917216,"name":"plan","status":"completed"}
+{"conclusion":"failure","failed_steps":[{"conclusion":"failure","name":"Build once and check the edition","number":9}],"head_sha":"143eb18c2431229d1ca8741e07eb0abd0745f793","id":127864113450,"name":"build","status":"completed"}
+{"conclusion":"skipped","failed_steps":[],"head_sha":"143eb18c2431229d1ca8741e07eb0abd0745f793","id":127864116155,"name":"light","status":"completed"}
+{"conclusion":"failure","failed_steps":[{"conclusion":"failure","name":"Require the selected coverage and its proof","number":2}],"head_sha":"143eb18c2431229d1ca8741e07eb0abd0745f793","id":127864437762,"name":"verify","status":"completed"}
+{"conclusion":"skipped","failed_steps":[],"head_sha":"143eb18c2431229d1ca8741e07eb0abd0745f793","id":127864438415,"name":"shards (${{ matrix.name }})","status":"completed"}
+{"conclusion":"skipped","failed_steps":[],"head_sha":"143eb18c2431229d1ca8741e07eb0abd0745f793","id":127864439739,"name":"full-push-proof","status":"completed"}
+{"conclusion":"skipped","failed_steps":[],"head_sha":"143eb18c2431229d1ca8741e07eb0abd0745f793","id":127864439971,"name":"nightly-proof","status":"completed"}
