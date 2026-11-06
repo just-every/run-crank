@@ -1,0 +1,4 @@
+hosted-probe stage=initializing node=22.20.0
+▲ [WARNING] Proxy environment variables detected. We'll use your proxy for fetch requests.
+
+

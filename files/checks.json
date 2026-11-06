@@ -1,0 +1,43 @@
+{
+  "schema": 1,
+  "repository": "just-every/run-crank",
+  "branch": "cloud/sx-crank-c-f79",
+  "head": "8a93c7867963528acc8f42c2b9dce55c4adaa61a",
+  "checks": [
+    {
+      "name": "app",
+      "command": "node --test --test-concurrency=1 tests/app.test.mjs",
+      "head": "8a93c7867963528acc8f42c2b9dce55c4adaa61a",
+      "exit": 0,
+      "note": "passed"
+    },
+    {
+      "name": "typecheck",
+      "command": "pnpm typecheck",
+      "head": "8a93c7867963528acc8f42c2b9dce55c4adaa61a",
+      "exit": 0,
+      "note": "passed"
+    },
+    {
+      "name": "first-party",
+      "command": "pnpm exec rer check --profile first-party",
+      "head": "8a93c7867963528acc8f42c2b9dce55c4adaa61a",
+      "exit": 0,
+      "note": "passed"
+    },
+    {
+      "name": "lock",
+      "command": "node node_modules/@runeditrun/rer/edition-authoring/cli.mjs check",
+      "head": "8a93c7867963528acc8f42c2b9dce55c4adaa61a",
+      "exit": 0,
+      "note": "passed"
+    },
+    {
+      "name": "legacy-seed-lock",
+      "command": "node scripts/edition-authoring/cli.mjs check",
+      "head": "8a93c7867963528acc8f42c2b9dce55c4adaa61a",
+      "exit": 1,
+      "note": "Pre-existing tool identity mismatch. Main and the candidate use the pinned installed CLI required by Verify."
+    }
+  ]
+}

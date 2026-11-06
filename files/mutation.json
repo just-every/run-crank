@@ -1,0 +1,7 @@
+{
+  "mutation": "Discard native code and infer only from HTTP status",
+  "command": "node --test --test-concurrency=1 tests/app.test.mjs",
+  "exit": 1,
+  "observed": "errorParity rejects validation_failed where the native action returns invalid_graph",
+  "restored": true
+}

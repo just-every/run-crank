@@ -1,0 +1,16 @@
+{
+  "head": "8a93c7867963528acc8f42c2b9dce55c4adaa61a",
+  "status": "NOT ESTABLISHED",
+  "command": "cloud_run timeout 1200 node --input-type=module -e \"import {checkAgentDoor} from './node_modules/@runeditrun/rer/cli/agent-door.mjs'; await checkAgentDoor(process.cwd());\"",
+  "wrapper_exit": 247,
+  "reason": "Hosted runner initialization stalled without producing any conformance assertion. Stopped only recorded owned processes after about twelve minutes.",
+  "diagnostic": {
+    "command": "cloud_run timeout 60 <pinned Node 22.20.0> --input-type=module -e <serveHosted and health probe>",
+    "last_stage": "initializing",
+    "wrapper_exit": 137,
+    "ready_reached": false,
+    "reason": "Timed initialization also stalled; terminate did not finish cleanup, so only recorded owned processes were killed."
+  },
+  "product_assertion_failure": false,
+  "no_full_core_pass_claim": true
+}

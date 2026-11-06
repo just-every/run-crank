@@ -1,0 +1,3 @@
+PROBE BASE-AGENT-002 4: native save and MCP tool, invalid graph and stale digest and revoked preparation -> identical stable codes; full records unchanged.
+PROBE BASE-AGENT-002 5: native and MCP draft creation and saving -> matching state and workflow.create or workflow.draft audit event types; refusals -> no success event.
+PROBE BASE-AGENT-002 privacy: missing and inaccessible workflows -> identical refusals; graph content, credentials and private validation text absent from tool errors.

@@ -1,0 +1,21 @@
+▲ [WARNING] Proxy environment variables detected. We'll use your proxy for fetch requests.
+
+
+✔ the flow editor shows the steps and runs; an approval decided from its form continues the run (3500.347857ms)
+✔ EXEC-005: older business-key history, date/error filters, mapping decisions, comparison and restricted payloads through API and app (473.086386ms)
+✔ Native visual drafting builds named branches, fences stale and unauthorized saves, and preserves published execution (5980.699782ms)
+▲ [WARNING] Proxy environment variables detected. We'll use your proxy for fetch requests.
+
+
+✔ PLATFORM-001: SDK and CORE door draft lifecycle, native granted execution/progress, paginated reads and out-of-grant denial share native approval and audit (14085.779234ms)
+✔ PLATFORM-001: concurrent and restarted draft/publication/rollback retries retain identities and audit without changing later state or restoring authority (12973.497586ms)
+✔ PLATFORM-001: lost, concurrent and restarted duplicate requests keep one inert preparation without overwriting later work (13686.775913ms)
+✔ Per-client MCP connector tools enforce exact grants, approvals, history, restart and revocation (14056.929408ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 7
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 67117.238239

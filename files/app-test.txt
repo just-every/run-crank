@@ -1,0 +1,15 @@
+rer toolchain: node v24.19.0 pnpm 10.12.4 (pins 22.20.0 / 10.12.4)
+▲ [WARNING] Proxy environment variables detected. We'll use your proxy for fetch requests.
+
+
+✔ the flow editor shows the steps and runs; an approval decided from its form continues the run (5753.592027ms)
+✔ EXEC-005: older business-key history, date/error filters, mapping decisions, comparison and restricted payloads through API and app (584.479306ms)
+✔ Native visual drafting builds named branches, fences stale and unauthorized saves, and preserves published execution (9880.064409ms)
+ℹ tests 3
+ℹ suites 0
+ℹ pass 3
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 17567.549778

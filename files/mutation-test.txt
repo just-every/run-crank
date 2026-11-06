@@ -1,0 +1,39 @@
+rer toolchain: node v24.19.0 pnpm 10.12.4 (pins 22.20.0 / 10.12.4)
+▲ [WARNING] Proxy environment variables detected. We'll use your proxy for fetch requests.
+
+
+✔ the flow editor shows the steps and runs; an approval decided from its form continues the run (3941.387328ms)
+✔ EXEC-005: older business-key history, date/error filters, mapping decisions, comparison and restricted payloads through API and app (465.079268ms)
+✖ Native visual drafting builds named branches, fences stale and unauthorized saves, and preserves published execution (2212.302935ms)
+ℹ tests 3
+ℹ suites 0
+ℹ pass 2
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 8056.143399
+
+✖ failing tests:
+
+test at tests/app.test.mjs:90:1
+✖ Native visual drafting builds named branches, fences stale and unauthorized saves, and preserves published execution (2212.302935ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'validation_failed'
+  - 'invalid_graph'
+  
+      at pair (file:///home/agent/rer-consolidation/work/sx-crank-c-f79/crank/tests/agent-door/error-parity.mjs:29:10)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async errorParity (file:///home/agent/rer-consolidation/work/sx-crank-c-f79/crank/tests/agent-door/error-parity.mjs:45:2)
+      at async TestContext.<anonymous> (file:///home/agent/rer-consolidation/work/sx-crank-c-f79/crank/tests/app.test.mjs:184:3)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'validation_failed',
+    expected: 'invalid_graph',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

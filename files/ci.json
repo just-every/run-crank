@@ -1,0 +1,16 @@
+{
+  "repository": "just-every/run-crank",
+  "head": "8a93c7867963528acc8f42c2b9dce55c4adaa61a",
+  "run_id": 42149872559,
+  "event": "push",
+  "status": "completed",
+  "conclusion": "failure",
+  "permitted_exception": "generated-view freshness only",
+  "error": "Error: ACCEPTANCE.md is stale; run node src/base/contract-docs.mjs write",
+  "failed_jobs": [
+    127670388304,
+    127670621778
+  ],
+  "product_shards": "skipped after build gate",
+  "github_calls": 6
+}
