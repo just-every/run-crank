@@ -172,7 +172,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "6d5a86583f7eb51e151e2bf4815e8b38acebb65b9acd0a7b89b37428ef051fbb",
+      "sha256": "ced99b573f7c7b41f332f881a3b4329a4f4115cba01c81b035c498f75aecb7ba",
       "executable": false
     },
     "DEMO.md": {
@@ -196,7 +196,7 @@
       "executable": false
     },
     "docs/AGENT-DOOR.md": {
-      "sha256": "59504e882239cb2c33520c2f1ebd6253208990c6b0b3563ac030a87656232190",
+      "sha256": "3baf82e00f49957f7c84442355f777d4390c488172e27498d02d553ab3ef6d52",
       "executable": false
     },
     "docs/API.md": {
@@ -6740,7 +6740,7 @@
       "executable": false
     },
     "tests/agent-door/narrowing-journey.mjs": {
-      "sha256": "091a2a71ef586e0b587da951f904a1f56d9227d0001019014cd8253988e2f8a8",
+      "sha256": "c7b55ba7ed4ba8fbadbd5fe02fa17f78ffe23e13b51c4bf79b91ae179e48172b",
       "executable": false
     },
     "tests/ai-steps-browser.mjs": {

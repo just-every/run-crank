@@ -247,7 +247,9 @@ scope fence. Scope history travels in archives with `active=0`, while native
 credentials remain excluded. Restore offers no activation or regrant action.
 The existing native journey invokes `tests/agent-door/narrowing-journey.mjs`;
 the existing platform sanity journey additionally proves restart, held-person
-approval, concurrency and complete inactive custody.
+approval, withdrawn and revoked pending authority, concurrency, complete removal
+and inactive custody. The expanded hosted CORE conformance run passes 1,213
+points on this slice; broader clause obligations remain open.
 
 This slice leaves BASE-AGENT-005 PARTIAL. Full role and tool UI parity,
 resource, folder, action and budget intersections, broader sponsor downgrade
