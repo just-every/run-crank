@@ -1,0 +1,8 @@
+{
+  "receipt_extraction_error": "StopIteration",
+  "reason": "The extraction looked for the JSON-load failure in the shard log before checking its actual text; the shard instead failed on incomplete setup. No VERIFY_REPRODUCED JSON claiming success was written.",
+  "consequence": "The shell command did not use set -e, so its next report-only loader probe started despite the extraction error. It exited 1 on the JSON load and made no product edits. No shard rerun or repair was attempted.",
+  "commentary_correction": "The initial reproduction claim was explicitly corrected after inspecting the actual shard log.",
+  "probe_effective_timeout_seconds": 180,
+  "phase_receipt_timeout_note": "The generic wrapper records its static default 1200; the probe command itself was bounded by timeout 180."
+}

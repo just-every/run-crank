@@ -1,0 +1,116 @@
+{
+  "task": "sx-crank-f64-ci-repair-1",
+  "repository": "just-every/run-crank",
+  "branch": "cloud/sx-crank-f64-ci-repair-1",
+  "head": "2b7186c1c3ef673f610070a9c0b2a3a34f43b310",
+  "terminal_status": "BLOCKED",
+  "product_commits_created": 0,
+  "product_pushes": 0,
+  "pr": null,
+  "github_api_calls": 0,
+  "ci_run_ids_created": [],
+  "historical_ci_run": 42150056848,
+  "historical_failed_job": 127671299542,
+  "verification_reproduced": {
+    "head": "2b7186c1c3ef673f610070a9c0b2a3a34f43b310",
+    "job": 127671299542,
+    "reproduced": false,
+    "required_command": [
+      "timeout",
+      "1200",
+      "env",
+      "CRANK_EVIDENCE=/home/agent/rer-consolidation/work/sx-crank-f64-ci-repair-1/packet/before-artifacts",
+      "node",
+      "scripts/verify-ci.mjs",
+      "owner-decisions"
+    ],
+    "test": "tests/decision-browser.mjs: rer dev --foreground startup",
+    "nonzeroexit": 1,
+    "quotedfailure": "Local migrations, owner or local authentication/mail settings are missing. Run rer setup first.",
+    "duration_seconds": 195.183,
+    "required_json_load_failure_reached_by_shard": false,
+    "setup_json_load_failure_observed": true,
+    "probe_json_load_failure_observed": true,
+    "after_repair_executed": false,
+    "host": "Debian 13 x86_64; historical CI Ubuntu 24.04; no host equivalence claimed",
+    "runtime": "Node 22.20.0 / pnpm 10.12.4 / Playwright Chromium headless shell revision 1243",
+    "build_exit": 0
+  },
+  "phases": [
+    {
+      "phase": "before-build",
+      "exit": 0,
+      "seconds": 16.976,
+      "receipt": "before-build-receipt.json"
+    },
+    {
+      "phase": "before-owner-decisions",
+      "exit": 1,
+      "seconds": 195.183,
+      "receipt": "before-owner-decisions-receipt.json"
+    },
+    {
+      "phase": null,
+      "exit": null,
+      "seconds": null,
+      "receipt": "orchestration-receipt.json"
+    },
+    {
+      "phase": "probe-manifest-before",
+      "exit": 1,
+      "seconds": 11.582,
+      "receipt": "probe-manifest-before-receipt.json"
+    },
+    {
+      "phase": "setup-chromium-install",
+      "exit": 0,
+      "seconds": 36.267,
+      "receipt": "setup-chromium-install-receipt.json"
+    },
+    {
+      "phase": "setup-chromium-probe",
+      "exit": 0,
+      "seconds": 2.29,
+      "receipt": "setup-chromium-probe-receipt.json"
+    },
+    {
+      "phase": "setup-committed-deps",
+      "exit": 0,
+      "seconds": 5.404,
+      "receipt": "setup-committed-deps-receipt.json"
+    },
+    {
+      "phase": "setup-frozen-deps",
+      "exit": 0,
+      "seconds": 11.315,
+      "receipt": "setup-frozen-deps-receipt.json"
+    },
+    {
+      "phase": "setup-gateway-deps",
+      "exit": 0,
+      "seconds": 5.024,
+      "receipt": "setup-gateway-deps-receipt.json"
+    },
+    {
+      "phase": "setup-ordinary-setup",
+      "exit": 1,
+      "seconds": 42.802,
+      "receipt": "setup-ordinary-setup-receipt.json"
+    }
+  ],
+  "counts_before": [
+    32,
+    50,
+    17
+  ],
+  "counts_after": [
+    32,
+    50,
+    17
+  ],
+  "clause_status_changes": [],
+  "BASE-AGENT-013": "PARTIAL",
+  "after_receipt": null,
+  "blocker": "Ordinary setup fails on JSON dev loading and leaves local owner/auth/mail setup incomplete. The single unchanged owner-decisions run therefore fails before reaching its required original JSON-load case. The brief forbids a repair without that reproduction and forbids blind reruns.",
+  "holds": "All original AP/Base/riders/frozen lifetime/source/stack/review/provider/release holds retained; no acceptance/lifecycle/submission/landing change."
+}

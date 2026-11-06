@@ -1,0 +1,19 @@
+{
+  "private_or_secret_files_selected": false,
+  "environment_dump_selected": false,
+  "symlinks_selected": false,
+  "redacted_files": [
+    "probe-manifest-before.log",
+    "setup-chromium-install.log",
+    "before-owner-decisions.log",
+    "before-build.log",
+    "setup-committed-deps.log",
+    "setup-ordinary-setup.log",
+    "setup-gateway-deps.log",
+    "setup-frozen-deps.log",
+    "setup-chromium-probe.log",
+    "diagnostic/main-owner-decisions.log",
+    "diagnostic/candidate-owner-decisions.log"
+  ],
+  "redaction": "Runtime binding lines, sign-in URLs, URL queries/fragments and recognizable credential prefixes are removed from task logs. No credential file or value is copied."
+}

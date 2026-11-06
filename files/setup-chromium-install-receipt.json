@@ -1,0 +1,22 @@
+{
+  "phase": "setup-chromium-install",
+  "cwd": "/home/agent/rer-consolidation/work/sx-crank-f64-ci-repair-1/run-crank",
+  "command": [
+    "timeout",
+    "1200",
+    "pnpm",
+    "exec",
+    "playwright",
+    "install",
+    "chromium"
+  ],
+  "shell_prelude": "set -euo pipefail; . /tmp/rer-f64-env.sh; cloud_run",
+  "started_utc": "2026-11-06T04:30:00.933577+00:00",
+  "time_limit_seconds": 1200,
+  "literal_wrapper_pid": 2413,
+  "captured_dev_logs": [],
+  "exit": 0,
+  "duration_seconds": 36.267,
+  "finished_utc": "2026-11-06T04:30:37.201404+00:00",
+  "log_file": "setup-chromium-install.log"
+}

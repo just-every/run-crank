@@ -1,0 +1,27 @@
+COMMAND timeout 1200 env DEBUG=pw:browser node --input-type=module -e 'import { chromium } from "@playwright/test"; import { access } from "node:fs/promises"; const executable=chromium.executablePath(); await access(executable); console.log(JSON.stringify({executable,probe:"launch-close only"})); const browser=await chromium.launch({headless:true,args:["--no-sandbox"]}); console.log(JSON.stringify({version:browser.version()})); await browser.close();'
+[runtime binding line omitted]
+rer toolchain: node v24.19.0 pnpm 10.12.4 (pins 22.20.0 / 10.12.4)
+v22.20.0
+10.12.4
+/home/agent/.rer/toolchain/node-22.20.0/node_modules/node/bin/node
+{"executable":"/home/agent/rer-consolidation/work/sx-crank-f64-ci-repair-1/browser-cache/chromium-1243/chrome-linux64/chrome","probe":"launch-close only"}
+2026-11-06T04:30:38.804Z pw:browser <launching> /home/agent/rer-consolidation/work/sx-crank-f64-ci-repair-1/browser-cache/chromium_headless_shell-1243/chrome-headless-shell-linux64/chrome-headless-shell --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-edgeupdater --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,BlockOriginHeaderModificationOnRedirect,Translate,AutoDeElevate,OptimizationHints,msForceBrowserSignIn,msEdgeUpdateLaunchServicesPreferredVersion --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --disable-updater-scheduler --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --no-sandbox --user-data-dir=/tmp/playwright_chromiumdev_profile-FsyW1I --remote-debugging-pipe --no-startup-window
+2026-11-06T04:30:38.807Z pw:browser <launched> pid=2684
+2026-11-06T04:30:38.931Z pw:browser [pid=2684][err] [1106/043038.930540:ERROR:dbus/bus.cc:405] Failed to connect to the bus: Failed to connect to socket /run/dbus/system_bus_socket: No such file or directory
+2026-11-06T04:30:38.931Z pw:browser [pid=2684][err] [1106/043038.930602:ERROR:dbus/bus.cc:405] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+2026-11-06T04:30:38.934Z pw:browser [pid=2684][err] [1106/043038.931818:ERROR:dbus/bus.cc:405] Failed to connect to the bus: Failed to connect to socket /run/dbus/system_bus_socket: No such file or directory
+2026-11-06T04:30:38.934Z pw:browser [pid=2684][err] [1106/043038.931881:ERROR:dbus/bus.cc:405] Failed to connect to the bus: Failed to connect to socket /run/dbus/system_bus_socket: No such file or directory
+2026-11-06T04:30:38.967Z pw:browser [pid=2684][err] [1106/043038.967171:WARNING:media/gpu/vaapi/vaapi_wrapper.cc:1660] drmGetDevices2() has not found any devices
+2026-11-06T04:30:38.969Z pw:browser [pid=2684][err] [1106/043038.969656:WARNING:sandbox/policy/linux/sandbox_linux.cc:405] InitializeSandbox() called with multiple threads in process gpu-process.
+2026-11-06T04:30:39.489Z pw:browser [pid=2684][err] [1106/043039.489116:ERROR:dbus/object_proxy.cc:572] Failed to call method: org.freedesktop.DBus.NameHasOwner: object_path= /org/freedesktop/DBus: unknown error type: 
+2026-11-06T04:30:39.490Z pw:browser [pid=2684][err] [1106/043039.489196:WARNING:device/bluetooth/dbus/bluez_dbus_manager.cc:209] Floss manager service not available, cannot set Floss enable/disable.
+2026-11-06T04:30:39.490Z pw:browser [pid=2684][err] [1106/043039.489199:ERROR:dbus/bus.cc:405] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+2026-11-06T04:30:39.491Z pw:browser [pid=2684][err] [1106/043039.491727:ERROR:dbus/object_proxy.cc:572] Failed to call method: org.freedesktop.DBus.NameHasOwner: object_path= /org/freedesktop/DBus: unknown error type: 
+{"version":"153.0.8010.12"}
+2026-11-06T04:30:39.494Z pw:browser [pid=2684] <gracefully close start>
+2026-11-06T04:30:39.507Z pw:browser [pid=2684] <process did exit: exitCode=0, signal=null>
+2026-11-06T04:30:39.507Z pw:browser [pid=2684] starting temporary directories cleanup
+2026-11-06T04:30:39.511Z pw:browser [pid=2684] finished temporary directories cleanup
+2026-11-06T04:30:39.511Z pw:browser [pid=2684] <gracefully close end>
+
+[runtime binding line omitted]

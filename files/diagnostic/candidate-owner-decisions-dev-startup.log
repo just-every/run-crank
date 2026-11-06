@@ -1,0 +1,24 @@
+CAPTURE task-generated diagnostic log /tmp/crank-decisions-nUjft1/dev.log
+Allow roughly 500 MB–1 GB of downloads and 1–3 GB of disk space for a first run, including Node, rer, the app and its dependencies. The app and your computer can need more; later runs reuse downloads.
+rer dev: checking the server limit
+rer dev: setting up a local owner (owner@candidate.test) on port 8787
+rer dev: using port 8787
+rer dev: still setting up a local owner (owner@candidate.test) on port 8787 (21s). Allow up to 10 minutes; if this command is stopped, run rer dev again to reattach.
+Starting your application on this computer (waiting for the bound internal listener): exit 1, signal none. Last health: Waiting for the application listener handshake.
+Installation stopped while starting the application. Ask your agent to check the edition's operating command for that step, correct the cause, then select Start again. Your setup answers are saved; you may need to supply credentials again.
+Command: /home/agent/.rer/toolchain/node-22.20.0/node_modules/node/bin/node
+Last output (up to 40 lines):
+▲ [WARNING] Proxy environment variables detected. We'll use your proxy for fetch requests.
+
+
+Using secrets defined in .dev.vars
+node:internal/modules/run_main:123
+    triggerUncaughtException(
+    ^
+
+Failed to load url /agent-surface.json (resolved id: [REDACTED]/agent-surface.json) in [REDACTED]/src/crank/agent-door/index.ts. Does the file exist?
+  [cause]: undefined
+}
+
+Node.js v22.20.0
+Log: [REDACTED]/.seed/installer/install.log

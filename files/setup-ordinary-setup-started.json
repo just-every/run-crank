@@ -1,0 +1,19 @@
+{
+  "phase": "setup-ordinary-setup",
+  "cwd": "/home/agent/rer-consolidation/work/sx-crank-f64-ci-repair-1/run-crank",
+  "command": [
+    "timeout",
+    "1200",
+    "npx",
+    "-y",
+    "@runeditrun/rer",
+    "setup",
+    "--owner-email",
+    "fleet@runeditrun.com",
+    "--non-interactive"
+  ],
+  "shell_prelude": "set -euo pipefail; . /tmp/rer-f64-env.sh; cloud_run",
+  "started_utc": "2026-11-06T04:28:38.405719+00:00",
+  "time_limit_seconds": 1200,
+  "literal_wrapper_pid": 1444
+}

@@ -1,0 +1,62 @@
+COMMAND timeout 1200 env CRANK_EVIDENCE=/home/agent/rer-consolidation/work/sx-crank-f64-ci-repair-1/packet/before-artifacts node scripts/verify-ci.mjs owner-decisions
+[runtime binding line omitted]
+rer toolchain: node v24.19.0 pnpm 10.12.4 (pins 22.20.0 / 10.12.4)
+v22.20.0
+10.12.4
+/home/agent/.rer/toolchain/node-22.20.0/node_modules/node/bin/node
+> pnpm run verify:app
+
+> @automation/crank@0.1.0 verify:app /home/agent/rer-consolidation/work/sx-crank-f64-ci-repair-1/run-crank
+> node scripts/verify-app.mjs
+
+> CRANK_EVIDENCE="$CRANK_EVIDENCE/recurring" node tests/recurring-browser.mjs
+▲ [WARNING] Proxy environment variables detected. We'll use your proxy for fetch requests.
+
+
+recurring browser width=1440 state=skills
+recurring browser width=1440 state=pinned-objective
+recurring browser width=1440 state=blocked-contact
+recurring browser width=1440 state=native-run
+recurring browser width=1440 state=adopted-next-run
+recurring browser width=1440 state=paused
+recurring browser width=1440 state=tool-revoked
+recurring browser width=1440 state=recurring-list
+recurring browser width=390 state=skills
+recurring browser width=390 state=pinned-objective
+recurring browser width=390 state=blocked-contact
+recurring browser width=390 state=native-run
+recurring browser width=390 state=adopted-next-run
+recurring browser width=390 state=paused
+recurring browser width=390 state=tool-revoked
+recurring browser width=390 state=recurring-list
+recurring-browser: PASS widths=1440,390 customer_sends=0 frozen_open_versions=true
+> CRANK_EVIDENCE="$CRANK_EVIDENCE/sibling" node tests/sibling-browser.mjs
+▲ [WARNING] Proxy environment variables detected. We'll use your proxy for fetch requests.
+
+
+Native Nook and Orbit scoped operations, readback and authority screens proved at 1440 and captured at 390
+Teams directory retained identities, exact outcomes, literal names and tooltips PASS; screens at 1440 and 390
+> CRANK_EVIDENCE="$CRANK_EVIDENCE/decision" node tests/decision-browser.mjs
+rer dev exited: Allow roughly 500 MB–1 GB of downloads and 1–3 GB of disk space for a first run, including Node, rer, the app and its dependencies. The app and your computer can need more; later runs reuse downloads.
+rer dev: checking the server limit
+Checking pinned pnpm
+10.12.4
+Applying database migrations
+Applying database migrations
+▲ [WARNING] Proxy environment variables detected. We'll use your proxy for fetch requests.
+
+
+
+ ⛅️ wrangler 4.129.1
+────────────────────
+Resource location: local 
+
+Use --remote if you want to access the remote instance.
+
+✅ No migrations to apply!
+Local migrations, owner or local authentication/mail settings are missing. Run rer setup first.
+dev: failed (exit 3)
+
+ ELIFECYCLE  Command failed with exit code 1.
+
+[runtime binding line omitted]

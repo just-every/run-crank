@@ -1,0 +1,21 @@
+{
+  "environment": "ssr",
+  "id": "/home/agent/rer-consolidation/work/sx-crank-f64-ci-repair-1/run-crank/agent-surface.json",
+  "exists": true,
+  "sha256": "05856b153904d58868ef2703b4073c7a7d1e66dd701df4fef5f27ba53396e983",
+  "strict": true,
+  "safeAbsolute": false,
+  "safeManifestEntries": [
+    "/agent-surface.json"
+  ],
+  "fsAllow": [
+    "/home/agent/rer-consolidation/work/sx-crank-f64-ci-repair-1/run-crank/src",
+    "/home/agent/rer-consolidation/work/sx-crank-f64-ci-repair-1/run-crank/public",
+    "/home/agent/rer-consolidation/work/sx-crank-f64-ci-repair-1/run-crank/node_modules",
+    "/home/agent/rer-consolidation/work/sx-crank-f64-ci-repair-1/run-crank/deploy-site.json"
+  ],
+  "absoluteAllowed": false,
+  "seedPrivateDenied": true,
+  "rerPrivateDenied": true,
+  "exportsDenied": true
+}
