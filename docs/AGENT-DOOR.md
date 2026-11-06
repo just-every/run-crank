@@ -258,6 +258,10 @@ Replaying a position preserves retained identities and order, with visibility
 checked anew against the current active person and approval or reviewer
 eligibility. Fresh requests also enforce token scope, consent, agent revocation,
 policy and Pause. Delivery is at least once; consumers deduplicate by event id.
+Under review policy, feed reads retain their required review and audit but
+do not emit an automatic review-opened event about that same read. This
+prevents an endless event tail; a person's explicit Flag or Mark reviewed
+on such a review still emits its normal lifecycle event.
 
 `tests/agent-door/events-journey.mjs` exercises actual native decisions, multiple
 pages, restart, withheld values, explicit scopes, revoked consent and agents,

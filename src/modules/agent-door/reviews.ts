@@ -11,7 +11,9 @@ export async function openReview(rt: Runtime, tool: string, principal: Principal
   const id = crypto.randomUUID()
   const saved: SavedReview = { decision_id, tool, classes: evidence.classes, principal, reviewers: evidence.document.reviewers ?? [], undo, door, summary }
   await rt.options.db.prepare('INSERT INTO agent_door_reviews(id,state,saved) VALUES(?,?,?)').bind(id, 'open', JSON.stringify(saved)).run()
-  await appendEvents(rt, [{ type: 'review.opened', uri: `${rt.options.origin}/agents/reviews/${id}`,
+  // Reading the lifecycle feed must not append to its own tail. The review
+  // and audit remain durable, and a person's later mark still emits an event.
+  if (tool !== `${rt.options.seed}.events.list`) await appendEvents(rt, [{ type: 'review.opened', uri: `${rt.options.origin}/agents/reviews/${id}`,
     actor: { kind: 'agent', ...preparedBy(principal) }, data: { decision_id, classes: evidence.classes } }])
   return { id }
 }

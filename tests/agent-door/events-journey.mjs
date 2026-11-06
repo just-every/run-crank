@@ -207,6 +207,22 @@ export async function nativeEventsProof() {
   initial.events.forEach(projection);
   assert.ok(!JSON.stringify(initial.events).includes('withheld business value'));
 
+  await adopt({...autonomousPolicy(),rules:[...autonomousPolicy().rules,{
+   id:'review-feed-reader',class:'standard',agent:context.agentId,do:'review',
+  }],reviewers:['role:owner']});
+  const heldFeed=await readAll(reader);
+  assert.deepEqual(await readAll(reader),heldFeed,'review policy must not make feed reads manufacture an endless event tail');
+  const feedReview=(await person('/agents/api/reviews')).reviews.find(review=>review.tool==='crank.events.list');
+  assert.ok(feedReview,'feed reads still receive their policy-required review');
+  assert.ok((await person('/agents/api/audit')).rows.some(row=>row.tool==='crank.events.list'&&row.decision==='review'),
+   'a held feed read retains its actual policy decision in the audit');
+  await person('/agents/api/reviews/'+feedReview.id+'/reviewed',{});
+  const markedFeedRead=await readAll(reader);
+  assert.ok(markedFeedRead.events.some(event=>event.type==='review.reviewed'&&event.uri.endsWith('/'+feedReview.id)),
+   'an explicit person mark on a feed-read review still emits its own lifecycle event');
+  assert.deepEqual(await readAll(reader),markedFeedRead);
+  await adopt(autonomousPolicy());
+
   const writerId='synthetic-crank-writer';
   const writer=await token({act:{sub:writerId,name:'Synthetic writer'},scope:'workflows:prepare'});
   await adopt({...autonomousPolicy(),rules:[...autonomousPolicy().rules,{
@@ -282,7 +298,7 @@ export async function nativeEventsProof() {
   await h.restart();
   assert.ok(!(await readAll(erasureReader,beforeFlagCursor)).events.some(event=>event.actor.person?.name==='Synthetic reviewer'));
   assert.equal((await tool('crank.events.list',{after:beforeFlagCursor},reviewerToken)).status,401);
-  const summary={erasedActorWithheld:true,markedReviewed:true,personImpersonationRefused:true,nativeTypes:[...new Set(initial.events.map(event=>event.type))],stableRestart:true,explicitScope:true,
+  const summary={heldFeedFinite:true,erasedActorWithheld:true,markedReviewed:true,personImpersonationRefused:true,nativeTypes:[...new Set(initial.events.map(event=>event.type))],stableRestart:true,explicitScope:true,
    hiddenEvents:202,reviewerReplayFiltered:true,consentRevoked:true,agentRevoked:true,personInactive:true};
   console.log('PROBE BASE-AGENT-010 lifecycle: production MCP and person decisions -> '+JSON.stringify(summary));
   return summary;
