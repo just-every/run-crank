@@ -4,6 +4,8 @@ import type { AgentDoorOptions, PeopleAdapter, Person } from '../../modules/agen
 import { stmt, type CrankEnv } from '../model'
 
 export const LOCAL_AGENT_PREFIX = 'crank-token:'
+// Existing preparation credentials never acquire events:read implicitly.
+// Feed readers need a fresh signed credential explicitly carrying that scope.
 const localScopes = ['workflows:read', 'workflows:prepare', 'runs:read', 'connections:read', 'catalog:read']
 
 /** Business subjects retain the settings module's durable native-operator bindings. */

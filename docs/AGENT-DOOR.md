@@ -1,4 +1,4 @@
-# Crank Agent door: partial CORE adoption
+# Crank Agent door: partial adoption
 
 Crank exposes a bounded preparation and redacted metadata surface for the
 **Automation operations lead**. This is a **PARTIAL** adoption of Crank's full
@@ -19,22 +19,21 @@ tokens retain the canonical `/mcp` audience. Protected-resource discovery is at
 `/.well-known/oauth-protected-resource` and
 `/.well-known/oauth-protected-resource/mcp`.
 
-The explicit capability declaration contains only the indivisible CORE duties:
-`tools`, `policy`, `pause`, `audit` and `idempotency`. Optional `resources`,
-`prompts`, `events` and `subscriptions` are undeclared and typed-refused. Their
-discovery lists are empty where the protocol supplies a list; they are not
-advertised as working families. No event-list tool is injected and tool replies
-emit no MCP resource links. A person's approval URL remains part of the policy
-handoff; it does not imply record-resource support.
+The explicit capability declaration contains the indivisible CORE duties:
+`tools`, `policy`, `pause`, `audit` and `idempotency`, plus the bounded
+`events` family. Optional `resources`, `prompts` and `subscriptions` remain
+undeclared and typed-refused. Their discovery lists are empty where the protocol
+supplies a list. Tool replies emit no MCP resource links. A person's approval
+URL remains part of the policy handoff; it does not imply record-resource support.
 
 The surface declares `resources: []`, `escalations: []` and
 `spend: { "none": true }`. No paid or provider call is reachable from these
-twelve declared tools. This no-spend boundary comes from the admitted native
+thirteen declared tools. This no-spend boundary comes from the admitted native
 operations; it does not claim provider-spend-cap enforcement. Other native
 Crank routes, execution paths and connectors have broader purposes outside this
 registry.
 
-## The twelve declared tools
+## The thirteen declared tools
 
 Every tool declares only `standard`, with server-computed item-count facts.
 Eight are read-only and four prepare inert work. Clauses below are the actual
@@ -54,6 +53,7 @@ through this door.
 | `crank.connections.list` | `connections:read` | Read credential-free account binding and lifecycle metadata within native scope. | CONN-002 |
 | `crank.catalog.list` | `catalog:read` | Read the installed connector operation catalogue and restrictions. | CONN-001 |
 | `crank.coverage.report` | `catalog:read` | Compare a supplied app/operation inventory with the local catalogue; fetch no schema. | CONN-001, CONN-011 |
+| `crank.events.list` | `events:read` | Page native approval, flagged review and person-adopted policy metadata under current access. | BASE-AGENT-010 |
 | `crank.custom.propose` | `workflows:prepare` | Convert a supplied OpenAPI document into an uninstalled native connector proposal requiring owner review. | CONN-011, CONN-020 |
 
 Only create, update, duplicate and connector proposal have `readOnly: false`.
@@ -213,9 +213,54 @@ native/provider classification parity through every wrapper.
 This document records the implemented boundary. Integrated CORE conformance passes 1,021/1,021 points on rer 0.2.91. Native
 Agents and pending/executed approval pages have browser proof at 1440 and 390.
 The complete ct registry, native UI parity for its omitted jobs and the seeded
-specialist week remain acceptance work. No optional capability is promoted.
+specialist week remain acceptance work. The lifecycle feed is the only optional
+capability enabled by this adoption.
 
 Ordinary health, setup and application requests do not construct Business or
 agent adapters. On door paths, native classification refusals use the shared
 `ToolRefusal` type; policy-unset and Pause preserve their machine codes while
 the native authority fence still prevents reads or effects.
+
+## Native policy-lifecycle feed
+
+`crank.events.list` requires a freshly issued signed access token with explicit
+`events:read` scope. Discovery of the tool grants no scope. Existing native
+preparation credentials retain exactly their prior scopes and cannot read the
+feed; execution and trigger credentials retain their separate purposes.
+
+The feed covers `approval.pending`, `approval.decided`, `review.flagged` and
+native, signed-in-person `policy.adopted`. Each carries its retained identity,
+record URI, time and a person or agent-for-person actor. Approval and review
+events include class identifiers and the decision, plus the decision identity;
+decided approvals include their lifecycle state. Native policy adoption includes
+its revision and the adoption decision; it has no tool class. Graph values,
+summaries, class facts, policy documents, notes, errors and credentials are
+excluded by a closed projection at storage and again on read. Current native
+actor names replace retained snapshots, so erasure cannot revive a former name.
+
+A call returns at most 200 visible events and scans at most 200 retained rows.
+`limit` defaults to 100. Return the response's `cursor` as `after` to continue;
+an empty page can still advance past hidden rows. Continue until the cursor
+stops advancing. Cursors contain only a versioned sequence position, confer no
+authority and expose no hidden event identities. Unknown or malformed cursors
+are refused. Previously returned event identities remain accepted as positions.
+Replaying a position preserves retained identities and order, with visibility
+checked anew against the current active person and approval or reviewer
+eligibility. Fresh requests also enforce token scope, consent, agent revocation,
+policy and Pause. Delivery is at least once; consumers deduplicate by event id.
+
+`tests/agent-door/events-journey.mjs` exercises actual native decisions, multiple
+pages, restart, withheld values, explicit scopes, revoked consent and agents,
+reviewer demotion, deactivation and erased actor names. The existing platform
+journey invokes that proof in push Verify, and the hosted native journey invokes
+the feed replay checks. Signed issuer fixtures establish native protocol
+behavior only. Real Business propagation and signed policy actor provenance
+remain unproved; Business envelopes are excluded from this native feed rather
+than attributed to a fabricated person.
+
+This remains PARTIAL under BASE-AGENT-010. Native record-change coverage,
+resource-linked events under BASE-AGENT-003, subscriptions, the ten-second
+notification journey, signed integrations webhooks with matching ids, failed
+delivery history and replay, real Business propagation and every provider-change
+channel remain required. PLATFORM-001's enforcing-egress prerequisite and all
+existing owner, account, ct and device holds remain in force.

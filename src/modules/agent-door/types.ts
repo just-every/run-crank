@@ -89,6 +89,8 @@ export interface AgentDoorOptions {
   }
   currentScopes?(principal: Principal): Promise<string[]>
   paths?: string[]; limits?: { requestsPerMinute?: number; maxBodyBytes?: number }
+  /** Restrict this adoption to a closed, value-free lifecycle projection. */
+  eventTypes?: readonly ('approval.pending' | 'approval.decided' | 'review.flagged' | 'policy.adopted')[]
   onEvent?(event: AgentEvent): void | Promise<void>; now?(): number
 }
 export interface DecisionMeta { id: string; disposition: string; revision: number | null; classes: Array<{ class: string; facts: object; rule: string | null; do: string }> }

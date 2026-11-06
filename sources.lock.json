@@ -6,7 +6,7 @@
   "toolchain": {
     "id": "runeditrun/edition-authoring",
     "version": "1.1.0",
-    "sha256": "b546ef04830f935ee2493a5bc08ef43a0f7d5905aeb8549fb75670c19890af99"
+    "sha256": "3f7b56f3ae1e70588fb35c49e75b639c2360ceed550182b9caf8adc33021abb8"
   },
   "components": [
     {
@@ -148,7 +148,7 @@
       "executable": false
     },
     "agent-surface.json": {
-      "sha256": "dc7a0189533b875553ebf0db80baeb2bf4482bcc5bf41056e1e8eeebfee76ed3",
+      "sha256": "2522707e0b3e16f26bf51ca1a44b1ed0a359e298d37f015754b0039572e1a884",
       "executable": false
     },
     "AGENTS.md": {
@@ -156,7 +156,7 @@
       "executable": false
     },
     "base-copies.json": {
-      "sha256": "ced6cc21b99967d6e8d533c0e3e7d8e554eaf1c7ac03270d42c5504515f658b1",
+      "sha256": "a49f716e6f260bb9dceed60f6895f5db893825f0b61149f8f6679463980642c1",
       "executable": false
     },
     "CHANGELOG.md": {
@@ -172,7 +172,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "aac2d3d2ae3f5062bea791377b189e5eb86834bd3f7a1d043ac176b60e5d43c9",
+      "sha256": "d899bf0914706ec71f224ac54c3025e8f4482b321a71f4e4acb86b2651e35dad",
       "executable": false
     },
     "DEMO.md": {
@@ -196,7 +196,7 @@
       "executable": false
     },
     "docs/AGENT-DOOR.md": {
-      "sha256": "7418c518e7505e79eeb56bd768b93e2b422c01c8425c9e87b5d3b11a566c5287",
+      "sha256": "70b97d00ea7bca81ce0cca633f21d9fff55eb8105ed323c149bb77ef2f8839e6",
       "executable": false
     },
     "docs/API.md": {
@@ -2952,7 +2952,7 @@
       "executable": false
     },
     "src/crank/agent-door/index.ts": {
-      "sha256": "1420bf0ee787d7f28bea0645d9f375c0f0ec323656800f6c1b95ad9bc7e90bb6",
+      "sha256": "12825ad293c74210c7a15991d4123c45d559a43331edee3a4684bffc183ebc3c",
       "executable": false
     },
     "src/crank/agent-door/native.ts": {
@@ -2960,7 +2960,7 @@
       "executable": false
     },
     "src/crank/agent-door/people.ts": {
-      "sha256": "37a3b5dd42bd33b3e991c0f7d4013e6a607b609365af4343b7e75e77e02ee3d8",
+      "sha256": "7514ab9e6d2269bc5c7074c3347d4f14945624104d9d81ca8be41a6ff57f5444",
       "executable": false
     },
     "src/crank/agent-door/tool-metadata.ts": {
@@ -4460,7 +4460,7 @@
       "executable": false
     },
     "src/modules/agent-door/events.ts": {
-      "sha256": "c5e911d9b692551224ae02e564232cfef2c6462dbe91a5d7e07ea0571a85cab9",
+      "sha256": "1a8e9fb3a7a4d16e23ec6e714ea7ccf8692d0acf484d4503f334410dc206a115",
       "executable": false
     },
     "src/modules/agent-door/execution.ts": {
@@ -4504,7 +4504,7 @@
       "executable": false
     },
     "src/modules/agent-door/person-doors.ts": {
-      "sha256": "ae6ca4f854809578d3b3402a9779a0dc4def0ff1a887d9dc3b8ec924e644b190",
+      "sha256": "9be8cc2640a0324a102aef6a43efe1d00be7401dc4364d04f95805a4b1a22fdc",
       "executable": false
     },
     "src/modules/agent-door/pipeline.ts": {
@@ -4640,7 +4640,7 @@
       "executable": false
     },
     "src/modules/agent-door/types.ts": {
-      "sha256": "4fec6765ad72c5ec287b07518d11cf911f03668659eaf5efea780b65d5363878",
+      "sha256": "48cc935c03cbd4be7e3ab2e2fd39f185d8bf8ae6f7ccc3f28cf8a9da8b278a4e",
       "executable": false
     },
     "src/modules/agent-door/wire.ts": {
@@ -6711,12 +6711,16 @@
       "sha256": "0c09db04c84b104431dfca05ab12604ae51308f7359f368bcb70240329043ac0",
       "executable": false
     },
+    "tests/agent-door/events-journey.mjs": {
+      "sha256": "2635ed93c97921df9f72d9ace4e64c844af2518b723aba38fbed5938cef59372",
+      "executable": false
+    },
     "tests/agent-door/fixtures.mjs": {
       "sha256": "ae9cddd16c5be7f5290b7e44198a322d03495840e9b0b8f8eab3c4475a0e7e0e",
       "executable": false
     },
     "tests/agent-door/journey.mjs": {
-      "sha256": "1e12e5184c5a39733d467a7c01509771a2754096022d56c2745564a4ec237998",
+      "sha256": "491bd59e0556723c80c706e55de8d8a45bbb80c0214341f125662df692d4fc5e",
       "executable": false
     },
     "tests/ai-steps-browser.mjs": {
@@ -7024,7 +7028,7 @@
       "executable": false
     },
     "tests/harness.mjs": {
-      "sha256": "2fda941aa549dddeee79f87941ef2857c166833723ad6e12d9adb988e8ae2b52",
+      "sha256": "89af78417389abb082a9879cf34477a63353c91e4562366b23aa1acf568f9d55",
       "executable": false
     },
     "tests/historical.test.mjs": {
@@ -7184,7 +7188,7 @@
       "executable": false
     },
     "tests/platform.test.mjs": {
-      "sha256": "e50e8e2cacb0f819c98f8ba8fbd9c5294b1a750ee880c4536a7db767d6b05e2f",
+      "sha256": "6b3c087510e7e65b2029954176a53f8d97ad48e18fb21c57290ffbdd23224d58",
       "executable": false
     },
     "tests/postgres-write-fixture.mjs": {

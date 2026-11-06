@@ -4,6 +4,7 @@ import { businessRole } from './people.ts'
 import { localPolicy, policyState, publicState } from './policy-store.ts'
 import { approvalDoor } from './approvals.ts'
 import { reviewDoor } from './reviews.ts'
+import { appendEvents } from './events.ts'
 import { auditPage } from './audit.ts'
 
 export async function personDoor(rt: Runtime, request: Request): Promise<Response> {
@@ -12,7 +13,16 @@ export async function personDoor(rt: Runtime, request: Request): Promise<Respons
   if (!person?.active) return error('unauthenticated', 401)
   if (!['GET', 'HEAD'].includes(request.method) && request.headers.get('origin') !== rt.options.origin) return error('origin_refused', 403)
   const path = new URL(request.url).pathname, role = businessRole(rt.options.people, person)
-  if (path === '/agents/api/policy') return role === 'owner' ? localPolicy(rt, request) : error('forbidden', 403)
+  if (path === '/agents/api/policy') {
+    if (role !== 'owner') return error('forbidden', 403)
+    const response = await localPolicy(rt, request)
+    if (response.ok && request.method === 'PUT') {
+      const { revision } = await response.clone().json() as { revision: number }
+      await appendEvents(rt, [{ type: 'policy.adopted', uri: `${rt.options.origin}/agents/policy/${revision}`,
+        actor: { kind: 'person', person: { id: person.id, name: person.name } }, data: { revision } }])
+    }
+    return response
+  }
   if (path === '/agents/api/state') return role && request.method === 'GET' ? json(publicState(rt, await policyState(rt))) : error('forbidden', 403)
   if (path === '/agents/api/pause') {
     if (role !== 'owner') return error('forbidden', 403)
