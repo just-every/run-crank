@@ -24,7 +24,7 @@ export async function callTool(rt: Runtime, name: string, input: unknown, princi
   if (operationId !== undefined) row.operation_id = operationId
   if (name === 'resources/read') row.resource = String((input as { uri: string }).uri)
   let claimKey: string | null = null
-  let evidence: Evidence | undefined, owned = false, effected = false, locked = false, recoveredNative = false
+  let evidence: Evidence | undefined, owned = false, effected = false, locked = false, recoveredNative = false, recoverableExecution = false
   let result: CallResult = { outcome: 'refused', decision: null }, status: number | undefined, scope: string | undefined
   const refuse = (code: string, fields?: Record<string, unknown>) => { result = { ...result, outcome: 'refused', code, fields }; return { result, status, scope } }
   try {
@@ -192,6 +192,7 @@ export async function callTool(rt: Runtime, name: string, input: unknown, princi
       owned = key !== null
       await releaseDecision(rt, row.id); locked = false
       effected = true
+      recoverableExecution = !!tool.recover && decision.result === 'autonomous'
       const run = await runTool(rt, tool, args, principal, result, door, approvers)
       result = run.result
       if (result.outcome === 'done' && decision.result === 'review') result.review = await openReview(rt, name, principal, row.id, evidence, run.undo, door, savedSummary)
@@ -204,7 +205,10 @@ export async function callTool(rt: Runtime, name: string, input: unknown, princi
     if (cause instanceof ToolRefusal) return refuse(cause.code, cause.details)
     row.outcome = 'failed'; status = 500
     const failed = refuse('execution_failed')
-    if (owned && effected) await saveCall(rt, principal, claimKey, result)
+    // An inert native effect may already have committed its frozen success.
+    // Leave its claim uncertain for evidence-only recovery; a catch-path refusal
+    // must never replace that success when outcome storage briefly recovers.
+    if (owned && effected && !recoverableExecution) await saveCall(rt, principal, claimKey, result)
     return failed
   } finally {
     if (locked) await releaseDecision(rt, row.id)

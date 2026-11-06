@@ -3669,7 +3669,7 @@
           "mode": "100644"
         },
         "src/modules/agent-door/pipeline.ts": {
-          "sha256": "db9f54c288a5ddb19f79785b58e64f74ce34124903ad1b70a5b436a167a23d01",
+          "sha256": "7f3b7fe3c9d5095da588339813df89380e8c54127a48eb6d107fb0d5b0e4db4c",
           "mode": "100644"
         },
         "src/modules/agent-door/audit.ts": {

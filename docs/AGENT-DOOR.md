@@ -229,6 +229,11 @@ transaction as the draft, snapshot and native audit. The normal response uses
 that projection too. A retained door claim without an outcome can recover it
 without executing the tool again, even after later edits and after 24 hours.
 Old receipts that contain only identifiers cannot reconstruct an outcome.
+An unexpected failure during an autonomous recoverable execution leaves its
+door claim uncertain. In particular, a transient failure saving the outcome
+must not let the catch path replace a committed native success with an
+execution failure. A retry still requires matching durable evidence; absent
+evidence remains refused without repeating the mutation.
 
 The receipt binds the original agent, sponsoring person, consent, client,
 tool, full declared argument digest, admission decision, operation and hashed

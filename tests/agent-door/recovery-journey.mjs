@@ -27,10 +27,10 @@ const receipt=async(h,key)=>h.db.prepare('SELECT c.outcome,w.agent_receipt_json 
  * Only the test-built outcome persistence boundary is interrupted. No SQL seeds,
  * forged outcome or direct replay of the mutation is used to manufacture proof. */
 export async function recoveryJourney(){
- const faults=new Set(),beforeNative=new Set();
+ const faults=new Set(),once=new Set(),beforeNative=new Set();
  const edge=async request=>{
   if(new URL(request.url).hostname!=='agent-recovery.example')return undefined;
-  const key=await request.text(),reject=new URL(request.url).pathname==='/outcome'?faults.has(key):beforeNative.has(key);
+  const key=await request.text(),reject=new URL(request.url).pathname==='/outcome'?(faults.has(key)||once.delete(key)):beforeNative.has(key);
   return new Response(null,{status:reject?503:204});
  };
  const h=await harness('http://127.0.0.1:9',{agentRecoveryFault:true,edge,clock:'2026-11-06T12:00:00.000Z'});
@@ -41,14 +41,14 @@ export async function recoveryJourney(){
   await setPolicy(h,policy());
   const source=await h.post('workflows',{name:'Synthetic source',graph},h.owner,201);
   let day=6;
-  for(const operation of ['create','update','duplicate']){
-   const key='synthetic-crank-recovery-'+operation;
+  for(const [operation,transient] of ['create','update','duplicate'].flatMap(operation=>[[operation,false],[operation,true]])){
+   const key='synthetic-crank-recovery-'+operation+(transient?'-transient':'');
    const before=operation==='update'?value(await call('crank.workflows.get',{workflow_id:source.id})):null;
    const args={...(operation==='create'?{name:'Synthetic recovered draft',graph}:operation==='duplicate'?{workflow_id:source.id}:{workflow_id:source.id,draft_digest:before.draft_digest,expected_revision:before.revision,description:'Synthetic original edit'}),idempotency_key:key};
    const baseline=await h.get('workflows');
-   faults.add(key);
-   // The call reaches the public native mutation, then loses both attempts to
-   // persist its door outcome. Reading the draft proves the effect happened.
+   (transient?once:faults).add(key);
+   // Interrupt one or every attempt to save the door outcome after the real
+   // native commit. A later successful save must not record a fabricated failure.
    const interrupted=await call('crank.workflows.'+operation,args);
    assert.equal(interrupted.status,500);
    const retained=await receipt(h,key);
@@ -99,7 +99,7 @@ export async function recoveryJourney(){
    const original=JSON.parse(retained.agent_receipt_json).binding.decision;
    const audit=JSON.parse((await h.db.prepare('SELECT row FROM agent_door_audit WHERE id=?').bind(original).first()).row);
    assert.equal(audit.outcome,'done');assert.equal(audit.code,null,'recovered native effect has truthful original audit');
-   probes.push(`PROBE BASE-AGENT-012 ${operation}: committed native draft, outcome interruption, restart and concurrent new RPC IDs after 24 hours -> one effect, frozen original result, later edits preserved`);
+   probes.push(`PROBE BASE-AGENT-012 ${operation}${transient?' transient':''}: committed native draft, outcome interruption, restart and concurrent new RPC IDs after 24 hours -> one effect, frozen original result, later edits preserved`);
   }
   const unmatched={name:'Synthetic uncertain draft',graph,idempotency_key:'synthetic-crank-uncertain'};
   const count=(await h.get('workflows')).length;
