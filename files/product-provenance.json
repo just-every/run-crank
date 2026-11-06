@@ -1,0 +1,54 @@
+{
+  "base": "4770731cb2b0d708b0ae2d3679abe34e998e752c",
+  "branch": "cloud/sx-crank-c-f85",
+  "candidate_commits": [
+    {
+      "head": "0d42476763f6b3f48fc54ae915e0f290805bba6c",
+      "subject": "Keep held lifecycle feed replay finite without losing reviews"
+    },
+    {
+      "head": "bb24fedad9367b58c5e85b094de534ef9c60eb65",
+      "subject": "Emit native marked-review lifecycle events [skip ci]"
+    },
+    {
+      "head": "4770731cb2b0d708b0ae2d3679abe34e998e752c",
+      "subject": "Complete native lifecycle authority and replay proof"
+    },
+    {
+      "head": "27c57bada9a96bd33155ee1044c455ea8fbfa956",
+      "subject": "Add bounded native policy lifecycle feed [skip ci]"
+    }
+  ],
+  "changed_paths_since_main": [
+    "CONTRACT.md",
+    "agent-surface.json",
+    "base-copies.json",
+    "docs/AGENT-DOOR.md",
+    "sources.lock.json",
+    "src/crank/agent-door/index.ts",
+    "src/crank/agent-door/people.ts",
+    "src/modules/agent-door/events.ts",
+    "src/modules/agent-door/person-doors.ts",
+    "src/modules/agent-door/reviews.ts",
+    "src/modules/agent-door/types.ts",
+    "tests/agent-door/events-journey.mjs",
+    "tests/agent-door/journey.mjs",
+    "tests/harness.mjs",
+    "tests/platform.test.mjs"
+  ],
+  "head": "0d42476763f6b3f48fc54ae915e0f290805bba6c",
+  "main": "e2c146dc38eb64e685cf01d2c56e798404b3936e",
+  "observed_at": "2026-11-06T03:27:51.043536+00:00",
+  "publication_identity_check": {
+    "all_candidates_including_side_parents": true,
+    "fleet_author_and_committer": true,
+    "trailers": []
+  },
+  "remote_advertisement": "0d42476763f6b3f48fc54ae915e0f290805bba6c\trefs/heads/cloud/sx-crank-c-f85\ne2c146dc38eb64e685cf01d2c56e798404b3936e\trefs/heads/main",
+  "source_lock_check": {
+    "command": "node node_modules/@runeditrun/rer/edition-authoring/cli.mjs check",
+    "exit": 0
+  },
+  "tree": "fe86fe3ea53c2b80f473a545648dc890a2cbdbb4",
+  "working_tree_clean": true
+}

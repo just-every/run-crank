@@ -1,0 +1,138 @@
+{
+  "base_verify": {
+    "conclusion": "failure",
+    "expected_generated_view_failure": true,
+    "head": "4770731cb2b0d708b0ae2d3679abe34e998e752c",
+    "job": 127672174778,
+    "only_observed_failure": "ACCEPTANCE.md is stale; run node src/base/contract-docs.mjs write",
+    "run": 42150421648
+  },
+  "branch": "cloud/sx-crank-c-f85",
+  "checks": [
+    {
+      "command": "cloud_run npx -y @runeditrun/rer build",
+      "exit": 0,
+      "result": "Production Worker and assets built"
+    },
+    {
+      "command": "cloud_run timeout 1200 node --test --test-concurrency=1 --test-name-pattern='^PLATFORM-001: SDK and CORE door' tests/platform.test.mjs",
+      "exit": 0,
+      "failed": 0,
+      "head_at_execution": "0d42476763f6b3f48fc54ae915e0f290805bba6c",
+      "log": "platform-exact.log",
+      "passed": 1,
+      "result": "1 passed; includes nativeEventsProof"
+    },
+    {
+      "command": "cloud_run timeout 1200 node node_modules/@runeditrun/rer/cli/agent-door.mjs .",
+      "exit": 0,
+      "log": "conformance.log",
+      "result": "1203 of 1203 hosted points passed, including native journey"
+    },
+    {
+      "command": "pnpm run typecheck",
+      "exit": 0
+    },
+    {
+      "command": "pnpm exec rer check --profile first-party",
+      "exit": 0
+    },
+    {
+      "command": "node src/base/contract-docs.mjs write && node src/base/contract-docs.mjs check",
+      "exit": 0,
+      "result": "99 clauses generated and checked; main views restored afterward"
+    },
+    {
+      "command": "node node_modules/@runeditrun/rer/edition-authoring/cli.mjs lock",
+      "exit": 0
+    },
+    {
+      "command": "node node_modules/@runeditrun/rer/edition-authoring/cli.mjs check",
+      "exit": 0
+    },
+    {
+      "command": "git merge origin/main",
+      "exit": 0,
+      "result": "Already up to date; no history rewritten"
+    },
+    {
+      "command": "git diff --cached --check",
+      "exit": 0
+    },
+    {
+      "command": "git diff --exit-code && git diff --cached --exit-code",
+      "exit": 0,
+      "result": "Generator and lock regeneration leave the exact pushed tree unchanged after restoring main views"
+    }
+  ],
+  "ci": {
+    "api_calls_used": 8,
+    "build_job": 127690970486,
+    "conclusion": "failure",
+    "event": "push",
+    "expected_generated_view_failure": true,
+    "head": "0d42476763f6b3f48fc54ae915e0f290805bba6c",
+    "log": "candidate-verify-failure.log",
+    "only_observed_failure": "ACCEPTANCE.md is stale; run node src/base/contract-docs.mjs write",
+    "push_suites": "skipped after generated-view check; no suite failure observed",
+    "ready_exception_applies": true,
+    "run": 42156198466,
+    "status": "completed"
+  },
+  "counts": {
+    "done_after": 32,
+    "done_before": 32,
+    "missing_after": 17,
+    "missing_before": 17,
+    "new_test_registrations": 0,
+    "partial_after": 50,
+    "partial_before": 50,
+    "recorded_tests_after": 201,
+    "recorded_tests_before": 201,
+    "status_rows_after": 99,
+    "status_rows_before": 99,
+    "table_lines_after": 153,
+    "table_lines_before": 153
+  },
+  "created_at": "2026-11-06T03:24:00.197361+00:00",
+  "head": "0d42476763f6b3f48fc54ae915e0f290805bba6c",
+  "landing": {
+    "main_equal": false,
+    "pr": null,
+    "run_site": "pending fleet landing"
+  },
+  "negative_probe": {
+    "cause": "Each events.list under review policy appended its own review.opened event",
+    "command": "cloud_run timeout 1200 node tests/agent-door/events-journey.mjs",
+    "exit": 1,
+    "failure": "AssertionError [ERR_ASSERTION]: feed did not reach its retained end",
+    "log": "held-feed-reproduction.log"
+  },
+  "publication_scan": {
+    "complete": false,
+    "findings": null,
+    "historyScanned": null,
+    "status": "deferred_to_fleet"
+  },
+  "repository": "just-every/run-crank",
+  "schema": 1,
+  "tag": "sx-crank-c-f85",
+  "tested_files": {
+    "src/crank/agent-door/index.ts": "501607cd79b9542242aa8cb59d9b357b8a9ad989b930a8a8e62f67fbdc057465",
+    "src/modules/agent-door/reviews.ts": "7e972943143fa8903722e2979d15ea71a49993164f8f2b550e80c69892f98fcb",
+    "src/modules/agent-door/types.ts": "f69a9b7fe618a4b4614aa2a4e2de28806d6ca3e80115034aa61aa2d20de1b89e",
+    "tests/agent-door/events-journey.mjs": "52f18140a1cfcef0f9b8b22c1f3e972b83213d692b607bc9857902e15f6eecfc",
+    "tests/agent-door/journey.mjs": "491bd59e0556723c80c706e55de8d8a45bbb80c0214341f125662df692d4fc5e",
+    "tests/platform.test.mjs": "6b3c087510e7e65b2029954176a53f8d97ad48e18fb21c57290ffbdd23224d58"
+  },
+  "tooling_attempts": [
+    {
+      "command": "node scripts/test-budget.mjs",
+      "exit": 1,
+      "failure": "MODULE_NOT_FOUND",
+      "resolution": "Existing helper absent; counted ordinary registrations and compared main budget; zero added registrations"
+    }
+  ],
+  "tree": "fe86fe3ea53c2b80f473a545648dc890a2cbdbb4",
+  "worktree_clean": true
+}

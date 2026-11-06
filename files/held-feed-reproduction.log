@@ -1,0 +1,21 @@
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProxy environment variables detected. We'll use your proxy for fetch requests.[0m
+
+
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: feed did not reach its retained end
+    at readAll (file:///home/agent/rer-consolidation/work/sx-crank-c-f85/run-crank/tests/agent-door/events-journey.mjs:197:11)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async nativeEventsProof (file:///home/agent/rer-consolidation/work/sx-crank-c-f85/run-crank/tests/agent-door/events-journey.mjs:213:18)
+    at async file:///home/agent/rer-consolidation/work/sx-crank-c-f85/run-crank/tests/agent-door/events-journey.mjs:301:60 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: undefined,
+  expected: undefined,
+  operator: 'fail',
+  diff: 'simple'
+}
+
+Node.js v24.19.0

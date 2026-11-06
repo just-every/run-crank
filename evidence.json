@@ -1,0 +1,118 @@
+{
+  "files": [
+    {
+      "blob": "d2182545cb1e5a970e50bd100df3472c5354dc9d",
+      "bytes": 2618,
+      "path": "PLAN.md",
+      "sha256": "5bd21ae26e4ca4ddcc203c8700b456f831abcba4f6b5885533b66928eb605ccb"
+    },
+    {
+      "blob": "8323deadf720815edc1614ba8a73bbdc4c383867",
+      "bytes": 11866,
+      "path": "REPORT.md",
+      "sha256": "0a566c11633b4d8a91ffd7389b644f844d853e9603c8cc59aad2070962068eec"
+    },
+    {
+      "blob": "a2838b81ab5aec011a7b7c8e092ad1e2488b75f9",
+      "bytes": 9958,
+      "path": "base-verify-failure.log",
+      "sha256": "ec10ccfa01d7068dad5bb9e9331f486dfc7da970995181b502f1cf6413d75f58"
+    },
+    {
+      "blob": "4b7d2b01f9434178cd6e0acbee0841a93493633f",
+      "bytes": 3235,
+      "path": "build.log",
+      "sha256": "a50686c92ffd0a8b4c985cc475f51caa18c42be2d37c8e333ad4089e56f5f523"
+    },
+    {
+      "blob": "ab4dc026f006c275550ee91efa19d4c881342039",
+      "bytes": 9958,
+      "path": "candidate-verify-failure.log",
+      "sha256": "07aed316bc875d4951633d2b73cdf06288c77f56bb53e9974092edfaa934cdb7"
+    },
+    {
+      "blob": "82de6c26e795fd953841537d8fd7e1f330edbd5b",
+      "bytes": 4840,
+      "path": "checks.json",
+      "sha256": "12108196024c303218dd6953221c6cf119cc56599fece9c9f23edbd33dd89183"
+    },
+    {
+      "blob": "85cc8d35b03c75d380ebc636bbf182df402283c6",
+      "bytes": 438,
+      "path": "ci-discovery.json",
+      "sha256": "b65b521bcd9ffb258a9bb984dadd1bfb90ba084b1fc3e165c987da92d0f31b32"
+    },
+    {
+      "blob": "87bc54ea1783a4d0698e8580234a083b6b0573ee",
+      "bytes": 815,
+      "path": "ci-jobs.json",
+      "sha256": "9b236b8f2af0e1a53284240d93f4e96ea15aac544dff8e4e9da328a807e6e724"
+    },
+    {
+      "blob": "ab47ab5c12defaeffce4f6ad581caee6e47fcd80",
+      "bytes": 311,
+      "path": "ci-status.json",
+      "sha256": "554d3cf3a105a7ab0110d0c2f34409380d201a5d3ce845ab061b62c723ae4e43"
+    },
+    {
+      "blob": "97f112c975c21300b39dda6569880479a6c045a0",
+      "bytes": 44041,
+      "path": "conformance.log",
+      "sha256": "408df480d9c0bc17b3e103ce1938cdb3bd85bf4df813fe60adbd75bb11e2b233"
+    },
+    {
+      "blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "bytes": 0,
+      "path": "first-party.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "blob": "4f10da6316f8a2d6f2934d8c9c78ddebe45982df",
+      "bytes": 907,
+      "path": "held-feed-reproduction.log",
+      "sha256": "2d6b514ef6c272c4057c09d718e16de81541c05a73b08d537695085456ce5ff6"
+    },
+    {
+      "blob": "8814258a19fda4d9c3106a54ed75dea5944e69f8",
+      "bytes": 2672,
+      "path": "packet-preflight.json",
+      "sha256": "a737348eda4d87dd222ee4bed891d4309214e5db45ac3306829683423fd8cd38"
+    },
+    {
+      "blob": "01044855efd013152bfc4a9b745084117c893e02",
+      "bytes": 884,
+      "path": "platform-exact.log",
+      "sha256": "56d88e98dbb7bb28b5449bff6b10756c1b7745cacab018a185caf270e239fd9e"
+    },
+    {
+      "blob": "c1c6e2d7fff54bf9729db58e9f9713209bc4625b",
+      "bytes": 1917,
+      "path": "product-provenance.json",
+      "sha256": "a92bfb5c80cddd47b97d45c1ec835171970718bb76fb8df967b5d1d5b4ab1cbb"
+    },
+    {
+      "blob": "7a8d2bf05d09907ea7d865eb0a4eeb47da65302f",
+      "bytes": 232,
+      "path": "typecheck.log",
+      "sha256": "cf499367abb484575fa404fced8c0d97f8b3e45eeae875bb9c243287ad0f8d5b"
+    },
+    {
+      "blob": "79dd0b129bd8170bc0b3ac0a0c2186314ebf42e3",
+      "bytes": 43,
+      "path": "views-check.log",
+      "sha256": "41be670e8514d35d3059536f54f0a1ff875aa0cf719cdfa33febe6c30584d084"
+    },
+    {
+      "blob": "ab92292705a601d5509c82e28a33e53c210ae892",
+      "bytes": 43,
+      "path": "views-write.log",
+      "sha256": "540b168efe390f92191c4c47be4676a9db640b8f3c00b2bea4c20a224c0e80cf"
+    }
+  ],
+  "product_branch": "cloud/sx-crank-c-f85",
+  "product_head": "0d42476763f6b3f48fc54ae915e0f290805bba6c",
+  "ref": "refs/heads/evidence/sx-crank-c-f85",
+  "repository": "just-every/run-crank",
+  "schema": 1,
+  "tag": "sx-crank-c-f85"
+}

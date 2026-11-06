@@ -1,0 +1,16 @@
+{
+  "head": "0d42476763f6b3f48fc54ae915e0f290805bba6c",
+  "observed_at": "2026-11-06T03:23:18.868145+00:00",
+  "runs": [
+    {
+      "conclusion": null,
+      "event": "push",
+      "head_sha": "0d42476763f6b3f48fc54ae915e0f290805bba6c",
+      "html_url": "https://github.com/just-every/run-crank/actions/runs/42156198466",
+      "id": 42156198466,
+      "name": "Verify",
+      "status": "in_progress"
+    }
+  ],
+  "api_calls_used": 5
+}

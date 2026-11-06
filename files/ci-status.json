@@ -1,0 +1,10 @@
+{
+  "conclusion": "failure",
+  "head_sha": "0d42476763f6b3f48fc54ae915e0f290805bba6c",
+  "html_url": "https://github.com/just-every/run-crank/actions/runs/42156198466",
+  "status": "completed",
+  "id": 42156198466,
+  "event": "push",
+  "observed_at": "2026-11-06T03:28:19.240779+00:00",
+  "api_calls_used": 6
+}
