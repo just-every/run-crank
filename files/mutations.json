@@ -1,0 +1,29 @@
+{
+  "source_sha256": "0e037d40d0031099acae9a45c5cca0849dffd4b270e98388e1389224ad998368",
+  "restored": true,
+  "rows": [
+    {
+      "mutation": "explicit-event-scope",
+      "command": "node tests/agent-door/events-journey.mjs",
+      "exit": 1,
+      "expected_assertion": "existing preparation authority never widens",
+      "caught": true
+    },
+    {
+      "mutation": "current-event-visibility",
+      "command": "node tests/agent-door/events-journey.mjs",
+      "exit": 1,
+      "expected_assertion": "current reviewer eligibility filters every replay",
+      "caught": true
+    },
+    {
+      "mutation": "erased-actor-name",
+      "command": "node tests/agent-door/events-journey.mjs",
+      "exit": 1,
+      "expected_assertion": "Removed person",
+      "caught": true
+    }
+  ],
+  "candidate_head": "4770731cb2b0d708b0ae2d3679abe34e998e752c",
+  "matches_committed_source": true
+}

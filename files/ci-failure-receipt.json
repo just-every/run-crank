@@ -1,0 +1,42 @@
+{
+  "repository": "just-every/run-crank",
+  "run_id": 42150421648,
+  "head_sha": "4770731cb2b0d708b0ae2d3679abe34e998e752c",
+  "event": "push",
+  "status": "completed",
+  "conclusion": "failure",
+  "classification": "permitted generated-view freshness failure only",
+  "build": {
+    "job_id": 127672174778,
+    "workflow_exit": 1,
+    "command": "node src/base/contract-docs.mjs check",
+    "failure": "Error: ACCEPTANCE.md is stale; run node src/base/contract-docs.mjs write",
+    "preceding_commands_passed": [
+      "pnpm run build",
+      "pnpm exec rer build --site",
+      "pnpm run typecheck",
+      "pnpm exec rer check --profile first-party"
+    ]
+  },
+  "verify": {
+    "job_id": 127672432893,
+    "workflow_exit": 1,
+    "reason": "Dependent build failed; shards and push proof skipped"
+  },
+  "archives_read_once": [
+    {
+      "command": "gh run view 42150421648 --repo just-every/run-crank --job 127672174778 --log-failed",
+      "transport_exit": 0
+    },
+    {
+      "command": "gh run view 42150421648 --repo just-every/run-crank --job 127672432893 --log-failed",
+      "transport_exit": 0
+    }
+  ],
+  "github_calls_used": 6,
+  "dispatches": 0,
+  "reruns": 0,
+  "generated_views_committed": false,
+  "repair_attempted": false,
+  "raw_job_environment_sections_excluded_from_public_packet": true
+}

@@ -1,0 +1,135 @@
+{
+  "tag": "sx-crank-c-f80",
+  "repository": "just-every/run-crank",
+  "branch": "cloud/sx-crank-c-f80",
+  "initial_main": "e2c146dc38eb64e685cf01d2c56e798404b3936e",
+  "candidate_head": "4770731cb2b0d708b0ae2d3679abe34e998e752c",
+  "counts_before": {
+    "done": 32,
+    "partial": 50,
+    "missing": 17,
+    "total": 99
+  },
+  "counts_after": {
+    "done": 32,
+    "partial": 50,
+    "missing": 17,
+    "total": 99
+  },
+  "clause": {
+    "id": "BASE-AGENT-010",
+    "before": "partial",
+    "after": "partial",
+    "done_claimed": false
+  },
+  "status_rows": {
+    "parent": 99,
+    "candidate": 99,
+    "dropped": 0
+  },
+  "registrations": {
+    "added": 0,
+    "removed": 0,
+    "recorded_inherited_current": 201,
+    "maximum": 200
+  },
+  "mechanical": [
+    {
+      "command": "node src/base/contract-docs.mjs write",
+      "exit": 0,
+      "generated_views_committed": false
+    },
+    {
+      "command": "node src/base/contract-docs.mjs check",
+      "exit": 0,
+      "before_restoring_views": true
+    },
+    {
+      "command": "node node_modules/@runeditrun/rer/edition-authoring/cli.mjs lock",
+      "exit": 0
+    },
+    {
+      "command": "node node_modules/@runeditrun/rer/edition-authoring/cli.mjs check",
+      "exit": 0
+    },
+    {
+      "command": "pnpm exec rer check --profile first-party",
+      "exit": 0
+    },
+    {
+      "command": "pnpm typecheck",
+      "exit": 0
+    },
+    {
+      "command": "migration-ledger check",
+      "result": "not applicable; no migrations changed",
+      "exit": 0
+    }
+  ],
+  "mutation_receipt": "mutations.json",
+  "publication_scan": {
+    "status": "not_run_in_cloud",
+    "owner": "guarded fleet lander"
+  },
+  "main_equality": false,
+  "run_site_candidate": {
+    "status": "not_run_branch_only"
+  },
+  "ui": {
+    "changed": false,
+    "browser_proof": "not applicable; no screens changed"
+  },
+  "ci": {
+    "run_id": 42150421648,
+    "head_sha": "4770731cb2b0d708b0ae2d3679abe34e998e752c",
+    "event": "push",
+    "status": "completed",
+    "conclusion": "failure",
+    "api_calls_used": 6,
+    "html_url": "https://github.com/just-every/run-crank/actions/runs/42150421648",
+    "classification": "permitted generated-view freshness failure only",
+    "receipt": "ci-failure-receipt.json"
+  },
+  "timestamp": "2026-11-06T02:35:01.888797+00:00",
+  "exact_candidate_local_checks": [
+    {
+      "command": "node --test --test-concurrency=1 tests/platform.test.mjs",
+      "exit": 0,
+      "head": "4770731cb2b0d708b0ae2d3679abe34e998e752c",
+      "passed": 4,
+      "failed": 0,
+      "receipt": "platform-tests.log"
+    },
+    {
+      "command": "npx -y @runeditrun/rer build",
+      "exit": 0,
+      "head": "4770731cb2b0d708b0ae2d3679abe34e998e752c",
+      "receipt": "build.log"
+    },
+    {
+      "command": "node node_modules/@runeditrun/rer/cli/agent-door.mjs .",
+      "exit": 0,
+      "head": "4770731cb2b0d708b0ae2d3679abe34e998e752c",
+      "points_passed": 1223,
+      "points_total": 1223,
+      "receipt": "agent-conformance.log"
+    }
+  ],
+  "status": "ready_under_generated_view_exception",
+  "product_push": {
+    "status": "pushed",
+    "head": "4770731cb2b0d708b0ae2d3679abe34e998e752c",
+    "branch": "cloud/sx-crank-c-f80"
+  },
+  "identity_audit": {
+    "candidate_commits": 2,
+    "passed": true,
+    "trailers": []
+  },
+  "generated_views": {
+    "committed": false,
+    "restored_from": "origin/main",
+    "expected_candidate_freshness_failure": true
+  },
+  "mutation_source_matches_candidate": true
+}
