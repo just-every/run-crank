@@ -1,0 +1,158 @@
+{
+  "head": "184178d3ca7b499818b5982021559c472a7a56dc",
+  "month": "2026-11",
+  "door": "GET /api/crank/reports/usage",
+  "input": {
+    "month": "2026-11"
+  },
+  "report": {
+    "month": "2026-11",
+    "start": "2026-11-01T00:00:00.000Z",
+    "end": "2026-12-01T00:00:00.000Z",
+    "watermark": 422,
+    "scope": "All native agent calls; workflow and team filters do not apply",
+    "accounting": "Requests in this UTC month; retained current outcomes. Replays are attempts, not new original operations. Class counts overlap when a call has several classes. Calls refused before agent authentication are not attributed.",
+    "boundary": "The admitted native registry rejects provider-cost tools. Provider spend and money moved are not reported here; unknown amounts are not zero. Workflow budget accounting is separate.",
+    "totals": {
+      "request_attempts": 212,
+      "replays": 1,
+      "original_operations": 211
+    },
+    "agents": [
+      {
+        "agent_id": "crank-token:c9213cd7-f0bb-462f-ad86-71cd7156b772",
+        "request_attempts": 105,
+        "replays": 0,
+        "original_operations": 105,
+        "name": "Coastal review assistant",
+        "specialist": null,
+        "revoked": false,
+        "decisions": [
+          {
+            "agent_id": "crank-token:c9213cd7-f0bb-462f-ad86-71cd7156b772",
+            "decision": "approval",
+            "outcome": "pending",
+            "request_attempts": 1,
+            "replays": 0
+          },
+          {
+            "agent_id": "crank-token:c9213cd7-f0bb-462f-ad86-71cd7156b772",
+            "decision": "autonomous",
+            "outcome": "done",
+            "request_attempts": 102,
+            "replays": 0
+          },
+          {
+            "agent_id": "crank-token:c9213cd7-f0bb-462f-ad86-71cd7156b772",
+            "decision": "blocked",
+            "outcome": "refused",
+            "request_attempts": 1,
+            "replays": 0
+          },
+          {
+            "agent_id": "crank-token:c9213cd7-f0bb-462f-ad86-71cd7156b772",
+            "decision": "review",
+            "outcome": "done",
+            "request_attempts": 1,
+            "replays": 0
+          }
+        ],
+        "classes": [
+          {
+            "agent_id": "crank-token:c9213cd7-f0bb-462f-ad86-71cd7156b772",
+            "class": "standard",
+            "decision": "approval",
+            "outcome": "pending",
+            "request_attempts": 1,
+            "replays": 0
+          },
+          {
+            "agent_id": "crank-token:c9213cd7-f0bb-462f-ad86-71cd7156b772",
+            "class": "standard",
+            "decision": "autonomous",
+            "outcome": "done",
+            "request_attempts": 102,
+            "replays": 0
+          },
+          {
+            "agent_id": "crank-token:c9213cd7-f0bb-462f-ad86-71cd7156b772",
+            "class": "standard",
+            "decision": "blocked",
+            "outcome": "refused",
+            "request_attempts": 1,
+            "replays": 0
+          },
+          {
+            "agent_id": "crank-token:c9213cd7-f0bb-462f-ad86-71cd7156b772",
+            "class": "standard",
+            "decision": "review",
+            "outcome": "done",
+            "request_attempts": 1,
+            "replays": 0
+          }
+        ],
+        "money_moved": null,
+        "provider_spend_usd": null
+      },
+      {
+        "agent_id": "crank-token:ea570c65-6de4-4225-b766-4fe9619779a2",
+        "request_attempts": 107,
+        "replays": 1,
+        "original_operations": 106,
+        "name": "Harbour records assistant",
+        "specialist": null,
+        "revoked": true,
+        "decisions": [
+          {
+            "agent_id": "crank-token:ea570c65-6de4-4225-b766-4fe9619779a2",
+            "decision": "autonomous",
+            "outcome": "done",
+            "request_attempts": 104,
+            "replays": 0
+          },
+          {
+            "agent_id": "crank-token:ea570c65-6de4-4225-b766-4fe9619779a2",
+            "decision": "autonomous",
+            "outcome": "replayed",
+            "request_attempts": 1,
+            "replays": 1
+          },
+          {
+            "agent_id": "crank-token:ea570c65-6de4-4225-b766-4fe9619779a2",
+            "decision": "none",
+            "outcome": "refused",
+            "request_attempts": 1,
+            "replays": 0
+          },
+          {
+            "agent_id": "crank-token:ea570c65-6de4-4225-b766-4fe9619779a2",
+            "decision": "paused",
+            "outcome": "refused",
+            "request_attempts": 1,
+            "replays": 0
+          }
+        ],
+        "classes": [
+          {
+            "agent_id": "crank-token:ea570c65-6de4-4225-b766-4fe9619779a2",
+            "class": "standard",
+            "decision": "autonomous",
+            "outcome": "done",
+            "request_attempts": 104,
+            "replays": 0
+          },
+          {
+            "agent_id": "crank-token:ea570c65-6de4-4225-b766-4fe9619779a2",
+            "class": "standard",
+            "decision": "autonomous",
+            "outcome": "replayed",
+            "request_attempts": 1,
+            "replays": 1
+          }
+        ],
+        "money_moved": null,
+        "provider_spend_usd": null
+      }
+    ]
+  }
+}

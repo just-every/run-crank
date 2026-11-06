@@ -1,0 +1,16 @@
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProxy environment variables detected. We'll use your proxy for fetch requests.[0m
+
+
+✔ OPS-002: owner estimates, budget admissions, reported spend and rollback remain attributable (6546.978124ms)
+✔ OPS-002: workflow and team caps retain triggered and scheduled work until reviewed release (6355.212687ms)
+✔ OPS-002 DATA-001 DATA-002: native and legacy usage restore inactive and erasure cannot fund more work (22586.494813ms)
+PROBE BASE-AGENT-011 native usage: 212 attempts, 211 originals, 1 replay, two agents, complete UTC month, restarted authority and retained attribution PASS
+✔ Native agent usage reports the complete UTC month with actual decisions, replay and current owner authority (7162.553398ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 4
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 43961.529147

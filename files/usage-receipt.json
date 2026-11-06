@@ -1,0 +1,10 @@
+{
+  "head": "184178d3ca7b499818b5982021559c472a7a56dc",
+  "command": [
+    "node",
+    "--test",
+    "--test-concurrency=1",
+    "tests/usage.test.mjs"
+  ],
+  "exit": 0
+}

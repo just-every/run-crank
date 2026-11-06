@@ -1,0 +1,22 @@
+verify	Require the selected coverage and its proof	﻿2026-11-06T11:27:05.4225795Z ##[group]Run set -euo pipefail
+verify	Require the selected coverage and its proof	2026-11-06T11:27:05.4226570Z [36;1mset -euo pipefail[0m
+verify	Require the selected coverage and its proof	2026-11-06T11:27:05.4227169Z [36;1mtest "$PLAN" = success[0m
+verify	Require the selected coverage and its proof	2026-11-06T11:27:05.4227914Z [36;1mcase "$PUSH_PROOF:$NIGHTLY_PROOF" in[0m
+verify	Require the selected coverage and its proof	2026-11-06T11:27:05.4228570Z [36;1m  *failure*|*cancelled*) exit 1 ;;[0m
+verify	Require the selected coverage and its proof	2026-11-06T11:27:05.4229129Z [36;1mesac[0m
+verify	Require the selected coverage and its proof	2026-11-06T11:27:05.4229615Z [36;1mcase "$COVERAGE" in[0m
+verify	Require the selected coverage and its proof	2026-11-06T11:27:05.4230416Z [36;1m  reuse) test "$SKIP" = true && test "$BUILD" = skipped && test "$SHARDS" = skipped && test "$LIGHT" = skipped ;;[0m
+verify	Require the selected coverage and its proof	2026-11-06T11:27:05.4231792Z [36;1m  light) test "$SKIP" = false && test "$LIGHT" = success && test "$BUILD" = skipped && test "$SHARDS" = skipped ;;[0m
+verify	Require the selected coverage and its proof	2026-11-06T11:27:05.4232710Z [36;1m  full)[0m
+verify	Require the selected coverage and its proof	2026-11-06T11:27:05.4233211Z [36;1m    test "$SKIP" = false && test "$LIGHT" = skipped[0m
+verify	Require the selected coverage and its proof	2026-11-06T11:27:05.4233874Z [36;1m    if [ "$HAS_SHARDS" = true ]; then[0m
+verify	Require the selected coverage and its proof	2026-11-06T11:27:05.4234522Z [36;1m      test "$BUILD" = success && test "$SHARDS" = success[0m
+verify	Require the selected coverage and its proof	2026-11-06T11:27:05.4235262Z [36;1m    else[0m
+verify	Require the selected coverage and its proof	2026-11-06T11:27:05.4235799Z [36;1m      test "$BUILD" = skipped && test "$SHARDS" = skipped[0m
+verify	Require the selected coverage and its proof	2026-11-06T11:27:05.4236421Z [36;1m    fi[0m
+verify	Require the selected coverage and its proof	2026-11-06T11:27:05.4237007Z [36;1m    if [ "$REQUIRE_PUSH" = true ]; then test "$PUSH_PROOF" = success; fi[0m
+verify	Require the selected coverage and its proof	2026-11-06T11:27:05.4237849Z [36;1m    if [ "$REQUIRE_NIGHTLY" = true ]; then test "$NIGHTLY_PROOF" = success; fi[0m
+verify	Require the selected coverage and its proof	2026-11-06T11:27:05.4238624Z [36;1m    ;;[0m
+verify	Require the selected coverage and its proof	2026-11-06T11:27:05.4239049Z [36;1m  *) exit 1 ;;[0m
+verify	Require the selected coverage and its proof	2026-11-06T11:27:05.4239544Z [36;1mesac[0m
+verify	Require the selected coverage and its proof	2026-11-06T11:27:05.4701018Z ##[error]Process completed with exit code 1.

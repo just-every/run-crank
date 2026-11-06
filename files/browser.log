@@ -1,0 +1,5 @@
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProxy environment variables detected. We'll use your proxy for fetch requests.[0m
+
+
+PROBE BASE-AGENT-011 native usage: 212 attempts, 211 originals, 1 replay, two agents, complete UTC month, restarted authority and retained attribution PASS
+Native agent usage browser PASS: populated, empty and error states; totals, classes, owner controls and tooltips at 1440 with matching 390 screens

@@ -1,0 +1,42 @@
+{
+  "head": "184178d3ca7b499818b5982021559c472a7a56dc",
+  "command": "CRANK_CHROMIUM=/usr/bin/chromium CRANK_EVIDENCE=<packet>/screens cloud_run timeout 1200 node tests/agent-usage-browser.mjs",
+  "exit": 0,
+  "screens": [
+    {
+      "path": "screens/empty-1440.png",
+      "bytes": 42656,
+      "sha256": "812a1f02d27bca35fb91589bf1694628d3bdb6d7bfd910ec82f51d3dbe64c816"
+    },
+    {
+      "path": "screens/empty-390.png",
+      "bytes": 43084,
+      "sha256": "0e0633e15572701ea527095a58db3c8798912667acaf529fad932b36cdf4f4df"
+    },
+    {
+      "path": "screens/error-1440.png",
+      "bytes": 86954,
+      "sha256": "2bfe488c92aeb36c63b5f7b8341847684b9d452957441e77a3a7d4fd6f414f0a"
+    },
+    {
+      "path": "screens/error-390.png",
+      "bytes": 48055,
+      "sha256": "934769839793fb81eb9094f7db364e61a359f461e983618b3d320f8ad378be5d"
+    },
+    {
+      "path": "screens/populated-1440.png",
+      "bytes": 140493,
+      "sha256": "05647ef9fe1e11cfb9ef564ae1723551ba98c236098d509c9f32a9ee3c066df7"
+    },
+    {
+      "path": "screens/populated-390.png",
+      "bytes": 125400,
+      "sha256": "4d569e60e6905bdb43ba898a4e73f506f8b0792c0c59c4543a5f00a0e7746957"
+    }
+  ],
+  "functional_assertion_width": 1440,
+  "screen_widths": [
+    1440,
+    390
+  ]
+}

@@ -1,0 +1,10 @@
+# sx-crank-c-f89 plan
+
+Scope: acceptance point 5 of BASE-AGENT-011, native call reporting only. Keep the clause PARTIAL and preserve every existing hold and remaining money, provider and lifecycle obligation.
+
+1. Read the target clause, Status gap, shipped rulings, DONE riders, launcher and repository rules. Map native audit, policy, usage, owner report and Operations view.
+2. Aggregate one complete UTC month from native audit storage by agent, actual decision and outcome, with class decisions separately. Count attempts and replay requests separately from original operation identities. Use retained agent attribution and current credential revocation status. Preserve team billing aggregates and existing workflow budget accounting.
+3. Add the focused Operations panel using existing components. Report missing money and provider costs as null and Not reported, with the registry boundary explicit. Keep provider execution and spend-cap claims out of this slice.
+4. Exercise two actual native agent credentials through MCP for more than one audit page, all applicable configured policy dispositions, replay, authority refusals, restart, revocation and adjacent UTC month boundaries. Compare complete API and rendered totals. Register browser proof for populated, empty and invalid-month states at 1440 and 390. Group existing usage registrations while preserving every assertion to stay within 200.
+5. Update only the target Status evidence and gap plus relevant documentation. Prove contract generation, restore generated views, regenerate and check the source lock last. Run touched usage tests, typecheck and first-party checks. Retain all 99 Status rows.
+6. Save and push only cloud/sx-crank-c-f89 with fleet identity and hooks. Merge updated main before the final candidate. Discover and poll exact-SHA Verify within the ten-call budget. Publish non-secret reports, receipts and screens only on evidence/sx-crank-c-f89. Leave publication scanning, regenerated views and landing to the fleet.

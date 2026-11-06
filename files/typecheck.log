@@ -1,0 +1,6 @@
+ WARN  Unsupported engine: wanted: {"node":"22.20.0"} (current: {"node":"v24.19.0","pnpm":"10.12.4"})
+
+> @automation/crank@0.1.0 typecheck /workspace/crank-f89
+> tsc --build --incremental
+
+rer toolchain: node v24.19.0 pnpm 10.12.4 (pins 22.20.0 / 10.12.4)
