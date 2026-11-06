@@ -48,4 +48,6 @@ export default async function journey({request, origin, cookie, tool}) {
   await person('/agents/api/pause', {paused: false});
  }
  assert.equal(output(await tool('crank.workflows.create', args)).id, created.id);
+ const {agentUsageJourney}=await import('./usage-journey.mjs');
+ await agentUsageJourney();
 }
