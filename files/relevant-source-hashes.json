@@ -1,0 +1,8 @@
+{
+  "head": "da3a3e58b09efc4989fe476568c81123e7c5ba8f",
+  "files": {
+    "src/crank/agent-door/native-recovery.ts": "fc94efd73460ffe657f63e5b5045b56e9a50dcd6d66129e3074f7b057c37b1ed",
+    "src/crank/agent-door/tool-workflows.ts": "ea5cc9b85fe8c9837bc764da2c6e3e32ff85ba416140539853687d6f57a99896",
+    "tests/agent-door/recovery-journey.mjs": "e8b88b30b0dd62921ef963b4494b8b6b5819c2a5b6b183aba778986048da1553"
+  }
+}

@@ -1,0 +1,7 @@
+{"conclusion":"success","id":127717270917,"name":"plan","status":"completed","steps":[]}
+{"conclusion":"failure","id":127717661686,"name":"build","status":"completed","steps":[{"conclusion":"failure","name":"Build once and check the edition"}]}
+{"conclusion":"skipped","id":127717662960,"name":"light","status":"completed","steps":[]}
+{"conclusion":"failure","id":127717914902,"name":"verify","status":"completed","steps":[{"conclusion":"failure","name":"Require the selected coverage and its proof"}]}
+{"conclusion":"skipped","id":127717915702,"name":"shards (${{ matrix.name }})","status":"completed","steps":[]}
+{"conclusion":"skipped","id":127717915880,"name":"full-push-proof","status":"completed","steps":[]}
+{"conclusion":"skipped","id":127717916228,"name":"nightly-proof","status":"completed","steps":[]}

@@ -1,0 +1,165 @@
+{
+  "base": "ff071f1e55bf22bd4e19052dc48f676bd1e4e053",
+  "branch": "cloud/sx-crank-c-f86",
+  "candidate_run_site": {
+    "reason": "main-only landing workflow",
+    "status": "not run"
+  },
+  "checks": [
+    {
+      "command": "node --test --test-concurrency=1 tests/platform.test.mjs",
+      "exit": 0,
+      "failed": 0,
+      "log": "platform.log",
+      "passed": 4,
+      "tree": "byte-identical relevant source and tests to candidate"
+    },
+    {
+      "command": "node --test --test-concurrency=1 --test-name-pattern='^PLATFORM-001: SDK and CORE door' tests/platform.test.mjs",
+      "exit": 0,
+      "failed": 0,
+      "head": "da3a3e58b09efc4989fe476568c81123e7c5ba8f",
+      "log": "exact-recovery.log",
+      "passed": 1
+    },
+    {
+      "command": "pnpm typecheck",
+      "exit": 0,
+      "log": "typecheck.log"
+    },
+    {
+      "command": "pnpm exec rer check --profile first-party",
+      "exit": 0
+    },
+    {
+      "command": "npx -y @runeditrun/rer build",
+      "exit": 0,
+      "log": "build.log"
+    },
+    {
+      "command": "node src/base/contract-docs.mjs write; node src/base/contract-docs.mjs check",
+      "exit": 0,
+      "generated_views": "restored whole from origin/main; not committed",
+      "log": "views.log"
+    },
+    {
+      "command": "node node_modules/@runeditrun/rer/edition-authoring/cli.mjs lock; node node_modules/@runeditrun/rer/edition-authoring/cli.mjs check",
+      "exit": 0
+    },
+    {
+      "command": "migration ledger",
+      "reason": "no migration changed",
+      "status": "not applicable"
+    },
+    {
+      "authors": "fleet",
+      "candidate_commits": 5,
+      "command": "candidate identity and trailers",
+      "committers": "fleet",
+      "exit": 0,
+      "trailers": "absent"
+    },
+    {
+      "command": "all candidate commits retain every parent Status ID, including side parents",
+      "exit": 0,
+      "log": "parent-row-check.json",
+      "parents_checked": 5
+    },
+    {
+      "command": "node src/base/contract-docs.mjs check after restoring generated views from origin/main",
+      "exit": 1,
+      "expected": true,
+      "failure": "ACCEPTANCE.md is stale; run node src/base/contract-docs.mjs write",
+      "log": "restored-view-check.log"
+    }
+  ],
+  "ci": {
+    "aggregate": "dependency gate rejects the failed build; shards and proof jobs skipped",
+    "aggregate_job": 127717914902,
+    "build_failure": "ACCEPTANCE.md is stale; run node src/base/contract-docs.mjs write",
+    "conclusion": "failure",
+    "disposition": "permitted generated-view-only failure",
+    "event": "push",
+    "failed_build_job": 127717661686,
+    "failed_log_reads": [
+      {
+        "command": "gh run view 42164373961 --repo just-every/run-crank --job 127717661686 --log-failed",
+        "exit": 0,
+        "file": "ci-build-failed.log"
+      },
+      {
+        "command": "gh run view 42164373961 --repo just-every/run-crank --job 127717914902 --log-failed",
+        "error": "failed to get run log: zip: not a valid zip file",
+        "exit": 1,
+        "file": "ci-aggregate-log-error.log",
+        "http_status": "not supplied",
+        "retried": false
+      }
+    ],
+    "github_calls_used": 6,
+    "head_sha": "da3a3e58b09efc4989fe476568c81123e7c5ba8f",
+    "html_url": "https://github.com/just-every/run-crank/actions/runs/42164373961",
+    "run_id": 42164373961,
+    "status": "completed",
+    "url": "https://github.com/just-every/run-crank/actions/runs/42164373961"
+  },
+  "clause": {
+    "after": "partial",
+    "before": "partial",
+    "id": "BASE-AGENT-012"
+  },
+  "counts_after": {
+    "done": 32,
+    "missing": 17,
+    "partial": 50,
+    "status_rows": 99
+  },
+  "counts_before": {
+    "done": 32,
+    "missing": 17,
+    "partial": 50,
+    "status_rows": 99
+  },
+  "head": "da3a3e58b09efc4989fe476568c81123e7c5ba8f",
+  "integrated_main": "e2c146dc38eb64e685cf01d2c56e798404b3936e",
+  "main_ci_observed": {
+    "conclusion": "success",
+    "head": "e2c146dc38eb64e685cf01d2c56e798404b3936e",
+    "run_site": 42017109210,
+    "verify": [
+      42017109412,
+      42013805947
+    ]
+  },
+  "product_push": {
+    "attempts": 1,
+    "ref": "refs/heads/cloud/sx-crank-c-f86",
+    "status": "pushed",
+    "transport": "cloud-push.py"
+  },
+  "publication_scan": {
+    "reason": "maintained Mac lander owns exact-tree full-history scan",
+    "status": "not run in cloud"
+  },
+  "recorded_at": "2026-11-06T04:52:35.495600+00:00",
+  "regression": {
+    "assertion": "unrelated preparation and target read grants cannot authorize recovery",
+    "base": "ff071f1e55bf22bd4e19052dc48f676bd1e4e053",
+    "exit": 1,
+    "log": "reproduced-before-fix.log",
+    "observed": "native direct mutation 403 but recovery returned success"
+  },
+  "repository": "just-every/run-crank",
+  "schema": 1,
+  "screens": {
+    "reason": "no screens changed",
+    "status": "not applicable"
+  },
+  "tag": "sx-crank-c-f86",
+  "test_budget": {
+    "assertions_removed": 0,
+    "recorded_after": 201,
+    "recorded_before": 201,
+    "registrations_added": 0
+  }
+}

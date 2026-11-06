@@ -1,0 +1,27 @@
+▲ [WARNING] Proxy environment variables detected. We'll use your proxy for fetch requests.
+
+
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: unrelated preparation and target read grants cannot authorize recovery
++ actual - expected
+
++ undefined
+- 'native_authority_refused'
+
+    at scopedRecovery (file:///home/agent/rer-consolidation/work/sx-crank-c-f86/run-crank/tests/agent-door/recovery-journey.mjs:220:10)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async businessRecovery (file:///home/agent/rer-consolidation/work/sx-crank-c-f86/run-crank/tests/agent-door/recovery-journey.mjs:182:3)
+    at async recoveryJourney (file:///home/agent/rer-consolidation/work/sx-crank-c-f86/run-crank/tests/agent-door/recovery-journey.mjs:143:2)
+    at async file:///home/agent/rer-consolidation/work/sx-crank-c-f86/run-crank/tests/agent-door/local-full.mjs:2:1 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: undefined,
+  expected: 'native_authority_refused',
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.19.0

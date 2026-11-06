@@ -1,0 +1,23 @@
+▲ [WARNING] Proxy environment variables detected. We'll use your proxy for fetch requests.
+
+
+PROBE BASE-AGENT-012 create: committed native draft, outcome interruption, restart and concurrent new RPC IDs after 24 hours -> one effect, frozen original result, later edits preserved
+PROBE BASE-AGENT-012 create transient: committed native draft, outcome interruption, restart and concurrent new RPC IDs after 24 hours -> one effect, frozen original result, later edits preserved
+PROBE BASE-AGENT-012 update: committed native draft, outcome interruption, restart and concurrent new RPC IDs after 24 hours -> one effect, frozen original result, later edits preserved
+PROBE BASE-AGENT-012 update transient: committed native draft, outcome interruption, restart and concurrent new RPC IDs after 24 hours -> one effect, frozen original result, later edits preserved
+PROBE BASE-AGENT-012 duplicate: committed native draft, outcome interruption, restart and concurrent new RPC IDs after 24 hours -> one effect, frozen original result, later edits preserved
+PROBE BASE-AGENT-012 duplicate transient: committed native draft, outcome interruption, restart and concurrent new RPC IDs after 24 hours -> one effect, frozen original result, later edits preserved
+PROBE BASE-AGENT-012 unmatched: interrupted admission without a native receipt, with outcome storage available or failed -> call_in_progress, no invented result or mutation replay
+PROBE BASE-AGENT-012 restore: public export and restore -> no native receipts or credentials; inert drafts without owners; no execution after restart
+PROBE BASE-AGENT-012 erased sponsor: committed uncertain draft, deactivation, person erasure and restart -> native recovery evidence removed, pending and completed retries unauthenticated, no metadata or second effect
+PROBE BASE-AGENT-012 scoped authority: withdrawn creation or target preparation with current read access and an unrelated builder grant -> native write, recovery and completed replay refused; explicit complete grant recovers the frozen result without another effect
+PROBE BASE-AGENT-012 authority: signed Business MCP retries with changed consent, client, foreign sponsor and revoked consent -> refused without completion; original current consent returns frozen metadata
+✔ PLATFORM-001: SDK and CORE door draft lifecycle, native granted execution/progress, paginated reads and out-of-grant denial share native approval and audit (70073.396583ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 1
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 72402.701344
