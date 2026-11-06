@@ -1,0 +1,57 @@
+{
+  "calls": [
+    {
+      "at": 1793936881.8900926,
+      "argv": [
+        "api",
+        "repos/just-every/run-crank/actions/runs?head_sha=cb5bd681c5d0ec59cf990150b33e2d83755d3896&per_page=100",
+        "--jq",
+        "{total_count,workflow_runs:[.workflow_runs[]|{id,name,status,conclusion,head_sha,html_url,event}]}"
+      ]
+    },
+    {
+      "at": 1793937182.9293628,
+      "argv": [
+        "api",
+        "repos/just-every/run-crank/actions/runs/42158651905",
+        "--jq",
+        "{status,conclusion,head_sha,html_url}"
+      ]
+    },
+    {
+      "at": 1793937190.5658553,
+      "argv": [
+        "api",
+        "repos/just-every/run-crank/actions/runs/42158651905/jobs",
+        "--jq",
+        "{jobs:[.jobs[]|{id,name,status,conclusion,steps:[.steps[]|{name,conclusion}]}]}"
+      ]
+    },
+    {
+      "at": 1793937203.958633,
+      "argv": [
+        "run",
+        "view",
+        "42158651905",
+        "--repo",
+        "just-every/run-crank",
+        "--job",
+        "127698893615",
+        "--log-failed"
+      ]
+    },
+    {
+      "at": 1793937216.5821588,
+      "argv": [
+        "run",
+        "view",
+        "42158651905",
+        "--repo",
+        "just-every/run-crank",
+        "--job",
+        "127699165908",
+        "--log-failed"
+      ]
+    }
+  ]
+}

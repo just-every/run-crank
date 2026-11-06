@@ -1,0 +1,12 @@
+{
+  "rejected_head": "d8623c31cf359634b9516a57754ede47e02fa8e8",
+  "fresh_main": "e2c146dc38eb64e685cf01d2c56e798404b3936e",
+  "original_commits": [
+    "e4e82fafc93b7f60099b4615128a555a775b25de",
+    "d8623c31cf359634b9516a57754ede47e02fa8e8"
+  ],
+  "rejected_is_ancestor": true,
+  "contract_matches_rejected": true,
+  "generated_views_match_main": true,
+  "migrations_changed": false
+}

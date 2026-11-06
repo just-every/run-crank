@@ -1,0 +1,71 @@
+diff --git a/sources.lock.json b/sources.lock.json
+index caed64e..0d20a0f 100644
+--- a/sources.lock.json
++++ b/sources.lock.json
+@@ -2948,7 +2948,7 @@
+       "executable": false
+     },
+     "src/crank/access.ts": {
+-      "sha256": "93c675fc7f6e79a8d4fa3985c64ba4736994823fff6b799d1684896b2315ec6e",
++      "sha256": "1e29d91c631dcd8e6313f76e5c474cf1a9fa3f916d0538d0ea42c0aabf4ef42c",
+       "executable": false
+     },
+     "src/crank/agent-door/business.ts": {
+@@ -7208,7 +7208,7 @@
+       "executable": false
+     },
+     "tests/platform.test.mjs": {
+-      "sha256": "d18dc10a525a3ee67de55b7e043acf476608f063b33f1b449ddb57072c347363",
++      "sha256": "9b7766677764beffffe6c4e75bdfc6ae1db8e68180834cc97ad41ad70010f6c3",
+       "executable": false
+     },
+     "tests/postgres-write-fixture.mjs": {
+diff --git a/src/crank/access.ts b/src/crank/access.ts
+index 70e07f6..504fc5c 100644
+--- a/src/crank/access.ts
++++ b/src/crank/access.ts
+@@ -47,7 +47,9 @@ export async function authorize(request: Request, original: CrankEnv): Promise<A
+     if (token.scope === 'agent' && !['/mcp', '/api/crank/v1/mcp'].includes(new URL(request.url).pathname)) {
+       const path = new URL(request.url).pathname
+       const family = path.includes('/connections') ? 'connections:read' : path.includes('/catalog') || path.includes('/coverage') ? 'catalog:read' : /\/(?:workflow-runs|runs)(?:\/|$)/.test(path) ? 'runs:read' : 'workflows:read'
+-      requireValue(scopes.includes(request.method === 'GET' ? family : 'workflows:prepare'), 'Tool scope was removed', 403)
++      // State includes both flow metadata and run payloads, approvals and attempts.
++      const required = request.method !== 'GET' ? ['workflows:prepare'] : path === '/api/crank/state' ? ['workflows:read', 'runs:read'] : [family]
++      requireValue(required.every(scope => scopes.includes(scope)), 'Tool scope was removed', 403)
+     }
+     return { agentScopes: scopes, id: token.created_by, name: token.display_name, role: 'admin', kind: token.scope, version: token.operator_version, tokenId: token.id, flowId: token.flow_id, local: env.AUTH_LOCAL === 'true' }
+   }
+diff --git a/tests/platform.test.mjs b/tests/platform.test.mjs
+index c557569..0c6b6d3 100644
+--- a/tests/platform.test.mjs
++++ b/tests/platform.test.mjs
+@@ -117,6 +117,29 @@ test('PLATFORM-001: SDK and CORE door draft lifecycle, native granted execution/
+     } finally {await receiving.close()}
+    }});
+ 
++  // Aggregate native reads must honor both the issued ceiling and later removal.
++  const flow=await h.flow('synthetic-crank-scope-read'),privateInput={note:'synthetic-crank-private-run-input'};
++  const pending=await h.run(flow,'synthetic-crank-scope-read',privateInput);assert.equal(pending.state,'pending');
++  const scoped=await h.post('tokens',{label:'synthetic-crank-read-removal',scope:'agent',tool_scopes:['workflows:read','runs:read']},h.owner,201);
++  const limited=await h.post('tokens',{label:'synthetic-crank-issued-read-ceiling',scope:'agent',tool_scopes:['workflows:read']},h.owner,201);
++  const read=(path,token,status=200)=>h.get(path,'',status,{authorization:'Bearer '+token});
++  const visible=async token=>{
++   assert.deepEqual((await read('runs/'+pending.id,token)).input,privateInput);
++   assert.deepEqual((await read('state',token)).runs.find(row=>row.id===pending.id)?.input,privateInput);
++  };
++  await visible(scoped.token);
++  const removal=await h.post('agent-access/'+encodeURIComponent(scoped.agent_access.agent_id),{scopes:['workflows:read'],revision:scoped.agent_access.revision});
++  assert.deepEqual(removal.scopes,['workflows:read']);
++  for(const restarted of [false,true]){
++   if(restarted)await h.restart();
++   for(const token of [scoped.token,limited.token]){
++    await read('runs/'+pending.id,token,403);await read('state',token,403);
++    assert.equal((await read('flows/'+flow.id,token)).id,flow.id,'Retained workflow reads still work');
++   }
++   await visible(preparer.token);
++   assert.deepEqual((await h.get('state')).runs.find(row=>row.id===pending.id)?.input,privateInput,'Native owner reads remain authorized');
++  }
++
+   const independent=await issue(h,current), other=client(h,{token:independent.credential});
+   const separate=await other.startTask(input,{idempotencyKey:'receipt-one'});assert.notEqual(separate.id,run.id);assert.equal(edge.requests.length,count+1);
+   await h.post(`workflows/${draft.id}/pause`);

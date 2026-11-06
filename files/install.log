@@ -1,0 +1,53 @@
+ WARN  Unsupported engine: wanted: {"node":"22.20.0"} (current: {"node":"v24.19.0","pnpm":"10.12.4"})
+Lockfile is up to date, resolution step is skipped
+Progress: resolved 1, reused 0, downloaded 0, added 0
+Packages: +156
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+   ╭──────────────────────────────────────────╮
+   │                                          │
+   │   Update available! 10.12.4 → 12.18.0.   │
+   │   Changelog: https://pnpm.io/v/12.18.0   │
+   │     To update, run: pnpm add -g pnpm     │
+   │                                          │
+   ╰──────────────────────────────────────────╯
+
+Progress: resolved 156, reused 0, downloaded 9, added 9
+Progress: resolved 156, reused 0, downloaded 27, added 27
+Progress: resolved 156, reused 0, downloaded 52, added 52
+Progress: resolved 156, reused 0, downloaded 72, added 72
+Progress: resolved 156, reused 0, downloaded 83, added 83
+Progress: resolved 156, reused 0, downloaded 104, added 104
+Progress: resolved 156, reused 0, downloaded 115, added 115
+Progress: resolved 156, reused 0, downloaded 127, added 127
+Progress: resolved 156, reused 0, downloaded 138, added 138
+Progress: resolved 156, reused 0, downloaded 156, added 156, done
+.../esbuild@0.28.1/node_modules/esbuild postinstall$ node install.js
+.../node_modules/workerd postinstall$ node install.js
+.../esbuild@0.28.1/node_modules/esbuild postinstall: Done
+.../node_modules/workerd postinstall: Done
+
+dependencies:
++ @tanstack/react-router 1.170.41
++ @tanstack/react-start 1.168.60
++ hono 4.13.7
++ marked 18.0.14
++ react 19.2.8
++ react-dom 19.2.8
+
+devDependencies:
++ @cloudflare/vite-plugin 1.54.5
++ @cloudflare/workers-types 5.20260908.1
++ @playwright/test 1.63.0
++ @runeditrun/rer 0.2.91
++ @types/node 22.18.6
++ @types/react 19.2.18
++ @types/react-dom 19.2.7
++ @vitejs/plugin-react 6.1.1
++ esbuild 0.28.1
++ miniflare 5.20260907.0-alpha
++ typescript 5.9.3
++ vite 8.2.2
++ wrangler 4.129.1
+
+Done in 11.7s using pnpm v10.12.4

@@ -1,0 +1,168 @@
+{
+  "tag": "sx-crank-f81fix1",
+  "repository": "just-every/run-crank",
+  "branch": "cloud/sx-crank-f81fix1",
+  "rejected_head": "d8623c31cf359634b9516a57754ede47e02fa8e8",
+  "head": "cb5bd681c5d0ec59cf990150b33e2d83755d3896",
+  "fresh_main": "e2c146dc38eb64e685cf01d2c56e798404b3936e",
+  "checks": [
+    {
+      "command": "cloud_run pnpm install --frozen-lockfile",
+      "exit": 0,
+      "file": "install.log"
+    },
+    {
+      "command": "cloud_run npx -y @runeditrun/rer setup --owner-email fleet@runeditrun.com --non-interactive",
+      "exit": 0
+    },
+    {
+      "command": "cloud_run node ../packet/scope-probe.mjs before",
+      "exit": 0,
+      "file": "probe-before.json"
+    },
+    {
+      "command": "cloud_run node ../packet/scope-probe.mjs after",
+      "exit": 0,
+      "file": "probe-after.json"
+    },
+    {
+      "command": "cloud_run node --test --test-concurrency=1 tests/platform.test.mjs",
+      "exit": 0,
+      "file": "platform-tests.log"
+    },
+    {
+      "command": "cloud_run pnpm typecheck",
+      "exit": 0,
+      "file": "typecheck.log"
+    },
+    {
+      "command": "cloud_run npx -y @runeditrun/rer build",
+      "exit": 0,
+      "file": "build.log"
+    },
+    {
+      "command": "git fetch origin main",
+      "exit": 0
+    },
+    {
+      "command": "env GIT_AUTHOR_NAME=Run\\ Edit\\ Run\\ fleet GIT_AUTHOR_EMAIL=fleet@runeditrun.com GIT_COMMITTER_NAME=Run\\ Edit\\ Run\\ fleet GIT_COMMITTER_EMAIL=fleet@runeditrun.com git merge --no-edit origin/main",
+      "exit": 0
+    },
+    {
+      "command": "node src/base/contract-docs.mjs write",
+      "exit": 0
+    },
+    {
+      "command": "node src/base/contract-docs.mjs check",
+      "exit": 0
+    },
+    {
+      "command": "git checkout origin/main -- ACCEPTANCE.md docs/CLAIMS.md",
+      "exit": 0
+    },
+    {
+      "command": "node node_modules/@runeditrun/rer/edition-authoring/cli.mjs lock",
+      "exit": 0,
+      "file": "source-lock-write.json"
+    },
+    {
+      "command": "node node_modules/@runeditrun/rer/edition-authoring/cli.mjs check",
+      "exit": 0,
+      "file": "source-lock-check.json"
+    },
+    {
+      "command": "git diff --check",
+      "exit": 0
+    },
+    {
+      "command": "python3 $HOME/rer-consolidation/.tools/cloud-push.py origin cloud/sx-crank-f81fix1",
+      "exit": 0,
+      "file": "push-receipt.txt"
+    },
+    {
+      "command": "gh api repos/just-every/run-crank/actions/runs?head_sha=cb5bd681c5d0ec59cf990150b33e2d83755d3896&per_page=100",
+      "exit": 0,
+      "file": "ci-discovery.json"
+    },
+    {
+      "command": "gh api repos/just-every/run-crank/actions/runs/42158651905 --jq {status,conclusion,head_sha,html_url}",
+      "exit": 0,
+      "file": "ci-run.json"
+    },
+    {
+      "command": "gh api repos/just-every/run-crank/actions/runs/42158651905/jobs",
+      "exit": 0,
+      "file": "ci-jobs.json"
+    },
+    {
+      "command": "gh run view 42158651905 --repo just-every/run-crank --job 127698893615 --log-failed",
+      "exit": 0,
+      "file": "ci-build-failed.log"
+    },
+    {
+      "command": "gh run view 42158651905 --repo just-every/run-crank --job 127699165908 --log-failed",
+      "exit": 0,
+      "file": "ci-verify-failed.log"
+    }
+  ],
+  "probe_before": {
+    "process_exit": 0,
+    "policy": "FAIL",
+    "meaning": "The probe asserts the observed vulnerability, not policy compliance."
+  },
+  "probe_after": {
+    "process_exit": 0,
+    "policy": "PASS"
+  },
+  "platform_tests": {
+    "tests": 4,
+    "passed": 4,
+    "failed": 0,
+    "skipped": 0,
+    "cancelled": 0,
+    "new_registrations": 0
+  },
+  "contract_status_changes": [],
+  "contract_counts": {
+    "before": {
+      "done": 32,
+      "partial": 50,
+      "missing": 17
+    },
+    "after": {
+      "done": 32,
+      "partial": 50,
+      "missing": 17
+    },
+    "clause_status": "partial",
+    "row": "| `BASE-AGENT-005` | An agent acts as a person in a role, never more | target | partial | `tests/agent-door/narrowing-journey.mjs` \u2014 native person and MCP scope-removal sanity journey, invoked by `tests/agent-door/journey.mjs` and `tests/platform.test.mjs` \u2014 SDK and CORE door draft lifecycle; `tests/team-browser.mjs` \u2014 installed owner scope controls at 1440 and 390; `agent-surface.json`; `docs/AGENT-DOOR.md`. | Explicit owner-issued tool-scope ceilings, shared person and agent removal, server-resolved identity, revision-bound narrowing, immediate and restarted native preparation refusal, held human approval and inactive scope restoration are proved. Full per-role and per-tool UI parity; resource, folder, action and budget grant intersection; broader sponsor downgrade and suspension journeys; other access and security actions; complete injection resistance remain required. Existing BASE-AGENT-004 token and consent lifecycle, real IdP interoperability, Business propagation, owner and account, ct, enforcing-egress and device holds remain unchanged; TEAM-001 policy and TEAM-006 creation revisions are untouched. |",
+    "contract_unchanged": true,
+    "platform_registrations_before": 4,
+    "platform_registrations_after": 4,
+    "recorded_test_budget": 201,
+    "maximum": 200
+  },
+  "migrations_changed": false,
+  "migration_ledger_check": "not applicable; no migration changed",
+  "pr_url": null,
+  "ci": {
+    "run_id": 42158651905,
+    "status": "completed",
+    "conclusion": "failure",
+    "head_sha": "cb5bd681c5d0ec59cf990150b33e2d83755d3896",
+    "url": "https://github.com/just-every/run-crank/actions/runs/42158651905",
+    "candidate_exception": "allowed generated-view-only failure",
+    "root_failed_job": 127698893615,
+    "downstream_failed_job": 127699165908,
+    "root_error": "ACCEPTANCE.md is stale; run node src/base/contract-docs.mjs write",
+    "runtime_shards": "skipped after shared build failed; no CI runtime pass claimed",
+    "cloud_build_and_typecheck": "passed locally; CI build, site build, typecheck and first-party check also passed before generator check",
+    "ready_eligible_under_brief": true
+  },
+  "product_pushes": 1,
+  "frozen_independent_regate": "required, not performed by builder",
+  "publication_scan": "COMPLETE full-history publication scan remains the maintained Mac lander duty; unavailable in this cloud",
+  "product_worktree_clean": true,
+  "blockers": [],
+  "github_calls": 5
+}

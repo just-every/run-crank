@@ -1,0 +1,19 @@
+{
+  "before": {
+    "done": 32,
+    "partial": 50,
+    "missing": 17
+  },
+  "after": {
+    "done": 32,
+    "partial": 50,
+    "missing": 17
+  },
+  "clause_status": "partial",
+  "row": "| `BASE-AGENT-005` | An agent acts as a person in a role, never more | target | partial | `tests/agent-door/narrowing-journey.mjs` — native person and MCP scope-removal sanity journey, invoked by `tests/agent-door/journey.mjs` and `tests/platform.test.mjs` — SDK and CORE door draft lifecycle; `tests/team-browser.mjs` — installed owner scope controls at 1440 and 390; `agent-surface.json`; `docs/AGENT-DOOR.md`. | Explicit owner-issued tool-scope ceilings, shared person and agent removal, server-resolved identity, revision-bound narrowing, immediate and restarted native preparation refusal, held human approval and inactive scope restoration are proved. Full per-role and per-tool UI parity; resource, folder, action and budget grant intersection; broader sponsor downgrade and suspension journeys; other access and security actions; complete injection resistance remain required. Existing BASE-AGENT-004 token and consent lifecycle, real IdP interoperability, Business propagation, owner and account, ct, enforcing-egress and device holds remain unchanged; TEAM-001 policy and TEAM-006 creation revisions are untouched. |",
+  "contract_unchanged": true,
+  "platform_registrations_before": 4,
+  "platform_registrations_after": 4,
+  "recorded_test_budget": 201,
+  "maximum": 200
+}

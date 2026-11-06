@@ -1,0 +1,58 @@
+{
+  "phase": "before",
+  "observed_before_failure": true,
+  "policy": "FAIL",
+  "rows": [
+    {
+      "phase": "before",
+      "stage": "before-removal",
+      "kind": "authorized-control",
+      "direct_status": 200,
+      "aggregate_status": 200,
+      "owner_status": 200,
+      "payload_visible": true
+    },
+    {
+      "phase": "before",
+      "stage": "after-removal",
+      "kind": "removed-scope",
+      "direct_status": 403,
+      "aggregate_status": 200,
+      "workflow_status": 200,
+      "removed_payload_visible": true,
+      "original_ceiling_status": 200,
+      "original_ceiling_payload_visible": true,
+      "policy": "FAIL"
+    },
+    {
+      "phase": "before",
+      "stage": "after-removal",
+      "kind": "authorized-control",
+      "direct_status": 200,
+      "aggregate_status": 200,
+      "owner_status": 200,
+      "payload_visible": true
+    },
+    {
+      "phase": "before",
+      "stage": "after-worker-restart",
+      "kind": "removed-scope",
+      "direct_status": 403,
+      "aggregate_status": 200,
+      "workflow_status": 200,
+      "removed_payload_visible": true,
+      "original_ceiling_status": 200,
+      "original_ceiling_payload_visible": true,
+      "policy": "FAIL"
+    },
+    {
+      "phase": "before",
+      "stage": "after-worker-restart",
+      "kind": "authorized-control",
+      "direct_status": 200,
+      "aggregate_status": 200,
+      "owner_status": 200,
+      "payload_visible": true
+    }
+  ]
+}

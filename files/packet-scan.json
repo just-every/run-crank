@@ -1,0 +1,147 @@
+{
+  "files": [
+    {
+      "file": "PLAN.md",
+      "bytes": 2179,
+      "sha256": "b6bcbb108b610a54efbc5915ef41d969d8d8886b78ecbb2d1684d870920ae534"
+    },
+    {
+      "file": "REPORT.md",
+      "bytes": 9899,
+      "sha256": "c41379ea0b581f6b4c3187b2a1429bca4a81111501cc95a15259e892129be45e"
+    },
+    {
+      "file": "RECEIPT.json",
+      "bytes": 6288,
+      "sha256": "749dc5141ec2b10590d0d4ed7b630d2ef54ab1b1020cbdf7cc37853c54d18963"
+    },
+    {
+      "file": "scope-probe.mjs",
+      "bytes": 3390,
+      "sha256": "dfc9fbbbf38e0a940623e6e0a2d3a0b2fe77b3531a749771e75212cba9dc6246"
+    },
+    {
+      "file": "probe-before.json",
+      "bytes": 1452,
+      "sha256": "2b08db4b8ab5013b627dee84a9cb808d8e174fb5483bd8b1fa2f18e9bd68421f"
+    },
+    {
+      "file": "probe-before.stderr",
+      "bytes": 136,
+      "sha256": "6205e22497347c74bf6517d7c67792b17cc2051d7b12f33098353c4b1b9bed4a"
+    },
+    {
+      "file": "probe-after.json",
+      "bytes": 1451,
+      "sha256": "4e1cdbfaec629c9c5d1547310b57f9d8649fdb69144ff2fb159f5767f99a4fc5"
+    },
+    {
+      "file": "probe-after.stderr",
+      "bytes": 136,
+      "sha256": "6205e22497347c74bf6517d7c67792b17cc2051d7b12f33098353c4b1b9bed4a"
+    },
+    {
+      "file": "platform-tests.log",
+      "bytes": 865,
+      "sha256": "5d4f9def140d8ced64f83e96740c326ac43d3edbc4a3068760c17583a7d99ee4"
+    },
+    {
+      "file": "typecheck.log",
+      "bytes": 234,
+      "sha256": "05fe154bfc2557e728640ad2f6d0bbb5e4b346cdf687a0c8aeb4679ca5a5a751"
+    },
+    {
+      "file": "build.log",
+      "bytes": 3242,
+      "sha256": "1c301e37ece3964ee12cbe1629aa0d2581ae2b5bcc09125bafe4d342511461cf"
+    },
+    {
+      "file": "install.log",
+      "bytes": 2185,
+      "sha256": "02a1ac7a2a8a82badd287520d2c87f70952bd1b2d048e5dc6eb545383575f57d"
+    },
+    {
+      "file": "source-lock-write.json",
+      "bytes": 310010,
+      "sha256": "124245b03fb937c9a3623be73f56b06e88f6bf791a896c24091de3969e797126"
+    },
+    {
+      "file": "source-lock-check.json",
+      "bytes": 310024,
+      "sha256": "a74a75bfe222c2f517812041b174a24c80de94d57938d2b35a26ca2cdd61c107"
+    },
+    {
+      "file": "identity-trailers.txt",
+      "bytes": 255,
+      "sha256": "c25a9c829a41ff3b6938f4311bbea40664474a5d0bc965f03084b9b336738113"
+    },
+    {
+      "file": "candidate-messages.txt",
+      "bytes": 303,
+      "sha256": "d89feddba5afeea0a3fa5d63fc2956a5c77525087d7119e43a10ae0c6ea0b709"
+    },
+    {
+      "file": "repair.diff",
+      "bytes": 4410,
+      "sha256": "93c592ac7e9f8e93d86d36f760ccac519b7c20a25e748a1c3c75035ac1e3cc9e"
+    },
+    {
+      "file": "ancestry-contract-receipt.json",
+      "bytes": 388,
+      "sha256": "7ff3502ff135911c3a21820e2563df75910f70f11e2b4d4c19d2abcdc8bf8879"
+    },
+    {
+      "file": "counts-contract-receipt.json",
+      "bytes": 1475,
+      "sha256": "71b506d7f19ce2ef55fa949c91da4f7afdc00bd49f9a2b57a013164c378a3442"
+    },
+    {
+      "file": "push-receipt.txt",
+      "bytes": 903,
+      "sha256": "35a8c8d5e20c70526afe9802cd4cf53dc57d5a2ae31d942fb61d4757ab08c89a"
+    },
+    {
+      "file": "ci-discovery.json",
+      "bytes": 254,
+      "sha256": "59fd95d79ba5ff4add57996a3ee97df4f49450e21dee0c995619c13f43dd1375"
+    },
+    {
+      "file": "ci-run.json",
+      "bytes": 216,
+      "sha256": "89ff2f6864723eb68c586f0409819bfdbdee80119c99b4b4e1b360cd93ecf31f"
+    },
+    {
+      "file": "ci-jobs.json",
+      "bytes": 3279,
+      "sha256": "beac68bcc0083419808427585cfaf47cdfe5352761e61163e93c80a5fc0258df"
+    },
+    {
+      "file": "ci-build-failed.log",
+      "bytes": 9838,
+      "sha256": "96964a8fc7e80a31a6f0ba95ef5c0e969da61c33f4a8eff037a55a4b1f39c679"
+    },
+    {
+      "file": "ci-build-transport.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "file": "ci-verify-failed.log",
+      "bytes": 3172,
+      "sha256": "6c9f89cc361a77d616235e0d62787dac8f052b0b417d6bb597ff50cbfb384350"
+    },
+    {
+      "file": "ci-verify-transport.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "file": "github-api-receipt.json",
+      "bytes": 1285,
+      "sha256": "77f0f673263ab6062d770ad7833fd4edeb030d0b552108a6d8c3de2d68e328bb"
+    }
+  ],
+  "secret_scan": "passed",
+  "symlinks": 0,
+  "method": "Explicit regular-file allowlist, compared in memory against injected values and credential-shaped patterns. No credential values recorded. Workflow runner environment blocks omitted from public logs; actual diagnostics retained."
+}

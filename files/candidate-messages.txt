@@ -1,0 +1,9 @@
+cb5bd681c5d0ec59cf990150b33e2d83755d3896
+Enforce run read ceilings on aggregate native state
+
+d8623c31cf359634b9516a57754ede47e02fa8e8
+Prove scope removal survives withdrawn and revoked approval authority
+
+e4e82fafc93b7f60099b4615128a555a775b25de
+Persist owner-authorized agent scope removal [skip ci]
+
