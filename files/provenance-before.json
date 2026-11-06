@@ -1,0 +1,187 @@
+{
+  "main": {
+    "head": "e2c146dc38eb64e685cf01d2c56e798404b3936e",
+    "branch": "main",
+    "status": "",
+    "shallow": "true",
+    "package": {
+      "name": "@automation/crank",
+      "version": "0.1.0",
+      "private": true,
+      "license": "MIT",
+      "type": "module",
+      "engines": {
+        "node": "22.20.0"
+      },
+      "scripts": {
+        "build": "rer build",
+        "dev": "rer dev",
+        "preview": "rer preview",
+        "typecheck": "tsc --build --incremental",
+        "verify": "rer verify",
+        "setup": "rer setup",
+        "deploy": "rer deploy",
+        "test:runtime": "rer queue test:runtime -- sh -c \"node tests/runtime.mjs\"",
+        "test:email-link": "rer queue test:email-link -- sh -c \"node tests/email-link.mjs\"",
+        "onboard": "node scripts/install.mjs",
+        "build:app": "rer queue build:app -- sh -c \"vite build\"",
+        "verify:app": "node scripts/verify-app.mjs",
+        "reset": "rer reset",
+        "export": "rer export",
+        "import": "rer import",
+        "release": "rer release",
+        "outbox": "rer outbox",
+        "doctor": "rer doctor",
+        "describe": "rer describe",
+        "check": "rer check",
+        "deps": "rer install",
+        "rer": "rer",
+        "test:crank": "node --test --test-concurrency=1 ${CRANK_TEST_SHARD:+--test-shard=$CRANK_TEST_SHARD} tests/crank.test.mjs tests/triggers.test.mjs tests/webhook-erasure.test.mjs tests/hold-cost.test.mjs tests/usage.test.mjs tests/logic.test.mjs tests/connections.test.mjs tests/app.test.mjs tests/ops.test.mjs tests/batch.test.mjs tests/pagination.test.mjs tests/ownership.test.mjs tests/historical.test.mjs tests/publish-authority.test.mjs tests/execution-queue.test.mjs tests/dispatch-authority.test.mjs tests/request-limits.test.mjs tests/version-comparison.test.mjs tests/deployment.test.mjs tests/skills.test.mjs tests/grants.test.mjs tests/platform.test.mjs tests/security.test.mjs tests/team.test.mjs tests/service-accounts.test.mjs tests/followups.test.mjs tests/executors.test.mjs tests/hosted-mail.test.mjs tests/drift.test.mjs",
+        "inbox": "node examples/inbox/server.mjs",
+        "test:site": "node --test --test-concurrency=1 tests/site.test.mjs",
+        "delivery:spec": "node scripts/build-deployment-spec.mjs",
+        "check:deployment-spec": "node scripts/build-deployment-spec.mjs --check"
+      },
+      "dependencies": {
+        "@tanstack/react-router": "1.170.41",
+        "@tanstack/react-start": "1.168.60",
+        "hono": "4.13.7",
+        "marked": "18.0.14",
+        "react": "19.2.8",
+        "react-dom": "19.2.8"
+      },
+      "devDependencies": {
+        "@cloudflare/vite-plugin": "1.54.5",
+        "@cloudflare/workers-types": "5.20260908.1",
+        "@playwright/test": "1.63.0",
+        "@runeditrun/rer": "0.2.91",
+        "@types/node": "22.18.6",
+        "@types/react": "19.2.18",
+        "@types/react-dom": "19.2.7",
+        "@vitejs/plugin-react": "6.1.1",
+        "esbuild": "0.28.1",
+        "miniflare": "5.20260907.0-alpha",
+        "typescript": "5.9.3",
+        "vite": "8.2.2",
+        "wrangler": "4.129.1"
+      },
+      "packageManager": "pnpm@10.12.4",
+      "pnpm": {
+        "overrides": {
+          "sharp": "0.35.5",
+          "undici": "7.29.1",
+          "source-map-js": "1.2.2"
+        },
+        "onlyBuiltDependencies": [
+          "esbuild",
+          "workerd"
+        ]
+      },
+      "repository": {
+        "type": "git",
+        "url": "https://github.com/just-every/run-crank"
+      }
+    },
+    "lock_sha256": "3764eeff5aad3b6371aff04d277021fad944c5f67d9b6195597f247d631c9ff9"
+  },
+  "candidate": {
+    "head": "2b7186c1c3ef673f610070a9c0b2a3a34f43b310",
+    "branch": "cloud/sx-crank-c-f64-rebase-2b7186c1c3ef673f610070a9c0b2a3a34f43b310",
+    "status": "",
+    "shallow": "true",
+    "package": {
+      "name": "@automation/crank",
+      "version": "0.1.0",
+      "private": true,
+      "license": "MIT",
+      "type": "module",
+      "engines": {
+        "node": "22.20.0"
+      },
+      "scripts": {
+        "build": "rer build",
+        "dev": "rer dev",
+        "preview": "rer preview",
+        "typecheck": "tsc --build --incremental",
+        "verify": "rer verify",
+        "setup": "rer setup",
+        "deploy": "rer deploy",
+        "test:runtime": "rer queue test:runtime -- sh -c \"node tests/runtime.mjs\"",
+        "test:email-link": "rer queue test:email-link -- sh -c \"node tests/email-link.mjs\"",
+        "onboard": "node scripts/install.mjs",
+        "build:app": "rer queue build:app -- sh -c \"vite build\"",
+        "verify:app": "node scripts/verify-app.mjs",
+        "reset": "rer reset",
+        "export": "rer export",
+        "import": "rer import",
+        "release": "rer release",
+        "outbox": "rer outbox",
+        "doctor": "rer doctor",
+        "describe": "rer describe",
+        "check": "rer check",
+        "deps": "rer install",
+        "rer": "rer",
+        "test:crank": "node --test --test-concurrency=1 ${CRANK_TEST_SHARD:+--test-shard=$CRANK_TEST_SHARD} tests/crank.test.mjs tests/triggers.test.mjs tests/webhook-erasure.test.mjs tests/hold-cost.test.mjs tests/usage.test.mjs tests/logic.test.mjs tests/connections.test.mjs tests/app.test.mjs tests/ops.test.mjs tests/batch.test.mjs tests/pagination.test.mjs tests/ownership.test.mjs tests/historical.test.mjs tests/publish-authority.test.mjs tests/execution-queue.test.mjs tests/dispatch-authority.test.mjs tests/request-limits.test.mjs tests/version-comparison.test.mjs tests/deployment.test.mjs tests/skills.test.mjs tests/grants.test.mjs tests/platform.test.mjs tests/security.test.mjs tests/team.test.mjs tests/service-accounts.test.mjs tests/followups.test.mjs tests/executors.test.mjs tests/hosted-mail.test.mjs tests/drift.test.mjs",
+        "inbox": "node examples/inbox/server.mjs",
+        "test:site": "node --test --test-concurrency=1 tests/site.test.mjs",
+        "delivery:spec": "node scripts/build-deployment-spec.mjs",
+        "check:deployment-spec": "node scripts/build-deployment-spec.mjs --check"
+      },
+      "dependencies": {
+        "@tanstack/react-router": "1.170.41",
+        "@tanstack/react-start": "1.168.60",
+        "hono": "4.13.7",
+        "marked": "18.0.14",
+        "react": "19.2.8",
+        "react-dom": "19.2.8"
+      },
+      "devDependencies": {
+        "@cloudflare/vite-plugin": "1.54.5",
+        "@cloudflare/workers-types": "5.20260908.1",
+        "@playwright/test": "1.63.0",
+        "@runeditrun/rer": "0.2.91",
+        "@types/node": "22.18.6",
+        "@types/react": "19.2.18",
+        "@types/react-dom": "19.2.7",
+        "@vitejs/plugin-react": "6.1.1",
+        "esbuild": "0.28.1",
+        "miniflare": "5.20260907.0-alpha",
+        "typescript": "5.9.3",
+        "vite": "8.2.2",
+        "wrangler": "4.129.1"
+      },
+      "packageManager": "pnpm@10.12.4",
+      "pnpm": {
+        "overrides": {
+          "sharp": "0.35.5",
+          "undici": "7.29.1",
+          "source-map-js": "1.2.2"
+        },
+        "onlyBuiltDependencies": [
+          "esbuild",
+          "workerd"
+        ]
+      },
+      "repository": {
+        "type": "git",
+        "url": "https://github.com/just-every/run-crank"
+      }
+    },
+    "lock_sha256": "3764eeff5aad3b6371aff04d277021fad944c5f67d9b6195597f247d631c9ff9"
+  },
+  "changed_paths": [
+    "ACCEPTANCE.md",
+    "CONTRACT.md",
+    "agent-surface.json",
+    "docs/AGENT-DOOR.md",
+    "docs/CLAIMS.md",
+    "sources.lock.json",
+    "src/crank/agent-door/documentation.ts",
+    "src/crank/agent-door/index.ts",
+    "src/crank/agent-door/tools.ts",
+    "tests/agent-door/documentation-browser.mjs",
+    "tests/agent-door/journey.mjs",
+    "tests/mcp-client-browser.mjs",
+    "tests/platform.test.mjs"
+  ]
+}

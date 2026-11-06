@@ -1,0 +1,29 @@
+> pnpm run verify:app
+
+> @automation/crank@0.1.0 verify:app /home/agent/rer-consolidation/work/sx-crank-f64-ci-triage-1/main
+> node scripts/verify-app.mjs
+
+> CRANK_EVIDENCE="$CRANK_EVIDENCE/recurring" node tests/recurring-browser.mjs
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProxy environment variables detected. We'll use your proxy for fetch requests.[0m
+
+
+node:internal/modules/run_main:123
+    triggerUncaughtException(
+    ^
+
+browserType.launch: Executable doesn't exist at /home/agent/.cache/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-linux64/chrome-headless-shell
+╔════════════════════════════════════════════════════════════╗
+║ Looks like Playwright was just installed or updated.       ║
+║ Please run the following command to download new browsers: ║
+║                                                            ║
+║     pnpm exec playwright install                           ║
+║                                                            ║
+║ <3 Playwright Team                                         ║
+╚════════════════════════════════════════════════════════════╝
+    at /home/agent/rer-consolidation/work/sx-crank-f64-ci-triage-1/main/tests/recurring-browser.mjs:26:30 {
+  log: [],
+  name: 'Error'
+}
+
+Node.js v22.20.0
+ ELIFECYCLE  Command failed with exit code 1.

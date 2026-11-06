@@ -1,0 +1,28 @@
+{
+  "provenance": "supplied inline brief, not newly fetched logs",
+  "run_id": 42150056848,
+  "attempt": 1,
+  "head_sha": "2b7186c1c3ef673f610070a9c0b2a3a34f43b310",
+  "conclusion": "failure",
+  "owner_decisions_job": 127671299542,
+  "connections_cancelled_job": 127671299444,
+  "aggregate_derivative_job": 127675746913,
+  "failure": "Failed to load url /agent-surface.json (resolved id: [REDACTED]/agent-surface.json) in [REDACTED]/src/crank/agent-door/index.ts",
+  "later_failure": "listener handshake",
+  "completed_before_failure": [
+    "ordinary build",
+    "six runtime shards",
+    "recurring-browser 1440/390",
+    "sibling journeys",
+    "teams journeys"
+  ],
+  "original_source": "598f9307bd61093d260ae2f8bdf9bd1947f85cd4",
+  "saved_source_baseline": "e2c146dc38eb64e685cf01d2c56e798404b3936e",
+  "base_agent_013": "PARTIAL",
+  "counts_before_and_after": [
+    32,
+    50,
+    17
+  ],
+  "verdict": "none; original final-Verify refusal remains"
+}

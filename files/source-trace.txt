@@ -1,0 +1,344 @@
+=== main:src/crank/agent-door/index.ts sha256=1420bf0ee787d7f28bea0645d9f375c0f0ec323656800f6c1b95ad9bc7e90bb6 ===
+1: import { createAgentDoor, type Trust } from '../../modules/agent-door/index.ts'
+2: import { runtimeBindings, type Bindings } from '../../auth.server'
+3: import { peopleAdapter, localCredentials } from './people'
+4: import { crankTools } from './tools'
+5: 
+6: export const capabilities = ['tools', 'policy', 'pause', 'audit', 'idempotency'] as const
+7: 
+8: function installationTrust(env: Bindings): Trust | null {
+9:   const issuer = env.RER_OWNER_CLAIM_ISSUER
+10:   const installationId = env.RER_OWNER_CLAIM_INSTALLATION_ID
+11:   const publicKeys = env.RER_OWNER_CLAIM_PUBLIC_KEYS
+12:   if (![issuer, installationId, publicKeys].some(Boolean)) return null
+13:   if (!issuer || !installationId || !publicKeys) throw new Error('Incomplete installation trust')
+14:   return { issuer, installationId, appOrigin: env.AUTH_ORIGIN, publicKeys: JSON.parse(publicKeys) }
+15: }
+16: 
+17: /** One registry and policy pipeline for Business, local preparation and person review. */
+18: export function crankAgentDoor(bindings: Bindings) {
+19:   const env = runtimeBindings(bindings)
+20:   return createAgentDoor({
+21:     seed: 'crank', name: 'Crank', specialist: 'Automation operations lead',
+22:     db: env.DB, origin: env.AUTH_ORIGIN, trust: installationTrust(env),
+23:     capabilities: [...capabilities], people: peopleAdapter(env),
+24:     tools: crankTools(env), resources: [],
+25:     paths: ['/api/crank/v1/mcp'],
+26:     localCredentials: request => localCredentials(env, request),
+27:     notTools: [
+28:       { clauses: ['PLATFORM-002'], reason: 'connector' },
+29:       { clauses: ['DATA-001'], reason: 'import-door' },
+30:       { clauses: ['BASE-002'], reason: 'installation' },
+31:     ],
+32:   })
+33: }
+34: 
+35: /** Construct native adapters only for paths owned by the shared door. */
+36: export async function crankAgentResponse(request: Request, env: Bindings): Promise<Response | null> {
+37:   const path = new URL(request.url).pathname
+38:   if (!['/.well-known/oauth-protected-resource', '/.well-known/oauth-protected-resource/mcp',
+39:     '/api/rer/agent-policy', '/mcp', '/api/crank/v1/mcp', '/agents'].includes(path)
+40:     && !path.startsWith('/agents/api/') && !/^\/agents\/approvals\/[^/]+$/.test(path)) return null
+41:   return crankAgentDoor(env).handle(request)
+42: }
+=== candidate:src/crank/agent-door/index.ts sha256=844d0683574929dc7d1cc98b6f2859f1486a786337bebd4094a6d2b510db6738 ===
+1: import { createAgentDoor, type AgentDoorOptions, type Trust } from '../../modules/agent-door/index.ts'
+2: import { runtimeBindings, type Bindings } from '../../auth.server'
+3: import { peopleAdapter, localCredentials } from './people'
+4: import { crankTools } from './tools'
+5: import surface from '../../../agent-surface.json'
+6: import { agentDocumentation, documentationResponse, describeAgentResponse } from './documentation'
+7: 
+8: export const capabilities = ['tools', 'policy', 'pause', 'audit', 'idempotency'] as const
+9: 
+10: function installationTrust(env: Bindings): Trust | null {
+11:   const issuer = env.RER_OWNER_CLAIM_ISSUER
+12:   const installationId = env.RER_OWNER_CLAIM_INSTALLATION_ID
+13:   const publicKeys = env.RER_OWNER_CLAIM_PUBLIC_KEYS
+14:   if (![issuer, installationId, publicKeys].some(Boolean)) return null
+15:   if (!issuer || !installationId || !publicKeys) throw new Error('Incomplete installation trust')
+16:   return { issuer, installationId, appOrigin: env.AUTH_ORIGIN, publicKeys: JSON.parse(publicKeys) }
+17: }
+18: 
+19: /** One registry and policy pipeline for Business, local preparation and person review. */
+20: export function crankAgentDoor(bindings: Bindings) {
+21:   const env = runtimeBindings(bindings)
+22:   const options: AgentDoorOptions = {
+23:     seed: surface.seed, name: 'Crank', specialist: surface.specialist,
+24:     db: env.DB, origin: env.AUTH_ORIGIN, trust: installationTrust(env),
+25:     capabilities: [...capabilities], people: peopleAdapter(env),
+26:     tools: crankTools(env), resources: [],
+27:     paths: ['/api/crank/v1/mcp'], limits: surface.documentation.limits,
+28:     localCredentials: request => localCredentials(env, request),
+29:     notTools: [
+30:       { clauses: ['PLATFORM-002'], reason: 'connector' },
+31:       { clauses: ['DATA-001'], reason: 'import-door' },
+32:       { clauses: ['BASE-002'], reason: 'installation' },
+33:     ],
+34:   }
+35:   const door = createAgentDoor(options)
+36:   const documentation = agentDocumentation(options)
+37:   return { ...door, async handle(request: Request) {
+38:     if (new URL(request.url).pathname === surface.documentation.path) return documentationResponse(request, documentation)
+39:     const response = await door.handle(request)
+40:     return response && (new URL(request.url).pathname === '/mcp' || options.paths?.includes(new URL(request.url).pathname))
+41:       ? describeAgentResponse(response, documentation) : response
+42:   } }
+43: }
+44: 
+45: /** Construct native adapters only for paths owned by the shared door. */
+46: export async function crankAgentResponse(request: Request, env: Bindings): Promise<Response | null> {
+47:   const path = new URL(request.url).pathname
+48:   if (!['/.well-known/oauth-protected-resource', '/.well-known/oauth-protected-resource/mcp',
+49:     surface.documentation.path, '/api/rer/agent-policy', '/mcp', '/api/crank/v1/mcp', '/agents'].includes(path)
+50:     && !path.startsWith('/agents/api/') && !/^\/agents\/approvals\/[^/]+$/.test(path)) return null
+51:   return crankAgentDoor(env).handle(request)
+52: }
+=== candidate:src/server.dev.ts sha256=79540e700d89d02af4df1297bd844c0e58f0a4758a647eda87d873a8b7109168 ===
+1: // Local-only Worker entry. vite.config.ts loads it only for `vite dev`; the
+2: // deployed main stays src/server.ts, and `rer build` refuses any output that
+3: // contains the dev layer. It adds dev sign-in, personas and the Dev title and name suffix.
+4: import worker from './server'
+5: import { withDevIdentity } from './modules/operator-auth/dev/index.mjs'
+6: import { authConfig, runtimeBindings, type Bindings } from './auth.server'
+7: import { devPersonas } from './dev-personas'
+8: import { withDevAi } from './modules/ai/dev/index.mjs'
+9: import { fontDocumentResponse } from './base/font-response'
+10: import { fontLinks } from './base/font-head'
+11: 
+12: const development = withDevAi<Bindings, typeof worker>(worker, { bindings: runtimeBindings })
+13: const dev = withDevIdentity<Bindings, typeof worker>(development, { bindings: runtimeBindings, config: authConfig, personas: devPersonas })
+14: 
+15: // The dev layer answers its one-click sign-in and its hand-off page itself; they get the look
+=== candidate:src/server.ts sha256=9cd6f79a28cafe0cfb12a83b2629b9e9ec61c0baa3e9bc0d79404086a893a714 ===
+13: import { appResponse, productApi } from './crank/ui/handler'
+14: import { publicHooks } from './crank/triggers/public'
+15: import { schedulerPass } from './crank/ops/scheduler'
+16: import { emailHandler } from './crank/triggers/email'
+17: import { crankAgentResponse } from './crank/agent-door'
+18: import { businessSettingsResponse } from './crank/agent-door/business'
+19: 
+20: const api = new Hono<{ Bindings: Bindings }>()
+33:   email: emailHandler,
+34:   async fetch(request, env, execution) {
+35:     const asset = await staticAssetResponse(request, env)
+36:     if (asset) return asset
+37:     const bindings = runtimeBindings(env)
+38:     const business = await businessSettingsResponse(request, bindings)
+39:     if (business) return business
+40:     const door = await crankAgentResponse(request, bindings)
+41:     if (door) return rejectedResponse(request, door)
+42:     const auth = await authResponse(request, env)
+43:     if (auth) return auth
+44:     // Inbound webhook, callback and Slack event doors admit events only; runs continue after the response.
+=== candidate:vite.config.ts sha256=8b20eacac4d6971222866f9515fbefa2185970bc504606603a4641e60a913b12 ===
+1: import { demoSockets } from './src/modules/demo/vite.mjs'
+2: import demo from './deploy-demo.json' with { type: 'json' }
+3: import { cloudflare } from '@cloudflare/vite-plugin'
+4: import { tanstackStart } from '@tanstack/react-start/plugin/vite'
+5: import react from '@vitejs/plugin-react'
+6: import { defineConfig } from 'vite'
+7: import { archiveOutputGuard } from '@runeditrun/rer/archive-output'
+8: 
+9: // Only `vite dev` loads the local-only entry and the checkout's dev key; a build
+10: // keeps src/server.ts and never sees either (rer build checks its output).
+11: const local = (name: string) => process.env[name] ? { [name]: process.env[name] } : {}
+12: const serve = { main: './src/server.dev.ts', vars: { ...local('RER_DEV_ORIGIN'), ...local('RER_DEV_KEY'), ...local('RER_DEV_IDENTITY'), ...local('RER_MODELS_SERVICE'), ...local('RER_MODELS_KEY'), ...local('RER_DEMO'), ...local('RER_DEMO_EXPIRES'), ...(process.env.RER_DEMO === '1' ? demo.settings : {}) } }
+13: 
+14: // `vite dev` serves only the folders the app is built from (and what they
+15: // import, plus the public run site declaration its identity reads), never the rest of the checkout: not rer's private folders (the dev
+16: // key, installer state), export archives, settings or local data.
+17: const server = { fs: { allow: ['src', 'public', 'node_modules', 'deploy-site.json'], deny: ['**/.rer/**', '**/.seed/**', '**/exports/**', '**/*.rer'] } }
+18: 
+19: export default defineConfig(({ command, isPreview }) => ({ server, plugins: [demoSockets(), cloudflare({ inspectorPort: false, viteEnvironment: { name: 'ssr' }, persistState: { path: process.env.RER_STATE_DIR ?? '.wrangler/state' }, ...(command === 'serve' && !isPreview ? { config: serve } : process.env.RER_DEV_ORIGIN ? { config: { vars: local('RER_DEV_ORIGIN') } } : {}) }), tanstackStart(), react(), archiveOutputGuard()] }))
+=== candidate:edition.json sha256=ad049593af154d1901420494301930d693cc1b3ed13ab5e62aa0fb6633246785 ===
+40:           "examples",
+41:           "executors",
+42:           "gateways",
+43:           "management",
+44:           "migrations",
+45:           "package.json",
+46:           "packaging.json",
+47:           "pnpm-lock.yaml",
+48:           "public",
+49:           "rer-project.json",
+50:           "rer-setup.json",
+51:           "scripts",
+52:           "sdk",
+53:           "seed.json",
+54:           "src",
+55:           "test-budget.json",
+56:           "tests",
+57:           "tsconfig.json",
+58:           "verification.json",
+59:           "vite.config.ts",
+60:           "vite.site.config.ts",
+61:           "wrangler.jsonc",
+62:           "agent-surface.json"
+63:         ],
+64:         "origin": {
+=== candidate:scripts/verify-ci.mjs sha256=c9f9bb71880c632028a1cab9fb484e454767c6f47eeb61bc7a25bd1e1a3f909b ===
+121:   } else if (mode === '--build' && !tier) {
+122:    for (const command of plan.build) run(command);
+123:    if (process.env.GITHUB_ACTIONS === 'true') {
+124:     if (!/^[a-f0-9]{40}$/.test(process.env.GITHUB_SHA ?? '')) throw Error('Shared build requires a GitHub Actions commit');
+125:     writeFileSync('dist/.ci-sha', process.env.GITHUB_SHA + '\n');
+126:    }
+127:   } else {
+128:    const shard = [...plan.push, ...plan.nightly].find(shard => shard.name === mode);
+129:    if (!shard || tier) throw Error('Usage: verify-ci.mjs SHARD');
+130:    if (process.env.GITHUB_ACTIONS === 'true') {
+131:     const sha = readFileSync('dist/.ci-sha', 'utf8').trim();
+132:     if (!/^[a-f0-9]{40}$/.test(process.env.GITHUB_SHA ?? '') || sha !== process.env.GITHUB_SHA) throw Error('Build artifact belongs to another commit');
+133:    }
+134:    // Exactly one job retains rer verify's hosted-output and hydration checks.
+135:    run(shard.hosted ? 'pnpm run verify' : 'pnpm run verify:app', { ...process.env, SEED_VERIFY_SHARD: shard.name });
+136:   }
+=== candidate:scripts/verify-app.mjs sha256=53d32df18fc683c843d980a06e5e92b4c4029af9e307027307678ea28cf888e4 ===
+25:  if (result.error) throw result.error;
+26:  if (result.status !== 0) process.exit(result.status ?? 1);
+27: }
+28: 
+29: const invokedDirectly = () => { try { return realpathSync(process.argv[1]) === realpathSync(import.meta.filename); } catch { return false; } };
+30: if (invokedDirectly()) {
+31:  const plan = await verificationPlan();
+32:  const all = [...plan.push, ...plan.nightly];
+33:  const selected = process.env.SEED_VERIFY_SHARD;
+34:  const shards = selected ? all.filter(shard => shard.name === selected) : all;
+35:  if (!shards.length) throw Error(`Unknown verification shard: ${selected}`);
+36:  if (!selected) for (const command of plan.build) run(command);
+37:  for (const shard of shards) for (const command of shard.commands) run(command);
+38: }
+=== candidate:tests/recurring-browser.mjs sha256=89cc69744d73f87a3b93155cad5e6cbf161915182c1c97b17f754ff291f86fe7 ===
+22:  const response=await h.mf.dispatchFetch(h.origin+req.url,{method:req.method,headers,redirect:'manual',...(!['GET','HEAD'].includes(req.method)?{body:Buffer.concat(chunks)}:{})});
+23:  res.writeHead(response.status,Object.fromEntries(response.headers));res.end(Buffer.from(await response.arrayBuffer()));
+24: }catch{res.writeHead(503);res.end('Browser transport failed')}});
+25: await new Promise(r=>bridge.listen(Number(new URL(h.origin).port),'127.0.0.1',r));
+26: const browser=await chromium.launch({headless:true,args:['--use-mock-keychain','--password-store=basic']});let page;
+27: try {
+28:  const context=await browser.newContext();const [name,...value]=h.owner.split('=');await context.addCookies([{name,value:value.join('='),url:h.origin}]);page=await context.newPage();
+63:  }
+64:  assert.equal(reads,4);assert.equal(fake.requests.filter(r=>r.method!=='GET').length,0);console.log('recurring-browser: PASS widths=1440,390 customer_sends=0 frozen_open_versions=true');await context.close();
+65: }catch(error){if(page){console.error('screen path:',new URL(page.url()).pathname,(await page.locator('body').innerText()).slice(0,1800));await page.screenshot({path:join(evidence,'journey-error.png'),fullPage:true})}throw error}
+66: finally {await browser.close();await h.close();bridge.closeAllConnections();await new Promise(r=>bridge.close(r))}
+=== candidate:tests/sibling-browser.mjs sha256=1b365ccd3a39770a49708ad4f2b4d189a7737e47fe5951f34753731f3e3794ae ===
+24:     res.writeHead(response.status,Object.fromEntries(response.headers));res.end(Buffer.from(await response.arrayBuffer()));
+25:    }catch{res.writeHead(503);res.end('Browser transport failed')}});
+26:    await new Promise(done=>server.listen(Number(new URL(h.origin).port),'127.0.0.1',done));
+27:    context=await browser.newContext({viewport:{width:1440,height:1000}});
+28:    const [name,...value]=h.owner.split('=');await context.addCookies([{name,value:value.join('='),url:h.origin}]);page=await context.newPage();
+29:    await page.goto(h.origin+'/setup');
+30:    if(new URL(page.url()).pathname==='/setup'){await page.getByRole('checkbox').check();await page.getByRole('button',{name:'Finish setup',exact:true}).click()}
+31:   }
+32: }
+91:   }
+92:  }});
+93:  console.log('Native Nook and Orbit scoped operations, readback and authority screens proved at 1440 and captured at 390');
+94: } finally {await context?.close();await browser.close();if(server){server.closeAllConnections();await new Promise(done=>server.close(done))}}
+95: 
+96: const {teamsSearchBrowser}=await import('./teams-search-browser.mjs');
+97: await teamsSearchBrowser();
+=== candidate:tests/teams-search-browser.mjs sha256=e2c86a656d2a4fa75f3595f65b55a8344d1ba701d40c15e3d77f7d1bea2e602d ===
+51:    }
+52:   }
+53:  }finally{await context.close();server.closeAllConnections();await new Promise(done=>server.close(done))}
+54: }
+55: try{await teamsSearchJourney({onScreen});await teamsCustodyJourney({onScreen})}finally{await browser.close()}
+56: console.log('Teams directory retained identities, exact outcomes, literal names and tooltips PASS; screens at 1440 and 390');
+57: }
+58: if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href)await teamsSearchBrowser();
+=== candidate:tests/decision-browser.mjs sha256=6f91f5b701e9238fcaa48327956e2ca94c79abb88e5317ef97046c5bc51a00a6 ===
+11: assert.ok(evidence, 'Set CRANK_EVIDENCE');
+12: await mkdir(evidence, { recursive: true });
+13: const privateDir = await mkdtemp(join(tmpdir(), 'crank-decisions-'));
+14: const devLog = join(privateDir, 'dev.log'), children = [], report = [];
+15: const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
+16: const pathInputs = ':is(input,button)[name="path"][value^="/api/crank/"]:is([value*="/workflow-runs/"],[value*="/runs/"]):is([value$="/approve"],[value$="/reject"])';
+17: const decisionForms = page => page.locator('form[action="/app/action"]').filter({ has: page.locator(pathInputs) });
+18: const decisionButtons = page => decisionForms(page).locator('button');
+19: const formFor = (page, id) => decisionForms(page).filter({ has: page.locator(`[name="path"][value*="/${id}/"]`) });
+20: const status = page => page.locator('[data-decision-status][role="status"]');
+21: let browser, page;
+22: 
+23: function startDev() {
+24:   const child = spawn('rer', ['dev', '--foreground'], {
+25:     env: { ...process.env, PATH: dirname(process.execPath) + ':' + process.env.PATH },
+26:     stdio: ['ignore', 'pipe', 'pipe'],
+27:   });
+28:   children.push(child);
+29:   const stream = createWriteStream(devLog, { flags: 'a', mode: 0o600 });
+30:   child.stdout.pipe(stream, { end: false }); child.stderr.pipe(stream, { end: false });
+31:   child.once('close', () => stream.end());
+32:   return child;
+33: }
+34: 
+35: async function stopOwned(child) {
+36:   const tree = execFileSync('ps', ['-axo', 'pid=,ppid='], { encoding: 'utf8' }).trim().split('\n').map(line => line.trim().split(/\s+/).map(Number));
+37:   const owned = new Set([child.pid]);
+38:   for (let n = 0; n < 20; n++) for (const [pid, parent] of tree) if (owned.has(parent)) owned.add(pid);
+39:   child.kill('SIGTERM'); await pause(1000);
+40:   for (const pid of [...owned].reverse()) try { process.kill(pid, 'SIGTERM'); } catch {}
+41: }
+60: try {
+61:   const dev = startDev();
+62:   let open;
+63:   const deadline = Date.now() + 10 * 60000;
+64:   while (Date.now() < deadline) {
+65:     const text = await readFile(devLog, 'utf8').catch(() => '');
+66:     open = /RER_OPEN\s+(https?:\/\/\S+)/.exec(text)?.[1];
+67:     if (open) break;
+68:     if (dev.exitCode !== null) throw Error('rer dev exited: ' + text.replace(/https?:\/\/\S+/g, '[private URL]').slice(-1800));
+69:     await pause(1000);
+70:   }
+71:   assert.ok(open, 'rer dev readiness deadline');
+72:   browser = await chromium.launch({ headless: true, ...(process.env.CRANK_CHROMIUM_EXECUTABLE?{executablePath:process.env.CRANK_CHROMIUM_EXECUTABLE}:{}), args: ['--use-mock-keychain', '--password-store=basic', ...(process.platform==='linux'?['--no-sandbox']:[])] });
+73:   const owner = await browser.newContext(); page = await owner.newPage();
+74:   await page.goto(open);
+75:   await page.waitForURL(url => ['/app', '/setup'].includes(url.pathname), { timeout: 60000 });
+76:   if (new URL(page.url()).pathname === '/setup') {
+77:     await page.getByRole('checkbox').check();
+78:     await page.getByRole('button', { name: 'Finish setup', exact: true }).click();
+79:     await page.waitForURL('**/app');
+274:   await browser?.close();
+275:   for (const child of children.reverse()) await stopOwned(child);
+276:   await rm(privateDir, { recursive: true, force: true });
+277: }
+=== candidate:tests/harness.mjs sha256=2fda941aa549dddeee79f87941ef2857c166833723ad6e12d9adb988e8ae2b52 ===
+=== frozen installed vite 8.2.2 dist/node/chunks/node.js ===
+20501: function isFileLoadingAllowed(config, filePath) {
+20502: 	const { fs } = config.server;
+20503: 	if (!fs.strict) return true;
+20504: 	if (isWindows && looksLikeWindowsShortNamePath(filePath)) return false;
+20505: 	if ((isWindows && windowsDriveRE.test(filePath) ? filePath.slice(2) : filePath).includes(":")) return false;
+20506: 	const filePathWithoutTrailingSlash = filePath.endsWith("/") ? filePath.slice(0, -1) : filePath;
+20507: 	if (config.fsDenyGlob(filePathWithoutTrailingSlash)) return false;
+20508: 	if (config.safeModulePaths.has(filePath)) return true;
+20509: 	if (fs.allow.some((uri) => isFileInTargetPath(uri, filePath))) return true;
+20510: 	return false;
+20511: }
+20624: 	const loadResult = await pluginContainer.load(id);
+20625: 	if (loadResult == null) {
+20626: 		const file = cleanUrl(id);
+20627: 		if (options.skipFsCheck || isFileLoadingAllowed(environment.getTopLevelConfig(), slash(file))) {
+20628: 			try {
+20629: 				code = await fsp.readFile(file, "utf-8");
+20630: 				debugLoad?.(`${timeFrom(loadStart)} [fs] ${prettyUrl}`);
+20631: 			} catch (e) {
+20632: 				if (e.code !== "ENOENT" && e.code !== "EISDIR") throw e;
+20633: 			}
+20634: 			if (code != null && environment.pluginContainer.watcher) ensureWatchedFile(environment.pluginContainer.watcher, file, config.root);
+20653: 	if (code == null) {
+20654: 		const isPublicFile = checkPublicFile(url, environment.getTopLevelConfig());
+20655: 		let publicDirName = path.relative(config.root, config.publicDir);
+20656: 		if (publicDirName[0] !== ".") publicDirName = "/" + publicDirName;
+20657: 		const msg = isPublicFile ? `This file is in ${publicDirName} and will be copied as-is during build without going through the plugin transforms, and therefore should not be imported from source code. It can only be referenced via HTML tags.` : `Does the file exist?`;
+20658: 		const importerMod = moduleGraph.idToModuleMap.get(id)?.importers.values().next().value;
+20659: 		const importer = importerMod?.file || importerMod?.url;
+20660: 		const err = /* @__PURE__ */ new Error(`Failed to load url ${url} (resolved id: ${id})${importer ? ` in ${importer}` : ""}. ${msg}`);
+20661: 		err.code = isPublicFile ? ERR_LOAD_PUBLIC_URL : ERR_LOAD_URL;
+20662: 		throw err;
+20663: 	}
+20664: 	if (moduleType === void 0) {
+
+=== tests/harness.mjs:122 close method ===
+async close(){await mf.dispose();await rm(directory,{recursive:true,force:true})}};

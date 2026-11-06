@@ -1,0 +1,14 @@
+{
+  "input": "main",
+  "phase": "build",
+  "start": "2026-11-06T03:12:06Z",
+  "end": "2026-11-06T03:12:27Z",
+  "exit": 0,
+  "controller_pid": 1251,
+  "head": "e2c146dc38eb64e685cf01d2c56e798404b3936e",
+  "status": "",
+  "node": "v22.20.0",
+  "pnpm": "10.12.4",
+  "lock_sha256": "3764eeff5aad3b6371aff04d277021fad944c5f67d9b6195597f247d631c9ff9",
+  "command": "cloud_run timeout --signal=TERM --kill-after=30s 1200 node scripts/verify-ci.mjs --build"
+}

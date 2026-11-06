@@ -1,0 +1,12 @@
+{
+  "recorded_utc": "2026-11-06T03:15:39.958150+00:00",
+  "host": "one cloud VM for both inputs",
+  "os": "Linux-6.18.57-x86_64-with-glibc2.41",
+  "os_release": "PRETTY_NAME=\"Debian GNU/Linux 13 (trixie)\"\nNAME=\"Debian GNU/Linux\"\nVERSION_ID=\"13\"\nVERSION=\"13 (trixie)\"\nVERSION_CODENAME=trixie\nDEBIAN_VERSION_FULL=13.6\nID=debian\nHOME_URL=\"https://www.debian.org/\"\nSUPPORT_URL=\"https://www.debian.org/support\"\nBUG_REPORT_URL=\"https://bugs.debian.org/\"\n",
+  "node_requested": "22.20.0",
+  "pnpm_requested": "10.12.4",
+  "chromium_configured": "/usr/bin/chromium via CRANK_CHROMIUM_EXECUTABLE where the committed test supports it",
+  "first_journey_browser_selection": "tests/recurring-browser.mjs:26 uses Playwright default; no committed CRANK_CHROMIUM_EXECUTABLE override",
+  "github_api_calls": 0,
+  "ci_reruns_or_dispatches": 0
+}

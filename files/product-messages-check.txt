@@ -1,0 +1,2 @@
+Regenerate contract views from CONTRACT.md
+

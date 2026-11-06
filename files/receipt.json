@@ -1,0 +1,50 @@
+{
+  "recorded_utc": "2026-11-06T03:18:29.526450+00:00",
+  "redacted_files": [],
+  "product_states": {
+    "candidate": {
+      "head": "2b7186c1c3ef673f610070a9c0b2a3a34f43b310",
+      "status": ""
+    },
+    "main": {
+      "head": "e2c146dc38eb64e685cf01d2c56e798404b3936e",
+      "status": ""
+    }
+  },
+  "product_commits": 0,
+  "product_pushes": 0,
+  "prs": 0,
+  "github_api_calls": 0,
+  "ci_reruns": 0,
+  "repeat_shard_invocations": 0,
+  "target_decision_journey_reached": false,
+  "source_status_changes": 0,
+  "counts_before": [
+    32,
+    50,
+    17
+  ],
+  "counts_after": [
+    32,
+    50,
+    17
+  ],
+  "note": "Packet contains public source excerpts, synthetic workflow outputs and actual non-secret build/shard receipts. The original CI failure remains unclassified.",
+  "browser_install": {
+    "command": "cloud_run timeout 300 pnpm exec playwright install chromium",
+    "exit": 0,
+    "verified_binary_present": true,
+    "note": "Completed only after both shard invocations had failed; no repeat performed."
+  },
+  "disposition": "TRIAGE BLOCKED: reauthorization for one fresh bounded pair with the completed browser prerequisite",
+  "processes": {
+    "controller_pid": 1251,
+    "controller_exited": true,
+    "browser_or_dev_server_started": false,
+    "live_task_runtime_processes": 0,
+    "observed_nonlive_git_zombies": [
+      626,
+      811
+    ]
+  }
+}
