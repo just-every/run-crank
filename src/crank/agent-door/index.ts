@@ -1,6 +1,7 @@
 import { createAgentDoor, type Trust } from '../../modules/agent-door/index.ts'
 import { runtimeBindings, type Bindings } from '../../auth.server'
 import { peopleAdapter, localCredentials } from './people'
+import { currentScopes } from './scope-grants'
 import { crankTools } from './tools'
 
 export const capabilities = ['tools', 'policy', 'pause', 'audit', 'idempotency'] as const
@@ -21,7 +22,7 @@ export function crankAgentDoor(bindings: Bindings) {
     seed: 'crank', name: 'Crank', specialist: 'Automation operations lead',
     db: env.DB, origin: env.AUTH_ORIGIN, trust: installationTrust(env),
     capabilities: [...capabilities], people: peopleAdapter(env),
-    tools: crankTools(env), resources: [],
+    tools: crankTools(env), resources: [], currentScopes: principal => currentScopes(env, principal),
     paths: ['/api/crank/v1/mcp'],
     localCredentials: request => localCredentials(env, request),
     notTools: [

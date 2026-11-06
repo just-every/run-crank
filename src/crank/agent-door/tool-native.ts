@@ -43,7 +43,7 @@ export async function nativeCall(env: CrankEnv, ctx: ToolContext, path: string, 
 export async function nativeGuard<T>(work: () => Promise<T>): Promise<T> {
   try { return await work() }
   catch (error) {
-    if (error instanceof CrankError) throw new ToolRefusal(error.status === 403 ? 'native_authority_refused' : error.status === 404 ? 'resource_unavailable' : 'native_operation_refused')
+    if (error instanceof CrankError) throw new ToolRefusal(error.status === 403 ? 'native_authority_refused' : error.status === 404 ? 'resource_unavailable' : error.status === 409 ? 'revision_conflict' : 'native_operation_refused')
     throw error
   }
 }

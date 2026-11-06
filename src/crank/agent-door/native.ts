@@ -3,6 +3,7 @@ import { ToolRefusal } from '../../modules/agent-door/index.ts'
 import { runtimeBindings } from '../../auth.server'
 import { admitTeamRequest, teamAccess } from '../team/policy'
 import { CrankError, requireValue, stmt, type Actor, type CrankEnv, type Role } from '../model'
+import { currentScopes, scopeFence } from './scope-grants'
 import { LOCAL_AGENT_PREFIX, peopleAdapter } from './people'
 
 interface NativePerson { id: string; display_name: string; role: Role; version: number; status: string }
@@ -19,6 +20,7 @@ export function bindNativeRequest(request: Request, actor: Actor): Request {
 export function agentDoorFence(actor: Actor): { sql: string; args: unknown[] } {
   const identity = actor.agentDoor
   if (!identity) return { sql: '1', args: [] }
+  const scopes = scopeFence(identity.agentId, actor.id, identity.scopes)
   const policy = `json_extract(s.envelope,'$.paused')=0 AND json_extract(s.envelope,'$.exp')*1000>?
     AND NOT EXISTS(SELECT 1 FROM json_each(s.envelope,'$.revoked.agents') WHERE value=?)
     AND NOT EXISTS(SELECT 1 FROM json_each(s.envelope,'$.revoked.consents') WHERE value=?)`
@@ -26,15 +28,17 @@ export function agentDoorFence(actor: Actor): { sql: string; args: unknown[] } {
     (b.owner_id=? AND ?=(SELECT claim_id FROM oa_bootstrap WHERE singleton=1))
     OR EXISTS(SELECT 1 FROM bs_team m WHERE m.business_id=? AND m.operator_id=? AND m.state<>'conflict')))` : ''
   return {
-    sql: `EXISTS(SELECT 1 FROM agent_door_agents a WHERE a.id=? AND a.sponsor=? AND a.revoked=0)
+    sql: `(${scopes.sql}) AND EXISTS(SELECT 1 FROM agent_door_agents a WHERE a.id=? AND a.sponsor=? AND a.revoked=0)
       AND EXISTS(SELECT 1 FROM agent_door_state s WHERE s.id=1 AND s.local_paused=0
         AND ${identity.consent ? `s.envelope IS NOT NULL AND (${policy})` : `(s.envelope IS NULL OR (${policy}))`})${business}`,
-    args: [identity.agentId, actor.id, Date.now(), identity.agentId, identity.consent ?? null,
+    args: [...scopes.args, identity.agentId, actor.id, Date.now(), identity.agentId, identity.consent ?? null,
       ...(identity.consent ? [identity.businessPersonId ?? null, actor.id, identity.businessPersonId ?? null, actor.id] : [])],
   }
 }
 
 async function admittedActor(env: CrankEnv, actor: Actor): Promise<Actor> {
+  const current = await currentScopes(env, { agent: { id: actor.agentDoor!.agentId, name: '' }, person: { id: actor.id } as never, scopes: [...actor.agentDoor!.scopes] })
+  requireValue(actor.agentDoor!.scopes.every(scope => current.includes(scope)), 'Agent tool scopes changed', 403)
   const fence = agentDoorFence(actor)
   const live = await stmt(env, `SELECT 1 AS ok WHERE ${fence.sql}`, ...fence.args).first()
   requireValue(live, 'Agent authority was paused, revoked, or detached', 403)

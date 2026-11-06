@@ -1,3 +1,4 @@
+import narrowingJourney from './agent-door/narrowing-journey.mjs';
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {harness} from './harness.mjs';
@@ -17,7 +18,15 @@ const issue=async(h,w)=>h.post('grants',{label:'Harbor supplier receipt agent',w
 
 test('PLATFORM-001: SDK and CORE door draft lifecycle, native granted execution/progress, paginated reads and out-of-grant denial share native approval and audit',async()=>{
  const edge=fakeEdge();edge.routes.set('platform-ledger.example',({body})=>jsonResponse({id:crypto.randomUUID(),receipt:JSON.parse(body)}));
- const h=await harness('http://127.0.0.1:9',{edge:edge.edge});
+ let scopeBoundary=null;
+ const commitBarrier=()=>{
+  let reached,release;const arrival=new Promise(resolve=>reached=resolve),wait=new Promise(resolve=>release=resolve);
+  scopeBoundary={reached,wait};return {arrival,release:()=>{scopeBoundary=null;release()}};
+ };
+ const h=await harness('http://127.0.0.1:9',{agentScopeCommitBarrier:true,edge:async request=>{
+  if(new URL(request.url).hostname==='agent-scope-commit.example') {const boundary=scopeBoundary;if(boundary){boundary.reached();await boundary.wait}return jsonResponse({ok:true})}
+  return edge.edge(request);
+ }});
  try{
   const sdk=client(h);
   const preparer=await h.post('tokens',{label:'Harbor integrations preparation',scope:'agent'},h.owner,201), prep=client(h,{token:preparer.token}),rpc=mcp(h,{token:preparer.token});
@@ -93,6 +102,21 @@ test('PLATFORM-001: SDK and CORE door draft lifecycle, native granted execution/
   const next=await call(rpc,'crank.runs.list',{workflow:draft.id,limit:1,before:page.structuredContent.next});assert.notEqual(next.structuredContent.runs[0].id,page.structuredContent.runs[0].id);
   const audit=await h.get('audit');for(const action of ['workflow.create','workflow.publish','grant.task','run.reject'])assert.ok(audit.some(a=>a.action===action),action);
   assert.equal((await h.send('/api/crank/v1/workflows')).value.code,'unauthenticated');
+  await narrowingJourney({origin:h.origin,cookie:h.owner,request:(url,init)=>h.mf.dispatchFetch(url,init),restart:()=>h.restart(),configurePolicy:true,commitBarrier,
+   restore:async({archive,token,grant,full})=>{
+    const receiving=await harness('http://127.0.0.1:9');
+    try {
+     await receiving.post('data/restore',{archive,confirm:'RESTORE'});
+     const grants=await receiving.get('agent-access');assert.equal(grants.grants.length,0,'Restoration cannot transfer original sponsor authority to the receiving owner');
+     const denied=await mcp(receiving,{token})('tools/list');assert.equal(denied.status,401,'A restored scope history carries no credential');
+     const duplicateGrant=await receiving.post('agent-access',{agent_id:'synthetic-crank-business',scopes:full},receiving.owner,201);
+     assert.equal(duplicateGrant.revision,0);
+     const secondArchive=await receiving.post('data/export');
+     const restoredRows=secondArchive.trim().split('\n').map(JSON.parse).flatMap(line=>line.items??[]).filter(item=>item.table==='crank_agent_scope_grants');
+     const retained=restoredRows.find(item=>item.row.agent_id===grant.agent_id);assert.ok(retained);assert.equal(retained.row.active,0);assert.deepEqual(JSON.parse(retained.row.scopes),grant.scopes);
+    } finally {await receiving.close()}
+   }});
+
   const independent=await issue(h,current), other=client(h,{token:independent.credential});
   const separate=await other.startTask(input,{idempotencyKey:'receipt-one'});assert.notEqual(separate.id,run.id);assert.equal(edge.requests.length,count+1);
   await h.post(`workflows/${draft.id}/pause`);

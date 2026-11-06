@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import narrowingJourney from './narrowing-journey.mjs';
 
 const code = answer => answer.result?._meta?.['com.runeditrun/error']?.code ?? answer.body?.error?.data?.code;
 const output = answer => { assert.equal(answer.status, 200); assert.ok(!answer.result?.isError); assert.ok(answer.result?.structuredContent); return answer.result.structuredContent; };
@@ -48,4 +49,5 @@ export default async function journey({request, origin, cookie, tool}) {
   await person('/agents/api/pause', {paused: false});
  }
  assert.equal(output(await tool('crank.workflows.create', args)).id, created.id);
+ await narrowingJourney({request,origin,cookie});
 }

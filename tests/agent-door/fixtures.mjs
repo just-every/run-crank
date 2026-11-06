@@ -11,5 +11,7 @@ export default async function prepare({phase, request, origin, cookie}) {
  const graph = {trigger: {type: 'manual'}, steps: [{id: 'shape', type: 'map', input: {supplier: 'Harbour Workshop', status: 'received'}}]};
  const workflow = await post('/workflows', {name: 'Harbour Workshop — ' + phase, folder: 'Agent conformance fixtures', graph});
  const run = await post('/workflows/' + workflow.id + '/test', {input: {supplier: 'Harbour Workshop'}, bindings: {}});
- return {values: {run: {id: run.id}}};
+ const grants=await request(origin+'/api/crank/agent-access',{headers:{cookie}}).then(response=>response.json());
+ const access=grants.grants.find(grant=>!grant.agent_id.startsWith('crank-token:'));
+ return {values: {run: {id: run.id}, access:{...access,wider:[...access.scopes,'workflows:publish'],after_revision:access.revision+1}}};
 }
