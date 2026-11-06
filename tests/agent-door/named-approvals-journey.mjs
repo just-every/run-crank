@@ -14,6 +14,9 @@ const held = answer => {
  assert.equal(answer.status, 200); assert.equal(answer.result?.resultType, 'input_required', JSON.stringify(answer.body));
  const approval = answer.result._meta['com.runeditrun/approval'];
  assert.ok(approval?.id); assert.ok(approval.url.endsWith('/agents/approvals/' + approval.id));
+ assert.equal(answer.result.inputRequests?.approval?.method, ['elicitation', 'create'].join('/'));
+ assert.equal(answer.result.inputRequests.approval.params.mode, 'url');
+ assert.equal(answer.result.inputRequests.approval.params.url, approval.url);
  return approval;
 };
 
@@ -56,7 +59,8 @@ export default async function namedApprovalsJourney({h: supplied, observe = asyn
   const mcp = async (name, arguments_) => {
    const method = ['tools', 'call'].join('/'), response = await request('/mcp', {method: 'POST', cookie: '',
     headers: {authorization: 'Bearer ' + credential.token, 'mcp-protocol-version': '2026-07-28', 'mcp-method': method, 'mcp-name': name},
-    body: {jsonrpc: '2.0', id: crypto.randomUUID(), method, params: {name, arguments: arguments_, _meta: {'io.modelcontextprotocol/protocolVersion': '2026-07-28'}}}});
+    body: {jsonrpc: '2.0', id: crypto.randomUUID(), method, params: {name, arguments: arguments_, _meta: {'io.modelcontextprotocol/protocolVersion': '2026-07-28',
+     'io.modelcontextprotocol/clientCapabilities': {elicitation: {url: {}}}}}}});
    const body = await response.json(); return {status: response.status, body, result: body.result};
   };
   const args = label => ({name: 'Synthetic Crank ' + label, graph: {trigger: {type: 'manual'}, steps: [{id: 'shape', type: 'map', input: {reviewed: true}}]}, idempotency_key: crypto.randomUUID()});

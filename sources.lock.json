@@ -6732,7 +6732,7 @@
       "executable": false
     },
     "tests/agent-door/named-approvals-journey.mjs": {
-      "sha256": "9cb5999924e0b3e9f46118bf0dd1123600b01bd12638871a96f81cbe850c8c83",
+      "sha256": "a5092a3c356985a70e8bd4adb99db53e7ee2a2cfd09d77dbc508abff4b939ada",
       "executable": false
     },
     "tests/agent-door/prompts-journey.mjs": {
