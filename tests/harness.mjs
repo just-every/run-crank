@@ -50,8 +50,24 @@ async function appCustodyBarrierBundle() {
     });
   }}]})).outputFiles[0].text;
 }
+// A test-built persistence fault interrupts only the door outcome write. The
+// native route and D1 transaction run unchanged and are observable beforehand.
+async function agentRecoveryBundle() {
+  return (await build({...bundleOptions,plugins:[{name:'agent-outcome-persistence-fault',setup(plugin){
+    plugin.onLoad({filter:/agent-door[\/]execution\.ts$/},async({path})=>{
+      let contents=await readFile(path,'utf8');
+      const save='  if (key !== null) await rt.options.db.prepare';
+      assert.equal(contents.split(save).length,2);
+      contents=contents.replace(save,`  if (key !== null && !(await fetch('https://agent-recovery.example/outcome', {method:'POST',body:key})).ok) throw new Error('Simulated door outcome persistence interruption');\n`+save);
+      const run='    const value = await tool.run(args, context(rt, principal, door, effects, approvers))';
+      assert.equal(contents.split(run).length,2);
+      contents=contents.replace(run,`    if (principal.idempotencyKey && !(await fetch('https://agent-recovery.example/native', {method:'POST',body:principal.idempotencyKey})).ok) throw new Error('Simulated interruption before native mutation');\n`+run);
+      return {contents,loader:'ts'};
+    });
+  }}]})).outputFiles[0].text;
+}
 /** `edge` fakes third-party APIs at the network edge: a function from Request to a Response, or undefined to use the real network. */
-export async function harness(target,{emitted=false,edge,mailEdge,quoteCosts=true,bindings={},clock,digestCommitBarrier=false,appCustodyBarrier=false,beforeTeamMigration=false,emailTransport=false}={}) {
+export async function harness(target,{emitted=false,edge,mailEdge,quoteCosts=true,bindings={},clock,digestCommitBarrier=false,appCustodyBarrier=false,beforeTeamMigration=false,emailTransport=false,agentRecoveryFault=false}={}) {
   bundle ??= (await build(bundleOptions)).outputFiles[0].text;
   const port=await freePort(),origin=`http://127.0.0.1:${port}`,directory=await mkdtemp(join(tmpdir(),'crank-tests-'));
   const mail=[];
@@ -62,7 +78,7 @@ export async function harness(target,{emitted=false,edge,mailEdge,quoteCosts=tru
   // the undici dispatcher miniflare installs process-wide rejects before the receiver sees the request.
   const {'content-length':_,...headers}=Object.fromEntries(request.headers);return fetch(request.url,{method:request.method,headers,body:['GET','HEAD'].includes(request.method)?undefined:await request.arrayBuffer(),redirect:'manual'})},compatibilityDate:'2026-09-08',compatibilityFlags:['nodejs_compat'],d1Databases:{DB:'crank'},bindings:{AUTH_ORIGIN:origin,AUTH_LOCAL:'true',OWNER_EMAIL:'owner@example.test',SESSION_SECRET:'test-session-secret-01234567890123456789',SETUP_TOKEN:'synthetic-test-owner-claim-01234567890123456789',MAIL_PROVIDER:'resend',MAIL_API_KEY:'example-resend-test-key',MAIL_FROM:'Crank <auth@example.test>',RER_DEV_KEY:'test-dev-gate-0123456789012345678901234567890123',CRANK_TARGET_ORIGIN:target,...bindings}};
   const optionsFor=script=>({...convertV4MiniflareOptions({...legacyOptions,...(!emitted?{script}:{})}),resourcePersistencePath:directory});
-  const selectedBundle=appCustodyBarrier?await appCustodyBarrierBundle():digestCommitBarrier?await digestBarrierBundle():bundle;
+  const selectedBundle=agentRecoveryFault?await agentRecoveryBundle():appCustodyBarrier?await appCustodyBarrierBundle():digestCommitBarrier?await digestBarrierBundle():bundle;
   const atClock=(script,time)=>time ? `const RealDate=Date; globalThis.Date=class extends RealDate { constructor(...args) { super(...(args.length?args:[${Date.parse(time)}])); } static now(){return ${Date.parse(time)}} };\n`+script : script;
   let currentBundle=atClock(selectedBundle,clock);
   let mf=new Miniflare(optionsFor(currentBundle));

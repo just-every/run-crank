@@ -1,8 +1,9 @@
 import type { ToolContext, ToolDefinition } from '../../modules/agent-door/types.ts'
 import { requirePrepare } from '../access.ts'
-import { canonical, digest, type CrankEnv } from '../model.ts'
+import { type CrankEnv } from '../model.ts'
 import { validateGraph } from '../engine/graph.ts'
 import { resolveActor } from './native.ts'
+import { recoverWorkflow, workflowRevision as revision, workflowView as view } from './native-recovery.ts'
 import { arraySchema, nativeCall, nativeGuard, nullableText, objectSchema, pathPart, pick, query, record, standard, textSchema } from './tool-native.ts'
 
 const properties = {
@@ -22,19 +23,6 @@ const listKeys = Object.keys(properties)
 
 async function current(env: CrankEnv, args: Record<string, unknown>, ctx: ToolContext) {
   return record(await nativeCall(env, ctx, sourcePath(args)))
-}
-async function revision(value: Record<string, unknown>) {
-  // Include the native metadata as well as graph bytes: a rename invalidates an approval too.
-  return digest(canonical(pick(value, ['id', 'name', 'description', 'folder', 'draft_digest', 'draft_updated_at', 'published_version_id', 'status'])))
-}
-async function view(value: Record<string, unknown>) {
-  const graph = record(value.draft)
-  const declared = validateGraph(graph).declared
-  return {
-    ...pick(value, ['id', 'name', 'description', 'folder', 'environment', 'status', 'published_version_id', 'draft_digest', 'draft_updated_at', 'data_class']),
-    owner_id: record(value.owner).id, trigger: record(graph.trigger).type ?? null,
-    step_count: declared.steps.length, revision: await revision(value),
-  }
 }
 
 export function workflowTools(env: CrankEnv): ToolDefinition[] {
@@ -66,7 +54,7 @@ export function workflowTools(env: CrankEnv): ToolDefinition[] {
       run: async (args, ctx) => ({ result: await view(await current(env, args, ctx)) }),
     },
     {
-      ...base, name: 'crank.workflows.create', title: 'Create workflow draft', scope: 'workflows:prepare', readOnly: false,
+      ...base, recover: (args, ctx, claim) => recoverWorkflow(env, 'create', args, ctx, claim), name: 'crank.workflows.create', title: 'Create workflow draft', scope: 'workflows:prepare', readOnly: false,
       description: 'Create an inert, natively validated workflow draft. It runs nothing and grants no publication, connection or execution authority.',
       inputSchema: objectSchema(draftFields, ['name', 'graph']), outputSchema: workflowSchema, clauses: ['WORK-001', 'WORK-002', 'WORK-003', 'WORK-004', 'WORK-013'],
       classify: classifyDraft,
@@ -74,7 +62,7 @@ export function workflowTools(env: CrankEnv): ToolDefinition[] {
       run: async (args, ctx) => ({ result: await view(record(await nativeCall(env, ctx, '/workflows', args))) }),
     },
     {
-      ...base, name: 'crank.workflows.update', title: 'Save workflow draft', scope: 'workflows:prepare', readOnly: false,
+      ...base, recover: (args, ctx, claim) => recoverWorkflow(env, 'update', args, ctx, claim), name: 'crank.workflows.update', title: 'Save workflow draft', scope: 'workflows:prepare', readOnly: false,
       description: 'Save an inert draft at its native draft_digest. Read metadata first and supply expected_revision to bind a reviewed edit. No publication or dispatch occurs.',
       inputSchema: objectSchema({ ...workflowId, ...draftFields, draft_digest: { type: 'string', pattern: '^[a-f0-9]{64}$' } }, ['workflow_id', 'draft_digest']), outputSchema: workflowSchema, clauses: ['WORK-001', 'WORK-002', 'WORK-003', 'WORK-004', 'WORK-008', 'WORK-013', 'EXEC-003'],
       revisionType: 'string', revision: snapshot, target: source, classify: classifyDraft,
@@ -85,7 +73,7 @@ export function workflowTools(env: CrankEnv): ToolDefinition[] {
       },
     },
     {
-      ...base, name: 'crank.workflows.duplicate', title: 'Duplicate workflow draft', scope: 'workflows:prepare', readOnly: false,
+      ...base, recover: (args, ctx, claim) => recoverWorkflow(env, 'duplicate', args, ctx, claim), name: 'crank.workflows.duplicate', title: 'Duplicate workflow draft', scope: 'workflows:prepare', readOnly: false,
       description: 'Copy the native current draft into one new inert workflow. Keyed retries retain the original copy; no actions run.',
       inputSchema: objectSchema(workflowId, ['workflow_id']), outputSchema: workflowSchema, clauses: ['WORK-001'],
       revisionType: 'string', revision: snapshot, target: source, classify: classifyDraft,

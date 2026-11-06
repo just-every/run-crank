@@ -92,8 +92,18 @@ export async function callTool(rt: Runtime, name: string, input: unknown, princi
       const saved = await rt.options.db.prepare('SELECT digest,outcome,decision_id FROM agent_door_calls WHERE agent=? AND key=?').bind(principal.agent.id, claimKey).first<{ digest: string; outcome: string | null; decision_id: string }>()
       if (saved) {
         if (saved.digest !== requestDigest) return refuse('idempotency_conflict')
-        if (!saved.outcome) return refuse('call_in_progress')
-        previous = saved
+        if (tool.recover) {
+          const origin = await rt.options.db.prepare('SELECT row FROM agent_door_audit WHERE id=?').bind(saved.decision_id).first<{ row: string }>()
+          if (!origin) return refuse('call_in_progress')
+          const bound: AuditRow = JSON.parse(origin.row)
+          if (bound.agent.id !== principal.agent.id || bound.sponsor.id !== principal.person.id
+            || bound.consent !== (principal.consent ?? null) || bound.client_id !== (principal.clientId ?? null)) return refuse('idempotency_conflict')
+        }
+        if (!saved.outcome) {
+          const recovered = await tool.recover?.(args, ctx, { decisionId: saved.decision_id, requestDigest })
+          if (!recovered || recovered.outcome !== 'done' || !validateSchema(tool.outputSchema, recovered.result)) return refuse('call_in_progress')
+          previous = { ...saved, outcome: JSON.stringify(recovered) }
+        } else previous = saved
       }
     }
     if (!raw || !validateSchema(tool.inputSchema, declared)) return refuse('invalid_arguments')
@@ -138,6 +148,9 @@ export async function callTool(rt: Runtime, name: string, input: unknown, princi
       if (decision.result === 'review' && cached.decision?.disposition !== 'review') return refuse('review_required')
       if (cached.outcome === 'done' && cached.receipt) cached.receipt = { ...cached.receipt, decision: cached.decision,
         ...(cached.review ? { review: cached.review } : {}) }
+      if (!tool.readOnly && key !== null) await rt.options.db.prepare(`UPDATE agent_door_calls SET state='done',outcome=?
+        WHERE agent=? AND key=? AND decision_id=? AND digest=? AND outcome IS NULL`)
+        .bind(previous.outcome, principal.agent.id, claimKey, previous.decision_id, requestDigest).run()
       await recoverAudit(rt, previous.decision_id, JSON.parse(previous.outcome))
       const original = await rt.options.db.prepare('SELECT row FROM agent_door_audit WHERE id=?').bind(previous.decision_id).first<{ row: string }>()
       row.operation_id = original ? JSON.parse(original.row).operation_id ?? previous.decision_id : previous.decision_id
