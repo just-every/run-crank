@@ -1,0 +1,6 @@
+{
+  "check": "Wrangler local applied migration names equal checkout inventory",
+  "exit": 0,
+  "migrations": 95,
+  "latest": "0092_agent_scope_grants.sql"
+}

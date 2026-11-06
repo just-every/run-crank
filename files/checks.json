@@ -1,0 +1,105 @@
+{
+  "head": "d8623c31cf359634b9516a57754ede47e02fa8e8",
+  "branch": "cloud/sx-crank-c-f81",
+  "before": {
+    "done": 32,
+    "partial": 50,
+    "missing": 17,
+    "clauses": 99,
+    "recorded_tests": 201
+  },
+  "after": {
+    "done": 32,
+    "partial": 50,
+    "missing": 17,
+    "clauses": 99,
+    "recorded_tests": 201
+  },
+  "checks": {
+    "typecheck": 0,
+    "first_party": 0,
+    "source_lock_verify_command": 0,
+    "views_write": 0,
+    "views_check": 0,
+    "generated_views_restored": true,
+    "migration_ledger": 0,
+    "deployment_spec": 0
+  },
+  "vendored_helper": {
+    "exit": 1,
+    "reason": "Only toolchain SHA differs from the installed Verify tool; main and candidate both use the installed tool SHA",
+    "changes": {
+      "files": [],
+      "metadata": [
+        {
+          "path": "toolchain",
+          "change": "modified",
+          "before": {
+            "id": "runeditrun/edition-authoring",
+            "version": "1.1.0",
+            "sha256": "b546ef04830f935ee2493a5bc08ef43a0f7d5905aeb8549fb75670c19890af99"
+          },
+          "after": {
+            "id": "runeditrun/edition-authoring",
+            "version": "1.1.0",
+            "sha256": "3f7b56f3ae1e70588fb35c49e75b639c2360ceed550182b9caf8adc33021abb8"
+          }
+        }
+      ],
+      "meaning": "Origins are comparison baselines; changing an origin does not assert adoption or local byte equality."
+    }
+  },
+  "proof_byte_identity": {
+    "browser": {
+      "tested_commit": "e4e82fafc93b7f60099b4615128a555a775b25de",
+      "relevant_source_and_browser_test_diff_to_candidate": ""
+    }
+  },
+  "tests": {
+    "platform_full": {
+      "tests": 4,
+      "pass": 4,
+      "same_product_code": true
+    },
+    "native_regressions": {
+      "tests": 4,
+      "pass": 4,
+      "node": "22.20.0"
+    },
+    "candidate_narrowing": {
+      "tests": 1,
+      "pass": 1,
+      "node": "22.20.0",
+      "head": "d8623c31cf359634b9516a57754ede47e02fa8e8"
+    },
+    "candidate_hosted_conformance": {
+      "points": 1213,
+      "pass": 1213,
+      "head": "d8623c31cf359634b9516a57754ede47e02fa8e8"
+    }
+  },
+  "publication_scan": {
+    "status": "lander_required",
+    "cloud_scan_required": false
+  },
+  "run_site": {
+    "status": "lander_required"
+  },
+  "pr": null,
+  "existing_assertions_removed_or_weakened": false,
+  "new_registrations": 0,
+  "source_restored_after_mutations": true,
+  "branch_verify": {
+    "conclusion": "failure",
+    "head_sha": "d8623c31cf359634b9516a57754ede47e02fa8e8",
+    "html_url": "https://github.com/just-every/run-crank/actions/runs/42151249698",
+    "status": "completed",
+    "run_id": 42151249698,
+    "event": "push",
+    "ready_exception": "Only contract-generated ACCEPTANCE.md freshness fails; dependent verify job fails and shards skip.",
+    "build_job": 127674942894,
+    "dependent_verify_job": 127675251160,
+    "product_failure": false,
+    "dispatch_or_rerun": false
+  }
+}

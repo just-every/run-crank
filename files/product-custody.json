@@ -1,0 +1,8 @@
+{
+  "branch": "cloud/sx-crank-c-f81",
+  "head": "d8623c31cf359634b9516a57754ede47e02fa8e8",
+  "remote_head": "d8623c31cf359634b9516a57754ede47e02fa8e8",
+  "push_guard": "cloud-push.py",
+  "working_tree_clean": true,
+  "added_product_email_literals": 0
+}

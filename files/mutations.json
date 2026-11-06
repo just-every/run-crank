@@ -1,0 +1,37 @@
+{
+  "head": "d8623c31cf359634b9516a57754ede47e02fa8e8",
+  "temporary_mutations_only": true,
+  "source_restored": true,
+  "rows": [
+    {
+      "id": "original-scope-ceiling",
+      "head": "d8623c31cf359634b9516a57754ede47e02fa8e8",
+      "command": [
+        "node",
+        "--test",
+        "--test-concurrency=1",
+        "--test-name-pattern=^PLATFORM-001: SDK",
+        "tests/platform.test.mjs"
+      ],
+      "exit": 1,
+      "purpose": "Existing default permission sets must not gain access-family authority",
+      "killed": true,
+      "log": "mutation-original-scope-ceiling.log"
+    },
+    {
+      "id": "native-late-commit",
+      "head": "d8623c31cf359634b9516a57754ede47e02fa8e8",
+      "command": [
+        "node",
+        "--test",
+        "--test-concurrency=1",
+        "--test-name-pattern=^PLATFORM-001: SDK",
+        "tests/platform.test.mjs"
+      ],
+      "exit": 1,
+      "purpose": "A prior admission cannot commit after its scope is removed",
+      "killed": true,
+      "log": "mutation-native-late-commit.log"
+    }
+  ]
+}

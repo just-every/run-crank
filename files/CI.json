@@ -1,0 +1,13 @@
+{
+  "conclusion": "failure",
+  "head_sha": "d8623c31cf359634b9516a57754ede47e02fa8e8",
+  "html_url": "https://github.com/just-every/run-crank/actions/runs/42151249698",
+  "status": "completed",
+  "run_id": 42151249698,
+  "event": "push",
+  "ready_exception": "Only contract-generated ACCEPTANCE.md freshness fails; dependent verify job fails and shards skip.",
+  "build_job": 127674942894,
+  "dependent_verify_job": 127675251160,
+  "product_failure": false,
+  "dispatch_or_rerun": false
+}

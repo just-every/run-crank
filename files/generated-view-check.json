@@ -1,0 +1,7 @@
+{
+  "head": "d8623c31cf359634b9516a57754ede47e02fa8e8",
+  "command": "node src/base/contract-docs.mjs check",
+  "exit": 1,
+  "failure": "Error: ACCEPTANCE.md is stale; run node src/base/contract-docs.mjs write",
+  "expected_uncommitted_generated_view": true
+}
