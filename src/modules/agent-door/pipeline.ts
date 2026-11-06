@@ -24,7 +24,7 @@ export async function callTool(rt: Runtime, name: string, input: unknown, princi
   if (operationId !== undefined) row.operation_id = operationId
   if (name === 'resources/read') row.resource = String((input as { uri: string }).uri)
   let claimKey: string | null = null
-  let evidence: Evidence | undefined, owned = false, effected = false, locked = false
+  let evidence: Evidence | undefined, owned = false, effected = false, locked = false, recoveredNative = false
   let result: CallResult = { outcome: 'refused', decision: null }, status: number | undefined, scope: string | undefined
   const refuse = (code: string, fields?: Record<string, unknown>) => { result = { ...result, outcome: 'refused', code, fields }; return { result, status, scope } }
   try {
@@ -102,7 +102,7 @@ export async function callTool(rt: Runtime, name: string, input: unknown, princi
         if (!saved.outcome) {
           const recovered = await tool.recover?.(args, ctx, { decisionId: saved.decision_id, requestDigest })
           if (!recovered || recovered.outcome !== 'done' || !validateSchema(tool.outputSchema, recovered.result)) return refuse('call_in_progress')
-          previous = { ...saved, outcome: JSON.stringify(recovered) }
+          previous = { ...saved, outcome: JSON.stringify(recovered) }; recoveredNative = true
         } else previous = saved
       }
     }
@@ -151,7 +151,7 @@ export async function callTool(rt: Runtime, name: string, input: unknown, princi
       if (!tool.readOnly && key !== null) await rt.options.db.prepare(`UPDATE agent_door_calls SET state='done',outcome=?
         WHERE agent=? AND key=? AND decision_id=? AND digest=? AND outcome IS NULL`)
         .bind(previous.outcome, principal.agent.id, claimKey, previous.decision_id, requestDigest).run()
-      await recoverAudit(rt, previous.decision_id, JSON.parse(previous.outcome))
+      await recoverAudit(rt, previous.decision_id, JSON.parse(previous.outcome), recoveredNative)
       const original = await rt.options.db.prepare('SELECT row FROM agent_door_audit WHERE id=?').bind(previous.decision_id).first<{ row: string }>()
       row.operation_id = original ? JSON.parse(original.row).operation_id ?? previous.decision_id : previous.decision_id
       if (tool.readOnly && cached.outcome === 'done') {

@@ -156,7 +156,7 @@
       "executable": false
     },
     "base-copies.json": {
-      "sha256": "73b2de4140c5507cca8f6af24d2ca9ae922ed5789dae7197e1f68a300b419a5e",
+      "sha256": "3c963e12805bfd3c0ca7a2d4c0dc59aa0bbc50b4166e405f39f54ec2ddc75d50",
       "executable": false
     },
     "CHANGELOG.md": {
@@ -172,7 +172,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "aac2d3d2ae3f5062bea791377b189e5eb86834bd3f7a1d043ac176b60e5d43c9",
+      "sha256": "d1b13348cb88e90e9706695da0e8ec6510ca86b1335506ae43fab81b3b716d11",
       "executable": false
     },
     "DEMO.md": {
@@ -196,7 +196,7 @@
       "executable": false
     },
     "docs/AGENT-DOOR.md": {
-      "sha256": "7418c518e7505e79eeb56bd768b93e2b422c01c8425c9e87b5d3b11a566c5287",
+      "sha256": "85dca80631b75bfa9cee5e751ffe54ff1ae3b46ffe4dab452ac0b21f95ef63b3",
       "executable": false
     },
     "docs/API.md": {
@@ -1328,7 +1328,7 @@
       "executable": false
     },
     "management/integration/deployment-spec.json": {
-      "sha256": "ea6640f3310329c4c5873a400e8a826143ec7b4b8d436ce43a398d70d565d797",
+      "sha256": "35a6919b757b963560025701ed1ca141005f21454a5865b88dff1b984de1ec02",
       "executable": false
     },
     "migrations/core/0001_owner.sql": {
@@ -3092,7 +3092,7 @@
       "executable": false
     },
     "src/crank/archive-policy.mjs": {
-      "sha256": "ef8851160cc46b23179de346e366c5608f59de9c67311f05f8d9e49204df1a19",
+      "sha256": "6320cffc64f2ac4cfbf8b7323eacfe88fce2f45f4882ef724c34918525e9abe7",
       "executable": false
     },
     "src/crank/connections/apps.ts": {
@@ -4316,7 +4316,7 @@
       "executable": false
     },
     "src/modules/agent-door/audit.ts": {
-      "sha256": "cb45fb29821cfa9fd544198154dde76efb0d3c2800e264a318282fdb622e7725",
+      "sha256": "2ca258581e976b8faa564be23c6586b3ef600d102c3915b8810a7e0600b23f2d",
       "executable": false
     },
     "src/modules/agent-door/capabilities.d.mts": {
@@ -4516,7 +4516,7 @@
       "executable": false
     },
     "src/modules/agent-door/pipeline.ts": {
-      "sha256": "d15346210465d3b397843f7840cf3d06124e0f462d76797dba6f54ac1aacb5c0",
+      "sha256": "db9f54c288a5ddb19f79785b58e64f74ce34124903ad1b70a5b436a167a23d01",
       "executable": false
     },
     "src/modules/agent-door/policy-store.ts": {
@@ -6724,7 +6724,11 @@
       "executable": false
     },
     "tests/agent-door/journey.mjs": {
-      "sha256": "1e12e5184c5a39733d467a7c01509771a2754096022d56c2745564a4ec237998",
+      "sha256": "7d76722102d99c2762858f0165717cf004e30fb4a3b6d8c75b13da18d246dc03",
+      "executable": false
+    },
+    "tests/agent-door/recovery-journey.mjs": {
+      "sha256": "a5f5ea1f510768685e47a6041d896fe0708c3ea0ae5df1959a9da45665f166f9",
       "executable": false
     },
     "tests/ai-steps-browser.mjs": {
@@ -7032,7 +7036,7 @@
       "executable": false
     },
     "tests/harness.mjs": {
-      "sha256": "e4bd759b7f61abf98268f886a0a0f6e4003fc7540d9fbdab7795f3adbd01f3f3",
+      "sha256": "a9a5619f20608e5b57358fc7bbb8858afb96549b1faf286a2fe759d788f09f85",
       "executable": false
     },
     "tests/historical.test.mjs": {
@@ -7192,7 +7196,7 @@
       "executable": false
     },
     "tests/platform.test.mjs": {
-      "sha256": "e50e8e2cacb0f819c98f8ba8fbd9c5294b1a750ee880c4536a7db767d6b05e2f",
+      "sha256": "4b652cdc23ab5afa2787b57b8fc2b7755287cfe71e8eeb71afd0fbd87d47bad3",
       "executable": false
     },
     "tests/postgres-write-fixture.mjs": {

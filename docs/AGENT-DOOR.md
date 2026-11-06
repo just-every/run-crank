@@ -219,3 +219,40 @@ Ordinary health, setup and application requests do not construct Business or
 agent adapters. On door paths, native classification refusals use the shared
 `ToolRefusal` type; policy-unset and Pause preserve their machine codes while
 the native authority fence still prevents reads or effects.
+
+
+## Recovery of interrupted inert draft writes
+
+The create, update and duplicate workflow tools freeze their exact closed
+metadata result in the native idempotency receipt, in the same guarded D1
+transaction as the draft, snapshot and native audit. The normal response uses
+that projection too. A retained door claim without an outcome can recover it
+without executing the tool again, even after later edits and after 24 hours.
+Old receipts that contain only identifiers cannot reconstruct an outcome.
+
+The receipt binds the original agent, sponsoring person, consent, client,
+tool, full declared argument digest, admission decision, operation and hashed
+native key and scope. The existing native authority fence protects the write.
+Recovery checks the binding, current native preparation and workflow access,
+then the door applies its current Pause, revocation, classification and policy
+checks. A changed client or consent cannot reuse a completed recovery. A newly
+required review or approval is refused; recovery never creates either lifecycle
+from a draft receipt. Only original autonomous inert writes are recoverable.
+No receipt proves a provider effect, starts a job or grants execution authority.
+
+The seed adapts the shared door types with an optional evidence-only recovery
+callback, and the pipeline with claim-bound recovery before ordinary completed
+replay. The callback never invokes a mutation. A receipt-backed recovery can
+also correct an original audit marked failed by interrupted outcome storage;
+ordinary cached replay retains the existing audit recovery behavior. These
+narrow adaptations do not change runtime or package pins, declare queued
+lifecycle support or widen the native tool registry.
+
+Native receipts, door claims, policy, agent bindings and pending actions are
+installation-local authority and do not travel in archives. Passive audit and
+usage history remain portable. Restored drafts retain the DATA-001 owner
+adoption fence and remain inactive; a fresh preparation credential does not
+reconstruct old execution authority. The public-door recovery journey extends
+the existing SDK and CORE draft lifecycle test and the declared hosted journey,
+without adding a test registration or changing the test budget. The remaining
+BASE-AGENT-012 obligations stay in its Status Gap.

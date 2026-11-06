@@ -3640,7 +3640,8 @@
         "src/modules/agent-door/tests/runtime.mjs": "2135c394939f4a737adabdc8003b0e667b31ac5a",
         "src/modules/agent-door/tests/seed.ts": "2135c394939f4a737adabdc8003b0e667b31ac5a",
         "src/modules/agent-door/types.ts": "2135c394939f4a737adabdc8003b0e667b31ac5a",
-        "src/modules/agent-door/pipeline.ts": "2135c394939f4a737adabdc8003b0e667b31ac5a"
+        "src/modules/agent-door/pipeline.ts": "2135c394939f4a737adabdc8003b0e667b31ac5a",
+        "src/modules/agent-door/audit.ts": "2135c394939f4a737adabdc8003b0e667b31ac5a"
       },
       "acknowledged": {
         "src/modules/agent-door/tests/door.test.ts": {
@@ -3668,7 +3669,11 @@
           "mode": "100644"
         },
         "src/modules/agent-door/pipeline.ts": {
-          "sha256": "d15346210465d3b397843f7840cf3d06124e0f462d76797dba6f54ac1aacb5c0",
+          "sha256": "db9f54c288a5ddb19f79785b58e64f74ce34124903ad1b70a5b436a167a23d01",
+          "mode": "100644"
+        },
+        "src/modules/agent-door/audit.ts": {
+          "sha256": "2ca258581e976b8faa564be23c6586b3ef600d102c3915b8810a7e0600b23f2d",
           "mode": "100644"
         }
       }

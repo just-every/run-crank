@@ -43,11 +43,14 @@ export function outcomeRow(row: AuditRow, result: import('./types.ts').CallResul
   row.approval = result.approval ? { id: result.approval.id, by: (result.receipt?.approved_by as string[]) ?? [] } : null
   row.review = result.review ? { id: result.review.id, by: null } : null
 }
-export async function recoverAudit(rt: Runtime, id: string, result: import('./types.ts').CallResult) {
+export async function recoverAudit(rt: Runtime, id: string, result: import('./types.ts').CallResult, nativeReceipt = false) {
   const record = await rt.options.db.prepare('SELECT row,evidence FROM agent_door_audit WHERE id=?').bind(id).first<{ row: string; evidence: string | null }>()
   if (!record) throw new Error('audit_missing')
   const row: AuditRow = JSON.parse(record.row)
-  if (row.outcome !== 'running') return
+  if (row.outcome !== 'running' && !nativeReceipt) return
+  // A seed-verified atomic receipt can distinguish a committed inert effect
+  // from failure while persisting its door outcome. Ordinary replay cannot.
+  if (nativeReceipt) row.outcome = 'running'
   outcomeRow(row, result)
   await audit(rt, row, record.evidence ? JSON.parse(record.evidence) : undefined)
 }
