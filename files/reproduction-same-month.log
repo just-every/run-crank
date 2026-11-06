@@ -1,0 +1,39 @@
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProxy environment variables detected. We'll use your proxy for fetch requests.[0m
+
+
+✖ Native agent usage reports the complete UTC month with actual decisions, replay and current owner authority (6903.031394ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 7694.650514
+
+✖ failing tests:
+
+test at tests/usage.test.mjs:266:1
+✖ Native agent usage reports the complete UTC month with actual decisions, replay and current owner authority (6903.031394ms)
+  AssertionError [ERR_ASSERTION]: same-month owner approval must not count another agent request
+  + actual - expected
+  
+    {
+      original_operations: 215,
+      replays: 1,
+  +   request_attempts: 217
+  -   request_attempts: 216
+    }
+  
+      at agentUsageJourney (file:///workspace/run-crank/tests/agent-door/usage-journey.mjs:111:10)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async TestContext.<anonymous> (file:///workspace/run-crank/tests/usage.test.mjs:266:200)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: { request_attempts: 217, replays: 1, original_operations: 215 },
+    expected: { request_attempts: 216, replays: 1, original_operations: 215 },
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }

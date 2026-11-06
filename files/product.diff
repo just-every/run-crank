@@ -1,0 +1,680 @@
+diff --git a/CONTRACT.md b/CONTRACT.md
+index 8599137..80a3334 100644
+--- a/CONTRACT.md
++++ b/CONTRACT.md
+@@ -1371,6 +1371,6 @@ MIG-006, BASE-004 and BASE-005 were added on 17 October 2026 so every homepage c
+ | `BASE-AGENT-008` | Truthful attribution | target | partial | rer 0.2.91 hosted CORE conformance: 1,021/1,021 points (29 Oct 2026); `agent-surface.json`; `tests/agent-door/journey.mjs`; `docs/AGENT-DOOR.md`. | Native draft audit carries agent and sponsor attribution. Provider content, independent approval and Undo attribution remain unproved. |
+ | `BASE-AGENT-009` | Every agent action is audited with its class and decision | target | partial | rer 0.2.91 hosted CORE conformance: 1,021/1,021 points (29 Oct 2026); `agent-surface.json`; `tests/agent-door/journey.mjs`; `docs/AGENT-DOOR.md`. | CORE reads, writes and refusals enter Base audit. Cross-provider/native timeline coverage remains partial. |
+ | `BASE-AGENT-010` | Agents can follow changes | target | partial | rer 0.2.91 hosted CORE conformance: 1,021/1,021 points (29 Oct 2026); `agent-surface.json`; `tests/agent-door/journey.mjs`; `docs/AGENT-DOOR.md`. | Undeclared families: events and subscriptions. Feed/listen are typed-refused; no event handoff or cursor claim. |
+-| `BASE-AGENT-011` | Limits are policy, and Pause stops everything | target | partial | rer 0.2.91 hosted CORE conformance: 1,021/1,021 points (29 Oct 2026); `agent-surface.json`; `tests/agent-door/journey.mjs`; `docs/AGENT-DOOR.md`. | CORE Business/local Pause and consent checks are wired. Spend caps, timed lifecycle and queued provider execution are unscoped and unproved. |
++| `BASE-AGENT-011` | Limits are policy, and Pause stops everything | target | partial | rer 0.2.91 hosted CORE conformance: 1,021/1,021 points (29 Oct 2026); `agent-surface.json`; `tests/agent-door/journey.mjs`; `tests/agent-door/usage-journey.mjs` agentUsageJourney (native monthly calls, class decisions, outcomes, replay, restart and authority); `tests/usage.test.mjs` Native agent usage reports the complete UTC month; `tests/agent-usage-browser.mjs` (populated, empty and error Operations views); `docs/AGENT-DOOR.md`. | Native owner reporting aggregates complete UTC months per agent from retained audit attribution, separates request attempts, replays and original operations, and reports actual standard-class decisions and outcomes. The admitted registry rejects provider-cost tools; money moved and provider spend remain unreported, never inferred as zero. CORE Business and local Pause and consent checks are wired; real Business Pause propagation and omitted execution paths remain unproved. Spend caps, timed lifecycle and queued provider execution remain unscoped and unproved. Provider estimates and spend-cap enforcement per seed, specialist and agent, actual money and recipient measures and provider-cost accounting, and no-cap spending acceptance remain required. Existing owner and account, ct, enforcing-egress and device holds remain unchanged, including BASE-AGENT-004 token and consent lifecycle, TEAM-001 IdP and public-mint restrictions with no further gate, DATA-001 adoption fences, retained BASE-AGENT-009 activity and Undo scope and live BASE-AGENT-005 and BASE-AGENT-012 ownership. |
+ | `BASE-AGENT-012` | Writes are idempotent and conflict-safe | target | partial | rer 0.2.91 hosted CORE conformance: 1,021/1,021 points (29 Oct 2026); `agent-surface.json`; `tests/agent-door/journey.mjs`; `docs/AGENT-DOOR.md`. | Native draft idempotency and revision fences are wired. Durable queued/provider uncertainty and replay remain unscoped and unproved. |
+ | `BASE-AGENT-013` | Manifest, docs and the conformance journey | target | partial | rer 0.2.91 hosted CORE conformance: 1,021/1,021 points (29 Oct 2026); `agent-surface.json`; `tests/agent-door/journey.mjs`; `docs/AGENT-DOOR.md`. | 1,021 integrated CORE checks passed, including native attribution, replay, review audit, consent and Pause refusals. Undeclared families: resources, prompts, events, subscriptions. Full specialist jobs and unscoped multiSponsor/mailEdges/resourceRefresh/timedLifecycle/dualHost/queuedLifecycle/ownerNativeApi remain PARTIAL. |
+diff --git a/docs/AGENT-DOOR.md b/docs/AGENT-DOOR.md
+index ca96106..001cf35 100644
+--- a/docs/AGENT-DOOR.md
++++ b/docs/AGENT-DOOR.md
+@@ -255,3 +255,35 @@ Ordinary health, setup and application requests do not construct Business or
+ agent adapters. On door paths, native classification refusals use the shared
+ `ToolRefusal` type; policy-unset and Pause preserve their machine codes while
+ the native authority fence still prevents reads or effects.
++
++## Native monthly call reporting
++
++The owner reads native agent call reporting at `GET /api/crank/reports/usage?month=2026-11`
++or the Native agent calls panel in Operations. The selected UTC calendar month
++is inclusive at its start and exclusive at the next month's start. SQL
++aggregation covers all retained calls in that window independently of the
++200-row audit page. A sequence watermark excludes newly admitted requests from
++the report. Outcomes describe the retained current state of requests made in
++that month, including pending approvals and failures, rather than a historical
++snapshot of their state at month end.
++
++Each agent is identified by its stable agent ID and its latest retained audit
++name in the selected month. Revoking an agent does not relabel or erase that
++history. Request attempts include refusals and replays; original operations
++count distinct non-replay operation identities. Class counts are request
++counts, can overlap for multi-class calls, and show each class's actual policy
++decision with the retained outcome. Refusals without classification stay in
++the overall decision totals. Requests rejected before agent authentication
++have no attributable audit call and are excluded.
++
++These totals cover all native agent calls. Workflow and team filters continue
++to govern workflow budget accounting, and do not narrow native agent call
++reporting. Existing team billing access returns only its existing aggregate;
++agent credentials and non-billing viewers cannot read the owner's report.
++
++The admitted registry rejects provider-cost tools. Its native preparation and
++metadata calls establish neither money moved nor provider spend. Both remain
++Not reported, with null amounts in the API; an unknown cost is never zero.
++Workflow estimates, reported charges and budget accounting remain separate.
++This reporting slice does not complete BASE-AGENT-011 or authorize a broader
++tool registry, paid execution, spend-cap enforcement or Business Pause proof.
+diff --git a/sources.lock.json b/sources.lock.json
+index 0b79642..d7f38e0 100644
+--- a/sources.lock.json
++++ b/sources.lock.json
+@@ -172,7 +172,7 @@
+       "executable": false
+     },
+     "CONTRACT.md": {
+-      "sha256": "e3dec2a78eefc32866d3992e41160474ea2719ffc9c83eba3258a43a30927470",
++      "sha256": "460fbb05b67ee35f049701e95c15ce8744fff21d03b13a31540c5f0304b427d1",
+       "executable": false
+     },
+     "DEMO.md": {
+@@ -196,7 +196,7 @@
+       "executable": false
+     },
+     "docs/AGENT-DOOR.md": {
+-      "sha256": "5a7551fdd1e365a315887da8946234ab27d15472d5c23fc5f10f027355489666",
++      "sha256": "fdc0c01adc70abaf394faf87315f9f5a84e861a6c80a8344be6fdba1b07119c8",
+       "executable": false
+     },
+     "docs/API.md": {
+@@ -3615,6 +3615,10 @@
+       "sha256": "2f5dcaea7f039e9e8910a41a2780c5faa6cd603d304f6bcdaf5b4145ce4628ac",
+       "executable": false
+     },
++    "src/crank/ops/agent-usage.ts": {
++      "sha256": "0bfcd2bc14cdebb10cedd85ee65f19991de80d44943ca62cfe35e43a4df0a352",
++      "executable": false
++    },
+     "src/crank/ops/audit.ts": {
+       "sha256": "ad28789314470c42cd985470f090edd73061cb0a14fdb436e9f9bee7592c763d",
+       "executable": false
+@@ -3720,7 +3724,7 @@
+       "executable": false
+     },
+     "src/crank/ops/usage-report.ts": {
+-      "sha256": "09d54974aa556484410aeabe9884ae004add5232140960add392d5a9e614d05e",
++      "sha256": "beb4a85450d6f7ce0b9b10ddff1f0c0bb2d8856986c69c74a664c670ba7b00a5",
+       "executable": false
+     },
+     "src/crank/ops/usage-transport.ts": {
+@@ -3967,6 +3971,10 @@
+       "sha256": "33c4d4d430d2bf4587d3cb8e143c6273f00285bb11ab88da60a10124e5cee16c",
+       "executable": false
+     },
++    "src/crank/ui/agent-usage.ts": {
++      "sha256": "7966ff6dfc71aab6e606436acb207a27b886fb57b0353d0fe34f3fd6474178a4",
++      "executable": false
++    },
+     "src/crank/ui/authoring.ts": {
+       "sha256": "7ec9dd025269d28bedc2dbb8e634abf79bd025f36c8d0e30eeb3a387f7b64965",
+       "executable": false
+@@ -4148,7 +4156,7 @@
+       "executable": false
+     },
+     "src/crank/ui/usage.ts": {
+-      "sha256": "e9cf8b26e26a02c8292fa840031a08cc41c1990ff05d82cbd2d621f6a04bd7fe",
++      "sha256": "079672656742fb4daba74e58f8ddae43b80f581c5946e2844c644842b811acb8",
+       "executable": false
+     },
+     "src/crank/ui/watched-fields.ts": {
+@@ -6708,7 +6716,7 @@
+       "executable": false
+     },
+     "test-budget.json": {
+-      "sha256": "728eda3c89c2d2d41a4f1591709fb847157d7b9ad3d2ac89a1ebad08d1770ec8",
++      "sha256": "521d97c1e65b676bc58eb15c6d5522070de5143b854ba2bdc4ca824639712a2a",
+       "executable": false
+     },
+     "tests/accounting-poll-journey.mjs": {
+@@ -6720,13 +6728,21 @@
+       "executable": false
+     },
+     "tests/agent-door/journey.mjs": {
+-      "sha256": "91ea323836579ae179f75b7cff5a6f012422dc8ef2c3ec29ed76815acd9e8c81",
++      "sha256": "e51a9d7c72725f4d4dac1829f6356ebbc9d801d1467269d4dfe3cd83f86222c7",
+       "executable": false
+     },
+     "tests/agent-door/prompts-journey.mjs": {
+       "sha256": "99aca54be85153bc667b25eff4d97954294448ded233cafd8d5137b9b4cf8357",
+       "executable": false
+     },
++    "tests/agent-door/usage-journey.mjs": {
++      "sha256": "043264faf42ff9819eb851068ef2df2d901a8a66a91d486f19a52880db1aa644",
++      "executable": false
++    },
++    "tests/agent-usage-browser.mjs": {
++      "sha256": "28115efdfdf1b76fb2eefbc04fd5f0a1914f37b1f4e22f632e4d6b141a53ee83",
++      "executable": false
++    },
+     "tests/ai-steps-browser.mjs": {
+       "sha256": "697afe478cf688563adce3bbc466aa644afd69af4e0258fc01692502784ebaf5",
+       "executable": false
+@@ -7384,7 +7400,7 @@
+       "executable": false
+     },
+     "tests/usage.test.mjs": {
+-      "sha256": "dab23e1b5255c6d4c06b97252272d4b553bc32abdfa54a874401e97d41bf4977",
++      "sha256": "87b9c70dbfcee841a517e776eca800f6c1ebefdb596b99108521be756451f329",
+       "executable": false
+     },
+     "tests/version-comparison.test.mjs": {
+@@ -7404,7 +7420,7 @@
+       "executable": false
+     },
+     "verification.json": {
+-      "sha256": "eab798a0a366bbea43e07a026ea256f71913f4b3ed37e8bc270c733a0b9a8ef1",
++      "sha256": "81844a73d5d84210c9de8d543b4e5e8fe245b60ebeea5a04b02c0d704c187bc9",
+       "executable": false
+     },
+     "VERIFY-WORKFLOW.md": {
+diff --git a/src/crank/ops/agent-usage.ts b/src/crank/ops/agent-usage.ts
+new file mode 100644
+index 0000000..dc1a968
+--- /dev/null
++++ b/src/crank/ops/agent-usage.ts
+@@ -0,0 +1,87 @@
++import { stmt, type CrankEnv } from '../model'
++
++interface Counts {
++  request_attempts: number
++  replays: number
++  original_operations: number
++}
++interface AgentRow extends Counts {
++  agent_id: string
++  name: string
++  specialist: string | null
++  revoked: number
++}
++interface DecisionRow {
++  agent_id: string
++  decision: string
++  outcome: string
++  request_attempts: number
++  replays: number
++}
++interface ClassRow extends DecisionRow {
++  class: string
++}
++
++/** Aggregate the complete month in storage, independent of the audit page size.
++ * A sequence watermark excludes newly admitted calls between these reads.
++ * Outcomes are the retained current outcomes of calls requested in this month.
++ */
++export async function agentUsage(env: CrankEnv, month: string) {
++  const start = month + '-01T00:00:00.000Z', next = new Date(start)
++  next.setUTCMonth(next.getUTCMonth() + 1)
++  const end = next.toISOString()
++  const watermark = (await stmt(env, 'SELECT COALESCE(MAX(sequence),0) n FROM agent_door_audit WHERE at>=? AND at<?', start, end).first<{ n: number }>())!.n
++  const window = 'a.at>=? AND a.at<? AND a.sequence<=?'
++  const replay = "(json_extract(a.row,'$.replay_of') IS NOT NULL OR json_extract(a.row,'$.outcome')='replayed')"
++  // Approval execution has its own audit row, but is a person's continuation
++  // of the held request. Keep requests in their admission month and preserve
++  // actual agent retries, while projecting the retained approval resolution.
++  const requests = `WITH requests AS (
++    SELECT a.*,CASE WHEN json_extract(a.row,'$.outcome')='pending' AND p.id IS NOT NULL THEN
++      CASE WHEN json_extract(p.result,'$.code') IN ('output_invalid','execution_failed') THEN 'failed'
++        WHEN p.result IS NOT NULL THEN json_extract(p.result,'$.outcome')
++        WHEN p.state IN ('rejected','expired') OR (p.state='pending' AND json_extract(p.saved,'$.expires_at')<=?) THEN 'refused'
++        ELSE 'pending' END
++      ELSE json_extract(a.row,'$.outcome') END outcome
++    FROM agent_door_audit a LEFT JOIN agent_door_approvals p ON p.id=json_extract(a.row,'$.approval.id')
++    WHERE ${window} AND (p.id IS NULL OR a.id=json_extract(p.saved,'$.decision_id') OR ${replay})
++  )`
++  const args = [new Date().toISOString(), start, end, watermark]
++  const rows = await env.DB.batch([
++    stmt(env, `${requests} SELECT a.agent AS agent_id,COUNT(*) request_attempts,SUM(${replay}) replays,
++      COUNT(DISTINCT CASE WHEN NOT ${replay} THEN COALESCE(json_extract(a.row,'$.operation_id'),a.id) END) original_operations,
++      json_extract(last.row,'$.agent.name') name,json_extract(last.row,'$.agent.specialist') specialist,
++      CASE WHEN COALESCE(g.revoked,0)=1 OR t.revoked_at IS NOT NULL THEN 1 ELSE 0 END revoked
++      FROM requests a
++      JOIN (SELECT agent,MAX(sequence) last_sequence FROM requests GROUP BY agent) recent ON recent.agent=a.agent
++      JOIN requests last ON last.sequence=recent.last_sequence
++      LEFT JOIN agent_door_agents g ON g.id=a.agent
++      LEFT JOIN crank_tokens t ON a.agent='crank-token:'||t.id GROUP BY a.agent ORDER BY a.agent`, ...args),
++    stmt(env, `${requests} SELECT a.agent agent_id,json_extract(a.row,'$.decision') decision,a.outcome,
++      COUNT(*) request_attempts,SUM(${replay}) replays FROM requests a
++      GROUP BY a.agent,decision,outcome ORDER BY a.agent,decision,outcome`, ...args),
++    stmt(env, `${requests} SELECT a.agent agent_id,json_extract(c.value,'$.class') class,
++      COALESCE((SELECT json_extract(r.value,'$.do') FROM json_each(a.row,'$.rules') r WHERE json_extract(r.value,'$.class')=json_extract(c.value,'$.class')),json_extract(a.row,'$.decision')) decision,
++      a.outcome,COUNT(*) request_attempts,SUM(${replay}) replays
++      FROM requests a,json_each(a.row,'$.classes') c
++      GROUP BY a.agent,class,decision,outcome ORDER BY a.agent,class,decision,outcome`, ...args),
++  ])
++  const decisions = rows[1].results as unknown as DecisionRow[], classes = rows[2].results as unknown as ClassRow[]
++  const agents = (rows[0].results as unknown as AgentRow[]).map(({ revoked, ...row }) => ({
++    ...row, revoked: !!revoked,
++    decisions: decisions.filter(item => item.agent_id === row.agent_id),
++    classes: classes.filter(item => item.agent_id === row.agent_id),
++    money_moved: null, provider_spend_usd: null,
++  }))
++  return {
++    month, start, end, watermark, scope: 'All native agent calls; workflow and team filters do not apply',
++    accounting: 'Requests in this UTC month; retained current outcomes. Replays are attempts, not new original operations. Class counts overlap when a call has several classes. Calls refused before agent authentication are not attributed.',
++    boundary: 'The admitted native registry rejects provider-cost tools. Provider spend and money moved are not reported here; unknown amounts are not zero. Workflow budget accounting is separate.',
++    totals: agents.reduce<Counts>((sum, agent) => ({
++      request_attempts: sum.request_attempts + agent.request_attempts,
++      replays: sum.replays + agent.replays,
++      original_operations: sum.original_operations + agent.original_operations,
++    }), { request_attempts: 0, replays: 0, original_operations: 0 }),
++    agents,
++  }
++}
+diff --git a/src/crank/ops/usage-report.ts b/src/crank/ops/usage-report.ts
+index 2bc74ba..9dbd608 100644
+--- a/src/crank/ops/usage-report.ts
++++ b/src/crank/ops/usage-report.ts
+@@ -1,4 +1,5 @@
+ import { requireValue, stmt, type CrankEnv } from '../model'
++import { agentUsage } from './agent-usage'
+ import { notify } from './notices'
+ import { budgetRows, presentBudget, type BudgetScope } from './usage-budgets'
+ import { readWorkflowEstimate } from './usage-estimates'
+@@ -62,6 +63,7 @@ export async function usageReport(env: CrankEnv, query = new URLSearchParams())
+     totals: { runs: reservations.length, estimated_usd: unitsUsd(estimated), observed_steps: observations.length, observed_requests: requests.length,
+       provider_reported_usd: charges.length ? unitsUsd(sum(charges.map(row => row.usd_units))) : null, provider_reported_entries: charges.length,
+       budget_accounted_usd: unitsUsd(sum(reservations.map(row => row.accounted_units))), forecast_usd: forecast(estimated, month) },
++    agent_usage: await agentUsage(env, month),
+     workflows, observations, requests, reporting_errors: reportingErrors, provider_charges: charges.map(({ usd_units, ...row }) => ({ ...row, usd: unitsUsd(usd_units) })),
+     allowances: (result[4].results as unknown as Allowance[]).map(({ usd_units, ...row }) => ({ ...row, usd: unitsUsd(usd_units) })),
+     notices: result[5].results as unknown as Notice[],
+diff --git a/src/crank/ui/agent-usage.ts b/src/crank/ui/agent-usage.ts
+new file mode 100644
+index 0000000..4a4c837
+--- /dev/null
++++ b/src/crank/ui/agent-usage.ts
+@@ -0,0 +1,21 @@
++import type { agentUsage } from '../ops/agent-usage'
++import { esc } from './document'
++
++/** Reuses the Operations list and disclosure controls. */
++export function agentUsageView(report: Awaited<ReturnType<typeof agentUsage>>) {
++  return '<section class="panel" id="agent-usage"><h2>Native agent calls · ' + esc(report.month) + ' UTC</h2>' +
++    '<p>' + esc(report.scope) + '. ' + esc(report.accounting) + '</p>' +
++    '<p>' + esc(report.boundary) + '</p>' +
++    '<p data-agent-totals>' + report.totals.request_attempts + ' request attempts · ' + report.totals.original_operations + ' original operations · ' + report.totals.replays + ' replays</p>' +
++    '<ul class="list">' + (report.agents.map(agent => '<li class="history-item" data-agent-id="' + esc(agent.agent_id) + '">' +
++      '<h3>' + esc(agent.name) + (agent.revoked ? ' · revoked' : '') + '</h3><p>' + esc(agent.agent_id) +
++      (agent.specialist ? ' · ' + esc(agent.specialist) : '') + '</p><p>' +
++      agent.request_attempts + ' request attempts · ' + agent.original_operations + ' original operations · ' + agent.replays + ' replays</p>' +
++      '<p>Money moved: Not reported · Provider spend: Not reported</p>' +
++      '<details><summary>Decisions and outcomes</summary><ul>' + agent.decisions.map(row => '<li>' +
++        esc(row.decision) + ' · ' + esc(row.outcome) + ': ' + row.request_attempts + ' attempts (' + row.replays + ' replays)</li>').join('') +
++      '</ul><h4>Decisions by class</h4><ul>' + (agent.classes.map(row => '<li>' +
++        esc(row.class) + ' · ' + esc(row.decision) + ' · ' + esc(row.outcome) + ': ' +
++        row.request_attempts + ' attempts (' + row.replays + ' replays)</li>').join('') || '<li>No classified calls.</li>') +
++      '</ul></details></li>').join('') || '<li>No native agent calls in this UTC month.</li>') + '</ul></section>'
++}
+diff --git a/src/crank/ui/usage.ts b/src/crank/ui/usage.ts
+index 56b0d55..9424d16 100644
+--- a/src/crank/ui/usage.ts
++++ b/src/crank/ui/usage.ts
+@@ -1,3 +1,4 @@
++import { agentUsageView } from './agent-usage'
+ import type { usageReport } from '../ops/usage'
+ import type { readWorkflowEstimate } from '../ops/usage'
+ import { action, esc, hidden, timestamp } from './document'
+@@ -70,7 +71,7 @@ export function usageView(report: UsageReport, workflows: Workflow[]) {
+     <h3>Budget notices</h3><ul>${report.notices.map(n => `<li>${esc(scopeLabel(n.scope, n.scope_id))} · ${esc(n.threshold)}% · recorded ${timestamp(n.created_at)}${n.delivered_at ? ` · delivered ${timestamp(n.delivered_at)}` : !n.active ? ' · restored inactive' : ' · delivery pending'}</li>`).join('') || '<li>No budget notices for this month.</li>'}</ul>
+     <h3>Owner overage history</h3><ul>${report.allowances.map(a => `<li>${esc(scopeLabel(a.scope, a.scope_id))} · ${usd(a.usd)} · ${esc(a.reason)} · by ${esc(a.created_by)} · ${timestamp(a.created_at)}</li>`).join('') || '<li>No owner overages for this month.</li>'}</ul>
+     <h3>Held work awaiting review</h3><ul>${report.holds.map(h => `<li><a href="/app/holds/${esc(h.id)}">Review held work</a> · ${esc(workflows.find(w => w.id === h.workflow_id)?.name ?? h.workflow_id)} · ${esc(h.source)} · ${timestamp(h.created_at)}</li>`).join('') || '<li>No open admission holds match this report.</li>'}</ul>
+-  </section>${budgetControls(report, workflows, back)}`
++  </section>${agentUsageView(report.agent_usage)}${budgetControls(report, workflows, back)}`
+ }
+ 
+ export function workflowEstimateView(workflow: Workflow, estimate: Estimate) {
+diff --git a/test-budget.json b/test-budget.json
+index e2df327..8683982 100644
+--- a/test-budget.json
++++ b/test-budget.json
+@@ -1,5 +1,5 @@
+ {
+   "maximum": 200,
+-  "current": 201,
+-  "notes": "TRIG-003 adds one public-door complete-page and outage recovery journey and extends the existing signed Slack event journey with atomic admission, current authority, out-of-order delivery and provider-effect assertions. PLATFORM-001 adds one public-door duplication journey for lost/concurrent/restarted requests, later edits, credential boundaries and inactive restoration. Public-door business journeys, including BASE-003 recovery and BASE-001 owned operation and disclosure, plus the real-time EXEC-002 retry journey (nightly and manual, outside push Verify); below the 200-test cap. AGENT-003 adds retained exception proposal/deploy/rollback and inactive portability journeys. TEAM-002 adds three public-door standing-grant journeys. PLATFORM-001 adds two SDK and MCP and atomic draft retry journeys. TEAM-001 adds one scoped-role and transfer public-door journey. SEC-002 adds one named workflow and import boundary journey, without claiming DNS rebinding or agent-policy conformance. AGENT-004 adds three native contact and calendar, lifecycle and portability and DST public-door journeys. WORK-005 adds two public-door executor lifecycle and portability tests; a standalone real Linux executor journey covers sandbox runtimes and limits. WORK-005 adds one structural output-schema public-door journey and a standalone installed-screen journey. TEAM-001 adds one scoped-builder draft-test public-door journey covering bindings and authority revocation; the existing installed-screen journey extends to waiting/completed/revoked tests. CONN-011 adds two public-door connector and gateway journeys; the installed browser journey is separate. Real SQLite, PostgreSQL and MySQL and OpenSSH and RustFS containers and streamed local files are used; explicit live-resource choices extend the existing journey, without adding top-level tests. Enterprise provider and IdP interoperability remains unclaimed. CONN-011 adds two scoped service-account flows and one real private gateway retry/restart/exhaustion flow. SQL Server and real-time private backoff remain standalone manual journeys. EXEC-003 adds one public-door channel delivery and recovery journey with inactive restore and erasure; standalone timing and installed-screen scripts do not add node:test registrations. WORK-009 adds one public-door typed-question/calendar/continuation/timeout/custody journey; browser proof extends the existing standalone notice script. WORK-006 adds one public-door immutable pure-subflow pin/upgrade/rollback/type/revocation/inactive-restore journey; no recipe or provider completion is claimed. WORK-007 adds one public-door operational-state concurrency, replay, custody refusal, inactive-restore and erasure journey; the same standalone exact-SHA scale journey runs outside Verify. Hosted mail adds one public-door provider-routing journey covering sign-in delivery and missing relay refusal at the provider boundary. MIG-001 adds one public-door native graph conversion, journal recovery, receiver branch outcome and undo-protection journey. The standalone installed-browser journey covers move-in and native drafts at 1440 and 390. Financial providers add two public-door journeys for native invoice and refund reconciliation with separately approved compensation, and exact Gusto consent with retained regulated obligations; existing owned-operation conformance also exercises all new step types. AGENT-001 adds one public-door cross-record obligation and bounded repair journey. AGENT-002 adds two public-door native schema and permission recovery, twenty retained sandbox cases, checkpoint continuation and inactive custody journeys. PLATFORM-002 adds two public-door MCP client and managed Calendar recovery journeys. AI-002 adds one public-door natural-language proposal, scope refusal, exact sandbox test and human promotion journey with complete inactive provenance restoration. MIG-001 adds two public-door journeys for multi-item source batches with receiver recovery, and exact strict source condition semantics with short-circuit dispatch. Two further MIG-001 public-door journeys cover complete-stream transforms and fresh HTTP account binding with revocation. One further MIG-001 journey covers reviewed original n8n code orchestration, restart and output refusal; its existing real Linux journey proves sandbox execution. AI-003 adds four public-door recurring version, live-source boundary, authority-stop and inactive-custody flows, plus the built recurring owner browser journey. Existing owned-operation conformance includes the native invoice check. The budget-hold regression is exercised in the recurring authority flow; no separate pin test was added. CONN-010 adds one public-door Nook scoped-delivery journey plus one Verify-invoked browser assertion script; existing owned-operation coverage includes the native action. No real sibling event or independent message-read proof is claimed. TRIG-003 adds two native app poll journeys for CRM watched-property recovery and mailbox subscription expiry, plus one Verify-invoked installed browser script that exercises them at both release widths. Recount: 139 node:test registrations in the 30 ordinary test files, 2 runtime assertion scripts, 11 Verify browser scripts, 1 Linux executor script, and 9 nightly registrations or assertion scripts; 162 total. The previous recorded current count was stale. WORK-010 adds one registered native digest journey and one Verify browser assertion script, taking the recorded total from 162 to 164. Existing owned-operation assertions extend to append, find and release; no pin tests were added. WORK-006 extends the existing registered subflow journey with reviewed native graph child histories and adds one Verify browser assertion script; together with main's WORK-010 digest coverage, the recorded total is 165. No existing journeys or assertions are removed. TEAM-001 adds two public-door journeys for complete explicit grant boundaries and one-time migration; 167 total after preserving current main's WORK-010 and WORK-006 coverage. TEAM-001 registers its existing native browser journey in push Verify; combined with current main subflow coverage, 168 total. WORK-014 adds two public-door sample journeys, one Verify browser script and one contract-document consistency assertion, for 172 total. Existing tests are retained. WORK-012 adds one registered public-door n8n date arithmetic migration journey covering repeated apply, exact calendar outcomes and destination readback, restart, refusal and complete inactive archives. The existing migration browser script extends its retained operand and result coverage; no separate browser registration is added. Preserving current main WORK-014 and TEAM-001 coverage brings the total to 173. TRIG-008 adds two public-door registrations for Sheets and Excel stable-row polling and reviewed n8n Sheets trigger migration; the existing app-poll browser script covers settling and released values at both widths. No existing assertion is removed. TRIG-008 adds one Airtable public-door adapter journey; property-history recovery and loaded watched-field selection extend existing journeys. The total is 176. TRIG-008 adds one public-door SharePoint and configured JSON list journey, taking the total to 177. TRIG-008 adds one public-door subject erasure journey for zero-run comparison state, paused authority, legal holds, key availability, inactive archives and replay fences; total 178. TRIG-008 adds one registered snapshot retention journey and the standalone real two-minute row-settling clock journey, executed outside push Verify; total 180. One further public-door registration covers complete current Pipedrive, Shopify and Zendesk snapshots; total 181. The existing spreadsheet registration also exercises paginated Excel tables. One registered pinned custom polling journey exercises native review, exact request bounds, scope revocation and fresh-consent fencing; total 182. One native operational-table polling registration covers same-clock revisions, both identities, inactive adoption and erasure; total 183. Its payload is inspected in the existing app polling browser journey. One accounting snapshot registration covers QuickBooks invoices and customers and Xero invoices and contacts, complete pagination, account custody and unchanged provider clocks; total 184. The existing sheet registration also proves atomic admission and baseline storage across an interrupted write and restart; no registration is added. CONN-019 extends the registered custom connector journey and registers its bounded picker browser mode in push Verify; 174 total, with no new node:test registrations and one additional browser assertion script. CONN-010 adds two public-door Orbit registrations for scoped deals and watched snapshot admission; existing sibling browser and owned-operation registrations extend to these operations. No existing assertion is removed. WORK-011 adds one public-door PostgreSQL custom find-or-create registration and one Verify browser script; existing private-write journeys retain every assertion. AI-001 adds three public-door classification, dispatch-authority and complete inactive-custody registrations; existing owned-operation coverage includes the new native step. No existing assertion is removed. The Verify-invoked AI editor browser journey adds one assertion script, taking the recorded total to 191; functional assertions run at 1440 with matching 390 screen proof. WORK-011 extends the existing Slack and custom search registrations with complete and incomplete page outcomes, declared result bounds and downstream routes; the existing private search browser covers retained truncated history. No registrations are added and no existing assertion is removed; the recorded total remains 193. The same WORK-011 continuation extends the existing operational-state and owned-operation registrations and the existing browser script with bounded table find-or-create, custody and replay assertions. No registrations are added; total 189. WORK-001 adds one native visual-draft public-door sanity journey for construction, typed fields, stale and unauthorized saves, immutable publication and branch outputs. No existing assertion is removed; recorded total 194. WORK-001 also registers its installed native editor browser sanity journey in push Verify; recorded total 195. Native construction, correction, authority refusals, immutable publication, both route outcomes and one phone layout smoke share that journey; no existing test or assertion is removed. TRIG-006 adds three native email public-door journeys for delivery and authority, streaming and MIME limits, and complete inactive custody with erasure; one Verify browser script inspects admission history and mapped files. No existing assertion is removed. Replay onto current main preserves its registered editor and custody coverage; the combined recorded total is 199. CONN-003 adds one public-door Gmail search and custody sanity journey and one Verify browser script; all current-main coverage is preserved. Recount from package.json, verification.json and retry-backoff.yml: 166 ordinary node:test registrations across 29 files, 1 site registration, 2 runtime assertion scripts, 21 browser scripts, 1 Linux executor script and 9 nightly registrations or assertion scripts = 200. Main before this slice has 198 on the same inventory; its historical recorded 199 was stale. No tests or assertions are removed and the maximum stays 200. CONN-013 extends the existing managed Calendar registration and owned-operation journey with read-only search and sealed checkpoint custody. One Verify browser assertion script covers retained results at 1440 and 390. No existing assertion is removed. CONN-004 extends the existing Slack registration, owned-operation registration and sibling browser script with bounded Teams directory search and custody. No test registrations or independently invoked assertion scripts are added, and no assertion is removed or weakened; the inherited recorded current count is unchanged."
++  "current": 200,
++  "notes": "TRIG-003 adds one public-door complete-page and outage recovery journey and extends the existing signed Slack event journey with atomic admission, current authority, out-of-order delivery and provider-effect assertions. PLATFORM-001 adds one public-door duplication journey for lost/concurrent/restarted requests, later edits, credential boundaries and inactive restoration. Public-door business journeys, including BASE-003 recovery and BASE-001 owned operation and disclosure, plus the real-time EXEC-002 retry journey (nightly and manual, outside push Verify); below the 200-test cap. AGENT-003 adds retained exception proposal/deploy/rollback and inactive portability journeys. TEAM-002 adds three public-door standing-grant journeys. PLATFORM-001 adds two SDK and MCP and atomic draft retry journeys. TEAM-001 adds one scoped-role and transfer public-door journey. SEC-002 adds one named workflow and import boundary journey, without claiming DNS rebinding or agent-policy conformance. AGENT-004 adds three native contact and calendar, lifecycle and portability and DST public-door journeys. WORK-005 adds two public-door executor lifecycle and portability tests; a standalone real Linux executor journey covers sandbox runtimes and limits. WORK-005 adds one structural output-schema public-door journey and a standalone installed-screen journey. TEAM-001 adds one scoped-builder draft-test public-door journey covering bindings and authority revocation; the existing installed-screen journey extends to waiting/completed/revoked tests. CONN-011 adds two public-door connector and gateway journeys; the installed browser journey is separate. Real SQLite, PostgreSQL and MySQL and OpenSSH and RustFS containers and streamed local files are used; explicit live-resource choices extend the existing journey, without adding top-level tests. Enterprise provider and IdP interoperability remains unclaimed. CONN-011 adds two scoped service-account flows and one real private gateway retry/restart/exhaustion flow. SQL Server and real-time private backoff remain standalone manual journeys. EXEC-003 adds one public-door channel delivery and recovery journey with inactive restore and erasure; standalone timing and installed-screen scripts do not add node:test registrations. WORK-009 adds one public-door typed-question/calendar/continuation/timeout/custody journey; browser proof extends the existing standalone notice script. WORK-006 adds one public-door immutable pure-subflow pin/upgrade/rollback/type/revocation/inactive-restore journey; no recipe or provider completion is claimed. WORK-007 adds one public-door operational-state concurrency, replay, custody refusal, inactive-restore and erasure journey; the same standalone exact-SHA scale journey runs outside Verify. Hosted mail adds one public-door provider-routing journey covering sign-in delivery and missing relay refusal at the provider boundary. MIG-001 adds one public-door native graph conversion, journal recovery, receiver branch outcome and undo-protection journey. The standalone installed-browser journey covers move-in and native drafts at 1440 and 390. Financial providers add two public-door journeys for native invoice and refund reconciliation with separately approved compensation, and exact Gusto consent with retained regulated obligations; existing owned-operation conformance also exercises all new step types. AGENT-001 adds one public-door cross-record obligation and bounded repair journey. AGENT-002 adds two public-door native schema and permission recovery, twenty retained sandbox cases, checkpoint continuation and inactive custody journeys. PLATFORM-002 adds two public-door MCP client and managed Calendar recovery journeys. AI-002 adds one public-door natural-language proposal, scope refusal, exact sandbox test and human promotion journey with complete inactive provenance restoration. MIG-001 adds two public-door journeys for multi-item source batches with receiver recovery, and exact strict source condition semantics with short-circuit dispatch. Two further MIG-001 public-door journeys cover complete-stream transforms and fresh HTTP account binding with revocation. One further MIG-001 journey covers reviewed original n8n code orchestration, restart and output refusal; its existing real Linux journey proves sandbox execution. AI-003 adds four public-door recurring version, live-source boundary, authority-stop and inactive-custody flows, plus the built recurring owner browser journey. Existing owned-operation conformance includes the native invoice check. The budget-hold regression is exercised in the recurring authority flow; no separate pin test was added. CONN-010 adds one public-door Nook scoped-delivery journey plus one Verify-invoked browser assertion script; existing owned-operation coverage includes the native action. No real sibling event or independent message-read proof is claimed. TRIG-003 adds two native app poll journeys for CRM watched-property recovery and mailbox subscription expiry, plus one Verify-invoked installed browser script that exercises them at both release widths. Recount: 139 node:test registrations in the 30 ordinary test files, 2 runtime assertion scripts, 11 Verify browser scripts, 1 Linux executor script, and 9 nightly registrations or assertion scripts; 162 total. The previous recorded current count was stale. WORK-010 adds one registered native digest journey and one Verify browser assertion script, taking the recorded total from 162 to 164. Existing owned-operation assertions extend to append, find and release; no pin tests were added. WORK-006 extends the existing registered subflow journey with reviewed native graph child histories and adds one Verify browser assertion script; together with main's WORK-010 digest coverage, the recorded total is 165. No existing journeys or assertions are removed. TEAM-001 adds two public-door journeys for complete explicit grant boundaries and one-time migration; 167 total after preserving current main's WORK-010 and WORK-006 coverage. TEAM-001 registers its existing native browser journey in push Verify; combined with current main subflow coverage, 168 total. WORK-014 adds two public-door sample journeys, one Verify browser script and one contract-document consistency assertion, for 172 total. Existing tests are retained. WORK-012 adds one registered public-door n8n date arithmetic migration journey covering repeated apply, exact calendar outcomes and destination readback, restart, refusal and complete inactive archives. The existing migration browser script extends its retained operand and result coverage; no separate browser registration is added. Preserving current main WORK-014 and TEAM-001 coverage brings the total to 173. TRIG-008 adds two public-door registrations for Sheets and Excel stable-row polling and reviewed n8n Sheets trigger migration; the existing app-poll browser script covers settling and released values at both widths. No existing assertion is removed. TRIG-008 adds one Airtable public-door adapter journey; property-history recovery and loaded watched-field selection extend existing journeys. The total is 176. TRIG-008 adds one public-door SharePoint and configured JSON list journey, taking the total to 177. TRIG-008 adds one public-door subject erasure journey for zero-run comparison state, paused authority, legal holds, key availability, inactive archives and replay fences; total 178. TRIG-008 adds one registered snapshot retention journey and the standalone real two-minute row-settling clock journey, executed outside push Verify; total 180. One further public-door registration covers complete current Pipedrive, Shopify and Zendesk snapshots; total 181. The existing spreadsheet registration also exercises paginated Excel tables. One registered pinned custom polling journey exercises native review, exact request bounds, scope revocation and fresh-consent fencing; total 182. One native operational-table polling registration covers same-clock revisions, both identities, inactive adoption and erasure; total 183. Its payload is inspected in the existing app polling browser journey. One accounting snapshot registration covers QuickBooks invoices and customers and Xero invoices and contacts, complete pagination, account custody and unchanged provider clocks; total 184. The existing sheet registration also proves atomic admission and baseline storage across an interrupted write and restart; no registration is added. CONN-019 extends the registered custom connector journey and registers its bounded picker browser mode in push Verify; 174 total, with no new node:test registrations and one additional browser assertion script. CONN-010 adds two public-door Orbit registrations for scoped deals and watched snapshot admission; existing sibling browser and owned-operation registrations extend to these operations. No existing assertion is removed. WORK-011 adds one public-door PostgreSQL custom find-or-create registration and one Verify browser script; existing private-write journeys retain every assertion. AI-001 adds three public-door classification, dispatch-authority and complete inactive-custody registrations; existing owned-operation coverage includes the new native step. No existing assertion is removed. The Verify-invoked AI editor browser journey adds one assertion script, taking the recorded total to 191; functional assertions run at 1440 with matching 390 screen proof. WORK-011 extends the existing Slack and custom search registrations with complete and incomplete page outcomes, declared result bounds and downstream routes; the existing private search browser covers retained truncated history. No registrations are added and no existing assertion is removed; the recorded total remains 193. The same WORK-011 continuation extends the existing operational-state and owned-operation registrations and the existing browser script with bounded table find-or-create, custody and replay assertions. No registrations are added; total 189. WORK-001 adds one native visual-draft public-door sanity journey for construction, typed fields, stale and unauthorized saves, immutable publication and branch outputs. No existing assertion is removed; recorded total 194. WORK-001 also registers its installed native editor browser sanity journey in push Verify; recorded total 195. Native construction, correction, authority refusals, immutable publication, both route outcomes and one phone layout smoke share that journey; no existing test or assertion is removed. TRIG-006 adds three native email public-door journeys for delivery and authority, streaming and MIME limits, and complete inactive custody with erasure; one Verify browser script inspects admission history and mapped files. No existing assertion is removed. Replay onto current main preserves its registered editor and custody coverage; the combined recorded total is 199. CONN-003 adds one public-door Gmail search and custody sanity journey and one Verify browser script; all current-main coverage is preserved. Recount from package.json, verification.json and retry-backoff.yml: 166 ordinary node:test registrations across 29 files, 1 site registration, 2 runtime assertion scripts, 21 browser scripts, 1 Linux executor script and 9 nightly registrations or assertion scripts = 200. Main before this slice has 198 on the same inventory; its historical recorded 199 was stale. No tests or assertions are removed and the maximum stays 200. CONN-013 extends the existing managed Calendar registration and owned-operation journey with read-only search and sealed checkpoint custody. One Verify browser assertion script covers retained results at 1440 and 390. No existing assertion is removed. CONN-004 extends the existing Slack registration, owned-operation registration and sibling browser script with bounded Teams directory search and custody. No test registrations or independently invoked assertion scripts are added, and no assertion is removed or weakened; the inherited recorded current count is unchanged. BASE-AGENT-011 groups the six existing usage registrations into three budget and custody sanity journeys with every assertion retained, adds one native agent usage registration and one focused browser script: 201 - 3 + 2 = 200. The existing CORE journey invokes the same native usage proof. No assertion is removed or narrowed."
+ }
+diff --git a/tests/agent-door/journey.mjs b/tests/agent-door/journey.mjs
+index 842379a..13c9d32 100644
+--- a/tests/agent-door/journey.mjs
++++ b/tests/agent-door/journey.mjs
+@@ -54,4 +54,6 @@ export default async function journey({request, origin, cookie, tool}) {
+   await person('/agents/api/pause', {paused: false});
+  }
+  assert.equal(output(await tool('crank.workflows.create', args)).id, created.id);
++ const {agentUsageJourney}=await import('./usage-journey.mjs');
++ await agentUsageJourney();
+ }
+diff --git a/tests/agent-door/usage-journey.mjs b/tests/agent-door/usage-journey.mjs
+new file mode 100644
+index 0000000..292fa1d
+--- /dev/null
++++ b/tests/agent-door/usage-journey.mjs
+@@ -0,0 +1,156 @@
++import assert from 'node:assert/strict';
++import {harness} from '../harness.mjs';
++
++const month='2026-11';
++const errorCode=r=>r.value.result?._meta?.['com.runeditrun/error']?.code??r.value.error?.data?.code;
++export async function agentUsageJourney({inspect}={}) {
++ const h=await harness('http://127.0.0.1:9',{clock:'2026-10-31T23:59:59.999Z'});
++ let cookie=h.owner;
++ try {
++  const setup=await h.mf.dispatchFetch(h.origin+'/setup',{method:'POST',redirect:'manual',headers:{origin:h.origin,cookie,'content-type':'application/x-www-form-urlencoded'},body:'confirm=yes'});
++  assert.equal(setup.status,303);
++  const people=await h.send('/auth/operators',undefined,cookie),email=people.value.find(p=>p.role==='owner').email;
++  const tokens=await Promise.all(['Harbour records assistant','Coastal review assistant'].map(label=>h.post('tokens',{label,scope:'agent'},cookie,201)));
++  const ids=tokens.map(t=>'crank-token:'+t.id);
++  const person=async(path,body,method=body===undefined?'GET':'POST')=>{
++   const r=await h.mf.dispatchFetch(h.origin+path,{method,redirect:'manual',headers:{origin:h.origin,cookie,'content-type':'application/json'},...(body===undefined?{}:{body:JSON.stringify(body)})});
++   assert.equal(r.status,200,await r.clone().text());return r.json();
++  };
++  const policy=async disposition=>person('/agents/api/policy',{document:{schema:'rer-agent-policy/1',catalogue:'rer-agent-classes/1',spend:{none:true},rules:[{id:'native',class:'*',do:disposition,...(disposition==='approval'?{approver:['sponsor'],wait:'P1D'}:{})}],...(disposition==='review'?{reviewers:['sponsor']}:{})}},'PUT');
++  let rpc=0;
++  const call=(agent,name='crank.catalog.list',args={})=>h.send('/mcp',{jsonrpc:'2.0',id:++rpc,method:'tools/call',params:{name,arguments:args}},'',{authorization:'Bearer '+tokens[agent].token,accept:'application/json','mcp-protocol-version':'2025-11-25'});
++  const report=async(selected=month)=>h.get('reports/usage?month='+selected,cookie);
++  const restart=async(clock)=>{
++   await h.restart({clock});
++   await h.send('/auth/magic-link',{email,returnTo:'/app'});
++   const link=h.mail.at(-1).html.match(/href="([^"]*\/auth\/confirm\?token=[^"]+)"/)[1].replaceAll('&amp;','&');
++   const signed=await h.send('/auth/confirm',{token:new URL(link,h.origin).searchParams.get('token')});assert.equal(signed.status,303,signed.text);cookie=signed.cookie;
++  };
++  const empty=(await report()).agent_usage;
++  assert.deepEqual(empty.totals,{request_attempts:0,replays:0,original_operations:0});
++  await policy('autonomous');
++  const prior=await call(0);assert.equal(prior.status,200,prior.text);assert.ok(prior.value.result,prior.text);assert.ok(!prior.value.result.isError,prior.text);
++  await restart('2026-11-01T00:00:00.000Z');
++  for(let i=0;i<205;i++) {
++   const r=await call(i%2);assert.equal(r.status,200);assert.ok(!r.value.result.isError,JSON.stringify(r.value));
++  }
++  const create={name:'Native usage provenance',graph:{trigger:{type:'manual'},steps:[]},idempotency_key:'synthetic-crank-1'};
++  const first=await call(0,'crank.workflows.create',create);assert.ok(!first.value.result.isError,JSON.stringify(first.value));
++  const replay=await call(0,'crank.workflows.create',create);assert.equal(replay.value.result.structuredContent.id,first.value.result.structuredContent.id);
++  await policy('review');
++  const reviewed=await call(1,'crank.workflows.create',{...create,idempotency_key:'synthetic-crank-2'});assert.ok(!reviewed.value.result.isError,JSON.stringify(reviewed.value));
++  await policy('approval');
++  const pending=await call(1,'crank.workflows.create',{...create,idempotency_key:'synthetic-crank-3'});assert.equal(pending.value.result._meta['com.runeditrun/decision'].disposition,'approval',pending.text);
++  await policy('blocked');assert.equal(errorCode(await call(1)),'policy_blocked');
++  await policy('autonomous');
++  await person('/agents/api/pause',{paused:true});assert.equal(errorCode(await call(0)),'agents_paused');await person('/agents/api/pause',{paused:false});
++  assert.equal(errorCode(await call(0,'crank.workflows.get',{})),'invalid_arguments');
++  const before=(await report()).agent_usage;
++  assert.equal(before.totals.request_attempts,212);assert.equal(before.totals.replays,1);assert.equal(before.totals.original_operations,211);
++  assert.deepEqual(before.agents.map(a=>a.request_attempts),[...before.agents].map(a=>a.agent_id===ids[0]?107:105));
++  assert.ok(before.agents.every(a=>a.money_moved===null&&a.provider_spend_usd===null));
++  assert.ok(before.agents.flatMap(a=>a.decisions).some(d=>d.decision==='approval'&&d.outcome==='pending'));
++  assert.ok(before.agents.flatMap(a=>a.decisions).some(d=>d.decision==='review'&&d.outcome==='done'));
++  assert.ok(before.agents.flatMap(a=>a.classes).some(d=>d.class==='standard'&&d.decision==='blocked'&&d.outcome==='refused'));
++  assert.ok(before.agents.flatMap(a=>a.decisions).some(d=>d.decision==='paused'&&d.outcome==='refused'));
++  assert.ok(before.agents.flatMap(a=>a.decisions).some(d=>d.decision==='none'&&d.outcome==='refused'));
++  const audit=[];let after='';
++  do {const page=await person('/agents/api/audit'+(after?'?after='+after:''));audit.push(...page.rows);if(page.rows.length<200)break;after=page.cursor;}while(true);
++  assert.ok(audit.length>200);
++  const inMonth=audit.filter(r=>r.at>=before.start&&r.at<before.end);
++  assert.equal(inMonth.length,212);
++  for(const agent of before.agents) {
++   const own=inMonth.filter(r=>r.agent.id===agent.agent_id);
++   assert.equal(agent.request_attempts,own.length);
++   for(const d of agent.decisions) assert.equal(d.request_attempts,own.filter(r=>r.decision===d.decision&&r.outcome===d.outcome).length);
++   for(const c of agent.classes) assert.equal(c.request_attempts,own.filter(r=>r.outcome===c.outcome&&r.classes.some(k=>k.class===c.class)&&r.rules.some(k=>k.class===c.class&&k.do===c.decision)).length);
++  }
++  await h.restart();
++  assert.deepEqual((await report()).agent_usage,before);
++  await h.post('tokens/'+tokens[0].id+'/revoke',{},cookie);
++  assert.equal((await call(0)).status,401);
++  const revoked=(await report()).agent_usage;
++  assert.deepEqual(revoked.totals,before.totals);
++  assert.equal(revoked.agents.find(a=>a.agent_id===ids[0]).name,tokens[0].label);
++  assert.equal(revoked.agents.find(a=>a.agent_id===ids[0]).revoked,true);
++  await h.get('reports/usage?month='+month,'',401);
++  for(const role of ['viewer','billing']) {
++   const displayName='Usage '+role;
++   const invited=await h.send('/auth/invite',{email:email.replace('@','+'+role+'@'),displayName,role:'member'},cookie);assert.equal(invited.status,202,invited.text);
++   const link=h.mail.at(-1).html.match(/href="([^"]*\/auth\/confirm\?token=[^"]+)"/)[1].replaceAll('&amp;','&');
++   const signed=await h.send('/auth/confirm',{token:new URL(link,h.origin).searchParams.get('token')});assert.equal(signed.status,303,signed.text);
++   const people=await h.send('/auth/operators',undefined,cookie),id=people.value.find(p=>p.displayName===displayName).id;
++   await h.post('team/'+id,{grants:[{role,workflow_ids:[],connection_ids:[]}]},cookie);
++   const response=await h.send('/api/crank/reports/usage?month='+month,undefined,signed.cookie);
++   if(role==='viewer')assert.equal(response.status,403,response.text);
++   else {assert.equal(response.status,200,response.text);assert.ok(Array.isArray(response.value));assert.ok(!response.text.includes(tokens[0].label));assert.ok(!response.text.includes('agent_usage'))}
++  }
++  await h.get('reports/usage?month='+month,'',403,{authorization:'Bearer '+tokens[1].token});
++  await h.get('reports/usage?month=2026-13',cookie,400);
++  const screen=await h.send('/app/operations?month='+month,undefined,cookie);assert.equal(screen.status,200);
++  assert.ok(screen.text.includes('212 request attempts · 211 original operations · 1 replays'));
++  for(const agent of revoked.agents)assert.ok(screen.text.includes(agent.name));
++  assert.ok(screen.text.includes('Money moved: Not reported'));
++  assert.equal((await report('2026-10')).agent_usage.totals.request_attempts,1);
++  // A person's decision resolves the retained request; it is not another agent call.
++  await restart('2026-11-30T23:59:59.999Z');
++  await policy('approval');
++  const heldArgs=[4,5,6,7].map(n=>({...create,name:'Monthly approval '+n,idempotency_key:'synthetic-crank-'+n}));
++  const held=[];
++  for(const args of heldArgs) {
++   const response=await call(1,'crank.workflows.create',args);
++   assert.equal(response.value.result._meta['com.runeditrun/decision'].disposition,'approval',response.text);
++   const approvals=(await person('/agents/api/approvals')).approvals;
++   held.push(approvals.find(a=>a.decision_id===response.value.result._meta['com.runeditrun/decision'].id));
++   assert.ok(held.at(-1));
++  }
++  const heldTotals={request_attempts:216,replays:1,original_operations:215};
++  assert.deepEqual((await report()).agent_usage.totals,heldTotals);
++  const sameMonth=held[3];
++  assert.equal((await person('/agents/api/approvals/'+sameMonth.id+'/approve',{revision:sameMonth.revision,summary_sha256:sameMonth.summary_sha256})).approval.state,'executed');
++  assert.deepEqual((await report()).agent_usage.totals,heldTotals,'same-month owner approval must not count another agent request');
++  const workflowsBefore=await h.get('workflows',cookie);
++  await restart('2026-12-01T00:00:00.000Z');
++  for(const [index,action] of ['approve','reject'].entries()) {
++   const view=held[index];
++   const decided=await person('/agents/api/approvals/'+view.id+'/'+action,{revision:view.revision,summary_sha256:view.summary_sha256});
++   assert.equal(decided.approval.state,index===0?'executed':'rejected');
++  }
++  const workflowsAfter=await h.get('workflows',cookie);
++  assert.equal(workflowsAfter.length,workflowsBefore.length+1);
++  const approved=workflowsAfter.find(w=>w.name===heldArgs[0].name);assert.ok(approved);
++  for(const args of heldArgs.slice(1,3))assert.ok(!workflowsAfter.some(w=>w.name===args.name));
++  const completed=(await report()).agent_usage;
++  assert.deepEqual(completed.totals,heldTotals,'owner approval must not count another request in the original month');
++  const nextMonth=(await report('2026-12')).agent_usage;
++  assert.deepEqual(nextMonth.totals,{request_attempts:0,replays:0,original_operations:0},'owner decisions must not invent a next-month agent call');
++  assert.deepEqual(nextMonth.agents,[]);
++  const approvalCounts=usage=>Object.fromEntries(usage.agents.find(a=>a.agent_id===ids[1]).decisions.filter(d=>d.decision==='approval').map(d=>[d.outcome,d.request_attempts]));
++  assert.deepEqual(approvalCounts(completed),{done:2,pending:1,refused:2},'approval completion, rejection and earlier expiry must resolve the original requests');
++  // A real keyed retry is a December attempt, never a second original operation.
++  const retried=await call(1,'crank.workflows.create',heldArgs[0]);
++  assert.equal(retried.value.result.structuredContent.id,approved.id);
++  assert.equal((await h.get('workflows',cookie)).length,workflowsAfter.length);
++  const replayMonth=(await report('2026-12')).agent_usage;
++  assert.deepEqual(replayMonth.totals,{request_attempts:1,replays:1,original_operations:0});
++  assert.deepEqual(replayMonth.agents[0].decisions.map(({decision,outcome,request_attempts,replays})=>({decision,outcome,request_attempts,replays})),[{decision:'approval',outcome:'replayed',request_attempts:1,replays:1}]);
++  await restart('2026-12-01T23:59:59.999Z');
++  assert.equal((await person('/agents/api/approvals/'+held[2].id)).approval.state,'expired');
++  const resolved=(await report()).agent_usage;
++  assert.deepEqual(resolved.totals,heldTotals);
++  assert.deepEqual(approvalCounts(resolved),{done:2,refused:3},'expired held calls must no longer appear pending');
++  const standard=resolved.agents.find(a=>a.agent_id===ids[1]).classes.filter(c=>c.class==='standard'&&c.decision==='approval');
++  assert.deepEqual(standard.map(({outcome,request_attempts})=>({outcome,request_attempts})),[{outcome:'done',request_attempts:2},{outcome:'refused',request_attempts:3}]);
++  const resolvedScreen=await h.send('/app/operations?month='+month,undefined,cookie);assert.equal(resolvedScreen.status,200);
++  assert.ok(resolvedScreen.text.includes('216 request attempts · 215 original operations · 1 replays'));
++  assert.ok(resolvedScreen.text.includes('approval · done: 2 attempts (0 replays)'));
++  assert.ok(resolvedScreen.text.includes('approval · refused: 3 attempts (0 replays)'));
++  assert.ok(!resolvedScreen.text.includes('approval · pending:'));
++  await h.restart();
++  assert.deepEqual((await report()).agent_usage,resolved);
++  assert.deepEqual((await report('2026-12')).agent_usage,replayMonth);
++  if(inspect)await inspect({h,cookie,report:resolved,month});
++  console.log('PROBE BASE-AGENT-011 totals: November held calls approved in December -> 216 attempts, 215 originals, 1 replay; zero December calls until a real keyed retry, then 1 attempt and 1 replay PASS');
++  console.log('PROBE BASE-AGENT-011 outcomes: owner completion, rejection and expiry -> November approval outcomes done 2, refused 3, pending 0; API and rendered class totals survive restart PASS');
++ } finally {await h.close()}
++}
+diff --git a/tests/agent-usage-browser.mjs b/tests/agent-usage-browser.mjs
+new file mode 100644
+index 0000000..06282c1
+--- /dev/null
++++ b/tests/agent-usage-browser.mjs
+@@ -0,0 +1,62 @@
++import assert from 'node:assert/strict';
++import {createServer} from 'node:http';
++import {mkdir,readFile} from 'node:fs/promises';
++import {extname,join,resolve} from 'node:path';
++import {chromium,expect} from '@playwright/test';
++import {agentUsageJourney} from './agent-door/usage-journey.mjs';
++
++const evidence=process.env.CRANK_EVIDENCE;assert.ok(evidence,'Set CRANK_EVIDENCE');await mkdir(evidence,{recursive:true});
++const mime=(a,b)=>[a,b].join('/');
++const types={'.css':mime('text','css'),'.js':mime('text','javascript'),'.svg':mime('image','svg+xml'),'.woff2':mime('font','woff2'),'.png':mime('image','png')};
++const browser=await chromium.launch({headless:true,...(process.env.CRANK_CHROMIUM?{executablePath:process.env.CRANK_CHROMIUM}:{}),args:['--no-sandbox','--use-mock-keychain','--password-store=basic']});
++try {
++ await agentUsageJourney({inspect:async({h,cookie,report,month})=>{
++  const server=createServer(async(req,res)=>{try{
++   const pathname=new URL(req.url,h.origin).pathname;
++   if(types[extname(pathname)])for(const root of ['public','dist/client']) {
++    const directory=resolve(root),file=resolve(directory,'.'+decodeURIComponent(pathname));if(!file.startsWith(directory+'/'))continue;
++    const bytes=await readFile(file).catch(()=>null);if(bytes){res.writeHead(200,{'content-type':types[extname(pathname)]});res.end(bytes);return}
++   }
++   const chunks=[];for await(const chunk of req)chunks.push(chunk);
++   const headers={...req.headers};delete headers['content-length'];
++   const response=await h.mf.dispatchFetch(h.origin+req.url,{method:req.method,headers,redirect:'manual',...(!['GET','HEAD'].includes(req.method)?{body:Buffer.concat(chunks)}:{})});
++   res.writeHead(response.status,Object.fromEntries(response.headers));res.end(Buffer.from(await response.arrayBuffer()));
++  }catch{res.writeHead(503);res.end('Browser transport failed')}});
++  await new Promise(done=>server.listen(Number(new URL(h.origin).port),'127.0.0.1',done));
++  const context=await browser.newContext(),[name,...value]=cookie.split('=');await context.addCookies([{name,value:value.join('='),url:h.origin}]);
++  const page=await context.newPage();
++  try {
++   for(const width of [1440,390]) {
++    await page.setViewportSize({width,height:1000});await page.goto(h.origin+'/app/operations?month='+month);
++    const panel=page.locator('#agent-usage');
++    for(const summary of await panel.locator('summary').all())await summary.click();
++    if(width===1440) {
++     await expect(panel.locator('[data-agent-totals]')).toHaveText('216 request attempts · 215 original operations · 1 replays');
++     for(const agent of report.agents) {
++      const row=panel.locator('[data-agent-id="'+agent.agent_id+'"]');
++      await expect(row).toContainText(agent.name);
++      await expect(row).toContainText(agent.request_attempts+' request attempts · '+agent.original_operations+' original operations · '+agent.replays+' replays');
++      for(const d of agent.decisions)await expect(row).toContainText(d.decision+' · '+d.outcome+': '+d.request_attempts+' attempts ('+d.replays+' replays)');
++      for(const c of agent.classes)await expect(row).toContainText(c.class+' · '+c.decision+' · '+c.outcome+': '+c.request_attempts+' attempts ('+c.replays+' replays)');
++      await expect(row).toContainText('Money moved: Not reported · Provider spend: Not reported');
++     }
++     for(const [id,label] of [['search-tooltip','Search runs'],['account-tooltip','Your account']]) {
++      const control=page.locator('[aria-describedby="'+id+'"]'),tooltip=page.getByRole('tooltip',{name:label,exact:true});
++      await page.mouse.move(0,0);await control.blur();await expect(tooltip).toBeHidden();await control.hover();await page.waitForTimeout(150);await expect(tooltip).toBeHidden();await expect(tooltip).toBeVisible();
++      await page.mouse.move(0,0);await control.focus();await expect(tooltip).toBeVisible({timeout:100});await control.blur();
++     }
++     assert.ok(await panel.locator('p,h2,h3,h4,li,summary').evaluateAll(nodes=>nodes.every(n=>parseFloat(getComputedStyle(n).fontSize)>=13)),'report text is readable');
++    }
++    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'report fits viewport');
++    await panel.screenshot({path:join(evidence,'populated-'+width+'.png')});
++    await page.getByLabel('Usage month (UTC)',{exact:true}).fill('2026-09');await page.getByRole('button',{name:'Update usage report',exact:true}).click();
++    if(width===1440)await expect(page.locator('#agent-usage')).toContainText('No native agent calls in this UTC month.');
++    await page.locator('#agent-usage').screenshot({path:join(evidence,'empty-'+width+'.png')});
++    const response=await page.goto(h.origin+'/app/operations?month=invalid');
++    if(width===1440) {assert.equal(response.status(),400);await expect(page.locator('main')).toContainText('month must be YYYY-MM in UTC');assert.equal(await page.locator('[data-agent-totals]').count(),0)}
++    await page.screenshot({path:join(evidence,'error-'+width+'.png'),fullPage:true});
++   }
++  }finally{await context.close();server.closeAllConnections();await new Promise(done=>server.close(done))}
++ }});
++}finally{await browser.close()}
++console.log('Native agent usage browser PASS: populated, empty and error states; totals, classes, owner controls and tooltips at 1440 with matching 390 screens');
+diff --git a/tests/usage.test.mjs b/tests/usage.test.mjs
+index e6953c5..894b40b 100644
+--- a/tests/usage.test.mjs
++++ b/tests/usage.test.mjs
+@@ -19,7 +19,7 @@ const completeSetup = async h => {
+ };
+ const form = (h, fields) => h.mf.dispatchFetch(h.origin + '/app/action', { method: 'POST', redirect: 'manual', headers: { origin: h.origin, cookie: h.owner, 'content-type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams(fields).toString() });
+ 
+-test('OPS-002: exact owner estimates precede publication; concurrent budget exhaustion preserves backlog, notices and audited replenishment', async () => {
++async function budgetAdmission() {
+   const fake = fakeEdge();
+   fake.routes.set('meter.example', () => jsonResponse({ id: 'provider-record' }, 201, { 'x-crank-usage-usd': '0.1' }));
+   const h = await harness(target, { edge: fake.edge, quoteCosts: false });
+@@ -76,9 +76,10 @@ test('OPS-002: exact owner estimates precede publication; concurrent budget exha
+     assert.equal((await h.get(`workflows/${workflow.id}/estimate`)).status, 'stale');
+     await h.post(`workflows/${workflow.id}/publish`, {}, h.owner, 409);
+   } finally { await h.close(); }
+-});
++}
++
+ 
+-test('OPS-002: workflow and team caps, trigger holds, per-run step ceilings, test exclusion and unknown charges are observable', async () => {
++async function triggerBudgets() {
+   const fake = fakeEdge(); fake.routes.set('meter.example', () => jsonResponse({ id: 'observed-only' }, 201));
+   const h = await harness(target, { edge: fake.edge, quoteCosts: false });
+   try {
+@@ -113,12 +114,13 @@ test('OPS-002: workflow and team caps, trigger holds, per-run step ceilings, tes
+     assert.equal(tested.mode, 'test'); assert.equal(tested.status, 'succeeded');
+     assert.equal((await h.get('reports/usage?workflow=' + testing.id)).totals.runs, 0);
+   } finally { await h.close(); }
+-});
++}
++
+ 
+ const archiveRows = text => text.trim().split('\n').map(JSON.parse).flatMap(line => line.items ?? []).filter(item => item.kind === 'row');
+ const usageInventory = text => archiveRows(text).filter(item => item.table.startsWith('crank_usage_') || ['crank_step_admissions','crank_schedule_holds'].includes(item.table)).map(item => JSON.stringify(item)).sort();
+ 
+-test('OPS-002 DATA-001 DATA-002: full usage inventory restores inactive; erasure retains only value-free spending and cannot fund more runs', async () => {
++async function usageCustody() {
+   const fake = fakeEdge(); fake.routes.set('meter.example', ({url}) => jsonResponse({ id: 'reported-record' }, 201, { 'x-crank-usage-usd': url.pathname === '/bad' ? 'not a USD amount' : '0.2' }));
+   const source = await harness(target, { edge: fake.edge, quoteCosts: false }), destination = await harness(target, { edge: fake.edge, quoteCosts: false });
+   try {
+@@ -153,9 +155,10 @@ test('OPS-002 DATA-001 DATA-002: full usage inventory restores inactive; erasure
+     await source.post(`workflows/${workflow.id}/resume`);
+     assert.equal((await start(source, workflow, 'after-erasure')).held, true);
+   } finally { await source.close(); await destination.close(); }
+-});
++}
++
+ 
+-test('OPS-002: legacy approval inputs stay held without loss; owner release creates approval work and usage survives restore', async () => {
++async function legacyUsageCustody() {
+   const h = await harness(target, { quoteCosts: false }), receiving = await harness(target, { quoteCosts: false });
+   try {
+     const flow = await h.post('flows', { name: 'Harbour approval deliveries', source_app: 'Harbour desk', destination_app: 'Accounts inbox', target_url: target + '/events' }, h.owner, 201);
+@@ -183,9 +186,10 @@ test('OPS-002: legacy approval inputs stay held without loss; owner release crea
+     assert.deepEqual(usageInventory((await receiving.send('/api/crank/data/export', {}, receiving.owner)).text), usageInventory(archive));
+     await h.post(`runs/${first.id}/reject`);
+   } finally { await h.close(); await receiving.close(); }
+-});
++}
+ 
+-test('OPS-002: reported over-reservation spend pauses the next request, invalid charges stay unknown, and rollback reuses a visible immutable quote', async () => {
++
++async function reportedUsage() {
+   const edge = fakeEdge();
+   edge.routes.set('meter.example', ({ url }) => url.pathname === '/redirect' ? new Response(null,{status:302,headers:{location:'https://billing.example/final'}}) : jsonResponse({ id: url.pathname }, 201, { 'x-crank-usage-usd': url.pathname === '/bad' ? 'unusable provider amount' : '0.3' }));
+   edge.routes.set('billing.example', () => jsonResponse({ id:'redirected-response' },200,{'x-crank-usage-usd':'0.15'}));
+@@ -223,9 +227,10 @@ test('OPS-002: reported over-reservation spend pauses the next request, invalid
+     const rollback = await h.post(`workflows/${bad.id}/rollback`, { version: 1 }, h.owner, 201);
+     assert.deepEqual((await h.get(`workflows/${bad.id}/versions/${rollback.version.number}`)).estimate, original.estimate);
+   } finally { await h.close(); }
+-});
++}
++
+ 
+-test('OPS-002 TRIG-002: exhausted schedules and polls retain every due occurrence/item until reviewed release', async () => {
++async function scheduledUsage() {
+   const edge = fakeEdge(); edge.routes.set('meter.example', ({url}) => url.pathname === '/feed' ? jsonResponse({items:[{id:'order-A'},{id:'order-B'}]}) : jsonResponse({id:'record'}));
+   const h = await harness(target, { edge: edge.edge, quoteCosts: false });
+   try {
+@@ -252,4 +257,10 @@ test('OPS-002 TRIG-002: exhausted schedules and polls retain every due occurrenc
+     assert.equal((await h.get(`workflow-runs?workflow=${schedule.id}`)).runs.length, 3);
+     assert.equal((await h.get(`workflow-runs?workflow=${poll.id}`)).runs.length, 2);
+   } finally { await h.close(); }
+-});
++}
++
++
++test('OPS-002: owner estimates, budget admissions, reported spend and rollback remain attributable', async()=>{await budgetAdmission();await reportedUsage()});
++test('OPS-002: workflow and team caps retain triggered and scheduled work until reviewed release', async()=>{await triggerBudgets();await scheduledUsage()});
++test('OPS-002 DATA-001 DATA-002: native and legacy usage restore inactive and erasure cannot fund more work', async()=>{await usageCustody();await legacyUsageCustody()});
++test('Native agent usage reports the complete UTC month with actual decisions, replay and current owner authority', async()=>{const {agentUsageJourney}=await import('./agent-door/usage-journey.mjs');await agentUsageJourney()});
+diff --git a/verification.json b/verification.json
+index 9b779ea..51ed637 100644
+--- a/verification.json
++++ b/verification.json
+@@ -57,7 +57,8 @@
+         "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/digests\" node tests/digest-browser.mjs",
+         "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/subflows\" node tests/run-notices-browser.mjs",
+         "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/team\" node tests/team-browser.mjs",
+-        "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/samples\" node tests/sample-browser.mjs"
++        "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/samples\" node tests/sample-browser.mjs",
++        "CRANK_EVIDENCE=\"$CRANK_EVIDENCE/agent-usage\" node tests/agent-usage-browser.mjs"
+       ]
+     },
+     {

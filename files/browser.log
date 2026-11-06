@@ -1,0 +1,6 @@
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProxy environment variables detected. We'll use your proxy for fetch requests.[0m
+
+
+PROBE BASE-AGENT-011 totals: November held calls approved in December -> 216 attempts, 215 originals, 1 replay; zero December calls until a real keyed retry, then 1 attempt and 1 replay PASS
+PROBE BASE-AGENT-011 outcomes: owner completion, rejection and expiry -> November approval outcomes done 2, refused 3, pending 0; API and rendered class totals survive restart PASS
+Native agent usage browser PASS: populated, empty and error states; totals, classes, owner controls and tooltips at 1440 with matching 390 screens

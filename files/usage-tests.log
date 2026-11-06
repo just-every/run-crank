@@ -1,0 +1,37 @@
+TAP version 13
+# [33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProxy environment variables detected. We'll use your proxy for fetch requests.[0m
+# Subtest: OPS-002: owner estimates, budget admissions, reported spend and rollback remain attributable
+ok 1 - OPS-002: owner estimates, budget admissions, reported spend and rollback remain attributable
+  ---
+  duration_ms: 8026.045189
+  type: 'test'
+  ...
+# Subtest: OPS-002: workflow and team caps retain triggered and scheduled work until reviewed release
+ok 2 - OPS-002: workflow and team caps retain triggered and scheduled work until reviewed release
+  ---
+  duration_ms: 6988.820568
+  type: 'test'
+  ...
+# Subtest: OPS-002 DATA-001 DATA-002: native and legacy usage restore inactive and erasure cannot fund more work
+ok 3 - OPS-002 DATA-001 DATA-002: native and legacy usage restore inactive and erasure cannot fund more work
+  ---
+  duration_ms: 21875.347047
+  type: 'test'
+  ...
+# PROBE BASE-AGENT-011 totals: November held calls approved in December -> 216 attempts, 215 originals, 1 replay; zero December calls until a real keyed retry, then 1 attempt and 1 replay PASS
+# PROBE BASE-AGENT-011 outcomes: owner completion, rejection and expiry -> November approval outcomes done 2, refused 3, pending 0; API and rendered class totals survive restart PASS
+# Subtest: Native agent usage reports the complete UTC month with actual decisions, replay and current owner authority
+ok 4 - Native agent usage reports the complete UTC month with actual decisions, replay and current owner authority
+  ---
+  duration_ms: 8225.527944
+  type: 'test'
+  ...
+1..4
+# tests 4
+# suites 0
+# pass 4
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 46180.884097

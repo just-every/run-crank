@@ -1,0 +1,185 @@
+{
+  "branch": "cloud/sx-crank-c-f90",
+  "checks": [
+    {
+      "command": "node --test --test-concurrency=1 tests/usage.test.mjs",
+      "exit": 0,
+      "head": "7522947f072a471aa52bcd3447215a2354b2daa8",
+      "log": "usage-tests.log",
+      "passed": 4,
+      "tests": 4
+    },
+    {
+      "command": "pnpm typecheck",
+      "exit": 0,
+      "head": "7522947f072a471aa52bcd3447215a2354b2daa8",
+      "log": "typecheck.log"
+    },
+    {
+      "command": "npx -y @runeditrun/rer build",
+      "exit": 0,
+      "head": "7522947f072a471aa52bcd3447215a2354b2daa8"
+    },
+    {
+      "command": "npx -y @runeditrun/rer check --profile first-party",
+      "exit": 0,
+      "head": "7522947f072a471aa52bcd3447215a2354b2daa8",
+      "log": "first-party.log"
+    },
+    {
+      "assertion_width": 1440,
+      "command": "node tests/agent-usage-browser.mjs",
+      "exit": 0,
+      "head": "7522947f072a471aa52bcd3447215a2354b2daa8",
+      "log": "browser.log",
+      "proof_widths": [
+        1440,
+        390
+      ],
+      "states": [
+        "populated",
+        "empty",
+        "error"
+      ]
+    },
+    {
+      "command": "node /tmp/sx-crank-c-f90-outcomes.mjs",
+      "exit": 0,
+      "head": "7522947f072a471aa52bcd3447215a2354b2daa8",
+      "log": "probe-outcomes.log"
+    },
+    {
+      "command": "node src/base/contract-docs.mjs write",
+      "exit": 0,
+      "log": "views-write.log"
+    },
+    {
+      "command": "node src/base/contract-docs.mjs check",
+      "exit": 0,
+      "log": "views-check.log"
+    },
+    {
+      "command": "node node_modules/@runeditrun/rer/edition-authoring/cli.mjs lock",
+      "exit": 0
+    },
+    {
+      "command": "node node_modules/@runeditrun/rer/edition-authoring/cli.mjs check",
+      "exit": 0,
+      "head": "7522947f072a471aa52bcd3447215a2354b2daa8"
+    }
+  ],
+  "ci": {
+    "aggregate_job": 127902860202,
+    "build_job": 127902523727,
+    "classification": "expected_generated_view_freshness_only",
+    "conclusion": "failure",
+    "diagnostic": "Error: ACCEPTANCE.md is stale; run node src/base/contract-docs.mjs write",
+    "event": "push",
+    "head_sha": "7522947f072a471aa52bcd3447215a2354b2daa8",
+    "html_url": "https://github.com/just-every/run-crank/actions/runs/42220885544",
+    "id": 42220885544,
+    "last_observed_utc": "2026-11-06T12:57:18Z",
+    "readiness_exception": "Explicit cloud contract-view exception; fleet regenerates views and reruns exact-head Verify before landing.",
+    "shards": "skipped after build stopped on generated views",
+    "status": "completed"
+  },
+  "github_core_calls_so_far": 7,
+  "head": "7522947f072a471aa52bcd3447215a2354b2daa8",
+  "identity": {
+    "all_candidate_commits_checked": true,
+    "candidate_commits": [
+      "7522947f072a471aa52bcd3447215a2354b2daa8",
+      "96fbe42f963dae5220420e813b37534712b19a19"
+    ],
+    "log": "identity.log",
+    "result": "pass"
+  },
+  "integrated_main": "6e7ecd842a34e04d6aa3b5ca617ae6dccdf1e3ae",
+  "landing": {
+    "main_not_pushed": true,
+    "pr": null,
+    "status": "branch_only"
+  },
+  "local_vendored_helper": {
+    "check_exit": 1,
+    "comparison": {
+      "same_source_files": true,
+      "same_tool_integrity": false
+    },
+    "diagnostic": "Stale lock or source/tool integrity mismatch",
+    "resolution": "Use the installed pinned CLI required by Verify; its check passes."
+  },
+  "mechanical": {
+    "candidate_all_table_rows": 153,
+    "candidate_status_rows": 99,
+    "generated_views_committed": false,
+    "generated_views_restored_from_main": true,
+    "lock_fresh_for_installed_verify_tool": true,
+    "migration_changes": false,
+    "parent_all_table_rows": 153,
+    "parent_status_rows": 99
+  },
+  "pinned_reproduction_base": "184178d3ca7b499818b5982021559c472a7a56dc",
+  "product_push": {
+    "attempts": 1,
+    "exit": 0,
+    "log": "product-push.log",
+    "ref": "refs/heads/cloud/sx-crank-c-f90",
+    "remote_head_verified": "7522947f072a471aa52bcd3447215a2354b2daa8"
+  },
+  "publication_scan": {
+    "findings": null,
+    "historyScanned": null,
+    "status": "pending_fleet"
+  },
+  "readiness": "ready_under_explicit_generated_view_exception",
+  "recorded_at": "2026-11-06T12:53:34.717423+00:00",
+  "repository": "just-every/run-crank",
+  "reproductions": [
+    {
+      "exit": 1,
+      "finding": "A1 same-month attempt inflation",
+      "log": "reproduction-same-month.log",
+      "observed": {
+        "expected": 216,
+        "request_attempts": 217
+      }
+    },
+    {
+      "exit": 1,
+      "finding": "A1 next-month invented call",
+      "log": "reproduction.log",
+      "observed": {
+        "december_request_attempts": 1,
+        "expected": 0
+      }
+    },
+    {
+      "exit": 1,
+      "finding": "A2 stale pending outcomes",
+      "log": "reproduction-outcomes.log",
+      "observed": {
+        "expected_pending": 0,
+        "pending": 3
+      }
+    }
+  ],
+  "status": {
+    "after": "partial",
+    "before": "partial",
+    "clause": "BASE-AGENT-011",
+    "counts_after": {
+      "done": 32,
+      "missing": 17,
+      "partial": 50
+    },
+    "counts_before": {
+      "done": 32,
+      "missing": 17,
+      "partial": 50
+    },
+    "test_budget_after": 200,
+    "test_budget_before": 200
+  },
+  "tag": "sx-crank-c-f90"
+}
