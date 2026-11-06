@@ -265,7 +265,9 @@ aggregation covers all retained calls in that window independently of the
 200-row audit page. A sequence watermark excludes newly admitted requests from
 the report. Outcomes describe the retained current state of requests made in
 that month, including pending approvals and failures, rather than a historical
-snapshot of their state at month end.
+snapshot of their state at month end. A person's approval execution is not
+a new agent request. Completion, rejection and expiry resolve the original
+request in its request month; a later agent retry still counts as a replay.
 
 Each agent is identified by its stable agent ID and its latest retained audit
 name in the selected month. Revoking an agent does not relabel or erase that

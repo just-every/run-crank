@@ -30,27 +30,42 @@ export async function agentUsage(env: CrankEnv, month: string) {
   const start = month + '-01T00:00:00.000Z', next = new Date(start)
   next.setUTCMonth(next.getUTCMonth() + 1)
   const end = next.toISOString()
-  const watermark = (await stmt(env, 'SELECT COALESCE(MAX(sequence),0) n FROM agent_door_audit WHERE at>=? AND at<?', start, end).first<{ n: number }>())!.n
-  const window = 'a.at>=? AND a.at<? AND a.sequence<=?'
-  const args = [start, end, watermark]
+  // A person executes the held decision in a separate audit row. It is not
+  // another agent request, even when approval happens in a later month.
+  const execution = "(json_extract(a.row,'$.approval.id') IS NOT NULL AND json_extract(a.row,'$.decision_id') IS NOT NULL AND json_extract(a.row,'$.decision_id')<>a.id AND json_extract(a.row,'$.replay_of') IS NULL)"
+  const watermark = (await stmt(env, `SELECT COALESCE(MAX(sequence),0) n FROM agent_door_audit a WHERE at>=? AND at<? AND NOT ${execution}`, start, end).first<{ n: number }>())!.n
+  // Keep request attribution and classes, but read current approval outcomes.
+  // Expiry is effective at its deadline without requiring another agent call.
+  const requests = `WITH requests AS (
+    SELECT a.*,CASE WHEN json_extract(a.row,'$.outcome')='pending' AND p.id IS NOT NULL THEN
+      CASE WHEN p.result IS NOT NULL THEN COALESCE(json_extract(p.result,'$.outcome'),'pending')
+        WHEN p.state IN ('rejected','expired','refused') OR
+          (p.state='pending' AND json_extract(p.saved,'$.expires_at')<=?) THEN 'refused'
+        ELSE 'pending' END
+      ELSE json_extract(a.row,'$.outcome') END current_outcome
+    FROM agent_door_audit a LEFT JOIN agent_door_approvals p
+      ON p.id=json_extract(a.row,'$.approval.id') AND json_extract(p.saved,'$.decision_id')=a.id
+    WHERE a.at>=? AND a.at<? AND a.sequence<=? AND NOT ${execution}
+  )`
+  const args = [new Date().toISOString(), start, end, watermark]
   const replay = "(json_extract(a.row,'$.replay_of') IS NOT NULL OR json_extract(a.row,'$.outcome')='replayed')"
   const rows = await env.DB.batch([
-    stmt(env, `SELECT a.agent AS agent_id,COUNT(*) request_attempts,SUM(${replay}) replays,
+    stmt(env, `${requests} SELECT a.agent AS agent_id,COUNT(*) request_attempts,SUM(${replay}) replays,
       COUNT(DISTINCT CASE WHEN NOT ${replay} THEN COALESCE(json_extract(a.row,'$.operation_id'),a.id) END) original_operations,
       json_extract(last.row,'$.agent.name') name,json_extract(last.row,'$.agent.specialist') specialist,
       CASE WHEN COALESCE(g.revoked,0)=1 OR t.revoked_at IS NOT NULL THEN 1 ELSE 0 END revoked
-      FROM agent_door_audit a
-      JOIN (SELECT agent,MAX(sequence) last_sequence FROM agent_door_audit WHERE at>=? AND at<? AND sequence<=? GROUP BY agent) recent ON recent.agent=a.agent
-      JOIN agent_door_audit last ON last.sequence=recent.last_sequence
+      FROM requests a
+      JOIN (SELECT agent,MAX(sequence) last_sequence FROM requests GROUP BY agent) recent ON recent.agent=a.agent
+      JOIN requests last ON last.sequence=recent.last_sequence
       LEFT JOIN agent_door_agents g ON g.id=a.agent
-      LEFT JOIN crank_tokens t ON a.agent='crank-token:'||t.id WHERE ${window} GROUP BY a.agent ORDER BY a.agent`, ...args, ...args),
-    stmt(env, `SELECT a.agent agent_id,json_extract(a.row,'$.decision') decision,json_extract(a.row,'$.outcome') outcome,
-      COUNT(*) request_attempts,SUM(${replay}) replays FROM agent_door_audit a WHERE ${window}
+      LEFT JOIN crank_tokens t ON a.agent='crank-token:'||t.id GROUP BY a.agent ORDER BY a.agent`, ...args),
+    stmt(env, `${requests} SELECT a.agent agent_id,json_extract(a.row,'$.decision') decision,a.current_outcome outcome,
+      COUNT(*) request_attempts,SUM(${replay}) replays FROM requests a
       GROUP BY a.agent,decision,outcome ORDER BY a.agent,decision,outcome`, ...args),
-    stmt(env, `SELECT a.agent agent_id,json_extract(c.value,'$.class') class,
+    stmt(env, `${requests} SELECT a.agent agent_id,json_extract(c.value,'$.class') class,
       COALESCE((SELECT json_extract(r.value,'$.do') FROM json_each(a.row,'$.rules') r WHERE json_extract(r.value,'$.class')=json_extract(c.value,'$.class')),json_extract(a.row,'$.decision')) decision,
-      json_extract(a.row,'$.outcome') outcome,COUNT(*) request_attempts,SUM(${replay}) replays
-      FROM agent_door_audit a,json_each(a.row,'$.classes') c WHERE ${window}
+      a.current_outcome outcome,COUNT(*) request_attempts,SUM(${replay}) replays
+      FROM requests a,json_each(a.row,'$.classes') c
       GROUP BY a.agent,class,decision,outcome ORDER BY a.agent,class,decision,outcome`, ...args),
   ])
   const decisions = rows[1].results as unknown as DecisionRow[], classes = rows[2].results as unknown as ClassRow[]

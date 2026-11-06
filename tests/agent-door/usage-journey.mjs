@@ -94,8 +94,87 @@ export async function agentUsageJourney({inspect}={}) {
   assert.equal((await report('2026-10')).agent_usage.totals.request_attempts,1);
   if(inspect)await inspect({h,cookie,report:revoked,month});
   await restart('2026-12-01T00:00:00.000Z');assert.ok(!(await call(1)).value.result.isError);
-  assert.deepEqual((await report()).agent_usage,revoked);
+  const expired=structuredClone(revoked);
+  for(const agent of expired.agents)for(const row of [...agent.decisions,...agent.classes]) {
+   if(row.decision==='approval'&&row.outcome==='pending')row.outcome='refused';
+  }
+  assert.deepEqual((await report()).agent_usage,expired,'Month-old approval is expired; request attribution and totals are unchanged');
   assert.equal((await report('2026-12')).agent_usage.totals.request_attempts,1);
   console.log('PROBE BASE-AGENT-011 native usage: 212 attempts, 211 originals, 1 replay, two agents, complete UTC month, restarted authority and retained attribution PASS');
+ } finally {await h.close()}
+ await approvalUsageJourney();
+}
+
+export async function approvalUsageJourney() {
+ const h=await harness('http://127.0.0.1:9',{clock:'2026-11-30T23:59:59.999Z'});
+ let cookie=h.owner;
+ try {
+  const setup=await h.mf.dispatchFetch(h.origin+'/setup',{method:'POST',redirect:'manual',headers:{origin:h.origin,cookie,'content-type':'application/x-www-form-urlencoded'},body:'confirm=yes'});
+  assert.equal(setup.status,303);
+  const people=await h.send('/auth/operators',undefined,cookie),email=people.value.find(p=>p.role==='owner').email;
+  const token=await h.post('tokens',{label:'Approval reporting assistant',scope:'agent'},cookie,201);
+  const person=async(path,body,method=body===undefined?'GET':'POST')=>{
+   const r=await h.mf.dispatchFetch(h.origin+path,{method,redirect:'manual',headers:{origin:h.origin,cookie,'content-type':'application/json'},...(body===undefined?{}:{body:JSON.stringify(body)})});
+   assert.equal(r.status,200,await r.clone().text());return r.json();
+  };
+  await person('/agents/api/policy',{document:{schema:'rer-agent-policy/1',catalogue:'rer-agent-classes/1',spend:{none:true},rules:[{id:'held',class:'*',do:'approval',approver:['sponsor'],wait:'P1D'}]}},'PUT');
+  let rpc=0;
+  const args=n=>({name:'Approval reporting '+n,graph:{trigger:{type:'manual'},steps:[]},idempotency_key:'synthetic-crank-'+n});
+  const call=n=>h.send('/mcp',{jsonrpc:'2.0',id:++rpc,method:'tools/call',params:{name:'crank.workflows.create',arguments:args(n)}},'',{authorization:'Bearer '+token.token,accept:'application/json','mcp-protocol-version':'2025-11-25'});
+  const held=[];
+  for(let n=1;n<=4;n++) {
+   const response=await call(n);assert.equal(response.value.result._meta['com.runeditrun/decision'].disposition,'approval',response.text);
+   const url=new URL(response.value.result._meta['com.runeditrun/error'].approval.url).pathname;
+   held.push({url,...(await person(url.replace('/agents/approvals/','/agents/api/approvals/'))).approval});
+  }
+  const decide=async(n,action)=>{
+   const approval=held[n-1];
+   return (await person(approval.url.replace('/agents/approvals/','/agents/api/approvals/')+'/'+action,{revision:approval.revision,summary_sha256:approval.summary_sha256})).approval;
+  };
+  const snapshot=async(month)=>{
+   const report=(await h.get('reports/usage?month='+month,cookie)).agent_usage;
+   const agent=report.agents.find(a=>a.agent_id==='crank-token:'+token.id);
+   return {totals:report.totals,decisions:agent?.decisions.map(({decision,outcome,request_attempts,replays})=>({decision,outcome,request_attempts,replays}))??[],
+    classes:agent?.classes.map(({class:cls,decision,outcome,request_attempts,replays})=>({class:cls,decision,outcome,request_attempts,replays}))??[]};
+  };
+  const expected=(done,refused,pending)=>({
+   totals:{request_attempts:4,replays:0,original_operations:4},
+   decisions:[...done?[{decision:'approval',outcome:'done',request_attempts:done,replays:0}]:[],...pending?[{decision:'approval',outcome:'pending',request_attempts:pending,replays:0}]:[],...refused?[{decision:'approval',outcome:'refused',request_attempts:refused,replays:0}]:[]],
+   classes:[...done?[{class:'standard',decision:'approval',outcome:'done',request_attempts:done,replays:0}]:[],...pending?[{class:'standard',decision:'approval',outcome:'pending',request_attempts:pending,replays:0}]:[],...refused?[{class:'standard',decision:'approval',outcome:'refused',request_attempts:refused,replays:0}]:[]],
+  });
+  assert.deepEqual(await snapshot('2026-11'),expected(0,0,4));
+  assert.equal((await decide(1,'approve')).state,'executed');
+  const approved=await snapshot('2026-11');
+  console.log('PROBE BASE-AGENT-011 AP5 approval completion: '+JSON.stringify(approved));
+  assert.deepEqual(approved,expected(1,0,3),'Approval completion must update the held request without adding an attempt');
+  assert.equal((await decide(2,'reject')).state,'rejected');
+  assert.deepEqual(await snapshot('2026-11'),expected(1,1,2),'Rejection resolves the original request');
+  const restart=async clock=>{
+   await h.restart({clock});
+   await h.send('/auth/magic-link',{email,returnTo:'/app'});
+   const link=h.mail.at(-1).html.match(/href="([^"]*\/auth\/confirm\?token=[^"]+)"/)[1].replaceAll('&amp;','&');
+   const signed=await h.send('/auth/confirm',{token:new URL(link,h.origin).searchParams.get('token')});assert.equal(signed.status,303,signed.text);cookie=signed.cookie;
+  };
+  await restart('2026-12-01T00:00:00.000Z');
+  assert.equal((await decide(3,'approve')).state,'executed');
+  assert.deepEqual(await snapshot('2026-11'),expected(2,1,1),'Next-month approval updates the request month');
+  const empty={totals:{request_attempts:0,replays:0,original_operations:0},decisions:[],classes:[]};
+  assert.deepEqual(await snapshot('2026-12'),empty,'A person approval is not a next-month agent request');
+  await restart('2026-12-01T23:59:59.999Z');
+  assert.equal((await person(held[3].url.replace('/agents/approvals/','/agents/api/approvals/'))).approval.state,'expired');
+  assert.deepEqual(await snapshot('2026-11'),expected(2,2,0),'Expiry resolves the held request without an agent retry');
+  assert.deepEqual(await snapshot('2026-12'),empty);
+  const screen=await h.send('/app/operations?month=2026-11',undefined,cookie);
+  assert.equal(screen.status,200);
+  assert.ok(screen.text.includes('4 request attempts · 4 original operations · 0 replays'));
+  assert.ok(screen.text.includes('approval · done: 2 attempts'));
+  assert.ok(screen.text.includes('approval · refused: 2 attempts'));
+  assert.ok(!screen.text.includes('approval · pending:'),'Resolved requests are not shown as pending');
+  const replay=await call(4);assert.equal(errorCode(replay),'approval_expired');
+  const retried=await snapshot('2026-12');
+  assert.deepEqual(retried.totals,{request_attempts:1,replays:1,original_operations:0},'An actual agent retry still counts as a request');
+  assert.deepEqual(await snapshot('2026-11'),expected(2,2,0));
+  console.log('PROBE BASE-AGENT-011 AP5 monthly totals: four November requests, two approvals including one in December, no invented December call; one actual December replay PASS');
+  console.log('PROBE BASE-AGENT-011 AP5 resolved outcomes: two done, two refused after rejection and expiry, zero pending in decisions and classes after restart PASS');
  } finally {await h.close()}
 }
