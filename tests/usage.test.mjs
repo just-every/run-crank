@@ -19,7 +19,7 @@ const completeSetup = async h => {
 };
 const form = (h, fields) => h.mf.dispatchFetch(h.origin + '/app/action', { method: 'POST', redirect: 'manual', headers: { origin: h.origin, cookie: h.owner, 'content-type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams(fields).toString() });
 
-test('OPS-002: exact owner estimates precede publication; concurrent budget exhaustion preserves backlog, notices and audited replenishment', async () => {
+async function budgetAdmission() {
   const fake = fakeEdge();
   fake.routes.set('meter.example', () => jsonResponse({ id: 'provider-record' }, 201, { 'x-crank-usage-usd': '0.1' }));
   const h = await harness(target, { edge: fake.edge, quoteCosts: false });
@@ -76,9 +76,10 @@ test('OPS-002: exact owner estimates precede publication; concurrent budget exha
     assert.equal((await h.get(`workflows/${workflow.id}/estimate`)).status, 'stale');
     await h.post(`workflows/${workflow.id}/publish`, {}, h.owner, 409);
   } finally { await h.close(); }
-});
+}
 
-test('OPS-002: workflow and team caps, trigger holds, per-run step ceilings, test exclusion and unknown charges are observable', async () => {
+
+async function triggerBudgets() {
   const fake = fakeEdge(); fake.routes.set('meter.example', () => jsonResponse({ id: 'observed-only' }, 201));
   const h = await harness(target, { edge: fake.edge, quoteCosts: false });
   try {
@@ -113,12 +114,13 @@ test('OPS-002: workflow and team caps, trigger holds, per-run step ceilings, tes
     assert.equal(tested.mode, 'test'); assert.equal(tested.status, 'succeeded');
     assert.equal((await h.get('reports/usage?workflow=' + testing.id)).totals.runs, 0);
   } finally { await h.close(); }
-});
+}
+
 
 const archiveRows = text => text.trim().split('\n').map(JSON.parse).flatMap(line => line.items ?? []).filter(item => item.kind === 'row');
 const usageInventory = text => archiveRows(text).filter(item => item.table.startsWith('crank_usage_') || ['crank_step_admissions','crank_schedule_holds'].includes(item.table)).map(item => JSON.stringify(item)).sort();
 
-test('OPS-002 DATA-001 DATA-002: full usage inventory restores inactive; erasure retains only value-free spending and cannot fund more runs', async () => {
+async function usageCustody() {
   const fake = fakeEdge(); fake.routes.set('meter.example', ({url}) => jsonResponse({ id: 'reported-record' }, 201, { 'x-crank-usage-usd': url.pathname === '/bad' ? 'not a USD amount' : '0.2' }));
   const source = await harness(target, { edge: fake.edge, quoteCosts: false }), destination = await harness(target, { edge: fake.edge, quoteCosts: false });
   try {
@@ -153,9 +155,10 @@ test('OPS-002 DATA-001 DATA-002: full usage inventory restores inactive; erasure
     await source.post(`workflows/${workflow.id}/resume`);
     assert.equal((await start(source, workflow, 'after-erasure')).held, true);
   } finally { await source.close(); await destination.close(); }
-});
+}
 
-test('OPS-002: legacy approval inputs stay held without loss; owner release creates approval work and usage survives restore', async () => {
+
+async function legacyUsageCustody() {
   const h = await harness(target, { quoteCosts: false }), receiving = await harness(target, { quoteCosts: false });
   try {
     const flow = await h.post('flows', { name: 'Harbour approval deliveries', source_app: 'Harbour desk', destination_app: 'Accounts inbox', target_url: target + '/events' }, h.owner, 201);
@@ -183,9 +186,10 @@ test('OPS-002: legacy approval inputs stay held without loss; owner release crea
     assert.deepEqual(usageInventory((await receiving.send('/api/crank/data/export', {}, receiving.owner)).text), usageInventory(archive));
     await h.post(`runs/${first.id}/reject`);
   } finally { await h.close(); await receiving.close(); }
-});
+}
 
-test('OPS-002: reported over-reservation spend pauses the next request, invalid charges stay unknown, and rollback reuses a visible immutable quote', async () => {
+
+async function reportedUsage() {
   const edge = fakeEdge();
   edge.routes.set('meter.example', ({ url }) => url.pathname === '/redirect' ? new Response(null,{status:302,headers:{location:'https://billing.example/final'}}) : jsonResponse({ id: url.pathname }, 201, { 'x-crank-usage-usd': url.pathname === '/bad' ? 'unusable provider amount' : '0.3' }));
   edge.routes.set('billing.example', () => jsonResponse({ id:'redirected-response' },200,{'x-crank-usage-usd':'0.15'}));
@@ -223,9 +227,10 @@ test('OPS-002: reported over-reservation spend pauses the next request, invalid 
     const rollback = await h.post(`workflows/${bad.id}/rollback`, { version: 1 }, h.owner, 201);
     assert.deepEqual((await h.get(`workflows/${bad.id}/versions/${rollback.version.number}`)).estimate, original.estimate);
   } finally { await h.close(); }
-});
+}
 
-test('OPS-002 TRIG-002: exhausted schedules and polls retain every due occurrence/item until reviewed release', async () => {
+
+async function scheduledUsage() {
   const edge = fakeEdge(); edge.routes.set('meter.example', ({url}) => url.pathname === '/feed' ? jsonResponse({items:[{id:'order-A'},{id:'order-B'}]}) : jsonResponse({id:'record'}));
   const h = await harness(target, { edge: edge.edge, quoteCosts: false });
   try {
@@ -252,4 +257,10 @@ test('OPS-002 TRIG-002: exhausted schedules and polls retain every due occurrenc
     assert.equal((await h.get(`workflow-runs?workflow=${schedule.id}`)).runs.length, 3);
     assert.equal((await h.get(`workflow-runs?workflow=${poll.id}`)).runs.length, 2);
   } finally { await h.close(); }
-});
+}
+
+
+test('OPS-002: owner estimates, budget admissions, reported spend and rollback remain attributable', async()=>{await budgetAdmission();await reportedUsage()});
+test('OPS-002: workflow and team caps retain triggered and scheduled work until reviewed release', async()=>{await triggerBudgets();await scheduledUsage()});
+test('OPS-002 DATA-001 DATA-002: native and legacy usage restore inactive and erasure cannot fund more work', async()=>{await usageCustody();await legacyUsageCustody()});
+test('Native agent usage reports the complete UTC month with actual decisions, replay and current owner authority', async()=>{const {agentUsageJourney}=await import('./agent-door/usage-journey.mjs');await agentUsageJourney()});
