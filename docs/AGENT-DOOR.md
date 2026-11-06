@@ -181,6 +181,31 @@ classes the strictest result wins; this slice carries only `standard`.
 Approval retains the exact server summary and SHA-256, target and revision.
 The named person decides through the person door with the saved revision and
 summary hash. A changed target/revision invalidates stale approval evidence.
+Local policy admission resolves every named approver and reviewer through the
+current native people adapter. Each `person:` reference must identify an active
+native person; an unknown, invited-but-unaccepted or inactive person returns
+`policy_refs_unresolved` without replacing the last valid document or advancing
+its revision. Business policy admission retains its separate signed subject
+binding. Neither path turns a local person ID into a Business subject.
+
+For the existing inert workflow tools, an explicit standard approval policy may
+name two independent native people. Both must decide from their own signed-in
+sessions before the effect can occur. Sponsor, unrelated, agent and device
+requests cannot stand in for those named decisions. Previously recorded approvals
+are rechecked against current active identity, policy revision, native draft
+revision and the exact saved server summary at execution. Keyed concurrent and
+restarted retries return the original result and receipt without another effect.
+Rejection, expiry or stale evidence leaves the held effect unapplied. Explicit
+autonomous and standard review policies retain their existing behavior.
+
+`tests/agent-door/named-approvals-journey.mjs` exercises these native public doors;
+`tests/agent-door/named-approvals-browser.mjs` uses independent signed-in browser
+sessions and records pending, first-approved, executed, rejected, expired and
+refused pages at 1440 and 390. This local inert slice stays PARTIAL: it grants no
+provider execution, Business propagation, tenant interoperability, additional
+class coverage or adoption parity through omitted agent doors. Existing scope,
+consent, recovery, attribution, activity, usage, custody and egress holds remain.
+
 An MCP elicitation response is a handoff to that decision, not the decision
 itself. Pause and revocation are checked again before execution; Crank repeats
 the relevant authority fence at native mutation time. Agent-door Pause controls

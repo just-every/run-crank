@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import namedApprovalsJourney from './named-approvals-journey.mjs';
 import promptsJourney, {promptGuards} from './prompts-journey.mjs';
 
 export async function afterStep(context) {
@@ -12,6 +13,7 @@ const output = answer => { assert.equal(answer.status, 200); assert.ok(!answer.r
 // writes use native routes and the real policy/authority/persistence pipeline.
 export default async function journey({request, origin, cookie, tool}) {
  await promptGuards({request, origin, cookie});
+ await namedApprovalsJourney();
  const person = async (path, body) => {
   const response = await request(origin + path, {
    ...(body === undefined ? {} : {method: 'POST', body: JSON.stringify(body)}),
