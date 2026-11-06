@@ -6724,7 +6724,7 @@
       "executable": false
     },
     "tests/agent-door/prompts-journey.mjs": {
-      "sha256": "a8c6d8297200fa45b14304c2bf33e7d305aa7f531df780b1d35d69777f440289",
+      "sha256": "99aca54be85153bc667b25eff4d97954294448ded233cafd8d5137b9b4cf8357",
       "executable": false
     },
     "tests/ai-steps-browser.mjs": {
