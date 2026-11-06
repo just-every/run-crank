@@ -47,7 +47,9 @@ export async function authorize(request: Request, original: CrankEnv): Promise<A
     if (token.scope === 'agent' && !['/mcp', '/api/crank/v1/mcp'].includes(new URL(request.url).pathname)) {
       const path = new URL(request.url).pathname
       const family = path.includes('/connections') ? 'connections:read' : path.includes('/catalog') || path.includes('/coverage') ? 'catalog:read' : /\/(?:workflow-runs|runs)(?:\/|$)/.test(path) ? 'runs:read' : 'workflows:read'
-      requireValue(scopes.includes(request.method === 'GET' ? family : 'workflows:prepare'), 'Tool scope was removed', 403)
+      // State includes both flow metadata and run payloads, approvals and attempts.
+      const required = request.method !== 'GET' ? ['workflows:prepare'] : path === '/api/crank/state' ? ['workflows:read', 'runs:read'] : [family]
+      requireValue(required.every(scope => scopes.includes(scope)), 'Tool scope was removed', 403)
     }
     return { agentScopes: scopes, id: token.created_by, name: token.display_name, role: 'admin', kind: token.scope, version: token.operator_version, tokenId: token.id, flowId: token.flow_id, local: env.AUTH_LOCAL === 'true' }
   }

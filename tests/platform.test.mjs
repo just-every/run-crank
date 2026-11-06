@@ -117,6 +117,29 @@ test('PLATFORM-001: SDK and CORE door draft lifecycle, native granted execution/
     } finally {await receiving.close()}
    }});
 
+  // Aggregate native reads must honor both the issued ceiling and later removal.
+  const flow=await h.flow('synthetic-crank-scope-read'),privateInput={note:'synthetic-crank-private-run-input'};
+  const pending=await h.run(flow,'synthetic-crank-scope-read',privateInput);assert.equal(pending.state,'pending');
+  const scoped=await h.post('tokens',{label:'synthetic-crank-read-removal',scope:'agent',tool_scopes:['workflows:read','runs:read']},h.owner,201);
+  const limited=await h.post('tokens',{label:'synthetic-crank-issued-read-ceiling',scope:'agent',tool_scopes:['workflows:read']},h.owner,201);
+  const read=(path,token,status=200)=>h.get(path,'',status,{authorization:'Bearer '+token});
+  const visible=async token=>{
+   assert.deepEqual((await read('runs/'+pending.id,token)).input,privateInput);
+   assert.deepEqual((await read('state',token)).runs.find(row=>row.id===pending.id)?.input,privateInput);
+  };
+  await visible(scoped.token);
+  const removal=await h.post('agent-access/'+encodeURIComponent(scoped.agent_access.agent_id),{scopes:['workflows:read'],revision:scoped.agent_access.revision});
+  assert.deepEqual(removal.scopes,['workflows:read']);
+  for(const restarted of [false,true]){
+   if(restarted)await h.restart();
+   for(const token of [scoped.token,limited.token]){
+    await read('runs/'+pending.id,token,403);await read('state',token,403);
+    assert.equal((await read('flows/'+flow.id,token)).id,flow.id,'Retained workflow reads still work');
+   }
+   await visible(preparer.token);
+   assert.deepEqual((await h.get('state')).runs.find(row=>row.id===pending.id)?.input,privateInput,'Native owner reads remain authorized');
+  }
+
   const independent=await issue(h,current), other=client(h,{token:independent.credential});
   const separate=await other.startTask(input,{idempotencyKey:'receipt-one'});assert.notEqual(separate.id,run.id);assert.equal(edge.requests.length,count+1);
   await h.post(`workflows/${draft.id}/pause`);
