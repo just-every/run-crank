@@ -34,6 +34,46 @@ operations; it does not claim provider-spend-cap enforcement. Other native
 Crank routes, execution paths and connectors have broader purposes outside this
 registry.
 
+## Generated on-site reference
+
+Open `/docs/agents` on the installed application for the current registry reference.
+The public page groups admitted tools by job and shows their exact names, scopes,
+classes, classification case references and enriched input and output schemas.
+It also states the current resource-template boundary, capacity limits, typed
+errors and specialist preparation guidance. The same route accepts an explicit
+JSON Accept header for its machine-readable reference representation.
+
+The local development server admits the public `agent-surface.json` declaration
+explicitly, so the same reference and registry load through `rer dev` as in the
+emitted Worker. Private settings, archives and installer state retain their
+existing exclusions.
+
+The edition wrapper uses the shared registry enrichment and descriptors for both
+this reference and MCP lists. Discovery and initialization instructions are built
+from that registry and link to the page. Public documentation contains declarations
+only: no workflow names, customer payloads, credentials or current policy answers.
+Live discovery lists remain subject to authentication and company policy.
+
+`agent-surface.json` holds the per-tool job and classification references. Each
+reference names `checkClasses` in `src/modules/agent-door/conformance/journey.mjs`
+and its actual autonomous and held fixture case IDs. The shared conformance
+journey compares actual server classifications with those fixture expectations.
+The reference is documentation of that proof, never a new classification rule.
+
+`tests/agent-door/journey.mjs`, `documentationJourney`, compares the native HTTP
+page and its schemas against discovery, initialization and lists on both MCP
+paths. The existing PLATFORM-001 sanity journey and hosted CORE native journey
+invoke it. `tests/agent-door/documentation-browser.mjs`, `documentationBrowser`,
+is registered through the existing MCP browser journey in push Verify. It uses
+the emitted Worker, checks keyboard navigation and readable schemas, proves
+literal hostile labels through the production renderer, and captures the page
+at 1440 and 390. Existing client-server browser assertions remain in that journey.
+This extension adds no test registration or independently invoked script.
+
+The page supplies no resource, prompt, event or subscription capability. Full
+specialist jobs, native and provider parity, stranger-specialist completion and
+remaining conformance families stay unfinished.
+
 ## The twelve declared tools
 
 Every tool declares only `standard`, with server-computed item-count facts.

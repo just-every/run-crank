@@ -1,6 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {harness} from './harness.mjs';
+import {documentationJourney} from './agent-door/journey.mjs';
 import {fakeEdge,jsonResponse,settled} from './kit.mjs';
 import {CrankClient,CrankApiError} from '../sdk/index.js';
 import {archive} from './restore-journey.mjs';
@@ -28,6 +29,7 @@ test('PLATFORM-001: SDK and CORE door draft lifecycle, native granted execution/
   const notification=await h.mf.dispatchFetch(h.origin+'/api/crank/v1/mcp',{method:'POST',headers:{origin:h.origin,authorization:'Bearer '+preparer.token,accept:'application/json, text/event-stream','content-type':'application/json','mcp-protocol-version':'2025-11-25'},body:JSON.stringify({jsonrpc:'2.0',method:'notifications/initialized'})});assert.equal(notification.status,202);assert.equal(await notification.text(),'');
   const hostile=await h.mf.dispatchFetch(h.origin+'/api/crank/v1/mcp',{method:'POST',headers:{origin:'https://foreign.example',cookie:h.owner,accept:'application/json, text/event-stream','content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:1,method:'tools/list'})});assert.equal(hostile.status,403);
   const malformed=await h.mf.dispatchFetch(h.origin+'/api/crank/v1/mcp',{method:'POST',headers:{origin:h.origin,cookie:h.owner,accept:'application/json, text/event-stream','content-type':'application/json'},body:'{'});assert.equal(malformed.status,400);assert.equal((await malformed.json()).error.code,-32700);
+  await documentationJourney({request:(url,init)=>h.mf.dispatchFetch(url,init),origin:h.origin,cookie:h.owner,token:preparer.token});
   const listed=await rpc('tools/list');assert.ok(listed.value.result.tools.some(t=>t.name==='crank.workflows.create'));
   assert.equal((await rpc('invented')).value.error.code,-32601);
   assert.equal((await rpc('tools/call',{name:'crank.runs.get',arguments:{run_id:7}})).value.result._meta['com.runeditrun/error'].code,'invalid_arguments');
