@@ -6,6 +6,7 @@ export interface AppDefinition {
   test?: { method: string; url: string }
 }
 export const APPS: Record<string, AppDefinition> = Object.assign(Object.create(null), {
+  typeform: { name: 'Typeform response lookup', kinds: ['bearer'], domains: ['api.typeform.com'] },
   openai: { name: 'OpenAI text classification', kinds: ['bearer'], domains: ['api.openai.com'] },
   orbit: { name: 'Orbit scoped deal API', kinds: ['bearer'], domains: 'declared' },
   nook: { name: 'Nook integration token', kinds: ['bearer'], domains: 'declared' },
