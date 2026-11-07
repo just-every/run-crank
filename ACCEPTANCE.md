@@ -868,9 +868,9 @@ Status: partial.
 
 *Tier:* Agent surface **Requirement.** Every seed, hosted or self-hosted, serves one remote MCP endpoint at `/mcp` over Streamable HTTP. It speaks the current revision (2026-07-28) and accepts 2025-11-25 clients through the twelve-month deprecation window. It implements `server / discover`, tools, resources and prompts. Lists are deterministic and carry `ttlMs` and `cacheScope: "private"`. Roots, Sampling and Logging are not served. **Acceptance.** 1. `server / discover` returns the supported versions, capabilities, `serverInfo` and instructions. 2. A 2026-07-28 request works with no handshake, and a 2025-11-25 client completes `initialize` and lists the same tools. 3. An unsupported version returns `UnsupportedProtocolVersion`. 4. Two `tools / list` calls return the same order, with cache fields. 5. A foreign Origin returns 403, and a header and body method mismatch returns `HeaderMismatch`. 6. An oversized body returns 413 with no effect.
 
-Current evidence: rer 0.2.91 hosted CORE conformance: 1,021/1,021 points (29 Oct 2026); `agent-surface.json`; `tests/agent-door/journey.mjs`; `docs/AGENT-DOOR.md`.
+Current evidence: `agent-surface.json`; `tests/agent-door/journey.mjs` native CORE journey; `tests/agent-door/prompts-journey.mjs` bounded draft preparation and redacted run inspection under autonomous and held policies, private discovery and refusal guards; `docs/AGENT-DOOR.md`.
 
-Remaining gap: Publication-bound client connector MCP remains a separate native door; full one-surface adoption is PARTIAL.
+Remaining gap: Publication-bound client connector MCP remains a separate native door; full one-surface adoption is PARTIAL. Resources remain with BASE-AGENT-003. Broader specialist and provider jobs, optional events and subscriptions, full hosted and self-hosted compatibility and complete specialist acceptance remain required. Existing owner, account, ct, enforcing-egress and device holds remain unchanged; this prompt-only slice releases no provider, Business, IdP or queued-clause prerequisite.
 
 ## BASE-AGENT-002 — The seed's jobs are tools, through the UI's own actions
 
@@ -888,9 +888,9 @@ Status: partial.
 
 *Tier:* Agent surface **Requirement.** Each primary record type has a URI template, and tools return `resource_link`s to the records they touch. A read returns exactly the fields the caller's role sees in the UI. File bytes count against any byte budget on the grant. A record the caller cannot open reads as not found, identical to a missing id. Text from customers, imports or files carries an untrusted marker in `_meta`. **Acceptance.** 1. `resources / templates / list` names every record type in the Agent surface. 2. Reads as two roles return exactly what the UI shows each. 3. An out-of-scope id and a missing id give identical responses. 4. A write's `resource_link` reads back the new state. 5. Bytes over budget return `budget_exhausted` and no partial content. 6. Customer-sourced text carries the untrusted marker.
 
-Current evidence: rer 0.2.91 hosted CORE conformance: 1,021/1,021 points (29 Oct 2026); `agent-surface.json`; `tests/agent-door/journey.mjs`; `docs/AGENT-DOOR.md`.
+Current evidence: `tests/agent-door/resources-journey.mjs` — resourcesJourney through production MCP and native person doors: full workflow field parity for owner and scoped viewer; autonomous and held reads; exact revision links after writes; indistinguishable missing and cross-sponsor scope refusal; fresh resource-read scope; unanswered sensitive policy; hostile untrusted text; stale records and approvals; mid-classification record, scope and consent revocation; native agent revocation and inactive sponsors; approved-read replay after role changes; inactive restore. Invoked by `tests/agent-door/journey.mjs` and the existing CORE lifecycle in `tests/platform.test.mjs`.
 
-Remaining gap: Undeclared family: resources. Templates, reads and links are refused; primary-record resources are not claimed.
+Remaining gap: One native workflow record family and workflow preparation links are implemented; all other primary-record types and broader tool links remain required. Full returned workflow content is conservatively sensitive regardless of declared data class and requires fresh explicit resource-read scope; this grants no provider consent or execution authority. File-byte resources and grant byte-budget enforcement, provider-content reads, remaining resource-refresh conformance and full specialist and provider journeys remain required. All recorded owner and account, ct, Base-egress and device holds remain unchanged.
 
 ## BASE-AGENT-004 — Business identity and short-lived, audience-bound tokens
 
