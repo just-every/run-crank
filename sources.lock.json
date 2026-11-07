@@ -132,7 +132,7 @@
       "executable": false
     },
     ".github/workflows/verify.yml": {
-      "sha256": "6372479025acc34fcc6d577f06553c4e65d48e856ecd56166ecf1f3be4d9e243",
+      "sha256": "53e47fdb5b146f44d6bfd3fa6fd544d9b58d90d251c4a4918d413e59d1f05c46",
       "executable": false
     },
     ".gitignore": {
@@ -144,11 +144,11 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "8ee38ff34344e2c847d00c6bba9afd44dc5e98a248796753b5cee1e2060914a6",
+      "sha256": "d3d2eda36b6d2c6e6f19dc6ab60b3689014432f18c5374fc37ff214ba7c4914f",
       "executable": false
     },
     "agent-surface.json": {
-      "sha256": "b7a19f619ebc33d3e1f594779c1621699f2d625219d5d40936d6422185e6a7a0",
+      "sha256": "7f5bff2d925104d5f0700351d70747b014264f7f90d097a1a64b0956369a958d",
       "executable": false
     },
     "AGENTS.md": {
@@ -172,7 +172,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "e3dec2a78eefc32866d3992e41160474ea2719ffc9c83eba3258a43a30927470",
+      "sha256": "01dcf1fbed0c384dc8e28955c1eb77ea47fba3fcfc206bde934ec488b4c3cf76",
       "executable": false
     },
     "DEMO.md": {
@@ -196,7 +196,7 @@
       "executable": false
     },
     "docs/AGENT-DOOR.md": {
-      "sha256": "8d4d70ad06d368c38c88220e84c3ad09e3543cb7192ca467574ccfc30ed67380",
+      "sha256": "7e4d24858a096582472aa94374426f57437c3caf68b4a7b49a0380a462b11436",
       "executable": false
     },
     "docs/API.md": {
@@ -216,7 +216,7 @@
       "executable": false
     },
     "docs/CLAIMS.md": {
-      "sha256": "b537ad545338509f63303e9e07017ab4c8e1aeb31612c661b5e01a408875597e",
+      "sha256": "f1a9779f379138b4d9c842d7920542c763013dbfdcdc37dda7f23d5b29af6a90",
       "executable": false
     },
     "docs/DATA-FLOWS.md": {
@@ -2951,8 +2951,12 @@
       "sha256": "ada220adf2c63a88766fc37f4013eaf1b2d7b675d88d44d3408246e577aa38d6",
       "executable": false
     },
+    "src/crank/agent-door/documentation.ts": {
+      "sha256": "8a33a3323fcb05a8477e5aaffc1f11ff2d7ce7655a65c7216b1e8d07999f32d0",
+      "executable": false
+    },
     "src/crank/agent-door/index.ts": {
-      "sha256": "66937b3c0c9899c125dba074fbd6d090ebd27c8f233d3ce45c5bf573ba754671",
+      "sha256": "32736e6528ab46bb7bf9456a33220615d040f07585fc5e4cd502d6e9688a8e74",
       "executable": false
     },
     "src/crank/agent-door/native.ts": {
@@ -2980,7 +2984,7 @@
       "executable": false
     },
     "src/crank/agent-door/tools.ts": {
-      "sha256": "8def99494cb9b77f8d7939749fedfb95922d5a6f45688641c876454aab09a89c",
+      "sha256": "39442603b19b9ca12d32418269172d065fbfac2618c2e522d871fff3edc46d46",
       "executable": false
     },
     "src/crank/agents/authoring-model.ts": {
@@ -6719,12 +6723,16 @@
       "sha256": "0c09db04c84b104431dfca05ab12604ae51308f7359f368bcb70240329043ac0",
       "executable": false
     },
+    "tests/agent-door/documentation-browser.mjs": {
+      "sha256": "a7268a7026a7d1b4e498efe2025866649b9fc33ca91e4bef743aa2cbb64d89f7",
+      "executable": false
+    },
     "tests/agent-door/fixtures.mjs": {
       "sha256": "14a6ebcdee1003d9632e77cf4cf1259bc3d003fc8204d74040790244557038fa",
       "executable": false
     },
     "tests/agent-door/journey.mjs": {
-      "sha256": "f0bb6835b81e7d3c8832b60ecbd5ccab44fb86d5b2321d3c0b05e5919b956e11",
+      "sha256": "3db1f0216cdc307c98dbee5d3727248f188e48a6f69940e9adb9ac346ddf5f91",
       "executable": false
     },
     "tests/agent-door/named-approvals-browser.mjs": {
@@ -7104,7 +7112,7 @@
       "executable": false
     },
     "tests/mcp-client-browser.mjs": {
-      "sha256": "656052b0a9d8d8177cd3d75d62a69615e1f5ae34ac04466bcf96304f4d47e6bd",
+      "sha256": "b915ef7eb9612f0a6425dda1c654c20414d1a9bce9f38733482e2788e2b8dd67",
       "executable": false
     },
     "tests/mcp-client-journey.mjs": {
@@ -7204,7 +7212,7 @@
       "executable": false
     },
     "tests/platform.test.mjs": {
-      "sha256": "cbe042519a0df93f3ddfb886c60d826558c7150faf27b67b3627d97489acf76d",
+      "sha256": "8aac934fd3db8249e7f49045d62f611c8863f497fa3478362922b2de6d4165bc",
       "executable": false
     },
     "tests/postgres-write-fixture.mjs": {
@@ -7428,11 +7436,11 @@
       "executable": false
     },
     "VERIFY-WORKFLOW.md": {
-      "sha256": "6ce5a5998c1aae1fc79a88dc09403382facd77bea5d787a63e6daafec07bbdf4",
+      "sha256": "a426f7aa372716d1c7cf8780b96bb1655fe2648e6064747a4da1806e4cd05c86",
       "executable": false
     },
     "vite.config.ts": {
-      "sha256": "8b20eacac4d6971222866f9515fbefa2185970bc504606603a4641e60a913b12",
+      "sha256": "97300d4a4685f731964def81f819d756043e1d49217b46e0ffd57e43f44a3121",
       "executable": false
     },
     "vite.site.config.ts": {
