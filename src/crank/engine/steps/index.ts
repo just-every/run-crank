@@ -1,3 +1,4 @@
+import { typeformFindResponse } from '../../connectors/typeform'
 import { hubspotFindContact } from '../../connectors/hubspot'
 import { aiClassify } from './ai'
 import { orbitSteps } from '../../connectors/orbit'
@@ -28,6 +29,7 @@ import { join } from './join'
 
 /** Every step a published version may declare; `paths` groups are handled by the executor. */
 export const STEP_TYPES: Record<string, StepType> = Object.assign(Object.create(null), {
+  'typeform.find_response': typeformFindResponse,
   'hubspot.find_contact': hubspotFindContact,
   'microsoft_teams.find_user_by_email': teamsFindUserByEmail,
   'gmail.search_threads': gmailSearchThreads,
