@@ -28,6 +28,7 @@ export async function dataFlows(env: CrankEnv) {
     fields: ['business prompt', 'owner-selected connector schemas', 'owner-submitted samples', 'allowed account identifiers and mappings'],
     credentials: 'Installation AI_API_KEY or MODELS_KEY; credentials remain server-side' })
   add({ id: 'workflow-samples', kind: 'sample', label: 'Retained workflow samples', state: 'explicit preview only', recipients: [], purpose: 'Owner-started draft webhook capture and authorized manual, history and schema previews; no production admission', fields: ['sample fields, body, safe headers, query and file content', 'source identity, time and declared field paths'], credentials: 'No app credential; single-use draft URL expires after ten minutes and never travels in archives', region: 'This installation', retention: 'Retained until explicitly deleted; history copies follow source-run erasure and payload expiry. Archives restore samples unselected, without a receiving URL.' })
+  add({ id: 'inbound-email', kind: 'email', label: 'Inbound workflow email', state: 'owner-managed aliases; external routing required', recipients: ['Cloudflare Email Routing and this installation'], purpose: 'Admit messages to a published email workflow; sender allowlists use the envelope and configured authentication gates fail closed without trusted routing evidence', fields: ['sender, recipients, subject, literal text and HTML, headers, forwarded fields', 'bounded attachments as stored file references'], credentials: 'Opaque alias; hashes stored locally; no mailbox credential', region: 'Installation and Cloudflare routing region; provider custody is unverified', retention: 'Run payload and file retention, legal holds and erasure apply; refusal receipts contain decisions and opaque IDs only. Archives restore every alias inactive.' })
   const mailHosts = { resend: 'https://api.resend.com', sendgrid: 'https://api.sendgrid.com', cloudflare: 'https://api.cloudflare.com' }
   add({ id: 'mail', kind: 'mail', label: 'Installation mail', state: mailLocal ? 'suppressed' : env.MAIL_PROVIDER && env.MAIL_PROVIDER !== 'development' ? 'configured' : 'unconfigured',
     recipients: mailLocal ? [] : env.MAIL_PROVIDER && env.MAIL_PROVIDER in mailHosts ? [mailHosts[env.MAIL_PROVIDER as keyof typeof mailHosts]] : [],
@@ -42,7 +43,13 @@ export async function dataFlows(env: CrankEnv) {
   for (const route of noticeRoutes.results) add({ id: `notice:${route.workflow_id}`, kind: 'notice', label: 'Owner-authorized Slack operational notices', state: route.enabled ? 'enabled' : 'disabled', recipients: ['https://slack.com'], purpose: 'Failure and approval notices to the exact owner-consented conversation; no approval or continuation authority', fields: ['conversation ID', 'notice kind and category', 'owner reference', 'authenticated run link'], credentials: credential(route.connection_id) })
   const apps = await stmt(env, 'SELECT app FROM crank_oauth_apps ORDER BY app').all<{ app: string }>()
   for (const { app } of apps.results) {
-    const p = PROVIDERS[app]
+    const p = Object.hasOwn(PROVIDERS, app) ? PROVIDERS[app] : undefined
+    if (!p) {
+      // A pre-upgrade registration may name an inherited or removed provider.
+      add({ id: `oauth:${app}`, kind: 'oauth', label: `${app} OAuth`, state: 'unsupported provider', recipients: [],
+        purpose: 'Unsupported OAuth registration; consent, token exchange and refresh are refused', fields: [], credentials: 'Sealed client secret stays on this installation' })
+      continue
+    }
     add({ id: `oauth:${app}`, kind: 'oauth', label: `${app} OAuth`, state: 'configured', recipients: [recipient(p.authorize), recipient(p.token)],
       purpose: 'Owner-initiated provider consent, token exchange and refresh', fields: ['client identity', 'requested scopes', 'redirect URI', 'state/PKCE', 'authorization code or refresh token'], credentials: 'Owner-registered client ID and sealed client secret; provider-issued tokens' })
   }
@@ -83,6 +90,8 @@ export async function dataFlows(env: CrankEnv) {
   }
   const digests=await stmt(env,'SELECT id,name,active,retention_days FROM crank_digests ORDER BY id').all<{id:string;name:string;active:number;retention_days:number}>()
   for(const d of digests.results) flows.push({id:`digest:${d.id}`,kind:'digest',label:d.name,state:d.active?'active':'inactive receiving state',recipients:[],purpose:'Local cross-run digest entries and durable release receipts; downstream destinations are disclosed by their workflow steps',fields:['templated entry values','source run references','release occurrence and run references'],credentials:'Current native-owner publication; no external credential for local storage',region:'Owner-operated installation',retention:`${d.retention_days} days for local entries and release values; legal holds preserve values; erased-name digests prevent recreation without retaining entry values`})
+  const tables=await stmt(env,'SELECT id,name,active FROM crank_state_tables ORDER BY id').all<{id:string;name:string;active:number}>()
+  for(const table of tables.results) flows.push({id:`table:${table.id}`,kind:'table',label:table.name,state:table.active?'active':'inactive receiving state',recipients:[],purpose:'Local operational counters, number lists and read-only transform lookups; workflow destinations are disclosed separately',fields:['record keys','safe integers or integer lists','operation receipts'],credentials:'Current native table owner; production lookups require that owner’s publication and non-sensitive workflow',region:'Owner-operated installation',retention:'Until explicit paused-owner erasure; value-free key and operation digests prevent recreation and replay'})
   flows.push(...await graphDataFlows(env, credential))
   return { flows, local_retention: await retentionPolicy(env), notes: [
     'This is configuration disclosure, not evidence a request was sent, a provider was verified, or an agreement was checked.',

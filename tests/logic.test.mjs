@@ -156,7 +156,11 @@ test('BASE-003 WORK-004: business-day delays, callback waits and a shared delay 
   const done = await settled(h, asked.id);
   assert.deepEqual(stepOf(done, 'record').output, { answer: 'PO-7731', timed_out: false });
   const silent = await startRun(h, callback, {});
-  await h.tick(Date.now() + 2 * DAY + MINUTE);
+  const callbackDeadline = Date.parse(silent.waits.find(wait => wait.path === 'reply').expires_at);
+  // Calendar days can span 47 or 49 elapsed hours across Chicago DST.
+  await h.tick(callbackDeadline - MINUTE);
+  assert.equal((await h.get('workflow-runs/' + silent.id)).status, 'waiting', 'the callback cannot time out before its persisted deadline');
+  await h.tick(callbackDeadline + MINUTE);
   assert.equal(stepOf(await h.get('workflow-runs/' + silent.id), 'record').output.timed_out, true, 'the timeout route runs when the deadline passes');
 
   const lateUrl = crmBodies().at(-1).reply_to;

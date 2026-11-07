@@ -7,13 +7,16 @@ const quote = value => /^[a-zA-Z0-9_./:-]+$/.test(value) ? value : `'${value.rep
 
 export const snapshot = file => ({sha256: hash(file.read()), mode: file.executable ? '100755' : '100644'});
 
+export function acknowledgementCommand(root, name, recordPath) {
+  const relative = path.relative(root, cli);
+  return ['node', relative.startsWith('..') ? cli : relative, 'adapt-base', name,
+    ...(recordPath === 'base-copies.json' ? [] : ['--record', recordPath])].map(quote).join(' ');
+}
+
 // Keep the upstream baseline separate from the local bytes the owner accepted.
 // Legacy declarations remain readable, but cannot silently acknowledge new bytes.
 export function acknowledgementDrift(root, copy, name, file, recordPath) {
-  const relative = path.relative(root, cli);
-  const command = ['node', relative.startsWith('..') ? cli : relative, 'adapt-base', name,
-    ...(recordPath === 'base-copies.json' ? [] : ['--record', recordPath])].map(quote).join(' ');
-  const detail = {path: name, copy: copy.path, acknowledge: command};
+  const detail = {path: name, copy: copy.path, acknowledge: acknowledgementCommand(root, name, recordPath)};
   const expected = copy.acknowledged?.[name];
   if (!expected) return [{kind: 'adaptation-unacknowledged', ...detail}];
   const actual = snapshot(file);

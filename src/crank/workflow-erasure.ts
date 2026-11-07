@@ -37,6 +37,7 @@ export async function eraseWorkflowRun(env: CrankEnv, actor: Actor | null, porta
   const service = createErasure({ db: env.DB, portability, declarations: [defineErasure({
     entity: 'workflow-run', root: { table: 'crank_wf_runs' },
     edges: [
+      { table: 'crank_email_receipts', from: 'crank_wf_runs', on: { run_id: 'id' } },
       { table:'crank_digest_entries',from:'crank_wf_runs',on:{source_run_id:'id'} },
       { table:'crank_digest_operations',from:'crank_wf_runs',where:'run_id=? OR instr(result_json,?)>0',params:['id','id'] },
       { table: 'crank_workflow_samples', from: 'crank_wf_runs', where: "source='history' AND source_id=?", params: ['id'] },

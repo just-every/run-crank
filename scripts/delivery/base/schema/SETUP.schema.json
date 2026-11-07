@@ -36,6 +36,9 @@
     "runtime": {
       "$ref": "#/$defs/runtime"
     },
+    "business": {
+      "$ref": "#/$defs/business"
+    },
     "steps": {
       "type": "array",
       "items": {
@@ -85,6 +88,46 @@
     }
   },
   "$defs": {
+    "business": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["settings", "values"],
+      "properties": {
+        "settings": {
+          "const": 1
+        },
+        "values": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": ["display_name", "owner_name", "brand_color", "logo", "timezone"]
+          },
+          "description": "Business values rendered at runtime by this seed. Must include display_name. Logo is delivered only through the signed settings document."
+        },
+        "team": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["roles"],
+          "properties": {
+            "roles": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["admin", "member"],
+              "properties": {
+                "admin": {"$ref": "#/$defs/businessTeamRole"},
+                "member": {"$ref": "#/$defs/businessTeamRole"}
+              }
+            }
+          }
+        }
+      }
+    },
+    "businessTeamRole": {
+      "type": "string",
+      "pattern": "^(?![Oo][Ww][Nn][Ee][Rr]$)(?!\\s)(?![\\s\\S]*\\s$)[^\\x00-\\x1f\\x7f-\\x9f]{1,64}$",
+      "description": "Seed-owned role name for Business teammates. Must never grant ownership; the seed adapter also enforces its native ownership rules."
+    },
     "group": {
       "type": "object",
       "additionalProperties": false,
@@ -160,7 +203,6 @@
             "display_name",
             "owner_name",
             "brand_color",
-            "logo_ref",
             "entity_type",
             "state_of_organization",
             "fiscal_year_start",

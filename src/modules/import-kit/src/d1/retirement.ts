@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { D1CustodyRetirement, D1ErasureJournalEntry, D1ImportContext, D1ImportPerson, D1RetirementOptions, D1RetirementProgress, D1Sql } from './types.ts';
-import { requestContext, packGuards, remaining, D1RequestLimitError } from './budget.ts';
+import { requestContext, limitStatements, packGuards, remaining, D1RequestLimitError } from './budget.ts';
 import { authority, authorize, finalAuthority, guard, readonlyChecks, prepare, readAtomic, sql } from './database.ts';
 import { requireText } from '../provenance/identity.ts';
 import { targetErasure, type ErasureStep } from './erasure.ts';
@@ -39,7 +39,7 @@ export function retireD1ImportCustody(person: D1ImportPerson, nativeStatements: 
 export async function retireD1ImportCustody(person: D1ImportPerson, nativeStatements: D1Sql[], input: D1ImportContext, checkpoint: D1Sql[], options: D1RetirementOptions | D1ErasureStepOptions = {}): Promise<D1CustodyRetirement | D1RetirementProgress | D1ErasurePending> {
   if ('operationKey' in options) return retireD1ImportCustodyStep(person, nativeStatements, input, checkpoint, options);
   person = { ...person, related: person.related ? { ...person.related, fields: fieldRedactions(person.related.fields) } : undefined };
-  const context = requestContext({ ...input, originalErasurePolicy: input.originalErasurePolicy ?? 'withdraw-affected-artifacts' });
+  const context = limitStatements(requestContext({ ...input, originalErasurePolicy: input.originalErasurePolicy ?? 'withdraw-affected-artifacts' }), 1000);
   if (context.maxBatchBytes !== undefined) throw new Error('IMPORT_RETIREMENT_OPERATION_KEY_REQUIRED');
   const values = [...new Set(person.values ?? [])].sort();
   for (const value of values) requireText(value, 'person value');

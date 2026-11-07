@@ -1,3 +1,5 @@
+import type { ImporterReceiptTrustPolicy } from '../receipt/types.ts';
+
 export type ImporterStatus = 'verified' | 'documented format' | 'none';
 
 export interface ImporterEvidenceArtifact {
@@ -64,6 +66,7 @@ export interface ImporterEvidencePort {
   resolve: (link: string) => ResolvedEvidenceArtifact | undefined | Promise<ResolvedEvidenceArtifact | undefined>;
   trustedHosts: readonly string[];
   receiptPublicKeys?: Readonly<Record<string, string>>;
+  receiptTrustPolicy?: ImporterReceiptTrustPolicy;
 }
 
 export interface ImporterValidationIssue {

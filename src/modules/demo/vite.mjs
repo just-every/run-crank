@@ -21,7 +21,7 @@ export function demoSockets() {
         if (error.code !== 'ENOENT') throw error;
         if (on()) throw new Error('rer demo needs deploy-demo.json with the product name and canonical run-site domain. See DEMO.md.');
       }
-      const resolved = declaration && await demoRunDeclaration(declaration, { root: config.root ?? process.cwd() });
+      const resolved = declaration && await demoRunDeclaration(process.env.RER_DEMO_RUN_URL === undefined ? declaration : {...declaration, runUrl: process.env.RER_DEMO_RUN_URL}, { root: config.root ?? process.cwd() });
       return {
         define: { 'import.meta.rerDemo': JSON.stringify(resolved ? { name: resolved.name, url: demoRunUrl(resolved.runUrl === undefined ? `https://${resolved.domain}/run` : resolved.runUrl) } : null) },
         ...(on() && command === 'serve' ? { resolve: { alias: [{ find: /^cloudflare:sockets$/, replacement: 'cloudflare:sockets' }] } } : {}),

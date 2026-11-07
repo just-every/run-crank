@@ -277,13 +277,32 @@ all layers. An import still applying or reversing cannot be superseded
 The bounds below follow [D1 limits](https://developers.cloudflare.com/d1/platform/limits/).
 Bulk text insertion uses the supported [D1 JSON SQL functions](https://developers.cloudflare.com/d1/sql-api/query-json/).
 
-The port counts SQL executions over the entire public invocation (including
-nested resume reads and every atomic batch statement), caps them at 1,000 and
+The port assumes Workers Paid: one Worker invocation allows 1,000 D1 queries;
+Workers Free allows only 50 and is not supported by this budget. Each direct
+read and each `batch()` call counts as one query, independent of batch members.
+Statement length, bound-parameter and value guards still check every member.
+Planning and creation preflight share the production batch-cost function; a
+plan exceeding the fresh creation query ceiling is refused during planning
+with `IMPORT_PLAN_TOO_LARGE`, naming the 1,000-query paid-plan limit.
+`preflightD1ImportJob().totalExecutions` measures those D1 queries;
+`totalStatements` and `mutationStatements` retain the individual statement
+counts, and `mutationExecutions` counts mutation batch calls.
+The door shares one budget across all its kit calls in one HTTP request; later
+apply, resume and undo requests are distinct Worker invocations. Erasure retains
+its existing 1,000-statement work ceiling, counting every batch member as well
+as reads. An explicit `maxStatements` may tighten that separate ceiling.
+
+The port counts queries over the entire public invocation (including
+nested resume reads and atomic batches), caps them at 1,000 and
 returns durable partial progress as the budget approaches exhaustion. Explicit
 `IMPORT_D1_REQUEST_LIMIT`, `IMPORT_D1_STATEMENT_LIMIT` and
 `IMPORT_D1_VALUE_LIMIT` failures publish no portion of the rejected batch.
-Create, apply and reversal reserve both return reads before publication, including
-the read of a chunked plan. Each successful batch retains its checked job state;
+Create, apply and reversal reserve their return reads before publication,
+including chunked-plan readback. A shared calculation sizes plan pages from the
+maximum JSON-encoded stored chunk row bytes, measured before reading, with space
+reserved under the transport ceiling for row metadata and two-byte strings.
+Today's small chunks use up to 64 rows per page; larger legacy chunks use
+smaller pages. Neither the stored plan format nor the canonical byte cap changes. Each successful batch retains its checked job state;
 if a later batch's preflight or exact SQL count exhausts the same request budget,
 the invocation returns that durable partial progress. Other adapter, integrity
 and authority failures still reject. A first batch that cannot fit rejects before

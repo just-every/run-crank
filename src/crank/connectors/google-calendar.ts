@@ -1,3 +1,4 @@
+import { googleCalendarSearchEvents } from './google-calendar-search'
 import { utf8, type BoundedResponse } from '../engine/egress'
 import { StepError } from '../engine/errors'
 import type { StepContext, StepType } from '../engine/types'
@@ -75,4 +76,4 @@ export const googleCalendarCreateEvent: StepType = {
   },
 }
 
-export const googleCalendarSteps: Record<string, StepType> = { 'google_calendar.create_event': googleCalendarCreateEvent }
+export const googleCalendarSteps: Record<string, StepType> = { 'google_calendar.create_event': googleCalendarCreateEvent, 'google_calendar.search_events': googleCalendarSearchEvents }

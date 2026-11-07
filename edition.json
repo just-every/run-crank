@@ -58,7 +58,8 @@
           "verification.json",
           "vite.config.ts",
           "vite.site.config.ts",
-          "wrangler.jsonc"
+          "wrangler.jsonc",
+          "agent-surface.json"
         ],
         "origin": {
           "repository": "runeditrun/base",

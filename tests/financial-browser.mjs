@@ -6,6 +6,7 @@ import {resolve,extname,join} from 'node:path';
 import {chromium,expect} from '@playwright/test';
 import {quickbooksInputJourney,quickbooksReconciliationJourney} from './effect-readback-journey.mjs';
 import {stripeSearchJourney} from './stripe-search-journey.mjs';
+import {quickbooksSearchJourney} from './quickbooks-search-journey.mjs';
 import {gustoHandoffJourney} from './gusto-handoff-journey.mjs';
 const evidence=process.env.CRANK_EVIDENCE;
 assert.ok(evidence,'Set CRANK_EVIDENCE');await mkdir(evidence,{recursive:true});
@@ -58,6 +59,17 @@ try {
    }
    await page.screenshot({path:join(evidence,`${width}-stripe-subscriptions-run.png`),fullPage:true});
   }
+ }});
+ await quickbooksSearchJourney({inspect:async({h,run,state})=>{
+  await attach(h,1440);await page.setViewportSize({width:1440,height:1000});
+  await page.goto(h.origin+`/app/workflow-runs/${run.id}`);
+  const search=page.locator('.timeline-item').filter({hasText:'Find sandbox invoice'});
+  await expect(search).toHaveCount(1);await search.getByText('Input and output',{exact:true}).click();
+  const values=await search.locator('pre').allTextContents();
+  assert.ok(values.some(text=>text.includes('synthetic-crank-101')),'selected exact document number is visible');
+  if(state==='invoice-search-found'){assert.ok(values.some(text=>text.includes('123456789012345678.01')));assert.ok(values.some(text=>text.includes('synthetic-crank-102')))}
+  if(state==='invoice-search-truncated')assert.ok(values.some(text=>text.includes('truncated')));
+  for(const width of [1440,390]){await page.setViewportSize({width,height:1000});await shot(width,state)}
  }});
  for(const width of [1440,390]) {
   await quickbooksInputJourney({inspect:async({h,workflow,run,state})=>{

@@ -48,9 +48,12 @@ export async function getWorkflow(env: CrankEnv, workflowId: string): Promise<Wo
 export async function presentWorkflow(env: CrankEnv, row: WorkflowRow) {
   const versions = await stmt(env, "SELECT id,number,graph_digest,declared_json,published_by,published_at,retired_at FROM crank_workflow_versions WHERE workflow_id=? AND mode='production' ORDER BY number DESC", row.id).all<Omit<VersionRow, 'graph_json' | 'workflow_id'>>()
   const owner = await stmt(env, 'SELECT display_name FROM oa_operators WHERE id=?', row.owner_id).first<{ display_name: string }>()
+  const preparation = await stmt(env, "SELECT detail_json FROM crank_audit WHERE subject_kind='workflow' AND subject_id=? AND action IN('workflow.create','workflow.duplicate','workflow.draft') ORDER BY at DESC,id DESC LIMIT 1", row.id).first<{ detail_json: string }>()
+  const preparedBy = preparation ? JSON.parse(preparation.detail_json).agent_door ?? null : null
   return {
+    prepared_by: preparedBy,
     id: row.id, environment:(row as WorkflowRow & {environment:string}).environment, name: row.name, description: row.description, folder: row.folder, data_class: (row as { data_class?: string }).data_class ?? 'none', owner: { id: row.owner_id, name: owner?.display_name ?? null }, status: row.status,
-    enabled: row.status === 'published', draft: JSON.parse(row.draft_json), poll_rate: pollRate(JSON.parse(row.draft_json).trigger), draft_updated_at: row.draft_updated_at, published_version_id: row.published_version_id,
+    enabled: row.status === 'published', draft: JSON.parse(row.draft_json), poll_rate: pollRate(JSON.parse(row.draft_json).trigger), draft_updated_at: row.draft_updated_at, draft_digest: await digest(canonical(JSON.parse(row.draft_json))), published_version_id: row.published_version_id,
     created_by: row.created_by, created_at: row.created_at,
     versions: versions.results.map(v => ({ id: v.id, number: v.number, graph_digest: v.graph_digest, authority: JSON.parse(v.declared_json), published_by: v.published_by, published_at: v.published_at, retired_at: v.retired_at })),
     // WORK-008: every saved draft edit, newest first, with its author, time and changed fields.
@@ -106,6 +109,11 @@ export async function updateDraft(env: CrankEnv, actor: Actor, workflowId: strin
   const command = await workflowCommand(env, actor, idempotencyKey, 'draft', workflowId, input)
   if (command?.existing) return savedWorkflow(env, workflowId, command.existing, true)
   const current = await getWorkflow(env, workflowId)
+  if (input.draft_digest !== undefined) {
+    requireValue(typeof input.draft_digest === 'string' && /^[a-f0-9]{64}$/.test(input.draft_digest), 'Supply the current draft digest')
+    requireValue(await digest(canonical(JSON.parse(current.draft_json))) === input.draft_digest, 'The draft changed; reload it before saving', 409)
+    expectedDraftJson = expectedDraftJson ?? current.draft_json
+  }
   requireValue(expectedDraftJson===undefined || current.draft_json===expectedDraftJson, 'The draft changed; load its current resources again',409)
   const draftGuard=expectedDraftJson===undefined?null:id()
   const graph = input.graph === undefined ? JSON.parse(current.draft_json) : checked(input.graph).graph
@@ -220,7 +228,7 @@ async function publishVersion(env: CrankEnv, actor: Actor, workflowId: string, i
   const subflows = await subflowPublication(env, actor, graph)
   await checkCustomPublication(env,graph,actor)
   await checkCustomTriggerPublication(env,graph)
-  if (isTableSource(graph.trigger)) requireOwner(actor)
+  if (isTableSource(graph.trigger) || graph.trigger.type === 'email') requireOwner(actor)
   const tableGuard = isTableSource(graph.trigger) ? await tableSourceGuard(env, graph.trigger, { workflowId, ...(pendingRestore(current) ? { adoptingOwnerId: actor.id } : {}) }) : null
   const gateways = customGatewayIds(graph)
   await validateConnectionScopes(env, gateways.map(gatewayId => 'gateway:' + gatewayId), (current as WorkflowRow & {environment:string}).environment)

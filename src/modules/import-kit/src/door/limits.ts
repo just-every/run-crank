@@ -10,7 +10,7 @@ export function sizeLimitError(error: unknown): DoorError | undefined {
   const reason = targetKinds.length
     ? `The exact native snapshot of target kind ${targetKinds.map(kind => JSON.stringify(kind)).join(', ')} exceeds one 2 MiB D1 read; the seed's target adapter needs a compact matchesMany.`
     : error instanceof ImportSizeLimitError ? 'The import custody fence exceeds one 2 MiB D1 read.'
-    : error.message === 'IMPORT_D1_REQUEST_LIMIT' ? 'This request needs more than its 1,000 D1 statements; the seed\'s target adapter must read its native set in a fixed number of queries.'
+    : error.message === 'IMPORT_D1_REQUEST_LIMIT' ? 'This request needs more than its 1,000 D1 queries; the seed\'s target adapter must read its native set in a fixed number of queries.'
     : 'A D1 statement of this import exceeds its size limit.';
   return new DoorError('import_door_too_large', 413, {targetKinds, reason});
 }

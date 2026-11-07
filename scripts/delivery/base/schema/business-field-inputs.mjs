@@ -11,7 +11,6 @@ export const BUSINESS_FIELD_INPUTS = Object.freeze(Object.fromEntries(Object.ent
   display_name: ['APP_NAME', 'WORKSPACE_NAME', 'DEFAULT_TEAM_NAME', 'LAMP_PAGE_NAME', 'LAMP_PAGE_TAGLINE', 'DISPLAY_NAME', 'BUSINESS_NAME'],
   owner_name: ['OWNER_NAME', 'FIRST_OWNER_NAME', 'OWNER_DISPLAY_NAME'],
   brand_color: ['PRIMARY_COLOR', 'LAMP_ACCENT_COLOR', 'BRAND_COLOR'],
-  logo_ref: ['LOGO_REF'],
   entity_type: ['ENTITY_TYPE'],
   state_of_organization: ['STATE_OF_ORGANIZATION'],
   fiscal_year_start: ['FISCAL_YEAR_START'],

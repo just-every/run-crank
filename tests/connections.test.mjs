@@ -9,6 +9,12 @@ import { oauthRenewalJourney } from './oauth-renewal-journey.mjs';
 import { connection, deliver, fakeEdge, fakeSecret, jsonResponse, publish, runs, settled, startRun, stepOf, until } from './kit.mjs';
 
 const fake = fakeEdge();
+test('Gmail thread metadata search retains declared outcomes, consent, parked pages and inactive sealed custody', async () => {
+  const {gmailSearchJourney,gmailCustodyJourney}=await import('./gmail-search-journey.mjs');
+  await gmailSearchJourney();await gmailCustodyJourney();
+  const {typeformSearchJourney,typeformCustodyJourney}=await import('./typeform-search-journey.mjs');
+  await typeformSearchJourney();await typeformCustodyJourney();
+});
 let h;
 before(async () => {
   fake.routes.set('crm.example', () => jsonResponse({ ok: true }, 201));
@@ -136,10 +142,14 @@ test('CONN-002: OAuth consent, refresh and accounts per step; secrets never leav
     assert.ok(flows.length > 0 && flows.every(f => f.status === 'paused' || f.status === 'draft'), 'restored workflows do not dispatch');
   } finally { await other.close() }
   await oauthRenewalJourney();
+  const {hubspotSearchJourney,hubspotCustodyJourney}=await import('./hubspot-search-journey.mjs');
+  await hubspotSearchJourney();await hubspotCustodyJourney();
 });
 
 const slackSign = (secret, body, t = Math.floor(Date.now() / 1000)) => ({ 'x-slack-request-timestamp': String(t), 'x-slack-signature': 'v0=' + createHmac('sha256', secret).update(`v0:${t}:${body}`).digest('hex'), 'content-type': 'application/json' });
 test('CONN-004: Slack posts by channel name and user email, applies search outcomes, finds or creates once, and admits signed events once', async () => {
+  const {teamsSearchJourney,teamsCustodyJourney}=await import('./teams-search-journey.mjs');
+  await teamsSearchJourney();await teamsCustodyJourney();
   const channels = [{ id: 'C01', name: 'general' }, { id: 'C02', name: 'sales' }], posts = [];
   let failUsers = false;
   fake.routes.set('slack.com', ({ url, body }) => {
@@ -452,8 +462,10 @@ test('Custom connector review, agent OpenAPI proposal and sandbox gates retain e
   const agent=await h.post('tokens',{label:'Connector preparation agent',scope:'agent'},h.owner,201);
   const openapi={openapi:'3.0.3',info:{title:'Harbour public stock API',version:'1'},servers:[{url:'https://custom.example'}],'x-crank-id':id,'x-crank-disclosure':customDefinition(id).disclosure,components:{securitySchemes:{stock:{type:'oauth2',flows:{clientCredentials:{tokenUrl:'https://custom.example/token',scopes:{'records.read':'Read stock','scope.refused':'Read private notes'}}}}}},paths:{'/record':{get:{operationId:'record',summary:'Read stock',security:[{stock:['records.read']}],'x-crank-kind':'action',responses:{200:{description:'Current stock'}}}},'/notes':{get:{operationId:'notes',security:[{stock:['scope.refused']}],responses:{200:{description:'Private notes'}}}}}};
   const proposed=await h.post('custom-connectors/propose',{openapi},'',200,{authorization:'Bearer '+agent.token});
-  const tool=await h.send('/api/crank/v1/mcp',{jsonrpc:'2.0',id:1,method:'tools/call',params:{name:'propose_connector',arguments:{openapi}}},'',{authorization:'Bearer '+agent.token,accept:'application/json, text/event-stream','mcp-protocol-version':'2025-06-18'});
-  assert.equal(tool.status,200);assert.equal(tool.value.result.isError,false);assert.equal(tool.value.result.structuredContent.value.definition.id,id);
+  const policy=await h.mf.dispatchFetch(h.origin+'/agents/api/policy',{method:'PUT',headers:{cookie:h.owner,origin:h.origin,'content-type':'application/json'},body:JSON.stringify({document:{schema:'rer-agent-policy/1',catalogue:'rer-agent-classes/1',rules:[{id:'all',class:'*',do:'autonomous'}],spend:{none:true}}})});
+  assert.equal(policy.status,200);await policy.body?.cancel();
+  const tool=await h.send('/api/crank/v1/mcp',{jsonrpc:'2.0',id:1,method:'tools/call',params:{name:'crank.custom.propose',arguments:{openapi,idempotency_key:crypto.randomUUID()}}},'',{authorization:'Bearer '+agent.token,accept:'application/json, text/event-stream','mcp-protocol-version':'2025-11-25'});
+  assert.equal(tool.status,200);assert.ok(!tool.value.error);assert.ok(!tool.value.result.isError);assert.deepEqual(tool.value.result.structuredContent,proposed);
   assert.equal(proposed.requires_owner_review,true);assert.equal(proposed.definition.operations.length,2);
   assert.equal((await h.send('/api/crank/custom-connectors',{definition:proposed.definition,reviewed_digest:proposed.digest,granted_scopes:['records.read'],disclosure_confirmed:true},'',{authorization:'Bearer '+agent.token})).status,403);
   await h.get('custom-connectors','',403,{authorization:'Bearer '+agent.token});
@@ -759,6 +771,8 @@ test('Connection credentials are never resent past a redirect that leaves the AP
 test('Native financial effects reconcile after restart, continue once and require separate compensation approval', async () => {
   await quickbooksInputJourney();
   await quickbooksReconciliationJourney();
+  const { quickbooksSearchJourney } = await import('./quickbooks-search-journey.mjs');
+  await quickbooksSearchJourney();
 });
 test('Regulated Gusto handoffs retain obligations until exact provider agreement and scope consent', gustoHandoffJourney);
 
@@ -770,6 +784,7 @@ test('Invoice outcomes stay open after successful requests until granted repair 
 
 test('Managed Calendar creation reads back the exact event and reconciles response loss without repeating writes',async()=>{
  const {googleCalendarJourney}=await import('./google-calendar-journey.mjs');await googleCalendarJourney();
+ const {googleCalendarSearchJourney,googleCalendarSearchCustodyJourney}=await import('./google-calendar-search-journey.mjs');await googleCalendarSearchJourney();await googleCalendarSearchCustodyJourney();
 });
 
 test('Native Nook delivery binds installation and conversation, retains one effect across lost acknowledgements and fences current authority', async () => {

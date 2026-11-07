@@ -9,6 +9,7 @@ export async function verifyRunCommands(origin) {
     const page = await context.newPage()
     await page.goto(origin + '/run')
     await page.evaluate(() => document.fonts.ready)
+    await page.getByText('Other ways to run locally', { exact: true }).click()
     const inline = page.locator('p code').filter({ hasText: '@runeditrun/rer' })
     const command = 'npx -y @runeditrun/rer dev just-every/run-crank'
     assert.equal(await inline.textContent(), command, 'the complete start command is shown')

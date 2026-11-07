@@ -391,7 +391,7 @@ and separate execution bearer credentials. It creates, saves, reads, validates
 and publishes drafts, reads run pages and starts/inspects granted tasks. It
 never retries a write automatically. Publish still requires a native owner and
 the existing reviewed USD estimate; execution still requires an owner-issued
-grant. The SDK and MCP add no external recipient or execution class: the same
+grant. The SDK preserves the native API authority: the same
 published destinations, input/file limits, audit, sealing, erasure, recovery
 and inactive archive rules apply.
 
@@ -416,8 +416,9 @@ must still authorize the request. `task_id` is a source label, not a unique key.
 Changed reuse returns 409. Task receipts follow the same hash/ID-only local custody
 and operator erasure policy; history erasure leaves a receipt that refuses reuse
 with 409, so a retry cannot resurrect effects. Archives omit task receipts and grants.
-The SDK accepts `startTask(input, {idempotencyKey, signal})`; MCP `start_task`
-accepts `idempotency_key`. Clients never retry automatically.
+The SDK accepts `startTask(input, {idempotencyKey, signal})`. Task execution
+credentials retain this native API purpose and are refused by the CORE agent door.
+Clients never retry automatically.
 
 Publish and rollback use separate operation namespaces and the same credential,
 workflow, key and canonical-body rules. They atomically retain the receipt with
@@ -429,9 +430,9 @@ Current publish authority and workflow scope still apply to every retry. Publica
 receipts share the draft receipt's local hash/ID-only custody and operator erasure;
 restoring an archive still requires the native owner's adoption review. The SDK
 accepts `publishDraft(id, input, {idempotencyKey, signal})` and
-`rollbackWorkflow(id, versionNumber, {idempotencyKey, signal})`. MCP
-`publish_workflow` accepts `idempotency_key`. Other writes keep their existing
-semantics; neither client retries automatically.
+`rollbackWorkflow(id, versionNumber, {idempotencyKey, signal})`. The CORE agent
+door does not expose publication or rollback. Other writes keep their existing
+semantics; clients do not retry automatically.
 
 Duplication (`POST /workflows/:id/duplicate`, body `{}`) supports the same optional
 key under a separate operation and the source workflow as target. The first
@@ -446,38 +447,50 @@ Without a key, each request continues to create a fresh draft. Receipt custody,
 operator erasure and archive exclusion follow the rules above. Restored data
 has no local receipts, and duplication there prepares a fresh inactive draft.
 Use SDK `duplicateWorkflow(sourceId, {idempotencyKey, signal})` or MCP
-`duplicate_workflow({workflow_id, idempotency_key})`. No client retries automatically.
+`crank.workflows.duplicate({workflow_id, idempotency_key})`. No client retries automatically.
 
 ### MCP client connection
 
-Connect a Streamable HTTP MCP client to `/api/crank/v1/mcp`, using the same
-native or bearer credential as the JSON API. The stateless server implements
-protocol `2025-06-18` with JSON responses: `initialize`, `ping`, `tools/list`
-and `tools/call`; initialized/cancelled notifications return 202. Send
-`Accept: application/json, text/event-stream`, JSON-RPC 2.0 and, after
-initialization, `MCP-Protocol-Version: 2025-06-18`. GET returns 405; the server
-does not provide an SSE notification stream or retain MCP sessions. Origin
-checks and authentication apply to every request. The transport follows the
-[MCP Streamable HTTP specification](https://modelcontextprotocol.io/specification/2025-06-18/basic/transports).
+Connect to canonical `/mcp` or its `/api/crank/v1/mcp` alias. Both are served
+by the copied Base agent door and the same native registry. Supported MCP eras
+are `2026-07-28` and `2025-11-25`; initialize and send the matching
+`MCP-Protocol-Version`, JSON-RPC 2.0 and
+`Accept: application/json, text/event-stream`. The 2026 era also requires
+`Mcp-Method`, `Mcp-Name` for named operations, and matching
+`params._meta["io.modelcontextprotocol/protocolVersion"]`; modern client
+capabilities belong in that metadata. Business tokens use the canonical
+`/mcp` audience and bind their signed subject to a current native person through
+signed Business settings. Native cookies are for person controls. Existing
+non-flow-bound preparation bearer credentials retain their narrow scopes.
+Trigger, execution-grant, SDK and connector credentials keep their native purposes.
 
-Tools are `create_draft`, `update_draft`, `validate_draft`, `publish_workflow`,
-`duplicate_workflow`, `get_workflow`, `list_workflows`, `list_runs`, `get_run`, `list_connections`,
-`start_task` and `get_task`. Discover their argument schemas with `tools/list`.
-Create/update/publish/start-task take `input` and optional `idempotency_key`; workflow tools take
-`workflow_id`, run/task reads take `run_id`. `start_task` takes `input` containing
-`task_id` and `actions`. `list_runs` returns the normal `{runs,next}` page;
-pass `next` as `before` on the next call. Tool responses include text JSON and
-`structuredContent:{status,value}`; native refusal sets `isError:true`.
-Protocol/argument errors use JSON-RPC errors. Draft tools cannot execute work,
-preparation credentials cannot publish or start tasks, and an execution
-credential can only start/read its own tasks. Above-limit proposals wait for
-normal exact human review, and unknown tools/transport changes are refused.
-MCP tool metadata is descriptive; the native API enforces every permission.
+The declared CORE families are tools, policy, pause, audit and idempotency.
+Resources, prompts, events and subscriptions are undeclared: their lists and
+discovery do not offer them, and calls return `capability_not_declared` with the
+family name. Unknown tool calls have typed `tool_not_found` errors. This is a
+PARTIAL adoption of the full specialist surface.
 
-Outgoing signed completion subscriptions, webhook retry history and secret
-rotation are not shipped. PLATFORM-001 remains partial, including the Base
-egress door requirement for owner-entered destinations. This MCP server does
-not claim the connected-app MCP capabilities of PLATFORM-002.
+[Agent door documentation](AGENT-DOOR.md) lists the twelve exact `crank.*` tools,
+scopes, native projections and limits. Discover argument and output schemas
+with `tools/list` after company policy is answered. Tools prepare inert workflow
+drafts or read redacted native metadata; they do not publish, execute providers
+or expose full graphs, run payloads, hook URLs or credentials. `crank.custom.propose`
+accepts a supplied OpenAPI document and returns an uninstalled proposal.
+
+Every mutation requires `idempotency_key`; edits and duplication support native
+revision preconditions. Replies carry structured output plus decision metadata;
+refusals use `_meta["com.runeditrun/error"]`. Caller confirmations and imported
+instructions cannot lower the server-computed class. Unset, expired, blocked
+or paused policy makes no effect. A policy approval is a handoff to a named
+person at the supplied URL, never the agent's own confirmation.
+
+The signed receiver is `/api/rer/agent-policy`; native people use `/agents`
+and its approval/audit controls. The existing publication-bound connector MCP
+under `/api/crank/v1/mcp/:client` retains its separate grant lifecycle. Its
+migration into the shared door remains an explicit one-surface gap. Outgoing
+completion subscriptions and the broader provider execution journey are not
+claimed by this CORE declaration. PLATFORM-001 and the Base agent clauses remain
+partial; spend caps and omitted lifecycle families are not proved.
 
 ### Scoped workflow teams (TEAM-001 partial slice)
 
@@ -590,7 +603,7 @@ it does not claim an enforcing Base egress service or hosted deployment qualific
 
 The native owner installs and consents to custom versions. Preparation agents can
 call `POST /api/crank/custom-connectors/propose` with `{openapi: <OpenAPI 3 object>}`
-or `{definition: <typed declaration>}`; MCP's `propose_connector` takes `openapi`.
+or `{definition: <typed declaration>}`; the CORE tool `crank.custom.propose` takes `openapi`.
 The result is inert `{definition,digest,requires_owner_review:true}`. It fetches
 nothing and creates no credential or production authority. Unsupported schemas,
 security alternatives and remote/recursive references fail visibly. The owner
@@ -1124,6 +1137,11 @@ Authorized payload readers use `GET /api/crank/workflows/:id/samples`.
 Preparation callers save a manual trigger sample with
 `POST /api/crank/workflows/:id/samples` and `{source:"manual",sample:{...}}`,
 or select retained workflow history with `{source:"history",run_id:"..."}`.
+Include `step_path` to select that step's successful retained output instead of
+the trigger. The source keeps the run ID, step path and completion time. Missing
+or expired outputs, foreign workflows and callers without payload access are
+refused. Manual step outputs also use `step_path`; unlike trigger payloads,
+step outputs may be any JSON value, including a scalar or an array.
 A schema example uses `{source:"schema",step_path:"...",sample:{...}}` and
 always remains explicitly not tested. Use the same route with a `select` or
 `delete` suffix and `{sample_id:"..."}` to choose or remove a record. Deletion
@@ -1138,3 +1156,85 @@ not connected-provider field discovery. The workflow preview accepts
 `{sample_id:"..."}` or the selected trigger sample by default, and carries its
 source identity and time through pure mapping, transform and condition results.
 An explicit `{sample:{...}}` preview is always labelled manual.
+Selected step outputs carry previews past app steps without executing them.
+Each result names all sample sources consumed so far, and schema sources remain
+labelled not tested. A saved output does not bypass an approval, delay, loop or
+subflow. Missing fields referenced from selected outputs are named in validation
+and publication warnings. Restored step samples stay unselected until adoption
+and explicit selection; history erasure removes their retained copies too.
+
+
+Selected samples can drive the native draft-test door with
+`{sample_id:"...",bindings:{...}}`, or `{use_sample:true,bindings:{...}}` for the
+selected trigger. The test run and its audit retain the source identities rather
+than describing captured data as manual. Successful outputs are retained as
+source-labelled samples at the checkpoint, including an action completed after
+its live-effect approval and restart. Paused or restored workflows and a changed
+draft cannot acquire a new selected response from an old test.
+
+For a top-level HTTP action or read, include `step_path` in the same test request.
+The server freezes earlier pure results and selected app outputs as test data,
+then executes only that HTTP step. Explicitly bind its declared connection in
+`bindings`; unrelated connections are not requested. A production write waits
+for the existing exact effect and account confirmation, while a read requires no
+write confirmation. Earlier approvals, waits and other unsupported controls are
+not bypassed by supplying their sample outputs. Authored workflows continue to
+use their complete sandbox test. Other native step kinds and general search
+semantics remain outside this direct-step door.
+
+Response samples retain a value-free schema fingerprint. A changed pinned custom
+connector version, operation, declared output schema or installed connection
+schema produces a stale-sample warning until the sample is reloaded; referenced
+missing fields are also named. Legacy samples without a fingerprint remain
+stale until reloaded. This does not claim provider field discovery or a live
+provider receipt. Sample values and frozen upstream results stay in the workflow's
+sealed run payload when its data class requires encryption; they are never
+inserted into graph metadata, and declared subject identifiers remain indexed.
+
+## Gmail thread metadata search
+
+The native `gmail.search_threads` step uses one fixed managed Google connection and its already-consented Gmail read scope. It searches only that connection's mailbox. Supply `input.query` as nonempty Gmail search text, including supported provider operators such as `from:billing has:attachment label:invoices`; the text is forwarded unchanged. Declare `metadata_headers` with 1 to 16 unique header names and `sort` with `field` equal to `id` or `latest_internal_date` and `direction` equal to `asc` or `desc`.
+
+The ordinary draft test, publication and run APIs apply. Searches use the shared `no_match`, `multi_match`, `on_multiple` and `limit` settings. Results retain stable thread IDs, message IDs, provider internal dates, labels and arrays of the declared headers. Equal sort values use thread ID order. Reads scan at most 10 pages of 25 IDs and at most 100 distinct threads; result limits are applied after scanning and sorting. An incomplete scan reports `truncated` in all-results mode and refuses a first-match or multiple-match decision. Cyclic tokens, malformed metadata, denied access and provider errors fail explicitly, with no false no-match result. Thread metadata is limited to 100 messages, 100 headers per message and 2048 characters per header value; each response is bounded to 256 KiB and combined retained metadata to 512 KiB. Oversized results fail before downstream work.
+
+Only fixed Gmail GET endpoints are admitted. This operation never fetches message bodies, snippets or attachment bytes and cannot create, draft, send or update mail. Read access is rechecked for retained pages and at physical dispatch. Completed reads survive a parked rate-limit wait and restart. Classified workflow results and unfinished page chunks use existing data-class encryption, subject holds, erasure and retention; archives carry inactive history without credentials. For subject matching of metadata, declare the applicable header field names, for example `from`, in the workflow's identifier fields. Actual Google console setup, mailbox consent and live-provider readback remain required; this native operation supplies no Outlook capability or customer-contact authority.
+
+
+### Stored operational lookup values
+
+A built-in `utility.lookup` transform, including an inline function in a mapped
+input, accepts `table: {"$table": "<native-table-id>"}` instead of a static object.
+The reference is fixed in the draft. It reads the current complete WORK-007
+operational table; its lower-case record keys map to safe integers or integer
+lists. The transform keeps its existing case matching and explicit `default`
+behavior. Each run reads fresh values; retained step inputs and completed
+checkpoints keep their recorded values.
+
+The existing table owner creates and updates records through the native table
+API with `OPERATIONAL_NUMBERS_ONLY` confirmation and stable operation IDs. No
+customer, financial or health data, strings or general records are accepted.
+Preview requires that table owner and a non-sensitive workflow. Production
+requires that owner's current native publication and all existing dispatch
+authority checks. A paused or restored table supplies no values. Draft execution
+is refused because operational tables have no isolated test bindings; a pure
+preview performs no mutation or downstream request. Table records, receipts and
+spent-key fences remain portable, with receiving tables inactive until explicit
+owner adoption. Erased keys cannot be recreated by replay. The Data inventory
+discloses local custody and retention without record values.
+
+This bounded numeric lookup does not complete general WORK-007 records, scoped
+builder access, sensitive custody or isolated table test bindings.
+
+## HubSpot exact contact lookup
+
+The native `hubspot.find_contact` step reads contacts from one fixed managed HubSpot OAuth connection with current `crm.objects.contacts.read` consent. Set `input.email` to one nonempty string address, optionally mapped from an earlier value. Comparison trims outer whitespace and lowercases both whole addresses, then uses exact equality. It does not match substrings or expand aliases. The lookup address is compared locally and is not sent as a provider search query.
+
+The reader uses only GET requests to `https://api.hubapi.com/crm/v3/objects/contacts`, with `archived=false`, pages of 100, and the explicit `email,firstname,lastname` property projection. It ignores provider continuation links and follows only bounded opaque cursors on that endpoint. Set `max_pages` from 1 to 20 (default 20); each response is bounded to 256 KiB and the projected scan to 1 MiB. Missing email does not match; malformed responses, changed duplicate IDs, cursor cycles and provider failures are errors rather than absence. Identical repeated IDs collapse to one contact. Unrequested properties and provider error bodies are discarded before checkpoint retention.
+
+Declare `sort` with `field: "id"` and `direction: "asc"` or `"desc"`. Only after scanning every declared page does WORK-011 apply `no_match` (`halt` or `continue`), `multi_match` (`first`, `stop` or `all`), `on_multiple` and `limit`. Results retain IDs, original email values and nullable `first_name` and `last_name`, plus `pages` and `complete`. A complete scan exceeding the result limit returns `truncated` with `complete: true`. An incomplete scan can return only explicitly truncated `all` results with `complete: false`; it cannot assert absence, first match or a definitive multiple-match stop. Create-if-missing settings are refused.
+
+Every cached page consumption and physical request requires current selected-connection read consent and current workflow execution authority. Physical requests use existing per-connection admission and retry budgets, without claiming verified HubSpot account identity. A read grant or workflow pause changed while a page is in flight prevents releasing that page as a contact result. A 429 wait resumes from completed page checkpoints after restart. Polling snapshots and cursors are separate and unchanged. Classified inputs, results and unfinished page chunks inherit restricted payload reads, legal holds, subject erasure and retention. For contact subject discovery, declare the applicable retained fields, such as `email` or `firstname`. Archives preserve complete inactive history without credentials; receiving installations must reconnect and deliberately restore authority.
+
+Restore atomically refuses HubSpot page checkpoints with followed redirects, page ordinals outside the declared scan or unselected plaintext response headers. Sealed page bytes remain opaque and portable without importing credentials or data keys.
+
+This is a read-only native component. Actual HubSpot and Salesforce developer accounts, provider consent and independent live readback remain required. It supplies no contact creation, CRM writes, triggers, association or custom-field search, or synchronization authority; the remaining CONN-006 obligations stay open.

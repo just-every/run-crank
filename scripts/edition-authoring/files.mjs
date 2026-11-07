@@ -38,6 +38,63 @@ export function safe(name) {
   }
   return name;
 }
+// One physical spelling/type check for refresh writes and dependencies. Cache
+// directory entries only for one read-only planning pass; removals take priority.
+export function freedEntries(root) {
+  const removed = new Set();
+  const identity = (name, stat) => stat.nlink > 1 ? name : `${stat.dev}:${stat.ino}`;
+  return {
+    add: (name, stat) => removed.add(identity(name, stat)),
+    has(relative, stat, parent) {
+      if (stat.isFile()) return removed.has(identity(relative, stat));
+      if (!parent || !stat.isDirectory() || !removed.size) return false;
+      let found = false;
+      const empty = directory => fs.readdirSync(directory).every(name => {
+        const absolute = path.join(directory, name), child = fs.lstatSync(absolute);
+        if (child.isDirectory()) return empty(absolute);
+        const freed = child.isFile() && removed.has(identity(path.relative(root, absolute), child));
+        found ||= freed;
+        return freed;
+      });
+      return empty(path.join(root, relative)) && found;
+    },
+  };
+}
+export function physicalEntry(root, name, {cache = new Map(), freed = () => false} = {}) {
+  let parent = root, parentStat = fs.lstatSync(root);
+  const parts = safe(name).split('/');
+  for (const [i, part] of parts.entries()) {
+    const target = path.join(parent, part), relative = parts.slice(0, i + 1).join('/');
+    let stat;
+    try { stat = fs.lstatSync(target); }
+    catch (error) { if (error.code !== 'ENOENT' && error.code !== 'ENOTDIR') throw error; }
+    if (!stat || freed(relative, stat, i < parts.length - 1)) return {absent: true, parent, parentStat};
+    if (!cache.has(parent)) cache.set(parent, fs.readdirSync(parent));
+    const entries = cache.get(parent);
+    if (!entries.includes(part)) {
+      const physical = entries.find(entry => {
+        const other = fs.lstatSync(path.join(parent, entry));
+        return other.dev === stat.dev && other.ino === stat.ino;
+      });
+      return {kind: 'alias', path: relative, physical: path.relative(root, path.join(parent, physical ?? part))};
+    }
+    if (stat.isSymbolicLink()) return {kind: 'symlink', path: relative};
+    if (i < parts.length - 1 && !stat.isDirectory()) return {kind: 'non-directory parent', path: relative};
+    if (i === parts.length - 1) return stat.isFile() ? {stat, target, parent, parentStat} : {kind: 'non-regular', path: relative};
+    parent = target; parentStat = stat;
+  }
+}
+export function requirePhysical(root, name, options) {
+  const entry = physicalEntry(root, name, options);
+  if (entry.kind) {
+    const quote = value => "'" + value.replaceAll("'", "'\\''") + "'";
+    const indexed = raw(root, '--literal-pathspecs', 'ls-files', '--', entry.path).length > 0;
+    const command = `backup=$(mktemp -d) && mv -- ${quote(entry.physical ?? entry.path)} "$backup/"${indexed ? ' && git restore -- ' + quote(entry.path) : ''}`;
+    const reason = entry.kind === 'symlink' ? 'Symlink in destination path' : entry.kind === 'non-regular' ? 'destination is not a regular file' : entry.kind;
+    throw Error(`Cannot refresh ${name}: ${reason} at ${entry.physical ?? entry.path}. Run ${command}, then repeat refresh-base; no files were refreshed.`);
+  }
+  return entry;
+}
 export function noLinks(root, relative) {
   let current = root;
   for (const part of relative.split('/')) {
@@ -45,7 +102,7 @@ export function noLinks(root, relative) {
     let stat;
     try { stat = fs.lstatSync(current); }
     catch (error) { if (error.code !== 'ENOENT') throw error; }
-    if (stat?.isSymbolicLink()) throw Error('Symlink in destination path');
+    if (stat?.isSymbolicLink()) throw Error(`Symlink in destination path: ${relative} (${path.relative(root, current)})`);
   }
 }
 export function tracked(root, allowMissing = false) {
@@ -62,6 +119,17 @@ export function tracked(root, allowMissing = false) {
   return result;
 }
 export const digest = files => hash(json(files));
+// The complete tool in `dir`, as sorted relative paths: its non-test modules and
+// every vendored parser file with its licence. Copies and the lock identity use it.
+export const toolFile = name => name.startsWith('vendor/') || !name.includes('/') && name.endsWith('.mjs') && !name.endsWith('.test.mjs');
+export function toolFiles(dir) {
+  const modules = fs.readdirSync(dir).filter(toolFile);
+  const vendored = fs.readdirSync(path.join(dir, 'vendor'), {recursive: true, withFileTypes: true}).filter(entry => {
+    if (!entry.isFile() && !entry.isDirectory()) throw Error(`Unsupported vendored tool entry: ${entry.name}`);
+    return entry.isFile();
+  }).map(entry => path.relative(dir, path.join(entry.parentPath, entry.name)).split(path.sep).join('/'));
+  return [...modules, ...vendored].sort();
+}
 // Base's test, fixture and browser-check sources, which portable copies leave out.
 // Composition pins its tooling alone, so composition/git-source.mjs keeps its own copy.
 export function testSource(path) {
