@@ -1,6 +1,11 @@
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {checkClasses} from '../../src/modules/agent-door/conformance/journey.mjs';
+import promptsJourney, {promptGuards} from './prompts-journey.mjs';
+
+export async function afterStep(context) {
+ if (context.step.id === 'run' && ['autonomous', 'held'].includes(context.phase)) await promptsJourney(context);
+}
 
 const code = answer => answer.result?._meta?.['com.runeditrun/error']?.code ?? answer.body?.error?.data?.code;
 const output = answer => { assert.equal(answer.status, 200); assert.ok(!answer.result?.isError); assert.ok(answer.result?.structuredContent); return answer.result.structuredContent; };
@@ -9,6 +14,7 @@ const output = answer => { assert.equal(answer.status, 200); assert.ok(!answer.r
 // writes use native routes and the real policy/authority/persistence pipeline.
 export default async function journey({request, origin, cookie, tool}) {
  await documentationJourney({request, origin, cookie});
+ await promptGuards({request, origin, cookie});
  const person = async (path, body) => {
   const response = await request(origin + path, {
    ...(body === undefined ? {} : {method: 'POST', body: JSON.stringify(body)}),
@@ -86,7 +92,7 @@ export async function documentationJourney({request, origin, cookie, token}) {
   const listed=(await rpc(['tools', 'list'].join('/'))).tools;assert.deepEqual(listed.map(item=>item.name),names);
   assert.deepEqual((await rpc(['resources', 'templates', 'list'].join('/'))).resourceTemplates,doc.resourceTemplates);
   assert.deepEqual((await rpc(['prompts', 'list'].join('/'))).prompts,doc.prompts);
-  assert.deepEqual(Object.keys(discovered.capabilities),['tools']);
+  assert.deepEqual(Object.keys(discovered.capabilities),['tools','prompts']);
   const refused=await rpc(['tools','call'].join('/'),{name:'crank.runs.get',arguments:{run_id:7}});
   assert.equal(refused.isError,true);assert.ok(doc.errorCodes[refused._meta['com.runeditrun/error'].code],'the live refusal is documented');
   const limitText=decode(html.split('aria-labelledby="limits"')[1].split('</section>')[0]);

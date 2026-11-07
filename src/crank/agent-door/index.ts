@@ -4,8 +4,9 @@ import { peopleAdapter, localCredentials } from './people'
 import { crankTools } from './tools'
 import surface from '../../../agent-surface.json'
 import { agentDocumentation, documentationResponse, describeAgentResponse } from './documentation'
+import { crankPrompts } from './prompts'
 
-export const capabilities = ['tools', 'policy', 'pause', 'audit', 'idempotency'] as const
+export const capabilities = ['tools', 'policy', 'pause', 'audit', 'idempotency', 'prompts'] as const
 
 function installationTrust(env: Bindings): Trust | null {
   const issuer = env.RER_OWNER_CLAIM_ISSUER
@@ -19,11 +20,12 @@ function installationTrust(env: Bindings): Trust | null {
 /** One registry and policy pipeline for Business, local preparation and person review. */
 export function crankAgentDoor(bindings: Bindings) {
   const env = runtimeBindings(bindings)
+  const tools = crankTools(env)
   const options: AgentDoorOptions = {
     seed: surface.seed, name: 'Crank', specialist: surface.specialist,
     db: env.DB, origin: env.AUTH_ORIGIN, trust: installationTrust(env),
     capabilities: [...capabilities], people: peopleAdapter(env),
-    tools: crankTools(env), resources: [],
+    tools, prompts: crankPrompts(tools), resources: [],
     paths: ['/api/crank/v1/mcp'], limits: surface.documentation.limits,
     localCredentials: request => localCredentials(env, request),
     notTools: [
