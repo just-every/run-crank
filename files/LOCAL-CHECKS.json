@@ -1,0 +1,44 @@
+{
+  "repository": "just-every/run-crank",
+  "head": "97dbba76c57a620110886e92a959fbf15b07d3d0",
+  "checks": [
+    {
+      "name": "actionlint 1.7.7: Verify and Nightly journeys",
+      "status": "passed"
+    },
+    {
+      "name": "reusable workflow permissions",
+      "status": "passed"
+    },
+    {
+      "name": "contract docs: 99 clauses",
+      "status": "passed"
+    },
+    {
+      "name": "source lock",
+      "status": "passed"
+    },
+    {
+      "name": "eight push shards; unchanged verification.json",
+      "status": "passed"
+    },
+    {
+      "name": "git diff --check",
+      "status": "passed"
+    },
+    {
+      "name": "candidate identities and trailers",
+      "status": "passed"
+    }
+  ],
+  "product_push": "passed",
+  "ci": {
+    "conclusion": "success",
+    "head_sha": "97dbba76c57a620110886e92a959fbf15b07d3d0",
+    "html_url": "https://github.com/just-every/run-crank/actions/runs/42409599674",
+    "status": "completed",
+    "run_id": 42409599674,
+    "observed_at": "2026-11-07T20:33:44.462045+00:00",
+    "github_invocation_count": 9
+  }
+}

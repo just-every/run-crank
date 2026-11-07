@@ -1,0 +1,73 @@
+commit 97dbba76c57a620110886e92a959fbf15b07d3d0
+Author:     Run Edit Run fleet <fleet@runeditrun.com>
+AuthorDate: Sat Nov 7 20:08:30 2026 +0000
+Commit:     Run Edit Run fleet <fleet@runeditrun.com>
+CommitDate: Sat Nov 7 20:08:30 2026 +0000
+
+    ci: allow measured headroom for Crank shard jobs
+
+diff --git a/.github/workflows/verify.yml b/.github/workflows/verify.yml
+index cbf12b6..3046558 100644
+--- a/.github/workflows/verify.yml
++++ b/.github/workflows/verify.yml
+@@ -12,7 +12,7 @@ on:
+         default: push
+       timeout:
+         type: number
+-        default: 12
++        default: 21
+ 
+ permissions:
+   contents: read
+@@ -117,7 +117,7 @@ jobs:
+     needs: [plan, build]
+     if: ${{ needs.plan.outputs.has_shards == 'true' }}
+     runs-on: ubuntu-24.04
+-    timeout-minutes: ${{ matrix.name == 'app-comparisons' && 16 || inputs.timeout || 12 }}
++    timeout-minutes: ${{ inputs.timeout || 21 }}
+     strategy:
+       fail-fast: false
+       matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
+diff --git a/VERIFY-WORKFLOW.md b/VERIFY-WORKFLOW.md
+index c3d9c07..5cd088b 100644
+--- a/VERIFY-WORKFLOW.md
++++ b/VERIFY-WORKFLOW.md
+@@ -20,10 +20,12 @@ journeys remain in `retry-backoff.yml`, including its Monday and Thursday
+ 03:37 UTC schedule and manual selections.
+ 
+ All executing jobs use Ubuntu 24.04, Node 22.20.0 and pnpm 10.12.4 with frozen
+-installs. Push shards retain their 12-minute timeout and `app-comparisons` keeps
+-its existing 16-minute ceiling, including when invoked by Nightly journeys.
+-The latter permits 45 minutes for other full-tier shards. The final `verify`
+-aggregate is the stable required check.
++installs. Push shards use a 21-minute timeout. Verify 42235687658 cut
++`connections` at 12m47s; no shard in the three-run timing sample completed
++above the old 12-minute general limit, so that cut is a floor. Adding eight
++minutes and rounding up gives 21 minutes. The reusable workflow honors an
++explicit timeout input; Nightly journeys retains its 45-minute input for all
++selected shards. The final `verify` aggregate is the stable required check.
+ 
+ ## Shared build and assertions
+ 
+diff --git a/sources.lock.json b/sources.lock.json
+index 779a1d8..be0ea51 100644
+--- a/sources.lock.json
++++ b/sources.lock.json
+@@ -132,7 +132,7 @@
+       "executable": false
+     },
+     ".github/workflows/verify.yml": {
+-      "sha256": "6372479025acc34fcc6d577f06553c4e65d48e856ecd56166ecf1f3be4d9e243",
++      "sha256": "53e47fdb5b146f44d6bfd3fa6fd544d9b58d90d251c4a4918d413e59d1f05c46",
+       "executable": false
+     },
+     ".gitignore": {
+@@ -7428,7 +7428,7 @@
+       "executable": false
+     },
+     "VERIFY-WORKFLOW.md": {
+-      "sha256": "6ce5a5998c1aae1fc79a88dc09403382facd77bea5d787a63e6daafec07bbdf4",
++      "sha256": "a426f7aa372716d1c7cf8780b96bb1655fe2648e6064747a4da1806e4cd05c86",
+       "executable": false
+     },
+     "vite.config.ts": {

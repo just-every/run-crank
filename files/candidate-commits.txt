@@ -1,0 +1,5 @@
+commit 97dbba76c57a620110886e92a959fbf15b07d3d0
+Author: Run Edit Run fleet <fleet@runeditrun.com>
+Commit: Run Edit Run fleet <fleet@runeditrun.com>
+
+    ci: allow measured headroom for Crank shard jobs

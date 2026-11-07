@@ -1,0 +1,121 @@
+[
+  {
+    "run": 42235687658,
+    "name": "shards (financial-outcomes)",
+    "conclusion": "success",
+    "seconds": 439,
+    "job": 127967027261
+  },
+  {
+    "run": 42235687658,
+    "name": "shards (regulated-calendar)",
+    "conclusion": "success",
+    "seconds": 483,
+    "job": 127967027326
+  },
+  {
+    "run": 42235687658,
+    "name": "shards (owner-decisions)",
+    "conclusion": "success",
+    "seconds": 466,
+    "job": 127967027333
+  },
+  {
+    "run": 42235687658,
+    "name": "shards (workflow-custody)",
+    "conclusion": "success",
+    "seconds": 461,
+    "job": 127967027369
+  },
+  {
+    "run": 42235687658,
+    "name": "shards (agent-executor)",
+    "conclusion": "success",
+    "seconds": 551,
+    "job": 127967027395
+  },
+  {
+    "run": 42235687658,
+    "name": "shards (connections)",
+    "conclusion": "cancelled",
+    "seconds": 767,
+    "job": 127967027397
+  },
+  {
+    "run": 42235687658,
+    "name": "shards (runtime-authority)",
+    "conclusion": "success",
+    "seconds": 530,
+    "job": 127967027480
+  },
+  {
+    "run": 42235687658,
+    "name": "shards (app-comparisons)",
+    "conclusion": "failure",
+    "seconds": 421,
+    "job": 127967027486
+  },
+  {
+    "run": 42355375302,
+    "name": "shards (app-comparisons)",
+    "conclusion": "success",
+    "seconds": 672,
+    "job": 128352447018
+  },
+  {
+    "run": 42355375302,
+    "name": "shards (regulated-calendar)",
+    "conclusion": "success",
+    "seconds": 411,
+    "job": 128352447057
+  },
+  {
+    "run": 42355375302,
+    "name": "shards (agent-executor)",
+    "conclusion": "success",
+    "seconds": 538,
+    "job": 128352447058
+  },
+  {
+    "run": 42355375302,
+    "name": "shards (owner-decisions)",
+    "conclusion": "failure",
+    "seconds": 71,
+    "job": 128352447069
+  },
+  {
+    "run": 42355375302,
+    "name": "shards (runtime-authority)",
+    "conclusion": "success",
+    "seconds": 521,
+    "job": 128352447082
+  },
+  {
+    "run": 42355375302,
+    "name": "shards (financial-outcomes)",
+    "conclusion": "success",
+    "seconds": 356,
+    "job": 128352447101
+  },
+  {
+    "run": 42355375302,
+    "name": "shards (workflow-custody)",
+    "conclusion": "success",
+    "seconds": 450,
+    "job": 128352447103
+  },
+  {
+    "run": 42355375302,
+    "name": "shards (connections)",
+    "conclusion": "cancelled",
+    "seconds": 737,
+    "job": 128352447129
+  },
+  {
+    "run": 42384703867,
+    "name": "shards (${{ matrix.name }})",
+    "conclusion": "skipped",
+    "seconds": 0,
+    "job": 128439629980
+  }
+]

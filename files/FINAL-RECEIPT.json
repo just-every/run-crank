@@ -1,0 +1,41 @@
+{
+  "repository": "just-every/run-crank",
+  "tag": "sx-crank-ci-limit-1",
+  "branch": "cloud/sx-crank-ci-limit-1",
+  "head": "97dbba76c57a620110886e92a959fbf15b07d3d0",
+  "product_push": "success",
+  "checkout_clean": true,
+  "ci": {
+    "conclusion": "success",
+    "head_sha": "97dbba76c57a620110886e92a959fbf15b07d3d0",
+    "html_url": "https://github.com/just-every/run-crank/actions/runs/42409599674",
+    "status": "completed",
+    "run_id": 42409599674,
+    "observed_at": "2026-11-07T20:33:44.462045+00:00",
+    "github_invocation_count": 9
+  },
+  "pr": null,
+  "before": {
+    "general_shard_timeout_minutes": 12,
+    "app_comparisons_timeout_minutes": 16,
+    "push_shards": 8,
+    "done": 32,
+    "partial": 50,
+    "missing": 17,
+    "total": 99
+  },
+  "after": {
+    "general_shard_timeout_minutes": 21,
+    "app_comparisons_timeout_minutes": 21,
+    "push_shards": 8,
+    "done": 32,
+    "partial": 50,
+    "missing": 17,
+    "total": 99
+  },
+  "clause_status_changes": [],
+  "tests_moved": 0,
+  "assertions_changed": 0,
+  "blockers": [],
+  "evidence_publication": "separate report-only publication follows; transport receipt is outside packet"
+}
