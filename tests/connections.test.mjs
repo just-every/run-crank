@@ -12,6 +12,8 @@ const fake = fakeEdge();
 test('Gmail thread metadata search retains declared outcomes, consent, parked pages and inactive sealed custody', async () => {
   const {gmailSearchJourney,gmailCustodyJourney}=await import('./gmail-search-journey.mjs');
   await gmailSearchJourney();await gmailCustodyJourney();
+  const {typeformSearchJourney,typeformCustodyJourney}=await import('./typeform-search-journey.mjs');
+  await typeformSearchJourney();await typeformCustodyJourney();
 });
 let h;
 before(async () => {
@@ -140,10 +142,14 @@ test('CONN-002: OAuth consent, refresh and accounts per step; secrets never leav
     assert.ok(flows.length > 0 && flows.every(f => f.status === 'paused' || f.status === 'draft'), 'restored workflows do not dispatch');
   } finally { await other.close() }
   await oauthRenewalJourney();
+  const {hubspotSearchJourney,hubspotCustodyJourney}=await import('./hubspot-search-journey.mjs');
+  await hubspotSearchJourney();await hubspotCustodyJourney();
 });
 
 const slackSign = (secret, body, t = Math.floor(Date.now() / 1000)) => ({ 'x-slack-request-timestamp': String(t), 'x-slack-signature': 'v0=' + createHmac('sha256', secret).update(`v0:${t}:${body}`).digest('hex'), 'content-type': 'application/json' });
 test('CONN-004: Slack posts by channel name and user email, applies search outcomes, finds or creates once, and admits signed events once', async () => {
+  const {teamsSearchJourney,teamsCustodyJourney}=await import('./teams-search-journey.mjs');
+  await teamsSearchJourney();await teamsCustodyJourney();
   const channels = [{ id: 'C01', name: 'general' }, { id: 'C02', name: 'sales' }], posts = [];
   let failUsers = false;
   fake.routes.set('slack.com', ({ url, body }) => {

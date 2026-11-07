@@ -1224,3 +1224,17 @@ discloses local custody and retention without record values.
 
 This bounded numeric lookup does not complete general WORK-007 records, scoped
 builder access, sensitive custody or isolated table test bindings.
+
+## HubSpot exact contact lookup
+
+The native `hubspot.find_contact` step reads contacts from one fixed managed HubSpot OAuth connection with current `crm.objects.contacts.read` consent. Set `input.email` to one nonempty string address, optionally mapped from an earlier value. Comparison trims outer whitespace and lowercases both whole addresses, then uses exact equality. It does not match substrings or expand aliases. The lookup address is compared locally and is not sent as a provider search query.
+
+The reader uses only GET requests to `https://api.hubapi.com/crm/v3/objects/contacts`, with `archived=false`, pages of 100, and the explicit `email,firstname,lastname` property projection. It ignores provider continuation links and follows only bounded opaque cursors on that endpoint. Set `max_pages` from 1 to 20 (default 20); each response is bounded to 256 KiB and the projected scan to 1 MiB. Missing email does not match; malformed responses, changed duplicate IDs, cursor cycles and provider failures are errors rather than absence. Identical repeated IDs collapse to one contact. Unrequested properties and provider error bodies are discarded before checkpoint retention.
+
+Declare `sort` with `field: "id"` and `direction: "asc"` or `"desc"`. Only after scanning every declared page does WORK-011 apply `no_match` (`halt` or `continue`), `multi_match` (`first`, `stop` or `all`), `on_multiple` and `limit`. Results retain IDs, original email values and nullable `first_name` and `last_name`, plus `pages` and `complete`. A complete scan exceeding the result limit returns `truncated` with `complete: true`. An incomplete scan can return only explicitly truncated `all` results with `complete: false`; it cannot assert absence, first match or a definitive multiple-match stop. Create-if-missing settings are refused.
+
+Every cached page consumption and physical request requires current selected-connection read consent and current workflow execution authority. Physical requests use existing per-connection admission and retry budgets, without claiming verified HubSpot account identity. A read grant or workflow pause changed while a page is in flight prevents releasing that page as a contact result. A 429 wait resumes from completed page checkpoints after restart. Polling snapshots and cursors are separate and unchanged. Classified inputs, results and unfinished page chunks inherit restricted payload reads, legal holds, subject erasure and retention. For contact subject discovery, declare the applicable retained fields, such as `email` or `firstname`. Archives preserve complete inactive history without credentials; receiving installations must reconnect and deliberately restore authority.
+
+Restore atomically refuses HubSpot page checkpoints with followed redirects, page ordinals outside the declared scan or unselected plaintext response headers. Sealed page bytes remain opaque and portable without importing credentials or data keys.
+
+This is a read-only native component. Actual HubSpot and Salesforce developer accounts, provider consent and independent live readback remain required. It supplies no contact creation, CRM writes, triggers, association or custom-field search, or synchronization authority; the remaining CONN-006 obligations stay open.

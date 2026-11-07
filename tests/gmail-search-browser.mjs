@@ -47,3 +47,7 @@ async function onScreen({h,w,run,state}){
 }
 try{await gmailSearchJourney({onScreen})}finally{await browser.close()}
 console.log('Gmail metadata identities, literal headers, declared outcomes and tooltips PASS; screens at 1440 and 390');
+
+// The existing read-only provider browser entry also covers CRM result custody.
+const {hubspotSearchBrowser}=await import('./hubspot-search-browser.mjs');
+await hubspotSearchBrowser();
