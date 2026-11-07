@@ -19,9 +19,9 @@ tokens retain the canonical `/mcp` audience. Protected-resource discovery is at
 `/.well-known/oauth-protected-resource` and
 `/.well-known/oauth-protected-resource/mcp`.
 
-The explicit capability declaration contains only the indivisible CORE duties:
-`tools`, `policy`, `pause`, `audit` and `idempotency`. Optional `resources`,
-`prompts`, `events` and `subscriptions` are undeclared and typed-refused. Their
+The explicit capability declaration contains the indivisible CORE duties
+`tools`, `policy`, `pause`, `audit` and `idempotency`, plus bounded `prompts`.
+Optional `resources`, `events` and `subscriptions` are undeclared and typed-refused. Their
 discovery lists are empty where the protocol supplies a list; they are not
 advertised as working families. No event-list tool is injected and tool replies
 emit no MCP resource links. A person's approval URL remains part of the policy
@@ -110,6 +110,42 @@ request details. Connection responses omit secret values and encrypted material.
 Catalogue presence is inventory, not dispatch authority or a claim that a planned
 connector is built. Names, descriptions and imported declarations remain
 untrusted content; every tool marks its results accordingly.
+
+## Bounded specialist prompts
+
+`prompts/list` deterministically lists `crank.runs.inspect` and
+`crank.workflows.prepare`, with `ttlMs` and private cache scope. `prompts/get`
+returns static text guidance for the Automation operations lead. Both protocol
+versions receive the same guidance. These prompts take no arguments; string
+arguments cannot alter or inject their messages. Malformed argument values and
+unknown names are refused by the existing transport.
+
+The draft guide explains current metadata, digest and revision fencing,
+idempotency, inert creation and editing, saved-graph validation and native person
+readback. The run guide explains scoped filters, bounded pagination and the
+closed status, timing and count projection. Tool names, scopes and descriptions
+come only from the admitted registry. Prompts neither invoke those tools nor
+read records, reveal payloads, supply credentials, decide approvals or grant
+publication, execution, provider or connector authority. Missing jobs remain
+missing; names and imported content remain untrusted data.
+
+Authentication, current policy, Pause and credential revocation still gate
+retrieval. Unanswered policy and Pause hide the listing and refuse retrieval.
+The existing Origin, protocol, header consistency and body bounds apply.
+`tests/agent-door/prompts-journey.mjs`, invoked by the existing native journey and
+fixture preparation, retrieves the guidance and completes draft preparation and
+populated run inspection through production MCP under autonomous and held
+policies. Native person readback verifies inert draft state and redaction; held
+review marks use the real person door. It also exercises unknown and malformed
+requests and the authentication, unset-policy, Pause, revocation and transport
+refusals without changing workflows.
+
+This slice keeps BASE-AGENT-001 partial. The publication-bound client connector
+MCP remains separate; resources belong to BASE-AGENT-003. Broader specialist and
+provider jobs, optional events and subscriptions, full hosted and self-hosted
+compatibility and complete specialist acceptance remain owed. Existing owner,
+account, ct, enforcing-egress and device holds remain unchanged. No provider,
+Business, IdP or queued-clause prerequisite is released.
 
 ## Native people and authority
 
@@ -221,7 +257,7 @@ through SURFACE-013. It is a target, not evidence of implemented behavior.
 | Proposal mapping | `crank.custom.propose`, citing CONN-020 | Same name; native OpenAPI preparation cites CONN-011 and CONN-020. |
 | Record resources | 34 URI templates | 0; no record-resource links. |
 | Classes | All 11 fleet classes, including computed combinations | Only `standard`; ten class families and the draft's computed-class pairs remain outside this declaration. |
-| Specialist guidance | Six specialist prompts, typed events and handoffs | No prompt/event/subscription capability. |
+| Specialist guidance | Six specialist prompts, typed events and handoffs | Two bounded native prompts; events and subscriptions remain undeclared. |
 | Journey | SURFACE-013's seeded business week under All-autonomous and Held policies | 13 declared steps covering these 12 tools, with a second workflow read; preparation and metadata only. |
 
 The current journey creates, lists, reads, updates, rereads, duplicates and
@@ -253,7 +289,7 @@ native/provider classification parity through every wrapper.
 This document records the implemented boundary. Integrated CORE conformance passes 1,021/1,021 points on rer 0.2.91. Native
 Agents and pending/executed approval pages have browser proof at 1440 and 390.
 The complete ct registry, native UI parity for its omitted jobs and the seeded
-specialist week remain acceptance work. No optional capability is promoted.
+specialist week remain acceptance work. Only the bounded prompt capability is promoted.
 
 Ordinary health, setup and application requests do not construct Business or
 agent adapters. On door paths, native classification refusals use the shared
