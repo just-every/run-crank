@@ -1,5 +1,10 @@
 import assert from 'node:assert/strict';
 import eventsJourney from './events-journey.mjs';
+import promptsJourney, {promptGuards} from './prompts-journey.mjs';
+
+export async function afterStep(context) {
+ if (context.step.id === 'run' && ['autonomous', 'held'].includes(context.phase)) await promptsJourney(context);
+}
 
 const code = answer => answer.result?._meta?.['com.runeditrun/error']?.code ?? answer.body?.error?.data?.code;
 const output = answer => { assert.equal(answer.status, 200); assert.ok(!answer.result?.isError); assert.ok(answer.result?.structuredContent); return answer.result.structuredContent; };
@@ -7,6 +12,7 @@ const output = answer => { assert.equal(answer.status, 200); assert.ok(!answer.r
 // The seed's extra public-door checks supplement the shared CORE harness. All
 // writes use native routes and the real policy/authority/persistence pipeline.
 export default async function journey({request, origin, cookie, tool}) {
+ await promptGuards({request, origin, cookie});
  const person = async (path, body) => {
   const response = await request(origin + path, {
    ...(body === undefined ? {} : {method: 'POST', body: JSON.stringify(body)}),
