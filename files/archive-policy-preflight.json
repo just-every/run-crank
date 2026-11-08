@@ -1,0 +1,11 @@
+{
+  "scope": "Actual pinned Base export preflight; no Docker, data transfer or provider request was made.",
+  "version": "0.2.91",
+  "API": "@runeditrun/rer/portability#localPortability.export",
+  "platform": "container",
+  "policyModule": "src/crank/archive-policy.mjs",
+  "result": "refused",
+  "code": "safety_refusal",
+  "message": "Local portability policy refused (container_policy_module_unsupported). Executable policies require a seed-owned policyModule with a valid default policy export; policyModule requires native local transport.",
+  "durationSeconds": 0.001
+}

@@ -1,0 +1,22 @@
+{
+  "before": {
+    "partial": 50,
+    "done": 32,
+    "missing": 17
+  },
+  "after": {
+    "partial": 50,
+    "done": 32,
+    "missing": 17
+  },
+  "clause_changes": [],
+  "BASE-005": "partial -> partial",
+  "test_budget_metadata_before": 199,
+  "test_budget_metadata_after": 199,
+  "ordinary_test_registrations_added": 0,
+  "new_dispatch_assertion_drivers": 1,
+  "inventory_note": "No push Verify registration is added or changed. One dispatch-only assertion driver is added; count it once under the fleet assertion-script rule.",
+  "counting": "All clause-status table rows, regardless of tier; excludes reference tables.",
+  "test_inventory_before": 199,
+  "test_inventory_after": 200
+}

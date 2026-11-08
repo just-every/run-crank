@@ -1,0 +1,140 @@
+{
+  "scope": "Explicit actual public reports and receipts only; regular files, no symlinks, no injected bundle values.",
+  "files": [
+    {
+      "file": "CI.json",
+      "bytes": 375,
+      "sha256": "1e5686e6248ae79d57014e9eeae037b52814294d4be72808ba6b93062ff48198"
+    },
+    {
+      "file": "PLAN.md",
+      "bytes": 2728,
+      "sha256": "8b2d9179da03df646b2ebf1f605567ad5c3477a3fd0ad7a2a3db2820b71c179e"
+    },
+    {
+      "file": "REPORT.md",
+      "bytes": 8727,
+      "sha256": "1fa634bee2961f3f7d8969890c001e6b553012fa5023f8bf80d4cee834ad3542"
+    },
+    {
+      "file": "actionlint.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "file": "archive-policy-preflight.json",
+      "bytes": 576,
+      "sha256": "6795125c7d6eeaebec0f0d74c57d674fc5117424f20975671e6215b1c2764605"
+    },
+    {
+      "file": "ci-discovery.json",
+      "bytes": 12237,
+      "sha256": "108e8c6208fd8cd45ac12ab8976dc5953ec09330fe52aae1046101314f7b483b"
+    },
+    {
+      "file": "ci-status-1.json",
+      "bytes": 175,
+      "sha256": "5440e87b0240b33e372e9c11bd3ca931241a8d744528e426e416bf384bcc6a38"
+    },
+    {
+      "file": "ci-status-2.json",
+      "bytes": 175,
+      "sha256": "5440e87b0240b33e372e9c11bd3ca931241a8d744528e426e416bf384bcc6a38"
+    },
+    {
+      "file": "ci-status-3.json",
+      "bytes": 175,
+      "sha256": "5440e87b0240b33e372e9c11bd3ca931241a8d744528e426e416bf384bcc6a38"
+    },
+    {
+      "file": "ci-status-4.json",
+      "bytes": 178,
+      "sha256": "d1beed2524b55fce1f18423e2221f30387708da93b3d375641f9be32bdee183e"
+    },
+    {
+      "file": "commit-identity.txt",
+      "bytes": 176,
+      "sha256": "abed9acc264364a2b83932fa6ebb13da78fd6c9332cd8679ca44be2dcaa1d06f"
+    },
+    {
+      "file": "counts.json",
+      "bytes": 689,
+      "sha256": "f02e25750b4071bfbea9b1e458416fd8e826d7edd1339f709f88c48d9e7f9af7"
+    },
+    {
+      "file": "diff-check.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "file": "driver-failure-probes.log",
+      "bytes": 274,
+      "sha256": "4cf986fe9bcc23de4c15aeee3e824bd02d3e22e84e83e2d2b177c697a9f2379c"
+    },
+    {
+      "file": "driver-probes.json",
+      "bytes": 537,
+      "sha256": "3c1b46451aa2e87d6684f529d0b8207351637037510ec469c190793faa939157"
+    },
+    {
+      "file": "driver-probes.py",
+      "bytes": 3530,
+      "sha256": "43d81f84959880022ce31f2624099f49941c66cda9c9cd460cda165b0451e1c9"
+    },
+    {
+      "file": "first-party.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "file": "github-calls.jsonl",
+      "bytes": 1234,
+      "sha256": "ed558203c5cc24223e5fa2022f1b6e62fa6e44d2b3c8e9e855b893051d567a4f"
+    },
+    {
+      "file": "local-checks.json",
+      "bytes": 2888,
+      "sha256": "462a6819edd6e15422501e4e699e9aa0c1a47982b65726adede129c8d2a54491"
+    },
+    {
+      "file": "product.json",
+      "bytes": 595,
+      "sha256": "1ebf25d93bf254ea46efdfa6b7050e182bdf5c501d19796e2d7c91e10760f101"
+    },
+    {
+      "file": "remote-ref.txt",
+      "bytes": 86,
+      "sha256": "34d839f0f0264b001a135bab1634e5ba78a40d54574904391c377c3b0bb626f7"
+    },
+    {
+      "file": "shallow-status.txt",
+      "bytes": 6,
+      "sha256": "2ed27c1421e6928dbe13dbfdb5c59e1045b30341fe7ebe05700006bc5ac572c0"
+    },
+    {
+      "file": "source-changes.json",
+      "bytes": 907,
+      "sha256": "31947c3aae566be878bf7815ce5347f0c44f125810499eda80e13a42b654da29"
+    },
+    {
+      "file": "source-lock.log",
+      "bytes": 63,
+      "sha256": "0e041417c4626d1acb5fd9d6e80c31eb5d0bb188a54979e59197e6a03f38ba05"
+    },
+    {
+      "file": "syntax.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "file": "typecheck.log",
+      "bytes": 193,
+      "sha256": "9ae7a15f2713b6879ed209d3a06fd2ddcd7b989b66b76fdc578b715714252c89"
+    },
+    {
+      "file": "workflow-permissions.log",
+      "bytes": 65,
+      "sha256": "583e7a3ffe4b1e3f8e379d6cda554de637ea7883ce31fb780858c381e2022890"
+    }
+  ]
+}

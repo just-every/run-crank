@@ -1,0 +1,109 @@
+{
+  "source": "staged candidate before commit",
+  "checks": [
+    {
+      "name": "syntax",
+      "command": [
+        "node",
+        "--check",
+        "scripts/container-qualify.mjs"
+      ],
+      "exit_code": 0,
+      "duration_seconds": 0.066,
+      "log": "syntax.log",
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "actionlint",
+      "command": [
+        "/tmp/actionlint-bin/actionlint",
+        ".github/workflows/container-qualify.yml"
+      ],
+      "exit_code": 0,
+      "duration_seconds": 0.011,
+      "log": "actionlint.log",
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "workflow-permissions",
+      "command": [
+        "node",
+        "scripts/verify-ci.mjs",
+        "--check-workflows"
+      ],
+      "exit_code": 0,
+      "duration_seconds": 0.078,
+      "log": "workflow-permissions.log",
+      "log_sha256": "583e7a3ffe4b1e3f8e379d6cda554de637ea7883ce31fb780858c381e2022890"
+    },
+    {
+      "name": "typecheck",
+      "command": [
+        "python3",
+        "/tmp/rer-reap.py",
+        "pnpm",
+        "typecheck"
+      ],
+      "exit_code": 0,
+      "duration_seconds": 0.566,
+      "log": "typecheck.log",
+      "log_sha256": "9ae7a15f2713b6879ed209d3a06fd2ddcd7b989b66b76fdc578b715714252c89"
+    },
+    {
+      "name": "first-party",
+      "command": [
+        "python3",
+        "/tmp/rer-reap.py",
+        "pnpm",
+        "exec",
+        "rer",
+        "check",
+        "--profile",
+        "first-party"
+      ],
+      "exit_code": 0,
+      "duration_seconds": 1.196,
+      "log": "first-party.log",
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "source-lock",
+      "command": [
+        "node",
+        "node_modules/@runeditrun/rer/edition-authoring/cli.mjs",
+        "check"
+      ],
+      "exit_code": 0,
+      "duration_seconds": 0.476,
+      "log": "source-lock.log",
+      "log_sha256": "0e041417c4626d1acb5fd9d6e80c31eb5d0bb188a54979e59197e6a03f38ba05"
+    },
+    {
+      "name": "diff-check",
+      "command": [
+        "git",
+        "diff",
+        "--cached",
+        "--check"
+      ],
+      "exit_code": 0,
+      "duration_seconds": 0.006,
+      "log": "diff-check.log",
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "driver-failure-probes",
+      "command": [
+        "python3",
+        "/tmp/check-container-driver.py"
+      ],
+      "exit_code": 0,
+      "duration_seconds": 0.561,
+      "log": "driver-failure-probes.log",
+      "log_sha256": "4cf986fe9bcc23de4c15aeee3e824bd02d3e22e84e83e2d2b177c697a9f2379c"
+    }
+  ],
+  "committed_head": "0fbed5e5bcb6965d68505fc2358bb442c983905d",
+  "committed_tree_matches_checked_tree": true,
+  "working_tree_clean": true
+}

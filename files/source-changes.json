@@ -1,0 +1,34 @@
+{
+  "files": [
+    {
+      "path": ".github/workflows/container-qualify.yml",
+      "change": "added",
+      "before": null,
+      "after": {
+        "sha256": "49e01a39eda5eb2c43526e38505ba025513e8f489f44927ae5d9718520f72084",
+        "executable": false
+      }
+    },
+    {
+      "path": "docs/CONTAINER-QUALIFICATION.md",
+      "change": "added",
+      "before": null,
+      "after": {
+        "sha256": "15ff8dcaa390a7f40e89e6d437d20b5cfaf83bdefd5bb3f00642d060b0ddc0c8",
+        "executable": false
+      }
+    },
+    {
+      "path": "scripts/container-qualify.mjs",
+      "change": "added",
+      "before": null,
+      "after": {
+        "sha256": "42c81863c7c19fbaaa909e627ba7cf89c8f9a586664151be22e9482f3a482035",
+        "executable": false
+      }
+    }
+  ],
+  "metadata": [],
+  "meaning": "Origins are comparison baselines; changing an origin does not assert adoption or local byte equality."
+}
+
