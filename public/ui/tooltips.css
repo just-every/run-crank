@@ -1,9 +1,13 @@
 /* Icon-only shell controls: delayed hover, immediate keyboard focus. */
 .control-tooltip { position: relative; }
-.control-tooltip-label { position: absolute; z-index: 100; top: calc(100% + 6px); right: 0; width: max-content; max-width: 180px; padding: 5px 8px; border-radius: 4px; background: var(--ink, #182736); color: white; font-size: 13px; line-height: 1.4; font-weight: 500; pointer-events: none; opacity: 0; visibility: hidden; transition: opacity 0s, visibility 0s; }
+.control-tooltip-label { position: absolute; z-index: 100; top: calc(100% + 6px); right: 0; width: max-content; max-width: 180px; padding: 5px 8px; border-radius: 4px; background: var(--ink, #182736); color: white; font-size: 13px; line-height: 1.4; font-weight: 500; pointer-events: auto; opacity: 0; visibility: hidden; transition: opacity 0s, visibility 0s; }
 .control-tooltip:not([data-tooltip-dismissed]):hover > .control-tooltip-label { opacity: 1; visibility: visible; transition-delay: 300ms; }
 .control-tooltip:not([data-tooltip-dismissed]):focus > .control-tooltip-label { opacity: 1; visibility: visible; transition-delay: 0s; }
 .row-open > .control-tooltip-label { top: auto; bottom: calc(100% + 4px); }
 @media (max-width: 760px) {
   .row-open > .control-tooltip-label { top: 50%; bottom: auto; right: 28px; transform: translateY(-50%); }
 }
+
+/* The transparent bridge keeps help hoverable across the gap to its trigger. */
+.control-tooltip-label::before { content: ""; position: absolute; left: 0; right: 0; top: -6px; height: 6px; }
+.row-open > .control-tooltip-label::before { top: auto; bottom: -4px; height: 4px; }

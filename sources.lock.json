@@ -196,7 +196,7 @@
       "executable": false
     },
     "docs/ACCESSIBILITY.md": {
-      "sha256": "8f72f79e64e9b5853fe9678a5ca63b7a9e7fddfcc4c2c251dc44af375c980ad5",
+      "sha256": "ea3793e71243e2f8e09d14e2c1a1e8c6a05172127a557adbff471ad6b71fcd38",
       "executable": false
     },
     "docs/AGENT-DOOR.md": {
@@ -1780,7 +1780,7 @@
       "executable": false
     },
     "public/decision.js": {
-      "sha256": "475f136e2a31b4bb9282fb6efb52c5b92ad53fb8b563e7774144cfefdb7e79d6",
+      "sha256": "b05e687dd93bf48f9e74d15c03b6b7c06fff31f4dc1781ce426be415f2c3e272",
       "executable": false
     },
     "public/favicon.ico": {
@@ -2012,7 +2012,7 @@
       "executable": false
     },
     "public/ui/tooltips.css": {
-      "sha256": "910e6705895243290ffc12648cb3112daabb2ee84d421448f2d5d64fb6a9ce08",
+      "sha256": "810ffe700d1edab6ff390daf607865ceb02f6df3ba3bfc79bf33625890cda64d",
       "executable": false
     },
     "public/ui/undo.svg": {
@@ -6880,7 +6880,7 @@
       "executable": false
     },
     "tests/decision-browser.mjs": {
-      "sha256": "d7fe445620e73ab5b764785492559537a0e1dbbf93a06aa98244a6bb12da4099",
+      "sha256": "b875cbff63d5da144904447173f2d449571b8f7d5d28b129827700c5940307d4",
       "executable": false
     },
     "tests/deployment.test.mjs": {

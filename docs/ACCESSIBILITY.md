@@ -37,7 +37,7 @@ The measured checks visit every enabled visible control in natural DOM order by
 Tab, including activation of the skip link. Native segmented date and time fields may take several bounded Tab stops within one control. Each needs a computed accessible name, visible
 focus of at least 3:1 contrast, an exposed hit point and its complete bounds in
 the viewport. Positive tabindex is refused. Focused icon controls expose their
-named tooltips. Each target is at least 24 by 24 CSS pixels, has equivalent
+named tooltips. On hover-capable pointing devices, help stays visible when the pointer moves onto it and Escape dismisses it. Keyboard help is checked at both widths. Each target is at least 24 by 24 CSS pixels, has equivalent
 spacing, is an inline text link, or has an equivalent larger link to the same
 run. Reflow is measured at 320 CSS pixels, including nested scroll containers;
 text fields retain their ordinary single-line input behavior.

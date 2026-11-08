@@ -183,9 +183,11 @@ document.addEventListener('input', event => {
 document.addEventListener('keydown', event => {
   if (event.key === 'Escape') for (const control of document.querySelectorAll('.control-tooltip:hover,.control-tooltip:focus')) control.dataset.tooltipDismissed = 'true';
 });
-for (const type of ['focusin', 'focusout', 'pointerout']) document.addEventListener(type, event => {
+for (const type of ['focusin', 'focusout', 'pointerover', 'pointerout']) document.addEventListener(type, event => {
   const control = event.target instanceof Element && event.target.closest('.control-tooltip');
-  if (control && (type !== 'pointerout' || !control.contains(event.relatedTarget))) delete control.dataset.tooltipDismissed;
+  if (!control) return;
+  const crossed = !(event.relatedTarget instanceof Node) || !control.contains(event.relatedTarget);
+  if (type === 'focusin' || type === 'pointerover' && crossed || type === 'focusout' && !control.matches(':hover') || type === 'pointerout' && crossed && !control.matches(':focus')) delete control.dataset.tooltipDismissed;
 });
 
 // A popover must not cover the next keyboard target when focus leaves it.
