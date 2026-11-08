@@ -1,5 +1,6 @@
 import type { D1Database,D1Sql } from './types.ts';
-import { jsonChunks,jobColumns,provenanceColumns,claimColumns } from './sets.ts';
+import { jsonChunks } from './sets.ts';
+import { jobColumns, provenanceColumns, claimColumns } from './column-layout.ts';
 
 const PAGE_BYTES=2*1024*1024;
 const UNKNOWN_BYTES=Number.MAX_SAFE_INTEGER;

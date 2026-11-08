@@ -14,6 +14,8 @@ import { appResponse, productApi } from './crank/ui/handler'
 import { publicHooks } from './crank/triggers/public'
 import { schedulerPass } from './crank/ops/scheduler'
 import { emailHandler } from './crank/triggers/email'
+import { crankAgentResponse } from './crank/agent-door'
+import { businessSettingsResponse } from './crank/agent-door/business'
 
 const api = new Hono<{ Bindings: Bindings }>()
 api.get('/health', (context) => healthResponse(context.env))
@@ -32,6 +34,11 @@ export default withDemo({
   async fetch(request, env, execution) {
     const asset = await staticAssetResponse(request, env)
     if (asset) return asset
+    const bindings = runtimeBindings(env)
+    const business = await businessSettingsResponse(request, bindings)
+    if (business) return business
+    const door = await crankAgentResponse(request, bindings)
+    if (door) return rejectedResponse(request, door)
     const auth = await authResponse(request, env)
     if (auth) return auth
     // Inbound webhook, callback and Slack event doors admit events only; runs continue after the response.

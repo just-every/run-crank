@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {harness} from './harness.mjs';
-import {connection,fakeEdge,jsonResponse,publish,runs} from './kit.mjs';
+import {connection,fakeEdge,jsonResponse,publish,runs,until} from './kit.mjs';
 
 const minute=60000,day=86400000,sha=value=>createHash('sha256').update(value).digest('hex');
 const policy={payload_days:1,attachment_days:null,history_days:null};
@@ -13,8 +13,12 @@ const snapshotIds=rows=>rows.map(row=>[row.version_id,row.record_id]).sort();
 /** Retention covers unadmitted observations without losing comparison identity. */
 export async function appRetentionJourney({inspect=async()=>{}}={}) {
  const edge=fakeEdge(),initial='2026-10-20T01:00:00.000Z';
- const h=await harness('http://127.0.0.1:9',{edge:edge.edge,clock:initial});
- let ownerEmail;
+ const h=await harness('http://127.0.0.1:9',{edge:edge.edge,appCustodyBarrier:true,clock:initial});
+ let ownerEmail,barrier;
+ edge.routes.set('app-custody.example',async({url})=>{
+  if(barrier&&url.pathname==='/expire'){const current=barrier;barrier=undefined;current.reached=true;await current.wait}
+  return jsonResponse({ok:true});
+ });
  const renewOwner=async()=>{
   assert.equal((await h.send('/auth/magic-link',{email:ownerEmail,returnTo:'/app'})).status,202);
   const token=new URL(h.mail.at(-1).html.match(/href="([^"]*\/auth\/confirm\?token=[^"]+)"/)[1].replaceAll('&amp;','&'),h.origin).searchParams.get('token');
@@ -74,7 +78,17 @@ export async function appRetentionJourney({inspect=async()=>{}}={}) {
   const archive=await h.send('/api/crank/data/export',{},h.owner);assert.equal(archive.status,200,archive.text);
   await h.post('data/retention',{...policy,digest:held.digest});
   await inspect({h,w,state:'snapshot-retention-preview',preview:held});
-  await h.restart({clock:new Date(time).toISOString()});await h.tick(time);
+  await h.restart({clock:new Date(time).toISOString()});
+  let release;const pendingExpiry=barrier={wait:new Promise(done=>{release=done}),reached:false};
+  const expiring=h.tick(time);
+  let lateHold;
+  try {
+   await until(()=>pendingExpiry.reached,'snapshot expiry transaction');
+   lateHold=await h.post('data/holds',{kind:'workflow',workflow_id:w.id,reason:'Hold placed during snapshot expiry'},h.owner,201);
+  } finally {barrier=undefined;release();await expiring}
+  assert.deepEqual(snapshotIds(await snapshots(h,w)),snapshotIds(all),'a hold placed after selection prevents snapshot expiry');
+  assert.deepEqual(await values(h,w),retainedValues);
+  await h.post(`data/holds/${lateHold.id}/release`);await h.tick(time+=minute);
   assert.deepEqual(snapshotIds(await snapshots(h,w)),[[oldVersion,sha(records[0])],...records.map(record=>[currentVersion,sha(record)])].sort(),'Cron removes only the unheld retired payload');
   assert.deepEqual(await values(h,w),retainedValues,'payload expiry preserves workflow-level first-value digests');
   assert.equal((await h.db.prepare('SELECT COUNT(*) AS n FROM crank_app_subjects WHERE workflow_id=?').bind(w.id).first()).n,2,'subject erasure identity survives payload expiry');
@@ -133,5 +147,5 @@ export async function appRetentionJourney({inspect=async()=>{}}={}) {
   revision++;status='Pending';await h.tick(time+=minute);revision++;status='Approved';await h.tick(time+=minute);
   assert.equal((await runs(h,active)).length,2,'later legitimate source changes still run exactly once');
 
- } finally {await restored?.close();await h.close()}
+ } finally {barrier=undefined;await restored?.close();await h.close()}
 }

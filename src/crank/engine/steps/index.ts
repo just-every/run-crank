@@ -1,3 +1,5 @@
+import { typeformFindResponse } from '../../connectors/typeform'
+import { hubspotFindContact } from '../../connectors/hubspot'
 import { aiClassify } from './ai'
 import { orbitSteps } from '../../connectors/orbit'
 import { digestSteps } from './digest'
@@ -11,20 +13,27 @@ import { code } from '../../executors/step'
 import { fileFetch } from '../../connectors/files'
 import { httpRequest } from '../../connectors/http-step'
 import { gustoSteps } from '../../providers/gusto'
+import { quickbooksFindInvoice } from '../../providers/quickbooks-search'
 import { quickbooksSteps } from '../../providers/quickbooks'
 import { invoiceOutcome } from '../../providers/invoice-outcome'
 import { invoiceFollowup } from '../../providers/invoice-followup'
 import { quickbooksVoid } from '../../providers/quickbooks-compensation'
 import { slackSteps } from '../../connectors/slack'
 import { googleCalendarSteps } from '../../connectors/google-calendar'
+import { teamsFindUserByEmail } from '../../connectors/microsoft-teams'
+import { gmailSearchThreads } from '../../connectors/gmail'
 import type { StepType } from '../types'
 import { filter, map, respond, transform } from './core'
 import { approval, delay, waitForCallback } from './flow'
 import { join } from './join'
 
 /** Every step a published version may declare; `paths` groups are handled by the executor. */
-export const STEP_TYPES: Record<string, StepType> = {
+export const STEP_TYPES: Record<string, StepType> = Object.assign(Object.create(null), {
+  'typeform.find_response': typeformFindResponse,
+  'hubspot.find_contact': hubspotFindContact,
+  'microsoft_teams.find_user_by_email': teamsFindUserByEmail,
+  'gmail.search_threads': gmailSearchThreads,
   'ai.classify': aiClassify, ...orbitSteps, 'nook.send_message': nookSendMessage, 'quickbooks.followup_invoice': invoiceFollowup,
   'drift.map': driftMap, 'table.atomic': tableAtomic, 'table.lookup': tableLookup, subflow, collect, 'custom.request':customRequest, code, filter, transform, map, respond, delay, wait_for_callback: waitForCallback, approval, join,
-  'quickbooks.invoice_outcome': invoiceOutcome, http: httpRequest, 'file.fetch': fileFetch, ...digestSteps, ...slackSteps, ...googleCalendarSteps, ...quickbooksSteps, ...gustoSteps, 'quickbooks.void_invoice': quickbooksVoid,
-}
+  'quickbooks.find_invoice': quickbooksFindInvoice, 'quickbooks.invoice_outcome': invoiceOutcome, http: httpRequest, 'file.fetch': fileFetch, ...digestSteps, ...slackSteps, ...googleCalendarSteps, ...quickbooksSteps, ...gustoSteps, 'quickbooks.void_invoice': quickbooksVoid,
+} satisfies Record<string, StepType>)

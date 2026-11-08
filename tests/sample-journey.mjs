@@ -69,6 +69,46 @@ export async function sampleJourney({inspect=async()=>{}}={}) {
   const chosen=history.samples.find(s=>s.source==='history');assert.equal(chosen.source_id,run.id);assert.equal(chosen.source_time,run.received_at);assert.deepEqual(chosen.payload,run.trigger);
   const historicalPreview=await h.post(base+'/preview',{});assert.equal(historicalPreview.source.source_id,run.id);assert.match(historicalPreview.sample_source,new RegExp(run.id));assert.equal(historicalPreview.steps[1].output,'HIDDEN-VALUE');
   await inspect({h,w,state:'history',sample:chosen,preview:historicalPreview});
+  // A retained app output is usable by later pure steps without replaying the app.
+  const downstream=graph();downstream.steps.push(
+   {id:'contact',type:'map',input:{id:'{{steps.notify.body.id}}'}},
+   {id:'contact_case',type:'transform',fn:'text.case',input:{value:'{{steps.contact.id}}',to:'upper'}},
+   {id:'contact_route',type:'paths',mode:'exclusive',branches:[{id:'known',when:[[{field:'steps.contact.id',op:'text.equals',value:'synthetic-crank-contact'}]],steps:[{id:'routed',type:'map',input:{id:'{{steps.contact.id}}'}}]}]},
+   {id:'after_route',type:'filter',when:[[{field:'steps.contact_case',op:'text.equals',value:'SYNTHETIC-CRANK-CONTACT',case_sensitive:true}]]}
+  );
+  await h.post(base+'/draft',{graph:downstream});
+  const sourceOutput=run.steps.find(step=>step.path==='notify').output;
+  assert.equal(sourceOutput.body.id,'synthetic-crank-contact');
+  await h.post(base+'/samples',{source:'history',step_path:'contact',run_id:run.id},h.owner,422);
+  const outputHistory=await h.post(base+'/samples',{source:'history',step_path:'notify',run_id:run.id},h.owner,201);
+  const outputSample=outputHistory.samples.find(sample=>sample.selected&&sample.step_path==='notify');
+  assert.deepEqual(outputSample.payload,sourceOutput);assert.equal(outputSample.source_id,run.id);assert.equal(outputSample.source_time,run.steps.find(step=>step.path==='notify').finished_at);
+  const beforeOutputPreview=checkpoints(await archive(h));
+  const fromOutput=await h.post(base+'/preview',{});
+  assert.deepEqual(fromOutput.steps.map(step=>step.path),['mapped','upper','qualify','notify','contact','contact_case','contact_route','contact_route/known/routed','after_route']);
+  assert.deepEqual(fromOutput.steps[4].output,{id:'synthetic-crank-contact'});assert.equal(fromOutput.steps[5].output,'SYNTHETIC-CRANK-CONTACT');
+  assert.deepEqual(fromOutput.steps[6].matched,['known']);assert.equal(fromOutput.steps[8].pass,true);
+  assert.deepEqual(fromOutput.steps[8].sources.map(source=>source.id),[chosen.id,outputSample.id]);assert.equal(fromOutput.steps[8].source.source_id,run.id);
+  assert.equal(edge.requests.length,1);assert.deepEqual(checkpoints(await archive(h)),beforeOutputPreview);
+  await inspect({h,w,state:'step-history',step:'notify',sample:outputSample,preview:fromOutput});
+  const stepSchema=await h.post(base+'/samples',{source:'schema',step_path:'notify',sample:{body:{id:'synthetic-crank-schema'}}},h.owner,201);
+  const stepSchemaId=stepSchema.samples.find(sample=>sample.selected&&sample.step_path==='notify').id;
+  const schemaPreview=await h.post(base+'/preview',{});
+  assert.deepEqual(schemaPreview.steps[4].output,{id:'synthetic-crank-schema'});assert.deepEqual(schemaPreview.steps[6].matched,[]);
+  assert.equal(schemaPreview.steps[6].source.id,stepSchemaId);assert.equal(schemaPreview.steps[6].source.tested,false);assert.match(schemaPreview.sample_source,/schema sample.*not tested/);
+  assert.ok((await h.post(base+'/validate',{})).warnings.includes('Step notify relies on a schema sample; not tested'));
+  await inspect({h,w,state:'step-schema',step:'notify',sample:stepSchema.samples.find(sample=>sample.id===stepSchemaId),preview:schemaPreview});
+  const incomplete=await h.post(base+'/samples',{source:'manual',step_path:'notify',sample:{body:{}}},h.owner,201);
+  assert.ok(incomplete.warnings.includes('Stale sample for step notify: missing fields steps.notify.body.id'));
+  assert.ok((await h.post(base+'/publish',{},h.owner,201)).warnings.includes('Stale sample for step notify: missing fields steps.notify.body.id'));
+  const manualOutputPreview=await h.post(base+'/preview',{});assert.deepEqual(manualOutputPreview.steps[4].output,{});assert.match(manualOutputPreview.sample_source,/manual sample/);
+  await h.post(base+'/samples/select',{sample_id:outputSample.id});
+  assert.equal((await h.get(base+'/samples')).warnings.some(warning=>warning.includes('Stale sample for step notify')),false);
+  const scalarHistory=await h.post(base+'/samples',{source:'history',step_path:'upper',run_id:run.id},h.owner,201);
+  const scalarSample=scalarHistory.samples.find(sample=>sample.selected&&sample.step_path==='upper');
+  assert.equal(scalarSample.payload,'HIDDEN-VALUE');
+  const scalarPreview=await h.post(base+'/preview',{});
+  assert.equal(scalarPreview.steps[1].output,'HIDDEN-VALUE');assert.equal(scalarPreview.steps[1].source.id,scalarSample.id);assert.equal(scalarPreview.steps.at(-1).pass,true);
   const invited=await h.send('/auth/invite',{email:address('reader'),displayName:'Sample reader',role:'member'},h.owner);assert.equal(invited.status,202);
   const token=new URL(h.mail.at(-1).html.match(/href="([^"]*\/auth\/confirm\?token=[^"]+)"/)[1].replaceAll('&amp;','&'),h.origin).searchParams.get('token');
   const reader=(await h.send('/auth/confirm',{token})).cookie;
@@ -83,9 +123,11 @@ export async function sampleJourney({inspect=async()=>{}}={}) {
   const restrictedValidation=await h.post(base+'/validate',{},reader,403);
   assert.equal(restrictedValidation.warnings,undefined,'a payload-restricted viewer cannot obtain sample validation');
   assert.equal(JSON.stringify(restrictedValidation).includes('body.private_question'),false,'refusal cannot disclose retained sample field presence');
+  await h.post(base+'/samples',{source:'history',step_path:'notify',run_id:run.id},reader,403);
   assert.equal(edge.requests.length,1);
   const foreign=await h.post('workflows',{name:'Other sample workflow',graph:graph()},h.owner,201);
   await h.post(`workflows/${foreign.id}/samples`,{source:'history',run_id:run.id},h.owner,422);
+  await h.post(`workflows/${foreign.id}/samples`,{source:'history',step_path:'notify',run_id:run.id},h.owner,422);
   await h.post(`workflows/${foreign.id}/preview`,{sample_id:chosen.id},h.owner,422);
   const outstanding=await h.post(base+'/samples/listen',{},h.owner,201);
   const exported=await archive(h),receiving=await harness('http://127.0.0.1:9',{edge:edge.edge});
@@ -100,6 +142,7 @@ export async function sampleJourney({inspect=async()=>{}}={}) {
    assert.ok((await receiving.get(base+'/samples')).samples.every(s=>!s.selected));
    await receiving.post(base+'/samples/select',{sample_id:chosen.id},receiving.owner,409);
    await receiving.post(base+'/samples/listen',{},receiving.owner,409);
+   await receiving.post(base+'/samples/select',{sample_id:outputSample.id},receiving.owner,409);
    assert.equal((await deliver(receiving,outstanding.url.replace(h.origin,receiving.origin),{method:'POST',body:'event=restored'})).status,404);
    assert.equal((await receiving.get(base)).status,'paused');
    const review=(await receiving.get(base)).restore;
@@ -107,6 +150,9 @@ export async function sampleJourney({inspect=async()=>{}}={}) {
    const oldHistory=await receiving.post(base+'/samples',{source:'history',run_id:run.id},receiving.owner,201);
    assert.equal(oldHistory.samples.find(s=>s.selected&&s.step_path==='trigger').source_time,oldTime);
    assert.equal((await receiving.post(base+'/preview',{})).source.source_id,run.id);
+   await receiving.post(base+'/samples/select',{sample_id:outputSample.id});
+   const restoredPreview=await receiving.post(base+'/preview',{});
+   assert.deepEqual(restoredPreview.steps[4].output,{id:'synthetic-crank-contact'});assert.equal(restoredPreview.steps.at(-1).pass,true);assert.equal(restoredPreview.steps.at(-1).source.id,outputSample.id);
   } finally {await receiving.close()}
   const hold=await h.post('data'+'/holds',{kind:'workflow',workflow_id:w.id,reason:'Retain sample review'},h.owner,201);
   await h.post(base+'/samples/delete',{sample_id:fileSample.id},h.owner,409);
@@ -129,8 +175,9 @@ export async function sampleJourney({inspect=async()=>{}}={}) {
   // Erasing the source removes the independently retained history copy too.
   await h.post(base+'/pause');await h.post('data'+'/erase',{workflow_run_id:run.id,confirm:'ERASE'});
   assert.equal((await h.get(base+'/samples')).samples.some(s=>s.source_id===run.id),false);
+  await h.post(base+'/samples',{source:'history',step_path:'notify',run_id:run.id},h.owner,404);
   await conditionPreviews(h,edge,inspect);
-  return {samples:6};
+  return {samples:10};
  } finally {await h.close()}
 }
 

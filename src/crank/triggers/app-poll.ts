@@ -93,7 +93,7 @@ export async function appItems(env: CrankEnv, poll: PollRow, trigger: Record<str
     const saveSnapshot = (guard = '1', params: unknown[] = []) => stmt(env, `INSERT INTO crank_app_snapshots(workflow_id,version_id,record_id,fields_json,changed_at,observed_at) SELECT ?,?,?,?,?,? WHERE ${guard}
       ON CONFLICT(workflow_id,version_id,record_id) DO UPDATE SET fields_json=excluded.fields_json,changed_at=excluded.changed_at,observed_at=excluded.observed_at WHERE crank_app_snapshots.changed_at${equalClock ? '<=' : '<'}excluded.changed_at`, poll.workflow_id, poll.version_id, recordKey, sealed, at, started, ...params)
     if (shouldRun && !reseeding) {
-      const key = trigger.event === 'new' ? `app:${record.id}` : 'change:' + await digest(canonical([record.id, changed, fields, changeAt, ...(native ? [record.fields.revision] : [])]))
+      const key = trigger.event === 'new' ? `app-record:${recordKey}` : 'change:' + await digest(canonical([record.id, changed, fields, changeAt, ...(native ? [record.fields.revision] : [])]))
       events.push({ key, businessKey: recordKey, sourceTime: changeAt,
         onRetain: (guard, params) => [
           ...receipts.map(({ field, hash }) => stmt(env, `INSERT OR IGNORE INTO crank_app_field_values(workflow_id,record_id,field,value_digest,first_seen_at) SELECT ?,?,?,?,? WHERE ${guard}`, poll.workflow_id, recordKey, field, hash, started, ...params)),

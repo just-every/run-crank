@@ -1,5 +1,6 @@
 import { validatePureRecipe } from './workflows/recipe-definition.mjs';
 import { validateSubflowDefinition } from './workflows/subflow-definition.mjs';
+const sealedValue = value => value?.sealed === 'crank-payload-v1' && typeof value.k === 'string' && ['customer','financial','health'].includes(value.c) && typeof value.iv === 'string' && atob(value.iv).length === 12 && typeof value.ct === 'string' && atob(value.ct).length >= 16;
 const unfinished = ['queued', 'running', 'waiting', 'awaiting_approval', 'paused'];
 const distant = '9999-12-31T00:00:00.000Z';
 const encode = value => JSON.stringify(value);
@@ -13,7 +14,7 @@ const uncertainWrite = encode({ category: 'uncertain', message: 'Restore interru
 const deliveryFence = previous => encode({ status: 'failed', code: 'restore_fence', uncertain: true, previous });
 const fenced = (json, key, code) => json !== null && JSON.parse(json)[key] === code;
 const remoteWrite = row => row.status === 'running' &&
-  (row.type === 'ai.classify' || row.type === 'orbit.update_deal' || row.type.startsWith('nook.') || row.type.startsWith('slack.') || row.type.startsWith('google_calendar.') || row.type.startsWith('quickbooks.') || row.type.startsWith('gusto.') || row.type === 'http' && !['GET', 'HEAD'].includes(String(JSON.parse(row.input_json ?? '{}').method ?? 'GET').toUpperCase()));
+  (row.type === 'ai.classify' || row.type === 'orbit.update_deal' || row.type.startsWith('nook.') || row.type.startsWith('slack.') || row.type === 'google_calendar.create_event' || (row.type.startsWith('quickbooks.') && row.type !== 'quickbooks.find_invoice') || row.type.startsWith('gusto.') || row.type === 'http' && !['GET', 'HEAD'].includes(String(JSON.parse(row.input_json ?? '{}').method ?? 'GET').toUpperCase()));
 
 /** Pure/idempotent export normalization: backups carry history, never execution authority. */
 export function fenceRow(table, row) {
@@ -90,6 +91,29 @@ export function importRow(table, row) {
   if (table === 'crank_polls') return { ...row, next_due_at: distant, subscription_json: null };
   if (table === 'crank_schedules') return { ...row, next_due_at: distant };
   return row;
+}
+
+// Typeform checkpoints contain only the declared projection, never provider uploads.
+function validTypeformProjection(step, value, input) {
+  const object = v => v && typeof v === 'object' && !Array.isArray(v);
+  const keys = (v, allowed) => object(v) && Object.keys(v).every(key => allowed.includes(key));
+  const identity = v => typeof v === 'string' && /^[A-Za-z0-9_-]{1,128}$/.test(v);
+  const time = v => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/.test(v) && Number.isFinite(Date.parse(v)) && new Date(v).toISOString().slice(0,19) === v.slice(0,19);
+  if (!keys(value,['records']) || !Array.isArray(value.records) || value.records.length > 1 || !Array.isArray(step.fields) || !Array.isArray(step.hidden_fields)) return false;
+  // Resolved inputs bind mapped lookups too. Opaque inputs are checked on consumption.
+  const expected = typeof step.input?.response_id === 'string' && !step.input.response_id.includes('{{') ? step.input.response_id : sealedValue(input) ? null : input?.response_id;
+  if (expected !== null && !identity(expected)) return false;
+  return value.records.every(record => {
+    if (!keys(record,['id','response_id','form_id','submitted_at','landed_at','answers','hidden']) || !identity(record.id) || record.id !== record.response_id || record.form_id !== step.form_id || !time(record.submitted_at) || record.landed_at !== undefined && !time(record.landed_at) || !Array.isArray(record.answers) || record.answers.length > step.fields.length || !keys(record.hidden,step.hidden_fields)) return false;
+    if (expected !== null && record.id !== expected) return false;
+    const seen = new Set();
+    for (const answer of record.answers) {
+      if (!keys(answer,['field','type','value']) || !keys(answer.field,['id','ref']) || !identity(answer.field.id) || answer.field.ref !== undefined && !identity(answer.field.ref) || seen.has(answer.field.id) || !Object.hasOwn(answer,'value') || !step.fields.some(field => field.id === answer.field.id && field.type === answer.type)) return false;
+      if (answer.value !== null && (typeof answer.value !== (answer.type === 'text' ? 'string' : answer.type) || answer.type === 'text' && answer.value.length > 16384 || answer.type === 'number' && !Number.isFinite(answer.value))) return false;
+      seen.add(answer.field.id);
+    }
+    return Object.values(record.hidden).every(value => value === null || typeof value === 'string' && value.length <= 16384);
+  });
 }
 
 /** Semantic checks on the normalized staging rows, before the atomic commit.
@@ -189,23 +213,41 @@ export async function validateRestore({ read }) {
         const allowed=[search?.id,search?.find_or_create?.operation].filter(Boolean)
         if (!step.gateway_id || !search?.gateway || response.body_bytes>65536 || !allowed.some(operation=>url.pathname===`/api/crank/gateways/${encodeURIComponent(step.gateway_id)}/operations/${encodeURIComponent(operation)}/pages/0`)) return false;
       }
-      if (!step || !['http','file.fetch','custom.request'].includes(step.type) && !step.type.startsWith('orbit.') && !step.type.startsWith('nook.') && !step.type.startsWith('slack.') && !step.type.startsWith('quickbooks.') && !step.type.startsWith('gusto.')) return false;
-      const bound = (step.type === 'file.fetch' || step.type === 'nook.send_message' || step.type.startsWith('orbit.') ? 1 : step.type.startsWith('slack.') ? 4 : 2) * 1024 * 1024;
+      if (!step || !['http','file.fetch','custom.request','typeform.find_response','gmail.search_threads','hubspot.find_contact','microsoft_teams.find_user_by_email'].includes(step.type) && !step.type.startsWith('orbit.') && !step.type.startsWith('nook.') && !step.type.startsWith('slack.') && !step.type.startsWith('quickbooks.') && !step.type.startsWith('gusto.') && !step.type.startsWith('google_calendar.')) return false;
+      // A CRM page can only come from the pinned no-redirect reader, inside its
+      // declared scan. Opaque sealed bodies remain intact without importing keys.
+      if (step.type === 'hubspot.find_contact' && (url.href !== 'https://api.hubapi.com/crm/v3/objects/contacts' || response.body_bytes > 262144 || response.redirects !== 0 || checkpoint.ordinal >= (step.max_pages ?? 20))) return false;
+      if (step.type === 'microsoft_teams.find_user_by_email' && (url.href !== 'https://graph.microsoft.com/v1.0/users' || response.body_bytes > 1048576 || response.redirects !== 0 || checkpoint.ordinal >= (step.max_pages ?? 20))) return false;
+      if (step.type === 'typeform.find_response' && (url.href !== 'https://api.typeform.com/responses' || response.body_bytes > 262144 || response.redirects !== 0 || checkpoint.ordinal !== 0)) return false;
+      if (step.type === 'google_calendar.search_events' && url.href !== 'https://www.googleapis.com/calendar/v3/events') return false;
+      const bound = (step.type === 'file.fetch' || step.type === 'nook.send_message' || step.type.startsWith('orbit.') || step.type === 'google_calendar.search_events' ? 1 : step.type.startsWith('slack.') ? 4 : 2) * 1024 * 1024;
       if (!Number.isSafeInteger(checkpoint.ordinal) || checkpoint.ordinal < 0 || !/^[a-f0-9]{64}$/.test(checkpoint.request_key) || typeof checkpoint.operation_key !== 'string' || !checkpoint.operation_key) return false;
       if (!Number.isInteger(response.status) || response.status < 100 || response.status > 599 || !['http:', 'https:'].includes(url.protocol) || url.username || url.password || url.search || url.hash) return false;
-      if (!Number.isSafeInteger(response.body_bytes) || response.body_bytes < 0 || response.body_bytes > bound || response.chunk_count !== Math.ceil(response.body_bytes / 65536) || !Array.isArray(response.headers)) return false;
+      if (!Number.isSafeInteger(response.body_bytes) || response.body_bytes < 0 || response.body_bytes > bound || response.chunk_count !== Math.ceil(response.body_bytes / 65536) || !(Array.isArray(response.headers) || sealedValue(response.headers))) return false;
       const key = checkpointKey(checkpoint), body = (chunks.get(key) ?? []).sort((a, b) => a.chunk_index - b.chunk_index);
       if (body.length !== response.chunk_count) return false;
       let length = 0;
       for (const [index, chunk] of body.entries()) {
         if (chunk.chunk_index !== index || typeof chunk.content_base64 !== 'string') return false;
-        const bytes = atob(chunk.content_base64).length;
+        const expected = Math.min(65536, response.body_bytes - length);
+        const envelope = chunk.content_base64.startsWith('{') ? JSON.parse(chunk.content_base64) : null;
+        if (envelope && (!run.payload_key || envelope.k !== run.payload_key || !sealedValue(envelope) || atob(envelope.ct).length !== 4 * Math.ceil(expected / 3) + 18)) return false;
+        const bytes = envelope ? expected : atob(chunk.content_base64).length;
         if (bytes !== Math.min(65536, response.body_bytes - length)) return false;
         length += bytes;
       }
       if (length !== response.body_bytes) return false;
+      if (step.type === 'typeform.find_response' && body.some(chunk => !chunk.content_base64.startsWith('{'))) {
+        if (body.some(chunk => chunk.content_base64.startsWith('{'))) return false;
+        const bytes = Uint8Array.from(body.map(chunk => atob(chunk.content_base64)).join(''), c => c.charCodeAt(0));
+        const value = JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(bytes));
+        const retained = (await rows('crank_wf_steps')).find(row => row.run_id === checkpoint.run_id && row.path === checkpoint.path && row.operation_key === checkpoint.operation_key);
+        const input = retained?.input_json ? JSON.parse(retained.input_json) : null;
+        if (response.status === 200 ? !validTypeformProjection(step,value,input) : Object.keys(value).length !== 0) return false;
+      }
       chunks.delete(key);
-      if (response.headers.some(pair => !Array.isArray(pair) || pair.length !== 2 || pair.some(value => typeof value !== 'string') || /authorization|cookie|api[-_]?key|token|secret|password|signature/i.test(pair[0]))) return false;
+      if (Array.isArray(response.headers) && response.headers.some(pair => !Array.isArray(pair) || pair.length !== 2 || pair.some(value => typeof value !== 'string') || /authorization|cookie|api[-_]?key|token|secret|password|signature/i.test(pair[0]))) return false;
+      if (['hubspot.find_contact','typeform.find_response','microsoft_teams.find_user_by_email'].includes(step.type) && Array.isArray(response.headers) && response.headers.some(([name]) => !['content-type','retry-after'].includes(name.toLowerCase()))) return false;
     } catch { return false; }
   }
   if (chunks.size) return false;

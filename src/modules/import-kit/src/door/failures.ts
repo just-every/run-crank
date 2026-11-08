@@ -1,4 +1,5 @@
 import type { ImportJob } from '../types.ts';
+import { reversalState } from '../d1/undo-state.ts';
 import type { DoorRequest, DoorSnapshot } from './types.ts';
 import { DoorError } from './protocol.ts';
 import { assertion, snapshotHeld, sql, transact } from './store.ts';
@@ -34,6 +35,10 @@ export function requireNewPlan(planId: string, reason: string): never {
 }
 export async function recordApplyFailure(request: DoorRequest, snapshot: DoorSnapshot, job: ImportJob, error: unknown): Promise<never> {
   const g = request.access, reason = reasonCode(error);
+  // A preserving reversal journal starts at the last published apply fence.
+  // A refused batch published no progress: its terminal failed state/error
+  // fence stale applies without introducing an unjournaled publication fence.
+  const fence = job.fence + Number(reversalState(job).policy !== 'preserve-conflicts');
   // This is server bookkeeping for an already accepted attempt, including when
   // its key was revoked/expired during apply. It grants no further native writes.
   // Fence on the pre-batch job: a concurrent publication must never be failed.
@@ -52,8 +57,8 @@ export async function recordApplyFailure(request: DoorRequest, snapshot: DoorSna
   await transact(request.options.database, sql('1'), [
     assertion(unerased), assertion(snapshotHeld(snapshot.id)), assertion(issued), assertion(accepted),
     sql('INSERT INTO ik_door_apply_failures(plan_id,reason_code) VALUES(?,?)', snapshot.id, reason),
-    sql("UPDATE ik_jobs SET state='failed',error=?,fence=fence+1 WHERE id=?", reason, job.id),
-    assertion(sql("EXISTS(SELECT 1 FROM ik_jobs WHERE id=? AND state='failed' AND error=? AND fence=?)", job.id, reason, job.fence + 1)),
+    sql("UPDATE ik_jobs SET state='failed',error=?,fence=? WHERE id=?", reason, fence, job.id),
+    assertion(sql("EXISTS(SELECT 1 FROM ik_jobs WHERE id=? AND state='failed' AND error=? AND fence=?)", job.id, reason, fence)),
   ]);
   throw new DoorError(reason, reason === 'import_door_apply_transient' ? 503 : 409,
     {planId:snapshot.id, jobId:job.id, requiresNewPlan:true, requiresNewApproval:true});

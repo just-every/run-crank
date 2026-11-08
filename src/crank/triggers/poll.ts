@@ -155,7 +155,10 @@ export async function runPoll(env: CrankEnv, poll: PollRow, time: number) {
       event.onRetain = (guard, params) => {
         const sourceGuard = sourceAuthority()
         return [
-        stmt(env, `INSERT INTO crank_authority_guards(id,ok) SELECT ?,CASE WHEN ${sourceGuard.sql} THEN 1 ELSE 0 END WHERE ${guard}`, guardId, ...sourceGuard.params, ...params),
+        // A paused poll may have prepared this payload before subject erasure.
+        // Refuse its held copy atomically as well as its run and snapshot writes.
+        stmt(env, `INSERT INTO crank_authority_guards(id,ok) SELECT ?,CASE WHEN ${sourceGuard.sql}
+          AND NOT EXISTS(SELECT 1 FROM crank_app_erased_records WHERE workflow_id=? AND record_id=?) THEN 1 ELSE 0 END WHERE ${guard}`, guardId, ...sourceGuard.params, poll.workflow_id, event.businessKey ?? null, ...params),
         ...(retain?.(guard, params) ?? []), stmt(env, 'DELETE FROM crank_authority_guards WHERE id=?', guardId),
         ]
       }

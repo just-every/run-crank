@@ -1,7 +1,7 @@
 import { archiveTransferApi } from './archive-api'
 import { archiveTransfers, operation } from './ops/recovery'
 import { createPortability, readArchive, type Manifest, type Part, type Closing } from '@runeditrun/rer/internal/modules/portability/index.mjs'
-import policy from './archive-policy.mjs'
+import policy, { restoreArchive } from './archive-policy.mjs'
 import { authorize, requireOwner, requireWriteOrigin, guardedBatch } from './access'
 import { body, type CrankEnv } from './model'
 import { eraseFlowRun, eraseWorkflowRun } from './workflow-erasure'
@@ -65,8 +65,10 @@ export async function dataApi(request:Request,env:CrankEnv):Promise<Response|nul
     if (path === '/api/crank/data/restore' && request.method === 'POST') {
       const value = await body(request, 8 * 1024 * 1024)
       if (value.confirm !== 'RESTORE' || typeof value.archive !== 'string') return Response.json({error:'Confirm RESTORE and supply an archive.'},{status:400})
-      const rows: (Manifest|Part|Closing)[] = []
+      let rows: (Manifest|Part|Closing)[] = []
       for await (const row of readArchive(new Response(value.archive).body!)) rows.push(row)
+      const originalArchiveHash = (rows.at(-1) as Closing)?.archiveHash
+      rows = await restoreArchive(rows)
       const manifest = rows[0] as Manifest, closing = rows.at(-1) as Closing
       if (manifest?.kind !== 'manifest' || closing?.kind !== 'closing') throw new Error('Incomplete archive')
       let laterJournal
@@ -80,7 +82,7 @@ export async function dataApi(request:Request,env:CrankEnv):Promise<Response|nul
       try {
         for (const part of rows.slice(1,-1) as Part[]) await store.imports.uploadPart(id,part.index,part)
         const status = await store.imports.finalize(id,{archiveHash:closing.archiveHash,contentHash:closing.contentHash,laterJournal})
-        await guardedBatch(env,actor,'owner',[auditStatement(env,actor.id,'data.restore','workspace','data',{archive_hash:closing.archiveHash,normalized:(status.safetyChanges ?? []).map(({table,column,rows}:{table:string;column:string;rows:number})=>({table,column,rows}))})])
+        await guardedBatch(env,actor,'owner',[auditStatement(env,actor.id,'data.restore','workspace','data',{archive_hash:originalArchiveHash,...(originalArchiveHash !== closing.archiveHash ? {normalized_archive_hash:closing.archiveHash} : {}),normalized:(status.safetyChanges ?? []).map(({table,column,rows}:{table:string;column:string;rows:number})=>({table,column,rows}))})])
         return Response.json(status,{headers:{'cache-control':'no-store'}})
       } catch(error) { await store.imports.abort(id); throw error }
     }

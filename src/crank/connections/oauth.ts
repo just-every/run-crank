@@ -21,13 +21,18 @@ export const PROVIDERS: Record<string, Provider> = {
   // https://developers.google.com/identity/protocols/oauth2/web-server
   google: { authorize: 'https://accounts.google.com/o/oauth2/v2/auth', token: 'https://oauth2.googleapis.com/token', separator: ' ', pkce: true, extra: { access_type: 'offline', prompt: 'consent', include_granted_scopes: 'true' }, tokenAuth: 'body' },
 }
+export function oauthProvider(app: string): Provider {
+  const provider = Object.hasOwn(PROVIDERS, app) ? PROVIDERS[app] : undefined
+  requireValue(provider, `No OAuth flow for ${app}`)
+  return provider
+}
 const redirectUri = (env: CrankEnv) => new URL('/api/crank/oauth/callback', env.AUTH_ORIGIN).href
 const b64url = (bytes: ArrayBuffer) => btoa(String.fromCharCode(...new Uint8Array(bytes))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
 
 /** The owner's own OAuth app registration for a provider (client ID and secret). */
 export async function setOauthApp(env: CrankEnv, actor: Actor, app: string, input: Record<string, unknown>) {
   requireOwner(actor)
-  requireValue(PROVIDERS[app], `No OAuth flow for ${app}`)
+  oauthProvider(app)
   const sealed = await seal(env, `crank-oauth-app:${app}`, { client_secret: text(input.client_secret, 'client_secret', 2048) })
   await guardedBatch(env, actor, 'owner', [
     stmt(env, 'INSERT INTO crank_oauth_apps(app,client_id,secret_iv,secret_ciphertext,updated_by,updated_at) VALUES(?,?,?,?,?,?) ON CONFLICT(app) DO UPDATE SET client_id=excluded.client_id,secret_iv=excluded.secret_iv,secret_ciphertext=excluded.secret_ciphertext,updated_by=excluded.updated_by,updated_at=excluded.updated_at',
@@ -45,8 +50,7 @@ async function oauthApp(env: CrankEnv, app: string) {
 /** Starts consent: exact scopes are shown at the provider; state and PKCE bind the callback. */
 export async function startOauth(env: CrankEnv, actor: Actor, input: Record<string, unknown>) {
   requireOwner(actor)
-  const app = text(input.app, 'app', 40), provider = PROVIDERS[app]
-  requireValue(provider, `No OAuth flow for ${app}`)
+  const app = text(input.app, 'app', 40), provider = oauthProvider(app)
   requireValue(!provider.managedOnly, 'Gusto managed renewal is sandbox only; add the company access and refresh tokens through Connections')
   const scopes = Array.isArray(input.scopes) ? input.scopes.map(scope => text(scope, 'scope', 200)) : []
   requireValue(scopes.length > 0, 'Choose the scopes to request')
@@ -65,7 +69,7 @@ export async function startOauth(env: CrankEnv, actor: Actor, input: Record<stri
 }
 
 async function tokenRequest(app: string, form: Record<string, string>) {
-  const provider = PROVIDERS[app]
+  const provider = oauthProvider(app)
   const headers = new Headers({ 'content-type': 'application/x-www-form-urlencoded', accept: 'application/json' }), fields = { ...form }
   if (provider.tokenAuth === 'basic') { headers.set('authorization', 'Basic ' + btoa(`${fields.client_id}:${fields.client_secret}`)); delete fields.client_id; delete fields.client_secret }
   if (provider.tokenEncoding === 'json') headers.set('content-type', 'application/json')
@@ -94,10 +98,11 @@ export async function finishOauth(env: CrankEnv, actor: Actor, params: URLSearch
   const claimed = await stmt(env, 'UPDATE crank_oauth_states SET used_at=? WHERE state_hash=? AND used_at IS NULL', now(), hash).run()
   requireValue(claimed.meta.changes === 1, 'This authorization link was already used', 409)
   requireValue(code, 'The provider returned no authorization code', 400)
+  const provider = oauthProvider(row.app)
   const { verifier } = await open<{ verifier: string }>(env, `crank-oauth-state:${hash}`, row.verifier_iv, row.verifier_ciphertext)
   const client = await oauthApp(env, row.app)
   const form: Record<string, string> = { grant_type: 'authorization_code', code, redirect_uri: redirectUri(env), client_id: client.client_id, client_secret: client.client_secret }
-  if (PROVIDERS[row.app].pkce) form.code_verifier = verifier
+  if (provider.pkce) form.code_verifier = verifier
   const realm = row.app === 'quickbooks' ? params.get('realmId') : null
   if (row.app === 'quickbooks') requireValue(realm && /^[0-9]{1,30}$/.test(realm), 'QuickBooks returned no sandbox company realmId')
   if (row.app === 'quickbooks' && row.connection_id) requireValue((await getConnection(env, row.connection_id)).account_name === realm, 'Reconnect the original QuickBooks company; use a new connection for another company', 409)

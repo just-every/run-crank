@@ -8,7 +8,7 @@ import { d1NativeStagingSchema } from './native-staging-schema.ts';
 import { d1CustodyStateSchema, d1CustodyStateReplaceSchema } from './custody-state-schema.ts';
 import { d1ReversalFenceSchema } from './reversal-fence-schema.ts';
 import { batchBytes } from './transport.ts';
-import { D1RequestLimitError, packGuards, remaining } from './budget.ts';
+import { batchExecutions, D1RequestLimitError, packGuards, remaining } from './budget.ts';
 import { d1ErasureSchema } from './erasure-schema.ts';
 import { d1RetirementSchema } from './retirement-schema.ts';
 import { d1ErasureProgressSchema } from './erasure-progress-schema.ts';
@@ -130,7 +130,7 @@ export const atomicCount = (context:Parameters<typeof authority>[0]&Pick<D1Impor
 function atomicPreparation(context:Parameters<typeof authority>[0]&Pick<D1ImportContext,'maxBatchBytes'>,action:ImportAction,statements:D1Sql[],scope?:NativeStagingScope,returnReads=0){
   const post=postConditions(context,statements,scope,action);
   const packed=[...atomicStatements(context,action,statements),...readonlyChecks(post),...(post.length?[finalAuthority(context,action)]:[])];
-  return {post,packed,count:packed.length+returnReads};
+  return {post,packed,count:batchExecutions(context as D1ImportContext,packed.length)+returnReads};
 }
 export { atomicPrefix } from './atomic-prefix.ts';
 /** SELECT-only fence: inspect every packed scalar before publishing snapshots.
@@ -145,7 +145,7 @@ export async function readAtomic(context: D1ImportContext, guards: D1Sql[], scop
     await readBoundedGuards(context, checks, scope, Math.min(limit,2*1024*1024), action);
     return;
   }
-  if (packed.length > remaining(context)) throw new D1RequestLimitError();
+  if (batchExecutions(context, packed.length) > remaining(context)) throw new D1RequestLimitError();
   const results = await context.storage.database.batch(packed.map(s => prepare(context.storage.database, s)));
   checkBatchResults(results, packed.length, 'IMPORT_ATOMIC_GUARD');
   for (const result of results) {

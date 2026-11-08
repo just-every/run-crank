@@ -24,7 +24,8 @@ import { listHooks } from '../triggers/webhook'
 import { nextBoundary } from '../triggers/poll'
 import { nextOccurrence } from '../triggers/schedule'
 import { pollRate } from '../triggers/definition'
-import { claimCommand, commandCondition, commandReceipt, committedReceipt, receiptMetadata, workflowCommand, type WorkflowCommand, type WorkflowReceipt } from './idempotency'
+import { claimCommand, freezeCommand, commandCondition, commandReceipt, committedReceipt, receiptMetadata, workflowCommand, type WorkflowCommand, type WorkflowReceipt } from './idempotency'
+import { workflowView } from '../agent-door/native-recovery'
 import { snapshotBindings } from './snapshot'
 import { adoptionStatements, pendingRestore, restoreReview } from './restore'
 import { RETRY_POLICY } from '../connectors/retry-policy'
@@ -48,9 +49,12 @@ export async function getWorkflow(env: CrankEnv, workflowId: string): Promise<Wo
 export async function presentWorkflow(env: CrankEnv, row: WorkflowRow) {
   const versions = await stmt(env, "SELECT id,number,graph_digest,declared_json,published_by,published_at,retired_at FROM crank_workflow_versions WHERE workflow_id=? AND mode='production' ORDER BY number DESC", row.id).all<Omit<VersionRow, 'graph_json' | 'workflow_id'>>()
   const owner = await stmt(env, 'SELECT display_name FROM oa_operators WHERE id=?', row.owner_id).first<{ display_name: string }>()
+  const preparation = await stmt(env, "SELECT detail_json FROM crank_audit WHERE subject_kind='workflow' AND subject_id=? AND action IN('workflow.create','workflow.duplicate','workflow.draft') ORDER BY at DESC,id DESC LIMIT 1", row.id).first<{ detail_json: string }>()
+  const preparedBy = preparation ? JSON.parse(preparation.detail_json).agent_door ?? null : null
   return {
+    prepared_by: preparedBy,
     id: row.id, environment:(row as WorkflowRow & {environment:string}).environment, name: row.name, description: row.description, folder: row.folder, data_class: (row as { data_class?: string }).data_class ?? 'none', owner: { id: row.owner_id, name: owner?.display_name ?? null }, status: row.status,
-    enabled: row.status === 'published', draft: JSON.parse(row.draft_json), poll_rate: pollRate(JSON.parse(row.draft_json).trigger), draft_updated_at: row.draft_updated_at, published_version_id: row.published_version_id,
+    enabled: row.status === 'published', draft: JSON.parse(row.draft_json), poll_rate: pollRate(JSON.parse(row.draft_json).trigger), draft_updated_at: row.draft_updated_at, draft_digest: await digest(canonical(JSON.parse(row.draft_json))), published_version_id: row.published_version_id,
     created_by: row.created_by, created_at: row.created_at,
     versions: versions.results.map(v => ({ id: v.id, number: v.number, graph_digest: v.graph_digest, authority: JSON.parse(v.declared_json), published_by: v.published_by, published_at: v.published_at, retired_at: v.retired_at })),
     // WORK-008: every saved draft edit, newest first, with its author, time and changed fields.
@@ -95,6 +99,10 @@ async function createWorkflowDraft(env: CrankEnv, actor: Actor, input: Record<st
       workflowId, metadata.name, metadata.description, metadata.folder, actor.id, JSON.stringify(graph), at, JSON.stringify(metadata.settings), actor.id, at, metadata.environment, ...condition.args),
     await savedDraft(env, actor, workflowId, draftId, null, graph, metadata, at, command),
     auditStatementWhen(env, condition.sql, condition.args, actor.id, 'workflow.create', 'workflow', workflowId, actor.team ? {team_revision:actor.team.revision} : {}),
+    ...freezeCommand(env, command, command?.recovery ? await workflowView({
+      id: workflowId, ...metadata, owner: { id: actor.id }, draft: graph, draft_updated_at: at,
+      status: 'draft', published_version_id: null, data_class: 'none',
+    }) : null),
     ...(command ? [commandReceipt(env, command)] : []),
   ])
   const receipt = committedReceipt(results, command)
@@ -106,6 +114,11 @@ export async function updateDraft(env: CrankEnv, actor: Actor, workflowId: strin
   const command = await workflowCommand(env, actor, idempotencyKey, 'draft', workflowId, input)
   if (command?.existing) return savedWorkflow(env, workflowId, command.existing, true)
   const current = await getWorkflow(env, workflowId)
+  if (input.draft_digest !== undefined) {
+    requireValue(typeof input.draft_digest === 'string' && /^[a-f0-9]{64}$/.test(input.draft_digest), 'Supply the current draft digest')
+    requireValue(await digest(canonical(JSON.parse(current.draft_json))) === input.draft_digest, 'The draft changed; reload it before saving', 409)
+    expectedDraftJson = expectedDraftJson ?? current.draft_json
+  }
   requireValue(expectedDraftJson===undefined || current.draft_json===expectedDraftJson, 'The draft changed; load its current resources again',409)
   const draftGuard=expectedDraftJson===undefined?null:id()
   const graph = input.graph === undefined ? JSON.parse(current.draft_json) : checked(input.graph).graph
@@ -134,6 +147,9 @@ export async function updateDraft(env: CrankEnv, actor: Actor, workflowId: strin
     auditStatementWhen(env, condition.sql, condition.args, actor.id, 'workflow.draft', 'workflow', workflowId, { draft_digest: await digest(JSON.stringify(graph)), changed }, current.published_version_id),
     ...(extraAudit?[auditStatementWhen(env,condition.sql,condition.args,actor.id,extraAudit.action,'workflow',workflowId,extraAudit.detail)]:[]),
     ...(draftGuard ? [stmt(env,'DELETE FROM crank_authority_guards WHERE id=?',draftGuard)] : []),
+    ...freezeCommand(env, command, command?.recovery ? await workflowView({
+      ...current, ...metadata, owner: { id: current.owner_id }, draft: graph, draft_updated_at: at,
+    }) : null),
     ...(command ? [commandReceipt(env, command)] : []),
   ]) } catch(error) {
     if(expectedDraftJson!==undefined && (await getWorkflow(env,workflowId)).draft_json!==expectedDraftJson)throw new CrankError(409,'The draft changed; load its current resources again')

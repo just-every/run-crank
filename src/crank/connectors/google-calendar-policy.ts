@@ -65,3 +65,23 @@ export async function googleCalendarAccount(env: CrankEnv, connectionId: string)
   const scopes: string[] = JSON.parse(row.scopes_json)
   if (row.app !== 'google' || row.auth_kind !== 'oauth2' || !writeScopes.some(scope => scopes.includes(scope))) throw new StepError('authority', 'Choose a managed Google OAuth connection with Calendar event write scope', { connection_id: connectionId })
 }
+
+const readScopes = [...writeScopes, 'https://www.googleapis.com/auth/calendar.readonly', 'https://www.googleapis.com/auth/calendar.events.readonly']
+export interface CalendarSearchInput { calendar_id: string; time_min: string; time_max: string; time_zone: string; query?: string }
+const searchFields = ['calendar_id', 'time_min', 'time_max', 'time_zone', 'query']
+export function calendarSearchInput(value: Record<string, unknown>): CalendarSearchInput {
+  if (Object.keys(value).some(key => !searchFields.includes(key))) return invalid('unsupported search field')
+  const calendar_id = text(value.calendar_id, 'calendar_id', 1024)
+  if (calendar_id === 'primary' || /[\s\x00-\x1f\x7f]/.test(calendar_id) || ['.', '..'].includes(calendar_id)) return invalid('calendar_id must be one exact calendar identifier')
+  const time_zone = text(value.time_zone, 'time_zone', 100)
+  const time_min = time({dateTime:value.time_min,timeZone:time_zone}, 'time_min').dateTime
+  const time_max = time({dateTime:value.time_max,timeZone:time_zone}, 'time_max').dateTime
+  const span = Date.parse(time_max) - Date.parse(time_min)
+  if (span <= 0 || span > 366 * 86400000) return invalid('search interval must be positive and at most 366 elapsed days')
+  return {calendar_id,time_min,time_max,time_zone,...(value.query === undefined ? {} : {query:text(value.query, 'query', 1024)})}
+}
+export async function googleCalendarReadAccount(env: CrankEnv, connectionId: string) {
+  const {row} = await credential(env, connectionId)
+  const scopes: string[] = JSON.parse(row.scopes_json)
+  if (row.app !== 'google' || row.auth_kind !== 'oauth2' || !readScopes.some(scope => scopes.includes(scope))) throw new StepError('authority', 'Choose an already-consented managed Google connection with Calendar event read scope', {connection_id:connectionId})
+}

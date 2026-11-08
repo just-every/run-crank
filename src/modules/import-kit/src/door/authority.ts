@@ -9,6 +9,7 @@ import { reserveReturn } from '../d1/budget.ts';
 const actions: Record<DoorAction, ImportAction[]> = {
   uploads: [], plan: ['plan', 'read'], apply: ['create', 'apply', 'read'],
   status: ['read'], reconcile: ['read'], undo: ['read', 'undo', 'rollback'],
+  cancel: [],
   // Parsing a bundle for its counts is a plan: no native write.
   archive: ['plan'], 'restore-check': ['plan'],
 };
