@@ -188,7 +188,7 @@
       "executable": false
     },
     "deploy.json": {
-      "sha256": "afd56db112fecbf263f89571ad8d127ec028f8f1b69f2949123544479ed2cd0a",
+      "sha256": "b1413057465bab51388ae88357caddde65681463456be5f3a56f1cc72876d66f",
       "executable": false
     },
     "docs/ACCESS.md": {
@@ -248,7 +248,7 @@
       "executable": false
     },
     "docs/INBOUND-EMAIL.md": {
-      "sha256": "917d0ba8cbc7a5ed8f3517c5e87bb9ebfe77bc111dd635e313652cfa2741ad57",
+      "sha256": "1a80f7bd1d12b95561d6ead39bd5e74726597c835bb9f524212b1531cddeb351",
       "executable": false
     },
     "docs/OPERATIONS.md": {
@@ -1728,7 +1728,7 @@
       "executable": false
     },
     "OPERATIONS.md": {
-      "sha256": "3a2aa3ad1a97cfc08ec86ad5df5b12891cb522d3774301291b3747ada632a40b",
+      "sha256": "c10bb3efd065888d07aee50f21508fb5d8d858e5c73932c89c333fe12c3d9610",
       "executable": false
     },
     "package.json": {
@@ -2040,7 +2040,7 @@
       "executable": false
     },
     "RUN-LOCALLY.md": {
-      "sha256": "805fb60acb045166482f2806645ee83ec596393cf8b0a6b540bbf1393d97a29c",
+      "sha256": "d0010f5ed289b4aac354f55191bb5b63366b7136a1343d6bb3e43a67b48fab40",
       "executable": false
     },
     "scripts/archive-migrations.d.mts": {
@@ -3932,7 +3932,7 @@
       "executable": false
     },
     "src/crank/triggers/email.ts": {
-      "sha256": "92c99a5731ad9eb1ba4e78977e58472ad129b0b695790a473bef1e10516cf103",
+      "sha256": "c71cd595c1416d2435242309e63036510c18f0ee3c446d828c95ba7bd9c000f4",
       "executable": false
     },
     "src/crank/triggers/excel-table.ts": {
@@ -4092,7 +4092,7 @@
       "executable": false
     },
     "src/crank/ui/email.ts": {
-      "sha256": "795a652c48ba4627f073efaaf2ff469278e539e92a00c0cfa6a8b11c7cc7246d",
+      "sha256": "b972d06bb632d31ece8b72628a818b9de963f7a1ef3c8c3ef1d4610dbb610e09",
       "executable": false
     },
     "src/crank/ui/erasure-view.ts": {
@@ -7364,7 +7364,7 @@
       "executable": false
     },
     "tests/runtime.mjs": {
-      "sha256": "45ed8ec188f9648c52f16ae7bc8aae2d2425cf58672fc0f3ae511afbcf8ec625",
+      "sha256": "de286c998ab93075cb972671c20515a58519f4e399051fe497eaff28184013ef",
       "executable": false
     },
     "tests/sample-browser.mjs": {
