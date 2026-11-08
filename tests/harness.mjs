@@ -6,13 +6,14 @@ import {join,resolve} from 'node:path';
 import {build} from 'esbuild';
 import {Miniflare,convertV4MiniflareOptions} from 'miniflare';
 import {unstable_splitSqlQuery} from 'wrangler';
-import {archiveMigrationSource} from '../scripts/archive-migrations.mjs';
+import {archiveMigrationSource,archiveSqliteSource} from '../scripts/archive-migrations.mjs';
 
 export async function freePort() { const s=createServer();await new Promise(r=>s.listen(0,'127.0.0.1',r)); const port=s.address().port; await new Promise(r=>s.close(r));return port; }
 let bundle;
 const migrationSources=new Map();
 function archiveMigrationPlugin(extraMigrations=[]) {
   return {name:'archive-migrations',setup(plugin){
+    plugin.onLoad({filter:/sql-asm\.js$/},async()=>({contents:await archiveSqliteSource(),loader:'js'}));
     plugin.onLoad({filter:/archive-migration-history\.ts$/},async()=>{
       const key=JSON.stringify(extraMigrations);
       if(!migrationSources.has(key))migrationSources.set(key,archiveMigrationSource(extraMigrations));

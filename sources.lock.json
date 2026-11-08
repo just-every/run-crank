@@ -2036,11 +2036,11 @@
       "executable": false
     },
     "scripts/archive-migrations.d.mts": {
-      "sha256": "a445317de218a8f2a77b16ab68c8dce47b432ce8dcf14bf04669d6cbf815fff4",
+      "sha256": "c0412a72d738737316d3b851aa8068d36cec3f705cbe940f7060e20209925dfe",
       "executable": false
     },
     "scripts/archive-migrations.mjs": {
-      "sha256": "e2bc2472d8fa53099a5f4fa3bbfda292825c3f67fed4ae5daa9183e2c19e6014",
+      "sha256": "997c08d377177792d4ffc204a10d9cbdf2828e114f764d7c063b55ee0a55ae2f",
       "executable": false
     },
     "scripts/build-deployment-spec.mjs": {
@@ -3104,7 +3104,7 @@
       "executable": false
     },
     "src/crank/archive-migration-history.ts": {
-      "sha256": "5c200d582ea8b899582757b452e605203f14df586d5160910af4b8ba023a5db4",
+      "sha256": "f52990c59f3b0219d57eb52793d98c7d418beac59f9cfc2fc08d9c607c1cfc69",
       "executable": false
     },
     "src/crank/archive-migration-modules.d.ts": {
@@ -3112,7 +3112,7 @@
       "executable": false
     },
     "src/crank/archive-migrations.ts": {
-      "sha256": "ae1d876aa56570c8535625f86284abbfb612b72924ecdb91a2dd82990251b4af",
+      "sha256": "026a2f0fbf8025aa017ba80a1aab07da73fc5e3915bdff58d2fa19344fb9e1d6",
       "executable": false
     },
     "src/crank/archive-policy.d.mts": {
@@ -3121,6 +3121,14 @@
     },
     "src/crank/archive-policy.mjs": {
       "sha256": "45f9787517cf6340574cc47598ff60d557308305339bf4b1d5b08f684a31180f",
+      "executable": false
+    },
+    "src/crank/archive-replay.d.mts": {
+      "sha256": "e10e008ce0f7048581c5829b8418b92323dd957a153b65628126dd0e33a91fe2",
+      "executable": false
+    },
+    "src/crank/archive-replay.mjs": {
+      "sha256": "2a54d0ec65022af6948280b25b1a3d0d8c2dcdb82e471e7407bb20095470d409",
       "executable": false
     },
     "src/crank/connections/apps.ts": {
@@ -7088,7 +7096,7 @@
       "executable": false
     },
     "tests/harness.mjs": {
-      "sha256": "ab0f138c5231cc3901a2c23f84662d03c848e3acfc492a1c08fc30e9df3ad31c",
+      "sha256": "0c8627a00530f085b5330be6dd26cc536a2bbe894499f124d21c5b36ef221bc7",
       "executable": false
     },
     "tests/historical.test.mjs": {

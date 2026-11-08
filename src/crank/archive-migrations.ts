@@ -26,7 +26,10 @@ export async function archiveMigrations(db: D1Database): Promise<MigrationReplay
     async schemaAfter(chosen, options: { tablesOnly?: boolean; legacyExcludedObjects?: boolean } = {}) {
       const ordered = selected.filter(file => chosen.includes(file.name))
       if (ordered.length !== chosen.length) throw new PortabilityError('schema_mismatch')
-      return replayArchiveSchema(ordered, options)
+      const cached = history.schemas[JSON.stringify(ordered.map(file => file.name))]
+      return cached
+        ? cached[options.tablesOnly ? 1 : options.legacyExcludedObjects ? 2 : 0]
+        : replayArchiveSchema(ordered, options)
     },
   }
 }

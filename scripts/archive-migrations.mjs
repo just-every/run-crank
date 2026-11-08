@@ -9,13 +9,21 @@ import { createRequire } from 'node:module';
 import policy from '../src/crank/archive-policy.mjs';
 
 export const archiveMigrationModule = fileURLToPath(new URL('../src/crank/archive-migration-history.ts', import.meta.url));
+const historicalSchemas = new Map();
 const directory = new URL('../migrations/core/', import.meta.url);
 const cache = new URL('../.cache/archive-migrations/', import.meta.url);
-const rerVersion = createRequire(import.meta.url)('@runeditrun/rer/package.json').version;
+const require = createRequire(import.meta.url);
+const rerVersion = require('@runeditrun/rer/package.json').version;
+export const archiveSqliteModule = require.resolve('sql.js/dist/sql-asm.js');
+export async function archiveSqliteSource() {
+  // This engine only uses its memory filesystem. Disable Emscripten's host
+  // discovery: Workers expose WorkerGlobalScope without a browser location.
+  return 'const globalThis = {};\n' + await readFile(archiveSqliteModule, 'utf8');
+}
 
-// Bundle only destination-owned migration statements, hashes and seeded rows.
-// The Worker replays the selected ledger in isolated SQLite, including histories
-// that omit a migration from the middle. No archive SQL is ever executed.
+// Bundle destination-owned migration statements, hashes and seeded rows. Cache
+// common prefix schemas; the Worker replays any other selected ledger in isolated
+// SQLite, including missing middle migrations. No archive SQL is ever executed.
 // Cache by all replay inputs so separate test processes do not each rebuild the
 // same history. A migration/policy/tool/runtime change selects a fresh cache.
 export async function archiveMigrationSource(extraMigrations = [], watch = () => {}) {
@@ -36,7 +44,17 @@ export async function archiveMigrationSource(extraMigrations = [], watch = () =>
     .update(await readFile(new URL(import.meta.url))).digest('hex');
   const cached = new URL(key + '.mjs', cache);
   try { return await readFile(cached, 'utf8'); } catch (error) { if (error.code !== 'ENOENT') throw error; }
-  const replay = migrationReplay(files, policy);
+  const replay = migrationReplay(files, policy), schemas = {};
+  for (let length = 0; length <= files.length; length++) {
+    const names = replay.names.slice(0, length);
+    const key = JSON.stringify(files.slice(0, length).map(({ name, sha256 }) => [name, sha256]));
+    if (!historicalSchemas.has(key)) historicalSchemas.set(key, Promise.all([
+      replay.schemaAfter(names),
+      replay.schemaAfter(names, { tablesOnly: true }),
+      replay.schemaAfter(names, { legacyExcludedObjects: true }),
+    ]));
+    schemas[JSON.stringify(names)] = await historicalSchemas.get(key);
+  }
   // Discover column requests from the destination's own SQL, then let the
   // shared replayer produce the exact row images used for empty-target checks.
   const scratch = new DatabaseSync(':memory:');
@@ -50,7 +68,7 @@ export async function archiveMigrationSource(extraMigrations = [], watch = () =>
   const images = await replay.rowImages(requests, 10000);
   const seeds = requests.filter(request => images.has(request.name))
     .map(request => ({ ...request, images: images.get(request.name) }));
-  const source = `export default ${JSON.stringify({ files, seeds })};`;
+  const source = `export default ${JSON.stringify({ files, schemas, seeds })};`;
   await mkdir(cache, { recursive: true });
   const pending = new URL(key + '.' + process.pid + '.new', cache);
   await writeFile(pending, source);
@@ -62,6 +80,7 @@ export function archiveMigrationsPlugin() {
   const id = archiveMigrationModule;
   return { name: 'crank-archive-migrations',
     async load(source) {
+      if (source === archiveSqliteModule) return archiveSqliteSource();
       if (source === id) return archiveMigrationSource([], path => this.addWatchFile(fileURLToPath(path)));
     },
   };
