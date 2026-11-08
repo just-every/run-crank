@@ -573,7 +573,13 @@
     },
     {
       "binding": "DB",
-      "name": "0092_agent_scope_grants.sql",
+      "name": "0092_agent_draft_recovery.sql",
+      "sha256": "32aaa78f81424f8d50e273086a5c43f6d626843cd478b0cd551cd8b2fb20a296",
+      "sql": "-- Inert draft recovery is installation-local authority, excluded with native receipts.\n-- Legacy receipts remain without recovery evidence; never infer an outcome from IDs.\nALTER TABLE crank_workflow_idempotency ADD COLUMN agent_receipt_json TEXT;\n"
+    },
+    {
+      "binding": "DB",
+      "name": "0093_agent_scope_grants.sql",
       "sha256": "0accf8e93e03302e18a9272e2ce619db9fd86ed8d56b3fa46f19af682ea685f7",
       "sql": "-- Native owner ceilings only narrow the scopes carried by an original credential.\nCREATE TABLE crank_agent_scope_grants (\n  agent_id TEXT PRIMARY KEY,\n  sponsor TEXT NOT NULL,\n  original_scopes TEXT NOT NULL,\n  scopes TEXT NOT NULL,\n  revision INTEGER NOT NULL DEFAULT 0 CHECK(revision >= 0),\n  active INTEGER NOT NULL DEFAULT 1 CHECK(active IN (0,1)),\n  updated_at TEXT NOT NULL,\n  updated_by TEXT NOT NULL\n);\n\n-- Existing native preparation keys keep exactly their historical permissions.\nINSERT INTO crank_agent_scope_grants(agent_id,sponsor,original_scopes,scopes,updated_at,updated_by)\nSELECT 'crank-token:' || id, created_by,\n  '[\"workflows:read\",\"workflows:prepare\",\"runs:read\",\"connections:read\",\"catalog:read\"]',\n  '[\"workflows:read\",\"workflows:prepare\",\"runs:read\",\"connections:read\",\"catalog:read\"]',\n  created_at, created_by\nFROM crank_tokens WHERE scope='agent' AND flow_id IS NULL AND revoked_at IS NULL;\n"
     }

@@ -24,7 +24,8 @@ import { listHooks } from '../triggers/webhook'
 import { nextBoundary } from '../triggers/poll'
 import { nextOccurrence } from '../triggers/schedule'
 import { pollRate } from '../triggers/definition'
-import { claimCommand, commandCondition, commandReceipt, committedReceipt, receiptMetadata, workflowCommand, type WorkflowCommand, type WorkflowReceipt } from './idempotency'
+import { claimCommand, freezeCommand, commandCondition, commandReceipt, committedReceipt, receiptMetadata, workflowCommand, type WorkflowCommand, type WorkflowReceipt } from './idempotency'
+import { workflowView } from '../agent-door/native-recovery'
 import { snapshotBindings } from './snapshot'
 import { adoptionStatements, pendingRestore, restoreReview } from './restore'
 import { RETRY_POLICY } from '../connectors/retry-policy'
@@ -98,6 +99,10 @@ async function createWorkflowDraft(env: CrankEnv, actor: Actor, input: Record<st
       workflowId, metadata.name, metadata.description, metadata.folder, actor.id, JSON.stringify(graph), at, JSON.stringify(metadata.settings), actor.id, at, metadata.environment, ...condition.args),
     await savedDraft(env, actor, workflowId, draftId, null, graph, metadata, at, command),
     auditStatementWhen(env, condition.sql, condition.args, actor.id, 'workflow.create', 'workflow', workflowId, actor.team ? {team_revision:actor.team.revision} : {}),
+    ...freezeCommand(env, command, command?.recovery ? await workflowView({
+      id: workflowId, ...metadata, owner: { id: actor.id }, draft: graph, draft_updated_at: at,
+      status: 'draft', published_version_id: null, data_class: 'none',
+    }) : null),
     ...(command ? [commandReceipt(env, command)] : []),
   ])
   const receipt = committedReceipt(results, command)
@@ -142,6 +147,9 @@ export async function updateDraft(env: CrankEnv, actor: Actor, workflowId: strin
     auditStatementWhen(env, condition.sql, condition.args, actor.id, 'workflow.draft', 'workflow', workflowId, { draft_digest: await digest(JSON.stringify(graph)), changed }, current.published_version_id),
     ...(extraAudit?[auditStatementWhen(env,condition.sql,condition.args,actor.id,extraAudit.action,'workflow',workflowId,extraAudit.detail)]:[]),
     ...(draftGuard ? [stmt(env,'DELETE FROM crank_authority_guards WHERE id=?',draftGuard)] : []),
+    ...freezeCommand(env, command, command?.recovery ? await workflowView({
+      ...current, ...metadata, owner: { id: current.owner_id }, draft: graph, draft_updated_at: at,
+    }) : null),
     ...(command ? [commandReceipt(env, command)] : []),
   ]) } catch(error) {
     if(expectedDraftJson!==undefined && (await getWorkflow(env,workflowId)).draft_json!==expectedDraftJson)throw new CrankError(409,'The draft changed; load its current resources again')

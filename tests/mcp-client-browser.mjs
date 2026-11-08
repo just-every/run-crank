@@ -4,11 +4,12 @@ import {join} from 'node:path';
 import {chromium,expect} from '@playwright/test';
 import {mcpClientFixture,eventTime} from './mcp-client-journey.mjs';
 import {serveMcpFixture} from './mcp-browser-runtime.mjs';
+import {documentationBrowser} from './agent-door/documentation-browser.mjs';
 const evidence=process.env.CRANK_EVIDENCE;assert.ok(evidence,'Set CRANK_EVIDENCE');await mkdir(evidence,{recursive:true});
 let browser,page,f,stop;
 try{
  f=await mcpClientFixture({emitted:true});const {h}=f;stop=await serveMcpFixture(h);
- browser=await chromium.launch({headless:true,args:['--use-mock-keychain','--password-store=basic']});
+ browser=await chromium.launch({headless:true,...(process.env.CRANK_CHROMIUM?{executablePath:process.env.CRANK_CHROMIUM}:{}),args:['--no-sandbox','--use-mock-keychain','--password-store=basic']});
  const context=await browser.newContext(),[name,...value]=h.owner.split('=');await context.addCookies([{name,value:value.join('='),url:h.origin}]);page=await context.newPage();
  await page.goto(h.origin+'/setup');if(new URL(page.url()).pathname==='/setup'){await page.getByRole('checkbox').check();await page.getByRole('button',{name:'Finish setup',exact:true}).click();await page.waitForURL('**/app')}
  const shot=async(width,state)=>{await page.screenshot({path:join(evidence,`${width}-${state}.png`),fullPage:true});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`${width} ${state} overflow`)};
@@ -37,6 +38,7 @@ try{
   await row.getByRole('button',{name:'Revoke client',exact:true}).click();await page.waitForLoadState('networkidle');assert.equal((await call('send_channel_message',{channel:f.slackChannel,text:'synthetic-crank-70'})).status,401);await shot(width,'client-revoked');
   console.log(`PLATFORM-002 ${width}: owner issuance, selected typed tools, approval, verified Calendar edge, refusal, call history, revocation and shell tooltips passed`);
  }
+ await documentationBrowser({h,page});
  await context.close();
 }catch(error){if(page)await page.screenshot({path:join(evidence,'journey-error.png'),fullPage:true});console.error(String(error.message).replace(/crm_[A-Za-z0-9_-]+/g,'[redacted secret]'));process.exitCode=1}
 finally{await browser?.close();await stop?.();await f?.h.close()}
