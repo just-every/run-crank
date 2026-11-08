@@ -1,0 +1,37 @@
+{
+  "head": "96330a235c656ab39ec0c7203057cf59d2dbc3d5",
+  "branch": "cloud/sx-crank-c-f95",
+  "main": "7ef378f73cfaf5576bc7f133172668363c0a8bca",
+  "clause": "UX-001",
+  "status": "PARTIAL",
+  "countsBefore": {
+    "done": 32,
+    "partial": 50,
+    "missing": 17
+  },
+  "countsAfter": {
+    "done": 32,
+    "partial": 50,
+    "missing": 17
+  },
+  "testsBefore": 200,
+  "testsAfter": 200,
+  "criteria": 55,
+  "states": 72,
+  "perWidth": {
+    "1440": 36,
+    "390": 36
+  },
+  "violations": 0,
+  "screenshots": 72,
+  "verify": {
+    "conclusion": null,
+    "event": "push",
+    "head_sha": "96330a235c656ab39ec0c7203057cf59d2dbc3d5",
+    "html_url": "https://github.com/just-every/run-crank/actions/runs/42507845303",
+    "id": 42507845303,
+    "name": "Verify",
+    "status": "in_progress"
+  },
+  "publicationScan": "lander pending"
+}
