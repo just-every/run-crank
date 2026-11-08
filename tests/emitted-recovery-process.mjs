@@ -22,7 +22,7 @@ export async function emittedProcess(receiver) {
   await new Promise(resolve => socket.close(resolve));
   const persist = await mkdtemp(join(tmpdir(), 'crank-emitted-recovery-'));
   const config = { receiver, port, persist, origin: `http://127.0.0.1:${port}`, sessionSecret: crypto.randomUUID() + crypto.randomUUID(), setupToken: crypto.randomUUID() + crypto.randomUUID() };
-  let child, sequence = 0, owner = '';
+  let child, sequence = 0, owner = '', starter = '';
   const pending = new Map();
   const command = (action, fields = {}) => new Promise((resolve, reject) => {
     const id = ++sequence;
@@ -61,7 +61,7 @@ export async function emittedProcess(receiver) {
     return { status: response.status, text, value, headers: response.headers, cookie: response.headers.get('set-cookie')?.split(';')[0] };
   };
   const post = async (path, body = {}, status = 200) => {
-    const result = await send('/api/crank/' + path, body);
+    const result = await send('/api/crank/' + path, body, /^(workflows|flows)\/[^/]+\/(run|runs)$/.test(path) ? starter : owner);
     assert.equal(result.status, status, `${path}: ${result.text}`); return result.value;
   };
   const get = async path => {
@@ -69,7 +69,25 @@ export async function emittedProcess(receiver) {
     assert.equal(result.status, 200, `${path}: ${result.text}`); return result.value;
   };
   return { start, stop, send, post, get, command,
-    async bootstrap() { const response = await send('/auth/bootstrap', { token: config.setupToken, displayName: 'Recovery owner' }); assert.equal(response.status, 303); assert.ok(response.cookie); owner = response.cookie; },
+    async bootstrap() {
+      const response = await send('/auth/bootstrap', { token: config.setupToken, displayName: 'Recovery owner' });
+      assert.equal(response.status, 303); assert.ok(response.cookie); owner = response.cookie;
+      // Start work as a separately invited native owner. The recovery owner
+      // remains the independent reviewer; never bypass starter self-approval.
+      const token = async () => {
+        const message = (await command('mail')).at(-1);
+        return new URL(message.html.match(/href="([^"]*\/auth\/confirm\?token=[^"]+)"/)[1].replaceAll('&amp;', '&'), config.origin).searchParams.get('token');
+      };
+      assert.equal((await send('/auth/magic-link', { email: 'recovery-owner@example.test', returnTo: '/app' }, '')).status, 202);
+      const inviter = await send('/auth/confirm', { token: await token() }, '');
+      assert.equal(inviter.status, 303); assert.ok(inviter.cookie);
+      assert.equal((await send('/auth/step-up', { action: 'owner:transfer' }, inviter.cookie)).status, 202);
+      assert.equal((await send('/auth/confirm', { token: await token() }, inviter.cookie)).status, 303);
+      assert.equal((await send('/auth/invite', { email: 'recovery-starter@example.test', displayName: 'Independent recovery starter', role: 'owner' }, inviter.cookie)).status, 202);
+      const signed = await send('/auth/confirm', { token: await token() }, '');
+      assert.equal(signed.status, 303); assert.ok(signed.cookie); starter = signed.cookie;
+      assert.equal((await send('/auth/signout', {}, inviter.cookie)).status, 204);
+    },
     async restart(omit = []) { await stop(); await start(omit); },
     async close() { await stop(); await rm(persist, { recursive: true, force: true }); },
   };

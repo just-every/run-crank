@@ -4,11 +4,13 @@ import type { Graph } from '../engine/graph'
 import { stmt, type CrankEnv } from '../model'
 import type { CustomDefinition } from './definition'
 import { customVersion } from './store'
+import { customPollBinding } from './poll-binding'
 
 /** Signed webhook transport is shared with native webhook workflows; a custom
  * operation adds a pinned version/scope gate before even parsing the event. */
 export async function customTrigger(env:CrankEnv,trigger:Record<string,unknown>,versionId?:string) {
   if(trigger.custom_connector_id===undefined) return null
+  if(trigger.type==='app_poll') return customPollBinding(env,trigger,versionId)
   if(trigger.type!=='webhook' || typeof trigger.custom_connector_id!=='string' || !Number.isSafeInteger(trigger.custom_connector_version) || typeof trigger.custom_operation!=='string') throw new StepError('validation','Pin a custom webhook connector, version and operation')
   if(!trigger.signature || typeof trigger.signing_connection_id!=='string') throw new StepError('validation','Custom webhook events require signature verification with a stored signing connection')
   const row=await customVersion(env,trigger.custom_connector_id,Number(trigger.custom_connector_version))

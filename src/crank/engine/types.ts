@@ -1,5 +1,6 @@
 import type { CrankEnv } from '../model'
 import type { Scope } from './mapping'
+import type { InputSchema } from './input-schema'
 
 export type Step = Record<string, unknown> & { id: string; type: string }
 export type ExecutionOutcome =
@@ -34,6 +35,7 @@ export interface StepContext {
   input: Record<string, unknown>
   requests: { next: number }
   retryPolicy?: Record<string, unknown>
+  executeSubflow?(steps: Step[], input: Record<string,unknown>, result: Record<string,unknown>, check: () => Promise<void>): Promise<{outcome:ExecutionOutcome;output?:unknown}>
   /** Native regulated operations recheck their exact consent at physical dispatch. */
   beforeRequest?: () => Promise<void>
   /** Earlier completed decision for this step, when resuming after a wait. */
@@ -48,6 +50,7 @@ export interface StepType {
   connection?: 'required' | 'optional'
   /** Inputs that must resolve to a value before any effect. */
   required?: string[]
+  inputSchema?: InputSchema
   validate?(step: Step): void
   execute(step: Step, ctx: StepContext): Promise<StepResult>
   resume?(step: Step, ctx: StepContext & { wait: WaitRow }): Promise<StepResult>

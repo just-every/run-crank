@@ -7,8 +7,8 @@ import { type DataFlow, fields, recipient, queryFields, providerFlow } from './d
 /** Project graph request declarations without exposing input values. */
 export async function graphDataFlows(env: CrankEnv, credential: (id: unknown) => string) {
   const flows: DataFlow[] = []
-  const siblings = (await stmt(env, "SELECT id,sibling_binding_json FROM crank_connections WHERE app='nook'").all<{ id: string; sibling_binding_json: string | null }>()).results
-  const siblingOrigin = (connectionId: unknown) => { const row = siblings.find(c => c.id === connectionId); return row?.sibling_binding_json ? JSON.parse(row.sibling_binding_json).origin : 'Unbound Nook installation' }
+  const siblings = (await stmt(env, "SELECT id,sibling_binding_json FROM crank_connections WHERE app IN ('nook','orbit')").all<{ id: string; sibling_binding_json: string | null }>()).results
+  const siblingOrigin = (connectionId: unknown) => { const row = siblings.find(c => c.id === connectionId); return row?.sibling_binding_json ? JSON.parse(row.sibling_binding_json).origin : 'Unbound sibling installation' }
   // Include old versions still retained by nonterminal work, not just the latest graph.
   const stored = await stmt(env, `SELECT v.id,v.graph_json,w.name,w.status,v.mode FROM crank_workflow_versions v JOIN crank_workflows w ON w.id=v.workflow_id
     WHERE v.id=w.published_version_id OR EXISTS(SELECT 1 FROM crank_wf_runs r WHERE r.version_id=v.id AND r.status IN ('queued','running','waiting','awaiting_approval','paused')) ORDER BY v.id`).all<{ id: string; graph_json: string; name: string; status: string; mode: string }>()
@@ -22,17 +22,24 @@ export async function graphDataFlows(env: CrankEnv, credential: (id: unknown) =>
       fields: [...fields(input), ...urls.flatMap(queryFields), ...(kind === 'http' ? ['multipart file names, content types and bytes when mapped', 'pagination and readback query'] : kind === 'file.fetch' ? ['URL query; download request (no uploaded file bytes)'] : [])], credentials: credential(connectionId),
     }))
     if (trigger.type === 'feed') emit('trigger', 'poll', { headers: 'feed content negotiation' }, undefined, trigger.urls as unknown[])
-    if (trigger.type === 'app_poll') emit('trigger', 'poll', { resource: trigger.resource, fields: trigger.watched_fields, subscription: trigger.subscription }, trigger.connection_id, [trigger.provider === 'hubspot' ? 'https://api.hubapi.com' : 'https://graph.microsoft.com'])
+    if (trigger.type === 'app_poll') emit('trigger', 'poll', { resource: trigger.resource, fields: trigger.watched_fields, subscription: trigger.subscription }, trigger.connection_id, [trigger.provider === 'orbit' ? siblingOrigin(trigger.connection_id) : trigger.provider === 'hubspot' ? 'https://api.hubapi.com' : 'https://graph.microsoft.com'])
     if (trigger.type === 'url_poll') emit('trigger', 'poll', { query: trigger.query, headers: trigger.headers, pagination: trigger.pagination }, trigger.connection_id, [trigger.url])
     const walk = (steps: Step[], prefix = '') => {
       for (const step of steps) {
         const path = prefix + step.id, input = isObject(step.input) ? step.input : {}
         if (step.type === 'paths') for (const b of branchesOf(step)) walk(b.steps, `${path}/${b.id}/`)
         else if (step.type === 'loop') walk(step.steps as Step[], `${path}/items/*/`)
+        else if (step.type === 'ai.classify') emit(path, 'ai.classify', { text: 'declared text only', categories: 'builder-selected category enum', model: 'pinned model identity' }, step.connection_id, ['https://api.openai.com'])
+        else if (step.type === 'hubspot.find_contact') emit(path,step.type,{email:'local exact comparison; not sent to provider',properties:'email, firstname and lastname projection',after:'opaque page cursor'},step.connection_id,['https://api.hubapi.com'])
+        else if (step.type === 'microsoft_teams.find_user_by_email') emit(path,step.type,{email:'exact directory email',filter:'literal equality on mail and userPrincipalName',projection:'id, displayName, mail and userPrincipalName',page_token:'provider pagination token'},step.connection_id,['https://graph.microsoft.com'])
+        else if (step.type === 'typeform.find_response') emit(path, step.type, { form_id: 'fixed selected form', response_id: 'one exact response identifier', response_type: 'completed', page_size: 'one result' }, step.connection_id, ['https://api.typeform.com'])
+        else if (step.type === 'gmail.search_threads') emit(path, step.type, { query: 'Gmail search text', metadata_headers: 'declared header names', mailbox: 'selected managed connection' }, step.connection_id, ['https://gmail.googleapis.com'])
         else if (step.type === 'code') emit(path,'code',{source:step.source,language:step.language,input},step.connection_id,[step.executor_url])
-        else if (step.type.startsWith('nook.')) emit(path,step.type,input,step.connection_id,[siblingOrigin(step.connection_id)])
+        else if ((step.type.startsWith('nook.') || step.type.startsWith('orbit.'))) emit(path,step.type,input,step.connection_id,[siblingOrigin(step.connection_id)])
+        else if (step.type === 'quickbooks.find_invoice') emit(path,step.type,{ realm_id: 'selected sandbox company', doc_number: 'exact invoice document number' },step.connection_id,['https://sandbox-quickbooks.api.intuit.com'])
         else if (step.type.startsWith('quickbooks.')) emit(path,step.type,input,step.connection_id,['https://sandbox-quickbooks.api.intuit.com'])
         else if (step.type.startsWith('gusto.')) emit(path,step.type,input,step.connection_id,['https://api.gusto-demo.com','https://api.gusto.com'])
+        else if (step.type === 'google_calendar.search_events') emit(path,step.type,{calendar_id:'exact calendar identifier',time_min:'interval lower bound',time_max:'interval upper bound',time_zone:'explicit IANA timezone',...(input.query === undefined ? {} : {query:'declared search text'}),page_token:'provider pagination token'},step.connection_id,['https://www.googleapis.com'])
         else if (step.type.startsWith('google_calendar.')) emit(path,step.type,input,step.connection_id,['https://www.googleapis.com'])
         else if (step.type === 'http' || step.type === 'file.fetch' || step.type.startsWith('slack.')) {
           const readback = isObject(step.readback) ? step.readback : {}

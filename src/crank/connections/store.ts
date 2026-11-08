@@ -5,6 +5,7 @@ import { isObject } from '../engine/values'
 import { CrankError, id, now, requireValue, stmt, text, type Actor, type CrankEnv } from '../model'
 import { auditStatement, auditStatementWhen } from '../ops/audit'
 import { notify } from '../ops/notices'
+import { orbitBinding } from './orbit-binding'
 import { siblingBinding } from './sibling-binding'
 import { APPS, SECRET_FIELDS, type AuthKind } from './apps'
 import { open, seal } from './vault'
@@ -64,14 +65,14 @@ export async function createConnection(env: CrankEnv, actor: Actor, input: Recor
     requireValue(input.environment === 'sandbox', 'Gusto managed OAuth credentials are only available for sandbox companies')
     requireValue(/^[A-Za-z0-9_-]+$/.test(text(granted.account ?? input.account_name, 'account_name', 100)), 'Bind Gusto managed credentials to one company identifier')
   }
-  const nativeBinding = app === 'nook' ? siblingBinding(input.binding) : null
+  const nativeBinding = app === 'nook' ? siblingBinding(input.binding) : app === 'orbit' ? orbitBinding(input.binding) : null
   const secret = validateSecret(kind, input.secret), row = { id: id(), app }
   const sealed = await seal(env, binding(row), secret), at = now()
   requireValue(input.purpose === undefined || ['production', 'test'].includes(String(input.purpose)), 'purpose must be production or test')
   const scopes = granted.scopes ?? (Array.isArray(input.scopes) ? input.scopes.map(String) : [])
   await guardedBatch(env, actor, 'owner', [
     stmt(env, `INSERT INTO crank_connections(id,app,label,auth_kind,account_name,domains_json,scopes_json,secret_iv,secret_ciphertext,expires_at,status,created_by,created_at,consented_at)
-      VALUES(?,?,?,?,?,?,?,?,?,?,'active',?,?,?)`, row.id, app, text(input.label, 'label'), kind, nativeBinding?.conversation_id ?? granted.account ?? (typeof input.account_name === 'string' ? input.account_name.slice(0, 200) : ''),
+      VALUES(?,?,?,?,?,?,?,?,?,?,'active',?,?,?)`, row.id, app, text(input.label, 'label'), kind, (nativeBinding && 'conversation_id' in nativeBinding ? nativeBinding.conversation_id : nativeBinding?.origin) ?? granted.account ?? (typeof input.account_name === 'string' ? input.account_name.slice(0, 200) : ''),
       JSON.stringify(nativeBinding ? [new URL(nativeBinding.origin).hostname] : domains(app, input.domains)), JSON.stringify(scopes), sealed.iv, sealed.ciphertext, granted.expiresAt ?? secret.expires_at ?? null, actor.id, at, at),
     stmt(env, 'UPDATE crank_connections SET sibling_binding_json=? WHERE id=?', nativeBinding ? JSON.stringify(nativeBinding) : null, row.id),
     stmt(env, 'UPDATE crank_connections SET purpose=?,environment=? WHERE id=?', input.purpose ?? 'production', environmentName(input.environment??'production'), row.id),
@@ -84,7 +85,7 @@ export async function createConnection(env: CrankEnv, actor: Actor, input: Recor
 export async function rotateConnection(env: CrankEnv, actor: Actor, connectionId: string, input: Record<string, unknown>, granted: { scopes?: string[]; expiresAt?: string | null } = {}) {
   requireOwner(actor)
   const row = await getConnection(env, connectionId)
-  requireValue(row.app !== 'nook' || input.binding === undefined, 'Connection bindings are immutable; create another connection to change the destination')
+  requireValue(!['nook','orbit'].includes(row.app) || input.binding === undefined, 'Connection bindings are immutable; create another connection to change the destination')
   const secret = validateSecret(row.auth_kind, input.secret), sealed = await seal(env, binding(row), secret), at = now()
   const reconnect = row.status !== 'active'
   const scopes = granted.scopes ?? (Array.isArray(input.scopes) ? input.scopes.map(String) : JSON.parse(row.scopes_json))

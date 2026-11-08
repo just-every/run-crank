@@ -137,3 +137,10 @@ their maintenance.
 
 Pinned reference: https://github.com/runeditrun/base/blob/fc0e1041efa55771142bbb57c4ab4743147e264d/TANSTACK-START-MIGRATION.md
 Native-session/runtime evidence: https://github.com/runeditrun/base/tree/fc0e1041efa55771142bbb57c4ab4743147e264d/default-seed
+
+## Contract documents
+
+CONTRACT.md is the source of acceptance text and status. After editing it, run
+`node src/base/contract-docs.mjs write`, then `node src/base/contract-docs.mjs check`.
+These commands regenerate ACCEPTANCE.md, docs/CLAIMS.md and the Status summary.
+Regenerate the edition source lock after the final source and documentation edit.

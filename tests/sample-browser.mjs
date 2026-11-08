@@ -1,10 +1,12 @@
-/** Retained sample journeys at the installed UI's public doors. Use heavy-slot. */
+/** Retained sample journeys at the installed UI's public doors. */
 import assert from 'node:assert/strict';
 import {createServer} from 'node:http';
 import {readFile,mkdir} from 'node:fs/promises';
 import {resolve,extname,join} from 'node:path';
 import {chromium,expect} from '@playwright/test';
 import {sampleJourney} from './sample-journey.mjs';
+import {stepSampleJourney} from './step-sample-journey.mjs';
+import {tableTransformJourney} from './table-state-journey.mjs';
 const evidence=process.env.CRANK_EVIDENCE;
 assert.ok(evidence,'Set CRANK_EVIDENCE');await mkdir(evidence,{recursive:true});
 const browser=await chromium.launch({headless:true,...(process.env.CRANK_CHROMIUM?{executablePath:process.env.CRANK_CHROMIUM}:{}),args:['--use-mock-keychain','--password-store=basic',...(process.env.CRANK_CHROMIUM?['--no-sandbox']:[])]});
@@ -31,9 +33,41 @@ async function attach(h,width) {
  await page.goto(h.origin+'/setup');
  if(new URL(page.url()).pathname==='/setup'){await page.getByRole('checkbox').check();await page.getByRole('button',{name:'Finish setup',exact:true}).click()}
 }
+async function shot(width,state) {
+ await page.screenshot({path:join(evidence,`${width}-${state}.png`),fullPage:true});
+ assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`${width} ${state} overflow`);
+ const search=page.getByRole('link',{name:'Search runs',exact:true});await search.focus();await expect(page.locator('#search-tooltip')).toBeVisible();await page.locator('h1').click();await search.hover();await page.waitForTimeout(350);await expect(page.locator('#search-tooltip')).toBeVisible();
+}
 try {
  await sampleJourney({inspect:async({h,w,state,listener,sample,warning,step='trigger'})=>{
   await attach(h,1440);
+  if(state.startsWith('condition-')) {
+   await page.goto(h.origin+`/app/workflows/${w.id}?step=route&tab=test`);
+   await page.getByRole('button',{name:'Preview selected sample',exact:true}).click();
+   const result=page.locator('.inspector-block').filter({has:page.getByRole('heading',{name:'Preview result',exact:true})});
+   await expect(result).toContainText(sample.source==='webhook'?sample.id:'manual sample');
+   const routing=result.locator(`.preview-list > li[data-outcome="${state==='condition-mismatch'?'type mismatch':'routed'}"]`);
+   await expect(routing).toHaveCount(1);
+   await routing.getByText('Condition details',{exact:true}).click();
+   await expect(routing.locator('details pre')).toContainText('"branch": "premium"');
+   await expect(routing.locator('details pre')).toContainText('"right": 5000');
+   await expect(routing.locator('details pre')).toContainText(state==='condition-mismatch'||state==='condition-routed'?'type_mismatch':state==='condition-fallback'?'"left": "100"':'"left": "6000"');
+   if(state==='condition-mismatch') {
+    await expect(result).not.toContainText('Not run in preview');
+    await expect(routing).toContainText('Type mismatch');
+   } else {
+    await expect(result).toContainText('Not run in preview');
+    await expect(routing).toContainText(state==='condition-fallback'||state==='condition-routed'?'Fallback':'Qualified lead');
+    if(state==='condition-captured') await expect(routing).toContainText('Regional lead');
+   }
+   const search=page.getByRole('link',{name:'Search runs',exact:true});await search.focus();await expect(page.locator('#search-tooltip')).toBeVisible();await page.locator('h1').click();await search.hover();await page.waitForTimeout(350);await expect(page.locator('#search-tooltip')).toBeVisible();
+   for(const width of [1440,390]) {
+    await page.setViewportSize({width,height:1000});
+    await page.screenshot({path:join(evidence,`${width}-${state}.png`),fullPage:true});
+   }
+   await page.setViewportSize({width:1440,height:1000});
+   return;
+  }
   await page.goto(h.origin+`/app/workflows/${w.id}?step=${step}&tab=test`);
   if(!state.startsWith('array-')) await expect(page.getByText('Step notify relies on a schema sample; not tested',{exact:true})).toBeVisible();
   if(state==='waiting') {
@@ -105,5 +139,38 @@ try {
    await page.setViewportSize({width:1440,height:1000});
   }
  }});
- console.log('Retained sample screens passed at 1440 and 390');
+ await stepSampleJourney({inspect:async({h,w,state,run,step})=>{
+  await attach(h,1440);
+  if(state==='step-confirmation') {
+   await page.goto(h.origin+`/app/workflow-runs/${run.id}`);
+   await expect(page.getByText('Synthetic Crank production',{exact:false}).first()).toBeVisible();
+   await expect(page.getByText('Confirm live test:',{exact:false}).first()).toBeVisible();
+  } else {
+   await page.goto(h.origin+`/app/workflows/${w.id}?step=${step}&tab=test`);
+   await expect(page.getByRole('heading',{name:'Retained step outputs',exact:true})).toBeVisible();
+   await page.getByRole('button',{name:'Test this step',exact:true}).click();
+   await expect(page).toHaveURL(new RegExp('/app/workflow-runs/'));
+   await expect(page.getByText('Draft test · this snapshot',{exact:false}).first()).toBeVisible();
+  }
+  for(const width of [1440,390]) {
+   await page.setViewportSize({width,height:1000});
+   await page.screenshot({path:join(evidence,`${width}-${state}.png`),fullPage:true});
+   if(width===1440)assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`${width} ${state} overflow`);
+  }
+  await page.setViewportSize({width:1440,height:1000});
+ }});
+ console.log('Retained sample screens and isolated step tests passed at 1440 and 390');
+ await tableTransformJourney({inspect:async({h,w,state,expected})=>{
+  await attach(h,1440);await page.setViewportSize({width:1440,height:1000});
+  await page.goto(h.origin+`/app/workflows/${w.id}?step=rep&tab=test`);
+  await page.getByRole('button',{name:'Preview selected sample',exact:true}).click();
+  const result=page.locator('.inspector-block').filter({has:page.getByRole('heading',{name:'Preview result',exact:true})});
+  await expect(result).toContainText('webhook sample');
+  if(state==='table-paused') await expect(result).toContainText('paused or restored');
+  else assert.equal(JSON.parse(await result.locator('pre').first().innerText()),expected);
+  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),state+' overflow');
+  const search=page.getByRole('link',{name:'Search runs',exact:true});await search.focus();await expect(page.locator('#search-tooltip')).toBeVisible();await page.locator('h1').click();await search.hover();await page.waitForTimeout(350);await expect(page.locator('#search-tooltip')).toBeVisible();
+  for(const width of [1440,390]) {await page.setViewportSize({width,height:1000});await page.screenshot({path:join(evidence,`${width}-${state}.png`),fullPage:true})}
+ }});
+ console.log('Retained sample and operational lookup screens passed at 1440 and 390');
 } finally {await context?.close();await browser.close();if(server){server.closeAllConnections();await new Promise(done=>server.close(done))}}

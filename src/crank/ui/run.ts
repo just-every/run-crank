@@ -2,6 +2,7 @@ import { action, chip, esc, json, parse, personName, timestamp } from './documen
 export function runView(state:any,id:string) {
   const r = state.runs.find((r:any)=>r.id===id)
   if (!r) return '<div class="empty-state"><h3>Run not found, or it has been erased.</h3><a class="btn btn-secondary" href="/app/runs">All runs</a></div>'
+  if (r.payload === 'restricted') return `<p class="back-link"><a href="/app/runs">← All runs</a></p><section class="panel detail-primary"><div class="title-row"><h2>Restricted run</h2>${chip(r.state)}</div><dl class="facts"><dt>Received</dt><dd>${timestamp(r.created_at)}</dd><dt>Updated</dt><dd>${timestamp(r.updated_at)}</dd></dl><p>Customer input and delivery details are restricted for your role.</p></section>`
   const owner = state.actor.role==='owner', f = state.flows.find((f:any)=>f.id===r.flow_id)
   const decisions = state.approvals.filter((a:any)=>a.run_id===id), attempts = state.attempts.filter((a:any)=>a.run_id===id)
   const expired = r.state==='running' && Date.parse(r.lease_expires_at)<Date.now()

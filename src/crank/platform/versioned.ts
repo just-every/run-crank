@@ -3,7 +3,7 @@ import { followupApi } from '../agents/followups/api'
 import { crankApi } from '../api'
 import { workflowApi } from '../workflows/api'
 import { json, type CrankEnv } from '../model'
-import { mcpApi } from '../mcp/api'
+import { crankAgentDoor } from '../agent-door'
 
 const codes: Record<number, string> = { 400: 'invalid_request', 401: 'unauthenticated', 403: 'forbidden', 404: 'not_found', 405: 'invalid_request', 406: 'invalid_request', 409: 'conflict', 413: 'invalid_request', 415: 'invalid_request', 422: 'invalid_operation', 502: 'unavailable', 503: 'unavailable' }
 
@@ -12,7 +12,7 @@ export async function versionedApi(request: Request, env: CrankEnv): Promise<Res
   const url = new URL(request.url)
   if (url.pathname !== '/api/crank/v1' && !url.pathname.startsWith('/api/crank/v1/')) return null
   const dispatch = async (forwarded: Request) => await customApi(forwarded,env) ?? await followupApi(forwarded, env) ?? await workflowApi(forwarded, env) ?? await crankApi(forwarded, env) ?? json({ error: 'Route not found' }, 404)
-  if (url.pathname === '/api/crank/v1/mcp') return mcpApi(request, env, dispatch)
+  if (url.pathname === '/api/crank/v1/mcp') return crankAgentDoor(env).handle(request)
   url.pathname = url.pathname.replace('/api/crank/v1', '/api/crank')
   const response = await dispatch(new Request(url, request))
   const headers = new Headers(response.headers)

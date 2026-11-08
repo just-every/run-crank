@@ -1,9 +1,10 @@
 import { authorizeServiceAccount, serviceAccountFence } from './team/service-accounts'
-import { admitTeamRequest, mayPrepare, mayPublish, teamAccess, teamFence } from './team/policy'
+import { admitTeamRequest, mayPrepare, mayPublish, teamAccess, teamFence, completeGrant } from './team/policy'
 import { operatorAuth, runtimeBindings } from '../auth.server'
 import { devGate } from '../modules/operator-auth/index.mjs'
 import { CrankError, digest, id, requireValue, stmt, type Actor, type CrankEnv } from './model'
 import { authorizeGrant, grantFence } from './grants/authority'
+import { agentDoorFence, nativeRequestActor } from './agent-door/native'
 
 export type AuthorityMode = 'read' | 'prepare' | 'publish' | 'operate' | 'owner' | 'trigger'
 export function requireOwner(actor: Actor): void {
@@ -13,7 +14,7 @@ export function requirePrepare(actor: Actor): void {
   requireValue(!actor.grantId, 'Execution grants do not authorize preparation', 403)
   requireValue(actor.kind === 'agent' || (actor.kind !== 'trigger' && actor.kind !== 'review' && mayPrepare(actor)), 'Preparation requires an administrator or agent', 403)
 }
-export function requirePublish(actor: Actor): void { requireValue(mayPublish(actor), 'Publishing requires a scoped builder or native owner', 403) }
+export function requirePublish(actor: Actor): void { requireValue(actor.kind !== 'company' && mayPublish(actor), 'Publishing requires a scoped builder or native owner', 403) }
 export const ownerGuard = requireOwner
 /** Cookie writes require an exact origin, including port, with no absent-Origin exemption. */
 export function requireWriteOrigin(request: Request, env: CrankEnv, actor: Actor): void {
@@ -26,6 +27,8 @@ export function requireWriteOrigin(request: Request, env: CrankEnv, actor: Actor
 }
 export async function authorize(request: Request, original: CrankEnv): Promise<Actor> {
   const env = runtimeBindings(original) as CrankEnv, header = request.headers.get('authorization')
+  const bound = await nativeRequestActor(request, env)
+  if (bound) return bound
   if (header !== null) {
     if(header.startsWith('Bearer crs_'))return authorizeServiceAccount(request,env,header)
     if (header.startsWith('Bearer crg_')) return authorizeGrant(request, env, header)
@@ -55,20 +58,29 @@ export async function authorize(request: Request, original: CrankEnv): Promise<A
  */
 export function authority(actor: Actor, mode: AuthorityMode): { sql: string; args: unknown[] } {
   const time = Date.now()
+  if (actor.kind === 'company') {
+    if (!actor.agentDoor?.consent || !['read', 'prepare'].includes(mode) || mode === 'prepare' && (!mayPrepare(actor) || !actor.agentDoor.scopes.includes('workflows:prepare'))) return { sql: '0', args: [] }
+    const product = teamFence(actor), door = agentDoorFence(actor)
+    return {
+      sql: `EXISTS(SELECT 1 FROM oa_operators o WHERE o.id=? AND o.version=? AND o.role=? AND o.status='active' AND (${product.sql}) AND (${door.sql}))`,
+      args: [actor.id, actor.version, actor.role, ...product.args, ...door.args],
+    }
+  }
   if(actor.serviceAccountId)return mode==='read'||mode==='prepare'?serviceAccountFence(actor):{sql:'0',args:[]}
   if (actor.grantId) return mode === 'read' ? grantFence(actor) : { sql: '0', args: [] }
   if (actor.tokenId) {
     const allowed = mode === 'read' || mode === 'prepare' ? 'agent' : mode === 'trigger' ? 'trigger' : null
+    const door = agentDoorFence(actor)
     return {
       sql: `EXISTS(SELECT 1 FROM crank_tokens t JOIN oa_operators o ON o.id=t.created_by WHERE t.id=? AND t.scope=?
         AND t.created_by=? AND t.operator_version=? AND t.revoked_at IS NULL AND o.status='active' AND o.role='owner'
         AND o.version=t.operator_version AND (t.session_kind='native' OR (t.session_kind='dev' AND ?=1))
-        AND ((t.scope='agent' AND t.flow_id IS NULL) OR (t.scope='trigger' AND t.flow_id=?)))`,
-      args: [actor.tokenId, allowed, actor.id, actor.version, actor.local ? 1 : 0, actor.flowId ?? null],
+        AND ((t.scope='agent' AND t.flow_id IS NULL) OR (t.scope='trigger' AND t.flow_id=?)) AND (${door.sql}))`,
+      args: [actor.tokenId, allowed, actor.id, actor.version, actor.local ? 1 : 0, actor.flowId ?? null, ...door.args],
     }
   }
   const product = teamFence(actor)
-  const teamAllowed = actor.team && (mode === 'prepare' ? mayPrepare(actor) : mode === 'publish' ? mayPublish(actor) : mode === 'operate' ? ['admin','operator'].includes(actor.team.role) : mode === 'read')
+  const teamAllowed = actor.team && (mode === 'prepare' ? mayPrepare(actor) : mode === 'publish' ? mayPublish(actor) : mode === 'operate' ? !!completeGrant(actor,'start') : mode === 'read')
   const roles = actor.team ? (teamAllowed ? "s.kind!='review'" : '0') : mode === 'publish' ? "o.role='owner' AND s.kind IN ('native','dev')" : mode === 'operate' ? "o.role IN ('owner','admin') AND s.kind!='review'" : mode === 'owner' ? "o.role='owner' AND s.kind IN ('native','dev')" : mode === 'prepare' ? "o.role IN ('owner','admin') AND s.kind!='review'" : mode === 'trigger' ? '0' : '1'
   return {
     sql: `EXISTS(SELECT 1 FROM oa_sessions s JOIN oa_operators o ON o.id=s.operator_id

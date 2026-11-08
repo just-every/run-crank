@@ -125,6 +125,7 @@ export async function executePostgresCommand(op, input, task) {
     if (error?.code === 'ERR_MODULE_NOT_FOUND' || error?.code === 'MODULE_NOT_FOUND') {
       throw new GatewayError('execution_failed', 'Install the private gateway package dependencies before using PostgreSQL commands.');
     }
+    if (op.command.action === 'insert' && error?.code === '23505') throw new GatewayError('duplicate_conflict', 'The unique business key already exists; read it back before any new action.');
     throw databaseFailure(error);
   } finally { if (client) await client.end().catch(() => {}); }
 }

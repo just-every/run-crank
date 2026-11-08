@@ -231,9 +231,17 @@ next write, and an empty stream never creates an aggregate record.
 Execute Workflow versions 1 through 1.3 support `source: "parameter"`, a literal
 `workflowJson`, `mode: "once"` and synchronous completion. Its snapshot needs
 one Execute Workflow Trigger version 1 with empty parameters and a linear body
-of Set, JSON HTTP or nested embedded calls. The caller supplies one current
-item. Child steps are inlined with distinct native identities; snapshot digests
+of Set, interval Wait (version 1.1), JSON HTTP or nested embedded calls. The
+caller supplies one current item. Child steps are inlined with distinct native identities; snapshot digests
 and layout are retained in `n8n_subflow_pins`. Nesting is limited to four levels.
+Embedded waits accept the same literal nonnegative whole amount and seconds,
+minutes, hours or days as top-level interval waits. Preview refuses intervals
+longer than 366 days. Interval days are exactly 24 elapsed hours across daylight
+saving changes, rather than native calendar days.
+They preserve the incoming JSON, continue once after restart and
+recheck current native authority without repeating completed receiver effects.
+Other wait modes, source expressions and additional settings require manual
+conversion. Cancellation prevents the delayed child from continuing.
 The reviewed import fingerprint binds the whole snapshot. Unbound database IDs, dynamic
 sources, asynchronous calls, declared child-input schemas and arbitrary child
 graphs require manual conversion. This does not create a reusable native registry
@@ -244,7 +252,7 @@ Source code never runs during parsing or planning. An owner can supply an explic
 reviewed native replacement for a provisioned executor as described below. A
 manual disposition records remaining work; it does not satisfy eventual conversion.
 Strict Filter nodes preserve the preceding item when conditions pass and end as
-`stopped by filter` otherwise. Text comparisons preserve whitespace. Unmapped operators and loose object parsing block conversion.
+`stopped by filter` otherwise. Text comparisons preserve whitespace. Unmapped operators and object syntax outside the documented data grammar block conversion.
 
 Switch versions 3 through 3.5 accept strict `mode: "rules"`, the same condition
 groups, and one destination per output. `allMatchingOutputs` preserves first-match
@@ -262,22 +270,70 @@ array membership and length, object emptiness and typed existence operators pres
 source null handling and whitespace. AND and OR groups short circuit, as do exclusive
 Switch outputs. Case handling follows the source condition version, including the
 version 4 regular-expression flag behavior. Loose conversion is supported for numbers, text, booleans and arrays, including
-source-version boolean truthiness and version 3 empty-number handling. Loose object
-syntax remains an explicit manual conversion. DateTime conditions accept ISO
+source-version boolean truthiness and version 3 empty-number handling. Loose object conversion uses retained `data-v1` grammar metadata with condition
+versions 1 through 4: a JSON object or null, with single-quoted strings, ASCII
+identifier keys and trailing commas also accepted. Values may contain nested
+objects and arrays, finite JSON numbers, booleans, null and strings with JSON
+escapes or an escaped single quote. Duplicate keys keep their last value. Text
+is bounded to 16,384 code units, nesting to 16 levels and values to 1,000 nodes.
+An existing object passes through; a missing value and null stay distinct in the
+retained operands, an empty object exists, and empty text is a type mismatch.
+Both operand types are checked unless `singleValue` omits the right operand.
+An explicit `rightType` applies to that operand independently: for example,
+array membership with an object right operand converts the text `null` to null,
+while an `any` right operand keeps that text unchanged. A missing right operand
+stays missing. Conversion failures identify the operand, declared type, condition
+and output group; the retained input keeps its exact source value for inspection.
+AND, OR and first-match output evaluation preserve short-circuit order.
+Unsupported literal syntax stays a named manual conversion during review;
+unsupported dynamically received syntax produces a named type mismatch before
+any downstream request. Comments, computed keys, shorthand, bare identifier
+values, methods, calls, property access, template strings, regular expressions,
+non-finite numbers, sparse arrays and additional source expressions are outside
+this grammar. Review and execution use the same object parser. Quoted expression
+delimiters remain data: `{"message":"{{"}` is accepted both as an imported literal
+and as a received value, with the original operand retained in run history.
+An operand beginning with `=` still requires a supported declarative data path;
+unsupported source expressions stay manual. Source text is parsed only as data
+and is never evaluated. DateTime conditions accept ISO
 timestamps with an explicit UTC or numeric offset and compare absolute instants.
 Missing or null timestamps preserve source empty and comparison behavior; malformed
 or local timestamps fail before dispatch. Local-date inference, non-ISO source
 formats and source DateTime runtime objects need an explicit manual conversion.
 
-Date & Time version 2 maps `operation: "formatDate"` with replacement output,
+Date & Time version 2 maps `operation: "formatDate"` with replacement or retained input output,
 `options.timezone: true`, and an explicit IANA `settings.timezone`. Supported
 calendar formats are `yyyy-MM-dd`, `MM/dd/yyyy`, `yyyy/MM/dd`, `MMMM dd yyyy`
 and `MM-dd-yyyy`, including those exact patterns under `format: "custom"`.
 The source date can be a literal or a declarative data path. Null stays null;
-an invalid date fails before a downstream request. Input-format overrides,
-input-zone inference, retaining other input fields, Unix formats and other date
-operations require manual conversion. These rules preserve the declared zone
+an invalid date fails before a downstream request. `options.includeInputFields`
+is a boolean, defaulting to false; true retains every input JSON field and
+replaces the named output field. A captured webhook sample can preview that
+formatter before publication, preserving its source label without dispatch.
+Input-format overrides, input-zone inference, Unix formats and other date
+formatting options require manual conversion. These rules preserve the declared zone
 instead of guessing the source installation's default.
+
+Version 2 also maps `addToDate` and `subtractFromDate`: `magnitude` is a literal
+or supported data path, `duration` is a literal whole number from -10000 to 10000
+(default zero), and `timeUnit` is years, months, weeks, days, hours, minutes or
+seconds (default days). An explicit workflow timezone is required. Inputs must
+be ISO timestamps with an explicit offset, within years 0100 through 9999;
+invalid or unsupported dates fail with a named error before destination writes.
+Crossing outside that year range and historical sub-minute timezone offsets
+are refused before writing, rather than approximated by the native calendar.
+Calendar units preserve wall time and clamp month ends, while hours and smaller
+units measure elapsed time. At a repeated hour the starting offset is retained
+when possible; skipped wall times move forward. Output uses source ISO spelling
+with milliseconds and the workflow zone's offset. `outputFieldName` defaults to
+`newDate` and must be a simple field name. `options.includeInputFields` defaults
+to false; true retains the input JSON fields and replaces the output field if
+it already exists. Other versions, date operations, expression durations,
+fractions, larger amounts, quarters, milliseconds, binary data, local-date
+inference and additional options remain manual conversions. Synthetic reviewed
+import, repeated apply, restart, publication, destination readback and complete
+inactive restoration are asserted in `tests/n8n-datetime-journey.mjs`; installed
+operands, output and failure screens are covered by `tests/migration-browser.mjs`.
 
 ### Retained owner conversion choices
 

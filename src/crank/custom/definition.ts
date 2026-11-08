@@ -1,11 +1,13 @@
 import { requireValue } from '../model'
 
-export type CustomResource = { operation: string; items_path: string; value_path: string; label_path: string; parents?: Record<string, string> }
+export type CustomResource = { operation: string; items_path: string; value_path: string; label_path: string; context_path?: string; parents?: Record<string, string> }
 export type CustomInput = { type: 'string' | 'number' | 'integer' | 'boolean'; required: boolean; location?: 'path' | 'query' | 'body'; encoding?: 'odata-string'; resource?: CustomResource }
 export type CustomOperation = {
   id: string; name: string; kind: 'action' | 'search' | 'trigger'
   method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'HEAD' | 'OPTIONS'
   path: string; scopes: string[]; inputs: Record<string, CustomInput>
+  find_or_create?: { operation: string; keys: Record<string, { create_input: string; record_path: string; match: 'exact' | 'case_insensitive' | 'email' }> }
+  resource_page?: { query_input: string; cursor_input: string; size_input: string; page_size: number; cursor_path: string }
   pagination?: { items_path: string; cursor_path: string; cursor_param: string; max_pages: number; max_items: number }
   gateway?: { destination: string; operation: string }
 }
@@ -88,8 +90,9 @@ function endpoint(value: unknown): string {
 }
 function resource(value: unknown): CustomResource {
   const raw = object(value, 'Resource picker')
-  keys(raw, ['operation', 'items_path', 'value_path', 'label_path', 'parents'], 'Resource picker')
+  keys(raw, ['operation', 'items_path', 'value_path', 'label_path', 'context_path', 'parents'], 'Resource picker')
   const result: CustomResource = { operation: identifier(raw.operation, 'Resource list operation'), items_path: dataPath(raw.items_path, 'Resource items path'), value_path: dataPath(raw.value_path, 'Resource value path'), label_path: dataPath(raw.label_path, 'Resource label path') }
+  if (raw.context_path !== undefined) result.context_path = dataPath(raw.context_path, 'Resource context path')
   if (raw.parents !== undefined) {
     const parents = object(raw.parents, 'Resource parents')
     requireValue(Object.keys(parents).length <= 100, 'Declare at most 100 resource parent bindings')
@@ -99,7 +102,7 @@ function resource(value: unknown): CustomResource {
 }
 function operation(value: unknown): CustomOperation {
   const raw = object(value, 'Operation')
-  keys(raw, ['id', 'name', 'kind', 'method', 'path', 'scopes', 'inputs', 'pagination', 'gateway'], 'Operation')
+  keys(raw, ['id', 'name', 'kind', 'method', 'path', 'scopes', 'inputs', 'pagination', 'resource_page', 'gateway', 'find_or_create'], 'Operation')
   requireValue(['action', 'search', 'trigger'].includes(String(raw.kind)), 'Unsupported operation kind')
   requireValue(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'].includes(String(raw.method)), 'Unsupported operation method')
   const inputs = object(raw.inputs, 'Operation inputs'), parsed: Record<string, CustomInput> = {}
@@ -121,6 +124,16 @@ function operation(value: unknown): CustomOperation {
   for (const [name, input] of Object.entries(parsed)) requireValue(input.location !== 'path' || placeholders.includes(name), 'Every path input needs a path placeholder')
   requireValue(!['GET', 'HEAD'].includes(String(raw.method)) || !Object.values(parsed).some(input => input.location === 'body'), 'GET and HEAD cannot declare body inputs')
   const result: CustomOperation = { id: identifier(raw.id, 'Operation id'), name: string(raw.name, 'Operation name'), kind: raw.kind as CustomOperation['kind'], method: raw.method as CustomOperation['method'], path, scopes: strings(raw.scopes, 'Operation scopes'), inputs: parsed }
+  if (raw.resource_page !== undefined) {
+    const page = object(raw.resource_page, 'Resource page')
+    keys(page, ['query_input', 'cursor_input', 'size_input', 'page_size', 'cursor_path'], 'Resource page')
+    const query = identifier(page.query_input, 'Resource search input'), cursor = identifier(page.cursor_input, 'Resource cursor input'), size = identifier(page.size_input, 'Resource size input')
+    requireValue(new Set([query, cursor, size]).size === 3, 'Resource page inputs must be distinct')
+    requireValue(result.method === 'GET' && raw.pagination === undefined, 'Resource pages require one GET without aggregate pagination')
+    for (const name of [query, cursor]) requireValue(parsed[name]?.type === 'string' && parsed[name]?.location === 'query' && !parsed[name]?.required, 'Resource search and cursor need optional string query inputs')
+    requireValue(parsed[size]?.type === 'integer' && parsed[size]?.location === 'query', 'Resource page size needs an integer query input')
+    result.resource_page = { query_input: query, cursor_input: cursor, size_input: size, page_size: bound(page.page_size, 'Resource page size', 100), cursor_path: dataPath(page.cursor_path, 'Resource next cursor path') }
+  }
   if (raw.pagination !== undefined) {
     const page = object(raw.pagination, 'Pagination')
     keys(page, ['items_path', 'cursor_path', 'cursor_param', 'max_pages', 'max_items'], 'Pagination')
@@ -134,6 +147,22 @@ function operation(value: unknown): CustomOperation {
     keys(gateway, ['destination', 'operation'], 'Gateway')
     result.gateway = { destination: identifier(gateway.destination, 'Gateway destination'), operation: identifier(gateway.operation, 'Gateway operation') }
   }
+  if (raw.find_or_create !== undefined) {
+    const pair = object(raw.find_or_create, 'Find or create')
+    keys(pair, ['operation', 'keys'], 'Find or create')
+    const fields = object(pair.keys, 'Search keys'), parsedKeys: NonNullable<CustomOperation['find_or_create']>['keys'] = {}
+    requireValue(Object.keys(fields).length > 0 && Object.keys(fields).length <= 8, 'Declare from one to eight search keys')
+    requireValue(result.kind === 'search' && result.method === 'GET' && result.gateway && !result.resource_page && !result.pagination, 'Find or create requires one bounded private GET search')
+    for (const [name, value] of Object.entries(fields)) {
+      const field = object(value, 'Search key')
+      keys(field, ['create_input', 'record_path', 'match'], 'Search key')
+      requireValue(parsed[name]?.required, 'Every search key must be a required typed input')
+      requireValue(['exact', 'case_insensitive', 'email'].includes(String(field.match)), 'Declare exact or case-insensitive key matching')
+      requireValue(field.match === 'exact' || parsed[name].type === 'string', 'Case-insensitive keys must be strings')
+      parsedKeys[name] = { create_input: identifier(field.create_input, 'Create key input'), record_path: dataPath(field.record_path, 'Record key path'), match: field.match as 'exact' | 'case_insensitive' | 'email' }
+    }
+    result.find_or_create = { operation: identifier(pair.operation, 'Create operation'), keys: parsedKeys }
+  }
   requireValue(result.gateway || result.kind==='trigger' || result.path.startsWith('https://'),'Public actions and searches require a literal HTTPS API URL')
   return result
 }
@@ -141,6 +170,13 @@ function operation(value: unknown): CustomOperation {
 function checkResources(operations: CustomOperation[]): void {
   const byId = new Map(operations.map(op => [op.id, op]))
   for (const op of operations) {
+    if (op.find_or_create) {
+      const create = byId.get(op.find_or_create.operation)
+      requireValue(create?.kind === 'action' && create.method === 'POST' && create.gateway && create.gateway.destination === op.gateway?.destination && !create.pagination, 'Pair the search with one private POST action on the same destination and version')
+      const names = Object.values(op.find_or_create.keys).map(key => key.create_input)
+      requireValue(new Set(names).size === names.length, 'Create key inputs must be distinct')
+      for (const [name, key] of Object.entries(op.find_or_create.keys)) requireValue(create.inputs[key.create_input]?.required && create.inputs[key.create_input].type === op.inputs[name].type, 'Create keys must retain the search input types')
+    }
     for (const input of Object.values(op.inputs)) {
       if (!input.resource) continue
       const list = byId.get(input.resource.operation)
@@ -151,7 +187,8 @@ function checkResources(operations: CustomOperation[]): void {
         requireValue(Object.hasOwn(list.inputs, key) && Object.hasOwn(op.inputs, sibling), 'Resource parent bindings must name list inputs and sibling operation inputs')
         requireValue(list.inputs[key].type === op.inputs[sibling].type, 'Resource parent bindings must preserve input types')
       }
-      requireValue(Object.entries(list.inputs).every(([name, spec]) => !spec.required || Object.hasOwn(parents, name)), 'Bind every required resource list input to a sibling input')
+      requireValue(!list.resource_page || ![list.resource_page.query_input, list.resource_page.cursor_input, list.resource_page.size_input].some(name => Object.hasOwn(parents, name)), 'Resource page controls cannot be parent bindings')
+      requireValue(Object.entries(list.inputs).every(([name, spec]) => !spec.required || Object.hasOwn(parents, name) || name === list.resource_page?.size_input), 'Bind every required resource list input to a sibling input')
     }
     const active = new Set<string>(), checked = new Set<string>()
     const visit = (name: string): void => {

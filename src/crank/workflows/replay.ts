@@ -1,3 +1,4 @@
+import { workflowScope, versionConnectionScope, completeGrant } from '../team/policy'
 import { guardedBatch, requireOwner } from '../access'
 import { executeRun } from '../engine/executor'
 import { isObject } from '../engine/values'
@@ -18,14 +19,21 @@ const isItem = (row: Row) => row.type === 'loop' && /\/items\/\d+$/.test(row.pat
  * and which effects already happened and will not repeat. Uncertain writes need
  * reconciliation (EXEC-006) and are never offered for blind replay. */
 export async function previewReplay(env: CrankEnv, actor: Actor, runId: string) {
-  requireOwner(actor)
+  if(!actor.team) requireOwner(actor)
+  else requireValue(completeGrant(actor,'replay'),'Replay requires a scoped operator',403)
   const run = await stmt(env, 'SELECT r.id,r.status,r.payload_expired_at,r.version_id,r.workflow_id,r.mode,r.repair_paths_json,r.repaired_paths_json,w.status AS workflow_status,w.owner_id FROM crank_wf_runs r JOIN crank_workflows w ON w.id=r.workflow_id WHERE r.id=?', runId)
     .first<{ id: string; status: string; payload_expired_at: string | null; version_id: string; workflow_id: string; workflow_status: string; mode: string; owner_id: string; repair_paths_json: string | null; repaired_paths_json: string }>()
   requireValue(run, 'Run not found', 404)
+  workflowScope(actor,run.workflow_id);await versionConnectionScope(env,actor,run.version_id)
+  if(run.mode==='test') requireOwner(actor)
   const rows = await Promise.all((await stmt(env, 'SELECT path,step_id,type,status,input_json,error_json,output_json,operation_key FROM crank_wf_steps WHERE run_id=? ORDER BY started_at,path', runId).all<Row>()).results
     .map(row => openRow(env, run.workflow_id, row, ['input_json', 'output_json', 'error_json'], 'display')))
   const revisions = (await stmt(env, 'SELECT path,COUNT(*) AS count FROM crank_wf_step_revisions WHERE run_id=? GROUP BY path', runId).all<{ path: string; count: number }>()).results
   const count = new Map(revisions.map(r => [r.path, r.count]))
+  // A local result-commit error can hide the model's completed response. Its
+  // physical attempt is still durable; never offer it as a fresh billed call.
+  const modelAttempts = new Set((await stmt(env, 'SELECT DISTINCT path FROM crank_wf_attempts WHERE run_id=?', runId).all<{path:string}>()).results.map(row => row.path))
+  const nonReplayable = (row: Row) => parse(row.error_json)?.replay_forbidden || row.status === 'failed' && row.type === 'ai.classify' && modelAttempts.has(row.path)
   const failedBelow = (row: Row) => rows.some(other => other.status === 'failed' && other.path.startsWith(row.path + '/'))
   const linked = (await stmt(env, 'SELECT chosen.value AS path FROM crank_wf_runs repair,json_each(repair.repair_paths_json) chosen WHERE repair.repair_of=?', runId).all<{ path: string }>()).results
   const claimed: string[] = [...new Set([...JSON.parse(run.repaired_paths_json), ...linked.map(row => row.path)])]
@@ -35,7 +43,7 @@ export async function previewReplay(env: CrankEnv, actor: Actor, runId: string) 
     return path === selected || !!item && path.startsWith(item + '/')
   })
   const eligible = ['failed', 'succeeded'].includes(run.status) ? rows.filter(row => row.status === 'failed' && !isItem(row) && !failedBelow(row)
-    && !parse(row.error_json)?.uncertain && withinRepair(row.path) && !claimed.includes(row.path)
+    && !parse(row.error_json)?.uncertain && !nonReplayable(row) && withinRepair(row.path) && !claimed.includes(row.path)
     && (run.status === 'failed' || /\/items\/\d+\//.test(row.path))) : []
   const preview = {
     run_id: run.id, version_id: run.version_id, status: run.status, mode: run.status === 'succeeded' ? 'linked_repair' : 'resume', claimed_paths: claimed, limit: REPLAY_LIMIT,
@@ -44,6 +52,7 @@ export async function previewReplay(env: CrankEnv, actor: Actor, runId: string) 
       : run.workflow_status === 'paused' || run.mode !== 'test' && run.workflow_status !== 'published' || pendingRestore(run) ? 'Publish (and adopt) the workflow before replaying its runs.' : null,
     eligible: eligible.map(row => ({ path: row.path, step_id: row.step_id, type: row.type, input: parse(row.input_json), error: parse(row.error_json), operation_key: row.operation_key,
       revisions: count.get(row.path) ?? 0, correctable: !['loop', 'paths'].includes(row.type) })),
+    non_replayable: rows.filter(nonReplayable).map(row => ({ path: row.path, operation_key: row.operation_key, reason: 'A model request was dispatched. Inspect its retained outcome before deliberately starting a new run.' })),
     uncertain: rows.filter(row => row.status === 'uncertain' || parse(row.error_json)?.uncertain).map(row => ({ path: row.path, step_id: row.step_id, operation_key: row.operation_key, reconcile: 'Reconcile this write in its destination (EXEC-006); it is never replayed blindly.' })),
     completed_effects: rows.filter(row => row.status === 'succeeded' && !isItem(row) && !['loop', 'paths'].includes(row.type)).map(row => ({ path: row.path, step_id: row.step_id, type: row.type, operation_key: row.operation_key })),
   }
@@ -99,7 +108,7 @@ export async function replaySteps(env: CrankEnv, actor: Actor, runId: string, in
     stmt(env, "UPDATE crank_wf_runs SET status='queued',error_json=NULL,finished_at=NULL WHERE id=? AND status='failed' RETURNING id", runId),
     auditStatement(env, actor.id, 'run.replay', 'run', runId, { paths, corrected: Object.keys(corrections) }, preview.version_id),
   )
-  const result = await guardedBatch(env, actor, 'owner', statements)
+  const result = await guardedBatch(env, actor, actor.team?'operate':'owner', statements)
   requireValue(result.at(-2)!.results.length === 1, 'The run changed during replay; nothing was replayed', 409)
   await executeRun(env, runId)
   return runDetail(env, actor, runId)

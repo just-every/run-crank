@@ -27,6 +27,15 @@ Owner history and undo must include jobs from either authority.
    `modules/import-kit/schema`, and sibling `./modules/d1-transport` with relative
    paths intact; record copies using the
    seed's existing Base provenance workflow. Never rename applied migrations.
+   Refresh the recorded kit copies together with `rer refresh-base`. For example,
+   `atomic-prefix.ts` and `budget.ts` must agree on the `batchExecutions` export.
+   Unadapted recorded dependencies advance together. If a dependency is marked
+   adapted or is unrecorded seed source, refresh preserves it and refuses before
+   writing when an incoming module needs an export it lacks. Use the printed
+   comparison command, merge the required exports while preserving seed edits,
+   and remove the comparison file. For a recorded adaptation, run the printed
+   `adapt-base` acknowledgement after the merge, then repeat refresh. Acknowledging
+   the old bytes alone does not resolve a missing export.
    Apply these in new numbered seed migrations, in this order,
    skipping any the seed already applied:
    - the D1 kit schemas, in the order `initializeD1ImportStorage` in
@@ -50,6 +59,10 @@ Owner history and undo must include jobs from either authority.
      `importDoorScopesMigration`. Until both are applied, the door answers 503
      `import_door_schema_outdated`. Then `importDoorArchiveMigration`; until it
      is applied, only `archive` and `restore-check` answer that 503.
+   - only when an installed adapter declares `intake`:
+     `importDoorIntakeMigration`, which adds nullable `intake_json` to
+     `ik_door_uploads`. Fresh `importDoorSchema` includes the column. Existing
+     undeclared installations need no intake migration or upload changes.
 2. **Native adapter.** Supply the seed's real `D1TargetAdapter`, parser,
    `ImportMapping`, destination and actual owner principal. Read/write/remove
    guards must protect native revisions and values in the same D1 transaction.
@@ -60,21 +73,50 @@ Owner history and undo must include jobs from either authority.
    already-imported target for catch-up, `list` must read the native set in a
    fixed number of queries, and large imports need a compact `matchesMany`
    (see Pitfalls).
-   **Undo policy.** Door jobs use the kit's `strict` undo unless the runtime
-   options set `reversalPolicy`. A seed whose own imports preserve the owner's
-   edits on undo passes `reversalPolicy: 'preserve-conflicts'` to every door
-   mount (operator and grant), and its adapter implements `preparePreservedUndo`
-   (a mount refuses construction with 503 `invalid_configuration` otherwise).
-   Door jobs are then created with that policy: the seed's ordinary history,
-   which reads each import job with its own policy, lists them, and door undo
-   after an owner edit keeps the owner's change and reverses the rest, as the
-   seed's local imports do. Only new door jobs take the option; earlier ones keep
-   the policy they were created with, even when an apply in flight resumes
-   after the seed remounts with another policy. Strict remains the default,
-   unchanged. With preserve, undoing a catch-up that kept an owner's edit
-   releases the layer beneath it, so the baseline then undoes too. A
-   seed that adapted `door/types.ts` and `door/authority.ts` to pass a policy
-   (Lamp) drops that change, re-vendors the door verbatim and passes the option.
+   **Undo policy.** An adapter declaring `preparePreservedUndo` automatically
+   selects `preserve-conflicts` for each new door job, on both operator and
+   grant mounts. An adapter without that method keeps the kit's `strict`
+   policy. `reversalPolicy` remains an explicit override; requesting preserve
+   without the method refuses construction with 503 `invalid_configuration`.
+   No seed-specific change to the vendored door is needed. For example, Orbit's
+   native adapter declaring the method makes new door imports preserve native
+   edits after re-vendoring this door; this does not change earlier strict jobs.
+
+   The selected policy is persisted and integrity-bound at job creation.
+   Apply resume, status, undo and request replay use that stored policy, even
+   after an adapter upgrade or a different mount setting. Adding the method
+   never upgrades an earlier strict job. Removing it from an adapter needed by
+   an existing preserving job refuses further apply batches and active undo
+   before native effects; restore a compatible adapter to undo earlier batches.
+   Apply resumes still use the stored policy. Every preserving publication
+   needs a valid preparation; if refused, that plan needs a new plan and approval. Keep adapter ownership
+   projections compatible with previously recorded undo evidence.
+
+   Before every preserving apply publication, including resumed or replayed
+   applies with pending work, the kit validates the adapter's preparation for
+   that batch's prospective effects in a read-only admission. Invalid structure
+   or a false observation fence answers 409 `import_door_apply_failed`, with no
+   effects from the refused batch. At checkpoint zero no imported native rows
+   remain; a new plan and approval are required. Admission makes
+   no undo decision and does not authorize effects: apply retains its existing
+   exact before-image and current-authority guards in each write transaction.
+   A later failed batch leaves earlier committed progress available to undo.
+   For small consecutive batches in one request, preparation can admit a window
+   before any of its effects publish. Every batch checks its exact prospective
+   effects against that admission; changed effects or adapter methods require a
+   new preparation. Admission never carries across requests.
+
+   Preserving undo reverses unchanged independent rows and leaves native edits,
+   native deletions and their required dependencies untouched. The door returns
+   `job.state: 'undone'` when finished, including when every effect was retained;
+   it does not answer a strict native-edit 409 for those conflicts. The durable
+   kit `readD1ImportUndoReport` reports `outcome: 'compensated'` when anything
+   was retained, with `retained` dispositions and `edited`, `dependency` or
+   `superseded` reasons; otherwise its outcome is `undone`. Read report pages
+   through the seed's owner-authorized kit context for native history details.
+   Repeated undo is idempotent. Undoing a catch-up that kept an owner's edit
+   releases the layer beneath it, so the baseline can then undo too.
+
 3. **Operator mount.** Import `createImportOperatorHandler` from
    `modules/import-kit/src/door/operator.ts`. Supply the runtime options in
    `types.ts`, plus server-owned `installationId`, `appOrigin`, `ownerEmail`,
@@ -91,13 +133,18 @@ Owner history and undo must include jobs from either authority.
 
    **Several import sources.** One namespace per source (for example one per
    vendor). Keep **one** server-owned allow-list, `importSource(name)`, that
-   returns a fresh `{parse, mapping, ownerPrincipalId?}` for a listed name and
-   `null` otherwise; step 4 passes the same function to the grant mount. Build
+   returns a fresh `{parse, mapping, ownerPrincipalId?, intake?}` for a listed
+   name and `null` otherwise; step 4 passes the same function to the grant mount. Build
    the owner handler per request from it and refuse anything else before the
    door runs. An entry may supply a mapping that needs that request's whole
    parsed bundle, or a per-request owner principal. Construction is cheap and
    stateless; plans and uploads are reachable only in their own namespace. The
-   move-in screen sends the source on every call. Answer `/api/rer/import/*`
+   optional `intake` is a static declaration of formats and fields per source, shared
+   unchanged with both mounts. Declare it when the source contract forbids
+   retaining other fields, so the door drops them before any persistent write,
+   rather than dropping them later in the product parser. See the
+   [Auth example below](#example-auth-source-contract).
+   The move-in screen sends the source on every call. Answer `/api/rer/import/*`
    with 404 here: a configured grant mount (step 4) runs before this handler.
    ```ts
    const sources = {pagerduty: pagerDutyImport, opsgenie: opsgenieImport}; // server-owned factories
@@ -156,8 +203,13 @@ Owner history and undo must include jobs from either authority.
    reconcile,undo}` with the current owner cookie, exact `Origin` and normal
    seed CSRF headers. Show the **Business imports** setting here (step 4): it
    starts off, and the owner's switch is what opens the door to Business
-   grants. Bodies and results are in [README.md](README.md). Upload
-   original bytes, show the returned counts, rejections, differences and each
+   grants. Bodies and results are in [README.md](README.md). Without declared
+   intake, upload original bytes through the existing JSON chunk protocol.
+   With intake, POST the full raw stream to the same uploads route with
+   `Content-Type: application/octet-stream`, `X-Import-Format` and `X-Import-Name`;
+   custody and response hashes then describe sanitized NDJSON. Do not send
+   JSON chunk envelopes or a client sanitizer/hash for that source. Show the
+   returned counts, rejections, differences and each
    `CREDENTIAL_REMOVED` diagnostic (a credential value the door removed from that
    record), and each named source refusal's `details.reason`, then
    require the owner's review before posting `{planId, reviewedFingerprint}`.
@@ -172,9 +224,11 @@ Owner history and undo must include jobs from either authority.
    facts (`ik_door_apply_failures`) and grant metadata in the seed's
    erasure/custody inventory,
    alongside ordinary kit originals/provenance. Withdraw an indivisible bundle
-   when erasing any contained subject; preserve unrelated native records. Keep
-   installation settings and permanent revoked keys. Exercise **every erase
-   path with door rows present** (see Pitfalls), even with grants disabled.
+   when erasing any contained subject; preserve unrelated native records. Include
+   partial sanitized uploads left by interrupted or invalid intake streams;
+   forbidden raw fields were never stored. Keep installation settings and
+   permanent revoked keys. Exercise **every erase path with door rows present**
+   (see Pitfalls), even with grants disabled.
    Do not omit tables from retirement tallies to hide retained personal data.
 7. **Tests.** Extend existing HTTP journeys within the seed's 200-test cap. Use
    its actual migrated Worker, real sign-in, synthetic exports and public native
@@ -205,6 +259,42 @@ opt in. Earlier owner imports then stay in history, and Business catches up on
 their lineage instead of re-creating them. The existing grant signature, nonce,
 scope, expiry and approval rules do not change.
 
+## Example: Auth source contract
+
+Auth's [MOVE-IN contract at commit 35c2080](https://github.com/just-every/run-auth/blob/35c2080c07c0c17fc7fd1315f0899bd953f0fa2e/MOVE-IN.md)
+keeps email, name, disabled state, provider id and review context. Credentials,
+MFA, roles, sessions and policies do not move. Its Auth0 and Okta sources can
+declare separate intake lists:
+
+```ts
+const auth0Intake = {
+  formats: ['csv', 'ndjson'],
+  allow: {
+    csv: ['user_id', 'email', 'name', 'blocked'],
+    ndjson: ['/user_id', '/email', '/name', '/blocked'],
+  },
+} as const;
+const oktaIntake = {
+  formats: ['json'],
+  allow: {
+    json: ['/id', '/status', '/profile/email', '/profile/login',
+      '/profile/displayName', '/profile/firstName', '/profile/lastName',
+      '/profile/department'],
+  },
+} as const;
+```
+
+Auth0's CSV and NDJSON lists contain only those four fields. Okta's Users API
+JSON array retains email with login as fallback, displayName with firstName
+plus lastName as fallback, and department for review only. Those choices stay
+in the product parser/mapping; intake only drops fields and preserves values.
+
+Return each declaration with its source's `{parse, mapping, ownerPrincipalId?,
+intake?}`. The operator mount spreads that source entry and the grant mount
+uses the same `importSource` resolver, so both enforce the same list before
+custody. This is a documentation example, not an Auth seed change. See the
+[streaming protocol and scalar-leaf rules](README.md#optional-intake-before-custody).
+
 ## Pitfalls found in adoptions
 
 - **Credential fields in exports.** Vendor exports carry credential-named
@@ -229,7 +319,8 @@ scope, expiry and approval rules do not change.
 
 - **Export custody.** A seed whose export policy excludes import custody
   (`excludeTables`) must also exclude `ik_door_%`; door uploads and plans hold
-  original source bytes.
+  original source bytes for undeclared sources, or sanitized NDJSON custody
+  for declared intake sources.
 - **Catch-up writes.** Catch-up replaces imported targets; the kit guards each
   replacement with `expectedRevision` from the import's provenance and the full
   before-image. `write` must upsert the target, replace the child rows it owns
@@ -253,10 +344,12 @@ scope, expiry and approval rules do not change.
 - **Erasure.** Run every erase path (each public erasure route, account,
   project or workspace deletion, retirement) with door rows present (an applied
   import's uploads, plans and approvals), not only with the tables installed.
-- **Door migrations.** Apply every door migration Base ships, each once, in
+- **Door migrations.** Apply every mandatory door migration Base ships, each once, in
   order, in its own new numbered seed migration: today
   `importDoorApplyFailureMigration` (one atomic batch, foreign keys on), then
-  `importDoorScopesMigration`, then `importDoorArchiveMigration`. Never re-apply an updated `importDoorSchema` to
+  `importDoorScopesMigration`, then `importDoorArchiveMigration`. Apply optional
+  `importDoorIntakeMigration` only for installed adapters declaring intake.
+  Never re-apply an updated `importDoorSchema` to
   an installed door: its `CREATE TABLE IF NOT EXISTS` statements would skip
   changed tables, so its first statement refuses an earlier door's plan table
   and the deploy fails.
@@ -277,6 +370,26 @@ requires replacing that caller with the operator mount and deleting the old
 HTTP importer in `src/domain/sentry-import/routes.ts`.
 Do not copy its older vendored door instead of current Base.
 
+## Raw source files
+
+For ZIP or another binary export, declare `format: 'raw'` and
+`readRaw(upload, limits)` instead of `parse`. The same source declaration serves
+both mounts, including a grant allow-list entry. The reader receives the verified
+`upload.bytes` (`Uint8Array`), `name`, `sha256` and `size`, before any text decoding,
+and returns a `ParsedRecord[]` (or a promise of it). Bound archive expansion while
+reading, inspect every member for credentials, and reject malformed or unsupported
+archives; thrown errors become a non-secret 422 `source_raw_reader_failed`.
+The door validates returned records, retains the exact original archive and binds
+it to the reviewed fingerprint. Raw sources cannot declare `intake`, which changes
+custody bytes. Chunk uploads have at most 1,024 chunks of 64 KiB: a 64 MiB
+(67,108,864-byte) ceiling, also the default owner quota. Signed quotas can reduce
+it. `limits.maxBytes` may lower it further and is checked before the
+reader runs; excess upload declarations are refused, or planning answers 413
+`source_byte_limit` (a previously retained upload above a lowered owner quota
+answers 403 `upload_exceeds_grant_quota`). Record count and per-record byte limits still apply. Export
+exclusion, erasure of complete or partial custody, archive restore-check, catch-up
+and Undo use the existing lifecycle and require the same seed integration proof.
+
 ## Copyable public HTTP conformance
 
 Copy the following into an existing seed test journey and call `checkDoor`.
@@ -290,6 +403,15 @@ excluding import bookkeeping. Supply nonempty synthetic source bytes plus
 real field values and the seed's undo policy. Those hooks must use public reads,
 not SQL, mocks or precomputed results. The existing seed journey separately
 covers settings, revocation, native edits and erasure as above.
+
+The chunk-upload portion below is for a source **without** an intake
+declaration. For declared intake, replace it with one authenticated streaming
+upload using the headers in [README.md](README.md#optional-intake-before-custody).
+Take `bundleSha256` and received sizes from that response/inventory and compare
+those custody hashes across plan and reconcile; do not assert the raw input's
+hash or size. Assert `intake.sanitized`, `inputFormat`, `custodyFormat` and the
+server-derived `allowlistSha256`, and exercise forbidden-field exclusion,
+invalid-row refusal and partial-upload erasure in that source's HTTP journey.
 
 ```js
 import assert from 'node:assert/strict';

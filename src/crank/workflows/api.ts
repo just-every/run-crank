@@ -1,3 +1,6 @@
+import { watchedFields, saveWatchedFields } from '../triggers/watched-fields'
+import { createEmailAlias, emailState, revokeEmailAlias } from '../triggers/email'
+import { digestApi } from '../engine/steps/digest'
 import { readSamples, saveSample, sampleAction, listenForSample, sampleWarnings } from './samples'
 import { consentRegulatedOperation, readRegulatedOperations } from '../providers/regulated-authority'
 import { tableApi } from '../tables/api'
@@ -40,7 +43,7 @@ import { previewReplay, replaySteps } from './replay'
 import { cancelRun, decideApproval, previewWorkflow, resumeRun, runDetail, runsToday, searchRuns, startRun } from './runs'
 import { createWorkflow, duplicateWorkflow, getWorkflow, listWorkflows, presentWorkflow, publishWorkflow, rollbackWorkflow, setWorkflowState, unpublishWorkflow, updateDraft, versionGraph } from './store'
 
-const PREFIXES = ['/api/crank/authoring', '/api/crank/regulated-operations', '/api/crank/tables', '/api/crank/subflows', '/api/crank/grants', '/api/crank/agent-tasks', '/api/crank/skills', '/api/crank/usage', '/api/crank/historical', '/api/crank/workflows', '/api/crank/workflow-runs', '/api/crank/connections', '/api/crank/oauth', '/api/crank/hooks', '/api/crank/holds', '/api/crank/queues', '/api/crank/catalog', '/api/crank/coverage', '/api/crank/settings', '/api/crank/audit', '/api/crank/notices', '/api/crank/reports']
+const PREFIXES = ['/api/crank/digests', '/api/crank/authoring', '/api/crank/regulated-operations', '/api/crank/tables', '/api/crank/subflows', '/api/crank/grants', '/api/crank/agent-tasks', '/api/crank/skills', '/api/crank/usage', '/api/crank/historical', '/api/crank/workflows', '/api/crank/workflow-runs', '/api/crank/connections', '/api/crank/oauth', '/api/crank/hooks', '/api/crank/holds', '/api/crank/queues', '/api/crank/catalog', '/api/crank/coverage', '/api/crank/settings', '/api/crank/audit', '/api/crank/notices', '/api/crank/reports']
 const match = (path: string, pattern: RegExp) => pattern.exec(path)?.slice(1).map(value => value === undefined ? '' : decodeURIComponent(value)) ?? null
 
 async function testConnection(env: CrankEnv, actor: Actor, connectionId: string, input: Record<string, unknown>) {
@@ -106,6 +109,10 @@ export async function workflowApi(request: Request, env: CrankEnv): Promise<Resp
     }
     requireValue(!path.startsWith('/api/crank/agent-tasks'), 'Agent tasks require a separate execution credential',403)
     requireValue(actor.kind !== 'trigger', 'Trigger tokens only admit events', 403)
+    if (path === '/api/crank/settings/email') {
+      requireValue(request.method === 'GET', 'Method not allowed', 405)
+      return json(await emailState(env, actor, url.searchParams.get('workflow_id') ?? undefined))
+    }
     if (path === '/api/crank/tables' || path.startsWith('/api/crank/tables/')) {
       if (request.method !== 'GET') requireWriteOrigin(request, env, actor)
       return await tableApi(request, env, actor)
@@ -114,11 +121,20 @@ export async function workflowApi(request: Request, env: CrankEnv): Promise<Resp
       if (request.method !== 'GET') requireWriteOrigin(request, env, actor)
       return await subflowApi(request, env, actor)
     }
+    if (path === '/api/crank/digests' || path.startsWith('/api/crank/digests/')) {
+      if (request.method !== 'GET') requireWriteOrigin(request, env, actor)
+      return await digestApi(request,env,actor)
+    }
     const usage = await usageApi(request, env, actor)
     if (usage) return usage
     let m: string[] | null
     if (path === '/api/crank/audit' || path.startsWith('/api/crank/audit/')) {
       requireValue(request.method === 'GET', 'The audit is append-only: no caller can change or remove its records.', 405)
+      if(actor.team) {
+        if(path.endsWith('/export'))await guardedBatch(env,actor,'read',[auditStatement(env,actor.id,'audit.export','workspace','audit')])
+        const rows=await stmt(env,'SELECT id,at,actor_id,action,subject_kind,subject_id,version_id FROM crank_audit ORDER BY at,id').all()
+        return path.endsWith('/export')?new Response(rows.results.map(row=>JSON.stringify(row)).join('\n'),{headers:{'content-type':'application/x-ndjson','cache-control':'no-store'}}):json(rows.results)
+      }
       requireOwner(actor)
       if (path === '/api/crank/audit/export') {
         await guardedBatch(env, actor, 'owner', [auditStatement(env, actor.id, 'audit.export', 'workspace', 'audit')])
@@ -138,6 +154,7 @@ export async function workflowApi(request: Request, env: CrankEnv): Promise<Resp
       if ((m = match(path, /^\/api\/crank\/workflows\/([^/]+)\/drafts\/([^/]+)$/))) return json(await readDraft(env, m[0], m[1]))
       if ((m = match(path, /^\/api\/crank\/workflows\/([^/]+)\/compare$/))) return json(await compareWorkflow(env, m[0], url.searchParams))
       if ((m = match(path, /^\/api\/crank\/workflows\/([^/]+)\/samples$/))) return json(await readSamples(env, actor, m[0]))
+      if ((m = match(path, /^\/api\/crank\/workflows\/([^/]+)\/trigger\/fields$/))) return json(await watchedFields(env, actor, m[0]))
       if ((m = match(path, /^\/api\/crank\/workflows\/([^/]+)\/trigger$/))) return json(await triggerState(env, m[0], url.searchParams))
       if ((m = match(path, /^\/api\/crank\/workflows\/([^/]+)\/versions\/(\d+)$/))) return json(await versionGraph(env, m[0], Number(m[1])))
       if ((m = match(path, /^\/api\/crank\/workflows\/([^/]+)\/today$/))) return json(await runsToday(env, m[0]))
@@ -169,6 +186,8 @@ export async function workflowApi(request: Request, env: CrankEnv): Promise<Resp
     requireValue(request.method === 'POST', 'Method not allowed', 405)
     requireWriteOrigin(request, env, actor)
     const input = request.body ? await body(request, 256 * 1024) : {}
+    if ((m = match(path, /^\/api\/crank\/workflows\/([^/]+)\/email-aliases$/))) return json(await createEmailAlias(env, actor, m[0], input), 201)
+    if ((m = match(path, /^\/api\/crank\/settings\/email\/([^/]+)\/revoke$/))) return json(await revokeEmailAlias(env, actor, m[0]))
     if (path === '/api/crank/authoring') return json(await generateAuthoring(env, actor, input), 201)
     if ((m = match(path, /^\/api\/crank\/authoring\/([^/]+)\/(revise|test|promote)$/))) {
       const action = m[1] === 'revise' ? reviseAuthoring : m[1] === 'test' ? testAuthoring : promoteAuthoring
@@ -186,6 +205,7 @@ export async function workflowApi(request: Request, env: CrankEnv): Promise<Resp
     if (path === '/api/crank/reports/settings') return json(await configureOperations(env, actor, input))
     if (path === '/api/crank/reports/obligations') return json(await createObligation(env, actor, input), 201)
     if ((m = match(path, /^\/api\/crank\/reports\/obligations\/([^/]+)\/verify$/))) return json(await verifyObligation(env, actor, m[0], input))
+    if ((m = match(path, /^\/api\/crank\/workflows\/([^/]+)\/trigger\/fields$/))) return json(await saveWatchedFields(env, actor, m[0], input))
     if ((m = match(path, /^\/api\/crank\/workflows\/([^/]+)\/samples(?:\/(listen|select|delete|fields))?$/))) {
       if (m[1] === 'listen') return json(await listenForSample(env, actor, m[0]), 201)
       return json(m[1] ? await sampleAction(env, actor, m[0], m[1], input) : await saveSample(env, actor, m[0], input), m[1] ? 200 : 201)

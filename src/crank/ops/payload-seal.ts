@@ -3,7 +3,7 @@ import { activeKey, b64, loadKey, SEALED_CLASSES, unb64, type PayloadKey } from 
 
 /** DATA-003 sealed payload values. A customer, financial or health workflow's trigger data, webhook
  * response, step input, output, trace and failure detail, replay inputs, approval proposals and
- * decisions, held and historical event copies and run files are stored as this envelope: AES-256-GCM
+ * decisions, held and historical event copies, unfinished connector pages and run files are stored as this envelope: AES-256-GCM
  * ciphertext bound to the workflow and key, plus the value-free facts Crank's own SQL and routing read
  * (file ids the value names, and the top-level fields in KEPT). */
 export const SEALED_PREFIX = '{"sealed":"crank-payload-v1"'
@@ -75,8 +75,10 @@ export const sealFileBase64 = (target: Target, content: string) => target.key ? 
 export function identifierValues(value: unknown, fields: string[], out = new Set<string>(), depth = 0): Set<string> {
   if (depth > 64 || value === null || typeof value !== 'object') return out
   for (const [name, item] of Object.entries(value as Record<string, unknown>)) {
-    if (fields.includes(name.toLowerCase()) && (typeof item === 'string' || typeof item === 'number')) { const v = String(item).trim().toLowerCase(); if (v) out.add(v) }
-    else identifierValues(item, fields, out, depth + 1)
+    if (fields.includes(name.toLowerCase())) {
+      for (const entry of Array.isArray(item) ? item : [item]) if (typeof entry === 'string' || typeof entry === 'number') { const v = String(entry).trim().toLowerCase(); if (v) out.add(v) }
+    }
+    identifierValues(item, fields, out, depth + 1)
   }
   return out
 }

@@ -257,19 +257,26 @@ export function createOidcProviders({ admission, db, config: input, clientIp, fe
       return result;
     },
     /** Owner actions; the caller requires a fresh step-up proof first. */
-    async relink(id) {
+    async relink(id, audit) {
       const provider = providers.get(id);
       check(provider, 'oidc_unknown_provider', 404);
+      const previous = audit ? await store.link(id) : undefined;
       const metadata = await observe(provider, () => discover(fetcher, provider, config));
-      if (await store.link(id)) await store.relink(id, provider, metadata, clock());
+      if (audit) await store.adminChange(id, provider, metadata, previous, audit);
+      else if (await store.link(id)) await store.relink(id, provider, metadata, clock());
       else await store.pin(id, provider, metadata, clock());
       return store.link(id);
     },
-    async unlink(id) {
+    async unlink(id, audit) {
       check(providers.has(id), 'oidc_unknown_provider', 404);
       // Only a pin can be ended; a provider never linked has nothing to unlink.
-      check(await store.link(id), 'oidc_not_linked', 409);
-      await store.unlink(id);
+      const previous = await store.link(id);
+      check(previous, 'oidc_not_linked', 409);
+      // Preserve the successful response for an ended pin, without an audit
+      // callback or another mutation. The unaudited path keeps its behavior.
+      if (audit && previous.status === 'unlinked') return;
+      if (audit) await store.adminChange(id, null, null, previous, audit);
+      else await store.unlink(id);
     },
     async links() {
       const [links, health] = await Promise.all([store.links(), store.health()]);

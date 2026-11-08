@@ -24,7 +24,7 @@ export async function createFlow(env: CrankEnv, actor: Actor, input: Record<stri
   const flow: Flow = { id: id(), name: text(input.name, 'name'), source_app: text(input.source_app, 'source_app'), destination_app: text(input.destination_app, 'destination_app'), target_url: targetUrl(input.target_url, env), revision: 1, status: 'draft', created_by: actor.id, created_at: now() }
   requireValue(flow.source_app !== flow.destination_app, 'Choose two different apps')
   await guardedBatch(env, actor, 'prepare', [stmt(env, `INSERT INTO crank_flows(id,name,source_app,destination_app,target_url,revision,status,created_by,created_at) VALUES(?,?,?,?,?,?,?,?,?)`, flow.id, flow.name, flow.source_app, flow.destination_app, flow.target_url, flow.revision, flow.status, flow.created_by, flow.created_at),
-    auditStatement(env, actor.id, 'flow.create', 'flow', flow.id)])
+    auditStatement(env, actor.id, 'flow.create', 'flow', flow.id, actor.team ? {team_revision:actor.team.revision} : {})])
   return flow
 }
 export async function setFlowStatus(env: CrankEnv, actor: Actor, flowId: string, status: 'draft' | 'active'): Promise<Flow> {

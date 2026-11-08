@@ -1,4 +1,4 @@
-import type { ImportDoorOptions, ImportDoorRuntimeOptions, DoorRequest } from './types.ts';
+import type { ImportDoorOptions, ImportDoorRuntime, DoorRequest } from './types.ts';
 import { runtimeOptions } from './handler.ts';
 import { DoorError, verifyImportGrant, type DoorAction } from './grants.ts';
 import { doorFence, erasures, sql, transact } from './store.ts';
@@ -17,11 +17,13 @@ export async function enabled(options: ImportDoorOptions): Promise<boolean> {
 }
 /** This grant's parser and mapping: the mount's own, or the seed's allow-list entry
  * for the verified namespace. Unlisted namespaces are refused before any write. */
-async function source(options: ImportDoorOptions, namespace: string): Promise<ImportDoorRuntimeOptions> {
+async function source(options: ImportDoorOptions, namespace: string): Promise<ImportDoorRuntime> {
   if (!options.source) return runtimeOptions(options);
   const listed = await options.source(namespace);
   if (!listed) throw new DoorError('unknown_import_source');
-  return runtimeOptions({...options, parse: listed.parse, mapping: listed.mapping, ownerPrincipalId: listed.ownerPrincipalId ?? options.ownerPrincipalId});
+  return runtimeOptions({...options, parse: listed.parse, mapping: listed.mapping, intake: listed.intake,
+    format: listed.format ?? options.format, readRaw: 'readRaw' in listed ? listed.readRaw : undefined,
+    ownerPrincipalId: listed.ownerPrincipalId ?? options.ownerPrincipalId});
 }
 export async function admit(options: ImportDoorOptions, request: Request, action: DoorAction): Promise<DoorRequest> {
   const authorization = request.headers.get('Authorization');

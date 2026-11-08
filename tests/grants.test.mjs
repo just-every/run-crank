@@ -93,6 +93,16 @@ test('TEAM-002 PLATFORM-001 BASE-001 DATA-001 BASE-003: owner-selected native de
  try{
   const delegate=await join(h,'Finance reviewer'),outsider=await join(h,'Unassigned reviewer'),step=tool('refund'),w=await publish(h,'Weekend refund decision',{trigger:{type:'manual'},steps:[step]});
   const p=policy([step]);p.approval={timeout_seconds:60,delegate_ids:[delegate.id],escalate_to:[outsider.id]};const g=await issue(h,w,p);
+  const ordinary=await startRun(h,w,{});
+  await h.get('workflow-runs/'+ordinary.id,delegate.cookie,403);
+  const ordinaryReview=await publish(h,'Synthetic unrelated standing reviewer',{trigger:{type:'manual'},steps:[{id:'review',type:'approval',input:{amount:'30.00'}}]});
+  const unrelated=await startRun(h,ordinaryReview,{});
+  await decide(h,unrelated,'approve',{},delegate.cookie,403);
+  const separate=await issue(h,w,policy([step]));
+  const separateWait=await task(h,separate,[action(step,{amount:'301.00'})]);
+  await h.get('workflow-runs/'+separateWait.id,delegate.cookie,403);
+  await decide(h,separateWait,'approve',{},delegate.cookie,403);
+  await decide(h,separateWait,'reject');
   const waiting=await task(h,g,[action(step,{amount:'300.00'})]);
   const view=await h.get('workflow-runs/'+waiting.id,delegate.cookie);assert.equal(view.waits[0].can_review,true);assert.equal(view.waits[0].proposal.input.body.amount,'300.00');assert.equal(view.trigger,undefined,'delegation reveals the proposed effect, not every payload');
   await decide(h,waiting,'approve',{},outsider.cookie,403);

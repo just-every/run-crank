@@ -12,11 +12,15 @@ const message = (m: any, channelId: string) => ({ ts: m.ts, text: m.text ?? '', 
 
 async function pages(ctx: StepContext, connectionId: string, method: string, params: Record<string, unknown>, key: string, maxPages = 50) {
   const items: any[] = []
+  const visited = new Set<string>()
   let cursor = '', count = 0
   do {
     const page = await slackCall(ctx, connectionId, method, { ...params, cursor, limit: 200 }, false)
-    items.push(...(page[key] ?? []))
+    if (!Array.isArray(page[key]) || page[key].some((item: unknown) => !isObject(item))) throw new StepError('provider', `Slack ${method} did not return its records array`)
+    items.push(...page[key])
     cursor = page.response_metadata?.next_cursor ?? ''
+    if (typeof cursor !== 'string' || cursor.length > 8192 || cursor && visited.has(cursor)) throw new StepError('provider', `Slack ${method} returned an invalid or repeated page cursor`)
+    if (cursor) visited.add(cursor)
   } while (cursor && ++count < maxPages)
   return { items, truncated: !!cursor }
 }
@@ -34,6 +38,7 @@ async function channelId(ctx: StepContext, connectionId: string, value: unknown)
   const text = searchKey(value, 'channel')
   if (/^[CGD][A-Z0-9]{6,}$/.test(text)) return text
   const found = await findChannels(ctx, connectionId, text)
+  if (found.truncated) throw new StepError('provider', 'Slack channel search is incomplete; no destination was selected')
   if (found.records.length !== 1) throw new StepError('validation', `resource not found: Slack channel ${text}`, { code: 'resource_not_found' })
   return found.records[0].id as string
 }
@@ -107,9 +112,11 @@ export const slackSteps: Record<string, StepType> = {
     const c = connectionOf(step), name = normalizeName(searchKey(ctx.input.name, 'name'))
     const first = await findChannels(ctx, c, name)
     if (first.records.length || !isObject(step.create_if_not_found)) return searchOutcome(step, first.records, first.truncated)
+    if (first.truncated) throw new StepError('provider', 'Slack channel search is incomplete; no create was dispatched')
     // Find or create: serialized per connection and key, with readback on a duplicate refusal.
     return withKeyLock(ctx.env, `slack-channel:${c}:${name}`, ctx.operationKey, async () => {
       const again = await findChannels(ctx, c, name)
+      if (again.truncated) throw new StepError('provider', 'Slack channel search is incomplete; no create was dispatched')
       if (again.records.length) return searchOutcome(step, again.records)
       try {
         const created = await slackCall(ctx, c, 'conversations.create', { name, is_private: (step.create_if_not_found as Record<string, unknown>).is_private === true }, true)

@@ -2,6 +2,7 @@ import { before, after, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash, createHmac } from 'node:crypto';
 import { harness } from './harness.mjs';
+import {inboundEmailJourney,inboundEmailBoundsJourney,inboundEmailCustodyJourney} from './inbound-email-journey.mjs';
 import { estimateHold, connection, deliver, fakeEdge, fakeSecret, hookUrl, jsonResponse, publish, runs, settled, stepOf, until } from './kit.mjs';
 
 // Feeds, vendor APIs and mail are faked only at the network edge.
@@ -11,6 +12,10 @@ before(async () => { h = await harness('http://127.0.0.1:9', { edge: fake.edge }
 after(async () => { await h?.close() });
 const MINUTE = 60000;
 const form = (body, headers = {}) => ({ method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded', ...headers }, body });
+
+test('Inbound email admits forwarded fields and files once and refuses sender, authentication and alias authority failures',()=>inboundEmailJourney());
+test('Inbound email bounds raw streams and MIME and fences in-flight revocation and stale owner authority',()=>inboundEmailBoundsJourney());
+test('Inbound email restores complete inactive custody and erases files without replay or archive resurrection',()=>inboundEmailCustodyJourney());
 
 test('TRIG-001: a secret URL admits form posts once per dedup window, verifies Stripe signatures and rotates', async () => {
   const w = await publish(h, 'Quote requests', { trigger: { type: 'webhook', dedup: { window_minutes: 5 } }, steps: [{ id: 'lead', type: 'map', input: { customer: '{{trigger.body.customer}}', amount: '{{trigger.body.amount}}' } }] });
@@ -270,11 +275,12 @@ test('TRIG-007/TRIG-004: polling preserves interval choices, warns before public
   assert.deepEqual(draft.poll_rate.limiting_rate, { requests: 60, window_seconds: 3600 });
   assert.match(draft.warnings.join(' '), /GitHub.*8 requests per poll.*3 redirects per page.*60 requests per 3600 seconds.*Slowest safe interval: 15 min/);
   assert.equal((await h.get('workflows/' + draft.id)).poll_rate.warning, draft.poll_rate.warning);
+  const sampleWarning = 'Trigger relies on a schema sample; not tested';
   const validation = await h.post(`workflows/${draft.id}/validate`);
-  assert.equal(validation.ok, true); assert.deepEqual(validation.warnings, draft.warnings);
+  assert.equal(validation.ok, true); assert.deepEqual(validation.warnings, [...draft.warnings, sampleWarning]);
   assert.equal((await h.get('workflows/' + draft.id)).published_version_id, null, 'validation has no publication side effect');
   const published = await h.post(`workflows/${draft.id}/publish`, {}, h.owner, 201);
-  assert.deepEqual(published.warnings, draft.warnings, 'publication returns the same advice');
+  assert.deepEqual(published.warnings, [...draft.warnings, sampleWarning], 'publication preserves rate advice and the untested sample warning');
   assert.equal((await h.get(`workflows/${draft.id}/trigger`)).poll.interval_minutes, 1, 'advice never silently changes the selected interval');
   const bounded = await h.post(`workflows/${draft.id}/draft`, { graph: { trigger: { ...source, pagination: { kind: 'link' } }, steps: [] } });
   assert.equal(bounded.poll_rate.requests_per_poll, 40);
@@ -284,6 +290,7 @@ test('TRIG-007/TRIG-004: polling preserves interval choices, warns before public
     assert.equal(saved.draft.trigger.interval_minutes, minutes);
     assert.equal(saved.warnings.length, minutes < 8 ? 1 : 0, 'the safe boundary and all slower supported choices are served without a warning');
     const selected = await h.post(`workflows/${draft.id}/publish`, {}, h.owner, 201);
+    assert.deepEqual(selected.warnings, [...saved.warnings, sampleWarning], 'rate advice and sample coverage remain independent');
     assert.equal(selected.workflow.draft.trigger.interval_minutes, minutes);
     assert.equal((await h.get(`workflows/${draft.id}/trigger`)).poll.interval_minutes, minutes);
   }
@@ -300,11 +307,11 @@ test('TRIG-007/TRIG-004: polling preserves interval choices, warns before public
     assert.match(moved.warnings.join(' '), /4 requests per poll.*3 redirects per page.*60 requests per 3600 seconds.*Slowest safe interval: 5 min/);
     const movedValidation = await redirects.post(`workflows/${moved.id}/validate`);
     assert.equal(movedValidation.ok, true);
-    assert.deepEqual(movedValidation.warnings, moved.warnings, 'the validation door warns about the same redirect-inclusive bound');
+    assert.deepEqual(movedValidation.warnings, [...moved.warnings, sampleWarning], 'validation preserves the redirect-inclusive bound and sample warning');
     const movedSafe = await redirects.post(`workflows/${moved.id}/validate`, { graph: { trigger: { ...movedSource, interval_minutes: 5 }, steps: [] } });
-    assert.deepEqual(movedSafe.warnings, [], 'the supported conservative interval is served');
+    assert.deepEqual(movedSafe.warnings, [sampleWarning], 'the safe interval removes only rate advice; the trigger still has no real sample');
     const movedPublished = await redirects.post(`workflows/${moved.id}/publish`, {}, redirects.owner, 201);
-    assert.deepEqual(movedPublished.warnings, moved.warnings);
+    assert.deepEqual(movedPublished.warnings, [...moved.warnings, sampleWarning]);
     assert.equal((await redirects.get(`workflows/${moved.id}/trigger`)).poll.interval_minutes, 1, 'the warning preserves the selected interval');
     let mode = 'moved';
     redirectEdge.routes.set('api.github.com', ({ url }) => {
@@ -337,7 +344,7 @@ test('TRIG-007/TRIG-004: polling preserves interval choices, warns before public
   } finally { await redirects.close(); }
   for (const resource of ['contacts', 'companies', 'deals']) {
     const crm = await h.post(`workflows/${draft.id}/validate`, { graph: { trigger: { type: 'app_poll', provider: 'hubspot', resource, event: 'new', connection_id: 'synthetic-crank-3', interval_minutes: 1, backfill: 'from_now' }, steps: [] } });
-    assert.deepEqual(crm.warnings, [], 'the native CRM baseline supports the one-minute choice');
+    assert.deepEqual(crm.warnings, [sampleWarning], 'the native CRM baseline needs no rate warning while sample coverage remains unproved');
   }
   await h.post(`workflows/${draft.id}/pause`);
   let items = [{ guid: 'a', title: 'Opening hours' }, { guid: 'b', title: 'New range' }];
@@ -596,6 +603,22 @@ test('TRIG-001: envelope identity, transactional admission and revocation preser
   } finally { await isolated.close(); }
 });
 
-import {crmPollJourney,subscriptionPollJourney} from './app-poll-journey.mjs';
-test('Native CRM polls seed watched properties and recover complete overlapping pages without duplicate effects', crmPollJourney);
+import {crmPollJourney,subscriptionPollJourney,comparisonPollJourney,transitionTimezoneJourney} from './app-poll-journey.mjs';
+test('Native CRM polls seed watched properties and recover complete overlapping pages without duplicate effects', async()=>{await crmPollJourney();await comparisonPollJourney();const {appHistoryJourney}=await import('./app-history-journey.mjs');await appHistoryJourney();await transitionTimezoneJourney()});
+test('Sheet changes wait for complete stable rows and preserve per-record identities across restart and restore', async()=>{const {sheetPollJourney}=await import('./sheet-poll-journey.mjs');await sheetPollJourney();await sheetPollJourney({provider:'microsoft_excel'});await sheetPollJourney({provider:'microsoft_excel',table:true});const {interruptedAppAdmission}=await import('./app-poll-interruption.mjs');await interruptedAppAdmission()});
+test('Airtable updates compare named fields after complete pagination and retain both change identities', async()=>{const {airtablePollJourney}=await import('./airtable-poll-journey.mjs');await airtablePollJourney()});
 test('Mailbox polling retains records through visible subscription expiry and restarted renewal', subscriptionPollJourney);
+
+test('SharePoint and custom JSON lists compare only complete current records under live account authority', async()=>{const {listPollJourney}=await import('./list-poll-journey.mjs');await listPollJourney()});
+
+test('Subject erasure removes unadmitted app observations and permanently fences source replay', async()=>{const {appSubjectJourney,appSubjectConcurrencyJourney}=await import('./app-subject-journey.mjs');await appSubjectJourney();await appSubjectConcurrencyJourney()});
+
+test('Snapshot retention expires only old inactive payloads and preserves comparison identities', async()=>{const {appRetentionJourney}=await import('./app-retention-journey.mjs');await appRetentionJourney()});
+
+test('Pipedrive, Shopify and Zendesk snapshots admit only watched changes from complete authorized pages', async()=>{const {commercePollJourney}=await import('./commerce-poll-journey.mjs');await commercePollJourney()});
+
+test('Pinned custom polling retains reviewed request boundaries and current consent across pages and admissions', async()=>{const {customPollJourney}=await import('./custom-poll-journey.mjs');await customPollJourney()});
+
+test('Operational table changes preserve native custody and revision identities without synthetic credentials', async()=>{const {tablePollJourney}=await import('./table-poll-journey.mjs');await tablePollJourney()});
+
+test('Accounting snapshots preserve watched changes and tenant boundaries through complete reads', async()=>{const {accountingPollJourney}=await import('./accounting-poll-journey.mjs');await accountingPollJourney()});

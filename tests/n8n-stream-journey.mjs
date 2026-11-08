@@ -33,6 +33,18 @@ export function filterStreamExport(target,id='synthetic-crank-480') {
  source.workflow.connections=Object.fromEntries(source.workflow.nodes.slice(0,-1).map((node,index)=>[node.name,{main:[[edge(source.workflow.nodes[index+1].name)]]}]));return source;
 }
 
+export function looseObjectFilterStreamExport(target,operand) {
+ const source=filterStreamExport(target,'synthetic-crank-stream-object-'+operand);
+ source.workflow.name='Synthetic stream object '+operand;
+ const parameters=source.workflow.nodes.find(node=>node.id==='n3').parameters;
+ parameters.looseTypeValidation=true;parameters.conditions.options.typeValidation='loose';
+ parameters.conditions.conditions=[
+  {id:'synthetic-crank-stream-guard',leftValue:1,rightValue:0,operator:{type:'number',operation:'gt'}},
+  {id:'synthetic-crank-stream-object',leftValue:'={{ $json.value }}',...(operand==='right'?{rightValue:'={{ $json.expected }}'}:{}),operator:operand==='left'?{type:'object',operation:'notEmpty',singleValue:true}:{type:'array',operation:'contains',rightType:'object'}},
+ ];
+ return source;
+}
+
 /** Complete-stream operations must settle before an actual native HTTP write. */
 export async function transformStreamJourney() {
  const target='https://receiver.example',writes=[];
@@ -58,7 +70,7 @@ export async function transformStreamJourney() {
    value.workflow.nodes[1].parameters.assignments.assignments.push({id:'synthetic-crank-422',name:'region',type:'string',value:'={{ $json.body.region }}'},{id:'synthetic-crank-423',name:'unselected',type:'string',value:'synthetic-crank-424'});
    value.workflow.nodes[2].parameters={fieldToSplitOut:'messages',include,...(include==='selectedOtherFields'?{fieldsToInclude:'region'}:{}),options:{destinationFieldName:'record'}};
    value.workflow.nodes[3].parameters.assignments.assignments[0].value='={{ $json.record.customer }}';value.workflow.nodes[3].parameters.assignments.assignments[1].value='={{ $json.record.amount }}';value.workflow.nodes[3].parameters.assignments.assignments.push({id:'synthetic-crank-425',name:'region',type:'string',value:'={{ $json.region }}'});return value;
-  }),plan=await doorPlan(h,JSON.stringify([envelope,filterStreamExport(target),...variants,...aggregateCases.map(row=>row.envelope)]));assert.equal(plan.status,200,plan.text);assert.equal(plan.value.rejected.length,0,JSON.stringify(plan.value));assert.equal(writes.length,0);
+  }),objectFilters=['left','right'].map(operand=>({operand,envelope:looseObjectFilterStreamExport(target,operand)})),plan=await doorPlan(h,JSON.stringify([envelope,filterStreamExport(target),...variants,...aggregateCases.map(row=>row.envelope),...objectFilters.map(row=>row.envelope)]));assert.equal(plan.status,200,plan.text);assert.equal(plan.value.rejected.length,0,JSON.stringify(plan.value));assert.equal(writes.length,0);
   for(let count=0;count<2;count++)assert.equal((await door(h,'apply',{planId:plan.value.planId,reviewedFingerprint:plan.value.fingerprint})).value.job.state,'completed');
   const workflows=await h.get('workflows'),workflow=workflows.find(row=>row.name===envelope.workflow.name),draft=await h.get('workflows/'+workflow.id);assert.equal(draft.status,'draft');assert.equal(draft.versions.length,0);assert.equal(draft.hooks.length,0);
   await h.restart();assert.deepEqual((await h.get('workflows/'+workflow.id)).draft,draft.draft);await h.post('workflows/'+workflow.id+'/publish',{},h.owner,201);const hook=await h.post('workflows/'+workflow.id+'/hooks',{},h.owner,201);
@@ -88,7 +100,19 @@ export async function transformStreamJourney() {
   const filteredItems=[{customer:'synthetic-crank-482',amount:2},{customer:'synthetic-crank-483',amount:-1},{customer:'synthetic-crank-482',amount:2}];
   assert.equal((await filterSend(filteredItems)).status,'succeeded');assert.deepEqual(writes.at(-1),{orders:[filteredItems[0],filteredItems[2]]},'stream filters preserve order and duplicate items before aggregation');
   const beforeFilter=writes.length;assert.equal((await filterSend([{amount:-1}])).status,'succeeded');assert.equal(writes.length,beforeFilter,'a filtered empty stream must stop all later receiver work');
-  assert.equal((await filterSend([{amount:1},{amount:'synthetic-crank-invalid'}])).status,'failed');assert.equal(writes.length,beforeFilter,'a later condition type failure must stop the entire stage before receiver dispatch');
+  const invalidFilter=await filterSend([{amount:1},{amount:'synthetic-crank-invalid'}]);assert.equal(invalidFilter.status,'failed');assert.equal(writes.length,beforeFilter,'a later condition type failure must stop the entire stage before receiver dispatch');
+  assert.deepEqual(invalidFilter.steps.find(step=>step.step_id==='n3').error,{category:'type_mismatch',message:'Condition left operand cannot be converted to number',operand:'left',declared_type:'number',group_index:0,condition_index:0},'stream Filter must retain the original conversion error identity');
+  for(const {operand,envelope}of objectFilters){
+   const workflow=workflows.find(row=>row.name===envelope.workflow.name);await h.post('workflows/'+workflow.id+'/publish',{},h.owner,201);const hook=await h.post('workflows/'+workflow.id+'/hooks',{},h.owner,201);
+   const send=async messages=>{const response=await deliver(h,hook.url,{method:'POST',headers:{'content-type':'application'+'/'+'json'},body:JSON.stringify({messages})});assert.equal(response.status,200,response.text);return settled(h,response.value.run_id)};
+   const good=operand==='left'?{value:'{ok: true}'}:{value:[null],expected:'null'},bad=operand==='left'?{value:'{invalid: call()}'}:{value:[null],expected:'{invalid: call()}'};
+   assert.equal((await send([good,good])).status,'succeeded');assert.deepEqual(writes.at(-1),{orders:[good,good]},'supported loose object stream conversions preserve order and duplicates');
+   const before=writes.length,failed=await send([good,bad]),original={category:'type_mismatch',message:'Condition '+operand+' operand cannot be converted to object',operand,declared_type:'object',group_index:0,condition_index:1};
+   assert.equal(failed.status,'failed');assert.equal(writes.length,before,'a later malformed object operand must prevent the whole stream from dispatching');
+   const checkpoint=failed.steps.find(step=>step.step_id==='n3');assert.deepEqual(checkpoint.error,original,'stream Filter must preserve operand, declared type and the non-first condition identity');assert.deepEqual(checkpoint.input.items,[good,bad],'failed stream inputs must retain the exact original values');
+   for(const [key,value]of Object.entries(original))assert.equal(failed.error[key],value,'run error must retain '+key);
+   await h.restart();const retained=await h.get('workflow-runs/'+failed.id);assert.deepEqual(retained.steps.find(step=>step.step_id==='n3').error,original,'restart must preserve the original stream conversion error');
+  }
   for(const mutation of [source=>source.workflow.nodes[4].parameters.type='random',source=>source.workflow.nodes[5].parameters.operation='removeItemsSeenInPreviousExecutions',source=>source.workflow.nodes[7].parameters.options.includeBinaries=true,
    source=>source.workflow.nodes[7].parameters.fieldsToInclude='customer',
    source=>source.workflow.nodes[7].parameters={aggregate:'aggregateIndividualFields',fieldsToAggregate:{fieldToAggregate:[{fieldToAggregate:'customer',renameField:true,outputFieldName:'summary'},{fieldToAggregate:'amount',renameField:true,outputFieldName:'summary.amount'}]},options:{}},

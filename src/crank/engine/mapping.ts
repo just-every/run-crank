@@ -3,15 +3,16 @@ import { runTransform } from './transforms'
 import { isObject, kindOf, lookup, textOf } from './values'
 
 /** What a mapping can read: the trigger payload, earlier step outputs and run facts. */
-export interface Scope { trigger: unknown; steps: Record<string, unknown>; run: Record<string, unknown>; item?: unknown; item_index?: number }
+export interface Scope { trigger: unknown; steps: Record<string, unknown>; run: Record<string, unknown>; item?: unknown; item_index?: number; tables?: Record<string, Record<string, unknown>> }
 const TOKEN = /\{\{\s*([A-Za-z_][\w.\-[\]]*)\s*\}\}/g
 
 export function read(scope: Scope, path: string) { return lookup(scope, path) }
 
 /** Mapped values: `{{path}}` text (a lone token keeps its type), `{"$ref":path}`,
  * `{"$fn":name,"args":{…}}` built-in transforms and `{"$literal":value}`.
- * A missing reference stays missing (the key is omitted); null and "" pass through. */
-export function resolve(value: unknown, scope: Scope, depth = 0): unknown {
+ * A missing reference stays missing (the key is omitted); null and "" pass through.
+ * Schema-bound inputs retain array slots so a missing line is refused at its index. */
+export function resolve(value: unknown, scope: Scope, depth = 0, preserveArrayItems = false): unknown {
   if (depth > 32) throw new StepError('mapping', 'Mapping nests too deeply')
   if (typeof value === 'string') {
     const whole = /^\{\{\s*([A-Za-z_][\w.\-[\]]*)\s*\}\}$/.exec(value)
@@ -24,17 +25,24 @@ export function resolve(value: unknown, scope: Scope, depth = 0): unknown {
       return text ?? JSON.stringify(found.value)
     })
   }
-  if (Array.isArray(value)) return value.map(item => resolve(item, scope, depth + 1)).filter(item => item !== undefined)
+  if (Array.isArray(value)) {
+    const items = value.map(item => resolve(item, scope, depth + 1, preserveArrayItems))
+    return preserveArrayItems ? items : items.filter(item => item !== undefined)
+  }
   if (isObject(value)) {
     if ('$literal' in value) return value.$literal
     if (typeof value.$ref === 'string') return read(scope, value.$ref).value
+    if ('$table' in value) {
+      if (typeof value.$table !== 'string' || !scope.tables || !Object.hasOwn(scope.tables, value.$table)) throw new StepError('authority', 'Lookup table requires a current authorized native read')
+      return scope.tables[value.$table]
+    }
     if (typeof value.$fn === 'string') {
-      const args = resolve(value.args ?? {}, scope, depth + 1) as Record<string, unknown>
+      const args = resolve(value.args ?? {}, scope, depth + 1, preserveArrayItems) as Record<string, unknown>
       try { return runTransform(value.$fn, args) } catch (error) { throw missingField(value.args, scope, error) ?? error }
     }
     const out: Record<string, unknown> = {}
     for (const [key, item] of Object.entries(value)) {
-      const resolved = resolve(item, scope, depth + 1)
+      const resolved = resolve(item, scope, depth + 1, preserveArrayItems)
       if (resolved !== undefined) out[key] = resolved
     }
     return out

@@ -1,13 +1,13 @@
-import type { DoorRequest, ImportOperatorOptions } from './types.ts';
+import type { DoorRequest, ImportOperatorOptions, ImportRawOperatorOptions } from './types.ts';
 import { DoorError } from './protocol.ts';
 import { createDoorHandler, runtimeOptions } from './handler.ts';
 import { authorized, doorFence, erasures, schemaCurrent, sql } from './store.ts';
-export { importDoorSchema, importDoorApplyFailureMigration, importDoorScopesMigration, importDoorArchiveMigration } from './schema.ts';
+export { importDoorSchema, importDoorApplyFailureMigration, importDoorScopesMigration, importDoorArchiveMigration, importDoorIntakeMigration } from './schema.ts';
 export { writeImportDoorSettings, readImportDoorHistory } from './authority.ts';
-export type { ImportOperatorOptions } from './types.ts';
+export type { ImportOperatorOptions, ImportRawOperatorOptions } from './types.ts';
 
 /** Owner-session entry point. No owner-claim module or grant key ring required. */
-export function createImportOperatorHandler(options: ImportOperatorOptions) {
+export function createImportOperatorHandler(options: ImportOperatorOptions | ImportRawOperatorOptions) {
   if (!options.installationId?.trim() || !options.ownerEmail?.trim() || !options.namespace?.trim()
     || new URL(options.appOrigin).origin !== options.appOrigin || typeof options.authorize !== 'function') throw new DoorError('invalid_configuration',503);
   runtimeOptions(options);

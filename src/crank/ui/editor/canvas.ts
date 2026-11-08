@@ -1,3 +1,5 @@
+import { namedFields, reference } from './native'
+import type { Graph } from '../../engine/graph'
 import { clock, esc } from '../document'
 import { icon } from '../icons'
 import { appOf, lastRecord, nodes, summaryOf, type Connection, type Node, type RunDetail } from './model'
@@ -12,7 +14,7 @@ export function tile(app: { tile: string; glyph: string }) {
 }
 
 /** `repaired`: steps where a run of an older version failed on a field the live version (`changedIn`) reads under its new name. */
-export interface CanvasContext { workflowId: string; connections: Connection[]; runs: RunDetail[]; selected: string; repaired: Set<string>; changedIn: number | null; query: string }
+export interface CanvasContext { graph?: Graph; workflowId: string; connections: Connection[]; runs: RunDetail[]; selected: string; repaired: Set<string>; changedIn: number | null; query: string }
 
 function card(node: Node, ctx: CanvasContext) {
   const app = appOf(node, ctx.connections), found = node.trigger ? (ctx.runs[0] ? { run: ctx.runs[0], record: null } : null) : lastRecord(ctx.runs, node.path)
@@ -22,8 +24,11 @@ function card(node: Node, ctx: CanvasContext) {
   const repaired = ctx.repaired.has(node.path) && state === 'succeeded'
   const mark = state === 'succeeded' ? 'check' : state === 'failed' || state === 'uncertain' ? 'warning' : state === 'stopped' || state === 'skipped' ? 'stop' : 'clock'
   const foot = state ? `<span class="step-foot"><span class="state" data-state="${esc(state)}"${repaired ? ` title="A run of an earlier version failed here; version ${ctx.changedIn} reads the renamed field and its runs succeed"` : ''}>${icon(mark, 'icon state-mark')}${esc(repaired ? 'Repaired' : reconciled ? 'Read back' : STEP_STATE[state] ?? state)}</span>${at ? clock(at) : ''}</span>` : '<span class="step-foot"><span class="state">No runs yet</span></span>'
+  const fields = ctx.graph && node.step ? namedFields(ctx.graph,node.step.id) : []
+  const refs = node.step?.input && typeof node.step.input === 'object' ? Object.values(node.step.input).map(reference).filter(Boolean) : []
+  const lineage = refs.map(ref=>fields.find(field=>field.ref===ref)?.label).filter(Boolean)
   const href = `/app/workflows/${encodeURIComponent(ctx.workflowId)}?step=${encodeURIComponent(node.path)}${ctx.query}`
-  return `<a class="step-card${ctx.selected === node.path ? ' is-selected' : ''}" href="${esc(href)}"${ctx.selected === node.path ? ' aria-current="true"' : ''}><span class="step-head">${tile(app)}<span class="step-text"><strong>${esc(app.title)}</strong><span>${esc(summaryOf(node))}</span></span></span>${node.branches && node.step?.type !== 'loop' ? '' : foot}</a>`
+  return `<a class="step-card${ctx.selected === node.path ? ' is-selected' : ''}" href="${esc(href)}"${ctx.selected === node.path ? ' aria-current="true"' : ''}><span class="step-head">${tile(app)}<span class="step-text"><strong>${esc(app.title)}</strong><span>${esc(summaryOf(node))}</span></span></span>${lineage.length ? `<span class="step-lineage">Reads ${esc(lineage.join('; '))}</span>` : ''}${node.branches && node.step?.type !== 'loop' ? '' : foot}</a>`
 }
 
 function column(list: Node[], ctx: CanvasContext): string {
@@ -32,5 +37,5 @@ function column(list: Node[], ctx: CanvasContext): string {
 
 /** The steps in order; a path group's branches stack in a column to its right. */
 export function canvas(graph: any, ctx: CanvasContext) {
-  return `<section class="canvas" aria-label="Steps">${column(nodes(graph), ctx)}</section>`
+  return `<section class="canvas" aria-label="Steps">${column(nodes(graph), {...ctx,graph})}</section>`
 }

@@ -8,4 +8,5 @@ export { canonicalJson, sha256, sourceIdentity, targetIdentity } from './provena
 export { readFileSource, readApiSource, ReaderError } from './readers/index.ts';
 export { validateImporters } from './status/index.ts';
 export type * from './status/types.ts';
+export * from './receipt/index.ts';
 export { readImportOriginals } from './journal/originals.ts';

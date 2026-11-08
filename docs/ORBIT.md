@@ -1,0 +1,19 @@
+# Orbit deal connector
+
+Crank uses Orbit's standalone versioned deal API. It never uses a browser session or operates as an Orbit administrator. The source protocol is the public deal routes at [Orbit commit b9225f7](https://github.com/just-every/run-orbit/blob/b9225f7b4e94df7ee938279775e4dcc33b1afd9a/src/core/features/api/public-routes.ts).
+
+An Orbit administrator issues a credential for a current principal, named deal operations, specific records, fields and expiry. In Crank, the native owner creates an `orbit` bearer connection through `POST /api/crank/connections`. Its `binding` fixes an exact public HTTPS `origin`, 1 to 100 existing `record_ids` and the permitted `fields`: `title`, `stage_id`, `value_cents` and `company_id`. Local `scopes` declare `deal.read` and, only for updates, `deal.update`. Store the credential in `secret.token`; never put it in a workflow. The binding cannot be changed by rotating a credential. Create a separate connection to select another installation or record set. The provider credential should cover the same records and field projection; an unexpected returned record or field is refused.
+
+The connector ships these steps:
+
+- `orbit.read_deal`: input `deal_id`; output `record`, exact `etag` and installation `origin`.
+- `orbit.find_deal`: input `title`; bounded complete exact-title search with the normal no-match and multiple-match settings. It never creates a deal or treats a provider failure as no match.
+- `orbit.update_deal`: input `deal_id`, `etag` from a prior read and a nonempty `fields` object. For example, map `{{steps.read.etag}}` and set integer `value_cents` to `9500`. Orbit's conditional update refuses a changed record. A separate GET must observe the exact requested fields before the step succeeds. The output describes those observed fields; it does not attest which writer produced them.
+
+All workflow requests use the shared admission, current authority and retry bounds. After an ambiguous PATCH, Crank reads the bound deal and never blindly repeats the PATCH. Missing or mismatched readback remains uncertain and is excluded from blind replay. If authority ends after the write, the operation pauses; an explicit owner reconnect and resume can finish readback without sending another write. A definite stale revision requires a fresh read and deliberate new work. Connection verification and generic HTTP can read only individual bound deals with the approved field projection. Lists and updates require the native operations so their complete-set and readback checks cannot be bypassed.
+
+`app_poll` with `provider: "orbit"`, `resource: "deals"`, the connection, explicit `backfill`, `event: "new"` or `"updated"`, and `interval_minutes` reads current scoped deal snapshots. Updated triggers name `watched_fields` or explicitly select `any_field`. Existing TRIG-008 comparison, duplicate admission, change conditions and first-value identities apply. Complete pagination must succeed before comparison state changes. These are observed snapshots with a poll clock, not outbound events or complete modification history. Polling cannot detect a value that changes back between observations.
+
+Settings disclose the installation recipient, field categories, purpose and required credential. Provider region and retention remain unverified provider-controlled terms. Local erasure does not remove the sibling's deal. Archives retain bindings, completed history and comparison state but exclude credentials and execution authority; restored connections need reconnection and workflows remain paused.
+
+CONN-010 remains partial. No authorized live Orbit installation receipt, outbound subscription, Nook message readback or complete CRM-to-accounting-to-chat journey is established. Orbit creation, other resources and the remaining sibling connectors are unfinished.

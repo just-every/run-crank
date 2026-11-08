@@ -1,3 +1,4 @@
+import { digestRetention } from '../engine/steps/digest'
 import { runPureChildren } from '../workflows/subflow-calls'
 import { expireEnrollmentCodes } from '../custom/gateways'
 import { releaseGatewayTasks } from '../custom/gateway-tasks'
@@ -34,6 +35,7 @@ export async function schedulerPass(env: CrankEnv, time = Date.now()) {
 }
 
 async function runSchedulerPass(env: CrankEnv, time: number) {
+  await digestRetention(env,time)
   await expireEnrollmentCodes(env)
   const at = new Date(time).toISOString(), summary = { recovered: 0, released: 0, queued: 0, polls: 0, schedules: 0, executed: 0, holds: 0, sealed: { runs: 0, items: 0, files: 0, destroyed: 0 }, expired: { payload: 0, files: 0, history: 0 } }
   await cancelExecutorTasks(env,undefined,time)

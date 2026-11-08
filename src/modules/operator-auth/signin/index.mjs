@@ -48,7 +48,7 @@ export function createSignInHandler(auth, { setup, links, defaultReturnTo = '/ap
   return async function signIn(request) {
     const url = new URL(request.url);
     if (url.pathname !== path || !['GET', 'HEAD'].includes(request.method)) return null;
-    const branding = auth.presentation;
+    const branding = auth.publicPresentation ? await auth.publicPresentation() : auth.presentation;
     const returnTo = safeReturnTo(url.searchParams.get('returnTo'), defaultReturnTo);
     const hint = emailHint(url.searchParams.get('login_hint'));
     const providers = auth.providers ? (await auth.providers.list()).filter(p => p.visible) : [];

@@ -42,6 +42,16 @@ async function checkTask(env:CrankEnv,task:Task) {
   await assertDispatchAuthority(env,task.run_id)
   allowedOperation(await customVersion(env,task.connector_id,task.connector_version),task.operation,true)
 }
+export async function requireGatewayGrant(ctx:StepContext,step:Record<string,unknown>,op:CustomOperation) {
+  await assertDispatchAuthority(ctx.env,ctx.run.id)
+  const gatewayId=String(step.gateway_id),environment=String(step.environment),connectorId=String(step.connector_id),version=Number(step.connector_version)
+  const grant=await stmt(ctx.env,`SELECT a.id,a.revision,(SELECT revision FROM crank_team_authority WHERE singleton=1) AS authority_revision FROM crank_gateway_grants a JOIN crank_gateways g ON g.id=a.gateway_id JOIN oa_operators o ON o.id=g.owner_id
+    WHERE a.gateway_id=? AND g.environment=? AND g.origin=? AND g.status='active' AND o.status='active' AND o.role='owner' AND o.version=g.owner_version
+    AND g.environment=(SELECT environment FROM crank_workflows WHERE id=?) AND a.status='active' AND a.connector_id=? AND a.connector_version=?
+    AND EXISTS(SELECT 1 FROM json_each(a.operations_json) WHERE value=?) AND EXISTS(SELECT 1 FROM json_each(a.destinations_json) WHERE json_extract(value,'$.label')=?) ORDER BY a.created_at DESC LIMIT 1`,gatewayId,environment,ctx.env.AUTH_ORIGIN,ctx.run.workflow_id,connectorId,version,op.id,op.gateway!.destination).first<{id:string;revision:number;authority_revision:number}>()
+  if (!grant) throw new StepError('auth','The private gateway has no current write grant for this version, operation and environment')
+  return grant
+}
 export async function gatewayAttempt(ctx:StepContext,step:Record<string,unknown>,op:CustomOperation,input:Record<string,unknown>,ordinal:number,policy:AttemptPolicy) {
   await assertDispatchAuthority(ctx.env,ctx.run.id)
   const gatewayId=String(step.gateway_id),environment=String(step.environment),connectorId=String(step.connector_id),version=Number(step.connector_version)
@@ -114,7 +124,7 @@ export async function gatewayResult(env:CrankEnv,gateway:Gateway,taskId:string,i
   const failed=input.error!==undefined
   // A customer error is never forwarded verbatim: SQL, filenames and credentials
   // stay on the gateway. Only this bounded category is retained.
-  const error=failed?{gateway_error_category:isObject(input.error) && ['invalid_input','operation_refused','output_limit','execution_failed','timeout','file_changed'].includes(String(input.error.category))?String(input.error.category):'operation_refused'}:null
+  const error=failed?{gateway_error_category:isObject(input.error) && ['invalid_input','operation_refused','output_limit','execution_failed','timeout','file_changed','duplicate_conflict'].includes(String(input.error.category))?String(input.error.category):'operation_refused'}:null
   const value=canonical(failed?error:input.output)
   requireValue(new TextEncoder().encode(value).length<=65536,'Gateway output exceeds 64 KiB',413)
   const outputDigest=await digest(value)
@@ -137,6 +147,11 @@ export async function gatewayResult(env:CrankEnv,gateway:Gateway,taskId:string,i
 /** No execution slot is held while the customer gateway is offline. A completed
  * page wakes only its exact checkpoint; stale/expired authority fails in step. */
 export async function releaseGatewayTasks(env:CrankEnv,at:string) {
+  await stmt(env, `UPDATE crank_wf_runs SET status='queued' WHERE status='waiting' AND EXISTS(
+    SELECT 1 FROM crank_wf_steps s WHERE s.run_id=crank_wf_runs.id AND s.status='waiting' AND json_extract(s.trace_json,'$.search_key') IS NOT NULL
+    AND (NOT EXISTS(SELECT 1 FROM crank_custom_search_keys k WHERE k.name=json_extract(s.trace_json,'$.search_key')) OR EXISTS(
+      SELECT 1 FROM crank_custom_search_keys k JOIN crank_wf_runs owner ON owner.id=k.run_id WHERE k.name=json_extract(s.trace_json,'$.search_key') AND owner.status IN ('failed','rejected','cancelled','succeeded'))))`).run()
+
   const rows=await stmt(env,`UPDATE crank_wf_runs SET status='queued' WHERE status='waiting' AND EXISTS(
     SELECT 1 FROM crank_gateway_tasks t JOIN crank_wf_steps s ON s.run_id=t.run_id AND s.path=t.path
     WHERE t.run_id=crank_wf_runs.id AND s.status='waiting' AND s.type='custom.request' AND t.id=json_extract(s.trace_json,'$.gateway_task_id')

@@ -6,7 +6,10 @@ import {join,resolve,extname} from 'node:path';
 import {harness} from './harness.mjs';
 import {chromium} from '@playwright/test';
 import {createHash} from 'node:crypto';
+import {looseObjectExport} from './n8n-conditions-journey.mjs';
+import {arithmeticExport,formattingExport} from './n8n-datetime-journey.mjs';
 import {fakeSecret} from './kit.mjs';
+import {embeddedWaitExport} from './n8n-conversion-journey.mjs';
 const canonical=value=>value===null||typeof value!=='object'?JSON.stringify(value):Array.isArray(value)?'['+value.map(canonical).join(',')+']':'{'+Object.keys(value).sort().map(key=>JSON.stringify(key)+':'+canonical(value[key])).join(',')+'}';
 const digest=value=>createHash('sha256').update(value).digest('hex');
 const evidence=process.env.CRANK_EVIDENCE;
@@ -15,7 +18,7 @@ let browser,page,h,server,receiver;
 try {
  // Build first. This runs the emitted deployment Worker, real D1 and native handlers.
  const declared='https://receiver.example',effects=[];
- receiver=createServer(async(req,res)=>{let text='';for await(const chunk of req)text+=chunk;const input=JSON.parse(text);effects.push({path:req.url,input});res.writeHead(200,{'content-type':'application'+'/'+'json'});res.end(JSON.stringify(req.url==='/body'?[1,2].map(part=>({processed:input.message,part})):{processed:input.processed,part:input.part}))});
+ receiver=createServer(async(req,res)=>{let text='';for await(const chunk of req)text+=chunk;const input=JSON.parse(text);effects.push({path:req.url,input});res.writeHead(200,{'content-type':'application'+'/'+'json'});res.end(JSON.stringify(req.url.startsWith('/embedded-wait-')?input:req.url==='/body'?[1,2].map(part=>({processed:input.message,part})):{processed:input.processed,part:input.part}))});
  await new Promise(resolve=>receiver.listen(0,'127.0.0.1',resolve));const receiverOrigin='http://127.0.0.1:'+receiver.address().port;
  h=await harness(declared,{emitted:true,edge:async request=>{const url=new URL(request.url);if(url.origin!==declared)return undefined;const headers=new Headers(request.headers);headers.delete('content-length');return fetch(receiverOrigin+url.pathname,{method:request.method,headers,body:await request.arrayBuffer()})}});const origin=h.origin;
  const types={'.css':'text'+'/'+'css','.js':'text'+'/'+'javascript','.svg':'image'+'/'+'svg+xml','.woff2':'font'+'/'+'woff2','.webp':'image'+'/'+'webp','.png':'image'+'/'+'png','.json':'application'+'/'+'json'};
@@ -28,14 +31,14 @@ try {
   res.writeHead(response.status,Object.fromEntries(response.headers));res.end(Buffer.from(await response.arrayBuffer()));
  }catch{res.writeHead(500);res.end('Browser fixture transport failed')}});
  await new Promise(r=>server.listen(Number(new URL(origin).port),'127.0.0.1',r));
- browser=await chromium.launch({headless:true,args:['--use-mock-keychain','--password-store=basic']});const context=await browser.newContext();
+ browser=await chromium.launch({headless:true,...(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH?{executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH}:{}),args:['--use-mock-keychain','--password-store=basic','--no-sandbox']});const context=await browser.newContext();
  const cookie=h.owner.indexOf('=');await context.addCookies([{name:h.owner.slice(0,cookie),value:h.owner.slice(cookie+1),url:origin}]);page=await context.newPage();
  await page.goto(origin+'/setup');if(new URL(page.url()).pathname==='/setup'){await page.getByRole('checkbox').check();await page.getByRole('button',{name:'Finish setup',exact:true}).click();await page.waitForURL('**/app')}
  const send=async(path,body,status=200)=>{const r=await context.request.fetch(origin+'/api/crank/'+path,{method:body===undefined?'GET':'POST',headers:{origin},...(body===undefined?{}:{data:body})});const v=await r.json();assert.equal(r.status(),status,path+': '+(v.error??'unexpected status'));return v};
  const importDoor=async(action,body)=>{const response=await context.request.post(origin+'/api/operator/import/'+action,{headers:{origin,'X-Import-Source':'n8n'},data:body});const value=await response.json();assert.equal(response.status(),200,action+': '+(value.error??'unexpected import status'));return value};
  const shot=async(width,state)=>{await page.screenshot({path:join(evidence,`${width}-${state}.png`),fullPage:true});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`${width} ${state} overflow`)};
  const {loopExport,streamLoopEnvelope,switchExport,dateExport,conversionExport,isolatedCodeChoice,graphExport,originalCodeExport,originalCodeChoice,expressionSwitchExport}=await import('./n8n-graph-fixture.mjs');
- const {transformStreamExport,filterStreamExport}=await import('./n8n-stream-journey.mjs');
+ const {transformStreamExport,filterStreamExport,looseObjectFilterStreamExport}=await import('./n8n-stream-journey.mjs');
  const fresh=await send('connections',{app:'http',label:'Synthetic reviewed migration account',auth_kind:'bearer',domains:['receiver.example'],secret:{token:'synthetic-crank-600'}},201);
  const component=await send('subflows',{name:'Synthetic browser registry conversion',definition:{inputs:{address:'string'},outputs:{normalized:'string'},steps:[{id:'trim',fn:'text.trim',input:{value:'{{trigger.input.address}}'}}],result:{normalized:'{{steps.trim}}'}}},201);
  const executor=await send('connections',{app:'http',label:'Synthetic browser native executor',auth_kind:'bearer',domains:['executor.example'],secret:{token:fakeSecret('browser-migration-executor')}},201);
@@ -96,12 +99,20 @@ try {
 
  await page.setViewportSize({width:1440,height:1000});await page.goto(origin+'/app/import');
  const sourceEnvelope=streamLoopEnvelope(declared,'synthetic-crank-72'),source=sourceEnvelope.workflow;source.nodes[3].parameters.batchSize=2;
+ const objectSource=looseObjectExport(declared,'synthetic-crank-object-browser');
+ const literalObjectSource=looseObjectExport(declared,'synthetic-crank-object-literal-browser');literalObjectSource.name='Synthetic literal object routing';
+ literalObjectSource.nodes[1].parameters.conditions.conditions[0].leftValue='{"message":"{{"}';
+ const streamObjectSources=['left','right'].map(operand=>looseObjectFilterStreamExport(declared,operand));
+ const formatSource=formattingExport(declared,'synthetic-crank-format-browser');
+ const dateSources=[arithmeticExport(declared,'synthetic-crank-date-browser-month'),arithmeticExport(declared,'synthetic-crank-date-browser-day',{operation:'subtractFromDate',duration:1,timeUnit:'days',options:{includeInputFields:false}})];
+ const waitSource=embeddedWaitExport(declared,'synthetic-crank-wait-browser',{resume:'timeInterval',amount:1,unit:'days'});
+ waitSource.settings={timezone:'America'+'/'+'Chicago'};
  const driftSources=[conversionExport('registry','synthetic-crank-84'),conversionExport('code','synthetic-crank-85')],driftBundle=driftSources.map((workflow,index)=>({workflow,conversions:{n1:index?codeChoice:registryChoice}}));
  const shots=async state=>{for(const width of [1440,390]){await page.setViewportSize({width,height:1000});await shot(width,state)}};
  // Stage the protected-undo fixtures together while every imported target is an
  // unused draft. Publication later deliberately fences this retained plan;
  // planning another import against that used native inventory is not this test.
- await page.getByLabel('Workflow export JSON').fill(JSON.stringify([sourceEnvelope,...driftBundle]));await page.getByRole('button',{name:'Upload and plan',exact:true}).click();await page.waitForLoadState('networkidle');
+ await page.getByLabel('Workflow export JSON').fill(JSON.stringify([sourceEnvelope,...driftBundle,objectSource,literalObjectSource,...streamObjectSources,...dateSources,formatSource,waitSource]));await page.getByRole('button',{name:'Upload and plan',exact:true}).click();await page.waitForLoadState('networkidle');
  assert.equal(await page.getByRole('button',{name:'Approve this plan',exact:true}).count(),1);await page.getByText(/Supported fields/).click();assert.ok((await page.locator('body').innerText()).includes('distinct linear done path'));await shots('done-review');
  const driftPlan=await reviewedPlan();
  await page.getByRole('button',{name:'Approve this plan',exact:true}).click();await page.waitForLoadState('networkidle');
@@ -132,6 +143,101 @@ try {
  await page.goto(origin+'/app/import');const refusedResponse=page.waitForResponse(response=>new URL(response.url()).pathname==='/app/import/undo'&&response.request().method()==='POST');await page.locator('form[action="/app/import/undo"]').filter({has:page.locator('input[name="planId"][value="'+driftPlan.planId+'"]')}).getByRole('button').click();assert.ok((await refusedResponse).status()>=400,'native drift must refuse the exact conversion undo');await page.waitForLoadState('networkidle');await shots('envelope-drift-undo-refused');
  const afterRefusal=await send('workflows/'+driftCode.id);assert.equal(afterRefusal.name,changed.name);assert.equal(afterRefusal.updated_at,changed.updated_at);assert.deepEqual(afterRefusal.draft,changed.draft);assert.deepEqual((await send('workflows/'+driftRegistry.id)).draft,preserved.draft,'refused undo must preserve the companion registry graph');assert.equal((await send('workflow-runs/'+run.id)).status,'succeeded','refused retained-plan undo must preserve completed source work');
  console.log('MIG-001 1440 and 390: retained conversion envelopes, owner-reviewed registry and code provenance, inactive native drafts, exact unused undo and native drift refusal passed');
+
+ for(const reviewedObjectSource of [objectSource,literalObjectSource]){
+ const literal=reviewedObjectSource===literalObjectSource;
+ const objectWorkflow=(await send('workflows')).find(row=>row.name===reviewedObjectSource.name),objectDraft=await send('workflows/'+objectWorkflow.id);
+ assert.equal(objectDraft.status,'draft');assert.equal(objectDraft.hooks.length,0);assert.equal(objectDraft.versions.length,0);
+ const conditionStep=objectDraft.draft.steps.find(step=>step.fn==='n8n.conditions');assert.ok(conditionStep);
+ await send('workflows/'+objectWorkflow.id+'/estimate',{cost:{components:['orchestration','connectors','models','executors'].map(kind=>({kind,usd_per_run:'0',assumption:'Synthetic receiver browser proof'}))}});
+ await send('workflows/'+objectWorkflow.id+'/publish',{},201);const objectHook=await send('workflows/'+objectWorkflow.id+'/hooks',{},201);
+ for(const [value,expected,path]of literal? [['{"message":"{{"}',true,'/object-present']]:[["{customer: 'synthetic-crank-730', items: [null, true,],}",true,'/object-present'],['{"message":"{{"}',true,'/object-present'],['{}',false,'/object-empty']]){
+  const before=effects.length,response=await context.request.post(objectHook.url,{data:{value}});assert.equal(response.status(),200);const admitted=await response.json();let result;
+  for(let tries=0;tries<100;tries++){result=await send('workflow-runs/'+admitted.run_id);if(!['running','queued'].includes(result.status))break;await new Promise(resolve=>setTimeout(resolve,50))}
+  assert.equal(result.status,'succeeded');assert.equal(effects.length,before+1);assert.equal(effects.at(-1).path,path);assert.deepEqual(effects.at(-1).input.body,{value});assert.deepEqual(result.steps.find(step=>step.type==='paths').output.matched,[expected?'yes':'fallback']);
+  await page.setViewportSize({width:1440,height:1000});await page.goto(origin+'/app/workflows/'+objectWorkflow.id+'?step='+conditionStep.id+'&tab=data');
+  const input=JSON.parse(await page.locator('.inspector-block').filter({has:page.getByRole('heading',{name:'Input',exact:true})}).locator('pre').innerText());
+  const output=JSON.parse(await page.locator('.inspector-block').filter({has:page.getByRole('heading',{name:'Output',exact:true})}).locator('pre').innerText());
+  assert.equal(input.inputs.g0.c0.left,value);assert.equal(input.sets[0].objectConversion,'data-v1');assert.deepEqual(output,[expected]);
+  await shots(literal?'literal-object-operands':expected?'loose-object-operands-present':'loose-object-operands-empty');
+  await page.setViewportSize({width:1440,height:1000});await page.goto(origin+'/app/workflow-runs/'+result.id);await page.locator('.timeline details.inline-disclosure').evaluateAll(elements=>elements.forEach(element=>element.open=true));
+  assert.ok((await page.locator('.timeline').innerText()).includes(expected?'true':'false'));
+  await shots(literal?'literal-object-branch':expected?'loose-object-branch-present':'loose-object-branch-empty');
+ }
+ }
+ console.log('WORK-013: reviewed loose-object operands, data grammar provenance, exact branch results and receiver outcomes inspected at 1440 and 390');
+
+ for(const [index,operand]of ['left','right'].entries()){
+  const workflow=(await send('workflows')).find(row=>row.name===streamObjectSources[index].workflow.name);
+  await send('workflows/'+workflow.id+'/estimate',{cost:{components:['orchestration','connectors','models','executors'].map(kind=>({kind,usd_per_run:'0',assumption:'Synthetic stream receiver proof'}))}});
+  await send('workflows/'+workflow.id+'/publish',{},201);const hook=await send('workflows/'+workflow.id+'/hooks',{},201);
+  const good=operand==='left'?{value:'{ok: true}'}:{value:[null],expected:'null'},bad=operand==='left'?{value:'{invalid: call()}'}:{value:[null],expected:'{invalid: call()}'},before=effects.length;
+  const response=await context.request.post(hook.url,{data:{messages:[good,bad]}});assert.equal(response.status(),200);const admission=await response.json();let result;
+  for(let attempt=0;attempt<100;attempt++){result=await send('workflow-runs/'+admission.run_id);if(!['queued','running'].includes(result.status))break;await page.waitForTimeout(50)}
+  assert.equal(result.status,'failed');assert.equal(effects.length,before,'a stream conversion failure must dispatch no receiver write');
+  const checkpoint=result.steps.find(step=>step.step_id==='n3');assert.deepEqual(checkpoint.error,{category:'type_mismatch',message:'Condition '+operand+' operand cannot be converted to object',operand,declared_type:'object',group_index:0,condition_index:1});assert.deepEqual(checkpoint.input.items,[good,bad]);
+  await page.setViewportSize({width:1440,height:1000});await page.goto(origin+'/app/workflow-runs/'+result.id);await page.locator('.timeline details.inline-disclosure').evaluateAll(elements=>elements.forEach(element=>element.open=true));
+  const timeline=await page.locator('.timeline').innerText();assert.ok(timeline.includes(checkpoint.error.message));assert.ok(timeline.includes('{invalid: call()}'));
+  await shots('stream-object-'+operand+'-mismatch');
+ }
+ console.log('WORK-013: stream Filter retains left and right object mismatch identity and original input with no downstream effects at 1440 and 390');
+ for(const [index,dateSource]of dateSources.entries()){
+  const dateWorkflow=(await send('workflows')).find(row=>row.name===dateSource.name),draft=await send('workflows/'+dateWorkflow.id);
+  assert.equal(draft.status,'draft');assert.deepEqual(draft.versions,[]);assert.deepEqual(draft.hooks,[]);
+  const dateStep=draft.draft.steps.find(step=>step.fn==='date.n8n_arithmetic');assert.ok(dateStep);
+  await page.setViewportSize({width:1440,height:1000});await page.goto(origin+'/app/workflows/'+dateWorkflow.id+'?step='+dateStep.id);await shots('datetime-'+index+'-inactive');
+  await send('workflows/'+dateWorkflow.id+'/estimate',{cost:{components:['orchestration','connectors','models','executors'].map(kind=>({kind,usd_per_run:'0',assumption:'Synthetic date receiver browser proof'}))}});
+  await send('workflows/'+dateWorkflow.id+'/publish',{},201);const hook=await send('workflows/'+dateWorkflow.id+'/hooks',{},201);
+  const date=index?'2026-11-02T01:30:00-06:00':'2024-01-31T18:05:06.123Z',expectedDate=index?'2026-11-01T01:30:00.000-06:00':'2024-02-29T12:05:06.123-06:00';
+  const expected=index?{due:expectedDate}:{date,label:'synthetic-crank-803',due:expectedDate,nested:{values:[1,null,'synthetic-crank-806']}};
+  const before=effects.length,response=await context.request.post(hook.url,{data:{date}});assert.equal(response.status(),200);const admission=await response.json();let result;
+  for(let tries=0;tries<100;tries++){result=await send('workflow-runs/'+admission.run_id);if(!['queued','running'].includes(result.status))break;await page.waitForTimeout(50)}
+  assert.equal(result.status,'succeeded',JSON.stringify(result.error));assert.equal(effects.length,before+1);assert.equal(effects.at(-1).path,'/date-arithmetic');assert.deepEqual(effects.at(-1).input,expected);
+  await page.setViewportSize({width:1440,height:1000});await page.goto(origin+'/app/workflows/'+dateWorkflow.id+'?step='+dateStep.id+'&tab=data');
+  const input=JSON.parse(await page.locator('.inspector-block').filter({has:page.getByRole('heading',{name:'Input',exact:true})}).locator('pre').innerText()),output=JSON.parse(await page.locator('.inspector-block').filter({has:page.getByRole('heading',{name:'Output',exact:true})}).locator('pre').innerText());
+  assert.equal(input.value,date);assert.equal(input.amount,index?-1:1);assert.equal(input.unit,index?'days':'months');assert.equal(input.timezone,'America'+'/'+'Chicago');assert.equal(input.include_input_fields,!index);assert.deepEqual(output,expected);await shots('datetime-'+index+'-operands-output');
+  await page.setViewportSize({width:1440,height:1000});await page.goto(origin+'/app/workflow-runs/'+result.id);await page.locator('.timeline details.inline-disclosure').evaluateAll(elements=>elements.forEach(element=>element.open=true));assert.ok((await page.locator('.timeline').innerText()).includes(expectedDate));await shots('datetime-'+index+'-destination-result');
+  if(index===0){const count=effects.length,bad=await context.request.post(hook.url,{data:{date:'2026-02-30T12:00:00Z'}}),admitted=await bad.json();let failed;
+   for(let tries=0;tries<100;tries++){failed=await send('workflow-runs/'+admitted.run_id);if(!['queued','running'].includes(failed.status))break;await page.waitForTimeout(50)}
+   assert.equal(failed.status,'failed');assert.equal(failed.error.category,'validation');assert.equal(effects.length,count);await page.setViewportSize({width:1440,height:1000});await page.goto(origin+'/app/workflow-runs/'+failed.id);await shots('datetime-invalid-no-write');
+  }
+ }
+ console.log('WORK-012: reviewed date arithmetic, month-end and Chicago repeated-hour results, retained fields and invalid-date refusal inspected at 1440 and 390');
+ const formatted=(await send('workflows')).find(row=>row.name===formatSource.name),formatBase='workflows/'+formatted.id;
+ const listener=await send(formatBase+'/samples/listen',{},201),formatDate='2024-03-01T00:30:00Z',formatCount=effects.length;
+ assert.equal((await context.request.post(listener.url,{form:{date:formatDate}})).status(),201);
+ await page.setViewportSize({width:1440,height:1000});await page.goto(origin+'/app/workflows/'+formatted.id+'?step=n2&tab=test');
+ await page.getByRole('button',{name:'Preview selected sample',exact:true}).click();
+ const formatPreview=page.locator('.inspector-block').filter({has:page.getByRole('heading',{name:'Preview result',exact:true})});
+ const formatExpected={date:formatDate,label:'synthetic-crank-803',due:'02/29/2024',nested:{values:[1,null,'synthetic-crank-806']}};
+ assert.ok((await formatPreview.innerText()).includes('webhook sample'));assert.deepEqual(JSON.parse(await formatPreview.locator('pre').nth(1).innerText()),formatExpected);assert.equal(effects.length,formatCount);await shots('datetime-retained-format-preview');
+ await send(formatBase+'/estimate',{cost:{components:['orchestration','connectors','models','executors'].map(kind=>({kind,usd_per_run:'0',assumption:'Synthetic retained formatting proof'}))}});
+ await send(formatBase+'/publish',{},201);const formatHook=await send(formatBase+'/hooks',{},201),formatAdmission=await context.request.post(formatHook.url,{form:{date:formatDate}}),formatAdmitted=await formatAdmission.json();let formatRun;
+ for(let tries=0;tries<100;tries++){formatRun=await send('workflow-runs/'+formatAdmitted.run_id);if(!['queued','running'].includes(formatRun.status))break;await page.waitForTimeout(50)}
+ assert.equal(formatRun.status,'succeeded',JSON.stringify(formatRun.error));assert.deepEqual(effects.at(-1).input,formatExpected);assert.equal(effects.length,formatCount+1);
+ await page.setViewportSize({width:1440,height:1000});await page.goto(origin+'/app/workflows/'+formatted.id+'?step=n2&tab=data');
+ assert.deepEqual(JSON.parse(await page.locator('.inspector-block').filter({has:page.getByRole('heading',{name:'Output',exact:true})}).locator('pre').innerText()),formatExpected);await shots('datetime-retained-format-output');
+
+
+ // Assert the embedded-child flow at desktop width; capture both release widths.
+ await page.setViewportSize({width:1440,height:1000});
+ const waitWorkflow=(await send('workflows')).find(row=>row.name===waitSource.name),waitDetail=await send('workflows/'+waitWorkflow.id);
+ assert.equal(waitDetail.status,'draft');assert.deepEqual(waitDetail.versions,[]);assert.deepEqual(waitDetail.hooks,[]);assert.equal(waitDetail.draft.settings.n8n_subflow_pins.length,1);
+ assert.deepEqual(waitDetail.draft.steps.find(step=>step.id==='n2_n1').input,{amount:24,unit:'hours'});
+ assert.equal(waitDetail.draft.settings.n8n_subflow_pins[0].digest,digest(canonical(JSON.parse(waitSource.nodes[2].parameters.workflowJson))));
+ await page.goto(origin+'/app/workflows/'+waitWorkflow.id+'?step=n2_n1');
+ assert.ok((await page.locator('.inspector').innerText()).includes('Child interval wait'));await shots('embedded-child-wait-inactive');
+ await send('workflows/'+waitWorkflow.id+'/estimate',{cost:{components:['orchestration','connectors','models','executors'].map(kind=>({kind,usd_per_run:'0',assumption:'Synthetic embedded child receiver proof'}))}});
+ await send('workflows/'+waitWorkflow.id+'/publish',{},201);
+ const waitPayload={message:'synthetic-crank-embedded-browser',amount:7,nested:{items:[null,false,'',7]}},waitBefore=effects.length;
+ const waitRun=await send('workflows/'+waitWorkflow.id+'/run',{input:waitPayload},201);assert.equal(waitRun.status,'waiting');assert.equal(waitRun.waits[0].path,'n2_n1');assert.deepEqual(effects.slice(waitBefore),[{path:'/embedded-wait-before',input:waitPayload}]);
+ await page.setViewportSize({width:1440,height:1000});await page.goto(origin+'/app/workflow-runs/'+waitRun.id);assert.ok((await page.locator('body').innerText()).includes('Child interval wait'));await shots('embedded-child-wait-held');
+ await h.restart();await h.tick(Date.parse(waitRun.waits[0].due_at)+1);await h.tick(Date.parse(waitRun.waits[0].due_at)+60001);
+ const waitDone=await send('workflow-runs/'+waitRun.id);assert.equal(waitDone.status,'succeeded');assert.deepEqual(effects.slice(waitBefore),['before','after','final'].map(phase=>({path:'/embedded-wait-'+phase,input:waitPayload})));
+ await page.setViewportSize({width:1440,height:1000});await page.goto(origin+'/app/workflows/'+waitWorkflow.id+'?step=n2_n2&tab=data');
+ const waitOutput=JSON.parse(await page.locator('.inspector-block').filter({has:page.getByRole('heading',{name:'Output',exact:true})}).locator('pre').innerText());assert.deepEqual(waitOutput.body,waitPayload);await shots('embedded-child-wait-output');
+ await page.setViewportSize({width:1440,height:1000});await page.goto(origin+'/app/workflow-runs/'+waitRun.id);await shots('embedded-child-wait-completed');
+ console.log('MIG-001: embedded child Wait, inactive pinned draft, restart and once-only receiver continuation asserted at 1440 and inspected at 1440 and 390');
 
  await context.close();
 }catch(error){if(page){await page.screenshot({path:join(evidence,'journey-error.png'),fullPage:true});console.error((await page.locator('body').innerText()).slice(0,800))}console.error(String(error.message).replace(/https?:\/\/\S+/g,'[redacted URL]'));process.exitCode=1}

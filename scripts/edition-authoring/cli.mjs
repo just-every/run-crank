@@ -77,7 +77,7 @@ try {
   } else if (command === 'record-base') result = recordCopy(root, options(args.slice(1), 3));
   else if (command === 'adapt-base') result = adaptCopy(root, options(args.slice(1), 1));
   else if (command === 'refresh-base') result = refreshCopies(root, options(args.slice(1), 1));
-  else throw Error('Usage: cli.mjs adopt|inspect|lock|check|receipt <sidecar-json>|changes|extract <id|parent> <new-output>|compare <id|parent> <candidate-checkout> [current-parent-checkout]|materialize <new-output>|promote <id>|release <new-local-git-repository>|verify-base [--record <file>] [--base <checkout>] [--offline]|record-base <path> <origin-path> <revision> [--record <file>] [--base <checkout>]|adapt-base <file> [--record <file>]|refresh-base <revision> [--record <file>] [--base <checkout>]');
+  else throw Error('Usage: cli.mjs adopt|inspect|lock|check|receipt <sidecar-json>|changes|extract <id|parent> <new-output>|compare <id|parent> <candidate-checkout> [current-parent-checkout]|materialize <new-output>|promote <id>|release <new-local-git-repository>|verify-base [--record <file>] [--base <checkout>] [--offline]|record-base <path> <origin-path> <revision>|--ref <revision> [--record <file>] [--base <checkout>|--base-archive <directory>|--from-api|--offline --base <checkout>]|adapt-base <file> [--record <file>]|refresh-base <revision>|--ref <revision> [--record <file>] [--base <checkout>|--base-archive <directory>]');
   console.log(json(result));
 } catch (error) {
   console.error(error.message);

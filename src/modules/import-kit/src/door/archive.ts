@@ -1,9 +1,10 @@
+import { readRawSource } from './raw.ts';
 import { Buffer } from 'node:buffer';
 import { randomUUID } from 'node:crypto';
 import { canonicalJson, sha256 } from '../provenance/identity.ts';
 import { readFileSourceRemovals } from '../readers/file.ts';
 import { planD1Import } from '../d1/jobs.ts';
-import type { ImportPlan } from '../types.ts';
+import type { ImportPlan, IntakeCustody } from '../types.ts';
 import type { DoorRequest } from './types.ts';
 import { kitContext } from './authority.ts';
 import { DoorError } from './protocol.ts';
@@ -11,6 +12,7 @@ import { assertion, sql, transact } from './store.ts';
 import { bundleBytes, text, uploadRow } from './uploads.ts';
 import { refuseErased } from './planning.ts';
 import { sourceRefusal } from './refusals.ts';
+import { intakeIdentity, intakeState } from './intake-policy.ts';
 
 interface ArchiveRow {
   id: string; installation_id: string; namespace: string; upload_id: string; tool: string; taken_at: string;
@@ -38,22 +40,27 @@ async function archivesInstalled(request: DoorRequest): Promise<void> {
  * archive keeps exact bytes, so a bundle the reader had to remove a live
  * credential value from is refused rather than kept; the markers rer's vendor
  * exports leave (`[removed]`, `removed@`, `=removed`) hold none, so they archive. */
-async function readArchive(request: DoorRequest, name: string, bytes: Uint8Array, id: string, bundleSha256: string): Promise<ImportPlan> {
+async function readArchive(request: DoorRequest, name: string, bytes: Uint8Array, id: string, bundleSha256: string, intake?: IntakeCustody): Promise<ImportPlan> {
   const options = request.options, access = request.access;
+  if (!!intake !== !!options.intake || (intake && intake.allowlistSha256 !== intakeIdentity(options.intake!))) throw new DoorError('archive_intake_changed',409);
   const kitNamespace = 'door-archive:' + sha256(canonicalJson([access.namespace, bundleSha256, id]));
   try {
-    const {source, liveCredentialsRemoved} = await readFileSourceRemovals({namespace: kitNamespace, name, bytes, format: options.format, parse: options.parse, credentials: 'remove'},
-      {...options.limits, maxBytes: Math.min(options.limits?.maxBytes ?? access.maxBytes, access.maxBytes), maxRecords: Math.min(options.limits?.maxRecords ?? access.maxRecords, access.maxRecords)});
+    const limits = {...options.limits, maxBytes: Math.min(options.limits?.maxBytes ?? access.maxBytes, access.maxBytes), maxRecords: Math.min(options.limits?.maxRecords ?? access.maxRecords, access.maxRecords)};
+    const {source, liveCredentialsRemoved} = options.format === 'raw'
+      ? {source: await readRawSource(options,{name,bundle_sha256:bundleSha256,total_bytes:bytes.length},bytes,kitNamespace,limits),liveCredentialsRemoved:false}
+      : await readFileSourceRemovals({namespace: kitNamespace, name, bytes, format: intake ? 'ndjson' : options.format, parse: options.parse, credentials: 'remove'},limits);
     if (liveCredentialsRemoved) throw new DoorError('archive_holds_credentials', 422,
       {reason: 'The bundle holds credential values, and an archive keeps its exact bytes, so it is not kept. Export again with credential values removed (rer\'s vendor exports remove them) and archive that.'});
+    if (intake) source.intake = intake;
     return await planD1Import(source, options.mapping, kitContext(request, {id, kitNamespace, plan: {mappingVersion: options.mapping.version} as ImportPlan}));
   } catch (error) { throw sourceRefusal(error) ?? error; }
 }
 
 const rejected = (plan: ImportPlan) => plan.entries.filter(e => e.rejection).map(e => ({kind: e.source.kind, sourceId: e.source.sourceId, reason: e.rejection}));
-const answer = (row: Pick<ArchiveRow, 'id' | 'tool' | 'taken_at' | 'bundle_sha256' | 'total_bytes'>, counts: ImportPlan['counts']) => ({
+type ArchiveCounts = ImportPlan['counts'] & {intake?: IntakeCustody};
+const answer = (row: Pick<ArchiveRow, 'id' | 'tool' | 'taken_at' | 'bundle_sha256' | 'total_bytes'>, {intake, ...counts}: ArchiveCounts) => ({
   archiveId: row.id, key: `business-archive/${row.tool}/${row.taken_at}`, tool: row.tool, takenAt: row.taken_at,
-  bundleSha256: row.bundle_sha256, bytes: row.total_bytes, counts,
+  bundleSha256: row.bundle_sha256, bytes: row.total_bytes, counts, ...(intake ? {intake} : {}),
 });
 
 async function archiveRow(request: DoorRequest, id: string): Promise<ArchiveRow> {
@@ -96,18 +103,19 @@ export async function archive(request: DoorRequest, input: Record<string, unknow
   const held = await db.prepare('SELECT count(*) AS n FROM ik_door_chunks WHERE upload_id=?').bind(upload.id).first<{n: number}>();
   if (!held?.n) throw new DoorError('upload_bytes_withheld', 410, {reason: 'The upload\'s bytes are no longer held: they went when it was planned or refused. Upload the bundle again and archive it before planning.'});
   const bytes = await bundleBytes(request, upload), id = randomUUID();
-  const plan = await readArchive(request, upload.name, bytes, id, upload.bundle_sha256);
+  const intake = intakeState(upload.intake_json)?.custody;
+  const plan = await readArchive(request, upload.name, bytes, id, upload.bundle_sha256, intake);
   // An upload holding an erased record is refused and goes, as plan does.
   await refuseErased(request, upload, plan);
   const row = {id, tool, taken_at: takenAt, bundle_sha256: upload.bundle_sha256, total_bytes: upload.total_bytes};
   await transact(db, request.authority, [
     assertion(sql('EXISTS(SELECT 1 FROM ik_door_uploads WHERE id=? AND bundle_sha256=? AND total_chunks=(SELECT count(*) FROM ik_door_chunks WHERE upload_id=?))', upload.id, upload.bundle_sha256, upload.id)),
     sql(`INSERT INTO ik_door_archives(id,installation_id,namespace,upload_id,tool,taken_at,name,bundle_sha256,total_bytes,total_chunks,counts_json)
-      VALUES(?,?,?,?,?,?,?,?,?,?,?)`, id, g.installationId, g.namespace, upload.id, tool, takenAt, upload.name, upload.bundle_sha256, upload.total_bytes, upload.total_chunks, canonicalJson(plan.counts)),
+      VALUES(?,?,?,?,?,?,?,?,?,?,?)`, id, g.installationId, g.namespace, upload.id, tool, takenAt, upload.name, upload.bundle_sha256, upload.total_bytes, upload.total_chunks, canonicalJson({...plan.counts,...(intake ? {intake} : {})})),
     sql('INSERT INTO ik_door_archive_chunks(archive_id,ordinal,sha256,size,base64) SELECT ?,ordinal,sha256,size,base64 FROM ik_door_chunks WHERE upload_id=?', id, upload.id),
     assertion(sql('(SELECT count(*) FROM ik_door_archive_chunks WHERE archive_id=?)=?', id, upload.total_chunks)),
   ]);
-  return answer(row, plan.counts);
+  return answer(row, {...plan.counts,...(intake ? {intake} : {})});
 }
 
 /** `{archiveId}`: parse the archive's exact bytes with the namespace's reader
@@ -118,6 +126,7 @@ export async function restoreCheck(request: DoorRequest, input: Record<string, u
   const row = await archiveRow(request, text(input.archiveId, 'archive_id'));
   if (row.total_bytes > request.access.maxBytes || row.total_chunks > request.access.maxChunks) throw new DoorError('archive_exceeds_grant_quota');
   const bytes = await archiveBytes(request, row);
-  const plan = await readArchive(request, row.name, bytes, row.id, row.bundle_sha256);
-  return {...answer({...row, bundle_sha256: sha256(bytes), total_bytes: bytes.length}, plan.counts), rejected: rejected(plan)};
+  const intake = (JSON.parse(row.counts_json) as ArchiveCounts).intake;
+  const plan = await readArchive(request, row.name, bytes, row.id, row.bundle_sha256, intake);
+  return {...answer({...row, bundle_sha256: sha256(bytes), total_bytes: bytes.length}, {...plan.counts,...(intake ? {intake} : {})}), rejected: rejected(plan)};
 }

@@ -129,6 +129,8 @@ test('WORK-008: immutable draft tests bind test accounts; live confirmation, pro
 test('Retained draft samples preserve captured and manual provenance, refuse restricted history and restore inactive without production admission', async () => {
   const {sampleJourney}=await import('./sample-journey.mjs');
   await sampleJourney();
+  const {stepSampleJourney}=await import('./step-sample-journey.mjs');
+  await stepSampleJourney();
 });
 
 test('Draft capture rejects changed authority and concurrent reuse without admitting a production event', async () => {

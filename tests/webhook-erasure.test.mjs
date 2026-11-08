@@ -146,7 +146,11 @@ test('DATA-002: subject erasure previews every run carrying one identifier, wait
     const synced = await deliver(h, url, envelope('signup-77', { email: subject.toLowerCase() }));
     const unrelated = await deliver(h, url, envelope('signup-78', { email: other }));
     await h.tick();
-    const syncedRun = await settled(h, synced.value.run_id), unrelatedRun = await settled(h, unrelated.value.run_id);
+    const syncedRun = await settled(h, synced.value.run_id);
+    // The workflow serializes its runs. Let the next Cron pass dispatch the
+    // second event after the first has released its execution slot.
+    await h.tick();
+    const unrelatedRun = await settled(h, unrelated.value.run_id);
     const waiting = await h.post(`workflows/${review.id}/run`, { input: { email: subject } }, h.owner, 201);
     const flow = await h.flow('Legacy follow-up'), legacy = await h.run(flow, 'legacy-77', { customer: subject });
     await h.post(`runs/${legacy.id}/reject`);
@@ -201,6 +205,7 @@ test('DATA-002: subject erasure previews every run carrying one identifier, wait
     assert.equal((await h.send('/auth/invite', { email, displayName: 'Leaving Builder', role: 'admin' }, h.owner)).status, 202);
     const link = h.mail.findLast(m => m.to.includes(email)).html.match(/href="([^"]*\/auth\/confirm\?token=[^"]+)"/)[1].replaceAll('&amp;', '&');
     const leaver = (await h.send('/auth/confirm', { token: new URL(link, h.origin).searchParams.get('token') })).cookie, leaverId = (await h.get('state', leaver)).actor.id;
+    await h.post('team/'+leaverId,{role:'builder',workflow_ids:['workspace:production'],connection_ids:[]});
     const prepared = await h.post('flows', { name: 'Prepared by a leaver', source_app: 'Support desk', destination_app: 'Inbox', target_url: target + '/events' }, leaver, 201);
     const preparedDraft = await h.post('workflows', { name: 'Draft prepared by a leaver', graph: { trigger: { type: 'manual' }, steps: [{ id: 'summary', type: 'map', input: { label: 'Retained draft parameters' } }] } }, leaver, 201);
     await h.post('data/erase', { operator_id: leaverId, confirm: 'ERASE' }, h.owner, 409);

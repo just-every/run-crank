@@ -4,11 +4,17 @@ import assert from 'node:assert/strict';
 import { createHmac } from 'node:crypto';
 import { harness } from './harness.mjs';
 import { gustoHandoffJourney } from './gusto-handoff-journey.mjs';
-import { effectReadbackJourney, quickbooksReconciliationJourney } from './effect-readback-journey.mjs';
+import { effectReadbackJourney, quickbooksInputJourney, quickbooksReconciliationJourney } from './effect-readback-journey.mjs';
 import { oauthRenewalJourney } from './oauth-renewal-journey.mjs';
 import { connection, deliver, fakeEdge, fakeSecret, jsonResponse, publish, runs, settled, startRun, stepOf, until } from './kit.mjs';
 
 const fake = fakeEdge();
+test('Gmail thread metadata search retains declared outcomes, consent, parked pages and inactive sealed custody', async () => {
+  const {gmailSearchJourney,gmailCustodyJourney}=await import('./gmail-search-journey.mjs');
+  await gmailSearchJourney();await gmailCustodyJourney();
+  const {typeformSearchJourney,typeformCustodyJourney}=await import('./typeform-search-journey.mjs');
+  await typeformSearchJourney();await typeformCustodyJourney();
+});
 let h;
 before(async () => {
   fake.routes.set('crm.example', () => jsonResponse({ ok: true }, 201));
@@ -136,10 +142,14 @@ test('CONN-002: OAuth consent, refresh and accounts per step; secrets never leav
     assert.ok(flows.length > 0 && flows.every(f => f.status === 'paused' || f.status === 'draft'), 'restored workflows do not dispatch');
   } finally { await other.close() }
   await oauthRenewalJourney();
+  const {hubspotSearchJourney,hubspotCustodyJourney}=await import('./hubspot-search-journey.mjs');
+  await hubspotSearchJourney();await hubspotCustodyJourney();
 });
 
 const slackSign = (secret, body, t = Math.floor(Date.now() / 1000)) => ({ 'x-slack-request-timestamp': String(t), 'x-slack-signature': 'v0=' + createHmac('sha256', secret).update(`v0:${t}:${body}`).digest('hex'), 'content-type': 'application/json' });
 test('CONN-004: Slack posts by channel name and user email, applies search outcomes, finds or creates once, and admits signed events once', async () => {
+  const {teamsSearchJourney,teamsCustodyJourney}=await import('./teams-search-journey.mjs');
+  await teamsSearchJourney();await teamsCustodyJourney();
   const channels = [{ id: 'C01', name: 'general' }, { id: 'C02', name: 'sales' }], posts = [];
   let failUsers = false;
   fake.routes.set('slack.com', ({ url, body }) => {
@@ -183,6 +193,7 @@ test('CONN-004: Slack posts by channel name and user email, applies search outco
   assert.equal(stepOf(await startRun(h, room, {}), 'room').output.outcome, 'created');
   assert.equal(stepOf(await startRun(h, room, {}), 'room').output.outcome, 'found');
   assert.equal(channels.filter(c => c.name === 'deals-won').length, 1);
+  const {searchOutcomesJourney}=await import('./search-outcomes-journey.mjs');await searchOutcomesJourney();
 
   const secret = fakeSecret('signing');
   const signing = await connection(h, { app: 'webhook', label: 'Slack signing secret', auth_kind: 'signing_secret', secret: { secret } });
@@ -451,8 +462,10 @@ test('Custom connector review, agent OpenAPI proposal and sandbox gates retain e
   const agent=await h.post('tokens',{label:'Connector preparation agent',scope:'agent'},h.owner,201);
   const openapi={openapi:'3.0.3',info:{title:'Harbour public stock API',version:'1'},servers:[{url:'https://custom.example'}],'x-crank-id':id,'x-crank-disclosure':customDefinition(id).disclosure,components:{securitySchemes:{stock:{type:'oauth2',flows:{clientCredentials:{tokenUrl:'https://custom.example/token',scopes:{'records.read':'Read stock','scope.refused':'Read private notes'}}}}}},paths:{'/record':{get:{operationId:'record',summary:'Read stock',security:[{stock:['records.read']}],'x-crank-kind':'action',responses:{200:{description:'Current stock'}}}},'/notes':{get:{operationId:'notes',security:[{stock:['scope.refused']}],responses:{200:{description:'Private notes'}}}}}};
   const proposed=await h.post('custom-connectors/propose',{openapi},'',200,{authorization:'Bearer '+agent.token});
-  const tool=await h.send('/api/crank/v1/mcp',{jsonrpc:'2.0',id:1,method:'tools/call',params:{name:'propose_connector',arguments:{openapi}}},'',{authorization:'Bearer '+agent.token,accept:'application/json, text/event-stream','mcp-protocol-version':'2025-06-18'});
-  assert.equal(tool.status,200);assert.equal(tool.value.result.isError,false);assert.equal(tool.value.result.structuredContent.value.definition.id,id);
+  const policy=await h.mf.dispatchFetch(h.origin+'/agents/api/policy',{method:'PUT',headers:{cookie:h.owner,origin:h.origin,'content-type':'application/json'},body:JSON.stringify({document:{schema:'rer-agent-policy/1',catalogue:'rer-agent-classes/1',rules:[{id:'all',class:'*',do:'autonomous'}],spend:{none:true}}})});
+  assert.equal(policy.status,200);await policy.body?.cancel();
+  const tool=await h.send('/api/crank/v1/mcp',{jsonrpc:'2.0',id:1,method:'tools/call',params:{name:'crank.custom.propose',arguments:{openapi,idempotency_key:crypto.randomUUID()}}},'',{authorization:'Bearer '+agent.token,accept:'application/json, text/event-stream','mcp-protocol-version':'2025-11-25'});
+  assert.equal(tool.status,200);assert.ok(!tool.value.error);assert.ok(!tool.value.result.isError);assert.deepEqual(tool.value.result.structuredContent,proposed);
   assert.equal(proposed.requires_owner_review,true);assert.equal(proposed.definition.operations.length,2);
   assert.equal((await h.send('/api/crank/custom-connectors',{definition:proposed.definition,reviewed_digest:proposed.digest,granted_scopes:['records.read'],disclosure_confirmed:true},'',{authorization:'Bearer '+agent.token})).status,403);
   await h.get('custom-connectors','',403,{authorization:'Bearer '+agent.token});
@@ -517,6 +530,16 @@ test('Custom connector review, agent OpenAPI proposal and sandbox gates retain e
   const multiple=await startRun(h,stopMultiple,{query:'oak'});assert.equal(multiple.status,'stopped_by_search');assert.equal(stepOf(multiple,'lookup').output.outcome,'multiple matches');assert.equal(stepOf(multiple,'after'),undefined);
   searchRows=matches;
   const all=await startRun(h,allMatches,{query:'oak'});assert.equal(all.status,'succeeded');assert.deepEqual(stepOf(all,'lookup').output.records,[matches[1],matches[0]]);assert.deepEqual(stepOf(all,'each').output.results,['stock-1','stock-2']);
+  const boundedMatches=await searchFlow('Custom search exposes a declared bound',{multi_match:'all',limit:1},[{id:'route',type:'paths',mode:'exclusive',branches:[{id:'bounded',when:[[{field:'steps.lookup.outcome',op:'text.equals',value:'truncated'}]],steps:[]}],fallback:{steps:[]}}]);
+  const bounded=await startRun(h,boundedMatches,{query:'oak'});assert.equal(bounded.status,'succeeded');
+  assert.equal(stepOf(bounded,'lookup').output.outcome,'truncated');assert.equal(stepOf(bounded,'lookup').output.count,1);assert.equal(stepOf(bounded,'lookup').output.truncated,true);
+  assert.deepEqual(stepOf(bounded,'lookup').output.records,[matches[1]]);assert.deepEqual(stepOf(bounded,'route').output.matched,['bounded']);
+  searchRows={rows:[matches[0]],complete:false};
+  const incomplete=await startRun(h,firstMatch,{query:'oak'});assert.equal(incomplete.status,'failed');assert.equal(incomplete.error.outcome,'search incomplete');assert.equal(stepOf(incomplete,'after'),undefined);
+  const singlePartial=await startRun(h,allMatches,{query:'oak'});assert.equal(singlePartial.status,'succeeded');assert.equal(stepOf(singlePartial,'lookup').output.outcome,'truncated');assert.equal(stepOf(singlePartial,'lookup').output.truncated,true);assert.deepEqual(stepOf(singlePartial,'each').output.results,['stock-2']);
+  searchRows={rows:[],truncated:true};
+  const incompleteEmpty=await startRun(h,missingContinue,{query:'oak'});assert.equal(incompleteEmpty.status,'failed');assert.equal(incompleteEmpty.error.category,'provider');assert.equal(stepOf(incompleteEmpty,'after'),undefined);
+  searchRows=matches;
   searchFailure=true;
   const failed=await startRun(h,missingContinue,{query:'oak'});assert.equal(failed.status,'failed');assert.equal(failed.error.category,'provider');assert.equal(stepOf(failed,'lookup').output?.outcome,undefined);assert.equal(stepOf(failed,'after'),undefined,'Provider failure never follows the not-found continuation');
   searchFailure=false;
@@ -538,7 +561,9 @@ test('Custom connector review, agent OpenAPI proposal and sandbox gates retain e
   assert.equal((await h.get('custom-connectors')).find(v=>v.id===installed.id&&v.version===1).status,'sandbox','Re-review requires fresh readback and duplicate-event proof');
   await h.post(`custom-connectors/${installed.id}/versions/1/revoke-scopes`,{scopes:['records.read']});
   const deniedBefore=fake.to('custom.example').length,deniedSearch=await draftTest(h,'Revoked stock search',[search],{query:'oak'},{[account.id]:account.id});assert.equal(deniedSearch.run.status,'failed');assert.equal(stepOf(deniedSearch.run,'lookup').error.custom_scope,true);assert.equal(fake.to('custom.example').length,deniedBefore);
-  await (await import('./custom-picker-fixture.mjs')).proveCustomPickers(h,account,agent,fake);
+  const pickers=await import('./custom-picker-fixture.mjs');
+  await pickers.proveCustomPickers(h,account,agent,fake);
+  await pickers.provePagedPickers(h,fake);
   const decisions=await h.get('audit');assert.ok(decisions.some(d=>d.action==='custom.owner_denied'&&d.detail.session_kind==='agent'));
 });
 
@@ -683,6 +708,8 @@ test('Enrolled private gateway reads a real database, checkpoints file pages acr
   const dispatchedBeforeRevoke=deliveries.length;
   const invitation=await h.send('/auth/invite',{email:'warehouse-admin@example.test',displayName:'Warehouse administrator',role:'admin'},h.owner);assert.equal(invitation.status,202,invitation.text);
   const link=h.mail.at(-1).html.match(/href="([^"]*\/auth\/confirm\?token=[^"]+)"/)[1].replaceAll('&amp;','&');const admin=await h.send('/auth/confirm',{token:new URL(link).searchParams.get('token')});assert.equal(admin.status,303,admin.text);
+  const scopedAdmin=(await h.send('/auth/operators',undefined,h.owner)).value.find(person=>person.email==='warehouse-admin@example.test');
+  await h.post('team/'+scopedAdmin.id,{role:'admin',workflow_ids:[production.id],connection_ids:['gateway:'+state.gateway.id]});
   await h.post(base+'/grants',{environment:'production',connector_id:connectorId,connector_version:1,operations:['record'],destinations:manifestDestinations({operations:{stock:manifest.operations.stock}},manifestPath)},admin.cookie,403);
   await h.post(base+'/revoke',{},admin.cookie);await h.tick();const refused=await h.get('workflow-runs/'+waiting.id);assert.equal(refused.status,'failed');assert.match(refused.error.message,/gateway revoked/);assert.equal(deliveries.length,dispatchedBeforeRevoke);assert.equal(stepOf(refused,'stock').output,null);
   await gatewayPost(h,state,`gateways/${state.gateway.id}/tasks/${deliveries.at(-1).id}/result`,{environment:'production',output:{rows:[{name:'Oak workbench',quantity:999}]}},401);
@@ -741,7 +768,12 @@ test('Connection credentials are never resent past a redirect that leaves the AP
   assert.deepEqual(fake.requests.filter(r => r.url.host === 'collector.example' || r.url.protocol === 'http:' && r.url.host === 'api.trusted.example').map(r => r.url.href), [], 'no credentialed request leaves the API origin or its HTTPS scheme');
 });
 
-test('Native financial effects reconcile after restart, continue once and require separate compensation approval', quickbooksReconciliationJourney);
+test('Native financial effects reconcile after restart, continue once and require separate compensation approval', async () => {
+  await quickbooksInputJourney();
+  await quickbooksReconciliationJourney();
+  const { quickbooksSearchJourney } = await import('./quickbooks-search-journey.mjs');
+  await quickbooksSearchJourney();
+});
 test('Regulated Gusto handoffs retain obligations until exact provider agreement and scope consent', gustoHandoffJourney);
 
 test('Invoice outcomes stay open after successful requests until granted repair and independent provider readback, with inactive complete reconciliation records', async () => {
@@ -752,9 +784,22 @@ test('Invoice outcomes stay open after successful requests until granted repair 
 
 test('Managed Calendar creation reads back the exact event and reconciles response loss without repeating writes',async()=>{
  const {googleCalendarJourney}=await import('./google-calendar-journey.mjs');await googleCalendarJourney();
+ const {googleCalendarSearchJourney,googleCalendarSearchCustodyJourney}=await import('./google-calendar-search-journey.mjs');await googleCalendarSearchJourney();await googleCalendarSearchCustodyJourney();
 });
 
 test('Native Nook delivery binds installation and conversation, retains one effect across lost acknowledgements and fences current authority', async () => {
   const {nookJourney}=await import('./nook-journey.mjs');
   await nookJourney();
+});
+
+test('Native Orbit deals preserve scoped lookup, conditional update and readback across loss, revocation and inactive custody', async () => {
+ const {orbitJourney}=await import('./orbit-journey.mjs');await orbitJourney();
+});
+
+test('Native Orbit snapshots admit watched deal changes and new records once, retaining pages and erasure fences', async () => {
+ const {orbitPollJourney}=await import('./orbit-journey.mjs');await orbitPollJourney();
+});
+
+test('Private custom find or create retains exact approval, key ownership and accountable readback',async()=>{
+  const {customSearchJourney}=await import('./custom-search-journey.mjs');await customSearchJourney();
 });

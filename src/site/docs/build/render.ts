@@ -1,4 +1,6 @@
 import { Marked } from 'marked'
+import { pipelines, startLine } from '../../../base/run-site'
+import { run } from '../../run'
 import type { DocsTocEntry } from '../types'
 import { rewriteLink, type Anchor, type LinkContext } from './links'
 import { escapeHtml, headingText, slugger } from './slug'
@@ -18,9 +20,13 @@ export function renderMarkdown(markdown: string, context: Omit<LinkContext, 'anc
       return `<h${depth} id="${escapeHtml(id)}">${this.parser.parseInline(tokens)}</h${depth}>\n`
     },
     code({ text, lang }) {
-      const language = (lang ?? '').trim().split(/\s+/)[0]
+      const [language, recipe] = (lang ?? '').trim().split(/\s+/)
+      // Markdown keeps readable commands; the built guide takes its recipe from RunData.
+      if (recipe === 'rer-start') text = startLine(run)
+      else if (recipe === 'rer-alternative') text = run.clone
       const label = /^(sh|bash|shell|zsh)$/.test(language) ? 'Shell' : language.toUpperCase() || 'Code'
-      return `<div class="docs-code"><div class="docs-code-label">${escapeHtml(label)}<button class="docs-copy" type="button" hidden>Copy</button></div><pre tabindex="0" aria-label="${escapeHtml(label)} code"><code>${escapeHtml(text)}</code></pre></div>\n`
+      const localRecipe = recipe === 'rer-start' || recipe === 'rer-alternative'
+      return `<div class="docs-code${localRecipe ? ' docs-recipe' : ''}"><div class="docs-code-label">${escapeHtml(label)}<button class="docs-copy" type="button" hidden>Copy</button></div><pre tabindex="0" aria-label="${escapeHtml(label)} code"><code>${localRecipe ? pipelines(text) : escapeHtml(text)}</code></pre></div>\n`
     },
     html({ text }) { return escapeHtml(text) },
     link({ href, title: label, tokens }) {

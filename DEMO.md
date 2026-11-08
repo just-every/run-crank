@@ -6,6 +6,15 @@ as the saved owner with realistic data. Its title and marked nav label read
 **Run <Seed>** opens the canonical run site’s `/run` chooser. There is no injected
 bar or outbox.
 
+The exit uses only spare space beside or directly below the label and truncates its own text.
+It stays out of the host layout, preserving sibling rectangles and document
+width relative to the same header with the Demo suffix but no exit. It never
+repairs an already overflowing host header. With no readable room it remains
+a keyboard stop; keyboard focus reveals the full link above clipping ancestors.
+The full name is also its accessible name and title. The host keeps ownership
+of its responsive layout.
+
+
 Invite another person through the app, then choose **Sign in as <name>** in
 operator access or at `/signin`. Owners and invited people use the same one-click
 path to `/app`, with their assigned roles. Local demos require the checkout's

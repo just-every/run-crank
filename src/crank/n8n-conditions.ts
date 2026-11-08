@@ -1,12 +1,13 @@
 import type { Groups } from './engine/conditions'
 import type { Step } from './engine/types'
+import { normalizeN8nConditionValue } from './engine/transforms/n8n-condition-values'
 import { n8nDateValue } from './engine/transforms/n8n-date-value'
 
 type Obj = Record<string, any>
 type Mapper = (value: any, previous: string, at: string) => any
 type Fields = (value: Obj, allowed: string[], at: string) => void
 export interface N8nCondition { type: string; operation: string; rightType: string; singleValue: boolean }
-export interface N8nConditionSet { combinator: 'and' | 'or'; caseSensitive: boolean; version: number; strict: boolean; conditions: N8nCondition[] }
+export interface N8nConditionSet { combinator: 'and' | 'or'; caseSensitive: boolean; version: number; strict: boolean; objectConversion?: 'data-v1'; conditions: N8nCondition[] }
 
 export const N8N_CONDITION_OPERATIONS: Record<string, readonly string[]> = {
   string: ['exists', 'notExists', 'empty', 'notEmpty', 'equals', 'notEquals', 'contains', 'notContains', 'startsWith', 'notStartsWith', 'endsWith', 'notEndsWith', 'regex', 'notRegex'],
@@ -48,7 +49,18 @@ export function compileN8nConditionSets(values: unknown[], previous: string, at:
       if (operator.singleValue !== undefined && typeof operator.singleValue !== 'boolean') throw Error('condition singleValue must be boolean')
       const rightType = operator.rightType ?? type
       if (!['string', 'number', 'boolean', 'array', 'object', 'any', 'dateTime'].includes(rightType)) throw Error('unsupported condition operand type override')
-      if(options.typeValidation!=='strict'&&(type==='object'||rightType==='object'))throw Error('loose object parsing requires manual conversion')
+      const operand = (key: 'leftValue' | 'rightValue', operandType: string) => {
+        const value = condition[key]
+        const expression = typeof value === 'string' && value.startsWith('=')
+        if (options.typeValidation !== 'strict' && operandType === 'object' && !expression && !(key === 'rightValue' && operator.singleValue === true)) {
+          try { normalizeN8nConditionValue(value, 'object', false, options.version ?? 1) }
+          catch { throw Error('loose object operand requires data grammar v1; unsupported syntax needs manual conversion') }
+          // The shared runtime parser has established data, including quoted
+          // expression delimiters. Retain the original operand without mapping it.
+          return { $literal: value }
+        }
+        return mapped(value, previous, conditionPath + '.' + key)
+      }
       if (operator.singleValue === true && !unary(operation)) throw Error('binary conditions cannot skip operand validation')
       if(type==='dateTime') {
         if(rightType!=='dateTime')throw Error('DateTime comparisons require timestamp operands')
@@ -59,12 +71,12 @@ export function compileN8nConditionSets(values: unknown[], previous: string, at:
         }
       }
       operands['c' + index] = {
-        ...(Object.hasOwn(condition, 'leftValue') ? { left: mapped(condition.leftValue, previous, conditionPath + '.leftValue') } : {}),
-        ...(Object.hasOwn(condition, 'rightValue') ? { right: mapped(condition.rightValue, previous, conditionPath + '.rightValue') } : {}),
+        ...(Object.hasOwn(condition, 'leftValue') ? { left: operand('leftValue', type) } : {}),
+        ...(Object.hasOwn(condition, 'rightValue') ? { right: operand('rightValue', rightType) } : {}),
       }
       return { type, operation, rightType, singleValue: operator.singleValue === true }
     })
-    return { combinator: source.combinator, caseSensitive: options.caseSensitive ?? false, version: options.version ?? 1, strict: options.typeValidation==='strict', conditions }
+    return { combinator: source.combinator, caseSensitive: options.caseSensitive ?? false, version: options.version ?? 1, strict: options.typeValidation==='strict', ...(options.typeValidation !== 'strict' && conditions.some(condition => condition.type === 'object' || condition.rightType === 'object') ? { objectConversion: 'data-v1' as const } : {}), conditions }
   })
   const stepId = id + '_conditions'
   return {

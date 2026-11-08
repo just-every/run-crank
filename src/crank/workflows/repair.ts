@@ -51,7 +51,7 @@ export async function createRepair(env: CrankEnv, actor: Actor, sourceId: string
     }
   }
   jobs.push(auditStatementWhen(env, exists, [runId], actor.id, 'run.replay', 'run', runId, { repair_of: sourceId, paths, corrected: selected.filter(s => s.corrected).map(s => s.path) }, versionId))
-  const result = await guardedBatch(env, actor, 'owner', jobs)
+  const result = await guardedBatch(env, actor, actor.team?'operate':'owner', jobs)
   requireValue(result[0].results.length === 1, 'The run or its selected repairs changed. Review a new replay preview.', 409)
   return runId
 }

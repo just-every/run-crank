@@ -27,7 +27,8 @@ export function n8nFilterStream(args: Args): Record<string, unknown>[] {
       if (!isObject(resolved) || !Array.isArray(resolved.sets) || resolved.sets.length !== 1 || resolved.all_matching !== false) throw new StepError('validation', 'n8n Filter requires one condition group')
       if (n8nConditions(resolved)[0] === true) retained.push(item)
     } catch (error) {
-      throw new StepError(error instanceof StepError ? error.category : 'mapping', 'n8n Filter condition could not evaluate its JSON stream')
+      if (error instanceof StepError) throw error
+      throw new StepError('mapping', 'n8n Filter condition could not evaluate its JSON stream')
     }
   }
   bounded(retained, Number(maxItems))

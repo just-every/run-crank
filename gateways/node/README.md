@@ -488,6 +488,63 @@ gateway CLI and isolated Linux PostgreSQL provider. It requires Docker and the
 existing gateway dependencies, runs separately from push Verify, and removes
 its owned containers.
 
+## Find or create with PostgreSQL
+
+A reviewed private GET search may declare one matching private POST action in
+its immutable connector version. Both operations must use the same destination;
+the workflow pins the enrolled gateway and environment for both. The host uses
+the existing bounded PostgreSQL query and insert adapters, with a unique business
+key and the provisioned receipt table described above.
+
+Add this declaration to the search operation, whose required `name` input and
+create action's required `name` input are both strings:
+
+```json
+{
+  "find_or_create": {
+    "operation": "insert_stock",
+    "keys": {
+      "name": {
+        "create_input": "name",
+        "record_path": "name",
+        "match": "case_insensitive"
+      }
+    }
+  }
+}
+```
+
+Declare from one to eight keys. Matching is `exact`, `case_insensitive` or `email`;
+strings are trimmed, and the latter two modes fold case. Numeric and boolean
+keys retain their declared types. Empty keys fail before dispatch. The reviewed
+query must implement the declared comparison and return the key fields.
+
+On the pinned `custom.request` search step, set
+`"create_if_not_found":{"input":{"quantity":7}}`. The engine copies normalized
+keys into the create input; supplied create keys must agree. Other create fields
+use ordinary mappings. Ordinary searches keep their `no_match`, `multi_match`
+and `sort` settings. A find or create emits the record, count and outcome
+`found` or `created` in step output and retained run history.
+
+Grant both exact operations explicitly. A read grant supplies no write authority.
+After no match, a separate human reviews the exact create fields, connector
+version, destination, environment and current grant. An existing match needs no
+create approval. Revocation and a replacement grant invalidate the old approval.
+Typed-key ownership persists through approval and restart, so concurrent callers
+create one row. A duplicate conflict reads the key back to `found`. A lost result
+uses the deliberate receipt recovery above and then the reviewed key read;
+there is no automatic repeat insert. Zero or several readback matches retain
+uncertainty and key ownership for destination inspection rather than recreating.
+
+Archives retain the definitions and full business histories, with receiving
+connectors requiring review, gateways and grants revoked, and unfinished runs
+paused. Gateway tasks and key ownership are installation-local authority and
+are excluded. `tests/custom-search-journey.mjs`, registered in
+`tests/connections.test.mjs`, exercises real PostgreSQL and the signed CLI.
+`tests/custom-search-browser.mjs` exercises the existing approval and history
+screens in push Verify. HubSpot, general workflow tables, other connector write
+implementations and migration parity remain separate unfinished WORK-011 work.
+
 `tests/storage-provider-journey.mjs` runs the actual Worker and gateway CLI
 against isolated OpenSSH and RustFS S3-compatible containers. It proves exact
 pages and continuation after Worker restart, source-change refusal, invalid

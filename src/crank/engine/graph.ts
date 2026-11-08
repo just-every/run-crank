@@ -1,3 +1,4 @@
+import { mappingTableIds } from '../tables/mapping'
 import { pollRate, validateTrigger } from '../triggers/definition'
 import { validateGroups } from './conditions'
 import { requireZone } from './dates'
@@ -6,6 +7,7 @@ import { STEP_TYPES } from './steps'
 import { validateLoop } from './loop'
 import type { Step } from './types'
 import { isObject } from './values'
+import { validateInput } from './input-schema'
 import { validateCap } from './caps'
 import { validateRetryPolicy } from '../connectors/retry'
 
@@ -22,6 +24,7 @@ export function validateGraph(value: unknown): Validation {
   if (!isObject(value)) throw new StepError('validation', 'graph must be an object with trigger and steps')
   if (!isObject(value.trigger) || typeof value.trigger.type !== 'string') throw new StepError('validation', 'graph.trigger needs a type')
   if (!Array.isArray(value.steps)) throw new StepError('validation', 'graph.steps must be a list')
+  mappingTableIds(value.steps)
   const settings = isObject(value.settings) ? value.settings : {}
   if (settings.timezone !== undefined) requireZone(settings.timezone)
   if (settings.priority !== undefined && (!Number.isInteger(settings.priority) || (settings.priority as number) < -100 || (settings.priority as number) > 100)) throw new StepError('validation', 'settings.priority must be a whole number from -100 to 100')
@@ -76,6 +79,7 @@ export function validateGraph(value: unknown): Validation {
         if (!declared.connections.includes(step.connection_id)) declared.connections.push(step.connection_id)
       }
       validateCap(step)
+      if (type.inputSchema) validateInput(type.inputSchema, step.input, step.id, true)
       type.validate?.(step)
       declared.steps.push({ path, id: step.id, type: step.type, ...(typeof step.connection_id === 'string' ? { connection_id: step.connection_id } : {}) })
     })
@@ -107,5 +111,11 @@ function validatePaths(step: Step, depth: number, warnings: string[]) {
   }
   for (const key of ['fallback', 'always'] as const) if (step[key] !== undefined && (!isObject(step[key]) || !Array.isArray((step[key] as Record<string, unknown>).steps))) throw new StepError('validation', `Path group ${step.id}: ${key} needs steps`)
   if (step.on_type_mismatch !== undefined && step.on_type_mismatch !== 'halt' && !seen.has(step.on_type_mismatch as string) && step.on_type_mismatch !== 'fallback') throw new StepError('validation', `Path group ${step.id}: on_type_mismatch must be halt or a branch id`)
+  if (step.on_type_mismatch === 'fallback' && step.fallback === undefined) throw new StepError('validation', `Path group ${step.id}: add a fallback branch before routing type mismatches to it`)
   if (step.fallback === undefined) warnings.push(`Path group ${step.id} has no fallback branch: a run that matches no branch ends as stopped by filter`)
+}
+
+/** Native subflows share the public graph validator, without provider capabilities. */
+export function validateSubflowGraph(steps: Step[]) {
+  return validateGraph({trigger:{type:'manual'},steps,settings:{max_steps:2000}}).graph
 }

@@ -3,17 +3,17 @@ import { reportedResponse, assertReportedBudget } from '../ops/usage-transport'
 import { flushUsageNotices } from '../ops/usage'
 import { authorizeRequest } from '../connections/auth'
 import { assertDispatchAuthority } from '../engine/authority'
-import { boundedFetch } from '../engine/egress'
+import { boundedFetch, type BoundedResponse } from '../engine/egress'
 import { StepError } from '../engine/errors'
 import type { StepContext } from '../engine/types'
 import { id, now, stmt } from '../model'
 import { acquireRequest } from './rate-limit'
 import type { AttemptPolicy } from './retry'
 
-export interface Prepared { url: URL; method: string; headers: Headers; body: Uint8Array<ArrayBuffer> | null; bodyIdentity?: string; timeout: number; maxBytes?: number; follow?: number; credentialIdentity?: (headers: Headers) => Promise<string> }
+export interface Prepared { responseIdentity?: (response: BoundedResponse) => string | null; sanitizeResponse?: (response: BoundedResponse) => Promise<BoundedResponse>; nativeOrbit?: boolean; url: URL; method: string; headers: Headers; body: Uint8Array<ArrayBuffer> | null; bodyIdentity?: string; timeout: number; maxBytes?: number; follow?: number; credentialIdentity?: (headers: Headers) => Promise<string> }
 export async function sendRequest(ctx: StepContext, prepared: Prepared, connectionId: string | undefined, policy: AttemptPolicy) {
   const headers = new Headers(prepared.headers), url = new URL(prepared.url)
-  if (connectionId) await authorizeRequest(ctx.env, connectionId, url, headers, prepared.body)
+  if (connectionId) await authorizeRequest(ctx.env, connectionId, url, headers, prepared.body, prepared.method, prepared.nativeOrbit)
   await assertDispatchAuthority(ctx.env, ctx.run.id)
   const release = await acquireRequest(ctx, connectionId, url.origin, policy.deadline, prepared.timeout)
   try {
@@ -21,7 +21,7 @@ export async function sendRequest(ctx: StepContext, prepared: Prepared, connecti
     // recording or dispatching a physical request with live credentials.
     await assertDispatchAuthority(ctx.env, ctx.run.id)
     await assertReportedBudget(ctx.env, ctx.run.id)
-    if (connectionId) await authorizeRequest(ctx.env, connectionId, url, headers, prepared.body)
+    if (connectionId) await authorizeRequest(ctx.env, connectionId, url, headers, prepared.body, prepared.method, prepared.nativeOrbit)
     if (!['GET','HEAD'].includes(prepared.method)) await assertDriftWriteAllowed(ctx.env,ctx.run.id)
     await ctx.beforeRequest?.()
     const credentialIdentity = await prepared.credentialIdentity?.(headers) ?? null
@@ -35,10 +35,11 @@ export async function sendRequest(ctx: StepContext, prepared: Prepared, connecti
       const remaining = policy.deadline - Date.now()
       if (remaining <= 0) throw new StepError('provider', 'The request elapsed-time budget ended before dispatch', { exhausted: true })
       const response = await boundedFetch(url.href, { method: prepared.method, headers, body: prepared.body, timeoutMs: Math.min(prepared.timeout, remaining), maxBytes: prepared.maxBytes ?? 2 * 1024 * 1024, follow: prepared.follow ?? (prepared.method === 'GET' || prepared.method === 'HEAD' ? 3 : 0), sameOrigin: Boolean(connectionId) })
-      await stmt(ctx.env, 'UPDATE crank_wf_attempts SET finished_at=?,http_status=? WHERE id=?', now(), response.status, attemptId).run()
+      const safe = prepared.sanitizeResponse ? await prepared.sanitizeResponse(response) : response
+      await stmt(ctx.env, 'UPDATE crank_wf_attempts SET finished_at=?,http_status=?,response_identity=? WHERE id=?', now(), response.status, prepared.responseIdentity?.(safe) ?? null, attemptId).run()
       await reportedResponse(ctx.env, ctx.run.id, attemptId, new URL(response.url).origin, response.headers)
       await flushUsageNotices(ctx.env)
-      return response
+      return safe
     } catch (error) {
       await stmt(ctx.env, 'UPDATE crank_wf_attempts SET finished_at=?,error_category=? WHERE id=?', now(), error instanceof StepError ? error.category : 'network', attemptId).run()
       throw error

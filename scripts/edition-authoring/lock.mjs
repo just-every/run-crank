@@ -3,11 +3,11 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {manifest, VERSION} from './manifest.mjs';
 import {snapshot, merge} from './sources.mjs';
-import {hash, json, tracked} from './files.mjs';
+import {hash, json, tracked, toolFiles} from './files.mjs';
 
 function toolsIdentity() {
   const dir = path.dirname(fileURLToPath(import.meta.url));
-  const names = fs.readdirSync(dir).filter(p => p.endsWith('.mjs') && !p.endsWith('.test.mjs')).sort();
+  const names = toolFiles(dir);
   const bytes = names.map(p => p + '\0' + fs.readFileSync(path.join(dir, p), 'utf8')).join('\0');
   return {id: 'runeditrun/edition-authoring', version: VERSION, sha256: hash(bytes)};
 }

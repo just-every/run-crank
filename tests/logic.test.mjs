@@ -1,8 +1,16 @@
+import { aiClassificationJourney, aiAuthorityJourney, aiCustodyJourney } from './ai-steps-journey.mjs';
+test('AI classification validates text and output, meters known and unknown costs and stops downstream writes', aiClassificationJourney);
+test('AI classification retries only rejected requests and fences parked budgets and current dispatch authority', aiAuthorityJourney);
+test('AI classification retains uncertain billed identities without replay and restores complete inactive custody', aiCustodyJourney);
 import { before, after, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { harness } from './harness.mjs';
 import { archive } from './restore-journey.mjs';
 import { estimateHold, connection, deliver, fakeEdge, fakeSecret, hookUrl, jsonResponse, publish, runs, settled, startRun, stepOf, until } from './kit.mjs';
+
+import { digestJourney } from './digest-journey.mjs';
+
+test('WORK-010: durable named digest releases survive concurrency, Chicago DST and inactive restore', digestJourney);
 
 import { tableStateJourney } from './table-state-journey.mjs';
 import { subflowsJourney } from './subflows-journey.mjs';
@@ -148,7 +156,11 @@ test('BASE-003 WORK-004: business-day delays, callback waits and a shared delay 
   const done = await settled(h, asked.id);
   assert.deepEqual(stepOf(done, 'record').output, { answer: 'PO-7731', timed_out: false });
   const silent = await startRun(h, callback, {});
-  await h.tick(Date.now() + 2 * DAY + MINUTE);
+  const callbackDeadline = Date.parse(silent.waits.find(wait => wait.path === 'reply').expires_at);
+  // Calendar days can span 47 or 49 elapsed hours across Chicago DST.
+  await h.tick(callbackDeadline - MINUTE);
+  assert.equal((await h.get('workflow-runs/' + silent.id)).status, 'waiting', 'the callback cannot time out before its persisted deadline');
+  await h.tick(callbackDeadline + MINUTE);
   assert.equal(stepOf(await h.get('workflow-runs/' + silent.id), 'record').output.timed_out, true, 'the timeout route runs when the deadline passes');
 
   const lateUrl = crmBodies().at(-1).reply_to;
@@ -427,6 +439,6 @@ test('EXEC-003: run notices retain channel outcomes and safely recover definite 
 
 test('WORK-009: typed native questions survive restart, answer once and preserve calendar, timeout and inactive custody', async () => { await collectJourney(); });
 
-test('WORK-006: callers pin immutable typed pure subflows and independently upgrade, roll back and restore inactive', async () => { await subflowsJourney(); });
+test('WORK-006: callers pin typed pure and native graph children, independently upgrade, roll back and restore inactive', async () => { await subflowsJourney(); });
 
 test('WORK-007: owner-only operational tables serialize ten runs and list pops with receipts and inactive erasure-safe restore', async () => { await tableStateJourney(); });

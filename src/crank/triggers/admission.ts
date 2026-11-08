@@ -13,7 +13,11 @@ export interface WorkflowRow {
   id: string; name: string; description: string; folder: string; owner_id: string; draft_json: string; draft_updated_at: string
   status: 'draft' | 'published' | 'paused'; published_version_id: string | null; settings_json: string; created_by: string; created_at: string
 }
-export interface TriggerEvent { key: string; payload: unknown; sourceTime?: string | null; businessKey?: string | null }
+export interface TriggerEvent {
+  key: string; payload: unknown; sourceTime?: string | null; businessKey?: string | null
+  /** Internal comparison receipts committed with the run or held item. */
+  onRetain?: (guard: string, params: unknown[]) => D1PreparedStatement[]
+}
 export const DEFAULT_BURST = 100
 
 export function burstThreshold(graph: { settings?: Record<string, unknown> }) {
@@ -27,7 +31,7 @@ export async function createRun(env: CrankEnv, workflow: WorkflowRow, kind: stri
   const insert = stmt(env, `INSERT INTO crank_wf_runs(id,workflow_id,version_id,trigger_kind,source_id,trigger_json,status,source_time,received_at,created_by,business_key,payload_key,payload_index)
     SELECT ?,?,?,?,?,?,'queued',?,?,?,?,?,? WHERE EXISTS(SELECT 1 FROM crank_workflows WHERE id=? AND status='published' AND published_version_id=?)`, runId, workflow.id, workflow.published_version_id, kind, event.key, await sealText(target, plain), event.sourceTime ?? null, receivedAt, createdBy, event.businessKey ?? null,
     target.key?.id ?? null, target.key ? target.fieldsJson : null, workflow.id, workflow.published_version_id)
-  const jobs = [insert, ...(index ? [index] : [])]
+  const jobs = [insert, ...(index ? [index] : []), ...(event.onRetain?.('EXISTS(SELECT 1 FROM crank_wf_runs WHERE id=?)', [runId]) ?? [])]
   if (actor) await guardedBatch(env, actor, actor.team ? 'operate' : 'prepare', jobs)
   else await env.DB.batch(jobs)
   const run = await getWfRun(env, runId)
@@ -52,8 +56,8 @@ export async function hold(env: CrankEnv, workflow: WorkflowRow, source: 'poll' 
   if (budget) await stmt(env, 'UPDATE crank_holds SET budget_hold=1,expires_at=NULL WHERE id=?', holdRow.id).run()
   const target = await targetFor(env, workflow.id), sealed = await Promise.all(events.map(event => sealText(target, JSON.stringify(event.payload ?? null))))
   for (let i = 0; i < events.length; i += 50) {
-    await env.DB.batch(events.slice(i, i + 50).map((event, j) => stmt(env, "INSERT INTO crank_hold_items(hold_id,item_key,payload_json,source_time,received_at,status) VALUES(?,?,?,?,?,'held') ON CONFLICT DO NOTHING",
-      holdRow!.id, event.key, sealed[i + j], event.sourceTime ?? null, at)))
+    await env.DB.batch(events.slice(i, i + 50).flatMap((event, j) => [stmt(env, "INSERT INTO crank_hold_items(hold_id,item_key,payload_json,source_time,received_at,status) VALUES(?,?,?,?,?,'held') ON CONFLICT DO NOTHING",
+      holdRow!.id, event.key, sealed[i + j], event.sourceTime ?? null, at), ...(event.onRetain?.('EXISTS(SELECT 1 FROM crank_hold_items WHERE hold_id=? AND item_key=?)', [holdRow!.id, event.key]) ?? [])]))
   }
   if (created) {
     const count = await stmt(env, "SELECT COUNT(*) AS n FROM crank_hold_items WHERE hold_id=? AND status='held'", holdRow.id).first<{ n: number }>()

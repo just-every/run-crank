@@ -1,3 +1,4 @@
+import { assertModelQuote } from './model-cost'
 import { guardedBatch, requireOwner } from '../access'
 import { canonical, digest, id, now, requireValue, stmt, type Actor, type CrankEnv } from '../model'
 import { auditStatement } from './audit'
@@ -31,6 +32,7 @@ export async function readWorkflowEstimate(env: CrankEnv, workflowId: string, co
 export async function quoteWorkflow(env: CrankEnv, actor: Actor, workflowId: string, input: Record<string, unknown>) {
   requireOwner(actor)
   const cost = historicalCost(input.cost, 1), snapshot = await workflowSnapshot(env, workflowId), at = now(), hash = await digest(snapshot.graph)
+  if (!snapshot.legacy) assertModelQuote(JSON.parse(snapshot.graph), cost.components)
   const guard = id(), check = snapshot.legacy
     ? `EXISTS(SELECT 1 FROM crank_flows WHERE id=? AND revision=json_extract(?,'$.revision') AND target_url=json_extract(?,'$.target_url') AND source_app=json_extract(?,'$.source_app') AND destination_app=json_extract(?,'$.destination_app'))`
     : `EXISTS(SELECT 1 FROM crank_workflows WHERE id=? AND draft_json=?)`
@@ -57,6 +59,7 @@ export async function publishUsageStatements(env: CrankEnv, workflowId: string, 
   }
   const quote = await stmt(env, 'SELECT * FROM crank_usage_workflow_estimates WHERE workflow_id=?', workflowId).first<Quote>()
   requireValue(quote && quote.graph_json === graph, 'Cost estimate required; quote all four components for this exact graph before publishing', 409)
+  assertModelQuote(JSON.parse(graph), JSON.parse(quote.cost_json).components)
   return versionStatements(env, workflowId, versionId, graph, quote)
 }
 function versionStatements(env: CrankEnv, workflowId: string, versionId: string, graph: string, quote: Quote): D1PreparedStatement[] {

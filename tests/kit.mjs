@@ -45,7 +45,11 @@ export async function until(check, label, timeout = 8000) {
   }
 }
 export const runs = async (h, workflow, query = '') => (await h.get(`workflow-runs?workflow=${workflow.id}${query}`)).runs;
-export const settled = (h, runId) => until(async () => { const run = await h.get('workflow-runs/' + runId); return ['queued', 'running'].includes(run.status) ? null : run }, 'run ' + runId);
+export async function settled(h, runId) {
+  let last;
+  try { return await until(async () => { last = await h.get('workflow-runs/' + runId); return ['queued', 'running'].includes(last.status) ? null : last }, 'run ' + runId) }
+  catch(error) { error.message += ' (last status: '+last?.status+', error category: '+(last?.error?.category??'none')+')'; throw error }
+}
 export const stepOf = (run, id) => run.steps.find(s => s.step_id === id);
 export async function startRun(h, workflow, input) { return h.post(`workflows/${workflow.id}/run`, { input }, h.owner, 201) }
 export const connection = (h, body) => h.post('connections', body, h.owner, 201);

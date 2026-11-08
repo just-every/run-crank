@@ -8,13 +8,13 @@ import type { D1ImportContext, D1PlanCodec, D1Sql } from './types.ts';
 import { planFingerprint } from '../plan/index.ts';
 import { assertPlanSize } from '../plan/size.ts';
 import { assertPlanCredentials } from '../provenance/credentials.ts';
-import { preparedAtomic, guard, sql } from './database.ts';
+import { atomicCount, preparedAtomic, guard, sql } from './database.ts';
 import { retainPlan, planChunkReads, creationCodec, LARGE_PLAN_BYTES } from './plans.ts';
-import { preflightStagedCreation, stagedSize } from './staged-creation.ts';
+import { preflightStagedCreation, stagedCreationCost, stagedSize } from './staged-creation.ts';
 import { stagingStatements } from './staging-statements.ts';
 import { custodyGuards } from './original-storage.ts';
 import { retainOriginals } from './originals.ts';
-import { checkSql, D1RequestLimitError, valueBytes } from './budget.ts';
+import { batchExecutions, checkSql, D1_REQUEST_QUERY_LIMIT, valueBytes } from './budget.ts';
 import { policy, policyHash, EMPTY_REVERSAL_HASH } from './undo-state.ts';
 
 export type D1CreatePreflightContext = Pick<D1ImportContext, 'destination' | 'namespace' | 'mappingVersion' | 'authorization' | 'reviewedFingerprint' | 'operationKey' | 'reversalPolicy' | 'maxBatchBytes'> & {
@@ -22,10 +22,13 @@ export type D1CreatePreflightContext = Pick<D1ImportContext, 'destination' | 'na
   planCodec?: D1PlanCodec;
 };
 export interface D1CreatePreflight {
-  /** Statements in the one atomic job, plan and original-custody batch. */
+  /** Statements across private staging and atomic job, plan and custody publication. */
   mutationStatements: number;
-  /** Initial authority batch, operation-key lookup, mutation and return reads. */
+  mutationExecutions: number;
+  /** D1 queries: authority batch, operation-key lookup, mutation and return reads. */
   totalExecutions: number;
+  /** All individual statements, including the members of each batch. */
+  totalStatements: number;
   maxSqlBytes: number;
   maxBoundBytes: number;
   maxParameters: number;
@@ -82,13 +85,17 @@ export function preflightD1ImportJob(plan: ImportPlan, context: D1CreatePrefligh
     sql('SELECT * FROM ik_jobs WHERE id=?', '00000000-0000-0000-0000-000000000000'),
     sql('SELECT * FROM ik_d1_plan_chunks WHERE job_id IN (SELECT value FROM json_each(?)) ORDER BY job_id,ordinal', JSON.stringify(['00000000-0000-0000-0000-000000000000']))];
   const chunkRead = reads.pop()!;
-  for (let n = 0; n < planChunkReads(retained.body, unbounded); n++) reads.push(chunkRead);
+  const chunkReads = planChunkReads(retained.body, unbounded, retained.encoded.chunks);
+  for (let n = 0; n < chunkReads; n++) reads.push(chunkRead);
   if (policy(context) === 'preserve-conflicts') reads.push(sql('SELECT r.*,p.reversed AS native_reversed FROM ik_d1_reversal_reports r LEFT JOIN ik_provenance p ON p.id=r.effect_id AND p.job_id=r.job_id WHERE r.job_id=? ORDER BY r.position', '00000000-0000-0000-0000-000000000000'));
   const erasedReads = erasedSourcePredicates(plan).map(p => ({ sql: `SELECT ${p.sql} AS clear`, params: p.params }));
   const all = [...initial, ...erasedReads, ...statements, ...reads];
   for (const statement of all) checkSql(statement);
-  if (all.length > 1000) throw new D1RequestLimitError();
-  return { mutationStatements: statements.length, totalExecutions: all.length,
+  const queryContext = context as D1ImportContext;
+  const mutationExecutions = staged ? stagedCreationCost(queryContext, staged) : atomicCount(queryContext, 'create', creation, 0);
+  const totalExecutions = batchExecutions(queryContext, initial.length) + erasedReads.length + reads.length + mutationExecutions;
+  if (totalExecutions > D1_REQUEST_QUERY_LIMIT) throw new Error(`IMPORT_PLAN_TOO_LARGE: D1 creation needs ${totalExecutions} queries; the paid-plan limit is ${D1_REQUEST_QUERY_LIMIT}`);
+  return { mutationStatements: statements.length, totalExecutions, mutationExecutions, totalStatements: all.length,
     maxSqlBytes: Math.max(...all.map(s => Buffer.byteLength(s.sql))),
     maxBoundBytes: Math.max(...all.map(s => (s.params ?? []).reduce((n, p) => n + valueBytes(p), 0))),
     maxParameters: Math.max(...all.map(s => s.params?.length ?? 0)) };

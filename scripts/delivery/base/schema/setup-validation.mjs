@@ -126,6 +126,9 @@ export function setupManifestSemanticErrors(data) {
     || !Array.isArray(data.fields) || !Array.isArray(data.groups) || !Array.isArray(data.steps)) return [];
   const errors = [...dependencyErrors(data), ...businessFieldErrors(data)];
   const fail = (path, message) => errors.push(`${path}: ${message}`);
+  if (Array.isArray(data.business?.values) && !data.business.values.includes('display_name')) {
+    fail('$.business.values', 'Business settings adoption must include display_name');
+  }
   const groups = new Map();
   for (const [index, group] of data.groups.entries()) {
     if (!group || typeof group !== 'object' || typeof group.id !== 'string') continue;

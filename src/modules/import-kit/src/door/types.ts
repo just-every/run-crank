@@ -2,13 +2,33 @@ import type { D1Database, D1Sql, D1TargetAdapter } from '../d1/types.ts';
 import type { D1ReversalPolicy } from '../d1/undo-types.ts';
 import type { ImportMapping, ImportPlan, Json, ParsedRecord, ReaderLimits } from '../types.ts';
 import type { DoorGrant } from './protocol.ts';
+import type { ImportDoorIntake } from './intake/types.ts';
+export type { ImportDoorIntake, IntakeFormat } from './intake/types.ts';
 
-/** One import source: its parser and mapping, and optionally its own owner principal. */
+/** Verified upload custody passed to the seed's archive or binary reader. */
+export interface ImportDoorRawUpload {
+  readonly bytes: Uint8Array;
+  readonly name: string;
+  readonly sha256: string;
+  readonly size: number;
+}
+/** One decoded source; existing adapters may keep the mount's format. */
 export interface ImportDoorSource {
   mapping: ImportMapping;
   parse(value: Json, index: number): ParsedRecord | ParsedRecord[];
   ownerPrincipalId?: string;
+  format?: 'json' | 'ndjson';
+  /** Project declared fields before the first persistent byte. Shared by both mounts. */
+  intake?: ImportDoorIntake;
 }
+export interface ImportDoorRawSource extends Omit<ImportDoorSource, 'format' | 'parse' | 'intake'> {
+  format: 'raw';
+  /** Bound archive expansion while reading; return inert source records. */
+  readRaw(upload: ImportDoorRawUpload, limits: Readonly<Required<ReaderLimits>>): ParsedRecord[] | Promise<ParsedRecord[]>;
+  parse?: undefined;
+  intake?: undefined;
+}
+export type ImportDoorResolvedSource = ImportDoorSource | ImportDoorRawSource;
 export interface ImportDoorRuntimeOptions extends ImportDoorSource {
   database: D1Database;
   targets: D1TargetAdapter;
@@ -17,12 +37,13 @@ export interface ImportDoorRuntimeOptions extends ImportDoorSource {
   destination: string;
   format: 'json' | 'ndjson';
   limits?: ReaderLimits;
-  /** The undo policy each new door job is created with: 'strict' (the default)
-   * refuses undo after a native edit; 'preserve-conflicts' keeps the owner's
-   * edits, as the seed's own imports do, and needs the adapter's
-   * `preparePreservedUndo`. Existing jobs keep the policy they were created with. */
+  /** Override the undo policy for new jobs. By default an adapter declaring
+   * `preparePreservedUndo` selects 'preserve-conflicts'; other adapters select
+   * 'strict'. Existing jobs always keep the policy they were created with. */
   reversalPolicy?: D1ReversalPolicy;
 }
+export type ImportDoorRawRuntimeOptions = Omit<ImportDoorRuntimeOptions, 'format' | 'parse' | 'intake'> & ImportDoorRawSource;
+export type ImportDoorRuntime = ImportDoorRuntimeOptions | ImportDoorRawRuntimeOptions;
 /** Structurally identical to owner-claim's server-owned trust configuration. */
 export interface ImportDoorClaimConfig {
   issuer: string;
@@ -31,7 +52,8 @@ export interface ImportDoorClaimConfig {
   expectedEmail: string;
   publicKeys: Record<string, JsonWebKey>;
 }
-interface ImportDoorMountOptions extends Omit<ImportDoorRuntimeOptions, 'parse' | 'mapping'> {
+interface ImportDoorMountOptions extends Omit<ImportDoorRuntimeOptions, 'parse' | 'mapping' | 'format'> {
+  format: 'json' | 'ndjson' | 'raw';
   claim: ImportDoorClaimConfig;
   /** Permanent door key for settings, lineage and history. Defaults to
    * `claim.installationId`. Set it to the operator mount's `installationId`
@@ -41,13 +63,13 @@ interface ImportDoorMountOptions extends Omit<ImportDoorRuntimeOptions, 'parse' 
 /** A grant mount takes one source's `parse`/`mapping`, or a `source` resolver
  * for a seed with several sources. */
 export type ImportDoorOptions = ImportDoorMountOptions & (
-  | (Pick<ImportDoorRuntimeOptions, 'parse' | 'mapping'> & { source?: undefined })
+  | (ImportDoorResolvedSource & { source?: undefined })
   | {
     /** The seed's server-owned allow-list, shared with its owner-session mount.
      * Called with the verified grant's namespace before any grant row is written;
      * null refuses the grant with 403 `unknown_import_source`. */
-    source(namespace: string): ImportDoorSource | null | Promise<ImportDoorSource | null>;
-    parse?: undefined; mapping?: undefined;
+    source(namespace: string): ImportDoorResolvedSource | null | Promise<ImportDoorResolvedSource | null>;
+    parse?: undefined; mapping?: undefined; readRaw?: undefined;
   });
 export type DoorAccess = Pick<DoorGrant, 'action' | 'installationId' | 'email' | 'namespace'
   | 'maxBytes' | 'maxChunks' | 'maxRecords' | 'fingerprint' | 'approvalRecordId' | 'approvedAt' | 'catchup'>;
@@ -60,6 +82,7 @@ export interface ImportOperatorOptions extends ImportDoorRuntimeOptions {
    * Check the seed's normal CSRF policy here as well. Null denies access. */
   authorize(request: Request, action: DoorAccess['action']): Promise<D1Sql | null>;
 }
+export type ImportRawOperatorOptions = Omit<ImportOperatorOptions, 'format' | 'parse' | 'intake'> & ImportDoorRawSource;
 export interface DoorHistoryEntry {
   planId: string; jobId: string; namespace: string; fingerprint: string; state: string;
   owner: string; approvedAt: string; approvalRecordId: string; reviewer: string; caption: string;
@@ -87,7 +110,7 @@ export interface DoorPlanRow {
   complete: number; snapshot_hash: string;
 }
 export interface DoorRequest {
-  options: ImportDoorRuntimeOptions; access: Readonly<DoorAccess>;
+  options: ImportDoorRuntime; access: Readonly<DoorAccess>;
   via: 'grant' | 'operator';
   authority: D1Sql;
   /** The destination's erasure journal rows when the request was admitted. */
