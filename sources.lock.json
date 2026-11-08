@@ -196,7 +196,7 @@
       "executable": false
     },
     "docs/ACCESSIBILITY.md": {
-      "sha256": "1356726bc5d5e7637d3306cbee34c409c6d6362c99c19a33bf2eb057b9318e57",
+      "sha256": "5ab22d46b668ba124345c348e6fe9fd7753aaf35d00d1b2728d789ab71f4c5a8",
       "executable": false
     },
     "docs/AGENT-DOOR.md": {
@@ -6880,7 +6880,7 @@
       "executable": false
     },
     "tests/decision-browser.mjs": {
-      "sha256": "84dae6613153301400b0c6d34671d4fe7bb4774153241a0415a871a31e3e392d",
+      "sha256": "c401467f74e4a604e4fc53e2bbd6d7ecc5f032bbd6c5dbfacd5c79ad6babff95",
       "executable": false
     },
     "tests/deployment.test.mjs": {

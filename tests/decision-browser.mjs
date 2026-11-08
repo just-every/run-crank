@@ -193,13 +193,20 @@ async function measuredChecks(width, state) {
       const a = lum(style.borderTopColor), b = lum(style.backgroundColor);
       return { name: element.name, ratio: (Math.max(a,b)+.05)/(Math.min(a,b)+.05), width: parseFloat(style.borderTopWidth) };
     });
+    const fieldErrors = [...document.querySelectorAll('[aria-invalid=true]')].filter(visible).map(element => {
+      const descriptions = (element.getAttribute('aria-describedby') ?? '').split(/\s+/).map(id => document.getElementById(id)).filter(Boolean);
+      return { name: axe.commons.text.accessibleText(element), announced: descriptions.some(description => visible(description) && description.matches('[role=alert]') && description.textContent.trim().length > 0) };
+    });
+    const smallText = [...document.querySelectorAll('main *,header *,aside *')].filter(element => visible(element) && [...element.childNodes].some(node => node.nodeType === 3 && node.textContent.trim()) && parseFloat(getComputedStyle(element).fontSize) < 13).map(element => ({ text: element.textContent.trim().slice(0,80), pixels: getComputedStyle(element).fontSize }));
     const notices = [...document.querySelectorAll('[data-decision-status]')].filter(visible).map(element => ({ role: element.getAttribute('role'), live: element.getAttribute('aria-live'), atomic: element.getAttribute('aria-atomic'), text: element.textContent.trim() }));
     window.__auditFocus = { previous: document.activeElement, x: scrollX, y: scrollY, controls, openDetails: [...document.querySelectorAll('details[open]')] };
-    return { controls: controls.length, unnamed, positiveTabindex, emptyStates, small, edges, notices, missingTooltips, namedControls: namedControls.length };
+    return { controls: controls.length, unnamed, positiveTabindex, emptyStates, small, edges, notices, fieldErrors, smallText, missingTooltips, namedControls: namedControls.length };
   }, focusable);
   assert.deepEqual(checks.unnamed, [], `${state}: every control has a name`);
   assert.deepEqual(checks.missingTooltips, [], `${state}: icon-only controls have tooltips`);
   assert.deepEqual(checks.positiveTabindex, [], `${state}: natural DOM focus order`);
+  assert.deepEqual(checks.smallText, [], `${state}: readable operator text`);
+  for (const error of checks.fieldErrors) assert.ok(error.announced && error.name, `${state}: named field has a linked announced error ${JSON.stringify(error)}`);
   assert.deepEqual(checks.emptyStates, [], `${state}: states carry words`);
   assert.deepEqual(checks.small, [], `${state}: target size or spacing`);
   for (const edge of checks.edges) assert.ok(edge.width >= 1 && edge.ratio >= 3, `${state}: field boundary ${JSON.stringify(edge)}`);
@@ -663,7 +670,7 @@ try {
     const stale = await newRun(`Northern coastal workshop concurrent review — ${width}`);
     await page.goto(origin + '/app/workflow-runs/' + stale.id);
     const completedNote = 'Reviewed by another current session before this page refreshed.';
-    await send('workflow-runs/' + stale.id + '/approve', { step_path: 'review', digest: stale.waits[0].proposal_digest, reason: completedNote });
+    await send('workflow-runs/' + stale.id + '/approve', { path: 'review', digest: stale.waits[0].proposal_digest, reason: completedNote });
     const beforeRefusal = posts().length;
     await activate(formFor(page, stale.id).getByRole('button', { name: 'Reject', exact: true }), touch);
     await expect(status(page)).toContainText('The decision was refused. Latest state loaded');

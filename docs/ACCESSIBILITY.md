@@ -36,7 +36,9 @@ correction, workflow execution error, cancellation, populated and empty search,
 filtered results, empty and addressed inbox and its resolved decision.
 
 The measured checks visit every enabled visible control in natural DOM order by
-Tab, including activation of the skip link. Native segmented date and time fields may take several bounded Tab stops within one control. Each needs a computed accessible name, visible
+Tab, including activation of the skip link. Painted operator text must be at
+least 13 CSS pixels; every visible invalid field must retain its name and a
+visible alert linked through its accessible description. Native segmented date and time fields may take several bounded Tab stops within one control. Each needs a computed accessible name, visible
 focus of at least 3:1 contrast, an exposed hit point and its complete bounds in
 the viewport. Positive tabindex is refused. Focused icon controls expose their
 named tooltips. On hover-capable pointing devices, help stays visible when the pointer moves onto it and Escape dismisses it. Keyboard help is checked at both widths. Each target is at least 24 by 24 CSS pixels, has equivalent
