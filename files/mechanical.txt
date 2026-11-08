@@ -1,0 +1,15 @@
+Product head: 5d4c2784ba44da64911b1df5702d202c4400c8da
+Typecheck exit: 0
+
+> @automation/crank@0.1.0 typecheck /workspace/run-crank-sx-crank-c-f101
+> tsc --build --incremental
+
+
+First-party check exit: 0
+Contract generator write exit: 0
+Contract generator check exit: 0
+Contract documents are current; 99 clauses
+Generated views restored from origin/main.
+Installed source lock write exit: 0
+Installed source lock check exit: 0
+No migration changes.

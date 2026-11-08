@@ -1,0 +1,43 @@
+{
+  "repository": "just-every/run-crank",
+  "branch": "cloud/sx-crank-c-f101",
+  "head": "5d4c2784ba44da64911b1df5702d202c4400c8da",
+  "base": "4da29fb0d18db5b317e43fb4a6ef9f9419f1c99b",
+  "counts_before": {
+    "done": 32,
+    "partial": 50,
+    "missing": 17
+  },
+  "counts_after": {
+    "done": 32,
+    "partial": 50,
+    "missing": 17
+  },
+  "clauses": {
+    "BASE-005": "PARTIAL -> PARTIAL",
+    "TRIG-006": "PARTIAL unchanged"
+  },
+  "test_registrations": {
+    "before": 200,
+    "after": 200,
+    "new": 0
+  },
+  "scope": [
+    "OPERATIONS.md",
+    "RUN-LOCALLY.md",
+    "deploy.json",
+    "docs/INBOUND-EMAIL.md",
+    "sources.lock.json",
+    "src/crank/triggers/email.ts",
+    "src/crank/ui/email.ts",
+    "tests/runtime.mjs"
+  ],
+  "base_copies_changed": false,
+  "pins_changed": false,
+  "contract_changed": false,
+  "generated_views_committed": false,
+  "product_status": "BLOCKED qualification; product preservation saves only",
+  "pr": null,
+  "publication_scan": "Not run in cloud; maintained fleet responsibility",
+  "ci": "Saves carry skip ci; no green claim"
+}

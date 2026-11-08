@@ -1,0 +1,14 @@
+Product head: 5d4c2784ba44da64911b1df5702d202c4400c8da
+Exit: 0
+
+> @automation/crank@0.1.0 test:runtime /workspace/run-crank-sx-crank-c-f101
+> rer queue test:runtime -- sh -c "node tests/runtime.mjs"
+
+test:runtime
+Heavy job admitted: Crank test:runtime:command [fde7341f7b1f]
+▲ [WARNING] Proxy environment variables detected. We'll use your proxy for fetch requests.
+
+
+TRIG-006 runtime platform guard passed: Workers address creation, container creation and rotation refusal without mutation, Settings requirement and revocation
+HTTP-001 passed against emitted local Worker: health, the installed homepage, HTTP and document 404s
+BASE-003 passed against emitted service: bounded dependency failure/repair, killed legacy and workflow delivery, durable queue/delay recovery, interrupted Cron, resumable archive transfer and authorized reconciliation and custody

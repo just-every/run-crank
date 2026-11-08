@@ -1,0 +1,99 @@
+{
+  "schema": 1,
+  "repository": "just-every/run-crank",
+  "branch": "cloud/sx-crank-c-f101",
+  "head": "5d4c2784ba44da64911b1df5702d202c4400c8da",
+  "recorded_at": "2026-11-08T21:24:06.915881+00:00",
+  "runtime": {
+    "command": "CRANK_CHROMIUM=/usr/bin/chromium CRANK_EVIDENCE=<packet>/screens pnpm run test:runtime",
+    "exit": 0,
+    "node": "22.20.0",
+    "observed": [
+      "Workers alias creation 201",
+      "Container runtime identity creation and rotation 409 with named requirement",
+      "Aliases and receipts unchanged on refusal",
+      "Existing alias revocation 200",
+      "Settings requirement and no creation form",
+      "1440 Settings text at least 13px and delayed hover and immediate focus tooltips",
+      "1440 and 390 screenshots",
+      "HTTP-001 emitted health and homepage and 404 checks",
+      "BASE-003 emitted service and durable restart and inactive custody"
+    ]
+  },
+  "build": {
+    "command": "npx -y @runeditrun/rer build",
+    "exit": 0
+  },
+  "typecheck": {
+    "command": "pnpm run typecheck",
+    "exit": 0
+  },
+  "first_party": {
+    "command": "npx -y @runeditrun/rer check --profile first-party",
+    "exit": 0
+  },
+  "contract_views": {
+    "write": "node src/base/contract-docs.mjs write",
+    "write_exit": 0,
+    "check": "node src/base/contract-docs.mjs check",
+    "check_exit": 0,
+    "views_restored": true,
+    "contract_unchanged": true
+  },
+  "lock": {
+    "write": "node node_modules/@runeditrun/rer/edition-authoring/cli.mjs lock",
+    "write_exit": 0,
+    "check": "node node_modules/@runeditrun/rer/edition-authoring/cli.mjs check",
+    "check_exit": 0
+  },
+  "ledger": {
+    "command": null,
+    "exit": 0,
+    "reason": "No migrations changed"
+  },
+  "diff_check": {
+    "command": "git diff --check",
+    "exit": 0
+  },
+  "container_build": {
+    "command": "npx -y @runeditrun/rer build --platform container",
+    "source_head": "4da29fb0d18db5b317e43fb4a6ef9f9419f1c99b",
+    "exit": 1,
+    "failure": "SELF_SIGNED_CERT_IN_CHAIN in generated Base Dockerfile npm install",
+    "image_available": false
+  },
+  "local_setup": {
+    "command": "npx -y @runeditrun/rer setup --owner-email fleet@runeditrun.com --non-interactive",
+    "exit": 1,
+    "failure": "Readiness expected internal port 29605; application listened on different ports"
+  },
+  "ci": {
+    "runs": [],
+    "reason": "Product preservation commits carry skip ci; exact full SHA queried once"
+  },
+  "publication_scan": {
+    "complete": false,
+    "historyScanned": false,
+    "findings": null,
+    "reason": "Not run in cloud; no READY or scan claim"
+  },
+  "product_push": {
+    "status": "PUSH_OK",
+    "remote_head": "5d4c2784ba44da64911b1df5702d202c4400c8da",
+    "checked_all_authors_and_committers": true,
+    "trailers": []
+  },
+  "container_qualification": "NOT RUN; Base build trust blocker",
+  "screens": [
+    {
+      "path": "screens/1440-container-email-requirement.png",
+      "bytes": 248340,
+      "sha256": "6d1f96b4916ca3b5f622d8352963b0a77269884a13cc833fbae3b035e2fa04f6"
+    },
+    {
+      "path": "screens/390-container-email-requirement.png",
+      "bytes": 123610,
+      "sha256": "33a6bccf07f63065c9c63a2cb6d7e97c623f90b2c5a3a2ca81e6d6fc1df2d75c"
+    }
+  ]
+}

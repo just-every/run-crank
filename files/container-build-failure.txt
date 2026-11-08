@@ -1,0 +1,29 @@
+Command: npx -y @runeditrun/rer build --platform container
+Exit: 1
+Source: 4da29fb0d18db5b317e43fb4a6ef9f9419f1c99b (unchanged initial main before product edits)
+
+#10 [6/8] RUN npm install --omit=dev --no-audit --no-fund
+#10 140.8 npm error code SELF_SIGNED_CERT_IN_CHAIN
+#10 140.8 npm error errno SELF_SIGNED_CERT_IN_CHAIN
+#10 140.8 npm error request to https://registry.npmjs.org/miniflare failed, reason: self-signed certificate in certificate chain
+#10 140.8 npm error A complete log of this run can be found in: /root/.npm/_logs/2026-11-08T21_13_40_095Z-debug-0.log
+#10 ERROR: process "/bin/sh -c npm install --omit=dev --no-audit --no-fund" did not complete successfully: exit code: 1
+------
+ > [6/8] RUN npm install --omit=dev --no-audit --no-fund:
+140.8 npm error code SELF_SIGNED_CERT_IN_CHAIN
+140.8 npm error errno SELF_SIGNED_CERT_IN_CHAIN
+140.8 npm error request to https://registry.npmjs.org/miniflare failed, reason: self-signed certificate in certificate chain
+140.8 npm error A complete log of this run can be found in: /root/.npm/_logs/2026-11-08T21_13_40_095Z-debug-0.log
+------
+Dockerfile:6
+--------------------
+   4 |     WORKDIR /runtime
+   5 |     COPY runtime/package.json ./package.json
+   6 | >>> RUN npm install --omit=dev --no-audit --no-fund
+   7 |     COPY runtime/ /runtime/
+   8 |     COPY app/ /app/
+--------------------
+ERROR: failed to build: failed to solve: process "/bin/sh -c npm install --omit=dev --no-audit --no-fund" did not complete successfully: exit code: 1
+Container command failed
+Unexpected failure: run the command again, and if it repeats inspect the project operating documentation.
+build: failed (exit 1)
