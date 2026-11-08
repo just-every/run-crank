@@ -1,0 +1,73 @@
+shards (owner-decisions)	Run this shard	﻿2026-11-08T12:22:49.3027925Z ##[group]Run node scripts/verify-ci.mjs "$SHARD"
+shards (owner-decisions)	Run this shard	2026-11-08T12:22:49.3028230Z [36;1mnode scripts/verify-ci.mjs "$SHARD"[0m
+shards (owner-decisions)	Run this shard	2026-11-08T12:22:49.3043818Z shell: /usr/bin/bash -e {0}
+shards (owner-decisions)	Run this shard	2026-11-08T12:22:49.3044028Z env:
+shards (owner-decisions)	Run this shard	2026-11-08T12:22:49.3044193Z   CI: true
+shards (owner-decisions)	Run this shard	2026-11-08T12:22:49.3044361Z   WRANGLER_SEND_METRICS: false
+shards (owner-decisions)	Run this shard	2026-11-08T12:22:49.3044575Z   PLAYWRIGHT_SKIP_BROWSER_GC: 1
+shards (owner-decisions)	Run this shard	2026-11-08T12:22:49.3044798Z   CRANK_EVIDENCE: artifacts/owner-decisions
+shards (owner-decisions)	Run this shard	2026-11-08T12:22:49.3045104Z   PLAYWRIGHT_BROWSERS_PATH: /home/runner/work/_temp/ms-playwright
+shards (owner-decisions)	Run this shard	2026-11-08T12:22:49.3045404Z   SHARD: owner-decisions
+shards (owner-decisions)	Run this shard	2026-11-08T12:22:49.3045595Z ##[endgroup]
+shards (owner-decisions)	Run this shard	2026-11-08T12:22:49.3312910Z > pnpm run verify:app
+shards (owner-decisions)	Run this shard	2026-11-08T12:22:49.5382146Z 
+shards (owner-decisions)	Run this shard	2026-11-08T12:22:49.5382771Z > @automation/crank@0.1.0 verify:app /home/runner/work/run-crank/run-crank
+shards (owner-decisions)	Run this shard	2026-11-08T12:22:49.5383155Z > node scripts/verify-app.mjs
+shards (owner-decisions)	Run this shard	2026-11-08T12:22:49.5383313Z 
+shards (owner-decisions)	Run this shard	2026-11-08T12:22:49.5626813Z > CRANK_EVIDENCE="$CRANK_EVIDENCE/recurring" node tests/recurring-browser.mjs
+shards (owner-decisions)	Run this shard	2026-11-08T12:22:54.7057162Z recurring browser width=1440 state=skills
+shards (owner-decisions)	Run this shard	2026-11-08T12:23:00.3057546Z recurring browser width=1440 state=pinned-objective
+shards (owner-decisions)	Run this shard	2026-11-08T12:23:02.1946716Z recurring browser width=1440 state=blocked-contact
+shards (owner-decisions)	Run this shard	2026-11-08T12:23:03.8522118Z recurring browser width=1440 state=native-run
+shards (owner-decisions)	Run this shard	2026-11-08T12:23:05.8792290Z recurring browser width=1440 state=adopted-next-run
+shards (owner-decisions)	Run this shard	2026-11-08T12:23:07.6069235Z recurring browser width=1440 state=paused
+shards (owner-decisions)	Run this shard	2026-11-08T12:23:09.3531731Z recurring browser width=1440 state=tool-revoked
+shards (owner-decisions)	Run this shard	2026-11-08T12:23:10.6281437Z recurring browser width=1440 state=recurring-list
+shards (owner-decisions)	Run this shard	2026-11-08T12:23:11.8436806Z recurring browser width=390 state=skills
+shards (owner-decisions)	Run this shard	2026-11-08T12:23:14.8800939Z recurring browser width=390 state=pinned-objective
+shards (owner-decisions)	Run this shard	2026-11-08T12:23:16.7193440Z recurring browser width=390 state=blocked-contact
+shards (owner-decisions)	Run this shard	2026-11-08T12:23:18.3370453Z recurring browser width=390 state=native-run
+shards (owner-decisions)	Run this shard	2026-11-08T12:23:21.8682311Z recurring browser width=390 state=adopted-next-run
+shards (owner-decisions)	Run this shard	2026-11-08T12:23:23.5390154Z recurring browser width=390 state=paused
+shards (owner-decisions)	Run this shard	2026-11-08T12:23:25.6882040Z recurring browser width=390 state=tool-revoked
+shards (owner-decisions)	Run this shard	2026-11-08T12:23:27.2106522Z recurring browser width=390 state=recurring-list
+shards (owner-decisions)	Run this shard	2026-11-08T12:23:27.2117007Z recurring-browser: PASS widths=1440,390 customer_sends=0 frozen_open_versions=true
+shards (owner-decisions)	Run this shard	2026-11-08T12:23:27.2838180Z > CRANK_EVIDENCE="$CRANK_EVIDENCE/sibling" node tests/sibling-browser.mjs
+shards (owner-decisions)	Run this shard	2026-11-08T12:24:59.6795462Z Native Nook and Orbit scoped operations, readback and authority screens proved at 1440 and captured at 390
+shards (owner-decisions)	Run this shard	2026-11-08T12:26:27.9844828Z Teams directory retained identities, exact outcomes, literal names and tooltips PASS; screens at 1440 and 390
+shards (owner-decisions)	Run this shard	2026-11-08T12:26:28.0271688Z > CRANK_EVIDENCE="$CRANK_EVIDENCE/decision" node tests/decision-browser.mjs
+shards (owner-decisions)	Run this shard	2026-11-08T12:27:52.0408018Z UX-001 1440: offline input retained; all decisions frozen; authoritative GET recovery; one approve and one committed-response-lost reject; no POST replay; legacy hidden-path rejection passed; bounded timeout passed.
+shards (owner-decisions)	Run this shard	2026-11-08T12:27:56.0782672Z UX-001 390: offline input retained; all decisions frozen; authoritative GET recovery; one approve and one committed-response-lost reject; no POST replay; legacy hidden-path rejection passed.
+shards (owner-decisions)	Run this shard	2026-11-08T12:27:57.1530964Z > CRANK_EVIDENCE="$CRANK_EVIDENCE/executor-schema" node tests/executor-schema-browser.mjs
+shards (owner-decisions)	Run this shard	2026-11-08T12:28:17.8680566Z WORK-005 PASS: installed output declaration and succeeded/failed schema results at 1440/390; invalid nested amounts never continue. Remote executor network edge only is faked.
+shards (owner-decisions)	Run this shard	2026-11-08T12:28:18.9162310Z > CRANK_EVIDENCE="$CRANK_EVIDENCE/digests" node tests/digest-browser.mjs
+shards (owner-decisions)	Run this shard	2026-11-08T12:29:04.2747575Z Digest release history and tooltips PASS at 1440 and 390
+shards (owner-decisions)	Run this shard	2026-11-08T12:29:04.3148885Z > CRANK_EVIDENCE="$CRANK_EVIDENCE/subflows" node tests/run-notices-browser.mjs
+shards (owner-decisions)	Run this shard	2026-11-08T12:29:43.2536881Z EXEC-003 installed notice history and tooltips PASS at 1440/390
+shards (owner-decisions)	Run this shard	2026-11-08T12:29:43.2986615Z > CRANK_EVIDENCE="$CRANK_EVIDENCE/team" node tests/team-browser.mjs
+shards (owner-decisions)	Run this shard	2026-11-08T12:30:12.1162345Z TEAM-001: scoped role selection, builder draft-test completion/revocation and owner handover passed at 1440 and 390.
+shards (owner-decisions)	Run this shard	2026-11-08T12:30:13.2070793Z > CRANK_EVIDENCE="$CRANK_EVIDENCE/samples" node tests/sample-browser.mjs
+shards (owner-decisions)	Run this shard	2026-11-08T12:30:19.2235087Z 1440 sample refresh contrast 17.10:1
+shards (owner-decisions)	Run this shard	2026-11-08T12:31:19.9218561Z Retained sample screens and isolated step tests passed at 1440 and 390
+shards (owner-decisions)	Run this shard	2026-11-08T12:31:25.3774471Z node:internal/modules/run_main:123
+shards (owner-decisions)	Run this shard	2026-11-08T12:31:25.3775030Z     triggerUncaughtException(
+shards (owner-decisions)	Run this shard	2026-11-08T12:31:25.3775269Z     ^
+shards (owner-decisions)	Run this shard	2026-11-08T12:31:25.3775372Z 
+shards (owner-decisions)	Run this shard	2026-11-08T12:31:25.3775619Z AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+shards (owner-decisions)	Run this shard	2026-11-08T12:31:25.3776294Z 
+shards (owner-decisions)	Run this shard	2026-11-08T12:31:25.3776409Z true !== false
+shards (owner-decisions)	Run this shard	2026-11-08T12:31:25.3776585Z 
+shards (owner-decisions)	Run this shard	2026-11-08T12:31:25.3777084Z     at tableTransformJourney (file:///home/runner/work/run-crank/run-crank/tests/table-state-journey.mjs:149:164)
+shards (owner-decisions)	Run this shard	2026-11-08T12:31:25.3777682Z     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+shards (owner-decisions)	Run this shard	2026-11-08T12:31:25.3778330Z     at async file:///home/runner/work/run-crank/run-crank/tests/sample-browser.mjs:157:2 {
+shards (owner-decisions)	Run this shard	2026-11-08T12:31:25.3778877Z   generatedMessage: true,
+shards (owner-decisions)	Run this shard	2026-11-08T12:31:25.3779099Z   code: 'ERR_ASSERTION',
+shards (owner-decisions)	Run this shard	2026-11-08T12:31:25.3779287Z   actual: true,
+shards (owner-decisions)	Run this shard	2026-11-08T12:31:25.3779461Z   expected: false,
+shards (owner-decisions)	Run this shard	2026-11-08T12:31:25.3779651Z   operator: 'strictEqual',
+shards (owner-decisions)	Run this shard	2026-11-08T12:31:25.3779852Z   diff: 'simple'
+shards (owner-decisions)	Run this shard	2026-11-08T12:31:25.3780022Z }
+shards (owner-decisions)	Run this shard	2026-11-08T12:31:25.3780112Z 
+shards (owner-decisions)	Run this shard	2026-11-08T12:31:25.3780227Z Node.js v22.20.0
+shards (owner-decisions)	Run this shard	2026-11-08T12:31:25.4338476Z  ELIFECYCLE  Command failed with exit code 1.
+shards (owner-decisions)	Run this shard	2026-11-08T12:31:25.4530790Z ##[error]Process completed with exit code 1.

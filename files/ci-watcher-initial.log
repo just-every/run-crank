@@ -1,0 +1,2 @@
+CI_WAIT run=42479308952 seconds=181
+CI_OBSERVATION {"conclusion":"failure","head_sha":"37fbdf45d6177fa0be8a03793ef5566d580f4aa6","html_url":"https://github.com/just-every/run-crank/actions/runs/42479308952","status":"completed"}

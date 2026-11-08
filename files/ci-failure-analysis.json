@@ -1,0 +1,33 @@
+{
+  "run_id": 42479803993,
+  "head_sha": "dea20ab568c8c5be25accec8b425a0fa125e00f9",
+  "failed_job": 128729432184,
+  "failed_step": "Run this shard",
+  "failed_file": "tests/table-state-journey.mjs",
+  "line": 149,
+  "assertion": "assert.equal(JSON.stringify(disclosed).includes('201'),false)",
+  "actual": true,
+  "expected": false,
+  "call_site": "tests/sample-browser.mjs:157",
+  "failure_precedes_export_and_restore": true,
+  "file_hashes": {
+    "tests/table-state-journey.mjs": {
+      "c449a78d4b6502270a4383c6517eee55b5964262": "1f3178edc8791629b0e698299edf2424355248748b7622e8fccaf8f08e663fbe",
+      "6f6dcc7defff54a5111ca851f9fdfe621090a051": "1f3178edc8791629b0e698299edf2424355248748b7622e8fccaf8f08e663fbe",
+      "dea20ab568c8c5be25accec8b425a0fa125e00f9": "1f3178edc8791629b0e698299edf2424355248748b7622e8fccaf8f08e663fbe"
+    },
+    "tests/sample-browser.mjs": {
+      "c449a78d4b6502270a4383c6517eee55b5964262": "771e8a0af888d5de34d3308fec78e45782ac7fc4e9b4d064cbd2b672f23d73b5",
+      "6f6dcc7defff54a5111ca851f9fdfe621090a051": "771e8a0af888d5de34d3308fec78e45782ac7fc4e9b4d064cbd2b672f23d73b5",
+      "dea20ab568c8c5be25accec8b425a0fa125e00f9": "771e8a0af888d5de34d3308fec78e45782ac7fc4e9b4d064cbd2b672f23d73b5"
+    },
+    "src/crank/data-flows.ts": {
+      "c449a78d4b6502270a4383c6517eee55b5964262": "4531b1f9087be16cc7fe6503e9ec9ec3782ba22571a306076314fe40bf1c06c0",
+      "6f6dcc7defff54a5111ca851f9fdfe621090a051": "4531b1f9087be16cc7fe6503e9ec9ec3782ba22571a306076314fe40bf1c06c0",
+      "dea20ab568c8c5be25accec8b425a0fa125e00f9": "4531b1f9087be16cc7fe6503e9ec9ec3782ba22571a306076314fe40bf1c06c0"
+    }
+  },
+  "assessment": "Existing operational-table disclosure assertion, before export/restore. It can also match an opaque identifier containing the digit substring; the CI log does not retain the disclosure value, so that cause is unconfirmed. This FIX does not change the assertion or disclosure code and its compatibility helper is invoked only after readArchive in POST /api/crank/data/restore. Fixing the separate disclosure/test issue or rerunning an existing exact-SHA workflow is outside the authorized one-blocker FIX.",
+  "github_calls_used": 10,
+  "custody": "BLOCKED"
+}

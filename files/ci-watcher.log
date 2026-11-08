@@ -1,0 +1,6 @@
+CI_WAIT run=42479803993 seconds=300
+CI_OBSERVATION {"conclusion":null,"head_sha":"dea20ab568c8c5be25accec8b425a0fa125e00f9","html_url":"https://github.com/just-every/run-crank/actions/runs/42479803993","status":"in_progress"}
+CI_WAIT run=42479803993 seconds=300
+CI_OBSERVATION {"conclusion":null,"head_sha":"dea20ab568c8c5be25accec8b425a0fa125e00f9","html_url":"https://github.com/just-every/run-crank/actions/runs/42479803993","status":"in_progress"}
+CI_WAIT run=42479803993 seconds=300
+CI_OBSERVATION {"conclusion":"failure","head_sha":"dea20ab568c8c5be25accec8b425a0fa125e00f9","html_url":"https://github.com/just-every/run-crank/actions/runs/42479803993","status":"completed"}

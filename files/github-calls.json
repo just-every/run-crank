@@ -1,0 +1,112 @@
+[
+  {
+    "number": 1,
+    "utc": "2026-11-08T12:14:51.658329+00:00",
+    "epoch": 1794140091.6583414,
+    "args": [
+      "api",
+      "repos/just-every/run-crank/actions/runs?head_sha=37fbdf45d6177fa0be8a03793ef5566d580f4aa6&per_page=100"
+    ]
+  },
+  {
+    "number": 2,
+    "utc": "2026-11-08T12:19:51.682756+00:00",
+    "epoch": 1794140391.6827676,
+    "args": [
+      "api",
+      "repos/just-every/run-crank/actions/runs/42479308952",
+      "--jq",
+      "{status,conclusion,head_sha,html_url}"
+    ]
+  },
+  {
+    "number": 3,
+    "utc": "2026-11-08T12:19:59.673775+00:00",
+    "epoch": 1794140399.6737878,
+    "args": [
+      "api",
+      "repos/just-every/run-crank/actions/runs/42479308952/jobs?per_page=100"
+    ]
+  },
+  {
+    "number": 4,
+    "utc": "2026-11-08T12:20:17.052416+00:00",
+    "epoch": 1794140417.0524292,
+    "args": [
+      "run",
+      "view",
+      "42479308952",
+      "--repo",
+      "just-every/run-crank",
+      "--job",
+      "128727551408",
+      "--log-failed"
+    ]
+  },
+  {
+    "number": 5,
+    "utc": "2026-11-08T12:21:15.269802+00:00",
+    "epoch": 1794140475.269814,
+    "args": [
+      "api",
+      "repos/just-every/run-crank/actions/runs?head_sha=dea20ab568c8c5be25accec8b425a0fa125e00f9&per_page=100"
+    ]
+  },
+  {
+    "number": 6,
+    "utc": "2026-11-08T12:26:15.295105+00:00",
+    "epoch": 1794140775.2951179,
+    "args": [
+      "api",
+      "repos/just-every/run-crank/actions/runs/42479803993",
+      "--jq",
+      "{status,conclusion,head_sha,html_url}"
+    ]
+  },
+  {
+    "number": 7,
+    "utc": "2026-11-08T12:31:15.321283+00:00",
+    "epoch": 1794141075.321296,
+    "args": [
+      "api",
+      "repos/just-every/run-crank/actions/runs/42479803993",
+      "--jq",
+      "{status,conclusion,head_sha,html_url}"
+    ]
+  },
+  {
+    "number": 8,
+    "utc": "2026-11-08T12:36:15.348477+00:00",
+    "epoch": 1794141375.3484879,
+    "args": [
+      "api",
+      "repos/just-every/run-crank/actions/runs/42479803993",
+      "--jq",
+      "{status,conclusion,head_sha,html_url}"
+    ]
+  },
+  {
+    "number": 9,
+    "utc": "2026-11-08T12:37:04.930727+00:00",
+    "epoch": 1794141424.9307365,
+    "args": [
+      "api",
+      "repos/just-every/run-crank/actions/runs/42479803993/jobs?per_page=100"
+    ]
+  },
+  {
+    "number": 10,
+    "utc": "2026-11-08T12:37:14.649739+00:00",
+    "epoch": 1794141434.64975,
+    "args": [
+      "run",
+      "view",
+      "42479803993",
+      "--repo",
+      "just-every/run-crank",
+      "--job",
+      "128729432184",
+      "--log-failed"
+    ]
+  }
+]

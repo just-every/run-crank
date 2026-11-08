@@ -1,0 +1,13 @@
+{
+  "phase": "candidate",
+  "head": "37fbdf45d6177fa0be8a03793ef5566d580f4aa6",
+  "archive_sha256": "790421bfcf7cc594067a7a4f36fc88573113797d884697ca925d9460f509d5f3",
+  "restore_status": 200,
+  "error": null,
+  "flow_names": [
+    "Synthetic main archive"
+  ],
+  "flow_statuses": [
+    "draft"
+  ]
+}

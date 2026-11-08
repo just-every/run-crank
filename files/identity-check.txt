@@ -1,0 +1,1 @@
+Final push: independently validated all author/committer names/emails and all co-author addresses across all 8 origin/main..HEAD commits including side parents. No Codex/OpenAI co-author trailer. Published owner merge Validation trailer retained.

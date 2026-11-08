@@ -1,0 +1,1 @@
+Inspected all 7 commits in origin/main..HEAD, including side parents. Author names, author emails, committer names and committer emails independently allowed. No OpenAI/Codex co-author trailer. Inherited owner merge has a non-email Validation trailer, preserved as published history.

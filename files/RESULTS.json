@@ -1,0 +1,144 @@
+{
+  "schema": 1,
+  "tag": "sx-crank-f86fix1",
+  "repository": "just-every/run-crank",
+  "branch": "cloud/sx-crank-f86fix1",
+  "product_head": "dea20ab568c8c5be25accec8b425a0fa125e00f9",
+  "resolver_head": "6f6dcc7defff54a5111ca851f9fdfe621090a051",
+  "main_at_integration": "c449a78d4b6502270a4383c6517eee55b5964262",
+  "checks": {
+    "restore": {
+      "command": "node --test --test-concurrency=1 --test-name-pattern='BASE-003 DATA-001' tests/crank.test.mjs",
+      "exit_code": 0,
+      "registered_selected": 1,
+      "passed": 1,
+      "failed": 0,
+      "log": "restore-tests.log"
+    },
+    "agent_recovery": {
+      "command": "node --test --test-concurrency=1 --test-name-pattern='SDK and CORE door draft lifecycle' tests/platform.test.mjs",
+      "exit_code": 0,
+      "registered_selected": 1,
+      "passed": 1,
+      "failed": 0,
+      "log": "recovery-tests.log"
+    },
+    "typecheck": {
+      "command": "pnpm typecheck",
+      "exit_code": 0,
+      "log": "typecheck.log"
+    },
+    "source_lock": {
+      "command": "node node_modules/@runeditrun/rer/edition-authoring/cli.mjs check",
+      "exit_code": 0,
+      "receipt": "source-lock-check-final.json"
+    },
+    "diff": {
+      "command": "git diff --check",
+      "exit_code": 0
+    }
+  },
+  "node_local": "24.19.0",
+  "pnpm": "10.12.4",
+  "ui_changed": false,
+  "test_budget_before": 200,
+  "test_budget_after": 200,
+  "new_registrations": 0,
+  "new_regression_assertions": 1,
+  "contract_cell_changes": 0,
+  "publication_scan": "not run, per FIX brief",
+  "pr": null,
+  "push": "succeeded first attempt",
+  "ci": {
+    "run_id": 42479803993,
+    "conclusion": "failure",
+    "head_sha": "dea20ab568c8c5be25accec8b425a0fa125e00f9",
+    "html_url": "https://github.com/just-every/run-crank/actions/runs/42479803993",
+    "status": "completed",
+    "github_calls_used": 10,
+    "jobs": {
+      "plan": "success",
+      "build": "success",
+      "successful_shards": [
+        "app-comparisons",
+        "connections",
+        "runtime-authority",
+        "agent-executor",
+        "regulated-calendar",
+        "workflow-custody",
+        "financial-outcomes"
+      ],
+      "failed_shard": "owner-decisions",
+      "failed_job_id": 128729432184,
+      "verify": "failure (dependent coverage barrier)"
+    }
+  },
+  "blockers": [
+    "Exact-SHA Verify 42479803993 failed in owner-decisions job 128729432184: tests/table-state-journey.mjs:149 checks JSON.stringify(disclosed).includes('201') is false, observed true; invoked by tests/sample-browser.mjs:157 before archive export/restore. Existing assertion/disclosure code unchanged from main/f86; outside the authorized sole archive-restore blocker. Ten-call GitHub budget exhausted; no rerun or test change."
+  ],
+  "before": {
+    "phase": "before",
+    "head": "6f6dcc7defff54a5111ca851f9fdfe621090a051",
+    "archive_sha256": "790421bfcf7cc594067a7a4f36fc88573113797d884697ca925d9460f509d5f3",
+    "restore_status": 400,
+    "error": "schema_mismatch",
+    "flow_names": [],
+    "flow_statuses": []
+  },
+  "main": {
+    "source_head": "c449a78d4b6502270a4383c6517eee55b5964262",
+    "export_status": 200,
+    "archive_sha256": "790421bfcf7cc594067a7a4f36fc88573113797d884697ca925d9460f509d5f3",
+    "archive_bytes": 287330,
+    "source_agents_used": false,
+    "main_restore_status": 200,
+    "restored_flows": [
+      {
+        "id": "e0d86543-437e-4cb8-b221-ad7072140c63",
+        "name": "Synthetic main archive",
+        "status": "draft"
+      }
+    ]
+  },
+  "candidate": {
+    "phase": "candidate-final",
+    "head": "dea20ab568c8c5be25accec8b425a0fa125e00f9",
+    "archive_sha256": "790421bfcf7cc594067a7a4f36fc88573113797d884697ca925d9460f509d5f3",
+    "restore_status": 200,
+    "error": null,
+    "flow_names": [
+      "Synthetic main archive"
+    ],
+    "flow_statuses": [
+      "draft"
+    ]
+  },
+  "source_archive_sha256": "790421bfcf7cc594067a7a4f36fc88573113797d884697ca925d9460f509d5f3",
+  "previous_candidates": [
+    {
+      "head": "37fbdf45d6177fa0be8a03793ef5566d580f4aa6",
+      "ci": {
+        "run_id": 42479308952,
+        "conclusion": "failure",
+        "head_sha": "37fbdf45d6177fa0be8a03793ef5566d580f4aa6",
+        "html_url": "https://github.com/just-every/run-crank/actions/runs/42479308952",
+        "status": "completed"
+      },
+      "reason": "source lock omitted new fixture because it was untracked at first lock generation; corrected by a new lock-only commit"
+    }
+  ],
+  "candidate_initial": {
+    "phase": "candidate",
+    "head": "37fbdf45d6177fa0be8a03793ef5566d580f4aa6",
+    "archive_sha256": "790421bfcf7cc594067a7a4f36fc88573113797d884697ca925d9460f509d5f3",
+    "restore_status": 200,
+    "error": null,
+    "flow_names": [
+      "Synthetic main archive"
+    ],
+    "flow_statuses": [
+      "draft"
+    ]
+  },
+  "custody": "BLOCKED"
+}

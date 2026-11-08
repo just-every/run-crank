@@ -1,0 +1,15 @@
+{
+  "source_head": "c449a78d4b6502270a4383c6517eee55b5964262",
+  "export_status": 200,
+  "archive_sha256": "790421bfcf7cc594067a7a4f36fc88573113797d884697ca925d9460f509d5f3",
+  "archive_bytes": 287330,
+  "source_agents_used": false,
+  "main_restore_status": 200,
+  "restored_flows": [
+    {
+      "id": "e0d86543-437e-4cb8-b221-ad7072140c63",
+      "name": "Synthetic main archive",
+      "status": "draft"
+    }
+  ]
+}
