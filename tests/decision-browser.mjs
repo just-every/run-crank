@@ -393,7 +393,8 @@ try {
     const context = await browser.newContext({ storageState, viewport: { width, height: 1000 }, hasTouch: touch, isMobile: touch });
     page = await context.newPage(); page.setDefaultTimeout(10000);
     const events = [], routeErrors = [];
-    let failReads = false, postMode = '', committed = false, heldRelease;
+    let failReads = false, postMode = '', committed = false, heldRelease, readRelease;
+    let holdNextRead = false;
     const posts = () => events.filter(event => event.method === 'POST');
     const reads = () => events.filter(event => event.method === 'GET');
     page.on('request', request => {
@@ -418,6 +419,10 @@ try {
           postMode = '';
           await new Promise(resolve => { heldRelease = resolve; });
           await route.abort('timedout').catch(() => {}); return;
+        }
+        if (request.method() === 'GET' && holdNextRead) {
+          holdNextRead = false;
+          await new Promise(resolve => { readRelease = resolve; });
         }
         if (request.method() === 'GET' && failReads) { await route.abort('internetdisconnected'); return; }
         await route.continue();
@@ -444,9 +449,15 @@ try {
     await frozen(page, note);
     assert.equal(posts().length, initialPosts);
     await shot(width, 'reconciliation-error');
-    failReads = false;
+    failReads = false; holdNextRead = true;
     await page.evaluate(() => { const marker = document.createElement('span'); marker.id = 'journey-old-body'; document.body.append(marker); });
     await activate(page.locator('[data-decision-refresh]'), touch);
+    await expect(status(page)).toContainText('Checking the latest state');
+    await expect(page.locator('[data-decision-refresh]')).toBeDisabled();
+    await expect.poll(() => typeof readRelease).toBe('function');
+    await shot(width, 'checking-latest-state');
+    assert.equal(posts().length, initialPosts, 'checking state sends no decision');
+    readRelease();
     await expect(formFor(page, approved.id).getByRole('button', { name: 'Approve', exact: true })).toBeEnabled();
     await expect(page.locator('#journey-old-body')).toHaveCount(0);
     assert.equal(posts().length, initialPosts, 'manual reconciliation only reads');
@@ -646,6 +657,20 @@ try {
     await expect(page.locator('.detail-primary .title-row .status')).toHaveText('Cancelled');
     assert.equal((await send('workflow-runs/' + cancelled.id)).steps.filter(step => step.path === 'record').length, 0);
     await shot(width, 'cancelled');
+
+    // Another legitimate review can finish while this browser still shows the
+    // old proposal. The real server refuses it and the UI announces a fresh read.
+    const stale = await newRun(`Northern coastal workshop concurrent review — ${width}`);
+    await page.goto(origin + '/app/workflow-runs/' + stale.id);
+    const completedNote = 'Reviewed by another current session before this page refreshed.';
+    await send('workflow-runs/' + stale.id + '/approve', { step_path: 'review', digest: stale.waits[0].proposal_digest, reason: completedNote });
+    const beforeRefusal = posts().length;
+    await activate(formFor(page, stale.id).getByRole('button', { name: 'Reject', exact: true }), touch);
+    await expect(status(page)).toContainText('The decision was refused. Latest state loaded');
+    await expect(formFor(page, stale.id)).toHaveCount(0);
+    await resolved(stale.id, true, completedNote);
+    assert.equal(posts().length, beforeRefusal + 1, 'refused stale decision is not retried');
+    await shot(width, 'decision-refused-reconciled');
 
     await page.goto(origin + '/app/runs');
     await shot(width, 'run-search');

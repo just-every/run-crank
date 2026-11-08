@@ -26,7 +26,9 @@ checks and measured results. `decision-requests.json` retains the decision reque
 ledger. Neither file contains sign-in links, sessions or credentials.
 
 The states include approvals waiting, offline before send, failed reconciliation,
-workflow approval detail, committed but lost response, reconciled approval and
+checking the latest state with controls frozen, workflow approval detail,
+committed but lost response, a server-refused stale decision followed by an
+authoritative read, reconciled approval and
 rejection, bounded submission timeout, legacy pending and rejected detail,
 required-field error and correction, created workflow, live and paused controls,
 legacy failed delivery and acknowledged replay, structured decision error and
@@ -50,7 +52,10 @@ fill. Disabled controls are exempt from the contrast requirement. Textual state
 labels and atomic polite decision announcements are inspected programmatically.
 Legacy delivery errors and workflow execution errors have alert semantics. Required-field and malformed JSON errors are identified in text, announced as
 alerts and associated with their control through `aria-describedby` and
-`aria-invalid`; correction clears the error. Invalid JSON sends no decision.
+`aria-invalid`; correction clears the error. Invalid JSON sends no decision. A held authoritative read proves the checking
+announcement while actions stay frozen; a decision already completed by another
+current session is refused by the real server and announced after reconciliation
+without a second decision or a replayed request.
 
 ## Criteria within the audited doors
 
