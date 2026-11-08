@@ -259,6 +259,20 @@ and approval/review attribution. Native product audit receives the same
 invocation attribution through a cloned environment. Reading the audit does not
 turn an agent into the approving person or expose credentials.
 
+A call that completes native classification but cannot acquire policy admission
+returns `decision_busy`. Its audit retains the exact computed classes and facts,
+current scopes, sponsor and policy revision. The unevaluated call has no policy
+decision, winning rule, approval or review receipt, call claim or usage
+reservation, and performs no native mutation. Invalid arguments, unknown tools
+and inaccessible targets refused before classification retain no invented
+classes. The existing native journey exercises real concurrent metadata and
+inert-draft calls using the public fixture doors, compares the audit facts,
+checks ordinary success and early refusals, and reads the same rows after
+restart. This audit correction keeps BASE-AGENT-006 PARTIAL: provider leaf
+classification, sensitive record content, omitted risk combinations and facts,
+and the existing Business, IdP, provider, egress and device obligations remain
+held. It changes no policy-reference or named-human approval scope.
+
 All four mutating tools require `idempotency_key`. The same agent/key and
 unchanged declared arguments return the retained outcome; changed arguments
 return `idempotency_conflict`. The runtime durably claims the call before

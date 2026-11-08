@@ -130,3 +130,147 @@ export async function documentationJourney({request, origin, cookie, token}) {
  assert.deepEqual(doc.resourceTemplates,[]);assert.deepEqual(doc.eventTypes,[]);assert.deepEqual(doc.subscriptions,[]);
  return {doc,html};
 }
+
+// Real MCP contention against the existing inert tools, with native fixture
+// records and durable audit readback. No test-only tool or injected lease.
+export async function contentionJourney({h: existing, observe = async () => {}} = {}) {
+ const h = existing ?? await (await import('../harness.mjs')).harness('http://127.0.0.1:9');
+ const request = (url, init) => h.mf.dispatchFetch(url, init);
+ const person = async path => {
+  const response = await request(h.origin + path, {headers: {cookie: h.owner}});
+  assert.equal(response.status, 200); return response.json();
+ };
+ const auditRows = async () => {
+  const rows = []; let after = '';
+  for (;;) {
+   const page = await person('/agents/api/audit' + (after ? '?after=' + after : ''));
+   assert.equal(page.differs_from_policy, 0); rows.push(...page.rows);
+   if (!page.cursor || page.cursor === after) return rows;
+   after = page.cursor;
+  }
+ };
+ const usageIds = async () => (await h.db.prepare('SELECT decision_id FROM agent_door_usage ORDER BY decision_id').all()).results.map(row => row.decision_id);
+ try {
+  const fixture = await (await import('./fixtures.mjs')).default({phase: 'contention', request, origin: h.origin, cookie: h.owner});
+  await (await import('./fixtures.mjs')).default({phase: 'contention-second', request, origin: h.origin, cookie: h.owner});
+  const token = await h.post('tokens', {label: 'Synthetic contention preparation', scope: 'agent'}, h.owner, 201);
+  const policy = await request(h.origin + '/agents/api/policy', {method: 'PUT',
+   headers: {cookie: h.owner, origin: h.origin, 'content-type': 'application/json'},
+   body: JSON.stringify({document: {schema: 'rer-agent-policy/1', catalogue: 'rer-agent-classes/1',
+    rules: [{id: 'all', class: '*', do: 'autonomous'}], spend: {none: true}}})});
+  assert.equal(policy.status, 200);
+  const call = async (name, args, trace) => {
+   const response = await h.send('/mcp', {jsonrpc: '2.0', id: crypto.randomUUID(), method: 'tools/call',
+    params: {name, arguments: args, _meta: {traceparent: trace}}}, '', {
+    authorization: 'Bearer ' + token.token, 'mcp-protocol-version': '2025-11-25'});
+   return {status: response.status, body: response.value, result: response.value.result,
+    decision: response.value.result?._meta?.['com.runeditrun/decision'], trace};
+  };
+  const baseline = await person('/api/crank/workflows');
+  const baselineUsage = await usageIds();
+  const controls = [
+   await call('crank.runs.get', {run_id: fixture.values.run.id}, 'synthetic-crank-success'),
+   await call('crank.runs.get', {run_id: 7}, 'synthetic-crank-invalid'),
+   await call('crank.runs.get', {run_id: 'synthetic-crank-absent'}, 'synthetic-crank-inaccessible'),
+   await call('crank.unknown.get', {}, 'synthetic-crank-unknown'),
+   await call('crank.workflows.create', {name: 'Synthetic invalid draft', graph: {trigger: {type: 'manual'}, steps: [{id: 'invalid', type: 'synthetic-crank-unknown'}]},
+    idempotency_key: 'synthetic-crank-invalid-graph'}, 'synthetic-crank-classification-refused'),
+  ];
+  assert.equal(output(controls[0]).id, fixture.values.run.id);
+  assert.deepEqual(controls[0].decision.classes.map(({class: cls, facts}) => ({class: cls, facts})),
+   [{class: 'standard', facts: {measure: 1}}]);
+  assert.equal(code(controls[1]), 'invalid_arguments');
+  assert.equal(code(controls[2]), 'resource_unavailable');
+  assert.equal(code(controls[3]), 'tool_not_found');
+  assert.equal(code(controls[4]), 'execution_failed');
+  assert.equal(controls[4].status, 500, 'The native classifier rejects an invalid graph before producing classes');
+  const batches = [];
+  for (const kind of ['metadata', 'inert']) {
+   const before = await person('/api/crank/workflows');
+   const input = i => kind === 'metadata' ? {} : {name: 'Synthetic contention draft ' + i,
+    graph: {trigger: {type: 'manual'}, steps: [{id: 'shape', type: 'map', input: {record: 'synthetic-crank-1'}}]},
+    idempotency_key: 'synthetic-crank-contention-' + i};
+   const name = kind === 'metadata' ? 'crank.workflows.list' : 'crank.workflows.create';
+   const answers = await Promise.all(Array.from({length: 12}, (_, i) => call(name, input(i), 'synthetic-crank-' + kind + '-' + i)));
+   const refused = answers.filter(answer => code(answer) === 'decision_busy');
+   const admitted = answers.filter(answer => !answer.result?.isError);
+   assert.ok(refused.length > 0 && admitted.length > 0, 'Real concurrent MCP must exercise both admission and contention');
+   assert.equal(refused.length + admitted.length, answers.length);
+   const after = await person('/api/crank/workflows');
+   if (kind === 'metadata') assert.deepEqual(after, before);
+   else {
+    assert.equal(after.length, before.length + admitted.length);
+    for (const answer of admitted) {
+     const native = await person('/api/crank/workflows/' + output(answer).id);
+     assert.equal(native.status, 'draft'); assert.equal(native.published_version_id, null);
+    }
+   }
+   batches.push({kind, answers, expected: [{class: 'standard', facts: {measure: kind === 'metadata' ? before.length : 1}}]});
+  }
+  const rows = await auditRows(), byTrace = new Map(rows.map(row => [row.trace, row]));
+  const usage = await usageIds(), refusedRows = [], results = [];
+  for (const batch of batches) {
+   for (const answer of batch.answers) {
+    const row = byTrace.get(answer.trace); assert.ok(row);
+    if (code(answer) !== 'decision_busy') {
+     assert.deepEqual(row.classes, batch.expected);
+     assert.equal(row.outcome, 'done'); assert.ok(usage.includes(row.id));
+     continue;
+    }
+    refusedRows.push(row);
+    assert.equal(answer.decision, null, 'An unevaluated call supplies no policy decision');
+    assert.equal(row.decision, 'none'); assert.equal(row.decision_id, null);
+    assert.deepEqual(row.rules, []); assert.equal(row.approval, null); assert.equal(row.review, null);
+    assert.equal(row.outcome, 'refused'); assert.equal(row.code, 'decision_busy');
+    assert.equal(row.revision, controls[0].decision.revision);
+    assert.equal(row.sponsor.id, byTrace.get(controls[0].trace).sponsor.id);
+    assert.equal(answer.result.structuredContent, undefined);
+    for (const key of ['com.runeditrun/approval', 'com.runeditrun/review', 'com.runeditrun/receipt'])
+     assert.equal(answer.result._meta[key], undefined);
+    assert.deepEqual(row.scopes, byTrace.get(controls[0].trace).scopes);
+    assert.ok(!usage.includes(row.id), 'A pre-decision refusal reserves no usage');
+    assert.equal((await h.db.prepare('SELECT count(*) AS n FROM agent_door_calls WHERE decision_id=?').bind(row.id).first()).n, 0);
+    results.push({kind: batch.kind, classes: row.classes, expected: batch.expected,
+     decision: row.decision, rules: row.rules, outcome: row.outcome, code: row.code,
+     usageReserved: usage.includes(row.id)});
+   }
+  }
+  for (const answer of controls.slice(1)) {
+   const row = byTrace.get(answer.trace); assert.ok(row);
+   assert.deepEqual(row.classes, []); assert.deepEqual(row.rules, []);
+   assert.equal(row.decision, 'none'); assert.equal(row.approval, null);
+   assert.ok(!usage.includes(row.id));
+  }
+  const admittedCount = 1 + batches.reduce((n, batch) => n + batch.answers.filter(answer => !answer.result?.isError).length, 0);
+  assert.equal(usage.length - baselineUsage.length, admittedCount, 'Only completed admitted calls reserve usage');
+  assert.equal((await person('/api/crank/workflows')).length - baseline.length,
+   batches.find(batch => batch.kind === 'inert').answers.filter(answer => !answer.result?.isError).length);
+  await h.restart();
+  assert.deepEqual(await auditRows(), rows, 'Every computed fact and refusal survives a durable restart');
+  assert.deepEqual(await usageIds(), usage);
+  const witness = await person('/api/crank/workflows');
+  await h.post('tokens/' + token.id + '/revoke', {});
+  assert.equal((await call('crank.workflows.list', {}, 'synthetic-crank-revoked')).status, 401);
+  assert.deepEqual(await person('/api/crank/workflows'), witness);
+  await observe({status: results.every(row => JSON.stringify(row.classes) === JSON.stringify(row.expected)) ? 'pass' : 'fail',
+   results, refused: refusedRows.length, admitted: admittedCount, controls: ['success', 'invalid', 'inaccessible', 'unknown', 'classification-refused', 'revoked'],
+   restart: 'identical audit and usage readback', nativeEffects: 'only admitted inert drafts', usage: 'only admitted calls'});
+  for (const row of results) assert.deepEqual(row.classes, row.expected, 'Contention audit retains exact completed native classification');
+  const answers = new Map([...controls, ...batches.flatMap(batch => batch.answers)].map(answer => [answer.trace, answer]));
+  const points = [];
+  await (await import('../../src/modules/agent-door/conformance/audit.mjs')).auditPhase({
+   agentId: rows[0].agent.id, surface: JSON.parse(await readFile(new URL('../../agent-surface.json', import.meta.url), 'utf8')),
+   calls: rows.map(row => { const answer = answers.get(row.trace); assert.ok(answer); return {
+    kind: 'tools/call', name: row.tool, decision: answer.decision, code: code(answer), result: answer.result,
+    principal: {agent: row.agent, consent: row.consent, sponsor: row.sponsor.id, clientId: row.client_id},
+   }; }),
+   personJson: person, add: (id, ok, detail) => points.push({id, ok, detail}),
+  });
+  assert.deepEqual(points.filter(point => !point.ok), [], 'Shared conformance accepts completed classification only for undecided contention');
+
+  console.log('PROBE BASE-AGENT-006 6: concurrent metadata and inert MCP calls -> computed standard facts, decision_busy, no decision, rule, approval, claim or usage reservation; durable restart readback');
+  return {refused: refusedRows.length, admitted: admittedCount};
+ } finally {
+  if (!existing) await h.close();
+ }
+}
