@@ -4,7 +4,7 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { timingSafeEqual } from 'node:crypto';
 import { openStore, identity, publicTask, terminal } from './store.mjs';
-import { runtimeInfo, validatePayload, prepareJob, launchJob, messages, MAX_OUTPUT } from './sandbox.mjs';
+import { runtimeInfo, validatePayload, prepareJob, launchJob, messages, MAX_OUTPUT, recoverJob } from './sandbox.mjs';
 
 const MAX_REQUEST = MAX_OUTPUT;
 const interrupted = { category: 'interrupted', message: 'Executor stopped; task outcome is uncertain and it will not be relaunched.' };
@@ -36,12 +36,13 @@ export async function createExecutor(options = {}) {
   if (typeof token !== 'string' || Buffer.byteLength(token) < 32) throw new Error('A bearer token of at least 32 bytes is required');
   if (typeof dataDir !== 'string' || !path.isAbsolute(dataDir)) throw new Error('An absolute private data directory is required');
   if (!Number.isInteger(port) || port < 0 || port > 65535) throw new Error('Invalid executor port');
+  const cgroupRoot = options.cgroupRoot ?? process.env.CRANK_EXECUTOR_CGROUP;
   const runtime = runtimeInfo();
   const store = openStore(dataDir);
   // Linux abstract sockets give an OS-held, crash-released lock without stale PID files.
   const lock = net.createServer(socket => socket.destroy());
   await new Promise((resolve, reject) => { lock.once('error', reject); lock.listen(`\0crank-executor-${identity(store.root)}`, resolve); });
-  try { store.recover(); } catch (error) { lock.close(); throw error; }
+  try { store.recover(record => recoverJob(path.join(store.tasks, record.task_id), record, record.cgroup_root ?? cgroupRoot), messages); } catch (error) { lock.close(); throw error; }
   const pending = new Map();
   let active = null;
   let stopping = false;
@@ -58,7 +59,7 @@ export async function createExecutor(options = {}) {
       if (terminal.has(store.read(id).status)) return;
       store.save({ ...store.read(id), status: 'running' });
       let config;
-      try { config = await prepareJob(runtime, payload, path.join(store.tasks, id)); }
+      try { config = await prepareJob(runtime, payload, path.join(store.tasks, id), cgroupRoot); }
       catch {
         if (!terminal.has(store.read(id).status)) store.save({ ...store.read(id), status: 'failed', error: { category: 'invalid_source', message: messages.invalid_source } });
         return;
@@ -66,11 +67,11 @@ export async function createExecutor(options = {}) {
       if (terminal.has(store.read(id).status)) return;
       current.handle = launchJob(config);
       const result = await current.handle.result;
-      if (!terminal.has(store.read(id).status)) {
+      if (!terminal.has(store.read(id).status) || result.error === 'memory_limit') {
         const category = Object.hasOwn(messages, result.error) ? result.error : 'sandbox_unavailable';
         store.save(Object.hasOwn(result, 'output')
           ? { ...store.read(id), status: 'succeeded', output: result.output }
-          : { ...store.read(id), status: 'failed', error: { category, message: messages[category] } });
+          : { ...store.read(id), status: category === 'interrupted' ? 'interrupted' : 'failed', error: { category, message: messages[category] } });
       }
     } catch {
       const record = store.read(id);
@@ -106,7 +107,7 @@ export async function createExecutor(options = {}) {
           active.handle?.cancel();
           await active.done;
         }
-        return send(response, 200, publicTask(record));
+        return send(response, 200, publicTask(store.read(id) ?? record));
       }
       if (requests >= 16) return send(response, 503, { error: { category: 'busy', message: 'Executor request capacity reached.' } });
       requests++;
@@ -122,7 +123,7 @@ export async function createExecutor(options = {}) {
         return send(response, terminal.has(previous.status) ? 200 : 202, publicTask(previous));
       }
       if (pending.size >= 32) return send(response, 503, { error: { category: 'busy', message: 'Executor queue capacity reached.' } });
-      const record = store.save({ task_id: id, status: 'queued', identity: digest });
+      const record = store.save({ task_id: id, status: 'queued', identity: digest, ...(Object.hasOwn(payload, 'aggregate_memory_mb') ? { aggregate_memory_mb: payload.aggregate_memory_mb, ...(cgroupRoot ? { cgroup_root: cgroupRoot } : {}) } : {}) });
       pending.set(id, payload);
       send(response, 202, publicTask(record));
       queueMicrotask(drain);
