@@ -3096,11 +3096,11 @@
       "executable": false
     },
     "src/crank/archive-policy.d.mts": {
-      "sha256": "0dfb105be572c50bc4fef7287dcb1bf3dc8c250fe8faf0d233813caab361c379",
+      "sha256": "ba0e6f2fc8fbb6e308acef6882838efcbf27236ea03787e00674a70db6966fb1",
       "executable": false
     },
     "src/crank/archive-policy.mjs": {
-      "sha256": "6320cffc64f2ac4cfbf8b7323eacfe88fce2f45f4882ef724c34918525e9abe7",
+      "sha256": "45f9787517cf6340574cc47598ff60d557308305339bf4b1d5b08f684a31180f",
       "executable": false
     },
     "src/crank/connections/apps.ts": {
@@ -3304,7 +3304,7 @@
       "executable": false
     },
     "src/crank/data.ts": {
-      "sha256": "012c3e88883823f317658c0f51363ecdd2ea6d5d7239e527cf8b59da61b245a2",
+      "sha256": "f5fb384c65607dbfeebb69b0b68d069ec174bc4367f36b739b1135392dcbca3a",
       "executable": false
     },
     "src/crank/delivery-window.ts": {
@@ -7280,7 +7280,7 @@
       "executable": false
     },
     "tests/restore-journey.mjs": {
-      "sha256": "e9d0fd28f513b20af442f0e3903578e6ed6dec366150cf59db9db9e5459d2216",
+      "sha256": "53375453deab64321b1c626ea3173a202d4da212247b56f61b29929a1af56e1e",
       "executable": false
     },
     "tests/retry-archive.mjs": {
