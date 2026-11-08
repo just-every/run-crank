@@ -87,6 +87,8 @@ class Quota:
     def stop(self):
         if self.path is None or not self.path.exists():
             return
+        if 'populated 1' not in (self.path / 'cgroup.events').read_text():
+            return
         (self.path / 'cgroup.kill').write_text('1')
         end = time.monotonic() + 5
         while 'populated 1' in (self.path / 'cgroup.events').read_text():

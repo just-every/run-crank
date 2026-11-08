@@ -67,7 +67,7 @@ export async function createExecutor(options = {}) {
       if (terminal.has(store.read(id).status)) return;
       current.handle = launchJob(config);
       const result = await current.handle.result;
-      if (!terminal.has(store.read(id).status)) {
+      if (!terminal.has(store.read(id).status) || result.error === 'memory_limit') {
         const category = Object.hasOwn(messages, result.error) ? result.error : 'sandbox_unavailable';
         store.save(Object.hasOwn(result, 'output')
           ? { ...store.read(id), status: 'succeeded', output: result.output }
@@ -107,7 +107,7 @@ export async function createExecutor(options = {}) {
           active.handle?.cancel();
           await active.done;
         }
-        return send(response, 200, publicTask(record));
+        return send(response, 200, publicTask(store.read(id) ?? record));
       }
       if (requests >= 16) return send(response, 503, { error: { category: 'busy', message: 'Executor request capacity reached.' } });
       requests++;

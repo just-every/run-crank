@@ -39,7 +39,7 @@ export function openStore(dataDir) {
       const record = read(entry.name);
       if (record) {
         const result = cleanup(record);
-        if (!terminal.has(record.status)) {
+        if (!terminal.has(record.status) || result.error === 'memory_limit') {
           const category = result.error !== 'cancelled' && Object.hasOwn(messages, result.error) ? result.error : 'interrupted';
           save(Object.hasOwn(result, 'output') ? { ...record, status: 'succeeded', output: result.output }
             : { ...record, status: category === 'interrupted' ? 'interrupted' : 'failed', error: { category,
