@@ -1,9 +1,11 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {harness} from './harness.mjs';
+import {documentationJourney} from './agent-door/journey.mjs';
 import {fakeEdge,jsonResponse,settled} from './kit.mjs';
 import {CrankClient,CrankApiError} from '../sdk/index.js';
 import {archive} from './restore-journey.mjs';
+import namedApprovalsJourney from './agent-door/named-approvals-journey.mjs';
 
 const graph={trigger:{type:'manual'},steps:[{id:'receipt',type:'http',input:{method:'POST',url:'https://platform-ledger.example/receipts',body:{to:'operations@harbor.example',amount:'25.00'}}}]};
 const costs={cost:{components:['orchestration','connectors','models','executors'].map(kind=>({kind,usd_per_run:'0',assumption:'Owner-reviewed synthetic network edge; no paid operations'}))}};
@@ -16,6 +18,8 @@ const call=async(rpc,name,args={})=>{const r=await rpc('tools/call',{name,argume
 const issue=async(h,w)=>h.post('grants',{label:'Harbor supplier receipt agent',workflow_id:w.id,version_id:w.published_version_id,expires_at:new Date(Date.now()+3600000).toISOString(),policy:{rules:[{step_id:'receipt',type:'http',connection_id:null,app:'none',fields:['method','url','body'],recipients:['operations@harbor.example'],recipient_field:'body.to',amount_field:'body.amount',max_usd:'100.00',max_per_minute:50}],approval:{timeout_seconds:60,delegate_ids:[],escalate_to:[]}}},h.owner,201);
 
 test('PLATFORM-001: SDK and CORE door draft lifecycle, native granted execution/progress, paginated reads and out-of-grant denial share native approval and audit',async()=>{
+ await (await import('./agent-door/recovery-journey.mjs')).recoveryJourney();
+ await namedApprovalsJourney();
  const edge=fakeEdge();edge.routes.set('platform-ledger.example',({body})=>jsonResponse({id:crypto.randomUUID(),receipt:JSON.parse(body)}));
  const h=await harness('http://127.0.0.1:9',{edge:edge.edge});
  try{
@@ -28,6 +32,7 @@ test('PLATFORM-001: SDK and CORE door draft lifecycle, native granted execution/
   const notification=await h.mf.dispatchFetch(h.origin+'/api/crank/v1/mcp',{method:'POST',headers:{origin:h.origin,authorization:'Bearer '+preparer.token,accept:'application/json, text/event-stream','content-type':'application/json','mcp-protocol-version':'2025-11-25'},body:JSON.stringify({jsonrpc:'2.0',method:'notifications/initialized'})});assert.equal(notification.status,202);assert.equal(await notification.text(),'');
   const hostile=await h.mf.dispatchFetch(h.origin+'/api/crank/v1/mcp',{method:'POST',headers:{origin:'https://foreign.example',cookie:h.owner,accept:'application/json, text/event-stream','content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:1,method:'tools/list'})});assert.equal(hostile.status,403);
   const malformed=await h.mf.dispatchFetch(h.origin+'/api/crank/v1/mcp',{method:'POST',headers:{origin:h.origin,cookie:h.owner,accept:'application/json, text/event-stream','content-type':'application/json'},body:'{'});assert.equal(malformed.status,400);assert.equal((await malformed.json()).error.code,-32700);
+  await documentationJourney({request:(url,init)=>h.mf.dispatchFetch(url,init),origin:h.origin,cookie:h.owner,token:preparer.token});
   const listed=await rpc('tools/list');assert.ok(listed.value.result.tools.some(t=>t.name==='crank.workflows.create'));
   assert.equal((await rpc('invented')).value.error.code,-32601);
   assert.equal((await rpc('tools/call',{name:'crank.runs.get',arguments:{run_id:7}})).value.result._meta['com.runeditrun/error'].code,'invalid_arguments');

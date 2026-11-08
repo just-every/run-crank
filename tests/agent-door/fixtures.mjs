@@ -1,6 +1,9 @@
 // Disposable native records, prepared through the owner's real public HTTP doors.
 // No providers, credentials, direct SQL or application-only fixture routes.
+import {unansweredPrompts} from './prompts-journey.mjs';
+
 export default async function prepare({phase, request, origin, cookie}) {
+ if (phase === 'initial') await unansweredPrompts({request, origin, cookie});
  const post = async (path, body) => {
   const response = await request(origin + '/api/crank' + path, {
    method: 'POST', headers: {cookie, origin, 'content-type': 'application/json'}, body: JSON.stringify(body),
