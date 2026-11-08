@@ -196,7 +196,7 @@
       "executable": false
     },
     "docs/AGENT-DOOR.md": {
-      "sha256": "6d5d3788dce23e21dfde546c8fee3144afb7eb914344ed525484016d74f55c5b",
+      "sha256": "42ba606ef9db7317a0e3cc77a18e4adf9d1def08f3fdff76fccd457af0eb82f1",
       "executable": false
     },
     "docs/API.md": {
@@ -4352,7 +4352,7 @@
       "executable": false
     },
     "src/modules/agent-door/conformance/audit.mjs": {
-      "sha256": "dd72b827c1d511d7bcb757f01056ab68858dc4f8ee8a58181107ca32df62df40",
+      "sha256": "2abc91dd4025e475f97ffa3d0333a510a14bcacee0221bee328cb0f5efb4eba3",
       "executable": false
     },
     "src/modules/agent-door/conformance/authority.d.mts": {
@@ -6740,7 +6740,7 @@
       "executable": false
     },
     "tests/agent-door/journey.mjs": {
-      "sha256": "d184a026cf59bea7dc1559dabd33d5fd149b75893ab82c6e03122d93fb425fae",
+      "sha256": "05b0cb1afe7469f30235c4c43360064f6b02bf902fa7f8471312a27ed0c1ef7f",
       "executable": false
     },
     "tests/agent-door/named-approvals-browser.mjs": {

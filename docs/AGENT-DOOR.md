@@ -273,6 +273,13 @@ classification, sensitive record content, omitted risk combinations and facts,
 and the existing Business, IdP, provider, egress and device obligations remain
 held. It changes no policy-reference or named-human approval scope.
 
+The shared conformance assertion requires nonempty completed classification on
+an undecided `decision_busy` refusal; empty classes remain valid only for calls
+refused before classification. The native contention journey also checks that
+refused draft names never appear, existing workflows stay unchanged, and native
+run counts and usage accounting remain unchanged. Complete native workflow and
+usage reports, including admitted inert drafts, survive restart unchanged.
+
 All four mutating tools require `idempotency_key`. The same agent/key and
 unchanged declared arguments return the retained outcome; changed arguments
 return `idempotency_conflict`. The runtime durably claims the call before

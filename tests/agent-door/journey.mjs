@@ -134,7 +134,7 @@ export async function documentationJourney({request, origin, cookie, token}) {
 // Real MCP contention against the existing inert tools, with native fixture
 // records and durable audit readback. No test-only tool or injected lease.
 export async function contentionJourney({h: existing, observe = async () => {}} = {}) {
- const h = existing ?? await (await import('../harness.mjs')).harness('http://127.0.0.1:9');
+ const h = existing ?? await (await import('../harness.mjs')).harness('http://127.0.0.1:9', {clock: '2026-11-08T12:00:00.000Z'});
  const request = (url, init) => h.mf.dispatchFetch(url, init);
  const person = async path => {
   const response = await request(h.origin + path, {headers: {cookie: h.owner}});
@@ -167,6 +167,8 @@ export async function contentionJourney({h: existing, observe = async () => {}} 
     decision: response.value.result?._meta?.['com.runeditrun/decision'], trace};
   };
   const baseline = await person('/api/crank/workflows');
+  const baselineRuns = await person('/api/crank/workflow-runs');
+  const {workflows: baselineEstimates, ...baselineNativeUsage} = await person('/api/crank/reports/usage');
   const baselineUsage = await usageIds();
   const controls = [
    await call('crank.runs.get', {run_id: fixture.values.run.id}, 'synthetic-crank-success'),
@@ -197,12 +199,20 @@ export async function contentionJourney({h: existing, observe = async () => {}} 
    assert.ok(refused.length > 0 && admitted.length > 0, 'Real concurrent MCP must exercise both admission and contention');
    assert.equal(refused.length + admitted.length, answers.length);
    const after = await person('/api/crank/workflows');
+   const originalIds = new Set(before.map(workflow => workflow.id));
+   assert.deepEqual(after.filter(workflow => originalIds.has(workflow.id)), before,
+    'Concurrent calls cannot mutate existing native workflows');
    if (kind === 'metadata') assert.deepEqual(after, before);
    else {
     assert.equal(after.length, before.length + admitted.length);
     for (const answer of admitted) {
      const native = await person('/api/crank/workflows/' + output(answer).id);
      assert.equal(native.status, 'draft'); assert.equal(native.published_version_id, null);
+    }
+    for (const answer of refused) {
+     const i = answers.indexOf(answer);
+     assert.ok(!after.some(workflow => workflow.name === input(i).name),
+      'A refused preparation cannot create its requested native draft');
     }
    }
    batches.push({kind, answers, expected: [{class: 'standard', facts: {measure: kind === 'metadata' ? before.length : 1}}]});
@@ -245,9 +255,24 @@ export async function contentionJourney({h: existing, observe = async () => {}} 
   assert.equal(usage.length - baselineUsage.length, admittedCount, 'Only completed admitted calls reserve usage');
   assert.equal((await person('/api/crank/workflows')).length - baseline.length,
    batches.find(batch => batch.kind === 'inert').answers.filter(answer => !answer.result?.isError).length);
+  assert.deepEqual(await person('/api/crank/workflow-runs'), baselineRuns);
+  const nativeUsage = await person('/api/crank/reports/usage');
+  const {workflows: estimates, ...accounting} = nativeUsage;
+  assert.deepEqual(accounting, baselineNativeUsage,
+   'Metadata reads and inert preparations reserve no native execution usage');
+  const baselineIds = new Set(baselineEstimates.map(workflow => workflow.workflow_id));
+  assert.deepEqual(estimates.filter(workflow => baselineIds.has(workflow.workflow_id)), baselineEstimates);
+  for (const workflow of estimates.filter(workflow => !baselineIds.has(workflow.workflow_id))) {
+   assert.equal(workflow.runs, 0); assert.equal(workflow.observed_steps, 0);
+   assert.equal(workflow.observed_requests, 0); assert.equal(workflow.budget_accounted_usd, '0');
+  }
+  const nativeWorkflows = await person('/api/crank/workflows');
   await h.restart();
   assert.deepEqual(await auditRows(), rows, 'Every computed fact and refusal survives a durable restart');
   assert.deepEqual(await usageIds(), usage);
+  assert.deepEqual(await person('/api/crank/workflows'), nativeWorkflows);
+  assert.deepEqual(await person('/api/crank/workflow-runs'), baselineRuns);
+  assert.deepEqual(await person('/api/crank/reports/usage'), nativeUsage);
   const witness = await person('/api/crank/workflows');
   await h.post('tokens/' + token.id + '/revoke', {});
   assert.equal((await call('crank.workflows.list', {}, 'synthetic-crank-revoked')).status, 401);
