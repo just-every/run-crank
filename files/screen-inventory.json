@@ -1,0 +1,610 @@
+[
+  {
+    "file": "browser/1440-cancellation-pending.png",
+    "pixels": [
+      1440,
+      2246
+    ],
+    "sha256": "1a441f39b5bd9c1bea45d7e5761cb4ff2ae8175f90876eb633934cfd45290d0a"
+  },
+  {
+    "file": "browser/1440-cancelled.png",
+    "pixels": [
+      1440,
+      2131
+    ],
+    "sha256": "425b208f20c6f1addd29b12706f7a5363e2050b056cc9cb3e044f7dd63c6762e"
+  },
+  {
+    "file": "browser/1440-checking-latest-state.png",
+    "pixels": [
+      1440,
+      3092
+    ],
+    "sha256": "4eb8409f366c16300c6daa200717c8a3dda62a5c8ae4748d2070639124cf70b6"
+  },
+  {
+    "file": "browser/1440-corrected-decision-approved.png",
+    "pixels": [
+      1440,
+      1820
+    ],
+    "sha256": "954b156ab28ddfab88befedb9f240270fcbf701a76f49f059ed49ecbc735fb27"
+  },
+  {
+    "file": "browser/1440-created-workflow.png",
+    "pixels": [
+      1440,
+      1053
+    ],
+    "sha256": "40150ef7028a1f9146ab697b0f805b8e24aa8ea4ddfd023c2e357daa1f1b180b"
+  },
+  {
+    "file": "browser/1440-decision-field-corrected.png",
+    "pixels": [
+      1440,
+      2003
+    ],
+    "sha256": "9d6f9d6b78549a0c8021b635d38611817118735e2fd4c71ca302690ecfb5dae4"
+  },
+  {
+    "file": "browser/1440-decision-field-error.png",
+    "pixels": [
+      1440,
+      2030
+    ],
+    "sha256": "852fb9451a7d03aea912c1cfee1c6cce36e29e0186f03727925d9c0a9e122153"
+  },
+  {
+    "file": "browser/1440-decision-refused-reconciled.png",
+    "pixels": [
+      1440,
+      2194
+    ],
+    "sha256": "434fa2fcd5e7fad76cefadd042fd06672be2b63af4d04506500d950a4f3b58ba"
+  },
+  {
+    "file": "browser/1440-flow-active.png",
+    "pixels": [
+      1440,
+      3587
+    ],
+    "sha256": "0a5ffc115137c194324c3ffd14d3fc4beee3f05f64dc7f2f4495bde81758a7cf"
+  },
+  {
+    "file": "browser/1440-flow-paused.png",
+    "pixels": [
+      1440,
+      3555
+    ],
+    "sha256": "67cb2109175763638005f2c9a8791ee46dffc30298f649462faea6da59348a6c"
+  },
+  {
+    "file": "browser/1440-inbox-addressed.png",
+    "pixels": [
+      1440,
+      1000
+    ],
+    "sha256": "d9edbb68a9d3a5cc6591332d13da8c65d0d13115b3d183a69304550c10aff18b"
+  },
+  {
+    "file": "browser/1440-inbox-decision.png",
+    "pixels": [
+      1440,
+      1549
+    ],
+    "sha256": "1c1e1510c7f2147aadd3f41b5d04246859d061c22fdc23db4412bcf120c66785"
+  },
+  {
+    "file": "browser/1440-inbox-empty.png",
+    "pixels": [
+      1440,
+      1000
+    ],
+    "sha256": "a227bcee7ddabd51a6bad8b8dde0f07419311ecb23f81eed4160e06192e0f169"
+  },
+  {
+    "file": "browser/1440-inbox-resolved.png",
+    "pixels": [
+      1440,
+      1378
+    ],
+    "sha256": "a20f388c3c6005b529d17d8e478efa2d6bbd2698277268afe46747b3bc27aa40"
+  },
+  {
+    "file": "browser/1440-legacy-failure.png",
+    "pixels": [
+      1440,
+      1210
+    ],
+    "sha256": "0d49c7557685661fa6ed7565ba7fc3532d9621f01aef4a8112bac0a542ee17da"
+  },
+  {
+    "file": "browser/1440-legacy-offline.png",
+    "pixels": [
+      1440,
+      1042
+    ],
+    "sha256": "9cf76a4adeb37363ca74cce50ed9edcfdb0fa02d2fc1589ba1cf0d8a252c1ce4"
+  },
+  {
+    "file": "browser/1440-legacy-pending.png",
+    "pixels": [
+      1440,
+      1042
+    ],
+    "sha256": "edaa2d46fa36709aa81bdc638860703cd94a113f9c9c606814397f5d8bff2f99"
+  },
+  {
+    "file": "browser/1440-legacy-rejected.png",
+    "pixels": [
+      1440,
+      1042
+    ],
+    "sha256": "f27ed970d3b91d300aca48f661fa575c2a892ff7f334dcdab71f648dbc50df12"
+  },
+  {
+    "file": "browser/1440-legacy-replayed.png",
+    "pixels": [
+      1440,
+      1209
+    ],
+    "sha256": "0afcf3cd10a0e46ebe52969f4d5195cc5ead24f85ae891ab20f762df9ea424db"
+  },
+  {
+    "file": "browser/1440-offline-before-send.png",
+    "pixels": [
+      1440,
+      3092
+    ],
+    "sha256": "ba65a89c3e6b843b2349e186f60bb229dac3133dbd4d9205d9c5c9bff8280ade"
+  },
+  {
+    "file": "browser/1440-offline-response-lost.png",
+    "pixels": [
+      1440,
+      2309
+    ],
+    "sha256": "38b22a0ae8f757958bac154bd0797dc8c7fd15d3ff34e2da9764c03e180bc46c"
+  },
+  {
+    "file": "browser/1440-pending.png",
+    "pixels": [
+      1440,
+      2988
+    ],
+    "sha256": "79ea77fa749a459c9a86bd901614d5fd1a6e06c9c73fe5eb7b23d4de2c62b76f"
+  },
+  {
+    "file": "browser/1440-reconciled-approved.png",
+    "pixels": [
+      1440,
+      2090
+    ],
+    "sha256": "48e2296aa2b96dba054f74503a8abea73228d9eff3bbd6977842b9b320f3a357"
+  },
+  {
+    "file": "browser/1440-reconciliation-error.png",
+    "pixels": [
+      1440,
+      3092
+    ],
+    "sha256": "6c437aaa93e9741462631eebea778270445acb05ec5e845fd9959868bc6d1275"
+  },
+  {
+    "file": "browser/1440-rejected.png",
+    "pixels": [
+      1440,
+      2152
+    ],
+    "sha256": "2faae2315d37e39bd1ad37506bf42417d3c559f75f2369ac1062217495ce0427"
+  },
+  {
+    "file": "browser/1440-required-field-corrected.png",
+    "pixels": [
+      1440,
+      3519
+    ],
+    "sha256": "7906c5fe668cd16d69a59c14e3f47b159c66c8eea78635ccb2d670304c54c9fd"
+  },
+  {
+    "file": "browser/1440-required-field-error.png",
+    "pixels": [
+      1440,
+      3545
+    ],
+    "sha256": "ba01f3c20cf93f1b13981af0ef576439b49f68ffa49ac73be428570a07f34941"
+  },
+  {
+    "file": "browser/1440-run-search-empty.png",
+    "pixels": [
+      1440,
+      1548
+    ],
+    "sha256": "5af5fcac1784e5f672e0111f4c4b70723de7b347ab910e3394f5aca00003db6a"
+  },
+  {
+    "file": "browser/1440-run-search-filtered.png",
+    "pixels": [
+      1440,
+      1801
+    ],
+    "sha256": "30e94334dbc606dd164fbdeac75bba5bdd3738df1ed69f69415872d41e5841a4"
+  },
+  {
+    "file": "browser/1440-run-search.png",
+    "pixels": [
+      1440,
+      4481
+    ],
+    "sha256": "49de46219798c92306ec42b1d7cd8b652b9aa1c5b421a74c4440b3c84627e51a"
+  },
+  {
+    "file": "browser/1440-submission-timeout.png",
+    "pixels": [
+      1440,
+      2350
+    ],
+    "sha256": "16da4bff90c741b90a92908001c9ae3bce1f9026263899a7818add060ba1e5ee"
+  },
+  {
+    "file": "browser/1440-submitting.png",
+    "pixels": [
+      1440,
+      2308
+    ],
+    "sha256": "13280f35953e6303788534b2120d5afe994349da1e8b0f36de22bb930a68fbcb"
+  },
+  {
+    "file": "browser/1440-workflow-active.png",
+    "pixels": [
+      1440,
+      1087
+    ],
+    "sha256": "9d3b97e101a70aca03a05271930e5e8c3016c67720caf5540a5a59f4bc91c210"
+  },
+  {
+    "file": "browser/1440-workflow-failure.png",
+    "pixels": [
+      1440,
+      1515
+    ],
+    "sha256": "0daf5b8921b223c1b85dc1e989f143c4c99dc7bdd0312aa6e5aafde361c0cbad"
+  },
+  {
+    "file": "browser/1440-workflow-live-menu.png",
+    "pixels": [
+      1440,
+      1087
+    ],
+    "sha256": "502c38f808d668c6149a2ae2a670e0eee6eafcfd4fb932408c56c3133aada736"
+  },
+  {
+    "file": "browser/1440-workflow-paused-menu.png",
+    "pixels": [
+      1440,
+      1087
+    ],
+    "sha256": "0ceb8f8455c08d4505750db7de89b74d887f026e772976a6b845dfb1b71eb179"
+  },
+  {
+    "file": "browser/1440-workflow-paused.png",
+    "pixels": [
+      1440,
+      1087
+    ],
+    "sha256": "e2dd8f9758d6d398aa9a4621a715f8e7bdce74ffad9a1e493400d7072380c623"
+  },
+  {
+    "file": "browser/1440-workflow-pending.png",
+    "pixels": [
+      1440,
+      2204
+    ],
+    "sha256": "777e8c38b9d758bfbcf74cf80dcf7f4e622f53e1881224319f57fe7150817b99"
+  },
+  {
+    "file": "browser/390-cancellation-pending.png",
+    "pixels": [
+      390,
+      3221
+    ],
+    "sha256": "b34d02e4f53ad80cb74dd80f8c2746aa96ffe6354bd6cde5dd5bc19096b9df99"
+  },
+  {
+    "file": "browser/390-cancelled.png",
+    "pixels": [
+      390,
+      3145
+    ],
+    "sha256": "b0e24868328dced9978f1c421108ec80f4b97243c83d2ed997ec2cc10a7a9fca"
+  },
+  {
+    "file": "browser/390-checking-latest-state.png",
+    "pixels": [
+      390,
+      4350
+    ],
+    "sha256": "f29f9a2f13a60cfb783648c4a8dab781f8e8ba4894adc0dc8aa19a3ef15bdcd3"
+  },
+  {
+    "file": "browser/390-corrected-decision-approved.png",
+    "pixels": [
+      390,
+      2709
+    ],
+    "sha256": "aba70b8e605e91aa9fd4824c4bbaf53525783e7a608b36e6087e8e458f201c44"
+  },
+  {
+    "file": "browser/390-created-workflow.png",
+    "pixels": [
+      390,
+      2050
+    ],
+    "sha256": "dec818dcda22e68a3f06b72de12b45ff2e3c566a22dd3ba91968edf8ef24b15f"
+  },
+  {
+    "file": "browser/390-decision-field-corrected.png",
+    "pixels": [
+      390,
+      2856
+    ],
+    "sha256": "caf9e568c60138bf517a7b19abf454fff19076d8288bef17632f7859766c2fa2"
+  },
+  {
+    "file": "browser/390-decision-field-error.png",
+    "pixels": [
+      390,
+      2903
+    ],
+    "sha256": "63247b709f33af5260f1d35ccd0e6632ce3752f1e4adb9f3263739c1571ee950"
+  },
+  {
+    "file": "browser/390-decision-refused-reconciled.png",
+    "pixels": [
+      390,
+      3245
+    ],
+    "sha256": "0582d54dce87babd1fa827cfe466b3db1476d6db14465e430852b9054db6cd6e"
+  },
+  {
+    "file": "browser/390-flow-active.png",
+    "pixels": [
+      390,
+      7940
+    ],
+    "sha256": "4b2b3f82c594a67fa39efe4926eb5fccc76c01739296ebb626bec3a048328d9e"
+  },
+  {
+    "file": "browser/390-flow-paused.png",
+    "pixels": [
+      390,
+      7908
+    ],
+    "sha256": "6fe5359baae65825e88f6cac694d45bd93b3b6fc0ace89b6f57fd7736b09d220"
+  },
+  {
+    "file": "browser/390-inbox-addressed.png",
+    "pixels": [
+      390,
+      1000
+    ],
+    "sha256": "847a123d06ed7596cfad5437c142533b7c0ec92fba570ca3388df91ad4fa67f4"
+  },
+  {
+    "file": "browser/390-inbox-decision.png",
+    "pixels": [
+      390,
+      2276
+    ],
+    "sha256": "e5a07e874143736b36283242f49bb05fc5f6cfa4708b8c49af4032a908d91508"
+  },
+  {
+    "file": "browser/390-inbox-empty.png",
+    "pixels": [
+      390,
+      1000
+    ],
+    "sha256": "d8e49958dd14a76b8a3b1fd82f5f769532121a25303c2c741aac6b8faa20d701"
+  },
+  {
+    "file": "browser/390-inbox-resolved.png",
+    "pixels": [
+      390,
+      2172
+    ],
+    "sha256": "857c9703006ba9e100561651e5abdfbab2c0c608cfa23249daf2d3bb2cb83fa6"
+  },
+  {
+    "file": "browser/390-legacy-failure.png",
+    "pixels": [
+      390,
+      2375
+    ],
+    "sha256": "ef11d36a755f2ddf63febe8763f00d63f8506979b86010d59f8ee313e96cd9e4"
+  },
+  {
+    "file": "browser/390-legacy-offline.png",
+    "pixels": [
+      390,
+      1642
+    ],
+    "sha256": "8f56ad2dddf26af46b115732fd7e4556ddfe2ff9e02fd38341470e44d68c57cc"
+  },
+  {
+    "file": "browser/390-legacy-pending.png",
+    "pixels": [
+      390,
+      1768
+    ],
+    "sha256": "c98b3751d8fdc07c2f8889ae7312f72b45b78a94b14f3f31d8b5e4c7c848aca0"
+  },
+  {
+    "file": "browser/390-legacy-rejected.png",
+    "pixels": [
+      390,
+      1753
+    ],
+    "sha256": "72d5c9e5ca73854c053db729230536a63d41a0a9eecdf45e07100ed4693dd007"
+  },
+  {
+    "file": "browser/390-legacy-replayed.png",
+    "pixels": [
+      390,
+      2439
+    ],
+    "sha256": "6624c8ed2e452d8a6d9d5df0c252535a8f0657643d16433afe49fc3cf20b7339"
+  },
+  {
+    "file": "browser/390-offline-before-send.png",
+    "pixels": [
+      390,
+      4390
+    ],
+    "sha256": "89a9fee24c01c6c4df678f403e83e92cee62a1d68d03c9ce95277a3273dd478f"
+  },
+  {
+    "file": "browser/390-offline-response-lost.png",
+    "pixels": [
+      390,
+      3324
+    ],
+    "sha256": "783901fa1d331dfb9beecea7f725d20be9f43036aa73d6170d3a77d9e45ef280"
+  },
+  {
+    "file": "browser/390-pending.png",
+    "pixels": [
+      390,
+      4245
+    ],
+    "sha256": "be0f0c05781366b26aa3bee9d7a8b60521a33f1d495dc6037b3438ce4abf7199"
+  },
+  {
+    "file": "browser/390-reconciled-approved.png",
+    "pixels": [
+      390,
+      3121
+    ],
+    "sha256": "efecea6ba018c352c9015141efb3ee689a110ee70194ca3975520081ea07ea00"
+  },
+  {
+    "file": "browser/390-reconciliation-error.png",
+    "pixels": [
+      390,
+      4390
+    ],
+    "sha256": "89790478faf1e40ac15a3232e584dd186caadf6122e1d153e2b8efb8cba31781"
+  },
+  {
+    "file": "browser/390-rejected.png",
+    "pixels": [
+      390,
+      3170
+    ],
+    "sha256": "b77406615aa7ccb8b1c9e537e748e60db94865316f9fc221e26105b2e3856dc7"
+  },
+  {
+    "file": "browser/390-required-field-corrected.png",
+    "pixels": [
+      390,
+      7780
+    ],
+    "sha256": "01c948a26e95ae3229d8f44700b5a92306600ec83b81c2db23cf59f2bd709782"
+  },
+  {
+    "file": "browser/390-required-field-error.png",
+    "pixels": [
+      390,
+      7807
+    ],
+    "sha256": "0dfe4af4d6fefe6f4a117e2b90bf5214a6c50097dfb394d81d4cd3be7b90cf37"
+  },
+  {
+    "file": "browser/390-run-search-empty.png",
+    "pixels": [
+      390,
+      3397
+    ],
+    "sha256": "b2cf98512808b85b05cebf1f866a6409aa469b101836e17388f5bc95c09d60c0"
+  },
+  {
+    "file": "browser/390-run-search-filtered.png",
+    "pixels": [
+      390,
+      5281
+    ],
+    "sha256": "9862b259a15fa70ed9502b27659cbbebca411728fccde36af4f0743e0f330eac"
+  },
+  {
+    "file": "browser/390-run-search.png",
+    "pixels": [
+      390,
+      11462
+    ],
+    "sha256": "acba22d0526ee792bf0c487739337bf48aa4eebbf2b4abece1d3c78f58fbedb8"
+  },
+  {
+    "file": "browser/390-submission-timeout.png",
+    "pixels": [
+      390,
+      3366
+    ],
+    "sha256": "1d78b3cf7654394ae3504d96b8fd7839d783df142b7cd01ff7add15d3ba4c240"
+  },
+  {
+    "file": "browser/390-submitting.png",
+    "pixels": [
+      390,
+      3303
+    ],
+    "sha256": "b6c7e3442e22341422977185f8a4f7e50cecc7a23358800978a72e108a28d529"
+  },
+  {
+    "file": "browser/390-workflow-active.png",
+    "pixels": [
+      390,
+      2939
+    ],
+    "sha256": "6d5d7437ed37cd4619fba3c3a5dcf56423cef0d373379c341aebe2a507d31841"
+  },
+  {
+    "file": "browser/390-workflow-failure.png",
+    "pixels": [
+      390,
+      2380
+    ],
+    "sha256": "d0ef17428af8ddb00fc89c1129a8e491b04a7460f6b5682e44d54597d46465b3"
+  },
+  {
+    "file": "browser/390-workflow-live-menu.png",
+    "pixels": [
+      390,
+      2939
+    ],
+    "sha256": "5cf7d61aeda5551b8150dd67e22562a8f9644ee3ae022b574041d10a1d5acc84"
+  },
+  {
+    "file": "browser/390-workflow-paused-menu.png",
+    "pixels": [
+      390,
+      2887
+    ],
+    "sha256": "a284436424d67bfa5897430c6530d64366a71a0a42992b4b6b2bbaa07e1547a9"
+  },
+  {
+    "file": "browser/390-workflow-paused.png",
+    "pixels": [
+      390,
+      2887
+    ],
+    "sha256": "8ddc728da3464e26fe7b084565c6026d16c0113d8d268a3ce6ba96fd41b0d4a6"
+  },
+  {
+    "file": "browser/390-workflow-pending.png",
+    "pixels": [
+      390,
+      3179
+    ],
+    "sha256": "c6e1395b0a407940fb17acabfbdcb765de2eba821ea6a58814cda55c0992ef2e"
+  }
+]

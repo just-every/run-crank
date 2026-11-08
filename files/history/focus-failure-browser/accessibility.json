@@ -1,0 +1,99 @@
+[
+  {
+    "width": 1440,
+    "state": "pending",
+    "violations": [],
+    "passes": [
+      "aria-allowed-attr",
+      "aria-conditional-attr",
+      "aria-hidden-body",
+      "aria-hidden-focus",
+      "aria-prohibited-attr",
+      "aria-valid-attr-value",
+      "aria-valid-attr",
+      "button-name",
+      "bypass",
+      "color-contrast",
+      "document-title",
+      "duplicate-id-aria",
+      "form-field-multiple-labels",
+      "html-has-lang",
+      "html-lang-valid",
+      "image-alt",
+      "label",
+      "link-name",
+      "list",
+      "listitem",
+      "meta-viewport",
+      "nested-interactive",
+      "target-size"
+    ],
+    "incomplete": [
+      {
+        "id": "color-contrast",
+        "nodes": [
+          [
+            "span[data-rer-name=\"\"]"
+          ],
+          [
+            ".avatar"
+          ],
+          [
+            ".person-name"
+          ],
+          [
+            "small"
+          ],
+          [
+            "nav > a[href$=\"app\"] > span"
+          ],
+          [
+            "a[href$=\"runs\"] > span"
+          ],
+          [
+            "a[href$=\"connections\"] > span"
+          ],
+          [
+            "a[href$=\"operations\"] > span"
+          ],
+          [
+            "a[href$=\"skills\"] > span"
+          ],
+          [
+            "a[href$=\"import\"] > span"
+          ],
+          [
+            "a[href$=\"access\"] > span"
+          ],
+          [
+            "a[href$=\"data\"] > span"
+          ],
+          [
+            "a[href$=\"inbox\"] > span"
+          ],
+          [
+            "a[href$=\"followups\"] > span"
+          ],
+          [
+            "nav > a[href$=\"account\"] > span"
+          ],
+          [
+            "h1"
+          ],
+          [
+            "p"
+          ],
+          [
+            "li:nth-child(3) > form > label:nth-child(5) > textarea"
+          ],
+          [
+            "li:nth-child(4) > form > label:nth-child(5) > textarea"
+          ],
+          [
+            "footer"
+          ]
+        ]
+      }
+    ]
+  }
+]

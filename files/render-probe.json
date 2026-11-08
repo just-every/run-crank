@@ -1,0 +1,158 @@
+[
+  {
+    "stage": "before",
+    "scrollY": 1629,
+    "innerHeight": 1000,
+    "visual": {
+      "height": 1000,
+      "offsetTop": 0,
+      "pageTop": 1629,
+      "scale": 1
+    },
+    "errors": [
+      {
+        "text": "Enter valid JSON, such as {\"quantity\": 1}, before approving.",
+        "rect": {
+          "x": 33,
+          "y": 493.28125,
+          "width": 324,
+          "height": 40.59375,
+          "top": 493.28125,
+          "right": 357,
+          "bottom": 533.875,
+          "left": 33
+        },
+        "style": "visible"
+      }
+    ],
+    "forms": [
+      {
+        "x": 33,
+        "y": 370.234375,
+        "width": 324,
+        "height": 299.9375,
+        "top": 370.234375,
+        "right": 357,
+        "bottom": 670.171875,
+        "left": 33
+      }
+    ]
+  },
+  {
+    "stage": "after-resize",
+    "scrollY": 1629,
+    "innerHeight": 1000,
+    "visual": {
+      "height": 1000,
+      "offsetTop": 0,
+      "pageTop": 1629,
+      "scale": 1
+    },
+    "errors": [
+      {
+        "text": "Enter valid JSON, such as {\"quantity\": 1}, before approving.",
+        "rect": {
+          "x": 33,
+          "y": 493.28125,
+          "width": 324,
+          "height": 40.59375,
+          "top": 493.28125,
+          "right": 357,
+          "bottom": 533.875,
+          "left": 33
+        },
+        "style": "visible"
+      }
+    ],
+    "forms": [
+      {
+        "x": 33,
+        "y": 370.234375,
+        "width": 324,
+        "height": 299.9375,
+        "top": 370.234375,
+        "right": 357,
+        "bottom": 670.171875,
+        "left": 33
+      }
+    ]
+  },
+  {
+    "stage": "after-two-animation-frames",
+    "scrollY": 1628,
+    "innerHeight": 1000,
+    "visual": {
+      "height": 1000,
+      "offsetTop": 0,
+      "pageTop": 1628,
+      "scale": 1
+    },
+    "errors": [
+      {
+        "text": "Enter valid JSON, such as {\"quantity\": 1}, before approving.",
+        "rect": {
+          "x": 33,
+          "y": 494.28125,
+          "width": 324,
+          "height": 40.59375,
+          "top": 494.28125,
+          "right": 357,
+          "bottom": 534.875,
+          "left": 33
+        },
+        "style": "visible"
+      }
+    ],
+    "forms": [
+      {
+        "x": 33,
+        "y": 371.234375,
+        "width": 324,
+        "height": 299.9375,
+        "top": 371.234375,
+        "right": 357,
+        "bottom": 671.171875,
+        "left": 33
+      }
+    ]
+  },
+  {
+    "stage": "viewport",
+    "scrollY": 1643,
+    "innerHeight": 1000,
+    "visual": {
+      "height": 1000,
+      "offsetTop": 0,
+      "pageTop": 1643,
+      "scale": 1
+    },
+    "errors": [
+      {
+        "text": "Enter valid JSON, such as {\"quantity\": 1}, before approving.",
+        "rect": {
+          "x": 33,
+          "y": 479.28125,
+          "width": 324,
+          "height": 40.59375,
+          "top": 479.28125,
+          "right": 357,
+          "bottom": 519.875,
+          "left": 33
+        },
+        "style": "visible"
+      }
+    ],
+    "forms": [
+      {
+        "x": 33,
+        "y": 356.234375,
+        "width": 324,
+        "height": 299.9375,
+        "top": 356.234375,
+        "right": 357,
+        "bottom": 656.171875,
+        "left": 33
+      }
+    ]
+  }
+]

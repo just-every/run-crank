@@ -1,0 +1,541 @@
+{
+  "head": "454a573f6671bc4a467cb1a0edc3853368dcdd05",
+  "sourceClean": true,
+  "completed": true,
+  "states": [
+    {
+      "width": 1440,
+      "state": "pending",
+      "violations": 0,
+      "measured": true
+    },
+    {
+      "width": 1440,
+      "state": "offline-before-send",
+      "violations": 0,
+      "measured": true
+    },
+    {
+      "width": 1440,
+      "state": "reconciliation-error",
+      "violations": 0,
+      "measured": true
+    },
+    {
+      "width": 1440,
+      "state": "checking-latest-state",
+      "violations": 0,
+      "measured": true
+    },
+    {
+      "width": 1440,
+      "state": "reconciled-approved",
+      "violations": 0,
+      "measured": true
+    },
+    {
+      "width": 1440,
+      "state": "workflow-pending",
+      "violations": 0,
+      "measured": true
+    },
+    {
+      "width": 1440,
+      "state": "offline-response-lost",
+      "violations": 0,
+      "measured": true
+    },
+    {
+      "width": 1440,
+      "state": "rejected",
+      "violations": 0,
+      "measured": true
+    },
+    {
+      "width": 1440,
+      "state": "submitting",
+      "violations": 0,
+      "measured": true
+    },
+    {
+      "width": 1440,
+      "state": "submission-timeout",
+      "violations": 0,
+      "measured": true
+    },
+    {
+      "width": 1440,
+      "state": "legacy-offline",
+      "violations": 0,
+      "measured": true
+    },
+    {
+      "width": 1440,
+      "state": "legacy-rejected",
+      "violations": 0,
+      "measured": true
+    },
+    {
+      "width": 1440,
+      "state": "required-field-error",
+      "violations": 0,
+      "measured": true
+    },
+    {
+      "width": 1440,
+      "state": "required-field-corrected",
+      "violations": 0,
+      "measured": true
+    },
+    {
+      "width": 1440,
+      "state": "created-workflow",
+      "violations": 0,
+      "measured": true
+    },
+    {
+      "width": 1440,
+      "state": "flow-paused",
+      "violations": 0,
+      "measured": true
+    },
+    {
+      "width": 1440,
+      "state": "flow-active",
+      "violations": 0,
+      "measured": true
+    },
+    {
+      "width": 1440,
+      "state": "workflow-live-menu",
+      "violations": 0,
+      "measured": true
+    },
+    {
+      "width": 1440,
+      "state": "workflow-paused",
+      "violations": 0,
+      "measured": true
+    },
+    {
+      "width": 1440,
+      "state": "workflow-paused-menu",
+      "violations": 0,
+      "measured": true
+    },
+    {
+      "width": 1440,
+      "state": "workflow-active",
+      "violations": 0,
+      "measured": true
+    },
+    {
+      "width": 1440,
+      "state": "legacy-pending",
+      "violations": 0,
+      "measured": true
+    },
+    {
+      "width": 1440,
+      "state": "legacy-failure",
+      "violations": 0,
+      "measured": true
+    },
+    {
+      "width": 1440,
+      "state": "legacy-replayed",
+      "violations": 0,
+      "measured": true
+    },
+    {
+      "width": 1440,
+      "state": "decision-field-error",
+      "violations": 0,
+      "measured": true
+    },
+    {
+      "width": 1440,
+      "state": "decision-field-corrected",
+      "violations": 0,
+      "measured": true
+    },
+    {
+      "width": 1440,
+      "state": "corrected-decision-approved",
+      "violations": 0,
+      "measured": true
+    },
+    {
+      "width": 1440,
+      "state": "workflow-failure",
+      "violations": 0,
+      "measured": true
+    },
+    {
+      "width": 1440,
+      "state": "cancellation-pending",
+      "violations": 0,
+      "measured": true
+    },
+    {
+      "width": 1440,
+      "state": "cancelled",
+      "violations": 0,
+      "measured": true
+    },
+    {
+      "width": 1440,
+      "state": "decision-refused-reconciled",
+      "violations": 0,
+      "measured": true
+    },
+    {
+      "width": 1440,
+      "state": "run-search",
+      "violations": 0,
+      "measured": true
+    },
+    {
+      "width": 1440,
+      "state": "run-search-empty",
+      "violations": 0,
+      "measured": true
+    },
+    {
+      "width": 1440,
+      "state": "run-search-filtered",
+      "violations": 0,
+      "measured": true
+    },
+    {
+      "width": 1440,
+      "state": "inbox-empty",
+      "violations": 0,
+      "measured": true
+    },
+    {
+      "width": 1440,
+      "state": "inbox-addressed",
+      "violations": 0,
+      "measured": true
+    },
+    {
+      "width": 1440,
+      "state": "inbox-decision",
+      "violations": 0,
+      "measured": true
+    },
+    {
+      "width": 1440,
+      "state": "inbox-resolved",
+      "violations": 0,
+      "measured": true
+    },
+    {
+      "width": 390,
+      "state": "pending",
+      "violations": 0,
+      "measured": true
+    },
+    {
+      "width": 390,
+      "state": "offline-before-send",
+      "violations": 0,
+      "measured": true
+    },
+    {
+      "width": 390,
+      "state": "reconciliation-error",
+      "violations": 0,
+      "measured": true
+    },
+    {
+      "width": 390,
+      "state": "checking-latest-state",
+      "violations": 0,
+      "measured": true
+    },
+    {
+      "width": 390,
+      "state": "reconciled-approved",
+      "violations": 0,
+      "measured": true
+    },
+    {
+      "width": 390,
+      "state": "workflow-pending",
+      "violations": 0,
+      "measured": true
+    },
+    {
+      "width": 390,
+      "state": "offline-response-lost",
+      "violations": 0,
+      "measured": true
+    },
+    {
+      "width": 390,
+      "state": "rejected",
+      "violations": 0,
+      "measured": true
+    },
+    {
+      "width": 390,
+      "state": "submitting",
+      "violations": 0,
+      "measured": true
+    },
+    {
+      "width": 390,
+      "state": "submission-timeout",
+      "violations": 0,
+      "measured": true
+    },
+    {
+      "width": 390,
+      "state": "legacy-offline",
+      "violations": 0,
+      "measured": true
+    },
+    {
+      "width": 390,
+      "state": "legacy-rejected",
+      "violations": 0,
+      "measured": true
+    },
+    {
+      "width": 390,
+      "state": "required-field-error",
+      "violations": 0,
+      "measured": true
+    },
+    {
+      "width": 390,
+      "state": "required-field-corrected",
+      "violations": 0,
+      "measured": true
+    },
+    {
+      "width": 390,
+      "state": "created-workflow",
+      "violations": 0,
+      "measured": true
+    },
+    {
+      "width": 390,
+      "state": "flow-paused",
+      "violations": 0,
+      "measured": true
+    },
+    {
+      "width": 390,
+      "state": "flow-active",
+      "violations": 0,
+      "measured": true
+    },
+    {
+      "width": 390,
+      "state": "workflow-live-menu",
+      "violations": 0,
+      "measured": true
+    },
+    {
+      "width": 390,
+      "state": "workflow-paused",
+      "violations": 0,
+      "measured": true
+    },
+    {
+      "width": 390,
+      "state": "workflow-paused-menu",
+      "violations": 0,
+      "measured": true
+    },
+    {
+      "width": 390,
+      "state": "workflow-active",
+      "violations": 0,
+      "measured": true
+    },
+    {
+      "width": 390,
+      "state": "legacy-pending",
+      "violations": 0,
+      "measured": true
+    },
+    {
+      "width": 390,
+      "state": "legacy-failure",
+      "violations": 0,
+      "measured": true
+    },
+    {
+      "width": 390,
+      "state": "legacy-replayed",
+      "violations": 0,
+      "measured": true
+    },
+    {
+      "width": 390,
+      "state": "decision-field-error",
+      "violations": 0,
+      "measured": true
+    },
+    {
+      "width": 390,
+      "state": "decision-field-corrected",
+      "violations": 0,
+      "measured": true
+    },
+    {
+      "width": 390,
+      "state": "corrected-decision-approved",
+      "violations": 0,
+      "measured": true
+    },
+    {
+      "width": 390,
+      "state": "workflow-failure",
+      "violations": 0,
+      "measured": true
+    },
+    {
+      "width": 390,
+      "state": "cancellation-pending",
+      "violations": 0,
+      "measured": true
+    },
+    {
+      "width": 390,
+      "state": "cancelled",
+      "violations": 0,
+      "measured": true
+    },
+    {
+      "width": 390,
+      "state": "decision-refused-reconciled",
+      "violations": 0,
+      "measured": true
+    },
+    {
+      "width": 390,
+      "state": "run-search",
+      "violations": 0,
+      "measured": true
+    },
+    {
+      "width": 390,
+      "state": "run-search-empty",
+      "violations": 0,
+      "measured": true
+    },
+    {
+      "width": 390,
+      "state": "run-search-filtered",
+      "violations": 0,
+      "measured": true
+    },
+    {
+      "width": 390,
+      "state": "inbox-empty",
+      "violations": 0,
+      "measured": true
+    },
+    {
+      "width": 390,
+      "state": "inbox-addressed",
+      "violations": 0,
+      "measured": true
+    },
+    {
+      "width": 390,
+      "state": "inbox-decision",
+      "violations": 0,
+      "measured": true
+    },
+    {
+      "width": 390,
+      "state": "inbox-resolved",
+      "violations": 0,
+      "measured": true
+    }
+  ],
+  "screenshots": [
+    "1440-pending.png",
+    "1440-offline-before-send.png",
+    "1440-reconciliation-error.png",
+    "1440-checking-latest-state.png",
+    "1440-reconciled-approved.png",
+    "1440-workflow-pending.png",
+    "1440-offline-response-lost.png",
+    "1440-rejected.png",
+    "1440-submitting.png",
+    "1440-submission-timeout.png",
+    "1440-legacy-offline.png",
+    "1440-legacy-rejected.png",
+    "1440-required-field-error.png",
+    "1440-required-field-corrected.png",
+    "1440-created-workflow.png",
+    "1440-flow-paused.png",
+    "1440-flow-active.png",
+    "1440-workflow-live-menu.png",
+    "1440-workflow-paused.png",
+    "1440-workflow-paused-menu.png",
+    "1440-workflow-active.png",
+    "1440-legacy-pending.png",
+    "1440-legacy-failure.png",
+    "1440-legacy-replayed.png",
+    "1440-decision-field-error.png",
+    "1440-decision-field-corrected.png",
+    "1440-corrected-decision-approved.png",
+    "1440-workflow-failure.png",
+    "1440-cancellation-pending.png",
+    "1440-cancelled.png",
+    "1440-decision-refused-reconciled.png",
+    "1440-run-search.png",
+    "1440-run-search-empty.png",
+    "1440-run-search-filtered.png",
+    "1440-inbox-empty.png",
+    "1440-inbox-addressed.png",
+    "1440-inbox-decision.png",
+    "1440-inbox-resolved.png",
+    "390-pending.png",
+    "390-offline-before-send.png",
+    "390-reconciliation-error.png",
+    "390-checking-latest-state.png",
+    "390-reconciled-approved.png",
+    "390-workflow-pending.png",
+    "390-offline-response-lost.png",
+    "390-rejected.png",
+    "390-submitting.png",
+    "390-submission-timeout.png",
+    "390-legacy-offline.png",
+    "390-legacy-rejected.png",
+    "390-required-field-error.png",
+    "390-required-field-corrected.png",
+    "390-created-workflow.png",
+    "390-flow-paused.png",
+    "390-flow-active.png",
+    "390-workflow-live-menu.png",
+    "390-workflow-paused.png",
+    "390-workflow-paused-menu.png",
+    "390-workflow-active.png",
+    "390-legacy-pending.png",
+    "390-legacy-failure.png",
+    "390-legacy-replayed.png",
+    "390-decision-field-error.png",
+    "390-decision-field-corrected.png",
+    "390-corrected-decision-approved.png",
+    "390-workflow-failure.png",
+    "390-cancellation-pending.png",
+    "390-cancelled.png",
+    "390-decision-refused-reconciled.png",
+    "390-run-search.png",
+    "390-run-search-empty.png",
+    "390-run-search-filtered.png",
+    "390-inbox-empty.png",
+    "390-inbox-addressed.png",
+    "390-inbox-decision.png",
+    "390-inbox-resolved.png"
+  ]
+}

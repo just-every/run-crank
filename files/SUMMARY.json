@@ -1,0 +1,19 @@
+{
+  "head": "cf6d2ea660ddf502ce15f72f80e2cbcc88016518",
+  "states": 76,
+  "widths": [
+    1440,
+    390
+  ],
+  "states_per_width": {
+    "1440": 38,
+    "390": 38
+  },
+  "axe_violations": 0,
+  "minimum_measured_focus_contrast": 15.844014377180384,
+  "minimum_measured_field_boundary_contrast": 3.17243544725999,
+  "reflow_width": 320,
+  "field_error_checks": 4,
+  "screenshots_reviewed": 76,
+  "all_measured_checks_passed": true
+}

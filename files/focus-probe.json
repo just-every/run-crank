@@ -1,0 +1,560 @@
+[
+  {
+    "tag": "A",
+    "name": null,
+    "text": "Skip to main content",
+    "rect": {
+      "x": 12,
+      "y": 12,
+      "width": 173.59375,
+      "height": 43.75,
+      "top": 12,
+      "right": 185.59375,
+      "bottom": 55.75,
+      "left": 12
+    },
+    "scrollY": 0,
+    "viewport": 1000,
+    "inViewport": true
+  },
+  {
+    "tag": "A",
+    "name": null,
+    "text": "Crank",
+    "rect": {
+      "x": 40,
+      "y": 13.5,
+      "width": 223.515625,
+      "height": 54,
+      "top": 13.5,
+      "right": 263.515625,
+      "bottom": 67.5,
+      "left": 40
+    },
+    "scrollY": 0,
+    "viewport": 1000,
+    "inViewport": true
+  },
+  {
+    "tag": "A",
+    "name": null,
+    "text": "Search runs",
+    "rect": {
+      "x": 1250.921875,
+      "y": 20.5,
+      "width": 40,
+      "height": 40,
+      "top": 20.5,
+      "right": 1290.921875,
+      "bottom": 60.5,
+      "left": 1250.921875
+    },
+    "scrollY": 0,
+    "viewport": 1000,
+    "inViewport": true
+  },
+  {
+    "tag": "A",
+    "name": null,
+    "text": "Your accountOOwnerowner",
+    "rect": {
+      "x": 1304.921875,
+      "y": 18.5,
+      "width": 107.078125,
+      "height": 44,
+      "top": 18.5,
+      "right": 1412,
+      "bottom": 62.5,
+      "left": 1304.921875
+    },
+    "scrollY": 0,
+    "viewport": 1000,
+    "inViewport": true
+  },
+  {
+    "tag": "A",
+    "name": null,
+    "text": "Flows",
+    "rect": {
+      "x": 9,
+      "y": 102,
+      "width": 147,
+      "height": 52,
+      "top": 102,
+      "right": 156,
+      "bottom": 154,
+      "left": 9
+    },
+    "scrollY": 0,
+    "viewport": 1000,
+    "inViewport": true
+  },
+  {
+    "tag": "A",
+    "name": null,
+    "text": "Runs",
+    "rect": {
+      "x": 9,
+      "y": 158,
+      "width": 147,
+      "height": 52,
+      "top": 158,
+      "right": 156,
+      "bottom": 210,
+      "left": 9
+    },
+    "scrollY": 0,
+    "viewport": 1000,
+    "inViewport": true
+  },
+  {
+    "tag": "A",
+    "name": null,
+    "text": "Connections",
+    "rect": {
+      "x": 9,
+      "y": 214,
+      "width": 147,
+      "height": 52,
+      "top": 214,
+      "right": 156,
+      "bottom": 266,
+      "left": 9
+    },
+    "scrollY": 0,
+    "viewport": 1000,
+    "inViewport": true
+  },
+  {
+    "tag": "A",
+    "name": null,
+    "text": "Approvals5",
+    "rect": {
+      "x": 9,
+      "y": 270,
+      "width": 147,
+      "height": 63.5,
+      "top": 270,
+      "right": 156,
+      "bottom": 333.5,
+      "left": 9
+    },
+    "scrollY": 0,
+    "viewport": 1000,
+    "inViewport": true
+  },
+  {
+    "tag": "A",
+    "name": null,
+    "text": "Operations",
+    "rect": {
+      "x": 9,
+      "y": 337.5,
+      "width": 147,
+      "height": 52,
+      "top": 337.5,
+      "right": 156,
+      "bottom": 389.5,
+      "left": 9
+    },
+    "scrollY": 0,
+    "viewport": 1000,
+    "inViewport": true
+  },
+  {
+    "tag": "A",
+    "name": null,
+    "text": "Skills",
+    "rect": {
+      "x": 9,
+      "y": 393.5,
+      "width": 147,
+      "height": 52,
+      "top": 393.5,
+      "right": 156,
+      "bottom": 445.5,
+      "left": 9
+    },
+    "scrollY": 0,
+    "viewport": 1000,
+    "inViewport": true
+  },
+  {
+    "tag": "A",
+    "name": null,
+    "text": "Move in",
+    "rect": {
+      "x": 9,
+      "y": 449.5,
+      "width": 147,
+      "height": 52,
+      "top": 449.5,
+      "right": 156,
+      "bottom": 501.5,
+      "left": 9
+    },
+    "scrollY": 0,
+    "viewport": 1000,
+    "inViewport": true
+  },
+  {
+    "tag": "A",
+    "name": null,
+    "text": "Access",
+    "rect": {
+      "x": 9,
+      "y": 505.5,
+      "width": 147,
+      "height": 52,
+      "top": 505.5,
+      "right": 156,
+      "bottom": 557.5,
+      "left": 9
+    },
+    "scrollY": 0,
+    "viewport": 1000,
+    "inViewport": true
+  },
+  {
+    "tag": "A",
+    "name": null,
+    "text": "Data",
+    "rect": {
+      "x": 9,
+      "y": 561.5,
+      "width": 147,
+      "height": 52,
+      "top": 561.5,
+      "right": 156,
+      "bottom": 613.5,
+      "left": 9
+    },
+    "scrollY": 0,
+    "viewport": 1000,
+    "inViewport": true
+  },
+  {
+    "tag": "A",
+    "name": null,
+    "text": "Inbox",
+    "rect": {
+      "x": 9,
+      "y": 617.5,
+      "width": 147,
+      "height": 52,
+      "top": 617.5,
+      "right": 156,
+      "bottom": 669.5,
+      "left": 9
+    },
+    "scrollY": 0,
+    "viewport": 1000,
+    "inViewport": true
+  },
+  {
+    "tag": "A",
+    "name": null,
+    "text": "Follow-ups",
+    "rect": {
+      "x": 9,
+      "y": 673.5,
+      "width": 147,
+      "height": 52,
+      "top": 673.5,
+      "right": 156,
+      "bottom": 725.5,
+      "left": 9
+    },
+    "scrollY": 0,
+    "viewport": 1000,
+    "inViewport": true
+  },
+  {
+    "tag": "A",
+    "name": null,
+    "text": "Account",
+    "rect": {
+      "x": 9,
+      "y": 729.5,
+      "width": 147,
+      "height": 52,
+      "top": 729.5,
+      "right": 156,
+      "bottom": 781.5,
+      "left": 9
+    },
+    "scrollY": 0,
+    "viewport": 1000,
+    "inViewport": true
+  },
+  {
+    "tag": "A",
+    "name": null,
+    "text": "Harbor Workshop — replacement valve and industrial maintenan",
+    "rect": {
+      "x": 271,
+      "y": 271.375,
+      "width": 984.921875,
+      "height": 18,
+      "top": 271.375,
+      "right": 1255.921875,
+      "bottom": 289.375,
+      "left": 271
+    },
+    "scrollY": 0,
+    "viewport": 1000,
+    "inViewport": true
+  },
+  {
+    "tag": "INPUT",
+    "name": "reason",
+    "text": "",
+    "rect": {
+      "x": 219,
+      "y": 471.171875,
+      "width": 1168,
+      "height": 40,
+      "top": 471.171875,
+      "right": 1387,
+      "bottom": 511.171875,
+      "left": 219
+    },
+    "scrollY": 0,
+    "viewport": 1000,
+    "inViewport": true
+  },
+  {
+    "tag": "BUTTON",
+    "name": "path",
+    "text": "Approve",
+    "rect": {
+      "x": 219,
+      "y": 525.171875,
+      "width": 90.5625,
+      "height": 42,
+      "top": 525.171875,
+      "right": 309.5625,
+      "bottom": 567.171875,
+      "left": 219
+    },
+    "scrollY": 0,
+    "viewport": 1000,
+    "inViewport": true
+  },
+  {
+    "tag": "BUTTON",
+    "name": "path",
+    "text": "Reject",
+    "rect": {
+      "x": 319.5625,
+      "y": 525.171875,
+      "width": 77.421875,
+      "height": 42,
+      "top": 525.171875,
+      "right": 396.984375,
+      "bottom": 567.171875,
+      "left": 319.5625
+    },
+    "scrollY": 0,
+    "viewport": 1000,
+    "inViewport": true
+  },
+  {
+    "tag": "A",
+    "name": null,
+    "text": "Harbor Workshop — replacement valve and industrial maintenan",
+    "rect": {
+      "x": 271,
+      "y": 597.171875,
+      "width": 984.5625,
+      "height": 18,
+      "top": 597.171875,
+      "right": 1255.5625,
+      "bottom": 615.171875,
+      "left": 271
+    },
+    "scrollY": 0,
+    "viewport": 1000,
+    "inViewport": true
+  },
+  {
+    "tag": "INPUT",
+    "name": "reason",
+    "text": "",
+    "rect": {
+      "x": 219,
+      "y": 796.96875,
+      "width": 1168,
+      "height": 40,
+      "top": 796.96875,
+      "right": 1387,
+      "bottom": 836.96875,
+      "left": 219
+    },
+    "scrollY": 0,
+    "viewport": 1000,
+    "inViewport": true
+  },
+  {
+    "tag": "BUTTON",
+    "name": "path",
+    "text": "Approve",
+    "rect": {
+      "x": 219,
+      "y": 850.96875,
+      "width": 90.5625,
+      "height": 42,
+      "top": 850.96875,
+      "right": 309.5625,
+      "bottom": 892.96875,
+      "left": 219
+    },
+    "scrollY": 0,
+    "viewport": 1000,
+    "inViewport": true
+  },
+  {
+    "tag": "BUTTON",
+    "name": "path",
+    "text": "Reject",
+    "rect": {
+      "x": 319.5625,
+      "y": 850.96875,
+      "width": 77.421875,
+      "height": 42,
+      "top": 850.96875,
+      "right": 396.984375,
+      "bottom": 892.96875,
+      "left": 319.5625
+    },
+    "scrollY": 0,
+    "viewport": 1000,
+    "inViewport": true
+  },
+  {
+    "tag": "A",
+    "name": null,
+    "text": "Synthetic operator rendering investigation · run f7fd323d",
+    "rect": {
+      "x": 271,
+      "y": 922.96875,
+      "width": 392.6875,
+      "height": 18,
+      "top": 922.96875,
+      "right": 663.6875,
+      "bottom": 940.96875,
+      "left": 271
+    },
+    "scrollY": 0,
+    "viewport": 1000,
+    "inViewport": true
+  },
+  {
+    "tag": "TEXTAREA",
+    "name": "decision_edit_details",
+    "text": "{\"description\":\"Replacement valves\",\"quantity\":2}",
+    "rect": {
+      "x": 219,
+      "y": 482.359375,
+      "width": 1168,
+      "height": 90.75,
+      "top": 482.359375,
+      "right": 1387,
+      "bottom": 573.109375,
+      "left": 219
+    },
+    "scrollY": 682,
+    "viewport": 1000,
+    "inViewport": true
+  },
+  {
+    "tag": "INPUT",
+    "name": "reason",
+    "text": "",
+    "rect": {
+      "x": 219,
+      "y": 613.40625,
+      "width": 1168,
+      "height": 40,
+      "top": 613.40625,
+      "right": 1387,
+      "bottom": 653.40625,
+      "left": 219
+    },
+    "scrollY": 682,
+    "viewport": 1000,
+    "inViewport": true
+  },
+  {
+    "tag": "BUTTON",
+    "name": "path",
+    "text": "Approve",
+    "rect": {
+      "x": 219,
+      "y": 667.40625,
+      "width": 90.5625,
+      "height": 42,
+      "top": 667.40625,
+      "right": 309.5625,
+      "bottom": 709.40625,
+      "left": 219
+    },
+    "scrollY": 682,
+    "viewport": 1000,
+    "inViewport": true
+  },
+  {
+    "tag": "BUTTON",
+    "name": "path",
+    "text": "Reject",
+    "rect": {
+      "x": 319.5625,
+      "y": 667.40625,
+      "width": 77.421875,
+      "height": 42,
+      "top": 667.40625,
+      "right": 396.984375,
+      "bottom": 709.40625,
+      "left": 319.5625
+    },
+    "scrollY": 682,
+    "viewport": 1000,
+    "inViewport": true
+  },
+  {
+    "tag": "A",
+    "name": null,
+    "text": "Synthetic operator rendering investigation · run 418892fd",
+    "rect": {
+      "x": 271,
+      "y": 739.40625,
+      "width": 395.875,
+      "height": 18,
+      "top": 739.40625,
+      "right": 666.875,
+      "bottom": 757.40625,
+      "left": 271
+    },
+    "scrollY": 682,
+    "viewport": 1000,
+    "inViewport": true
+  },
+  {
+    "tag": "TEXTAREA",
+    "name": "decision_edit_details",
+    "text": "{\"description\":\"Replacement valves\",\"quantity\":2}",
+    "rect": {
+      "x": 219,
+      "y": 973.796875,
+      "width": 1168,
+      "height": 90.75,
+      "top": 973.796875,
+      "right": 1387,
+      "bottom": 1064.546875,
+      "left": 219
+    },
+    "scrollY": 689,
+    "viewport": 1000,
+    "inViewport": false
+  }
+]

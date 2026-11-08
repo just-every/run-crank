@@ -1,0 +1,201 @@
+diff --git a/docs/ACCESSIBILITY.md b/docs/ACCESSIBILITY.md
+index 8befd86..39b6f7a 100644
+--- a/docs/ACCESSIBILITY.md
++++ b/docs/ACCESSIBILITY.md
+@@ -26,7 +26,9 @@ checks and measured results. `decision-requests.json` retains the decision reque
+ ledger. Neither file contains sign-in links, sessions or credentials.
+ 
+ The states include approvals waiting, offline before send, failed reconciliation,
+-workflow approval detail, committed but lost response, reconciled approval and
++checking the latest state with controls frozen, workflow approval detail,
++committed but lost response, a server-refused stale decision followed by an
++authoritative read, reconciled approval and
+ rejection, bounded submission timeout, legacy pending and rejected detail,
+ required-field error and correction, created workflow, live and paused controls,
+ legacy failed delivery and acknowledged replay, structured decision error and
+@@ -34,13 +36,17 @@ correction, workflow execution error, cancellation, populated and empty search,
+ filtered results, empty and addressed inbox and its resolved decision.
+ 
+ The measured checks visit every enabled visible control in natural DOM order by
+-Tab, including activation of the skip link. Native segmented date and time fields may take several bounded Tab stops within one control. Each needs a computed accessible name, visible
++Tab, including activation of the skip link. Painted operator text must be at
++least 13 CSS pixels; every visible invalid field must retain its name and a
++visible alert linked through its accessible description. Native segmented date and time fields may take several bounded Tab stops within one control. Each needs a computed accessible name, visible
+ focus of at least 3:1 contrast, an exposed hit point and its complete bounds in
+ the viewport. Positive tabindex is refused. Focused icon controls expose their
+ named tooltips. On hover-capable pointing devices, help stays visible when the pointer moves onto it and Escape dismisses it. Keyboard help is checked at both widths. Each target is at least 24 by 24 CSS pixels, has equivalent
+ spacing, is an inline text link, or has an equivalent larger link to the same
+ run. Reflow is measured at 320 CSS pixels, including nested scroll containers;
+-text fields retain their ordinary single-line input behavior.
++text fields retain their ordinary single-line input behavior. Two animation
++frames after restoring the viewport let mobile Chromium paint its restored clip
++before the full-page capture; the measurements and visible errors are unchanged.
+ 
+ For axe's unresolved image and gradient backgrounds, the journey measures the
+ actual background pixels behind painted text (excluding portions clipped or covered by an open popover), temporarily making foreground text
+@@ -50,7 +56,10 @@ fill. Disabled controls are exempt from the contrast requirement. Textual state
+ labels and atomic polite decision announcements are inspected programmatically.
+ Legacy delivery errors and workflow execution errors have alert semantics. Required-field and malformed JSON errors are identified in text, announced as
+ alerts and associated with their control through `aria-describedby` and
+-`aria-invalid`; correction clears the error. Invalid JSON sends no decision.
++`aria-invalid`; correction clears the error. Invalid JSON sends no decision. A held authoritative read proves the checking
++announcement while actions stay frozen; a decision already completed by another
++current session is refused by the real server and announced after reconciliation
++without a second decision or a replayed request.
+ 
+ ## Criteria within the audited doors
+ 
+@@ -124,7 +133,7 @@ dark ink on orange, and footer text uses the readable body color. Secondary edit
+ keyboard outlines have sufficient contrast. A skip link bypasses repeated shell
+ navigation. Long headings wrap, the header retains its controls beside long breadcrumbs, run-ID focus remains above the phone row link, and decision notices have space for their focus
+ outline. Standalone links have their own 24-pixel targets. Field errors persist visibly after the native validity popup closes and
+-clear when edited. Tooltips can be dismissed without moving focus. Popovers close when keyboard focus leaves them, so they cannot cover the next target.
++clear when edited. Tooltips can be dismissed without moving focus. Popovers close when keyboard focus leaves them, so they cannot cover the next target. Native textarea focus now reveals the complete control rather than only its first line, without changing Tab order or activating an action.
+ 
+ Existing one-decision, offline, lost-response, authoritative-read, input-retention
+ and hidden-path legacy assertions remain in the registered journey unchanged.
+diff --git a/public/decision.js b/public/decision.js
+index 597e693..ecbe677 100644
+--- a/public/decision.js
++++ b/public/decision.js
+@@ -204,3 +204,14 @@ document.addEventListener('keydown', event => {
+   const menu = event.target instanceof Element && event.target.closest('details.menu[open]');
+   if (menu) { menu.open = false; menu.querySelector('summary')?.focus(); }
+ });
++
++// Native textarea focus may reveal only its first line. Keep the complete
++// control visible without changing focus, tab order or the user's action.
++document.addEventListener('focusin', event => {
++  const control = event.target;
++  if (!(control instanceof HTMLElement) || !control.matches('a[href],button,input:not([type=hidden]),select,textarea,summary')) return;
++  const rect = control.getBoundingClientRect();
++  if (rect.top < 8 || rect.bottom > innerHeight - 8 || rect.left < 8 || rect.right > innerWidth - 8) {
++    control.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'instant' });
++  }
++});
+diff --git a/sources.lock.json b/sources.lock.json
+index dc2501d..3e7c0dc 100644
+--- a/sources.lock.json
++++ b/sources.lock.json
+@@ -196,7 +196,7 @@
+       "executable": false
+     },
+     "docs/ACCESSIBILITY.md": {
+-      "sha256": "ea3793e71243e2f8e09d14e2c1a1e8c6a05172127a557adbff471ad6b71fcd38",
++      "sha256": "60c2fe0b16d8b6f8f0305bc31aa685ddb83ce689892d038e32f09df23b34abdf",
+       "executable": false
+     },
+     "docs/AGENT-DOOR.md": {
+@@ -1780,7 +1780,7 @@
+       "executable": false
+     },
+     "public/decision.js": {
+-      "sha256": "b05e687dd93bf48f9e74d15c03b6b7c06fff31f4dc1781ce426be415f2c3e272",
++      "sha256": "86d0068e9f4da6014d31919f1c805d35d6c2d0b606316e4ab3b69877c60a5ed5",
+       "executable": false
+     },
+     "public/favicon.ico": {
+@@ -6880,7 +6880,7 @@
+       "executable": false
+     },
+     "tests/decision-browser.mjs": {
+-      "sha256": "b875cbff63d5da144904447173f2d449571b8f7d5d28b129827700c5940307d4",
++      "sha256": "65f1b4ebd1b0068367933306c8e2b40b75ee84ff09a70cbf02d6c76f52c8c165",
+       "executable": false
+     },
+     "tests/deployment.test.mjs": {
+diff --git a/tests/decision-browser.mjs b/tests/decision-browser.mjs
+index fda9b4a..c21d28b 100644
+--- a/tests/decision-browser.mjs
++++ b/tests/decision-browser.mjs
+@@ -193,13 +193,20 @@ async function measuredChecks(width, state) {
+       const a = lum(style.borderTopColor), b = lum(style.backgroundColor);
+       return { name: element.name, ratio: (Math.max(a,b)+.05)/(Math.min(a,b)+.05), width: parseFloat(style.borderTopWidth) };
+     });
++    const fieldErrors = [...document.querySelectorAll('[aria-invalid=true]')].filter(visible).map(element => {
++      const descriptions = (element.getAttribute('aria-describedby') ?? '').split(/\s+/).map(id => document.getElementById(id)).filter(Boolean);
++      return { name: axe.commons.text.accessibleText(element), announced: descriptions.some(description => visible(description) && description.matches('[role=alert]') && description.textContent.trim().length > 0) };
++    });
++    const smallText = [...document.querySelectorAll('main *,header *,aside *')].filter(element => visible(element) && [...element.childNodes].some(node => node.nodeType === 3 && node.textContent.trim()) && parseFloat(getComputedStyle(element).fontSize) < 13).map(element => ({ text: element.textContent.trim().slice(0,80), pixels: getComputedStyle(element).fontSize }));
+     const notices = [...document.querySelectorAll('[data-decision-status]')].filter(visible).map(element => ({ role: element.getAttribute('role'), live: element.getAttribute('aria-live'), atomic: element.getAttribute('aria-atomic'), text: element.textContent.trim() }));
+     window.__auditFocus = { previous: document.activeElement, x: scrollX, y: scrollY, controls, openDetails: [...document.querySelectorAll('details[open]')] };
+-    return { controls: controls.length, unnamed, positiveTabindex, emptyStates, small, edges, notices, missingTooltips, namedControls: namedControls.length };
++    return { controls: controls.length, unnamed, positiveTabindex, emptyStates, small, edges, notices, fieldErrors, smallText, missingTooltips, namedControls: namedControls.length };
+   }, focusable);
+   assert.deepEqual(checks.unnamed, [], `${state}: every control has a name`);
+   assert.deepEqual(checks.missingTooltips, [], `${state}: icon-only controls have tooltips`);
+   assert.deepEqual(checks.positiveTabindex, [], `${state}: natural DOM focus order`);
++  assert.deepEqual(checks.smallText, [], `${state}: readable operator text`);
++  for (const error of checks.fieldErrors) assert.ok(error.announced && error.name, `${state}: named field has a linked announced error ${JSON.stringify(error)}`);
+   assert.deepEqual(checks.emptyStates, [], `${state}: states carry words`);
+   assert.deepEqual(checks.small, [], `${state}: target size or spacing`);
+   for (const edge of checks.edges) assert.ok(edge.width >= 1 && edge.ratio >= 3, `${state}: field boundary ${JSON.stringify(edge)}`);
+@@ -299,6 +306,9 @@ async function measuredChecks(width, state) {
+     delete window.__spacingStyles;
+   });
+   await page.setViewportSize(viewport);
++  // Mobile Chromium needs the restored viewport to paint before a full-page
++  // capture; otherwise its previous compositor clip can hide visible content.
++  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+   assert.equal(spacingReflow, true, `${state}: increased text spacing reflows`);
+   assert.equal(reflow.document, true, `${state}: 320 CSS pixel reflow`);
+   assert.deepEqual(reflow.scrollContainers, [], `${state}: no two-dimensional scrolling`);
+@@ -393,7 +403,8 @@ try {
+     const context = await browser.newContext({ storageState, viewport: { width, height: 1000 }, hasTouch: touch, isMobile: touch });
+     page = await context.newPage(); page.setDefaultTimeout(10000);
+     const events = [], routeErrors = [];
+-    let failReads = false, postMode = '', committed = false, heldRelease;
++    let failReads = false, postMode = '', committed = false, heldRelease, readRelease;
++    let holdNextRead = false;
+     const posts = () => events.filter(event => event.method === 'POST');
+     const reads = () => events.filter(event => event.method === 'GET');
+     page.on('request', request => {
+@@ -419,6 +430,10 @@ try {
+           await new Promise(resolve => { heldRelease = resolve; });
+           await route.abort('timedout').catch(() => {}); return;
+         }
++        if (request.method() === 'GET' && holdNextRead) {
++          holdNextRead = false;
++          await new Promise(resolve => { readRelease = resolve; });
++        }
+         if (request.method() === 'GET' && failReads) { await route.abort('internetdisconnected'); return; }
+         await route.continue();
+       } catch (error) { routeErrors.push(error.message); await route.abort().catch(() => {}); }
+@@ -444,9 +459,15 @@ try {
+     await frozen(page, note);
+     assert.equal(posts().length, initialPosts);
+     await shot(width, 'reconciliation-error');
+-    failReads = false;
++    failReads = false; holdNextRead = true;
+     await page.evaluate(() => { const marker = document.createElement('span'); marker.id = 'journey-old-body'; document.body.append(marker); });
+     await activate(page.locator('[data-decision-refresh]'), touch);
++    await expect(status(page)).toContainText('Checking the latest state');
++    await expect(page.locator('[data-decision-refresh]')).toBeDisabled();
++    await expect.poll(() => typeof readRelease).toBe('function');
++    await shot(width, 'checking-latest-state');
++    assert.equal(posts().length, initialPosts, 'checking state sends no decision');
++    readRelease();
+     await expect(formFor(page, approved.id).getByRole('button', { name: 'Approve', exact: true })).toBeEnabled();
+     await expect(page.locator('#journey-old-body')).toHaveCount(0);
+     assert.equal(posts().length, initialPosts, 'manual reconciliation only reads');
+@@ -647,6 +668,20 @@ try {
+     assert.equal((await send('workflow-runs/' + cancelled.id)).steps.filter(step => step.path === 'record').length, 0);
+     await shot(width, 'cancelled');
+ 
++    // Another legitimate review can finish while this browser still shows the
++    // old proposal. The real server refuses it and the UI announces a fresh read.
++    const stale = await newRun(`Northern coastal workshop concurrent review — ${width}`);
++    await page.goto(origin + '/app/workflow-runs/' + stale.id);
++    const completedNote = 'Reviewed by another current session before this page refreshed.';
++    await send('workflow-runs/' + stale.id + '/approve', { path: 'review', digest: stale.waits[0].proposal_digest, reason: completedNote });
++    const beforeRefusal = posts().length;
++    await activate(formFor(page, stale.id).getByRole('button', { name: 'Reject', exact: true }), touch);
++    await expect(status(page)).toContainText('The decision was refused. Latest state loaded');
++    await expect(formFor(page, stale.id)).toHaveCount(0);
++    await resolved(stale.id, true, completedNote);
++    assert.equal(posts().length, beforeRefusal + 1, 'refused stale decision is not retried');
++    await shot(width, 'decision-refused-reconciled');
++
+     await page.goto(origin + '/app/runs');
+     await shot(width, 'run-search');
+     const searchForm = page.locator('#run-search');

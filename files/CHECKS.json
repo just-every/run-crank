@@ -1,0 +1,75 @@
+{
+  "head": "cf6d2ea660ddf502ce15f72f80e2cbcc88016518",
+  "build": {
+    "command": "npx -y @runeditrun/rer build",
+    "exit": 0
+  },
+  "typecheck": {
+    "command": "pnpm typecheck",
+    "exit": 0
+  },
+  "first_party": {
+    "command": "npx -y @runeditrun/rer check --profile first-party",
+    "exit": 0
+  },
+  "views": {
+    "commands": [
+      "node src/base/contract-docs.mjs write",
+      "node src/base/contract-docs.mjs check"
+    ],
+    "exit": 0,
+    "restored": [
+      "ACCEPTANCE.md",
+      "docs/CLAIMS.md"
+    ]
+  },
+  "lock": {
+    "command": "node node_modules/@runeditrun/rer/edition-authoring/cli.mjs check",
+    "exit": 0,
+    "ok": true
+  },
+  "migration_ledger": {
+    "command": null,
+    "exit": 0,
+    "note": "No migration changed"
+  },
+  "counts": {
+    "before": {
+      "done": 32,
+      "partial": 50,
+      "missing": 17
+    },
+    "after": {
+      "done": 32,
+      "partial": 50,
+      "missing": 17
+    },
+    "registrations_before": 200,
+    "registrations_after": 200
+  },
+  "contract_diff": "empty",
+  "original_assertions_removed": 0,
+  "policy_defaults": [],
+  "main_base": "7ece4aec67ea1fa9328aad8632d01a4c541fe064",
+  "product_head": "cf6d2ea660ddf502ce15f72f80e2cbcc88016518",
+  "generated_views_equal_main": true,
+  "contract_equal_main": true,
+  "browser": {
+    "status": "passed",
+    "command": "CRANK_CHROMIUM_EXECUTABLE=/usr/bin/chromium CRANK_EVIDENCE=./../packet/browser timeout 1800 node tests/decision-browser.mjs",
+    "exit": 0,
+    "states": 76,
+    "axe_violations": 0,
+    "sourceClean": true
+  },
+  "identities": {
+    "candidate_commits": 8,
+    "all_fleet": true,
+    "trailers": []
+  },
+  "main_integration": {
+    "kind": "merge",
+    "main": "7ece4aec67ea1fa9328aad8632d01a4c541fe064",
+    "published_history_rewritten": false
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "repository": "just-every/run-crank",
+  "branch": "cloud/sx-crank-c-f98",
+  "head": "cf6d2ea660ddf502ce15f72f80e2cbcc88016518",
+  "tree": "eee7502ec72ddec5938229f548aeb43814084a90",
+  "parents": [
+    "454a573f6671bc4a467cb1a0edc3853368dcdd05",
+    "7ece4aec67ea1fa9328aad8632d01a4c541fe064"
+  ],
+  "main_base": "7ece4aec67ea1fa9328aad8632d01a4c541fe064",
+  "changed_files": [
+    "docs/ACCESSIBILITY.md",
+    "public/decision.js",
+    "sources.lock.json",
+    "tests/decision-browser.mjs"
+  ],
+  "pr": null,
+  "pushed": true,
+  "publication_scan": "Mac lander pending",
+  "run_site": "Mac lander pending"
+}

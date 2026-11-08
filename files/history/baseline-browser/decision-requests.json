@@ -1,0 +1,398 @@
+[
+  {
+    "width": 1440,
+    "input": "keyboard Enter",
+    "requests": [
+      {
+        "method": "GET",
+        "path": "/app/approvals"
+      },
+      {
+        "method": "GET",
+        "path": "/app/approvals"
+      },
+      {
+        "method": "GET",
+        "path": "/app/approvals"
+      },
+      {
+        "method": "POST",
+        "path": "/api/crank/workflow-runs/c5aa741d-8d5c-4f44-88ef-ff68744ba774/approve"
+      },
+      {
+        "method": "GET",
+        "path": "/app/approvals"
+      },
+      {
+        "method": "GET",
+        "path": "/app/approvals"
+      },
+      {
+        "method": "GET",
+        "path": "/app/workflow-runs/c5aa741d-8d5c-4f44-88ef-ff68744ba774"
+      },
+      {
+        "method": "GET",
+        "path": "/app/workflow-runs/59253704-1f1e-4e65-884c-5666c0a8397a"
+      },
+      {
+        "method": "POST",
+        "path": "/api/crank/workflow-runs/59253704-1f1e-4e65-884c-5666c0a8397a/reject"
+      },
+      {
+        "method": "GET",
+        "path": "/app/workflow-runs/59253704-1f1e-4e65-884c-5666c0a8397a"
+      },
+      {
+        "method": "GET",
+        "path": "/app/workflow-runs/59253704-1f1e-4e65-884c-5666c0a8397a"
+      },
+      {
+        "method": "GET",
+        "path": "/app/workflow-runs/59253704-1f1e-4e65-884c-5666c0a8397a"
+      },
+      {
+        "method": "GET",
+        "path": "/app/workflow-runs/1a07e051-46e4-4b52-99c8-1a77957f3617"
+      },
+      {
+        "method": "POST",
+        "path": "/api/crank/workflow-runs/1a07e051-46e4-4b52-99c8-1a77957f3617/approve"
+      },
+      {
+        "method": "GET",
+        "path": "/app/workflow-runs/1a07e051-46e4-4b52-99c8-1a77957f3617"
+      },
+      {
+        "method": "POST",
+        "path": "/api/crank/workflow-runs/1a07e051-46e4-4b52-99c8-1a77957f3617/reject"
+      },
+      {
+        "method": "GET",
+        "path": "/app/workflow-runs/1a07e051-46e4-4b52-99c8-1a77957f3617"
+      },
+      {
+        "method": "GET",
+        "path": "/app/workflow-runs/1a07e051-46e4-4b52-99c8-1a77957f3617"
+      },
+      {
+        "method": "GET",
+        "path": "/app/runs/aa0fce0d-d935-4925-8bf6-e59146c55d33"
+      },
+      {
+        "method": "GET",
+        "path": "/app/runs/aa0fce0d-d935-4925-8bf6-e59146c55d33"
+      },
+      {
+        "method": "POST",
+        "path": "/api/crank/runs/aa0fce0d-d935-4925-8bf6-e59146c55d33/reject"
+      },
+      {
+        "method": "GET",
+        "path": "/app/runs/aa0fce0d-d935-4925-8bf6-e59146c55d33"
+      },
+      {
+        "method": "GET",
+        "path": "/app/runs/aa0fce0d-d935-4925-8bf6-e59146c55d33"
+      },
+      {
+        "method": "GET",
+        "path": "/app/workflows/e146c8d2-7632-400c-966d-a11561cda90c"
+      },
+      {
+        "method": "POST",
+        "path": "/api/crank/flows/6c221c7c-d085-435a-966c-93a5713d4bf6/pause"
+      },
+      {
+        "method": "POST",
+        "path": "/api/crank/flows/6c221c7c-d085-435a-966c-93a5713d4bf6/activate"
+      },
+      {
+        "method": "GET",
+        "path": "/app/workflows/7808b056-40a4-4051-8d5f-113aaeb78cb5"
+      },
+      {
+        "method": "POST",
+        "path": "/api/crank/workflows/7808b056-40a4-4051-8d5f-113aaeb78cb5/pause"
+      },
+      {
+        "method": "GET",
+        "path": "/app/workflows/7808b056-40a4-4051-8d5f-113aaeb78cb5"
+      },
+      {
+        "method": "POST",
+        "path": "/api/crank/workflows/7808b056-40a4-4051-8d5f-113aaeb78cb5/resume"
+      },
+      {
+        "method": "GET",
+        "path": "/app/workflows/7808b056-40a4-4051-8d5f-113aaeb78cb5"
+      },
+      {
+        "method": "GET",
+        "path": "/app/runs/a7412dcc-e47a-4716-b2e7-b939cc4495bb"
+      },
+      {
+        "method": "POST",
+        "path": "/api/crank/runs/a7412dcc-e47a-4716-b2e7-b939cc4495bb/approve"
+      },
+      {
+        "method": "GET",
+        "path": "/app/runs/a7412dcc-e47a-4716-b2e7-b939cc4495bb"
+      },
+      {
+        "method": "GET",
+        "path": "/app/runs/a7412dcc-e47a-4716-b2e7-b939cc4495bb"
+      },
+      {
+        "method": "POST",
+        "path": "/api/crank/runs/a7412dcc-e47a-4716-b2e7-b939cc4495bb/replay"
+      },
+      {
+        "method": "GET",
+        "path": "/app/runs/a7412dcc-e47a-4716-b2e7-b939cc4495bb"
+      },
+      {
+        "method": "GET",
+        "path": "/app/workflow-runs/952cc497-20cf-4e94-958a-338476b7724e"
+      },
+      {
+        "method": "POST",
+        "path": "/api/crank/workflow-runs/952cc497-20cf-4e94-958a-338476b7724e/approve"
+      },
+      {
+        "method": "GET",
+        "path": "/app/workflow-runs/952cc497-20cf-4e94-958a-338476b7724e"
+      },
+      {
+        "method": "GET",
+        "path": "/app/workflow-runs/952cc497-20cf-4e94-958a-338476b7724e"
+      },
+      {
+        "method": "GET",
+        "path": "/app/workflow-runs/ad3a0efb-39e3-406a-94df-1c1e2c7ecf5e"
+      },
+      {
+        "method": "GET",
+        "path": "/app/workflow-runs/7da87f03-a893-4eb2-9c97-38cdbc785ab8"
+      },
+      {
+        "method": "POST",
+        "path": "/api/crank/workflow-runs/7da87f03-a893-4eb2-9c97-38cdbc785ab8/cancel"
+      },
+      {
+        "method": "GET",
+        "path": "/app/workflow-runs/7da87f03-a893-4eb2-9c97-38cdbc785ab8"
+      },
+      {
+        "method": "GET",
+        "path": "/app/runs"
+      },
+      {
+        "method": "GET",
+        "path": "/app/runs"
+      },
+      {
+        "method": "GET",
+        "path": "/app/runs"
+      }
+    ]
+  },
+  {
+    "width": 390,
+    "input": "Playwright touch emulation",
+    "requests": [
+      {
+        "method": "GET",
+        "path": "/app/approvals"
+      },
+      {
+        "method": "GET",
+        "path": "/app/approvals"
+      },
+      {
+        "method": "GET",
+        "path": "/app/approvals"
+      },
+      {
+        "method": "POST",
+        "path": "/api/crank/workflow-runs/abba3f98-3cde-4108-ad7f-f0611c84012f/approve"
+      },
+      {
+        "method": "GET",
+        "path": "/app/approvals"
+      },
+      {
+        "method": "GET",
+        "path": "/app/approvals"
+      },
+      {
+        "method": "GET",
+        "path": "/app/workflow-runs/abba3f98-3cde-4108-ad7f-f0611c84012f"
+      },
+      {
+        "method": "GET",
+        "path": "/app/workflow-runs/2cacce20-950c-4162-b557-c3095ab866e5"
+      },
+      {
+        "method": "POST",
+        "path": "/api/crank/workflow-runs/2cacce20-950c-4162-b557-c3095ab866e5/reject"
+      },
+      {
+        "method": "GET",
+        "path": "/app/workflow-runs/2cacce20-950c-4162-b557-c3095ab866e5"
+      },
+      {
+        "method": "GET",
+        "path": "/app/workflow-runs/2cacce20-950c-4162-b557-c3095ab866e5"
+      },
+      {
+        "method": "GET",
+        "path": "/app/workflow-runs/2cacce20-950c-4162-b557-c3095ab866e5"
+      },
+      {
+        "method": "GET",
+        "path": "/app/workflow-runs/88484d25-d378-4bdb-9697-fe39535fac4f"
+      },
+      {
+        "method": "POST",
+        "path": "/api/crank/workflow-runs/88484d25-d378-4bdb-9697-fe39535fac4f/approve"
+      },
+      {
+        "method": "GET",
+        "path": "/app/workflow-runs/88484d25-d378-4bdb-9697-fe39535fac4f"
+      },
+      {
+        "method": "POST",
+        "path": "/api/crank/workflow-runs/88484d25-d378-4bdb-9697-fe39535fac4f/reject"
+      },
+      {
+        "method": "GET",
+        "path": "/app/workflow-runs/88484d25-d378-4bdb-9697-fe39535fac4f"
+      },
+      {
+        "method": "GET",
+        "path": "/app/workflow-runs/88484d25-d378-4bdb-9697-fe39535fac4f"
+      },
+      {
+        "method": "GET",
+        "path": "/app/runs/a51559e1-3b96-46fb-bb03-98bb21d2f044"
+      },
+      {
+        "method": "GET",
+        "path": "/app/runs/a51559e1-3b96-46fb-bb03-98bb21d2f044"
+      },
+      {
+        "method": "POST",
+        "path": "/api/crank/runs/a51559e1-3b96-46fb-bb03-98bb21d2f044/reject"
+      },
+      {
+        "method": "GET",
+        "path": "/app/runs/a51559e1-3b96-46fb-bb03-98bb21d2f044"
+      },
+      {
+        "method": "GET",
+        "path": "/app/runs/a51559e1-3b96-46fb-bb03-98bb21d2f044"
+      },
+      {
+        "method": "GET",
+        "path": "/app/workflows/82227445-8f23-4149-b30e-4c339a421dfb"
+      },
+      {
+        "method": "POST",
+        "path": "/api/crank/flows/8bfa64b2-af35-40ea-87be-a247b51dd1a6/pause"
+      },
+      {
+        "method": "POST",
+        "path": "/api/crank/flows/8bfa64b2-af35-40ea-87be-a247b51dd1a6/activate"
+      },
+      {
+        "method": "GET",
+        "path": "/app/workflows/7808b056-40a4-4051-8d5f-113aaeb78cb5"
+      },
+      {
+        "method": "POST",
+        "path": "/api/crank/workflows/7808b056-40a4-4051-8d5f-113aaeb78cb5/pause"
+      },
+      {
+        "method": "GET",
+        "path": "/app/workflows/7808b056-40a4-4051-8d5f-113aaeb78cb5"
+      },
+      {
+        "method": "POST",
+        "path": "/api/crank/workflows/7808b056-40a4-4051-8d5f-113aaeb78cb5/resume"
+      },
+      {
+        "method": "GET",
+        "path": "/app/workflows/7808b056-40a4-4051-8d5f-113aaeb78cb5"
+      },
+      {
+        "method": "GET",
+        "path": "/app/runs/7f5bf5a1-783c-411f-b225-8537ccef8f57"
+      },
+      {
+        "method": "POST",
+        "path": "/api/crank/runs/7f5bf5a1-783c-411f-b225-8537ccef8f57/approve"
+      },
+      {
+        "method": "GET",
+        "path": "/app/runs/7f5bf5a1-783c-411f-b225-8537ccef8f57"
+      },
+      {
+        "method": "GET",
+        "path": "/app/runs/7f5bf5a1-783c-411f-b225-8537ccef8f57"
+      },
+      {
+        "method": "POST",
+        "path": "/api/crank/runs/7f5bf5a1-783c-411f-b225-8537ccef8f57/replay"
+      },
+      {
+        "method": "GET",
+        "path": "/app/runs/7f5bf5a1-783c-411f-b225-8537ccef8f57"
+      },
+      {
+        "method": "GET",
+        "path": "/app/workflow-runs/19144dfd-29cd-4bd4-9de2-d83bcb3eaed9"
+      },
+      {
+        "method": "POST",
+        "path": "/api/crank/workflow-runs/19144dfd-29cd-4bd4-9de2-d83bcb3eaed9/approve"
+      },
+      {
+        "method": "GET",
+        "path": "/app/workflow-runs/19144dfd-29cd-4bd4-9de2-d83bcb3eaed9"
+      },
+      {
+        "method": "GET",
+        "path": "/app/workflow-runs/19144dfd-29cd-4bd4-9de2-d83bcb3eaed9"
+      },
+      {
+        "method": "GET",
+        "path": "/app/workflow-runs/041b980f-80f7-4e75-aafb-aadddb68684e"
+      },
+      {
+        "method": "GET",
+        "path": "/app/workflow-runs/aa37910a-d60c-43e7-b449-d8c2d8118917"
+      },
+      {
+        "method": "POST",
+        "path": "/api/crank/workflow-runs/aa37910a-d60c-43e7-b449-d8c2d8118917/cancel"
+      },
+      {
+        "method": "GET",
+        "path": "/app/workflow-runs/aa37910a-d60c-43e7-b449-d8c2d8118917"
+      },
+      {
+        "method": "GET",
+        "path": "/app/runs"
+      },
+      {
+        "method": "GET",
+        "path": "/app/runs"
+      },
+      {
+        "method": "GET",
+        "path": "/app/runs"
+      }
+    ]
+  }
+]
