@@ -6983,6 +6983,10 @@
       "sha256": "84bf67de2ee3fd9a9564cfe64718e7f1d1c575cf15690f53a81ad30262426d37",
       "executable": false
     },
+    "tests/fixtures/main-agent-archive.rer.gz": {
+      "sha256": "65d9f72973d37b2b364f6a5180bc72aff3c7fc9a45f5e272d9bca6409fccd8d0",
+      "executable": false
+    },
     "tests/followups-browser.mjs": {
       "sha256": "3275aaba4cfd91274102335ee220615ce29d26174e07fa517fb2737af3fffd8a",
       "executable": false
