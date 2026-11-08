@@ -10,6 +10,16 @@ export interface AuthoringScope {
   customer_id: string; item_id: string; amount_usd: string; country: 'US'; tools: string[]
 }
 export interface Question { id: string; question: string; answer?: string }
+/** This question belongs to the native review, never to the model. Answers are
+ * valid only for the displayed pair of fetched-record mappings. */
+export function mappingQuestions(graph: Graph, questions: Question[]): Question[] {
+  const country = (graph.steps[1].when as { field: string }[][])[0][0].field
+  const businessKey = (graph.steps[2].input as Record<string, unknown>).business_key
+  const question = `Confirm the fetched country field ${country} and stable invoice business key ${businessKey} before promotion.`
+  const previous = questions.find(q => q.id === 'native_mapping_confirmation')
+  return [{ id: 'native_mapping_confirmation', question, ...(previous?.question === question && previous.answer ? { answer: previous.answer } : {}) },
+    ...questions.filter(q => q.id !== 'native_mapping_confirmation')]
+}
 export function exact(value: unknown, keys: string[], label: string): asserts value is Record<string, unknown> {
   requireValue(isObject(value) && Object.keys(value).every(key => keys.includes(key)), `${label} contains unsupported fields`, 422)
 }

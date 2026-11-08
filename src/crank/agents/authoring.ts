@@ -7,7 +7,7 @@ import { createWorkflow, publishWorkflow } from '../workflows/store'
 import { testWorkflow } from '../workflows/testing'
 import { generateProposal } from './authoring-model'
 import { authoringDigest, authoringState, saveAuthoring, type AuthoringRecord } from './authoring-record'
-import { exact, samplesOf, scopeOf, scopedGraph } from './authoring-schema'
+import { exact, mappingQuestions, samplesOf, scopeOf, scopedGraph } from './authoring-schema'
 
 export async function generateAuthoring(env: CrankEnv, actor: Actor, input: Record<string, unknown>) {
   requireOwner(actor)
@@ -53,7 +53,7 @@ export async function reviseAuthoring(env: CrankEnv, actor: Actor, workflowId: s
   const answers = input.answers ?? {}; exact(answers, state.record.questions.map(q => q.id), 'Answers')
   const questions = state.record.questions.map(q => answers[q.id] === undefined ? q : typeof answers[q.id] === 'string' && !(answers[q.id] as string).trim()
     ? { id: q.id, question: q.question } : { ...q, answer: text(answers[q.id], 'Answer', 2000) })
-  const record = { ...state.record, samples, questions, tested: null }
+  const record = { ...state.record, samples, questions: mappingQuestions(graph, questions), tested: null }
   await saveAuthoring(env, actor, state, graph, record)
   return readAuthoring(env, actor, workflowId)
 }
@@ -67,7 +67,8 @@ export async function testAuthoring(env: CrankEnv, actor: Actor, workflowId: str
     const run = await testWorkflow(env, actor, workflowId, { bindings, input: sample }, structuredClone(graph))
     runIds.push(run.id); passed = passed && run.status === 'succeeded'
   }
-  const record = { ...state.record, tested: passed ? { digest: await authoringDigest(graph, state.record), run_ids: runIds } : null }
+  const reviewed = { ...state.record, questions: mappingQuestions(graph, state.record.questions) }
+  const record = { ...reviewed, tested: passed ? { digest: await authoringDigest(graph, reviewed), run_ids: runIds } : null }
   await saveAuthoring(env, actor, state, graph, record)
   return { ...await readAuthoring(env, actor, workflowId), test_runs: runIds }
 }
