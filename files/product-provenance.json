@@ -1,0 +1,99 @@
+{
+  "repository": "just-every/run-crank",
+  "branch": "cloud/sx-crank-c-f94",
+  "head": "52f8599de3a7083337a052d9416600d5380755ea",
+  "startingHead": "52f8599de3a7083337a052d9416600d5380755ea",
+  "newProductCommits": 0,
+  "reason": "The pinned continuation already implements this exact scoped correction. It landed on main while this task independently reran its proof. No no-op product commit was created.",
+  "productPush": "success; cloud push guard attempt 1",
+  "remoteRefs": [
+    "52f8599de3a7083337a052d9416600d5380755ea\trefs/heads/cloud/sx-crank-c-f94",
+    "52f8599de3a7083337a052d9416600d5380755ea\trefs/heads/main"
+  ],
+  "workingTree": "",
+  "counts": {
+    "before": {
+      "done": 32,
+      "partial": 50,
+      "missing": 17,
+      "tests": 200
+    },
+    "after": {
+      "done": 32,
+      "partial": 50,
+      "missing": 17,
+      "tests": 200
+    }
+  },
+  "contractStatusChanges": [],
+  "sourceLock": "fresh under installed pinned tool; unchanged from candidate",
+  "publicationScan": {
+    "commit": "52f8599de3a7083337a052d9416600d5380755ea",
+    "complete": "unestablished in this cloud task",
+    "historyScanned": "unestablished in this cloud task",
+    "findings": "unestablished in this cloud task",
+    "owner": "maintained fleet lander"
+  },
+  "ci": [
+    {
+      "conclusion": null,
+      "event": "push",
+      "head_branch": "cloud/sx-crank-c-f94",
+      "head_sha": "52f8599de3a7083337a052d9416600d5380755ea",
+      "html_url": "https://github.com/just-every/run-crank/actions/runs/42499821827",
+      "id": 42499821827,
+      "name": "Verify",
+      "status": "in_progress"
+    },
+    {
+      "conclusion": "skipped",
+      "event": "push",
+      "head_branch": "main",
+      "head_sha": "52f8599de3a7083337a052d9416600d5380755ea",
+      "html_url": "https://github.com/just-every/run-crank/actions/runs/42499438687",
+      "id": 42499438687,
+      "name": "Run demo",
+      "status": "completed"
+    },
+    {
+      "conclusion": "success",
+      "event": "push",
+      "head_branch": "main",
+      "head_sha": "52f8599de3a7083337a052d9416600d5380755ea",
+      "html_url": "https://github.com/just-every/run-crank/actions/runs/42499438688",
+      "id": 42499438688,
+      "name": "Run site",
+      "status": "completed"
+    },
+    {
+      "conclusion": "success",
+      "event": "push",
+      "head_branch": "main",
+      "head_sha": "52f8599de3a7083337a052d9416600d5380755ea",
+      "html_url": "https://github.com/just-every/run-crank/actions/runs/42499438495",
+      "id": 42499438495,
+      "name": "Verify",
+      "status": "completed"
+    },
+    {
+      "conclusion": "success",
+      "event": "dynamic",
+      "head_branch": "main",
+      "head_sha": "52f8599de3a7083337a052d9416600d5380755ea",
+      "html_url": "https://github.com/just-every/run-crank/actions/runs/42499438340",
+      "id": 42499438340,
+      "name": "Push on main",
+      "status": "completed"
+    },
+    {
+      "conclusion": "success",
+      "event": "push",
+      "head_branch": "cloud/sx-crank-c-f93",
+      "head_sha": "52f8599de3a7083337a052d9416600d5380755ea",
+      "html_url": "https://github.com/just-every/run-crank/actions/runs/42497577443",
+      "id": 42497577443,
+      "name": "Verify",
+      "status": "completed"
+    }
+  ]
+}

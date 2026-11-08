@@ -1,0 +1,24 @@
+{
+  "head": "52f8599de3a7083337a052d9416600d5380755ea",
+  "views": {
+    "write": "node src/base/contract-docs.mjs write",
+    "check": "node src/base/contract-docs.mjs check",
+    "exit": 0,
+    "generatedViews": "restored from origin/main; never committed"
+  },
+  "lock": {
+    "write": "node scripts/edition-authoring/cli.mjs lock",
+    "check": "node scripts/edition-authoring/cli.mjs check",
+    "exit": 0
+  },
+  "installedLock": {
+    "check": "node node_modules/@runeditrun/rer/edition-authoring/cli.mjs check",
+    "exit": 0,
+    "write": "node node_modules/@runeditrun/rer/edition-authoring/cli.mjs lock"
+  },
+  "ledger": {
+    "command": "none; no migration change",
+    "exit": 0
+  },
+  "note": "The repository copy fingerprints its own tool differently. Regenerated last with the installed pinned tool that Verify invokes, then checked successfully."
+}

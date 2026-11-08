@@ -1,0 +1,3 @@
+cloud_run npx -y @runeditrun/rer build
+exit=0
+build: complete (exit 0)

@@ -1,0 +1,21 @@
+{
+  "head": "52f8599de3a7083337a052d9416600d5380755ea",
+  "status": "pass",
+  "assertedWidth": 1440,
+  "refused": 20,
+  "admitted": 5,
+  "screens": [
+    {
+      "width": 1440,
+      "file": "1440-agents.png",
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "file": "390-agents.png",
+      "overflow": false
+    }
+  ],
+  "tooltips": "No icon-only controls on inspected agent screen",
+  "uiChanges": false
+}

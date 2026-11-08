@@ -1,0 +1,499 @@
+{
+  "head": "52f8599de3a7083337a052d9416600d5380755ea",
+  "status": "pass",
+  "results": [
+    {
+      "kind": "metadata",
+      "classes": [
+        {
+          "class": "standard",
+          "facts": {
+            "measure": 2
+          }
+        }
+      ],
+      "expected": [
+        {
+          "class": "standard",
+          "facts": {
+            "measure": 2
+          }
+        }
+      ],
+      "decision": "none",
+      "rules": [],
+      "outcome": "refused",
+      "code": "decision_busy",
+      "usageReserved": false
+    },
+    {
+      "kind": "metadata",
+      "classes": [
+        {
+          "class": "standard",
+          "facts": {
+            "measure": 2
+          }
+        }
+      ],
+      "expected": [
+        {
+          "class": "standard",
+          "facts": {
+            "measure": 2
+          }
+        }
+      ],
+      "decision": "none",
+      "rules": [],
+      "outcome": "refused",
+      "code": "decision_busy",
+      "usageReserved": false
+    },
+    {
+      "kind": "metadata",
+      "classes": [
+        {
+          "class": "standard",
+          "facts": {
+            "measure": 2
+          }
+        }
+      ],
+      "expected": [
+        {
+          "class": "standard",
+          "facts": {
+            "measure": 2
+          }
+        }
+      ],
+      "decision": "none",
+      "rules": [],
+      "outcome": "refused",
+      "code": "decision_busy",
+      "usageReserved": false
+    },
+    {
+      "kind": "metadata",
+      "classes": [
+        {
+          "class": "standard",
+          "facts": {
+            "measure": 2
+          }
+        }
+      ],
+      "expected": [
+        {
+          "class": "standard",
+          "facts": {
+            "measure": 2
+          }
+        }
+      ],
+      "decision": "none",
+      "rules": [],
+      "outcome": "refused",
+      "code": "decision_busy",
+      "usageReserved": false
+    },
+    {
+      "kind": "metadata",
+      "classes": [
+        {
+          "class": "standard",
+          "facts": {
+            "measure": 2
+          }
+        }
+      ],
+      "expected": [
+        {
+          "class": "standard",
+          "facts": {
+            "measure": 2
+          }
+        }
+      ],
+      "decision": "none",
+      "rules": [],
+      "outcome": "refused",
+      "code": "decision_busy",
+      "usageReserved": false
+    },
+    {
+      "kind": "metadata",
+      "classes": [
+        {
+          "class": "standard",
+          "facts": {
+            "measure": 2
+          }
+        }
+      ],
+      "expected": [
+        {
+          "class": "standard",
+          "facts": {
+            "measure": 2
+          }
+        }
+      ],
+      "decision": "none",
+      "rules": [],
+      "outcome": "refused",
+      "code": "decision_busy",
+      "usageReserved": false
+    },
+    {
+      "kind": "metadata",
+      "classes": [
+        {
+          "class": "standard",
+          "facts": {
+            "measure": 2
+          }
+        }
+      ],
+      "expected": [
+        {
+          "class": "standard",
+          "facts": {
+            "measure": 2
+          }
+        }
+      ],
+      "decision": "none",
+      "rules": [],
+      "outcome": "refused",
+      "code": "decision_busy",
+      "usageReserved": false
+    },
+    {
+      "kind": "metadata",
+      "classes": [
+        {
+          "class": "standard",
+          "facts": {
+            "measure": 2
+          }
+        }
+      ],
+      "expected": [
+        {
+          "class": "standard",
+          "facts": {
+            "measure": 2
+          }
+        }
+      ],
+      "decision": "none",
+      "rules": [],
+      "outcome": "refused",
+      "code": "decision_busy",
+      "usageReserved": false
+    },
+    {
+      "kind": "metadata",
+      "classes": [
+        {
+          "class": "standard",
+          "facts": {
+            "measure": 2
+          }
+        }
+      ],
+      "expected": [
+        {
+          "class": "standard",
+          "facts": {
+            "measure": 2
+          }
+        }
+      ],
+      "decision": "none",
+      "rules": [],
+      "outcome": "refused",
+      "code": "decision_busy",
+      "usageReserved": false
+    },
+    {
+      "kind": "metadata",
+      "classes": [
+        {
+          "class": "standard",
+          "facts": {
+            "measure": 2
+          }
+        }
+      ],
+      "expected": [
+        {
+          "class": "standard",
+          "facts": {
+            "measure": 2
+          }
+        }
+      ],
+      "decision": "none",
+      "rules": [],
+      "outcome": "refused",
+      "code": "decision_busy",
+      "usageReserved": false
+    },
+    {
+      "kind": "inert",
+      "classes": [
+        {
+          "class": "standard",
+          "facts": {
+            "measure": 1
+          }
+        }
+      ],
+      "expected": [
+        {
+          "class": "standard",
+          "facts": {
+            "measure": 1
+          }
+        }
+      ],
+      "decision": "none",
+      "rules": [],
+      "outcome": "refused",
+      "code": "decision_busy",
+      "usageReserved": false
+    },
+    {
+      "kind": "inert",
+      "classes": [
+        {
+          "class": "standard",
+          "facts": {
+            "measure": 1
+          }
+        }
+      ],
+      "expected": [
+        {
+          "class": "standard",
+          "facts": {
+            "measure": 1
+          }
+        }
+      ],
+      "decision": "none",
+      "rules": [],
+      "outcome": "refused",
+      "code": "decision_busy",
+      "usageReserved": false
+    },
+    {
+      "kind": "inert",
+      "classes": [
+        {
+          "class": "standard",
+          "facts": {
+            "measure": 1
+          }
+        }
+      ],
+      "expected": [
+        {
+          "class": "standard",
+          "facts": {
+            "measure": 1
+          }
+        }
+      ],
+      "decision": "none",
+      "rules": [],
+      "outcome": "refused",
+      "code": "decision_busy",
+      "usageReserved": false
+    },
+    {
+      "kind": "inert",
+      "classes": [
+        {
+          "class": "standard",
+          "facts": {
+            "measure": 1
+          }
+        }
+      ],
+      "expected": [
+        {
+          "class": "standard",
+          "facts": {
+            "measure": 1
+          }
+        }
+      ],
+      "decision": "none",
+      "rules": [],
+      "outcome": "refused",
+      "code": "decision_busy",
+      "usageReserved": false
+    },
+    {
+      "kind": "inert",
+      "classes": [
+        {
+          "class": "standard",
+          "facts": {
+            "measure": 1
+          }
+        }
+      ],
+      "expected": [
+        {
+          "class": "standard",
+          "facts": {
+            "measure": 1
+          }
+        }
+      ],
+      "decision": "none",
+      "rules": [],
+      "outcome": "refused",
+      "code": "decision_busy",
+      "usageReserved": false
+    },
+    {
+      "kind": "inert",
+      "classes": [
+        {
+          "class": "standard",
+          "facts": {
+            "measure": 1
+          }
+        }
+      ],
+      "expected": [
+        {
+          "class": "standard",
+          "facts": {
+            "measure": 1
+          }
+        }
+      ],
+      "decision": "none",
+      "rules": [],
+      "outcome": "refused",
+      "code": "decision_busy",
+      "usageReserved": false
+    },
+    {
+      "kind": "inert",
+      "classes": [
+        {
+          "class": "standard",
+          "facts": {
+            "measure": 1
+          }
+        }
+      ],
+      "expected": [
+        {
+          "class": "standard",
+          "facts": {
+            "measure": 1
+          }
+        }
+      ],
+      "decision": "none",
+      "rules": [],
+      "outcome": "refused",
+      "code": "decision_busy",
+      "usageReserved": false
+    },
+    {
+      "kind": "inert",
+      "classes": [
+        {
+          "class": "standard",
+          "facts": {
+            "measure": 1
+          }
+        }
+      ],
+      "expected": [
+        {
+          "class": "standard",
+          "facts": {
+            "measure": 1
+          }
+        }
+      ],
+      "decision": "none",
+      "rules": [],
+      "outcome": "refused",
+      "code": "decision_busy",
+      "usageReserved": false
+    },
+    {
+      "kind": "inert",
+      "classes": [
+        {
+          "class": "standard",
+          "facts": {
+            "measure": 1
+          }
+        }
+      ],
+      "expected": [
+        {
+          "class": "standard",
+          "facts": {
+            "measure": 1
+          }
+        }
+      ],
+      "decision": "none",
+      "rules": [],
+      "outcome": "refused",
+      "code": "decision_busy",
+      "usageReserved": false
+    },
+    {
+      "kind": "inert",
+      "classes": [
+        {
+          "class": "standard",
+          "facts": {
+            "measure": 1
+          }
+        }
+      ],
+      "expected": [
+        {
+          "class": "standard",
+          "facts": {
+            "measure": 1
+          }
+        }
+      ],
+      "decision": "none",
+      "rules": [],
+      "outcome": "refused",
+      "code": "decision_busy",
+      "usageReserved": false
+    }
+  ],
+  "refused": 20,
+  "admitted": 5,
+  "controls": [
+    "success",
+    "invalid",
+    "inaccessible",
+    "unknown",
+    "classification-refused",
+    "revoked"
+  ],
+  "restart": "identical audit and usage readback",
+  "nativeEffects": "only admitted inert drafts",
+  "usage": "only admitted calls"
+}

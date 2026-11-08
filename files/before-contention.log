@@ -1,0 +1,4 @@
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProxy environment variables detected. We'll use your proxy for fetch requests.[0m
+
+
+{"mode":"before","status":"failed","message":"Contention audit retains exact completed native classification\n+ actual - expected\n\n+ []\n- [\n-   {\n-     class: 'standard',\n-     facts: {\n-       measure: 2\n-     }\n-   }\n- ]\n","actual":[],"expected":[{"class":"standard","facts":{"measure":2}}]}

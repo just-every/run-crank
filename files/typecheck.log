@@ -1,0 +1,5 @@
+ WARN  Unsupported engine: wanted: {"node":"22.20.0"} (current: {"node":"v24.19.0","pnpm":"10.12.4"})
+
+> @automation/crank@0.1.0 typecheck /home/agent/rer-consolidation/work/sx-crank-c-f94/run-crank
+> tsc --build --incremental
+

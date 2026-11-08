@@ -1,0 +1,94 @@
+{
+  "head": "52f8599de3a7083337a052d9416600d5380755ea",
+  "setup": {
+    "command": "cloud_run npx -y @runeditrun/rer setup --owner-email [fleet identity] --non-interactive",
+    "exit": 0
+  },
+  "build": {
+    "command": "cloud_run npx -y @runeditrun/rer build",
+    "exit": 0
+  },
+  "typecheck": {
+    "command": "pnpm typecheck",
+    "exit": 0
+  },
+  "firstParty": {
+    "command": "pnpm exec rer check --profile first-party",
+    "exit": 0
+  },
+  "registeredJourney": {
+    "command": "node --test --test-concurrency=1 --test-name-pattern='^PLATFORM-001: SDK and CORE door draft lifecycle' tests/platform.test.mjs",
+    "exit": 0,
+    "pass": 1,
+    "fail": 0
+  },
+  "beforeProbe": {
+    "temporaryRegression": "Remove only row.classes = classes before acquireDecision; restore before all candidate checks. No temporary edit committed.",
+    "exit": 1,
+    "expectedFailure": "Contention audit retains exact completed native classification",
+    "actual": [],
+    "expected": [
+      {
+        "class": "standard",
+        "facts": {
+          "measure": 2
+        }
+      }
+    ]
+  },
+  "afterProbe": {
+    "exit": 0,
+    "refused": 20,
+    "admitted": 5,
+    "facts": "metadata standard measure 2; inert create standard measure 1",
+    "restart": "identical facts and native reports",
+    "effects": "zero on refused calls",
+    "usage": "zero on refused calls"
+  },
+  "browser": {
+    "head": "52f8599de3a7083337a052d9416600d5380755ea",
+    "status": "pass",
+    "assertedWidth": 1440,
+    "refused": 20,
+    "admitted": 5,
+    "screens": [
+      {
+        "width": 1440,
+        "file": "1440-agents.png",
+        "overflow": false
+      },
+      {
+        "width": 390,
+        "file": "390-agents.png",
+        "overflow": false
+      }
+    ],
+    "tooltips": "No icon-only controls on inspected agent screen",
+    "uiChanges": false
+  },
+  "mechanical": {
+    "head": "52f8599de3a7083337a052d9416600d5380755ea",
+    "views": {
+      "write": "node src/base/contract-docs.mjs write",
+      "check": "node src/base/contract-docs.mjs check",
+      "exit": 0,
+      "generatedViews": "restored from origin/main; never committed"
+    },
+    "lock": {
+      "write": "node scripts/edition-authoring/cli.mjs lock",
+      "check": "node scripts/edition-authoring/cli.mjs check",
+      "exit": 0
+    },
+    "installedLock": {
+      "check": "node node_modules/@runeditrun/rer/edition-authoring/cli.mjs check",
+      "exit": 0,
+      "write": "node node_modules/@runeditrun/rer/edition-authoring/cli.mjs lock"
+    },
+    "ledger": {
+      "command": "none; no migration change",
+      "exit": 0
+    },
+    "note": "The repository copy fingerprints its own tool differently. Regenerated last with the installed pinned tool that Verify invokes, then checked successfully."
+  },
+  "allCandidateCommits": "git log origin/main..HEAD checked; empty after main advanced to this same head; inherited two correction commits separately confirmed fleet authors and committers with no trailers"
+}
