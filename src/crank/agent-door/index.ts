@@ -1,10 +1,13 @@
-import { createAgentDoor, type Trust } from '../../modules/agent-door/index.ts'
+import { createAgentDoor, type AgentDoorOptions, type Trust } from '../../modules/agent-door/index.ts'
 import { runtimeBindings, type Bindings } from '../../auth.server'
 import { peopleAdapter, localCredentials } from './people'
 import { currentScopes } from './scope-grants'
 import { crankTools } from './tools'
+import surface from '../../../agent-surface.json'
+import { agentDocumentation, documentationResponse, describeAgentResponse } from './documentation'
+import { crankPrompts } from './prompts'
 
-export const capabilities = ['tools', 'policy', 'pause', 'audit', 'idempotency'] as const
+export const capabilities = ['tools', 'policy', 'pause', 'audit', 'idempotency', 'prompts'] as const
 
 function installationTrust(env: Bindings): Trust | null {
   const issuer = env.RER_OWNER_CLAIM_ISSUER
@@ -18,26 +21,35 @@ function installationTrust(env: Bindings): Trust | null {
 /** One registry and policy pipeline for Business, local preparation and person review. */
 export function crankAgentDoor(bindings: Bindings) {
   const env = runtimeBindings(bindings)
-  return createAgentDoor({
-    seed: 'crank', name: 'Crank', specialist: 'Automation operations lead',
+  const tools = crankTools(env)
+  const options: AgentDoorOptions = {
+    seed: surface.seed, name: 'Crank', specialist: surface.specialist,
     db: env.DB, origin: env.AUTH_ORIGIN, trust: installationTrust(env),
     capabilities: [...capabilities], people: peopleAdapter(env),
-    tools: crankTools(env), resources: [], currentScopes: principal => currentScopes(env, principal),
-    paths: ['/api/crank/v1/mcp'],
+    tools, prompts: crankPrompts(tools), resources: [], currentScopes: principal => currentScopes(env, principal),
+    paths: ['/api/crank/v1/mcp'], limits: surface.documentation.limits,
     localCredentials: request => localCredentials(env, request),
     notTools: [
       { clauses: ['PLATFORM-002'], reason: 'connector' },
       { clauses: ['DATA-001'], reason: 'import-door' },
       { clauses: ['BASE-002'], reason: 'installation' },
     ],
-  })
+  }
+  const door = createAgentDoor(options)
+  const documentation = agentDocumentation(options)
+  return { ...door, async handle(request: Request) {
+    if (new URL(request.url).pathname === surface.documentation.path) return documentationResponse(request, documentation)
+    const response = await door.handle(request)
+    return response && (new URL(request.url).pathname === '/mcp' || options.paths?.includes(new URL(request.url).pathname))
+      ? describeAgentResponse(response, documentation) : response
+  } }
 }
 
 /** Construct native adapters only for paths owned by the shared door. */
 export async function crankAgentResponse(request: Request, env: Bindings): Promise<Response | null> {
   const path = new URL(request.url).pathname
   if (!['/.well-known/oauth-protected-resource', '/.well-known/oauth-protected-resource/mcp',
-    '/api/rer/agent-policy', '/mcp', '/api/crank/v1/mcp', '/agents'].includes(path)
+    surface.documentation.path, '/api/rer/agent-policy', '/mcp', '/api/crank/v1/mcp', '/agents'].includes(path)
     && !path.startsWith('/agents/api/') && !/^\/agents\/approvals\/[^/]+$/.test(path)) return null
   return crankAgentDoor(env).handle(request)
 }
