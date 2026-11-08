@@ -90,6 +90,7 @@ export async function restoreFixture() {
 }
 
 export async function restoreJourney() {
+  await migrationRestoreJourney();
   // A real export from main before installation-local door tables were excluded.
   // Agents were never used; migration 0091 alone must not make the backup unrestorable.
   const mainArchive = gunzipSync(await readFile('tests/fixtures/main-agent-archive.rer.gz')).toString('utf8');
@@ -220,4 +221,65 @@ export async function restoreJourney() {
     assert.equal((await older.get(`workflow-runs/${cancel.id}`)).status, 'cancelled');
     assert.equal(fake.requests.length, olderBefore + 1, 'only the explicitly resumed run dispatches once');
   } finally { fixture.releaseExecution(); await fixture.pendingExecution; await older?.close(); await corrupt?.close(); await restored?.close(); await source.close(); }
+}
+
+
+// A real current-level export crosses a future migration compiled only into
+// this test Worker. The unchanged DATA-001 registration also runs its complete
+// inventory, inactivity, adoption and erasure journeys above.
+async function migrationRestoreJourney() {
+  const additive = { name: '9999_synthetic_restore_additive.sql', sql: `
+    ALTER TABLE crank_flows ADD COLUMN synthetic_restore_note TEXT NOT NULL DEFAULT 'awaiting review';
+    CREATE TABLE synthetic_restore_records (id TEXT PRIMARY KEY, note TEXT NOT NULL DEFAULT 'new');
+  ` };
+  const incompatible = { name: '9999_synthetic_restore_incompatible.sql', sql:
+    'ALTER TABLE crank_flows RENAME COLUMN source_app TO synthetic_source_system;' };
+  const source = await harness(target);
+  let upgraded, older, changed;
+  try {
+    const flow = await source.flow('Synthetic migration bridge');
+    const run = await source.run(flow);
+    const exported = await archive(source), original = inventory(exported);
+    upgraded = await harness(target, { extraMigrations: [additive] });
+    const restored = await upgraded.post('data/restore', { archive: exported, confirm: 'RESTORE' });
+    assert.equal(restored.phase, 'complete');
+    assert.ok(restored.bridged.migrations.includes(additive.name));
+    assert.deepEqual(restored.bridged.columns.crank_flows, ['synthetic_restore_note']);
+    assert.ok(restored.bridged.tables.includes('synthetic_restore_records'));
+    const received = await upgraded.get();
+    assert.equal(received.flows.find(row => row.id === flow.id).status, 'draft');
+    assert.ok(received.runs.some(row => row.id === run.id));
+    assert.equal((await upgraded.db.prepare('SELECT synthetic_restore_note FROM crank_flows WHERE id=?').bind(flow.id).first()).synthetic_restore_note, 'awaiting review');
+    assert.equal((await upgraded.db.prepare('SELECT COUNT(*) AS n FROM synthetic_restore_records').first()).n, 0);
+    const newer = await archive(upgraded);
+    const carried = inventory(newer).map(text => {
+      const { table, row } = JSON.parse(text);
+      if (table === 'crank_flows') delete row.synthetic_restore_note;
+      return JSON.stringify({ table, row });
+    });
+    assert.deepEqual(carried.filter(text => !original.includes(text)).map(text => {
+      const {table,row}=JSON.parse(text); return [table,row.action];
+    }), [['crank_audit', 'data.restore']], 'the migration preserves every source record with only the receiving audit added');
+    assert.ok(original.every(text => carried.includes(text)));
+
+    older = await harness(target);
+    changed = await harness(target, { extraMigrations: [incompatible] });
+    // Snapshot every row and schema, including authority, audit and transfer
+    // bookkeeping. A refused import must leave this entire destination intact.
+    const snapshot = async h => {
+      const tables = (await h.db.prepare("SELECT name,sql FROM sqlite_master WHERE type='table' ORDER BY name").all()).results;
+      return Promise.all(tables.map(async table => ({...table, rows:(await h.db.prepare('SELECT * FROM "'+table.name.replaceAll('"','""')+'"').all()).results})));
+    };
+    for (const [destination, text, reason] of [[older, newer, 'newer migration level'], [changed, exported, 'non-additive column change']]) {
+      // Initialize ordinary portability bookkeeping before the comparison.
+      await destination.get('data/transfers');
+      const before = await snapshot(destination);
+      const refused = await destination.send('/api/crank/data/restore', { archive: text, confirm: 'RESTORE' }, destination.owner);
+      assert.equal(refused.status, 400, reason+': '+refused.text);
+      assert.equal(refused.value.error, 'schema_mismatch', reason);
+      assert.deepEqual(await snapshot(destination), before, reason+' writes no rows or schema');
+    }
+  } finally {
+    await changed?.close(); await older?.close(); await upgraded?.close(); await source.close();
+  }
 }

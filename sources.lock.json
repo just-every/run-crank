@@ -3304,7 +3304,7 @@
       "executable": false
     },
     "src/crank/data.ts": {
-      "sha256": "f5fb384c65607dbfeebb69b0b68d069ec174bc4367f36b739b1135392dcbca3a",
+      "sha256": "8199ccf73bbd6f12a2a9a22530788bc92cbe988947a01da48acd7b03b88faf43",
       "executable": false
     },
     "src/crank/delivery-window.ts": {
@@ -7068,7 +7068,7 @@
       "executable": false
     },
     "tests/harness.mjs": {
-      "sha256": "a9a5619f20608e5b57358fc7bbb8858afb96549b1faf286a2fe759d788f09f85",
+      "sha256": "2c00fbc7db286844e5b2f29141c4d4eb5a9728e4d1d98f4aafd833984f50799b",
       "executable": false
     },
     "tests/historical.test.mjs": {
@@ -7284,7 +7284,7 @@
       "executable": false
     },
     "tests/restore-journey.mjs": {
-      "sha256": "53375453deab64321b1c626ea3173a202d4da212247b56f61b29929a1af56e1e",
+      "sha256": "334ef9d0cfd398efcd24f1920a3646a108d759af5c8ecb6d84cdeb0a6cfc64e5",
       "executable": false
     },
     "tests/retry-archive.mjs": {
@@ -7456,7 +7456,7 @@
       "executable": false
     },
     "vite.config.ts": {
-      "sha256": "97300d4a4685f731964def81f819d756043e1d49217b46e0ffd57e43f44a3121",
+      "sha256": "4400da938a220b1f158613250bb3fe120ddb58fa58845ab02d4e0f00eae73de4",
       "executable": false
     },
     "vite.site.config.ts": {
