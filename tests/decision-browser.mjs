@@ -193,13 +193,20 @@ async function measuredChecks(width, state) {
       const a = lum(style.borderTopColor), b = lum(style.backgroundColor);
       return { name: element.name, ratio: (Math.max(a,b)+.05)/(Math.min(a,b)+.05), width: parseFloat(style.borderTopWidth) };
     });
+    const fieldErrors = [...document.querySelectorAll('[aria-invalid=true]')].filter(visible).map(element => {
+      const descriptions = (element.getAttribute('aria-describedby') ?? '').split(/\s+/).map(id => document.getElementById(id)).filter(Boolean);
+      return { name: axe.commons.text.accessibleText(element), announced: descriptions.some(description => visible(description) && description.matches('[role=alert]') && description.textContent.trim().length > 0) };
+    });
+    const smallText = [...document.querySelectorAll('main *,header *,aside *')].filter(element => visible(element) && [...element.childNodes].some(node => node.nodeType === 3 && node.textContent.trim()) && parseFloat(getComputedStyle(element).fontSize) < 13).map(element => ({ text: element.textContent.trim().slice(0,80), pixels: getComputedStyle(element).fontSize }));
     const notices = [...document.querySelectorAll('[data-decision-status]')].filter(visible).map(element => ({ role: element.getAttribute('role'), live: element.getAttribute('aria-live'), atomic: element.getAttribute('aria-atomic'), text: element.textContent.trim() }));
     window.__auditFocus = { previous: document.activeElement, x: scrollX, y: scrollY, controls, openDetails: [...document.querySelectorAll('details[open]')] };
-    return { controls: controls.length, unnamed, positiveTabindex, emptyStates, small, edges, notices, missingTooltips, namedControls: namedControls.length };
+    return { controls: controls.length, unnamed, positiveTabindex, emptyStates, small, edges, notices, fieldErrors, smallText, missingTooltips, namedControls: namedControls.length };
   }, focusable);
   assert.deepEqual(checks.unnamed, [], `${state}: every control has a name`);
   assert.deepEqual(checks.missingTooltips, [], `${state}: icon-only controls have tooltips`);
   assert.deepEqual(checks.positiveTabindex, [], `${state}: natural DOM focus order`);
+  assert.deepEqual(checks.smallText, [], `${state}: readable operator text`);
+  for (const error of checks.fieldErrors) assert.ok(error.announced && error.name, `${state}: named field has a linked announced error ${JSON.stringify(error)}`);
   assert.deepEqual(checks.emptyStates, [], `${state}: states carry words`);
   assert.deepEqual(checks.small, [], `${state}: target size or spacing`);
   for (const edge of checks.edges) assert.ok(edge.width >= 1 && edge.ratio >= 3, `${state}: field boundary ${JSON.stringify(edge)}`);
@@ -274,13 +281,20 @@ async function measuredChecks(width, state) {
   await page.evaluate(() => { const saved = window.__auditFocus; saved.previous?.focus(); for (const details of document.querySelectorAll('details')) details.open = saved.openDetails.includes(details); scrollTo(saved.x, saved.y); delete window.__auditFocus; });
   const viewport = page.viewportSize();
   await page.setViewportSize({ width: 320, height: viewport.height });
-  const reflow = await page.evaluate(() => ({
+  const measureReflow = () => ({
     document: document.documentElement.scrollWidth <= innerWidth + 1,
+    clippedControls: [...document.querySelectorAll('main a[href],main button,main input:not([type=hidden]),main select,main textarea,main summary')].filter(element => {
+      if (!element.checkVisibility({ checkVisibilityCSS: true, checkOpacity: true })) return false;
+      if ([...document.querySelectorAll('details:not([open])')].some(details => details.contains(element) && !details.querySelector(':scope > summary')?.contains(element))) return false;
+      const rect = element.getBoundingClientRect();
+      return rect.left < -1 || rect.right > innerWidth + 1;
+    }).map(element => ({ control: element.outerHTML.slice(0,180), left: element.getBoundingClientRect().left, right: element.getBoundingClientRect().right })),
     scrollContainers: [...document.querySelectorAll('main *')].filter(element => {
       const style = getComputedStyle(element);
       return element.getClientRects().length && /auto|scroll/.test(style.overflowX) && !element.matches('input,select,textarea') && element.scrollWidth > element.clientWidth + 1;
     }).map(element => element.outerHTML.slice(0, 180)),
-  }));
+  });
+  const reflow = await page.evaluate(measureReflow);
   await page.evaluate(() => {
     window.__spacingStyles = [...document.querySelectorAll('body,body *')].map(element => [element,element.getAttribute('style')]);
     for (const [element] of window.__spacingStyles) {
@@ -290,7 +304,8 @@ async function measuredChecks(width, state) {
       if (element.matches('p')) element.style.setProperty('margin-bottom','2em','important');
     }
   });
-  const spacingReflow = await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1);
+  const spacedReflow = await page.evaluate(measureReflow);
+  const spacingReflow = spacedReflow.document;
   await page.evaluate(() => {
     for (const [element,style] of window.__spacingStyles) {
       element.style.cssText = style ?? '';
@@ -299,10 +314,16 @@ async function measuredChecks(width, state) {
     delete window.__spacingStyles;
   });
   await page.setViewportSize(viewport);
+  // Mobile Chromium needs the restored viewport to paint before a full-page
+  // capture; otherwise its previous compositor clip can hide visible content.
+  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   assert.equal(spacingReflow, true, `${state}: increased text spacing reflows`);
+  assert.deepEqual(spacedReflow.clippedControls, [], `${state}: increased text spacing preserves complete controls`);
+  assert.deepEqual(spacedReflow.scrollContainers, [], `${state}: increased text spacing needs no two-dimensional scrolling`);
   assert.equal(reflow.document, true, `${state}: 320 CSS pixel reflow`);
   assert.deepEqual(reflow.scrollContainers, [], `${state}: no two-dimensional scrolling`);
-  return { ...checks, minimumFocusContrast: minimumContrast, nativeSubfieldStops, hoverTested, reflow, spacingReflow };
+  assert.deepEqual(reflow.clippedControls, [], `${state}: reflow preserves complete controls at 320 CSS pixels`);
+  return { ...checks, minimumFocusContrast: minimumContrast, nativeSubfieldStops, hoverTested, reflow, spacingReflow, spacedReflow };
 }
 
 async function audit(width, state) {
@@ -393,7 +414,8 @@ try {
     const context = await browser.newContext({ storageState, viewport: { width, height: 1000 }, hasTouch: touch, isMobile: touch });
     page = await context.newPage(); page.setDefaultTimeout(10000);
     const events = [], routeErrors = [];
-    let failReads = false, postMode = '', committed = false, heldRelease;
+    let failReads = false, postMode = '', committed = false, heldRelease, readRelease;
+    let holdNextRead = false;
     const posts = () => events.filter(event => event.method === 'POST');
     const reads = () => events.filter(event => event.method === 'GET');
     page.on('request', request => {
@@ -418,6 +440,10 @@ try {
           postMode = '';
           await new Promise(resolve => { heldRelease = resolve; });
           await route.abort('timedout').catch(() => {}); return;
+        }
+        if (request.method() === 'GET' && holdNextRead) {
+          holdNextRead = false;
+          await new Promise(resolve => { readRelease = resolve; });
         }
         if (request.method() === 'GET' && failReads) { await route.abort('internetdisconnected'); return; }
         await route.continue();
@@ -444,9 +470,15 @@ try {
     await frozen(page, note);
     assert.equal(posts().length, initialPosts);
     await shot(width, 'reconciliation-error');
-    failReads = false;
+    failReads = false; holdNextRead = true;
     await page.evaluate(() => { const marker = document.createElement('span'); marker.id = 'journey-old-body'; document.body.append(marker); });
     await activate(page.locator('[data-decision-refresh]'), touch);
+    await expect(status(page)).toContainText('Checking the latest state');
+    await expect(page.locator('[data-decision-refresh]')).toBeDisabled();
+    await expect.poll(() => typeof readRelease).toBe('function');
+    await shot(width, 'checking-latest-state');
+    assert.equal(posts().length, initialPosts, 'checking state sends no decision');
+    readRelease();
     await expect(formFor(page, approved.id).getByRole('button', { name: 'Approve', exact: true })).toBeEnabled();
     await expect(page.locator('#journey-old-body')).toHaveCount(0);
     assert.equal(posts().length, initialPosts, 'manual reconciliation only reads');
@@ -646,6 +678,20 @@ try {
     await expect(page.locator('.detail-primary .title-row .status')).toHaveText('Cancelled');
     assert.equal((await send('workflow-runs/' + cancelled.id)).steps.filter(step => step.path === 'record').length, 0);
     await shot(width, 'cancelled');
+
+    // Another legitimate review can finish while this browser still shows the
+    // old proposal. The real server refuses it and the UI announces a fresh read.
+    const stale = await newRun(`Northern coastal workshop concurrent review — ${width}`);
+    await page.goto(origin + '/app/workflow-runs/' + stale.id);
+    const completedNote = 'Reviewed by another current session before this page refreshed.';
+    await send('workflow-runs/' + stale.id + '/approve', { path: 'review', digest: stale.waits[0].proposal_digest, reason: completedNote });
+    const beforeRefusal = posts().length;
+    await activate(formFor(page, stale.id).getByRole('button', { name: 'Reject', exact: true }), touch);
+    await expect(status(page)).toContainText('The decision was refused. Latest state loaded');
+    await expect(formFor(page, stale.id)).toHaveCount(0);
+    await resolved(stale.id, true, completedNote);
+    assert.equal(posts().length, beforeRefusal + 1, 'refused stale decision is not retried');
+    await shot(width, 'decision-refused-reconciled');
 
     await page.goto(origin + '/app/runs');
     await shot(width, 'run-search');

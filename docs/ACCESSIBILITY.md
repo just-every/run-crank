@@ -26,7 +26,9 @@ checks and measured results. `decision-requests.json` retains the decision reque
 ledger. Neither file contains sign-in links, sessions or credentials.
 
 The states include approvals waiting, offline before send, failed reconciliation,
-workflow approval detail, committed but lost response, reconciled approval and
+checking the latest state with controls frozen, workflow approval detail,
+committed but lost response, a server-refused stale decision followed by an
+authoritative read, reconciled approval and
 rejection, bounded submission timeout, legacy pending and rejected detail,
 required-field error and correction, created workflow, live and paused controls,
 legacy failed delivery and acknowledged replay, structured decision error and
@@ -34,13 +36,19 @@ correction, workflow execution error, cancellation, populated and empty search,
 filtered results, empty and addressed inbox and its resolved decision.
 
 The measured checks visit every enabled visible control in natural DOM order by
-Tab, including activation of the skip link. Native segmented date and time fields may take several bounded Tab stops within one control. Each needs a computed accessible name, visible
+Tab, including activation of the skip link. Painted operator text must be at
+least 13 CSS pixels; every visible invalid field must retain its name and a
+visible alert linked through its accessible description. Native segmented date and time fields may take several bounded Tab stops within one control. Each needs a computed accessible name, visible
 focus of at least 3:1 contrast, an exposed hit point and its complete bounds in
 the viewport. Positive tabindex is refused. Focused icon controls expose their
 named tooltips. On hover-capable pointing devices, help stays visible when the pointer moves onto it and Escape dismisses it. Keyboard help is checked at both widths. Each target is at least 24 by 24 CSS pixels, has equivalent
 spacing, is an inline text link, or has an equivalent larger link to the same
-run. Reflow is measured at 320 CSS pixels, including nested scroll containers;
-text fields retain their ordinary single-line input behavior.
+run. Reflow is measured at 320 CSS pixels, including nested scroll containers and
+the complete horizontal bounds of every visible main-content control, both
+before and after increasing text spacing;
+text fields retain their ordinary single-line input behavior. Two animation
+frames after restoring the viewport let mobile Chromium paint its restored clip
+before the full-page capture; the measurements and visible errors are unchanged.
 
 For axe's unresolved image and gradient backgrounds, the journey measures the
 actual background pixels behind painted text (excluding portions clipped or covered by an open popover), temporarily making foreground text
@@ -50,7 +58,10 @@ fill. Disabled controls are exempt from the contrast requirement. Textual state
 labels and atomic polite decision announcements are inspected programmatically.
 Legacy delivery errors and workflow execution errors have alert semantics. Required-field and malformed JSON errors are identified in text, announced as
 alerts and associated with their control through `aria-describedby` and
-`aria-invalid`; correction clears the error. Invalid JSON sends no decision.
+`aria-invalid`; correction clears the error. Invalid JSON sends no decision. A held authoritative read proves the checking
+announcement while actions stay frozen; a decision already completed by another
+current session is refused by the real server and announced after reconciliation
+without a second decision or a replayed request.
 
 ## Criteria within the audited doors
 
@@ -77,9 +88,9 @@ supplements automation; browser touch emulation is not a handset receipt.
 | 1.4.3 Minimum text contrast | Pass | Zero axe violations plus worst-pixel measurements for unresolved backgrounds. |
 | 1.4.4 Resize text | Pass | Reflow proof at 320 CSS pixels and inspected resizable text and native controls; no fixed text-height containers. |
 | 1.4.5 Images of text | Pass | Inspected live HTML text; the brand mark is decorative beside the textual name. |
-| 1.4.10 Reflow | Pass | Each state is measured at 320 CSS pixels with no page or nested two-dimensional scrolling. |
+| 1.4.10 Reflow | Pass | Each state is measured at 320 CSS pixels with no page or nested two-dimensional scrolling, and no control clipped beyond the viewport. |
 | 1.4.11 Non-text contrast | Pass | Measured field boundaries and focus rings; state dots are redundant to words. |
-| 1.4.12 Text spacing | Pass | Each state reflows with 1.5 line height, .12em letter spacing, .16em word spacing and 2em paragraph spacing; expanding panels and controls are inspected. |
+| 1.4.12 Text spacing | Pass | Each state reflows with 1.5 line height, .12em letter spacing, .16em word spacing and 2em paragraph spacing; complete control bounds and nested scrolling are measured with that spacing applied. |
 | 1.4.13 Hover or focus content | Pass | Focus tooltip checks; hover help persists while hovered or focused and Escape dismisses it. |
 | 2.1.1 Keyboard | Pass | Actual Tab traversal and Enter activation, including approvals, pause, replay, cancellation and search. |
 | 2.1.2 No keyboard trap | Pass | Every control is reached in order; disclosures use native summary controls and no modal focus trap. |
@@ -124,7 +135,7 @@ dark ink on orange, and footer text uses the readable body color. Secondary edit
 keyboard outlines have sufficient contrast. A skip link bypasses repeated shell
 navigation. Long headings wrap, the header retains its controls beside long breadcrumbs, run-ID focus remains above the phone row link, and decision notices have space for their focus
 outline. Standalone links have their own 24-pixel targets. Field errors persist visibly after the native validity popup closes and
-clear when edited. Tooltips can be dismissed without moving focus. Popovers close when keyboard focus leaves them, so they cannot cover the next target.
+clear when edited. Tooltips can be dismissed without moving focus. Popovers close when keyboard focus leaves them, so they cannot cover the next target. Native textarea focus now reveals the complete control rather than only its first line, without changing Tab order or activating an action.
 
 Existing one-decision, offline, lost-response, authoritative-read, input-retention
 and hidden-path legacy assertions remain in the registered journey unchanged.

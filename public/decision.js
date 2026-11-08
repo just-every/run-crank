@@ -204,3 +204,14 @@ document.addEventListener('keydown', event => {
   const menu = event.target instanceof Element && event.target.closest('details.menu[open]');
   if (menu) { menu.open = false; menu.querySelector('summary')?.focus(); }
 });
+
+// Native textarea focus may reveal only its first line. Keep the complete
+// control visible without changing focus, tab order or the user's action.
+document.addEventListener('focusin', event => {
+  const control = event.target;
+  if (!(control instanceof HTMLElement) || !control.matches('a[href],button,input:not([type=hidden]),select,textarea,summary')) return;
+  const rect = control.getBoundingClientRect();
+  if (rect.top < 8 || rect.bottom > innerHeight - 8 || rect.left < 8 || rect.right > innerWidth - 8) {
+    control.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'instant' });
+  }
+});
