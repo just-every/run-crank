@@ -3008,7 +3008,7 @@
       "executable": false
     },
     "src/crank/agents/authoring-model.ts": {
-      "sha256": "934dc2e80100ba012c8595c7a695248a1aba8337db069b37448975890ae7ba83",
+      "sha256": "903d213567d9166054c80860c90c296a04653c7fc58de876ed6a424826f86ede",
       "executable": false
     },
     "src/crank/agents/authoring-promotion.ts": {
@@ -3024,11 +3024,11 @@
       "executable": false
     },
     "src/crank/agents/authoring-schema.ts": {
-      "sha256": "c5d41bc88d83dca22aea1abb458f14e8180be82d0b9bafc4cebd0113229bf64a",
+      "sha256": "9013a741030d7e0759b77b90e2fcc1c0b6e695fbf397a34e2f2d7497800ec447",
       "executable": false
     },
     "src/crank/agents/authoring.ts": {
-      "sha256": "9d1ff87178c9f47ee49c65134c955cdc6a3717ed39c9778d68e2247296973019",
+      "sha256": "d869c7e71b6060c236c0322458fb966d79fab5ec19da4b2b25397b41adf1dcbe",
       "executable": false
     },
     "src/crank/agents/cases.ts": {
@@ -6756,7 +6756,7 @@
       "executable": false
     },
     "test-budget.json": {
-      "sha256": "830530a120c81567f20562e2a733e372d73bff7431a8014d4acb018de368bbb4",
+      "sha256": "ff5d22a43e4fb78049153a67e7ed72ff6cd505fb0294435b6bd8ff7103e78744",
       "executable": false
     },
     "tests/accounting-poll-journey.mjs": {
@@ -6791,8 +6791,12 @@
       "sha256": "e8b88b30b0dd62921ef963b4494b8b6b5819c2a5b6b183aba778986048da1553",
       "executable": false
     },
+    "tests/agent-policy-journey.mjs": {
+      "sha256": "00eca75fa179412382a2fd2afb57b4ab07f69d40640958544fd2681bbc7bcfc1",
+      "executable": false
+    },
     "tests/ai-steps-browser.mjs": {
-      "sha256": "697afe478cf688563adce3bbc466aa644afd69af4e0258fc01692502784ebaf5",
+      "sha256": "ebe4e7a65ad803c2a0905262f53ac84dc4449b5c7355378fa6e5ecf01f9f7bae",
       "executable": false
     },
     "tests/ai-steps-journey.mjs": {
@@ -6832,11 +6836,11 @@
       "executable": false
     },
     "tests/authoring-browser.mjs": {
-      "sha256": "4df010bc5875a96f8304c21bce4254a9e4565d7e6c4d38cec69a73770bd00588",
+      "sha256": "ee626a3c722549220d19acc670d9e655bfb165553a41dab86970c94e6520db26",
       "executable": false
     },
     "tests/authoring-fixture.mjs": {
-      "sha256": "a3ef41d81c9f3039cb3d920f0df34c53149f2239e450cf56cb6b099f8d2992d2",
+      "sha256": "ea707f1026f39f8a9cfe32893d03b2164aa17e2eeddf4651ba2715b4646f5d4d",
       "executable": false
     },
     "tests/authoring-sandbox.mjs": {
@@ -7364,7 +7368,7 @@
       "executable": false
     },
     "tests/security.test.mjs": {
-      "sha256": "d90eb7e89f23c87edf1bd85fb3a50a959c36f079c8f7e021f404af057d700416",
+      "sha256": "c2d464341916dba687e7a7ab7724a8e8b45cc7d95b2dd88567ef7cb537ecc92a",
       "executable": false
     },
     "tests/service-accounts.test.mjs": {

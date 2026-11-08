@@ -1,9 +1,9 @@
 import { connection } from './kit.mjs';
 
 /** Provider-edge response for native authoring HTTP journeys. */
-export function authoringModelReply(requestBody, { questions = [{ id: 'mapping_confirmation', question: 'Confirm the country and stable business key mappings.' }], refusal = null, graph } = {}) {
+export function authoringModelReply(requestBody, { questions = [{ id: 'mapping_confirmation', question: 'Confirm the country and stable business key mappings.' }], refusal = null, graph, name = 'US lead invoicing' } = {}) {
   const { scope } = JSON.parse(requestBody.messages.at(-1).content);
-  const proposal = { name: 'US lead invoicing', refusal, questions, graph: graph ?? { trigger: { type: 'manual' }, steps: [
+  const proposal = { name, refusal, questions, graph: graph ?? { trigger: { type: 'manual' }, steps: [
     { id: 'lead', name: 'Read CRM lead', type: 'http', connection_id: scope.crm_connection_id, input: { method: 'GET', url: scope.lead_url } },
     { id: 'us', name: 'Keep US leads', type: 'filter', when: [[{ field: 'steps.lead.body.country', op: 'text.equals', value: 'US' }]] },
     { id: 'invoice', name: 'Create USD invoice', type: 'quickbooks.create_invoice', connection_id: scope.quickbooks_connection_id, input: { realm_id: scope.realm_id, business_key: '{{steps.lead.body.id}}', amount_usd: scope.amount_usd, payload: { CustomerRef: { value: scope.customer_id }, Line: [{ Amount: Number(scope.amount_usd), DetailType: 'SalesItemLineDetail', SalesItemLineDetail: { ItemRef: { value: scope.item_id } } }] } } },
