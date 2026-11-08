@@ -1,0 +1,90 @@
+{
+  "head": "37007521bfa3a034b21f83077c4fea9664688681",
+  "checks": [
+    {
+      "name": "executors",
+      "command": [
+        "node",
+        "--test",
+        "--test-concurrency=1",
+        "tests/executors.test.mjs"
+      ],
+      "head": "37007521bfa3a034b21f83077c4fea9664688681",
+      "exit": 0,
+      "start": "2026-11-08T17:03:18.100016+00:00",
+      "finish": "2026-11-08T17:03:42.368761+00:00",
+      "log": "executors.log",
+      "sha256": "f1c862991640e9809c3a58961281f2c25a7bb7ed3eccc6525d5590bebf55afb0"
+    },
+    {
+      "name": "typecheck",
+      "command": [
+        "pnpm",
+        "typecheck"
+      ],
+      "head": "37007521bfa3a034b21f83077c4fea9664688681",
+      "exit": 0,
+      "start": "2026-11-08T17:03:42.369174+00:00",
+      "finish": "2026-11-08T17:03:42.882427+00:00",
+      "log": "typecheck.log",
+      "sha256": "36714ac86ca77107d92134877ed413b65f23b0af3d5427cde7dabdc02c5c0fc1"
+    },
+    {
+      "name": "first-party",
+      "command": [
+        "npx",
+        "-y",
+        "@runeditrun/rer",
+        "check",
+        "--profile",
+        "first-party"
+      ],
+      "head": "37007521bfa3a034b21f83077c4fea9664688681",
+      "exit": 0,
+      "start": "2026-11-08T17:03:42.882610+00:00",
+      "finish": "2026-11-08T17:03:44.074950+00:00",
+      "log": "first-party.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "views-write",
+      "command": [
+        "node",
+        "src/base/contract-docs.mjs",
+        "write"
+      ],
+      "head": "37007521bfa3a034b21f83077c4fea9664688681",
+      "exit": 0,
+      "start": "2026-11-08T17:03:44.075092+00:00",
+      "finish": "2026-11-08T17:03:44.128876+00:00",
+      "log": "views-write.log",
+      "sha256": "540b168efe390f92191c4c47be4676a9db640b8f3c00b2bea4c20a224c0e80cf"
+    },
+    {
+      "name": "views-check",
+      "command": [
+        "node",
+        "src/base/contract-docs.mjs",
+        "check"
+      ],
+      "head": "37007521bfa3a034b21f83077c4fea9664688681",
+      "exit": 0,
+      "start": "2026-11-08T17:03:44.129040+00:00",
+      "finish": "2026-11-08T17:03:44.177858+00:00",
+      "log": "views-check.log",
+      "sha256": "41be670e8514d35d3059536f54f0a1ff875aa0cf719cdfa33febe6c30584d084"
+    },
+    {
+      "name": "lock",
+      "command": [
+        "node",
+        "node_modules/@runeditrun/rer/edition-authoring/cli.mjs",
+        "check"
+      ],
+      "head": "37007521bfa3a034b21f83077c4fea9664688681",
+      "exit": 0,
+      "log": "source-lock-check.log",
+      "sha256": "8ee3f08ec8c947ab75d65540dbdd7c7e7288e8eb207af0b848654bc958d2fbc3"
+    }
+  ]
+}

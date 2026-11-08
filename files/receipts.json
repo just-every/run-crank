@@ -1,0 +1,45 @@
+{
+  "tag": "sx-crank-c-f96",
+  "repository": "just-every/run-crank",
+  "branch": "cloud/sx-crank-c-f96",
+  "head": "37007521bfa3a034b21f83077c4fea9664688681",
+  "base": "52f8599de3a7083337a052d9416600d5380755ea",
+  "status_before": "PARTIAL",
+  "status_after": "PARTIAL",
+  "counts_before": {
+    "done": 32,
+    "partial": 50,
+    "missing": 17
+  },
+  "counts_after": {
+    "done": 32,
+    "partial": 50,
+    "missing": 17
+  },
+  "status_rows": 99,
+  "test_budget_before": 200,
+  "test_budget_after": 200,
+  "new_registrations": 0,
+  "contract_diff_bytes": 0,
+  "product_pushed": true,
+  "publication_scan": {
+    "commit": "37007521bfa3a034b21f83077c4fea9664688681",
+    "complete": null,
+    "historyScanned": null,
+    "findings": null,
+    "status": "NOT RUN: cloud adaptation assigns the exact-tree full-history scan to the Mac lander"
+  },
+  "main_equality": false,
+  "main_verify_runs": [
+    42499821827,
+    42499438495,
+    42497577443
+  ],
+  "main_run_site": 42499438688,
+  "candidate_verify_run": 42502971132,
+  "candidate_verify_status": "in_progress",
+  "candidate_verify_observed_at": "2026-11-08T17:20:51Z",
+  "main_changed": false,
+  "pr": null,
+  "github_calls_so_far": 5
+}

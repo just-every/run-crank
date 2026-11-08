@@ -1,0 +1,4 @@
+
+> @automation/crank@0.1.0 typecheck /home/agent/rer-consolidation/work/sx-crank-c-f96/run-crank
+> tsc --build --incremental
+

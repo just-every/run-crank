@@ -1,0 +1,1 @@
+WORK-005 PASS: installed output declaration and successful and failed schema results at 1440 and 390; invalid nested amounts and named aggregate memory failures never continue. Remote executor network edge only is faked.

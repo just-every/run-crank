@@ -1,0 +1,58 @@
+{
+  "head": "37007521bfa3a034b21f83077c4fea9664688681",
+  "command": [
+    "timeout",
+    "1200",
+    "node",
+    "tests/executor-schema-browser.mjs"
+  ],
+  "exit": 0,
+  "start": "2026-11-08T17:03:58.459652+00:00",
+  "finish": "2026-11-08T17:04:34.573181+00:00",
+  "widths": [
+    1440,
+    390
+  ],
+  "files": [
+    {
+      "file": "screens/1440-aggregate-memory-failed.png",
+      "bytes": 393780,
+      "sha256": "f90b152826996844f0d558694a5d9c2f3dd14d12d37aed2612b24861b90a2e47"
+    },
+    {
+      "file": "screens/1440-schema-definition.png",
+      "bytes": 507196,
+      "sha256": "6907a4963776665f0c48df7e12df2d9206ff8ba99f94575975d37731090ad7cb"
+    },
+    {
+      "file": "screens/1440-schema-failed.png",
+      "bytes": 419128,
+      "sha256": "202826cae96eec841fc63782ac302e66d02c9d4bba51eb9336e15ebcd196285c"
+    },
+    {
+      "file": "screens/1440-schema-succeeded.png",
+      "bytes": 441300,
+      "sha256": "dd7b8bd5ba9db845acb2bdb4fbe9b606ff9156e05812904580fad2833859aba6"
+    },
+    {
+      "file": "screens/390-aggregate-memory-failed.png",
+      "bytes": 255274,
+      "sha256": "58f117894b0093f500987927fb98070c5838d3144644dff7d10ddaabae247030"
+    },
+    {
+      "file": "screens/390-schema-definition.png",
+      "bytes": 336783,
+      "sha256": "8ea146b24d0cf2a981b3456c2f0f80e9a7e52a0853a00dee74b8cb32a5947da8"
+    },
+    {
+      "file": "screens/390-schema-failed.png",
+      "bytes": 278501,
+      "sha256": "37a691003d43765ecf57d02b7f1f8d6223def097fd6a096aabb5a31241ecc8b9"
+    },
+    {
+      "file": "screens/390-schema-succeeded.png",
+      "bytes": 296134,
+      "sha256": "2e9eb8a282d6bf31391d6e04d3b575cd3695dbbf66395cdb1153058cdaee93e8"
+    }
+  ]
+}

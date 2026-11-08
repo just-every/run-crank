@@ -1,0 +1,230 @@
+{
+  "head": "37007521bfa3a034b21f83077c4fea9664688681",
+  "proof": [
+    {
+      "file": "executors/linux/launch.py",
+      "term": "class Quota:",
+      "lines": [
+        37
+      ],
+      "sha256": "8258f5bd5eb4fee2715877353bd24602699bb56f195a23ccf6c1f5b84ee5ca7a"
+    },
+    {
+      "file": "executors/linux/launch.py",
+      "term": "def create(self):",
+      "lines": [
+        59
+      ],
+      "sha256": "8258f5bd5eb4fee2715877353bd24602699bb56f195a23ccf6c1f5b84ee5ca7a"
+    },
+    {
+      "file": "executors/linux/launch.py",
+      "term": "def enter(self):",
+      "lines": [
+        77
+      ],
+      "sha256": "8258f5bd5eb4fee2715877353bd24602699bb56f195a23ccf6c1f5b84ee5ca7a"
+    },
+    {
+      "file": "executors/linux/launch.py",
+      "term": "def stop(self):",
+      "lines": [
+        87
+      ],
+      "sha256": "8258f5bd5eb4fee2715877353bd24602699bb56f195a23ccf6c1f5b84ee5ca7a"
+    },
+    {
+      "file": "executors/linux/launch.py",
+      "term": "def supervise(",
+      "lines": [
+        182
+      ],
+      "sha256": "8258f5bd5eb4fee2715877353bd24602699bb56f195a23ccf6c1f5b84ee5ca7a"
+    },
+    {
+      "file": "executors/linux/launch.py",
+      "term": "durable_result(config, result)",
+      "lines": [
+        21,
+        215
+      ],
+      "sha256": "8258f5bd5eb4fee2715877353bd24602699bb56f195a23ccf6c1f5b84ee5ca7a"
+    },
+    {
+      "file": "executors/linux/server.mjs",
+      "term": "store.recover(",
+      "lines": [
+        45
+      ],
+      "sha256": "841f623994e89e0594c294eca489ad4b2af4ec256b67fdc34c9290d089cb342d"
+    },
+    {
+      "file": "executors/linux/server.mjs",
+      "term": "current.handle = launchJob",
+      "lines": [
+        68
+      ],
+      "sha256": "841f623994e89e0594c294eca489ad4b2af4ec256b67fdc34c9290d089cb342d"
+    },
+    {
+      "file": "executors/linux/server.mjs",
+      "term": "aggregate_memory_mb: payload",
+      "lines": [
+        126
+      ],
+      "sha256": "841f623994e89e0594c294eca489ad4b2af4ec256b67fdc34c9290d089cb342d"
+    },
+    {
+      "file": "src/crank/executors/step.ts",
+      "term": "if (step.aggregate_memory_mb",
+      "lines": [
+        23
+      ],
+      "sha256": "fd95f7e0631a3607d9660158ce644734c309b2f1e9643e126f6f4cc5a2b07f38"
+    },
+    {
+      "file": "src/crank/executors/step.ts",
+      "term": "['memory_limit','cgroup_setup_required'",
+      "lines": [
+        57
+      ],
+      "sha256": "fd95f7e0631a3607d9660158ce644734c309b2f1e9643e126f6f4cc5a2b07f38"
+    },
+    {
+      "file": "tests/executors.test.mjs",
+      "term": "test('WORK-005 EXEC-002",
+      "lines": [
+        9
+      ],
+      "sha256": "92e844b7d3085a1536af12d9e95dce18b74bde537a9f8f426864cea80c749eff"
+    },
+    {
+      "file": "tests/executors.test.mjs",
+      "term": "test('WORK-005 DATA-001",
+      "lines": [
+        45
+      ],
+      "sha256": "92e844b7d3085a1536af12d9e95dce18b74bde537a9f8f426864cea80c749eff"
+    },
+    {
+      "file": "tests/executors.test.mjs",
+      "term": "test('WORK-005: declared",
+      "lines": [
+        76
+      ],
+      "sha256": "92e844b7d3085a1536af12d9e95dce18b74bde537a9f8f426864cea80c749eff"
+    },
+    {
+      "file": "tests/executors.test.mjs",
+      "term": "const published=",
+      "lines": [
+        26
+      ],
+      "sha256": "92e844b7d3085a1536af12d9e95dce18b74bde537a9f8f426864cea80c749eff"
+    },
+    {
+      "file": "tests/executors.test.mjs",
+      "term": "const limited=",
+      "lines": [
+        36
+      ],
+      "sha256": "92e844b7d3085a1536af12d9e95dce18b74bde537a9f8f426864cea80c749eff"
+    },
+    {
+      "file": "tests/executors.test.mjs",
+      "term": "inactive restore retains",
+      "lines": [
+        64
+      ],
+      "sha256": "92e844b7d3085a1536af12d9e95dce18b74bde537a9f8f426864cea80c749eff"
+    },
+    {
+      "file": "tests/executor-linux.mjs",
+      "term": "const forked=",
+      "lines": [
+        34
+      ],
+      "sha256": "fafa3d6894d28298c8477ccbdf6f313a0436545f35ab5456bfc10bbedb350cae"
+    },
+    {
+      "file": "tests/executor-linux.mjs",
+      "term": "const quotaJob=",
+      "lines": [
+        46
+      ],
+      "sha256": "fafa3d6894d28298c8477ccbdf6f313a0436545f35ab5456bfc10bbedb350cae"
+    },
+    {
+      "file": "tests/executor-linux.mjs",
+      "term": "const lostOutcome=",
+      "lines": [
+        52
+      ],
+      "sha256": "fafa3d6894d28298c8477ccbdf6f313a0436545f35ab5456bfc10bbedb350cae"
+    },
+    {
+      "file": "tests/executor-linux.mjs",
+      "term": "const within=",
+      "lines": [
+        55
+      ],
+      "sha256": "fafa3d6894d28298c8477ccbdf6f313a0436545f35ab5456bfc10bbedb350cae"
+    },
+    {
+      "file": "tests/executor-linux.mjs",
+      "term": "second=await",
+      "lines": [
+        58
+      ],
+      "sha256": "fafa3d6894d28298c8477ccbdf6f313a0436545f35ab5456bfc10bbedb350cae"
+    },
+    {
+      "file": "tests/executor-linux.mjs",
+      "term": "const supervisorCrash=",
+      "lines": [
+        71
+      ],
+      "sha256": "fafa3d6894d28298c8477ccbdf6f313a0436545f35ab5456bfc10bbedb350cae"
+    },
+    {
+      "file": "tests/executor-linux.mjs",
+      "term": "undelegated=await",
+      "lines": [
+        72
+      ],
+      "sha256": "fafa3d6894d28298c8477ccbdf6f313a0436545f35ab5456bfc10bbedb350cae"
+    },
+    {
+      "file": "tests/executor-schema-browser.mjs",
+      "term": "const limited=",
+      "lines": [
+        37
+      ],
+      "sha256": "942014161cb5368eed7a3c569f92f51f2b56768a17415abf9d933b3098755a39"
+    },
+    {
+      "file": "tests/executor-schema-browser.mjs",
+      "term": "[limited,'aggregate-memory-failed']",
+      "lines": [
+        42
+      ],
+      "sha256": "942014161cb5368eed7a3c569f92f51f2b56768a17415abf9d933b3098755a39"
+    },
+    {
+      "file": "verification.json",
+      "term": "tests/executor-schema-browser.mjs",
+      "lines": [
+        56
+      ],
+      "sha256": "5a841a2a63638f39313d41b73e032a51877dfeb1b0a52bd696c5889a5c6d470c"
+    },
+    {
+      "file": "verification.json",
+      "term": "tests/executor-linux.mjs",
+      "lines": [
+        96
+      ],
+      "sha256": "5a841a2a63638f39313d41b73e032a51877dfeb1b0a52bd696c5889a5c6d470c"
+    }
+  ]
+}

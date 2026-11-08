@@ -1,0 +1,1 @@
+{"probe":"undelegated public HTTP task and restart","result":{"task_id":"ee43b18ae8da8406313dea5ff556007db9b5e342651a71671ce15a15b7714db8","status":"failed","aggregate_memory_mb":64,"error":{"category":"cgroup_setup_required","message":"Task requires delegated cgroup v2 memory and pids controllers with swap control."}},"repeat":"identical terminal outcome; no source staging"}
