@@ -44,7 +44,9 @@ the viewport. Positive tabindex is refused. Focused icon controls expose their
 named tooltips. On hover-capable pointing devices, help stays visible when the pointer moves onto it and Escape dismisses it. Keyboard help is checked at both widths. Each target is at least 24 by 24 CSS pixels, has equivalent
 spacing, is an inline text link, or has an equivalent larger link to the same
 run. Reflow is measured at 320 CSS pixels, including nested scroll containers;
-text fields retain their ordinary single-line input behavior.
+text fields retain their ordinary single-line input behavior. Two animation
+frames after restoring the viewport let mobile Chromium paint its restored clip
+before the full-page capture; the measurements and visible errors are unchanged.
 
 For axe's unresolved image and gradient backgrounds, the journey measures the
 actual background pixels behind painted text (excluding portions clipped or covered by an open popover), temporarily making foreground text
@@ -131,7 +133,7 @@ dark ink on orange, and footer text uses the readable body color. Secondary edit
 keyboard outlines have sufficient contrast. A skip link bypasses repeated shell
 navigation. Long headings wrap, the header retains its controls beside long breadcrumbs, run-ID focus remains above the phone row link, and decision notices have space for their focus
 outline. Standalone links have their own 24-pixel targets. Field errors persist visibly after the native validity popup closes and
-clear when edited. Tooltips can be dismissed without moving focus. Popovers close when keyboard focus leaves them, so they cannot cover the next target.
+clear when edited. Tooltips can be dismissed without moving focus. Popovers close when keyboard focus leaves them, so they cannot cover the next target. Native textarea focus now reveals the complete control rather than only its first line, without changing Tab order or activating an action.
 
 Existing one-decision, offline, lost-response, authoritative-read, input-retention
 and hidden-path legacy assertions remain in the registered journey unchanged.

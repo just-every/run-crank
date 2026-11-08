@@ -306,6 +306,9 @@ async function measuredChecks(width, state) {
     delete window.__spacingStyles;
   });
   await page.setViewportSize(viewport);
+  // Mobile Chromium needs the restored viewport to paint before a full-page
+  // capture; otherwise its previous compositor clip can hide visible content.
+  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   assert.equal(spacingReflow, true, `${state}: increased text spacing reflows`);
   assert.equal(reflow.document, true, `${state}: 320 CSS pixel reflow`);
   assert.deepEqual(reflow.scrollContainers, [], `${state}: no two-dimensional scrolling`);

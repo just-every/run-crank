@@ -196,7 +196,7 @@
       "executable": false
     },
     "docs/ACCESSIBILITY.md": {
-      "sha256": "5ab22d46b668ba124345c348e6fe9fd7753aaf35d00d1b2728d789ab71f4c5a8",
+      "sha256": "60c2fe0b16d8b6f8f0305bc31aa685ddb83ce689892d038e32f09df23b34abdf",
       "executable": false
     },
     "docs/AGENT-DOOR.md": {
@@ -1780,7 +1780,7 @@
       "executable": false
     },
     "public/decision.js": {
-      "sha256": "b05e687dd93bf48f9e74d15c03b6b7c06fff31f4dc1781ce426be415f2c3e272",
+      "sha256": "86d0068e9f4da6014d31919f1c805d35d6c2d0b606316e4ab3b69877c60a5ed5",
       "executable": false
     },
     "public/favicon.ico": {
@@ -6880,7 +6880,7 @@
       "executable": false
     },
     "tests/decision-browser.mjs": {
-      "sha256": "c401467f74e4a604e4fc53e2bbd6d7ecc5f032bbd6c5dbfacd5c79ad6babff95",
+      "sha256": "65f1b4ebd1b0068367933306c8e2b40b75ee84ff09a70cbf02d6c76f52c8c165",
       "executable": false
     },
     "tests/deployment.test.mjs": {
