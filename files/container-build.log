@@ -1,0 +1,281 @@
+Using project Node 22.20.0 (current Node 24.19.0).
+Waiting to start (queue position 1/1): all job slots are in use (1 of 1; change slots in /home/agent/.rer/jobs/config.json).
+Ahead of this job:
+  running: Crank setup:workflow [bb6dfca173e9] in [REDACTED]
+Memory: 14.2 GiB available, floor 2.0 GiB. Change the floor with RER_JOBS_MIN_FREE_MEMORY_BYTES (bytes; 0 for no floor).
+Run from the project root. Inspect the queue with: 'node' 'node_modules/.pnpm/@runeditrun+rer@0.2.91/node_modules/@runeditrun/rer/modules/job-queue/cli.mjs' 'status' '--json'
+Waiting to start (queue position 1/1): all job slots are in use (1 of 1; change slots in /home/agent/.rer/jobs/config.json).
+Ahead of this job:
+  running: Crank setup:workflow [bb6dfca173e9] in [REDACTED]
+Memory: 13.9 GiB available, floor 2.0 GiB. Change the floor with RER_JOBS_MIN_FREE_MEMORY_BYTES (bytes; 0 for no floor).
+Run from the project root. Inspect the queue with: 'node' 'node_modules/.pnpm/@runeditrun+rer@0.2.91/node_modules/@runeditrun/rer/modules/job-queue/cli.mjs' 'status' '--json'
+Waiting to start (queue position 1/1): all job slots are in use (1 of 1; change slots in /home/agent/.rer/jobs/config.json).
+Ahead of this job:
+  running: Crank setup:workflow [bb6dfca173e9] in [REDACTED]
+Memory: 13.6 GiB available, floor 2.0 GiB. Change the floor with RER_JOBS_MIN_FREE_MEMORY_BYTES (bytes; 0 for no floor).
+Run from the project root. Inspect the queue with: 'node' 'node_modules/.pnpm/@runeditrun+rer@0.2.91/node_modules/@runeditrun/rer/modules/job-queue/cli.mjs' 'status' '--json'
+Waiting to start (queue position 1/1): all job slots are in use (1 of 1; change slots in /home/agent/.rer/jobs/config.json).
+Ahead of this job:
+  running: Crank setup:workflow [bb6dfca173e9] in [REDACTED]
+Memory: 15.1 GiB available, floor 2.0 GiB. Change the floor with RER_JOBS_MIN_FREE_MEMORY_BYTES (bytes; 0 for no floor).
+Run from the project root. Inspect the queue with: 'node' 'node_modules/.pnpm/@runeditrun+rer@0.2.91/node_modules/@runeditrun/rer/modules/job-queue/cli.mjs' 'status' '--json'
+Heavy job admitted: Crank build:workflow [bb6dfca173e9]
+▲ [WARNING] Proxy environment variables detected. We'll use your proxy for fetch requests.
+
+
+(node:2338) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+vite v8.2.2 building client environment for production...
+transforming...
+✓ 135 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/client/.assetsignore               0.02 kB
+dist/client/assets/index-DgoNPDnv.js  311.20 kB │ gzip: 100.86 kB
+
+✓ built in 513ms
+vite v8.2.2 building ssr environment for production...
+transforming...
+✓ 995 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/server/wrangler.json                                      1.57 kB │ gzip:     0.79 kB
+dist/server/.vite/manifest.json                                3.05 kB │ gzip:     0.63 kB
+dist/server/assets/empty-plugin-adapters-D_0twvAa.js           0.28 kB │ gzip:     0.18 kB
+dist/server/assets/start-D8qDT34V.js                           0.28 kB │ gzip:     0.21 kB
+dist/server/assets/_tanstack-start-manifest_v-DvhK_Dzb.js      0.39 kB │ gzip:     0.28 kB
+dist/server/assets/font-head-D9nSLVNU.js                       1.88 kB │ gzip:     0.89 kB
+dist/server/assets/hash-CGMmNW5x.js                            4.69 kB │ gzip:     2.16 kB
+dist/server/assets/storage-BpBgzBli.js                         4.91 kB │ gzip:     1.95 kB
+dist/server/assets/router-Bnd2MprL.js                         37.21 kB │ gzip:    10.06 kB
+dist/server/assets/Match-CA07Md50.js                         161.09 kB │ gzip:    40.32 kB
+dist/server/index.js                                       2,380.89 kB │ gzip:   590.42 kB
+dist/server/assets/access-aUSTWbcB.js                      6,704.06 kB │ gzip: 1,162.71 kB
+
+[INEFFECTIVE_DYNAMIC_IMPORT] src/crank/connections/catalog.ts is dynamically imported by src/crank/workflows/snapshot.ts but also statically imported by src/crank/ops/coverage.ts, src/crank/workflows/api.ts, dynamic import will not move module into another chunk.
+
+[INEFFECTIVE_DYNAMIC_IMPORT] src/modules/import-kit/src/d1/undo-snapshot.ts is dynamically imported by src/modules/import-kit/src/d1/apply.ts but also statically imported by src/modules/import-kit/src/d1/preserved-preview.ts, src/modules/import-kit/src/d1/preserved-reverse.ts, dynamic import will not move module into another chunk.
+
+[INEFFECTIVE_DYNAMIC_IMPORT] src/crank/engine/executor.ts is dynamically imported by src/crank/workflows/subflow-calls.ts but also statically imported by src/crank/agents/drift-approval.ts, src/crank/agents/drift-permission.ts, src/crank/agents/drift-testing.ts, src/crank/agents/recurring-dispatch.ts, src/crank/custom/api.ts, ..., dynamic import will not move module into another chunk.
+
+[INEFFECTIVE_DYNAMIC_IMPORT] src/crank/access.ts is dynamically imported by src/crank/agent-door/people.ts but also statically imported by src/crank/agent-door/native-recovery.ts, src/crank/agent-door/tool-metadata.ts, src/crank/agent-door/tool-workflows.ts, src/crank/agents/authoring-promotion.ts, src/crank/agents/authoring-record.ts, ..., dynamic import will not move module into another chunk.
+
+✓ built in 1m 22s
+[PLUGIN_TIMINGS] Plugin hooks ran for 81.4s of this 82.1s build (99%).
+The slowest hooks, timed inside each callback (the wait before a callback starts is excluded, the time it awaits is included):
+  - crank-archive-migrations load (99%, 81.2s, 992 calls)
+2 hooks are listed without a time. Their calls overlapped, so the time inside one call includes work from other calls. To find their cost, profile the build with `node --cpu-prof`:
+  - tanstack-start-core:import-protection resolveId (3990 calls)
+  - tanstack-start-core::server-fn:ssr transform (15 calls)
+See https://rolldown.rs/reference/InputOptions.checks#plugintimings for more details.
+
+{"output":"[REDACTED]/.rer/container/image","engine":"workerd"}
+#0 building with "default" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 505B done
+#1 DONE 0.0s
+
+#2 [internal] load metadata for docker.io/library/node:26.8.1-bookworm-slim
+#2 DONE 7.7s
+
+#3 [internal] load .dockerignore
+#3 transferring context: 2B done
+#3 DONE 0.0s
+
+#4 [1/8] FROM docker.io/library/node:26.8.1-bookworm-slim@sha256:367679cf9792759492a486e4aa4b421764d71a9546a6dae8aab81a99eb797b3e
+#4 resolve docker.io/library/node:26.8.1-bookworm-slim@sha256:367679cf9792759492a486e4aa4b421764d71a9546a6dae8aab81a99eb797b3e 0.0s done
+#4 ...
+
+#5 [internal] load build context
+#5 transferring context: 18.77MB 0.1s done
+#5 DONE 0.1s
+
+#4 [1/8] FROM docker.io/library/node:26.8.1-bookworm-slim@sha256:367679cf9792759492a486e4aa4b421764d71a9546a6dae8aab81a99eb797b3e
+#4 sha256:367679cf9792759492a486e4aa4b421764d71a9546a6dae8aab81a99eb797b3e 3.93kB / 3.93kB done
+#4 sha256:27f5e13512830beb5d9a574108daa6701a0a0b91528aeaf1ee84ecdcddaeeaae 1.74kB / 1.74kB done
+#4 sha256:cf29686709c0bbe09620640e5275825c6f435f69f7665ef8e8f6603d11feae51 4.46kB / 4.46kB done
+#4 sha256:a8ac7f6c67abc236e4c745052c404112b8fab6fe8ac3a329d1ef3b867ad67c71 0B / 28.23MB 0.2s
+#4 sha256:a945e5dd4c31c8a431cc9a22ee18d011c9569086f8046202721d41b94bd58a0f 0B / 3.31kB 0.2s
+#4 sha256:3da92288bc537288410154113fb5b5f80d42f809819e3a52191c871050e6cccd 0B / 55.21MB 0.2s
+#4 sha256:a945e5dd4c31c8a431cc9a22ee18d011c9569086f8046202721d41b94bd58a0f 3.31kB / 3.31kB 2.8s done
+#4 sha256:48a8de95b4323f1c7057435d57efc290b492935139e83ba94e449cf1c05390dd 0B / 446B 2.8s
+#4 sha256:a8ac7f6c67abc236e4c745052c404112b8fab6fe8ac3a329d1ef3b867ad67c71 2.10MB / 28.23MB 3.7s
+#4 sha256:48a8de95b4323f1c7057435d57efc290b492935139e83ba94e449cf1c05390dd 446B / 446B 4.5s done
+#4 sha256:3da92288bc537288410154113fb5b5f80d42f809819e3a52191c871050e6cccd 1.05MB / 55.21MB 5.2s
+#4 sha256:a8ac7f6c67abc236e4c745052c404112b8fab6fe8ac3a329d1ef3b867ad67c71 4.19MB / 28.23MB 5.9s
+#4 sha256:a8ac7f6c67abc236e4c745052c404112b8fab6fe8ac3a329d1ef3b867ad67c71 6.29MB / 28.23MB 7.7s
+#4 sha256:3da92288bc537288410154113fb5b5f80d42f809819e3a52191c871050e6cccd 4.19MB / 55.21MB 7.7s
+#4 sha256:a8ac7f6c67abc236e4c745052c404112b8fab6fe8ac3a329d1ef3b867ad67c71 8.39MB / 28.23MB 9.7s
+#4 sha256:3da92288bc537288410154113fb5b5f80d42f809819e3a52191c871050e6cccd 7.34MB / 55.21MB 11.0s
+#4 sha256:a8ac7f6c67abc236e4c745052c404112b8fab6fe8ac3a329d1ef3b867ad67c71 10.49MB / 28.23MB 11.5s
+#4 sha256:a8ac7f6c67abc236e4c745052c404112b8fab6fe8ac3a329d1ef3b867ad67c71 12.58MB / 28.23MB 13.5s
+#4 sha256:3da92288bc537288410154113fb5b5f80d42f809819e3a52191c871050e6cccd 10.49MB / 55.21MB 14.5s
+#4 sha256:a8ac7f6c67abc236e4c745052c404112b8fab6fe8ac3a329d1ef3b867ad67c71 14.68MB / 28.23MB 15.4s
+#4 sha256:a8ac7f6c67abc236e4c745052c404112b8fab6fe8ac3a329d1ef3b867ad67c71 16.78MB / 28.23MB 17.2s
+#4 sha256:3da92288bc537288410154113fb5b5f80d42f809819e3a52191c871050e6cccd 13.63MB / 55.21MB 17.9s
+#4 sha256:a8ac7f6c67abc236e4c745052c404112b8fab6fe8ac3a329d1ef3b867ad67c71 18.87MB / 28.23MB 19.2s
+#4 sha256:a8ac7f6c67abc236e4c745052c404112b8fab6fe8ac3a329d1ef3b867ad67c71 20.97MB / 28.23MB 21.0s
+#4 sha256:3da92288bc537288410154113fb5b5f80d42f809819e3a52191c871050e6cccd 16.78MB / 55.21MB 21.2s
+#4 sha256:a8ac7f6c67abc236e4c745052c404112b8fab6fe8ac3a329d1ef3b867ad67c71 23.07MB / 28.23MB 22.9s
+#4 sha256:3da92288bc537288410154113fb5b5f80d42f809819e3a52191c871050e6cccd 19.92MB / 55.21MB 24.7s
+#4 sha256:a8ac7f6c67abc236e4c745052c404112b8fab6fe8ac3a329d1ef3b867ad67c71 25.17MB / 28.23MB 24.8s
+#4 sha256:a8ac7f6c67abc236e4c745052c404112b8fab6fe8ac3a329d1ef3b867ad67c71 27.26MB / 28.23MB 27.0s
+#4 sha256:a8ac7f6c67abc236e4c745052c404112b8fab6fe8ac3a329d1ef3b867ad67c71 28.23MB / 28.23MB 27.9s done
+#4 sha256:3da92288bc537288410154113fb5b5f80d42f809819e3a52191c871050e6cccd 23.07MB / 55.21MB 28.0s
+#4 extracting sha256:a8ac7f6c67abc236e4c745052c404112b8fab6fe8ac3a329d1ef3b867ad67c71 0.1s
+#4 extracting sha256:a8ac7f6c67abc236e4c745052c404112b8fab6fe8ac3a329d1ef3b867ad67c71 1.5s done
+#4 extracting sha256:a945e5dd4c31c8a431cc9a22ee18d011c9569086f8046202721d41b94bd58a0f done
+#4 sha256:3da92288bc537288410154113fb5b5f80d42f809819e3a52191c871050e6cccd 26.21MB / 55.21MB 31.4s
+#4 sha256:3da92288bc537288410154113fb5b5f80d42f809819e3a52191c871050e6cccd 29.36MB / 55.21MB 33.9s
+#4 sha256:3da92288bc537288410154113fb5b5f80d42f809819e3a52191c871050e6cccd 32.51MB / 55.21MB 35.9s
+#4 sha256:3da92288bc537288410154113fb5b5f80d42f809819e3a52191c871050e6cccd 35.65MB / 55.21MB 37.8s
+#4 sha256:3da92288bc537288410154113fb5b5f80d42f809819e3a52191c871050e6cccd 38.80MB / 55.21MB 40.2s
+#4 sha256:3da92288bc537288410154113fb5b5f80d42f809819e3a52191c871050e6cccd 41.94MB / 55.21MB 42.0s
+#4 sha256:3da92288bc537288410154113fb5b5f80d42f809819e3a52191c871050e6cccd 45.09MB / 55.21MB 44.1s
+#4 sha256:3da92288bc537288410154113fb5b5f80d42f809819e3a52191c871050e6cccd 48.23MB / 55.21MB 45.9s
+#4 sha256:3da92288bc537288410154113fb5b5f80d42f809819e3a52191c871050e6cccd 51.38MB / 55.21MB 48.1s
+#4 sha256:3da92288bc537288410154113fb5b5f80d42f809819e3a52191c871050e6cccd 54.53MB / 55.21MB 50.3s
+#4 sha256:3da92288bc537288410154113fb5b5f80d42f809819e3a52191c871050e6cccd 55.21MB / 55.21MB 50.6s done
+#4 extracting sha256:3da92288bc537288410154113fb5b5f80d42f809819e3a52191c871050e6cccd
+#4 extracting sha256:3da92288bc537288410154113fb5b5f80d42f809819e3a52191c871050e6cccd 1.5s done
+#4 extracting sha256:48a8de95b4323f1c7057435d57efc290b492935139e83ba94e449cf1c05390dd done
+#4 DONE 52.9s
+
+#6 [2/8] RUN apt-get update && apt-get install -y --no-install-recommends util-linux ca-certificates && apt-get clean
+#6 1.884 Get:1 http://deb.debian.org/debian bookworm InRelease [151 kB]
+#6 3.180 Get:2 http://deb.debian.org/debian bookworm-updates InRelease [55.4 kB]
+#6 4.568 Get:3 http://deb.debian.org/debian-security bookworm-security InRelease [34.8 kB]
+#6 5.177 Get:4 http://deb.debian.org/debian bookworm/main amd64 Packages [8790 kB]
+#6 6.973 Get:5 http://deb.debian.org/debian bookworm-updates/main amd64 Packages [6924 B]
+#6 7.556 Get:6 http://deb.debian.org/debian-security bookworm-security/main amd64 Packages [363 kB]
+#6 8.283 Fetched 9402 kB in 8s (1232 kB/s)
+#6 8.283 Reading package lists...
+#6 8.930 Reading package lists...
+#6 9.489 Building dependency tree...
+#6 9.674 Reading state information...
+#6 9.793 util-linux is already the newest version (2.38.1-5+deb12u3).
+#6 9.793 util-linux set to manually installed.
+#6 9.793 The following additional packages will be installed:
+#6 9.794   libssl3 openssl
+#6 9.809 The following NEW packages will be installed:
+#6 9.810   ca-certificates libssl3 openssl
+#6 10.28 0 upgraded, 3 newly installed, 0 to remove and 6 not upgraded.
+#6 10.28 Need to get 3643 kB of archives.
+#6 10.28 After this operation, 8955 kB of additional disk space will be used.
+#6 10.28 Get:1 http://deb.debian.org/debian-security bookworm-security/main amd64 libssl3 amd64 3.0.22-1~deb12u2 [2040 kB]
+#6 10.92 Get:2 http://deb.debian.org/debian-security bookworm-security/main amd64 openssl amd64 3.0.22-1~deb12u2 [1442 kB]
+#6 12.10 Get:3 http://deb.debian.org/debian-security bookworm-security/main amd64 ca-certificates all 20250419~deb12u2 [161 kB]
+#6 12.22 debconf: delaying package configuration, since apt-utils is not installed
+#6 12.24 Fetched 3643 kB in 2s (1583 kB/s)
+#6 12.26 Selecting previously unselected package libssl3:amd64.
+
+#6 12.26 (Reading database ... 
+(Reading database ... 5%
+(Reading database ... 10%
+(Reading database ... 15%
+(Reading database ... 20%
+(Reading database ... 25%
+(Reading database ... 30%
+(Reading database ... 35%
+(Reading database ... 40%
+(Reading database ... 45%
+(Reading database ... 50%
+(Reading database ... 55%
+(Reading database ... 60%
+(Reading database ... 65%
+(Reading database ... 70%
+(Reading database ... 75%
+(Reading database ... 80%
+(Reading database ... 85%
+(Reading database ... 90%
+(Reading database ... 95%
+(Reading database ... 100%
+(Reading database ... 6099 files and directories currently installed.)
+
+#6 12.26 Preparing to unpack .../libssl3_3.0.22-1~deb12u2_amd64.deb ...
+
+#6 12.27 Unpacking libssl3:amd64 (3.0.22-1~deb12u2) ...
+
+#6 12.40 Selecting previously unselected package openssl.
+
+#6 12.41 Preparing to unpack .../openssl_3.0.22-1~deb12u2_amd64.deb ...
+
+#6 12.41 Unpacking openssl (3.0.22-1~deb12u2) ...
+
+#6 12.53 Selecting previously unselected package ca-certificates.
+
+#6 12.53 Preparing to unpack .../ca-certificates_20250419~deb12u2_all.deb ...
+
+#6 12.54 Unpacking ca-certificates (20250419~deb12u2) ...
+
+#6 12.58 Setting up libssl3:amd64 (3.0.22-1~deb12u2) ...
+
+#6 12.59 Setting up openssl (3.0.22-1~deb12u2) ...
+
+#6 12.60 Setting up ca-certificates (20250419~deb12u2) ...
+
+#6 12.68 debconf: unable to initialize frontend: Dialog
+
+#6 12.68 debconf: (TERM is not set, so the dialog frontend is not usable.)
+
+#6 12.68 debconf: falling back to frontend: Readline
+
+#6 12.68 debconf: unable to initialize frontend: Readline
+
+#6 12.68 debconf: (Can't locate Term/ReadLine.pm in @INC (you may need to install the Term::ReadLine module) (@INC contains: /etc/perl /usr/local/lib/x86_64-linux-gnu/perl/5.36.0 /usr/local/share/perl/5.36.0 /usr/lib/x86_64-linux-gnu/perl5/5.36 /usr/share/perl5 /usr/lib/x86_64-linux-gnu/perl-base /usr/lib/x86_64-linux-gnu/perl/5.36 /usr/share/perl/5.36 /usr/local/lib/site_perl) at /usr/share/perl5/Debconf/FrontEnd/Readline.pm line 7.)
+
+#6 12.68 debconf: falling back to frontend: Teletype
+
+#6 13.11 Updating certificates in /etc/ssl/certs...
+
+#6 13.80 148 added, 0 removed; done.
+
+#6 13.83 Processing triggers for libc-bin (2.36-9+deb12u14) ...
+
+#6 13.84 Processing triggers for ca-certificates (20250419~deb12u2) ...
+
+#6 13.85 Updating certificates in /etc/ssl/certs...
+
+#6 14.39 0 added, 0 removed; done.
+
+#6 14.39 Running hooks in /etc/ca-certificates/update.d...
+
+#6 14.39 done.
+
+#6 DONE 14.4s
+
+#7 [3/8] RUN mkdir -p /private /archive
+#7 DONE 0.6s
+
+#8 [4/8] WORKDIR /runtime
+#8 DONE 0.4s
+
+#9 [5/8] COPY runtime/package.json ./package.json
+#9 DONE 0.4s
+
+#10 [6/8] RUN npm install --omit=dev --no-audit --no-fund
+#10 141.2 npm error code SELF_SIGNED_CERT_IN_CHAIN
+#10 141.2 npm error errno SELF_SIGNED_CERT_IN_CHAIN
+#10 141.2 npm error request to https://registry.npmjs.org/miniflare failed, reason: self-signed certificate in certificate chain
+#10 141.2 npm error A complete log of this run can be found in: /root/.npm/_logs/2026-11-08T22_16_42_831Z-debug-0.log
+#10 ERROR: process "/bin/sh -c npm install --omit=dev --no-audit --no-fund" did not complete successfully: exit code: 1
+------
+ > [6/8] RUN npm install --omit=dev --no-audit --no-fund:
+141.2 npm error code SELF_SIGNED_CERT_IN_CHAIN
+141.2 npm error errno SELF_SIGNED_CERT_IN_CHAIN
+141.2 npm error request to https://registry.npmjs.org/miniflare failed, reason: self-signed certificate in certificate chain
+141.2 npm error A complete log of this run can be found in: /root/.npm/_logs/2026-11-08T22_16_42_831Z-debug-0.log
+------
+Dockerfile:6
+--------------------
+   4 |     WORKDIR /runtime
+   5 |     COPY runtime/package.json ./package.json
+   6 | >>> RUN npm install --omit=dev --no-audit --no-fund
+   7 |     COPY runtime/ /runtime/
+   8 |     COPY app/ /app/
+--------------------
+ERROR: failed to build: failed to solve: process "/bin/sh -c npm install --omit=dev --no-audit --no-fund" did not complete successfully: exit code: 1
+Container command failed
+Unexpected failure: run the command again, and if it repeats inspect the project operating documentation.
+build: failed (exit 1)

@@ -1,0 +1,4 @@
+command=cloud_run npx -y @runeditrun/rer setup --owner-email fleet@runeditrun.com --non-interactive
+exit=1
+observed=Application listened on ports 33183, 40855 and 42385; readiness failed for GET health through expected internal port 15991.
+notes=Frozen dependency installation, application build and 93 core migrations completed. The setup command then failed its temporary development listener health check. No owner credentials or setup settings are included in this receipt.

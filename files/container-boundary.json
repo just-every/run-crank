@@ -1,0 +1,19 @@
+{
+  "package": "@runeditrun/rer",
+  "version": "0.2.91",
+  "files": [
+    {
+      "path": "node_modules/@runeditrun/rer/modules/container/build.mjs",
+      "sha256": "f1430ffeb7d206d9d7ed4dc28d8f379cc47769ea3f1fcdd079eb73b18e3a2c80"
+    },
+    {
+      "path": "node_modules/@runeditrun/rer/cli/container.mjs",
+      "sha256": "db236aeb05f8ab8329aa220465a48ebaf83df27149e6534120b890fae5b747c2"
+    },
+    {
+      "path": "../packet/generated-container.Dockerfile",
+      "sha256": "b377eee92bbe73ca5654cbbbb1fc27f875cbd4a8dc473406818330d9e1843cc3"
+    }
+  ],
+  "observed": "The generated npm install RUN has no CA mount; the public build command supplies docker build only a tag and context. No generated or Base file was edited."
+}

@@ -1,0 +1,10 @@
+command=cloud_run timeout 1200 npx -y @runeditrun/rer build --platform container
+head=dfa28611c3194a208793de6e3a4fd65489fd361b
+exit=1
+package=@runeditrun/rer@0.2.91
+stage=Base-generated Dockerfile line 6: RUN npm install --omit=dev --no-audit --no-fund
+failure=SELF_SIGNED_CERT_IN_CHAIN: request to https://registry.npmjs.org/miniflare failed, reason: self-signed certificate in certificate chain
+elapsed_npm_seconds=141.2
+base_dependency=node_modules/@runeditrun/rer/modules/container/build.mjs:97; node_modules/@runeditrun/rer/cli/container.mjs:53
+boundary=The managed Docker host needs the session CA supplied to the dependency-installing build step. The pinned generator provides no CA mount, and its public build invocation provides only the Docker image tag and context. A supported trust input is needed in Base; no Base or generated copy was edited, and TLS verification was not disabled.
+qualification=Stopped before image completion. Real SSH deploy, HTTPS health, memory-limited operation, app crash, Docker daemon restart, schedule occurrence uniqueness, durable records, redeploy, preview, export and restore are NOT RUN.

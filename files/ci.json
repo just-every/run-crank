@@ -1,0 +1,57 @@
+{
+  "head": "dfa28611c3194a208793de6e3a4fd65489fd361b",
+  "query": "repos/just-every/run-crank/actions/runs?head_sha=dfa28611c3194a208793de6e3a4fd65489fd361b&per_page=100",
+  "runs": [],
+  "main": {
+    "head": "18cf94064499fd097f145cd1c45a681dadd08445",
+    "runs": [
+      {
+        "conclusion": "skipped",
+        "event": "push",
+        "head_sha": "18cf94064499fd097f145cd1c45a681dadd08445",
+        "html_url": "https://github.com/just-every/run-crank/actions/runs/42528207140",
+        "id": 42528207140,
+        "name": "Run demo",
+        "status": "completed"
+      },
+      {
+        "conclusion": "success",
+        "event": "push",
+        "head_sha": "18cf94064499fd097f145cd1c45a681dadd08445",
+        "html_url": "https://github.com/just-every/run-crank/actions/runs/42528207169",
+        "id": 42528207169,
+        "name": "Run site",
+        "status": "completed"
+      },
+      {
+        "conclusion": "success",
+        "event": "push",
+        "head_sha": "18cf94064499fd097f145cd1c45a681dadd08445",
+        "html_url": "https://github.com/just-every/run-crank/actions/runs/42528207155",
+        "id": 42528207155,
+        "name": "Verify",
+        "status": "completed"
+      },
+      {
+        "conclusion": "success",
+        "event": "dynamic",
+        "head_sha": "18cf94064499fd097f145cd1c45a681dadd08445",
+        "html_url": "https://github.com/just-every/run-crank/actions/runs/42528206759",
+        "id": 42528206759,
+        "name": "Push on main",
+        "status": "completed"
+      },
+      {
+        "conclusion": "success",
+        "event": "push",
+        "head_sha": "18cf94064499fd097f145cd1c45a681dadd08445",
+        "html_url": "https://github.com/just-every/run-crank/actions/runs/42526177224",
+        "id": 42526177224,
+        "name": "Verify",
+        "status": "completed"
+      }
+    ]
+  },
+  "github_api_calls": 3,
+  "candidate_note": "Published intermediate save has [skip ci]; no exact-head Verify run was found. No dispatch or rerun was requested because the real container build blocker keeps this run BLOCKED."
+}

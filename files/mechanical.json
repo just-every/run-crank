@@ -1,0 +1,27 @@
+{
+  "head": "dfa28611c3194a208793de6e3a4fd65489fd361b",
+  "base": "18cf94064499fd097f145cd1c45a681dadd08445",
+  "commands": [
+    {
+      "command": "node src/base/contract-docs.mjs write",
+      "exit": 0
+    },
+    {
+      "command": "node src/base/contract-docs.mjs check",
+      "exit": 0
+    },
+    {
+      "command": "git checkout origin/main -- ACCEPTANCE.md docs/CLAIMS.md",
+      "exit": 0
+    },
+    {
+      "command": "node node_modules/@runeditrun/rer/edition-authoring/cli.mjs lock",
+      "exit": 0
+    },
+    {
+      "command": "node node_modules/@runeditrun/rer/edition-authoring/cli.mjs check",
+      "exit": 0
+    }
+  ],
+  "ledger": "not applicable; no migration edited"
+}

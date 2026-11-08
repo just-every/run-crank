@@ -1,0 +1,184 @@
+{
+  "files": [
+    {
+      "blob": "2aa4d1f22b405695091409aa42712078e8630f59",
+      "bytes": 12918,
+      "path": "REPORT.md",
+      "sha256": "e7a2593d5df7127159fdcdf04bcb127d2e6f42251209145fca647b904e20ab8f"
+    },
+    {
+      "blob": "05086c635d304317d4839bbe953df9ce09ac0fda",
+      "bytes": 1500,
+      "path": "checks.json",
+      "sha256": "1fa71f9a98fc680d82e921a244cd5d27a3ea99d48476362f3a2ea383362ca0ab"
+    },
+    {
+      "blob": "8f36f11b7fca269ab0e315ee22b13a3aa42e904e",
+      "bytes": 2070,
+      "path": "ci.json",
+      "sha256": "074e1104c95925e70cfb801eda7495e8615d1e052d5ef6876083e85642e9863e"
+    },
+    {
+      "blob": "e796f7dcfc06ba4031c4b412d0efaaab0b02865c",
+      "bytes": 1135,
+      "path": "container-blocker.receipt",
+      "sha256": "6da4fa483495418c1a76c9d05c33e10269d436e5c1a97fa62505a691878c8e31"
+    },
+    {
+      "blob": "2c3c59962be72a7bd2548b66c7a43a7606fcb4bd",
+      "bytes": 732,
+      "path": "container-boundary.json",
+      "sha256": "6adbc3ee204304441e2c683a6b3d182d178fa8ca42f13d9dfd7f3844a50322f0"
+    },
+    {
+      "blob": "0679636b3140da04f11be48e1646f1ac09a79831",
+      "bytes": 17544,
+      "path": "container-build.log",
+      "sha256": "c6bcbd076c09f6435acea732709d928cf28147cc0bd80022a3165c9838359277"
+    },
+    {
+      "blob": "097845822d7617804065cfde58e8fd56349034a1",
+      "bytes": 23,
+      "path": "container-build.receipt",
+      "sha256": "d001efe70f9712eeadc67fcf6595a2dd4a217b757615be6e28ef849cf1d1978f"
+    },
+    {
+      "blob": "c269a9dc9368d28332d6448fce5b229b5184f11e",
+      "bytes": 409,
+      "path": "counts.json",
+      "sha256": "fcbb4481fedabc11e8f24b56e9f8f2a705b0820710cb4601c72cd767b2ed24a3"
+    },
+    {
+      "blob": "7d632f5fad329e9a85c9366234d19d2442dfe181",
+      "bytes": 227,
+      "path": "deployment-spec.log",
+      "sha256": "6f51182f47c5b5b1f8461b612598d9f7aba93ebfff429ce16fb58142ac39803c"
+    },
+    {
+      "blob": "8126b5d029c040eaa7e979b0d676b767b5431117",
+      "bytes": 23,
+      "path": "deployment-spec.receipt",
+      "sha256": "79973e67473b95a5e5733d3486da1ca658d3178ca55c1174e57f937f6f062f7c"
+    },
+    {
+      "blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "bytes": 0,
+      "path": "first-party.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "blob": "f3c06c2b46c35c94e6144d95fb90609199005e94",
+      "bytes": 19,
+      "path": "first-party.receipt",
+      "sha256": "b28b37fa50bdb02fbba69ae00933bb4677e5835ab0ebbecfa7233a899f22c8db"
+    },
+    {
+      "blob": "fafa7927f3a7cd3650b26faec8aebd679313d6ad",
+      "bytes": 466,
+      "path": "generated-container.Dockerfile",
+      "sha256": "b377eee92bbe73ca5654cbbbb1fc27f875cbd4a8dc473406818330d9e1843cc3"
+    },
+    {
+      "blob": "21c25417603c3a92f50e6f76f68020033093056d",
+      "bytes": 637,
+      "path": "inbound-tests.log",
+      "sha256": "2f1739557d0e4a42b59876580672b45e727a32cb0570e14f36dd1a0b4b61f570"
+    },
+    {
+      "blob": "9f0f1ec289fecb5f96ec177b3eeca2396ec3dc5e",
+      "bytes": 21,
+      "path": "inbound-tests.receipt",
+      "sha256": "103e4bf4a6fa932531c83ce78a57e6deffe54683be1b40eb99083b8d05743191"
+    },
+    {
+      "blob": "497c469ea0b8d22b8e4221ea2a67ed00b18ea9b6",
+      "bytes": 1143,
+      "path": "main-ci.jsonl",
+      "sha256": "1bd8341275ce663c6a5fc7e1e8a0b2c07afa2b1763b6680e75ccd5f9d88c43bc"
+    },
+    {
+      "blob": "13eb175ff71bfc64e9f7962fe215cf4b98675aea",
+      "bytes": 691,
+      "path": "mechanical.json",
+      "sha256": "f5912daa3d0396965c2ba1d0b73d53be9b4e9e6c8191a944bfbd0ca5fcd3af6a"
+    },
+    {
+      "blob": "c7cba347d5e9f48707d1f8bc1dfa5806ed1ac0a3",
+      "bytes": 100,
+      "path": "packet-safety.json",
+      "sha256": "b0cfbbf7228cc66cc086a44b3c49b7590d1e5511771671e6458b1941fa216793"
+    },
+    {
+      "blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "bytes": 0,
+      "path": "product-ci.jsonl",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "blob": "7bdd662d60013963780e4f3bc75c35f95abc26cc",
+      "bytes": 464,
+      "path": "product-push.log",
+      "sha256": "5a40275a033665849869b40c33f0e2fcc638bebd7f425713815641809757b8a4"
+    },
+    {
+      "blob": "6d0b4a30b3c0526ff35bb234dca2c462c99c4cba",
+      "bytes": 74,
+      "path": "product-ref.txt",
+      "sha256": "f4af33963869ec9451dc115ecb286065b70c7efacf9fbf38e31e8d325e40c29c"
+    },
+    {
+      "blob": "3b56b0546ab091c987718d72ba682adcc30fabf9",
+      "bytes": 105,
+      "path": "protected-files.json",
+      "sha256": "29841dc5d38da33ac3c39c3d1287d19740ec6e34c1f13a98a236c58ddbbff861"
+    },
+    {
+      "blob": "5e99d8c69b851101117505bcf25ff73ec92c2a6b",
+      "bytes": 7335,
+      "path": "runtime.log",
+      "sha256": "88b4610bd1d19ca3c747b759a153972676dc44bc3879c7d5366cd6eaaea4c240"
+    },
+    {
+      "blob": "3e15ea8bcf69bc6c3181be7a9c374905a900fcb2",
+      "bytes": 15,
+      "path": "runtime.receipt",
+      "sha256": "d248803b949a7fc2b60bcc5eea2fe59d4d0701d3ad38e4e9cfb4779361d093d3"
+    },
+    {
+      "blob": "c9674d25b7941f256d2107392a1222af864db078",
+      "bytes": 248265,
+      "path": "screens/1440-container-email-requirement.png",
+      "sha256": "b835944d6035eee271386fd1ac4f0fb08cce2b6c774fd3eb660bef07ac88420c"
+    },
+    {
+      "blob": "df994627dae82687494dd1f3495ddefe2ba56d08",
+      "bytes": 123570,
+      "path": "screens/390-container-email-requirement.png",
+      "sha256": "7de9cfa18f4f54bc396cdb6e2b04450b0a4041848cbf0ae4862fcc1a6f59462d"
+    },
+    {
+      "blob": "e59e8b27806937901d10c2229e77ec5864f6990c",
+      "bytes": 478,
+      "path": "setup.receipt",
+      "sha256": "00b6b4758902353e43773fb1a4b7f6e513a649a25733e4e519dcc28f9bb05af2"
+    },
+    {
+      "blob": "dccda528aede8b2d4fefcd4aa2f7106e4c619bb1",
+      "bytes": 233,
+      "path": "typecheck.log",
+      "sha256": "70c0488d5fccffb074f667efe4b24cd2b3b642db8887436b577e151c7c405e94"
+    },
+    {
+      "blob": "4ccf283a5214ee54fea7b8128da6cbecbd50ccee",
+      "bytes": 17,
+      "path": "typecheck.receipt",
+      "sha256": "27defb71d02103d5ef7d007f4ba2a563e69e45834e417adda7c7cdf26435123f"
+    }
+  ],
+  "product_branch": "cloud/sx-crank-c-f104",
+  "product_head": "dfa28611c3194a208793de6e3a4fd65489fd361b",
+  "ref": "refs/heads/evidence/sx-crank-c-f104",
+  "repository": "just-every/run-crank",
+  "schema": 1,
+  "tag": "sx-crank-c-f104"
+}

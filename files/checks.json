@@ -1,0 +1,54 @@
+{
+  "repository": "just-every/run-crank",
+  "branch": "cloud/sx-crank-c-f104",
+  "head": "dfa28611c3194a208793de6e3a4fd65489fd361b",
+  "main": "18cf94064499fd097f145cd1c45a681dadd08445",
+  "tests": {
+    "runtime": {
+      "exit": 0,
+      "receipt": "runtime.receipt",
+      "log": "runtime.log"
+    },
+    "inbound-tests": {
+      "exit": 0,
+      "receipt": "inbound-tests.receipt",
+      "log": "inbound-tests.log"
+    },
+    "typecheck": {
+      "exit": 0,
+      "receipt": "typecheck.receipt",
+      "log": "typecheck.log"
+    },
+    "first-party": {
+      "exit": 0,
+      "receipt": "first-party.receipt",
+      "log": "first-party.log"
+    },
+    "deployment-spec": {
+      "exit": 0,
+      "receipt": "deployment-spec.receipt",
+      "log": "deployment-spec.log"
+    },
+    "container-build": {
+      "exit": 1,
+      "receipt": "container-build.receipt",
+      "log": "container-build.log"
+    }
+  },
+  "runtime_node": "22.20.0",
+  "inbound_and_typecheck_node": "24.19.0",
+  "source_pins_unchanged": true,
+  "container_qualification": "BLOCKED by generated Base Dockerfile trust input",
+  "contract_status_change": false,
+  "test_registration_delta": 0,
+  "screens": [
+    {
+      "path": "screens/1440-container-email-requirement.png",
+      "sha256": "b835944d6035eee271386fd1ac4f0fb08cce2b6c774fd3eb660bef07ac88420c"
+    },
+    {
+      "path": "screens/390-container-email-requirement.png",
+      "sha256": "7de9cfa18f4f54bc396cdb6e2b04450b0a4041848cbf0ae4862fcc1a6f59462d"
+    }
+  ]
+}

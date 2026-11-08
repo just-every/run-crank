@@ -1,0 +1,16 @@
+{
+  "before": {
+    "done": 32,
+    "partial": 50,
+    "missing": 17
+  },
+  "after": {
+    "done": 32,
+    "partial": 50,
+    "missing": 17
+  },
+  "test_budget_metadata_before": 199,
+  "test_budget_metadata_after": 199,
+  "new_registrations": 0,
+  "note": "The assignment states 200 of 200. Current main metadata records 199 after consolidation. No registration inventory or cap is changed by this replay."
+}
