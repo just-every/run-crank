@@ -10,6 +10,9 @@ const bwrap = '/usr/bin/bwrap';
 const cleanEnv = { PATH: '/usr/bin:/bin', LANG: 'C.UTF-8' };
 export const MAX_OUTPUT = 1024 * 1024;
 export const messages = {
+  interrupted: 'Executor stopped; task outcome is uncertain and it will not be relaunched.',
+  memory_limit: 'Task exceeded its aggregate memory limit.',
+  cgroup_setup_required: 'Task requires delegated cgroup v2 memory and pids controllers with swap control.',
   cancelled: 'Task was cancelled.', timeout: 'Task exceeded its wall deadline.',
   output_limit: 'Task exceeded the output limit.', invalid_output: 'Task did not return a JSON value.',
   execution_failed: 'Task execution failed or an operating system resource limit was reached.',
@@ -33,13 +36,14 @@ export function runtimeInfo() {
 
 export function validatePayload(value, runtime) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return 'Expected a task object.';
-  if (Object.keys(value).some(key => !['language', 'source', 'input', 'timeout_ms', 'memory_mb', 'allowed_egress', 'runtime_version'].includes(key))) return 'Unsupported task field.';
+  if (Object.keys(value).some(key => !['language', 'source', 'input', 'timeout_ms', 'memory_mb', 'aggregate_memory_mb', 'allowed_egress', 'runtime_version'].includes(key))) return 'Unsupported task field.';
   if (!['python', 'javascript', 'typescript'].includes(value.language)) return 'Supported languages are python, javascript and typescript.';
   if (typeof value.source !== 'string' || !value.source.trim() || !Object.hasOwn(value, 'input')) return 'Source and JSON input are required.';
   if (!Array.isArray(value.allowed_egress) || value.allowed_egress.length) return 'Only explicit allowed_egress: [] is supported; network access is unavailable.';
   if (!Number.isInteger(value.timeout_ms) || value.timeout_ms < 50 || value.timeout_ms > 60000) return 'timeout_ms must be an integer from 50 to 60000.';
   const minimum = value.language === 'python' ? 64 : 512;
   if (!Number.isInteger(value.memory_mb) || value.memory_mb < minimum || value.memory_mb > 2048) return `memory_mb must be an integer from ${minimum} to 2048 (virtual address space).`;
+  if (Object.hasOwn(value, 'aggregate_memory_mb') && (!Number.isInteger(value.aggregate_memory_mb) || value.aggregate_memory_mb < 32 || value.aggregate_memory_mb > 2048)) return 'aggregate_memory_mb must be an integer from 32 to 2048 (whole-task resident memory).';
   if (value.runtime_version !== undefined && value.runtime_version !== runtime[value.language]) return 'Requested runtime version is unavailable; an exact installed version is required.';
   return null;
 }
@@ -63,7 +67,7 @@ function command(runtime, payload, sourceDir) {
   return args;
 }
 
-export async function prepareJob(runtime, payload, taskDir) {
+export async function prepareJob(runtime, payload, taskDir, cgroupRoot) {
   const sourceDir = path.join(taskDir, 'job');
   fs.mkdirSync(sourceDir, { mode: 0o700 });
   const source = payload.language === 'typescript'
@@ -71,8 +75,8 @@ export async function prepareJob(runtime, payload, taskDir) {
     : payload.source;
   fs.writeFileSync(path.join(sourceDir, payload.language === 'python' ? 'code.py' : 'code.mjs'), source, { mode: 0o600 });
   fs.writeFileSync(path.join(sourceDir, 'input.json'), JSON.stringify(payload.input), { mode: 0o600 });
-  const config = path.join(sourceDir, 'supervisor.json');
-  fs.writeFileSync(config, JSON.stringify({ command: command(runtime, payload, sourceDir), timeout_ms: payload.timeout_ms, memory_mb: payload.memory_mb }), { mode: 0o600 });
+  const config = path.join(taskDir, 'supervisor.json');
+  fs.writeFileSync(config, JSON.stringify({ command: command(runtime, payload, sourceDir), timeout_ms: payload.timeout_ms, memory_mb: payload.memory_mb, task_dir: taskDir, task_id: path.basename(taskDir), ...(Object.hasOwn(payload, 'aggregate_memory_mb') ? { aggregate_memory_mb: payload.aggregate_memory_mb, cgroup_root: cgroupRoot } : {}) }), { mode: 0o600 });
   return config;
 }
 
@@ -90,8 +94,26 @@ export function launchJob(config) {
       if (Buffer.byteLength(output) > MAX_OUTPUT + 4096) { child.stdin.end('cancel'); output = ''; }
     });
     child.on('close', () => {
-      try { finish(JSON.parse(output)); } catch { finish({ error: 'sandbox_unavailable' }); }
+      try { finish(JSON.parse(output)); } catch {
+        // If the supervisor itself crashes, cleanup still precedes terminal readback.
+        try {
+          const recovery = spawnSync(python, ['-I', '-S', path.join(here, 'launch.py'), '--recover', config], { env: cleanEnv, encoding: 'utf8', timeout: 70000 });
+          finish(recovery.status === 0 ? JSON.parse(recovery.stdout) : { error: 'sandbox_unavailable' });
+        } catch { finish({ error: 'sandbox_unavailable' }); }
+      }
     });
   });
   return { result, cancel() { if (!stopped) child.stdin.end('cancel'); } };
+}
+
+// Recovery runs only trusted cleanup, never the staged command or task source.
+export function recoverJob(taskDir, record, cgroupRoot) {
+  const config = path.join(taskDir, 'recovery.json');
+  fs.writeFileSync(config, JSON.stringify({ task_dir: taskDir, task_id: record.task_id,
+    ...(Object.hasOwn(record, 'aggregate_memory_mb') ? { aggregate_memory_mb: record.aggregate_memory_mb, cgroup_root: cgroupRoot } : {}) }), { mode: 0o600 });
+  const recovery = spawnSync(python, ['-I', '-S', path.join(here, 'launch.py'), '--recover', config], { env: cleanEnv, encoding: 'utf8', timeout: 70000 });
+  if (recovery.status !== 0) throw new Error('Task cleanup could not finish');
+  const result = JSON.parse(recovery.stdout);
+  if (result.error === 'sandbox_unavailable') throw new Error('Task cleanup could not finish');
+  return result;
 }

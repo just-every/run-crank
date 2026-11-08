@@ -200,7 +200,7 @@
       "executable": false
     },
     "docs/API.md": {
-      "sha256": "2d86d513c58decc73a29c6ee143159b7e0d28671d2d9a0bbbd0c05960b035043",
+      "sha256": "0ebcd4a428b1c03e98148f124d2c3dbdda6e096e2fa97c89677fbf3d7ec2223a",
       "executable": false
     },
     "docs/APP-TRIGGERS.md": {
@@ -1196,23 +1196,23 @@
       "executable": false
     },
     "executors/linux/launch.py": {
-      "sha256": "5423482551dbcd8bad81c8bd61ab12d15046468df64b5d8abd1abd56a7de95a1",
+      "sha256": "8258f5bd5eb4fee2715877353bd24602699bb56f195a23ccf6c1f5b84ee5ca7a",
       "executable": false
     },
     "executors/linux/README.md": {
-      "sha256": "cbf8f6730253150e423a9f98cd586b7e5058cc730ddcc4a621db5141a37ef440",
+      "sha256": "6bc66406199eba320ccc265c98dda0c8e88e5c229409e25a3b514c60904dc64a",
       "executable": false
     },
     "executors/linux/sandbox.mjs": {
-      "sha256": "6e6b6e9445ff208808125e43a96ae06074ec779435322c8b7aa5b790a94381d1",
+      "sha256": "a77489a2ade137e96d2c6d7cd5b218252ae31510d10f01fad65ab0519ea6cc97",
       "executable": false
     },
     "executors/linux/server.mjs": {
-      "sha256": "a4af6823e84fcf69aeacd9161c2de27d88b8b2578c55a099e37dd92cd9d59c40",
+      "sha256": "841f623994e89e0594c294eca489ad4b2af4ec256b67fdc34c9290d089cb342d",
       "executable": false
     },
     "executors/linux/store.mjs": {
-      "sha256": "c7703ce58b6a910f72185d032324635854aed471ed2aad8b33d396f58972669e",
+      "sha256": "724e810bd68065ef8702267a9541a3502bb2cc77434837be39437e79133457d9",
       "executable": false
     },
     "executors/linux/wrappers/javascript.mjs": {
@@ -3500,7 +3500,7 @@
       "executable": false
     },
     "src/crank/executors/step.ts": {
-      "sha256": "f03e7d182e4116fd0fa384df5ef9adeba7a299bf9d9a98c3bf22edce5cd46ffe",
+      "sha256": "fd95f7e0631a3607d9660158ce644734c309b2f1e9643e126f6f4cc5a2b07f38",
       "executable": false
     },
     "src/crank/executors/transport.ts": {
@@ -4024,7 +4024,7 @@
       "executable": false
     },
     "src/crank/ui/editor/inspector.ts": {
-      "sha256": "02db38f4ddef49be67cff7a8a0e6082d282494495d93bba5ca5a123d99c72556",
+      "sha256": "d190a00bee24345f1312ee986204422462e37374fa00fa26c75f19a427203011",
       "executable": false
     },
     "src/crank/ui/editor/model.ts": {
@@ -6960,19 +6960,19 @@
       "executable": false
     },
     "tests/executor-fixture.mjs": {
-      "sha256": "cf64dda5b4ffc5c9716471660307ec8bde39606d862504c20150879a95bb533a",
+      "sha256": "e3b09ca940357e2bb856a08dfbf4cf768dcbd83a6b709aef997486a12a505dcf",
       "executable": false
     },
     "tests/executor-linux.mjs": {
-      "sha256": "549e5b7cbf631c8dfdf163e1d792ac2a448fa82d5a13aedb63ce44059f8e4356",
+      "sha256": "2a0a2a1593918971a441ccac3d4706e41eadba551c7281498fb6de240f33960b",
       "executable": false
     },
     "tests/executor-schema-browser.mjs": {
-      "sha256": "98a76eba30bf028213e575eea834df2228de22dbfb3625776bf8fdfd8a6ccc62",
+      "sha256": "942014161cb5368eed7a3c569f92f51f2b56768a17415abf9d933b3098755a39",
       "executable": false
     },
     "tests/executors.test.mjs": {
-      "sha256": "07b5eb11cfb01b19a419ce070bf08dda1dbd60a8901a4cad944747639a9c9eab",
+      "sha256": "92e844b7d3085a1536af12d9e95dce18b74bde537a9f8f426864cea80c749eff",
       "executable": false
     },
     "tests/financial-browser.mjs": {
