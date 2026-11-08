@@ -17,5 +17,14 @@
   "pr": null,
   "pushed": true,
   "publication_scan": "Mac lander pending",
-  "run_site": "Mac lander pending"
+  "run_site": "Mac lander pending",
+  "remote_product_head_verified": true,
+  "ci": {
+    "conclusion": "success",
+    "head_sha": "cf6d2ea660ddf502ce15f72f80e2cbcc88016518",
+    "html_url": "https://github.com/just-every/run-crank/actions/runs/42515607344",
+    "status": "completed",
+    "id": 42515607344,
+    "event": "push"
+  }
 }

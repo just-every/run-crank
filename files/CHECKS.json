@@ -71,5 +71,21 @@
     "kind": "merge",
     "main": "7ece4aec67ea1fa9328aad8632d01a4c541fe064",
     "published_history_rewritten": false
+  },
+  "publication": {
+    "product_branch": "cloud/sx-crank-c-f98",
+    "product_head": "cf6d2ea660ddf502ce15f72f80e2cbcc88016518",
+    "evidence_first_head": "6f311be9e522460ea39b335d4ff41d122d593df3",
+    "scan": "Mac lander pending",
+    "main_equality": "not claimed",
+    "run_site": "Mac lander pending"
+  },
+  "ci": {
+    "conclusion": "success",
+    "head_sha": "cf6d2ea660ddf502ce15f72f80e2cbcc88016518",
+    "html_url": "https://github.com/just-every/run-crank/actions/runs/42515607344",
+    "status": "completed",
+    "id": 42515607344,
+    "event": "push"
   }
 }

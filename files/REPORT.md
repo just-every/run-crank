@@ -54,7 +54,7 @@ is UX-001: PARTIAL to PARTIAL, with the operator conformance slice expanded.
 | --- | --- |
 | 1 | PARTIAL: scoped web journey covers the operator outcomes; native devices and broader obligations remain unproved. |
 | 2 | PASS: seeded nonempty workflows, real local HTTP decisions, actual storage, local Cron inbox delivery and a refusing then acknowledging receiver. |
-| 3 | Pending exact-head Verify until its recorded result; the existing owner-decisions entry invokes this journey without an opt-in flag. |
+| 3 | PASS: push Verify 42515607344 completed successfully on cf6d2ea660ddf502ce15f72f80e2cbcc88016518; the existing owner-decisions entry invokes this journey without an opt-in flag. |
 | 4 | Candidate receipt records the exact head and source cleanliness; no UI or test edit follows successful final proof. |
 | 5 | INSPECTED: no new inherited duty is claimed and no contract text changes. |
 | 6 | PASS mechanically: generator write and check pass; generated views restored whole from main. Contract status and counts retained. |
@@ -144,7 +144,27 @@ MECHANICAL lock=node node_modules/@runeditrun/rer/edition-authoring/cli.mjs chec
 CLAIM UX-001 PARTIAL points=1 tests=tests/decision-browser.mjs#UX-001: accessible owner operation and real decisions across connection loss
 GAP UX-001: Actual iOS and Android notification-to-resolution devices, native assistive technology, APNs and FCM delivery with secret-free notifications, complete small-screen workflow editing, Base-owned pages and full conformance beyond the audited operator doors remain unproved.
 
-Verify 42515607344: push event, exact candidate SHA, in progress at discovery.
-A successful run is required before a green Verify claim. Scan and main equality
+Verify 42515607344: push event, completed successfully on cf6d2ea660ddf502ce15f72f80e2cbcc88016518. Scan and main equality
 are not claimed; the guarded lander still owns the complete publication scan and
 Run site checks on landing.
+
+
+## Terminal handoff
+
+Exact-head Verify: completed and successful, run 42515607344, push event.
+https://github.com/just-every/run-crank/actions/runs/42515607344
+
+All requested operator conformance checks pass. UX-001 remains PARTIAL because
+of the held and broader obligations named in the GAP. Counts are unchanged:
+32 DONE, 50 PARTIAL, 17 MISSING; registered tests remain 200 of 200. All 99
+Status rows remain. No policy default was adopted. No PR was opened because
+this repository starts Verify directly from the named branch push.
+
+Product custody: cloud/sx-crank-c-f98 at cf6d2ea660ddf502ce15f72f80e2cbcc88016518, confirmed remotely.
+Evidence custody: the complete explicitly selected report packet is published
+separately to evidence/sx-crank-c-f98. Evidence publication is neither acceptance
+nor landing. Main equality, the complete publication scan and Run site remain
+with the guarded Mac lander. No scan or landing success is claimed here.
+
+The disposable product checkout will be removed after the final report transfer;
+the packet remains under the task work directory and on its evidence ref.
