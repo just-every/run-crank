@@ -74,8 +74,12 @@ try {
   await page.getByRole('button',{name:'Record owner estimate',exact:true}).click();await page.waitForLoadState('networkidle');
   await page.getByRole('checkbox').check();await page.getByRole('button',{name:'Promote tested version',exact:true}).click();await page.waitForLoadState('networkidle');
   proposal=await h.get(path);assert.equal(proposal.promoted,true);assert.equal(invoices.length,before+1);assert.equal((await h.get('grants')).length,0);await shot(width,'promoted');
+  await page.getByRole('link',{name:'Open workflow editor',exact:true}).click();
+  if(width===1440)await expect(page.locator('h1')).toHaveText(hostilePolicyText);
+  await shot(width,'hostile-workflow-name');
   await page.goto(h.origin+'/app/import');await page.getByLabel('Workflow export JSON').fill(JSON.stringify(hostileAiImport()));await page.getByRole('button',{name:'Upload and plan',exact:true}).click();await page.waitForLoadState('networkidle');
-  if(width===1440){await expect(page.getByRole('button',{name:'Approve this plan',exact:true})).toHaveCount(0);await expect(page.locator('body')).toContainText('<script>globalThis.crankInjected=1</script>');await expect(page.locator('body')).toContainText('Manual conversion required');assert.equal(fake.to('leak.example').length,0)}
+  await page.getByText(/Supported fields/).click();
+  if(width===1440){await expect(page.getByRole('button',{name:'Approve this plan',exact:true})).toHaveCount(0);await expect(page.locator('body')).toContainText('<script>globalThis.crankInjected=1</script>');await expect(page.locator('body')).toContainText(hostileAiImport().nodes[1].name);await expect(page.locator('body')).toContainText('Manual conversion required');assert.equal(fake.to('leak.example').length,0)}
   await shot(width,'hostile-ai-import');const planId=await page.locator('.import-review input[name="planId"]').inputValue();const status=await door(h,'status',{planId});assert.equal(status.value.job,null);await page.getByRole('button',{name:'Cancel plan',exact:true}).click();
  }
  assert.equal(modelCalls,4);console.log('authoring-browser: PASS widths=1440,390 production_sends=0 scope_refusal=true literal_hostile_states=true exact_human_promotion=true');await context.close();
