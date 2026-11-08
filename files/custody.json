@@ -1,0 +1,16 @@
+{
+  "head": "0169bf01751cd589b2a0a4531ea2e2e65e0c3cf6",
+  "branch": "cloud/sx-crank-c-f92",
+  "remote": "https://github.com/just-every/run-crank.git",
+  "remoteRefs": [
+    "0169bf01751cd589b2a0a4531ea2e2e65e0c3cf6\trefs/heads/cloud/sx-crank-c-f92",
+    "a18d77530d6071377b744b4301f1f19caae8498b\trefs/heads/main"
+  ],
+  "clean": true,
+  "fullHistory": true,
+  "sourceLockSHA256": "1472e67f12ee89640e4f2ef81dd2e1908d5a786be243fe226143af95a457e8b8",
+  "lockCheckExit": 0,
+  "candidateCommits": "0169bf01751cd589b2a0a4531ea2e2e65e0c3cf6\nRun Edit Run fleet <fleet@runeditrun.com>\nRun Edit Run fleet <fleet@runeditrun.com>",
+  "coreHooksPath": "/workspace/run-crank/.git/fleet-cloud-hooks",
+  "generatedFilesUnchanged": true
+}

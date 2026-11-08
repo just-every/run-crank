@@ -1,0 +1,147 @@
+{
+  "tag": "sx-crank-c-f92",
+  "repository": "just-every/run-crank",
+  "branch": "cloud/sx-crank-c-f92",
+  "head": "0169bf01751cd589b2a0a4531ea2e2e65e0c3cf6",
+  "base": "a18d77530d6071377b744b4301f1f19caae8498b",
+  "productPush": "succeeded on first attempt with cloud-push.py",
+  "checks": [
+    {
+      "command": "timeout 300 node /tmp/crank-contention-probe.mjs <packet>/before.json",
+      "exit": 1,
+      "kind": "expected regression reproduction",
+      "artifact": "before.log",
+      "runtime": "22.20.0",
+      "tree": "final journey with only the pipeline restored to origin/main"
+    },
+    {
+      "command": "timeout 300 node /tmp/crank-contention-probe.mjs <packet>/after.json",
+      "exit": 0,
+      "artifact": "after.log",
+      "runtime": "22.20.0"
+    },
+    {
+      "command": "timeout 1200 node --test --test-concurrency=1 --test-name-pattern='^PLATFORM-001: SDK and CORE door draft lifecycle' tests/platform.test.mjs",
+      "exit": 0,
+      "artifact": "platform.log",
+      "runtime": "22.20.0"
+    },
+    {
+      "command": "pnpm typecheck",
+      "exit": 0,
+      "artifact": "typecheck.log",
+      "runtime": "22.20.0"
+    },
+    {
+      "command": "node src/base/contract-docs.mjs write; node src/base/contract-docs.mjs check",
+      "exit": 0,
+      "artifact": "views.log",
+      "clauses": 99,
+      "generatedViewsCommitted": false
+    },
+    {
+      "command": "node node_modules/@runeditrun/rer/edition-authoring/cli.mjs lock; node node_modules/@runeditrun/rer/edition-authoring/cli.mjs check",
+      "exit": 0
+    },
+    {
+      "command": "pnpm exec rer check --profile first-party",
+      "exit": 0,
+      "artifact": "first-party.log"
+    },
+    {
+      "command": "cloud_run npx -y @runeditrun/rer build",
+      "exit": 0,
+      "artifact": "build.log"
+    },
+    {
+      "command": "cloud_run timeout 1200 node /tmp/crank-contention-browser.mjs <packet>",
+      "exit": 0,
+      "artifact": "browser.json",
+      "runtime": "22.20.0",
+      "head": "0169bf01751cd589b2a0a4531ea2e2e65e0c3cf6"
+    }
+  ],
+  "relevantFiles": [
+    {
+      "path": "src/modules/agent-door/pipeline.ts",
+      "sha256": "4b2aee54eae148d1387469e19b65b9a1d680ca000b00308ab08a780d3088d1e8"
+    },
+    {
+      "path": "src/modules/agent-door/conformance/audit.mjs",
+      "sha256": "dd72b827c1d511d7bcb757f01056ab68858dc4f8ee8a58181107ca32df62df40"
+    },
+    {
+      "path": "tests/agent-door/journey.mjs",
+      "sha256": "d184a026cf59bea7dc1559dabd33d5fd149b75893ab82c6e03122d93fb425fae"
+    },
+    {
+      "path": "tests/platform.test.mjs",
+      "sha256": "4c31d212246d55d6cb37d101ddc63207867515f829d0c5de5562c1a45ed6fbff"
+    },
+    {
+      "path": "docs/AGENT-DOOR.md",
+      "sha256": "6d5d3788dce23e21dfde546c8fee3144afb7eb914344ed525484016d74f55c5b"
+    },
+    {
+      "path": "sources.lock.json",
+      "sha256": "1472e67f12ee89640e4f2ef81dd2e1908d5a786be243fe226143af95a457e8b8"
+    }
+  ],
+  "testRegistrations": {
+    "before": 200,
+    "after": 200,
+    "added": 0
+  },
+  "clauses": {
+    "before": {
+      "done": 32,
+      "partial": 50,
+      "missing": 17
+    },
+    "after": {
+      "done": 32,
+      "partial": 50,
+      "missing": 17
+    }
+  },
+  "hygiene": {
+    "newEmailLiterals": 0,
+    "newProviderCredentialShapes": 0,
+    "commitIdentity": "fleet",
+    "trailers": []
+  },
+  "mechanical": {
+    "lockExit": 0,
+    "viewsWriteExit": 0,
+    "viewsCheckExit": 0,
+    "ledger": "not applicable; no migration"
+  },
+  "publicationScan": {
+    "status": "not run in cloud; guarded lander duty",
+    "complete": null,
+    "historyScanned": null,
+    "findings": null
+  },
+  "mainEqualsCandidate": false,
+  "mainVerify": 42493151148,
+  "mainRunSite": 42493151166,
+  "candidateVerify": 42495093191,
+  "candidateVerifyStatus": "in_progress",
+  "githubApiCalls": 3,
+  "browser": {
+    "status": "pass",
+    "head": "0169bf01751cd589b2a0a4531ea2e2e65e0c3cf6",
+    "widths": [
+      1440,
+      390
+    ],
+    "inspected": true
+  },
+  "claim": "PARTIAL",
+  "points": [
+    6
+  ],
+  "newPolicyDefault": false,
+  "candidateVerifyConclusion": null,
+  "ciLastObservedUTC": "2026-11-08T15:35:45Z"
+}
