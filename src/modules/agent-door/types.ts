@@ -56,6 +56,10 @@ export interface ToolDefinition {
    * recorded effect facts instead of requiring consumed preparation state. */
   classify(args: Record<string, unknown>, ctx: ToolContext, completed?: readonly ClassAndFacts[]): ClassAndFacts[] | Promise<ClassAndFacts[]>
   run(args: Record<string, unknown>, ctx: ToolContext): Promise<{ result: unknown; resources?: Array<{ uri: string; name: string }>; undo?: unknown }>
+  /** Seed-owned durable evidence only. Called for an admitted claim with no
+   * outcome; must never re-execute a mutation. The pipeline still applies current
+   * authority, classification and policy before returning or saving the result. */
+  recover?(args: Record<string, unknown>, ctx: ToolContext, claim: { decisionId: string; requestDigest: string }): Promise<CallResult | null>
   revisionType?: 'integer' | 'number' | 'string'
   revision?(args: Record<string, unknown>, ctx: ToolContext): Promise<string | number | null>
   summary?(args: Record<string, unknown>, ctx: ToolContext): ApprovalSummary | Promise<ApprovalSummary>

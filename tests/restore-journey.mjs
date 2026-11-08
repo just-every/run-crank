@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import { gunzipSync } from 'node:zlib';
 import { harness } from './harness.mjs';
 import { makePart, ArchiveVerifier, ContentVerifier } from '@runeditrun/rer/internal/modules/portability/format.mjs';
 import { connection, deliver, doorImport, estimateHold, fakeEdge, fakeSecret, hookUrl, jsonResponse, publish, startRun, settled } from './kit.mjs';
@@ -89,6 +90,14 @@ export async function restoreFixture() {
 }
 
 export async function restoreJourney() {
+  // A real export from main before installation-local door tables were excluded.
+  // Agents were never used; migration 0091 alone must not make the backup unrestorable.
+  const mainArchive = gunzipSync(await readFile('tests/fixtures/main-agent-archive.rer.gz')).toString('utf8');
+  const receiving = await harness(target);
+  try {
+    await receiving.post('data/restore', { archive: mainArchive, confirm: 'RESTORE' });
+  } finally { await receiving.close(); }
+
   const fixture = await restoreFixture(), { source, fake, bound, token, workflow, resume, cancel, approval, waitingApproval, scheduled, poll, oldHook, hold, pendingLegacy, failedLegacy, agent } = fixture;
   let restored, corrupt, older;
   try {
