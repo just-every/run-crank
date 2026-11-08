@@ -19,6 +19,10 @@ export async function crossSponsorPhase(c, sponsors, initializeAgent) {
     return;
    }
   }
+  b.renewPolicy = async () => {
+   await c.renewPolicy();
+   b.seq = c.seq; b.revision = c.revision; b.document = c.document;
+  };
   const prefix = `BASE-AGENT-004.cross-sponsor.${person.label}`;
   await c.adopt(autonomousPolicy());
   b.revision = c.revision;

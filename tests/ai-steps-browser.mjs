@@ -1,9 +1,11 @@
+import {expectHoverTooltip} from './tooltip-browser.mjs';
 import assert from 'node:assert/strict';
 import {createServer} from 'node:http';
 import {mkdir,readFile} from 'node:fs/promises';
 import {extname,join,resolve} from 'node:path';
 import {chromium,expect} from '@playwright/test';
 import {aiClassificationJourney,aiCustodyJourney,model,endpoint} from './ai-steps-journey.mjs';
+import {classificationPolicyJourney,hostilePolicyText} from './agent-policy-journey.mjs';
 
 const evidence=process.env.CRANK_EVIDENCE;
 assert.ok(evidence,'Set CRANK_EVIDENCE outside the repository');
@@ -50,7 +52,7 @@ async function onScreen({h,w,run,state}) {
         await page.goto(h.origin+`/app/workflows/${w.id}?step=classify&tab=data`);
         if(width===1440) {
           const inspector=page.getByRole('region',{name:'Selected step'});
-          if(state==='classified') {
+          if(state.endsWith('classified')) {
             await expect(inspector).toContainText('synthetic-crank-response');
             await expect(inspector).toContainText('quoted_usd');await expect(inspector).toContainText('provider_reported_usd');
             await expect(inspector).toContainText('unknown');await expect(inspector).toContainText('support');
@@ -62,20 +64,20 @@ async function onScreen({h,w,run,state}) {
       const ai=page.locator('.timeline-item').filter({hasText:'AI classification'}).first();
       await ai.getByText('Input and output',{exact:true}).click();
       if(width===1440) {
-        if(state==='classified')await expect(ai).toContainText('synthetic-crank-response');
-        else if(state==='refused') {
+        if(state.endsWith('classified'))await expect(ai).toContainText('synthetic-crank-response');
+        else if(state.endsWith('refused')) {
           await expect(ai).toContainText('invalid structured output');
-          await expect(page.locator('.timeline-item[data-state="succeeded"]')).toHaveCount(0);
+          await expect(page.locator('.timeline-item[data-state="succeeded"]')).toHaveCount(state==='policy-refused'?1:0);
         }else {
           await expect(ai).toContainText('response is unknown');
           await expect(ai).toContainText(run.steps.find(step=>step.step_id==='classify').operation_key);
           await expect(page.locator('.timeline-item[data-state="succeeded"]')).toHaveCount(1);
         }
+        if(state.startsWith('policy-')){await expect(ai).toContainText(hostilePolicyText);assert.equal(await page.evaluate(()=>globalThis.crankInjected),undefined);assert.equal(stepOfPolicy(run),state==='policy-refused'?null:'support')}
         for(const label of ['Search runs','Your account']) {
           const control=page.locator(`[aria-describedby="${label==='Search runs'?'search-tooltip':'account-tooltip'}"]`);
           const tooltip=page.getByRole('tooltip',{name:label,exact:true});
-          await page.mouse.move(0,0);await control.blur();await expect(tooltip).toBeHidden();
-          await control.hover();await page.waitForTimeout(150);await expect(tooltip).toBeHidden();await expect(tooltip).toBeVisible();
+          await expectHoverTooltip(page,control,tooltip);
           await page.mouse.move(0,0);await control.focus();await expect(tooltip).toBeVisible({timeout:100});await control.blur();
         }
       }
@@ -84,6 +86,7 @@ async function onScreen({h,w,run,state}) {
     }
   }finally{await context.close();server.closeAllConnections();await new Promise(done=>server.close(done))}
 }
-try{await aiClassificationJourney({onScreen});await aiCustodyJourney({onScreen})}
+const stepOfPolicy=run=>run.steps.find(s=>s.step_id==='classify').output?.category??null;
+try{await classificationPolicyJourney({onScreen});await aiClassificationJourney({onScreen});await aiCustodyJourney({onScreen})}
 finally{await browser.close()}
 console.log('AI classification editor provenance, failures, uncertainty and tooltips PASS; proof at 1440 and 390');

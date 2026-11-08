@@ -6,6 +6,7 @@ import type {
   ImporterValidationIssue,
   ImporterValidationResult,
   ImportersDocument,
+  MoveInImporterRecord,
 } from './types.ts';
 
 export type * from './types.ts';
@@ -22,7 +23,18 @@ export async function validateImporters(
   const counters: ImporterValidationResult['evidence'] = { required: 0, resolved: 0, verifiedReceipts: 0 };
   if (issues.length > 0) return result(issues, counters);
 
-  const records = (document as ImportersDocument).importers;
+  const { schemaVersion, importers } = document as ImportersDocument;
+  const records = importers as Array<ImporterRecord | MoveInImporterRecord>;
+  // Version 1 rows carry no Move in fields and version 2 rows all three; the schema allows either row shape in either file.
+  for (let index = 0; index < records.length; index += 1) {
+    if (Object.hasOwn(records[index]!, 'moveIn') !== (schemaVersion === 2)) {
+      issues.push({ code: 'SCHEMA_VERSION_ROW', path: `$.importers[${index}]`, message: schemaVersion === 2 ? 'Every version 2 row declares moveIn, accepts and export.' : 'Move in fields need schemaVersion 2.' });
+    }
+  }
+  if (schemaVersion === 1 && Object.hasOwn(document as object, 'format')) {
+    issues.push({ code: 'SCHEMA_VERSION_ROW', path: '$.format', message: 'The import format path needs schemaVersion 2.' });
+  }
+  if (issues.length > 0) return result(issues, counters);
   const seen = new Map<string, number>();
   for (let index = 0; index < records.length; index += 1) {
     const record = records[index]!;
@@ -43,7 +55,10 @@ export async function validateImporters(
   }
   if (issues.length > 0) return result(issues, counters);
 
-  const evidenceCounters = await validateImporterEvidence(records as ImporterRecord[], evidence, issues);
+  // A row with no status declares only its Move in page; it has no evidence to resolve.
+  const evidenced = records.some((record) => 'evidence' in record);
+  if (!evidenced) return result(issues, counters);
+  const evidenceCounters = await validateImporterEvidence(records, evidence, issues);
   return result(issues, evidenceCounters);
 }
 

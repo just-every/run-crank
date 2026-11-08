@@ -26,7 +26,7 @@ export async function subscriptions(rt: Runtime, request: Request, rpc: Rpc, pri
   const position = (await rt.options.db.prepare('SELECT COALESCE(MAX(sequence),0) AS seq FROM agent_door_events').first<{ seq: number }>())!.seq
   const listed = async () => {
     const state = await policyState(rt)
-    return rt.tools.filter(tool => tool.classes.every(cls => answered(state.document, cls))).map(tool => tool.name).join(',')
+    return rt.tools.filter(tool => tool.exposure !== 'invoke' && tool.classes.every(cls => answered(state.document, cls))).map(tool => tool.name).join(',')
   }
   let cursor = position, lastTools = await listed(), stopped = false, timer: ReturnType<typeof setTimeout> | undefined
   const started = rt.now(), encoder = new TextEncoder()

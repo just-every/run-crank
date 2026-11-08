@@ -69,6 +69,9 @@ export async function negativePhase(c) {
  const foreign = await c.request('/api/rer/agent-policy', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ policy: foreignBusiness.policy }) });
  c.add('BASE-AGENT-007.8.business', !foreign.ok, 'An envelope whose Business does not match its revision signature was accepted.');
  await foreign.body?.cancel();
- c.add('BASE-AGENT-007.8.state', isDeepStrictEqual(state, await c.personJson('/agents/api/state')), 'An invalid envelope changed the adopted policy state or revision.');
+ // Slow requests may renew the adopted envelope before the second state read.
+ // Only its acknowledged expiry may change; every other field stays strict.
+ const sameState = actual => isDeepStrictEqual({ ...state, policy: { ...state.policy, expires_at: new Date(c.adoptedPolicy.exp * 1000).toISOString() } }, actual);
+ c.add('BASE-AGENT-007.8.state', sameState(await c.personJson('/agents/api/state')), 'An invalid envelope changed the adopted policy state or revision.');
  c.add('BASE-AGENT-004.negative-no-effect', isDeepStrictEqual(before, await c.witness()), 'An authentication/person-door/policy-envelope negative changed native state.');
 }

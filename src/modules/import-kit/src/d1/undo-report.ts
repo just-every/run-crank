@@ -7,6 +7,7 @@ import { custodyGuards, inventoryGuards } from './integrity.ts';
 import { readOriginals } from './originals.ts';
 import { reversalState } from './undo-state.ts';
 import { nativeStagingScope } from './native-staging-context.ts';
+import { compactCustodyGuards } from './read-fence.ts';
 
 export async function readD1ImportUndoReport(id: string, context: D1ImportContext, page: { offset?: number; limit?: number } = {}): Promise<D1UndoReport> {
   const offset = page.offset ?? 0, limit = page.limit ?? 100;
@@ -15,7 +16,9 @@ export async function readD1ImportUndoReport(id: string, context: D1ImportContex
   await authorize(context, 'read');
   const { job, plan } = await stored(id, context);
   await readOriginals(plan, id, context);
-  await readAtomic(context, [...boundary(job, plan), ...custodyGuards(plan, id), ...await inventoryGuards(job, plan, context)], nativeStagingScope(job, plan));
+  const scope = nativeStagingScope(job, plan);
+  const guards = await compactCustodyGuards(context, [...boundary(job, plan), ...custodyGuards(plan, id), ...await inventoryGuards(job, plan, context)], scope, 'read');
+  await readAtomic(context, guards, scope);
   const state = reversalState(job);
   const outcome = !['undone','rolled_back'].includes(job.state) ? 'pending' : state.dispositions.some(d => d.disposition === 'retained') ? 'compensated' : 'undone';
   return { job, policy: state.policy, cursor: state.cursor, total: state.dispositions.length, nextOffset: offset + limit < state.dispositions.length ? offset + limit : null, dispositions: state.dispositions.slice(offset, offset + limit), outcome, ...(state.conversion ? { conversion: state.conversion } : {}) };

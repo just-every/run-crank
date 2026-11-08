@@ -21,8 +21,8 @@ export interface RetirementScope { jobs: string[]; streams: string[]; stages: st
 /** Jobs, streams and private stages whose headers hold one of the exact values,
  * closed over everything their deletion would break: whole streams, jobs whose
  * entries reuse a retired job's sources, and preserved history in both directions. */
-export async function retirementScope(db: D1Database, destination: string, values: string[]): Promise<RetirementScope> {
-  const jobs = new Set<string>(), streams = new Set<string>(), stages = new Set<string>(), anchors = new Set<string>(), preparations = new Set<string>();
+export async function retirementScope(db: D1Database, destination: string, values: string[], seedJobs: string[] = []): Promise<RetirementScope> {
+  const jobs = new Set<string>(seedJobs), streams = new Set<string>(), stages = new Set<string>(), anchors = new Set<string>(), preparations = new Set<string>();
   const exact = JSON.stringify(values);
   const read = async (query: string, ...bound: unknown[]) => (await db.prepare(query).bind(...bound).all<{ id: string }>()).results.map(row => row.id);
   if (values.length) {

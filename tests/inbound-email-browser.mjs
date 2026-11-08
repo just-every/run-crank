@@ -1,3 +1,4 @@
+import {expectHoverTooltip} from './tooltip-browser.mjs';
 import assert from 'node:assert/strict';
 import {createServer} from 'node:http';
 import {mkdir,readFile} from 'node:fs/promises';
@@ -38,7 +39,7 @@ async function onScreen({h,w,run}) {
         const link=history.getByRole('link',{name:'Open run'}).first();await expect(link).toHaveAttribute('href',/^\/app\/workflow-runs\//);
         for(const label of ['Search runs','Your account']) {
           const control=page.locator(`[aria-describedby="${label==='Search runs'?'search-tooltip':'account-tooltip'}"]`),tooltip=page.getByRole('tooltip',{name:label,exact:true});
-          await page.mouse.move(0,0);await control.blur();await expect(tooltip).toBeHidden();await control.hover();await page.waitForTimeout(150);await expect(tooltip).toBeHidden();await expect(tooltip).toBeVisible();await page.mouse.move(0,0);await control.focus();await expect(tooltip).toBeVisible({timeout:100});await control.blur();
+          await expectHoverTooltip(page,control,tooltip);await page.mouse.move(0,0);await control.focus();await expect(tooltip).toBeVisible({timeout:100});await control.blur();
         }
         assert.ok(await page.locator('.panel').evaluateAll(panels=>panels.every(panel=>[...panel.querySelectorAll('p,label,button,a,h2,h3,strong')].every(el=>parseFloat(getComputedStyle(el).fontSize)>=13))),'settings text is at least 13 pixels');
       }

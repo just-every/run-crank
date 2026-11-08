@@ -6,10 +6,21 @@ Agent surface. The declared CORE journey passes integrated conformance; full con
 coverage remains partial. The declared registry is [agent-surface.json](../agent-surface.json);
 the implementation is [src/crank/agent-door](../src/crank/agent-door/index.ts).
 
-The shared runtime source is adopted from Base commit
-`2135c394939f4a737adabdc8003b0e667b31ac5a`; the corresponding released CLI is
-`0.2.91`. The released runner passes 1,021/1,021 hosted CORE points, including the
-seed native journey. This proves only the declared preparation boundary.
+The maintained shared runtime source is refreshed to Base commit
+`96045612467d5e752c668e8557b4bf6e906edfb1`, with released CLI `0.2.104`.
+Crank retains its native draft-recovery, named-person policy and busy-refusal
+audit adaptations, including immediate `decision_busy` refusal for contending
+preparations without a reservation or effect. The custom people adapter forwards Base's durable Business
+stop reader; applied schema is upgraded additively, preserving migration history. The signed
+`POST /api/rer/agent-decisions` pull is forwarded to that same Base handler;
+its issuer, installation, current Business pairing and durable stop checks
+remain authoritative. The additive backfill retains existing paired MCP audit
+membership without changing the decision history.
+
+The historical rer `0.2.91` runner passed 1,021/1,021 hosted CORE points,
+including the seed native journey, on the earlier `2135c394939f4a737adabdc8003b0e667b31ac5a`
+runtime. That receipt proves only the declared preparation boundary; it is not
+a new conformance receipt for this refresh.
 
 ## Routes and capability boundary
 
@@ -27,9 +38,9 @@ advertised as working families. No event-list tool is injected and tool replies
 emit no MCP resource links. A person's approval URL remains part of the policy
 handoff; it does not imply record-resource support.
 
-The surface declares `resources: []`, `escalations: []` and
+The surface declares `resources: []`, an explicit scope-addition refusal fixture and
 `spend: { "none": true }`. No paid or provider call is reachable from these
-twelve declared tools. This no-spend boundary comes from the admitted native
+thirteen declared tools. This no-spend boundary comes from the admitted native
 operations; it does not claim provider-spend-cap enforcement. Other native
 Crank routes, execution paths and connectors have broader purposes outside this
 registry.
@@ -74,10 +85,11 @@ The page supplies no resource, prompt, event or subscription capability. Full
 specialist jobs, native and provider parity, stranger-specialist completion and
 remaining conformance families stay unfinished.
 
-## The twelve declared tools
+## The declared tools
 
-Every tool declares only `standard`, with server-computed item-count facts.
-Eight are read-only and four prepare inert work. Clauses below are the actual
+Metadata and preparation tools declare `standard`, with server-computed item-count facts.
+The scope-removal tool declares `access` with direction computed from persisted grants.
+Eight tools are read-only, four prepare inert work and one removes tool scopes. Clauses below are the actual
 registry metadata, not a statement that each cited clause is fully implemented
 through this door.
 
@@ -95,8 +107,9 @@ through this door.
 | `crank.catalog.list` | `catalog:read` | Read the installed connector operation catalogue and restrictions. | CONN-001 |
 | `crank.coverage.report` | `catalog:read` | Compare a supplied app/operation inventory with the local catalogue; fetch no schema. | CONN-001, CONN-011 |
 | `crank.custom.propose` | `workflows:prepare` | Convert a supplied OpenAPI document into an uninstalled native connector proposal requiring owner review. | CONN-011, CONN-020 |
+| `crank.agents.narrow` | `agents:narrow` | Retain only existing tool scopes for the calling agent at an exact native scope revision. | BASE-AGENT-005 |
 
-Only create, update, duplicate and connector proposal have `readOnly: false`.
+Create, update, duplicate, connector proposal and scope removal have `readOnly: false`.
 Validation is read-only even though its native adapter uses a POST.
 Draft creation, editing and duplication grant no execution, publication,
 connection or provider authority. A stored graph can describe provider work
@@ -109,7 +122,7 @@ inputs, outputs, payloads, business keys, source IDs, error text and provider
 request details. Connection responses omit secret values and encrypted material.
 Catalogue presence is inventory, not dispatch authority or a claim that a planned
 connector is built. Names, descriptions and imported declarations remain
-untrusted content; every tool marks its results accordingly.
+untrusted content; the metadata and preparation tools mark their results accordingly.
 
 ## Bounded specialist prompts
 
@@ -280,6 +293,27 @@ refused draft names never appear, existing workflows stay unchanged, and native
 run counts and usage accounting remain unchanged. Complete native workflow and
 usage reports, including admitted inert drafts, survive restart unchanged.
 
+Native create, update and duplicate preparation audits retain the door's verified
+`ctx.approvers` as separate identity snapshots. The sponsor remains the sponsor;
+an agent argument cannot select an approver. The native workflow response's
+`prepared_by` and `preparations` retain those snapshots across restart and inactive
+archive restoration. The editor shows the preparer, sponsor and actual human
+approver for each preparation. Autonomous and older records without approval
+evidence show no human approval; preparation approval grants no publication or
+execution authority. Historical names render as escaped text. Native admission
+also binds each verified reviewer's current operator generation. The same native
+transaction fence checks that generation and active status before committing a
+preparation, so revocation during an in-flight decision changes no draft or
+native preparation audit. This does not change retained historical attribution.
+
+The installed native editor journey in
+`tests/agent-door/attribution-browser.mjs` keeps the existing construction proof
+and exercises the separate-session approval and refusal paths through
+`tests/agent-door/attribution-journey.mjs`. The shared hosted CORE journey also
+uses the same native preparation projection assertions. This proves the inert
+draft boundary only: provider actions, outside messages, signatures, certificates,
+Undo attribution and broader specialist acts remain unproved.
+
 All four mutating tools require `idempotency_key`. The same agent/key and
 unchanged declared arguments return the retained outcome; changed arguments
 return `idempotency_conflict`. The runtime durably claims the call before
@@ -332,7 +366,7 @@ gap against SURFACE-001's shared-registry requirement. Aliasing the old generic
 `/api/crank/v1/mcp` path to this door does not close that gap or establish
 native/provider classification parity through every wrapper.
 
-This document records the implemented boundary. Integrated CORE conformance passes 1,021/1,021 points on rer 0.2.91. Native
+This document records the implemented boundary. The historical integrated CORE receipt records 1,021/1,021 points on rer 0.2.91. Native
 Agents and pending/executed approval pages have browser proof at 1440 and 390.
 The complete ct registry, native UI parity for its omitted jobs and the seeded
 specialist week remain acceptance work. Only the bounded prompt capability is promoted.
@@ -389,3 +423,38 @@ reconstruct old execution authority. The public-door recovery journey extends
 the existing SDK and CORE draft lifecycle test and the declared hosted journey,
 without adding a test registration or changing the test budget. The remaining
 BASE-AGENT-012 obligations stay in its Status Gap.
+
+## Persistent tool-scope removal
+
+A native owner may explicitly include `agents:narrow` when issuing a new
+preparation credential using `tool_scopes`. Existing credentials retain the
+previous preparation scope set. The Access settings form offers this permission
+only for a new credential. An owner may also issue a once-only Business-agent
+ceiling through `POST /api/crank/agent-access`; it is bound to that signed-in
+owner, never to a sponsor supplied by the request. Business credentials must
+independently carry each scope: the native ceiling never adds token authority.
+
+`crank.agents.narrow` takes `scopes` and a required integer `revision`.
+Agent and sponsor come from the authenticated principal. The owner control at
+`POST /api/crank/agent-access/:agent_id` uses the same native removal action.
+A current scope set and revision are visible through the owner-only GET of that
+route and in Access settings. Additions return `self_escalation` through MCP,
+even under an autonomous policy. Stale or concurrent removals cannot restore
+removed authority. Arguments naming another agent, sponsor, role, direction,
+policy or Pause cannot change the target or the computed access direction.
+
+The edition's `currentScopes` adapter intersects the original credential with
+the persisted ceiling on every call. Native mutation transactions repeat the
+scope fence. Scope history travels in archives with `active=0`, while native
+credentials remain excluded. Restore offers no activation or regrant action.
+The existing native journey invokes `tests/agent-door/narrowing-journey.mjs`;
+the existing platform sanity journey additionally proves restart, held-person
+approval, withdrawn and revoked pending authority, concurrency, complete removal
+and inactive custody. The expanded hosted CORE conformance run passes 1,213
+points on this slice; broader clause obligations remain open.
+
+This slice leaves BASE-AGENT-005 PARTIAL. Full role and tool UI parity,
+resource, folder, action and budget intersections, broader sponsor downgrade
+and suspension journeys, other access and security actions, and complete
+injection resistance remain owed. Existing IdP, Business propagation, account,
+Base enforcing-egress and device holds remain unchanged.

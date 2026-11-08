@@ -281,13 +281,20 @@ async function measuredChecks(width, state) {
   await page.evaluate(() => { const saved = window.__auditFocus; saved.previous?.focus(); for (const details of document.querySelectorAll('details')) details.open = saved.openDetails.includes(details); scrollTo(saved.x, saved.y); delete window.__auditFocus; });
   const viewport = page.viewportSize();
   await page.setViewportSize({ width: 320, height: viewport.height });
-  const reflow = await page.evaluate(() => ({
+  const measureReflow = () => ({
     document: document.documentElement.scrollWidth <= innerWidth + 1,
+    clippedControls: [...document.querySelectorAll('main a[href],main button,main input:not([type=hidden]),main select,main textarea,main summary')].filter(element => {
+      if (!element.checkVisibility({ checkVisibilityCSS: true, checkOpacity: true })) return false;
+      if ([...document.querySelectorAll('details:not([open])')].some(details => details.contains(element) && !details.querySelector(':scope > summary')?.contains(element))) return false;
+      const rect = element.getBoundingClientRect();
+      return rect.left < -1 || rect.right > innerWidth + 1;
+    }).map(element => ({ control: element.outerHTML.slice(0,180), left: element.getBoundingClientRect().left, right: element.getBoundingClientRect().right })),
     scrollContainers: [...document.querySelectorAll('main *')].filter(element => {
       const style = getComputedStyle(element);
       return element.getClientRects().length && /auto|scroll/.test(style.overflowX) && !element.matches('input,select,textarea') && element.scrollWidth > element.clientWidth + 1;
     }).map(element => element.outerHTML.slice(0, 180)),
-  }));
+  });
+  const reflow = await page.evaluate(measureReflow);
   await page.evaluate(() => {
     window.__spacingStyles = [...document.querySelectorAll('body,body *')].map(element => [element,element.getAttribute('style')]);
     for (const [element] of window.__spacingStyles) {
@@ -297,7 +304,8 @@ async function measuredChecks(width, state) {
       if (element.matches('p')) element.style.setProperty('margin-bottom','2em','important');
     }
   });
-  const spacingReflow = await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1);
+  const spacedReflow = await page.evaluate(measureReflow);
+  const spacingReflow = spacedReflow.document;
   await page.evaluate(() => {
     for (const [element,style] of window.__spacingStyles) {
       element.style.cssText = style ?? '';
@@ -310,9 +318,12 @@ async function measuredChecks(width, state) {
   // capture; otherwise its previous compositor clip can hide visible content.
   await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   assert.equal(spacingReflow, true, `${state}: increased text spacing reflows`);
+  assert.deepEqual(spacedReflow.clippedControls, [], `${state}: increased text spacing preserves complete controls`);
+  assert.deepEqual(spacedReflow.scrollContainers, [], `${state}: increased text spacing needs no two-dimensional scrolling`);
   assert.equal(reflow.document, true, `${state}: 320 CSS pixel reflow`);
   assert.deepEqual(reflow.scrollContainers, [], `${state}: no two-dimensional scrolling`);
-  return { ...checks, minimumFocusContrast: minimumContrast, nativeSubfieldStops, hoverTested, reflow, spacingReflow };
+  assert.deepEqual(reflow.clippedControls, [], `${state}: reflow preserves complete controls at 320 CSS pixels`);
+  return { ...checks, minimumFocusContrast: minimumContrast, nativeSubfieldStops, hoverTested, reflow, spacingReflow, spacedReflow };
 }
 
 async function audit(width, state) {

@@ -7,19 +7,21 @@ import { createProtocol } from './protocol.mjs';
 import { autonomousPolicy, heldPolicy } from './crypto.mjs';
 import { discoverDoor, listedDoor } from './discovery.mjs';
 import { runJourney } from './journey.mjs';
-import { unsetPolicy, removalPhase, blockedPhases, pausePhase, consentRevocationPhase } from './policy-phases.mjs';
+import { unsetPolicy, removalPhase, blockedPhases, pausePhase, consentRevocationPhase, agentRevocationPhase } from './policy-phases.mjs';
+import { unpairPhase } from './unpair.mjs';
 import { negativePhase } from './negative.mjs';
 import { replayAdmissionPhase } from './replay.mjs';
 import { webhookPhase } from './webhooks.mjs';
 import { recordSecurityPhase } from './security.mjs';
 import { crossSponsorPhase } from './sponsors.mjs';
-import { auditPhase } from './audit.mjs';
+import { auditPhase, auditRows } from './audit.mjs';
+import { relayPhase, relayStoppedPhase } from './relay.mjs';
 import { invocationPhase } from './invocation.mjs';
 
 export { validateAgentSurface } from './surface.mjs';
 
 /** Run against a fresh, real installation using its HTTP and person doors. */
-export async function runAgentDoorConformance({ fetch, invoke, origin, surface, signer, person, sponsors = [person], webhooks, business = 'rer-agent-conformance', consent = randomUUID(), now, prove, nativeJourney, nativeStep, prepare, initializeAgent }) {
+export async function runAgentDoorConformance({ fetch, invoke, origin, surface, signer, person, sponsors = [person], webhooks, business = 'rer-agent-conformance', consent = randomUUID(), now, prove, nativeJourney, nativeStep, prepare, initializeAgent, unpair }) {
  const validation = validateAgentSurface(surface), points = [...validation.points];
  if (!validation.ok) return { ok: false, points };
  const capabilities = capabilitySet(surface.capabilities);
@@ -34,7 +36,11 @@ export async function runAgentDoorConformance({ fetch, invoke, origin, surface, 
   }
  }
  await c.phase('BASE-AGENT-001.transport', () => discoverDoor(c));
- await c.phase('BASE-AGENT-007.phase0', () => unsetPolicy(c, true));
+ await c.phase('BASE-AGENT-007.phase0', async () => {
+  await unsetPolicy(c, true);
+  // No Business envelope existed for these audits, so they cannot be relayed.
+  c.unattributedAuditIds = new Set((await auditRows(c, { agents: [null], includeFixtures: true })).rows.map(row => row.id));
+ });
  await c.phase('BASE-AGENT-007.phase1', () => removalPhase(c));
  await c.phase('BASE-AGENT-013.phase2', async () => { await c.adopt(autonomousPolicy()); await c.prepare('autonomous'); await listedDoor(c); await runJourney(c, 'autonomous', { injections: true, replay: true }); });
  await c.phase('BASE-AGENT-013.phase3', async () => { await c.prepare('held'); await c.adopt(heldPolicy()); await runJourney(c, 'held', { held: true }); });
@@ -42,6 +48,7 @@ export async function runAgentDoorConformance({ fetch, invoke, origin, surface, 
  await c.phase('BASE-AGENT-011.phase5', () => pausePhase(c));
  await c.phase('BASE-AGENT-004.phase6', () => negativePhase(c));
  await c.phase('BASE-AGENT-004.consent', () => consentRevocationPhase(c));
+ await c.phase('BASE-AGENT-004.6.seed', () => agentRevocationPhase(c, initializeAgent));
  if (invoke) await c.phase('BASE-AGENT-012.invocation', () => invocationPhase(c, invoke));
  if (nativeJourney) await c.phase('BASE-AGENT-013.native-journey', async () => { await nativeJourney({ tool: c.tool }); c.add('BASE-AGENT-013.native-journey', true); });
  if (surface.tools.some(tool => tool.authority === 'none')) await c.phase('BASE-AGENT-005.no-subject', () => recordSecurityPhase(c));
@@ -50,6 +57,8 @@ export async function runAgentDoorConformance({ fetch, invoke, origin, surface, 
  await c.phase('BASE-AGENT-subset.refusals', () => refusalPhase(c));
  if (capabilities.mode === 'declared' && offers(surface.capabilities, 'subscriptions')) await c.phase('BASE-AGENT-subset.subscriptions', () => subscriptionPhase(c));
  await c.phase('BASE-AGENT-009.phase7', () => auditPhase(c));
+ await c.phase('BASE-AGENT-009.relay', () => relayPhase(c));
  if (sponsors.length > 1) await c.phase('BASE-AGENT-004.cross-sponsor', () => crossSponsorPhase(c, sponsors, initializeAgent));
+ if (unpair) await c.phase('BASE-AGENT-004.7', () => unpairPhase(c, unpair, sponsors, () => relayStoppedPhase(c)));
  return { ok: points.every(point => point.ok), points, capabilities };
 }

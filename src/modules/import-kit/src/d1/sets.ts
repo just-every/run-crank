@@ -4,6 +4,7 @@ import type { D1Database, D1Sql } from './types.ts';
 import { guard, sql } from './database.ts';
 import { retainedSql } from './retained-values.ts';
 import { changedLazy, putRow } from './expected-state.ts';
+import { snapshotText, snapshotTextRows, snapshotTextSaves } from './snapshot-text.ts';
 
 // JSON snapshots are split by UTF-8 size, never by source count alone. Each
 // statement compares the original column values, not their recorded hashes.
@@ -59,6 +60,13 @@ export function exactRows(table: string, columns: string[], rows: any[], scope?:
     } else ordinary.push(picked);
   }
   for (const chunk of jsonChunks(ordinary, maxBytes)) {
+    const encoded = snapshotText(JSON.parse(chunk).map((row: any) => columns.map(column => row[column])));
+    if (snapshotTextSaves(chunk, encoded)) {
+      const parts = [snapshotTextRows.slice(0, snapshotTextRows.indexOf('?')), snapshotTextRows.slice(snapshotTextRows.indexOf('?') + 1) + ` WHERE NOT EXISTS(SELECT 1 FROM ${table} t WHERE ${columns.map((c, i) => `t.${c} IS json_extract(e.value,'$[${i}]')`).join(' AND ')})`];
+      parts[0] = 'NOT EXISTS(' + parts[0]; parts[1] += ')';
+      result.push(guard(retain ? retainedSql(parts, [encoded], [0]) : sql(parts.join('?'), encoded)));
+      continue;
+    }
     const parts=['NOT EXISTS(SELECT 1 FROM json_each(',`) e WHERE NOT EXISTS(SELECT 1 FROM ${table} t WHERE ${columns.map(c => `t.${c} IS json_extract(e.value,'$.${c}')`).join(' AND ')}))`];
     result.push(guard(retain?retainedSql(parts,[chunk],[0]):sql(parts.join('?'),chunk)));
   }

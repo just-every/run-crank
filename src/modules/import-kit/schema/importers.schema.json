@@ -6,7 +6,8 @@
   "required": ["$schema", "schemaVersion", "importers"],
   "properties": {
     "$schema": { "const": "./schema/importers.schema.json" },
-    "schemaVersion": { "const": 1 },
+    "schemaVersion": { "enum": [1, 2] },
+    "format": { "$ref": "#/$defs/format" },
     "importers": {
       "type": "array",
       "minItems": 1,
@@ -14,13 +15,21 @@
         "oneOf": [
           { "$ref": "#/$defs/verifiedImporter" },
           { "$ref": "#/$defs/documentedImporter" },
-          { "$ref": "#/$defs/noneImporter" }
+          { "$ref": "#/$defs/noneImporter" },
+          { "$ref": "#/$defs/moveIn" },
+          { "$ref": "#/$defs/moveInVerifiedImporter" },
+          { "$ref": "#/$defs/moveInDocumentedImporter" },
+          { "$ref": "#/$defs/moveInNoneImporter" }
         ]
       }
     }
   },
   "additionalProperties": false,
   "$defs": {
+    "format": { "type": "string", "minLength": 1, "maxLength": 300, "pattern": "^(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._][A-Za-z0-9._/-]*$" },
+    "moveInPath": { "type": "string", "minLength": 1, "maxLength": 300, "pattern": "^/(?:[^/\\s][^\\s]*)?$" },
+    "accepts": { "type": "array", "minItems": 1, "maxItems": 3, "uniqueItems": true, "items": { "enum": ["file", "key", "address"] } },
+    "export": { "type": "string", "minLength": 1, "maxLength": 1000, "pattern": "^[^\\r\\n]+$" },
     "artifact": {
       "type": "object",
       "required": ["link", "sha256", "size"],
@@ -87,6 +96,99 @@
       "properties": {
         "incumbent": { "type": "string", "minLength": 1 },
         "product": { "type": "string", "minLength": 1 },
+        "status": { "const": "none" },
+        "evidence": {
+          "type": "object",
+          "required": ["link", "sha256", "size", "reason", "checkedAt"],
+          "properties": {
+            "link": { "type": "string", "minLength": 1 },
+            "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+            "size": { "type": "integer", "minimum": 1 },
+            "reason": { "type": "string", "minLength": 1 },
+            "checkedAt": { "type": "string", "format": "date-time" }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "moveIn": {
+      "type": "object",
+      "required": ["incumbent", "product", "moveIn", "accepts", "export"],
+      "properties": {
+        "incumbent": { "type": "string", "minLength": 1 },
+        "product": { "type": "string", "minLength": 1 },
+        "moveIn": { "$ref": "#/$defs/moveInPath" },
+        "accepts": { "$ref": "#/$defs/accepts" },
+        "export": { "$ref": "#/$defs/export" }
+      },
+      "additionalProperties": false
+    },
+    "moveInVerifiedImporter": {
+      "type": "object",
+      "required": ["incumbent", "product", "moveIn", "accepts", "export", "status", "evidence"],
+      "properties": {
+        "incumbent": { "type": "string", "minLength": 1 },
+        "product": { "type": "string", "minLength": 1 },
+        "moveIn": { "$ref": "#/$defs/moveInPath" },
+        "accepts": { "$ref": "#/$defs/accepts" },
+        "export": { "$ref": "#/$defs/export" },
+        "status": { "const": "verified" },
+        "evidence": {
+          "type": "object",
+          "required": ["link", "sha256", "size", "research"],
+          "properties": {
+            "link": { "type": "string", "minLength": 1 },
+            "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+            "size": { "type": "integer", "minimum": 1 },
+            "research": { "$ref": "#/$defs/artifact" }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "moveInDocumentedImporter": {
+      "type": "object",
+      "required": ["incumbent", "product", "moveIn", "accepts", "export", "status", "evidence"],
+      "properties": {
+        "incumbent": { "type": "string", "minLength": 1 },
+        "product": { "type": "string", "minLength": 1 },
+        "moveIn": { "$ref": "#/$defs/moveInPath" },
+        "accepts": { "$ref": "#/$defs/accepts" },
+        "export": { "$ref": "#/$defs/export" },
+        "status": { "const": "documented format" },
+        "evidence": {
+          "type": "object",
+          "required": [
+            "link", "sha256", "size", "sourceRepository", "sourceRevision",
+            "sourcePath", "sourceSha256", "validation", "realExport"
+          ],
+          "properties": {
+            "link": { "type": "string", "minLength": 1 },
+            "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+            "size": { "type": "integer", "minimum": 1 },
+            "sourceRepository": { "type": "string", "minLength": 1 },
+            "sourceRevision": { "type": "string", "pattern": "^[a-f0-9]{40,64}$" },
+            "sourcePath": { "type": "string", "minLength": 1 },
+            "sourceSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+            "validation": { "const": "synthetic-only" },
+            "realExport": { "const": "not-supplied" }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "moveInNoneImporter": {
+      "type": "object",
+      "required": ["incumbent", "product", "moveIn", "accepts", "export", "status", "evidence"],
+      "properties": {
+        "incumbent": { "type": "string", "minLength": 1 },
+        "product": { "type": "string", "minLength": 1 },
+        "moveIn": { "$ref": "#/$defs/moveInPath" },
+        "accepts": { "$ref": "#/$defs/accepts" },
+        "export": { "$ref": "#/$defs/export" },
         "status": { "const": "none" },
         "evidence": {
           "type": "object",

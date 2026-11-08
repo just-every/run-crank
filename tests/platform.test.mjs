@@ -1,3 +1,4 @@
+import narrowingJourney from './agent-door/narrowing-journey.mjs';
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {harness} from './harness.mjs';
@@ -6,6 +7,7 @@ import {fakeEdge,jsonResponse,settled} from './kit.mjs';
 import {CrankClient,CrankApiError} from '../sdk/index.js';
 import {archive} from './restore-journey.mjs';
 import namedApprovalsJourney from './agent-door/named-approvals-journey.mjs';
+import {nativeAttributionJourney} from './agent-door/attribution-journey.mjs';
 
 const graph={trigger:{type:'manual'},steps:[{id:'receipt',type:'http',input:{method:'POST',url:'https://platform-ledger.example/receipts',body:{to:'operations@harbor.example',amount:'25.00'}}}]};
 const costs={cost:{components:['orchestration','connectors','models','executors'].map(kind=>({kind,usd_per_run:'0',assumption:'Owner-reviewed synthetic network edge; no paid operations'}))}};
@@ -22,7 +24,15 @@ test('PLATFORM-001: SDK and CORE door draft lifecycle, native granted execution/
  await (await import('./agent-door/recovery-journey.mjs')).recoveryJourney();
  await namedApprovalsJourney();
  const edge=fakeEdge();edge.routes.set('platform-ledger.example',({body})=>jsonResponse({id:crypto.randomUUID(),receipt:JSON.parse(body)}));
- const h=await harness('http://127.0.0.1:9',{edge:edge.edge});
+ let scopeBoundary=null;
+ const commitBarrier=()=>{
+  let reached,release;const arrival=new Promise(resolve=>reached=resolve),wait=new Promise(resolve=>release=resolve);
+  scopeBoundary={reached,wait};return {arrival,release:()=>{scopeBoundary=null;release()}};
+ };
+ const h=await harness('http://127.0.0.1:9',{agentScopeCommitBarrier:true,edge:async request=>{
+  if(new URL(request.url).hostname==='agent-scope-commit.example') {const boundary=scopeBoundary;if(boundary){boundary.reached();await boundary.wait}return jsonResponse({ok:true})}
+  return edge.edge(request);
+ }});
  try{
   const sdk=client(h);
   const preparer=await h.post('tokens',{label:'Harbor integrations preparation',scope:'agent'},h.owner,201), prep=client(h,{token:preparer.token}),rpc=mcp(h,{token:preparer.token});
@@ -99,6 +109,44 @@ test('PLATFORM-001: SDK and CORE door draft lifecycle, native granted execution/
   const next=await call(rpc,'crank.runs.list',{workflow:draft.id,limit:1,before:page.structuredContent.next});assert.notEqual(next.structuredContent.runs[0].id,page.structuredContent.runs[0].id);
   const audit=await h.get('audit');for(const action of ['workflow.create','workflow.publish','grant.task','run.reject'])assert.ok(audit.some(a=>a.action===action),action);
   assert.equal((await h.send('/api/crank/v1/workflows')).value.code,'unauthenticated');
+
+  const legacyFlow=await h.flow('Scope-bound aggregate read'),sensitiveInput={supplier:'synthetic-crank-1',note:'Run payload requires retained run authority'};
+  const legacyRun=await h.run(legacyFlow,'synthetic-crank-scope-read',sensitiveInput);
+  const reader=await h.post('tokens',{label:'Aggregate read scope ceiling',scope:'agent',tool_scopes:['workflows:read','runs:read']},h.owner,201);
+  const readHeaders={authorization:'Bearer '+reader.token};
+  const allowed=await h.get('state','',200,readHeaders);
+  assert.deepEqual(allowed.runs.find(row=>row.id===legacyRun.id)?.input,sensitiveInput,'The aggregate positive control contains a real run payload');
+  await h.post('agent-access/'+encodeURIComponent(reader.agent_access.agent_id),{scopes:['workflows:read'],revision:0});
+  const assertReadCeiling=async()=>{
+   assert.equal((await h.get('workflows/'+draft.id,'',200,readHeaders)).id,draft.id,'Retained workflow metadata remains readable');
+   for(const path of ['state','runs/'+legacyRun.id]) {
+    const refused=await h.send('/api/crank/'+path,undefined,'',readHeaders);
+    assert.equal(refused.status,403,'Removed run authority must refuse '+path);
+    assert.ok(!refused.text.includes(sensitiveInput.note),'Refusals must not disclose the run payload');
+   }
+   assert.deepEqual((await h.get('state')).runs.find(row=>row.id===legacyRun.id)?.input,sensitiveInput,'Scope removal leaves owner-visible run data intact');
+  };
+  await assertReadCeiling();await h.restart();await assertReadCeiling();
+  const runReader=await h.post('tokens',{label:'Run-only aggregate scope ceiling',scope:'agent',tool_scopes:['runs:read']},h.owner,201);
+  const runHeaders={authorization:'Bearer '+runReader.token};
+  assert.deepEqual((await h.get('runs/'+legacyRun.id,'',200,runHeaders)).input,sensitiveInput);
+  assert.equal((await h.send('/api/crank/state',undefined,'',runHeaders)).status,403,'The aggregate also requires retained workflow metadata authority');
+
+  await narrowingJourney({origin:h.origin,cookie:h.owner,request:(url,init)=>h.mf.dispatchFetch(url,init),restart:()=>h.restart(),configurePolicy:true,commitBarrier,
+   restore:async({archive,token,grant,full})=>{
+    const receiving=await harness('http://127.0.0.1:9');
+    try {
+     await receiving.post('data/restore',{archive,confirm:'RESTORE'});
+     const grants=await receiving.get('agent-access');assert.equal(grants.grants.length,0,'Restoration cannot transfer original sponsor authority to the receiving owner');
+     const denied=await mcp(receiving,{token})('tools/list');assert.equal(denied.status,401,'A restored scope history carries no credential');
+     const duplicateGrant=await receiving.post('agent-access',{agent_id:'synthetic-crank-business',scopes:full},receiving.owner,201);
+     assert.equal(duplicateGrant.revision,0);
+     const secondArchive=await receiving.post('data/export');
+     const restoredRows=secondArchive.trim().split('\n').map(JSON.parse).flatMap(line=>line.items??[]).filter(item=>item.table==='crank_agent_scope_grants');
+     const retained=restoredRows.find(item=>item.row.agent_id===grant.agent_id);assert.ok(retained);assert.equal(retained.row.active,0);assert.deepEqual(JSON.parse(retained.row.scopes),grant.scopes);
+    } finally {await receiving.close()}
+   }});
+
   const independent=await issue(h,current), other=client(h,{token:independent.credential});
   const separate=await other.startTask(input,{idempotencyKey:'receipt-one'});assert.notEqual(separate.id,run.id);assert.equal(edge.requests.length,count+1);
   await h.post(`workflows/${draft.id}/pause`);
@@ -110,7 +158,34 @@ test('PLATFORM-001: SDK and CORE door draft lifecycle, native granted execution/
  }finally{await h.close()}
 });
 
-test('PLATFORM-001: concurrent and restarted draft/publication/rollback retries retain identities and audit without changing later state or restoring authority',async()=>{
+test('PLATFORM-001: draft, publication and duplicate preparations preserve retries, reviewer authority and inactive custody',async()=>{
+ await draftRetryJourney();
+ await duplicateRetryJourney();
+ await reviewerRevocationJourney();
+});
+
+async function reviewerRevocationJourney() {
+ let arrive,release;
+ const reached=new Promise(resolve=>{arrive=resolve}),resume=new Promise(resolve=>{release=resolve});
+ let pause=false;
+ const h=await harness('http://127.0.0.1:9',{nativePreparationBarrier:true,edge:async request=>{
+  if(new URL(request.url).hostname!=='native-preparation.example')return;
+  if(pause){arrive();await resume}
+  return new Response('continue');
+ }});
+ try {
+  await nativeAttributionJourney(h,{duringPreparation:async(approve,deactivate)=>{
+   pause=true;const decision=approve();
+   try {
+    await Promise.race([reached,decision.then(()=>{throw Error('approval completed before the native commit boundary')})]);
+    await deactivate();
+   } finally {release()}
+   return decision;
+  }});
+ } finally {release();await h.close()}
+}
+
+async function draftRetryJourney() {
  const h=await harness('http://127.0.0.1:9');let restored;
  try{
   const sdk=client(h), input={name:'Harbor Workshop — durable draft write',graph};
@@ -182,9 +257,9 @@ test('PLATFORM-001: concurrent and restarted draft/publication/rollback retries 
   assert.notEqual(adopted.version.id,first.version.id);assert.equal(adopted.workflow.versions.length,4);
 
  }finally{await restored?.close();await h.close()}
-});
+}
 
-test('PLATFORM-001: lost, concurrent and restarted duplicate requests keep one inert preparation without overwriting later work',async()=>{
+async function duplicateRetryJourney() {
  const edge=fakeEdge();edge.routes.set('platform-ledger.example',({body})=>jsonResponse({id:crypto.randomUUID(),receipt:JSON.parse(body)}));
  const h=await harness('http://127.0.0.1:9',{edge:edge.edge});let restored;
  try{
@@ -241,8 +316,7 @@ test('PLATFORM-001: lost, concurrent and restarted duplicate requests keep one i
   assert.equal((await restored.send(`/api/crank/workflows/${fresh.id}/run`,{},restored.owner)).status,409);
   await restored.restart();await restored.tick();assert.equal(edge.requests.length,1,'receipt-free restoration and fresh duplication stay inactive');
  }finally{await restored?.close();await h.close()}
-});
-
+}
 
 test('Per-client MCP connector tools enforce exact grants, approvals, history, restart and revocation',async()=>{
  const {mcpClientJourney}=await import('./mcp-client-journey.mjs');await mcpClientJourney();

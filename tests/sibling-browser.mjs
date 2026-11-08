@@ -1,3 +1,4 @@
+import {expectHoverTooltip} from './tooltip-browser.mjs';
 /** Native sibling action screens on the installed owner's existing public pages. */
 import assert from 'node:assert/strict';
 import {createServer} from 'node:http';
@@ -47,8 +48,7 @@ try {
     if(width===390)await arrow.focus();
     if(width===1440){
      await arrow.focus();await expect(tip).toBeVisible();
-     await page.locator('h1').click();await arrow.hover();
-     await expect(tip).toBeHidden();await page.waitForTimeout(350);await expect(tip).toBeVisible();
+     await expectHoverTooltip(page,arrow,tip);
      const small=await page.locator('body').evaluate(root=>[...root.querySelectorAll('*')].filter(el=>el.getClientRects().length&&getComputedStyle(el).visibility==='visible'&&[...el.childNodes].some(n=>n.nodeType===3&&n.textContent.trim())&&parseFloat(getComputedStyle(el).fontSize)<13).map(el=>({tag:el.tagName,text:el.textContent.slice(0,80),size:getComputedStyle(el).fontSize})));
      assert.deepEqual(small,[],'visible editor text meets the minimum size');
     }

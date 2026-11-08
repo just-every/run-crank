@@ -1,3 +1,4 @@
+import { waveRetirementSeeds } from './wave-retirement.ts';
 import { randomUUID } from 'node:crypto';
 import type { D1CustodyRetirement, D1ErasureJournalEntry, D1ImportContext, D1ImportPerson, D1RetirementOptions, D1RetirementProgress, D1Sql } from './types.ts';
 import { requestContext, limitStatements, packGuards, remaining, D1RequestLimitError } from './budget.ts';
@@ -37,7 +38,14 @@ export function retireD1ImportCustody(person: D1ImportPerson, nativeStatements: 
 export function retireD1ImportCustody(person: D1ImportPerson, nativeStatements: D1Sql[], input: D1ImportContext, checkpoint: D1Sql[], options: D1ErasureStepOptions): Promise<D1CustodyRetirement | D1ErasurePending>;
 export function retireD1ImportCustody(person: D1ImportPerson, nativeStatements: D1Sql[], input: D1ImportContext, checkpoint: D1Sql[], options: D1RetirementOptions): Promise<D1CustodyRetirement | D1RetirementProgress>;
 export async function retireD1ImportCustody(person: D1ImportPerson, nativeStatements: D1Sql[], input: D1ImportContext, checkpoint: D1Sql[], options: D1RetirementOptions | D1ErasureStepOptions = {}): Promise<D1CustodyRetirement | D1RetirementProgress | D1ErasurePending> {
-  if ('operationKey' in options) return retireD1ImportCustodyStep(person, nativeStatements, input, checkpoint, options);
+  if ('operationKey' in options) {
+    const admission=requestContext(input);
+    await readAtomic(admission,[],undefined,'erase');
+    const db=admission.storage.database;
+    const installed=await db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='ik_door_wave_roots'").first();
+    if (person.aliases?.length || installed && await db.prepare('SELECT 1 FROM ik_door_wave_roots WHERE destination=? LIMIT 1').bind(input.destination).first()) throw new Error('IMPORT_WAVE_JOURNAL_REQUIRED');
+    return retireD1ImportCustodyStep(person,nativeStatements,admission,checkpoint,options);
+  }
   person = { ...person, related: person.related ? { ...person.related, fields: fieldRedactions(person.related.fields) } : undefined };
   const context = limitStatements(requestContext({ ...input, originalErasurePolicy: input.originalErasurePolicy ?? 'withdraw-affected-artifacts' }), 1000);
   if (context.maxBatchBytes !== undefined) throw new Error('IMPORT_RETIREMENT_OPERATION_KEY_REQUIRED');
@@ -45,16 +53,18 @@ export async function retireD1ImportCustody(person: D1ImportPerson, nativeStatem
   for (const value of values) requireText(value, 'person value');
   if (person.target) { requireText(person.target.kind, 'target kind'); requireText(person.target.id, 'target id'); }
   const fields = person.related?.fields ?? [];
-  if (!person.target && !values.length && !fields.length) throw new Error('IMPORT_RETIREMENT_PERSON_REQUIRED');
+  if (!person.target && !values.length && !fields.length && !person.aliases?.length) throw new Error('IMPORT_RETIREMENT_PERSON_REQUIRED');
+  for (const alias of person.aliases ?? []) for (const value of [alias.installationId,alias.namespace,alias.kind,alias.sourceId]) requireText(value,'source alias');
   // Without a native target only field redaction applies: whole-record erasure
   // (`source`, `original`) binds what it severs to the erased target.
   if (person.related && !person.target && (person.related.source || person.related.original || !fields.length)) throw new Error('IMPORT_RETIREMENT_TARGET_REQUIRED');
   await readAtomic(context, [], undefined, 'erase');
   const db = context.storage.database, destination = context.destination;
-  const scope = await retirementScope(db, destination, values), retiring = new Set(scope.jobs);
+  const wave = await waveRetirementSeeds(db,destination,person,context.storage.targets.planCodec);
+  const scope = await retirementScope(db, destination, values,wave.jobs), retiring = new Set(scope.jobs);
   // Withdrawn door content is custody too: a values-only erasure that removes it is fenced.
   let stores: Store[] | undefined;
-  const fenced = Boolean(person.target) || fields.length > 0 || scope.jobs.length + scope.streams.length + scope.stages.length + scope.anchors.length + scope.preparations.length > 0
+  const fenced = Boolean(person.target) || !!person.aliases?.length || fields.length > 0 || scope.jobs.length + scope.streams.length + scope.stages.length + scope.anchors.length + scope.preparations.length > 0
     || await doorCustodyInScope(db, destination, stores = await tallyStores(db));
   if (fenced && !checkpoint.length) throw new Error('IMPORT_RETIREMENT_CHECKPOINT_REQUIRED');
   const fence = fenced ? checkpoint : [];
@@ -94,7 +104,7 @@ export async function retireD1ImportCustody(person: D1ImportPerson, nativeStatem
     touched.streams = [...new Set([...scope.anchors, ...await pageStreams(db, touched.jobs)])].sort();
     stores ??= await tallyStores(db);
     const entry = { recordedAt, recordsErased: erasure.decisions.length, jobsRetired: scope.jobs.length, streamsRetired: scope.anchors.length };
-    prefix = packGuards([authority(context, 'erase'), ...tallyBefore(stores, receiptId, touched), ...tallyWithdraw(stores, touched), ...erasure.before, ...scopeGuards(scope), ...lineage.fence.map(guard)]);
+    prefix = packGuards([authority(context, 'erase'), ...tallyBefore(stores, receiptId, touched), ...(wave.roots.length ? [sql("UPDATE ik_door_wave_roots SET state='withdrawn' WHERE id IN (SELECT value FROM json_each(?))",JSON.stringify(wave.roots))] : []), ...wave.tombstones.map(alias=>sql('INSERT OR IGNORE INTO ik_door_wave_erased_aliases(installation_id,namespace,destination,identity) VALUES(?,?,?,?)',alias.installation,alias.namespace,destination,alias.identity)), ...tallyWithdraw(stores, touched), ...erasure.before, ...scopeGuards(scope), ...wave.guards.map(guard), ...lineage.fence.map(guard)]);
     suffix = [...packGuards([...erasure.after, ...retirementWrites(scope, destination, receiptId, recordedAt), ...headerAbsence(destination, values),
       ...tallyJournal(stores, receiptId, touched, entry, fenced), authority(context, 'erase'), sql('DELETE FROM ik_d1_assertions')]), ...readonlyChecks(erasure.final), finalAuthority(context, 'erase')];
     // One read after the batch returns its journal row.

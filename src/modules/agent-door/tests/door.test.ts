@@ -104,6 +104,7 @@ test('approval waits, names its person, executes once, rejects, expires and dete
   assert.equal(call.result.resultType,'input_required'); assert.ok(call.result.inputRequests.approval); assert.deepEqual(await rows(r),before)
   assert.equal((await r.tool('records.erase',input)).result.requestState,call.result.requestState)
   assert.equal(code(await r.tool('records.erase',input,{version:'2025-11-25'})),'approval_required')
+  assert.equal(code(await r.tool('records.erase',input,{version:'2025-06-18'})),'approval_required')
   assert.equal((await r.person(`/agents/api/approvals/${id}/approve`,{revision:r.c.revision,summary_sha256:(await r.person(`/agents/api/approvals/${id}`)).body.approval.summary_sha256}, {authorization:`Bearer ${await r.token()}`})).status,403)
   assert.equal((await r.person(`/agents/api/approvals/${id}/approve`,{revision:r.c.revision,summary_sha256:(await r.person(`/agents/api/approvals/${id}`)).body.approval.summary_sha256})).status,200); assert.deepEqual(await rows(r),[])
   const completed=await r.tool('records.erase',input), receipt=completed.result._meta['com.runeditrun/receipt']; assert.equal(receipt.approval_id,id); assert.ok(receipt.approved_by.length)
@@ -132,7 +133,7 @@ test('credentials, pause, embedded calls, subscriptions and the generic conforma
   await r.adopt()
   for (const method of ['GET','DELETE']) assert.equal((await r.fetch('/mcp',{method})).status,405)
   assert.equal((await r.mcp('synthetic/unknown')).status,404)
-  const legacy=await r.post('/mcp',{jsonrpc:'2.0',id:1,method:'initialize',params:{protocolVersion:'2025-11-25',capabilities:{}}}); assert.equal((await legacy.json()).result.protocolVersion,'2025-11-25')
+  const legacy=await r.post('/mcp',{jsonrpc:'2.0',id:1,method:'initialize',params:{protocolVersion:'2025-11-25',capabilities:{}}},{Authorization:`Bearer ${await r.token()}`}); assert.equal((await legacy.json()).result.protocolVersion,'2025-11-25')
   const valid=await r.token(), payload=JSON.parse(Buffer.from(valid.split('.')[1],'base64url').toString())
   for (const bad of [await r.sign('at+jwt',payload,'synthetic-base-unknown'),await r.sign('other+jwt',payload),valid.slice(0,-8)+'AAAAAAAA']) assert.equal((await r.mcp('tools/list',{}, {token:bad})).status,401)
   for (const token of [null,await r.token({aud:'https://synthetic-base-3.invalid/mcp'}),await r.token({exp:Math.floor(r.c.now/1000)-1}),await r.token({exp:Math.floor(r.c.now/1000)+901}),await r.token({business:'synthetic-base-3'}),await r.sign('other+jwt',{}),await r.sign('at+jwt',{},'synthetic-base-unknown')]) assert.equal((await r.mcp('tools/list',{}, {token})).status,401)
@@ -202,7 +203,7 @@ test('credentials, pause, embedded calls, subscriptions and the generic conforma
    {name:'synthetic.access.change',scope:'records:write',readOnly:false,classes:['access'],clauses:['BASE-AGENT-006']},
    {name:'synthetic.events.list',scope:'events:read',readOnly:true,classes:['standard'],clauses:['BASE-AGENT-010']}],notTools:[],resources:['synthetic://record/{id}'],witness:{tool:'synthetic.records.list',args:{}},journey:[
     {id:'list',tool:'synthetic.records.list',args:{},expect:[{class:'standard'}]},
-    {id:'write',tool:'synthetic.records.write',args:{id:'synthetic-base-1',value:'synthetic-base-1'},expect:[{class:'standard'}],inject:{confirmExternal:true}},
+    {id:'write',tool:'synthetic.records.write',resource:{uriTemplate:'synthetic://record/{id}',state:{id:'synthetic-base-1',value:'synthetic-base-1'}},args:{id:'synthetic-base-1',value:'synthetic-base-1'},expect:[{class:'standard'}],inject:{confirmExternal:true}},
     {id:'send',tool:'synthetic.records.send',args:{id:'synthetic-base-1'},expect:[{class:'external'},{class:'sensitive'}]},
     {id:'access',tool:'synthetic.access.change',args:{id:'synthetic-base-other'},expect:[{class:'access'}]},
     {id:'erase',tool:'synthetic.records.erase',args:{id:'synthetic-base-1'},expect:[{class:'destructive'}]},

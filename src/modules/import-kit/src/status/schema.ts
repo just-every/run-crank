@@ -13,6 +13,8 @@ interface JsonSchema {
   pattern?: string;
   minimum?: number;
   minItems?: number;
+  maxItems?: number;
+  uniqueItems?: boolean;
   minProperties?: number;
   required?: string[];
   properties?: Record<string, JsonSchema>;
@@ -90,6 +92,12 @@ function schemaIssues(value: unknown, schema: JsonSchema, root: JsonSchema, path
   if (Array.isArray(value)) {
     if (schema.minItems !== undefined && value.length < schema.minItems) {
       issues.push({ code: 'SCHEMA_MIN_ITEMS', path, message: `Array must contain at least ${schema.minItems} item(s).` });
+    }
+    if (schema.maxItems !== undefined && value.length > schema.maxItems) {
+      issues.push({ code: 'SCHEMA_MAX_ITEMS', path, message: `Array must contain no more than ${schema.maxItems} item(s).` });
+    }
+    if (schema.uniqueItems && new Set(value.map(canonicalJson)).size !== value.length) {
+      issues.push({ code: 'SCHEMA_UNIQUE_ITEMS', path, message: 'Array items must be unique.' });
     }
     if (schema.items) {
       for (let index = 0; index < value.length; index += 1) {

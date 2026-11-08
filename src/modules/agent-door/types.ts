@@ -1,18 +1,25 @@
 import type { Capability } from './capabilities.mjs'
 import type { ClassFacts, ClassId } from './policy/catalogue.ts'
+import type { Decision } from './policy/decide.ts'
+import type { ApproverRef } from './policy/document.ts'
 import type { PolicyDocument } from './policy/document.ts'
 
 export type JsonSchema = boolean | { [key: string]: unknown }
 export interface JsonSchemaObject { type: 'object'; properties?: Record<string, JsonSchema>; required?: string[]; [key: string]: unknown }
 export interface Person { id: string; email: string; name: string; role: string; active: boolean }
 export interface Agent { id: string; name: string; specialist?: string | null }
-export interface Principal { person: Person; agent: Agent; scopes: string[]; clientId?: string; consent?: string; nativeProof?: { kind: string; reference: string }; operationId?: string; idempotencyKey?: string | null; continuationItemId?: string }
+/** Where admission came from: a signed Business token, or the seed's own credential. Embedded invocations carry none. */
+export type PrincipalSource = 'business' | 'local'
+export interface Principal { person: Person; agent: Agent; source?: PrincipalSource; scopes: string[]; clientId?: string; consent?: string; nativeProof?: { kind: string; reference: string }; operationId?: string; idempotencyKey?: string | null; continuationItemId?: string }
 export interface PeopleAdapter {
   sponsor(claims: { sub: string }): Promise<Person | null>
   person(id: string): Promise<Person | null>
   session(request: Request): Promise<Person | null>
   businessRole?(person: Person): 'owner' | 'editor' | null
   businessMember?(person: Person): Promise<{ id: string; role: 'owner' | 'editor' | null } | null>
+  /** Reads the durable Business stop state; see README.md, Wire and authority, for the stop contract.
+   * The subject mapping in sponsor() must survive a stop so signed policy remains adoptable. */
+  businessStopped(): Promise<boolean>
 }
 export interface Trust { issuer: string; installationId: string; appOrigin: string; publicKeys: Record<string, JsonWebKey> }
 export interface ClassAndFacts { class: ClassId; facts: ClassFacts }
@@ -43,7 +50,7 @@ export interface ApprovalSummary {
   target?: { id?: string; name?: string; email?: string }; recipients?: string[]
   amount?: { value: number; currency: string }; payee?: string; role?: string; items?: string[]
 }
-export type ApprovalDisplaySummary = (ApprovalSummary | { arguments: Record<string, unknown> } | { uri: string }) & { nativeTarget?: NativeTarget }
+export type ApprovalDisplaySummary = (ApprovalSummary | { arguments: Record<string, unknown> } | { uri: string }) & { nativeTarget?: NativeTarget; company_policy?: CompanyPolicyDecision }
 export interface UndoContext {
   db: D1Database; person: Person; agent: null; actor: { kind: 'person'; person: { id: string; name: string }; label: string }
   seed: string; origin: string; now(): number; door: 'mcp' | 'embedded'
@@ -51,6 +58,8 @@ export interface UndoContext {
 }
 export interface ToolDefinition {
   name: string; title: string; description: string; scope: string; readOnly: boolean
+  /** Only invoke may call this tool; omitted keeps MCP discovery and calls. */
+  exposure?: 'invoke'
   inputSchema: JsonSchemaObject; outputSchema: JsonSchema; classes: ClassId[]; clauses: string[]
   /** Always enforce current native authority. On completed replay, use the
    * recorded effect facts instead of requiring consumed preparation state. */
@@ -79,7 +88,17 @@ export interface ResourceDefinition {
   classify(record: { json?: unknown; text?: string }, ctx: ResourceContext): ClassAndFacts[] | Promise<ClassAndFacts[]>
   read(uri: string, ctx: ResourceContext): Promise<{ json?: unknown; text?: string; untrusted?: boolean } | null>
 }
+export type CompanyPolicyDecision =
+  | { decision: 'allow'; rule: string; revision: string }
+  | { decision: 'deny'; rule: string; revision: string }
+  | { decision: 'hold'; rule: string; revision: string; approvers: ApproverRef[]; wait: string }
+type Immutable<T> = T extends object ? { readonly [K in keyof T]: Immutable<T[K]> } : T
+export type CompanyPolicyInput = Immutable<{
+  tool: string; args: Record<string, unknown>; classes: ClassAndFacts[]; target: NativeTarget | null; policy: Decision
+}>
+export type CompanyPolicyContext = Pick<ToolContext, 'db' | 'person' | 'agent' | 'consent' | 'scopes' | 'clientId' | 'operationId' | 'idempotencyKey' | 'seed' | 'origin' | 'now' | 'door'>
 export interface AgentDoorOptions {
+  erasure?: import("./erasure.ts").AgentErasureOptions
   seed: string; name: string; specialist: string; version?: string; db: D1Database; origin: string; trust: Trust | null
   capabilities?: readonly Capability[]
   tools: ToolDefinition[]; resources?: ResourceDefinition[]
@@ -91,11 +110,13 @@ export interface AgentDoorOptions {
     handoff(input: { kind: string; tool: string; principal: Principal }): string | Promise<string>
     verify(input: { kind: string; tool: string; args: Record<string, unknown>; principal: Principal; reference: string }): Promise<boolean>
   }
+  /** Read-only native rule evaluation; may only restrict the class policy. */
+  companyPolicy?: { decide(input: CompanyPolicyInput, ctx: CompanyPolicyContext): CompanyPolicyDecision | Promise<CompanyPolicyDecision> }
   currentScopes?(principal: Principal): Promise<string[]>
   paths?: string[]; limits?: { requestsPerMinute?: number; maxBodyBytes?: number }
   onEvent?(event: AgentEvent): void | Promise<void>; now?(): number
 }
-export interface DecisionMeta { id: string; disposition: string; revision: number | null; classes: Array<{ class: string; facts: object; rule: string | null; do: string }> }
+export interface DecisionMeta { company_policy?: CompanyPolicyDecision; id: string; disposition: string; revision: number | null; classes: Array<{ class: string; facts: object; rule: string | null; do: string }> }
 export interface CallResult {
   outcome: 'done' | 'pending' | 'refused'; code?: string; result?: unknown; decision: DecisionMeta | null
   fields?: Record<string, unknown>; resources?: Array<{ uri: string; name: string }>; review?: { id: string }

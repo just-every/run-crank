@@ -93,7 +93,7 @@ export function shellWords(script) {
   return words;
 }
 
-export function literalPaths(script) {
+export function literalPaths(script, {helpersOnly = false} = {}) {
   const names = new Set();
   function scan(text, ancestors = new Set(), words = shellWords(text)) {
     if (ancestors.has(text)) return;
@@ -101,7 +101,9 @@ export function literalPaths(script) {
     for (const {value, dynamic} of words) {
       if (dynamic) continue;
       const relative = value.replace(/^\.\//, '');
-      if ((value.startsWith('./') || relative.startsWith('scripts/') || !/\s/.test(value) && (relative.includes('/') || /\.[a-z0-9]+$/i.test(relative))) && !relative.startsWith('/')) names.add(relative);
+      if ((value.startsWith('./') || relative.startsWith('scripts/') || !/\s/.test(value) && (relative.includes('/') || /\.[a-z0-9]+$/i.test(relative))) && !relative.startsWith('/')) {
+        if (!helpersOnly || value.startsWith('./') || relative.startsWith('scripts/') || relative.startsWith('.github/workflows/')) names.add(relative);
+      }
       // A complete quoted path is one word; only script-like quoted content is
       // recursively tokenized, never a path whose filename contains whitespace.
       else if (/\s/.test(value)) {

@@ -5,8 +5,8 @@ export {resolve, external} from './module-resolution.mjs';
 export {dependencies} from './module-edges.mjs';
 
 // Binding checks are lexical: unknown export forms remain unknown, never absent.
-export function bindings(source, types = false) {
-  const t = tokens(source), result = new Map();
+export function bindings(source, types = false, filename = 'module.ts') {
+  const t = tokens(source, filename), result = new Map();
   for (let i = 0; i < t.length; i++) {
     if (!['import', 'export'].includes(t[i]) || ['.', '('].includes(t[i + 1])) continue;
     let end = i + 1;
@@ -31,8 +31,8 @@ export function bindings(source, types = false) {
   }
   return result;
 }
-export function lexicalExports(source, star, types = false) {
-  const t = tokens(source), names = new Set();
+export function lexicalExports(source, star, types = false, filename = 'module.ts') {
+  const t = tokens(source, filename), names = new Set();
   for (let i = 0; i < t.length; i++) {
     if (t[i] !== 'export') continue;
     let j = i + 1;

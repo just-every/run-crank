@@ -2,11 +2,12 @@
 
 Crank began with the committed Base foundation at
 `fc0e1041efa55771142bbb57c4ab4743147e264d`. `composition.lock.json` records
-the generated application runtime and auth copies. `base-copies.json` records
-the unchanged import-kit source. The command tooling comes from the exact
-published package `@runeditrun/rer@0.2.30`. `base-copies.json` also records the
-verbatim Base runtime, installer and workflow copies, refreshed together from
-`rer-v0.2.30` (`d434ea67989fe10b6ddff01daba8bb350975e54a`).
+that original application runtime and auth composition. Maintained Base copies
+are refreshed to `96045612467d5e752c668e8557b4bf6e906edfb1` (rer 0.2.104);
+`base-copies.json` records their source paths, bytes and intentional seed
+adaptations. Command tooling comes from the exact published package
+`@runeditrun/rer@0.2.104`. The installed edition-authoring CLI regenerates
+`sources.lock.json` after the source and documentation changes.
 
 Package-mode operation was informed by the public Coaster, Beam and Pier seeds.
 No sibling repository was edited. Crank's domain code adapts these MIT patterns:
@@ -42,4 +43,4 @@ SOFTWARE.
 
 ## Shared process inspection
 
-The exact published RER 0.2.30 package supplies bounded, nonblocking macOS listener ownership inspection. No local RER patches are applied.
+The exact published RER 0.2.104 package supplies bounded, nonblocking macOS listener ownership inspection. No local RER patches are applied.

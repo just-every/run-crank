@@ -124,7 +124,12 @@ account activity and the ledger state on each call.
 
 `stop()` and signed `detached:true` keep the last values, logo, overrides and
 members. They close the document door; rendering and existing team access
-continue. Detachment records the newer revision while keeping the previous
+continue. They also end every authority derived from Business in the agent door:
+no Business token is admitted for any subject, calls a Business token held or left
+waiting do not execute, and `person:` and `role:` approver and reviewer refs match
+nobody; `sponsor` refs, seed credentials and native sessions are unchanged. The
+owner and team mappings stay (`bs_team` is never deleted), so a signed policy that
+names Business people is still adopted. Detachment records the newer revision while keeping the previous
 content. There is no public restart/reset method. Removing trust also closes
 the door without deleting data.
 

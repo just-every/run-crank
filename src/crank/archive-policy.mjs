@@ -2,6 +2,7 @@ import { makePart, ArchiveVerifier, ContentVerifier } from '@runeditrun/rer/inte
 import { schemaIdentityOf } from '@runeditrun/rer/internal/modules/portability/schema-identity.mjs';
 import { fenceRow, importRow, importSafety, validateRestore } from './restore-policy.mjs';
 
+// Agent scope ceilings travel inactive; neither credentials nor broader authority are restored.
 // Email aliases travel inactive; value-free receipts and sealed run files retain custody.
 // Read-only invoice searches retain sealed unfinished pages in the existing request
 // checkpoint inventory; final search results use sealed step values. Restore keeps
@@ -15,7 +16,7 @@ import { fenceRow, importRow, importSafety, validateRestore } from './restore-po
 // Credentials, data-class keys (DATA-003: an archive carries sealed values and blind-index
 // digests only), receiving authority and active execution never travel; older
 // archives are normalized to the same inactive state on import (DATA-001).
-const localAgentTables = ['agent_door_state', 'agent_door_agents', 'agent_door_calls', 'agent_door_approvals', 'agent_door_reviews'];
+const localAgentTables = ['agent_door_state', 'agent_door_agents', 'agent_door_calls', 'agent_door_approvals', 'agent_door_reviews', 'agent_door_relay'];
 
 // readArchive must verify the complete original before this projection. Earlier
 // Crank writers included these installation-local tables in the schema identity.

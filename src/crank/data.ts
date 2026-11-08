@@ -1,3 +1,4 @@
+import { archiveMigrations } from './archive-migrations'
 import { archiveTransferApi } from './archive-api'
 import { archiveTransfers, operation } from './ops/recovery'
 import { createPortability, readArchive, type Manifest, type Part, type Closing } from '@runeditrun/rer/internal/modules/portability/index.mjs'
@@ -14,7 +15,7 @@ import { operatorAuth } from '../auth.server'
 import { dataFlows } from './data-flows'
 import { DISCLOSURE, listHolds, placeHold, previewRetention, releaseHold, retentionPolicy, retentionScope, setRetention } from './ops/retention'
 
-export const portability = (env: CrankEnv) => createPortability({ db:env.DB, policy })
+export const portability = (env: CrankEnv) => createPortability({ db:env.DB, policy, migrations: () => archiveMigrations(env.DB) })
 
 export async function dataApi(request:Request,env:CrankEnv):Promise<Response|null> {
   const path = new URL(request.url).pathname
@@ -94,7 +95,7 @@ export async function dataApi(request:Request,env:CrankEnv):Promise<Response|nul
       }
       if (value.operator_id !== undefined) {
         if (value.confirm !== 'ERASE' || typeof value.operator_id !== 'string' || !value.operator_id) return Response.json({error:'Confirm ERASE and select one deactivated person.'},{status:400})
-        return Response.json(await eraseOperator(env,actor,value.operator_id),{headers:{'cache-control':'no-store'}})
+        return Response.json(await eraseOperator(env,actor,value.operator_id,store),{headers:{'cache-control':'no-store'}})
       }
       if (value.subject !== undefined) {
         if (value.confirm !== 'ERASE' || typeof value.subject !== 'string' || typeof value.digest !== 'string') return Response.json({error:'Confirm ERASE with the subject and its preview digest.'},{status:400})
@@ -132,6 +133,6 @@ export async function dataApi(request:Request,env:CrankEnv):Promise<Response|nul
     }
     return Response.json({error:'Not found'},{status:404})
   } catch(error:any) {
-    return Response.json({error:error.code === 'staged_validation' ? 'staged_validation: Archive product records are inconsistent (a broken workflow graph, version digest or record reference). Nothing was restored.' : error.code || (error.status ? error.message : 'Data operation refused. Check the archive and destination.')},{status:/^(erasure_epoch|erased_row)/.test(error.code || '') ? 409 : error.status || 409,headers:{'cache-control':'no-store'}})
+    return Response.json({error:error.code === 'staged_validation' ? 'staged_validation: Archive product records are inconsistent (a broken workflow graph, version digest or record reference). Nothing was restored.' : (/^(schema_mismatch|migration_ledger)(:|$)/.test(error.code || '') ? 'schema_mismatch' : error.code) || (error.status ? error.message : 'Data operation refused. Check the archive and destination.')},{status:/^(erasure_epoch|erased_row)/.test(error.code || '') ? 409 : error.status || 409,headers:{'cache-control':'no-store'}})
   }
 }

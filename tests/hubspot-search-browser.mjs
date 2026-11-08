@@ -1,3 +1,4 @@
+import {expectHoverTooltip} from './tooltip-browser.mjs';
 import assert from 'node:assert/strict';
 import {createServer} from 'node:http';
 import {mkdir,readFile} from 'node:fs/promises';
@@ -33,7 +34,7 @@ async function onScreen({h,w,run,state}) {
     if(state==='found'){for(const text of ['synthetic-crank-a','synthetic-crank-b','found','synthetic-crank-name','synthetic-crank-family'])await expect(search).toContainText(text);const output=JSON.parse(await search.locator('pre').nth(1).innerText());assert.equal(output.records[0].first_name,hostileName);assert.equal(await page.evaluate(()=>globalThis.hubspotInjected),undefined);await expect(search.locator('img')).toHaveCount(0)}
     else{await expect(search).toContainText('incomplete');await expect(page.locator('.timeline-item[data-state="succeeded"]')).toHaveCount(0)}
     for(const [id,label] of [['search-tooltip','Search runs'],['account-tooltip','Your account']]) {
-     const control=page.locator(`[aria-describedby="${id}"]`),tooltip=page.getByRole('tooltip',{name:label,exact:true});await page.mouse.move(0,0);await control.blur();await expect(tooltip).toBeHidden();await control.hover();await page.waitForTimeout(150);await expect(tooltip).toBeHidden();await expect(tooltip).toBeVisible();await page.mouse.move(0,0);await control.focus();await expect(tooltip).toBeVisible({timeout:100});await control.blur();
+     const control=page.locator(`[aria-describedby="${id}"]`),tooltip=page.getByRole('tooltip',{name:label,exact:true});await expectHoverTooltip(page,control,tooltip);await page.mouse.move(0,0);await control.focus();await expect(tooltip).toBeVisible({timeout:100});await control.blur();
     }
    }
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`${width} retained results fit`);
