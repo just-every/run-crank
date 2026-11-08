@@ -34,7 +34,7 @@ correction, workflow execution error, cancellation, populated and empty search,
 filtered results, empty and addressed inbox and its resolved decision.
 
 The measured checks visit every enabled visible control in natural DOM order by
-Tab, including the skip link. Each needs a computed accessible name, visible
+Tab, including activation of the skip link. Native segmented date and time fields may take several bounded Tab stops within one control. Each needs a computed accessible name, visible
 focus of at least 3:1 contrast, an exposed hit point and its complete bounds in
 the viewport. Positive tabindex is refused. Focused icon controls expose their
 named tooltips. Each target is at least 24 by 24 CSS pixels, has equivalent
@@ -43,12 +43,12 @@ run. Reflow is measured at 320 CSS pixels, including nested scroll containers;
 text fields retain their ordinary single-line input behavior.
 
 For axe's unresolved image and gradient backgrounds, the journey measures the
-actual background pixels behind text, temporarily making foreground text
+actual background pixels behind painted text (excluding portions clipped or covered by an open popover), temporarily making foreground text
 transparent and restoring all styles afterward. The worst sampled pixel must
 meet 4.5:1, or 3:1 for large text. Fields also need a 3:1 boundary against their
 fill. Disabled controls are exempt from the contrast requirement. Textual state
 labels and atomic polite decision announcements are inspected programmatically.
-Required-field and malformed JSON errors are identified in text, announced as
+Legacy delivery errors and workflow execution errors have alert semantics. Required-field and malformed JSON errors are identified in text, announced as
 alerts and associated with their control through `aria-describedby` and
 `aria-invalid`; correction clears the error. Invalid JSON sends no decision.
 
@@ -122,9 +122,9 @@ supplements automation; browser touch emulation is not a handset receipt.
 Unreached timeline text no longer inherits faded opacity. The approval badge uses
 dark ink on orange, and footer text uses the readable body color. Secondary editor labels, field edges and
 keyboard outlines have sufficient contrast. A skip link bypasses repeated shell
-navigation. Long headings wrap, and decision notices have space for their focus
+navigation. Long headings wrap, the header retains its controls beside long breadcrumbs, run-ID focus remains above the phone row link, and decision notices have space for their focus
 outline. Standalone links have their own 24-pixel targets. Field errors persist visibly after the native validity popup closes and
-clear when edited. Tooltips can be dismissed without moving focus.
+clear when edited. Tooltips can be dismissed without moving focus. Popovers close when keyboard focus leaves them, so they cannot cover the next target.
 
 Existing one-decision, offline, lost-response, authoritative-read, input-retention
 and hidden-path legacy assertions remain in the registered journey unchanged.

@@ -196,7 +196,7 @@
       "executable": false
     },
     "docs/ACCESSIBILITY.md": {
-      "sha256": "836d278bbeff4509541966b59b21c3a877d6981c528114f331123a258e487612",
+      "sha256": "8f72f79e64e9b5853fe9678a5ca63b7a9e7fddfcc4c2c251dc44af375c980ad5",
       "executable": false
     },
     "docs/AGENT-DOOR.md": {
@@ -1780,7 +1780,7 @@
       "executable": false
     },
     "public/decision.js": {
-      "sha256": "ab6ca2fed723818e8b0b905819274d61c0d03074851c8e258d75753dd966f765",
+      "sha256": "475f136e2a31b4bb9282fb6efb52c5b92ad53fb8b563e7774144cfefdb7e79d6",
       "executable": false
     },
     "public/favicon.ico": {
@@ -2008,7 +2008,7 @@
       "executable": false
     },
     "public/ui/shell.css": {
-      "sha256": "eb561adadcb14f2d3eea3420277b2e8f46efda323ed6b34a30186e70c8475bc1",
+      "sha256": "1397b8ffb5e576cddf7c93099ac77974a19cc5d638efd2a08da30ef419e1b3ce",
       "executable": false
     },
     "public/ui/tooltips.css": {
@@ -4144,7 +4144,7 @@
       "executable": false
     },
     "src/crank/ui/run.ts": {
-      "sha256": "5fca1c370fd63f742926f8f7afbac7e22dd8758fc1173b73777bee57d1c02325",
+      "sha256": "cc8445ae5ee14a9a026a34a6102e3de7c3d291bb79bdb2cf5100a3dbdd2bcc04",
       "executable": false
     },
     "src/crank/ui/service-accounts.ts": {
@@ -6880,7 +6880,7 @@
       "executable": false
     },
     "tests/decision-browser.mjs": {
-      "sha256": "1a29215c7d876b02e10b72d61ed237e1e91578025d53c119978155eb8f2976a7",
+      "sha256": "d7fe445620e73ab5b764785492559537a0e1dbbf93a06aa98244a6bb12da4099",
       "executable": false
     },
     "tests/deployment.test.mjs": {
