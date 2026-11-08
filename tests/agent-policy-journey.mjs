@@ -150,6 +150,13 @@ export async function authoringPolicyJourney(){
   assert.ok(proposal.questions.find(q=>q.id==='native_mapping_confirmation').question.includes('steps.lead.body.region'));
   proposal=await h.post(path+'/revise',{answers:{native_mapping_confirmation:'Confirmed region and key'}});
   proposal=await h.post(path+'/test',{bindings:{[crm.id]:crm.id,[qbo.id]:qbo.id}});assert.equal(proposal.tested.passed,true);
+  const direct=structuredClone(proposal.graph);direct.steps[1].when[0][0].field='steps.lead.body.country';direct.steps[2].input.business_key='{{steps.lead.body.id}}';
+  await h.post(`workflows/${proposal.workflow_id}/draft`,{graph:direct});
+  proposal=await h.post(path+'/test',{bindings:{[crm.id]:crm.id,[qbo.id]:qbo.id}});
+  assert.equal(proposal.questions.find(q=>q.id==='native_mapping_confirmation').answer,undefined,'the ordinary draft door cannot retain confirmation for different tested mappings');
+  await h.post(path+'/promote',{digest:proposal.digest,confirm:true},h.owner,409);
+  proposal=await h.post(path+'/revise',{answers:{native_mapping_confirmation:'Confirmed country and id after the ordinary draft edit'}});
+  proposal=await h.post(path+'/test',{bindings:{[crm.id]:crm.id,[qbo.id]:qbo.id}});assert.equal(proposal.tested.passed,true);
   await h.post(`workflows/${proposal.workflow_id}/estimate`,{cost:{components:['orchestration','connectors','models','executors'].map(kind=>({kind,usd_per_run:'0',assumption:'Synthetic policy provider edges with reviewed mappings'}))}});
   proposal=await h.post(path+'/promote',{digest:proposal.digest,confirm:true});assert.equal(proposal.promoted,true);assert.equal((await h.get('grants')).length,0);
   assert.ok(!JSON.stringify(proposal).includes(modelSecret));assert.ok(!JSON.stringify(proposal).includes('synthetic-crank-10'));
@@ -172,12 +179,17 @@ export async function importPolicyJourney({onScreen}={}){
   const planned=await snapshot(h);
   for(const table of protectedTables)assert.deepEqual(sorted(planned.all.filter(r=>r.table===table)),sorted(before.all.filter(r=>r.table===table)));
   assert.equal(planned.counts.crank_wf_runs,before.counts.crank_wf_runs);assert.equal((await h.get('grants')).length,0);assert.equal(fake.requests.length,0);
-  const applied=await door(h,'apply',{planId:plan.value.planId,reviewedFingerprint:plan.value.fingerprint});assert.ok(applied.status>=400||applied.value.job?.state!=='completed','unresolved AI nodes cannot be approved into authority');
-  const status=await door(h,'status',{planId:plan.value.planId});assert.equal(status.value.job,null);
-  unchanged(planned,await snapshot(h),'refused AI import apply');
+  const applied=await door(h,'apply',{planId:plan.value.planId,reviewedFingerprint:plan.value.fingerprint});assert.equal(applied.status,200);
+  const reconciled=await door(h,'reconcile',{planId:plan.value.planId});assert.equal(reconciled.value.ok,true);assert.equal(reconciled.value.counts.nativeTargets,0);assert.equal(reconciled.value.counts.explained,1);
+  // The import kit records the rejected source as explained. That journal and
+  // its apply audit are provenance, never native execution authority.
+  const after=await snapshot(h),native=all=>all.filter(({table,row})=>!table.startsWith('ik_')&&!(table==='crank_audit'&&row.action==='import.apply'));
+  assert.deepEqual(sorted(native(after.all)),sorted(native(planned.all)),'complete native inventory unchanged by the rejected source');
+  assert.equal(after.counts.crank_audit,planned.counts.crank_audit+1,'only the import apply receipt is added to the product audit');
   assert.equal((await h.get('workflows')).length,0);assert.equal((await h.get('connections')).length,0);assert.equal(fake.requests.length,0);
   if(onScreen)await onScreen({h,plan:plan.value});
   const retained=await snapshot(h);await h.restart();unchanged(retained,await snapshot(h),'unsupported AI import restart');assert.equal(fake.requests.length,0);
+  await h.tick('2026-11-10T15:01:00Z');assert.equal(fake.requests.length,0,'a restarted scheduler cannot execute imported AI nodes');assert.equal((await h.get('workflows')).length,0);assert.equal((await h.get('grants')).length,0);
   console.log('SEC-002 AI import manual conversions; zero native workflows, connections, grants or requests; complete retained inventory unchanged after refusal and restart');
  }finally{await h.close()}
 }

@@ -6792,7 +6792,7 @@
       "executable": false
     },
     "tests/agent-policy-journey.mjs": {
-      "sha256": "98343a8758f0ef41f475dec6edb0d1cb95f291f70b08c341eda0420a45b641b5",
+      "sha256": "00eca75fa179412382a2fd2afb57b4ab07f69d40640958544fd2681bbc7bcfc1",
       "executable": false
     },
     "tests/ai-steps-browser.mjs": {
@@ -6836,7 +6836,7 @@
       "executable": false
     },
     "tests/authoring-browser.mjs": {
-      "sha256": "10f738b14ef4b884c78485475fbcf919fef102674e8695dc97b2e6a009a1adce",
+      "sha256": "ee626a3c722549220d19acc670d9e655bfb165553a41dab86970c94e6520db26",
       "executable": false
     },
     "tests/authoring-fixture.mjs": {
