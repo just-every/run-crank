@@ -248,3 +248,15 @@ a.list-row:hover { background: var(--row); border-radius: 10px; }
   .run-filters .btn { flex: 1 1 100%; }
   .crank-app .run-filters select { width: 100%; }
 }
+
+/* Keyboard focus stays distinct from both the control and its surrounding sheet. */
+.crank-app :focus-visible { outline: 3px solid #011646; outline-offset: 3px; scroll-margin-block: 16px; }
+.crank-app :is(input, select, textarea):focus-visible { outline: 3px solid #011646; outline-offset: 3px; box-shadow: none; }
+.skip-link { position: absolute; z-index: 200; left: 12px; top: 12px; padding: 10px 16px; background: white; color: var(--ink); border: 1px solid var(--navy); border-radius: 8px; transform: translateY(-160%); }
+.skip-link:focus { transform: none; }
+.crank-app :is(h1, h2, h3, h4, p, summary) { overflow-wrap: anywhere; }
+.crank-app :is(.page-head > div, .title-row > *, .bar-actions, .top-person) { min-width: 0; }
+.crank-app :is(summary, input[type=checkbox]) { min-height: 24px; }
+.crank-app input[type=checkbox] { min-width: 24px; vertical-align: middle; }
+.crank-app :is(input, select, textarea)[aria-invalid=true] { border-color: #8f2236; }
+.field-error { color: #8f2236; font-size: 14px; font-weight: 500; }
