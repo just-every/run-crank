@@ -6960,11 +6960,11 @@
       "executable": false
     },
     "tests/executor-fixture.mjs": {
-      "sha256": "e3b09ca940357e2bb856a08dfbf4cf768dcbd83a6b709aef997486a12a505dcf",
+      "sha256": "2e0c77b3fbd9d5795bb116e1107bb424c64e12abf8b24818e66bf5e3757c389c",
       "executable": false
     },
     "tests/executor-linux.mjs": {
-      "sha256": "2a0a2a1593918971a441ccac3d4706e41eadba551c7281498fb6de240f33960b",
+      "sha256": "fafa3d6894d28298c8477ccbdf6f313a0436545f35ab5456bfc10bbedb350cae",
       "executable": false
     },
     "tests/executor-schema-browser.mjs": {
