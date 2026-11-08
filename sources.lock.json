@@ -1724,7 +1724,7 @@
       "executable": false
     },
     "package.json": {
-      "sha256": "4c09e684c6a505a1d5a4df3f61681474b75df2f457a5175a9090287481cba1a9",
+      "sha256": "831e3f0ac8a1783fc8b7adf183566925108e7a341a35a8a33d61244ebc9cf30e",
       "executable": false
     },
     "packaging.json": {
@@ -1732,7 +1732,7 @@
       "executable": false
     },
     "pnpm-lock.yaml": {
-      "sha256": "3764eeff5aad3b6371aff04d277021fad944c5f67d9b6195597f247d631c9ff9",
+      "sha256": "b4d890e53f4c61abf3bdf328db4ec45b6077d60636cf2f39f012bc4f066e7fd3",
       "executable": false
     },
     "public/apple-touch-icon.png": {
@@ -1776,7 +1776,7 @@
       "executable": false
     },
     "public/decision.js": {
-      "sha256": "a3155cc751c3a46c0cf809219ee038484e2cd72ac1c470b4ef7a51665376d345",
+      "sha256": "18d0bf2a70a140f3bc132d3020bad16af7e008f59727ee40ffbc587c1c36744d",
       "executable": false
     },
     "public/favicon.ico": {
@@ -2000,11 +2000,11 @@
       "executable": false
     },
     "public/ui/pages.css": {
-      "sha256": "26791c96cb735eb305d02e2d641e0da065bef600cc51d250615c4be23243a981",
+      "sha256": "0189c78fd1107a450b1e7cfdb71eeed12cc8559180c907bd8b4dd7b87fbf0fb3",
       "executable": false
     },
     "public/ui/shell.css": {
-      "sha256": "209c7e32bd270bf78b9aa060b7c483c363dcc6d65c94d04e537f59ada8f54a4a",
+      "sha256": "52e51747a7616235d6c802981cad714271729cda2f524a867d199f7ccd87b7e9",
       "executable": false
     },
     "public/ui/tooltips.css": {
@@ -4008,7 +4008,7 @@
       "executable": false
     },
     "src/crank/ui/document.ts": {
-      "sha256": "acac60a66fee7d95418de8d093650d8158a0fa93df03bda0b3e0c73abddbfc6b",
+      "sha256": "c73171fa84c4969f8216f742351a63eb611fd5ccb74f2a8efbe49e7ed1cb3133",
       "executable": false
     },
     "src/crank/ui/drift.ts": {
@@ -4152,7 +4152,7 @@
       "executable": false
     },
     "src/crank/ui/shell.ts": {
-      "sha256": "67a070dc5c18ef03626304a2a9cbce453e84680229cbb132fccbc0d42b5380aa",
+      "sha256": "87ad346a571f553f1eecef557d51f5214498b3d959c54b148d028fea1d6160d5",
       "executable": false
     },
     "src/crank/ui/skills.ts": {
@@ -4176,7 +4176,7 @@
       "executable": false
     },
     "src/crank/ui/workflow-run.ts": {
-      "sha256": "07302981167274af26c3795d59ca3f018a6310059953908f077ecc32d782cc88",
+      "sha256": "a884d27a10ce64200b41ddd30bf5218bd6a53cf16b9889aef2327142159366b9",
       "executable": false
     },
     "src/crank/workflow-erasure.ts": {
@@ -6876,7 +6876,7 @@
       "executable": false
     },
     "tests/decision-browser.mjs": {
-      "sha256": "6f91f5b701e9238fcaa48327956e2ca94c79abb88e5317ef97046c5bc51a00a6",
+      "sha256": "d31d3c1d3b9ef60047765753390af3dd15ddbf08ea2afab56b2333807eda6b7a",
       "executable": false
     },
     "tests/deployment.test.mjs": {

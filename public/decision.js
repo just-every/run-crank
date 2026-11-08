@@ -5,6 +5,7 @@ let pending = false;
 let refreshing = false;
 let sending = false;
 let refreshUrl = location.href;
+let fieldSequence = 0;
 
 function decisionButtons() {
   return [...document.querySelectorAll('form[action="/app/action"]')].flatMap(form => {
@@ -25,6 +26,7 @@ function notice(message, canRefresh = true) {
     region.dataset.decisionStatus = '';
     region.setAttribute('role', 'status');
     region.setAttribute('aria-live', 'polite');
+    region.setAttribute('aria-atomic', 'true');
     region.tabIndex = -1;
     document.querySelector('main')?.prepend(region);
   }
@@ -96,6 +98,17 @@ document.addEventListener('submit', async event => {
   if (event.submitter?.name) data.set(event.submitter.name, event.submitter.value);
   if (!decisionPath.test(String(data.get('path')))) return;
   event.preventDefault();
+  if (String(data.get('path')).endsWith('/approve')) {
+    for (const control of form.querySelectorAll('[name^="decision_edit_"]')) {
+      if (data.get('decision_kind_' + control.name.slice('decision_edit_'.length)) !== 'json') continue;
+      try { JSON.parse(control.value); }
+      catch {
+        fieldError(control, 'Enter valid JSON, such as {"quantity": 1}, before approving.');
+        control.focus();
+        return;
+      }
+    }
+  }
   if (pending) return;
   pending = true;
   refreshUrl = location.href;
@@ -126,4 +139,40 @@ window.addEventListener('pageshow', event => {
     pending = true;
     reconcile();
   }
+});
+
+// Keep validation visible after the native popup closes and associate it with
+// the exact control. Labels and existing help remain part of its description.
+function clearFieldError(control) {
+  const id = control.dataset.fieldError;
+  if (!id) return;
+  document.getElementById(id)?.remove();
+  const described = (control.getAttribute('aria-describedby') ?? '').split(/\s+/).filter(value => value && value !== id);
+  if (described.length) control.setAttribute('aria-describedby', described.join(' '));
+  else control.removeAttribute('aria-describedby');
+  control.removeAttribute('aria-invalid');
+  delete control.dataset.fieldError;
+}
+function fieldError(control, message) {
+  clearFieldError(control);
+  const error = document.createElement('span');
+  error.id = 'crank-field-error-' + ++fieldSequence;
+  error.className = 'field-error';
+  error.setAttribute('role', 'alert');
+  error.textContent = message;
+  control.dataset.fieldError = error.id;
+  control.setAttribute('aria-invalid', 'true');
+  control.setAttribute('aria-describedby', [control.getAttribute('aria-describedby'), error.id].filter(Boolean).join(' '));
+  control.insertAdjacentElement('afterend', error);
+}
+document.addEventListener('invalid', event => {
+  const control = event.target;
+  if (control instanceof HTMLInputElement || control instanceof HTMLSelectElement || control instanceof HTMLTextAreaElement) {
+    const label = control.labels?.[0]?.childNodes[0]?.textContent?.trim() || 'This field';
+    fieldError(control, label + ': ' + control.validationMessage);
+  }
+}, true);
+document.addEventListener('input', event => {
+  const control = event.target;
+  if (control instanceof HTMLInputElement || control instanceof HTMLSelectElement || control instanceof HTMLTextAreaElement) clearFieldError(control);
 });
