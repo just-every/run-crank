@@ -1,0 +1,118 @@
+{
+  "files": [
+    {
+      "blob": "e6690c3b036fcdb9c4a1300e4fdd7b8ca4907062",
+      "bytes": 1246,
+      "path": "PLAN.md",
+      "sha256": "48761d5d2d35552278986ddcf1afdf49f69a7dfb685e19fdcc13ba1b355bc9c1"
+    },
+    {
+      "blob": "7ffc2351e44049f662ecbb41ffb671242bf01ab8",
+      "bytes": 4208,
+      "path": "RECEIPT.json",
+      "sha256": "915d2332894551790406e64fdef1ac0b1a3a035cf66ee11310a72983a712eb70"
+    },
+    {
+      "blob": "73bb190b9f852a5cf1df020eb0969d6892e2bc06",
+      "bytes": 6808,
+      "path": "REPORT.md",
+      "sha256": "52774f15347d3d49ec770279b2ad0026b7ab08d822f0981ad14df6c484fc6775"
+    },
+    {
+      "blob": "98970679152f4a818c93225407c6d916ca125ba6",
+      "bytes": 1004,
+      "path": "after.log",
+      "sha256": "f1456d0e6d67b3b15372f74fbffdcefa2a1285bcaf8fffd796eb2ccf9c9da244"
+    },
+    {
+      "blob": "fc020dfcac0a85010b71e2517abfa5781727cb71",
+      "bytes": 1854,
+      "path": "before.log",
+      "sha256": "47abeefc3851fc1abc0899978b0aa06e89a19d84d52f410ba0cafdb957a6b2ee"
+    },
+    {
+      "blob": "9c8654f916ccd343059cf6a27ec9cc01bc702d33",
+      "bytes": 4036,
+      "path": "build.log",
+      "sha256": "f00bc02afccc3b2206d1d94f583e34aaae434abc21b12ff80e91fa79852e7464"
+    },
+    {
+      "blob": "b9ddaa23ed3fc0b213f3d29272759021f312a352",
+      "bytes": 14484,
+      "path": "ci-discovery.json",
+      "sha256": "48d8b0feb96f60a057d5670f16a2baffe737cc2cc477721df2dade7066651191"
+    },
+    {
+      "blob": "1cfc4a6fe4f375cf0403211268945f0d8933d82c",
+      "bytes": 216,
+      "path": "ci-status.json",
+      "sha256": "1fdacf4d3a610d9d7b195982ad4e05bfd5c39711ba725f0e8e2d57941f6c5f81"
+    },
+    {
+      "blob": "79dd0b129bd8170bc0b3ac0a0c2186314ebf42e3",
+      "bytes": 43,
+      "path": "contract-check.log",
+      "sha256": "41be670e8514d35d3059536f54f0a1ff875aa0cf719cdfa33febe6c30584d084"
+    },
+    {
+      "blob": "ab92292705a601d5509c82e28a33e53c210ae892",
+      "bytes": 43,
+      "path": "contract-write.log",
+      "sha256": "540b168efe390f92191c4c47be4676a9db640b8f3c00b2bea4c20a224c0e80cf"
+    },
+    {
+      "blob": "6eeea5acbc321be4539cd513b6514bfd8e4c1614",
+      "bytes": 425,
+      "path": "final-identities.log",
+      "sha256": "bebd14c2976af3c82732395800b1877f2bce97efc547cdf8d38d82d3d735928d"
+    },
+    {
+      "blob": "dd758b29d554c454bbe97a631eb3c7d8a7676e8a",
+      "bytes": 312298,
+      "path": "final-lock-check.log",
+      "sha256": "3e25458de22e09e7dec8dcd1400395a9ee8a3298f344110ee2d3531dd1b0b9ab"
+    },
+    {
+      "blob": "32acb088d5f4955bedee139015a033cba1a1ed60",
+      "bytes": 553,
+      "path": "final-messages.log",
+      "sha256": "e8fee105241c7f0ee6743196064df617d106fbc1027bd240b8e30999454f830b"
+    },
+    {
+      "blob": "f82d8b5f58c4259b4f6661174e1549d0aeb85a05",
+      "bytes": 1391,
+      "path": "github-calls.json",
+      "sha256": "ec8d33c43995893f4f124e13b87ecc5e068c60a18eb11b0fb42b0a143880ca10"
+    },
+    {
+      "blob": "b5a9f94394268a996e468698f50a4bb4e904ca04",
+      "bytes": 3524,
+      "path": "integration-before-cache.log",
+      "sha256": "cecd1281f650bc0b5bcf28b8c282e00f7a9fbf8f9255d6e14361698f488317e1"
+    },
+    {
+      "blob": "1fcda5af0c3334ebcf3955a9586997e401caa0c8",
+      "bytes": 727,
+      "path": "replay-probe.log",
+      "sha256": "e72153e4d13fb910f569350a17615abaf0ed9e31b2c9b49143ef64c2b015f355"
+    },
+    {
+      "blob": "40663a1b0805095f832c22039b8c21241ae8b7e4",
+      "bytes": 5888,
+      "path": "test-counts.json",
+      "sha256": "f7f18ba5e29683324be45cf89eaa196d8ee949dba13784df5bf2b6639bc7bf4c"
+    },
+    {
+      "blob": "346d0c264ca06068ce3e0db324ef6b89020c86bc",
+      "bytes": 140,
+      "path": "typecheck.log",
+      "sha256": "6a7f4611d685e31a09203a4946b556e1cd9086b487123accee867d894475499f"
+    }
+  ],
+  "product_branch": "cloud/sx-crank-restore-bridge-fix1",
+  "product_head": "1780553f1cae64f9026db32567cb84983fa9a137",
+  "ref": "refs/heads/evidence/sx-crank-restore-bridge-fix1",
+  "repository": "just-every/run-crank",
+  "schema": 1,
+  "tag": "sx-crank-restore-bridge-fix1"
+}

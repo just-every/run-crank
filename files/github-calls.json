@@ -1,0 +1,64 @@
+[
+  {
+    "time": 1794163194.1697316,
+    "args": [
+      "api",
+      "repos/just-every/run-crank/actions/runs?head_sha=1780553f1cae64f9026db32567cb84983fa9a137&per_page=100"
+    ],
+    "run": null,
+    "exit": 0
+  },
+  {
+    "time": 1794163494.2234538,
+    "args": [
+      "api",
+      "repos/just-every/run-crank/actions/runs?head_sha=1780553f1cae64f9026db32567cb84983fa9a137&per_page=100"
+    ],
+    "run": null,
+    "exit": 0
+  },
+  {
+    "time": 1794163794.221502,
+    "args": [
+      "api",
+      "repos/just-every/run-crank/actions/runs/42511123908",
+      "--jq",
+      "{id,status,conclusion,head_sha,html_url}"
+    ],
+    "run": "42511123908",
+    "exit": 0
+  },
+  {
+    "time": 1794164094.226411,
+    "args": [
+      "api",
+      "repos/just-every/run-crank/actions/runs/42511123908",
+      "--jq",
+      "{id,status,conclusion,head_sha,html_url}"
+    ],
+    "run": "42511123908",
+    "exit": 0
+  },
+  {
+    "time": 1794164394.2292929,
+    "args": [
+      "api",
+      "repos/just-every/run-crank/actions/runs/42511123908",
+      "--jq",
+      "{id,status,conclusion,head_sha,html_url}"
+    ],
+    "run": "42511123908",
+    "exit": 0
+  },
+  {
+    "time": 1794164712.9610038,
+    "args": [
+      "api",
+      "repos/just-every/run-crank/actions/runs/42511123908",
+      "--jq",
+      "{id,status,conclusion,head_sha,html_url}"
+    ],
+    "run": "42511123908",
+    "exit": 0
+  }
+]

@@ -1,0 +1,9 @@
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProxy environment variables detected. We'll use your proxy for fetch requests.[0m
+
+
+(node:2264) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+sql.js: the asm.js build is deprecated. Use sql-wasm-inline.js (worker.sql-wasm-inline.js for workers) for a single JavaScript file with embedded WebAssembly. WebAssembly support is required. If you cannot migrate, please tell us at https://github.com/sql-js/sql.js/issues/635.
+Schema identity parity undefined true
+Schema identity parity {"tablesOnly":true} true
+Schema identity parity {"legacyExcludedObjects":true} true

@@ -1,0 +1,56 @@
+Heavy job admitted: Crank build:workflow [abfe90e1d3c9]
+Checking pinned pnpm
+10.12.4
+Building your application
+build:app
+▲ [WARNING] Proxy environment variables detected. We'll use your proxy for fetch requests.
+
+
+(node:3871) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+vite v8.2.2 building client environment for production...
+transforming...
+✓ 135 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/client/.assetsignore               0.02 kB
+dist/client/assets/index-DgoNPDnv.js  311.20 kB │ gzip: 100.86 kB
+
+✓ built in 338ms
+vite v8.2.2 building ssr environment for production...
+transforming...
+✓ 994 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/server/wrangler.json                                      1.59 kB │ gzip:     0.79 kB
+dist/server/.vite/manifest.json                                3.05 kB │ gzip:     0.63 kB
+dist/server/assets/empty-plugin-adapters-D_0twvAa.js           0.28 kB │ gzip:     0.18 kB
+dist/server/assets/start-D8qDT34V.js                           0.28 kB │ gzip:     0.21 kB
+dist/server/assets/_tanstack-start-manifest_v-C4SKhgWU.js      0.40 kB │ gzip:     0.28 kB
+dist/server/assets/font-head-D9nSLVNU.js                       1.88 kB │ gzip:     0.89 kB
+dist/server/assets/hash-CGMmNW5x.js                            4.69 kB │ gzip:     2.16 kB
+dist/server/assets/storage-BpBgzBli.js                         4.91 kB │ gzip:     1.95 kB
+dist/server/assets/router-Bnd2MprL.js                         37.21 kB │ gzip:    10.06 kB
+dist/server/assets/Match-CA07Md50.js                         161.09 kB │ gzip:    40.32 kB
+dist/server/index.js                                       2,377.32 kB │ gzip:   589.43 kB
+dist/server/assets/access-C7gv3EzP.js                      6,691.78 kB │ gzip: 1,160.38 kB
+
+[INEFFECTIVE_DYNAMIC_IMPORT] src/crank/connections/catalog.ts is dynamically imported by src/crank/workflows/snapshot.ts but also statically imported by src/crank/ops/coverage.ts, src/crank/workflows/api.ts, dynamic import will not move module into another chunk.
+
+[INEFFECTIVE_DYNAMIC_IMPORT] src/modules/import-kit/src/d1/undo-snapshot.ts is dynamically imported by src/modules/import-kit/src/d1/apply.ts but also statically imported by src/modules/import-kit/src/d1/preserved-preview.ts, src/modules/import-kit/src/d1/preserved-reverse.ts, dynamic import will not move module into another chunk.
+
+[INEFFECTIVE_DYNAMIC_IMPORT] src/crank/engine/executor.ts is dynamically imported by src/crank/workflows/subflow-calls.ts but also statically imported by src/crank/agents/drift-approval.ts, src/crank/agents/drift-permission.ts, src/crank/agents/drift-testing.ts, src/crank/agents/recurring-dispatch.ts, src/crank/custom/api.ts, ..., dynamic import will not move module into another chunk.
+
+[INEFFECTIVE_DYNAMIC_IMPORT] src/crank/access.ts is dynamically imported by src/crank/agent-door/people.ts but also statically imported by src/crank/agent-door/native-recovery.ts, src/crank/agent-door/tool-metadata.ts, src/crank/agent-door/tool-workflows.ts, src/crank/agents/authoring-promotion.ts, src/crank/agents/authoring-record.ts, ..., dynamic import will not move module into another chunk.
+
+[PLUGIN_TIMINGS] Plugin hooks ran for 56.6s of this 57.3s build (99%).
+The slowest hooks, timed inside each callback (the wait before a callback starts is excluded, the time it awaits is included):
+  - crank-archive-migrations load (99%, 56.7s, 991 calls)
+2 hooks are listed without a time. Their calls overlapped, so the time inside one call includes work from other calls. To find their cost, profile the build with `node --cpu-prof`:
+  - tanstack-start-core:import-protection resolveId (3988 calls)
+  - tanstack-start-core::server-fn:ssr transform (15 calls)
+See https://rolldown.rs/reference/InputOptions.checks#plugintimings for more details.
+
+✓ built in 57.30s
+Your application is built
+build: complete (exit 0)

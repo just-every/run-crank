@@ -1,0 +1,113 @@
+{
+  "schema": 1,
+  "repository": "just-every/run-crank",
+  "branch": "cloud/sx-crank-restore-bridge-fix1",
+  "head": "1780553f1cae64f9026db32567cb84983fa9a137",
+  "merged_main": "7ef378f73cfaf5576bc7f133172668363c0a8bca",
+  "recorded_at": "2026-11-08T18:40:49.928806+00:00",
+  "checks": [
+    {
+      "name": "regression_before",
+      "command": "node --test --test-name-pattern='BASE-003 DATA-001: complete portable inventory' tests/crank.test.mjs",
+      "exit_code": 1,
+      "receipt": "before.log",
+      "sha256": "47abeefc3851fc1abc0899978b0aa06e89a19d84d52f410ba0cafdb957a6b2ee",
+      "note": "Expected reproduction: 400 schema_mismatch at the sorted-middle scenario on the original bridge with the new fixture."
+    },
+    {
+      "name": "restore_journey",
+      "command": "node --test --test-name-pattern='BASE-003 DATA-001: complete portable inventory' tests/crank.test.mjs",
+      "exit_code": 0,
+      "receipt": "after.log",
+      "sha256": "f1456d0e6d67b3b15372f74fbffdcefa2a1285bcaf8fffd796eb2ccf9c9da244",
+      "note": "Final candidate: 1 pass, 0 fail, 0 skipped; all existing assertions plus the one new regression scenario."
+    },
+    {
+      "name": "typecheck",
+      "command": "pnpm typecheck",
+      "exit_code": 0,
+      "receipt": "typecheck.log",
+      "sha256": "6a7f4611d685e31a09203a4946b556e1cd9086b487123accee867d894475499f",
+      "note": "Final candidate."
+    },
+    {
+      "name": "production_build",
+      "command": "cloud_run npx -y @runeditrun/rer build",
+      "exit_code": 0,
+      "receipt": "build.log",
+      "sha256": "f00bc02afccc3b2206d1d94f583e34aaae434abc21b12ff80e91fa79852e7464",
+      "note": "Final candidate."
+    },
+    {
+      "name": "contract_generation",
+      "command": "node src/base/contract-docs.mjs write",
+      "exit_code": 0,
+      "receipt": "contract-write.log",
+      "sha256": "540b168efe390f92191c4c47be4676a9db640b8f3c00b2bea4c20a224c0e80cf",
+      "note": "99 clauses; generated views restored from main afterward."
+    },
+    {
+      "name": "contract_check",
+      "command": "node src/base/contract-docs.mjs check",
+      "exit_code": 0,
+      "receipt": "contract-check.log",
+      "sha256": "41be670e8514d35d3059536f54f0a1ff875aa0cf719cdfa33febe6c30584d084",
+      "note": "99 clauses."
+    },
+    {
+      "name": "source_lock_check",
+      "command": "node node_modules/@runeditrun/rer/edition-authoring/cli.mjs check",
+      "exit_code": 0,
+      "receipt": "final-lock-check.log",
+      "sha256": "3e25458de22e09e7dec8dcd1400395a9ee8a3298f344110ee2d3531dd1b0b9ab",
+      "note": "Final source lock regenerated last with the installed tool."
+    }
+  ],
+  "toolchain": {
+    "node": "22.20.0",
+    "pnpm": "10.12.4"
+  },
+  "counts": {
+    "ordinary_before": 166,
+    "ordinary_after": 166,
+    "recorded_total_before": 200,
+    "recorded_total_after": 200,
+    "contract_before": {
+      "done": 32,
+      "partial": 50,
+      "missing": 17,
+      "total": 99
+    },
+    "contract_after": {
+      "done": 32,
+      "partial": 50,
+      "missing": 17,
+      "total": 99
+    },
+    "recounted_total_before": 201,
+    "recounted_total_after": 201,
+    "note": "Recorded budget remains 200; declared-entrypoint recount is 201 on both main and candidate. No count increase in this fix."
+  },
+  "clause_changes": [],
+  "generated_view_changes": [],
+  "product_push": "success",
+  "verify": {
+    "conclusion": "success",
+    "head_sha": "1780553f1cae64f9026db32567cb84983fa9a137",
+    "html_url": "https://github.com/just-every/run-crank/actions/runs/42511123908",
+    "id": 42511123908,
+    "status": "completed"
+  },
+  "pr": null,
+  "publication_scan": "not run; prohibited by scoped brief; fleet owns landing scan",
+  "github_calls_used": 6,
+  "evidence_ref": "refs/heads/evidence/sx-crank-restore-bridge-fix1",
+  "setup": {
+    "exit_code": 1,
+    "reason": "Local readiness port mismatch after dependency installation and build; subsequent native Worker/D1 journey, typecheck and build succeeded.",
+    "raw_log": "Retained privately outside the public packet; not selected for evidence publication."
+  },
+  "blockers": [],
+  "disposition": "READY",
+  "remote_product_head": "1780553f1cae64f9026db32567cb84983fa9a137"
+}

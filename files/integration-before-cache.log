@@ -1,0 +1,29 @@
+TAP version 13
+# [33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProxy environment variables detected. We'll use your proxy for fetch requests.[0m
+# (node:2806) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# sql.js: the asm.js build is deprecated. Use sql-wasm-inline.js (worker.sql-wasm-inline.js for workers) for a single JavaScript file with embedded WebAssembly. WebAssembly support is required. If you cannot migrate, please tell us at https://github.com/sql-js/sql.js/issues/635.
+# sql.js: the asm.js build is deprecated. Use sql-wasm-inline.js (worker.sql-wasm-inline.js for workers) for a single JavaScript file with embedded WebAssembly. WebAssembly support is required. If you cannot migrate, please tell us at https://github.com/sql-js/sql.js/issues/635.
+# sql.js: the asm.js build is deprecated. Use sql-wasm-inline.js (worker.sql-wasm-inline.js for workers) for a single JavaScript file with embedded WebAssembly. WebAssembly support is required. If you cannot migrate, please tell us at https://github.com/sql-js/sql.js/issues/635.
+# sql.js: the asm.js build is deprecated. Use sql-wasm-inline.js (worker.sql-wasm-inline.js for workers) for a single JavaScript file with embedded WebAssembly. WebAssembly support is required. If you cannot migrate, please tell us at https://github.com/sql-js/sql.js/issues/635.
+# sql.js: the asm.js build is deprecated. Use sql-wasm-inline.js (worker.sql-wasm-inline.js for workers) for a single JavaScript file with embedded WebAssembly. WebAssembly support is required. If you cannot migrate, please tell us at https://github.com/sql-js/sql.js/issues/635.
+# sql.js: the asm.js build is deprecated. Use sql-wasm-inline.js (worker.sql-wasm-inline.js for workers) for a single JavaScript file with embedded WebAssembly. WebAssembly support is required. If you cannot migrate, please tell us at https://github.com/sql-js/sql.js/issues/635.
+# sql.js: the asm.js build is deprecated. Use sql-wasm-inline.js (worker.sql-wasm-inline.js for workers) for a single JavaScript file with embedded WebAssembly. WebAssembly support is required. If you cannot migrate, please tell us at https://github.com/sql-js/sql.js/issues/635.
+# sql.js: the asm.js build is deprecated. Use sql-wasm-inline.js (worker.sql-wasm-inline.js for workers) for a single JavaScript file with embedded WebAssembly. WebAssembly support is required. If you cannot migrate, please tell us at https://github.com/sql-js/sql.js/issues/635.
+# sql.js: the asm.js build is deprecated. Use sql-wasm-inline.js (worker.sql-wasm-inline.js for workers) for a single JavaScript file with embedded WebAssembly. WebAssembly support is required. If you cannot migrate, please tell us at https://github.com/sql-js/sql.js/issues/635.
+# sql.js: the asm.js build is deprecated. Use sql-wasm-inline.js (worker.sql-wasm-inline.js for workers) for a single JavaScript file with embedded WebAssembly. WebAssembly support is required. If you cannot migrate, please tell us at https://github.com/sql-js/sql.js/issues/635.
+# Subtest: BASE-003 DATA-001: complete portable inventory, inactive restore, explicit per-run adoption and atomic refusal
+ok 1 - BASE-003 DATA-001: complete portable inventory, inactive restore, explicit per-run adoption and atomic refusal
+  ---
+  duration_ms: 187766.888879
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 188834.2433
