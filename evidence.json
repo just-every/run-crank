@@ -205,6 +205,12 @@
       "sha256": "6a54406b686bd00f36b4c4a6629d3532c6b11dd294dbdf989dbd694d746246cc"
     },
     {
+      "blob": "fc27c2bd7597838167b4995e11c7ef7485eccea7",
+      "bytes": 153,
+      "path": "remote-custody.txt",
+      "sha256": "5b2f9bb2d57c39d0b0a2fa85318e98de119163591ddedacef4e4b88c7ae60377"
+    },
+    {
       "blob": "6f5dac4f19855226bdb254dca981f14b8c921b9a",
       "bytes": 385,
       "path": "restore-tests.log",
