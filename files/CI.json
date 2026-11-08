@@ -2,7 +2,7 @@
   "repository": "just-every/run-crank",
   "branch": "cloud/sx-crank-restore-bridge-1",
   "head": "0b8655204eeba01ba499becbfc727763a1e356de",
-  "gh_calls": 3,
+  "gh_calls": 5,
   "run_id": 42504310690,
   "observations": [
     {
@@ -48,6 +48,32 @@
         "id": 42504310690,
         "name": "Verify",
         "status": "in_progress"
+      }
+    },
+    {
+      "call": 4,
+      "observed": "2026-11-08T17:34:01.054445+00:00",
+      "response": {
+        "conclusion": null,
+        "head_branch": "cloud/sx-crank-restore-bridge-1",
+        "head_sha": "0b8655204eeba01ba499becbfc727763a1e356de",
+        "html_url": "https://github.com/just-every/run-crank/actions/runs/42504310690",
+        "id": 42504310690,
+        "name": "Verify",
+        "status": "in_progress"
+      }
+    },
+    {
+      "call": 5,
+      "observed": "2026-11-08T17:39:00.941743+00:00",
+      "response": {
+        "conclusion": "success",
+        "head_branch": "cloud/sx-crank-restore-bridge-1",
+        "head_sha": "0b8655204eeba01ba499becbfc727763a1e356de",
+        "html_url": "https://github.com/just-every/run-crank/actions/runs/42504310690",
+        "id": 42504310690,
+        "name": "Verify",
+        "status": "completed"
       }
     }
   ]

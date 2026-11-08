@@ -55,5 +55,16 @@
   "full_history": true,
   "recount_before": 201,
   "recount_after": 201,
-  "recount_receipt": "COUNTS.json"
+  "recount_receipt": "COUNTS.json",
+  "ci": {
+    "id": 42504310690,
+    "head": "0b8655204eeba01ba499becbfc727763a1e356de",
+    "status": "completed",
+    "conclusion": "success",
+    "url": "https://github.com/just-every/run-crank/actions/runs/42504310690",
+    "gh_calls": 5
+  },
+  "source_lock_sha256": "dbedf7b27507e3d2051c7a80887b88ccd8b8a95d97b3cf6f2486b3bf1da950e7",
+  "blockers": [],
+  "product_checkout_clean": true
 }
