@@ -1,0 +1,11 @@
+{
+  "command": "gh run view 42479803993 -R just-every/run-crank --json conclusion,headSha,status,url,name,number",
+  "result": {
+    "conclusion": "success",
+    "headSha": "dea20ab568c8c5be25accec8b425a0fa125e00f9",
+    "name": "Verify",
+    "number": 662,
+    "status": "completed",
+    "url": "https://github.com/just-every/run-crank/actions/runs/42479803993"
+  }
+}

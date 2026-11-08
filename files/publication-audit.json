@@ -1,0 +1,44 @@
+{
+  "repository": "just-every/run-crank",
+  "branch": "cloud/sx-crank-f86fix1-push-1",
+  "source_branch": "cloud/sx-crank-f86fix1",
+  "head": "dea20ab568c8c5be25accec8b425a0fa125e00f9",
+  "main": "6f6dcc7defff54a5111ca851f9fdfe621090a051",
+  "merge_base": "6f6dcc7defff54a5111ca851f9fdfe621090a051",
+  "candidate_count": 2,
+  "candidates": [
+    {
+      "sha": "dea20ab568c8c5be25accec8b425a0fa125e00f9",
+      "author": "Run Edit Run fleet",
+      "author_email": "fleet@runeditrun.com",
+      "committer": "Run Edit Run fleet",
+      "committer_email": "fleet@runeditrun.com",
+      "message": "Include the tracked main archive fixture in the source lock",
+      "trailers": ""
+    },
+    {
+      "sha": "37fbdf45d6177fa0be8a03793ef5566d580f4aa6",
+      "author": "Run Edit Run fleet",
+      "author_email": "fleet@runeditrun.com",
+      "committer": "Run Edit Run fleet",
+      "committer_email": "fleet@runeditrun.com",
+      "message": "Restore main archives across agent authority exclusions",
+      "trailers": ""
+    }
+  ],
+  "complete_candidate_history": true,
+  "worktree_clean": true,
+  "product_commits_created": 0,
+  "clause_status_counts_before": {
+    "partial": 50,
+    "done": 32,
+    "missing": 17
+  },
+  "clause_status_counts_after": {
+    "partial": 50,
+    "done": 32,
+    "missing": 17
+  },
+  "clause_status_changes": [],
+  "clause_count": 99
+}
