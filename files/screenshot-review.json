@@ -1,0 +1,615 @@
+{
+  "head": "4da29fb0d18db5b317e43fb4a6ef9f9419f1c99b",
+  "reviewed": 76,
+  "screenshots": [
+    {
+      "file": "screens/1440-pending.png",
+      "width": 1440,
+      "height": 1042,
+      "sha256": "8ebbe4eaaa047fc1330c4a19f2837faed29fe6f69228cc9643b1f04ce941d913",
+      "visuallyInspected": true,
+      "acceptanceBreakingFinding": false
+    },
+    {
+      "file": "screens/1440-offline-before-send.png",
+      "width": 1440,
+      "height": 1118,
+      "sha256": "79994e6ee727dd9e7cf7a13fe765db1a10f8f08544b1d1829fc32de838224094",
+      "visuallyInspected": true,
+      "acceptanceBreakingFinding": false
+    },
+    {
+      "file": "screens/1440-reconciliation-error.png",
+      "width": 1440,
+      "height": 1118,
+      "sha256": "25f0001aae43e86a301f18227c78f8f164ecb4b623bff35f1e9460fca46946d7",
+      "visuallyInspected": true,
+      "acceptanceBreakingFinding": false
+    },
+    {
+      "file": "screens/1440-checking-latest-state.png",
+      "width": 1440,
+      "height": 1118,
+      "sha256": "e9c32ddfb06630e5869aaca9a38b3d3204618529fd983086e8d80a9225e7b63a",
+      "visuallyInspected": true,
+      "acceptanceBreakingFinding": false
+    },
+    {
+      "file": "screens/1440-reconciled-approved.png",
+      "width": 1440,
+      "height": 2090,
+      "sha256": "9181554a619c77b20a82fb3b38aabbe847f7b9543810ad0e4eddd24bd3692a3b",
+      "visuallyInspected": true,
+      "acceptanceBreakingFinding": false
+    },
+    {
+      "file": "screens/1440-workflow-pending.png",
+      "width": 1440,
+      "height": 2204,
+      "sha256": "9c6119b06e88700d93fc9c7654878fe89cb84cf970b88b258acd82b914117614",
+      "visuallyInspected": true,
+      "acceptanceBreakingFinding": false
+    },
+    {
+      "file": "screens/1440-offline-response-lost.png",
+      "width": 1440,
+      "height": 2309,
+      "sha256": "1810bc767bee1fd0392d3b5be87b328493eddac5d99bc6bc18b4ac2649ef6aaf",
+      "visuallyInspected": true,
+      "acceptanceBreakingFinding": false
+    },
+    {
+      "file": "screens/1440-rejected.png",
+      "width": 1440,
+      "height": 2152,
+      "sha256": "f2f7c366bc00cf337056d3c8e48eb0b73d87db25274ae82c01dfdbd3ea3f3053",
+      "visuallyInspected": true,
+      "acceptanceBreakingFinding": false
+    },
+    {
+      "file": "screens/1440-submitting.png",
+      "width": 1440,
+      "height": 2308,
+      "sha256": "b7d2cd92fb5f1fc66d62e0aa2de9be0f7a8a3779ea56d2fd598a73bbd924bd86",
+      "visuallyInspected": true,
+      "acceptanceBreakingFinding": false
+    },
+    {
+      "file": "screens/1440-submission-timeout.png",
+      "width": 1440,
+      "height": 2350,
+      "sha256": "dff278e408d7dd985a314b9d748926ec09aca28ade6069f9b6275b1e225132b9",
+      "visuallyInspected": true,
+      "acceptanceBreakingFinding": false
+    },
+    {
+      "file": "screens/1440-legacy-offline.png",
+      "width": 1440,
+      "height": 1042,
+      "sha256": "06a4f668d68e0a77724e6a3dc46ed96fa849f3f87165b5e993e7fdc049fe8ced",
+      "visuallyInspected": true,
+      "acceptanceBreakingFinding": false
+    },
+    {
+      "file": "screens/1440-legacy-rejected.png",
+      "width": 1440,
+      "height": 1030,
+      "sha256": "5e06d8d760c37dcfaa509d92bffa34e8850087fb448eac0cf6ab56217612928c",
+      "visuallyInspected": true,
+      "acceptanceBreakingFinding": false
+    },
+    {
+      "file": "screens/1440-required-field-error.png",
+      "width": 1440,
+      "height": 2902,
+      "sha256": "c7d0e8be023c0188c633eeb45cb8240469eb036e0cbbe2dcdd750840947e1b3e",
+      "visuallyInspected": true,
+      "acceptanceBreakingFinding": false
+    },
+    {
+      "file": "screens/1440-required-field-corrected.png",
+      "width": 1440,
+      "height": 2876,
+      "sha256": "bc72fb4669da57fba1d0bad7d2a0cdb2617dc1705aa4da0be6b2bc8ad9abcc2c",
+      "visuallyInspected": true,
+      "acceptanceBreakingFinding": false
+    },
+    {
+      "file": "screens/1440-created-workflow.png",
+      "width": 1440,
+      "height": 1053,
+      "sha256": "43249670bc0cde7d62beda829b448b36455fa8e1f46c438dfe9f5c47925282bb",
+      "visuallyInspected": true,
+      "acceptanceBreakingFinding": false
+    },
+    {
+      "file": "screens/1440-flow-paused.png",
+      "width": 1440,
+      "height": 2912,
+      "sha256": "8638178ff3835e6f57b1aba166523c55fa2af8838d6029dad53811a7b066a35e",
+      "visuallyInspected": true,
+      "acceptanceBreakingFinding": false
+    },
+    {
+      "file": "screens/1440-flow-active.png",
+      "width": 1440,
+      "height": 2944,
+      "sha256": "6782d250f0100774c6a0a7da32c689912b5d8f5043712732d389799920d85a95",
+      "visuallyInspected": true,
+      "acceptanceBreakingFinding": false
+    },
+    {
+      "file": "screens/1440-workflow-live-menu.png",
+      "width": 1440,
+      "height": 1087,
+      "sha256": "0a700ff3b1a762d47fbb99f415c104112d8066ebd56022f8c203cf7093354aed",
+      "visuallyInspected": true,
+      "acceptanceBreakingFinding": false
+    },
+    {
+      "file": "screens/1440-workflow-paused.png",
+      "width": 1440,
+      "height": 1087,
+      "sha256": "37eaee7f34cbb6af1836c9efed69ff9545353481c5c6a81afd3110a8af1d27b4",
+      "visuallyInspected": true,
+      "acceptanceBreakingFinding": false
+    },
+    {
+      "file": "screens/1440-workflow-paused-menu.png",
+      "width": 1440,
+      "height": 1087,
+      "sha256": "67507be4444292b7dfc1beab6bc4d253ba29f975f8e605f70e185121def438b6",
+      "visuallyInspected": true,
+      "acceptanceBreakingFinding": false
+    },
+    {
+      "file": "screens/1440-workflow-active.png",
+      "width": 1440,
+      "height": 1087,
+      "sha256": "d45890c07f3fdcf22ea4bd19ebdbf1bab44568dc8e8020e97eecd2acf22599d2",
+      "visuallyInspected": true,
+      "acceptanceBreakingFinding": false
+    },
+    {
+      "file": "screens/1440-legacy-pending.png",
+      "width": 1440,
+      "height": 1042,
+      "sha256": "fa0ccb901cdb1745287964c313e50319fc42e3b427eb409d856f82712942b343",
+      "visuallyInspected": true,
+      "acceptanceBreakingFinding": false
+    },
+    {
+      "file": "screens/1440-legacy-failure.png",
+      "width": 1440,
+      "height": 1210,
+      "sha256": "979e3208dd0dded73691d7162658386f42d90591f6f05842404b37a2720079ef",
+      "visuallyInspected": true,
+      "acceptanceBreakingFinding": false
+    },
+    {
+      "file": "screens/1440-legacy-replayed.png",
+      "width": 1440,
+      "height": 1209,
+      "sha256": "100de2abbdbf238a93c581e3bb5b5f221b8c75b0f1f951c5d8a46526e29a0885",
+      "visuallyInspected": true,
+      "acceptanceBreakingFinding": false
+    },
+    {
+      "file": "screens/1440-decision-field-error.png",
+      "width": 1440,
+      "height": 2030,
+      "sha256": "caf5baf91645f30b3aefe6e2928332a9e32e03f1dd8783f3184ea92a033c056c",
+      "visuallyInspected": true,
+      "acceptanceBreakingFinding": false
+    },
+    {
+      "file": "screens/1440-decision-field-corrected.png",
+      "width": 1440,
+      "height": 2003,
+      "sha256": "ed7394fa96a3b2f93d34cd35ec366c77f161562063d7301af5dac78d044e39fd",
+      "visuallyInspected": true,
+      "acceptanceBreakingFinding": false
+    },
+    {
+      "file": "screens/1440-corrected-decision-approved.png",
+      "width": 1440,
+      "height": 1820,
+      "sha256": "7eb6d9f84e391cd6495466e46566510daafc9ec01a7510291d86c3c08f80896d",
+      "visuallyInspected": true,
+      "acceptanceBreakingFinding": false
+    },
+    {
+      "file": "screens/1440-workflow-failure.png",
+      "width": 1440,
+      "height": 1515,
+      "sha256": "54777bfbe4182a82565f9e56e315ccfa0b77a98006d0339e807ff1ea1d6d19a4",
+      "visuallyInspected": true,
+      "acceptanceBreakingFinding": false
+    },
+    {
+      "file": "screens/1440-cancellation-pending.png",
+      "width": 1440,
+      "height": 2246,
+      "sha256": "a19ad2176905088306cc9dd70f9d9a3504dc44b77479ed8003ef15f809c2cf91",
+      "visuallyInspected": true,
+      "acceptanceBreakingFinding": false
+    },
+    {
+      "file": "screens/1440-cancelled.png",
+      "width": 1440,
+      "height": 2131,
+      "sha256": "b9399dcba0f929a312f33bf9e091deb8e0f25018c422c9358936bd3ea0796fa9",
+      "visuallyInspected": true,
+      "acceptanceBreakingFinding": false
+    },
+    {
+      "file": "screens/1440-decision-refused-reconciled.png",
+      "width": 1440,
+      "height": 2194,
+      "sha256": "5aa337e07cf8877b969e13aac82e7d1486b62c5b888f390108c2025e24bb14bb",
+      "visuallyInspected": true,
+      "acceptanceBreakingFinding": false
+    },
+    {
+      "file": "screens/1440-run-search.png",
+      "width": 1440,
+      "height": 3788,
+      "sha256": "2a1e26a411140477ab7913efcc35e55f54e13df49162f40b041fd826c5a60ab5",
+      "visuallyInspected": true,
+      "acceptanceBreakingFinding": false
+    },
+    {
+      "file": "screens/1440-run-search-empty.png",
+      "width": 1440,
+      "height": 1411,
+      "sha256": "9c0b8518a49e5c0ca57ba4356fb957933c8c2c2643dd77baffb438a007c0e597",
+      "visuallyInspected": true,
+      "acceptanceBreakingFinding": false
+    },
+    {
+      "file": "screens/1440-run-search-filtered.png",
+      "width": 1440,
+      "height": 1664,
+      "sha256": "2bb04bb3998789725a1353c183c4f921f3e4766e194512defd8abc8791b715a4",
+      "visuallyInspected": true,
+      "acceptanceBreakingFinding": false
+    },
+    {
+      "file": "screens/1440-inbox-empty.png",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "a227bcee7ddabd51a6bad8b8dde0f07419311ecb23f81eed4160e06192e0f169",
+      "visuallyInspected": true,
+      "acceptanceBreakingFinding": false
+    },
+    {
+      "file": "screens/1440-inbox-addressed.png",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "08ffe124ee3b307909cb72bbbefeb4ac37de8b690fe14170252ed9a3515fa1b0",
+      "visuallyInspected": true,
+      "acceptanceBreakingFinding": false
+    },
+    {
+      "file": "screens/1440-inbox-decision.png",
+      "width": 1440,
+      "height": 1549,
+      "sha256": "561fbc4243a7f75f0a201e2be32aa81b8fcf34decdd068eb4bb5780e606e0955",
+      "visuallyInspected": true,
+      "acceptanceBreakingFinding": false
+    },
+    {
+      "file": "screens/1440-inbox-resolved.png",
+      "width": 1440,
+      "height": 1378,
+      "sha256": "5e2cf624c41ad63b277c8714b2e021d63dd38936ad250e17c77db4110c67b955",
+      "visuallyInspected": true,
+      "acceptanceBreakingFinding": false
+    },
+    {
+      "file": "screens/390-pending.png",
+      "width": 390,
+      "height": 1580,
+      "sha256": "92bbd8b1a11e332d3714c9c6380eabab21ba76b5b6607c35d9ce301a0ded3071",
+      "visuallyInspected": true,
+      "acceptanceBreakingFinding": false
+    },
+    {
+      "file": "screens/390-offline-before-send.png",
+      "width": 390,
+      "height": 1725,
+      "sha256": "f7cdf5224695e99f04acea95ae696815e855621af22338b4c14fc83700c3150e",
+      "visuallyInspected": true,
+      "acceptanceBreakingFinding": false
+    },
+    {
+      "file": "screens/390-reconciliation-error.png",
+      "width": 390,
+      "height": 1725,
+      "sha256": "9fe0d64953e517fd61e26c2290508e08958ce94df398831afcf49a080af2a87f",
+      "visuallyInspected": true,
+      "acceptanceBreakingFinding": false
+    },
+    {
+      "file": "screens/390-checking-latest-state.png",
+      "width": 390,
+      "height": 1684,
+      "sha256": "f2ddade5263fd3b7b11d7a1ab1e2cd906808ba9bd1ee75a43a5e4137ed486411",
+      "visuallyInspected": true,
+      "acceptanceBreakingFinding": false
+    },
+    {
+      "file": "screens/390-reconciled-approved.png",
+      "width": 390,
+      "height": 3121,
+      "sha256": "967c5a79fead037cf90572bcd8d03b115853cb2162c9e9287a5907f0f532a21c",
+      "visuallyInspected": true,
+      "acceptanceBreakingFinding": false
+    },
+    {
+      "file": "screens/390-workflow-pending.png",
+      "width": 390,
+      "height": 3179,
+      "sha256": "33fb8d530dc9abae24cd25e3570054ca6ed91ebc8ec03886a50744b411178fe7",
+      "visuallyInspected": true,
+      "acceptanceBreakingFinding": false
+    },
+    {
+      "file": "screens/390-offline-response-lost.png",
+      "width": 390,
+      "height": 3324,
+      "sha256": "43e32a93fd46699835c8f9170328b4e389481fc818bfda9260df1308e5e04eaa",
+      "visuallyInspected": true,
+      "acceptanceBreakingFinding": false
+    },
+    {
+      "file": "screens/390-rejected.png",
+      "width": 390,
+      "height": 3170,
+      "sha256": "1c786608c035d1ef9289dc0d5947bdaf738c894fc295e556a4787b3c234e9cd7",
+      "visuallyInspected": true,
+      "acceptanceBreakingFinding": false
+    },
+    {
+      "file": "screens/390-submitting.png",
+      "width": 390,
+      "height": 3303,
+      "sha256": "4db7a7291cc60940ce940913e3f156c8422780557e9c5775345df674d5d26ca6",
+      "visuallyInspected": true,
+      "acceptanceBreakingFinding": false
+    },
+    {
+      "file": "screens/390-submission-timeout.png",
+      "width": 390,
+      "height": 3366,
+      "sha256": "a7ae30b8d0b01ed632b275ebbeae6b74ced57433a44e9d7a4c67af72cfd2964f",
+      "visuallyInspected": true,
+      "acceptanceBreakingFinding": false
+    },
+    {
+      "file": "screens/390-legacy-offline.png",
+      "width": 390,
+      "height": 1642,
+      "sha256": "7b2dfecbf8f67920a8afb573fda10bfe3b8515438105694170df9c085228310b",
+      "visuallyInspected": true,
+      "acceptanceBreakingFinding": false
+    },
+    {
+      "file": "screens/390-legacy-rejected.png",
+      "width": 390,
+      "height": 1753,
+      "sha256": "e09f4b3d934cbe1957fb2b13aa9f8c635d7de3b6231ed92f5474e715ab34b891",
+      "visuallyInspected": true,
+      "acceptanceBreakingFinding": false
+    },
+    {
+      "file": "screens/390-required-field-error.png",
+      "width": 390,
+      "height": 6395,
+      "sha256": "f0f27c57d9c47d0736a017d213d6268be766484a0d90c43c819e9d21f28a3881",
+      "visuallyInspected": true,
+      "acceptanceBreakingFinding": false
+    },
+    {
+      "file": "screens/390-required-field-corrected.png",
+      "width": 390,
+      "height": 6369,
+      "sha256": "a7172fda849bf563124b19d2aa1e678b815529b0be4a5067e1ad4adaea9c4b85",
+      "visuallyInspected": true,
+      "acceptanceBreakingFinding": false
+    },
+    {
+      "file": "screens/390-created-workflow.png",
+      "width": 390,
+      "height": 2050,
+      "sha256": "f8a121b92baf8d7ca85543fd0a29d49e87f9286a58be4b08d708085d627f6142",
+      "visuallyInspected": true,
+      "acceptanceBreakingFinding": false
+    },
+    {
+      "file": "screens/390-flow-paused.png",
+      "width": 390,
+      "height": 6497,
+      "sha256": "cafce039ab2bddc744986520e074208c7f6c4241350d50ac3cb9fa729f70cdbf",
+      "visuallyInspected": true,
+      "acceptanceBreakingFinding": false
+    },
+    {
+      "file": "screens/390-flow-active.png",
+      "width": 390,
+      "height": 6529,
+      "sha256": "89f5f82809092769f8aef9e2cb15bddda27a8aa3853b7cd7dc357fe1f816a08b",
+      "visuallyInspected": true,
+      "acceptanceBreakingFinding": false
+    },
+    {
+      "file": "screens/390-workflow-live-menu.png",
+      "width": 390,
+      "height": 2939,
+      "sha256": "c4b51f204d054a12ec34b6549c7dbe7b7b264abea60d843ae95aee21d645c448",
+      "visuallyInspected": true,
+      "acceptanceBreakingFinding": false
+    },
+    {
+      "file": "screens/390-workflow-paused.png",
+      "width": 390,
+      "height": 2887,
+      "sha256": "2c5c17608a81648369facaa632fc588f0d5b174de27937737a0de33fe335374d",
+      "visuallyInspected": true,
+      "acceptanceBreakingFinding": false
+    },
+    {
+      "file": "screens/390-workflow-paused-menu.png",
+      "width": 390,
+      "height": 2887,
+      "sha256": "f0d61f7abef9c087428c771afca7597260c760d7153fe0d8b6a5205b795d4a61",
+      "visuallyInspected": true,
+      "acceptanceBreakingFinding": false
+    },
+    {
+      "file": "screens/390-workflow-active.png",
+      "width": 390,
+      "height": 2939,
+      "sha256": "b07e67f2d3638d5e9b854772a6e864c4fe63863704a68325d9622c271a0b9421",
+      "visuallyInspected": true,
+      "acceptanceBreakingFinding": false
+    },
+    {
+      "file": "screens/390-legacy-pending.png",
+      "width": 390,
+      "height": 1768,
+      "sha256": "96359547412a698c24f678e0ccc57c3b2339b76fadbc2f68d5577b6af927f8c6",
+      "visuallyInspected": true,
+      "acceptanceBreakingFinding": false
+    },
+    {
+      "file": "screens/390-legacy-failure.png",
+      "width": 390,
+      "height": 2375,
+      "sha256": "a35bb5e6f4ad292bb401f1c122375654705afa65e752816a06c31f8f267105df",
+      "visuallyInspected": true,
+      "acceptanceBreakingFinding": false
+    },
+    {
+      "file": "screens/390-legacy-replayed.png",
+      "width": 390,
+      "height": 2439,
+      "sha256": "a562f5b84ee14be460b203e5a96604e44880f2baea9e450ae280ea7a77354f56",
+      "visuallyInspected": true,
+      "acceptanceBreakingFinding": false
+    },
+    {
+      "file": "screens/390-decision-field-error.png",
+      "width": 390,
+      "height": 2903,
+      "sha256": "2d359aa112138a2edb032d4a0d0a5c354cb7f0dbd69f1a957305d3903a243984",
+      "visuallyInspected": true,
+      "acceptanceBreakingFinding": false
+    },
+    {
+      "file": "screens/390-decision-field-corrected.png",
+      "width": 390,
+      "height": 2856,
+      "sha256": "9a25215d4594c8fe07cc8b03eb2bd3bf7e32baf9f74368571db002e0121739c8",
+      "visuallyInspected": true,
+      "acceptanceBreakingFinding": false
+    },
+    {
+      "file": "screens/390-corrected-decision-approved.png",
+      "width": 390,
+      "height": 2733,
+      "sha256": "a8e3ded60c9fd900da22c77e270dad470e143de5069a074888190d9c4de73a41",
+      "visuallyInspected": true,
+      "acceptanceBreakingFinding": false
+    },
+    {
+      "file": "screens/390-workflow-failure.png",
+      "width": 390,
+      "height": 2400,
+      "sha256": "caaf762e02659f99857a03375bb558ecb95b49df82ad520206435d57c10ff834",
+      "visuallyInspected": true,
+      "acceptanceBreakingFinding": false
+    },
+    {
+      "file": "screens/390-cancellation-pending.png",
+      "width": 390,
+      "height": 3221,
+      "sha256": "9c9a0f3f31ceaee4d989d4b7c1a81ce7619d8d278fcd6373ce15cac7ee4d4b75",
+      "visuallyInspected": true,
+      "acceptanceBreakingFinding": false
+    },
+    {
+      "file": "screens/390-cancelled.png",
+      "width": 390,
+      "height": 3145,
+      "sha256": "d7ec0afe143fe60ad6f3ae254540b68ad3c582eb7203d115af8b4ff48c486213",
+      "visuallyInspected": true,
+      "acceptanceBreakingFinding": false
+    },
+    {
+      "file": "screens/390-decision-refused-reconciled.png",
+      "width": 390,
+      "height": 3249,
+      "sha256": "66fd19ebb287ff4bab2695ce34f50b884818558fdebb6c0e9fe469c54594f9d2",
+      "visuallyInspected": true,
+      "acceptanceBreakingFinding": false
+    },
+    {
+      "file": "screens/390-run-search.png",
+      "width": 390,
+      "height": 10849,
+      "sha256": "08db4cb77963244513d0fe957fbb13feb467ce0f538ac2485912647aadfe4a05",
+      "visuallyInspected": true,
+      "acceptanceBreakingFinding": false
+    },
+    {
+      "file": "screens/390-run-search-empty.png",
+      "width": 390,
+      "height": 3100,
+      "sha256": "78342e5284fe5f97ee8148340f28e6b3f3a161ee18580f0b0d71c2c227526092",
+      "visuallyInspected": true,
+      "acceptanceBreakingFinding": false
+    },
+    {
+      "file": "screens/390-run-search-filtered.png",
+      "width": 390,
+      "height": 4984,
+      "sha256": "db98ac11e43d92330fea8069dc83980aa359492864346c9eb8dad4155e8a7a4c",
+      "visuallyInspected": true,
+      "acceptanceBreakingFinding": false
+    },
+    {
+      "file": "screens/390-inbox-empty.png",
+      "width": 390,
+      "height": 1000,
+      "sha256": "d8e49958dd14a76b8a3b1fd82f5f769532121a25303c2c741aac6b8faa20d701",
+      "visuallyInspected": true,
+      "acceptanceBreakingFinding": false
+    },
+    {
+      "file": "screens/390-inbox-addressed.png",
+      "width": 390,
+      "height": 1000,
+      "sha256": "c9fd8d7f8c2fa813fda5de5e14f13618ec013de29d8f6a8fb2dfc80a0b9cf615",
+      "visuallyInspected": true,
+      "acceptanceBreakingFinding": false
+    },
+    {
+      "file": "screens/390-inbox-decision.png",
+      "width": 390,
+      "height": 2276,
+      "sha256": "5c396a310f400a214da6d73c6dbffac31d1fe1d1a44c170595c48663f4f5a2e2",
+      "visuallyInspected": true,
+      "acceptanceBreakingFinding": false
+    },
+    {
+      "file": "screens/390-inbox-resolved.png",
+      "width": 390,
+      "height": 2172,
+      "sha256": "5ca5c36dce0b05de8a89dc112e818c18ed7529ba534ea6a824aefc383a5e8aa6",
+      "visuallyInspected": true,
+      "acceptanceBreakingFinding": false
+    }
+  ],
+  "observations": "All captured operator states inspected. Long content wraps; control names, state text, focus and linked field errors remain readable. Browser touch emulation is not native device or assistive-technology proof."
+}

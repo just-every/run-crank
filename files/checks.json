@@ -1,0 +1,79 @@
+{
+  "typecheck": {
+    "command": "pnpm typecheck",
+    "exit": 0,
+    "log": "typecheck.log",
+    "head": "4da29fb0d18db5b317e43fb4a6ef9f9419f1c99b"
+  },
+  "first_party": {
+    "command": "rer check --profile first-party",
+    "exit": 0,
+    "log": "first-party.log",
+    "head": "4da29fb0d18db5b317e43fb4a6ef9f9419f1c99b"
+  },
+  "contract_views": {
+    "command": "node src/base/contract-docs.mjs write; node src/base/contract-docs.mjs check",
+    "exit": 0,
+    "clauses": 99,
+    "views_restored_from": "origin/main",
+    "head": "4da29fb0d18db5b317e43fb4a6ef9f9419f1c99b"
+  },
+  "edition_lock": {
+    "command": "node node_modules/@runeditrun/rer/edition-authoring/cli.mjs lock; node node_modules/@runeditrun/rer/edition-authoring/cli.mjs check",
+    "exit": 0,
+    "head": "4da29fb0d18db5b317e43fb4a6ef9f9419f1c99b",
+    "optional_vendored_check": {
+      "command": "node scripts/edition-authoring/cli.mjs check",
+      "exit": 1,
+      "difference": "Only toolchain.sha256 differs from installed Verify checker; source hashes agree"
+    }
+  },
+  "migration_ledger": {
+    "command": null,
+    "reason": "No migration added or changed by this round"
+  },
+  "source_pins": {
+    "axe-core": "4.11.0",
+    "existing_packages_changed": false,
+    "node": "22.20.0",
+    "pnpm": "10.12.4"
+  },
+  "publication_scan": {
+    "status": "NOT RUN IN CLOUD",
+    "complete": false,
+    "historyScanned": null,
+    "findings": null,
+    "custody": "fleet exact-tree landing gate"
+  },
+  "counts": {
+    "before": {
+      "done": 32,
+      "partial": 50,
+      "missing": 17,
+      "clauses": 99,
+      "tests": 200
+    },
+    "after": {
+      "done": 32,
+      "partial": 50,
+      "missing": 17,
+      "clauses": 99,
+      "tests": 200
+    }
+  },
+  "head": "4da29fb0d18db5b317e43fb4a6ef9f9419f1c99b",
+  "browser": {
+    "head": "4da29fb0d18db5b317e43fb4a6ef9f9419f1c99b",
+    "command": "cloud_run timeout 1800 node tests/decision-browser.mjs",
+    "exit": 0,
+    "states": 76,
+    "widths": [
+      1440,
+      390
+    ],
+    "violations": 0,
+    "allMeasuredChecksPassed": true,
+    "minimumFocusContrast": 15.844014377180384,
+    "receipt": "screens/accessibility-receipt.json"
+  }
+}

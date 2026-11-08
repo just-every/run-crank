@@ -1,0 +1,35 @@
+{
+  "repository": "just-every/run-crank",
+  "branch": "cloud/sx-crank-c-f100",
+  "head": "4da29fb0d18db5b317e43fb4a6ef9f9419f1c99b",
+  "mainAtFinalMerge": "93de59dcbf2c93c6bd3aae444e2e6a001ec007d3",
+  "contractAndViewsEqualMain": true,
+  "status": "PUSHED",
+  "testRegistrations": 200,
+  "countsBefore": {
+    "done": 32,
+    "partial": 50,
+    "missing": 17
+  },
+  "countsAfter": {
+    "done": 32,
+    "partial": 50,
+    "missing": 17
+  },
+  "pushExit": 0,
+  "remoteHead": "4da29fb0d18db5b317e43fb4a6ef9f9419f1c99b",
+  "verify": {
+    "conclusion": null,
+    "event": "push",
+    "head_sha": "4da29fb0d18db5b317e43fb4a6ef9f9419f1c99b",
+    "html_url": "https://github.com/just-every/run-crank/actions/runs/42521069114",
+    "id": 42521069114,
+    "name": "Verify",
+    "status": "in_progress"
+  },
+  "pr": null,
+  "publicationScan": "NOT RUN IN CLOUD; fleet gate",
+  "candidateRunSite": "Not run; main-only after landing",
+  "mainEqualsCandidate": false,
+  "evidenceRef": "refs/heads/evidence/sx-crank-c-f100"
+}

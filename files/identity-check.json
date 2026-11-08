@@ -1,0 +1,9 @@
+{
+  "head": "4da29fb0d18db5b317e43fb4a6ef9f9419f1c99b",
+  "command": "git log origin/main..HEAD --format=\"%an <%ae>%n%cn <%ce>%n%(trailers:only,unfold)\"",
+  "allReachableCandidateCommitsChecked": true,
+  "candidateCommitCount": 12,
+  "allAuthorsAndCommittersFleet": true,
+  "trailers": [],
+  "openAIOrCodexCoauthors": false
+}
