@@ -30,6 +30,7 @@ function notice(message, canRefresh = true) {
     region.tabIndex = -1;
     document.querySelector('main')?.prepend(region);
   }
+  region.hidden = false;
   const text = document.createElement('p');
   text.textContent = message;
   region.replaceChildren(text);
@@ -175,4 +176,14 @@ document.addEventListener('invalid', event => {
 document.addEventListener('input', event => {
   const control = event.target;
   if (control instanceof HTMLInputElement || control instanceof HTMLSelectElement || control instanceof HTMLTextAreaElement) clearFieldError(control);
+});
+
+// Hover help also works with keyboard focus and can be dismissed without
+// moving focus or the pointer away from the control.
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape') for (const control of document.querySelectorAll('.control-tooltip:hover,.control-tooltip:focus')) control.dataset.tooltipDismissed = 'true';
+});
+for (const type of ['focusin', 'focusout', 'pointerout']) document.addEventListener(type, event => {
+  const control = event.target instanceof Element && event.target.closest('.control-tooltip');
+  if (control && (type !== 'pointerout' || !control.contains(event.relatedTarget))) delete control.dataset.tooltipDismissed;
 });
