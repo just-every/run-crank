@@ -1,0 +1,53 @@
+{
+  "repository": "just-every/run-crank",
+  "branch": "cloud/sx-crank-c-f99",
+  "head": "bbe39290f87bdd640df535df57efe8c66259a503",
+  "tree": "9daa9244f47945fb4ebcec6ad005ef719ea58939",
+  "main": "7ece4aec67ea1fa9328aad8632d01a4c541fe064",
+  "main_is_ancestor": true,
+  "shallow": "false",
+  "contract_diff": "",
+  "generated_views_diff": "",
+  "files": [
+    {
+      "path": "sources.lock.json",
+      "sha256": "04172b2eaaefa611c6bbe110e5f48f480b07cddfd61f9f5b15899d992fef6e1f"
+    },
+    {
+      "path": "src/crank/agents/authoring-model.ts",
+      "sha256": "903d213567d9166054c80860c90c296a04653c7fc58de876ed6a424826f86ede"
+    },
+    {
+      "path": "src/crank/agents/authoring-schema.ts",
+      "sha256": "9013a741030d7e0759b77b90e2fcc1c0b6e695fbf397a34e2f2d7497800ec447"
+    },
+    {
+      "path": "src/crank/agents/authoring.ts",
+      "sha256": "d869c7e71b6060c236c0322458fb966d79fab5ec19da4b2b25397b41adf1dcbe"
+    },
+    {
+      "path": "test-budget.json",
+      "sha256": "ff5d22a43e4fb78049153a67e7ed72ff6cd505fb0294435b6bd8ff7103e78744"
+    },
+    {
+      "path": "tests/agent-policy-journey.mjs",
+      "sha256": "00eca75fa179412382a2fd2afb57b4ab07f69d40640958544fd2681bbc7bcfc1"
+    },
+    {
+      "path": "tests/ai-steps-browser.mjs",
+      "sha256": "ebe4e7a65ad803c2a0905262f53ac84dc4449b5c7355378fa6e5ecf01f9f7bae"
+    },
+    {
+      "path": "tests/authoring-browser.mjs",
+      "sha256": "ee626a3c722549220d19acc670d9e655bfb165553a41dab86970c94e6520db26"
+    },
+    {
+      "path": "tests/authoring-fixture.mjs",
+      "sha256": "ea707f1026f39f8a9cfe32893d03b2164aa17e2eeddf4651ba2715b4646f5d4d"
+    },
+    {
+      "path": "tests/security.test.mjs",
+      "sha256": "c2d464341916dba687e7a7ab7724a8e8b45cc7d95b2dd88567ef7cb537ecc92a"
+    }
+  ]
+}

@@ -1,0 +1,163 @@
+{
+  "repository": "just-every/run-crank",
+  "head": "bbe39290f87bdd640df535df57efe8c66259a503",
+  "branch": "cloud/sx-crank-c-f99",
+  "checks": [
+    {
+      "command": "node --test --test-concurrency=1 tests/security.test.mjs",
+      "exit": 0,
+      "log": "security.log",
+      "tests": 3,
+      "log_sha256": "80c944a17d30a9a5eab09be1edb4495c2b9d534fbae839376dee2a86885eff76"
+    },
+    {
+      "command": "node --test --test-concurrency=1 --test-name-pattern='^(AI-002:|AI classification)' tests/skills.test.mjs tests/logic.test.mjs",
+      "exit": 0,
+      "log": "existing-ai.log",
+      "tests": 4,
+      "log_sha256": "61022c6c0634e8c8dc9046a8a01bc5e3e2e758dcab4cd2121c865847a1da0f7d"
+    },
+    {
+      "command": "CRANK_CHROMIUM=/usr/bin/chromium node tests/authoring-browser.mjs",
+      "exit": 0,
+      "log": "authoring-browser.log",
+      "tests": null,
+      "log_sha256": "3ed9b3f7266daa6ef91f17bfac8c612cc4119353b992cb2474895c0c0d800293"
+    },
+    {
+      "command": "CRANK_CHROMIUM=/usr/bin/chromium node tests/ai-steps-browser.mjs",
+      "exit": 0,
+      "log": "ai-browser.log",
+      "tests": null,
+      "log_sha256": "f5d78b241c9c0d355f47b1eea230f1778d5670dbbd08dcfd4410337193fae094"
+    },
+    {
+      "command": "npx -y @runeditrun/rer build",
+      "exit": 0,
+      "log": "build.log",
+      "tests": null,
+      "log_sha256": "c45655b035581e2b77b282272491f43d39a3b73975775318949799128b49a4b3"
+    },
+    {
+      "command": "pnpm typecheck",
+      "exit": 0,
+      "log": "typecheck.log",
+      "tests": null,
+      "log_sha256": "a1d306a9ff6bb3b90e3c50b081d7d8579169c225557e1f5b7c347062aa7c2e4a"
+    },
+    {
+      "command": "npx -y @runeditrun/rer check --profile first-party",
+      "exit": 0,
+      "log": "first-party.log",
+      "tests": null,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "node src/base/contract-docs.mjs write",
+      "exit": 0,
+      "log": "views-write.log",
+      "tests": null,
+      "log_sha256": "540b168efe390f92191c4c47be4676a9db640b8f3c00b2bea4c20a224c0e80cf"
+    },
+    {
+      "command": "node src/base/contract-docs.mjs check",
+      "exit": 0,
+      "log": "views-check.log",
+      "tests": null,
+      "log_sha256": "41be670e8514d35d3059536f54f0a1ff875aa0cf719cdfa33febe6c30584d084"
+    },
+    {
+      "command": "node node_modules/@runeditrun/rer/edition-authoring/cli.mjs check",
+      "exit": 0,
+      "log": "lock-check.log",
+      "tests": null,
+      "log_sha256": "1fac30956dc88a291f7e4fe6c1a4b8b6ea59e766fa343053046377de4b72ca23"
+    }
+  ],
+  "contract_counts_before": {
+    "done": 32,
+    "partial": 50,
+    "missing": 17
+  },
+  "contract_counts_after": {
+    "done": 32,
+    "partial": 50,
+    "missing": 17
+  },
+  "test_budget_before": 200,
+  "test_budget_after": 200,
+  "new_registrations": 0,
+  "status_cells_changed": false,
+  "source_changes_since_passing_browser_runs": false,
+  "notes": [
+    "Local proof ran on byte-identical product sources before the terminal commit. Verify will run the committed entry points on the exact candidate SHA.",
+    "The final native security journey includes the latest complete-inventory assertions and direct draft-edit confirmation renewal.",
+    "The installed edition-authoring CLI is the command used by Verify. The older checkout CLI has a different self-fingerprint; the lock was regenerated last with the installed pinned tool.",
+    "No migration was changed; migration ledger check is not applicable."
+  ],
+  "candidate_ci": [
+    {
+      "conclusion": null,
+      "event": "push",
+      "head_sha": "bbe39290f87bdd640df535df57efe8c66259a503",
+      "html_url": "https://github.com/just-every/run-crank/actions/runs/42516635770",
+      "id": 42516635770,
+      "name": "Verify",
+      "status": "in_progress"
+    }
+  ],
+  "baseline_ci": [
+    {
+      "conclusion": "success",
+      "event": "push",
+      "head_sha": "7ece4aec67ea1fa9328aad8632d01a4c541fe064",
+      "html_url": "https://github.com/just-every/run-crank/actions/runs/42514478506",
+      "id": 42514478506,
+      "name": "Run site",
+      "status": "completed"
+    },
+    {
+      "conclusion": "skipped",
+      "event": "push",
+      "head_sha": "7ece4aec67ea1fa9328aad8632d01a4c541fe064",
+      "html_url": "https://github.com/just-every/run-crank/actions/runs/42514478480",
+      "id": 42514478480,
+      "name": "Run demo",
+      "status": "completed"
+    },
+    {
+      "conclusion": "success",
+      "event": "push",
+      "head_sha": "7ece4aec67ea1fa9328aad8632d01a4c541fe064",
+      "html_url": "https://github.com/just-every/run-crank/actions/runs/42514478470",
+      "id": 42514478470,
+      "name": "Verify",
+      "status": "completed"
+    },
+    {
+      "conclusion": "success",
+      "event": "dynamic",
+      "head_sha": "7ece4aec67ea1fa9328aad8632d01a4c541fe064",
+      "html_url": "https://github.com/just-every/run-crank/actions/runs/42514477478",
+      "id": 42514477478,
+      "name": "Push on main",
+      "status": "completed"
+    },
+    {
+      "conclusion": "success",
+      "event": "push",
+      "head_sha": "7ece4aec67ea1fa9328aad8632d01a4c541fe064",
+      "html_url": "https://github.com/just-every/run-crank/actions/runs/42510619689",
+      "id": 42510619689,
+      "name": "Verify",
+      "status": "completed"
+    }
+  ],
+  "github_api_calls": 2,
+  "publication_scan": {
+    "complete": null,
+    "historyScanned": null,
+    "findings": null,
+    "custody": "Mac fleet exact-tree landing gate"
+  }
+}

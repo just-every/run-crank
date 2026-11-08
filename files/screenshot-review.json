@@ -1,0 +1,446 @@
+{
+  "head": "bbe39290f87bdd640df535df57efe8c66259a503",
+  "images": [
+    {
+      "file": "authoring-screens/1440-edited.png",
+      "pixels": [
+        1440,
+        2911
+      ],
+      "sha256": "756926386d0fc07d2a0e683062b050e1854d79624b7eeb7b012730c35d514def",
+      "inspected": true,
+      "result": "Literal hostile content, no executed script, usable contained layout; no acceptance-breaking visual finding."
+    },
+    {
+      "file": "authoring-screens/1440-generated.png",
+      "pixels": [
+        1440,
+        2911
+      ],
+      "sha256": "aff4a87a0fa1ec179289d3db87b497fd572b8b7d65ff231a0e17752780384acc",
+      "inspected": true,
+      "result": "Literal hostile content, no executed script, usable contained layout; no acceptance-breaking visual finding."
+    },
+    {
+      "file": "authoring-screens/1440-hostile-ai-import.png",
+      "pixels": [
+        1440,
+        2346
+      ],
+      "sha256": "75fa31b7a14fc1ec5ecbe8169d6915824948c8d4ab85bb165c8b9a9986af7042",
+      "inspected": true,
+      "result": "Literal hostile content, no executed script, usable contained layout; no acceptance-breaking visual finding."
+    },
+    {
+      "file": "authoring-screens/1440-hostile-refused.png",
+      "pixels": [
+        1440,
+        1198
+      ],
+      "sha256": "842fe408907fc0d15ae5067fa151eaa98eca4d6d0aa65ec97332f51806305232",
+      "inspected": true,
+      "result": "Literal hostile content, no executed script, usable contained layout; no acceptance-breaking visual finding."
+    },
+    {
+      "file": "authoring-screens/1440-hostile-workflow-name.png",
+      "pixels": [
+        1440,
+        1187
+      ],
+      "sha256": "f0387b761e604ebb08a9f4b7dae65bafbb70a59200592a57515af5588d7ca33e",
+      "inspected": true,
+      "result": "Literal hostile content, no executed script, usable contained layout; no acceptance-breaking visual finding."
+    },
+    {
+      "file": "authoring-screens/1440-promoted.png",
+      "pixels": [
+        1440,
+        2880
+      ],
+      "sha256": "b3f2559727f23ed69df22aa24d1f43190ec3fcff9e7725c5c107355ca8850326",
+      "inspected": true,
+      "result": "Literal hostile content, no executed script, usable contained layout; no acceptance-breaking visual finding."
+    },
+    {
+      "file": "authoring-screens/1440-request.png",
+      "pixels": [
+        1440,
+        1183
+      ],
+      "sha256": "532797c3f81d5d7b438eec54c6bf219b3010a3b623aa44088349e76adbd89a3c",
+      "inspected": true,
+      "result": "Literal hostile content, no executed script, usable contained layout; no acceptance-breaking visual finding."
+    },
+    {
+      "file": "authoring-screens/1440-scope-refused.png",
+      "pixels": [
+        1440,
+        2957
+      ],
+      "sha256": "bbcf7459030128a22cf0b64f8da75940e82e47a99afca871a9783c800c289cf5",
+      "inspected": true,
+      "result": "Literal hostile content, no executed script, usable contained layout; no acceptance-breaking visual finding."
+    },
+    {
+      "file": "authoring-screens/1440-tested.png",
+      "pixels": [
+        1440,
+        2932
+      ],
+      "sha256": "7a11e373f8c3845d358002c962086f0243f8a4a506d52beb86de997802ffc5d3",
+      "inspected": true,
+      "result": "Literal hostile content, no executed script, usable contained layout; no acceptance-breaking visual finding."
+    },
+    {
+      "file": "authoring-screens/390-edited.png",
+      "pixels": [
+        390,
+        3623
+      ],
+      "sha256": "d7370d3b37abc3aef60a2b65de8c4adb8391cd7efb0335f836b9171c8a5ede2f",
+      "inspected": true,
+      "result": "Literal hostile content, no executed script, usable contained layout; no acceptance-breaking visual finding."
+    },
+    {
+      "file": "authoring-screens/390-generated.png",
+      "pixels": [
+        390,
+        3601
+      ],
+      "sha256": "eaafb7d7499cbf9127fd822770c74525267c72d19afdece12ca5bcf023c0776c",
+      "inspected": true,
+      "result": "Literal hostile content, no executed script, usable contained layout; no acceptance-breaking visual finding."
+    },
+    {
+      "file": "authoring-screens/390-hostile-ai-import.png",
+      "pixels": [
+        390,
+        4370
+      ],
+      "sha256": "5753e95bee3b80ebddacef1f576772e4812829d305270c39685e77d03a183fa0",
+      "inspected": true,
+      "result": "Literal hostile content, no executed script, usable contained layout; no acceptance-breaking visual finding."
+    },
+    {
+      "file": "authoring-screens/390-hostile-refused.png",
+      "pixels": [
+        390,
+        1809
+      ],
+      "sha256": "f7bbe7326880535e6ea003589ce45684af4e69bc802cf58aefe5d9498d467e67",
+      "inspected": true,
+      "result": "Literal hostile content, no executed script, usable contained layout; no acceptance-breaking visual finding."
+    },
+    {
+      "file": "authoring-screens/390-hostile-workflow-name.png",
+      "pixels": [
+        390,
+        2983
+      ],
+      "sha256": "90a25c1bb96dc8f5cbd7768c70a45848261fd907ba8727c6641e22bf3f4a657b",
+      "inspected": true,
+      "result": "Literal hostile content, no executed script, usable contained layout; no acceptance-breaking visual finding."
+    },
+    {
+      "file": "authoring-screens/390-promoted.png",
+      "pixels": [
+        390,
+        3555
+      ],
+      "sha256": "b3470d0764cba87f2ee97e853a9ee7151a7d9ec2eaaaaa394ab596803ccf48af",
+      "inspected": true,
+      "result": "Literal hostile content, no executed script, usable contained layout; no acceptance-breaking visual finding."
+    },
+    {
+      "file": "authoring-screens/390-request.png",
+      "pixels": [
+        390,
+        1754
+      ],
+      "sha256": "fe9f2fcf3f500feb2709965d43786f8cf9d8cf86280e4e8848180f5aa62d846c",
+      "inspected": true,
+      "result": "Literal hostile content, no executed script, usable contained layout; no acceptance-breaking visual finding."
+    },
+    {
+      "file": "authoring-screens/390-scope-refused.png",
+      "pixels": [
+        390,
+        3668
+      ],
+      "sha256": "7ea861ccd03d02656f23e6381f460114ddca27054158b9eb8999058d03c016fa",
+      "inspected": true,
+      "result": "Literal hostile content, no executed script, usable contained layout; no acceptance-breaking visual finding."
+    },
+    {
+      "file": "authoring-screens/390-tested.png",
+      "pixels": [
+        390,
+        3667
+      ],
+      "sha256": "0fbfafdab559402b600a1c3f97048753c48dd631d8f66e33b3651232c053e195",
+      "inspected": true,
+      "result": "Literal hostile content, no executed script, usable contained layout; no acceptance-breaking visual finding."
+    },
+    {
+      "file": "ai-screens/1440-classified-editor.png",
+      "pixels": [
+        1440,
+        1053
+      ],
+      "sha256": "0405d02650d0ab0ecdfb7c2a5cb178dd1ebbc7619d2a8dbde65fafb502e8aa98",
+      "inspected": true,
+      "result": "Literal hostile content, no executed script, usable contained layout; no acceptance-breaking visual finding."
+    },
+    {
+      "file": "ai-screens/1440-classified-run.png",
+      "pixels": [
+        1440,
+        2223
+      ],
+      "sha256": "c82698fb0eced5eede7df1c0bae84b09939128129cf5811d994f295a4a9bd886",
+      "inspected": true,
+      "result": "Literal hostile content, no executed script, usable contained layout; no acceptance-breaking visual finding."
+    },
+    {
+      "file": "ai-screens/1440-classified-setup.png",
+      "pixels": [
+        1440,
+        1261
+      ],
+      "sha256": "83abdd7df804d85fa70fa3c971746b6cf085de3b2734ef68468d1f8c7e496835",
+      "inspected": true,
+      "result": "Literal hostile content, no executed script, usable contained layout; no acceptance-breaking visual finding."
+    },
+    {
+      "file": "ai-screens/1440-policy-classified-editor.png",
+      "pixels": [
+        1440,
+        1195
+      ],
+      "sha256": "c3b0e3e319d25f56a0599a85cb13b7912cb30b6fc199722f8b04069075d0470b",
+      "inspected": true,
+      "result": "Literal hostile content, no executed script, usable contained layout; no acceptance-breaking visual finding."
+    },
+    {
+      "file": "ai-screens/1440-policy-classified-run.png",
+      "pixels": [
+        1440,
+        2532
+      ],
+      "sha256": "b9a6e583e56680870392c9424a532e77d349713266034df0870cf9c04728e219",
+      "inspected": true,
+      "result": "Literal hostile content, no executed script, usable contained layout; no acceptance-breaking visual finding."
+    },
+    {
+      "file": "ai-screens/1440-policy-classified-setup.png",
+      "pixels": [
+        1440,
+        1261
+      ],
+      "sha256": "cd0433b710c91a996726e2a4bb4b2e7e3dbefa6a0c6aecb6797519a37dd27d85",
+      "inspected": true,
+      "result": "Literal hostile content, no executed script, usable contained layout; no acceptance-breaking visual finding."
+    },
+    {
+      "file": "ai-screens/1440-policy-refused-editor.png",
+      "pixels": [
+        1440,
+        1290
+      ],
+      "sha256": "83f46e69224fd4a18bc17b8b74232a5f17973bb838a56d079ad35248693a5eae",
+      "inspected": true,
+      "result": "Literal hostile content, no executed script, usable contained layout; no acceptance-breaking visual finding."
+    },
+    {
+      "file": "ai-screens/1440-policy-refused-run.png",
+      "pixels": [
+        1440,
+        1696
+      ],
+      "sha256": "4a4da119536f3af86bb18b18fed201c20f6e70e735c8e67b0faf2eb4e8a9a835",
+      "inspected": true,
+      "result": "Literal hostile content, no executed script, usable contained layout; no acceptance-breaking visual finding."
+    },
+    {
+      "file": "ai-screens/1440-policy-refused-setup.png",
+      "pixels": [
+        1440,
+        1320
+      ],
+      "sha256": "7c520facdf229f900b2eed8ea716538b848e8046b15c137e710b754f208ce3bb",
+      "inspected": true,
+      "result": "Literal hostile content, no executed script, usable contained layout; no acceptance-breaking visual finding."
+    },
+    {
+      "file": "ai-screens/1440-refused-editor.png",
+      "pixels": [
+        1440,
+        1178
+      ],
+      "sha256": "5a2bc3d3f3fe280f5b4a375b887302071084b5def6aa58f1963cd3d1c4ab8c7c",
+      "inspected": true,
+      "result": "Literal hostile content, no executed script, usable contained layout; no acceptance-breaking visual finding."
+    },
+    {
+      "file": "ai-screens/1440-refused-run.png",
+      "pixels": [
+        1440,
+        1612
+      ],
+      "sha256": "b67ac041b90c37a4ec270e1e1b20072dbb528b94114dacf37d63a52f9a3ed292",
+      "inspected": true,
+      "result": "Literal hostile content, no executed script, usable contained layout; no acceptance-breaking visual finding."
+    },
+    {
+      "file": "ai-screens/1440-refused-setup.png",
+      "pixels": [
+        1440,
+        1320
+      ],
+      "sha256": "5a8c9a13278176a56e0b50308d5815c1fbb60e881df2dfd09ef243574bc0bcb3",
+      "inspected": true,
+      "result": "Literal hostile content, no executed script, usable contained layout; no acceptance-breaking visual finding."
+    },
+    {
+      "file": "ai-screens/1440-uncertain-run.png",
+      "pixels": [
+        1440,
+        1362
+      ],
+      "sha256": "c64bf1079ec271128a3154e502d990bc756dae098daf75cdcf2e980d275db46a",
+      "inspected": true,
+      "result": "Literal hostile content, no executed script, usable contained layout; no acceptance-breaking visual finding."
+    },
+    {
+      "file": "ai-screens/390-classified-editor.png",
+      "pixels": [
+        390,
+        3519
+      ],
+      "sha256": "637497fc0b2eff2aae88cd90f8baf982fed712171c5943e9ff2b4f01d5f6b843",
+      "inspected": true,
+      "result": "Literal hostile content, no executed script, usable contained layout; no acceptance-breaking visual finding."
+    },
+    {
+      "file": "ai-screens/390-classified-run.png",
+      "pixels": [
+        390,
+        3926
+      ],
+      "sha256": "5cf11a831904e8696ca8aa45834298d5bc542d6347fd1d5fc1a0c12ad020a024",
+      "inspected": true,
+      "result": "Literal hostile content, no executed script, usable contained layout; no acceptance-breaking visual finding."
+    },
+    {
+      "file": "ai-screens/390-classified-setup.png",
+      "pixels": [
+        390,
+        2957
+      ],
+      "sha256": "99d627394158bdc8690b39483ec04d284b86dcb0dfd683a3ae6681c84f393142",
+      "inspected": true,
+      "result": "Literal hostile content, no executed script, usable contained layout; no acceptance-breaking visual finding."
+    },
+    {
+      "file": "ai-screens/390-policy-classified-editor.png",
+      "pixels": [
+        390,
+        3895
+      ],
+      "sha256": "b6bc853d2a0ed4235810bf2accf4aa663c73ad71c3c9d2e038c66e232ab13bad",
+      "inspected": true,
+      "result": "Literal hostile content, no executed script, usable contained layout; no acceptance-breaking visual finding."
+    },
+    {
+      "file": "ai-screens/390-policy-classified-run.png",
+      "pixels": [
+        390,
+        4473
+      ],
+      "sha256": "d00858c10fe1d8db8901e079ecd401b90ef05f855305d5c536811fa59cde53d5",
+      "inspected": true,
+      "result": "Literal hostile content, no executed script, usable contained layout; no acceptance-breaking visual finding."
+    },
+    {
+      "file": "ai-screens/390-policy-classified-setup.png",
+      "pixels": [
+        390,
+        3271
+      ],
+      "sha256": "fb2bbe5b97bdf5aaa955957303a95a819fa74d3cfa2372702c9869dd2399ab2d",
+      "inspected": true,
+      "result": "Literal hostile content, no executed script, usable contained layout; no acceptance-breaking visual finding."
+    },
+    {
+      "file": "ai-screens/390-policy-refused-editor.png",
+      "pixels": [
+        390,
+        4182
+      ],
+      "sha256": "e05af5e88f65c19ee5b85066bb08719f4c53317959476ca8fab3bd217dde8470",
+      "inspected": true,
+      "result": "Literal hostile content, no executed script, usable contained layout; no acceptance-breaking visual finding."
+    },
+    {
+      "file": "ai-screens/390-policy-refused-run.png",
+      "pixels": [
+        390,
+        3385
+      ],
+      "sha256": "0cf1537c84f8659045dbc240a0fc891dc81a2ec9325aa382b198161f35ca9cdb",
+      "inspected": true,
+      "result": "Literal hostile content, no executed script, usable contained layout; no acceptance-breaking visual finding."
+    },
+    {
+      "file": "ai-screens/390-policy-refused-setup.png",
+      "pixels": [
+        390,
+        3512
+      ],
+      "sha256": "23ad023216cf1aef83d7ea76400cf5e4565bf74fc5fef7e58e341fc68dc5d29c",
+      "inspected": true,
+      "result": "Literal hostile content, no executed script, usable contained layout; no acceptance-breaking visual finding."
+    },
+    {
+      "file": "ai-screens/390-refused-editor.png",
+      "pixels": [
+        390,
+        3926
+      ],
+      "sha256": "71b92564a92d01ba31dec3161d593aa75fe480069e6ea5fa08211ad483417d5f",
+      "inspected": true,
+      "result": "Literal hostile content, no executed script, usable contained layout; no acceptance-breaking visual finding."
+    },
+    {
+      "file": "ai-screens/390-refused-run.png",
+      "pixels": [
+        390,
+        2941
+      ],
+      "sha256": "b69935f2482098d6157a220fccee3d598d1048bd849165a75599d1185ab13a31",
+      "inspected": true,
+      "result": "Literal hostile content, no executed script, usable contained layout; no acceptance-breaking visual finding."
+    },
+    {
+      "file": "ai-screens/390-refused-setup.png",
+      "pixels": [
+        390,
+        3340
+      ],
+      "sha256": "ff665f0b8bc746b47adb13c8f17c356f9a1778504dfe65208e1fb272267439a4",
+      "inspected": true,
+      "result": "Literal hostile content, no executed script, usable contained layout; no acceptance-breaking visual finding."
+    },
+    {
+      "file": "ai-screens/390-uncertain-run.png",
+      "pixels": [
+        390,
+        2747
+      ],
+      "sha256": "99c3e49ec21168572f52217125a873561951e674bd28e67aa4adcdc9d8f231b9",
+      "inspected": true,
+      "result": "Literal hostile content, no executed script, usable contained layout; no acceptance-breaking visual finding."
+    }
+  ],
+  "icon_tooltips": "Existing search and account controls tested on hover and focus; no new controls introduced."
+}

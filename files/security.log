@@ -1,0 +1,59 @@
+TAP version 13
+# [33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProxy environment variables detected. We'll use your proxy for fetch requests.[0m
+# SEC-002 classification archive delta {"from":"trigger","name":"tool calls","removed_tables":["crank_usage_spend"],"added_tables":["crank_audit","crank_notice_attempts","crank_notice_deliveries","crank_notices","crank_step_admissions","crank_usage_observations","crank_usage_reservations","crank_usage_spend","crank_wf_attempts","crank_wf_runs","crank_wf_steps"]}
+# SEC-002 classification archive delta {"from":"trigger","name":"undeclared category","removed_tables":["crank_usage_spend"],"added_tables":["crank_audit","crank_step_admissions","crank_usage_observations","crank_usage_reservations","crank_usage_spend","crank_wf_attempts","crank_wf_runs","crank_wf_steps"]}
+# SEC-002 classification archive delta {"from":"trigger","name":"extra fields","removed_tables":["crank_usage_spend"],"added_tables":["crank_audit","crank_step_admissions","crank_usage_observations","crank_usage_reservations","crank_usage_spend","crank_wf_attempts","crank_wf_runs","crank_wf_steps"]}
+# SEC-002 classification archive delta {"from":"trigger","name":"echoed credential","removed_tables":["crank_usage_spend"],"added_tables":["crank_audit","crank_step_admissions","crank_usage_observations","crank_usage_reservations","crank_usage_spend","crank_wf_attempts","crank_wf_runs","crank_wf_steps"]}
+# SEC-002 classification archive delta {"from":"trigger","name":"oversized prose","removed_tables":["crank_usage_spend"],"added_tables":["crank_audit","crank_notice_attempts","crank_notice_deliveries","crank_notices","crank_step_admissions","crank_usage_observations","crank_usage_reservations","crank_usage_spend","crank_wf_attempts","crank_wf_runs","crank_wf_steps"]}
+# SEC-002 classification archive delta {"from":"provider","name":"tool calls","removed_tables":["crank_usage_spend"],"added_tables":["crank_audit","crank_notice_attempts","crank_notice_deliveries","crank_notices","crank_step_admissions","crank_usage_observations","crank_usage_reservations","crank_usage_spend","crank_wf_attempts","crank_wf_runs","crank_wf_steps"]}
+# SEC-002 classification archive delta {"from":"provider","name":"undeclared category","removed_tables":["crank_usage_spend"],"added_tables":["crank_audit","crank_step_admissions","crank_usage_observations","crank_usage_reservations","crank_usage_spend","crank_wf_attempts","crank_wf_runs","crank_wf_steps"]}
+# SEC-002 classification archive delta {"from":"provider","name":"extra fields","removed_tables":["crank_usage_spend"],"added_tables":["crank_audit","crank_step_admissions","crank_usage_observations","crank_usage_reservations","crank_usage_spend","crank_wf_attempts","crank_wf_runs","crank_wf_steps"]}
+# SEC-002 classification archive delta {"from":"provider","name":"echoed credential","removed_tables":["crank_usage_spend"],"added_tables":["crank_audit","crank_step_admissions","crank_usage_observations","crank_usage_reservations","crank_usage_spend","crank_wf_attempts","crank_wf_runs","crank_wf_steps"]}
+# SEC-002 classification archive delta {"from":"provider","name":"oversized prose","removed_tables":["crank_usage_spend"],"added_tables":["crank_audit","crank_notice_attempts","crank_notice_deliveries","crank_notices","crank_step_admissions","crank_usage_observations","crank_usage_reservations","crank_usage_spend","crank_wf_attempts","crank_wf_runs","crank_wf_steps"]}
+# SEC-002 authoring refusal extra HTTP step complete portable inventory unchanged; one model request; zero provider requests
+# SEC-002 authoring refusal exfiltration replacement complete portable inventory unchanged; one model request; zero provider requests
+# SEC-002 authoring refusal changed CRM URL complete portable inventory unchanged; one model request; zero provider requests
+# SEC-002 authoring refusal changed CRM method complete portable inventory unchanged; one model request; zero provider requests
+# SEC-002 authoring refusal other realm complete portable inventory unchanged; one model request; zero provider requests
+# SEC-002 authoring refusal other customer complete portable inventory unchanged; one model request; zero provider requests
+# SEC-002 authoring refusal other item complete portable inventory unchanged; one model request; zero provider requests
+# SEC-002 authoring refusal other amount complete portable inventory unchanged; one model request; zero provider requests
+# SEC-002 authoring refusal background trigger complete portable inventory unchanged; one model request; zero provider requests
+# SEC-002 authoring refusal unknown connection complete portable inventory unchanged; one model request; zero provider requests
+# SEC-002 authoring refusal publish complete portable inventory unchanged; one model request; zero provider requests
+# SEC-002 authoring refusal grant complete portable inventory unchanged; one model request; zero provider requests
+# SEC-002 authoring refusal activate complete portable inventory unchanged; one model request; zero provider requests
+# SEC-002 authoring refusal step authority complete portable inventory unchanged; one model request; zero provider requests
+# SEC-002 authoring refusal oversized output complete portable inventory unchanged; one model request; zero provider requests
+# SEC-002 authoring refusal non-schema output complete portable inventory unchanged; one model request; zero provider requests
+# SEC-002 authoring refusal model tool call complete portable inventory unchanged; one model request; zero provider requests
+# SEC-002 authoring refusal echoed model credential complete portable inventory unchanged; one model request; zero provider requests
+# SEC-002 authoring refusal echoed connection credential complete portable inventory unchanged; one model request; zero provider requests
+# SEC-002 AI import manual conversions; zero native workflows, connections, grants or requests; complete retained inventory unchanged after refusal and restart
+# Subtest: SEC-002: workflow and import doors retain hostile HTML/prompt text literally, refuse credential/private/redirect destinations and oversized inputs, and keep connection secrets out of output
+ok 1 - SEC-002: workflow and import doors retain hostile HTML/prompt text literally, refuse credential/private/redirect destinations and oversized inputs, and keep connection secrets out of output
+  ---
+  duration_ms: 149958.178293
+  type: 'test'
+  ...
+# Subtest: Anonymous import requests are refused before any of their body is read
+ok 2 - Anonymous import requests are refused before any of their body is read
+  ---
+  duration_ms: 3852.212212
+  type: 'test'
+  ...
+# Subtest: Inherited OAuth provider names are refused at the public door before storing credentials
+ok 3 - Inherited OAuth provider names are refused at the public door before storing credentials
+  ---
+  duration_ms: 3133.600949
+  type: 'test'
+  ...
+1..3
+# tests 3
+# suites 0
+# pass 3
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 158330.785169

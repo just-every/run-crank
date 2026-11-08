@@ -1,0 +1,31 @@
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProxy environment variables detected. We'll use your proxy for fetch requests.[0m
+
+
+✖ SEC-002: workflow and import doors retain hostile HTML/prompt text literally, refuse credential/private/redirect destinations and oversized inputs, and keep connection secrets out of output (101415.298136ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 102448.433794
+
+✖ failing tests:
+
+test at tests/security.test.mjs:9:1
+✖ SEC-002: workflow and import doors retain hostile HTML/prompt text literally, refuse credential/private/redirect destinations and oversized inputs, and keep connection secrets out of output (101415.298136ms)
+  AssertionError [ERR_ASSERTION]: model tool call must refuse
+      at authoringPolicyJourney (file:///workspace/run-crank/tests/agent-policy-journey.mjs:113:11)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async agentPolicyJourney (file:///workspace/run-crank/tests/agent-policy-journey.mjs:162:80)
+      at async TestContext.<anonymous> (file:///workspace/run-crank/tests/security.test.mjs:10:2)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
