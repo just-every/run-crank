@@ -17,3 +17,15 @@ Message-ID is hashed and scoped to the workflow. `dedup_window_minutes` defaults
 Customer, financial and health payloads and attachments use the workflow's sealed custody. Ordinary retention, legal holds and run erasure apply. Erasure retains an opaque event fence so replay cannot recreate erased files. Export includes inactive aliases and value-free decisions, plus existing run and file custody records. Restore cannot reactivate receiving; create a new address after adoption. Provider routing and provider copies remain outside the archive.
 
 This native receiving component does not establish the required live forwarded PDF to HubSpot journey, installation-domain delivery, bounces, live authentication evidence or downstream AI acceptance.
+
+## Container installations
+
+TRIG-006 native receiving requires the Workers platform with Cloudflare Email
+Routing. The container host does not deliver native `email()` events. Its
+maintained launchers supply the runtime image identity; on that installation,
+address creation and rotation return a named platform requirement before any
+alias or audit write, and Settings offers no creation form. Restored aliases
+remain inactive; revocation and admission-history inspection remain available.
+Moving the archive does not transfer routing authority. This restriction changes
+no Workers receiving behavior, sending-domain configuration or live-provider
+proof requirement above.

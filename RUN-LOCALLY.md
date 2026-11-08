@@ -294,3 +294,52 @@ addresses). `rer door restart` drains and restarts the door: checkouts that
 were starting finish starting, and open tabs reconnect. After a reboot or logout the door needs `rer door start` (or any
 `rer dev` in a checkout that uses it); `rer door stop` and `rer door disable`
 stop it and opt this computer out.
+
+## Local container preview and portability
+
+Crank declares the workerd container engine, one D1 database and the per-minute
+Cron pass. Install Docker before this path. Keep the package and runtime pins
+unchanged. `rer dev` remains a development server with an idle timeout; use the
+SSH container installation described in `OPERATIONS.md` for an own-server
+production service.
+
+```sh
+rer build --platform container
+rer preview --platform container
+```
+
+Preview runs the built image with local settings and a persistent Docker
+volume named for this checkout. It does not transfer the native Workers local
+state automatically. Its image identity reaches the app at runtime; native
+inbound address creation requires the Workers platform with Cloudflare Email
+Routing and is refused on this path. Outbound mail and receiving email are
+separate capabilities. Stop the preview process you started before transfer.
+
+```sh
+rer export --platform container --output exports/container.rer
+```
+
+Import into a separate empty local Workers installation with the same source
+and migration history:
+
+```sh
+rer import --input /private/container.rer --yes
+rer setup
+rer dev
+```
+
+The archive moves supported domain records, without credentials or active
+receiving authority. Workflows restore paused; review the archive, establish a
+fresh owner and reconnect providers before resuming. `rer import --platform
+container --input /private/container.rer --yes` instead selects an empty local
+container volume. Transfers acquire the serving volume's exclusive lock and
+refuse a concurrent writer. Retain backups before deleting any Docker volume.
+
+The qualification target is a 1 GiB app memory limit; engine selection alone
+is not proof of operation at that limit. The SSH installation command, private
+settings requirements and post-install memory control are in `OPERATIONS.md`.
+`rer export --platform container` targets only the local checkout's volume.
+The pinned CLI refuses a hosted export without an implemented hosted-export
+door; it cannot back up an SSH server through this command. A disposable SSH
+host test does not establish clean-VM reboot acceptance, owner HTTPS ownership,
+a live Cloudflare account deployment or hosted archive transfer.

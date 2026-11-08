@@ -9,6 +9,11 @@ import { burstThreshold, type WorkflowRow } from './admission'
 import { parseEmail, readEmail } from './email-mime'
 import { admitWebhook } from './webhook-admission'
 
+// The maintained container launchers set this image identity at runtime. It is
+// absent on Workers; a browser header or submitted form cannot select a platform.
+const containerInstallation = (env: CrankEnv) => Boolean((env as CrankEnv & { RER_IMAGE_DIGEST?: string }).RER_IMAGE_DIGEST)
+const receivingRequirement = 'TRIG-006 requires the Workers platform with Cloudflare Email Routing; container installations cannot receive native email'
+
 const domainPattern = /^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/
 export function emailAddress(value: unknown): boolean {
   return typeof value === 'string' && value.length <= 320 && /^[a-z0-9.!#$%&'*+\-/=?^_`{|}~]+@/i.test(value) && value.split('@').length === 2 && domainPattern.test(value.split('@')[1].toLowerCase())
@@ -25,12 +30,14 @@ export async function emailState(env: CrankEnv, actor: Actor, workflowId?: strin
   requireOwner(actor)
   const scope = workflowId ? ' WHERE workflow_id=?' : ''
   return {
+    receiving_requirement: containerInstallation(env) ? receivingRequirement : null,
     aliases: (await stmt(env, 'SELECT id,workflow_id,domain,active,created_at,revoked_at FROM crank_email_aliases' + scope + ' ORDER BY created_at DESC', ...(workflowId ? [workflowId] : [])).all()).results,
     receipts: (await stmt(env, 'SELECT * FROM crank_email_receipts' + scope + ' ORDER BY received_at DESC,id DESC LIMIT 100', ...(workflowId ? [workflowId] : [])).all()).results,
   }
 }
 export async function createEmailAlias(env: CrankEnv, actor: Actor, workflowId: string, input: Record<string, unknown>) {
   requireOwner(actor)
+  requireValue(!containerInstallation(env), receivingRequirement, 409)
   const workflow = await stmt(env, 'SELECT owner_id,draft_json FROM crank_workflows WHERE id=?', workflowId).first<{ owner_id: string; draft_json: string }>()
   requireValue(workflow && workflow.owner_id === actor.id, 'Only the workflow owner may manage its email aliases', 403)
   requireValue(JSON.parse(workflow.draft_json).trigger.type === 'email', 'Choose an email trigger first')
@@ -58,6 +65,7 @@ export async function revokeEmailAlias(env: CrankEnv, actor: Actor, aliasId: str
  * Fail closed for configured gates. In particular, neither message.headers nor
  * an Authentication-Results line in raw MIME is routing evidence. */
 export async function receiveEmail(message: ForwardableEmailMessage, env: CrankEnv, defer?: (work: Promise<unknown>) => void) {
+  if (containerInstallation(env)) { message.setReject(receivingRequirement); return }
   const address = String(message.to ?? '').trim().toLowerCase()
   const alias = await stmt(env, 'SELECT id,workflow_id,active FROM crank_email_aliases WHERE address_hash=?', await digest(address)).first<{ id: string; workflow_id: string; active: number }>()
   if (!alias) { message.setReject('Unknown or inactive email alias'); return }
