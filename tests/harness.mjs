@@ -6,18 +6,30 @@ import {join,resolve} from 'node:path';
 import {build} from 'esbuild';
 import {Miniflare,convertV4MiniflareOptions} from 'miniflare';
 import {unstable_splitSqlQuery} from 'wrangler';
+import {archiveMigrationSource,archiveSqliteSource} from '../scripts/archive-migrations.mjs';
 
 export async function freePort() { const s=createServer();await new Promise(r=>s.listen(0,'127.0.0.1',r)); const port=s.address().port; await new Promise(r=>s.close(r));return port; }
 let bundle;
-const bundleOptions={entryPoints:['tests/worker.ts'],bundle:true,write:false,format:'esm',platform:'neutral',conditions:['workerd','worker','browser'],external:['node:*','cloudflare:*'],target:'es2023'};
+const migrationSources=new Map();
+function archiveMigrationPlugin(extraMigrations=[]) {
+  return {name:'archive-migrations',setup(plugin){
+    plugin.onLoad({filter:/sql-asm\.js$/},async()=>({contents:await archiveSqliteSource(),loader:'js'}));
+    plugin.onLoad({filter:/archive-migration-history\.ts$/},async()=>{
+      const key=JSON.stringify(extraMigrations);
+      if(!migrationSources.has(key))migrationSources.set(key,archiveMigrationSource(extraMigrations));
+      return {contents:await migrationSources.get(key),loader:'js'};
+    });
+  }};
+}
+const bundleOptions={entryPoints:['tests/worker.ts'],bundle:true,write:false,format:'esm',platform:'neutral',conditions:['workerd','worker','browser'],plugins:[archiveMigrationPlugin()],external:['node:*','cloudflare:*'],target:'es2023'};
 async function installedGustoBundle(version) {
   assert.match(version,/^\d+$/);
-  return (await build({...bundleOptions,plugins:[{name:'installed-provider-definition',setup(plugin){plugin.onLoad({filter:/gusto-version\.ts$/},async({path})=>({contents:(await readFile(path,'utf8')).replace(/GUSTO_CONNECTOR_VERSION = '\d+'/,`GUSTO_CONNECTOR_VERSION = '${version}'`),loader:'ts'}))}}]})).outputFiles[0].text;
+  return (await build({...bundleOptions,plugins:[archiveMigrationPlugin(),{name:'installed-provider-definition',setup(plugin){plugin.onLoad({filter:/gusto-version\.ts$/},async({path})=>({contents:(await readFile(path,'utf8')).replace(/GUSTO_CONNECTOR_VERSION = '\d+'/,`GUSTO_CONNECTOR_VERSION = '${version}'`),loader:'ts'}))}}]})).outputFiles[0].text;
 }
 // Pause only the scheduling boundary in a test-built Worker. Requests still use
 // the native workflow, retention and erasure doors and the real D1 transaction.
 async function digestBarrierBundle() {
-  return (await build({...bundleOptions,plugins:[{name:'digest-commit-barrier',setup(plugin){
+  return (await build({...bundleOptions,plugins:[archiveMigrationPlugin(),{name:'digest-commit-barrier',setup(plugin){
     plugin.onLoad({filter:/engine[\/]steps[\/]digest\.ts$/},async({path})=>{
       const contents=await readFile(path,'utf8'),boundary='const changes=await ctx.env.DB.batch(jobs)';
       assert.ok(contents.includes(boundary),'the fixture must pause before the native commit');
@@ -26,7 +38,7 @@ async function digestBarrierBundle() {
   }}]})).outputFiles[0].text;
 }
 async function pickerBarrierBundle() {
-  return (await build({...bundleOptions,plugins:[{name:'picker-selection-commit-barrier',setup(plugin){
+  return (await build({...bundleOptions,plugins:[archiveMigrationPlugin(),{name:'picker-selection-commit-barrier',setup(plugin){
     plugin.onLoad({filter:/workflows[\/]store\.ts$/},async({path})=>{
       const contents=await readFile(path,'utf8'),boundary='let results:D1Result[]';
       assert.equal(contents.split(boundary).length,2);
@@ -42,7 +54,7 @@ async function appCustodyBarrierBundle() {
     ['app-subjects.ts',["  await guardedBatch(env, actor, 'owner', [",'erase']],
     ['app-retention.ts',["      await env.DB.batch([",'expire']],
   ]);
-  return (await build({...bundleOptions,plugins:[{name:'app-custody-commit-barrier',setup(plugin){
+  return (await build({...bundleOptions,plugins:[archiveMigrationPlugin(),{name:'app-custody-commit-barrier',setup(plugin){
     plugin.onLoad({filter:/triggers[\/]app-(poll|subjects|retention)\.ts$/},async({path})=>{
       const name=path.split(/[\/]/).at(-1),[boundary,action]=boundaries.get(name),contents=await readFile(path,'utf8');
       assert.equal(contents.split(boundary).length,2,'one native app custody boundary');
@@ -50,9 +62,25 @@ async function appCustodyBarrierBundle() {
     });
   }}]})).outputFiles[0].text;
 }
+// A test-built persistence fault interrupts only the door outcome write. The
+// native route and D1 transaction run unchanged and are observable beforehand.
+async function agentRecoveryBundle() {
+  return (await build({...bundleOptions,plugins:[archiveMigrationPlugin(),{name:'agent-outcome-persistence-fault',setup(plugin){
+    plugin.onLoad({filter:/agent-door[\/]execution\.ts$/},async({path})=>{
+      let contents=await readFile(path,'utf8');
+      const save='  if (key !== null) await rt.options.db.prepare';
+      assert.equal(contents.split(save).length,2);
+      contents=contents.replace(save,`  if (key !== null && !(await fetch('https://agent-recovery.example/outcome', {method:'POST',body:key})).ok) throw new Error('Simulated door outcome persistence interruption');\n`+save);
+      const run='    const value = await tool.run(args, context(rt, principal, door, effects, approvers))';
+      assert.equal(contents.split(run).length,2);
+      contents=contents.replace(run,`    if (principal.idempotencyKey && !(await fetch('https://agent-recovery.example/native', {method:'POST',body:principal.idempotencyKey})).ok) throw new Error('Simulated interruption before native mutation');\n`+run);
+      return {contents,loader:'ts'};
+    });
+  }}]})).outputFiles[0].text;
+}
 // Pause a reviewed native preparation immediately before its real transaction.
 async function nativePreparationBarrierBundle() {
-  return (await build({...bundleOptions,plugins:[{name:'native-preparation-commit-barrier',setup(plugin){
+  return (await build({...bundleOptions,plugins:[archiveMigrationPlugin(),{name:'native-preparation-commit-barrier',setup(plugin){
     plugin.onLoad({filter:/workflows[\/]store\.ts$/},async({path})=>{
       const contents=await readFile(path,'utf8'),boundary="  const results = await guardedBatch(env, actor, 'prepare', [";
       assert.equal(contents.split(boundary).length,2,'one native creation transaction');
@@ -61,24 +89,29 @@ async function nativePreparationBarrierBundle() {
   }}]})).outputFiles[0].text;
 }
 /** `edge` fakes third-party APIs at the network edge: a function from Request to a Response, or undefined to use the real network. */
-export async function harness(target,{emitted=false,edge,mailEdge,quoteCosts=true,bindings={},clock,digestCommitBarrier=false,appCustodyBarrier=false,nativePreparationBarrier=false,beforeTeamMigration=false,emailTransport=false}={}) {
+export async function harness(target,{emitted=false,edge,mailEdge,quoteCosts=true,bindings={},clock,digestCommitBarrier=false,appCustodyBarrier=false,nativePreparationBarrier=false,beforeTeamMigration=false,emailTransport=false,agentRecoveryFault=false,extraMigrations=[]}={}) {
   bundle ??= (await build(bundleOptions)).outputFiles[0].text;
   const port=await freePort(),origin=`http://127.0.0.1:${port}`,directory=await mkdtemp(join(tmpdir(),'crank-tests-'));
   const mail=[];
   const emittedModules=emitted?[{type:'ESModule',path:resolve('dist/server/index.js')},...(await readdir('dist/server/assets')).filter(p=>p.endsWith('.js')).map(p=>({type:'ESModule',path:resolve('dist/server/assets',p)}))]:null;
   // Keep URL and Host on the stable public origin across restarts, while workerd
   // atomically allocates its private listener. Probing then rebinding races CI.
+  bindings=typeof bindings==='function'?bindings(origin):bindings;
   const legacyOptions={unsafeTriggerHandlers:emailTransport,host:'127.0.0.1',port:0,upstream:origin,...(emitted?{modules:emittedModules,modulesRoot:resolve('dist/server')}:{modules:true,script:bundle}),outboundService:async request=>{if(new URL(request.url).hostname==='api.resend.com'){mail.push(await request.json());const reply=mailEdge&&await mailEdge(request,mail.at(-1));if(reply)return reply;return new Response(JSON.stringify({id:'test-mail-'+mail.length}),{headers:{'content-type':'application/json'}})}const faked=edge&&await edge(request);if(faked)return faked;// fetch derives Content-Length from the body; forwarding the Worker's copy duplicates it, which
   // the undici dispatcher miniflare installs process-wide rejects before the receiver sees the request.
   const {'content-length':_,...headers}=Object.fromEntries(request.headers);return fetch(request.url,{method:request.method,headers,body:['GET','HEAD'].includes(request.method)?undefined:await request.arrayBuffer(),redirect:'manual'})},compatibilityDate:'2026-09-08',compatibilityFlags:['nodejs_compat'],d1Databases:{DB:'crank'},bindings:{AUTH_ORIGIN:origin,AUTH_LOCAL:'true',OWNER_EMAIL:'owner@example.test',SESSION_SECRET:'test-session-secret-01234567890123456789',SETUP_TOKEN:'synthetic-test-owner-claim-01234567890123456789',MAIL_PROVIDER:'resend',MAIL_API_KEY:'example-resend-test-key',MAIL_FROM:'Crank <auth@example.test>',RER_DEV_KEY:'test-dev-gate-0123456789012345678901234567890123',CRANK_TARGET_ORIGIN:target,...bindings}};
   const optionsFor=script=>({...convertV4MiniflareOptions({...legacyOptions,...(!emitted?{script}:{})}),resourcePersistencePath:directory});
-  const selectedBundle=nativePreparationBarrier?await nativePreparationBarrierBundle():appCustodyBarrier?await appCustodyBarrierBundle():digestCommitBarrier?await digestBarrierBundle():bundle;
+  const selectedBundle=extraMigrations.length?(await build({...bundleOptions,plugins:[archiveMigrationPlugin(extraMigrations)]})).outputFiles[0].text:nativePreparationBarrier?await nativePreparationBarrierBundle():agentRecoveryFault?await agentRecoveryBundle():appCustodyBarrier?await appCustodyBarrierBundle():digestCommitBarrier?await digestBarrierBundle():bundle;
   const atClock=(script,time)=>time ? `const RealDate=Date; globalThis.Date=class extends RealDate { constructor(...args) { super(...(args.length?args:[${Date.parse(time)}])); } static now(){return ${Date.parse(time)}} };\n`+script : script;
   let currentBundle=atClock(selectedBundle,clock);
   let mf=new Miniflare(optionsFor(currentBundle));
   try {
     let db=await mf.getD1Database('DB');
-    for(const file of (await readdir('migrations/core')).filter(x=>x.endsWith('.sql') && (!beforeTeamMigration || x!=='0080_team_grants.sql')).sort()) await db.batch(unstable_splitSqlQuery(await readFile('migrations/core/'+file,'utf8')).map(sql=>db.prepare(sql)));
+    await db.prepare('CREATE TABLE d1_migrations (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE, applied_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)').run();
+    const migrations=await Promise.all((await readdir('migrations/core')).filter(x=>x.endsWith('.sql') && (!beforeTeamMigration || x!=='0080_team_grants.sql')).sort().map(async name=>({name,sql:await readFile('migrations/core/'+name,'utf8')})));
+    for(const {name,sql} of [...migrations,...extraMigrations].sort((a,b)=>a.name<b.name?-1:a.name>b.name?1:0)) {
+      await db.batch([...unstable_splitSqlQuery(sql).map(sql=>db.prepare(sql)),db.prepare('INSERT INTO d1_migrations(name) VALUES (?)').bind(name)]);
+    }
     const send=async(path,body,cookie='',headers={})=>{
       const response=await mf.dispatchFetch(origin+path,{method:body===undefined?'GET':'POST',redirect:'manual',headers:{host:new URL(origin).host,origin,'content-type':'application/json',cookie,...headers},...(body===undefined?{}:{body:JSON.stringify(body)})});
       // Name the public door if the Worker transport interrupts its response.
@@ -129,6 +162,6 @@ export async function harness(target,{emitted=false,edge,mailEdge,quoteCosts=tru
     const run=async(f,event='ticket-'+crypto.randomUUID(),input={customer:'Harbour Workshop',task:'Book a callback'})=>post('flows/'+f.id+'/runs',{event_id:event,input},owner,201);
     // The Worker's per-minute Cron pass, at a chosen scheduled time.
     const tick=async(time=Date.now())=>{const worker=await mf.getWorker();await worker.scheduled({scheduledTime:new Date(time),cron:'* * * * *'})};
-    return {get mf(){return mf},get db(){return db},mail,origin,owner,independentStarter,send,post,get,flow,run,tick,async migrateTeam(){await db.batch(unstable_splitSqlQuery(await readFile('migrations/core/0080_team_grants.sql','utf8')).map(sql=>db.prepare(sql)))},async restart({gustoDefinitionVersion,clock:nextClock,pickerCommitBarrier=false}={}){if(pickerCommitBarrier){assert.equal(emitted,false);currentBundle=await pickerBarrierBundle()}if(nextClock!==undefined){assert.equal(emitted,false);assert.ok(Number.isFinite(Date.parse(nextClock)));currentBundle=atClock(selectedBundle,nextClock)}if(gustoDefinitionVersion!==undefined){assert.equal(emitted,false);currentBundle=await installedGustoBundle(gustoDefinitionVersion)}await mf.dispose();mf=new Miniflare(optionsFor(currentBundle));await mf.ready;db=await mf.getD1Database('DB')},async close(){await mf.dispose();await rm(directory,{recursive:true,force:true})}};
+    return {get mf(){return mf},get db(){return db},mail,origin,owner,independentStarter,send,post,get,flow,run,tick,async migrateTeam(){await db.batch(unstable_splitSqlQuery(await readFile('migrations/core/0080_team_grants.sql','utf8')).map(sql=>db.prepare(sql)));await db.prepare('INSERT INTO d1_migrations(name) VALUES (?)').bind('0080_team_grants.sql').run()},async restart({gustoDefinitionVersion,clock:nextClock,pickerCommitBarrier=false}={}){if(pickerCommitBarrier){assert.equal(emitted,false);currentBundle=await pickerBarrierBundle()}if(nextClock!==undefined){assert.equal(emitted,false);assert.ok(Number.isFinite(Date.parse(nextClock)));currentBundle=atClock(selectedBundle,nextClock)}if(gustoDefinitionVersion!==undefined){assert.equal(emitted,false);currentBundle=await installedGustoBundle(gustoDefinitionVersion)}await mf.dispose();mf=new Miniflare(optionsFor(currentBundle));await mf.ready;db=await mf.getD1Database('DB')},async close(){await mf.dispose();await rm(directory,{recursive:true,force:true})}};
   } catch(error){await mf.dispose();await rm(directory,{recursive:true,force:true});throw error}
 }

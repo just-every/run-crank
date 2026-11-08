@@ -31,5 +31,5 @@ function topBar(title: string, actor: any, page: Page) {
 
 export function shell(title: string, content: string, actor: any, page: Page) {
   const heading = page.editor ? '' : `<div class="page-head"><div><h1>${esc(title)}</h1>${page.intro ? `<p class="page-intro">${page.intro}</p>` : ''}</div>${page.tools ? `<div class="page-tools">${page.tools}</div>` : ''}</div>`
-  return `${topBar(title, actor, page)}<div class="app-frame${page.editor ? ' is-editor' : ''}">${actor ? navigation(title, actor.role === 'owner', page.approvals ?? 0, page.section) : ''}<main class="crank" id="main">${heading}${content}<footer class="app-footer">Crank · Published workflows run unattended; approval steps are optional</footer></main></div>`
+  return `<a class="skip-link" href="#main">Skip to main content</a>${topBar(title, actor, page)}<div class="app-frame${page.editor ? ' is-editor' : ''}">${actor ? navigation(title, actor.role === 'owner', page.approvals ?? 0, page.section) : ''}<main class="crank" id="main" tabindex="-1"><div class="notice" data-decision-status role="status" aria-live="polite" aria-atomic="true" tabindex="-1" hidden></div>${heading}${content}<footer class="app-footer">Crank · Published workflows run unattended; approval steps are optional</footer></main></div>`
 }

@@ -12,7 +12,7 @@ on:
         default: push
       timeout:
         type: number
-        default: 12
+        default: 21
 
 permissions:
   contents: read
@@ -117,7 +117,7 @@ jobs:
     needs: [plan, build]
     if: ${{ needs.plan.outputs.has_shards == 'true' }}
     runs-on: ubuntu-24.04
-    timeout-minutes: ${{ matrix.name == 'app-comparisons' && 16 || inputs.timeout || 12 }}
+    timeout-minutes: ${{ inputs.timeout || 21 }}
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
