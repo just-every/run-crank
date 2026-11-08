@@ -3638,7 +3638,10 @@
         "src/modules/agent-door/tests/identity.test.ts": "2135c394939f4a737adabdc8003b0e667b31ac5a",
         "src/modules/agent-door/tests/queued-context.test.ts": "2135c394939f4a737adabdc8003b0e667b31ac5a",
         "src/modules/agent-door/tests/runtime.mjs": "2135c394939f4a737adabdc8003b0e667b31ac5a",
-        "src/modules/agent-door/tests/seed.ts": "2135c394939f4a737adabdc8003b0e667b31ac5a"
+        "src/modules/agent-door/tests/seed.ts": "2135c394939f4a737adabdc8003b0e667b31ac5a",
+        "src/modules/agent-door/types.ts": "2135c394939f4a737adabdc8003b0e667b31ac5a",
+        "src/modules/agent-door/pipeline.ts": "2135c394939f4a737adabdc8003b0e667b31ac5a",
+        "src/modules/agent-door/audit.ts": "2135c394939f4a737adabdc8003b0e667b31ac5a"
       },
       "acknowledged": {
         "src/modules/agent-door/tests/door.test.ts": {
@@ -3659,6 +3662,18 @@
         },
         "src/modules/agent-door/tests/seed.ts": {
           "sha256": "9b7bc81796964182d0654fd92f4a9283b47d1c48fbdf961becd75ef3396e98cf",
+          "mode": "100644"
+        },
+        "src/modules/agent-door/types.ts": {
+          "sha256": "e1d7641da9c533bee677acc49f737b1e284005aade9d6fa2277aac91840ac912",
+          "mode": "100644"
+        },
+        "src/modules/agent-door/pipeline.ts": {
+          "sha256": "7f3b7fe3c9d5095da588339813df89380e8c54127a48eb6d107fb0d5b0e4db4c",
+          "mode": "100644"
+        },
+        "src/modules/agent-door/audit.ts": {
+          "sha256": "2ca258581e976b8faa564be23c6586b3ef600d102c3915b8810a7e0600b23f2d",
           "mode": "100644"
         }
       }

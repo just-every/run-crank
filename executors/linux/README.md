@@ -29,6 +29,7 @@ configuration (keep its secret file mode `0600`):
 | --- | --- |
 | `CRANK_EXECUTOR_TOKEN` | Required bearer token, at least 32 bytes. |
 | `CRANK_EXECUTOR_DATA` | Required absolute private data directory. |
+| `CRANK_EXECUTOR_CGROUP` | Absolute delegated cgroup v2 subtree for aggregate quota tasks; see below. |
 | `CRANK_EXECUTOR_PORT` | Optional TCP port; defaults to 8788. |
 
 Start as the dedicated service user:
@@ -66,6 +67,7 @@ terminal task.
   "input": {"a": 2, "b": 3},
   "timeout_ms": 5000,
   "memory_mb": 128,
+  "aggregate_memory_mb": 96,
   "allowed_egress": []
 }
 ```
@@ -111,7 +113,8 @@ The supervisor enforces wall time (50–60000 ms), OS virtual address space
 (64–2048 MiB Python; 512–2048 MiB Node), 64 processes/threads per dedicated host
 UID, 64 open file descriptors per process, a 1 MiB per-file size, zero core dumps,
 and a CPU time ceiling. The virtual address ceiling is an OS hard limit, not an
-RSS quota; aggregate resident memory across descendants is not a cgroup quota.
+RSS quota. Its existing meaning is unchanged; omitting `aggregate_memory_mb`
+retains exactly that previous per-process behavior.
 Tmpfs byte quotas bound writable storage. The service runs one job at a time,
 queues at most 32 tasks, and bounds inbound connections and request sizes.
 Use a dedicated account: the process count limit includes every process/thread
@@ -129,9 +132,50 @@ tombstones persist until the owner removes them while the service is stopped.
 Deleting an ID permits future reuse, so retain tombstones for the caller's full
 retry lifetime. Filesystem deletion is not a guarantee of physical secure erase.
 
+## Aggregate task memory
+
+Optional `aggregate_memory_mb` is an integer from 32 to 2048 MiB. Before executing
+bubblewrap, the supervisor creates `task-ID` inside `CRANK_EXECUTOR_CGROUP`, sets
+`memory.max` to the declared bytes, `memory.swap.max` to zero, `memory.oom.group`
+to one and `pids.max` to 64, and checks kernel readback. The entire sandbox enters
+that cgroup before exec; forks and threads inherit it. The supervisor stays
+outside the quota so an OOM kill cannot prevent durable outcome recording.
+The memory controller accounts the sandbox's resident and other charged memory,
+including tmpfs pages; the process address-space bound remains independently active.
+
+Use an administrator-provisioned cgroup v2 subtree with memory and pids enabled
+in `cgroup.subtree_control`. A service manager can delegate these controllers
+(for example, a dedicated systemd unit with `Delegate=memory pids`). Keep the
+service and supervisor in a leaf such as `service` below that subtree, alongside
+fresh task cgroups, since an internal controller node cannot contain processes.
+The dedicated user needs permission to create and remove children, configure
+their controls, write `cgroup.kill`, and migrate its child from the service leaf
+to a task leaf; the common delegated ancestor's `cgroup.procs` must be writable.
+Set `CRANK_EXECUTOR_CGROUP` to the absolute delegated ancestor, not the service
+leaf or a shared host root. The service does not acquire privilege or delegate
+host controllers itself. Use a distinct delegated subtree for each service.
+
+A missing controller, swap control or migration permission refuses a quota task
+with `cgroup_setup_required`, durably readable as a failed task. Task code never
+runs under a weaker replacement limit. Legacy tasks without the field remain
+available. A kernel `oom_kill` produces the fixed `memory_limit` diagnostic.
+Task readback includes the declared `aggregate_memory_mb`; payload identity
+also includes it, so changing the quota under an existing ID conflicts.
+
+Success, failure, cancellation and service crash cleanup kill all remaining
+cgroup descendants and wait for an empty group before removal. A private synced
+supervisor result records the outcome before the cgroup evidence is removed.
+Restart serializes with the old supervisor, reaps any surviving group, recovers
+its OOM event or recorded result and never relaunches source. A crash of both
+service and supervisor is reconciled on the next startup. Keep the delegated
+subtree available across restarts so orphan cleanup can finish; startup refuses
+when it cannot safely complete cleanup. Source staging is erased, while task
+results, cancellation tombstones and quota outcome receipts follow the same
+owner-managed task-record lifetime described above.
+
 ## Embedding and focused verification
 
-`await createExecutor({token, dataDir, port: 0})` returns an executor with
+`await createExecutor({token, dataDir, port: 0, cgroupRoot})` returns an executor with
 `await executor.listen()`, `executor.address.port`, `executor.runtime` (exact
 installed versions), and `await executor.close()`. `startExecutor(options)` creates
 and listens in one call. The same non-root requirement applies to embedding.

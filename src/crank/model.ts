@@ -4,6 +4,8 @@ export interface AgentDoorAttribution {
   readonly agent: { readonly id: string; readonly name: string }
   readonly for: { readonly id: string; readonly name: string }
   readonly label: string
+  /** Signed-in people verified by the policy door, separate from the sponsor. */
+  readonly approvers?: readonly Readonly<{ id: string; name: string }>[]
   readonly operation_id: string
   readonly consent?: string
   readonly client_id?: string
@@ -18,6 +20,8 @@ export type ActorKind = 'native' | 'dev' | 'oidc' | 'password' | 'review' | 'age
 export interface AgentDoorAuthority {
   agentId: string; scopes: readonly string[]; operationId: string
   consent?: string; clientId?: string; businessPersonId?: string
+  /** Current native identity generations for the door-verified human reviewers. */
+  approvers: readonly Readonly<{ id: string; version: number }>[]
 }
 export interface Actor {
   id: string; name: string; role: Role; kind: ActorKind; version: number
