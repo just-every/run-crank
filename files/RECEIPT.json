@@ -1,0 +1,232 @@
+{
+  "schema": 1,
+  "repository": "just-every/run-crank",
+  "branch": "cloud/sx-crank-c-f93",
+  "head": "52f8599de3a7083337a052d9416600d5380755ea",
+  "baseMain": "a18d77530d6071377b744b4301f1f19caae8498b",
+  "startingCommit": "0169bf01751cd589b2a0a4531ea2e2e65e0c3cf6",
+  "beforeVariant": {
+    "change": "Remove only row.classes = classes from the supplied retention implementation; restore original pipeline bytes afterward",
+    "exit": 1,
+    "error": "Contention audit retains exact completed native classification",
+    "actual": [],
+    "expected": [
+      {
+        "class": "standard",
+        "facts": {
+          "measure": 2
+        }
+      }
+    ]
+  },
+  "before": {
+    "refused": 20,
+    "admitted": 5,
+    "status": "fail"
+  },
+  "after": {
+    "refused": 20,
+    "admitted": 5,
+    "status": "pass"
+  },
+  "nativeInvariant": "Only admitted inert drafts are added. Existing native workflows unchanged; refused draft names absent. Native runs and usage accounting unchanged. Complete audit, native workflows and usage reports survive restart.",
+  "controls": [
+    "success",
+    "invalid",
+    "inaccessible",
+    "unknown",
+    "classification-refused",
+    "revoked"
+  ],
+  "noPermanentRegistrationsAdded": true,
+  "contractStatus": {
+    "clause": "BASE-AGENT-006",
+    "before": "PARTIAL",
+    "after": "PARTIAL",
+    "pointClosed": 6,
+    "countsBefore": {
+      "DONE": 32,
+      "PARTIAL": 50,
+      "MISSING": 17
+    },
+    "countsAfter": {
+      "DONE": 32,
+      "PARTIAL": 50,
+      "MISSING": 17
+    }
+  },
+  "ci": {
+    "run": 42497577443,
+    "event": "push",
+    "head": "52f8599de3a7083337a052d9416600d5380755ea",
+    "status": "in_progress",
+    "conclusion": null,
+    "head_sha": "52f8599de3a7083337a052d9416600d5380755ea",
+    "html_url": "https://github.com/just-every/run-crank/actions/runs/42497577443",
+    "observedAt": "2026-11-08T16:05:24Z",
+    "callsUsed": 5,
+    "watchers": 1,
+    "minimumPollingSeconds": 300
+  },
+  "publicationScan": {
+    "commit": "52f8599de3a7083337a052d9416600d5380755ea",
+    "complete": null,
+    "historyScanned": null,
+    "findings": null,
+    "status": "NOT RUN: cloud branch handoff; guarded Mac lander required"
+  },
+  "mainEquality": false,
+  "runSite": {
+    "status": "not applicable before landing",
+    "run": null
+  },
+  "checks": [
+    {
+      "command": "timeout 1200 node /tmp/sx-f93-browser.mjs",
+      "exit": 0,
+      "head": "52f8599de3a7083337a052d9416600d5380755ea",
+      "proof": "candidate-contention.json; browser-receipt.json; agents-1440.png; agents-390.png"
+    },
+    {
+      "command": "node --test --test-concurrency=1 --test-name-pattern='^PLATFORM-001: SDK and CORE door draft lifecycle' tests/platform.test.mjs",
+      "exit": 0,
+      "head": "52f8599de3a7083337a052d9416600d5380755ea",
+      "log": "PLATFORM.log",
+      "tests": 1,
+      "passed": 1,
+      "failed": 0
+    },
+    {
+      "command": "pnpm typecheck",
+      "exit": 0,
+      "head": "52f8599de3a7083337a052d9416600d5380755ea",
+      "log": "TYPECHECK.log"
+    },
+    {
+      "command": "npx -y @runeditrun/rer check --profile first-party",
+      "exit": 0,
+      "head": "52f8599de3a7083337a052d9416600d5380755ea",
+      "stdoutBytes": 0
+    },
+    {
+      "command": "node src/base/contract-docs.mjs write",
+      "exit": 0,
+      "clauses": 99,
+      "log": "VIEWS-WRITE.log"
+    },
+    {
+      "command": "node src/base/contract-docs.mjs check",
+      "exit": 0,
+      "clauses": 99,
+      "log": "VIEWS-CHECK.log"
+    },
+    {
+      "command": "git checkout origin/main -- ACCEPTANCE.md docs/CLAIMS.md",
+      "exit": 0,
+      "effect": "restore both generated views whole; no view committed"
+    },
+    {
+      "command": "node node_modules/@runeditrun/rer/edition-authoring/cli.mjs lock",
+      "exit": 0,
+      "head": "52f8599de3a7083337a052d9416600d5380755ea"
+    },
+    {
+      "command": "node node_modules/@runeditrun/rer/edition-authoring/cli.mjs check",
+      "exit": 0,
+      "head": "52f8599de3a7083337a052d9416600d5380755ea"
+    },
+    {
+      "command": "npx -y @runeditrun/rer build",
+      "exit": 0,
+      "head": "52f8599de3a7083337a052d9416600d5380755ea",
+      "log": "BUILD.log"
+    }
+  ],
+  "productPush": {
+    "command": "python3 $HOME/rer-consolidation/.tools/cloud-push.py origin cloud/sx-crank-c-f93",
+    "exit": 0,
+    "attempts": 1,
+    "result": "PUSH_OK branch=cloud/sx-crank-c-f93"
+  },
+  "identityInspection": {
+    "command": "git log origin/main..HEAD --format=\"%an <%ae>%n%cn <%ce>%n%(trailers:only,unfold)\"",
+    "commits": 2,
+    "result": "all fleet identities; trailers absent"
+  },
+  "proofFiles": {
+    "agents-390.png": {
+      "bytes": 254590,
+      "sha256": "1271d5f2f24420933b23a38e3773f608180181346559274355e4331f4b1c3a37"
+    },
+    "TYPECHECK.log": {
+      "bytes": 87,
+      "sha256": "a1d306a9ff6bb3b90e3c50b081d7d8579169c225557e1f5b7c347062aa7c2e4a"
+    },
+    "BROWSER-PROBE.mjs": {
+      "bytes": 3086,
+      "sha256": "3be2b3e172c5478dff883d443f69d1a95e60d1eed0721394de868a6910f407ec"
+    },
+    "INHERITED-CI.json": {
+      "bytes": 681,
+      "sha256": "df2cd2be9eef6111c69edcc9a9719788994fec348c04653d6bdb850d4434b754"
+    },
+    "PLAN.md": {
+      "bytes": 2221,
+      "sha256": "cede8a5472be5cbedc97f73775ae4b4a02df20d979e68676049e49c2ff9eedd9"
+    },
+    "agents-1440.png": {
+      "bytes": 276044,
+      "sha256": "e25380be7cf275ca2b4dbe0f2c38d723e55a653a038b78cf49414a7e523f4ba4"
+    },
+    "before-contention.json": {
+      "bytes": 6930,
+      "sha256": "80eac2e506b7ab4355afa99bfa48852c887cd9f87b909414034540010ece0d45"
+    },
+    "BROWSER.log": {
+      "bytes": 368,
+      "sha256": "d409e03603f68c8d728994c173d1f44b55cdb1ca0d3795ce45fcbf1a28088a11"
+    },
+    "PLATFORM.log": {
+      "bytes": 3642,
+      "sha256": "df925dc8a3eb2c309fc89d33583ca7065a38619fadf5db7535da48bcc85a580b"
+    },
+    "VIEWS-WRITE.log": {
+      "bytes": 43,
+      "sha256": "540b168efe390f92191c4c47be4676a9db640b8f3c00b2bea4c20a224c0e80cf"
+    },
+    "candidate-contention.json": {
+      "bytes": 9250,
+      "sha256": "23ddbdefc762317a6b5240b2d97764369520838c7e1879f2192e1cbb30ae6f49"
+    },
+    "BEFORE.log": {
+      "bytes": 716,
+      "sha256": "7c9774891a328f10ec86519256bf7b13bbe1577613bbdde57206558b273104d1"
+    },
+    "BUILD.log": {
+      "bytes": 3194,
+      "sha256": "5d3f6d484291e2c97137eb45c2e83267f2a02a6e12e80fcd29712cf04ae64628"
+    },
+    "VIEWS-CHECK.log": {
+      "bytes": 43,
+      "sha256": "41be670e8514d35d3059536f54f0a1ff875aa0cf719cdfa33febe6c30584d084"
+    },
+    "start-contention.json": {
+      "bytes": 9250,
+      "sha256": "23ddbdefc762317a6b5240b2d97764369520838c7e1879f2192e1cbb30ae6f49"
+    },
+    "browser-receipt.json": {
+      "bytes": 6107,
+      "sha256": "6946d7e5be9f0b5549a3ad753a5b544505947f52cd60ece15d01c44a2d4db30c"
+    }
+  },
+  "finalInstalledSourceLockCheck": {
+    "exit": 0,
+    "head": "52f8599de3a7083337a052d9416600d5380755ea"
+  },
+  "handoff": {
+    "localGates": "pass",
+    "product": "pushed",
+    "landing": "pending guarded Mac lander",
+    "status": "candidate handoff; no green Verify or landing claim"
+  }
+}

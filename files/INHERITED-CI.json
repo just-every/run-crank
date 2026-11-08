@@ -1,0 +1,15 @@
+{
+  "run": 42495093191,
+  "head": "0169bf01751cd589b2a0a4531ea2e2e65e0c3cf6",
+  "job": 128775971884,
+  "name": "shards (app-comparisons)",
+  "event": "push",
+  "conclusion": "failure",
+  "command": "node scripts/verify-ci.mjs \"$SHARD\"",
+  "shard": "app-comparisons",
+  "error": "Error: listen EADDRINUSE: address already in use 127.0.0.1:42473",
+  "classification": "known address-in-use infrastructure failure; no product repair",
+  "sameRunnerReplay": "Unavailable: hosted runner retired; no claim of local reproduction or repaired assertion",
+  "logCommand": "gh run view 42495093191 --repo just-every/run-crank --job 128775971884 --log-failed",
+  "logRead": "success once"
+}

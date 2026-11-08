@@ -1,0 +1,118 @@
+{
+  "files": [
+    {
+      "blob": "4c0976c7099a97aa5699a97e00ca18b471556aac",
+      "bytes": 716,
+      "path": "BEFORE.log",
+      "sha256": "7c9774891a328f10ec86519256bf7b13bbe1577613bbdde57206558b273104d1"
+    },
+    {
+      "blob": "18b9a9dd33f70e4b27e204978ba6cfc1654d0135",
+      "bytes": 3086,
+      "path": "BROWSER-PROBE.mjs",
+      "sha256": "3be2b3e172c5478dff883d443f69d1a95e60d1eed0721394de868a6910f407ec"
+    },
+    {
+      "blob": "afc565f0ed6fe91dd9ccd2c14fc2d3f806aa87cf",
+      "bytes": 368,
+      "path": "BROWSER.log",
+      "sha256": "d409e03603f68c8d728994c173d1f44b55cdb1ca0d3795ce45fcbf1a28088a11"
+    },
+    {
+      "blob": "af87ee7bd29f76165181eee4a8852d8d8ba6de97",
+      "bytes": 3194,
+      "path": "BUILD.log",
+      "sha256": "5d3f6d484291e2c97137eb45c2e83267f2a02a6e12e80fcd29712cf04ae64628"
+    },
+    {
+      "blob": "ca06bed7fd4345916e7322d223d3dd777ee2fdce",
+      "bytes": 681,
+      "path": "INHERITED-CI.json",
+      "sha256": "df2cd2be9eef6111c69edcc9a9719788994fec348c04653d6bdb850d4434b754"
+    },
+    {
+      "blob": "01f107dec3b437ec9c2994d40585d3591c97577a",
+      "bytes": 2221,
+      "path": "PLAN.md",
+      "sha256": "cede8a5472be5cbedc97f73775ae4b4a02df20d979e68676049e49c2ff9eedd9"
+    },
+    {
+      "blob": "87f05e27e2923244aa64e69c3b377775990ce56f",
+      "bytes": 3642,
+      "path": "PLATFORM.log",
+      "sha256": "df925dc8a3eb2c309fc89d33583ca7065a38619fadf5db7535da48bcc85a580b"
+    },
+    {
+      "blob": "66c6795e4ef80e32369df88fe8f1c8b5a3eaa561",
+      "bytes": 7096,
+      "path": "RECEIPT.json",
+      "sha256": "469e8c138c2cfd69fec21d1455c79b5ac5413919517023df810d0a27958abb18"
+    },
+    {
+      "blob": "87c783a455e774d09e517f62cf84e531ca54b0c5",
+      "bytes": 11724,
+      "path": "REPORT.md",
+      "sha256": "8edc137418c0910e937e550b189f335bbfd7b7ac28e4eee880e834b93027a470"
+    },
+    {
+      "blob": "af060dee2ff0562d87182ec3ea28c7e765f47137",
+      "bytes": 87,
+      "path": "TYPECHECK.log",
+      "sha256": "a1d306a9ff6bb3b90e3c50b081d7d8579169c225557e1f5b7c347062aa7c2e4a"
+    },
+    {
+      "blob": "79dd0b129bd8170bc0b3ac0a0c2186314ebf42e3",
+      "bytes": 43,
+      "path": "VIEWS-CHECK.log",
+      "sha256": "41be670e8514d35d3059536f54f0a1ff875aa0cf719cdfa33febe6c30584d084"
+    },
+    {
+      "blob": "ab92292705a601d5509c82e28a33e53c210ae892",
+      "bytes": 43,
+      "path": "VIEWS-WRITE.log",
+      "sha256": "540b168efe390f92191c4c47be4676a9db640b8f3c00b2bea4c20a224c0e80cf"
+    },
+    {
+      "blob": "7155c68f1673d0fefcad4e418330429cb9aba101",
+      "bytes": 276044,
+      "path": "agents-1440.png",
+      "sha256": "e25380be7cf275ca2b4dbe0f2c38d723e55a653a038b78cf49414a7e523f4ba4"
+    },
+    {
+      "blob": "2f0bc65b93064d365a9db974229cac6a66ef0151",
+      "bytes": 254590,
+      "path": "agents-390.png",
+      "sha256": "1271d5f2f24420933b23a38e3773f608180181346559274355e4331f4b1c3a37"
+    },
+    {
+      "blob": "62e12648ed0b8fbe7069e09868e9a1d232e6b7b7",
+      "bytes": 6930,
+      "path": "before-contention.json",
+      "sha256": "80eac2e506b7ab4355afa99bfa48852c887cd9f87b909414034540010ece0d45"
+    },
+    {
+      "blob": "af9a9c19e65dd608db3db77dcbc4de6c4d44c206",
+      "bytes": 6107,
+      "path": "browser-receipt.json",
+      "sha256": "6946d7e5be9f0b5549a3ad753a5b544505947f52cd60ece15d01c44a2d4db30c"
+    },
+    {
+      "blob": "65fb17a8d3bc0bcbd3f7938e3e7ef41234e78d72",
+      "bytes": 9250,
+      "path": "candidate-contention.json",
+      "sha256": "23ddbdefc762317a6b5240b2d97764369520838c7e1879f2192e1cbb30ae6f49"
+    },
+    {
+      "blob": "65fb17a8d3bc0bcbd3f7938e3e7ef41234e78d72",
+      "bytes": 9250,
+      "path": "start-contention.json",
+      "sha256": "23ddbdefc762317a6b5240b2d97764369520838c7e1879f2192e1cbb30ae6f49"
+    }
+  ],
+  "product_branch": "cloud/sx-crank-c-f93",
+  "product_head": "52f8599de3a7083337a052d9416600d5380755ea",
+  "ref": "refs/heads/evidence/sx-crank-c-f93",
+  "repository": "just-every/run-crank",
+  "schema": 1,
+  "tag": "sx-crank-c-f93"
+}

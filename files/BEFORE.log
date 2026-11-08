@@ -1,0 +1,31 @@
+▲ [WARNING] Proxy environment variables detected. We'll use your proxy for fetch requests.
+
+
+node:internal/modules/run_main:123
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: Contention audit retains exact completed native classification
++ actual - expected
+
++ []
+- [
+-   {
+-     class: 'standard',
+-     facts: {
+-       measure: 2
+-     }
+-   }
+- ]
+
+    at contentionJourney (file:///workspace/run-crank/tests/agent-door/journey.mjs:283:37)
+    at async file:///tmp/sx-f93-contention.mjs:4:1 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: [],
+  expected: [ { class: 'standard', facts: { measure: 2 } } ],
+  operator: 'deepStrictEqual',
+  diff: 'simple'
+}
+
+Node.js v22.20.0

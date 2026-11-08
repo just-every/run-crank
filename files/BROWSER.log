@@ -1,0 +1,5 @@
+▲ [WARNING] Proxy environment variables detected. We'll use your proxy for fetch requests.
+
+
+PROBE BASE-AGENT-006 6: concurrent metadata and inert MCP calls -> computed standard facts, decision_busy, no decision, rule, approval, claim or usage reservation; durable restart readback
+PROBE BASE-AGENT-006 6: existing Agents activity and summaries at 1440 and 390 PASS
