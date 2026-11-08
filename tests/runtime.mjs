@@ -17,12 +17,14 @@ await new Promise(resolve => socket.close(resolve))
 const persist = await mkdtemp(join(tmpdir(), 'foundation-runtime-'))
 execFileSync(process.execPath, ['node_modules/wrangler/bin/wrangler.js', 'd1', 'migrations', 'apply', 'foundation', '--local', '--persist-to', persist, '--config', 'dist/server/wrangler.json'], { stdio: ['ignore', 'ignore', 'inherit'], env: { ...process.env, CI: '1', WRANGLER_SEND_METRICS: 'false' } })
 const setupToken = crypto.randomUUID() + crypto.randomUUID()
-const workerArgs = ['node_modules/wrangler/bin/wrangler.js', 'dev', '--inspector-port', '0', '--local', '--persist-to', persist, '--ip', '127.0.0.1', '--config', 'dist/server/wrangler.json', '--port', String(port), '--var', `AUTH_ORIGIN:http://127.0.0.1:${port}`, '--var', 'AUTH_LOCAL:true', '--var', 'MAIL_PROVIDER:development', '--var', 'OWNER_EMAIL:runtime-owner@example.test', '--var', `SETUP_TOKEN:${setupToken}`, '--var', `SESSION_SECRET:${crypto.randomUUID()}${crypto.randomUUID()}`]
+const sessionSecret = crypto.randomUUID() + crypto.randomUUID()
+const ownerAddress = ['synthetic-crank-1', 'example.test'].join('@')
+const workerArgs = ['node_modules/wrangler/bin/wrangler.js', 'dev', '--inspector-port', '0', '--local', '--persist-to', persist, '--ip', '127.0.0.1', '--config', 'dist/server/wrangler.json', '--port', String(port), '--var', `AUTH_ORIGIN:http://127.0.0.1:${port}`, '--var', 'AUTH_LOCAL:true', '--var', 'MAIL_PROVIDER:development', '--var', `OWNER_EMAIL:${ownerAddress}`, '--var', `SETUP_TOKEN:${setupToken}`, '--var', `SESSION_SECRET:${sessionSecret}`]
 let output = '', worker
 function startWorker(extra = []) {
   const child = spawn(process.execPath, [...workerArgs, ...extra], { stdio: ['ignore', 'pipe', 'pipe'] })
-  child.stdout.on('data', chunk => { output += chunk })
-  child.stderr.on('data', chunk => { output += chunk })
+  child.stdout.on('data', chunk => { output += chunk.toString().replaceAll(setupToken, '<private>').replaceAll(sessionSecret, '<private>') })
+  child.stderr.on('data', chunk => { output += chunk.toString().replaceAll(setupToken, '<private>').replaceAll(sessionSecret, '<private>') })
   return child
 }
 async function stopWorker() {

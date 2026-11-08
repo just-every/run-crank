@@ -4084,7 +4084,7 @@
       "executable": false
     },
     "src/crank/ui/email.ts": {
-      "sha256": "1ebbb0efa70a72e06b04cbdba0aca0e7874e75dcd5fa4360a40f50eb6bcc33ab",
+      "sha256": "b972d06bb632d31ece8b72628a818b9de963f7a1ef3c8c3ef1d4610dbb610e09",
       "executable": false
     },
     "src/crank/ui/erasure-view.ts": {
@@ -7348,7 +7348,7 @@
       "executable": false
     },
     "tests/runtime.mjs": {
-      "sha256": "299485f3a069836d94ed3286ce2873a4937a10ad17f5852cb04fd6dd4b5f7cb5",
+      "sha256": "de286c998ab93075cb972671c20515a58519f4e399051fe497eaff28184013ef",
       "executable": false
     },
     "tests/sample-browser.mjs": {
