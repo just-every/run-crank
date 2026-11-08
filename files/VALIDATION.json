@@ -1,0 +1,59 @@
+{
+  "repository": "just-every/run-crank",
+  "branch": "cloud/sx-crank-restore-bridge-1",
+  "base": "52f8599de3a7083337a052d9416600d5380755ea",
+  "node": "22.20.0",
+  "checks": [
+    {
+      "name": "build",
+      "command": "cloud_run npx -y @runeditrun/rer build",
+      "exit": 0,
+      "log": "build.log",
+      "sha256": "d77dad0f911d5c0353092e844ca26cefb17e111a70413354eb9edb2b68e1e992"
+    },
+    {
+      "name": "typecheck",
+      "command": "pnpm run typecheck",
+      "exit": 0,
+      "log": "typecheck.log",
+      "sha256": "e5931fdf6ac9d5291e037441c81e51cd3f276b6138db340768f7c7665f65fc29"
+    },
+    {
+      "name": "restore",
+      "command": "cloud_run node --test --test-concurrency=1 --test-name-pattern='BASE-003 DATA-001' tests/crank.test.mjs",
+      "exit": 0,
+      "log": "restore.log",
+      "sha256": "a9de4f3c58f49893b0710007eef6bbdc32a969fa471aaf1f6d0b111c2d37f3b2"
+    },
+    {
+      "name": "touched_file",
+      "command": "cloud_run node --test --test-concurrency=1 tests/crank.test.mjs",
+      "exit": 0,
+      "log": "tests.log",
+      "sha256": "efbf17092f46cc4e415c7646f722968a6fdfd6f7725b8b6070268ed78c08e4d1",
+      "tests": 18,
+      "passed": 18,
+      "failed": 0
+    }
+  ],
+  "recorded_test_count_before": 200,
+  "recorded_test_count_after": 200,
+  "new_test_registrations": 0,
+  "clause_status_changes": [],
+  "pr": null,
+  "publication_scan": "not run as instructed",
+  "source_lock_check": "pass; exact installed edition-authoring command",
+  "standalone_registry_documentation_bundles": "pass",
+  "head": "0b8655204eeba01ba499becbfc727763a1e356de",
+  "product_push": "success, first attempt; cloud push guard",
+  "product_commits": [
+    "420c82ea5acb76bb078567633e6411553cae3784",
+    "0b8655204eeba01ba499becbfc727763a1e356de"
+  ],
+  "all_candidate_authors_committers": "Run Edit Run fleet <fleet@runeditrun.com>",
+  "all_candidate_trailers": "absent",
+  "full_history": true,
+  "recount_before": 201,
+  "recount_after": 201,
+  "recount_receipt": "COUNTS.json"
+}

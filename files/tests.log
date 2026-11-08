@@ -1,0 +1,121 @@
+TAP version 13
+# [33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProxy environment variables detected. We'll use your proxy for fetch requests.[0m
+# (node:6710) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: native sign-in grants no implicit Base-role product access; owner doors stay protected
+ok 1 - native sign-in grants no implicit Base-role product access; owner doors stay protected
+  ---
+  duration_ms: 4816.105013
+  type: 'test'
+  ...
+# Subtest: SEC-001: private doors need a current session or scoped credential, access/data/import decisions stay the owner's, and revocation lands at commit
+ok 2 - SEC-001: private doors need a current session or scoped credential, access/data/import decisions stay the owner's, and revocation lands at commit
+  ---
+  duration_ms: 2040.810212
+  type: 'test'
+  ...
+# Subtest: preparation does not send; approval binds input, records person and dispatches exactly once
+ok 3 - preparation does not send; approval binds input, records person and dispatches exactly once
+  ---
+  duration_ms: 108.679619
+  type: 'test'
+  ...
+# Subtest: uncertain network delivery replays once with the same bytes/key and cannot repeat its effect
+ok 4 - uncertain network delivery replays once with the same bytes/key and cannot repeat its effect
+  ---
+  duration_ms: 143.658595
+  type: 'test'
+  ...
+# Subtest: TEAM-003: scoped trigger and agent commands prepare only, revoked credentials stop working
+ok 5 - TEAM-003: scoped trigger and agent commands prepare only, revoked credentials stop working
+  ---
+  duration_ms: 2235.03131
+  type: 'test'
+  ...
+# Subtest: rejection has an audit decision and no delivery; destinations cannot escape deployment origin
+ok 6 - rejection has an audit decision and no delivery; destinations cannot escape deployment origin
+  ---
+  duration_ms: 99.200362
+  type: 'test'
+  ...
+# Subtest: MIG-001 move-in door: owner upload, plan without writes, reviewed apply, reconcile, undo and history
+ok 7 - MIG-001 move-in door: owner upload, plan without writes, reviewed apply, reconcile, undo and history
+  ---
+  duration_ms: 798.946794
+  type: 'test'
+  ...
+# Subtest: MIG-001 door refuses expressions and credential exports without echoing them, and keeps used drafts on undo
+ok 8 - MIG-001 door refuses expressions and credential exports without echoing them, and keeps used drafts on undo
+  ---
+  duration_ms: 425.349619
+  type: 'test'
+  ...
+# Subtest: Native n8n original code keeps reviewed sandbox identity through restart and schema refusal
+ok 9 - Native n8n original code keeps reviewed sandbox identity through restart and schema refusal
+  ---
+  duration_ms: 6295.537373
+  type: 'test'
+  ...
+# Subtest: Native n8n stream transforms process the complete bounded stream before receiver writes
+ok 10 - Native n8n stream transforms process the complete bounded stream before receiver writes
+  ---
+  duration_ms: 25000.427421
+  type: 'test'
+  ...
+# Subtest: Native n8n fresh account binding keeps source references inactive and enforces revocation
+ok 11 - Native n8n fresh account binding keeps source references inactive and enforces revocation
+  ---
+  duration_ms: 11304.322715
+  type: 'test'
+  ...
+# Subtest: Native n8n condition operators preserve source types and short circuit receiver dispatch
+ok 12 - Native n8n condition operators preserve source types and short circuit receiver dispatch
+  ---
+  duration_ms: 63525.615444
+  type: 'test'
+  ...
+# Subtest: Native n8n date arithmetic preserves calendar results and retained JSON through reviewed migration
+ok 13 - Native n8n date arithmetic preserves calendar results and retained JSON through reviewed migration
+  ---
+  duration_ms: 46066.035364
+  type: 'test'
+  ...
+# Subtest: Native n8n multi-item batches retain node barriers and replay only failed receiver work
+ok 14 - Native n8n multi-item batches retain node barriers and replay only failed receiver work
+  ---
+  duration_ms: 9610.118302
+  type: 'test'
+  ...
+# Subtest: MIG-001 native graph review, exact apply, restart, branch outcomes and protected undo
+ok 15 - MIG-001 native graph review, exact apply, restart, branch outcomes and protected undo
+  ---
+  duration_ms: 104254.447475
+  type: 'test'
+  ...
+# Subtest: BASE-003 DATA-001: complete portable inventory, inactive restore, explicit per-run adoption and atomic refusal
+ok 16 - BASE-003 DATA-001: complete portable inventory, inactive restore, explicit per-run adoption and atomic refusal
+  ---
+  duration_ms: 107270.854483
+  type: 'test'
+  ...
+# Subtest: erasure deletes input and decisions, blocks redelivery, and fences an older archive
+ok 17 - erasure deletes input and decisions, blocks redelivery, and fences an older archive
+  ---
+  duration_ms: 12035.23319
+  type: 'test'
+  ...
+# Subtest: Reviewed n8n Sheets triggers retain named columns and explicit fresh comparison bindings
+ok 18 - Reviewed n8n Sheets triggers retain named columns and explicit fresh comparison bindings
+  ---
+  duration_ms: 5696.221804
+  type: 'test'
+  ...
+1..18
+# tests 18
+# suites 0
+# pass 18
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 403164.133247

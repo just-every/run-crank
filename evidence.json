@@ -1,0 +1,70 @@
+{
+  "files": [
+    {
+      "blob": "6f051a6daecb07809bf3b19b08e8bc1bbfb45942",
+      "bytes": 1659,
+      "path": "CI.json",
+      "sha256": "48579980280eb7b8cd892ef3cfc52d31a7c57f38d04adbbcee82ac6c9fc72253"
+    },
+    {
+      "blob": "880471e068b4acc7c389456b8698b9ee48802ded",
+      "bytes": 2638,
+      "path": "COUNTS.json",
+      "sha256": "8dc2e0b0855aceaf10c6dc7b6d0708f3a64ec40e3c96d09bb5dc422be1d1af74"
+    },
+    {
+      "blob": "99795b79d3d78cb31fc478b87db6b6979082e2f3",
+      "bytes": 2137,
+      "path": "DEVELOPMENT.md",
+      "sha256": "2855cb0a28e66eef8388f9989e76124cabf4a7f1a21e22d0c1bff2a9f8fe29b0"
+    },
+    {
+      "blob": "66c6542bb30f7c191be364e290aa14a367b39a97",
+      "bytes": 3119,
+      "path": "IMPLEMENTATION.md",
+      "sha256": "0d753fe88ef9ce19dd4feb0733882f933f3fd9737336564873a1b9e9aace704c"
+    },
+    {
+      "blob": "bca36e0581214a45a9e91c32dea5288918158968",
+      "bytes": 5112,
+      "path": "REPORT.md",
+      "sha256": "696d6033c4c7c2ccbb379e26a8dc00cd3129eaba6869b2fd050c4d652188706b"
+    },
+    {
+      "blob": "c1cb41bc119d3cd37f70bda8643180bf31f77be8",
+      "bytes": 2008,
+      "path": "VALIDATION.json",
+      "sha256": "a3636fb0601d047665b5f5e2348a41d5abf35b453abb3d0e048d5691286f8010"
+    },
+    {
+      "blob": "29b6b4d9ac38031e214afec83641ab1a368767a2",
+      "bytes": 4011,
+      "path": "build.log",
+      "sha256": "d77dad0f911d5c0353092e844ca26cefb17e111a70413354eb9edb2b68e1e992"
+    },
+    {
+      "blob": "ac6c6c3d877958d4b04dbe43d40edb754d216687",
+      "bytes": 726,
+      "path": "restore.log",
+      "sha256": "a9de4f3c58f49893b0710007eef6bbdc32a969fa471aaf1f6d0b111c2d37f3b2"
+    },
+    {
+      "blob": "e3afc72b2bae244c9075cbbafb972241ee24b869",
+      "bytes": 5195,
+      "path": "tests.log",
+      "sha256": "efbf17092f46cc4e415c7646f722968a6fdfd6f7725b8b6070268ed78c08e4d1"
+    },
+    {
+      "blob": "5e2ee215ba727d33355111366fb0fbe3ee867b30",
+      "bytes": 137,
+      "path": "typecheck.log",
+      "sha256": "e5931fdf6ac9d5291e037441c81e51cd3f276b6138db340768f7c7665f65fc29"
+    }
+  ],
+  "product_branch": "cloud/sx-crank-restore-bridge-1",
+  "product_head": "0b8655204eeba01ba499becbfc727763a1e356de",
+  "ref": "refs/heads/evidence/sx-crank-restore-bridge-1",
+  "repository": "just-every/run-crank",
+  "schema": 1,
+  "tag": "sx-crank-restore-bridge-1"
+}
