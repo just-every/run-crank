@@ -11,6 +11,7 @@ import { chromium, expect } from '@playwright/test';
 const axeSource = await readFile(new URL('../node_modules/axe-core/axe.min.js', import.meta.url), 'utf8');
 const auditRows = [];
 const candidateHead = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+const sourceClean = !execFileSync('git', ['status', '--porcelain', '--untracked-files=no'], { encoding: 'utf8' }).trim();
 let completed = false;
 const evidence = process.env.CRANK_EVIDENCE;
 assert.ok(evidence, 'Set CRANK_EVIDENCE');
@@ -254,6 +255,21 @@ async function measuredChecks(width, state) {
     assert.ok(focus.exposed && focus.inViewport, `${state}: focus unobscured ${JSON.stringify(focus)}`);
     minimumContrast = Math.min(minimumContrast, focus.contrast);
   }
+  const hoverTested = await page.evaluate(() => matchMedia('(hover: hover)').matches);
+  if (hoverTested) {
+    await page.mouse.move(0, 0);
+    await page.evaluate(() => { document.body.tabIndex = -1; document.body.focus(); document.body.removeAttribute('tabindex'); });
+    const hoverControl = page.locator('a.search');
+    const hoverHelp = hoverControl.locator('[role="tooltip"]');
+    await hoverControl.hover();
+    await expect(hoverHelp).toBeVisible();
+    const helpBounds = await hoverHelp.boundingBox();
+    await page.mouse.move(helpBounds.x + helpBounds.width / 2, helpBounds.y + helpBounds.height / 2, { steps: 6 });
+    await expect(hoverHelp).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(hoverHelp).toBeHidden();
+    await page.mouse.move(0, 0);
+  }
   assert.equal(page.url(), beforeFocus, `${state}: focus alone does not navigate`);
   await page.evaluate(() => { const saved = window.__auditFocus; saved.previous?.focus(); for (const details of document.querySelectorAll('details')) details.open = saved.openDetails.includes(details); scrollTo(saved.x, saved.y); delete window.__auditFocus; });
   const viewport = page.viewportSize();
@@ -286,7 +302,7 @@ async function measuredChecks(width, state) {
   assert.equal(spacingReflow, true, `${state}: increased text spacing reflows`);
   assert.equal(reflow.document, true, `${state}: 320 CSS pixel reflow`);
   assert.deepEqual(reflow.scrollContainers, [], `${state}: no two-dimensional scrolling`);
-  return { ...checks, minimumFocusContrast: minimumContrast, nativeSubfieldStops, reflow, spacingReflow };
+  return { ...checks, minimumFocusContrast: minimumContrast, nativeSubfieldStops, hoverTested, reflow, spacingReflow };
 }
 
 async function audit(width, state) {
@@ -696,7 +712,7 @@ try {
   process.exitCode = 1;
 } finally {
   await writeFile(join(evidence, 'decision-requests.json'), JSON.stringify(report, null, 2));
-  await writeFile(join(evidence, 'accessibility-receipt.json'), JSON.stringify({ head: candidateHead, completed, states: auditRows.map(({width,state,violations,measured}) => ({width,state,violations: violations.length,measured: !!measured})), screenshots: auditRows.filter(row => row.measured).map(row => `${row.width}-${row.state}.png`) }, null, 2));
+  await writeFile(join(evidence, 'accessibility-receipt.json'), JSON.stringify({ head: candidateHead, sourceClean, completed, states: auditRows.map(({width,state,violations,measured}) => ({width,state,violations: violations.length,measured: !!measured})), screenshots: auditRows.filter(row => row.measured).map(row => `${row.width}-${row.state}.png`) }, null, 2));
   await browser?.close();
   await new Promise(resolve => receiver.close(resolve));
   for (const child of children.reverse()) await stopOwned(child);
