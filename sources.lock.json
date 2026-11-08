@@ -111,6 +111,10 @@
     }
   ],
   "files": {
+    ".github/workflows/container-qualify.yml": {
+      "sha256": "49e01a39eda5eb2c43526e38505ba025513e8f489f44927ae5d9718520f72084",
+      "executable": false
+    },
     ".github/workflows/rer-managed.yml": {
       "sha256": "7f5f61b7c2548b27e2fc5c3e7b10bd874bb1de2232a98531c97b09dcd4043d73",
       "executable": false
@@ -221,6 +225,10 @@
     },
     "docs/CLAIMS.md": {
       "sha256": "e7cb35d4cf8e9c429e381f7e32707ea73559639855b5b2152f1bfc33be74a79f",
+      "executable": false
+    },
+    "docs/CONTAINER-QUALIFICATION.md": {
+      "sha256": "15ff8dcaa390a7f40e89e6d437d20b5cfaf83bdefd5bb3f00642d060b0ddc0c8",
       "executable": false
     },
     "docs/DATA-FLOWS.md": {
@@ -2053,6 +2061,10 @@
     },
     "scripts/build-deployment-spec.mjs": {
       "sha256": "765b035fb0a6cecc2a07b2109f2dc36d110c1740021622c91b0bd7d64444268d",
+      "executable": false
+    },
+    "scripts/container-qualify.mjs": {
+      "sha256": "a965f08cff54ce68caad0daee3f8dc1e7ff5ce18277d19a3d57e9c24e3c583b2",
       "executable": false
     },
     "scripts/crank.mjs": {
