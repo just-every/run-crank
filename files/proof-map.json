@@ -1,5 +1,5 @@
 {
-  "head": "37007521bfa3a034b21f83077c4fea9664688681",
+  "head": "7ef378f73cfaf5576bc7f133172668363c0a8bca",
   "proof": [
     {
       "file": "executors/linux/launch.py",
@@ -7,7 +7,7 @@
       "lines": [
         37
       ],
-      "sha256": "8258f5bd5eb4fee2715877353bd24602699bb56f195a23ccf6c1f5b84ee5ca7a"
+      "sha256": "d59fcb3da87b464d1e3eb0a61a87b0c52759ba079dd28452803250692251b0b5"
     },
     {
       "file": "executors/linux/launch.py",
@@ -15,7 +15,7 @@
       "lines": [
         59
       ],
-      "sha256": "8258f5bd5eb4fee2715877353bd24602699bb56f195a23ccf6c1f5b84ee5ca7a"
+      "sha256": "d59fcb3da87b464d1e3eb0a61a87b0c52759ba079dd28452803250692251b0b5"
     },
     {
       "file": "executors/linux/launch.py",
@@ -23,7 +23,7 @@
       "lines": [
         77
       ],
-      "sha256": "8258f5bd5eb4fee2715877353bd24602699bb56f195a23ccf6c1f5b84ee5ca7a"
+      "sha256": "d59fcb3da87b464d1e3eb0a61a87b0c52759ba079dd28452803250692251b0b5"
     },
     {
       "file": "executors/linux/launch.py",
@@ -31,24 +31,24 @@
       "lines": [
         87
       ],
-      "sha256": "8258f5bd5eb4fee2715877353bd24602699bb56f195a23ccf6c1f5b84ee5ca7a"
+      "sha256": "d59fcb3da87b464d1e3eb0a61a87b0c52759ba079dd28452803250692251b0b5"
     },
     {
       "file": "executors/linux/launch.py",
       "term": "def supervise(",
       "lines": [
-        182
+        184
       ],
-      "sha256": "8258f5bd5eb4fee2715877353bd24602699bb56f195a23ccf6c1f5b84ee5ca7a"
+      "sha256": "d59fcb3da87b464d1e3eb0a61a87b0c52759ba079dd28452803250692251b0b5"
     },
     {
       "file": "executors/linux/launch.py",
       "term": "durable_result(config, result)",
       "lines": [
         21,
-        215
+        217
       ],
-      "sha256": "8258f5bd5eb4fee2715877353bd24602699bb56f195a23ccf6c1f5b84ee5ca7a"
+      "sha256": "d59fcb3da87b464d1e3eb0a61a87b0c52759ba079dd28452803250692251b0b5"
     },
     {
       "file": "executors/linux/server.mjs",
@@ -56,7 +56,7 @@
       "lines": [
         45
       ],
-      "sha256": "841f623994e89e0594c294eca489ad4b2af4ec256b67fdc34c9290d089cb342d"
+      "sha256": "e981ad49297366b816d2973a87442d9c325c78c1fc04ce4e8bb8e2d5f418e929"
     },
     {
       "file": "executors/linux/server.mjs",
@@ -64,7 +64,7 @@
       "lines": [
         68
       ],
-      "sha256": "841f623994e89e0594c294eca489ad4b2af4ec256b67fdc34c9290d089cb342d"
+      "sha256": "e981ad49297366b816d2973a87442d9c325c78c1fc04ce4e8bb8e2d5f418e929"
     },
     {
       "file": "executors/linux/server.mjs",
@@ -72,7 +72,7 @@
       "lines": [
         126
       ],
-      "sha256": "841f623994e89e0594c294eca489ad4b2af4ec256b67fdc34c9290d089cb342d"
+      "sha256": "e981ad49297366b816d2973a87442d9c325c78c1fc04ce4e8bb8e2d5f418e929"
     },
     {
       "file": "src/crank/executors/step.ts",
@@ -144,7 +144,7 @@
       "lines": [
         34
       ],
-      "sha256": "fafa3d6894d28298c8477ccbdf6f313a0436545f35ab5456bfc10bbedb350cae"
+      "sha256": "b673fd530897d8fb6d3afb81d4d2e3b44fc4dd21d7e6303d9c370d1f32098ce9"
     },
     {
       "file": "tests/executor-linux.mjs",
@@ -152,7 +152,7 @@
       "lines": [
         46
       ],
-      "sha256": "fafa3d6894d28298c8477ccbdf6f313a0436545f35ab5456bfc10bbedb350cae"
+      "sha256": "b673fd530897d8fb6d3afb81d4d2e3b44fc4dd21d7e6303d9c370d1f32098ce9"
     },
     {
       "file": "tests/executor-linux.mjs",
@@ -160,7 +160,7 @@
       "lines": [
         52
       ],
-      "sha256": "fafa3d6894d28298c8477ccbdf6f313a0436545f35ab5456bfc10bbedb350cae"
+      "sha256": "b673fd530897d8fb6d3afb81d4d2e3b44fc4dd21d7e6303d9c370d1f32098ce9"
     },
     {
       "file": "tests/executor-linux.mjs",
@@ -168,7 +168,7 @@
       "lines": [
         55
       ],
-      "sha256": "fafa3d6894d28298c8477ccbdf6f313a0436545f35ab5456bfc10bbedb350cae"
+      "sha256": "b673fd530897d8fb6d3afb81d4d2e3b44fc4dd21d7e6303d9c370d1f32098ce9"
     },
     {
       "file": "tests/executor-linux.mjs",
@@ -176,7 +176,7 @@
       "lines": [
         58
       ],
-      "sha256": "fafa3d6894d28298c8477ccbdf6f313a0436545f35ab5456bfc10bbedb350cae"
+      "sha256": "b673fd530897d8fb6d3afb81d4d2e3b44fc4dd21d7e6303d9c370d1f32098ce9"
     },
     {
       "file": "tests/executor-linux.mjs",
@@ -184,7 +184,7 @@
       "lines": [
         71
       ],
-      "sha256": "fafa3d6894d28298c8477ccbdf6f313a0436545f35ab5456bfc10bbedb350cae"
+      "sha256": "b673fd530897d8fb6d3afb81d4d2e3b44fc4dd21d7e6303d9c370d1f32098ce9"
     },
     {
       "file": "tests/executor-linux.mjs",
@@ -192,7 +192,7 @@
       "lines": [
         72
       ],
-      "sha256": "fafa3d6894d28298c8477ccbdf6f313a0436545f35ab5456bfc10bbedb350cae"
+      "sha256": "b673fd530897d8fb6d3afb81d4d2e3b44fc4dd21d7e6303d9c370d1f32098ce9"
     },
     {
       "file": "tests/executor-schema-browser.mjs",

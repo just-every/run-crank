@@ -9,4 +9,4 @@ Error: CGROUP_V2_DELEGATION_REQUIRED: real Linux quota proof needs delegated mem
     at linuxExecutor (file:///home/agent/rer-consolidation/work/sx-crank-c-f96/run-crank/tests/executor-fixture.mjs:41:66)
     at async file:///home/agent/rer-consolidation/work/sx-crank-c-f96/run-crank/tests/executor-linux.mjs:11:16
 
-Node.js v24.19.0
+Node.js v22.20.0

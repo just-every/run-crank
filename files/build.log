@@ -14,7 +14,7 @@ computing gzip size...
 dist/client/.assetsignore               0.02 kB
 dist/client/assets/index-DgoNPDnv.js  311.20 kB │ gzip: 100.86 kB
 
-✓ built in 419ms
+✓ built in 464ms
 vite v8.2.2 building ssr environment for production...
 transforming...
 ✓ 988 modules transformed.
@@ -41,6 +41,6 @@ dist/server/index.js                                       2,377.36 kB │ gzip:
 
 [INEFFECTIVE_DYNAMIC_IMPORT] src/crank/access.ts is dynamically imported by src/crank/agent-door/people.ts but also statically imported by src/crank/agent-door/native-recovery.ts, src/crank/agent-door/tool-metadata.ts, src/crank/agent-door/tool-workflows.ts, src/crank/agents/authoring-promotion.ts, src/crank/agents/authoring-record.ts, ..., dynamic import will not move module into another chunk.
 
-✓ built in 1.06s
+✓ built in 1.14s
 Your application is built
 build: complete (exit 0)

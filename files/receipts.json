@@ -2,7 +2,7 @@
   "tag": "sx-crank-c-f96",
   "repository": "just-every/run-crank",
   "branch": "cloud/sx-crank-c-f96",
-  "head": "37007521bfa3a034b21f83077c4fea9664688681",
+  "head": "7ef378f73cfaf5576bc7f133172668363c0a8bca",
   "base": "52f8599de3a7083337a052d9416600d5380755ea",
   "status_before": "PARTIAL",
   "status_after": "PARTIAL",
@@ -23,7 +23,7 @@
   "contract_diff_bytes": 0,
   "product_pushed": true,
   "publication_scan": {
-    "commit": "37007521bfa3a034b21f83077c4fea9664688681",
+    "commit": "7ef378f73cfaf5576bc7f133172668363c0a8bca",
     "complete": null,
     "historyScanned": null,
     "findings": null,
@@ -36,10 +36,21 @@
     42497577443
   ],
   "main_run_site": 42499438688,
-  "candidate_verify_run": 42502971132,
+  "candidate_verify_run": 42504682826,
   "candidate_verify_status": "in_progress",
-  "candidate_verify_observed_at": "2026-11-08T17:20:51Z",
+  "candidate_verify_observed_at": "2026-11-08T17:28:43Z",
   "main_changed": false,
   "pr": null,
-  "github_calls_so_far": 5
+  "github_calls_so_far": 7,
+  "earlier_candidate": "37007521bfa3a034b21f83077c4fea9664688681",
+  "earlier_verify_run": 42502971132,
+  "workflow_rest_calls": 7,
+  "handoff": "PUSHED",
+  "ready": false,
+  "proven_acceptance_points": [
+    2
+  ],
+  "pending_kernel_proof": true,
+  "remote_product_head_verified": "7ef378f73cfaf5576bc7f133172668363c0a8bca",
+  "product_worktree_clean": true
 }

@@ -1,0 +1,12 @@
+{
+  "head": "7ef378f73cfaf5576bc7f133172668363c0a8bca",
+  "command": [
+    "timeout",
+    "1200",
+    "node",
+    "tests/executor-linux.mjs"
+  ],
+  "exit": 1,
+  "result": "CGROUP_V2_DELEGATION_REQUIRED (EACCES)",
+  "proof": "not run: no local delegation or sudo"
+}
