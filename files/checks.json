@@ -1,0 +1,69 @@
+{
+  "head": "5d4c2784ba44da64911b1df5702d202c4400c8da",
+  "checks": [
+    {
+      "command": "npx -y @runeditrun/rer setup --owner-email fleet@runeditrun.com --non-interactive",
+      "exit": 1,
+      "result": "Temporary app listener handshake failed; expected internal port 61450, observed listeners 37003, 41707 and 44065. No setup success claimed."
+    },
+    {
+      "command": "node --test --test-concurrency=1 --test-name-pattern='^Inbound email ' tests/triggers.test.mjs",
+      "exit": 0,
+      "tests": 3,
+      "passed": 3
+    },
+    {
+      "command": "pnpm typecheck",
+      "exit": 0
+    },
+    {
+      "command": "npx -y @runeditrun/rer check --profile first-party",
+      "exit": 0
+    },
+    {
+      "command": "node src/base/contract-docs.mjs write",
+      "exit": 0
+    },
+    {
+      "command": "node src/base/contract-docs.mjs check",
+      "exit": 0,
+      "clauses": 99
+    },
+    {
+      "command": "git checkout origin/main -- ACCEPTANCE.md docs/CLAIMS.md",
+      "exit": 0
+    },
+    {
+      "command": "node node_modules/@runeditrun/rer/edition-authoring/cli.mjs lock",
+      "exit": 0
+    },
+    {
+      "command": "node node_modules/@runeditrun/rer/edition-authoring/cli.mjs check",
+      "exit": 0,
+      "note": "Installed tool is the Verify source-lock command. The legacy source CLI produces a different toolchain fingerprint and was not used to rewrite the lock."
+    },
+    {
+      "command": "npx -y @runeditrun/rer build --platform container",
+      "exit": 1,
+      "head": "5d4c2784ba44da64911b1df5702d202c4400c8da",
+      "stage": "Dockerfile line 6: npm install --omit=dev --no-audit --no-fund",
+      "error": "SELF_SIGNED_CERT_IN_CHAIN",
+      "failure": "request to https://registry.npmjs.org/miniflare failed, reason: self-signed certificate in certificate chain",
+      "base_file": "node_modules/@runeditrun/rer/modules/container/build.mjs:97",
+      "base_cli": "node_modules/@runeditrun/rer/cli/container.mjs:53",
+      "result": "Stopped container implementation under the brief; no unsupported Dockerfile replacement or certificate-verification bypass."
+    },
+    {
+      "command": "CRANK_EVIDENCE=<packet>/screens CRANK_CHROMIUM=/usr/bin/chromium node tests/runtime.mjs",
+      "exit": 0,
+      "head": "5d4c2784ba44da64911b1df5702d202c4400c8da",
+      "platform_guard": "passed",
+      "native_emitted_recovery": "passed",
+      "screens": [
+        "screens/1440-container-email-requirement.png",
+        "screens/390-container-email-requirement.png"
+      ],
+      "container_qualification": false
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+Application listened on port 37003, 41707, 44065; readiness failed for GET [REDACTED]/health through expected internal port 61450. Check application health and the runtime target's port binding.
+Starting your application on this computer (waiting for the bound internal listener): readiness deadline exceeded (exit none, signal none). Last health: Waiting for the application listener handshake.
+Installation stopped while starting the application. Ask your agent to check the edition's operating command for that step, correct the cause, then select Start again. Your setup answers are saved; you may need to supply credentials again.
+Command: /home/agent/.rer/node/node-v22.20.0-linux-x64/bin/node
+Last output (up to 40 lines):
+▲ [WARNING] Proxy environment variables detected. We'll use your proxy for fetch requests.
+
+
+(node:1739) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Using secrets defined in .dev.vars
+Log: [REDACTED]/.seed/installer/commands-965/install.log
+Application listened on port 37003, 41707, 44065; readiness failed for GET [REDACTED]/health through expected internal port 61450. Check application health and the runtime target's port binding.
+setup: failed (exit 1)

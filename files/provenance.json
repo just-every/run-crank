@@ -1,0 +1,80 @@
+{
+  "tag": "sx-crank-c-f102",
+  "repository": "just-every/run-crank",
+  "branch": "cloud/sx-crank-c-f102",
+  "head": "5d4c2784ba44da64911b1df5702d202c4400c8da",
+  "main": "4da29fb0d18db5b317e43fb4a6ef9f9419f1c99b",
+  "product_tree": "a0be693aecca3be955b74c24e7e38e237022a867",
+  "predecessor": "5d4c2784ba44da64911b1df5702d202c4400c8da",
+  "rebase": "git rebase origin/main: up to date",
+  "product_commits": [
+    "5d4c2784ba44da64911b1df5702d202c4400c8da Keep unsupported receiving state clear and redact runtime fixture secrets [skip ci]",
+    "8ba64e81147e438cea04eaf7a0c1af7d570b631b Refuse container inbound aliases and document own-server adoption [skip ci]"
+  ],
+  "changed_files": [
+    "OPERATIONS.md",
+    "RUN-LOCALLY.md",
+    "deploy.json",
+    "docs/INBOUND-EMAIL.md",
+    "sources.lock.json",
+    "src/crank/triggers/email.ts",
+    "src/crank/ui/email.ts",
+    "tests/runtime.mjs"
+  ],
+  "contract_changed": false,
+  "base_copies_changed": false,
+  "pins_changed": false,
+  "generated_views_changed": false,
+  "counts_before": {
+    "done": 32,
+    "partial": 50,
+    "missing": 17,
+    "total": 99
+  },
+  "counts_after": {
+    "done": 32,
+    "partial": 50,
+    "missing": 17,
+    "total": 99
+  },
+  "registered_tests_before": 200,
+  "registered_tests_after": 200,
+  "new_test_registrations": 0,
+  "new_product_edits_this_continuation": 0,
+  "qualifying_memory_limit_bytes": 1073741824,
+  "memory_limit_qualification": "NOT RUN: maintained image build failed with SELF_SIGNED_CERT_IN_CHAIN",
+  "container_manifest": {
+    "engine": "workerd",
+    "d1": [
+      "DB"
+    ],
+    "crons": [
+      "* * * * *"
+    ],
+    "kv": 0,
+    "r2": 0,
+    "queues": {
+      "producers": [],
+      "consumers": []
+    },
+    "durable_objects": {
+      "bindings": []
+    }
+  },
+  "dockerfile_sha256": "b377eee92bbe73ca5654cbbbb1fc27f875cbd4a8dc473406818330d9e1843cc3",
+  "base_build_support": {
+    "builder": "node_modules/@runeditrun/rer/modules/container/build.mjs",
+    "line": 97,
+    "behavior": "Generated npm installation has no CA secret mount or trust-setting door",
+    "cli": "node_modules/@runeditrun/rer/cli/container.mjs",
+    "cli_line": 53,
+    "command": "docker build --tag IMAGE BUILD_DIRECTORY"
+  },
+  "publication_scan": "Not run in cloud; retained Mac gate; no READY claim",
+  "main_equality": false,
+  "run_site": "Not run: main unchanged",
+  "pr": null,
+  "blocker": "Base-owned generated Dockerfile lacks a supported CA-trust input for dependency installation in the cloud proxy environment.",
+  "working_tree_clean": true,
+  "native_runtime_result": "PASS, including browser proof at 1440 and 390; not container qualification"
+}
