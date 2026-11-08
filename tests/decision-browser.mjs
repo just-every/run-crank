@@ -1,5 +1,6 @@
-/** UX-001: real owner decisions across connection loss. Run through heavy-slot. */
+/** UX-001: accessible owner operation and real decisions across connection loss. */
 import assert from 'node:assert/strict';
+import { createServer } from 'node:http';
 import { spawn, execFileSync } from 'node:child_process';
 import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { createWriteStream } from 'node:fs';
@@ -9,6 +10,8 @@ import { chromium, expect } from '@playwright/test';
 
 const axeSource = await readFile(new URL('../node_modules/axe-core/axe.min.js', import.meta.url), 'utf8');
 const auditRows = [];
+const candidateHead = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+let completed = false;
 const evidence = process.env.CRANK_EVIDENCE;
 assert.ok(evidence, 'Set CRANK_EVIDENCE');
 await mkdir(evidence, { recursive: true });
@@ -21,6 +24,17 @@ const decisionButtons = page => decisionForms(page).locator('button');
 const formFor = (page, id) => decisionForms(page).filter({ has: page.locator(`[name="path"][value*="/${id}/"]`) });
 const status = page => page.locator('[data-decision-status][role="status"]');
 let browser, page;
+const receiverRequests = [];
+const receiver = createServer(async (request, response) => {
+  let body = ''; for await (const part of request) body += part;
+  const key = request.headers['idempotency-key'];
+  receiverRequests.push({ key, body: JSON.parse(body) });
+  const attempt = receiverRequests.filter(item => item.key === key).length;
+  response.writeHead(attempt === 1 ? 503 : 200, { 'content-type': 'application/json' });
+  response.end(JSON.stringify({ id: 'synthetic-crank-receipt-' + key, idempotencyKey: key }));
+});
+await new Promise(resolve => receiver.listen(9051, '127.0.0.1', resolve));
+const receiverOrigin = 'http://127.0.0.1:' + receiver.address().port;
 
 function startDev() {
   const child = spawn('rer', ['dev', '--foreground'], {
@@ -54,10 +68,88 @@ async function frozen(page, note) {
   await expect(page.locator('[data-decision-refresh]')).toBeEnabled();
 }
 
+// axe cannot resolve image and gradient backgrounds. Measure their actual
+// rendered pixels with text temporarily transparent, then restore every style.
+async function renderedContrast(incomplete) {
+  await page.evaluate(() => document.fonts.ready);
+  const selectors = incomplete.filter(rule => rule.id === 'color-contrast').flatMap(rule => rule.nodes);
+  const targets = await page.evaluate(selectors => {
+    if (window.__contrastStyles) throw Error('Overlapping contrast measurement');
+    const targets = [];
+    for (const selector of selectors) {
+      const element = document.querySelector(selector.join(' '));
+      if (!element || element.matches(':disabled') || !element.getClientRects().length) continue;
+      const style = getComputedStyle(element);
+      let rects = [...element.childNodes].filter(node => node.nodeType === 3 && node.textContent.trim()).flatMap(node => {
+        const range = document.createRange(); range.selectNodeContents(node); return [...range.getClientRects()];
+      });
+      if (element.matches('input,select,textarea')) {
+        const r = element.getBoundingClientRect();
+        rects = [{ left: r.left + parseFloat(style.paddingLeft) + 2, top: r.top + parseFloat(style.paddingTop) + 2, right: r.right - parseFloat(style.paddingRight) - 2, bottom: r.bottom - parseFloat(style.paddingBottom) - 2 }];
+      }
+      const color = style.color.match(/[\d.]+/g).map(Number);
+      const large = parseFloat(style.fontSize) >= 24 || parseFloat(style.fontSize) >= 18.66 && parseInt(style.fontWeight) >= 700;
+      // A Range includes text hidden by an ellipsis; sample only painted
+      // bounds so a clipped breadcrumb cannot sample the neighboring avatar.
+      const bounds = element.getBoundingClientRect();
+      for (const r of rects) {
+        const clipped = { left: Math.max(r.left,bounds.left), top: Math.max(r.top,bounds.top), right: Math.min(r.right,bounds.right), bottom: Math.min(r.bottom,bounds.bottom) };
+        for (let parent = element.parentElement; parent; parent = parent.parentElement) {
+          const ps = getComputedStyle(parent), pr = parent.getBoundingClientRect();
+          if (/hidden|clip|auto|scroll/.test(ps.overflowX)) { clipped.left = Math.max(clipped.left,pr.left); clipped.right = Math.min(clipped.right,pr.right); }
+          if (/hidden|clip|auto|scroll/.test(ps.overflowY)) { clipped.top = Math.max(clipped.top,pr.top); clipped.bottom = Math.min(clipped.bottom,pr.bottom); }
+        }
+        if (clipped.right > clipped.left && clipped.bottom > clipped.top) targets.push({ selector, color, required: large ? 3 : 4.5, rect: { left: clipped.left + scrollX, top: clipped.top + scrollY, right: clipped.right + scrollX, bottom: clipped.bottom + scrollY } });
+      }
+    }
+    window.__contrastStyles = [...document.querySelectorAll('body,body *')].map(element => [element, element.getAttribute('style')]);
+    for (const [element] of window.__contrastStyles) {
+      element.style.setProperty('color', 'transparent', 'important');
+      element.style.setProperty('-webkit-text-fill-color', 'transparent', 'important');
+      element.style.setProperty('text-shadow', 'none', 'important');
+      element.style.setProperty('caret-color', 'transparent', 'important');
+    }
+    return targets;
+  }, selectors);
+  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  let png;
+  try { png = [...await page.screenshot({ fullPage: true, scale: 'css' })]; }
+  finally {
+    await page.evaluate(() => {
+      for (const [element, style] of window.__contrastStyles) {
+        element.style.cssText = style ?? '';
+        if (style === null) element.removeAttribute('style');
+      }
+      delete window.__contrastStyles;
+    });
+    await page.evaluate(() => new Promise(requestAnimationFrame));
+  }
+  const ratios = await page.evaluate(async ({ png, targets }) => {
+    const bitmap = await createImageBitmap(new Blob([new Uint8Array(png)], { type: 'image/png' }));
+    const canvas = document.createElement('canvas'); canvas.width = bitmap.width; canvas.height = bitmap.height;
+    const context = canvas.getContext('2d'); context.drawImage(bitmap, 0, 0);
+    const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+    const lum = rgb => rgb.slice(0,3).map(v => { v /= 255; return v <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; }).reduce((sum,value,i) => sum + value * [.2126,.7152,.0722][i], 0);
+    return targets.map(target => {
+      let minimum = Infinity; const foreground = lum(target.color), r = target.rect;
+      for (let y = Math.max(0,Math.ceil(r.top)); y < Math.min(canvas.height,Math.floor(r.bottom)); y++) {
+        for (let x = Math.max(0,Math.ceil(r.left)); x < Math.min(canvas.width,Math.floor(r.right)); x++) {
+          const offset = (y * canvas.width + x) * 4, background = lum([...pixels.slice(offset,offset+3)]);
+          minimum = Math.min(minimum,(Math.max(foreground,background)+.05)/(Math.min(foreground,background)+.05));
+        }
+      }
+      return { selector: target.selector, color: target.color, rect: r, required: target.required, minimum };
+    });
+  }, { png, targets });
+  for (const row of ratios) assert.ok(Number.isFinite(row.minimum) && row.minimum >= row.required, `Rendered text contrast: ${JSON.stringify(row)}`);
+  return ratios;
+}
+
 const focusable = 'a[href],button,input:not([type=hidden]),select,textarea,summary,[tabindex]';
 async function measuredChecks(width, state) {
   const checks = await page.evaluate(selector => {
-    const visible = element => element.getClientRects().length && getComputedStyle(element).visibility !== 'hidden' && !element.closest('[inert]');
+    axe.setup(document);
+    const visible = element => element.checkVisibility({ checkVisibilityCSS: true, checkOpacity: true }) && !element.closest('[inert]') && ![...document.querySelectorAll('details:not([open])')].some(details => details.contains(element) && !details.querySelector(':scope > summary')?.contains(element));
     const controls = [...document.querySelectorAll(selector)].filter(element => visible(element) && !element.disabled && element.tabIndex >= 0);
     const targets = controls.map(element => ({ element, rect: element.getBoundingClientRect() }));
     const small = [];
@@ -78,17 +170,33 @@ async function measuredChecks(width, state) {
       });
       if (collision) small.push({ control: element.outerHTML.slice(0, 200), width: rect.width, height: rect.height });
     }
-    const unnamed = controls.filter(element => !axe.commons.text.accessibleText(element).trim()).map(element => element.outerHTML.slice(0, 200));
+    const namedControls = [...document.querySelectorAll('a[href],button,input:not([type=hidden]),select,textarea,summary,[role=button],[role=link]')].filter(visible);
+    const unnamed = namedControls.filter(element => !axe.commons.text.accessibleText(element).trim()).map(element => element.outerHTML.slice(0, 200));
+    const missingTooltips = controls.filter(element => {
+      if (!element.matches('a,button,summary')) return false;
+      const copy = element.cloneNode(true);
+      for (const decoration of copy.querySelectorAll('svg,[role=tooltip],.sr-only')) decoration.remove();
+      const text = copy.textContent.trim();
+      return (!text || /^[↑↓←→×+−–]+$/.test(text)) && !element.querySelector('[role=tooltip]');
+    }).map(element => element.outerHTML.slice(0,200));
     const positiveTabindex = controls.filter(element => element.tabIndex > 0).map(element => element.outerHTML.slice(0, 200));
     const emptyStates = [...document.querySelectorAll('.status,.chip,.pill')].filter(element => visible(element) && !element.textContent.trim()).map(element => element.outerHTML);
-    const notices = [...document.querySelectorAll('[data-decision-status]')].map(element => ({ role: element.getAttribute('role'), live: element.getAttribute('aria-live'), atomic: element.getAttribute('aria-atomic'), text: element.textContent.trim() }));
+    const edges = [...document.querySelectorAll('input:not([type=hidden]):not([type=checkbox]),select,textarea')].filter(element => visible(element) && !element.disabled).map(element => {
+      const style = getComputedStyle(element), rgb = color => color.match(/[\d.]+/g).slice(0,3).map(Number);
+      const lum = color => rgb(color).map(v => { v /= 255; return v <= .04045 ? v / 12.92 : ((v+.055)/1.055)**2.4; }).reduce((sum,v,i) => sum+v*[.2126,.7152,.0722][i],0);
+      const a = lum(style.borderTopColor), b = lum(style.backgroundColor);
+      return { name: element.name, ratio: (Math.max(a,b)+.05)/(Math.min(a,b)+.05), width: parseFloat(style.borderTopWidth) };
+    });
+    const notices = [...document.querySelectorAll('[data-decision-status]')].filter(visible).map(element => ({ role: element.getAttribute('role'), live: element.getAttribute('aria-live'), atomic: element.getAttribute('aria-atomic'), text: element.textContent.trim() }));
     window.__auditFocus = { previous: document.activeElement, x: scrollX, y: scrollY, controls };
-    return { controls: controls.length, unnamed, positiveTabindex, emptyStates, small, notices };
+    return { controls: controls.length, unnamed, positiveTabindex, emptyStates, small, edges, notices, missingTooltips, namedControls: namedControls.length };
   }, focusable);
   assert.deepEqual(checks.unnamed, [], `${state}: every control has a name`);
+  assert.deepEqual(checks.missingTooltips, [], `${state}: icon-only controls have tooltips`);
   assert.deepEqual(checks.positiveTabindex, [], `${state}: natural DOM focus order`);
   assert.deepEqual(checks.emptyStates, [], `${state}: states carry words`);
   assert.deepEqual(checks.small, [], `${state}: target size or spacing`);
+  for (const edge of checks.edges) assert.ok(edge.width >= 1 && edge.ratio >= 3, `${state}: field boundary ${JSON.stringify(edge)}`);
   for (const notice of checks.notices) {
     assert.equal(notice.role, 'status'); assert.equal(notice.live, 'polite'); assert.equal(notice.atomic, 'true'); assert.ok(notice.text);
   }
@@ -110,12 +218,20 @@ async function measuredChecks(width, state) {
       }
       const a = luminance(outline), b = luminance(background), contrast = (Math.max(a,b) + .05) / (Math.min(a,b) + .05);
       const x = Math.min(innerWidth - 1, Math.max(0, rect.x + rect.width / 2)), y = Math.min(innerHeight - 1, Math.max(0, rect.y + rect.height / 2));
+      const tooltip = element.querySelector('[role=tooltip]');
+      const helpVisible = !tooltip || getComputedStyle(tooltip).visibility === 'visible';
       const covering = document.elementFromPoint(x, y);
       const exposed = covering === element || element.contains(covering) || covering?.contains(element);
-      return { error: null, name: element.textContent.trim().slice(0, 60) || element.getAttribute('name'), outline: style.outlineStyle, pixels: parseFloat(style.outlineWidth), contrast, exposed, inViewport: rect.top >= 0 && rect.bottom <= innerHeight + 1 && rect.left >= 0 && rect.right <= innerWidth + 1 };
+      return { error: null, name: element.textContent.trim().slice(0, 60) || element.getAttribute('name'), outline: style.outlineStyle, pixels: parseFloat(style.outlineWidth), contrast, exposed, helpVisible, inViewport: rect.top >= 0 && rect.bottom <= innerHeight + 1 && rect.left >= 0 && rect.right <= innerWidth + 1 };
     }, index);
     assert.equal(focus.error, null, `${state}: keyboard order`);
     assert.ok(focus.outline !== 'none' && focus.pixels >= 2 && focus.contrast >= 3, `${state}: visible focus ${JSON.stringify(focus)}`);
+    assert.ok(focus.helpVisible, `${state}: keyboard tooltip`);
+    const tooltip = page.locator(':focus > [role="tooltip"]');
+    if (await tooltip.count()) {
+      await page.keyboard.press('Escape');
+      await expect(tooltip).toBeHidden();
+    }
     assert.ok(focus.exposed && focus.inViewport, `${state}: focus unobscured ${JSON.stringify(focus)}`);
     minimumContrast = Math.min(minimumContrast, focus.contrast);
   }
@@ -129,10 +245,28 @@ async function measuredChecks(width, state) {
       return element.getClientRects().length && /auto|scroll/.test(style.overflowX) && !element.matches('input,select,textarea') && element.scrollWidth > element.clientWidth + 1;
     }).map(element => element.outerHTML.slice(0, 180)),
   }));
+  await page.evaluate(() => {
+    window.__spacingStyles = [...document.querySelectorAll('body,body *')].map(element => [element,element.getAttribute('style')]);
+    for (const [element] of window.__spacingStyles) {
+      element.style.setProperty('line-height','1.5','important');
+      element.style.setProperty('letter-spacing','.12em','important');
+      element.style.setProperty('word-spacing','.16em','important');
+      if (element.matches('p')) element.style.setProperty('margin-bottom','2em','important');
+    }
+  });
+  const spacingReflow = await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1);
+  await page.evaluate(() => {
+    for (const [element,style] of window.__spacingStyles) {
+      element.style.cssText = style ?? '';
+      if (style === null) element.removeAttribute('style');
+    }
+    delete window.__spacingStyles;
+  });
   await page.setViewportSize(viewport);
+  assert.equal(spacingReflow, true, `${state}: increased text spacing reflows`);
   assert.equal(reflow.document, true, `${state}: 320 CSS pixel reflow`);
   assert.deepEqual(reflow.scrollContainers, [], `${state}: no two-dimensional scrolling`);
-  return { ...checks, minimumFocusContrast: minimumContrast, reflow };
+  return { ...checks, minimumFocusContrast: minimumContrast, reflow, spacingReflow };
 }
 
 async function audit(width, state) {
@@ -143,8 +277,10 @@ async function audit(width, state) {
   auditRows.push(row);
   await writeFile(join(evidence, 'accessibility.json'), JSON.stringify(auditRows, null, 2));
   assert.deepEqual(violations, [], `${width} ${state}: WCAG A and AA violations`);
+  row.renderedContrast = await renderedContrast(row.incomplete);
   row.measured = await measuredChecks(width, state);
   await writeFile(join(evidence, 'accessibility.json'), JSON.stringify(auditRows, null, 2));
+  console.log(`A11Y ${width} ${state}: zero violations; ${row.measured.controls} named controls; focus, targets, contrast and reflow passed.`);
 }
 
 async function shot(width, state) {
@@ -271,6 +407,7 @@ try {
     await expect.poll(() => reads().length).toBeGreaterThan(beforeReconnect);
     await frozen(page, note);
     assert.equal(posts().length, initialPosts);
+    await shot(width, 'reconciliation-error');
     failReads = false;
     await page.evaluate(() => { const marker = document.createElement('span'); marker.id = 'journey-old-body'; document.body.append(marker); });
     await activate(page.locator('[data-decision-refresh]'), touch);
@@ -290,6 +427,7 @@ try {
     await page.goto(origin + '/app/workflow-runs/' + approved.id); await shot(width, 'reconciled-approved');
 
     await page.goto(origin + '/app/workflow-runs/' + rejected.id);
+    await shot(width, 'workflow-pending');
     const rejectionNote = 'Declined duplicate supplier request.';
     await formFor(page, rejected.id).locator('input[name="reason"]').fill(rejectionNote);
     postMode = 'lose'; committed = false;
@@ -335,7 +473,7 @@ try {
     }
 
     // Legacy approval forms store the path in a hidden input and use separate forms.
-    const flow = await send('flows', { name: `Harbor Workshop — legacy review ${width}`, source_app: 'Workshop', destination_app: 'Local inbox', target_url: 'http://127.0.0.1:9051/events' }, 201);
+    const flow = await send('flows', { name: `Harbor Workshop — legacy review ${width}`, source_app: 'Workshop', destination_app: 'Local inbox', target_url: receiverOrigin + '/events' }, 201);
     await send(`flows/${flow.id}/estimate`, quote); await send(`flows/${flow.id}/activate`, {});
     const legacy = await send(`flows/${flow.id}/runs`, { event_id: crypto.randomUUID(), input: { order: '4729', supplier: 'Harbor Parts' } }, 201);
     await page.goto(origin + '/app/runs/' + legacy.id);
@@ -355,19 +493,169 @@ try {
     assert.equal(state.attempts.filter(attempt => attempt.run_id === legacy.id).length, 0);
     assert.equal(posts().length, beforeLegacy + 1);
     await shot(width, 'legacy-rejected');
+    // Audit ordinary operator doors as real people operate them, using the same
+    // persistent store and server rendering as the connectivity journey above.
+    await page.goto(origin + '/app');
+    await activate(page.getByRole('button', { name: 'Create manual workflow', exact: true }), touch);
+    const requiredName = page.locator('form[action="/app/workflows/create"] input[name="name"]');
+    await expect(requiredName).toHaveAttribute('aria-invalid', 'true');
+    await expect(requiredName).toHaveAccessibleDescription(/Workflow name.*fill/i);
+    await shot(width, 'required-field-error');
+    await requiredName.fill('Workshop maintenance — emergency valve procurement for northern coastal operations');
+    await expect(requiredName).not.toHaveAttribute('aria-invalid', 'true');
+    await shot(width, 'required-field-corrected');
+    await activate(page.getByRole('button', { name: 'Create manual workflow', exact: true }), touch);
+    await expect(page.getByRole('heading', { name: 'Workshop maintenance — emergency valve procurement for northern coastal operations', exact: true })).toBeVisible();
+    await shot(width, 'created-workflow');
+    await page.goto(origin + '/app');
+
+    const flowRow = page.locator('li.flow-row').filter({ has: page.locator(`input[name="path"][value^="/api/crank/flows/${flow.id}/"]`) });
+    await activate(flowRow.getByRole('button', { name: 'Pause flow', exact: true }), touch);
+    await expect(flowRow.locator('.chip')).toHaveText('Draft');
+    assert.equal((await send('state')).flows.find(item => item.id === flow.id).status, 'draft', 'pausing removes active legacy admission');
+    await shot(width, 'flow-paused');
+    await activate(flowRow.getByRole('button', { name: 'Activate flow', exact: true }), touch);
+    await expect(flowRow.locator('.chip')).toHaveText('Active');
+    await shot(width, 'flow-active');
+
+    await page.goto(origin + '/app/workflows/' + workflow.id);
+    await activate(page.locator('.live-menu > summary'), touch);
+    await shot(width, 'workflow-live-menu');
+    await activate(page.getByRole('button', { name: 'Pause flow', exact: true }), touch);
+    await expect(page.locator('.live-menu > summary')).toContainText('Paused');
+    await shot(width, 'workflow-paused');
+    await activate(page.locator('.live-menu > summary'), touch);
+    await shot(width, 'workflow-paused-menu');
+    await activate(page.getByRole('button', { name: 'Resume flow', exact: true }), touch);
+    await expect(page.locator('.live-menu > summary')).toContainText('Live');
+    await shot(width, 'workflow-active');
+
+    // A real destination refuses once, then acknowledges this exact delivery.
+    const failure = await send(`flows/${flow.id}/runs`, { event_id: crypto.randomUUID(), input: { description: 'Northern coastal workshop purchase order '.repeat(10), request: 'synthetic-crank-replay-' + width } }, 201);
+    await page.goto(origin + '/app/runs/' + failure.id);
+    await shot(width, 'legacy-pending');
+    await activate(page.getByRole('button', { name: 'Approve and deliver', exact: true }), touch);
+    await expect(page.locator('.detail-primary .chip')).toHaveText('Failed');
+    await expect(page.getByRole('button', { name: 'Replay once', exact: true })).toBeVisible();
+    await shot(width, 'legacy-failure');
+    await activate(page.getByRole('button', { name: 'Replay once', exact: true }), touch);
+    await expect(page.locator('.detail-primary .chip')).toHaveText('Success');
+    await shot(width, 'legacy-replayed');
+    const deliveries = receiverRequests.filter(item => item.key === failure.id);
+    assert.equal(deliveries.length, 2); assert.deepEqual(deliveries[0].body, deliveries[1].body);
+    const failedState = await send('state');
+    assert.equal(failedState.runs.find(run => run.id === failure.id).replay_count, 1);
+    assert.equal(failedState.attempts.filter(attempt => attempt.run_id === failure.id).length, 2);
+
+    const editable = await send('workflows', { name: `Workshop structured procurement decision ${width}`, graph: { trigger: { type: 'manual' }, steps: [
+      { id: 'review', type: 'approval', editable: ['details'], input: { details: { quantity: 2, description: 'Replacement valves for the northern coastal workshop' } } },
+      { id: 'record', type: 'map', input: { details: '{{steps.review.proposal.details}}' } },
+    ] } }, 201);
+    await send(`workflows/${editable.id}/estimate`, quote); await send(`workflows/${editable.id}/publish`, {}, 201);
+    const correction = await send(`workflows/${editable.id}/run`, { input: {} }, 201);
+    await page.goto(origin + '/app/workflow-runs/' + correction.id);
+    const jsonField = page.locator('textarea[name="decision_edit_details"]');
+    await jsonField.fill('{quantity:');
+    const beforeInvalid = posts().length;
+    await activate(formFor(page, correction.id).getByRole('button', { name: 'Approve', exact: true }), touch);
+    await expect(jsonField).toHaveAttribute('aria-invalid', 'true');
+    await expect(jsonField).toHaveAccessibleDescription(/Enter valid JSON/);
+    await expect(jsonField).toHaveValue('{quantity:');
+    assert.equal(posts().length, beforeInvalid, 'invalid field does not send a decision');
+    assert.equal((await send('workflow-runs/' + correction.id)).status, 'awaiting_approval');
+    await shot(width, 'decision-field-error');
+    await jsonField.fill(JSON.stringify({ quantity: 3, description: 'Replacement valve assembly — corrected purchase quantity' }));
+    await expect(jsonField).not.toHaveAttribute('aria-invalid', 'true');
+    await shot(width, 'decision-field-corrected');
+    await activate(formFor(page, correction.id).getByRole('button', { name: 'Approve', exact: true }), touch);
+    await expect(formFor(page, correction.id)).toHaveCount(0);
+    assert.equal((await send('workflow-runs/' + correction.id)).steps.find(step => step.path === 'record').output.details.quantity, 3);
+    await shot(width, 'corrected-decision-approved');
+
+    const broken = await send('workflows', { name: `Northern coastal maintenance — missing order field ${width}`, graph: { trigger: { type: 'manual' }, steps: [{ id: 'inspect', type: 'map', input: { number: '{{trigger.input.order.number}}' } }] } }, 201);
+    await send(`workflows/${broken.id}/estimate`, quote); await send(`workflows/${broken.id}/publish`, {}, 201);
+    const brokenRun = await send(`workflows/${broken.id}/run`, { input: { description: 'Purchase order attachment needs an order number before processing.' } }, 201);
+    assert.equal(brokenRun.status, 'failed');
+    await page.goto(origin + '/app/workflow-runs/' + brokenRun.id);
+    await expect(page.getByRole('alert')).toContainText(/Field.*not found/);
+    await shot(width, 'workflow-failure');
+
+    const cancelled = await newRun(`Northern coastal workshop cancellation — ${width}`);
+    await page.goto(origin + '/app/workflow-runs/' + cancelled.id);
+    await shot(width, 'cancellation-pending');
+    await activate(page.getByRole('button', { name: 'Cancel run', exact: true }), touch);
+    await expect(page.locator('.detail-primary .title-row .status')).toHaveText('Cancelled');
+    assert.equal((await send('workflow-runs/' + cancelled.id)).steps.filter(step => step.path === 'record').length, 0);
+    await shot(width, 'cancelled');
+
+    await page.goto(origin + '/app/runs');
+    await shot(width, 'run-search');
+    const searchForm = page.locator('#run-search');
+    await searchForm.locator('[name="q"]').fill('synthetic-crank-no-matching-customer');
+    await activate(searchForm.getByRole('button', { name: 'Search', exact: true }), touch);
+    await expect(page.getByRole('heading', { name: 'No runs match this search', exact: true })).toBeVisible();
+    await shot(width, 'run-search-empty');
+    await searchForm.locator('[name="q"]').fill('');
+    await searchForm.locator('[name="workflow"]').selectOption(workflow.id);
+    await activate(searchForm.getByRole('button', { name: 'Search', exact: true }), touch);
+    await expect(page.locator('.runs-table tbody tr')).not.toHaveCount(0);
+    await shot(width, 'run-search-filtered');
+
+    const recipientEmail = 'synthetic-crank-inbox-' + width + '-' + crypto.randomUUID() + '@' + 'example.test';
+    const invitation = await owner.request.post(origin + '/auth/invite', { headers: { origin }, data: { email: recipientEmail, displayName: 'Northern coastal workshop — purchasing decision reviewer', role: 'member' } });
+    assert.equal(invitation.status(), 202);
+    const recipientSignIn = execFileSync('rer', ['dev', '--as', recipientEmail], { encoding: 'utf8', env: process.env, timeout: 60000, stdio: ['ignore','pipe','pipe'] });
+    const recipientContext = await browser.newContext({ viewport: { width, height: 1000 }, hasTouch: touch, isMobile: touch });
+    const recipientPage = await recipientContext.newPage();
+    await recipientPage.goto(/RER_OPEN\s+(https?:\/\/\S+)/.exec(recipientSignIn)[1]);
+    await recipientPage.waitForURL('**/app');
+    const recipientId = (await (await owner.request.get(origin + '/auth/operators')).json()).find(person => person.email === recipientEmail).id;
+    const grant = await owner.request.post(origin + '/api/crank/team/' + recipientId, { headers: { origin }, data: { role: 'approver', workflow_ids: [workflow.id], connection_ids: [] } });
+    assert.equal(grant.status(), 200);
+    const operatorPage = page; page = recipientPage;
+    await page.goto(origin + '/app/inbox');
+    await expect(page.getByText('No notices addressed to you.', { exact: true })).toBeVisible();
+    await shot(width, 'inbox-empty');
+    const inboxRun = await newRun(`Northern coastal workshop inbox resolution — ${width}`);
+    // Select a recipient zone safely inside its working window rather than
+    // asserting against a UTC day boundary in this real Cron proof.
+    const hour = new Date().getUTCHours();
+    const timezone = hour >= 6 && hour <= 17 ? 'UTC' : hour < 6 ? 'Etc/GMT-8' : 'Etc/GMT+8';
+    await send('followups/people/' + recipientId, { timezone, weekdays: [1,2,3,4,5,6,7], start: '00:00', end: '23:59', interval_minutes: 1, daily_limit: 100 });
+    const obligation = await send('followups', { run_id: inboxRun.id, path: 'review', due_at: new Date(Date.now() - 1000).toISOString(), recipient_ids: [recipientId] }, 201);
+    await expect.poll(async () => {
+      const response = await recipientContext.request.get(origin + '/api/crank/inbox');
+      assert.equal(response.status(), 200);
+      return (await response.json()).some(item => item.followup_id === obligation.id);
+    }, { timeout: 90000, intervals: [1000,2000] }).toBe(true);
+    await page.goto(origin + '/app/inbox');
+    const noticeLink = page.locator(`a[href="${obligation.link}"]`);
+    await expect(noticeLink).toBeVisible(); await shot(width, 'inbox-addressed');
+    await activate(noticeLink, touch);
+    await expect(formFor(page, inboxRun.id)).toHaveCount(1);
+    await shot(width, 'inbox-decision');
+    await activate(formFor(page, inboxRun.id).getByRole('button', { name: 'Reject', exact: true }), touch);
+    await expect(formFor(page, inboxRun.id)).toHaveCount(0);
+    await resolved(inboxRun.id, false, 'rejected');
+    await shot(width, 'inbox-resolved');
+    await recipientContext.close(); page = operatorPage;
+
     assert.deepEqual(routeErrors, []);
     report.push({ width, input: touch ? 'Playwright touch emulation' : 'keyboard Enter', requests: events });
     console.log(`UX-001 ${width}: offline input retained; all decisions frozen; authoritative GET recovery; one approve and one committed-response-lost reject; no POST replay; legacy hidden-path rejection passed${touch ? '' : '; bounded timeout passed'}.`);
     await context.close();
   }
   await owner.close();
+  completed = true;
 } catch (error) {
   if (page && !page.isClosed()) await page.screenshot({ path: join(evidence, 'journey-error.png'), fullPage: true }).catch(() => {});
   console.error(String(error.message).replace(/https?:\/\/\S+/g, '[redacted URL]'));
   process.exitCode = 1;
 } finally {
   await writeFile(join(evidence, 'decision-requests.json'), JSON.stringify(report, null, 2));
+  await writeFile(join(evidence, 'accessibility-receipt.json'), JSON.stringify({ head: candidateHead, completed, states: auditRows.map(({width,state,violations,measured}) => ({width,state,violations: violations.length,measured: !!measured})), screenshots: auditRows.filter(row => row.measured).map(row => `${row.width}-${row.state}.png`) }, null, 2));
   await browser?.close();
+  await new Promise(resolve => receiver.close(resolve));
   for (const child of children.reverse()) await stopOwned(child);
   await rm(privateDir, { recursive: true, force: true });
 }
