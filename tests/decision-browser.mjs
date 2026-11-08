@@ -283,6 +283,12 @@ async function measuredChecks(width, state) {
   await page.setViewportSize({ width: 320, height: viewport.height });
   const reflow = await page.evaluate(() => ({
     document: document.documentElement.scrollWidth <= innerWidth + 1,
+    clippedControls: [...document.querySelectorAll('main a[href],main button,main input:not([type=hidden]),main select,main textarea,main summary')].filter(element => {
+      if (!element.checkVisibility({ checkVisibilityCSS: true, checkOpacity: true })) return false;
+      if ([...document.querySelectorAll('details:not([open])')].some(details => details.contains(element) && !details.querySelector(':scope > summary')?.contains(element))) return false;
+      const rect = element.getBoundingClientRect();
+      return rect.left < -1 || rect.right > innerWidth + 1;
+    }).map(element => ({ control: element.outerHTML.slice(0,180), left: element.getBoundingClientRect().left, right: element.getBoundingClientRect().right })),
     scrollContainers: [...document.querySelectorAll('main *')].filter(element => {
       const style = getComputedStyle(element);
       return element.getClientRects().length && /auto|scroll/.test(style.overflowX) && !element.matches('input,select,textarea') && element.scrollWidth > element.clientWidth + 1;
@@ -312,6 +318,7 @@ async function measuredChecks(width, state) {
   assert.equal(spacingReflow, true, `${state}: increased text spacing reflows`);
   assert.equal(reflow.document, true, `${state}: 320 CSS pixel reflow`);
   assert.deepEqual(reflow.scrollContainers, [], `${state}: no two-dimensional scrolling`);
+  assert.deepEqual(reflow.clippedControls, [], `${state}: reflow preserves complete controls at 320 CSS pixels`);
   return { ...checks, minimumFocusContrast: minimumContrast, nativeSubfieldStops, hoverTested, reflow, spacingReflow };
 }
 

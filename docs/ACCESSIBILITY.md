@@ -43,7 +43,8 @@ focus of at least 3:1 contrast, an exposed hit point and its complete bounds in
 the viewport. Positive tabindex is refused. Focused icon controls expose their
 named tooltips. On hover-capable pointing devices, help stays visible when the pointer moves onto it and Escape dismisses it. Keyboard help is checked at both widths. Each target is at least 24 by 24 CSS pixels, has equivalent
 spacing, is an inline text link, or has an equivalent larger link to the same
-run. Reflow is measured at 320 CSS pixels, including nested scroll containers;
+run. Reflow is measured at 320 CSS pixels, including nested scroll containers and
+the complete horizontal bounds of every visible main-content control;
 text fields retain their ordinary single-line input behavior. Two animation
 frames after restoring the viewport let mobile Chromium paint its restored clip
 before the full-page capture; the measurements and visible errors are unchanged.
@@ -86,7 +87,7 @@ supplements automation; browser touch emulation is not a handset receipt.
 | 1.4.3 Minimum text contrast | Pass | Zero axe violations plus worst-pixel measurements for unresolved backgrounds. |
 | 1.4.4 Resize text | Pass | Reflow proof at 320 CSS pixels and inspected resizable text and native controls; no fixed text-height containers. |
 | 1.4.5 Images of text | Pass | Inspected live HTML text; the brand mark is decorative beside the textual name. |
-| 1.4.10 Reflow | Pass | Each state is measured at 320 CSS pixels with no page or nested two-dimensional scrolling. |
+| 1.4.10 Reflow | Pass | Each state is measured at 320 CSS pixels with no page or nested two-dimensional scrolling, and no control clipped beyond the viewport. |
 | 1.4.11 Non-text contrast | Pass | Measured field boundaries and focus rings; state dots are redundant to words. |
 | 1.4.12 Text spacing | Pass | Each state reflows with 1.5 line height, .12em letter spacing, .16em word spacing and 2em paragraph spacing; expanding panels and controls are inspected. |
 | 1.4.13 Hover or focus content | Pass | Focus tooltip checks; hover help persists while hovered or focused and Escape dismisses it. |
