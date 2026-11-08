@@ -99,6 +99,7 @@ document.addEventListener('submit', async event => {
   if (event.submitter?.name) data.set(event.submitter.name, event.submitter.value);
   if (!decisionPath.test(String(data.get('path')))) return;
   event.preventDefault();
+  if (pending) return;
   if (String(data.get('path')).endsWith('/approve')) {
     for (const control of form.querySelectorAll('[name^="decision_edit_"]')) {
       if (data.get('decision_kind_' + control.name.slice('decision_edit_'.length)) !== 'json') continue;
@@ -110,7 +111,6 @@ document.addEventListener('submit', async event => {
       }
     }
   }
-  if (pending) return;
   pending = true;
   refreshUrl = location.href;
   lock();
@@ -186,4 +186,19 @@ document.addEventListener('keydown', event => {
 for (const type of ['focusin', 'focusout', 'pointerout']) document.addEventListener(type, event => {
   const control = event.target instanceof Element && event.target.closest('.control-tooltip');
   if (control && (type !== 'pointerout' || !control.contains(event.relatedTarget))) delete control.dataset.tooltipDismissed;
+});
+
+// A popover must not cover the next keyboard target when focus leaves it.
+document.addEventListener('focusout', event => {
+  const menu = event.target instanceof Element && event.target.closest('details.menu');
+  if (menu && event.relatedTarget instanceof Node && !menu.contains(event.relatedTarget)) menu.open = false;
+});
+document.addEventListener('click', event => {
+  if (!(event.target instanceof Node)) return;
+  for (const menu of document.querySelectorAll('details.menu[open]')) if (!menu.contains(event.target)) menu.open = false;
+});
+document.addEventListener('keydown', event => {
+  if (event.key !== 'Escape') return;
+  const menu = event.target instanceof Element && event.target.closest('details.menu[open]');
+  if (menu) { menu.open = false; menu.querySelector('summary')?.focus(); }
 });

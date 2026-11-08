@@ -80,6 +80,9 @@ async function renderedContrast(incomplete) {
       const element = document.querySelector(selector.join(' '));
       if (!element || element.matches(':disabled') || !element.getClientRects().length) continue;
       const style = getComputedStyle(element);
+      const occluded = [...document.querySelectorAll('details.menu[open] > .menu-body')].filter(menu => !menu.contains(element) && getComputedStyle(menu).visibility !== 'hidden').map(menu => {
+        const r = menu.getBoundingClientRect(); return { left: r.left+scrollX, top: r.top+scrollY, right: r.right+scrollX, bottom: r.bottom+scrollY };
+      });
       let rects = [...element.childNodes].filter(node => node.nodeType === 3 && node.textContent.trim()).flatMap(node => {
         const range = document.createRange(); range.selectNodeContents(node); return [...range.getClientRects()];
       });
@@ -99,7 +102,7 @@ async function renderedContrast(incomplete) {
           if (/hidden|clip|auto|scroll/.test(ps.overflowX)) { clipped.left = Math.max(clipped.left,pr.left); clipped.right = Math.min(clipped.right,pr.right); }
           if (/hidden|clip|auto|scroll/.test(ps.overflowY)) { clipped.top = Math.max(clipped.top,pr.top); clipped.bottom = Math.min(clipped.bottom,pr.bottom); }
         }
-        if (clipped.right > clipped.left && clipped.bottom > clipped.top) targets.push({ selector, color, required: large ? 3 : 4.5, rect: { left: clipped.left + scrollX, top: clipped.top + scrollY, right: clipped.right + scrollX, bottom: clipped.bottom + scrollY } });
+        if (clipped.right > clipped.left && clipped.bottom > clipped.top) targets.push({ selector, color, occluded, required: large ? 3 : 4.5, rect: { left: clipped.left + scrollX, top: clipped.top + scrollY, right: clipped.right + scrollX, bottom: clipped.bottom + scrollY } });
       }
     }
     window.__contrastStyles = [...document.querySelectorAll('body,body *')].map(element => [element, element.getAttribute('style')]);
@@ -131,17 +134,19 @@ async function renderedContrast(incomplete) {
     const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
     const lum = rgb => rgb.slice(0,3).map(v => { v /= 255; return v <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; }).reduce((sum,value,i) => sum + value * [.2126,.7152,.0722][i], 0);
     return targets.map(target => {
-      let minimum = Infinity; const foreground = lum(target.color), r = target.rect;
+      let minimum = Infinity, samples = 0; const foreground = lum(target.color), r = target.rect;
       for (let y = Math.max(0,Math.ceil(r.top)); y < Math.min(canvas.height,Math.floor(r.bottom)); y++) {
         for (let x = Math.max(0,Math.ceil(r.left)); x < Math.min(canvas.width,Math.floor(r.right)); x++) {
+          if (target.occluded.some(r => x >= r.left && x < r.right && y >= r.top && y < r.bottom)) continue;
+          samples++;
           const offset = (y * canvas.width + x) * 4, background = lum([...pixels.slice(offset,offset+3)]);
           minimum = Math.min(minimum,(Math.max(foreground,background)+.05)/(Math.min(foreground,background)+.05));
         }
       }
-      return { selector: target.selector, color: target.color, rect: r, required: target.required, minimum };
+      return { selector: target.selector, color: target.color, rect: r, required: target.required, minimum: samples ? minimum : null, samples, occluded: target.occluded.length };
     });
   }, { png, targets });
-  for (const row of ratios) assert.ok(Number.isFinite(row.minimum) && row.minimum >= row.required, `Rendered text contrast: ${JSON.stringify(row)}`);
+  for (const row of ratios) assert.ok(row.samples ? Number.isFinite(row.minimum) && row.minimum >= row.required : row.occluded > 0, `Rendered text contrast: ${JSON.stringify(row)}`);
   return ratios;
 }
 
@@ -188,7 +193,7 @@ async function measuredChecks(width, state) {
       return { name: element.name, ratio: (Math.max(a,b)+.05)/(Math.min(a,b)+.05), width: parseFloat(style.borderTopWidth) };
     });
     const notices = [...document.querySelectorAll('[data-decision-status]')].filter(visible).map(element => ({ role: element.getAttribute('role'), live: element.getAttribute('aria-live'), atomic: element.getAttribute('aria-atomic'), text: element.textContent.trim() }));
-    window.__auditFocus = { previous: document.activeElement, x: scrollX, y: scrollY, controls };
+    window.__auditFocus = { previous: document.activeElement, x: scrollX, y: scrollY, controls, openDetails: [...document.querySelectorAll('details[open]')] };
     return { controls: controls.length, unnamed, positiveTabindex, emptyStates, small, edges, notices, missingTooltips, namedControls: namedControls.length };
   }, focusable);
   assert.deepEqual(checks.unnamed, [], `${state}: every control has a name`);
@@ -200,10 +205,24 @@ async function measuredChecks(width, state) {
   for (const notice of checks.notices) {
     assert.equal(notice.role, 'status'); assert.equal(notice.live, 'polite'); assert.equal(notice.atomic, 'true'); assert.ok(notice.text);
   }
-  await page.evaluate(() => { document.body.tabIndex = -1; document.body.focus(); document.body.removeAttribute('tabindex'); });
-  let minimumContrast = Infinity;
+  const beforeFocus = page.url();
+  await page.locator('.skip-link').focus();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('main')).toBeFocused();
+  await page.evaluate(url => history.replaceState(null, '', url), beforeFocus);
+  await page.evaluate(() => { document.body.tabIndex = -1; document.body.focus(); document.body.removeAttribute('tabindex'); for (const details of window.__auditFocus.openDetails) details.open = true; });
+  let minimumContrast = Infinity, nativeSubfieldStops = 0;
   for (let index = 0; index < checks.controls; index++) {
-    await page.keyboard.press('Tab');
+    for (let segment = 0; ; segment++) {
+      await page.keyboard.press('Tab');
+      const nativeSubfield = await page.evaluate(index => {
+        const previous = window.__auditFocus.controls[index - 1];
+        return previous && document.activeElement === previous && previous.matches('input:is([type=date],[type=time],[type=datetime-local],[type=month],[type=week])');
+      }, index);
+      if (!nativeSubfield) break;
+      assert.ok(segment < 7, `${state}: native date or time control must release Tab`);
+      nativeSubfieldStops++;
+    }
     const focus = await page.evaluate(index => {
       const element = document.activeElement, expected = window.__auditFocus.controls[index];
       if (element !== expected) return { error: `Expected ${expected.outerHTML.slice(0, 160)}, focused ${element.outerHTML.slice(0, 160)}` };
@@ -235,7 +254,8 @@ async function measuredChecks(width, state) {
     assert.ok(focus.exposed && focus.inViewport, `${state}: focus unobscured ${JSON.stringify(focus)}`);
     minimumContrast = Math.min(minimumContrast, focus.contrast);
   }
-  await page.evaluate(() => { const saved = window.__auditFocus; saved.previous?.focus(); scrollTo(saved.x, saved.y); delete window.__auditFocus; });
+  assert.equal(page.url(), beforeFocus, `${state}: focus alone does not navigate`);
+  await page.evaluate(() => { const saved = window.__auditFocus; saved.previous?.focus(); for (const details of document.querySelectorAll('details')) details.open = saved.openDetails.includes(details); scrollTo(saved.x, saved.y); delete window.__auditFocus; });
   const viewport = page.viewportSize();
   await page.setViewportSize({ width: 320, height: viewport.height });
   const reflow = await page.evaluate(() => ({
@@ -266,7 +286,7 @@ async function measuredChecks(width, state) {
   assert.equal(spacingReflow, true, `${state}: increased text spacing reflows`);
   assert.equal(reflow.document, true, `${state}: 320 CSS pixel reflow`);
   assert.deepEqual(reflow.scrollContainers, [], `${state}: no two-dimensional scrolling`);
-  return { ...checks, minimumFocusContrast: minimumContrast, reflow, spacingReflow };
+  return { ...checks, minimumFocusContrast: minimumContrast, nativeSubfieldStops, reflow, spacingReflow };
 }
 
 async function audit(width, state) {
@@ -458,6 +478,8 @@ try {
       await page.goto(origin + '/app/workflow-runs/' + timed.id);
       postMode = 'hold'; const beforeTimeout = posts().length;
       await activate(formFor(page, timed.id).getByRole('button', { name: 'Approve', exact: true }), false);
+      await expect(status(page)).toContainText('Sending your decision');
+      await shot(width, 'submitting');
       // The application owns its deadline; assert an eventual usable check control without pinning its value.
       await expect(page.locator('[data-decision-refresh]')).toBeEnabled({ timeout: 25000 });
       await frozen(page); heldRelease?.();
@@ -470,6 +492,26 @@ try {
       await activate(formFor(page, timed.id).getByRole('button', { name: 'Reject', exact: true }), false);
       await expect(formFor(page, timed.id)).toHaveCount(0);
       await resolved(timed.id, false, 'rejected');
+    }
+
+    if (touch) {
+      const timedPhone = await newRun('Northern coastal workshop — delayed touch decision');
+      await page.goto(origin + '/app/workflow-runs/' + timedPhone.id);
+      postMode = 'hold'; const beforePhoneTimeout = posts().length;
+      await activate(formFor(page, timedPhone.id).getByRole('button', { name: 'Approve', exact: true }), true);
+      await expect(status(page)).toContainText('Sending your decision');
+      await shot(width, 'submitting');
+      await expect(page.locator('[data-decision-refresh]')).toBeEnabled({ timeout: 25000 });
+      await frozen(page); heldRelease?.();
+      assert.equal((await send('workflow-runs/' + timedPhone.id)).waits[0].resolved_at, null);
+      assert.equal(posts().length, beforePhoneTimeout + 1);
+      await shot(width, 'submission-timeout');
+      await activate(page.locator('[data-decision-refresh]'), true);
+      await expect(formFor(page, timedPhone.id).getByRole('button', { name: 'Reject', exact: true })).toBeEnabled();
+      assert.equal(posts().length, beforePhoneTimeout + 1, 'touch timeout recovery only reads');
+      await activate(formFor(page, timedPhone.id).getByRole('button', { name: 'Reject', exact: true }), true);
+      await expect(formFor(page, timedPhone.id)).toHaveCount(0);
+      await resolved(timedPhone.id, false, 'rejected');
     }
 
     // Legacy approval forms store the path in a hidden input and use separate forms.
@@ -537,6 +579,7 @@ try {
     await activate(page.getByRole('button', { name: 'Approve and deliver', exact: true }), touch);
     await expect(page.locator('.detail-primary .chip')).toHaveText('Failed');
     await expect(page.getByRole('button', { name: 'Replay once', exact: true })).toBeVisible();
+    await expect(page.getByRole('alert')).toContainText(/Delivery.*not confirmed/);
     await shot(width, 'legacy-failure');
     await activate(page.getByRole('button', { name: 'Replay once', exact: true }), touch);
     await expect(page.locator('.detail-primary .chip')).toHaveText('Success');
@@ -572,7 +615,7 @@ try {
     assert.equal((await send('workflow-runs/' + correction.id)).steps.find(step => step.path === 'record').output.details.quantity, 3);
     await shot(width, 'corrected-decision-approved');
 
-    const broken = await send('workflows', { name: `Northern coastal maintenance — missing order field ${width}`, graph: { trigger: { type: 'manual' }, steps: [{ id: 'inspect', type: 'map', input: { number: '{{trigger.input.order.number}}' } }] } }, 201);
+    const broken = await send('workflows', { name: `Northern coastal maintenance — missing order field ${width}`, graph: { trigger: { type: 'manual' }, steps: [{ id: 'inspect', type: 'transform', fn: 'number.add', input: { a: '{{trigger.input.order.number}}', b: 1 } }] } }, 201);
     await send(`workflows/${broken.id}/estimate`, quote); await send(`workflows/${broken.id}/publish`, {}, 201);
     const brokenRun = await send(`workflows/${broken.id}/run`, { input: { description: 'Purchase order attachment needs an order number before processing.' } }, 201);
     assert.equal(brokenRun.status, 'failed');
