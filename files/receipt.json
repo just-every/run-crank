@@ -1,0 +1,101 @@
+{
+  "schema": 1,
+  "tag": "sx-crank-c-f97",
+  "repository": "just-every/run-crank",
+  "head": "7ef378f73cfaf5576bc7f133172668363c0a8bca",
+  "branch": "cloud/sx-crank-c-f97",
+  "new_product_commits": 0,
+  "reason": "The requested implementation and its exact-SHA real Linux proof are already present on origin/main. No empty commit was created.",
+  "local_checks": [
+    {
+      "command": "node --test --test-concurrency=1 tests/executors.test.mjs",
+      "exit": 0,
+      "passed": 3,
+      "failed": 0,
+      "log": "executors-tests.log"
+    },
+    {
+      "command": "pnpm typecheck",
+      "exit": 0,
+      "log": "typecheck.log"
+    },
+    {
+      "command": "pnpm exec rer check --profile first-party",
+      "exit": 0,
+      "log": "first-party.log"
+    },
+    {
+      "command": "npx -y @runeditrun/rer setup --owner-email fleet@runeditrun.com --non-interactive",
+      "exit": 0,
+      "private_log": "Kept outside the packet because setup emits private local entry links."
+    },
+    {
+      "command": "npx -y @runeditrun/rer build",
+      "exit": 0
+    },
+    {
+      "command": "CRANK_CHROMIUM=/usr/bin/chromium timeout 1200 pnpm exec node tests/executor-schema-browser.mjs",
+      "exit": 0,
+      "log": "browser.log",
+      "screens": [
+        "screens/1440-aggregate-memory-failed.png",
+        "screens/1440-schema-definition.png",
+        "screens/1440-schema-failed.png",
+        "screens/1440-schema-succeeded.png",
+        "screens/390-aggregate-memory-failed.png",
+        "screens/390-schema-definition.png",
+        "screens/390-schema-failed.png",
+        "screens/390-schema-succeeded.png"
+      ]
+    }
+  ],
+  "live_linux_proof": {
+    "run": 42504682826,
+    "job": 128804981702,
+    "conclusion": "success",
+    "command": "sudo \"$(command -v node)\" tests/executor-linux.mjs",
+    "local_repeat": "Not attempted: cloud task user has no sudo and does not own the cgroup controller. No substitute enforcement was used."
+  },
+  "artifact_transfer": {
+    "command": "gh api repos/just-every/run-crank/actions/artifacts/13626968841/zip",
+    "exit": 1,
+    "http_status": "unknown: no status supplied in the captured diagnostic",
+    "diagnostic": "Get https://productionresultssa15.blob.core.windows.net/.../artifacts/...zip (signed query removed; transfer unavailable)",
+    "followup": "Browser screens reproduced locally instead; no archive retry."
+  },
+  "counts_before": {
+    "done": 32,
+    "partial": 50,
+    "missing": 17,
+    "clauses": 99,
+    "test_registrations": 200
+  },
+  "counts_after": {
+    "done": 32,
+    "partial": 50,
+    "missing": 17,
+    "clauses": 99,
+    "test_registrations": 200
+  },
+  "clause": "WORK-005",
+  "status_before": "PARTIAL",
+  "status_after": "PARTIAL",
+  "scan": {
+    "commit": "7ef378f73cfaf5576bc7f133172668363c0a8bca",
+    "complete": "unestablished in this cloud",
+    "historyScanned": "unestablished",
+    "findings": "unestablished",
+    "custody": "Fleet publication gate; not claimed from green Verify."
+  },
+  "product_push": {
+    "status": "success",
+    "ref": "refs/heads/cloud/sx-crank-c-f97",
+    "log": "product-push.log",
+    "head": "7ef378f73cfaf5576bc7f133172668363c0a8bca"
+  },
+  "remote_refs": [
+    "7ef378f73cfaf5576bc7f133172668363c0a8bca\trefs/heads/cloud/sx-crank-c-f97",
+    "7ef378f73cfaf5576bc7f133172668363c0a8bca\trefs/heads/main"
+  ],
+  "source_lock_final_check_exit": 0
+}

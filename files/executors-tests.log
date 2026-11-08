@@ -1,0 +1,14 @@
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProxy environment variables detected. We'll use your proxy for fetch requests.[0m
+
+
+✔ WORK-005 EXEC-002 BASE-001: published executor work keeps one durable identity across lost responses/restart, checks live connection authority and discloses values without secrets (5093.984515ms)
+✔ WORK-005 DATA-001 DATA-002: cancellation reports remote confirmation, task references restore inactive and erase with their run (10423.294394ms)
+✔ WORK-005: declared output schemas reject invalid authoring and fence mismatched remote results before downstream effects (2563.081434ms)
+ℹ tests 3
+ℹ suites 0
+ℹ pass 3
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 19155.382077

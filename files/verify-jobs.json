@@ -1,0 +1,31 @@
+{
+  "head": "7ef378f73cfaf5576bc7f133172668363c0a8bca",
+  "run": 42504682826,
+  "source": "Observed gh api repos/just-every/run-crank/actions/runs/42504682826/jobs",
+  "jobs": [
+    {
+      "id": 128804981702,
+      "name": "shards (agent-executor)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 128804981689,
+      "name": "shards (owner-decisions)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 128804981731,
+      "name": "shards (runtime-authority)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 128808981987,
+      "name": "verify",
+      "status": "completed",
+      "conclusion": "success"
+    }
+  ]
+}
