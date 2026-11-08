@@ -1,0 +1,167 @@
+shards (agent-executor)	Run this shard	﻿2026-11-08T18:03:34.3324479Z ##[group]Run node scripts/verify-ci.mjs "$SHARD"
+shards (agent-executor)	Run this shard	2026-11-08T18:03:34.3324801Z [36;1mnode scripts/verify-ci.mjs "$SHARD"[0m
+shards (agent-executor)	Run this shard	2026-11-08T18:03:34.3341787Z shell: /usr/bin/bash -e {0}
+[runner environment block omitted]
+shards (agent-executor)	Run this shard	2026-11-08T18:03:34.3343616Z ##[endgroup]
+shards (agent-executor)	Run this shard	2026-11-08T18:03:34.3601204Z > pnpm run verify:app
+shards (agent-executor)	Run this shard	2026-11-08T18:03:34.5598429Z 
+shards (agent-executor)	Run this shard	2026-11-08T18:03:34.5599359Z > @automation/crank@0.1.0 verify:app /home/runner/work/run-crank/run-crank
+shards (agent-executor)	Run this shard	2026-11-08T18:03:34.5599966Z > node scripts/verify-app.mjs
+shards (agent-executor)	Run this shard	2026-11-08T18:03:34.5600184Z 
+shards (agent-executor)	Run this shard	2026-11-08T18:03:34.5834118Z > CRANK_EVIDENCE="$CRANK_EVIDENCE/named-approvals" node tests/agent-door/named-approvals-browser.mjs
+shards (agent-executor)	Run this shard	2026-11-08T18:03:38.2392166Z PROBE BASE-AGENT-007 reference admission: absent approver and reviewer -> policy_refs_unresolved, prior document and revision unchanged
+shards (agent-executor)	Run this shard	2026-11-08T18:03:40.0256696Z PROBE BASE-AGENT-007 independent decisions: sponsor, unrelated, agent, device and changed evidence refused; two signed-in people -> one inert draft and original concurrent and restarted receipt
+shards (agent-executor)	Run this shard	2026-11-08T18:03:44.8994469Z PROBE BASE-AGENT-007 invalidation: rejection, policy revision, changed draft, deactivated first approver and expiry -> no held effect; inactive policy references preserve prior revision
+shards (agent-executor)	Run this shard	2026-11-08T18:03:45.0197713Z PROBE BASE-AGENT-007 dispositions: explicit autonomous -> inert draft; standard review -> draft and independently marked review feed
+shards (agent-executor)	Run this shard	2026-11-08T18:03:45.0349796Z BASE-AGENT-007 browser: PASS, independent keyboard decisions at 1440; six states at 1440 and 390
+shards (agent-executor)	Run this shard	2026-11-08T18:03:45.1115730Z > CRANK_EVIDENCE="$CRANK_EVIDENCE/drift" node tests/drift-browser.mjs
+shards (agent-executor)	Run this shard	2026-11-08T18:03:54.1670345Z drift browser width=1440 state=scope proposal=8a34bf80-0896-4aa7-9d19-efcdec7ea06f
+shards (agent-executor)	Run this shard	2026-11-08T18:03:58.4832602Z drift browser width=1440 state=proposal proposal=48ffe644-6306-45f4-8e0e-d8fd3de03335
+shards (agent-executor)	Run this shard	2026-11-08T18:04:04.3850371Z drift browser width=1440 state=tested proposal=48ffe644-6306-45f4-8e0e-d8fd3de03335
+shards (agent-executor)	Run this shard	2026-11-08T18:04:06.8417404Z drift browser width=1440 state=approved proposal=48ffe644-6306-45f4-8e0e-d8fd3de03335
+shards (agent-executor)	Run this shard	2026-11-08T18:04:09.3092920Z drift browser width=1440 state=rollback proposal=48ffe644-6306-45f4-8e0e-d8fd3de03335
+shards (agent-executor)	Run this shard	2026-11-08T18:04:11.3631304Z drift browser width=1440 state=rolled_back proposal=48ffe644-6306-45f4-8e0e-d8fd3de03335
+shards (agent-executor)	Run this shard	2026-11-08T18:04:19.0769818Z drift browser width=390 state=scope proposal=13580332-9118-4197-9e0a-e0f9ef54ec94
+shards (agent-executor)	Run this shard	2026-11-08T18:04:20.8916097Z drift browser width=390 state=proposal proposal=ee6c4e2a-ae5a-4aaa-9b6b-3117ffc3e4ff
+shards (agent-executor)	Run this shard	2026-11-08T18:04:26.7134994Z drift browser width=390 state=tested proposal=ee6c4e2a-ae5a-4aaa-9b6b-3117ffc3e4ff
+shards (agent-executor)	Run this shard	2026-11-08T18:04:29.0195517Z drift browser width=390 state=approved proposal=ee6c4e2a-ae5a-4aaa-9b6b-3117ffc3e4ff
+shards (agent-executor)	Run this shard	2026-11-08T18:04:30.8527517Z drift browser width=390 state=rollback proposal=ee6c4e2a-ae5a-4aaa-9b6b-3117ffc3e4ff
+shards (agent-executor)	Run this shard	2026-11-08T18:04:32.6482478Z drift browser width=390 state=rolled_back proposal=ee6c4e2a-ae5a-4aaa-9b6b-3117ffc3e4ff
+shards (agent-executor)	Run this shard	2026-11-08T18:04:32.7769664Z > CRANK_EVIDENCE="$CRANK_EVIDENCE/mcp-client" node tests/mcp-client-browser.mjs
+shards (agent-executor)	Run this shard	2026-11-08T18:04:41.4006389Z PLATFORM-002 1440: owner issuance, selected typed tools, approval, verified Calendar edge, refusal, call history, revocation and shell tooltips passed
+shards (agent-executor)	Run this shard	2026-11-08T18:04:45.7512018Z PLATFORM-002 390: owner issuance, selected typed tools, approval, verified Calendar edge, refusal, call history, revocation and shell tooltips passed
+shards (agent-executor)	Run this shard	2026-11-08T18:04:47.0384513Z BASE-AGENT-013 reference: native HTTP and both MCP doors agree; keyboard, literal hostile names and readable schemas PASS; 1440 and 390 screens saved
+shards (agent-executor)	Run this shard	2026-11-08T18:04:47.1175405Z > CRANK_EVIDENCE="$CRANK_EVIDENCE/migration" node tests/migration-browser.mjs
+shards (agent-executor)	Run this shard	2026-11-08T18:05:06.2086804Z MIG-001 1440: mapping coverage, safe cancellation, inactive apply, native draft, undo and shell tooltip passed
+shards (agent-executor)	Run this shard	2026-11-08T18:05:19.7456401Z MIG-001 390: mapping coverage, safe cancellation, inactive apply, native draft, undo and shell tooltip passed
+shards (agent-executor)	Run this shard	2026-11-08T18:05:27.1477857Z MIG-001 1440 and 390: reviewed multi-item batches with source node barriers, inactive native draft, ordered actual receiver effects and retained checkpoints passed
+shards (agent-executor)	Run this shard	2026-11-08T18:05:28.2015539Z MIG-001 1440 and 390: retained conversion envelopes, owner-reviewed registry and code provenance, inactive native drafts, exact unused undo and native drift refusal passed
+shards (agent-executor)	Run this shard	2026-11-08T18:05:32.4653562Z WORK-013: reviewed loose-object operands, data grammar provenance, exact branch results and receiver outcomes inspected at 1440 and 390
+shards (agent-executor)	Run this shard	2026-11-08T18:05:33.8075597Z WORK-013: stream Filter retains left and right object mismatch identity and original input with no downstream effects at 1440 and 390
+shards (agent-executor)	Run this shard	2026-11-08T18:05:37.0318002Z WORK-012: reviewed date arithmetic, month-end and Chicago repeated-hour results, retained fields and invalid-date refusal inspected at 1440 and 390
+shards (agent-executor)	Run this shard	2026-11-08T18:05:40.3847113Z MIG-001: embedded child Wait, inactive pinned draft, restart and once-only receiver continuation asserted at 1440 and inspected at 1440 and 390
+shards (agent-executor)	Run this shard	2026-11-08T18:05:40.4878577Z > CRANK_EVIDENCE="$CRANK_EVIDENCE/authoring" node tests/authoring-browser.mjs
+shards (agent-executor)	Run this shard	2026-11-08T18:05:45.1872382Z authoring browser width=1440 state=request
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.4358525Z authoring browser width=1440 state=generated
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.5855733Z screen path: /app/action Skip to main content
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.5859603Z Crank
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.5860195Z Skills
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.5860768Z /
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.5861203Z Review generated workflow
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.5861680Z HO
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.5862055Z Harbour o.
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.5862445Z owner
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.5862807Z Flows
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.5863204Z Runs
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.5863576Z Connections
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.5864117Z Approvals
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.5864505Z Operations
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.5864909Z Skills
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.5865287Z Move in
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.5868143Z Access
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.5868806Z Data
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.5869210Z Inbox
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.5869602Z Follow-ups
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.5869946Z Account
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.5870342Z Review generated workflow
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.5870673Z 
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.5871156Z ← Skills
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.5871460Z 
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.5872031Z Authoring scope permits a manual CRM read, a US filter and one invoice only
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.5872590Z 
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.5872885Z Review generated workflow
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.5873223Z 
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.5873639Z Draft · sandbox test required
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.5874028Z 
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.5877731Z 1 unresolved business question. Authoring and revision make no production sends.
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.5878599Z 
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.5878951Z Open workflow editor
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.5879439Z Requested scope
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.5879756Z 
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.5880824Z These are the draft's fixed account and tool boundaries. Changes that widen access are refused. Review any declined change in the error above, then keep or narrow the saved scope.
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.5882064Z 
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.5882428Z Owned CRM authoring sandbox
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.5882797Z 
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.5883295Z Existing connection scopes: none declared · sandbox
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.5883827Z 
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.5884265Z QuickBooks authoring sandbox · 1234
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.5884674Z 
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.5885279Z Existing connection scopes: com.intuit.quickbooks.accounting · sandbox
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.5885902Z 
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.5886232Z Exact scope and tool boundaries
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.5886760Z Proposed execution grant
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.5887443Z Outgoing data and provider terms
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.5888066Z Graph, mappings and test samples
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.5889227Z Read CRM lead
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.5889560Z 
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.5890012Z http · Owned CRM authoring sandbox
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.5890454Z 
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.5890714Z Keep US leads
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.5891024Z 
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.5891284Z filter
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.5891577Z 
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.5891859Z Create USD invoice
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.5892357Z 
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.5892932Z quickbooks.create_invoice · QuickBooks authoring sandbox
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.5893577Z 
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.5893905Z Workflow graph (JSON)
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.5894418Z Sample inputs (JSON array)
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.5894973Z Business questions
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.5895505Z Confirm the country and stable business key mappings.
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.5895939Z 
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.5896586Z Blank answers stay unresolved. Saving edits invalidates previous tests; scope widening is refused.
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.5897215Z 
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.5897473Z Save draft changes
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.5897879Z Sandbox test
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.5898180Z 
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.5898998Z Tests run the saved graph and samples against explicitly bound test accounts. Save edits before testing.
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.5899681Z 
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.5899945Z Test account for Owne
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.8394038Z node:internal/modules/run_main:123
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.8394971Z     triggerUncaughtException(
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.8395941Z     ^
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.8396094Z 
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.8397180Z ExpectError: expect(locator).toBeVisible() failed
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.8397508Z 
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.8397671Z Locator: getByRole('alert')
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.8399011Z Expected: visible
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.8399566Z Error: strict mode violation: getByRole('alert') resolved to 2 elements:
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.8401310Z     1) <div role="alert">…</div> aka getByText('← SkillsAuthoring scope')
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.8403966Z     2) <p role="alert" class="notice">Authoring scope permits a manual CRM read, a US f…</p> aka getByText('Authoring scope permits a')
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.8404623Z 
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.8404750Z Call log:
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.8405158Z   - Expect "toBeVisible" getByRole('alert') with timeout 5000ms
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.8405658Z   - waiting for getByRole('alert')
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.8405901Z 
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.8406683Z     at captureRawStack (/home/runner/work/run-crank/run-crank/node_modules/.pnpm/playwright-core@1.63.0/node_modules/playwright-core/lib/coreBundle.js:8588:17)
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.8408322Z     at callMatcherAsStep (/home/runner/work/run-crank/run-crank/node_modules/.pnpm/playwright@1.63.0/node_modules/playwright/lib/matchers/expect.js:13310:57)
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.8409754Z     at Object.toBeVisible (/home/runner/work/run-crank/run-crank/node_modules/.pnpm/playwright@1.63.0/node_modules/playwright/lib/matchers/expect.js:13302:23)
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.8410814Z     at /home/runner/work/run-crank/run-crank/tests/authoring-browser.mjs:52:209 {
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.8411317Z   matcherResult: {
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.8411687Z     message: 'expect(locator).toBeVisible() failed\n' +
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.8412079Z       '\n' +
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.8412370Z       "Locator: getByRole('alert')\n" +
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.8412738Z       'Expected: visible\n' +
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.8413263Z       "Error: strict mode violation: getByRole('alert') resolved to 2 elements:\n" +
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.8414101Z       `    1) <div role="alert">…</div> aka getByText('← SkillsAuthoring scope')\n` +
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.8415209Z       `    2) <p role="alert" class="notice">Authoring scope permits a manual CRM read, a US f…</p> aka getByText('Authoring scope permits a')\n` +
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.8415943Z       '\n' +
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.8416183Z       'Call log:\n' +
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.8416638Z       `  - Expect "toBeVisible" getByRole('alert') with timeout 5000ms\n` +
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.8417147Z       "  - waiting for getByRole('alert')\n",
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.8417502Z     pass: false,
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.8417759Z     actual: undefined,
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.8418047Z     name: 'toBeVisible',
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.8418676Z     expected: 'visible',
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.8418948Z     log: [
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.8419339Z       `  - Expect "toBeVisible" getByRole('alert') with timeout 5000ms`,
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.8419837Z       "  - waiting for getByRole('alert')"
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.8420169Z     ],
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.8420403Z     timeout: undefined,
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.8420702Z     ariaSnapshot: undefined
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.8420987Z   }
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.8421214Z }
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.8421332Z 
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.8421447Z Node.js v22.20.0
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.8832414Z  ELIFECYCLE  Command failed with exit code 1.
+shards (agent-executor)	Run this shard	2026-11-08T18:05:46.9043662Z ##[error]Process completed with exit code 1.

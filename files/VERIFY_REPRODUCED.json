@@ -1,0 +1,8 @@
+{
+  "head": "96330a235c656ab39ec0c7203057cf59d2dbc3d5",
+  "job": "shards (agent-executor), 128814666152",
+  "command": "node scripts/verify-ci.mjs agent-executor",
+  "test": "tests/authoring-browser.mjs:52 scope-widening refusal alert",
+  "exit": 1,
+  "failure": "strict mode violation: getByRole('alert') resolved to 2 elements"
+}

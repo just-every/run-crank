@@ -3,19 +3,19 @@ TAP version 13
 # Subtest: the flow editor shows the steps and runs; an approval decided from its form continues the run
 ok 1 - the flow editor shows the steps and runs; an approval decided from its form continues the run
   ---
-  duration_ms: 2975.585352
+  duration_ms: 3135.695082
   type: 'test'
   ...
 # Subtest: EXEC-005: older business-key history, date/error filters, mapping decisions, comparison and restricted payloads through API and app
 ok 2 - EXEC-005: older business-key history, date/error filters, mapping decisions, comparison and restricted payloads through API and app
   ---
-  duration_ms: 406.797236
+  duration_ms: 444.246515
   type: 'test'
   ...
 # Subtest: Native visual drafting builds named branches, fences stale and unauthorized saves, and preserves published execution
 ok 3 - Native visual drafting builds named branches, fences stale and unauthorized saves, and preserves published execution
   ---
-  duration_ms: 1588.128033
+  duration_ms: 1903.915386
   type: 'test'
   ...
 1..3
@@ -26,4 +26,4 @@ ok 3 - Native visual drafting builds named branches, fences stale and unauthoriz
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 6028.720701
+# duration_ms 6573.678863

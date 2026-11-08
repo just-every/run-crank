@@ -1,0 +1,7 @@
+{
+  "head": "7ece4aec67ea1fa9328aad8632d01a4c541fe064",
+  "command": "node tests/authoring-browser.mjs",
+  "exit": 0,
+  "repairRound": 1,
+  "change": "Reuse existing role alert feedback on error pages instead of wrapping it in a second alert."
+}

@@ -4013,7 +4013,7 @@
       "executable": false
     },
     "src/crank/ui/document.ts": {
-      "sha256": "c73171fa84c4969f8216f742351a63eb611fd5ccb74f2a8efbe49e7ed1cb3133",
+      "sha256": "c56605bbbea79032fd5dd1add6082a6b4766e16892964de8fe63d9340936116f",
       "executable": false
     },
     "src/crank/ui/drift.ts": {

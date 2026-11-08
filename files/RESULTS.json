@@ -1,5 +1,5 @@
 {
-  "head": "96330a235c656ab39ec0c7203057cf59d2dbc3d5",
+  "head": "7ece4aec67ea1fa9328aad8632d01a4c541fe064",
   "branch": "cloud/sx-crank-c-f95",
   "main": "7ef378f73cfaf5576bc7f133172668363c0a8bca",
   "clause": "UX-001",
@@ -27,9 +27,9 @@
   "verify": {
     "conclusion": null,
     "event": "push",
-    "head_sha": "96330a235c656ab39ec0c7203057cf59d2dbc3d5",
-    "html_url": "https://github.com/just-every/run-crank/actions/runs/42507845303",
-    "id": 42507845303,
+    "head_sha": "7ece4aec67ea1fa9328aad8632d01a4c541fe064",
+    "html_url": "https://github.com/just-every/run-crank/actions/runs/42510619689",
+    "id": 42510619689,
     "name": "Verify",
     "status": "in_progress"
   },

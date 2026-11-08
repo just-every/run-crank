@@ -4,7 +4,7 @@ CLAIM UX-001 PARTIAL points=1 tests=tests/decision-browser.mjs#UX-001: accessibl
 GAP UX-001: Actual iOS and Android notification-to-resolution devices, APNs and FCM delivery, assistive technology on those devices, full small-screen workflow editing and conformance outside the audited Crank operator pages, including Base-owned sign-in, setup and agent doors, remain required.
 
 Product branch: cloud/sx-crank-c-f95
-Full candidate SHA: 96330a235c656ab39ec0c7203057cf59d2dbc3d5
+Full candidate SHA: 7ece4aec67ea1fa9328aad8632d01a4c541fe064
 Merged main: 7ef378f73cfaf5576bc7f133172668363c0a8bca
 PR: none; this repository starts Verify on branch push.
 
@@ -26,7 +26,7 @@ Visual follow-up (tier C): the desktop Approvals navigation label can wrap besid
 | --- | --- |
 | Acceptance sentence 1: create and inspect work, approve and reject, pause, resolve failure, and interrupt connectivity at both widths | PASS for the web slice: tests/decision-browser.mjs:391 through the native app and API; 72 audited states. Actual devices remain separate below. |
 | Acceptance sentence 2: the same notification-to-resolution journey on iOS and Android | UNMET-EXTERNAL: no native devices or APNs and FCM delivery credentials were supplied; touch emulation is labelled honestly. |
-| WCAG labels, textual states, focus and action errors on the named operator pages | PASS in scope: audit and measuredChecks at tests/decision-browser.mjs:155; all 55 criterion rows are in docs/ACCESSIBILITY.md. Zero axe violations across all requested rule tags, without an impact filter. |
+| WCAG labels, textual states, focus and action errors on the named operator pages | PASS in scope: audit and measuredChecks at tests/decision-browser.mjs:155; all 55 criterion rows are in docs/ACCESSIBILITY.md and its identical ACCESSIBILITY.md packet copy. Zero axe violations across all requested rule tags, without an impact filter. |
 | Poor connectivity labels stale and unconfirmed state and reconciles before another decision | PASS: tests/decision-browser.mjs:432; all 54 original assertion calls are retained. Pending and timeout states are audited at both widths. |
 | Failure resolution and field errors | PASS: tests/decision-browser.mjs:592; a real local destination refuses then acknowledges the same body and delivery key. Required-name and JSON errors are tied to fields, corrected and followed by one decision. |
 | Run search and the addressed people inbox | PASS: tests/decision-browser.mjs:650; populated, empty and filtered searches; fresh scoped recipients receive real Cron notices, follow their authenticated link and reject once. |
@@ -41,7 +41,7 @@ This is a PARTIAL claim. No DONE count is requested.
 | --- | --- | --- |
 | 1 | PARTIAL | The web acceptance outcomes pass the registered journey. Actual native-device outcomes remain held. |
 | 2 | PASS in scope | Seeded real storage, native HTTP doors, current grants, actual receiver requests and durable outcome assertions; negative malformed fields send no decision. |
-| 3 | PENDING LANDING | Push Verify 42507845303; exact head 96330a235c656ab39ec0c7203057cf59d2dbc3d5; conclusion None. |
+| 3 | PENDING LANDING | Push Verify 42510619689; exact head 7ece4aec67ea1fa9328aad8632d01a4c541fe064; conclusion None. |
 | 4 | PASS | The complete local browser receipt is bound to the clean exact candidate SHA. |
 | 5 | NOT APPLICABLE to a new inheritance claim | No new Base completion or inheritance is claimed; excluded Base doors remain in GAP. |
 | 6 | PASS mechanically | Contract generator write and check pass; generated views were restored from main and are not committed. All Status cells are unchanged. |
@@ -59,10 +59,18 @@ This is a PARTIAL claim. No DONE count is requested.
 4. Audited text uses the existing typography at 13 pixels or more; icon controls have two-word tooltips; focus and target findings were fixed; no one-sided rounded border or new configuration bucket was introduced.
 5. The source lock is fresh and contract views generate. No added credential-shaped or email-shaped literal is present in the changed source. Publication scanning and candidate main equality and Run site remain lander duties, not claimed receipts.
 
-Verify: {"conclusion": null, "event": "push", "head_sha": "96330a235c656ab39ec0c7203057cf59d2dbc3d5", "html_url": "https://github.com/just-every/run-crank/actions/runs/42507845303", "id": 42507845303, "name": "Verify", "status": "in_progress"}
+Verify: {"conclusion": null, "event": "push", "head_sha": "7ece4aec67ea1fa9328aad8632d01a4c541fe064", "html_url": "https://github.com/just-every/run-crank/actions/runs/42510619689", "id": 42510619689, "name": "Verify", "status": "in_progress"}
 
-Publication scan: commit=96330a235c656ab39ec0c7203057cf59d2dbc3d5; complete=unestablished; historyScanned=unestablished; findings=unestablished. Not run in cloud; the full-history clone and exact candidate are handed to the guarded lander.
+Publication scan: commit=7ece4aec67ea1fa9328aad8632d01a4c541fe064; complete=unestablished; historyScanned=unestablished; findings=unestablished. Not run in cloud; the full-history clone and exact candidate are handed to the guarded lander.
 
 PROBE UX-001 1: /app/approvals, /app/workflow-runs/<id>, /app/runs/<id>, /app/workflows/<id>, /app/runs and /app/inbox; long names and payloads, keyboard at 1440 and touch at 390 -> 72 zero-violation states, all measured checks pass, one decision and read-only reconciliation preserved.
 PROBE UX-001 2: none, actual iOS and Android devices and mobile push delivery are not provisioned.
 MECHANICAL lock=node node_modules/@runeditrun/rer/edition-authoring/cli.mjs lock and check exit=0; views=node src/base/contract-docs.mjs write and check, then restore generated views exit=0; ledger=none exit=0.
+
+## Verify repair, round 1
+
+The first candidate failed only the agent-executor shard and its aggregate gate; all other shards, including owner-decisions, succeeded. The exact failed shard command reproduced the duplicate-alert error on its failed SHA. The same authoring journey passed on main. Crank now reuses a view’s existing alert instead of wrapping it in a second alert. No assertion changed. The repaired authoring journey passes at both widths on the new exact candidate.
+
+VERIFY_REPRODUCED {"command": "node scripts/verify-ci.mjs agent-executor", "exit": 1, "failure": "strict mode violation: getByRole('alert') resolved to 2 elements", "head": "96330a235c656ab39ec0c7203057cf59d2dbc3d5", "job": "shards (agent-executor), 128814666152", "test": "tests/authoring-browser.mjs:52 scope-widening refusal alert"}
+Repaired candidate proof: {"change": "Reuse existing role alert feedback on error pages instead of wrapping it in a second alert.", "command": "node tests/authoring-browser.mjs", "exit": 0, "head": "7ece4aec67ea1fa9328aad8632d01a4c541fe064", "repairRound": 1}
+Main comparison: {"command": "node tests/authoring-browser.mjs", "exit": 0, "head": "7ef378f73cfaf5576bc7f133172668363c0a8bca"}

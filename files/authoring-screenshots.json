@@ -1,0 +1,77 @@
+{
+  "head": "7ece4aec67ea1fa9328aad8632d01a4c541fe064",
+  "files": [
+    {
+      "path": "repair-final-authoring/1440-request.png",
+      "width": 1440,
+      "height": 1183,
+      "sha256": "0f1bfde7e557d4b8b0a2f543e05b91ea5fd2bac79650b5478999d79e70388ce9"
+    },
+    {
+      "path": "repair-final-authoring/1440-generated.png",
+      "width": 1440,
+      "height": 2816,
+      "sha256": "105ec9b7dc8977844d252563f89b51d4e5dcc50136d6f8360739ab3c7e1be784"
+    },
+    {
+      "path": "repair-final-authoring/1440-scope-refused.png",
+      "width": 1440,
+      "height": 2862,
+      "sha256": "9d937e3d243d71512b5fd6803cea5dd34cac151b7d9b29025037f019b0ced59b"
+    },
+    {
+      "path": "repair-final-authoring/1440-edited.png",
+      "width": 1440,
+      "height": 2816,
+      "sha256": "a642538c0161c43fedfec7424e920d05188c9560b6fb427259c13a9b64b1a2af"
+    },
+    {
+      "path": "repair-final-authoring/1440-tested.png",
+      "width": 1440,
+      "height": 2838,
+      "sha256": "28c834582712e15877d5ee74d33af709f8dc4bc960e7fdd7268b44ca5480a220"
+    },
+    {
+      "path": "repair-final-authoring/1440-promoted.png",
+      "width": 1440,
+      "height": 2785,
+      "sha256": "176ad45c1d392ce38d45eca35d7008ad0c06546a15179e5bc0a280c0dee95625"
+    },
+    {
+      "path": "repair-final-authoring/390-request.png",
+      "width": 390,
+      "height": 1754,
+      "sha256": "984749169053e6d575a0122c7438a3243597530e21c43cdaf874771c6e376253"
+    },
+    {
+      "path": "repair-final-authoring/390-generated.png",
+      "width": 390,
+      "height": 3404,
+      "sha256": "7cac9b4786e32533af3fe924ab545ed8e9959570995402d506ee11346b4c95a6"
+    },
+    {
+      "path": "repair-final-authoring/390-scope-refused.png",
+      "width": 390,
+      "height": 3470,
+      "sha256": "1cf16e57aa3685b0d57421302c8bcf2746a698f2a220dafe07a5f1e032fcd0c2"
+    },
+    {
+      "path": "repair-final-authoring/390-edited.png",
+      "width": 390,
+      "height": 3426,
+      "sha256": "db0e0df5b4845e618b41f4c3853138bc3dfd3a9e09938eff773dc97f6f770807"
+    },
+    {
+      "path": "repair-final-authoring/390-tested.png",
+      "width": 390,
+      "height": 3469,
+      "sha256": "3b26aadb411b7cd82f82771476e17e973940c0896ffc32f6649274a8bdb84df5"
+    },
+    {
+      "path": "repair-final-authoring/390-promoted.png",
+      "width": 390,
+      "height": 3357,
+      "sha256": "4c6e47dafe1a0b39e3ec3427ef02302f36b55d0abf3f9a5e8eefc2cb36ab1384"
+    }
+  ]
+}

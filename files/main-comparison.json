@@ -1,0 +1,5 @@
+{
+  "head": "7ef378f73cfaf5576bc7f133172668363c0a8bca",
+  "command": "node tests/authoring-browser.mjs",
+  "exit": 0
+}

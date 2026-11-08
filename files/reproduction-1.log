@@ -1,0 +1,176 @@
+> pnpm run verify:app
+
+> @automation/crank@0.1.0 verify:app /workspace/crank-f95
+> node scripts/verify-app.mjs
+
+> CRANK_EVIDENCE="$CRANK_EVIDENCE/named-approvals" node tests/agent-door/named-approvals-browser.mjs
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProxy environment variables detected. We'll use your proxy for fetch requests.[0m
+
+
+PROBE BASE-AGENT-007 reference admission: absent approver and reviewer -> policy_refs_unresolved, prior document and revision unchanged
+PROBE BASE-AGENT-007 independent decisions: sponsor, unrelated, agent, device and changed evidence refused; two signed-in people -> one inert draft and original concurrent and restarted receipt
+PROBE BASE-AGENT-007 invalidation: rejection, policy revision, changed draft, deactivated first approver and expiry -> no held effect; inactive policy references preserve prior revision
+PROBE BASE-AGENT-007 dispositions: explicit autonomous -> inert draft; standard review -> draft and independently marked review feed
+BASE-AGENT-007 browser: PASS, independent keyboard decisions at 1440; six states at 1440 and 390
+> CRANK_EVIDENCE="$CRANK_EVIDENCE/drift" node tests/drift-browser.mjs
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProxy environment variables detected. We'll use your proxy for fetch requests.[0m
+
+
+drift browser width=1440 state=scope proposal=2b0854d3-aa72-40c7-906c-42d0cab148ca
+drift browser width=1440 state=proposal proposal=dc14cd85-9008-43b3-8f6b-80a1eb51b339
+drift browser width=1440 state=tested proposal=dc14cd85-9008-43b3-8f6b-80a1eb51b339
+drift browser width=1440 state=approved proposal=dc14cd85-9008-43b3-8f6b-80a1eb51b339
+drift browser width=1440 state=rollback proposal=dc14cd85-9008-43b3-8f6b-80a1eb51b339
+drift browser width=1440 state=rolled_back proposal=dc14cd85-9008-43b3-8f6b-80a1eb51b339
+drift browser width=390 state=scope proposal=dceaeb45-c73b-4ad8-982d-1a3ba0a7038f
+drift browser width=390 state=proposal proposal=648ecf36-21f6-41c3-8511-2c4167963d56
+drift browser width=390 state=tested proposal=648ecf36-21f6-41c3-8511-2c4167963d56
+drift browser width=390 state=approved proposal=648ecf36-21f6-41c3-8511-2c4167963d56
+drift browser width=390 state=rollback proposal=648ecf36-21f6-41c3-8511-2c4167963d56
+drift browser width=390 state=rolled_back proposal=648ecf36-21f6-41c3-8511-2c4167963d56
+> CRANK_EVIDENCE="$CRANK_EVIDENCE/mcp-client" node tests/mcp-client-browser.mjs
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProxy environment variables detected. We'll use your proxy for fetch requests.[0m
+
+
+PLATFORM-002 1440: owner issuance, selected typed tools, approval, verified Calendar edge, refusal, call history, revocation and shell tooltips passed
+PLATFORM-002 390: owner issuance, selected typed tools, approval, verified Calendar edge, refusal, call history, revocation and shell tooltips passed
+BASE-AGENT-013 reference: native HTTP and both MCP doors agree; keyboard, literal hostile names and readable schemas PASS; 1440 and 390 screens saved
+> CRANK_EVIDENCE="$CRANK_EVIDENCE/migration" node tests/migration-browser.mjs
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProxy environment variables detected. We'll use your proxy for fetch requests.[0m
+
+
+MIG-001 1440: mapping coverage, safe cancellation, inactive apply, native draft, undo and shell tooltip passed
+MIG-001 390: mapping coverage, safe cancellation, inactive apply, native draft, undo and shell tooltip passed
+MIG-001 1440 and 390: reviewed multi-item batches with source node barriers, inactive native draft, ordered actual receiver effects and retained checkpoints passed
+MIG-001 1440 and 390: retained conversion envelopes, owner-reviewed registry and code provenance, inactive native drafts, exact unused undo and native drift refusal passed
+WORK-013: reviewed loose-object operands, data grammar provenance, exact branch results and receiver outcomes inspected at 1440 and 390
+WORK-013: stream Filter retains left and right object mismatch identity and original input with no downstream effects at 1440 and 390
+WORK-012: reviewed date arithmetic, month-end and Chicago repeated-hour results, retained fields and invalid-date refusal inspected at 1440 and 390
+MIG-001: embedded child Wait, inactive pinned draft, restart and once-only receiver continuation asserted at 1440 and inspected at 1440 and 390
+> CRANK_EVIDENCE="$CRANK_EVIDENCE/authoring" node tests/authoring-browser.mjs
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProxy environment variables detected. We'll use your proxy for fetch requests.[0m
+
+
+authoring browser width=1440 state=request
+authoring browser width=1440 state=generated
+screen path: /app/action Skip to main content
+Crank
+Skills
+/
+Review generated workflow
+HO
+Harbour o.
+owner
+Flows
+Runs
+Connections
+Approvals
+Operations
+Skills
+Move in
+Access
+Data
+Inbox
+Follow-ups
+Account
+Review generated workflow
+
+← Skills
+
+Authoring scope permits a manual CRM read, a US filter and one invoice only
+
+Review generated workflow
+
+Draft · sandbox test required
+
+1 unresolved business question. Authoring and revision make no production sends.
+
+Open workflow editor
+Requested scope
+
+These are the draft's fixed account and tool boundaries. Changes that widen access are refused. Review any declined change in the error above, then keep or narrow the saved scope.
+
+Owned CRM authoring sandbox
+
+Existing connection scopes: none declared · sandbox
+
+QuickBooks authoring sandbox · 1234
+
+Existing connection scopes: com.intuit.quickbooks.accounting · sandbox
+
+Exact scope and tool boundaries
+Proposed execution grant
+Outgoing data and provider terms
+Graph, mappings and test samples
+Read CRM lead
+
+http · Owned CRM authoring sandbox
+
+Keep US leads
+
+filter
+
+Create USD invoice
+
+quickbooks.create_invoice · QuickBooks authoring sandbox
+
+Workflow graph (JSON)
+Sample inputs (JSON array)
+Business questions
+Confirm the country and stable business key mappings.
+
+Blank answers stay unresolved. Saving edits invalidates previous tests; scope widening is refused.
+
+Save draft changes
+Sandbox test
+
+Tests run the saved graph and samples against explicitly bound test accounts. Save edits before testing.
+
+Test account for Owne
+node:internal/modules/run_main:123
+    triggerUncaughtException(
+    ^
+
+ExpectError: expect(locator).toBeVisible() failed
+
+Locator: getByRole('alert')
+Expected: visible
+Error: strict mode violation: getByRole('alert') resolved to 2 elements:
+    1) <div role="alert">…</div> aka getByText('← SkillsAuthoring scope')
+    2) <p role="alert" class="notice">Authoring scope permits a manual CRM read, a US f…</p> aka getByText('Authoring scope permits a')
+
+Call log:
+  - Expect "toBeVisible" getByRole('alert') with timeout 5000ms
+  - waiting for getByRole('alert')
+
+    at captureRawStack (/workspace/crank-f95/node_modules/.pnpm/playwright-core@1.63.0/node_modules/playwright-core/lib/coreBundle.js:8588:17)
+    at callMatcherAsStep (/workspace/crank-f95/node_modules/.pnpm/playwright@1.63.0/node_modules/playwright/lib/matchers/expect.js:13310:57)
+    at Object.toBeVisible (/workspace/crank-f95/node_modules/.pnpm/playwright@1.63.0/node_modules/playwright/lib/matchers/expect.js:13302:23)
+    at /workspace/crank-f95/tests/authoring-browser.mjs:52:209 {
+  matcherResult: {
+    message: 'expect(locator).toBeVisible() failed\n' +
+      '\n' +
+      "Locator: getByRole('alert')\n" +
+      'Expected: visible\n' +
+      "Error: strict mode violation: getByRole('alert') resolved to 2 elements:\n" +
+      `    1) <div role="alert">…</div> aka getByText('← SkillsAuthoring scope')\n` +
+      `    2) <p role="alert" class="notice">Authoring scope permits a manual CRM read, a US f…</p> aka getByText('Authoring scope permits a')\n` +
+      '\n' +
+      'Call log:\n' +
+      `  - Expect "toBeVisible" getByRole('alert') with timeout 5000ms\n` +
+      "  - waiting for getByRole('alert')\n",
+    pass: false,
+    actual: undefined,
+    name: 'toBeVisible',
+    expected: 'visible',
+    log: [
+      `  - Expect "toBeVisible" getByRole('alert') with timeout 5000ms`,
+      "  - waiting for getByRole('alert')"
+    ],
+    timeout: undefined,
+    ariaSnapshot: undefined
+  }
+}
+
+Node.js v22.20.0
+ ELIFECYCLE  Command failed with exit code 1.

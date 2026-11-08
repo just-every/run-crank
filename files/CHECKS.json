@@ -1,5 +1,5 @@
 {
-  "head": "96330a235c656ab39ec0c7203057cf59d2dbc3d5",
+  "head": "7ece4aec67ea1fa9328aad8632d01a4c541fe064",
   "generatedViewsWriteAndCheckBeforeCommit": {
     "exit": 0,
     "restoredFromMain": true
@@ -11,57 +11,57 @@
       "name": "typecheck",
       "command": "pnpm typecheck",
       "exit": 0,
-      "seconds": 6.243,
+      "seconds": 0.376,
       "stdout_sha256": "f4b7d5821ac60bed30cb5a7a74137673b64c2d21e84fa4a155822e85e6f9421f"
     },
     {
       "name": "app-tests",
       "command": "node --test --test-concurrency=1 tests/app.test.mjs",
       "exit": 0,
-      "seconds": 6.09,
-      "stdout_sha256": "2561baabca6bbbac1d4c229d356bfe543853757b4a07984980248d4bf4ef7fd3"
+      "seconds": 6.631,
+      "stdout_sha256": "1437adff7b78793eeae7d1a8c52608bfc6902fb29f3bb409ba8b2296a84c3aad"
     },
     {
       "name": "first-party",
       "command": "pnpm exec rer check --profile first-party",
       "exit": 0,
-      "seconds": 0.971,
+      "seconds": 0.877,
       "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
       "name": "contract-views",
       "command": "node src/base/contract-docs.mjs check",
       "exit": 0,
-      "seconds": 0.079,
+      "seconds": 0.086,
       "stdout_sha256": "41be670e8514d35d3059536f54f0a1ff875aa0cf719cdfa33febe6c30584d084"
     },
     {
       "name": "source-lock",
       "command": "node node_modules/@runeditrun/rer/edition-authoring/cli.mjs check",
       "exit": 0,
-      "seconds": 0.416,
-      "stdout_sha256": "8a6864eebbe4592244b44fdfc92ee9c677a20248fbc848355eec31a0f4265751"
+      "seconds": 0.425,
+      "stdout_sha256": "251f3f07de44cf4bb6b41dad06bab0f0b80284fdca624abe8b99233f8317cb3b"
     },
     {
       "name": "decision-syntax",
       "command": "node --check public/decision.js",
       "exit": 0,
-      "seconds": 0.042,
+      "seconds": 0.044,
       "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
       "name": "journey-syntax",
       "command": "node --check tests/decision-browser.mjs",
       "exit": 0,
-      "seconds": 0.046,
+      "seconds": 0.055,
       "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
       "name": "assertion-preservation",
       "command": "node /tmp/check-original-assertions.mjs /home/agent/rer-consolidation/work/sx-crank-c-f95/packet/assertion-preservation.json",
       "exit": 0,
-      "seconds": 0.324,
-      "stdout_sha256": "1aafc4ba808aa4542853151d8fa5e919441f3af6d51e774c18c90b2e7ce05196"
+      "seconds": 0.335,
+      "stdout_sha256": "3093bd8d1e954d5b76f7e8afb94228f31c6c3432c14fd5673a2bcde56cf340fe"
     }
   ]
 }
