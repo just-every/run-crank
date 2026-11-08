@@ -33,11 +33,19 @@ export function openStore(dataDir) {
     catch (error) { if (error.code === 'ENOENT') return null; throw error; }
   }
   function erase(id) { fs.rmSync(path.join(tasks, id, 'job'), { recursive: true, force: true }); }
-  function recover() {
+  function recover(cleanup, messages) {
     for (const entry of fs.readdirSync(tasks, { withFileTypes: true })) {
       if (!entry.isDirectory() || !/^[a-f0-9]{64}$/.test(entry.name)) continue;
       const record = read(entry.name);
-      if (record && !terminal.has(record.status)) save({ ...record, status: 'interrupted', error: { category: 'interrupted', message: 'Executor restarted; task outcome is uncertain and it will not be relaunched.' } });
+      if (record) {
+        const result = cleanup(record);
+        if (!terminal.has(record.status) || result.error === 'memory_limit') {
+          const category = result.error !== 'cancelled' && Object.hasOwn(messages, result.error) ? result.error : 'interrupted';
+          save(Object.hasOwn(result, 'output') ? { ...record, status: 'succeeded', output: result.output }
+            : { ...record, status: category === 'interrupted' ? 'interrupted' : 'failed', error: { category,
+              message: messages[category] ?? 'Executor restarted; task outcome is uncertain and it will not be relaunched.' } });
+        }
+      }
       erase(entry.name);
     }
   }
@@ -46,6 +54,7 @@ export function openStore(dataDir) {
 
 export function publicTask(record) {
   const result = { task_id: record.task_id, status: record.status };
+  if (Object.hasOwn(record, 'aggregate_memory_mb')) result.aggregate_memory_mb = record.aggregate_memory_mb;
   if (Object.hasOwn(record, 'output')) result.output = record.output;
   if (record.error) result.error = record.error;
   return result;
