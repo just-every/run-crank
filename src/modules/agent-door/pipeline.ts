@@ -131,6 +131,9 @@ export async function callTool(rt: Runtime, name: string, input: unknown, princi
     }
     const currentClasses = await classify(tool, args, ctx, original?.classes)
     const classes = original?.classes ?? currentClasses
+    // Classification is complete even if policy admission is contended. Retain
+    // its native facts without inventing a decision, rule or approval receipt.
+    row.classes = classes
     locked = await acquireDecision(rt, row.id)
     if (!locked) return refuse('decision_busy')
     const sums = await usage(rt, state.document!, principal)

@@ -276,6 +276,27 @@ uses the same native preparation projection assertions. This proves the inert
 draft boundary only: provider actions, outside messages, signatures, certificates,
 Undo attribution and broader specialist acts remain unproved.
 
+A call that completes native classification but cannot acquire policy admission
+returns `decision_busy`. Its audit retains the exact computed classes and facts,
+current scopes, sponsor and policy revision. The unevaluated call has no policy
+decision, winning rule, approval or review receipt, call claim or usage
+reservation, and performs no native mutation. Invalid arguments, unknown tools
+and inaccessible targets refused before classification retain no invented
+classes. The existing native journey exercises real concurrent metadata and
+inert-draft calls using the public fixture doors, compares the audit facts,
+checks ordinary success and early refusals, and reads the same rows after
+restart. This audit correction keeps BASE-AGENT-006 PARTIAL: provider leaf
+classification, sensitive record content, omitted risk combinations and facts,
+and the existing Business, IdP, provider, egress and device obligations remain
+held. It changes no policy-reference or named-human approval scope.
+
+The shared conformance assertion requires nonempty completed classification on
+an undecided `decision_busy` refusal; empty classes remain valid only for calls
+refused before classification. The native contention journey also checks that
+refused draft names never appear, existing workflows stay unchanged, and native
+run counts and usage accounting remain unchanged. Complete native workflow and
+usage reports, including admitted inert drafts, survive restart unchanged.
+
 All four mutating tools require `idempotency_key`. The same agent/key and
 unchanged declared arguments return the retained outcome; changed arguments
 return `idempotency_conflict`. The runtime durably claims the call before
