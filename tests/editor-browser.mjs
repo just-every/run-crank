@@ -1,3 +1,4 @@
+import {expectHoverTooltip} from './tooltip-browser.mjs';
 /** Native graph construction through the installed Worker and shipped assets. */
 import assert from 'node:assert/strict';
 import {mkdir} from 'node:fs/promises';
@@ -159,7 +160,7 @@ try {
   // The installed controls are operable by keyboard, including shell tooltips.
   const search=page.getByRole('link',{name:'Search runs',exact:true}),tooltip=page.locator('#search-tooltip');
   await page.mouse.move(0,0);await search.focus();await expect(tooltip).toBeVisible({timeout:100});
-  await search.blur();await page.mouse.move(0,0);await search.hover();await page.waitForTimeout(150);await expect(tooltip).toBeHidden();await expect(tooltip).toBeVisible();
+  await expectHoverTooltip(page,search,tooltip);
   // Quote only the account-free native work; publishing remains an explicit UI action.
   async function quoteNativeWork() {
     const details=page.locator('details').filter({has:page.locator('input[name="path"][value$="/estimate"]')}).first();await open(details);

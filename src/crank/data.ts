@@ -1,7 +1,8 @@
+import { archiveMigrations } from './archive-migrations'
 import { archiveTransferApi } from './archive-api'
 import { archiveTransfers, operation } from './ops/recovery'
 import { createPortability, readArchive, type Manifest, type Part, type Closing } from '@runeditrun/rer/internal/modules/portability/index.mjs'
-import policy from './archive-policy.mjs'
+import policy, { restoreArchive } from './archive-policy.mjs'
 import { authorize, requireOwner, requireWriteOrigin, guardedBatch } from './access'
 import { body, type CrankEnv } from './model'
 import { eraseFlowRun, eraseWorkflowRun } from './workflow-erasure'
@@ -14,7 +15,7 @@ import { operatorAuth } from '../auth.server'
 import { dataFlows } from './data-flows'
 import { DISCLOSURE, listHolds, placeHold, previewRetention, releaseHold, retentionPolicy, retentionScope, setRetention } from './ops/retention'
 
-export const portability = (env: CrankEnv) => createPortability({ db:env.DB, policy })
+export const portability = (env: CrankEnv) => createPortability({ db:env.DB, policy, migrations: () => archiveMigrations(env.DB) })
 
 export async function dataApi(request:Request,env:CrankEnv):Promise<Response|null> {
   const path = new URL(request.url).pathname
@@ -65,8 +66,10 @@ export async function dataApi(request:Request,env:CrankEnv):Promise<Response|nul
     if (path === '/api/crank/data/restore' && request.method === 'POST') {
       const value = await body(request, 8 * 1024 * 1024)
       if (value.confirm !== 'RESTORE' || typeof value.archive !== 'string') return Response.json({error:'Confirm RESTORE and supply an archive.'},{status:400})
-      const rows: (Manifest|Part|Closing)[] = []
+      let rows: (Manifest|Part|Closing)[] = []
       for await (const row of readArchive(new Response(value.archive).body!)) rows.push(row)
+      const originalArchiveHash = (rows.at(-1) as Closing)?.archiveHash
+      rows = await restoreArchive(rows)
       const manifest = rows[0] as Manifest, closing = rows.at(-1) as Closing
       if (manifest?.kind !== 'manifest' || closing?.kind !== 'closing') throw new Error('Incomplete archive')
       let laterJournal
@@ -80,7 +83,7 @@ export async function dataApi(request:Request,env:CrankEnv):Promise<Response|nul
       try {
         for (const part of rows.slice(1,-1) as Part[]) await store.imports.uploadPart(id,part.index,part)
         const status = await store.imports.finalize(id,{archiveHash:closing.archiveHash,contentHash:closing.contentHash,laterJournal})
-        await guardedBatch(env,actor,'owner',[auditStatement(env,actor.id,'data.restore','workspace','data',{archive_hash:closing.archiveHash,normalized:(status.safetyChanges ?? []).map(({table,column,rows}:{table:string;column:string;rows:number})=>({table,column,rows}))})])
+        await guardedBatch(env,actor,'owner',[auditStatement(env,actor.id,'data.restore','workspace','data',{archive_hash:originalArchiveHash,...(originalArchiveHash !== closing.archiveHash ? {normalized_archive_hash:closing.archiveHash} : {}),normalized:(status.safetyChanges ?? []).map(({table,column,rows}:{table:string;column:string;rows:number})=>({table,column,rows}))})])
         return Response.json(status,{headers:{'cache-control':'no-store'}})
       } catch(error) { await store.imports.abort(id); throw error }
     }
@@ -92,7 +95,7 @@ export async function dataApi(request:Request,env:CrankEnv):Promise<Response|nul
       }
       if (value.operator_id !== undefined) {
         if (value.confirm !== 'ERASE' || typeof value.operator_id !== 'string' || !value.operator_id) return Response.json({error:'Confirm ERASE and select one deactivated person.'},{status:400})
-        return Response.json(await eraseOperator(env,actor,value.operator_id),{headers:{'cache-control':'no-store'}})
+        return Response.json(await eraseOperator(env,actor,value.operator_id,store),{headers:{'cache-control':'no-store'}})
       }
       if (value.subject !== undefined) {
         if (value.confirm !== 'ERASE' || typeof value.subject !== 'string' || typeof value.digest !== 'string') return Response.json({error:'Confirm ERASE with the subject and its preview digest.'},{status:400})
@@ -130,6 +133,6 @@ export async function dataApi(request:Request,env:CrankEnv):Promise<Response|nul
     }
     return Response.json({error:'Not found'},{status:404})
   } catch(error:any) {
-    return Response.json({error:error.code === 'staged_validation' ? 'staged_validation: Archive product records are inconsistent (a broken workflow graph, version digest or record reference). Nothing was restored.' : error.code || (error.status ? error.message : 'Data operation refused. Check the archive and destination.')},{status:/^(erasure_epoch|erased_row)/.test(error.code || '') ? 409 : error.status || 409,headers:{'cache-control':'no-store'}})
+    return Response.json({error:error.code === 'staged_validation' ? 'staged_validation: Archive product records are inconsistent (a broken workflow graph, version digest or record reference). Nothing was restored.' : (/^(schema_mismatch|migration_ledger)(:|$)/.test(error.code || '') ? 'schema_mismatch' : error.code) || (error.status ? error.message : 'Data operation refused. Check the archive and destination.')},{status:/^(erasure_epoch|erased_row)/.test(error.code || '') ? 409 : error.status || 409,headers:{'cache-control':'no-store'}})
   }
 }

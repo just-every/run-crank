@@ -12,7 +12,7 @@ const requests = new WeakMap<Request, Actor>()
 /** An object-identity binding available only to server code, never an HTTP header. */
 export function bindNativeRequest(request: Request, actor: Actor): Request {
   requireValue(actor.agentDoor && (actor.kind === 'company' || actor.kind === 'agent' && actor.tokenId), 'A current agent-door principal is required', 403)
-  requests.set(request, { ...actor, team: undefined, agentDoor: Object.freeze({ ...actor.agentDoor, scopes: Object.freeze([...actor.agentDoor.scopes]) }) })
+  requests.set(request, { ...actor, team: undefined, agentDoor: Object.freeze({ ...actor.agentDoor, scopes: Object.freeze([...actor.agentDoor.scopes]), approvers: Object.freeze(actor.agentDoor.approvers.map(person => Object.freeze({ ...person }))) }) })
   return request
 }
 
@@ -29,9 +29,12 @@ export function agentDoorFence(actor: Actor): { sql: string; args: unknown[] } {
     OR EXISTS(SELECT 1 FROM bs_team m WHERE m.business_id=? AND m.operator_id=? AND m.state<>'conflict')))` : ''
   return {
     sql: `(${scopes.sql}) AND EXISTS(SELECT 1 FROM agent_door_agents a WHERE a.id=? AND a.sponsor=? AND a.revoked=0)
+      AND NOT EXISTS(SELECT 1 FROM json_each(?) reviewer WHERE NOT EXISTS(
+        SELECT 1 FROM oa_operators person WHERE person.id=json_extract(reviewer.value,'$.id')
+        AND person.version=json_extract(reviewer.value,'$.version') AND person.status='active'))
       AND EXISTS(SELECT 1 FROM agent_door_state s WHERE s.id=1 AND s.local_paused=0
         AND ${identity.consent ? `s.envelope IS NOT NULL AND (${policy})` : `(s.envelope IS NULL OR (${policy}))`})${business}`,
-    args: [...scopes.args, identity.agentId, actor.id, Date.now(), identity.agentId, identity.consent ?? null,
+    args: [...scopes.args, identity.agentId, actor.id, JSON.stringify(identity.approvers), Date.now(), identity.agentId, identity.consent ?? null,
       ...(identity.consent ? [identity.businessPersonId ?? null, actor.id, identity.businessPersonId ?? null, actor.id] : [])],
   }
 }
@@ -51,7 +54,13 @@ async function currentActor(original: CrankEnv, ctx: ToolContext): Promise<Actor
   const env = runtimeBindings(original) as CrankEnv
   const person = await stmt(env, 'SELECT id,display_name,role,version,status FROM oa_operators WHERE id=?', ctx.person.id).first<NativePerson>()
   requireValue(person?.status === 'active', 'The sponsoring person is no longer active', 403)
-  const identity = Object.freeze({ agentId: ctx.agent.id, consent: ctx.consent, clientId: ctx.clientId, operationId: ctx.operationId, scopes: Object.freeze([...ctx.scopes]) })
+  const approvers = []
+  for (const verified of ctx.approvers) {
+    const reviewer = await stmt(env, 'SELECT id,version,status FROM oa_operators WHERE id=?', verified.id).first<Pick<NativePerson, 'id' | 'version' | 'status'>>()
+    requireValue(reviewer?.status === 'active', 'The approving person is no longer active', 403)
+    approvers.push(Object.freeze({ id: reviewer.id, version: reviewer.version }))
+  }
+  const identity = Object.freeze({ agentId: ctx.agent.id, consent: ctx.consent, clientId: ctx.clientId, operationId: ctx.operationId, scopes: Object.freeze([...ctx.scopes]), approvers: Object.freeze(approvers) })
   if (!ctx.consent) {
     requireValue(ctx.agent.id.startsWith(LOCAL_AGENT_PREFIX), 'A native preparation credential is required', 403)
     const tokenId = ctx.agent.id.slice(LOCAL_AGENT_PREFIX.length)
@@ -99,6 +108,7 @@ export function attributionEnv(env: CrankEnv, ctx: ToolContext): CrankEnv {
   return { ...env, CRANK_AGENT_ATTRIBUTION: Object.freeze({
     agent: Object.freeze({ id: ctx.agent.id, name: ctx.agent.name }),
     for: Object.freeze({ id: ctx.person.id, name: ctx.person.name }), label: ctx.actor.label,
+    approvers: Object.freeze(ctx.approvers.map(person => Object.freeze({ id: person.id, name: person.name }))),
     operation_id: ctx.operationId, ...(ctx.consent ? { consent: ctx.consent } : {}), ...(ctx.clientId ? { client_id: ctx.clientId } : {}),
   }) }
 }

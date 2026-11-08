@@ -1,4 +1,9 @@
-import { id, now, stmt, type CrankEnv } from '../model'
+import { id, now, stmt, type AgentDoorAttribution, type CrankEnv } from '../model'
+
+/** Older preparation rows carry no human approval evidence. Never infer it from the sponsor. */
+export function preparationAttribution(detail: { agent_door?: AgentDoorAttribution }): AgentDoorAttribution | null {
+  return detail.agent_door ? { ...detail.agent_door, approvers: detail.agent_door.approvers ?? [] } : null
+}
 
 function attributedDetail(env: CrankEnv, actorId: string, detail: Record<string, unknown>) {
   const attribution = env.CRANK_AGENT_ATTRIBUTION

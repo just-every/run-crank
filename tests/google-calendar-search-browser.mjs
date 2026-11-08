@@ -1,3 +1,4 @@
+import {expectHoverTooltip} from './tooltip-browser.mjs';
 import assert from 'node:assert/strict';
 import {createServer} from 'node:http';
 import {mkdir,readFile} from 'node:fs/promises';
@@ -30,7 +31,7 @@ async function onScreen({h,w,run}) {
     for(const text of ['synthetic-crank-a','synthetic-crank-b','synthetic-crank-c','2026-11-01T01:30:00-05:00','2026-11-01T01:30:00-06:00','cancelled','2026-11-01','synthetic-crank-series','synthetic-crank-person'])await expect(search).toContainText(text);
     assert.equal(await search.locator('img').count(),0,'provider markup renders literally');
     for(const [id,label] of [['search-tooltip','Search runs'],['account-tooltip','Your account']]) {
-     const control=page.locator(`[aria-describedby="${id}"]`),tooltip=page.getByRole('tooltip',{name:label,exact:true});await page.mouse.move(0,0);await control.blur();await expect(tooltip).toBeHidden();await control.hover();await page.waitForTimeout(150);await expect(tooltip).toBeHidden();await expect(tooltip).toBeVisible();await page.mouse.move(0,0);await control.focus();await expect(tooltip).toBeVisible({timeout:100});await control.blur();
+     const control=page.locator(`[aria-describedby="${id}"]`),tooltip=page.getByRole('tooltip',{name:label,exact:true});await expectHoverTooltip(page,control,tooltip);await page.mouse.move(0,0);await control.focus();await expect(tooltip).toBeVisible({timeout:100});await control.blur();
     }
    }
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`${width} retained results fit`);
@@ -40,3 +41,7 @@ async function onScreen({h,w,run}) {
 }
 try{await googleCalendarSearchJourney({onScreen})}finally{await browser.close()}
 console.log('Retained Calendar identities, zoned times and literal results PASS; screens at 1440 and 390');
+
+// One installed read-connector browser entry point retains all existing assertions.
+await import('./gmail-search-browser.mjs');
+await import('./typeform-search-browser.mjs');

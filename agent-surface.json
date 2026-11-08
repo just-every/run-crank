@@ -7,7 +7,8 @@
     "policy",
     "pause",
     "audit",
-    "idempotency"
+    "idempotency",
+    "prompts"
   ],
   "tools": [
     {
@@ -19,6 +20,18 @@
       ],
       "clauses": [
         "WORK-001"
+      ],
+      "job": "Inspect workflows",
+      "classificationTests": [
+        {
+          "class": "standard",
+          "path": "src/modules/agent-door/conformance/journey.mjs",
+          "name": "checkClasses",
+          "cases": [
+            "BASE-AGENT-006.2.autonomous.list",
+            "BASE-AGENT-006.2.held.list"
+          ]
+        }
       ]
     },
     {
@@ -31,6 +44,20 @@
       "clauses": [
         "WORK-001",
         "WORK-008"
+      ],
+      "job": "Inspect workflows",
+      "classificationTests": [
+        {
+          "class": "standard",
+          "path": "src/modules/agent-door/conformance/journey.mjs",
+          "name": "checkClasses",
+          "cases": [
+            "BASE-AGENT-006.2.autonomous.read",
+            "BASE-AGENT-006.2.autonomous.current",
+            "BASE-AGENT-006.2.held.read",
+            "BASE-AGENT-006.2.held.current"
+          ]
+        }
       ]
     },
     {
@@ -46,6 +73,18 @@
         "WORK-003",
         "WORK-004",
         "WORK-013"
+      ],
+      "job": "Prepare inert work",
+      "classificationTests": [
+        {
+          "class": "standard",
+          "path": "src/modules/agent-door/conformance/journey.mjs",
+          "name": "checkClasses",
+          "cases": [
+            "BASE-AGENT-006.2.autonomous.create",
+            "BASE-AGENT-006.2.held.create"
+          ]
+        }
       ]
     },
     {
@@ -63,6 +102,18 @@
         "WORK-008",
         "WORK-013",
         "EXEC-003"
+      ],
+      "job": "Prepare inert work",
+      "classificationTests": [
+        {
+          "class": "standard",
+          "path": "src/modules/agent-door/conformance/journey.mjs",
+          "name": "checkClasses",
+          "cases": [
+            "BASE-AGENT-006.2.autonomous.update",
+            "BASE-AGENT-006.2.held.update"
+          ]
+        }
       ]
     },
     {
@@ -74,6 +125,18 @@
       ],
       "clauses": [
         "WORK-001"
+      ],
+      "job": "Prepare inert work",
+      "classificationTests": [
+        {
+          "class": "standard",
+          "path": "src/modules/agent-door/conformance/journey.mjs",
+          "name": "checkClasses",
+          "cases": [
+            "BASE-AGENT-006.2.autonomous.duplicate",
+            "BASE-AGENT-006.2.held.duplicate"
+          ]
+        }
       ]
     },
     {
@@ -87,6 +150,18 @@
         "WORK-002",
         "WORK-003",
         "WORK-013"
+      ],
+      "job": "Prepare inert work",
+      "classificationTests": [
+        {
+          "class": "standard",
+          "path": "src/modules/agent-door/conformance/journey.mjs",
+          "name": "checkClasses",
+          "cases": [
+            "BASE-AGENT-006.2.autonomous.validate",
+            "BASE-AGENT-006.2.held.validate"
+          ]
+        }
       ]
     },
     {
@@ -98,6 +173,18 @@
       ],
       "clauses": [
         "EXEC-005"
+      ],
+      "job": "Inspect run history",
+      "classificationTests": [
+        {
+          "class": "standard",
+          "path": "src/modules/agent-door/conformance/journey.mjs",
+          "name": "checkClasses",
+          "cases": [
+            "BASE-AGENT-006.2.autonomous.runs",
+            "BASE-AGENT-006.2.held.runs"
+          ]
+        }
       ]
     },
     {
@@ -109,6 +196,18 @@
       ],
       "clauses": [
         "EXEC-005"
+      ],
+      "job": "Inspect run history",
+      "classificationTests": [
+        {
+          "class": "standard",
+          "path": "src/modules/agent-door/conformance/journey.mjs",
+          "name": "checkClasses",
+          "cases": [
+            "BASE-AGENT-006.2.autonomous.run",
+            "BASE-AGENT-006.2.held.run"
+          ]
+        }
       ]
     },
     {
@@ -120,6 +219,18 @@
       ],
       "clauses": [
         "CONN-002"
+      ],
+      "job": "Inspect account bindings",
+      "classificationTests": [
+        {
+          "class": "standard",
+          "path": "src/modules/agent-door/conformance/journey.mjs",
+          "name": "checkClasses",
+          "cases": [
+            "BASE-AGENT-006.2.autonomous.connections",
+            "BASE-AGENT-006.2.held.connections"
+          ]
+        }
       ]
     },
     {
@@ -131,6 +242,18 @@
       ],
       "clauses": [
         "CONN-001"
+      ],
+      "job": "Assess installed capabilities",
+      "classificationTests": [
+        {
+          "class": "standard",
+          "path": "src/modules/agent-door/conformance/journey.mjs",
+          "name": "checkClasses",
+          "cases": [
+            "BASE-AGENT-006.2.autonomous.catalog",
+            "BASE-AGENT-006.2.held.catalog"
+          ]
+        }
       ]
     },
     {
@@ -143,6 +266,18 @@
       "clauses": [
         "CONN-001",
         "CONN-011"
+      ],
+      "job": "Assess installed capabilities",
+      "classificationTests": [
+        {
+          "class": "standard",
+          "path": "src/modules/agent-door/conformance/journey.mjs",
+          "name": "checkClasses",
+          "cases": [
+            "BASE-AGENT-006.2.autonomous.coverage",
+            "BASE-AGENT-006.2.held.coverage"
+          ]
+        }
       ]
     },
     {
@@ -155,6 +290,18 @@
       "clauses": [
         "CONN-011",
         "CONN-020"
+      ],
+      "job": "Prepare inert work",
+      "classificationTests": [
+        {
+          "class": "standard",
+          "path": "src/modules/agent-door/conformance/journey.mjs",
+          "name": "checkClasses",
+          "cases": [
+            "BASE-AGENT-006.2.autonomous.proposal",
+            "BASE-AGENT-006.2.held.proposal"
+          ]
+        }
       ]
     },
     {
@@ -166,6 +313,18 @@
       ],
       "clauses": [
         "BASE-AGENT-005"
+      ],
+      "job": "Manage my access",
+      "classificationTests": [
+        {
+          "class": "access",
+          "path": "src/modules/agent-door/conformance/journey.mjs",
+          "name": "checkClasses",
+          "cases": [
+            "BASE-AGENT-006.2.autonomous.narrow",
+            "BASE-AGENT-006.2.held.narrow"
+          ]
+        }
       ]
     }
   ],
@@ -599,6 +758,13 @@
     "journey": "tests/agent-door/journey.mjs",
     "agent": {
       "initializer": "tests/agent-door/authorize.mjs"
+    }
+  },
+  "documentation": {
+    "path": "/docs/agents",
+    "limits": {
+      "requestsPerMinute": 600,
+      "maxBodyBytes": 1048576
     }
   }
 }

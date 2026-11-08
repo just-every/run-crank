@@ -82,6 +82,9 @@ export async function localPolicy(rt: Runtime, request: Request): Promise<Respon
   if (document.spend && 'caps' in document.spend) return error('spend_caps_not_enforced', 409)
   const problems = completeness(document, declaredClasses(rt))
   if (problems.length) return error('policy_incomplete', 409, { problems })
+  const refs = [...new Set([...document.rules.flatMap(rule => rule.approver ?? []), ...document.reviewers ?? []].filter(ref => ref.startsWith('person:')))]
+  const unresolved = (await Promise.all(refs.map(async ref => (await rt.options.people.person(ref.slice(7)))?.active ? null : ref))).filter(ref => ref !== null)
+  if (unresolved.length) return error('policy_refs_unresolved', 400, { refs: unresolved })
   const row = await rt.options.db.prepare('INSERT INTO agent_door_state(id,local_document,local_revision) VALUES(1,?,1) ON CONFLICT(id) DO UPDATE SET local_document=excluded.local_document,local_revision=agent_door_state.local_revision+1 RETURNING local_revision').bind(JSON.stringify(document)).first<{ local_revision: number }>()
   return json({ revision: row!.local_revision, complete: true })
 }

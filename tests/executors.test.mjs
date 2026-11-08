@@ -13,23 +13,29 @@ test('WORK-005 EXEC-002 BASE-001: published executor work keeps one durable iden
   const task_id=url.pathname.split('/')[2];
   if(method==='POST'){
    const job=JSON.parse(body);submitted.push(task_id);
-   if(!tasks.has(task_id))tasks.set(task_id,{task_id,status:'running',input:job.input});
+   if(!tasks.has(task_id))tasks.set(task_id,{task_id,status:'running',input:job.input,aggregate_memory_mb:job.aggregate_memory_mb});
    if(lose){lose=false;return new Response('Response lost after durable task creation',{status:500})}
   }
-  const task=tasks.get(task_id);return task?jsonResponse({task_id,status:task.status,...(task.status==='succeeded'?{output:{customer:task.input.customer.trim()}}:{})}):jsonResponse({error:'not_found'},404);
+  const task=tasks.get(task_id);return task?jsonResponse({task_id,status:task.status,...(task.status==='succeeded'?{output:{customer:task.input.customer.trim()}}:task.status==='failed'?{error:{category:'memory_limit',message:'Task exceeded its aggregate memory limit.'}}:{})}):jsonResponse({error:'not_found'},404);
  });
  const h=await harness('https://unused.example',{edge:edge.edge});
  try{
   const account=await connection(h,{app:'http',label:'Harbour isolated code host',auth_kind:'bearer',domains:['executor.example'],secret:{token}});
-  const w=await publish(h,'Harbour Workshop — customer normalization',codeGraph(account.id,{output_schema:{type:'object',properties:{customer:{type:'string'}},required:['customer'],additionalProperties:false}}));
+  const w=await publish(h,'Harbour Workshop — customer normalization',codeGraph(account.id,{aggregate_memory_mb:96,output_schema:{type:'object',properties:{customer:{type:'string'}},required:['customer'],additionalProperties:false}}));
   const run=await startRun(h,w,{customer:'  Harbour Workshop & Supply  '});assert.equal(run.status,'waiting',JSON.stringify(run));
-  const task=run.executor_tasks[0];assert.equal(task.status,'running');assert.equal(stepOf(run,'normalize').trace.executor_task_id,task.id);
+  const published=await h.get(`workflows/${w.id}/versions/1`);assert.equal(published.graph.steps[0].aggregate_memory_mb,96);
+  for(const aggregate_memory_mb of [null,'96',31,2049,64.5,'{{trigger.input.limit}}']){const bad=await h.send('/api/crank/workflows',{name:'Invalid aggregate quota',graph:codeGraph(account.id,{aggregate_memory_mb})},h.owner);assert.equal(bad.status,422);assert.match(bad.text,/aggregate_memory_mb/)}
+  await h.post(`workflows/${w.id}/draft`,{graph:codeGraph(account.id,{aggregate_memory_mb:192})});assert.equal((await h.get('workflows/'+w.id)).draft.steps[0].aggregate_memory_mb,192);
+  const task=run.executor_tasks[0];assert.equal(tasks.get(task.id).aggregate_memory_mb,96);assert.equal(task.status,'running');assert.equal(stepOf(run,'normalize').trace.executor_task_id,task.id);
   assert.equal(new Set(submitted).size,1);assert.ok(submitted.length>=1);
   const requestCount=edge.requests.length;await h.tick(Date.now());assert.equal(edge.requests.length,requestCount,'no early task poll');
   await h.restart();tasks.get(task.id).status='succeeded';await h.tick(Date.now()+61000);
   const done=await h.get('workflow-runs/'+run.id);assert.equal(done.status,'succeeded',JSON.stringify(done.error));assert.deepEqual(stepOf(done,'retain').output.result,{customer:'Harbour Workshop & Supply'});
   assert.equal(new Set(submitted).size,1,'reconciliation never launches a new remote task');assert.ok(!JSON.stringify(done).includes(token));
   const inventory=await h.get('data/flows');assert.ok(inventory.flows.some(flow=>flow.kind==='code'&&flow.recipients.includes('https://executor.example')&&flow.fields.includes('source')));assert.ok(!JSON.stringify(inventory).includes('def main'));
+  const limited=await startRun(h,w,{customer:'Private value must not appear in the limit diagnostic'});assert.equal(tasks.get(limited.executor_tasks[0].id).aggregate_memory_mb,96,'a new draft cannot change the published quota');tasks.get(limited.executor_tasks[0].id).status='failed';await h.restart();await h.tick(Date.now()+61000);
+  const failed=await h.get('workflow-runs/'+limited.id);assert.equal(failed.status,'failed');assert.equal(stepOf(failed,'normalize').error.executor_error_category,'memory_limit');assert.equal(stepOf(failed,'retain'),undefined);assert.ok(!JSON.stringify(stepOf(failed,'normalize').error).includes('Private value'));
+  const legacy=await publish(h,'Legacy address-space meaning',codeGraph(account.id));const legacyRun=await startRun(h,legacy,{customer:'Legacy'});assert.equal(tasks.get(legacyRun.executor_tasks[0].id).aggregate_memory_mb,undefined,'existing declarations never gain an implicit aggregate quota');
   const pending=await startRun(h,w,{customer:'Revoked while waiting'});await h.post(`connections/${account.id}/revoke`);const before=edge.requests.length;await h.tick(Date.now()+120000);
   assert.equal((await h.get('workflow-runs/'+pending.id)).status,'paused');assert.equal(edge.requests.length,before,'live revocation refuses the next physical request');
   const bad=await h.send('/api/crank/workflows',{name:'No implicit egress',graph:codeGraph(account.id,{allowed_egress:['https://unapproved.example']})},h.owner);assert.equal(bad.status,422);
@@ -46,7 +52,7 @@ test('WORK-005 DATA-001 DATA-002: cancellation reports remote confirmation, task
  });
  const h=await harness('https://unused.example',{edge:edge.edge});let receiving;
  try{
-  const c=await connection(h,{app:'http',label:'Owner Linux executor',auth_kind:'bearer',domains:['executor.example'],secret:{token:fakeSecret('executor')}}),w=await publish(h,'Long-running customer normalization',codeGraph(c.id));
+  const c=await connection(h,{app:'http',label:'Owner Linux executor',auth_kind:'bearer',domains:['executor.example'],secret:{token:fakeSecret('executor')}}),w=await publish(h,'Long-running customer normalization',codeGraph(c.id,{aggregate_memory_mb:96}));
   const run=await startRun(h,w,{customer:'Harbour Workshop'}),pending=await startRun(h,w,{customer:'Restore remains inactive'});
   const stopped=await h.post(`workflow-runs/${run.id}/cancel`);assert.equal(stopped.status,'cancelled');assert.equal(stopped.executor_tasks[0].status,'cancelled');assert.equal(cancelled,1);
   const after=edge.requests.length;await h.tick(Date.now());assert.equal(edge.requests.length,after,'cancelled work never resumes');
@@ -55,7 +61,7 @@ test('WORK-005 DATA-001 DATA-002: cancellation reports remote confirmation, task
   const exported=await archive(h);const items=exported.trim().split('\n').map(JSON.parse).flatMap(p=>p.items??[]),refs=items.filter(i=>i.kind==='row'&&i.table==='crank_executor_tasks');assert.equal(refs.length,3);assert.ok(refs.every(i=>i.row.active===0));
   const archivedRequests=edge.requests.length;
   receiving=await harness('https://unused.example',{edge:edge.edge});await receiving.post('data/restore',{archive:exported,confirm:'RESTORE'});
-  assert.equal(edge.requests.length,archivedRequests,'restored task references never contact the source executor');assert.equal((await receiving.get('workflow-runs/'+pending.id)).status,'paused');
+  assert.equal(edge.requests.length,archivedRequests,'restored task references never contact the source executor');assert.equal((await receiving.get('workflow-runs/'+pending.id)).status,'paused');assert.equal((await receiving.get(`workflows/${w.id}/versions/1`)).graph.steps[0].aggregate_memory_mb,96,'inactive restore retains the declared published quota');
   const portableRows=text=>text.trim().split('\n').map(JSON.parse).flatMap(part=>part.items??[]).filter(item=>item.kind==='row').map(({table,row})=>JSON.stringify({table,row})).sort();
   const original=portableRows(exported),received=portableRows(await archive(receiving)),added=received.filter(row=>!original.includes(row));
   assert.deepEqual(added.map(row=>[JSON.parse(row).table,JSON.parse(row).row.action]),[['crank_audit','data.restore']]);

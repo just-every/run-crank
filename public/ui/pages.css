@@ -48,7 +48,7 @@
 .timeline { display: grid; gap: 0; }
 .timeline-item { display: flex; gap: 12px; padding: 12px 0; border-top: 1px solid var(--line); }
 .timeline-item .tile { width: 34px; height: 34px; font-size: 16px; }
-.timeline-item[data-state=none] { opacity: .6; }
+.timeline-item[data-state=none] { opacity: 1; }
 .timeline-body { display: grid; gap: 4px; min-width: 0; flex: 1; }
 .timeline-head { display: flex; align-items: baseline; gap: 4px 12px; flex-wrap: wrap; font-size: 14px; }
 .timeline-head .status { margin-left: auto; }

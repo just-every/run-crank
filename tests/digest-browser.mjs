@@ -1,3 +1,4 @@
+import {expectHoverTooltip} from './tooltip-browser.mjs';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { mkdir, readFile } from 'node:fs/promises';
@@ -45,8 +46,7 @@ await digestJourney({onRelease:async({h,detail})=>{
       for(const label of ['Search runs','Your account']) {
         const tip=page.getByRole('tooltip',{name:label,exact:true});
         const control=page.locator(`[aria-describedby="${label==='Search runs'?'search-tooltip':'account-tooltip'}"]`);
-        await page.mouse.move(0,0);await control.blur();await expect(tip).toBeHidden();await control.hover();
-        await page.waitForTimeout(150);await expect(tip).toBeHidden();await expect(tip).toBeVisible();
+        await expectHoverTooltip(page,control,tip);
         await page.mouse.move(0,0);await control.focus();await expect(tip).toBeVisible({timeout:100});await control.blur();
       }
       }

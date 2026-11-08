@@ -2,9 +2,12 @@ import narrowingJourney from './agent-door/narrowing-journey.mjs';
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {harness} from './harness.mjs';
+import {contentionJourney, documentationJourney} from './agent-door/journey.mjs';
 import {fakeEdge,jsonResponse,settled} from './kit.mjs';
 import {CrankClient,CrankApiError} from '../sdk/index.js';
 import {archive} from './restore-journey.mjs';
+import namedApprovalsJourney from './agent-door/named-approvals-journey.mjs';
+import {nativeAttributionJourney} from './agent-door/attribution-journey.mjs';
 
 const graph={trigger:{type:'manual'},steps:[{id:'receipt',type:'http',input:{method:'POST',url:'https://platform-ledger.example/receipts',body:{to:'operations@harbor.example',amount:'25.00'}}}]};
 const costs={cost:{components:['orchestration','connectors','models','executors'].map(kind=>({kind,usd_per_run:'0',assumption:'Owner-reviewed synthetic network edge; no paid operations'}))}};
@@ -17,6 +20,9 @@ const call=async(rpc,name,args={})=>{const r=await rpc('tools/call',{name,argume
 const issue=async(h,w)=>h.post('grants',{label:'Harbor supplier receipt agent',workflow_id:w.id,version_id:w.published_version_id,expires_at:new Date(Date.now()+3600000).toISOString(),policy:{rules:[{step_id:'receipt',type:'http',connection_id:null,app:'none',fields:['method','url','body'],recipients:['operations@harbor.example'],recipient_field:'body.to',amount_field:'body.amount',max_usd:'100.00',max_per_minute:50}],approval:{timeout_seconds:60,delegate_ids:[],escalate_to:[]}}},h.owner,201);
 
 test('PLATFORM-001: SDK and CORE door draft lifecycle, native granted execution/progress, paginated reads and out-of-grant denial share native approval and audit',async()=>{
+ await contentionJourney();
+ await (await import('./agent-door/recovery-journey.mjs')).recoveryJourney();
+ await namedApprovalsJourney();
  const edge=fakeEdge();edge.routes.set('platform-ledger.example',({body})=>jsonResponse({id:crypto.randomUUID(),receipt:JSON.parse(body)}));
  let scopeBoundary=null;
  const commitBarrier=()=>{
@@ -37,6 +43,7 @@ test('PLATFORM-001: SDK and CORE door draft lifecycle, native granted execution/
   const notification=await h.mf.dispatchFetch(h.origin+'/api/crank/v1/mcp',{method:'POST',headers:{origin:h.origin,authorization:'Bearer '+preparer.token,accept:'application/json, text/event-stream','content-type':'application/json','mcp-protocol-version':'2025-11-25'},body:JSON.stringify({jsonrpc:'2.0',method:'notifications/initialized'})});assert.equal(notification.status,202);assert.equal(await notification.text(),'');
   const hostile=await h.mf.dispatchFetch(h.origin+'/api/crank/v1/mcp',{method:'POST',headers:{origin:'https://foreign.example',cookie:h.owner,accept:'application/json, text/event-stream','content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:1,method:'tools/list'})});assert.equal(hostile.status,403);
   const malformed=await h.mf.dispatchFetch(h.origin+'/api/crank/v1/mcp',{method:'POST',headers:{origin:h.origin,cookie:h.owner,accept:'application/json, text/event-stream','content-type':'application/json'},body:'{'});assert.equal(malformed.status,400);assert.equal((await malformed.json()).error.code,-32700);
+  await documentationJourney({request:(url,init)=>h.mf.dispatchFetch(url,init),origin:h.origin,cookie:h.owner,token:preparer.token});
   const listed=await rpc('tools/list');assert.ok(listed.value.result.tools.some(t=>t.name==='crank.workflows.create'));
   assert.equal((await rpc('invented')).value.error.code,-32601);
   assert.equal((await rpc('tools/call',{name:'crank.runs.get',arguments:{run_id:7}})).value.result._meta['com.runeditrun/error'].code,'invalid_arguments');
@@ -151,7 +158,34 @@ test('PLATFORM-001: SDK and CORE door draft lifecycle, native granted execution/
  }finally{await h.close()}
 });
 
-test('PLATFORM-001: concurrent and restarted draft/publication/rollback retries retain identities and audit without changing later state or restoring authority',async()=>{
+test('PLATFORM-001: draft, publication and duplicate preparations preserve retries, reviewer authority and inactive custody',async()=>{
+ await draftRetryJourney();
+ await duplicateRetryJourney();
+ await reviewerRevocationJourney();
+});
+
+async function reviewerRevocationJourney() {
+ let arrive,release;
+ const reached=new Promise(resolve=>{arrive=resolve}),resume=new Promise(resolve=>{release=resolve});
+ let pause=false;
+ const h=await harness('http://127.0.0.1:9',{nativePreparationBarrier:true,edge:async request=>{
+  if(new URL(request.url).hostname!=='native-preparation.example')return;
+  if(pause){arrive();await resume}
+  return new Response('continue');
+ }});
+ try {
+  await nativeAttributionJourney(h,{duringPreparation:async(approve,deactivate)=>{
+   pause=true;const decision=approve();
+   try {
+    await Promise.race([reached,decision.then(()=>{throw Error('approval completed before the native commit boundary')})]);
+    await deactivate();
+   } finally {release()}
+   return decision;
+  }});
+ } finally {release();await h.close()}
+}
+
+async function draftRetryJourney() {
  const h=await harness('http://127.0.0.1:9');let restored;
  try{
   const sdk=client(h), input={name:'Harbor Workshop — durable draft write',graph};
@@ -223,9 +257,9 @@ test('PLATFORM-001: concurrent and restarted draft/publication/rollback retries 
   assert.notEqual(adopted.version.id,first.version.id);assert.equal(adopted.workflow.versions.length,4);
 
  }finally{await restored?.close();await h.close()}
-});
+}
 
-test('PLATFORM-001: lost, concurrent and restarted duplicate requests keep one inert preparation without overwriting later work',async()=>{
+async function duplicateRetryJourney() {
  const edge=fakeEdge();edge.routes.set('platform-ledger.example',({body})=>jsonResponse({id:crypto.randomUUID(),receipt:JSON.parse(body)}));
  const h=await harness('http://127.0.0.1:9',{edge:edge.edge});let restored;
  try{
@@ -282,8 +316,7 @@ test('PLATFORM-001: lost, concurrent and restarted duplicate requests keep one i
   assert.equal((await restored.send(`/api/crank/workflows/${fresh.id}/run`,{},restored.owner)).status,409);
   await restored.restart();await restored.tick();assert.equal(edge.requests.length,1,'receipt-free restoration and fresh duplication stay inactive');
  }finally{await restored?.close();await h.close()}
-});
-
+}
 
 test('Per-client MCP connector tools enforce exact grants, approvals, history, restart and revocation',async()=>{
  const {mcpClientJourney}=await import('./mcp-client-journey.mjs');await mcpClientJourney();
