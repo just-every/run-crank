@@ -231,6 +231,7 @@ async function migrationRestoreJourney() {
   const additive = { name: '9999_synthetic_restore_additive.sql', sql: `
     ALTER TABLE crank_flows ADD COLUMN synthetic_restore_note TEXT NOT NULL DEFAULT 'awaiting review';
     CREATE TABLE synthetic_restore_records (id TEXT PRIMARY KEY, note TEXT NOT NULL DEFAULT 'new');
+    INSERT INTO synthetic_restore_records(id) VALUES ('synthetic-crank-1');
   ` };
   const incompatible = { name: '9999_synthetic_restore_incompatible.sql', sql:
     'ALTER TABLE crank_flows RENAME COLUMN source_app TO synthetic_source_system;' };
@@ -250,9 +251,9 @@ async function migrationRestoreJourney() {
     assert.equal(received.flows.find(row => row.id === flow.id).status, 'draft');
     assert.ok(received.runs.some(row => row.id === run.id));
     assert.equal((await upgraded.db.prepare('SELECT synthetic_restore_note FROM crank_flows WHERE id=?').bind(flow.id).first()).synthetic_restore_note, 'awaiting review');
-    assert.equal((await upgraded.db.prepare('SELECT COUNT(*) AS n FROM synthetic_restore_records').first()).n, 0);
+    assert.deepEqual((await upgraded.db.prepare('SELECT id,note FROM synthetic_restore_records').all()).results, [{id:'synthetic-crank-1',note:'new'}], 'migration-seeded defaults survive the shared importer');
     const newer = await archive(upgraded);
-    const carried = inventory(newer).map(text => {
+    const carried = inventory(newer).filter(text => JSON.parse(text).table !== 'synthetic_restore_records').map(text => {
       const { table, row } = JSON.parse(text);
       if (table === 'crank_flows') delete row.synthetic_restore_note;
       return JSON.stringify({ table, row });
@@ -264,18 +265,19 @@ async function migrationRestoreJourney() {
 
     older = await harness(target);
     changed = await harness(target, { extraMigrations: [incompatible] });
-    // Snapshot every row and schema, including authority, audit and transfer
-    // bookkeeping. A refused import must leave this entire destination intact.
+    // Snapshot every application row and schema, including authority, audit
+    // and transfer bookkeeping (D1 prohibits reads of its _cf_ internals).
+    // A refused import must leave this entire destination intact.
     const snapshot = async h => {
-      const tables = (await h.db.prepare("SELECT name,sql FROM sqlite_master WHERE type='table' ORDER BY name").all()).results;
+      const tables = (await h.db.prepare("SELECT name,sql FROM sqlite_master WHERE type='table' AND name NOT GLOB '_cf_*' ORDER BY name").all()).results;
       return Promise.all(tables.map(async table => ({...table, rows:(await h.db.prepare('SELECT * FROM "'+table.name.replaceAll('"','""')+'"').all()).results})));
     };
-    for (const [destination, text, reason] of [[older, newer, 'newer migration level'], [changed, exported, 'non-additive column change']]) {
+    for (const [destination, text, reason, status] of [[older, newer, 'newer migration level', 409], [changed, exported, 'non-additive column change', 400]]) {
       // Initialize ordinary portability bookkeeping before the comparison.
       await destination.get('data/transfers');
       const before = await snapshot(destination);
       const refused = await destination.send('/api/crank/data/restore', { archive: text, confirm: 'RESTORE' }, destination.owner);
-      assert.equal(refused.status, 400, reason+': '+refused.text);
+      assert.equal(refused.status, status, reason+': '+refused.text);
       assert.equal(refused.value.error, 'schema_mismatch', reason);
       assert.deepEqual(await snapshot(destination), before, reason+' writes no rows or schema');
     }

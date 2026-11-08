@@ -208,7 +208,7 @@
       "executable": false
     },
     "docs/BACKUP-RESTORE.md": {
-      "sha256": "0f1aa2d66123b661bd0d6784e99a17dd42f5df519184907f38b1041624685142",
+      "sha256": "94e89dd55f8613b79a4db66797043c16570a62747c7896d037c4e444325bfec0",
       "executable": false
     },
     "docs/BATCH.md": {
@@ -2035,6 +2035,14 @@
       "sha256": "805fb60acb045166482f2806645ee83ec596393cf8b0a6b540bbf1393d97a29c",
       "executable": false
     },
+    "scripts/archive-migrations.d.mts": {
+      "sha256": "a445317de218a8f2a77b16ab68c8dce47b432ce8dcf14bf04669d6cbf815fff4",
+      "executable": false
+    },
+    "scripts/archive-migrations.mjs": {
+      "sha256": "465ce22914efa1dfd11658867dc250ddb27b2160cc3c10d267e420ba612d8192",
+      "executable": false
+    },
     "scripts/build-deployment-spec.mjs": {
       "sha256": "765b035fb0a6cecc2a07b2109f2dc36d110c1740021622c91b0bd7d64444268d",
       "executable": false
@@ -3093,6 +3101,18 @@
     },
     "src/crank/archive-api.ts": {
       "sha256": "9119d556625c6edabb7f0d31234708c424badbceef908acd68a7e523ee814289",
+      "executable": false
+    },
+    "src/crank/archive-migration-history.ts": {
+      "sha256": "f52990c59f3b0219d57eb52793d98c7d418beac59f9cfc2fc08d9c607c1cfc69",
+      "executable": false
+    },
+    "src/crank/archive-migration-modules.d.ts": {
+      "sha256": "6ad1a165f9875ebb067d524bba32642d7114ebb5d88400d23666ad941f9993fd",
+      "executable": false
+    },
+    "src/crank/archive-migrations.ts": {
+      "sha256": "cc373126fb3e73232a0004d19bae272fdbad24a61ea726d31d297920a048d626",
       "executable": false
     },
     "src/crank/archive-policy.d.mts": {
@@ -7068,7 +7088,7 @@
       "executable": false
     },
     "tests/harness.mjs": {
-      "sha256": "2c00fbc7db286844e5b2f29141c4d4eb5a9728e4d1d98f4aafd833984f50799b",
+      "sha256": "9d72327d7b835448101845dcde3b666993b0369227d7638763465ebb5c54191d",
       "executable": false
     },
     "tests/historical.test.mjs": {
@@ -7284,7 +7304,7 @@
       "executable": false
     },
     "tests/restore-journey.mjs": {
-      "sha256": "334ef9d0cfd398efcd24f1920a3646a108d759af5c8ecb6d84cdeb0a6cfc64e5",
+      "sha256": "9ada0d116d32f803a9fdbc6c9d01c8bd92403ff1a426f5816a21417e52441ec3",
       "executable": false
     },
     "tests/retry-archive.mjs": {
