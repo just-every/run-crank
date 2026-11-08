@@ -20,10 +20,12 @@ journeys remain in `retry-backoff.yml`, including its Monday and Thursday
 03:37 UTC schedule and manual selections.
 
 All executing jobs use Ubuntu 24.04, Node 22.20.0 and pnpm 10.12.4 with frozen
-installs. Push shards retain their 12-minute timeout and `app-comparisons` keeps
-its existing 16-minute ceiling, including when invoked by Nightly journeys.
-The latter permits 45 minutes for other full-tier shards. The final `verify`
-aggregate is the stable required check.
+installs. Push shards use a 21-minute timeout. Verify 42235687658 cut
+`connections` at 12m47s; no shard in the three-run timing sample completed
+above the old 12-minute general limit, so that cut is a floor. Adding eight
+minutes and rounding up gives 21 minutes. The reusable workflow honors an
+explicit timeout input; Nightly journeys retains its 45-minute input for all
+selected shards. The final `verify` aggregate is the stable required check.
 
 ## Shared build and assertions
 
