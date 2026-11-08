@@ -1,1 +1,13 @@
-{"runs":[{"conclusion":null,"event":"push","head_sha":"7ece4aec67ea1fa9328aad8632d01a4c541fe064","html_url":"https://github.com/just-every/run-crank/actions/runs/42510619689","id":42510619689,"name":"Verify","status":"in_progress"}]}
+{
+  "runs": [
+    {
+      "conclusion": null,
+      "event": "push",
+      "head_sha": "7ece4aec67ea1fa9328aad8632d01a4c541fe064",
+      "html_url": "https://github.com/just-every/run-crank/actions/runs/42510619689",
+      "id": 42510619689,
+      "name": "Verify",
+      "status": "in_progress"
+    }
+  ]
+}

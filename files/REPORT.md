@@ -74,3 +74,9 @@ The first candidate failed only the agent-executor shard and its aggregate gate;
 VERIFY_REPRODUCED {"command": "node scripts/verify-ci.mjs agent-executor", "exit": 1, "failure": "strict mode violation: getByRole('alert') resolved to 2 elements", "head": "96330a235c656ab39ec0c7203057cf59d2dbc3d5", "job": "shards (agent-executor), 128814666152", "test": "tests/authoring-browser.mjs:52 scope-widening refusal alert"}
 Repaired candidate proof: {"change": "Reuse existing role alert feedback on error pages instead of wrapping it in a second alert.", "command": "node tests/authoring-browser.mjs", "exit": 0, "head": "7ece4aec67ea1fa9328aad8632d01a4c541fe064", "repairRound": 1}
 Main comparison: {"command": "node tests/authoring-browser.mjs", "exit": 0, "head": "7ef378f73cfaf5576bc7f133172668363c0a8bca"}
+
+## Terminal custody
+
+The final allowed REST observation at 2026-11-08 18:44 UTC found exact-SHA push Verify 42510619689 still in progress. Ten GitHub calls were used, including the failed-job archive and required reproduction investigation; no further CI poll is made. The terminal status is PUSHED, with no green Verify or READY claim. The earlier real test failure was reproduced and repaired in round 1, and the repaired authoring browser proof passes locally at both widths. No uncorrected local blocker remains. The guarded fleet owns completion of CI, publication scanning and landing.
+
+PUSHED branch=cloud/sx-crank-c-f95 head=7ece4aec67ea1fa9328aad8632d01a4c541fe064

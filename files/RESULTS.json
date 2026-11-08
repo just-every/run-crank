@@ -33,5 +33,9 @@
     "name": "Verify",
     "status": "in_progress"
   },
-  "publicationScan": "lander pending"
+  "publicationScan": "lander pending",
+  "terminalStatus": "PUSHED",
+  "githubCalls": 10,
+  "ciObservedAt": "2026-11-08T18:44:00Z",
+  "localBlockers": []
 }
