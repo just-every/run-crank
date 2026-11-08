@@ -98,7 +98,7 @@ export async function harness(target,{emitted=false,edge,mailEdge,quoteCosts=tru
     let db=await mf.getD1Database('DB');
     await db.prepare('CREATE TABLE d1_migrations (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE, applied_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)').run();
     const migrations=await Promise.all((await readdir('migrations/core')).filter(x=>x.endsWith('.sql') && (!beforeTeamMigration || x!=='0080_team_grants.sql')).sort().map(async name=>({name,sql:await readFile('migrations/core/'+name,'utf8')})));
-    for(const {name,sql} of [...migrations,...extraMigrations]) {
+    for(const {name,sql} of [...migrations,...extraMigrations].sort((a,b)=>a.name<b.name?-1:a.name>b.name?1:0)) {
       await db.batch([...unstable_splitSqlQuery(sql).map(sql=>db.prepare(sql)),db.prepare('INSERT INTO d1_migrations(name) VALUES (?)').bind(name)]);
     }
     const send=async(path,body,cookie='',headers={})=>{

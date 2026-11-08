@@ -1,4 +1,5 @@
 import bundledHistory from './archive-migration-history'
+import { replayArchiveSchema } from './archive-replay.mjs'
 import { destinationLedger, matchMigrationLedger } from '@runeditrun/rer/internal/modules/portability/ledgers.mjs'
 import { PortabilityError, type MigrationReplay } from '@runeditrun/rer/internal/modules/portability/index.mjs'
 
@@ -9,7 +10,7 @@ export async function archiveMigrations(db: D1Database): Promise<MigrationReplay
   const history = bundledHistory
   if (!history) throw new PortabilityError('schema_mismatch')
   const names = matchMigrationLedger(await destinationLedger(db) ?? [], history.files)
-  const selected = history.files.filter(file => names.includes(file.name))
+  const selected = names.map(name => history.files.find(file => file.name === name)!)
   return { names,
     statements: name => selected.find(file => file.name === name)!.statements,
     sha256: name => selected.find(file => file.name === name)?.sha256,
@@ -23,10 +24,9 @@ export async function archiveMigrations(db: D1Database): Promise<MigrationReplay
       }))
     },
     async schemaAfter(chosen, options: { tablesOnly?: boolean; legacyExcludedObjects?: boolean } = {}) {
-      const ordered = history.files.filter(file => chosen.includes(file.name)).map(file => file.name)
-      const schemas = history.schemas[JSON.stringify(ordered)]
-      if (ordered.length !== chosen.length || !schemas) throw new PortabilityError('schema_mismatch')
-      return schemas[options.tablesOnly ? 1 : options.legacyExcludedObjects ? 2 : 0]
+      const ordered = selected.filter(file => chosen.includes(file.name))
+      if (ordered.length !== chosen.length) throw new PortabilityError('schema_mismatch')
+      return replayArchiveSchema(ordered, options)
     },
   }
 }

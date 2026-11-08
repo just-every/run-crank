@@ -1724,7 +1724,7 @@
       "executable": false
     },
     "package.json": {
-      "sha256": "4c09e684c6a505a1d5a4df3f61681474b75df2f457a5175a9090287481cba1a9",
+      "sha256": "abc8725d2f59f8cd2ff5d0dfed3d5c23830ca6e44f51c68ba73f458fe2232b82",
       "executable": false
     },
     "packaging.json": {
@@ -1732,7 +1732,7 @@
       "executable": false
     },
     "pnpm-lock.yaml": {
-      "sha256": "3764eeff5aad3b6371aff04d277021fad944c5f67d9b6195597f247d631c9ff9",
+      "sha256": "d2d2b092e35fd01803df96ec48729fe5698910119488d93b4e624cf238258907",
       "executable": false
     },
     "public/apple-touch-icon.png": {
@@ -2040,7 +2040,7 @@
       "executable": false
     },
     "scripts/archive-migrations.mjs": {
-      "sha256": "465ce22914efa1dfd11658867dc250ddb27b2160cc3c10d267e420ba612d8192",
+      "sha256": "e2bc2472d8fa53099a5f4fa3bbfda292825c3f67fed4ae5daa9183e2c19e6014",
       "executable": false
     },
     "scripts/build-deployment-spec.mjs": {
@@ -3104,7 +3104,7 @@
       "executable": false
     },
     "src/crank/archive-migration-history.ts": {
-      "sha256": "f52990c59f3b0219d57eb52793d98c7d418beac59f9cfc2fc08d9c607c1cfc69",
+      "sha256": "5c200d582ea8b899582757b452e605203f14df586d5160910af4b8ba023a5db4",
       "executable": false
     },
     "src/crank/archive-migration-modules.d.ts": {
@@ -3112,7 +3112,7 @@
       "executable": false
     },
     "src/crank/archive-migrations.ts": {
-      "sha256": "cc373126fb3e73232a0004d19bae272fdbad24a61ea726d31d297920a048d626",
+      "sha256": "ae1d876aa56570c8535625f86284abbfb612b72924ecdb91a2dd82990251b4af",
       "executable": false
     },
     "src/crank/archive-policy.d.mts": {
@@ -7088,7 +7088,7 @@
       "executable": false
     },
     "tests/harness.mjs": {
-      "sha256": "9d72327d7b835448101845dcde3b666993b0369227d7638763465ebb5c54191d",
+      "sha256": "ab0f138c5231cc3901a2c23f84662d03c848e3acfc492a1c08fc30e9df3ad31c",
       "executable": false
     },
     "tests/historical.test.mjs": {
@@ -7304,7 +7304,7 @@
       "executable": false
     },
     "tests/restore-journey.mjs": {
-      "sha256": "9ada0d116d32f803a9fdbc6c9d01c8bd92403ff1a426f5816a21417e52441ec3",
+      "sha256": "8b215d4a5d5bf7b8c7e1d2e25460b9a49985a92a95f7d3a674708f51de9846e5",
       "executable": false
     },
     "tests/retry-archive.mjs": {

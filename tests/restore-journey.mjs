@@ -236,7 +236,7 @@ async function migrationRestoreJourney() {
   const incompatible = { name: '9999_synthetic_restore_incompatible.sql', sql:
     'ALTER TABLE crank_flows RENAME COLUMN source_app TO synthetic_source_system;' };
   const source = await harness(target);
-  let upgraded, older, changed;
+  let upgraded, older, changed, middle;
   try {
     const flow = await source.flow('Synthetic migration bridge');
     const run = await source.run(flow);
@@ -263,6 +263,19 @@ async function migrationRestoreJourney() {
     }), [['crank_audit', 'data.restore']], 'the migration preserves every source record with only the receiving audit added');
     assert.ok(original.every(text => carried.includes(text)));
 
+    const inserted = { ...additive, name: '0050_synthetic_restore_additive.sql' };
+    middle = await harness(target, { extraMigrations: [inserted] });
+    const middleRestore = await middle.post('data/restore', { archive: exported, confirm: 'RESTORE' });
+    assert.deepEqual({
+      phase: middleRestore.phase,
+      migrations: middleRestore.bridged.migrations,
+      flow: (await middle.get()).flows.find(row => row.id === flow.id).status,
+      records: (await middle.db.prepare('SELECT id,note FROM synthetic_restore_records').all()).results,
+    }, {
+      phase: 'complete', migrations: [inserted.name], flow: 'draft',
+      records: [{ id: 'synthetic-crank-1', note: 'new' }],
+    }, 'an older ledger can lack an additive migration that sorts between its recorded files');
+
     older = await harness(target);
     changed = await harness(target, { extraMigrations: [incompatible] });
     // Snapshot every application row and schema, including authority, audit
@@ -282,6 +295,6 @@ async function migrationRestoreJourney() {
       assert.deepEqual(await snapshot(destination), before, reason+' writes no rows or schema');
     }
   } finally {
-    await changed?.close(); await older?.close(); await upgraded?.close(); await source.close();
+    await middle?.close(); await changed?.close(); await older?.close(); await upgraded?.close(); await source.close();
   }
 }

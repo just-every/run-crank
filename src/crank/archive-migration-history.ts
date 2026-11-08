@@ -3,7 +3,6 @@
 // without installing a Worker build plugin. Restore fails closed without it.
 const history: null | {
   files: { name: string; sha256: string; statements: string[] }[]
-  schemas: Record<string, [string, string, string]>
   seeds: { name: string; columns: string[]; images: string[] }[]
 } = null
 export default history
