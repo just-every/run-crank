@@ -1,0 +1,88 @@
+{
+  "files": [
+    {
+      "blob": "1d8164a9cdb123eefbe06cc09c63a359fdfa406b",
+      "bytes": 12174,
+      "path": "REPORT.md",
+      "sha256": "bbfcf7fced451006ba182271e8d6ee038b5bdeea73b09e9f3ff9cb34a5d01501"
+    },
+    {
+      "blob": "da9e6d3ec65a1a3867adbbf6be3eab4bc54e2c6c",
+      "bytes": 248378,
+      "path": "browser/1440-container-email-requirement.png",
+      "sha256": "42ca7a2830450a29eacc2a48be183f6a837090445a26e075c3842b48c4d63dcb"
+    },
+    {
+      "blob": "c3ba812a2b5f89ac5adc29ef7f0a94a718faef37",
+      "bytes": 123677,
+      "path": "browser/390-container-email-requirement.png",
+      "sha256": "a2a1e4f20050f292907fb4748378d2e0fd8fd4245b9a21392693d6fd95cb8913"
+    },
+    {
+      "blob": "f947568245d145f21fdffefe2ca9d8a970fb5b30",
+      "bytes": 183,
+      "path": "candidate-ci.json",
+      "sha256": "df79d6542e56fad3f4fd4588551f79c79e472b20175b5325ca71369142a8eb88"
+    },
+    {
+      "blob": "c1dce7effb758183dbb957d953acc64182a1e27a",
+      "bytes": 4456,
+      "path": "checks.json",
+      "sha256": "e2b2efda8f7080852ddac7da1d737b93ceb01e3f06e4335afc8e682ff821a547"
+    },
+    {
+      "blob": "6470c26618ba5024fa97a73910204fbee8253a18",
+      "bytes": 30887,
+      "path": "container-build.log",
+      "sha256": "656a9dfd37cabf6de1b3b8239f59664f7af6e001aa5238cfd50f498181f587c5"
+    },
+    {
+      "blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "bytes": 0,
+      "path": "first-party.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "blob": "634f86682d5b9ce5cdec9568edb3a33ca9f71429",
+      "bytes": 598,
+      "path": "inbound-email-tests.log",
+      "sha256": "73cf776395bab332f1b45eaea36f82fcc9f724833b6d633ede4f2f7e8f7ac19b"
+    },
+    {
+      "blob": "f4576c9be018ba42efe9c41751a8812c0f3e6d70",
+      "bytes": 1690,
+      "path": "main-ci.json",
+      "sha256": "43edd2d478035ee669bd585b598a433be5bc6fa3cbbcc00f0b20cadbfa87e304"
+    },
+    {
+      "blob": "45614137dd25af4090b2c9b6424146d922dfd3e1",
+      "bytes": 21539,
+      "path": "runtime.log",
+      "sha256": "962b8e5bb9649a056d36629d5826fb8b8701f0d321b751e5456cdd950f258a2c"
+    },
+    {
+      "blob": "13a3a2bf96723dce6ef15729acebcc50e8c52f5a",
+      "bytes": 233,
+      "path": "typecheck.log",
+      "sha256": "f9707cb2c0e2f8304924e57a68e36958f248e51aa40681d15198aff69cd8004b"
+    },
+    {
+      "blob": "79dd0b129bd8170bc0b3ac0a0c2186314ebf42e3",
+      "bytes": 43,
+      "path": "views-check.log",
+      "sha256": "41be670e8514d35d3059536f54f0a1ff875aa0cf719cdfa33febe6c30584d084"
+    },
+    {
+      "blob": "ab92292705a601d5509c82e28a33e53c210ae892",
+      "bytes": 43,
+      "path": "views-write.log",
+      "sha256": "540b168efe390f92191c4c47be4676a9db640b8f3c00b2bea4c20a224c0e80cf"
+    }
+  ],
+  "product_branch": "cloud/sx-crank-c-f105",
+  "product_head": "93202cbd38b841fc76cb365da5d4544ac77f9834",
+  "ref": "refs/heads/evidence/sx-crank-c-f105",
+  "repository": "just-every/run-crank",
+  "schema": 1,
+  "tag": "sx-crank-c-f105"
+}

@@ -1,0 +1,56 @@
+[
+  {
+    "id": 42637751976,
+    "name": "Container qualification",
+    "event": "workflow_dispatch",
+    "status": "completed",
+    "conclusion": "success",
+    "head_sha": "e6ba1c6dd98f68e02826afdfe1e7ffb7fe2ab4df",
+    "html_url": "https://github.com/just-every/run-crank/actions/runs/42637751976"
+  },
+  {
+    "id": 42636568787,
+    "name": "Run demo",
+    "event": "push",
+    "status": "completed",
+    "conclusion": "skipped",
+    "head_sha": "e6ba1c6dd98f68e02826afdfe1e7ffb7fe2ab4df",
+    "html_url": "https://github.com/just-every/run-crank/actions/runs/42636568787"
+  },
+  {
+    "id": 42636568637,
+    "name": "Run site",
+    "event": "push",
+    "status": "completed",
+    "conclusion": "success",
+    "head_sha": "e6ba1c6dd98f68e02826afdfe1e7ffb7fe2ab4df",
+    "html_url": "https://github.com/just-every/run-crank/actions/runs/42636568637"
+  },
+  {
+    "id": 42636568784,
+    "name": "Verify",
+    "event": "push",
+    "status": "completed",
+    "conclusion": "success",
+    "head_sha": "e6ba1c6dd98f68e02826afdfe1e7ffb7fe2ab4df",
+    "html_url": "https://github.com/just-every/run-crank/actions/runs/42636568784"
+  },
+  {
+    "id": 42636567029,
+    "name": "Push on main",
+    "event": "dynamic",
+    "status": "completed",
+    "conclusion": "success",
+    "head_sha": "e6ba1c6dd98f68e02826afdfe1e7ffb7fe2ab4df",
+    "html_url": "https://github.com/just-every/run-crank/actions/runs/42636567029"
+  },
+  {
+    "id": 42626876257,
+    "name": "Verify",
+    "event": "push",
+    "status": "completed",
+    "conclusion": "success",
+    "head_sha": "e6ba1c6dd98f68e02826afdfe1e7ffb7fe2ab4df",
+    "html_url": "https://github.com/just-every/run-crank/actions/runs/42626876257"
+  }
+]

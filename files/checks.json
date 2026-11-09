@@ -1,0 +1,139 @@
+{
+  "schema": 1,
+  "tag": "sx-crank-c-f105",
+  "checks": [
+    {
+      "command": "pnpm run typecheck",
+      "exit": 0
+    },
+    {
+      "command": "npx -y @runeditrun/rer check --profile first-party",
+      "exit": 0
+    },
+    {
+      "command": "node src/base/contract-docs.mjs write && node src/base/contract-docs.mjs check",
+      "exit": 0,
+      "generatedViewsRestored": true
+    },
+    {
+      "command": "node --test --test-concurrency=1 --test-name-pattern='^Inbound email' tests/triggers.test.mjs",
+      "exit": 0,
+      "tests": 3,
+      "pass": 3,
+      "fail": 0
+    },
+    {
+      "command": "npx -y @runeditrun/rer setup --owner-email fleet@runeditrun.com --non-interactive",
+      "exit": 0
+    },
+    {
+      "command": "npx -y @runeditrun/rer build --platform container",
+      "exit": 1,
+      "stage": "Base-generated Dockerfile line 6: npm install --omit=dev --no-audit --no-fund",
+      "failure": "SELF_SIGNED_CERT_IN_CHAIN: request to https://registry.npmjs.org/miniflare failed, reason: self-signed certificate in certificate chain",
+      "rer": "0.2.104",
+      "shaAtInvocation": "d3e6305",
+      "productSourceIdenticalToSave": true
+    },
+    {
+      "command": "pnpm run test:runtime",
+      "exit": 0,
+      "outcomes": [
+        "TRIG-006 runtime platform guard",
+        "HTTP-001 emitted local Worker",
+        "BASE-003 emitted service recovery"
+      ],
+      "browserWidths": [
+        1440,
+        390
+      ],
+      "platformNote": "Emitted local Worker with explicit installation binding; not Docker qualification"
+    },
+    {
+      "command": "git merge origin/main",
+      "exit": 0,
+      "result": "Already up to date",
+      "main": "e6ba1c6dd98f68e02826afdfe1e7ffb7fe2ab4df"
+    },
+    {
+      "command": "node node_modules/@runeditrun/rer/edition-authoring/cli.mjs lock",
+      "exit": 0
+    },
+    {
+      "command": "node node_modules/@runeditrun/rer/edition-authoring/cli.mjs check",
+      "exit": 0
+    },
+    {
+      "command": "git diff --exit-code origin/main -- CONTRACT.md ACCEPTANCE.md docs/CLAIMS.md",
+      "exit": 0
+    }
+  ],
+  "counts": {
+    "before": {
+      "done": 32,
+      "partial": 50,
+      "missing": 17
+    },
+    "after": {
+      "done": 32,
+      "partial": 50,
+      "missing": 17
+    }
+  },
+  "newRegistrations": 0,
+  "preserved": {
+    "baseCopyDeclarations": 245,
+    "changedBaseCopies": [],
+    "srcBaseUnchanged": true,
+    "packagePinsUnchanged": true,
+    "runtimePinUnchanged": true,
+    "contractUnchanged": true
+  },
+  "containerQualification": {
+    "status": "BLOCKED",
+    "dependency": "Supported proxy-CA input in pinned Base container builder",
+    "sshInstall": "NOT RUN",
+    "tlsHealth": "NOT RUN",
+    "fiveMinuteSchedule": "NOT RUN",
+    "unexpectedProcessDeath": "NOT RUN",
+    "daemonRestart": "NOT RUN",
+    "persistentConnectionsAndHistory": "NOT RUN",
+    "sameIdentityRedeploy": "NOT RUN",
+    "containerToWorkersRestore": "NOT RUN",
+    "reason": "Image build failed; no substitute for real container proof was used"
+  },
+  "head": "93202cbd38b841fc76cb365da5d4544ac77f9834",
+  "branch": "cloud/sx-crank-c-f105",
+  "productCustody": "PUSHED",
+  "ready": false,
+  "sourceEquivalence": "No product or test byte changed after the runtime invocation began; final commit records the already-tested helper call and fresh lock.",
+  "migrationLedger": {
+    "command": null,
+    "reason": "No migrations changed"
+  },
+  "verify": {
+    "candidateRuns": [],
+    "reason": "Both commits deliberately carry [skip ci] because the required container qualification is blocked; no landing candidate or READY claim."
+  },
+  "publicationScan": {
+    "commit": "93202cbd38b841fc76cb365da5d4544ac77f9834",
+    "status": "NOT RUN",
+    "complete": false,
+    "historyScanned": false,
+    "findings": null,
+    "reason": "Cloud branch-only task; scan belongs to maintained Mac lander. No scan pass is claimed."
+  },
+  "push": {
+    "status": "PUSH_OK",
+    "head": "93202cbd38b841fc76cb365da5d4544ac77f9834",
+    "branch": "cloud/sx-crank-c-f105",
+    "attempts": 1,
+    "allCandidateIdentities": "Run Edit Run fleet",
+    "trailers": []
+  },
+  "evidencePreflight": {
+    "firstAttempt": "Local metadata-audit fetch failed exit 128: filtered clone could not serve absent historical blob",
+    "githubPushAttempted": false,
+    "repair": "Borrow the full commit object store for the identity audit, without fetching historical blobs or changing product refs"
+  }
+}

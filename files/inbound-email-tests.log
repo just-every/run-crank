@@ -1,0 +1,14 @@
+▲ [WARNING] Proxy environment variables detected. We'll use your proxy for fetch requests.
+
+
+✔ Inbound email admits forwarded fields and files once and refuses sender, authentication and alias authority failures (43712.079692ms)
+✔ Inbound email bounds raw streams and MIME and fences in-flight revocation and stale owner authority (13273.26863ms)
+✔ Inbound email restores complete inactive custody and erases files without replay or archive resurrection (134396.869042ms)
+ℹ tests 3
+ℹ suites 0
+ℹ pass 3
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 194643.761404
