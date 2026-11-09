@@ -94,6 +94,9 @@ the door ends everything it derived from Business: no Business token is admitted
 answers 401 with its resource-metadata challenge and open subscriptions close on their next tick), a call admitted
 with a Business token (`Principal.source: 'business'`) that was held for approval or waiting for admission is refused
 as `sponsor_unavailable` without a native effect, and `person:` and `role:` approver and reviewer refs match nobody.
+A principal saved by rer 0.2.95 or earlier has no `source`; approval execution treats one that has a `consent` id and was not
+held through the embedded door as Business-admitted (those versions admitted a Business token only with a consent id and
+never gave a local credential one), so such an approval ends with its Business too, with no migration.
 `sponsor` refs, seed credentials, native sessions and embedded invocations are unchanged, and the subject mapping
 stays, so a validly signed envelope that names Business people is still adopted and its Pause and revoked lists apply.
 `PeopleAdapter.businessStopped()` is required; `operatorAuthPeople` reads `bs_settings.stopped`,

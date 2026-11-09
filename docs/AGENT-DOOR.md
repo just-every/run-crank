@@ -7,7 +7,7 @@ coverage remains partial. The declared registry is [agent-surface.json](../agent
 the implementation is [src/crank/agent-door](../src/crank/agent-door/index.ts).
 
 The maintained shared runtime source is refreshed to Base commit
-`96045612467d5e752c668e8557b4bf6e906edfb1`, with released CLI `0.2.104`.
+`feb76ac8321ff1275168cce10009291721064738`, with released CLI `0.2.105`.
 Crank retains its native draft-recovery, named-person policy and busy-refusal
 audit adaptations, including immediate `decision_busy` refusal for contending
 preparations without a reservation or effect. The custom people adapter forwards Base's durable Business
@@ -16,6 +16,14 @@ stop reader; applied schema is upgraded additively, preserving migration history
 its issuer, installation, current Business pairing and durable stop checks
 remain authoritative. The additive backfill retains existing paired MCP audit
 membership without changing the decision history.
+
+Saved Business-sponsored approvals from agent doors older than rer 0.2.96 can
+have no persisted principal `source`. The shared 0.2.105 runtime treats those
+legacy principals as Business-sponsored: execution requires a positively running
+Business and otherwise refuses with `sponsor_unavailable`. Native local
+principals retain their separate authority. This refresh adds no migration;
+the existing additive 0.2.104 schema and `people.businessStopped()` adapter
+remain in place.
 
 The historical rer `0.2.91` runner passed 1,021/1,021 hosted CORE points,
 including the seed native journey, on the earlier `2135c394939f4a737adabdc8003b0e667b31ac5a`

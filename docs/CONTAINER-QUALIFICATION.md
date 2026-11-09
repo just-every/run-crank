@@ -55,8 +55,8 @@ persistence and local archive recovery portions of implementation qualification.
 A published map is synthetic stored state, not a complete customer workflow or
 pending-effect/Cron-recovery journey.
 
-Crank pins `@runeditrun/rer@0.2.104` and refreshes maintained Base copies to
-`96045612467d5e752c668e8557b4bf6e906edfb1`. The seed-owned declaration in
+Crank pins `@runeditrun/rer@0.2.105` and refreshes maintained Base copies to
+`feb76ac8321ff1275168cce10009291721064738`. The seed-owned declaration in
 `scripts/installer/local.mjs` uses
 `localPortability({ database: 'foundation', policyModule: 'src/crank/archive-policy.mjs', ... })`
 for both native and container transfers. The module's default export preserves

@@ -3,10 +3,10 @@
 Crank began with the committed Base foundation at
 `fc0e1041efa55771142bbb57c4ab4743147e264d`. `composition.lock.json` records
 that original application runtime and auth composition. Maintained Base copies
-are refreshed to `96045612467d5e752c668e8557b4bf6e906edfb1` (rer 0.2.104);
+are refreshed to `feb76ac8321ff1275168cce10009291721064738` (rer 0.2.105);
 `base-copies.json` records their source paths, bytes and intentional seed
 adaptations. Command tooling comes from the exact published package
-`@runeditrun/rer@0.2.104`. The installed edition-authoring CLI regenerates
+`@runeditrun/rer@0.2.105`. The installed edition-authoring CLI regenerates
 `sources.lock.json` after the source and documentation changes.
 
 Package-mode operation was informed by the public Coaster, Beam and Pier seeds.
@@ -43,4 +43,4 @@ SOFTWARE.
 
 ## Shared process inspection
 
-The exact published RER 0.2.104 package supplies bounded, nonblocking macOS listener ownership inspection. No local RER patches are applied.
+The exact published RER 0.2.105 package supplies bounded, nonblocking macOS listener ownership inspection. No local RER patches are applied.

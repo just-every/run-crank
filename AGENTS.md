@@ -135,8 +135,8 @@ applied migration history; choose any integration method and verify the result.
 Roll useful implementations and tests into shared source where that supports
 their maintenance.
 
-Pinned reference: https://github.com/runeditrun/base/blob/96045612467d5e752c668e8557b4bf6e906edfb1/TANSTACK-START-MIGRATION.md
-Native-session/runtime evidence: https://github.com/runeditrun/base/tree/96045612467d5e752c668e8557b4bf6e906edfb1/default-seed
+Pinned reference: https://github.com/runeditrun/base/blob/feb76ac8321ff1275168cce10009291721064738/TANSTACK-START-MIGRATION.md
+Native-session/runtime evidence: https://github.com/runeditrun/base/tree/feb76ac8321ff1275168cce10009291721064738/default-seed
 
 ## Contract documents
 
@@ -147,11 +147,11 @@ Regenerate the edition source lock after the final source and documentation edit
 
 ## Refresh maintained Base copies
 
-The current runner pin is `@runeditrun/rer@0.2.104`. Use the installed package's
+The current runner pin is `@runeditrun/rer@0.2.105`. Use the installed package's
 public refresh command, keeping seed adaptations and applied migrations:
 
 ```sh
-pnpm exec rer refresh-base --ref 96045612467d5e752c668e8557b4bf6e906edfb1 --base-archive /absolute/extracted-base
+pnpm exec rer refresh-base --ref feb76ac8321ff1275168cce10009291721064738 --from-api
 node node_modules/@runeditrun/rer/edition-authoring/cli.mjs verify-base --offline
 ```
 
