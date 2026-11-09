@@ -146,7 +146,10 @@ export async function tableTransformJourney({inspect=async()=>{}}={}) {
   await h.restart();assert.equal((await dispatch('ZZ')).status,'succeeded');assert.deepEqual(writes.at(-1),{rep:999,inline:999});
   await put('tx',201);assert.equal((await dispatch(' tx ')).status,'succeeded');assert.deepEqual(writes.at(-1),{rep:201,inline:201},'a new run reads the current stored lookup value');
   await inspect({h,w,state:'table-result',expected:201});
-  const disclosed=(await h.get('data'+'/flows')).flows.find(row=>row.id==='table:'+table.id);assert.ok(disclosed);assert.deepEqual(disclosed.recipients,[]);assert.equal(JSON.stringify(disclosed).includes('201'),false);
+  const disclosed=(await h.get('data'+'/flows')).flows.find(row=>row.id==='table:'+table.id);assert.ok(disclosed);assert.deepEqual(disclosed.recipients,[]);// The opaque table ID can itself contain '201'; it is identity, not a
+  // disclosed record value. Check every other disclosure field for leakage.
+  assert.equal(disclosed.id,'table:'+table.id);
+  assert.equal(JSON.stringify({...disclosed,id:undefined}).includes('201'),false);
   const exported=await archive(h);
   restored=await harness(target,{edge});await restored.post('data'+'/restore',{archive:exported,confirm:'RESTORE'});
   const {inventory}=await import('./restore-journey.mjs');

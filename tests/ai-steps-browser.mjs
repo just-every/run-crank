@@ -1,3 +1,4 @@
+import {expectHoverTooltip} from './tooltip-browser.mjs';
 import assert from 'node:assert/strict';
 import {createServer} from 'node:http';
 import {mkdir,readFile} from 'node:fs/promises';
@@ -76,8 +77,7 @@ async function onScreen({h,w,run,state}) {
         for(const label of ['Search runs','Your account']) {
           const control=page.locator(`[aria-describedby="${label==='Search runs'?'search-tooltip':'account-tooltip'}"]`);
           const tooltip=page.getByRole('tooltip',{name:label,exact:true});
-          await page.mouse.move(0,0);await control.blur();await expect(tooltip).toBeHidden();
-          await control.hover();await page.waitForTimeout(150);await expect(tooltip).toBeHidden();await expect(tooltip).toBeVisible();
+          await expectHoverTooltip(page,control,tooltip);
           await page.mouse.move(0,0);await control.focus();await expect(tooltip).toBeVisible({timeout:100});await control.blur();
         }
       }
