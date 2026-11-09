@@ -1,0 +1,64 @@
+{
+  "files": [
+    {
+      "blob": "8c81edd762bb226077d854c43418ca8a5a146e84",
+      "bytes": 5612,
+      "path": "REPORT.md",
+      "sha256": "37402f0ceebd1a3b5759c07d3143894ea49944d0d2c439528c6b0592b107c236"
+    },
+    {
+      "blob": "4b91b92b0e4718565b28271572edabc07ca6edbe",
+      "bytes": 535,
+      "path": "candidate-commits.txt",
+      "sha256": "a532c18f01b6a752ed3a6dc48aacd1cceb6df7a50297daacba4854092bd5da03"
+    },
+    {
+      "blob": "7c1b524ff595b45096f7c5b191fdc430cfa66938",
+      "bytes": 63,
+      "path": "identity-trailers.txt",
+      "sha256": "c59ea912cefcd9067aa7c9fd709eb7e826bcb01698b850d4e4936e0a7eb4fc95"
+    },
+    {
+      "blob": "110100662c7693564fcf59566064197f913f87ae",
+      "bytes": 8034,
+      "path": "product-change.patch",
+      "sha256": "a906843bd200425ed87557b2410cac6f7d688c1514b9c6b732aa9efe5cdaf8a7"
+    },
+    {
+      "blob": "c65d384ec8dc162ca47ede01ff5eea7610649c94",
+      "bytes": 993,
+      "path": "product-push.txt",
+      "sha256": "6fbd3f0bce8b5eb3e6315008aa99c73afc7074356a4d0e2dea4acc0888492e67"
+    },
+    {
+      "blob": "473bc4afbe9d17c73d9f25f78207a46caeef48ca",
+      "bytes": 3108,
+      "path": "product-receipt.json",
+      "sha256": "b2158d4ae358864ef2de9fc6819ad87e531d1fbe23c1bbe9327ed7f3f962f4d7"
+    },
+    {
+      "blob": "8c96988a54aa93c04b5bd25b443ba3674a2f06bb",
+      "bytes": 93,
+      "path": "remote-product-ref.txt",
+      "sha256": "45d50022fa309448e3bce5f5e6d4f41e70308b551c993b0ba214669374af39ff"
+    },
+    {
+      "blob": "5944c5b4998dde01ff58e7f39dd7032923f7b289",
+      "bytes": 172,
+      "path": "verify-conclusion.json",
+      "sha256": "9f6cf9ea97f6d43419ab4d643f3a9a9fd35c7fe4491ce620bac12273c3ec4fb8"
+    },
+    {
+      "blob": "fd847a06b7cca2e62dc872ed81733aa435229300",
+      "bytes": 1278,
+      "path": "verify-runs.json",
+      "sha256": "5ef9f6d7ecac130b60616858c6fe793b68364e440186c8d426b7ce5a84792ff8"
+    }
+  ],
+  "product_branch": "cloud/sx-crank-container-hosted-2-push-1",
+  "product_head": "2e4477cb76b9787b4b3c0ed0f9f90ba4453a8716",
+  "ref": "refs/heads/evidence/sx-crank-container-hosted-2-push-1",
+  "repository": "just-every/run-crank",
+  "schema": 1,
+  "tag": "sx-crank-container-hosted-2-push-1"
+}

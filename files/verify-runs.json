@@ -1,0 +1,38 @@
+{
+  "command": [
+    "gh",
+    "api",
+    "repos/just-every/run-crank/actions/runs?head_sha=2e4477cb76b9787b4b3c0ed0f9f90ba4453a8716&per_page=100",
+    "--jq",
+    ".workflow_runs | map({id,name,status,conclusion,head_sha,head_branch,run_attempt,html_url,event,created_at,updated_at})"
+  ],
+  "runs": [
+    {
+      "conclusion": "success",
+      "created_at": "2026-11-09T01:16:08Z",
+      "event": "push",
+      "head_branch": "cloud/sx-crank-container-hosted-2-push-1",
+      "head_sha": "2e4477cb76b9787b4b3c0ed0f9f90ba4453a8716",
+      "html_url": "https://github.com/just-every/run-crank/actions/runs/42544662613",
+      "id": 42544662613,
+      "name": "Verify",
+      "run_attempt": 1,
+      "status": "completed",
+      "updated_at": "2026-11-09T01:16:40Z"
+    },
+    {
+      "conclusion": "success",
+      "created_at": "2026-11-09T00:19:14Z",
+      "event": "push",
+      "head_branch": "cloud/sx-crank-container-hosted-2",
+      "head_sha": "2e4477cb76b9787b4b3c0ed0f9f90ba4453a8716",
+      "html_url": "https://github.com/just-every/run-crank/actions/runs/42539539780",
+      "id": 42539539780,
+      "name": "Verify",
+      "run_attempt": 2,
+      "status": "completed",
+      "updated_at": "2026-11-09T01:00:58Z"
+    }
+  ],
+  "observed_unix": 1794187227.7432315
+}

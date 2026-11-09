@@ -1,0 +1,7 @@
+{
+  "command": "gh run view 42539539780 -R just-every/run-crank --json conclusion",
+  "response": {
+    "conclusion": "success"
+  },
+  "observed_unix": 1794186926.166637
+}

@@ -1,0 +1,9 @@
+commit 2e4477cb76b9787b4b3c0ed0f9f90ba4453a8716
+Author:     James Peter <github@zemaj.com>
+AuthorDate: Mon Nov 9 10:19:03 2026 +1000
+Commit:     James Peter <github@zemaj.com>
+CommitDate: Mon Nov 9 10:19:03 2026 +1000
+
+    fix: qualify container export in the accepted archive directory
+    
+    Write the qualification backup under exports/ and distinguish our path or usage errors from the pinned Base policyModule refusal. Preserve the exact sanitized export output in the summary and retain FAIL/NOT RUN for blocked transfer rows.

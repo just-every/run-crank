@@ -1,0 +1,87 @@
+{
+  "blockers": [],
+  "branch": "cloud/sx-crank-container-hosted-2-push-1",
+  "branch_verify_conclusion": "success",
+  "branch_verify_run_id": 42544662613,
+  "branch_verify_status": "completed",
+  "branch_verify_url": "https://github.com/just-every/run-crank/actions/runs/42544662613",
+  "candidate_commits": 1,
+  "changed_files": [
+    "docs/CONTAINER-QUALIFICATION.md",
+    "scripts/container-qualify.mjs",
+    "sources.lock.json"
+  ],
+  "clause_changes": [],
+  "contract_and_views": "byte-identical to parent; no generation needed",
+  "counts": {
+    "after": {
+      "done": 32,
+      "missing": 17,
+      "partial": 50,
+      "total": 99
+    },
+    "before": {
+      "done": 32,
+      "missing": 17,
+      "partial": 50,
+      "total": 99
+    }
+  },
+  "github_cli_observation_invocations": 2,
+  "identity": {
+    "author_email": "github@zemaj.com",
+    "author_name": "James Peter",
+    "classification": "original owner identity; unchanged published source commit",
+    "committer_email": "github@zemaj.com",
+    "committer_name": "James Peter",
+    "trailers": []
+  },
+  "local_tests": "not rerun, as instructed for unchanged republication",
+  "merge_base": "0fbed5e5bcb6965d68505fc2358bb442c983905d",
+  "new_product_commits": 0,
+  "observed_utc": "2026-11-09T01:16:34.234474+00:00",
+  "origin_main": "0fbed5e5bcb6965d68505fc2358bb442c983905d",
+  "pr_url": null,
+  "product_head": "2e4477cb76b9787b4b3c0ed0f9f90ba4453a8716",
+  "product_push": "success; cloud-push.py first attempt",
+  "ready_basis": "Both original Verify 42539539780 (attempt 2) and the automatic new-branch Verify 42544662613 completed successfully on the unchanged exact SHA",
+  "remote_product_ref_verified": true,
+  "repository": "just-every/run-crank",
+  "source_branch": "cloud/sx-crank-container-hosted-2",
+  "source_head": "2e4477cb76b9787b4b3c0ed0f9f90ba4453a8716",
+  "tag": "sx-crank-container-hosted-2-push-1",
+  "verify_conclusion": "success",
+  "verify_exact_sha_confirmed": true,
+  "verify_run_attempt": 2,
+  "verify_run_id": 42539539780,
+  "verify_status": "completed",
+  "verify_url": "https://github.com/just-every/run-crank/actions/runs/42539539780",
+  "workflow_observations": [
+    {
+      "conclusion": "success",
+      "created_at": "2026-11-09T01:16:08Z",
+      "event": "push",
+      "head_branch": "cloud/sx-crank-container-hosted-2-push-1",
+      "head_sha": "2e4477cb76b9787b4b3c0ed0f9f90ba4453a8716",
+      "html_url": "https://github.com/just-every/run-crank/actions/runs/42544662613",
+      "id": 42544662613,
+      "name": "Verify",
+      "run_attempt": 1,
+      "status": "completed",
+      "updated_at": "2026-11-09T01:16:40Z"
+    },
+    {
+      "conclusion": "success",
+      "created_at": "2026-11-09T00:19:14Z",
+      "event": "push",
+      "head_branch": "cloud/sx-crank-container-hosted-2",
+      "head_sha": "2e4477cb76b9787b4b3c0ed0f9f90ba4453a8716",
+      "html_url": "https://github.com/just-every/run-crank/actions/runs/42539539780",
+      "id": 42539539780,
+      "name": "Verify",
+      "run_attempt": 2,
+      "status": "completed",
+      "updated_at": "2026-11-09T01:00:58Z"
+    }
+  ]
+}

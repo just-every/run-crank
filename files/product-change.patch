@@ -1,0 +1,128 @@
+commit 2e4477cb76b9787b4b3c0ed0f9f90ba4453a8716
+Author:     James Peter <github@zemaj.com>
+AuthorDate: Mon Nov 9 10:19:03 2026 +1000
+Commit:     James Peter <github@zemaj.com>
+CommitDate: Mon Nov 9 10:19:03 2026 +1000
+
+    fix: qualify container export in the accepted archive directory
+    
+    Write the qualification backup under exports/ and distinguish our path or usage errors from the pinned Base policyModule refusal. Preserve the exact sanitized export output in the summary and retain FAIL/NOT RUN for blocked transfer rows.
+
+diff --git a/docs/CONTAINER-QUALIFICATION.md b/docs/CONTAINER-QUALIFICATION.md
+index e7b31f7..b254a93 100644
+--- a/docs/CONTAINER-QUALIFICATION.md
++++ b/docs/CONTAINER-QUALIFICATION.md
+@@ -26,7 +26,7 @@ the image runtime, migrations or Crank's archive policy.
+ | build | `rer build --platform container`; inspect the resulting immutable image ID. |
+ | run | `rer preview --platform container` on loopback with its own new persistent volume; check native health, workerd engine and image ID; create and publish a synthetic map-only workflow through native HTTP. |
+ | recover | Kill the actual container with SIGKILL; relaunch through Base preview using the same volume and settings; check the same native workflow and image identity. Apply a 1 GiB runtime limit to each inspected app container. |
+-| export | Stop the owned preview and run `rer export --platform container --output FILE`. Base owns the exclusive transfer lock and archive policy. |
++| export | Stop the owned preview and run `rer export --platform container --output exports/container-qualification-backup.rer`. Base owns the exclusive transfer lock and archive policy. |
+ | restore | Use a separate empty checkout and volume, the exact same image ID and `rer import --platform container --input FILE --yes`; launch through Base preview, establish a fresh native owner and verify the previously published workflow is paused with no connection authority. |
+ 
+ The driver has a 22-minute overall budget inside the job's 25-minute timeout,
+@@ -38,7 +38,11 @@ run even after a failed qualification step.
+ 
+ `result.json` includes source SHA, rer version, image ID, every covered row's
+ status and duration, and overall timing. Command output is in `logs/ROW_ID.log`.
+-`summary.md` is a one-screen account of the same result. Uploads select only
++`summary.md` reports the same result and includes the exact sanitized command
++output for a failed export. Path/usage errors in the qualification command are
++labeled separately from an observed `container_policy_module_unsupported` Base
++refusal. Restore stays NOT RUN after either failure; a policy refusal is never
++inferred from the export exit code alone. Uploads select only
+ these two files and the sanitized `logs/*.log`; settings, cookies, archive bytes,
+ image contents, private inputs and environment dumps are not artifacts.
+ 
+@@ -53,8 +57,9 @@ pending-effect/Cron-recovery journey.
+ 
+ The pinned Crank installer in `scripts/installer/local.mjs` declares an
+ executable `policyModule`. In rer 0.2.91, `cli/portability.mjs` refuses that policy
+-with `container_policy_module_unsupported` for container export/import. The job
+-records that actual export refusal and labels restore NOT RUN. It does not
++with `container_policy_module_unsupported` for container export/import. When
++Base emits that refusal, the job records its exact text as export FAIL and
++labels restore NOT RUN. It does not
+ serialize, remove or replace the policy to obtain a passing result. A maintained
+ Base container policy door is needed before those rows can qualify.
+ 
+diff --git a/scripts/container-qualify.mjs b/scripts/container-qualify.mjs
+index 0d6147a..fb2796d 100644
+--- a/scripts/container-qualify.mjs
++++ b/scripts/container-qualify.mjs
+@@ -48,6 +48,10 @@ async function summary() {
+     `Image: ${safe(report.imageDigest ?? 'not built')}`, '',
+     '| Row | Result | Seconds | Detail |', '| --- | --- | ---: | --- |',
+     ...report.rows.map(row => `| ${row.title} | ${row.status} | ${row.durationSeconds.toFixed(1)} | ${safe(row.reason ?? 'Passed')} |`),
++    ...report.rows.filter(row => row.commandOutput).flatMap(row => [
++      '', `## ${row.title}: exact command output`, '',
++      ...row.commandOutput.split('\n').map(line => '    ' + line),
++    ]),
+     '', ...report.limits.map(line => '- ' + line),
+     '', 'See the artifact for command output and the machine-readable result. NOT RUN is not a pass.',
+   ].join('\n') + '\n';
+@@ -94,7 +98,7 @@ function launch(bin, args, { timeout = 600000 } = {}) {
+       clearTimeout(timer); children.delete(child);
+       if (pending) writes = writes.then(() => log(pending));
+       await writes;
+-      code === 0 ? accept(text.trim()) : reject(new Error(`${bin} ${args.join(' ')} failed (${signal ?? code}); see command output above.`));
++      code === 0 ? accept(text.trim()) : reject(Object.assign(new Error(`${bin} ${args.join(' ')} failed (${signal ?? code}); see command output above.`), { commandOutput: text.trim(), exitCode: code }));
+     });
+   });
+   // Attach immediately: preview remains running while HTTP probes execute.
+@@ -112,7 +116,20 @@ async function row(id, action) {
+   currentLog = join(output, 'logs', id + '.log');
+   await save();
+   try { await action(); record.status = 'PASS'; delete record.reason; }
+-  catch (error) { record.status = 'FAIL'; record.reason = scrub(error.message); await log('FAIL: ' + record.reason + '\n'); }
++  catch (error) {
++    record.status = 'FAIL'; record.reason = scrub(error.message);
++    if (id === 'export' && error.commandOutput) {
++      record.commandOutput = scrub(error.commandOutput);
++      if (error.exitCode === 2 || record.commandOutput.includes('Save the archive at a normalized path')) {
++        record.reason = 'Qualification path/usage error; see exact Base output below and export.log.';
++      } else if (record.commandOutput.includes('container_policy_module_unsupported')) {
++        record.reason = 'Base refused Crank policyModule (container_policy_module_unsupported); see exact Base output below and export.log.';
++      } else {
++        record.reason = 'Container export failed; see exact command output below and export.log.';
++      }
++    }
++    await log('FAIL: ' + record.reason + '\n');
++  }
+   finally { record.durationSeconds = (Date.now() - at) / 1000; await save(); }
+   return record.status === 'PASS';
+ }
+@@ -271,9 +288,9 @@ try {
+       });
+       await stopPreview();
+       containerId = undefined;
+-      const archive = join(root, '.rer/container-qualification-backup.rer');
++      const archive = join(root, 'exports/container-qualification-backup.rer');
+       const exported = await row('export', () => rer('export', '--platform', 'container', '--output', archive));
+-      if (!exported) notRun(['restore'], 'Base container export failed; no archive exists. Crank policyModule needs a maintained Base container policy door; see export.log.');
++      if (!exported) notRun(['restore'], 'Export failed; no archive is available for import/readback. ' + report.rows.find(row => row.id === 'export').reason);
+       else {
+         await row('restore', async () => {
+           // A second checkout has its own image/volume namespace. Base still
+diff --git a/sources.lock.json b/sources.lock.json
+index cd9451a..4d76350 100644
+--- a/sources.lock.json
++++ b/sources.lock.json
+@@ -228,7 +228,7 @@
+       "executable": false
+     },
+     "docs/CONTAINER-QUALIFICATION.md": {
+-      "sha256": "15ff8dcaa390a7f40e89e6d437d20b5cfaf83bdefd5bb3f00642d060b0ddc0c8",
++      "sha256": "41b04422b5db59dfe6a73e4710e8dbe481280a1bb45b8afff665d418a735e01a",
+       "executable": false
+     },
+     "docs/DATA-FLOWS.md": {
+@@ -2064,7 +2064,7 @@
+       "executable": false
+     },
+     "scripts/container-qualify.mjs": {
+-      "sha256": "a965f08cff54ce68caad0daee3f8dc1e7ff5ce18277d19a3d57e9c24e3c583b2",
++      "sha256": "8ebbf44e4e942d5afa2ca661f2f4dc016e2695290117e2bc5adef1291011f1fc",
+       "executable": false
+     },
+     "scripts/crank.mjs": {
