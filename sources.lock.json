@@ -7460,7 +7460,7 @@
       "executable": false
     },
     "tests/table-state-journey.mjs": {
-      "sha256": "4ba9710344c8dad7beeec7986817cff49ebbb805424f76c1ab3f9b33552c39f0",
+      "sha256": "f5131c81adf3c9435c5424f3302154a66501433bcc97b20fc915aa82d5aded4d",
       "executable": false
     },
     "tests/team-browser.mjs": {
@@ -7477,6 +7477,10 @@
     },
     "tests/teams-search-journey.mjs": {
       "sha256": "bbd27c68354e1df40ad3edb380f7769c9e813160f4d062e6602b290491e59b62",
+      "executable": false
+    },
+    "tests/tooltip-browser.mjs": {
+      "sha256": "cf497c41e0e94a38fc294250c9e036c34581450252efed4b6fe9cd19de4c773b",
       "executable": false
     },
     "tests/triggers.test.mjs": {
