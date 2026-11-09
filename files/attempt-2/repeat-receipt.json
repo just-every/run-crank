@@ -1,0 +1,28 @@
+[
+  {
+    "iteration": 1,
+    "journey": "inbound-email",
+    "command": [
+      "node",
+      "tests/inbound-email-browser.mjs"
+    ],
+    "head": "651caafb9926ce0de8163cc836aba4dc4320cda2",
+    "cpu_throttle": 1,
+    "exit": 0,
+    "elapsed_seconds": 11.05,
+    "log": "attempt-2/repeat-01-inbound-email.log"
+  },
+  {
+    "iteration": 1,
+    "journey": "sample",
+    "command": [
+      "node",
+      "tests/sample-browser.mjs"
+    ],
+    "head": "651caafb9926ce0de8163cc836aba4dc4320cda2",
+    "cpu_throttle": 1,
+    "exit": 1,
+    "elapsed_seconds": 66.2,
+    "log": "attempt-2/repeat-01-sample.log"
+  }
+]

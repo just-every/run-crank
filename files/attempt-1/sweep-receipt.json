@@ -1,0 +1,114 @@
+[
+  {
+    "journey": "ai-steps",
+    "command": [
+      "node",
+      "tests/ai-steps-browser.mjs"
+    ],
+    "exit": 0,
+    "elapsed_seconds": 126.81,
+    "log": "attempt-1/sweep-ai-steps.log",
+    "head_at_exit": "46a85903270d378ddc7c87aa600b597853e54253",
+    "note": "Initial exploratory sweep; HEAD was captured at completion. Helper was corrected during the editor/table commands. Final candidate sweep is recorded separately."
+  },
+  {
+    "journey": "digest",
+    "command": [
+      "node",
+      "tests/digest-browser.mjs"
+    ],
+    "exit": 0,
+    "elapsed_seconds": 42.7,
+    "log": "attempt-1/sweep-digest.log",
+    "head_at_exit": "46a85903270d378ddc7c87aa600b597853e54253",
+    "note": "Initial exploratory sweep; HEAD was captured at completion. Helper was corrected during the editor/table commands. Final candidate sweep is recorded separately."
+  },
+  {
+    "journey": "run-notices",
+    "command": [
+      "node",
+      "tests/run-notices-browser.mjs"
+    ],
+    "exit": 1,
+    "elapsed_seconds": 0.33,
+    "log": null,
+    "diagnostic": "spawn rer ENOENT; checkout node_modules/.bin absent from PATH in initial invocation",
+    "head_at_exit": "46a85903270d378ddc7c87aa600b597853e54253",
+    "note": "Initial exploratory sweep; HEAD was captured at completion. Helper was corrected during the editor/table commands. Final candidate sweep is recorded separately."
+  },
+  {
+    "journey": "run-notices",
+    "command": [
+      "node",
+      "tests/run-notices-browser.mjs"
+    ],
+    "exit": 1,
+    "elapsed_seconds": 2.45,
+    "log": "attempt-1/sweep-run-notices-busy-checkout.log",
+    "head_at_exit": "46a85903270d378ddc7c87aa600b597853e54253",
+    "note": "Initial exploratory sweep; HEAD was captured at completion. Helper was corrected during the editor/table commands. Final candidate sweep is recorded separately."
+  },
+  {
+    "journey": "sibling",
+    "command": [
+      "node",
+      "tests/sibling-browser.mjs"
+    ],
+    "exit": 1,
+    "elapsed_seconds": 1.45,
+    "log": "attempt-1/sweep-sibling-browser-path.log",
+    "head_at_exit": "46a85903270d378ddc7c87aa600b597853e54253",
+    "note": "Initial exploratory sweep; HEAD was captured at completion. Helper was corrected during the editor/table commands. Final candidate sweep is recorded separately."
+  },
+  {
+    "journey": "sibling",
+    "command": [
+      "node",
+      "tests/sibling-browser.mjs"
+    ],
+    "exit": 0,
+    "elapsed_seconds": 173.87,
+    "log": "attempt-1/sweep-sibling.log",
+    "head_at_exit": "46a85903270d378ddc7c87aa600b597853e54253",
+    "note": "Initial exploratory sweep; HEAD was captured at completion. Helper was corrected during the editor/table commands. Final candidate sweep is recorded separately."
+  },
+  {
+    "journey": "calendar-search",
+    "command": [
+      "node",
+      "tests/google-calendar-search-browser.mjs"
+    ],
+    "exit": 0,
+    "elapsed_seconds": 69.39,
+    "log": "attempt-1/sweep-calendar-search.log",
+    "head_at_exit": "46a85903270d378ddc7c87aa600b597853e54253",
+    "note": "Initial exploratory sweep; HEAD was captured at completion. Helper was corrected during the editor/table commands. Final candidate sweep is recorded separately."
+  },
+  {
+    "journey": "editor",
+    "command": [
+      "node",
+      "tests/agent-door/attribution-browser.mjs"
+    ],
+    "exit": 0,
+    "elapsed_seconds": 51.94,
+    "log": "attempt-1/sweep-editor.log",
+    "head_at_exit": "651caafb9926ce0de8163cc836aba4dc4320cda2",
+    "note": "Initial exploratory sweep; HEAD was captured at completion. Helper was corrected during the editor/table commands. Final candidate sweep is recorded separately."
+  },
+  {
+    "journey": "table-state",
+    "command": [
+      "node",
+      "--test",
+      "--test-concurrency=1",
+      "--test-name-pattern=^WORK-007:",
+      "tests/logic.test.mjs"
+    ],
+    "exit": 0,
+    "elapsed_seconds": 57.55,
+    "log": "attempt-1/sweep-table-state.log",
+    "head_at_exit": "651caafb9926ce0de8163cc836aba4dc4320cda2",
+    "note": "Initial exploratory sweep; HEAD was captured at completion. Helper was corrected during the editor/table commands. Final candidate sweep is recorded separately."
+  }
+]

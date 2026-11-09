@@ -1,0 +1,142 @@
+[
+  {
+    "check": "pnpm run typecheck",
+    "head": "46a85903270d378ddc7c87aa600b597853e54253",
+    "exit": 0,
+    "output": "\n> @automation/crank@0.1.0 typecheck /workspace/run-crank\n> tsc --build --incremental\n\n"
+  },
+  {
+    "check": "tooltip helper adversarial probes",
+    "head": "46a85903270d378ddc7c87aa600b597853e54253",
+    "exit": 0,
+    "results": [
+      "Existing hover and focus cleared before hidden assertion",
+      "Native hover remains hidden at transition time 150ms despite scheduler stall",
+      "Native tooltip eventually visible after transition resumes",
+      "Removed hover delay refused by hidden assertion"
+    ]
+  },
+  {
+    "check": "table disclosure collision probe",
+    "head": "46a85903270d378ddc7c87aa600b597853e54253",
+    "exit": 0,
+    "results": [
+      "Opaque table ID containing 201 reproduces old assertion failure",
+      "Identity excluded; every other field checked",
+      "Numeric, nested, list and string record leakage refused"
+    ]
+  },
+  {
+    "check": "npx -y @runeditrun/rer setup --owner-email fleet@runeditrun.com --non-interactive",
+    "exit": 1,
+    "results": [
+      "Dependencies installed and app build completed",
+      "Temporary local readiness failed: app bound different internal ports than readiness target",
+      "Browser journey harness serves the built Worker and assets independently"
+    ]
+  },
+  {
+    "check": "npx -y @runeditrun/rer build",
+    "head": "651caafb9926ce0de8163cc836aba4dc4320cda2",
+    "exit": 0,
+    "results": [
+      "Your application is built",
+      "build: complete (exit 0)"
+    ]
+  },
+  {
+    "check": "node tests/run-notices-browser.mjs",
+    "head": "651caafb9926ce0de8163cc836aba4dc4320cda2",
+    "exit": 1,
+    "results": [
+      "Native rer dev refused incomplete local settings left by failed first setup; rer dev exit 3",
+      "Re-running required setup with exact Node 22.20.0 on PATH before browser proof"
+    ]
+  },
+  {
+    "check": "node --test --test-concurrency=1 --test-name-pattern='^WORK-007:' tests/logic.test.mjs",
+    "head": "651caafb9926ce0de8163cc836aba4dc4320cda2",
+    "exit": 0,
+    "results": [
+      "Operational table registration passed, including transform disclosure/custody/erasure journey"
+    ]
+  },
+  {
+    "check": "corrected CSS clock adversarial probes",
+    "head": "651caafb9926ce0de8163cc836aba4dc4320cda2",
+    "exit": 0,
+    "results": [
+      "CSS clock frozen before hover remains hidden after 750ms of wall time",
+      "Native animation currentTime 150ms remains hidden",
+      "Restored playback produces visible hover",
+      "Removed delay yields visible tooltip even with frozen clock, correctly failing hidden assertion",
+      "Existing hover/focus state cleared; shared helper regression probe passes"
+    ]
+  },
+  {
+    "check": "npx -y @runeditrun/rer setup --owner-email fleet@runeditrun.com --non-interactive with Node 22.20.0 PATH",
+    "head": "651caafb9926ce0de8163cc836aba4dc4320cda2",
+    "exit": 0,
+    "results": [
+      "Setup completed; native owner and runtime ready"
+    ]
+  },
+  {
+    "check": "node tests/run-notices-browser.mjs",
+    "head": "651caafb9926ce0de8163cc836aba4dc4320cda2",
+    "exit": 0,
+    "results": [
+      "EXEC-003 installed notice history and tooltips PASS at 1440/390",
+      "Only remaining recorded descendants 9575, 9601, 9606 terminated after PASS so subreaper could finish"
+    ]
+  },
+  {
+    "check": "pnpm run typecheck",
+    "head": "651caafb9926ce0de8163cc836aba4dc4320cda2",
+    "exit": 0,
+    "log": "typecheck-final.log"
+  },
+  {
+    "check": "node node_modules/@runeditrun/rer/edition-authoring/cli.mjs check",
+    "head": "651caafb9926ce0de8163cc836aba4dc4320cda2",
+    "exit": 0,
+    "results": [
+      "Tracked shared tooltip helper and all touched sources match lock"
+    ]
+  },
+  {
+    "check": "node --check on changed mjs modules and git diff --check",
+    "head": "651caafb9926ce0de8163cc836aba4dc4320cda2",
+    "exit": 0
+  },
+  {
+    "check": "required setup and emitted build after main integration",
+    "head": "89b071efdb8561e4fc8050f1e23554d92cf6725c",
+    "exit": 0
+  },
+  {
+    "check": "node tests/run-notices-browser.mjs",
+    "head": "89b071efdb8561e4fc8050f1e23554d92cf6725c",
+    "exit": 0,
+    "log": "sweep-run-notices-merged.log",
+    "results": [
+      "Installed notice history and tooltips PASS at 1440/390",
+      "Remaining owned server descendants stopped by recorded PID after PASS"
+    ]
+  },
+  {
+    "check": "pnpm run typecheck",
+    "head": "89b071efdb8561e4fc8050f1e23554d92cf6725c",
+    "exit": 0,
+    "log": "typecheck-merged.log"
+  },
+  {
+    "check": "node --test --test-concurrency=1 --test-name-pattern='^WORK-007:' tests/logic.test.mjs",
+    "head": "89b071efdb8561e4fc8050f1e23554d92cf6725c",
+    "exit": 0,
+    "log": "table-state-merged.log",
+    "results": [
+      "Focused operational-table registration passes on merged candidate"
+    ]
+  }
+]

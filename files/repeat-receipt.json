@@ -1,0 +1,266 @@
+[
+  {
+    "iteration": 1,
+    "journey": "inbound-email",
+    "command": [
+      "node",
+      "tests/inbound-email-browser.mjs"
+    ],
+    "head": "89b071efdb8561e4fc8050f1e23554d92cf6725c",
+    "cpu_throttle": 1,
+    "exit": 0,
+    "elapsed_seconds": 8.74,
+    "log": "repeat-01-inbound-email.log"
+  },
+  {
+    "iteration": 1,
+    "journey": "sample",
+    "command": [
+      "node",
+      "tests/sample-browser.mjs"
+    ],
+    "head": "89b071efdb8561e4fc8050f1e23554d92cf6725c",
+    "cpu_throttle": 1,
+    "exit": 0,
+    "elapsed_seconds": 94.35,
+    "log": "repeat-01-sample.log"
+  },
+  {
+    "iteration": 2,
+    "journey": "inbound-email",
+    "command": [
+      "node",
+      "tests/inbound-email-browser.mjs"
+    ],
+    "head": "89b071efdb8561e4fc8050f1e23554d92cf6725c",
+    "cpu_throttle": 1,
+    "exit": 0,
+    "elapsed_seconds": 10.02,
+    "log": "repeat-02-inbound-email.log"
+  },
+  {
+    "iteration": 2,
+    "journey": "sample",
+    "command": [
+      "node",
+      "tests/sample-browser.mjs"
+    ],
+    "head": "89b071efdb8561e4fc8050f1e23554d92cf6725c",
+    "cpu_throttle": 1,
+    "exit": 0,
+    "elapsed_seconds": 89.83,
+    "log": "repeat-02-sample.log"
+  },
+  {
+    "iteration": 3,
+    "journey": "inbound-email",
+    "command": [
+      "node",
+      "tests/inbound-email-browser.mjs"
+    ],
+    "head": "89b071efdb8561e4fc8050f1e23554d92cf6725c",
+    "cpu_throttle": 1,
+    "exit": 0,
+    "elapsed_seconds": 10.11,
+    "log": "repeat-03-inbound-email.log"
+  },
+  {
+    "iteration": 3,
+    "journey": "sample",
+    "command": [
+      "node",
+      "tests/sample-browser.mjs"
+    ],
+    "head": "89b071efdb8561e4fc8050f1e23554d92cf6725c",
+    "cpu_throttle": 1,
+    "exit": 0,
+    "elapsed_seconds": 91.49,
+    "log": "repeat-03-sample.log"
+  },
+  {
+    "iteration": 4,
+    "journey": "inbound-email",
+    "command": [
+      "node",
+      "tests/inbound-email-browser.mjs"
+    ],
+    "head": "89b071efdb8561e4fc8050f1e23554d92cf6725c",
+    "cpu_throttle": 1,
+    "exit": 0,
+    "elapsed_seconds": 10.53,
+    "log": "repeat-04-inbound-email.log"
+  },
+  {
+    "iteration": 4,
+    "journey": "sample",
+    "command": [
+      "node",
+      "tests/sample-browser.mjs"
+    ],
+    "head": "89b071efdb8561e4fc8050f1e23554d92cf6725c",
+    "cpu_throttle": 1,
+    "exit": 0,
+    "elapsed_seconds": 92.82,
+    "log": "repeat-04-sample.log"
+  },
+  {
+    "iteration": 5,
+    "journey": "inbound-email",
+    "command": [
+      "node",
+      "tests/inbound-email-browser.mjs"
+    ],
+    "head": "89b071efdb8561e4fc8050f1e23554d92cf6725c",
+    "cpu_throttle": 1,
+    "exit": 0,
+    "elapsed_seconds": 10.45,
+    "log": "repeat-05-inbound-email.log"
+  },
+  {
+    "iteration": 5,
+    "journey": "sample",
+    "command": [
+      "node",
+      "tests/sample-browser.mjs"
+    ],
+    "head": "89b071efdb8561e4fc8050f1e23554d92cf6725c",
+    "cpu_throttle": 1,
+    "exit": 0,
+    "elapsed_seconds": 91.77,
+    "log": "repeat-05-sample.log"
+  },
+  {
+    "iteration": 6,
+    "journey": "inbound-email",
+    "command": [
+      "node",
+      "tests/inbound-email-browser.mjs"
+    ],
+    "head": "89b071efdb8561e4fc8050f1e23554d92cf6725c",
+    "cpu_throttle": 1,
+    "exit": 0,
+    "elapsed_seconds": 10.41,
+    "log": "repeat-06-inbound-email.log"
+  },
+  {
+    "iteration": 6,
+    "journey": "sample",
+    "command": [
+      "node",
+      "tests/sample-browser.mjs"
+    ],
+    "head": "89b071efdb8561e4fc8050f1e23554d92cf6725c",
+    "cpu_throttle": 1,
+    "exit": 0,
+    "elapsed_seconds": 82.35,
+    "log": "repeat-06-sample.log"
+  },
+  {
+    "iteration": 7,
+    "journey": "inbound-email",
+    "command": [
+      "node",
+      "tests/inbound-email-browser.mjs"
+    ],
+    "head": "89b071efdb8561e4fc8050f1e23554d92cf6725c",
+    "cpu_throttle": 1,
+    "exit": 0,
+    "elapsed_seconds": 8.76,
+    "log": "repeat-07-inbound-email.log"
+  },
+  {
+    "iteration": 7,
+    "journey": "sample",
+    "command": [
+      "node",
+      "tests/sample-browser.mjs"
+    ],
+    "head": "89b071efdb8561e4fc8050f1e23554d92cf6725c",
+    "cpu_throttle": 1,
+    "exit": 0,
+    "elapsed_seconds": 80.09,
+    "log": "repeat-07-sample.log"
+  },
+  {
+    "iteration": 8,
+    "journey": "inbound-email",
+    "command": [
+      "node",
+      "tests/inbound-email-browser.mjs"
+    ],
+    "head": "89b071efdb8561e4fc8050f1e23554d92cf6725c",
+    "cpu_throttle": 1,
+    "exit": 0,
+    "elapsed_seconds": 8.84,
+    "log": "repeat-08-inbound-email.log"
+  },
+  {
+    "iteration": 8,
+    "journey": "sample",
+    "command": [
+      "node",
+      "tests/sample-browser.mjs"
+    ],
+    "head": "89b071efdb8561e4fc8050f1e23554d92cf6725c",
+    "cpu_throttle": 1,
+    "exit": 0,
+    "elapsed_seconds": 82.68,
+    "log": "repeat-08-sample.log"
+  },
+  {
+    "iteration": 9,
+    "journey": "inbound-email",
+    "command": [
+      "node",
+      "tests/inbound-email-browser.mjs"
+    ],
+    "head": "89b071efdb8561e4fc8050f1e23554d92cf6725c",
+    "cpu_throttle": 1,
+    "exit": 0,
+    "elapsed_seconds": 10.28,
+    "log": "repeat-09-inbound-email.log"
+  },
+  {
+    "iteration": 9,
+    "journey": "sample",
+    "command": [
+      "node",
+      "tests/sample-browser.mjs"
+    ],
+    "head": "89b071efdb8561e4fc8050f1e23554d92cf6725c",
+    "cpu_throttle": 1,
+    "exit": 0,
+    "elapsed_seconds": 84.01,
+    "log": "repeat-09-sample.log"
+  },
+  {
+    "iteration": 10,
+    "journey": "inbound-email",
+    "command": [
+      "node",
+      "--import",
+      "/tmp/crank-cpu-throttle.mjs",
+      "tests/inbound-email-browser.mjs"
+    ],
+    "head": "89b071efdb8561e4fc8050f1e23554d92cf6725c",
+    "cpu_throttle": 6,
+    "exit": 0,
+    "elapsed_seconds": 12.59,
+    "log": "repeat-10-inbound-email.log"
+  },
+  {
+    "iteration": 10,
+    "journey": "sample",
+    "command": [
+      "node",
+      "--import",
+      "/tmp/crank-cpu-throttle.mjs",
+      "tests/sample-browser.mjs"
+    ],
+    "head": "89b071efdb8561e4fc8050f1e23554d92cf6725c",
+    "cpu_throttle": 6,
+    "exit": 0,
+    "elapsed_seconds": 124.97,
+    "log": "repeat-10-sample.log"
+  }
+]

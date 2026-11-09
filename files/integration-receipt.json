@@ -1,0 +1,9 @@
+{
+  "head": "89b071efdb8561e4fc8050f1e23554d92cf6725c",
+  "main": "e118d7c2269232b7fee52c6d2159a53f561fb3f3",
+  "method": "merge; published ancestry preserved",
+  "conflicts": [],
+  "contract_changes": false,
+  "source_lock_regenerated_and_checked": true,
+  "note": "No working tree mutation is permitted during final browser sequence."
+}

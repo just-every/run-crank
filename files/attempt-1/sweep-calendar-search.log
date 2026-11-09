@@ -1,0 +1,10 @@
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProxy environment variables detected. We'll use your proxy for fetch requests.[0m
+
+
+(node:7132) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Retained Calendar identities, zoned times and literal results PASS; screens at 1440 and 390
+Gmail metadata identities, literal headers, declared outcomes and tooltips PASS; screens at 1440 and 390
+HubSpot retained identities, exact outcomes, literal names and tooltips PASS; screens at 1440 and 390
+Typeform lookup: fixture ready
+Retained Typeform identities, typed projection and freshness limitation PASS; screens at 1440 and 390

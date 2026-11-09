@@ -1,0 +1,37 @@
+{
+  "repository": "just-every/run-crank",
+  "branch": "cloud/sx-crank-flake-1",
+  "head": "89b071efdb8561e4fc8050f1e23554d92cf6725c",
+  "remote_head": "89b071efdb8561e4fc8050f1e23554d92cf6725c",
+  "pushed": true,
+  "pr": null,
+  "base_sha": "e118d7c2269232b7fee52c6d2159a53f561fb3f3",
+  "commits": [
+    "89b071efdb8561e4fc8050f1e23554d92cf6725c Merge remote-tracking branch 'origin/main' into cloud/sx-crank-flake-1",
+    "651caafb9926ce0de8163cc836aba4dc4320cda2 Freeze the animation clock before hover and record the shared helper",
+    "46a85903270d378ddc7c87aa600b597853e54253 Make tooltip timing and table disclosure assertions deterministic [skip ci]"
+  ],
+  "changed_files": [
+    "sources.lock.json",
+    "tests/ai-steps-browser.mjs",
+    "tests/digest-browser.mjs",
+    "tests/editor-browser.mjs",
+    "tests/gmail-search-browser.mjs",
+    "tests/google-calendar-search-browser.mjs",
+    "tests/hubspot-search-browser.mjs",
+    "tests/inbound-email-browser.mjs",
+    "tests/run-notices-browser.mjs",
+    "tests/sibling-browser.mjs",
+    "tests/table-state-journey.mjs",
+    "tests/teams-search-browser.mjs",
+    "tests/tooltip-browser.mjs",
+    "tests/typeform-search-browser.mjs"
+  ],
+  "identity_review": "All candidate commits and side parents verified fleet identity; no trailers",
+  "source_lock_check": "passed",
+  "publication_scan": "Fleet-only; not run in cloud",
+  "ci_run_id": 42547214977,
+  "ci_status": "completed",
+  "ci_conclusion": "success",
+  "ci_url": "https://github.com/just-every/run-crank/actions/runs/42547214977"
+}

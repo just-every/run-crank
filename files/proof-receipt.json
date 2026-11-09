@@ -1,0 +1,24 @@
+{
+  "head": "89b071efdb8561e4fc8050f1e23554d92cf6725c",
+  "source": "First complete stable-candidate repetition",
+  "viewports": [
+    1440,
+    390
+  ],
+  "files": [
+    "proof/1440-email-admission.png",
+    "proof/1440-email-received-history.png",
+    "proof/1440-email-run.png",
+    "proof/1440-table-preview.png",
+    "proof/1440-table-result.png",
+    "proof/1440-table-paused.png",
+    "proof/1440-table-erased.png",
+    "proof/390-email-admission.png",
+    "proof/390-email-received-history.png",
+    "proof/390-email-run.png",
+    "proof/390-table-preview.png",
+    "proof/390-table-result.png",
+    "proof/390-table-paused.png",
+    "proof/390-table-erased.png"
+  ]
+}

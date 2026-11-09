@@ -1,0 +1,57 @@
+[
+  {
+    "journey": "ai-steps",
+    "command": [
+      "node",
+      "tests/ai-steps-browser.mjs"
+    ],
+    "head": "89b071efdb8561e4fc8050f1e23554d92cf6725c",
+    "exit": 0,
+    "elapsed_seconds": 135.2,
+    "log": "sweep-ai-steps.log"
+  },
+  {
+    "journey": "digest",
+    "command": [
+      "node",
+      "tests/digest-browser.mjs"
+    ],
+    "head": "89b071efdb8561e4fc8050f1e23554d92cf6725c",
+    "exit": 0,
+    "elapsed_seconds": 45.89,
+    "log": "sweep-digest.log"
+  },
+  {
+    "journey": "sibling",
+    "command": [
+      "node",
+      "tests/sibling-browser.mjs"
+    ],
+    "head": "89b071efdb8561e4fc8050f1e23554d92cf6725c",
+    "exit": 0,
+    "elapsed_seconds": 188.59,
+    "log": "sweep-sibling.log"
+  },
+  {
+    "journey": "calendar-search",
+    "command": [
+      "node",
+      "tests/google-calendar-search-browser.mjs"
+    ],
+    "head": "89b071efdb8561e4fc8050f1e23554d92cf6725c",
+    "exit": 0,
+    "elapsed_seconds": 74.68,
+    "log": "sweep-calendar-search.log"
+  },
+  {
+    "journey": "editor",
+    "command": [
+      "node",
+      "tests/agent-door/attribution-browser.mjs"
+    ],
+    "head": "89b071efdb8561e4fc8050f1e23554d92cf6725c",
+    "exit": 0,
+    "elapsed_seconds": 58.61,
+    "log": "sweep-editor.log"
+  }
+]

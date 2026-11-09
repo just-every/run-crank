@@ -1,0 +1,18 @@
+{
+  "base_sha": "e118d7c2269232b7fee52c6d2159a53f561fb3f3",
+  "recorded_test_budget_before": 199,
+  "recorded_test_budget_after": 199,
+  "test_registration_delta": 0,
+  "browser_entry_point_delta": 0,
+  "contract_status_before": {
+    "partial": 50,
+    "done": 32,
+    "missing": 17
+  },
+  "contract_status_after": {
+    "partial": 50,
+    "done": 32,
+    "missing": 17
+  },
+  "clause_status_changes": []
+}

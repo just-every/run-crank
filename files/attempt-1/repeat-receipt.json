@@ -1,0 +1,171 @@
+[
+  {
+    "iteration": 1,
+    "journey": "inbound-email",
+    "command": [
+      "node",
+      "tests/inbound-email-browser.mjs"
+    ],
+    "head": "46a85903270d378ddc7c87aa600b597853e54253",
+    "cpu_throttle": 1,
+    "exit": 0,
+    "elapsed_seconds": 9.02,
+    "log": "attempt-1/repeat-01-inbound-email.log"
+  },
+  {
+    "iteration": 1,
+    "journey": "sample",
+    "command": [
+      "node",
+      "tests/sample-browser.mjs"
+    ],
+    "head": "46a85903270d378ddc7c87aa600b597853e54253",
+    "cpu_throttle": 1,
+    "exit": 0,
+    "elapsed_seconds": 79.48,
+    "log": "attempt-1/repeat-01-sample.log"
+  },
+  {
+    "iteration": 2,
+    "journey": "inbound-email",
+    "command": [
+      "node",
+      "tests/inbound-email-browser.mjs"
+    ],
+    "head": "46a85903270d378ddc7c87aa600b597853e54253",
+    "cpu_throttle": 1,
+    "exit": 0,
+    "elapsed_seconds": 9.02,
+    "log": "attempt-1/repeat-02-inbound-email.log"
+  },
+  {
+    "iteration": 2,
+    "journey": "sample",
+    "command": [
+      "node",
+      "tests/sample-browser.mjs"
+    ],
+    "head": "46a85903270d378ddc7c87aa600b597853e54253",
+    "cpu_throttle": 1,
+    "exit": 0,
+    "elapsed_seconds": 88.4,
+    "log": "attempt-1/repeat-02-sample.log"
+  },
+  {
+    "iteration": 3,
+    "journey": "inbound-email",
+    "command": [
+      "node",
+      "tests/inbound-email-browser.mjs"
+    ],
+    "head": "46a85903270d378ddc7c87aa600b597853e54253",
+    "cpu_throttle": 1,
+    "exit": 0,
+    "elapsed_seconds": 9.91,
+    "log": "attempt-1/repeat-03-inbound-email.log"
+  },
+  {
+    "iteration": 3,
+    "journey": "sample",
+    "command": [
+      "node",
+      "tests/sample-browser.mjs"
+    ],
+    "head": "46a85903270d378ddc7c87aa600b597853e54253",
+    "cpu_throttle": 1,
+    "exit": 0,
+    "elapsed_seconds": 83.51,
+    "log": "attempt-1/repeat-03-sample.log"
+  },
+  {
+    "iteration": 4,
+    "journey": "inbound-email",
+    "command": [
+      "node",
+      "tests/inbound-email-browser.mjs"
+    ],
+    "head": "46a85903270d378ddc7c87aa600b597853e54253",
+    "cpu_throttle": 1,
+    "exit": 0,
+    "elapsed_seconds": 8.82,
+    "log": "attempt-1/repeat-04-inbound-email.log"
+  },
+  {
+    "iteration": 4,
+    "journey": "sample",
+    "command": [
+      "node",
+      "tests/sample-browser.mjs"
+    ],
+    "head": "46a85903270d378ddc7c87aa600b597853e54253",
+    "cpu_throttle": 1,
+    "exit": 0,
+    "elapsed_seconds": 80.45,
+    "log": "attempt-1/repeat-04-sample.log"
+  },
+  {
+    "iteration": 5,
+    "journey": "inbound-email",
+    "command": [
+      "node",
+      "tests/inbound-email-browser.mjs"
+    ],
+    "head": "46a85903270d378ddc7c87aa600b597853e54253",
+    "cpu_throttle": 1,
+    "exit": 0,
+    "elapsed_seconds": 9.63,
+    "log": "attempt-1/repeat-05-inbound-email.log"
+  },
+  {
+    "iteration": 5,
+    "journey": "sample",
+    "command": [
+      "node",
+      "tests/sample-browser.mjs"
+    ],
+    "head": "46a85903270d378ddc7c87aa600b597853e54253",
+    "cpu_throttle": 1,
+    "exit": 0,
+    "elapsed_seconds": 84.56,
+    "log": "attempt-1/repeat-05-sample.log"
+  },
+  {
+    "iteration": 6,
+    "journey": "inbound-email",
+    "command": [
+      "node",
+      "tests/inbound-email-browser.mjs"
+    ],
+    "head": "46a85903270d378ddc7c87aa600b597853e54253",
+    "cpu_throttle": 1,
+    "exit": 0,
+    "elapsed_seconds": 9.19,
+    "log": "attempt-1/repeat-06-inbound-email.log"
+  },
+  {
+    "iteration": 6,
+    "journey": "sample",
+    "command": [
+      "node",
+      "tests/sample-browser.mjs"
+    ],
+    "head": "46a85903270d378ddc7c87aa600b597853e54253",
+    "cpu_throttle": 1,
+    "exit": 0,
+    "elapsed_seconds": 88.36,
+    "log": "attempt-1/repeat-06-sample.log"
+  },
+  {
+    "iteration": 7,
+    "journey": "inbound-email",
+    "command": [
+      "node",
+      "tests/inbound-email-browser.mjs"
+    ],
+    "head": "46a85903270d378ddc7c87aa600b597853e54253",
+    "cpu_throttle": 1,
+    "exit": 1,
+    "elapsed_seconds": 11.97,
+    "log": "attempt-1/repeat-07-inbound-email.log"
+  }
+]

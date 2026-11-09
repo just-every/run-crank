@@ -1,0 +1,1 @@
+Checks started on 651caafb9926ce0de8163cc836aba4dc4320cda2. Updated main e118d7c was merged during these runs, adding migration 0094. Existing test Workers and later restore harnesses observed different migration inventories and failed schema_mismatch. These are invalidated exploratory runs, not a completed final-candidate proof. Restart all runs on the stable merged head.

@@ -1,0 +1,24 @@
+Allow roughly 500 MB–1 GB of downloads and 1–3 GB of disk space for a first run, including Node, rer, the app and its dependencies. The app and your computer can need more; later runs reuse downloads.
+rer dev: checking the server limit
+rer dev: starting the app
+Local migrations, owner or local authentication/mail settings are missing. Run rer setup first.
+Correct the cause, then run rer dev --cwd '/workspace/run-crank' again.
+
+node:internal/modules/run_main:123
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: rer dev exited before readiness; inspect private log
+
+3 !== null
+
+    at file:///workspace/run-crank/tests/run-notices-browser.mjs:27:12 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: 3,
+  expected: null,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v22.20.0

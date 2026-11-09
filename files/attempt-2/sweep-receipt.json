@@ -1,0 +1,13 @@
+[
+  {
+    "journey": "ai-steps",
+    "command": [
+      "node",
+      "tests/ai-steps-browser.mjs"
+    ],
+    "head": "651caafb9926ce0de8163cc836aba4dc4320cda2",
+    "exit": 1,
+    "elapsed_seconds": 105.43,
+    "log": "attempt-2/sweep-ai-steps.log"
+  }
+]
