@@ -1,0 +1,61 @@
+{
+  "contract_docs": {
+    "write_exit": 0,
+    "check_exit": 0,
+    "clauses": 99,
+    "views_restored_from": "origin/main"
+  },
+  "source_lock": {
+    "changes_exit": 0,
+    "lock_exit": 0,
+    "check_exit": 0,
+    "tool": "node_modules/@runeditrun/rer/edition-authoring/cli.mjs",
+    "rer": "0.2.104",
+    "identical_to_main": true,
+    "sha256": "2387cf46ebc935f9696e45c2cc52cd4531b0ab5e3034719223bbd5fc98479e0c"
+  },
+  "migration_ledger": {
+    "result": "PASS",
+    "main": "e6ba1c6dd98f68e02826afdfe1e7ffb7fe2ab4df",
+    "main_applied_migrations": 99,
+    "candidate_migrations": 99,
+    "main_applied_sql_unchanged": true,
+    "new_or_renamed_migrations": 0,
+    "historical_shared_prefixes_unchanged": {
+      "0080": [
+        "0080_digests.sql",
+        "0080_team_grants.sql",
+        "0080_workflow_samples.sql"
+      ],
+      "0085": [
+        "0085_custom_search_keys.sql",
+        "0085_model_response_identity.sql"
+      ]
+    },
+    "migration_0093_sha256": "827a8662dc0a567f6d1f44b8da57cf2fbd49db079fa24b4b65fc82bac6db8adf",
+    "probe_note": "An initial extra prefix-uniqueness assertion was inapplicable: main already has shared 0080 and 0085 prefixes. Corrected check compares every applied filename and SQL byte against main; no migration edits are introduced."
+  },
+  "test_counts": {
+    "main_recorded": 199,
+    "merged_recorded": 199,
+    "maximum": 200,
+    "registrations_added": 0,
+    "registrations_removed": 0,
+    "assertions_changed": 0
+  },
+  "clause_counts": {
+    "before_main": {
+      "done": 32,
+      "partial": 50,
+      "missing": 17,
+      "total": 99
+    },
+    "after_merge": {
+      "done": 32,
+      "partial": 50,
+      "missing": 17,
+      "total": 99
+    },
+    "status_changes": []
+  }
+}

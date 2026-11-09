@@ -1,0 +1,71 @@
+[
+  {
+    "call": 1,
+    "unix_time": 1794248009.5603812,
+    "utc": "2026-11-09T18:13:29.560424+00:00",
+    "arguments": [
+      "api",
+      "repos/just-every/run-crank/actions/runs?head_sha=170fc5b484d475fd80f29c8dc7f00093f0d6703d&per_page=100",
+      "--jq",
+      "{total_count,workflow_runs:[.workflow_runs[]|{id,name,event,status,conclusion,head_sha,html_url}]}"
+    ],
+    "exit": 0,
+    "response_file": "github-call-1.log"
+  },
+  {
+    "call": 2,
+    "unix_time": 1794248310.6780891,
+    "utc": "2026-11-09T18:18:30.678102+00:00",
+    "arguments": [
+      "api",
+      "repos/just-every/run-crank/actions/runs/42672083743",
+      "--jq",
+      "{status,conclusion,head_sha,html_url}"
+    ],
+    "exit": 0,
+    "response_file": "github-call-2.log"
+  },
+  {
+    "call": 3,
+    "unix_time": 1794248328.9407852,
+    "utc": "2026-11-09T18:18:48.940954+00:00",
+    "arguments": [
+      "api",
+      "repos/just-every/run-crank/actions/runs/42672083743/jobs",
+      "--jq",
+      "{total_count,jobs:[.jobs[]|{id,name,status,conclusion,steps:[.steps[]|{name,conclusion}]}]}"
+    ],
+    "exit": 0,
+    "response_file": "github-call-3.log"
+  },
+  {
+    "call": 4,
+    "unix_time": 1794248336.7875118,
+    "utc": "2026-11-09T18:18:56.787519+00:00",
+    "arguments": [
+      "run",
+      "view",
+      "42672083743",
+      "--repo",
+      "just-every/run-crank",
+      "--job",
+      "129348753720",
+      "--log-failed"
+    ],
+    "exit": 0,
+    "response_file": "github-call-4.log"
+  },
+  {
+    "call": 5,
+    "unix_time": 1794248364.2067049,
+    "utc": "2026-11-09T18:19:24.206831+00:00",
+    "arguments": [
+      "api",
+      "repos/just-every/run-crank/commits/170fc5b484d475fd80f29c8dc7f00093f0d6703d/check-runs",
+      "--jq",
+      "{total_count,check_runs:[.check_runs[]|{id,name,status,conclusion,details_url,output}]}"
+    ],
+    "exit": 0,
+    "response_file": "github-call-5.log"
+  }
+]

@@ -1,0 +1,5 @@
+{
+  "command": "node --test --test-concurrency=1 tests/platform.test.mjs",
+  "exit": 0,
+  "log": "platform.log"
+}

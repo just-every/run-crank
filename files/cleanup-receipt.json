@@ -1,0 +1,18 @@
+{
+  "utc": "2026-11-09T18:17:31.764995+00:00",
+  "owned_test_pids_checked": [
+    997,
+    1079,
+    1080,
+    1098,
+    1199,
+    1287,
+    1288,
+    1299
+  ],
+  "active_owned_test_processes": [],
+  "all_test_harnesses_closed": true,
+  "subreapers_completed": true,
+  "product_worktree_clean": true,
+  "clone_removal": "scheduled after successful evidence publication"
+}

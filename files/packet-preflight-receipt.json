@@ -1,0 +1,154 @@
+{
+  "result": "PASS",
+  "regular_explicit_files": 30,
+  "secret_value_matches": 0,
+  "symlinks": 0,
+  "note": "Final explicit packet preflight; every selected file is non-secret regular evidence. This receipt is itself included by the publisher manifest.",
+  "files": [
+    {
+      "path": "REPORT.md",
+      "bytes": 11461,
+      "sha256": "f65bdb398b95225f671e3e61a4c6a16f68b1e3b3ea06a1b8d0db6b06cfe008a2"
+    },
+    {
+      "path": "command-receipts.json",
+      "bytes": 293,
+      "sha256": "680faf908c7a0a3b4be8da75ae113742528fdbb7cadfbd7218624bd60c41553b"
+    },
+    {
+      "path": "checks-receipt.json",
+      "bytes": 1742,
+      "sha256": "eb2a94e56a4793862c0cc8fa9a9f6dc13f7024db1ce0424a18f0623566752764"
+    },
+    {
+      "path": "typecheck-receipt.json",
+      "bytes": 73,
+      "sha256": "ec7216d8c3300ab79fc032ab6b003daaad8b0065fbcb2cf4e034031b74b4dd85"
+    },
+    {
+      "path": "typecheck.log",
+      "bytes": 234,
+      "sha256": "ec0fb92f8d0f431b0955afb75c1d7f3e4fec05cfc875bc6ddffde4103b205b3d"
+    },
+    {
+      "path": "migration-ledger.log",
+      "bytes": 805,
+      "sha256": "cf1c38d1b1a32515bb275cd3738682bb82b737fe8d99fa02215c43b840661538"
+    },
+    {
+      "path": "contract-docs.log",
+      "bytes": 86,
+      "sha256": "e1f1915b593219b374d9dc92f3482ade63b516e4587cbac89016ea3206be924d"
+    },
+    {
+      "path": "source-lock.log",
+      "bytes": 646109,
+      "sha256": "4f2d0359b82a3f777a10c638aa3287d7b44943f0fb75c06dcda89b4998203ca4"
+    },
+    {
+      "path": "platform-receipt.json",
+      "bytes": 114,
+      "sha256": "b91b603527f8550286d6ed45d4ae44d61c2d3469c5684cd2559228b03c9520b2"
+    },
+    {
+      "path": "platform.log",
+      "bytes": 3999,
+      "sha256": "d3b60148c32d0dbf70e0c65338af1b24c3776a5370f81cf7f9831e28ad87fde5"
+    },
+    {
+      "path": "restore-journey.log",
+      "bytes": 665,
+      "sha256": "f3f31844ea649f37c9d22098dd5148337fd05e1162a89a32b658c9912cbb209e"
+    },
+    {
+      "path": "restore-schema-probe.mjs",
+      "bytes": 4638,
+      "sha256": "dace4db9ceafc854a302486091a85cc1617fac792c6482b362ae831caf5e2023"
+    },
+    {
+      "path": "restore-schema-probe.log",
+      "bytes": 670,
+      "sha256": "5e494b39ecd98560ddd3ec2f1b7bea9c666faa185799c62386521a3a2c6f0358"
+    },
+    {
+      "path": "restore-schema-probe-receipt.json",
+      "bytes": 148,
+      "sha256": "39e9e6b1dfca485a2459bc5379fa54359f3c41f1853c9470f46d8481461d6c83"
+    },
+    {
+      "path": "restore-schema-probe-initial.log",
+      "bytes": 1389,
+      "sha256": "0de2ad94c93224ae69b13ce14c2d29ad29a8115d2ba7b3592afb4816de04b4cb"
+    },
+    {
+      "path": "restore-schema-probe-initial-receipt.json",
+      "bytes": 148,
+      "sha256": "3f518182f8d74bf4f8e070808fe084de298f0c85b335f4b374b4063700744b0d"
+    },
+    {
+      "path": "install.log",
+      "bytes": 2398,
+      "sha256": "45db245db05d05734f63cc0de2970044ca0db6118ede9f2925a3e06c5992329c"
+    },
+    {
+      "path": "identity-audit.log",
+      "bytes": 219,
+      "sha256": "2c94b31dece534e2de52ab148c3275101885d42979fc8e7ef8a47b6bfef2576a"
+    },
+    {
+      "path": "product-push.log",
+      "bytes": 1123,
+      "sha256": "43f01e23b90cec476b113f4fa0f84442d693b6e472d3dbd61c9d8384e13a7fe3"
+    },
+    {
+      "path": "product-receipt.json",
+      "bytes": 978,
+      "sha256": "137ee416db7963a13c67fb3418301c56e62856861b6cc0248e320d064a6b943d"
+    },
+    {
+      "path": "github-api-calls.json",
+      "bytes": 1897,
+      "sha256": "a43d2e393efe3cb86741e33a026122efcbedc09514244ac54ff6723a190bb280"
+    },
+    {
+      "path": "github-call-1.log",
+      "bytes": 254,
+      "sha256": "be8c3c01242dc76dec9958c52e616ac9fbb2918ee7fa5eacea9dad0071659cad"
+    },
+    {
+      "path": "github-call-2.log",
+      "bytes": 178,
+      "sha256": "bdd732a696b1c8c94ad6387600f151f87c5d9a6bf053f663aaa57ecfb4750c11"
+    },
+    {
+      "path": "github-call-3.log",
+      "bytes": 467,
+      "sha256": "08b8712da93835bc21d7879b56b5b1d24265bcff8ab3ef0fcfb9b81c9a24ec88"
+    },
+    {
+      "path": "github-call-4.log",
+      "bytes": 4202,
+      "sha256": "df7e0a2a1406f2914d6ac0002c88cfe74b47f5ae25a61f8bbe1154e6bee8435d"
+    },
+    {
+      "path": "github-call-5.log",
+      "bytes": 1102,
+      "sha256": "91b5a423d9c94adf7c2d6ebcdd339ebaee59a101e4250a5a385b31af6ed22fa8"
+    },
+    {
+      "path": "ci-receipt.json",
+      "bytes": 1339,
+      "sha256": "a31ae56c56719bdaabd83e97f5f91ebab8a66426f164d92ea92842c98988dee6"
+    },
+    {
+      "path": "ci-watcher.log",
+      "bytes": 228,
+      "sha256": "6916c03397c901fa3407e08adadf6e9d3f31415a6f80032e6ce6831a14ab3739"
+    },
+    {
+      "path": "cleanup-receipt.json",
+      "bytes": 372,
+      "sha256": "85b799495f5b2a762f7dff79dd4020e9073a3193e18879406d6d385c607b8f68"
+    }
+  ]
+}

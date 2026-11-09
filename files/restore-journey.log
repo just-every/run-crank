@@ -1,0 +1,13 @@
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProxy environment variables detected. We'll use your proxy for fetch requests.[0m
+
+
+sql.js: the asm.js build is deprecated. Use sql-wasm-inline.js (worker.sql-wasm-inline.js for workers) for a single JavaScript file with embedded WebAssembly. WebAssembly support is required. If you cannot migrate, please tell us at https://github.com/sql-js/sql.js/issues/635.
+✔ BASE-003 DATA-001: complete portable inventory, inactive restore, explicit per-run adoption and atomic refusal (966324.491105ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 1
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 969531.100559

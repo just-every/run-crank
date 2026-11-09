@@ -1,0 +1,36 @@
+{
+  "repository": "just-every/run-crank",
+  "run_id": 42672083743,
+  "head_sha": "170fc5b484d475fd80f29c8dc7f00093f0d6703d",
+  "html_url": "https://github.com/just-every/run-crank/actions/runs/42672083743",
+  "observations": [
+    {
+      "conclusion": null,
+      "event": "push",
+      "head_sha": "170fc5b484d475fd80f29c8dc7f00093f0d6703d",
+      "html_url": "https://github.com/just-every/run-crank/actions/runs/42672083743",
+      "id": 42672083743,
+      "name": "Verify",
+      "status": "queued"
+    },
+    {
+      "conclusion": "failure",
+      "head_sha": "170fc5b484d475fd80f29c8dc7f00093f0d6703d",
+      "html_url": "https://github.com/just-every/run-crank/actions/runs/42672083743",
+      "status": "completed"
+    }
+  ],
+  "terminal": "failure",
+  "blocker": "Exact-SHA Verify failed: upstream PLAN=abandoned; aggregate verify exited 1; no plan job/check was exposed in the returned jobs or check-runs lists.",
+  "failed_job_id": 129348753720,
+  "failed_log_command": "gh run view 42672083743 --repo just-every/run-crank --job 129348753720 --log-failed",
+  "failed_log_read_count": 1,
+  "failed_log_exit": 0,
+  "failed_log_file": "github-call-4.log",
+  "jobs_file": "github-call-3.log",
+  "checks_file": "github-call-5.log",
+  "github_calls": 5,
+  "rerun_requested": false,
+  "workflow_dispatched": false,
+  "ready": false
+}

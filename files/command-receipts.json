@@ -1,0 +1,8 @@
+[
+  {
+    "command": "node --test --test-concurrency=1 --test-name-pattern='^BASE-003 DATA-001: complete portable inventory' tests/crank.test.mjs",
+    "exit": 0,
+    "log": "restore-journey.log",
+    "tree": "merged e6ba1c6dd98f68e02826afdfe1e7ffb7fe2ab4df; source unchanged from main"
+  }
+]

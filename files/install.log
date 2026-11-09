@@ -1,0 +1,58 @@
+ WARN  Unsupported engine: wanted: {"node":"22.20.0"} (current: {"node":"v24.19.0","pnpm":"10.12.4"})
+Lockfile is up to date, resolution step is skipped
+Progress: resolved 1, reused 0, downloaded 0, added 0
+Packages: +158
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+   ╭──────────────────────────────────────────╮
+   │                                          │
+   │   Update available! 10.12.4 → 12.18.0.   │
+   │   Changelog: https://pnpm.io/v/12.18.0   │
+   │     To update, run: pnpm add -g pnpm     │
+   │                                          │
+   ╰──────────────────────────────────────────╯
+
+Progress: resolved 158, reused 0, downloaded 5, added 5
+Progress: resolved 158, reused 0, downloaded 19, added 19
+Progress: resolved 158, reused 0, downloaded 38, added 38
+Progress: resolved 158, reused 0, downloaded 60, added 60
+Progress: resolved 158, reused 0, downloaded 76, added 76
+Progress: resolved 158, reused 0, downloaded 84, added 83
+Progress: resolved 158, reused 0, downloaded 105, added 105
+Progress: resolved 158, reused 0, downloaded 115, added 115
+Progress: resolved 158, reused 0, downloaded 126, added 126
+Progress: resolved 158, reused 0, downloaded 140, added 140
+Progress: resolved 158, reused 0, downloaded 156, added 155
+Progress: resolved 158, reused 0, downloaded 157, added 157
+Progress: resolved 158, reused 0, downloaded 158, added 158, done
+.../esbuild@0.28.1/node_modules/esbuild postinstall$ node install.js
+.../node_modules/workerd postinstall$ node install.js
+.../esbuild@0.28.1/node_modules/esbuild postinstall: Done
+.../node_modules/workerd postinstall: Done
+
+dependencies:
++ @tanstack/react-router 1.170.41
++ @tanstack/react-start 1.168.60
++ hono 4.13.7
++ marked 18.0.14
++ react 19.2.8
++ react-dom 19.2.8
++ sql.js 1.15.2
+
+devDependencies:
++ @cloudflare/vite-plugin 1.54.5
++ @cloudflare/workers-types 5.20260908.1
++ @playwright/test 1.63.0
++ @runeditrun/rer 0.2.104
++ @types/node 22.18.6
++ @types/react 19.2.18
++ @types/react-dom 19.2.7
++ @vitejs/plugin-react 6.1.1
++ axe-core 4.11.0
++ esbuild 0.28.1
++ miniflare 5.20260907.0-alpha
++ typescript 5.9.3
++ vite 8.2.2
++ wrangler 4.129.1
+
+Done in 14.9s using pnpm v10.12.4

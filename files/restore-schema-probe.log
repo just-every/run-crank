@@ -1,0 +1,6 @@
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProxy environment variables detected. We'll use your proxy for fetch requests.[0m
+
+
+{"case":"pre-0093 archive","status":200,"original_trigger_sha256":"deb7dc6710f71a28999cef5c44e7579d5c299abaeb3d584ca87b8ca60afbb053","destination_trigger_sha256":"dfb7709910f2beecc717eb0f8a2b5e6c0d331bececd26c2365b0c4cd34b3e3ce","current_schema_retained":true}
+{"case":"post-0093 archive","status":200,"trigger_sha256":"dfb7709910f2beecc717eb0f8a2b5e6c0d331bececd26c2365b0c4cd34b3e3ce","current_schema_retained":true}
+{"case":"checksummed tampered trigger","status":400,"error":"schema_mismatch","all_rows_and_schema_unchanged":true}

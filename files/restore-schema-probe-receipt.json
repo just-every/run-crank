@@ -1,0 +1,6 @@
+{
+  "command": "node ../packet/restore-schema-probe.mjs",
+  "exit": 0,
+  "log": "restore-schema-probe.log",
+  "probe": "restore-schema-probe.mjs"
+}

@@ -1,0 +1,25 @@
+{
+  "repository": "just-every/run-crank",
+  "branch": "cloud/sx-crank-f76fix1",
+  "head": "170fc5b484d475fd80f29c8dc7f00093f0d6703d",
+  "parents": [
+    "0c3b4cb0d00a0bd341d14a1c20ed64572c5296f0",
+    "e6ba1c6dd98f68e02826afdfe1e7ffb7fe2ab4df"
+  ],
+  "integration_main": "e6ba1c6dd98f68e02826afdfe1e7ffb7fe2ab4df",
+  "tree": "9cb37f00c79da9f4c6cf6bcab4d9c69891e7289a",
+  "tree_equals_main": true,
+  "clean_worktree": true,
+  "full_history": true,
+  "product_push_exit": 0,
+  "product_push_attempts": 1,
+  "identity_audit": "PASS, all two candidate commits including side parents",
+  "clause_status_changes": [],
+  "pr_created": false,
+  "local_checks_tree": "9cb37f00c79da9f4c6cf6bcab4d9c69891e7289a",
+  "utc": "2026-11-09T18:13:31.098723+00:00",
+  "remote_ref": "refs/heads/cloud/sx-crank-f76fix1",
+  "remote_head": "170fc5b484d475fd80f29c8dc7f00093f0d6703d",
+  "remote_verified": true,
+  "terminal_product_status": "PUSHED, READY blocked by exact-SHA Verify PLAN=abandoned"
+}

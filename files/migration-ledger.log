@@ -1,0 +1,21 @@
+{
+  "result": "PASS",
+  "main": "e6ba1c6dd98f68e02826afdfe1e7ffb7fe2ab4df",
+  "main_applied_migrations": 99,
+  "candidate_migrations": 99,
+  "main_applied_sql_unchanged": true,
+  "new_or_renamed_migrations": 0,
+  "historical_shared_prefixes_unchanged": {
+    "0080": [
+      "0080_digests.sql",
+      "0080_team_grants.sql",
+      "0080_workflow_samples.sql"
+    ],
+    "0085": [
+      "0085_custom_search_keys.sql",
+      "0085_model_response_identity.sql"
+    ]
+  },
+  "migration_0093_sha256": "827a8662dc0a567f6d1f44b8da57cf2fbd49db079fa24b4b65fc82bac6db8adf",
+  "probe_note": "An initial extra prefix-uniqueness assertion was inapplicable: main already has shared 0080 and 0085 prefixes. Corrected check compares every applied filename and SQL byte against main; no migration edits are introduced."
+}
