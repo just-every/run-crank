@@ -27,9 +27,9 @@ advertised as working families. No event-list tool is injected and tool replies
 emit no MCP resource links. A person's approval URL remains part of the policy
 handoff; it does not imply record-resource support.
 
-The surface declares `resources: []`, `escalations: []` and
+The surface declares `resources: []`, an explicit scope-addition refusal fixture and
 `spend: { "none": true }`. No paid or provider call is reachable from these
-twelve declared tools. This no-spend boundary comes from the admitted native
+thirteen declared tools. This no-spend boundary comes from the admitted native
 operations; it does not claim provider-spend-cap enforcement. Other native
 Crank routes, execution paths and connectors have broader purposes outside this
 registry.
@@ -74,10 +74,11 @@ The page supplies no resource, prompt, event or subscription capability. Full
 specialist jobs, native and provider parity, stranger-specialist completion and
 remaining conformance families stay unfinished.
 
-## The twelve declared tools
+## The declared tools
 
-Every tool declares only `standard`, with server-computed item-count facts.
-Eight are read-only and four prepare inert work. Clauses below are the actual
+Metadata and preparation tools declare `standard`, with server-computed item-count facts.
+The scope-removal tool declares `access` with direction computed from persisted grants.
+Eight tools are read-only, four prepare inert work and one removes tool scopes. Clauses below are the actual
 registry metadata, not a statement that each cited clause is fully implemented
 through this door.
 
@@ -95,8 +96,9 @@ through this door.
 | `crank.catalog.list` | `catalog:read` | Read the installed connector operation catalogue and restrictions. | CONN-001 |
 | `crank.coverage.report` | `catalog:read` | Compare a supplied app/operation inventory with the local catalogue; fetch no schema. | CONN-001, CONN-011 |
 | `crank.custom.propose` | `workflows:prepare` | Convert a supplied OpenAPI document into an uninstalled native connector proposal requiring owner review. | CONN-011, CONN-020 |
+| `crank.agents.narrow` | `agents:narrow` | Retain only existing tool scopes for the calling agent at an exact native scope revision. | BASE-AGENT-005 |
 
-Only create, update, duplicate and connector proposal have `readOnly: false`.
+Create, update, duplicate, connector proposal and scope removal have `readOnly: false`.
 Validation is read-only even though its native adapter uses a POST.
 Draft creation, editing and duplication grant no execution, publication,
 connection or provider authority. A stored graph can describe provider work
@@ -109,7 +111,7 @@ inputs, outputs, payloads, business keys, source IDs, error text and provider
 request details. Connection responses omit secret values and encrypted material.
 Catalogue presence is inventory, not dispatch authority or a claim that a planned
 connector is built. Names, descriptions and imported declarations remain
-untrusted content; every tool marks its results accordingly.
+untrusted content; the metadata and preparation tools mark their results accordingly.
 
 ## Bounded specialist prompts
 
@@ -410,3 +412,38 @@ reconstruct old execution authority. The public-door recovery journey extends
 the existing SDK and CORE draft lifecycle test and the declared hosted journey,
 without adding a test registration or changing the test budget. The remaining
 BASE-AGENT-012 obligations stay in its Status Gap.
+
+## Persistent tool-scope removal
+
+A native owner may explicitly include `agents:narrow` when issuing a new
+preparation credential using `tool_scopes`. Existing credentials retain the
+previous preparation scope set. The Access settings form offers this permission
+only for a new credential. An owner may also issue a once-only Business-agent
+ceiling through `POST /api/crank/agent-access`; it is bound to that signed-in
+owner, never to a sponsor supplied by the request. Business credentials must
+independently carry each scope: the native ceiling never adds token authority.
+
+`crank.agents.narrow` takes `scopes` and a required integer `revision`.
+Agent and sponsor come from the authenticated principal. The owner control at
+`POST /api/crank/agent-access/:agent_id` uses the same native removal action.
+A current scope set and revision are visible through the owner-only GET of that
+route and in Access settings. Additions return `self_escalation` through MCP,
+even under an autonomous policy. Stale or concurrent removals cannot restore
+removed authority. Arguments naming another agent, sponsor, role, direction,
+policy or Pause cannot change the target or the computed access direction.
+
+The edition's `currentScopes` adapter intersects the original credential with
+the persisted ceiling on every call. Native mutation transactions repeat the
+scope fence. Scope history travels in archives with `active=0`, while native
+credentials remain excluded. Restore offers no activation or regrant action.
+The existing native journey invokes `tests/agent-door/narrowing-journey.mjs`;
+the existing platform sanity journey additionally proves restart, held-person
+approval, withdrawn and revoked pending authority, concurrency, complete removal
+and inactive custody. The expanded hosted CORE conformance run passes 1,213
+points on this slice; broader clause obligations remain open.
+
+This slice leaves BASE-AGENT-005 PARTIAL. Full role and tool UI parity,
+resource, folder, action and budget intersections, broader sponsor downgrade
+and suspension journeys, other access and security actions, and complete
+injection resistance remain owed. Existing IdP, Business propagation, account,
+Base enforcing-egress and device holds remain unchanged.

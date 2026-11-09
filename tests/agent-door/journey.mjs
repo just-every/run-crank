@@ -1,5 +1,6 @@
 import {recoveryJourney} from './recovery-journey.mjs';
 import assert from 'node:assert/strict';
+import narrowingJourney from './narrowing-journey.mjs';
 import attribution from './attribution-journey.mjs';
 import namedApprovalsJourney from './named-approvals-journey.mjs';
 import {readFile} from 'node:fs/promises';
@@ -63,6 +64,7 @@ export default async function journey({request, origin, cookie, tool}) {
   await person('/agents/api/pause', {paused: false});
  }
  assert.equal(output(await tool('crank.workflows.create', args)).id, created.id);
+ await narrowingJourney({request,origin,cookie});
 }
 
 
@@ -153,8 +155,8 @@ export async function contentionJourney({h: existing, observe = async () => {}} 
  };
  const usageIds = async () => (await h.db.prepare('SELECT decision_id FROM agent_door_usage ORDER BY decision_id').all()).results.map(row => row.decision_id);
  try {
-  const fixture = await (await import('./fixtures.mjs')).default({phase: 'contention', request, origin: h.origin, cookie: h.owner});
-  await (await import('./fixtures.mjs')).default({phase: 'contention-second', request, origin: h.origin, cookie: h.owner});
+  const fixture = await (await import('./fixtures.mjs')).prepareRecords({phase: 'contention', request, origin: h.origin, cookie: h.owner});
+  await (await import('./fixtures.mjs')).prepareRecords({phase: 'contention-second', request, origin: h.origin, cookie: h.owner});
   const token = await h.post('tokens', {label: 'Synthetic contention preparation', scope: 'agent'}, h.owner, 201);
   const policy = await request(h.origin + '/agents/api/policy', {method: 'PUT',
    headers: {cookie: h.owner, origin: h.origin, 'content-type': 'application/json'},

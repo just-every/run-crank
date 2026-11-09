@@ -4,6 +4,7 @@ import { operatorAuth, runtimeBindings } from '../auth.server'
 import { devGate } from '../modules/operator-auth/index.mjs'
 import { CrankError, digest, id, requireValue, stmt, type Actor, type CrankEnv } from './model'
 import { authorizeGrant, grantFence } from './grants/authority'
+import { currentScopes, LOCAL_AGENT_PREFIX, preparationScopes, scopeFence } from './agent-door/scope-grants'
 import { agentDoorFence, nativeRequestActor } from './agent-door/native'
 
 export type AuthorityMode = 'read' | 'prepare' | 'publish' | 'operate' | 'owner' | 'trigger'
@@ -42,7 +43,14 @@ export async function authorize(request: Request, original: CrankEnv): Promise<A
       const gate = devGate({ key: env.RER_DEV_KEY, origin: env.AUTH_ORIGIN, local: env.AUTH_LOCAL === 'true' })
       requireValue(gate && await gate.admits(request), 'Local development gate is required', 401)
     }
-    return { id: token.created_by, name: token.display_name, role: 'admin', kind: token.scope, version: token.operator_version, tokenId: token.id, flowId: token.flow_id, local: env.AUTH_LOCAL === 'true' }
+    const scopes = token.scope === 'agent' ? await currentScopes(env, { agent: { id: LOCAL_AGENT_PREFIX + token.id, name: '' }, person: { id: token.created_by } as never, scopes: [...preparationScopes, 'agents:narrow'] }) : []
+    if (token.scope === 'agent' && !['/mcp', '/api/crank/v1/mcp'].includes(new URL(request.url).pathname)) {
+      const path = new URL(request.url).pathname
+      const family = path.includes('/connections') ? 'connections:read' : path.includes('/catalog') || path.includes('/coverage') ? 'catalog:read' : /\/(?:workflow-runs|runs)(?:\/|$)/.test(path) ? 'runs:read' : 'workflows:read'
+      const required = request.method !== 'GET' ? ['workflows:prepare'] : path === '/api/crank/state' ? ['workflows:read', 'runs:read'] : [family]
+      requireValue(required.every(scope => scopes.includes(scope)), 'Tool scope was removed', 403)
+    }
+    return { agentScopes: scopes, id: token.created_by, name: token.display_name, role: 'admin', kind: token.scope, version: token.operator_version, tokenId: token.id, flowId: token.flow_id, local: env.AUTH_LOCAL === 'true' }
   }
   const session = await operatorAuth(env).getSession(request)
   requireValue(session, 'Sign in to continue', 401)
@@ -71,12 +79,13 @@ export function authority(actor: Actor, mode: AuthorityMode): { sql: string; arg
   if (actor.tokenId) {
     const allowed = mode === 'read' || mode === 'prepare' ? 'agent' : mode === 'trigger' ? 'trigger' : null
     const door = agentDoorFence(actor)
+    const ceiling = scopeFence(LOCAL_AGENT_PREFIX + actor.tokenId, actor.id, mode === 'prepare' ? ['workflows:prepare'] : actor.agentScopes ?? [])
     return {
-      sql: `EXISTS(SELECT 1 FROM crank_tokens t JOIN oa_operators o ON o.id=t.created_by WHERE t.id=? AND t.scope=?
+      sql: `(${ceiling.sql}) AND EXISTS(SELECT 1 FROM crank_tokens t JOIN oa_operators o ON o.id=t.created_by WHERE t.id=? AND t.scope=?
         AND t.created_by=? AND t.operator_version=? AND t.revoked_at IS NULL AND o.status='active' AND o.role='owner'
         AND o.version=t.operator_version AND (t.session_kind='native' OR (t.session_kind='dev' AND ?=1))
         AND ((t.scope='agent' AND t.flow_id IS NULL) OR (t.scope='trigger' AND t.flow_id=?)) AND (${door.sql}))`,
-      args: [actor.tokenId, allowed, actor.id, actor.version, actor.local ? 1 : 0, actor.flowId ?? null, ...door.args],
+      args: [...ceiling.args, actor.tokenId, allowed, actor.id, actor.version, actor.local ? 1 : 0, actor.flowId ?? null, ...door.args],
     }
   }
   const product = teamFence(actor)

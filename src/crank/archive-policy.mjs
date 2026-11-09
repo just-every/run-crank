@@ -2,6 +2,7 @@ import { makePart, ArchiveVerifier, ContentVerifier } from '@runeditrun/rer/inte
 import { schemaIdentityOf } from '@runeditrun/rer/internal/modules/portability/schema-identity.mjs';
 import { fenceRow, importRow, importSafety, validateRestore } from './restore-policy.mjs';
 
+// Agent scope ceilings travel inactive; neither credentials nor broader authority are restored.
 // Email aliases travel inactive; value-free receipts and sealed run files retain custody.
 // Read-only invoice searches retain sealed unfinished pages in the existing request
 // checkpoint inventory; final search results use sealed step values. Restore keeps

@@ -48,6 +48,10 @@ async function summary() {
     `Image: ${safe(report.imageDigest ?? 'not built')}`, '',
     '| Row | Result | Seconds | Detail |', '| --- | --- | ---: | --- |',
     ...report.rows.map(row => `| ${row.title} | ${row.status} | ${row.durationSeconds.toFixed(1)} | ${safe(row.reason ?? 'Passed')} |`),
+    ...report.rows.filter(row => row.commandOutput).flatMap(row => [
+      '', `## ${row.title}: exact command output`, '',
+      ...row.commandOutput.split('\n').map(line => '    ' + line),
+    ]),
     '', ...report.limits.map(line => '- ' + line),
     '', 'See the artifact for command output and the machine-readable result. NOT RUN is not a pass.',
   ].join('\n') + '\n';
@@ -94,7 +98,7 @@ function launch(bin, args, { timeout = 600000 } = {}) {
       clearTimeout(timer); children.delete(child);
       if (pending) writes = writes.then(() => log(pending));
       await writes;
-      code === 0 ? accept(text.trim()) : reject(new Error(`${bin} ${args.join(' ')} failed (${signal ?? code}); see command output above.`));
+      code === 0 ? accept(text.trim()) : reject(Object.assign(new Error(`${bin} ${args.join(' ')} failed (${signal ?? code}); see command output above.`), { commandOutput: text.trim(), exitCode: code }));
     });
   });
   // Attach immediately: preview remains running while HTTP probes execute.
@@ -112,7 +116,20 @@ async function row(id, action) {
   currentLog = join(output, 'logs', id + '.log');
   await save();
   try { await action(); record.status = 'PASS'; delete record.reason; }
-  catch (error) { record.status = 'FAIL'; record.reason = scrub(error.message); await log('FAIL: ' + record.reason + '\n'); }
+  catch (error) {
+    record.status = 'FAIL'; record.reason = scrub(error.message);
+    if (id === 'export' && error.commandOutput) {
+      record.commandOutput = scrub(error.commandOutput);
+      if (error.exitCode === 2 || record.commandOutput.includes('Save the archive at a normalized path')) {
+        record.reason = 'Qualification path/usage error; see exact Base output below and export.log.';
+      } else if (record.commandOutput.includes('container_policy_module_unsupported')) {
+        record.reason = 'Base refused Crank policyModule (container_policy_module_unsupported); see exact Base output below and export.log.';
+      } else {
+        record.reason = 'Container export failed; see exact command output below and export.log.';
+      }
+    }
+    await log('FAIL: ' + record.reason + '\n');
+  }
   finally { record.durationSeconds = (Date.now() - at) / 1000; await save(); }
   return record.status === 'PASS';
 }
@@ -271,9 +288,9 @@ try {
       });
       await stopPreview();
       containerId = undefined;
-      const archive = join(root, '.rer/container-qualification-backup.rer');
+      const archive = join(root, 'exports/container-qualification-backup.rer');
       const exported = await row('export', () => rer('export', '--platform', 'container', '--output', archive));
-      if (!exported) notRun(['restore'], 'Base container export failed; no archive exists. Crank policyModule needs a maintained Base container policy door; see export.log.');
+      if (!exported) notRun(['restore'], 'Export failed; no archive is available for import/readback. ' + report.rows.find(row => row.id === 'export').reason);
       else {
         await row('restore', async () => {
           // A second checkout has its own image/volume namespace. Base still

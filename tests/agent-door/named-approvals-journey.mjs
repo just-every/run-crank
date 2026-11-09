@@ -3,7 +3,7 @@ import {harness} from '../harness.mjs';
 
 export const namedJourney = 'local named references and independent human approvals retain exact evidence and once-only inert effects';
 const policy = (action, refs, wait = 'PT1H') => ({schema: 'rer-agent-policy/1', catalogue: 'rer-agent-classes/1',
- rules: [{id: 'standard', class: 'standard', do: action, ...(action === 'approval' ? {approver: refs, wait} : {})}],
+ rules: [{id: 'standard', class: 'standard', do: action, ...(action === 'approval' ? {approver: refs, wait} : {})}, {id: 'access', class: 'access', do: 'blocked'}],
  ...(action === 'review' ? {reviewers: refs} : {}), spend: {none: true}});
 const code = answer => answer.result?._meta?.['com.runeditrun/error']?.code ?? answer.body?.error?.data?.code;
 const content = answer => {
