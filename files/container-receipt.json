@@ -1,0 +1,16 @@
+{
+  "product_head": "4d5b30636d0bc954dad715dee2984e9f0ea8a137",
+  "runner": "0.2.105",
+  "source": "Disposable git archive of exact pushed HEAD; same pinned dependencies; no product checkout edits",
+  "host_production_build": "PASS (client and Worker built; migration-history generation completed)",
+  "container_image": "FAIL",
+  "docker_step": "Dockerfile line 6: RUN npm install --omit=dev --no-audit --no-fund",
+  "error_code": "SELF_SIGNED_CERT_IN_CHAIN",
+  "error_target": "https://registry.npmjs.org/miniflare",
+  "exit_code": 1,
+  "image_digest": null,
+  "container_run_export_restore": "NOT RUN; image did not build",
+  "local_repair": "Exact pinned pnpm installed using the repair printed by rer; build isolated after native-operation lock correctly refused shared state",
+  "next": "REMOTE-NEEDS-LOCAL: hosted container-qualify.yml after landing, as assigned to sx by the brief; cloud proxy CA prevents inner npm install",
+  "security": "TLS verification retained; no generated Dockerfile, shared source or archive policy was edited"
+}

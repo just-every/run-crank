@@ -1,0 +1,9 @@
+{
+  "phase": "hydration",
+  "product_head": "4d5b30636d0bc954dad715dee2984e9f0ea8a137",
+  "source": "Installed rer 0.2.105 cli/lifecycle.mjs verification sequence",
+  "declaration": "deploy.json",
+  "status": "FAIL",
+  "error_code": "hydration_browser_missing",
+  "error": "The hydration check could not start Chromium from the seed's playwright-core: browserType.launch: Executable doesn't exist at /home/agent/.cache/ms-playwright/chromium_headless_shell-1234/chrome-headless-shell-linux64/chrome-headless-shell. Run rer verify, which downloads the browser it pins first."
+}

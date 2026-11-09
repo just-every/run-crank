@@ -1,0 +1,61 @@
+{
+  "repository": "just-every/run-crank",
+  "head_sha": "4d5b30636d0bc954dad715dee2984e9f0ea8a137",
+  "calls": 2,
+  "status": "FAIL",
+  "observations": [
+    {
+      "at": "2026-11-09T18:23:20.242794+00:00",
+      "result": {
+        "workflow_runs": [
+          {
+            "conclusion": null,
+            "head_sha": "4d5b30636d0bc954dad715dee2984e9f0ea8a137",
+            "html_url": "https://github.com/just-every/run-crank/actions/runs/42673558714",
+            "id": 42673558714,
+            "name": "Verify",
+            "status": "in_progress"
+          }
+        ]
+      }
+    },
+    {
+      "at": "2026-11-09T18:28:20.178698+00:00",
+      "result": {
+        "conclusion": "failure",
+        "head_sha": "4d5b30636d0bc954dad715dee2984e9f0ea8a137",
+        "html_url": "https://github.com/just-every/run-crank/actions/runs/42673558714",
+        "id": 42673558714,
+        "name": "Verify",
+        "status": "completed"
+      }
+    }
+  ],
+  "run": {
+    "conclusion": "failure",
+    "head_sha": "4d5b30636d0bc954dad715dee2984e9f0ea8a137",
+    "html_url": "https://github.com/just-every/run-crank/actions/runs/42673558714",
+    "id": 42673558714,
+    "name": "Verify",
+    "status": "completed"
+  },
+  "diagnostic_calls_after_watcher": 5,
+  "calls_total_for_ci_investigation": 7,
+  "failure_analysis": {
+    "job": "verify",
+    "failed_job_id": 129351166958,
+    "failed_step": "Require the selected coverage and its proof",
+    "cause": "Shared build was reported abandoned before a build job/log was recorded. The plan job succeeded. The final aggregate correctly rejected absent build/shard/push proof. The provider abandonment cause was not supplied by the returned jobs or failed aggregate log.",
+    "exception_for_contract_views": false,
+    "rerun_policy": "No same-SHA rerun or empty/no-op CI-trigger commit; brief prohibits both.",
+    "job_results": {
+      "plan": "success",
+      "build": "abandoned",
+      "shards": "skipped",
+      "light": "skipped",
+      "full-push-proof": "skipped",
+      "nightly-proof": "skipped"
+    },
+    "planned_coverage": "full, eight push shards, full push proof required"
+  }
+}

@@ -1,0 +1,3 @@
+Hydration check: 1 page(s), 1 load(s)
+  /: skipped, plain HTML: React does not hydrate this page and it loads no application script
+  not checked: /setup answered 303 to /signin?returnTo=%2Fsetup

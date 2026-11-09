@@ -1,0 +1,49 @@
+TAP version 13
+# ▲ [WARNING] Proxy environment variables detected. We'll use your proxy for fetch requests.
+# (node:10992) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# PROBE BASE-AGENT-006 6: concurrent metadata and inert MCP calls -> computed standard facts, decision_busy, no decision, rule, approval, claim or usage reservation; durable restart readback
+# PROBE BASE-AGENT-012 create: committed native draft, outcome interruption, restart and concurrent new RPC IDs after 24 hours -> one effect, frozen original result, later edits preserved
+# PROBE BASE-AGENT-012 create transient: committed native draft, outcome interruption, restart and concurrent new RPC IDs after 24 hours -> one effect, frozen original result, later edits preserved
+# PROBE BASE-AGENT-012 update: committed native draft, outcome interruption, restart and concurrent new RPC IDs after 24 hours -> one effect, frozen original result, later edits preserved
+# PROBE BASE-AGENT-012 update transient: committed native draft, outcome interruption, restart and concurrent new RPC IDs after 24 hours -> one effect, frozen original result, later edits preserved
+# PROBE BASE-AGENT-012 duplicate: committed native draft, outcome interruption, restart and concurrent new RPC IDs after 24 hours -> one effect, frozen original result, later edits preserved
+# PROBE BASE-AGENT-012 duplicate transient: committed native draft, outcome interruption, restart and concurrent new RPC IDs after 24 hours -> one effect, frozen original result, later edits preserved
+# PROBE BASE-AGENT-012 unmatched: interrupted admission without a native receipt, with outcome storage available or failed -> call_in_progress, no invented result or mutation replay
+# PROBE BASE-AGENT-012 restore: public export and restore -> no native receipts or credentials; inert drafts without owners; no execution after restart
+# PROBE BASE-AGENT-012 erased sponsor: committed uncertain draft, deactivation, person erasure and restart -> native recovery evidence removed, pending and completed retries unauthenticated, no metadata or second effect
+# PROBE BASE-AGENT-012 scoped authority: withdrawn creation or target preparation with current read access and an unrelated builder grant -> native write, recovery and completed replay refused; explicit complete grant recovers the frozen result without another effect
+# PROBE BASE-AGENT-012 authority: signed Business MCP retries with changed consent, client, foreign sponsor and revoked consent -> refused without completion; original current consent returns frozen metadata
+# PROBE BASE-AGENT-007 reference admission: absent approver and reviewer -> policy_refs_unresolved, prior document and revision unchanged
+# PROBE BASE-AGENT-007 independent decisions: sponsor, unrelated, agent, device and changed evidence refused; two signed-in people -> one inert draft and original concurrent and restarted receipt
+# PROBE BASE-AGENT-007 invalidation: rejection, policy revision, changed draft, deactivated first approver and expiry -> no held effect; inactive policy references preserve prior revision
+# PROBE BASE-AGENT-007 dispositions: explicit autonomous -> inert draft; standard review -> draft and independently marked review feed
+# Subtest: PLATFORM-001: SDK and CORE door draft lifecycle, native granted execution/progress, paginated reads and out-of-grant denial share native approval and audit
+ok 1 - PLATFORM-001: SDK and CORE door draft lifecycle, native granted execution/progress, paginated reads and out-of-grant denial share native approval and audit
+  ---
+  duration_ms: 290771.783651
+  type: 'test'
+  ...
+# PROBE BASE-AGENT-008 commit authority: signed-in approval paused before native commit, reviewer deactivated -> refused with no native mutation
+# PROBE DATA-002 reviewer erasure: approve draft, deactivate and erase reviewer -> anonymized workflow history and exports across restart and inactive restore
+# Subtest: PLATFORM-001: draft, publication and duplicate preparations preserve retries, reviewer authority and inactive custody
+ok 2 - PLATFORM-001: draft, publication and duplicate preparations preserve retries, reviewer authority and inactive custody
+  ---
+  duration_ms: 151478.234136
+  type: 'test'
+  ...
+# Subtest: Per-client MCP connector tools enforce exact grants, approvals, history, restart and revocation
+ok 3 - Per-client MCP connector tools enforce exact grants, approvals, history, restart and revocation
+  ---
+  duration_ms: 73688.737038
+  type: 'test'
+  ...
+1..3
+# tests 3
+# suites 0
+# pass 3
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 522261.703488

@@ -1,0 +1,36 @@
+{
+  "repository": "just-every/run-crank",
+  "branch": "cloud/sx-crank-rer-0-2-105-1",
+  "base_head": "e6ba1c6dd98f68e02826afdfe1e7ffb7fe2ab4df",
+  "product_head": "4d5b30636d0bc954dad715dee2984e9f0ea8a137",
+  "runner_before": "0.2.104",
+  "runner_after": "0.2.105",
+  "maintained_base_before": "96045612467d5e752c668e8557b4bf6e906edfb1",
+  "maintained_base_after": "feb76ac8321ff1275168cce10009291721064738",
+  "test_count_before": 199,
+  "test_count_after": 199,
+  "test_cap": 200,
+  "clause_counts_before": {
+    "partial": 50,
+    "done": 32,
+    "missing": 17
+  },
+  "clause_counts_after": {
+    "partial": 50,
+    "done": 32,
+    "missing": 17
+  },
+  "clause_status_changes": [],
+  "migration_count_before": 99,
+  "migration_count_after": 99,
+  "unchanged": [
+    "CONTRACT.md",
+    "ACCEPTANCE.md",
+    "docs/CLAIMS.md",
+    "test-budget.json"
+  ],
+  "publication_scan": "NOT RUN in cloud, explicitly excluded by brief; fleet owns publication gate",
+  "pr": null,
+  "full_history": true,
+  "test_count_source": "Unchanged test-budget.json declares 199/200; no seed test registrations changed; vendored Base fixtures excluded by existing rules"
+}

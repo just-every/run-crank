@@ -1,0 +1,41 @@
+{
+  "repository": "just-every/run-crank",
+  "product_head": "4d5b30636d0bc954dad715dee2984e9f0ea8a137",
+  "branch": "cloud/sx-crank-rer-0-2-105-1",
+  "published_commits": [
+    {
+      "sha": "4d5b30636d0bc954dad715dee2984e9f0ea8a137",
+      "author_name": "Run Edit Run fleet",
+      "author_email": "fleet@runeditrun.com",
+      "committer_name": "Run Edit Run fleet",
+      "committer_email": "fleet@runeditrun.com",
+      "subject": "Document rer 0.2.105 legacy approval adoption",
+      "trailers": ""
+    },
+    {
+      "sha": "81f7b6822d98e5b367c142ca56be0ab179d5cf49",
+      "author_name": "Run Edit Run fleet",
+      "author_email": "fleet@runeditrun.com",
+      "committer_name": "Run Edit Run fleet",
+      "committer_email": "fleet@runeditrun.com",
+      "subject": "Adopt rer 0.2.105 legacy Business approval safety [skip ci]",
+      "trailers": ""
+    }
+  ],
+  "pushes": [
+    {
+      "head": "81f7b6822d98e5b367c142ca56be0ab179d5cf49",
+      "command": "python3 $HOME/rer-consolidation/.tools/cloud-push.py origin cloud/sx-crank-rer-0-2-105-1",
+      "attempts": 1,
+      "status": "PUSH_OK",
+      "identity_and_trailers": "PASS, all candidates including side parents inspected"
+    },
+    {
+      "head": "4d5b30636d0bc954dad715dee2984e9f0ea8a137",
+      "command": "python3 $HOME/rer-consolidation/.tools/cloud-push.py origin cloud/sx-crank-rer-0-2-105-1",
+      "attempts": 1,
+      "status": "PUSH_OK",
+      "identity_and_trailers": "PASS, all candidates including side parents inspected"
+    }
+  ]
+}

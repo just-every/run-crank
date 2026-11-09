@@ -1,0 +1,39 @@
+{
+  "refreshed": "feb76ac8321ff1275168cce10009291721064738",
+  "copy_records": 245,
+  "retired": [],
+  "withheld": [],
+  "edition_migrations": [],
+  "new_copy_files": [
+    "src/modules/agent-door/tests/fixtures/credentials-0.2.95.ts",
+    "src/modules/agent-door/tests/legacy-principal.test.ts"
+  ],
+  "adaptations_retained": [
+    ".github/workflows/run-demo.yml",
+    ".github/workflows/verify-nightly.yml",
+    ".github/workflows/verify.yml",
+    "scripts/verify-app.mjs",
+    "scripts/verify-ci.mjs",
+    "scripts/verify-light.mjs",
+    "scripts/verify-plan.mjs",
+    "src/base/run-site.ts",
+    "src/modules/agent-door/tests/door.test.ts",
+    "src/modules/agent-door/tests/identity.test.ts",
+    "src/modules/agent-door/tests/queued-context.test.ts",
+    "src/modules/agent-door/tests/runtime.mjs",
+    "src/modules/agent-door/tests/seed.ts",
+    "src/modules/agent-door/types.ts",
+    "src/modules/agent-door/pipeline.ts",
+    "src/modules/agent-door/audit.ts",
+    "src/modules/agent-door/conformance/audit.mjs",
+    "src/modules/agent-door/policy-store.ts",
+    "src/modules/agent-door/counting.ts",
+    "src/modules/agent-door/transport.ts",
+    "VERIFY-WORKFLOW.md"
+  ],
+  "notices": [
+    ".github/workflows/verify.yml: preserved seed-owned workflow. The current template pins Ubuntu 24.04 and moves browser and apt caches to the runner temporary directory. To adopt, merge export/verify.yml from Base feb76ac8321ff1275168cce10009291721064738 into .github/workflows/verify.yml, then run node node_modules/@runeditrun/rer/edition-authoring/cli.mjs record-base .github/workflows/verify.yml export/verify.yml feb76ac8321ff1275168cce10009291721064738 --base <base-checkout> and repeat rer refresh-base --ref feb76ac8321ff1275168cce10009291721064738 --base <base-checkout>.",
+    ".github/workflows/verify-nightly.yml: preserved seed-owned workflow. The current template pins Ubuntu 24.04 and moves browser and apt caches to the runner temporary directory. To adopt, merge export/verify-nightly.yml from Base feb76ac8321ff1275168cce10009291721064738 into .github/workflows/verify-nightly.yml, then run node node_modules/@runeditrun/rer/edition-authoring/cli.mjs record-base .github/workflows/verify-nightly.yml export/verify-nightly.yml feb76ac8321ff1275168cce10009291721064738 --base <base-checkout> and repeat rer refresh-base --ref feb76ac8321ff1275168cce10009291721064738 --base <base-checkout>."
+  ],
+  "dependency_version_policy": "existing seed package versions preserved; newly delivered runtime code adds only an internal type import"
+}

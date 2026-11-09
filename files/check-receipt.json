@@ -1,0 +1,429 @@
+[
+  {
+    "name": "legacy-probe",
+    "command": [
+      "node",
+      "/home/agent/rer-consolidation/work/sx-crank-rer-0-2-105-1/packet/legacy-approval-probe.mjs"
+    ],
+    "head": "e6ba1c6dd98f68e02826afdfe1e7ffb7fe2ab4df",
+    "started_at": "2026-11-09T18:12:32.104905+00:00",
+    "duration_seconds": 21.9,
+    "exit_code": 0,
+    "status": "PASS"
+  },
+  {
+    "name": "typecheck",
+    "command": [
+      "pnpm",
+      "run",
+      "typecheck"
+    ],
+    "head": "e6ba1c6dd98f68e02826afdfe1e7ffb7fe2ab4df",
+    "started_at": "2026-11-09T18:12:53.921988+00:00",
+    "duration_seconds": 20.13,
+    "exit_code": 0,
+    "status": "PASS"
+  },
+  {
+    "name": "source-lock",
+    "command": [
+      "node",
+      "node_modules/@runeditrun/rer/edition-authoring/cli.mjs",
+      "check"
+    ],
+    "head": "e6ba1c6dd98f68e02826afdfe1e7ffb7fe2ab4df",
+    "started_at": "2026-11-09T18:13:23.096812+00:00",
+    "duration_seconds": 5.61,
+    "exit_code": 0,
+    "status": "PASS"
+  },
+  {
+    "name": "offline-base",
+    "command": [
+      "node",
+      "node_modules/@runeditrun/rer/edition-authoring/cli.mjs",
+      "verify-base",
+      "--offline"
+    ],
+    "head": "e6ba1c6dd98f68e02826afdfe1e7ffb7fe2ab4df",
+    "started_at": "2026-11-09T18:13:28.777550+00:00",
+    "duration_seconds": 0.58,
+    "exit_code": 0,
+    "status": "PASS"
+  },
+  {
+    "name": "first-party",
+    "command": [
+      "pnpm",
+      "exec",
+      "rer",
+      "check",
+      "--profile",
+      "first-party"
+    ],
+    "head": "81f7b6822d98e5b367c142ca56be0ab179d5cf49",
+    "started_at": "2026-11-09T18:15:04.483020+00:00",
+    "duration_seconds": 4.75,
+    "exit_code": 0,
+    "status": "PASS"
+  },
+  {
+    "name": "contract-documents",
+    "command": [
+      "node",
+      "src/base/contract-docs.mjs",
+      "check"
+    ],
+    "head": "81f7b6822d98e5b367c142ca56be0ab179d5cf49",
+    "started_at": "2026-11-09T18:15:09.326184+00:00",
+    "duration_seconds": 0.14,
+    "exit_code": 0,
+    "status": "PASS"
+  },
+  {
+    "name": "workflow-shape",
+    "command": [
+      "node",
+      "scripts/verify-ci.mjs",
+      "--check-workflows"
+    ],
+    "head": "81f7b6822d98e5b367c142ca56be0ab179d5cf49",
+    "started_at": "2026-11-09T18:15:09.597717+00:00",
+    "duration_seconds": 0.09,
+    "exit_code": 0,
+    "status": "PASS"
+  },
+  {
+    "name": "container-image",
+    "command": [
+      "npx",
+      "-y",
+      "@runeditrun/rer",
+      "build",
+      "--platform",
+      "container",
+      "--no-queue"
+    ],
+    "head": "81f7b6822d98e5b367c142ca56be0ab179d5cf49",
+    "started_at": "2026-11-09T18:16:49.229599+00:00",
+    "duration_seconds": 9.05,
+    "exit_code": 2,
+    "status": "FAIL"
+  },
+  {
+    "name": "agent-public-doors",
+    "command": [
+      "node",
+      "--test",
+      "--test-concurrency=1",
+      "tests/platform.test.mjs"
+    ],
+    "head": "81f7b6822d98e5b367c142ca56be0ab179d5cf49",
+    "started_at": "2026-11-09T18:13:40.457721+00:00",
+    "duration_seconds": 380.76,
+    "exit_code": 1,
+    "status": "FAIL"
+  },
+  {
+    "name": "native-setup",
+    "command": [
+      "npx",
+      "-y",
+      "@runeditrun/rer",
+      "setup",
+      "--owner-email",
+      "fleet@runeditrun.com",
+      "--non-interactive"
+    ],
+    "head": "81f7b6822d98e5b367c142ca56be0ab179d5cf49",
+    "started_at": "2026-11-09T18:13:38.125882+00:00",
+    "duration_seconds": 445.85,
+    "exit_code": 0,
+    "status": "PASS"
+  },
+  {
+    "name": "agent-public-doors-transport",
+    "command": [
+      "node",
+      "--import",
+      "/tmp/crank-transport-proof.mjs",
+      "--test",
+      "--test-name-pattern=^Per-client MCP",
+      "tests/platform.test.mjs"
+    ],
+    "head": "81f7b6822d98e5b367c142ca56be0ab179d5cf49",
+    "started_at": "2026-11-09T18:21:25.037669+00:00",
+    "duration_seconds": 55.38,
+    "exit_code": 0,
+    "status": "PASS"
+  },
+  {
+    "name": "final-source-lock",
+    "command": [
+      "node",
+      "node_modules/@runeditrun/rer/edition-authoring/cli.mjs",
+      "check"
+    ],
+    "head": "81f7b6822d98e5b367c142ca56be0ab179d5cf49",
+    "started_at": "2026-11-09T18:22:56.889758+00:00",
+    "duration_seconds": 5.17,
+    "exit_code": 0,
+    "status": "PASS"
+  },
+  {
+    "name": "final-legacy-probe",
+    "command": [
+      "node",
+      "/home/agent/rer-consolidation/work/sx-crank-rer-0-2-105-1/packet/legacy-approval-probe.mjs"
+    ],
+    "head": "4d5b30636d0bc954dad715dee2984e9f0ea8a137",
+    "started_at": "2026-11-09T18:23:22.946464+00:00",
+    "duration_seconds": 28.79,
+    "exit_code": 0,
+    "status": "PASS"
+  },
+  {
+    "name": "final-typecheck",
+    "command": [
+      "pnpm",
+      "run",
+      "typecheck"
+    ],
+    "head": "4d5b30636d0bc954dad715dee2984e9f0ea8a137",
+    "started_at": "2026-11-09T18:23:51.833263+00:00",
+    "duration_seconds": 2.17,
+    "exit_code": 0,
+    "status": "PASS"
+  },
+  {
+    "name": "exact-source-lock",
+    "command": [
+      "node",
+      "node_modules/@runeditrun/rer/edition-authoring/cli.mjs",
+      "check"
+    ],
+    "head": "4d5b30636d0bc954dad715dee2984e9f0ea8a137",
+    "started_at": "2026-11-09T18:23:54.062690+00:00",
+    "duration_seconds": 3.6,
+    "exit_code": 0,
+    "status": "PASS"
+  },
+  {
+    "name": "agent-public-doors-retry",
+    "command": [
+      "node",
+      "--import",
+      "/tmp/crank-transport-proof.mjs",
+      "--test",
+      "--test-concurrency=1",
+      "tests/platform.test.mjs"
+    ],
+    "head": "4d5b30636d0bc954dad715dee2984e9f0ea8a137",
+    "started_at": "2026-11-09T18:23:09.904873+00:00",
+    "duration_seconds": 522.34,
+    "exit_code": 0,
+    "status": "PASS"
+  },
+  {
+    "name": "container-image-queued",
+    "command": [
+      "npx",
+      "-y",
+      "@runeditrun/rer",
+      "build",
+      "--platform",
+      "container"
+    ],
+    "head": "81f7b6822d98e5b367c142ca56be0ab179d5cf49",
+    "started_at": "2026-11-09T18:18:44.079142+00:00",
+    "duration_seconds": 818.7,
+    "exit_code": 130,
+    "status": "FAIL"
+  },
+  {
+    "name": "container-image-ci",
+    "command": [
+      "npx",
+      "-y",
+      "@runeditrun/rer",
+      "build",
+      "--platform",
+      "container",
+      "--no-queue"
+    ],
+    "head": "4d5b30636d0bc954dad715dee2984e9f0ea8a137",
+    "started_at": "2026-11-09T18:32:30.690846+00:00",
+    "duration_seconds": 36.99,
+    "exit_code": 3,
+    "status": "FAIL"
+  },
+  {
+    "name": "container-image-repair",
+    "command": [
+      "npx",
+      "-y",
+      "@runeditrun/rer",
+      "build",
+      "--platform",
+      "container",
+      "--no-queue"
+    ],
+    "head": "4d5b30636d0bc954dad715dee2984e9f0ea8a137",
+    "started_at": "2026-11-09T18:35:26.662442+00:00",
+    "duration_seconds": 5.96,
+    "exit_code": 1,
+    "status": "FAIL"
+  },
+  {
+    "name": "container-disposable",
+    "command": [
+      "npx",
+      "-y",
+      "@runeditrun/rer",
+      "build",
+      "--cwd",
+      "/home/agent/rer-consolidation/work/sx-crank-rer-0-2-105-1/container-source",
+      "--platform",
+      "container",
+      "--no-queue"
+    ],
+    "head": "4d5b30636d0bc954dad715dee2984e9f0ea8a137",
+    "started_at": "2026-11-09T18:36:46.265142+00:00",
+    "duration_seconds": 503.84,
+    "exit_code": 1,
+    "status": "FAIL"
+  },
+  {
+    "name": "rer-verify-runtime-authority",
+    "command": [
+      "npx",
+      "-y",
+      "@runeditrun/rer",
+      "verify"
+    ],
+    "head": "81f7b6822d98e5b367c142ca56be0ab179d5cf49",
+    "started_at": "2026-11-09T18:15:37.286038+00:00",
+    "duration_seconds": 2421.58,
+    "exit_code": 1,
+    "status": "FAIL"
+  },
+  {
+    "name": "site-build",
+    "command": [
+      "npx",
+      "-y",
+      "@runeditrun/rer",
+      "build",
+      "--site"
+    ],
+    "head": "4d5b30636d0bc954dad715dee2984e9f0ea8a137",
+    "started_at": "2026-11-09T18:56:58.610508+00:00",
+    "duration_seconds": 11.62,
+    "exit_code": 0,
+    "status": "PASS"
+  },
+  {
+    "name": "site-check",
+    "command": [
+      "pnpm",
+      "run",
+      "test:site"
+    ],
+    "head": "4d5b30636d0bc954dad715dee2984e9f0ea8a137",
+    "started_at": "2026-11-09T18:57:10.458280+00:00",
+    "duration_seconds": 17.1,
+    "exit_code": 0,
+    "status": "PASS"
+  },
+  {
+    "name": "foundation-hosted",
+    "command": [
+      "node",
+      "/home/agent/rer-consolidation/work/sx-crank-rer-0-2-105-1/packet/foundation-checks.mjs",
+      "hosted"
+    ],
+    "head": "4d5b30636d0bc954dad715dee2984e9f0ea8a137",
+    "started_at": "2026-11-09T18:59:43.788333+00:00",
+    "duration_seconds": 13.01,
+    "exit_code": 0,
+    "status": "PASS"
+  },
+  {
+    "name": "foundation-hydration",
+    "command": [
+      "node",
+      "/home/agent/rer-consolidation/work/sx-crank-rer-0-2-105-1/packet/foundation-checks.mjs",
+      "hydration"
+    ],
+    "head": "4d5b30636d0bc954dad715dee2984e9f0ea8a137",
+    "started_at": "2026-11-09T18:59:56.938437+00:00",
+    "duration_seconds": 14.03,
+    "exit_code": 1,
+    "status": "FAIL"
+  },
+  {
+    "name": "emitted-runtime",
+    "command": [
+      "pnpm",
+      "run",
+      "test:runtime"
+    ],
+    "head": "4d5b30636d0bc954dad715dee2984e9f0ea8a137",
+    "started_at": "2026-11-09T18:57:27.726087+00:00",
+    "duration_seconds": 237.54,
+    "exit_code": 0,
+    "status": "PASS"
+  },
+  {
+    "name": "email-link",
+    "command": [
+      "pnpm",
+      "run",
+      "test:email-link"
+    ],
+    "head": "4d5b30636d0bc954dad715dee2984e9f0ea8a137",
+    "started_at": "2026-11-09T19:01:25.458162+00:00",
+    "duration_seconds": 20.2,
+    "exit_code": 0,
+    "status": "PASS"
+  },
+  {
+    "name": "foundation-hydration-system-browser",
+    "command": [
+      "node",
+      "/home/agent/rer-consolidation/work/sx-crank-rer-0-2-105-1/packet/foundation-checks.mjs",
+      "hydration"
+    ],
+    "head": "4d5b30636d0bc954dad715dee2984e9f0ea8a137",
+    "started_at": "2026-11-09T19:01:20.147645+00:00",
+    "duration_seconds": 29.33,
+    "exit_code": 0,
+    "status": "PASS"
+  },
+  {
+    "name": "foundation-agent",
+    "command": [
+      "node",
+      "/home/agent/rer-consolidation/work/sx-crank-rer-0-2-105-1/packet/foundation-checks.mjs",
+      "agent"
+    ],
+    "head": "4d5b30636d0bc954dad715dee2984e9f0ea8a137",
+    "started_at": "2026-11-09T19:00:11.115004+00:00",
+    "duration_seconds": 214.43,
+    "exit_code": 0,
+    "status": "PASS"
+  },
+  {
+    "name": "final-integrity",
+    "command": [
+      "node",
+      "node_modules/@runeditrun/rer/edition-authoring/cli.mjs",
+      "check"
+    ],
+    "head": "4d5b30636d0bc954dad715dee2984e9f0ea8a137",
+    "started_at": "2026-11-09T19:06:49.896824+00:00",
+    "duration_seconds": 1.92,
+    "exit_code": 0,
+    "status": "PASS"
+  }
+]

@@ -1,0 +1,24 @@
+{
+  "status": "PASS",
+  "product_head": "4d5b30636d0bc954dad715dee2984e9f0ea8a137",
+  "runner": "@runeditrun/rer 0.2.105",
+  "base": "feb76ac8321ff1275168cce10009291721064738",
+  "installation": "disposable native Worker, real D1 migrations and signed Business/public-door integration",
+  "source_shape": "principal.source absent; other saved fields unchanged",
+  "assertions": [
+    {
+      "case": "legacy principal without source, Business running, after restart",
+      "http": 200,
+      "state": "executed",
+      "code": null,
+      "native_drafts": 1
+    },
+    {
+      "case": "legacy principal without source, Business stopped by signed settings, after restart and repeated approval",
+      "http": 200,
+      "state": "refused",
+      "code": "sponsor_unavailable",
+      "native_drafts": 0
+    }
+  ]
+}

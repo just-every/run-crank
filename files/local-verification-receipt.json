@@ -1,0 +1,24 @@
+{
+  "entrypoint": "npx -y @runeditrun/rer verify",
+  "selection": "SEED_VERIFY_SHARD=runtime-authority, as supported by VERIFY-WORKFLOW.md",
+  "start_head": "81f7b6822d98e5b367c142ca56be0ab179d5cf49",
+  "final_runtime_source_equivalence": "The final 4d5b306 commit changes only CHANGELOG.md and sources.lock.json",
+  "unit_and_integration_tests": 46,
+  "unit_and_integration_passed": 46,
+  "unit_and_integration_failed": 0,
+  "entrypoint_exit": 1,
+  "stop_reason": "The run-site test returned 404 because dist/site had not been built locally. The documented CI shared build normally creates this artifact before the selected shard.",
+  "remaining_checks": "site build/check, emitted runtime and email-link are recorded separately after this artifact repair; no source or test assertions changed",
+  "repaired_site": "PASS after npx rer build --site, 13 pages/75 files",
+  "remaining_seed_commands": {
+    "test:runtime": "PASS on exact final head",
+    "test:email-link": "PASS on exact final head"
+  },
+  "foundation_checks": {
+    "hosted": "PASS",
+    "hydration": "PASS with plain-page/auth-redirect limitations recorded separately",
+    "agent": "PASS, 1524/1524 declared conformance points"
+  },
+  "status": "ALL_SELECTED_COMPONENTS_COMPLETED_AFTER_ARTIFACT_AND_BROWSER_REPAIR",
+  "public_entrypoint_status": "Initial rer verify invocation remains exit 1 in actual check receipt; no second full invocation or successful exit is claimed."
+}

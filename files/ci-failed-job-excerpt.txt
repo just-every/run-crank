@@ -1,0 +1,7 @@
+verify	Require the selected coverage and its proof	2026-11-09T18:25:11.4774807Z test "$PLAN" = success
+verify	Require the selected coverage and its proof	2026-11-09T18:25:11.4779087Z   reuse) test "$SKIP" = true && test "$BUILD" = skipped && test "$SHARDS" = skipped && test "$LIGHT" = skipped ;;
+verify	Require the selected coverage and its proof	2026-11-09T18:25:11.4780501Z   light) test "$SKIP" = false && test "$LIGHT" = success && test "$BUILD" = skipped && test "$SHARDS" = skipped ;;
+verify	Require the selected coverage and its proof	2026-11-09T18:25:11.4783954Z       test "$BUILD" = success && test "$SHARDS" = success
+verify	Require the selected coverage and its proof	2026-11-09T18:25:11.4785571Z       test "$BUILD" = skipped && test "$SHARDS" = skipped
+verify	Require the selected coverage and its proof	2026-11-09T18:25:11.4787112Z     if [ "$REQUIRE_PUSH" = true ]; then test "$PUSH_PROOF" = success; fi
+verify	Require the selected coverage and its proof	2026-11-09T18:25:11.5640639Z ##[error]Process completed with exit code 1.

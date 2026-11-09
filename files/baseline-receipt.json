@@ -1,0 +1,27 @@
+{
+  "status": "EXPECTED REGRESSION OBSERVED",
+  "command": [
+    "node",
+    "legacy-approval-probe.mjs"
+  ],
+  "working_tree_context": {
+    "product_base": "e6ba1c6dd98f68e02826afdfe1e7ffb7fe2ab4df",
+    "package_pin": "0.2.105",
+    "maintained_shared_runtime": "96045612467d5e752c668e8557b4bf6e906edfb1",
+    "note": "The package pin was already installed, but maintained runtime copies had not yet been refreshed."
+  },
+  "running_control": {
+    "state": "executed",
+    "native_drafts": 1,
+    "assertions": "PASS"
+  },
+  "stopped_case": {
+    "state": "refused",
+    "actual_code": "execution_failed",
+    "expected_code": "sponsor_unavailable",
+    "assertion": "FAIL",
+    "native_draft_count": "not asserted after the failed code assertion"
+  },
+  "exit_code": 1,
+  "migration_or_source_edit": "only principal.source removed in the disposable saved row; no product migration"
+}

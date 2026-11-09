@@ -1,0 +1,16 @@
+{
+  "phase": "hydration",
+  "product_head": "4d5b30636d0bc954dad715dee2984e9f0ea8a137",
+  "source": "Installed rer 0.2.105 cli/lifecycle.mjs verification sequence",
+  "declaration": "deploy.json",
+  "status": "PASS",
+  "pages": [
+    "/"
+  ],
+  "loads": 1,
+  "coverage_notes": [
+    "One public page loaded: / is plain HTML and has no application script, so no React hydration case was exercised.",
+    "/setup redirected to sign-in and was not checked.",
+    "The installed checker used the same selection and assertions as cli/lifecycle.mjs, with /usr/bin/chromium and --no-sandbox required by this cloud."
+  ]
+}

@@ -1,0 +1,25 @@
+#10 [6/8] RUN npm install --omit=dev --no-audit --no-fund
+#10 142.3 npm error code SELF_SIGNED_CERT_IN_CHAIN
+#10 142.3 npm error errno SELF_SIGNED_CERT_IN_CHAIN
+#10 142.3 npm error request to https://registry.npmjs.org/miniflare failed, reason: self-signed certificate in certificate chain
+#10 142.3 npm error A complete log of this run can be found in: /root/.npm/_logs/2026-11-09T18_42_48_730Z-debug-0.log
+#10 ERROR: process "/bin/sh -c npm install --omit=dev --no-audit --no-fund" did not complete successfully: exit code: 1
+------
+ > [6/8] RUN npm install --omit=dev --no-audit --no-fund:
+142.3 npm error code SELF_SIGNED_CERT_IN_CHAIN
+142.3 npm error errno SELF_SIGNED_CERT_IN_CHAIN
+142.3 npm error request to https://registry.npmjs.org/miniflare failed, reason: self-signed certificate in certificate chain
+142.3 npm error A complete log of this run can be found in: /root/.npm/_logs/2026-11-09T18_42_48_730Z-debug-0.log
+------
+Dockerfile:6
+--------------------
+   4 |     WORKDIR /runtime
+   5 |     COPY runtime/package.json ./package.json
+   6 | >>> RUN npm install --omit=dev --no-audit --no-fund
+   7 |     COPY runtime/ /runtime/
+   8 |     COPY app/ /app/
+--------------------
+ERROR: failed to build: failed to solve: process "/bin/sh -c npm install --omit=dev --no-audit --no-fund" did not complete successfully: exit code: 1
+Container command failed
+Unexpected failure: run the command again, and if it repeats inspect the project operating documentation.
+build: failed (exit 1)
