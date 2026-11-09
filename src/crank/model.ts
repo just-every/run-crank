@@ -28,6 +28,7 @@ export interface Actor {
   team?: import('./team/policy').TeamAccess
   serviceAccountId?:string; serviceOwnerId?:string; serviceEnvironment?:string; serviceWorkflowIds?:string[]; serviceConnectionIds?:string[]
   sessionId?: string; tokenId?: string; grantId?: string; flowId?: string | null; local: boolean
+  agentScopes?: readonly string[]
   agentDoor?: Readonly<AgentDoorAuthority>
 }
 export interface Flow {

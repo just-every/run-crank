@@ -1,6 +1,7 @@
 import { createAgentDoor, type AgentDoorOptions, type Trust } from '../../modules/agent-door/index.ts'
 import { runtimeBindings, type Bindings } from '../../auth.server'
 import { peopleAdapter, localCredentials } from './people'
+import { currentScopes } from './scope-grants'
 import { crankTools } from './tools'
 import surface from '../../../agent-surface.json'
 import { agentDocumentation, documentationResponse, describeAgentResponse } from './documentation'
@@ -25,7 +26,7 @@ export function crankAgentDoor(bindings: Bindings) {
     seed: surface.seed, name: 'Crank', specialist: surface.specialist,
     db: env.DB, origin: env.AUTH_ORIGIN, trust: installationTrust(env),
     capabilities: [...capabilities], people: peopleAdapter(env),
-    tools, prompts: crankPrompts(tools), resources: [],
+    tools, prompts: crankPrompts(tools), resources: [], currentScopes: principal => currentScopes(env, principal),
     paths: ['/api/crank/v1/mcp'], limits: surface.documentation.limits,
     localCredentials: request => localCredentials(env, request),
     notTools: [

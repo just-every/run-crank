@@ -37,6 +37,16 @@ async function digestBarrierBundle() {
     });
   }}]})).outputFiles[0].text;
 }
+// Pause a token's preparation immediately before the native authority transaction.
+async function agentScopeBarrierBundle() {
+  return (await build({...bundleOptions,plugins:[archiveMigrationPlugin(),{name:'agent-scope-commit-barrier',setup(plugin){
+    plugin.onLoad({filter:/crank[\/]access\.ts$/},async({path})=>{
+      const contents=await readFile(path,'utf8'),boundary='  const guard = id(), fence = authority(actor, mode)';
+      assert.equal(contents.split(boundary).length,2);
+      return {contents:contents.replace(boundary,"  if(actor.tokenId && mode==='prepare') await fetch('https://agent-scope-commit.example/before-commit');\n"+boundary),loader:'ts'};
+    });
+  }}]})).outputFiles[0].text;
+}
 async function pickerBarrierBundle() {
   return (await build({...bundleOptions,plugins:[archiveMigrationPlugin(),{name:'picker-selection-commit-barrier',setup(plugin){
     plugin.onLoad({filter:/workflows[\/]store\.ts$/},async({path})=>{
@@ -89,7 +99,7 @@ async function nativePreparationBarrierBundle() {
   }}]})).outputFiles[0].text;
 }
 /** `edge` fakes third-party APIs at the network edge: a function from Request to a Response, or undefined to use the real network. */
-export async function harness(target,{emitted=false,edge,mailEdge,quoteCosts=true,bindings={},clock,digestCommitBarrier=false,appCustodyBarrier=false,nativePreparationBarrier=false,beforeTeamMigration=false,emailTransport=false,agentRecoveryFault=false,extraMigrations=[]}={}) {
+export async function harness(target,{emitted=false,edge,mailEdge,quoteCosts=true,bindings={},clock,digestCommitBarrier=false,appCustodyBarrier=false,nativePreparationBarrier=false,beforeTeamMigration=false,emailTransport=false,agentRecoveryFault=false,agentScopeCommitBarrier=false,extraMigrations=[]}={}) {
   bundle ??= (await build(bundleOptions)).outputFiles[0].text;
   const port=await freePort(),origin=`http://127.0.0.1:${port}`,directory=await mkdtemp(join(tmpdir(),'crank-tests-'));
   const mail=[];
@@ -101,7 +111,7 @@ export async function harness(target,{emitted=false,edge,mailEdge,quoteCosts=tru
   // the undici dispatcher miniflare installs process-wide rejects before the receiver sees the request.
   const {'content-length':_,...headers}=Object.fromEntries(request.headers);return fetch(request.url,{method:request.method,headers,body:['GET','HEAD'].includes(request.method)?undefined:await request.arrayBuffer(),redirect:'manual'})},compatibilityDate:'2026-09-08',compatibilityFlags:['nodejs_compat'],d1Databases:{DB:'crank'},bindings:{AUTH_ORIGIN:origin,AUTH_LOCAL:'true',OWNER_EMAIL:'owner@example.test',SESSION_SECRET:'test-session-secret-01234567890123456789',SETUP_TOKEN:'synthetic-test-owner-claim-01234567890123456789',MAIL_PROVIDER:'resend',MAIL_API_KEY:'example-resend-test-key',MAIL_FROM:'Crank <auth@example.test>',RER_DEV_KEY:'test-dev-gate-0123456789012345678901234567890123',CRANK_TARGET_ORIGIN:target,...bindings}};
   const optionsFor=script=>({...convertV4MiniflareOptions({...legacyOptions,...(!emitted?{script}:{})}),resourcePersistencePath:directory});
-  const selectedBundle=extraMigrations.length?(await build({...bundleOptions,plugins:[archiveMigrationPlugin(extraMigrations)]})).outputFiles[0].text:nativePreparationBarrier?await nativePreparationBarrierBundle():agentRecoveryFault?await agentRecoveryBundle():appCustodyBarrier?await appCustodyBarrierBundle():digestCommitBarrier?await digestBarrierBundle():bundle;
+  const selectedBundle=agentScopeCommitBarrier?await agentScopeBarrierBundle():extraMigrations.length?(await build({...bundleOptions,plugins:[archiveMigrationPlugin(extraMigrations)]})).outputFiles[0].text:nativePreparationBarrier?await nativePreparationBarrierBundle():agentRecoveryFault?await agentRecoveryBundle():appCustodyBarrier?await appCustodyBarrierBundle():digestCommitBarrier?await digestBarrierBundle():bundle;
   const atClock=(script,time)=>time ? `const RealDate=Date; globalThis.Date=class extends RealDate { constructor(...args) { super(...(args.length?args:[${Date.parse(time)}])); } static now(){return ${Date.parse(time)}} };\n`+script : script;
   let currentBundle=atClock(selectedBundle,clock);
   let mf=new Miniflare(optionsFor(currentBundle));

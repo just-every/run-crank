@@ -1,5 +1,6 @@
 /** TEAM-001: owner scopes and handover through the installed app. Run through heavy-slot. */
 import assert from 'node:assert/strict';
+import narrowingBrowser from './agent-door/narrowing-browser.mjs';
 import { spawn, execFileSync } from 'node:child_process';
 import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { createWriteStream } from 'node:fs';
@@ -88,6 +89,7 @@ try {
     assert.equal(response.status(), expected, `${path}: ${value.error ?? 'unexpected status'}`);
     return value;
   };
+  report.push(await narrowingBrowser({page,owner,origin,evidence,send}));
   const quote = { cost: { components: ['orchestration', 'connectors', 'models', 'executors'].map(kind => ({ kind, usd_per_run: '0', assumption: 'Owner-reviewed local approval and literal mapping; no external execution' })) } };
 
   const workflow = await send('workflows',{name:'Harbour Workshop — finance supplier settlement and tax review',graph:{trigger:{type:'manual'},steps:[{id:'review',type:'approval',input:{supplier:'Northshore Fabrication and Industrial Supplies',amount:'2450.00',question:'Confirm the interstate sales-tax treatment before settlement.'}},{id:'record',type:'map',input:{approved:true}}]}},201);

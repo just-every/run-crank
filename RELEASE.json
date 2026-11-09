@@ -74,7 +74,8 @@
     "0070_pure_recipes.sql",
     "0071_pure_subflow_calls.sql",
     "0088_checkpoint_subjects.sql",
-    "0093_preparation_reviewer_erasure.sql"
+    "0093_preparation_reviewer_erasure.sql",
+    "0094_agent_scope_grants.sql"
   ],
   "breaking": false,
   "agentUpdateInstructions": "Review the hosted setup fields and deployment specification. Preserve migration bytes and reconnect external providers after restoring inactive workflows."
