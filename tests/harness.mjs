@@ -78,9 +78,11 @@ async function agentRecoveryBundle() {
   return (await build({...bundleOptions,plugins:[archiveMigrationPlugin(),{name:'agent-outcome-persistence-fault',setup(plugin){
     plugin.onLoad({filter:/agent-door[\/]execution\.ts$/},async({path})=>{
       let contents=await readFile(path,'utf8');
-      const save='  if (key !== null) await rt.options.db.prepare';
+      // Base 0.2.104 guards null before preparing the protected outcome write.
+      // Interrupt the same persistence boundary after that guard; keep every recovery assertion.
+      const save='  if (key === null) return';
       assert.equal(contents.split(save).length,2);
-      contents=contents.replace(save,`  if (key !== null && !(await fetch('https://agent-recovery.example/outcome', {method:'POST',body:key})).ok) throw new Error('Simulated door outcome persistence interruption');\n`+save);
+      contents=contents.replace(save,save+`\n  if (!(await fetch('https://agent-recovery.example/outcome', {method:'POST',body:key})).ok) throw new Error('Simulated door outcome persistence interruption');`);
       const run='    const value = await tool.run(args, context(rt, principal, door, effects, approvers))';
       assert.equal(contents.split(run).length,2);
       contents=contents.replace(run,`    if (principal.idempotencyKey && !(await fetch('https://agent-recovery.example/native', {method:'POST',body:principal.idempotencyKey})).ok) throw new Error('Simulated interruption before native mutation');\n`+run);

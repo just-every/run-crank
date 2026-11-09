@@ -160,11 +160,11 @@
       "executable": false
     },
     "base-copies.json": {
-      "sha256": "0be918ccf48269421b1c617bae0a42a26f3983e09a29b5effe6694fd29cd6b2f",
+      "sha256": "d5c1d36f359edeccd7e640e67d62d64c1426d13e751b8f2fc89cb4068b857419",
       "executable": false
     },
     "CHANGELOG.md": {
-      "sha256": "e7ef96b5be2aa76e52d53e7b70af44d474e3a120d63ad4391e865435f3b391fd",
+      "sha256": "84763a743a87e058c3eee38aae6f3be1deca3ba7cdc93cb6db78facf6fafb9ef",
       "executable": false
     },
     "CLAUDE.md": {
@@ -204,7 +204,7 @@
       "executable": false
     },
     "docs/AGENT-DOOR.md": {
-      "sha256": "54adf1ff5cf857c440f60ccc4aa73720ce9e33e741f8aa1ceb05c5ec476d3297",
+      "sha256": "dd55893d9ef1eadc041a48a4d575fa57ed7da1f57fd5b3544197865e266b97ec",
       "executable": false
     },
     "docs/API.md": {
@@ -1340,7 +1340,7 @@
       "executable": false
     },
     "management/integration/deployment-spec.json": {
-      "sha256": "3c38a92bf91f1bea92af20a8a72a2ba84c0c7c192fdf5f885e678930a44e6eb9",
+      "sha256": "eef58e74c4f9f63e249e711bffbaea77412af888088923b7fcff823d93030b43",
       "executable": false
     },
     "migrations/core/0001_owner.sql": {
@@ -4580,7 +4580,7 @@
       "executable": false
     },
     "src/modules/agent-door/counting.ts": {
-      "sha256": "5e16fcc366488fd14d90363bfed618d682c6974f8810734cb03780772c77317a",
+      "sha256": "33eb2ec0a09c2da30ba45568f1dae985aaa2224c4cbff479bfbc4c144f365695",
       "executable": false
     },
     "src/modules/agent-door/credentials.ts": {
@@ -4876,7 +4876,7 @@
       "executable": false
     },
     "src/modules/agent-door/transport.ts": {
-      "sha256": "fbbda7f1f48d3fd6f3d50254481540348353bfa476e8e6863bcd05aa7b898c23",
+      "sha256": "2df9f0e4373fd343a35febcebcb21bfb4aa3ece7c758a9725cd465d63527c019",
       "executable": false
     },
     "src/modules/agent-door/types.ts": {
@@ -7336,7 +7336,7 @@
       "executable": false
     },
     "tests/harness.mjs": {
-      "sha256": "d4f0a90ae8f8385bb90f34546185e34fb233d868a8c5158f9118d6b461b37609",
+      "sha256": "571e4387ed0e90c8080e251cb120e7649535ae06c4aac0795bf3ae94bff5aff0",
       "executable": false
     },
     "tests/historical.test.mjs": {

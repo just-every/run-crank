@@ -6,10 +6,17 @@ Agent surface. The declared CORE journey passes integrated conformance; full con
 coverage remains partial. The declared registry is [agent-surface.json](../agent-surface.json);
 the implementation is [src/crank/agent-door](../src/crank/agent-door/index.ts).
 
-The shared runtime source is adopted from Base commit
-`2135c394939f4a737adabdc8003b0e667b31ac5a`; the corresponding released CLI is
-`0.2.91`. The released runner passes 1,021/1,021 hosted CORE points, including the
-seed native journey. This proves only the declared preparation boundary.
+The maintained shared runtime source is refreshed to Base commit
+`96045612467d5e752c668e8557b4bf6e906edfb1`, with released CLI `0.2.104`.
+Crank retains its native draft-recovery, named-person policy and busy-refusal
+audit adaptations, including immediate `decision_busy` refusal for contending
+preparations without a reservation or effect. The custom people adapter forwards Base's durable Business
+stop reader; applied schema is upgraded additively, preserving migration history.
+
+The historical rer `0.2.91` runner passed 1,021/1,021 hosted CORE points,
+including the seed native journey, on the earlier `2135c394939f4a737adabdc8003b0e667b31ac5a`
+runtime. That receipt proves only the declared preparation boundary; it is not
+a new conformance receipt for this refresh.
 
 ## Routes and capability boundary
 
@@ -355,7 +362,7 @@ gap against SURFACE-001's shared-registry requirement. Aliasing the old generic
 `/api/crank/v1/mcp` path to this door does not close that gap or establish
 native/provider classification parity through every wrapper.
 
-This document records the implemented boundary. Integrated CORE conformance passes 1,021/1,021 points on rer 0.2.91. Native
+This document records the implemented boundary. The historical integrated CORE receipt records 1,021/1,021 points on rer 0.2.91. Native
 Agents and pending/executed approval pages have browser proof at 1440 and 390.
 The complete ct registry, native UI parity for its omitted jobs and the seeded
 specialist week remain acceptance work. Only the bounded prompt capability is promoted.

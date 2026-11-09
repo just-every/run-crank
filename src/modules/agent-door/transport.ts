@@ -22,13 +22,14 @@ function readGuard(rt: Runtime, rpc: Rpc, state: Awaited<ReturnType<typeof polic
 }
 export async function mcp(rt: Runtime, request: Request): Promise<Response> {
   if (request.method !== 'POST') return rpcError(null, -32600, 'Method not allowed', 405)
-  const state = await policyState(rt), authenticated = await authenticate(rt.options, request, state.business)
-  const principal = authenticated && await narrowPrincipal(rt, authenticated)
-  // Challenge before reading the body or negotiating transport headers, even
-  // for initialize. Keep resource metadata available at its well-known URL.
-  if (!principal) return rpcError(null, -32001, 'Unauthorized', 401, undefined, challenge(rt))
+  // Keep Crank's existing bounded Origin/protocol refusals before a credential challenge.
+  // Parsing never admits a call; discovery and initialize still require a principal.
   const rpc = await parseRequest(rt, request)
   if (rpc instanceof Response) return rpc
+  const state = await policyState(rt), authenticated = await authenticate(rt.options, request, state.business)
+  const principal = authenticated && await narrowPrincipal(rt, authenticated)
+  // Every admitted MCP request requires a current principal, including initialize.
+  if (!principal) return rpcError(null, -32001, 'Unauthorized', 401, undefined, challenge(rt))
   if (revoked(state, principal) && rpc.method !== 'tools/call') return rpcError(rpc.id, -32001, 'Unauthorized', 401, undefined, challenge(rt))
   if (!methods.includes(rpc.method) && !rpc.method.startsWith('notifications/')) return rpcError(rpc.id, -32601, 'Method not found', 404)
   if (rpc.method === 'server/discover') return rpcResult(rpc, discovery(rt))

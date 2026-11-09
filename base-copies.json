@@ -3749,7 +3749,9 @@
         "src/modules/agent-door/pipeline.ts": "2135c394939f4a737adabdc8003b0e667b31ac5a",
         "src/modules/agent-door/audit.ts": "2135c394939f4a737adabdc8003b0e667b31ac5a",
         "src/modules/agent-door/conformance/audit.mjs": "2135c394939f4a737adabdc8003b0e667b31ac5a",
-        "src/modules/agent-door/policy-store.ts": "2135c394939f4a737adabdc8003b0e667b31ac5a"
+        "src/modules/agent-door/policy-store.ts": "2135c394939f4a737adabdc8003b0e667b31ac5a",
+        "src/modules/agent-door/counting.ts": "96045612467d5e752c668e8557b4bf6e906edfb1",
+        "src/modules/agent-door/transport.ts": "96045612467d5e752c668e8557b4bf6e906edfb1"
       },
       "acknowledged": {
         "src/modules/agent-door/tests/door.test.ts": {
@@ -3790,6 +3792,14 @@
         },
         "src/modules/agent-door/policy-store.ts": {
           "sha256": "c06e9dc033a69961d3e2146142c8915d86320eda0f2c33a273b15e85a96cba4d",
+          "mode": "100644"
+        },
+        "src/modules/agent-door/counting.ts": {
+          "sha256": "33eb2ec0a09c2da30ba45568f1dae985aaa2224c4cbff479bfbc4c144f365695",
+          "mode": "100644"
+        },
+        "src/modules/agent-door/transport.ts": {
+          "sha256": "2df9f0e4373fd343a35febcebcb21bfb4aa3ece7c758a9725cd465d63527c019",
           "mode": "100644"
         }
       }
