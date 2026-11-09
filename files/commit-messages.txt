@@ -1,0 +1,6 @@
+Complete the Base audit transport adoption with current native authority
+
+Preserve Crank authority boundaries through the Base 0.2.104 adoption
+
+Adopt rer 0.2.104 and refresh maintained Base copies [skip ci]
+

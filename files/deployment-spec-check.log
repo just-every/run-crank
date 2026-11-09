@@ -1,0 +1,5 @@
+
+> @automation/crank@0.1.0 check:deployment-spec /home/agent/rer-consolidation/work/sx-crank-rer-0-2-104-1/run-crank
+> node scripts/build-deployment-spec.mjs --check
+
+Deployment specification matches the real build and source policy.

@@ -1,0 +1,11 @@
+{
+  "adapted": "src/modules/agent-door/transport.ts",
+  "revision": "96045612467d5e752c668e8557b4bf6e906edfb1",
+  "sha256": "fbbda7f1f48d3fd6f3d50254481540348353bfa476e8e6863bcd05aa7b898c23",
+  "acknowledged": {
+    "sha256": "61da63b56bd3fc1668babf6f96fc85bfb77288ed2205ac266b09021eaf32f659",
+    "mode": "100644"
+  },
+  "record": "base-copies.json"
+}
+

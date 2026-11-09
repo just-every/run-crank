@@ -1,0 +1,23 @@
+Using project Node 22.20.0 (current Node 24.19.0).
+Cannot refresh module src/modules/agent-door/company-policy.ts: src/modules/agent-door/types.ts does not export CompanyPolicyDecision required by Base modules/agent-door/types.ts at 96045612467d5e752c668e8557b4bf6e906edfb1.
+No files were refreshed. Reconcile each retained dependency in this order:
+Save seed edits and the original Base version used as the merge ancestor for 'src/modules/agent-door/types.ts' (use unused backup paths):
+cp 'src/modules/agent-door/types.ts' 'src/modules/agent-door/types.ts.seed'
+Obtain the original Base version from the recorded pin for the merge ancestor.
+Save the incoming dependency for comparison:
+cp '/tmp/crank-base-9604561/modules/agent-door/types.ts' 'src/modules/agent-door/types.ts.base'
+Install and record the incoming Base file before refreshing:
+cp 'src/modules/agent-door/types.ts.base' 'src/modules/agent-door/types.ts'
+node '/home/agent/rer-consolidation/work/sx-crank-rer-0-2-104-1/run-crank/node_modules/.pnpm/@runeditrun+rer@0.2.104/node_modules/@runeditrun/rer/edition-authoring/cli.mjs' record-base 'src/modules/agent-door/types.ts' 'modules/agent-door/types.ts' '96045612467d5e752c668e8557b4bf6e906edfb1' --base-archive '/tmp/crank-base-9604561'
+Add all named packages at Base's listed versions with the seed's package manager.
+rer refresh-base --ref '96045612467d5e752c668e8557b4bf6e906edfb1' --base-archive '/tmp/crank-base-9604561'
+After refresh delivers the new Base dependencies, merge the saved seed edits onto the new Base file; resolve any conflicts:
+git merge-file 'src/modules/agent-door/types.ts' 'src/modules/agent-door/types.ts.ancestor' 'src/modules/agent-door/types.ts.seed'
+If the seed source has no Base ancestor, reconcile its edits explicitly instead of guessing an ancestor.
+Review the reconciled bytes and mode, then acknowledge this adaptation:
+node 'node_modules/.pnpm/@runeditrun+rer@0.2.104/node_modules/@runeditrun/rer/edition-authoring/cli.mjs' adapt-base src/modules/agent-door/types.ts
+rer refresh-base --ref '96045612467d5e752c668e8557b4bf6e906edfb1' --base-archive '/tmp/crank-base-9604561'
+Remove 'src/modules/agent-door/types.ts.base', 'src/modules/agent-door/types.ts.ancestor' and 'src/modules/agent-door/types.ts.seed' after reconciliation.
+.github/workflows/verify.yml: preserved seed-owned workflow. The current template pins Ubuntu 24.04 and moves browser and apt caches to the runner temporary directory. To adopt, merge export/verify.yml from Base 96045612467d5e752c668e8557b4bf6e906edfb1 into .github/workflows/verify.yml, then run node node_modules/@runeditrun/rer/edition-authoring/cli.mjs record-base .github/workflows/verify.yml export/verify.yml 96045612467d5e752c668e8557b4bf6e906edfb1 --base <base-checkout> and repeat rer refresh-base --ref 96045612467d5e752c668e8557b4bf6e906edfb1 --base <base-checkout>.
+.github/workflows/verify-nightly.yml: preserved seed-owned workflow. The current template pins Ubuntu 24.04 and moves browser and apt caches to the runner temporary directory. To adopt, merge export/verify-nightly.yml from Base 96045612467d5e752c668e8557b4bf6e906edfb1 into .github/workflows/verify-nightly.yml, then run node node_modules/@runeditrun/rer/edition-authoring/cli.mjs record-base .github/workflows/verify-nightly.yml export/verify-nightly.yml 96045612467d5e752c668e8557b4bf6e906edfb1 --base <base-checkout> and repeat rer refresh-base --ref 96045612467d5e752c668e8557b4bf6e906edfb1 --base <base-checkout>.
+refresh-base: failed (exit 4)

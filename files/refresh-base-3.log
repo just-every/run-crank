@@ -1,0 +1,3 @@
+Using project Node 22.20.0 (current Node 24.19.0).
+Recorded copies have local edits; move adapted source out of the record first: src/modules/agent-door/conformance/audit.mjs, src/modules/agent-door/policy-store.ts. To keep each intentional adaptation, run adapt-base <file> first. No files were refreshed.
+refresh-base: failed (exit 4)

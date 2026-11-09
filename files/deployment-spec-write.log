@@ -1,0 +1,5 @@
+
+> @automation/crank@0.1.0 delivery:spec /home/agent/rer-consolidation/work/sx-crank-rer-0-2-104-1/run-crank
+> node scripts/build-deployment-spec.mjs
+
+Wrote management/integration/deployment-spec.json

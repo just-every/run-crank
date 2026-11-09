@@ -1,0 +1,15 @@
+ WARN  Unsupported engine: wanted: {"node":"22.20.0"} (current: {"node":"v24.19.0","pnpm":"10.12.4"})
+
+> @automation/crank@0.1.0 typecheck /home/agent/rer-consolidation/work/sx-crank-rer-0-2-104-1/run-crank
+> tsc --build --incremental
+
+src/modules/agent-door/pipeline.ts(32,1): error TS1185: Merge conflict marker encountered.
+src/modules/agent-door/pipeline.ts(34,1): error TS1185: Merge conflict marker encountered.
+src/modules/agent-door/pipeline.ts(36,1): error TS1185: Merge conflict marker encountered.
+src/modules/agent-door/pipeline.ts(167,1): error TS1185: Merge conflict marker encountered.
+src/modules/agent-door/pipeline.ts(173,1): error TS1185: Merge conflict marker encountered.
+src/modules/agent-door/pipeline.ts(177,1): error TS1185: Merge conflict marker encountered.
+src/modules/agent-door/policy-store.ts(92,1): error TS1185: Merge conflict marker encountered.
+src/modules/agent-door/policy-store.ts(97,1): error TS1185: Merge conflict marker encountered.
+src/modules/agent-door/policy-store.ts(100,1): error TS1185: Merge conflict marker encountered.
+ ELIFECYCLE  Command failed with exit code 1.

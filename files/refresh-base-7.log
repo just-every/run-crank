@@ -1,0 +1,1994 @@
+Using project Node 22.20.0 (current Node 24.19.0).
+{
+  "refreshed": "96045612467d5e752c668e8557b4bf6e906edfb1",
+  "record": "base-copies.json",
+  "copies": [
+    {
+      "path": ".github/workflows/run-demo.yml",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 0,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": ".github/workflows/verify-nightly.yml",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 0,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": ".github/workflows/verify.yml",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 0,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "DEMO.md",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "migrations/core/0002_outbox.sql",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "migrations/core/0003_portability.sql",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "migrations/core/0004_first_run.sql",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "migrations/core/0005_identity_providers.sql",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "migrations/core/0006_provider_control.sql",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "migrations/core/0007_dependencies.sql",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "migrations/core/0008_owner_claim.sql",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "migrations/core/0009_idp_owner.sql",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "migrations/core/0010_provider_pins.sql",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "migrations/core/0011_dependency_setup.sql",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "migrations/core/0012_dependency_approval.sql",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "migrations/core/0013_erasure.sql",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "migrations/core/0032_import_custody_replace.sql",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "migrations/core/0033_import_erasure_progress.sql",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "migrations/core/0034_import_door.sql",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "migrations/core/0068_dependencies_sealed.sql",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "migrations/core/0089_business_settings.sql",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "migrations/core/0090_business_people.sql",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "ONBOARDING.md",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/delivery/base/artifact.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/delivery/base/bindings.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/delivery/base/capabilities.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/delivery/base/cli.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/delivery/base/declarations.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/delivery/base/export.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/delivery/base/generators/integration.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/delivery/base/generators/managed.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/delivery/base/generators/project.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/delivery/base/generators/validation.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/delivery/base/mail.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/delivery/base/migrations.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/delivery/base/native-export.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/delivery/base/package.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/delivery/base/paths.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/delivery/base/payloads.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/delivery/base/schema",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 5,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/delivery/base/sign-in.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/delivery/base/spec.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/delivery/base/sql-statements.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/adopt.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/archive-source.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/base-acknowledgements.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/base-copies.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/cli.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/copy-checkout.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/copy-namespaces.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/edition-migrations.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/files.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/lock.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/manifest.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/module-closure.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/module-edges.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/module-resolution.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/module-syntax.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/offline-git.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/package-target.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/parent-comparison.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/projection-lock.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/release.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/runtime-dependencies.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/sources.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/updates.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-helper-string-parser/index.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-helper-validator-identifier/identifier.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-helper-validator-identifier/index.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-helper-validator-identifier/keyword.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/index.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/options.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/parse-error.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/parse-error/bind-operator-errors.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/parse-error/module-errors.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/parse-error/parse-expression-errors.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/parse-error/pipeline-operator-errors.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/parse-error/standard-errors.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/parse-error/strict-mode-errors.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/parse-error/to-node-description.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/parser/base.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/parser/comments.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/parser/expression.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/parser/index.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/parser/lval.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/parser/node.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/parser/statement.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/parser/util.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/plugin-utils.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/plugins/estree.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/plugins/flow/index.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/plugins/flow/scope.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/plugins/jsx/index.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/plugins/jsx/xhtml.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/plugins/placeholders.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/plugins/typescript/index.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/plugins/typescript/scope.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/plugins/v8intrinsic.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/tokenizer/context.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/tokenizer/index.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/tokenizer/state.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/tokenizer/types.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/types.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/util/class-scope.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/util/expression-scope.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/util/identifier.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/util/location.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/util/production-parameter.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/util/scope.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/util/scopeflags.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/babel-parser/util/whitespace.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/LICENSE",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/babel-parser/README.md",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/compose/compose-collection.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/compose/compose-doc.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/compose/compose-node.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/compose/compose-scalar.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/compose/composer.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/compose/resolve-block-map.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/compose/resolve-block-scalar.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/compose/resolve-block-seq.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/compose/resolve-end.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/compose/resolve-flow-collection.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/compose/resolve-flow-scalar.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/compose/resolve-props.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/compose/util-contains-newline.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/compose/util-empty-scalar-position.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/compose/util-flow-indent-check.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/compose/util-map-includes.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/doc/anchors.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/doc/applyReviver.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/doc/createNode.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/doc/directives.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/doc/Document.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/errors.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/index.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/LICENSE",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/log.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/nodes/addPairToJSMap.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/nodes/Alias.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/nodes/Collection.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/nodes/identity.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/nodes/Node.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/nodes/Pair.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/nodes/Scalar.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/nodes/toJS.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/nodes/YAMLMap.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/nodes/YAMLSeq.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/parse/cst-scalar.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/parse/cst-stringify.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/parse/cst-visit.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/parse/cst.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/parse/lexer.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/parse/line-counter.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/parse/parser.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/public-api.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/README.md",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/schema/common/map.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/schema/common/null.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/schema/common/seq.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/schema/common/string.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/schema/core/bool.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/schema/core/float.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/schema/core/int.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/schema/core/schema.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/schema/json/schema.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/schema/Schema.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/schema/tags.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/schema/yaml-1.1/binary.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/schema/yaml-1.1/bool.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/schema/yaml-1.1/float.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/schema/yaml-1.1/int.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/schema/yaml-1.1/merge.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/schema/yaml-1.1/omap.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/schema/yaml-1.1/pairs.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/schema/yaml-1.1/schema.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/schema/yaml-1.1/set.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/schema/yaml-1.1/timestamp.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/stringify/foldFlowLines.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/stringify/stringify.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/stringify/stringifyCollection.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/stringify/stringifyComment.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/stringify/stringifyDocument.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/stringify/stringifyNumber.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/stringify/stringifyPair.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/stringify/stringifyString.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/util.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/vendor/yaml/visit.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/workflow-copies.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/workflow-scripts.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/install-chromium-deps.py",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/installer/seed.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/installer/ui/background.svg",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/operations-config.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/verify-app.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 0,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/verify-ci.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 0,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/verify-evidence.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/verify-light.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 0,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/verify-plan.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 0,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "src/base/contract-filter.ts",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "src/base/contract-page.ts",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "src/base/contract-style.ts",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "src/base/deployment-health.ts",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "src/base/dispatch.ts",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "src/base/font-response.ts",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "src/base/hosting-page.ts",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "src/base/hydration/intro-guard.ts",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "src/base/hydration/report.ts",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "src/base/hydration/unit.tsx",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "src/base/icon-head.ts",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "src/base/identity.ts",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "src/base/lobby.ts",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "src/base/page-style.ts",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "src/base/rejected-response.ts",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "src/base/run-chooser-style.ts",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "src/base/run-data.d.mts",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "src/base/run-data.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "src/base/run-pricing.ts",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "src/base/run-site.ts",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 0,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "src/base/seed-contract.d.mts",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "src/base/seed-contract.mjs",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "src/base/select-style.ts",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "src/base/setup-state.ts",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "src/base/setup.ts",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "src/base/static-assets.ts",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "src/base/theme-frame.ts",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "src/client.tsx",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "src/dev-personas.ts",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "src/foundation/runtime/icon-head.ts",
+      "from": "2135c394939f4a737adabdc8003b0e667b31ac5a",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "src/foundation/runtime/theme-frame.ts",
+      "from": "2135c394939f4a737adabdc8003b0e667b31ac5a",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "src/mail.server.d.mts",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "src/modules/agent-door",
+      "from": "2135c394939f4a737adabdc8003b0e667b31ac5a",
+      "files": 116,
+      "added": [
+        "src/modules/agent-door/adoption/penny/0106_agent_erasure_custody.sql",
+        "src/modules/agent-door/adoption/penny/penny-map.ts",
+        "src/modules/agent-door/adoption/penny/README.md",
+        "src/modules/agent-door/business-state.ts",
+        "src/modules/agent-door/company-policy.ts",
+        "src/modules/agent-door/conformance/business-stop.mjs",
+        "src/modules/agent-door/conformance/erasure.mjs",
+        "src/modules/agent-door/conformance/relay.mjs",
+        "src/modules/agent-door/conformance/unpair.mjs",
+        "src/modules/agent-door/continuation-audit.ts",
+        "src/modules/agent-door/erasure.ts",
+        "src/modules/agent-door/relay.ts",
+        "src/modules/agent-door/retired-refs.ts",
+        "src/modules/agent-door/schema/replay-aliases.sql",
+        "src/modules/agent-door/tests/admission-flow.ts",
+        "src/modules/agent-door/tests/admission.fixture.ts",
+        "src/modules/agent-door/tests/business-stopped.test.ts",
+        "src/modules/agent-door/tests/company-policy.test.ts",
+        "src/modules/agent-door/tests/continuation-replay.test.ts",
+        "src/modules/agent-door/tests/erasure.test.ts",
+        "src/modules/agent-door/tests/fixtures/relay-pages.json",
+        "src/modules/agent-door/tests/fixtures/relay-pages.mjs",
+        "src/modules/agent-door/tests/fixtures/schema-0.2.93/agent-door.sql",
+        "src/modules/agent-door/tests/fixtures/schema-0.2.95/agent-door.sql",
+        "src/modules/agent-door/tests/fixtures/schema-0.2.95/replay-aliases.sql",
+        "src/modules/agent-door/tests/fixtures/schema-0.2.96/agent-door.sql",
+        "src/modules/agent-door/tests/injection.test.ts",
+        "src/modules/agent-door/tests/invoke-only.test.ts",
+        "src/modules/agent-door/tests/person-erasure-runtime.mjs",
+        "src/modules/agent-door/tests/person-erasure-worker.ts",
+        "src/modules/agent-door/tests/policy-renewal.test.ts",
+        "src/modules/agent-door/tests/relay-membership.test.ts",
+        "src/modules/agent-door/tests/relay-stopped.test.ts",
+        "src/modules/agent-door/tests/relay.test.ts",
+        "src/modules/agent-door/tests/resource-links.test.ts",
+        "src/modules/agent-door/tests/retirement-race.test.ts",
+        "src/modules/agent-door/tests/schema-upgrade.test.ts"
+      ],
+      "removed": []
+    },
+    {
+      "path": "src/modules/ai",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 13,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "src/modules/business-settings",
+      "from": "2135c394939f4a737adabdc8003b0e667b31ac5a",
+      "files": 17,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "src/modules/d1-transport",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 4,
+      "added": [
+        "src/modules/d1-transport/limits.d.mts",
+        "src/modules/d1-transport/limits.mjs"
+      ],
+      "removed": []
+    },
+    {
+      "path": "src/modules/demo",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 14,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "src/modules/dependencies",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 16,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "src/modules/import-kit",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 224,
+      "added": [
+        "src/modules/import-kit/src/d1/apply-reads.ts",
+        "src/modules/import-kit/src/d1/snapshot-text.ts",
+        "src/modules/import-kit/src/d1/wave-boundary.ts",
+        "src/modules/import-kit/src/d1/wave-retirement.ts"
+      ],
+      "removed": []
+    },
+    {
+      "path": "src/modules/mail",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 65,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "src/modules/operator-auth",
+      "from": "2135c394939f4a737adabdc8003b0e667b31ac5a",
+      "files": 111,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "src/modules/owner-claim",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 10,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "src/router.tsx",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "src/routes/__root.tsx",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 1,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "VERIFY-WORKFLOW.md",
+      "from": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "files": 0,
+      "added": [],
+      "removed": []
+    },
+    {
+      "path": "scripts/edition-authoring/module-packages.mjs",
+      "from": "96045612467d5e752c668e8557b4bf6e906edfb1",
+      "files": 1,
+      "added": [
+        "scripts/edition-authoring/module-packages.mjs"
+      ],
+      "removed": []
+    }
+  ],
+  "retired": [],
+  "adapted": [
+    {
+      "path": ".github/workflows/run-demo.yml",
+      "originPath": "export/run-demo.yml",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "conflict": false
+    },
+    {
+      "path": ".github/workflows/verify-nightly.yml",
+      "originPath": "export/verify-nightly.yml",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "conflict": false
+    },
+    {
+      "path": ".github/workflows/verify.yml",
+      "originPath": "export/verify.yml",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "conflict": false
+    },
+    {
+      "path": "scripts/verify-app.mjs",
+      "originPath": "export/verify-app.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "conflict": false
+    },
+    {
+      "path": "scripts/verify-ci.mjs",
+      "originPath": "export/verify-ci.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "conflict": true,
+      "note": "Upstream changed or removed this seed-owned adaptation; review and reconcile explicitly.",
+      "diffHint": "git -C <base> diff f96363bf919ea3e7ed1837daba6894810a50e4a6 96045612467d5e752c668e8557b4bf6e906edfb1 -- \"export/verify-ci.mjs\""
+    },
+    {
+      "path": "scripts/verify-light.mjs",
+      "originPath": "export/verify-light.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "conflict": false
+    },
+    {
+      "path": "scripts/verify-plan.mjs",
+      "originPath": "export/verify-plan.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "conflict": false
+    },
+    {
+      "path": "src/base/run-site.ts",
+      "originPath": "foundation/runtime/run-site.ts",
+      "revision": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "conflict": true,
+      "note": "Upstream changed or removed this seed-owned adaptation; review and reconcile explicitly.",
+      "diffHint": "git -C <base> diff 114ef7a61f080da053af783c5fbe06f625d692cc 96045612467d5e752c668e8557b4bf6e906edfb1 -- \"foundation/runtime/run-site.ts\""
+    },
+    {
+      "path": "src/modules/agent-door/tests/door.test.ts",
+      "originPath": "modules/agent-door/tests/door.test.ts",
+      "revision": "2135c394939f4a737adabdc8003b0e667b31ac5a",
+      "conflict": true,
+      "note": "Upstream changed or removed this seed-owned adaptation; review and reconcile explicitly.",
+      "diffHint": "git -C <base> diff 2135c394939f4a737adabdc8003b0e667b31ac5a 96045612467d5e752c668e8557b4bf6e906edfb1 -- \"modules/agent-door/tests/door.test.ts\""
+    },
+    {
+      "path": "src/modules/agent-door/tests/identity.test.ts",
+      "originPath": "modules/agent-door/tests/identity.test.ts",
+      "revision": "2135c394939f4a737adabdc8003b0e667b31ac5a",
+      "conflict": true,
+      "note": "Upstream changed or removed this seed-owned adaptation; review and reconcile explicitly.",
+      "diffHint": "git -C <base> diff 2135c394939f4a737adabdc8003b0e667b31ac5a 96045612467d5e752c668e8557b4bf6e906edfb1 -- \"modules/agent-door/tests/identity.test.ts\""
+    },
+    {
+      "path": "src/modules/agent-door/tests/queued-context.test.ts",
+      "originPath": "modules/agent-door/tests/queued-context.test.ts",
+      "revision": "2135c394939f4a737adabdc8003b0e667b31ac5a",
+      "conflict": false
+    },
+    {
+      "path": "src/modules/agent-door/tests/runtime.mjs",
+      "originPath": "modules/agent-door/tests/runtime.mjs",
+      "revision": "2135c394939f4a737adabdc8003b0e667b31ac5a",
+      "conflict": true,
+      "note": "Upstream changed or removed this seed-owned adaptation; review and reconcile explicitly.",
+      "diffHint": "git -C <base> diff 2135c394939f4a737adabdc8003b0e667b31ac5a 96045612467d5e752c668e8557b4bf6e906edfb1 -- \"modules/agent-door/tests/runtime.mjs\""
+    },
+    {
+      "path": "src/modules/agent-door/tests/seed.ts",
+      "originPath": "modules/agent-door/tests/seed.ts",
+      "revision": "2135c394939f4a737adabdc8003b0e667b31ac5a",
+      "conflict": true,
+      "note": "Upstream changed or removed this seed-owned adaptation; review and reconcile explicitly.",
+      "diffHint": "git -C <base> diff 2135c394939f4a737adabdc8003b0e667b31ac5a 96045612467d5e752c668e8557b4bf6e906edfb1 -- \"modules/agent-door/tests/seed.ts\""
+    },
+    {
+      "path": "src/modules/agent-door/types.ts",
+      "originPath": "modules/agent-door/types.ts",
+      "revision": "2135c394939f4a737adabdc8003b0e667b31ac5a",
+      "conflict": true,
+      "note": "Upstream changed or removed this seed-owned adaptation; review and reconcile explicitly.",
+      "diffHint": "git -C <base> diff 2135c394939f4a737adabdc8003b0e667b31ac5a 96045612467d5e752c668e8557b4bf6e906edfb1 -- \"modules/agent-door/types.ts\""
+    },
+    {
+      "path": "src/modules/agent-door/pipeline.ts",
+      "originPath": "modules/agent-door/pipeline.ts",
+      "revision": "2135c394939f4a737adabdc8003b0e667b31ac5a",
+      "conflict": true,
+      "note": "Upstream changed or removed this seed-owned adaptation; review and reconcile explicitly.",
+      "diffHint": "git -C <base> diff 2135c394939f4a737adabdc8003b0e667b31ac5a 96045612467d5e752c668e8557b4bf6e906edfb1 -- \"modules/agent-door/pipeline.ts\""
+    },
+    {
+      "path": "src/modules/agent-door/audit.ts",
+      "originPath": "modules/agent-door/audit.ts",
+      "revision": "2135c394939f4a737adabdc8003b0e667b31ac5a",
+      "conflict": true,
+      "note": "Upstream changed or removed this seed-owned adaptation; review and reconcile explicitly.",
+      "diffHint": "git -C <base> diff 2135c394939f4a737adabdc8003b0e667b31ac5a 96045612467d5e752c668e8557b4bf6e906edfb1 -- \"modules/agent-door/audit.ts\""
+    },
+    {
+      "path": "src/modules/agent-door/conformance/audit.mjs",
+      "originPath": "modules/agent-door/conformance/audit.mjs",
+      "revision": "2135c394939f4a737adabdc8003b0e667b31ac5a",
+      "conflict": true,
+      "note": "Upstream changed or removed this seed-owned adaptation; review and reconcile explicitly.",
+      "diffHint": "git -C <base> diff 2135c394939f4a737adabdc8003b0e667b31ac5a 96045612467d5e752c668e8557b4bf6e906edfb1 -- \"modules/agent-door/conformance/audit.mjs\""
+    },
+    {
+      "path": "src/modules/agent-door/policy-store.ts",
+      "originPath": "modules/agent-door/policy-store.ts",
+      "revision": "2135c394939f4a737adabdc8003b0e667b31ac5a",
+      "conflict": true,
+      "note": "Upstream changed or removed this seed-owned adaptation; review and reconcile explicitly.",
+      "diffHint": "git -C <base> diff 2135c394939f4a737adabdc8003b0e667b31ac5a 96045612467d5e752c668e8557b4bf6e906edfb1 -- \"modules/agent-door/policy-store.ts\""
+    },
+    {
+      "path": "VERIFY-WORKFLOW.md",
+      "originPath": "export/VERIFY-WORKFLOW.md",
+      "revision": "11f94fec479228d71ba6d7dd6ea7796c0d42c544",
+      "conflict": true,
+      "note": "Upstream changed or removed this seed-owned adaptation; review and reconcile explicitly.",
+      "diffHint": "git -C <base> diff 11f94fec479228d71ba6d7dd6ea7796c0d42c544 96045612467d5e752c668e8557b4bf6e906edfb1 -- \"export/VERIFY-WORKFLOW.md\""
+    }
+  ],
+  "relocated": [],
+  "withheld": [],
+  "packageDependencies": [
+    {
+      "package": "react",
+      "version": "19.2.8",
+      "baseVersion": "19.3.1",
+      "conflict": true,
+      "files": [
+        "src/base/hydration/unit.tsx",
+        "src/client.tsx"
+      ]
+    },
+    {
+      "package": "@tanstack/react-start",
+      "version": "1.168.60",
+      "baseVersion": "1.168.60",
+      "conflict": false,
+      "files": [
+        "src/client.tsx"
+      ]
+    },
+    {
+      "package": "react-dom",
+      "version": "19.2.8",
+      "baseVersion": "19.3.1",
+      "conflict": true,
+      "files": [
+        "src/client.tsx"
+      ]
+    },
+    {
+      "package": "miniflare",
+      "version": "5.20260907.0-alpha",
+      "baseVersion": "5.20260907.0-alpha",
+      "conflict": false,
+      "files": [
+        "src/modules/agent-door/conformance/network-runtime.mjs",
+        "src/modules/agent-door/tests/person-erasure-runtime.mjs",
+        "src/modules/agent-door/tests/schema-upgrade.test.ts"
+      ]
+    },
+    {
+      "package": "wrangler",
+      "version": "4.129.1",
+      "baseVersion": "4.129.1",
+      "conflict": false,
+      "files": [
+        "src/modules/agent-door/conformance/network-runtime.mjs",
+        "src/modules/agent-door/tests/person-erasure-runtime.mjs",
+        "src/modules/agent-door/tests/relay-membership.test.ts",
+        "src/modules/agent-door/tests/schema-upgrade.test.ts"
+      ]
+    },
+    {
+      "package": "esbuild",
+      "version": "0.28.1",
+      "baseVersion": "0.28.2",
+      "conflict": true,
+      "files": [
+        "src/modules/agent-door/tests/admission.fixture.ts",
+        "src/modules/agent-door/tests/person-erasure-runtime.mjs"
+      ]
+    },
+    {
+      "package": "@tanstack/react-router",
+      "version": "1.170.41",
+      "baseVersion": "1.170.41",
+      "conflict": false,
+      "files": [
+        "src/router.tsx",
+        "src/routes/__root.tsx"
+      ]
+    }
+  ],
+  "editionMigrations": [],
+  "templateAdoptions": [],
+  "notices": [
+    ".github/workflows/verify.yml: preserved seed-owned workflow. The current template pins Ubuntu 24.04 and moves browser and apt caches to the runner temporary directory. To adopt, merge export/verify.yml from Base 96045612467d5e752c668e8557b4bf6e906edfb1 into .github/workflows/verify.yml, then run node node_modules/@runeditrun/rer/edition-authoring/cli.mjs record-base .github/workflows/verify.yml export/verify.yml 96045612467d5e752c668e8557b4bf6e906edfb1 --base <base-checkout> and repeat rer refresh-base --ref 96045612467d5e752c668e8557b4bf6e906edfb1 --base <base-checkout>.",
+    ".github/workflows/verify-nightly.yml: preserved seed-owned workflow. The current template pins Ubuntu 24.04 and moves browser and apt caches to the runner temporary directory. To adopt, merge export/verify-nightly.yml from Base 96045612467d5e752c668e8557b4bf6e906edfb1 into .github/workflows/verify-nightly.yml, then run node node_modules/@runeditrun/rer/edition-authoring/cli.mjs record-base .github/workflows/verify-nightly.yml export/verify-nightly.yml 96045612467d5e752c668e8557b4bf6e906edfb1 --base <base-checkout> and repeat rer refresh-base --ref 96045612467d5e752c668e8557b4bf6e906edfb1 --base <base-checkout>."
+  ],
+  "next": "Run verify-base, then the edition tests, and commit the copied files with the record."
+}
+refresh-base: complete (exit 0)

@@ -1,0 +1,12 @@
+{
+  "repository": "just-every/run-crank",
+  "branch": "cloud/sx-crank-rer-0-2-104-1",
+  "head": "3c397ae03af1b8abdfd0a13e793a08a0100d5c2c",
+  "pushed": true,
+  "pr": null,
+  "contract_changed": false,
+  "generated_contract_views_committed": false,
+  "remote_ref": "refs/heads/cloud/sx-crank-rer-0-2-104-1",
+  "remote_head": "3c397ae03af1b8abdfd0a13e793a08a0100d5c2c",
+  "remote_head_matches": true
+}

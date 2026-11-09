@@ -1,0 +1,217 @@
+{
+  "refreshed": "96045612467d5e752c668e8557b4bf6e906edfb1",
+  "adapted": [
+    {
+      "path": ".github/workflows/run-demo.yml",
+      "originPath": "export/run-demo.yml",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "conflict": false
+    },
+    {
+      "path": ".github/workflows/verify-nightly.yml",
+      "originPath": "export/verify-nightly.yml",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "conflict": false
+    },
+    {
+      "path": ".github/workflows/verify.yml",
+      "originPath": "export/verify.yml",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "conflict": false
+    },
+    {
+      "path": "scripts/verify-app.mjs",
+      "originPath": "export/verify-app.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "conflict": false
+    },
+    {
+      "path": "scripts/verify-ci.mjs",
+      "originPath": "export/verify-ci.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "conflict": true,
+      "note": "Upstream changed or removed this seed-owned adaptation; review and reconcile explicitly.",
+      "diffHint": "git -C <base> diff f96363bf919ea3e7ed1837daba6894810a50e4a6 96045612467d5e752c668e8557b4bf6e906edfb1 -- \"export/verify-ci.mjs\""
+    },
+    {
+      "path": "scripts/verify-light.mjs",
+      "originPath": "export/verify-light.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "conflict": false
+    },
+    {
+      "path": "scripts/verify-plan.mjs",
+      "originPath": "export/verify-plan.mjs",
+      "revision": "f96363bf919ea3e7ed1837daba6894810a50e4a6",
+      "conflict": false
+    },
+    {
+      "path": "src/base/run-site.ts",
+      "originPath": "foundation/runtime/run-site.ts",
+      "revision": "114ef7a61f080da053af783c5fbe06f625d692cc",
+      "conflict": true,
+      "note": "Upstream changed or removed this seed-owned adaptation; review and reconcile explicitly.",
+      "diffHint": "git -C <base> diff 114ef7a61f080da053af783c5fbe06f625d692cc 96045612467d5e752c668e8557b4bf6e906edfb1 -- \"foundation/runtime/run-site.ts\""
+    },
+    {
+      "path": "src/modules/agent-door/tests/door.test.ts",
+      "originPath": "modules/agent-door/tests/door.test.ts",
+      "revision": "2135c394939f4a737adabdc8003b0e667b31ac5a",
+      "conflict": true,
+      "note": "Upstream changed or removed this seed-owned adaptation; review and reconcile explicitly.",
+      "diffHint": "git -C <base> diff 2135c394939f4a737adabdc8003b0e667b31ac5a 96045612467d5e752c668e8557b4bf6e906edfb1 -- \"modules/agent-door/tests/door.test.ts\""
+    },
+    {
+      "path": "src/modules/agent-door/tests/identity.test.ts",
+      "originPath": "modules/agent-door/tests/identity.test.ts",
+      "revision": "2135c394939f4a737adabdc8003b0e667b31ac5a",
+      "conflict": true,
+      "note": "Upstream changed or removed this seed-owned adaptation; review and reconcile explicitly.",
+      "diffHint": "git -C <base> diff 2135c394939f4a737adabdc8003b0e667b31ac5a 96045612467d5e752c668e8557b4bf6e906edfb1 -- \"modules/agent-door/tests/identity.test.ts\""
+    },
+    {
+      "path": "src/modules/agent-door/tests/queued-context.test.ts",
+      "originPath": "modules/agent-door/tests/queued-context.test.ts",
+      "revision": "2135c394939f4a737adabdc8003b0e667b31ac5a",
+      "conflict": false
+    },
+    {
+      "path": "src/modules/agent-door/tests/runtime.mjs",
+      "originPath": "modules/agent-door/tests/runtime.mjs",
+      "revision": "2135c394939f4a737adabdc8003b0e667b31ac5a",
+      "conflict": true,
+      "note": "Upstream changed or removed this seed-owned adaptation; review and reconcile explicitly.",
+      "diffHint": "git -C <base> diff 2135c394939f4a737adabdc8003b0e667b31ac5a 96045612467d5e752c668e8557b4bf6e906edfb1 -- \"modules/agent-door/tests/runtime.mjs\""
+    },
+    {
+      "path": "src/modules/agent-door/tests/seed.ts",
+      "originPath": "modules/agent-door/tests/seed.ts",
+      "revision": "2135c394939f4a737adabdc8003b0e667b31ac5a",
+      "conflict": true,
+      "note": "Upstream changed or removed this seed-owned adaptation; review and reconcile explicitly.",
+      "diffHint": "git -C <base> diff 2135c394939f4a737adabdc8003b0e667b31ac5a 96045612467d5e752c668e8557b4bf6e906edfb1 -- \"modules/agent-door/tests/seed.ts\""
+    },
+    {
+      "path": "src/modules/agent-door/types.ts",
+      "originPath": "modules/agent-door/types.ts",
+      "revision": "2135c394939f4a737adabdc8003b0e667b31ac5a",
+      "conflict": true,
+      "note": "Upstream changed or removed this seed-owned adaptation; review and reconcile explicitly.",
+      "diffHint": "git -C <base> diff 2135c394939f4a737adabdc8003b0e667b31ac5a 96045612467d5e752c668e8557b4bf6e906edfb1 -- \"modules/agent-door/types.ts\""
+    },
+    {
+      "path": "src/modules/agent-door/pipeline.ts",
+      "originPath": "modules/agent-door/pipeline.ts",
+      "revision": "2135c394939f4a737adabdc8003b0e667b31ac5a",
+      "conflict": true,
+      "note": "Upstream changed or removed this seed-owned adaptation; review and reconcile explicitly.",
+      "diffHint": "git -C <base> diff 2135c394939f4a737adabdc8003b0e667b31ac5a 96045612467d5e752c668e8557b4bf6e906edfb1 -- \"modules/agent-door/pipeline.ts\""
+    },
+    {
+      "path": "src/modules/agent-door/audit.ts",
+      "originPath": "modules/agent-door/audit.ts",
+      "revision": "2135c394939f4a737adabdc8003b0e667b31ac5a",
+      "conflict": true,
+      "note": "Upstream changed or removed this seed-owned adaptation; review and reconcile explicitly.",
+      "diffHint": "git -C <base> diff 2135c394939f4a737adabdc8003b0e667b31ac5a 96045612467d5e752c668e8557b4bf6e906edfb1 -- \"modules/agent-door/audit.ts\""
+    },
+    {
+      "path": "src/modules/agent-door/conformance/audit.mjs",
+      "originPath": "modules/agent-door/conformance/audit.mjs",
+      "revision": "2135c394939f4a737adabdc8003b0e667b31ac5a",
+      "conflict": true,
+      "note": "Upstream changed or removed this seed-owned adaptation; review and reconcile explicitly.",
+      "diffHint": "git -C <base> diff 2135c394939f4a737adabdc8003b0e667b31ac5a 96045612467d5e752c668e8557b4bf6e906edfb1 -- \"modules/agent-door/conformance/audit.mjs\""
+    },
+    {
+      "path": "src/modules/agent-door/policy-store.ts",
+      "originPath": "modules/agent-door/policy-store.ts",
+      "revision": "2135c394939f4a737adabdc8003b0e667b31ac5a",
+      "conflict": true,
+      "note": "Upstream changed or removed this seed-owned adaptation; review and reconcile explicitly.",
+      "diffHint": "git -C <base> diff 2135c394939f4a737adabdc8003b0e667b31ac5a 96045612467d5e752c668e8557b4bf6e906edfb1 -- \"modules/agent-door/policy-store.ts\""
+    },
+    {
+      "path": "VERIFY-WORKFLOW.md",
+      "originPath": "export/VERIFY-WORKFLOW.md",
+      "revision": "11f94fec479228d71ba6d7dd6ea7796c0d42c544",
+      "conflict": true,
+      "note": "Upstream changed or removed this seed-owned adaptation; review and reconcile explicitly.",
+      "diffHint": "git -C <base> diff 11f94fec479228d71ba6d7dd6ea7796c0d42c544 96045612467d5e752c668e8557b4bf6e906edfb1 -- \"export/VERIFY-WORKFLOW.md\""
+    }
+  ],
+  "withheld": [],
+  "packageDependencies": [
+    {
+      "package": "react",
+      "version": "19.2.8",
+      "baseVersion": "19.3.1",
+      "conflict": true,
+      "files": [
+        "src/base/hydration/unit.tsx",
+        "src/client.tsx"
+      ]
+    },
+    {
+      "package": "@tanstack/react-start",
+      "version": "1.168.60",
+      "baseVersion": "1.168.60",
+      "conflict": false,
+      "files": [
+        "src/client.tsx"
+      ]
+    },
+    {
+      "package": "react-dom",
+      "version": "19.2.8",
+      "baseVersion": "19.3.1",
+      "conflict": true,
+      "files": [
+        "src/client.tsx"
+      ]
+    },
+    {
+      "package": "miniflare",
+      "version": "5.20260907.0-alpha",
+      "baseVersion": "5.20260907.0-alpha",
+      "conflict": false,
+      "files": [
+        "src/modules/agent-door/conformance/network-runtime.mjs",
+        "src/modules/agent-door/tests/person-erasure-runtime.mjs",
+        "src/modules/agent-door/tests/schema-upgrade.test.ts"
+      ]
+    },
+    {
+      "package": "wrangler",
+      "version": "4.129.1",
+      "baseVersion": "4.129.1",
+      "conflict": false,
+      "files": [
+        "src/modules/agent-door/conformance/network-runtime.mjs",
+        "src/modules/agent-door/tests/person-erasure-runtime.mjs",
+        "src/modules/agent-door/tests/relay-membership.test.ts",
+        "src/modules/agent-door/tests/schema-upgrade.test.ts"
+      ]
+    },
+    {
+      "package": "esbuild",
+      "version": "0.28.1",
+      "baseVersion": "0.28.2",
+      "conflict": true,
+      "files": [
+        "src/modules/agent-door/tests/admission.fixture.ts",
+        "src/modules/agent-door/tests/person-erasure-runtime.mjs"
+      ]
+    },
+    {
+      "package": "@tanstack/react-router",
+      "version": "1.170.41",
+      "baseVersion": "1.170.41",
+      "conflict": false,
+      "files": [
+        "src/router.tsx",
+        "src/routes/__root.tsx"
+      ]
+    }
+  ]
+}

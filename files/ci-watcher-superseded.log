@@ -1,0 +1,5 @@
+GH_CALLS=3
+CI_RUN 42624756348 https://github.com/just-every/run-crank/actions/runs/42624756348
+CI {"id": 42624756348, "name": "Verify", "status": "in_progress", "conclusion": null, "head_sha": "3c397ae03af1b8abdfd0a13e793a08a0100d5c2c", "html_url": "https://github.com/just-every/run-crank/actions/runs/42624756348", "gh_calls": 3, "observed_at": "2026-11-09T13:21:36.928291+00:00"}
+GH_CALLS=4
+CI {"id": 42624756348, "name": "Verify", "status": "in_progress", "conclusion": null, "head_sha": "3c397ae03af1b8abdfd0a13e793a08a0100d5c2c", "html_url": "https://github.com/just-every/run-crank/actions/runs/42624756348", "gh_calls": 4, "observed_at": "2026-11-09T13:26:41.082437+00:00"}

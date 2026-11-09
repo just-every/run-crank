@@ -1,0 +1,10 @@
+CI_DISCOVERY_DELAY seconds=600; conserve the shared GitHub call budget
+GH_CALLS=5
+CI_RUN 42626876257 https://github.com/just-every/run-crank/actions/runs/42626876257
+CI {"id": 42626876257, "name": "Verify", "status": "in_progress", "conclusion": null, "head_sha": "e6ba1c6dd98f68e02826afdfe1e7ffb7fe2ab4df", "html_url": "https://github.com/just-every/run-crank/actions/runs/42626876257", "gh_calls": 5, "observed_at": "2026-11-09T13:46:26.286933+00:00"}
+GH_CALLS=6
+CI {"id": 42626876257, "name": "Verify", "status": "in_progress", "conclusion": null, "head_sha": "e6ba1c6dd98f68e02826afdfe1e7ffb7fe2ab4df", "html_url": "https://github.com/just-every/run-crank/actions/runs/42626876257", "gh_calls": 6, "observed_at": "2026-11-09T13:51:27.509239+00:00"}
+GH_CALLS=7
+CI {"id": 42626876257, "name": "Verify", "status": "in_progress", "conclusion": null, "head_sha": "e6ba1c6dd98f68e02826afdfe1e7ffb7fe2ab4df", "html_url": "https://github.com/just-every/run-crank/actions/runs/42626876257", "gh_calls": 7, "observed_at": "2026-11-09T13:56:30.278376+00:00"}
+GH_CALLS=8
+CI {"id": 42626876257, "name": "Verify", "status": "completed", "conclusion": "success", "head_sha": "e6ba1c6dd98f68e02826afdfe1e7ffb7fe2ab4df", "html_url": "https://github.com/just-every/run-crank/actions/runs/42626876257", "gh_calls": 8, "observed_at": "2026-11-09T14:01:32.279257+00:00"}

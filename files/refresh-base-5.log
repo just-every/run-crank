@@ -1,0 +1,4 @@
+Using project Node 22.20.0 (current Node 24.19.0).
+Adapted files need acknowledgement: src/modules/agent-door/types.ts. Review local bytes and mode, then run:
+node 'node_modules/.pnpm/@runeditrun+rer@0.2.104/node_modules/@runeditrun/rer/edition-authoring/cli.mjs' adapt-base src/modules/agent-door/types.ts No files were refreshed.
+refresh-base: failed (exit 4)

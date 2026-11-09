@@ -1,0 +1,97 @@
+{
+  "schema": 1,
+  "product_head": "e6ba1c6dd98f68e02826afdfe1e7ffb7fe2ab4df",
+  "typecheck": {
+    "exit": 0,
+    "log": "typecheck.log"
+  },
+  "first_party": {
+    "exit": 0,
+    "log": "first-party-check-final.log"
+  },
+  "base_copy_integrity": {
+    "exit": 0,
+    "log": "verify-base-final.log"
+  },
+  "source_lock": {
+    "exit": 0,
+    "log": "source-lock-check-final.log"
+  },
+  "contract_documents": {
+    "exit": 0,
+    "clauses": 99,
+    "log": "contract-check.log"
+  },
+  "workflow_permissions": {
+    "exit": 0,
+    "log": "workflow-check.log"
+  },
+  "deployment_spec": {
+    "exit": 0,
+    "log": "deployment-spec-check.log"
+  },
+  "syntax": {
+    "exit": 0,
+    "files": [
+      "scripts/container-qualify.mjs",
+      "scripts/installer/local.mjs",
+      "tests/harness.mjs"
+    ]
+  },
+  "application_build": {
+    "exit": 0,
+    "log": "application-build-terminal.log",
+    "note": "Terminal source tree, including signed route, additive backfill and native-cookie protocol compatibility; source lock regenerated and checked afterward."
+  },
+  "container_policy_compilation": {
+    "exit": 0,
+    "log": "container-policy-bundle.log"
+  },
+  "public_door_tests": {
+    "unique_passing_tests": 9,
+    "tests": [
+      "BASE-001/BASE-004: an owned installation publishes and finishes every shipped step type while author traffic is blocked",
+      "BASE-001: disconnected native sign-in, local HTTP, literal history and credential-free export restore with fresh authority",
+      "BASE-001: inspect configured recipients and field categories without leaking graph literals or credentials",
+      "PLATFORM-001: draft, publication and duplicate preparations preserve retries, reviewer authority and inactive custody",
+      "Per-client MCP connector tools enforce exact grants, approvals, history, restart and revocation",
+      "SEC-002: workflow and import doors retain hostile HTML/prompt text literally, refuse credential/private/redirect destinations and oversized inputs, and keep connection secrets out of output",
+      "Anonymous import requests are refused before any of their body is read",
+      "Inherited OAuth provider names are refused at the public door before storing credentials",
+      "PLATFORM-001: SDK and CORE door draft lifecycle, native granted execution/progress, paginated reads and out-of-grant denial share native approval and audit"
+    ],
+    "logs": [
+      "touched-tests.log",
+      "platform-tests-final.log",
+      "platform-complete-final.log"
+    ],
+    "note": "The initial aggregate retained 8 passing tests and one contention failure. A rerun passed the two remaining platform tests but exposed the moved fault-injection boundary. After fixture and protocol-order reconciliation, the full first platform test passed unchanged. Final combined selected coverage is 9/9; historical red outputs are retained, not described as green. The terminal route/backfill and narrower native-cookie compatibility were then validated by the focused native adoption probe and a fresh application build; exact-SHA Verify is the complete final-tree gate."
+  },
+  "container_image_build": {
+    "exit": 1,
+    "receipt": "CONTAINER-RECEIPT.json",
+    "soft_environment_limitation": true
+  },
+  "full_local_verify": "not run: touched checks locally; exact-SHA branch CI is the full gate",
+  "focused_terminal_adoption_probe": {
+    "exit": 0,
+    "log": "relay-adoption-probe-final.log",
+    "source": "relay-adoption-probe.mjs",
+    "behaviors": [
+      "native-cookie protocol refusals without MCP credential admission",
+      "Base authentication-first anonymous/invalid bearer challenges",
+      "native audited metadata through the shared signed Base relay",
+      "foreign Business and invalid signatures refused",
+      "signed detachment ends reads",
+      "all additive migrations applied"
+    ]
+  },
+  "exact_sha_verify": {
+    "status": "completed",
+    "conclusion": "success",
+    "head_sha": "e6ba1c6dd98f68e02826afdfe1e7ffb7fe2ab4df",
+    "run_id": 42626876257,
+    "url": "https://github.com/just-every/run-crank/actions/runs/42626876257",
+    "gh_calls_total": 8
+  }
+}

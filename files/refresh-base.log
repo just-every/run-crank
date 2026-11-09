@@ -1,0 +1,3 @@
+Using project Node 22.20.0 (current Node 24.19.0).
+Base archive has no Git history. Repeat with --base <checkout> containing the recorded and target commits; no files were refreshed.
+refresh-base: failed (exit 4)

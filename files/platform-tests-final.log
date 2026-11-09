@@ -1,0 +1,73 @@
+TAP version 13
+# [33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProxy environment variables detected. We'll use your proxy for fetch requests.[0m
+# (node:6663) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# PROBE BASE-AGENT-006 6: concurrent metadata and inert MCP calls -> computed standard facts, decision_busy, no decision, rule, approval, claim or usage reservation; durable restart readback
+# ✘ [ERROR] Expected values to be strictly equal:
+# 1 !== 2
+#  [plugin agent-outcome-persistence-fault]
+#     src/modules/agent-door/index.ts:11:24:
+#       11 │ import { revoked } from './execution.ts'
+#          ╵                         ~~~~~~~~~~~~~~~~
+#   This error came from the "onLoad" callback registered here:
+#     node_modules/.pnpm/esbuild@0.28.1/node_modules/esbuild/lib/main.js:1422:20:
+#       1422 │       let promise = setup({
+#            ╵                     ^
+#     at setup (file:///home/agent/rer-consolidation/work/sx-crank-rer-0-2-104-1/run-crank/tests/harness.mjs:79:12)
+#     at handlePlugins (/home/agent/rer-consolidation/work/sx-crank-rer-0-2-104-1/run-crank/node_modules/.pnpm/esbuild@0.28.1/node_modules/esbuild/lib/main.js:1422:21)
+#     at buildOrContextImpl (/home/agent/rer-consolidation/work/sx-crank-rer-0-2-104-1/run-crank/node_modules/.pnpm/esbuild@0.28.1/node_modules/esbuild/lib/main.js:1135:5)
+#     at Object.buildOrContext (/home/agent/rer-consolidation/work/sx-crank-rer-0-2-104-1/run-crank/node_modules/.pnpm/esbuild@0.28.1/node_modules/esbuild/lib/main.js:961:5)
+#     at /home/agent/rer-consolidation/work/sx-crank-rer-0-2-104-1/run-crank/node_modules/.pnpm/esbuild@0.28.1/node_modules/esbuild/lib/main.js:2316:15
+#     at new Promise (<anonymous>)
+#     at Object.build (/home/agent/rer-consolidation/work/sx-crank-rer-0-2-104-1/run-crank/node_modules/.pnpm/esbuild@0.28.1/node_modules/esbuild/lib/main.js:2315:25)
+#     at build (/home/agent/rer-consolidation/work/sx-crank-rer-0-2-104-1/run-crank/node_modules/.pnpm/esbuild@0.28.1/node_modules/esbuild/lib/main.js:2166:51)
+#     at agentRecoveryBundle (file:///home/agent/rer-consolidation/work/sx-crank-rer-0-2-104-1/run-crank/tests/harness.mjs:78:17)
+# Subtest: PLATFORM-001: SDK and CORE door draft lifecycle, native granted execution/progress, paginated reads and out-of-grant denial share native approval and audit
+not ok 1 - PLATFORM-001: SDK and CORE door draft lifecycle, native granted execution/progress, paginated reads and out-of-grant denial share native approval and audit
+  ---
+  duration_ms: 17936.937397
+  type: 'test'
+  location: '/home/agent/rer-consolidation/work/sx-crank-rer-0-2-104-1/run-crank/tests/platform.test.mjs:22:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Build failed with 1 error:
+    src/modules/agent-door/index.ts:11:24: ERROR: [plugin: agent-outcome-persistence-fault] Expected values to be strictly equal:
+    
+    1 !== 2
+    
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    failureErrorWithLog (/home/agent/rer-consolidation/work/sx-crank-rer-0-2-104-1/run-crank/node_modules/.pnpm/esbuild@0.28.1/node_modules/esbuild/lib/main.js:1748:15)
+    /home/agent/rer-consolidation/work/sx-crank-rer-0-2-104-1/run-crank/node_modules/.pnpm/esbuild@0.28.1/node_modules/esbuild/lib/main.js:1207:25
+    runOnEndCallbacks (/home/agent/rer-consolidation/work/sx-crank-rer-0-2-104-1/run-crank/node_modules/.pnpm/esbuild@0.28.1/node_modules/esbuild/lib/main.js:1588:45)
+    buildResponseToResult (/home/agent/rer-consolidation/work/sx-crank-rer-0-2-104-1/run-crank/node_modules/.pnpm/esbuild@0.28.1/node_modules/esbuild/lib/main.js:1205:7)
+    /home/agent/rer-consolidation/work/sx-crank-rer-0-2-104-1/run-crank/node_modules/.pnpm/esbuild@0.28.1/node_modules/esbuild/lib/main.js:1232:16
+    responseCallbacks.<computed> (/home/agent/rer-consolidation/work/sx-crank-rer-0-2-104-1/run-crank/node_modules/.pnpm/esbuild@0.28.1/node_modules/esbuild/lib/main.js:884:9)
+    handleIncomingPacket (/home/agent/rer-consolidation/work/sx-crank-rer-0-2-104-1/run-crank/node_modules/.pnpm/esbuild@0.28.1/node_modules/esbuild/lib/main.js:939:12)
+    Socket.readFromStdout (/home/agent/rer-consolidation/work/sx-crank-rer-0-2-104-1/run-crank/node_modules/.pnpm/esbuild@0.28.1/node_modules/esbuild/lib/main.js:862:7)
+    Socket.emit (node:events:519:28)
+    Socket.emit (node:domain:489:12)
+  ...
+# PROBE BASE-AGENT-008 commit authority: signed-in approval paused before native commit, reviewer deactivated -> refused with no native mutation
+# PROBE DATA-002 reviewer erasure: approve draft, deactivate and erase reviewer -> anonymized workflow history and exports across restart and inactive restore
+# Subtest: PLATFORM-001: draft, publication and duplicate preparations preserve retries, reviewer authority and inactive custody
+ok 2 - PLATFORM-001: draft, publication and duplicate preparations preserve retries, reviewer authority and inactive custody
+  ---
+  duration_ms: 135275.098
+  type: 'test'
+  ...
+# Subtest: Per-client MCP connector tools enforce exact grants, approvals, history, restart and revocation
+ok 3 - Per-client MCP connector tools enforce exact grants, approvals, history, restart and revocation
+  ---
+  duration_ms: 68045.965409
+  type: 'test'
+  ...
+1..3
+# tests 3
+# suites 0
+# pass 2
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 225994.209616

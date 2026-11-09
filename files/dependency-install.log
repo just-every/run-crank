@@ -1,0 +1,62 @@
+ WARN  Unsupported engine: wanted: {"node":"22.20.0"} (current: {"node":"v24.19.0","pnpm":"10.12.4"})
+
+   ╭──────────────────────────────────────────╮
+   │                                          │
+   │   Update available! 10.12.4 → 12.18.0.   │
+   │   Changelog: https://pnpm.io/v/12.18.0   │
+   │     To update, run: pnpm add -g pnpm     │
+   │                                          │
+   ╰──────────────────────────────────────────╯
+
+Progress: resolved 1, reused 0, downloaded 0, added 0
+Progress: resolved 9, reused 0, downloaded 8, added 0
+Progress: resolved 19, reused 0, downloaded 18, added 0
+Progress: resolved 21, reused 0, downloaded 21, added 0
+Progress: resolved 27, reused 0, downloaded 21, added 0
+Progress: resolved 37, reused 0, downloaded 21, added 0
+Progress: resolved 44, reused 0, downloaded 28, added 0
+Progress: resolved 58, reused 0, downloaded 42, added 0
+Progress: resolved 76, reused 0, downloaded 58, added 0
+Progress: resolved 105, reused 0, downloaded 68, added 0
+Progress: resolved 121, reused 0, downloaded 69, added 0
+Progress: resolved 133, reused 0, downloaded 75, added 0
+Progress: resolved 157, reused 0, downloaded 98, added 0
+Progress: resolved 162, reused 0, downloaded 102, added 0
+Progress: resolved 175, reused 0, downloaded 111, added 0
+Progress: resolved 192, reused 0, downloaded 119, added 0
+Progress: resolved 208, reused 0, downloaded 133, added 0
+Progress: resolved 230, reused 0, downloaded 153, added 0
+Packages: +158
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Progress: resolved 234, reused 0, downloaded 161, added 158, done
+.../node_modules/workerd postinstall$ node install.js
+.../esbuild@0.28.1/node_modules/esbuild postinstall$ node install.js
+.../node_modules/workerd postinstall: Done
+.../esbuild@0.28.1/node_modules/esbuild postinstall: Done
+
+dependencies:
++ @tanstack/react-router 1.170.41
++ @tanstack/react-start 1.168.60
++ hono 4.13.7
++ marked 18.0.14
++ react 19.2.8
++ react-dom 19.2.8
++ sql.js 1.15.2
+
+devDependencies:
++ @cloudflare/vite-plugin 1.54.5
++ @cloudflare/workers-types 5.20260908.1
++ @playwright/test 1.63.0
++ @runeditrun/rer 0.2.104
++ @types/node 22.18.6
++ @types/react 19.2.18
++ @types/react-dom 19.2.7
++ @vitejs/plugin-react 6.1.1
++ axe-core 4.11.0
++ esbuild 0.28.1
++ miniflare 5.20260907.0-alpha
++ typescript 5.9.3
++ vite 8.2.2
++ wrangler 4.129.1
+
+Done in 37.4s using pnpm v10.12.4

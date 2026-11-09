@@ -1,0 +1,14 @@
+{
+  "recorded": "src/base/run-site.ts",
+  "originPath": "foundation/runtime/run-site.ts",
+  "revision": "96045612467d5e752c668e8557b4bf6e906edfb1",
+  "record": "base-copies.json",
+  "files": 1,
+  "notCopied": [],
+  "differs": [
+    "src/base/run-site.ts"
+  ],
+  "localOnly": [],
+  "next": "Run verify-base, then the edition tests, and commit the copied files with the record."
+}
+

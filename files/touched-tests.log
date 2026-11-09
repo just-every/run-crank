@@ -1,0 +1,119 @@
+TAP version 13
+# [33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProxy environment variables detected. We'll use your proxy for fetch requests.[0m
+# (node:2559) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: BASE-001/BASE-004: an owned installation publishes and finishes every shipped step type while author traffic is blocked
+ok 1 - BASE-001/BASE-004: an owned installation publishes and finishes every shipped step type while author traffic is blocked
+  ---
+  duration_ms: 181032.699991
+  type: 'test'
+  ...
+# Subtest: BASE-001: disconnected native sign-in, local HTTP, literal history and credential-free export restore with fresh authority
+ok 2 - BASE-001: disconnected native sign-in, local HTTP, literal history and credential-free export restore with fresh authority
+  ---
+  duration_ms: 55451.021842
+  type: 'test'
+  ...
+# Subtest: BASE-001: inspect configured recipients and field categories without leaking graph literals or credentials
+ok 3 - BASE-001: inspect configured recipients and field categories without leaking graph literals or credentials
+  ---
+  duration_ms: 7824.847726
+  type: 'test'
+  ...
+# [33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProxy environment variables detected. We'll use your proxy for fetch requests.[0m
+# (node:3340) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: PLATFORM-001: SDK and CORE door draft lifecycle, native granted execution/progress, paginated reads and out-of-grant denial share native approval and audit
+not ok 4 - PLATFORM-001: SDK and CORE door draft lifecycle, native granted execution/progress, paginated reads and out-of-grant denial share native approval and audit
+  ---
+  duration_ms: 190475.370868
+  type: 'test'
+  location: '/home/agent/rer-consolidation/work/sx-crank-rer-0-2-104-1/run-crank/tests/platform.test.mjs:22:1'
+  failureType: 'testCodeFailure'
+  error: 'Real concurrent MCP must exercise both admission and contention'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    contentionJourney (file:///home/agent/rer-consolidation/work/sx-crank-rer-0-2-104-1/run-crank/tests/agent-door/journey.mjs:203:11)
+    process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    async TestContext.<anonymous> (file:///home/agent/rer-consolidation/work/sx-crank-rer-0-2-104-1/run-crank/tests/platform.test.mjs:23:2)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# PROBE BASE-AGENT-008 commit authority: signed-in approval paused before native commit, reviewer deactivated -> refused with no native mutation
+# PROBE DATA-002 reviewer erasure: approve draft, deactivate and erase reviewer -> anonymized workflow history and exports across restart and inactive restore
+# Subtest: PLATFORM-001: draft, publication and duplicate preparations preserve retries, reviewer authority and inactive custody
+ok 5 - PLATFORM-001: draft, publication and duplicate preparations preserve retries, reviewer authority and inactive custody
+  ---
+  duration_ms: 167358.516044
+  type: 'test'
+  ...
+# Subtest: Per-client MCP connector tools enforce exact grants, approvals, history, restart and revocation
+ok 6 - Per-client MCP connector tools enforce exact grants, approvals, history, restart and revocation
+  ---
+  duration_ms: 36783.848
+  type: 'test'
+  ...
+# [33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProxy environment variables detected. We'll use your proxy for fetch requests.[0m
+# (node:7119) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# SEC-002 classification archive delta {"from":"trigger","name":"tool calls","removed_tables":["crank_usage_spend"],"added_tables":["crank_audit","crank_notice_attempts","crank_notice_deliveries","crank_notices","crank_step_admissions","crank_usage_observations","crank_usage_reservations","crank_usage_spend","crank_wf_attempts","crank_wf_runs","crank_wf_steps"]}
+# SEC-002 classification archive delta {"from":"trigger","name":"undeclared category","removed_tables":["crank_usage_spend"],"added_tables":["crank_audit","crank_step_admissions","crank_usage_observations","crank_usage_reservations","crank_usage_spend","crank_wf_attempts","crank_wf_runs","crank_wf_steps"]}
+# SEC-002 classification archive delta {"from":"trigger","name":"extra fields","removed_tables":["crank_usage_spend"],"added_tables":["crank_audit","crank_step_admissions","crank_usage_observations","crank_usage_reservations","crank_usage_spend","crank_wf_attempts","crank_wf_runs","crank_wf_steps"]}
+# SEC-002 classification archive delta {"from":"trigger","name":"echoed credential","removed_tables":["crank_usage_spend"],"added_tables":["crank_audit","crank_step_admissions","crank_usage_observations","crank_usage_reservations","crank_usage_spend","crank_wf_attempts","crank_wf_runs","crank_wf_steps"]}
+# SEC-002 classification archive delta {"from":"trigger","name":"oversized prose","removed_tables":["crank_usage_spend"],"added_tables":["crank_audit","crank_notice_attempts","crank_notice_deliveries","crank_notices","crank_step_admissions","crank_usage_observations","crank_usage_reservations","crank_usage_spend","crank_wf_attempts","crank_wf_runs","crank_wf_steps"]}
+# SEC-002 classification archive delta {"from":"provider","name":"tool calls","removed_tables":["crank_usage_spend"],"added_tables":["crank_audit","crank_notice_attempts","crank_notice_deliveries","crank_notices","crank_step_admissions","crank_usage_observations","crank_usage_reservations","crank_usage_spend","crank_wf_attempts","crank_wf_runs","crank_wf_steps"]}
+# SEC-002 classification archive delta {"from":"provider","name":"undeclared category","removed_tables":["crank_usage_spend"],"added_tables":["crank_audit","crank_step_admissions","crank_usage_observations","crank_usage_reservations","crank_usage_spend","crank_wf_attempts","crank_wf_runs","crank_wf_steps"]}
+# SEC-002 classification archive delta {"from":"provider","name":"extra fields","removed_tables":["crank_usage_spend"],"added_tables":["crank_audit","crank_step_admissions","crank_usage_observations","crank_usage_reservations","crank_usage_spend","crank_wf_attempts","crank_wf_runs","crank_wf_steps"]}
+# SEC-002 classification archive delta {"from":"provider","name":"echoed credential","removed_tables":["crank_usage_spend"],"added_tables":["crank_audit","crank_step_admissions","crank_usage_observations","crank_usage_reservations","crank_usage_spend","crank_wf_attempts","crank_wf_runs","crank_wf_steps"]}
+# SEC-002 classification archive delta {"from":"provider","name":"oversized prose","removed_tables":["crank_usage_spend"],"added_tables":["crank_audit","crank_notice_attempts","crank_notice_deliveries","crank_notices","crank_step_admissions","crank_usage_observations","crank_usage_reservations","crank_usage_spend","crank_wf_attempts","crank_wf_runs","crank_wf_steps"]}
+# SEC-002 authoring refusal extra HTTP step complete portable inventory unchanged; one model request; zero provider requests
+# SEC-002 authoring refusal exfiltration replacement complete portable inventory unchanged; one model request; zero provider requests
+# SEC-002 authoring refusal changed CRM URL complete portable inventory unchanged; one model request; zero provider requests
+# SEC-002 authoring refusal changed CRM method complete portable inventory unchanged; one model request; zero provider requests
+# SEC-002 authoring refusal other realm complete portable inventory unchanged; one model request; zero provider requests
+# SEC-002 authoring refusal other customer complete portable inventory unchanged; one model request; zero provider requests
+# SEC-002 authoring refusal other item complete portable inventory unchanged; one model request; zero provider requests
+# SEC-002 authoring refusal other amount complete portable inventory unchanged; one model request; zero provider requests
+# SEC-002 authoring refusal background trigger complete portable inventory unchanged; one model request; zero provider requests
+# SEC-002 authoring refusal unknown connection complete portable inventory unchanged; one model request; zero provider requests
+# SEC-002 authoring refusal publish complete portable inventory unchanged; one model request; zero provider requests
+# SEC-002 authoring refusal grant complete portable inventory unchanged; one model request; zero provider requests
+# SEC-002 authoring refusal activate complete portable inventory unchanged; one model request; zero provider requests
+# SEC-002 authoring refusal step authority complete portable inventory unchanged; one model request; zero provider requests
+# SEC-002 authoring refusal oversized output complete portable inventory unchanged; one model request; zero provider requests
+# SEC-002 authoring refusal non-schema output complete portable inventory unchanged; one model request; zero provider requests
+# SEC-002 authoring refusal model tool call complete portable inventory unchanged; one model request; zero provider requests
+# SEC-002 authoring refusal echoed model credential complete portable inventory unchanged; one model request; zero provider requests
+# SEC-002 authoring refusal echoed connection credential complete portable inventory unchanged; one model request; zero provider requests
+# SEC-002 AI import manual conversions; zero native workflows, connections, grants or requests; complete retained inventory unchanged after refusal and restart
+# Subtest: SEC-002: workflow and import doors retain hostile HTML/prompt text literally, refuse credential/private/redirect destinations and oversized inputs, and keep connection secrets out of output
+ok 7 - SEC-002: workflow and import doors retain hostile HTML/prompt text literally, refuse credential/private/redirect destinations and oversized inputs, and keep connection secrets out of output
+  ---
+  duration_ms: 653377.849675
+  type: 'test'
+  ...
+# Subtest: Anonymous import requests are refused before any of their body is read
+ok 8 - Anonymous import requests are refused before any of their body is read
+  ---
+  duration_ms: 10935.127474
+  type: 'test'
+  ...
+# Subtest: Inherited OAuth provider names are refused at the public door before storing credentials
+ok 9 - Inherited OAuth provider names are refused at the public door before storing credentials
+  ---
+  duration_ms: 9280.396018
+  type: 'test'
+  ...
+1..9
+# tests 9
+# suites 0
+# pass 8
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1323983.030302

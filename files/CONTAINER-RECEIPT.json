@@ -1,0 +1,17 @@
+{
+  "schema": 1,
+  "rer_version": "0.2.104",
+  "base_revision": "96045612467d5e752c668e8557b4bf6e906edfb1",
+  "docker_local_socket": "available",
+  "docker_version": "28.4.0",
+  "policy_bundle_probe": "passed",
+  "command": "npx -y @runeditrun/rer build --platform container",
+  "application_build": "passed",
+  "image_build": "failed",
+  "failure": "Generated Dockerfile npm install cannot trust the cloud TLS proxy CA: SELF_SIGNED_CERT_IN_CHAIN while requesting the public miniflare package.",
+  "image_digest": null,
+  "container_execution": "not run: image unavailable",
+  "container_export_import": "not run: image unavailable",
+  "qualification_dispatch": "not run: reserved for the lane after landing",
+  "resolution": "Use the hosted container-qualify.yml job after landing. No generated Dockerfile was edited and TLS verification was retained."
+}

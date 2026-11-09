@@ -1,0 +1,11 @@
+{
+  "adapted": "src/modules/agent-door/types.ts",
+  "revision": "2135c394939f4a737adabdc8003b0e667b31ac5a",
+  "sha256": "4fec6765ad72c5ec287b07518d11cf911f03668659eaf5efea780b65d5363878",
+  "acknowledged": {
+    "sha256": "8e2a994c23ff9de48394315ca89a7a7ae713f750a3c7f2ac8e9e811208ce83a4",
+    "mode": "100644"
+  },
+  "record": "base-copies.json"
+}
+

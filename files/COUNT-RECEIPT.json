@@ -1,0 +1,142 @@
+{
+  "ordinary_files": 29,
+  "ordinary_registrations": 165,
+  "site": 1,
+  "verify_runtime_scripts": 2,
+  "verify_browser_commands": 22,
+  "verify_linux_executor_scripts": 1,
+  "nightly_assertions": 9,
+  "total": 201,
+  "registered_test_paths_unchanged": true,
+  "clause_counts_before_after": {
+    "done": 32,
+    "partial": 50,
+    "missing": 17,
+    "total": 99
+  },
+  "base_005_before_after": "partial",
+  "recorded_budget_before_after": 199,
+  "files": [
+    {
+      "file": "tests/crank.test.mjs",
+      "count": 18
+    },
+    {
+      "file": "tests/triggers.test.mjs",
+      "count": 26
+    },
+    {
+      "file": "tests/webhook-erasure.test.mjs",
+      "count": 5
+    },
+    {
+      "file": "tests/hold-cost.test.mjs",
+      "count": 2
+    },
+    {
+      "file": "tests/usage.test.mjs",
+      "count": 6
+    },
+    {
+      "file": "tests/logic.test.mjs",
+      "count": 16
+    },
+    {
+      "file": "tests/connections.test.mjs",
+      "count": 20
+    },
+    {
+      "file": "tests/app.test.mjs",
+      "count": 3
+    },
+    {
+      "file": "tests/ops.test.mjs",
+      "count": 9
+    },
+    {
+      "file": "tests/batch.test.mjs",
+      "count": 5
+    },
+    {
+      "file": "tests/pagination.test.mjs",
+      "count": 2
+    },
+    {
+      "file": "tests/ownership.test.mjs",
+      "count": 3
+    },
+    {
+      "file": "tests/historical.test.mjs",
+      "count": 1
+    },
+    {
+      "file": "tests/publish-authority.test.mjs",
+      "count": 1
+    },
+    {
+      "file": "tests/execution-queue.test.mjs",
+      "count": 4
+    },
+    {
+      "file": "tests/dispatch-authority.test.mjs",
+      "count": 3
+    },
+    {
+      "file": "tests/request-limits.test.mjs",
+      "count": 5
+    },
+    {
+      "file": "tests/version-comparison.test.mjs",
+      "count": 2
+    },
+    {
+      "file": "tests/deployment.test.mjs",
+      "count": 3
+    },
+    {
+      "file": "tests/skills.test.mjs",
+      "count": 7
+    },
+    {
+      "file": "tests/grants.test.mjs",
+      "count": 3
+    },
+    {
+      "file": "tests/platform.test.mjs",
+      "count": 3
+    },
+    {
+      "file": "tests/security.test.mjs",
+      "count": 3
+    },
+    {
+      "file": "tests/team.test.mjs",
+      "count": 4
+    },
+    {
+      "file": "tests/service-accounts.test.mjs",
+      "count": 2
+    },
+    {
+      "file": "tests/followups.test.mjs",
+      "count": 3
+    },
+    {
+      "file": "tests/executors.test.mjs",
+      "count": 3
+    },
+    {
+      "file": "tests/hosted-mail.test.mjs",
+      "count": 1
+    },
+    {
+      "file": "tests/drift.test.mjs",
+      "count": 2
+    }
+  ],
+  "total_before": 201,
+  "total_after": 201,
+  "note": "The standard recorded inventory recount is 200; the pre-existing manual container qualification assertion script adds one under the CI-script rule. This inherited 201 total and stale recorded current=199 are unchanged by adoption. All registration files match origin/main; only the fault-injection helper changed. No cap increase or test deletion is part of this task.",
+  "standard_inventory_subtotal": 200,
+  "existing_manual_container_qualification_script": 1
+}

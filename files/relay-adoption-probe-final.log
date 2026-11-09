@@ -1,0 +1,6 @@
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProxy environment variables detected. We'll use your proxy for fetch requests.[0m
+
+
+(node:9163) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS: native-cookie protocol refusals and Base authentication-first challenges;  native audited metadata pull uses the Base handler; signed current Business succeeds, foreign Business and invalid signatures refuse, credentials stay absent, and signed detachment returns an empty refusal. All additive migrations applied.

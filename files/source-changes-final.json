@@ -1,0 +1,31 @@
+{
+  "files": [
+    {
+      "path": "base-copies.json",
+      "change": "modified",
+      "before": {
+        "sha256": "d5c1d36f359edeccd7e640e67d62d64c1426d13e751b8f2fc89cb4068b857419",
+        "executable": false
+      },
+      "after": {
+        "sha256": "fe87aaaf1fa9707d8edd499d535ec02704e6bc0fe7242f46f00c6ece0ca30a71",
+        "executable": false
+      }
+    },
+    {
+      "path": "src/modules/agent-door/transport.ts",
+      "change": "modified",
+      "before": {
+        "sha256": "2df9f0e4373fd343a35febcebcb21bfb4aa3ece7c758a9725cd465d63527c019",
+        "executable": false
+      },
+      "after": {
+        "sha256": "61da63b56bd3fc1668babf6f96fc85bfb77288ed2205ac266b09021eaf32f659",
+        "executable": false
+      }
+    }
+  ],
+  "metadata": [],
+  "meaning": "Origins are comparison baselines; changing an origin does not assert adoption or local byte equality."
+}
+

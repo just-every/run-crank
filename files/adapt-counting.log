@@ -1,0 +1,11 @@
+{
+  "adapted": "src/modules/agent-door/counting.ts",
+  "revision": "96045612467d5e752c668e8557b4bf6e906edfb1",
+  "sha256": "5e16fcc366488fd14d90363bfed618d682c6974f8810734cb03780772c77317a",
+  "acknowledged": {
+    "sha256": "33eb2ec0a09c2da30ba45568f1dae985aaa2224c4cbff479bfbc4c144f365695",
+    "mode": "100644"
+  },
+  "record": "base-copies.json"
+}
+
