@@ -228,7 +228,7 @@
       "executable": false
     },
     "docs/CONTAINER-QUALIFICATION.md": {
-      "sha256": "15ff8dcaa390a7f40e89e6d437d20b5cfaf83bdefd5bb3f00642d060b0ddc0c8",
+      "sha256": "41b04422b5db59dfe6a73e4710e8dbe481280a1bb45b8afff665d418a735e01a",
       "executable": false
     },
     "docs/DATA-FLOWS.md": {
@@ -2064,7 +2064,7 @@
       "executable": false
     },
     "scripts/container-qualify.mjs": {
-      "sha256": "a965f08cff54ce68caad0daee3f8dc1e7ff5ce18277d19a3d57e9c24e3c583b2",
+      "sha256": "8ebbf44e4e942d5afa2ca661f2f4dc016e2695290117e2bc5adef1291011f1fc",
       "executable": false
     },
     "scripts/crank.mjs": {
