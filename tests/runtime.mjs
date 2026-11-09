@@ -98,6 +98,7 @@ try {
   assert.ok(!html.includes('Create address'), 'container settings do not offer an undeliverable address')
   if (process.env.CRANK_EVIDENCE) {
     const { chromium, expect } = await import('@playwright/test')
+    const { expectHoverTooltip } = await import('./tooltip-browser.mjs')
     const { mkdir } = await import('node:fs/promises')
     await mkdir(process.env.CRANK_EVIDENCE, { recursive: true })
     const browser = await chromium.launch({ headless: true, ...(process.env.CRANK_CHROMIUM ? { executablePath: process.env.CRANK_CHROMIUM } : {}), args: ['--no-sandbox', '--use-mock-keychain', '--password-store=basic'] })
@@ -116,8 +117,7 @@ try {
           for (const label of ['Search runs', 'Your account']) {
             const control = page.locator(`[aria-describedby="${label === 'Search runs' ? 'search-tooltip' : 'account-tooltip'}"]`)
             const tooltip = page.getByRole('tooltip', { name: label, exact: true })
-            await page.mouse.move(0, 0); await control.blur(); await control.hover()
-            await page.waitForTimeout(150); await expect(tooltip).toBeHidden(); await expect(tooltip).toBeVisible()
+            await expectHoverTooltip(page, control, tooltip)
             await page.mouse.move(0, 0); await control.focus(); await expect(tooltip).toBeVisible({ timeout: 100 }); await control.blur()
           }
         }
