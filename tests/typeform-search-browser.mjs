@@ -1,3 +1,4 @@
+import {expectHoverTooltip} from './tooltip-browser.mjs';
 import assert from 'node:assert/strict';
 import {createServer} from 'node:http';
 import {mkdir,readFile} from 'node:fs/promises';
@@ -30,7 +31,7 @@ async function onScreen({h,w,run}) {
     for(const text of ['synthetic-crank-response','synthetic-crank-form','synthetic-crank-ref','synthetic-crank-answer','synthetic-crank-person','2026-11-01T12:00:00Z','not found does not establish','does not detect submissions instantly'])await expect(search).toContainText(text);
     assert.equal(await search.locator('img').count(),0,'provider markup renders literally');
     for(const [id,label] of [['search-tooltip','Search runs'],['account-tooltip','Your account']]) {
-     const control=page.locator(`[aria-describedby="${id}"]`),tooltip=page.getByRole('tooltip',{name:label,exact:true});await page.mouse.move(0,0);await control.blur();await expect(tooltip).toBeHidden();await control.hover();await page.waitForTimeout(150);await expect(tooltip).toBeHidden();await expect(tooltip).toBeVisible();await page.mouse.move(0,0);await control.focus();await expect(tooltip).toBeVisible({timeout:100});await control.blur();
+     const control=page.locator(`[aria-describedby="${id}"]`),tooltip=page.getByRole('tooltip',{name:label,exact:true});await expectHoverTooltip(page,control,tooltip);await page.mouse.move(0,0);await control.focus();await expect(tooltip).toBeVisible({timeout:100});await control.blur();
     }
    }
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`${width} retained results fit`);

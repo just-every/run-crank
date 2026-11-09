@@ -5,7 +5,9 @@ import {raw, safe, requirePhysical, testSource, freedEntries, toolFile} from './
 import {dependencies, resolve, external, bindings, lexicalExports} from './runtime-dependencies.mjs';
 import {relocateDependencies} from './module-edges.mjs';
 import {sharedNamespaces} from './copy-namespaces.mjs';
+import {fileURLToPath} from 'node:url';
 import {acknowledgementCommand} from './base-acknowledgements.mjs';
+import {checkModulePackages} from './module-packages.mjs';
 const code = name => /\.(?:[cm]?[jt]s|[jt]sx)$/.test(name) && !testSource(name);
 const inside = (name, prefix) => prefix === '.' ? !name.startsWith('../') && !path.posix.isAbsolute(name) : name === prefix || name.startsWith(prefix + '/');
 const mapped = (source, copy) => copy.path + source.slice(copy.originPath.length);
@@ -17,6 +19,7 @@ export function completeModuleCopies(root, plans, {tree, read, revision, base, b
   const mappings = plans.filter(plan => !plan.retired).map(({copy}) => ({copy, ...namespace(copy)})).filter(mapping => mapping.from);
   const shared = sharedNamespaces(mappings);
   const cache = new Map(), planned = new Map(), recorded = new Map(), queue = [], withheld = [];
+  const retainedTargets = new Set();
   const disk = {has: name => {
     try { return fs.lstatSync(path.join(root, name)).isFile(); }
     catch (error) { if (['ENOENT', 'ENOTDIR'].includes(error.code)) return false; throw error; }
@@ -31,10 +34,11 @@ export function completeModuleCopies(root, plans, {tree, read, revision, base, b
     if (stat) removedObjects.add(target, stat);
   }
   const inspect = target => requirePhysical(root, safe(target), {cache, freed: removedObjects.has});
-  function enqueue(plan, source, entry, adapted = false) {
+  function enqueue(plan, source, entry, retained = false) {
     const target = mapped(source, plan.copy);
-    if (!adapted) planned.set(target, {plan, source, entry});
-    if (code(source)) queue.push({plan, source, target, entry, adapted});
+    if (retained) retainedTargets.add(target);
+    else planned.set(target, {plan, source, entry});
+    if (code(source)) queue.push({plan, source, target, entry, retained});
   }
   for (const plan of plans) {
     for (const target of Object.keys(plan.copy.files)) recorded.set(target, plan);
@@ -42,6 +46,8 @@ export function completeModuleCopies(root, plans, {tree, read, revision, base, b
     for (const target of Object.keys(plan.copy.adapted ?? {})) enqueue(plan, plan.copy.originPath + target.slice(plan.copy.path.length), null, true);
   }
   const directoryAdditions = new Set([...planned].filter(([target, {plan}]) => !Object.hasOwn(plan.copy.files, target) && !tree.has(plan.copy.originPath)).map(([target]) => target));
+  const packageRoots = new Set([...planned.keys()].filter(target => !directoryAdditions.has(target)));
+  for (const {target, retained} of queue) if (retained) packageRoots.add(target);
   function namespace(copy) {
     const file = Object.hasOwn(copy.files, copy.path) || tree.has(copy.originPath);
     if (file && path.posix.basename(copy.path) !== path.posix.basename(copy.originPath)) return {};
@@ -79,7 +85,15 @@ export function completeModuleCopies(root, plans, {tree, read, revision, base, b
     if (index.has(target)) {
       if (!physical.stat) refuse(target, 'tracked edition source is missing', `git restore -- ${quote(target)}`);
       ownerSources.set(target, source);
-      return; // Tracked, unrecorded source remains edition-owned, even at equal bytes.
+      // Retain ownership and bytes, but close Base edges introduced by seed
+      // reconciliation just as for an acknowledged adaptation. Seed-only
+      // helpers have no Base source and do not acquire a guessed origin.
+      if (tree.has(source) && code(source) && !retainedTargets.has(target)) {
+        retainedTargets.add(target);
+        packageRoots.add(target);
+        queue.push({source, target, retained: true});
+      }
+      return;
     }
     if (physical.stat && !index.has(target)) refuse(target, 'existing file has no Base copy record or Git index entry', `git add -f -- ${quote(target)}`);
     let plan = plans.find(plan => inside(target, plan.copy.path));
@@ -99,6 +113,7 @@ export function completeModuleCopies(root, plans, {tree, read, revision, base, b
     for (const target of new Set(targets)) {
       if (!witness(target, source)) refuse(target, 'migration delivery has no witnessed destination', '${EDITOR:-vi} base-copies.json');
       include(source, target);
+      packageRoots.add(target); // Explicitly consented migration delivery.
     }
   }
   // Template files can refer to another recorded copy whose Base origin is
@@ -106,7 +121,7 @@ export function completeModuleCopies(root, plans, {tree, read, revision, base, b
   // records and plans satisfy that local edge before looking for a new source.
   const view = {
     has: name => planned.has(name) || recorded.has(name) || index.has(name) && disk.has(name),
-    read: name => planned.has(name) ? blob(planned.get(name).entry) : local(name),
+    read: name => planned.has(name) ? relocations.get(name)?.toString('utf8') ?? blob(planned.get(name).entry) : local(name),
   };
   function requests(bytes, source, target) {
     return dependencies(bytes, source).filter(request => {
@@ -121,6 +136,9 @@ export function completeModuleCopies(root, plans, {tree, read, revision, base, b
     const originScope = {}, targetScope = {}, manifests = new Set();
     const dependency = resolve(tree, source, specifier, {...request, manifests, package: originScope});
     const destination = resolve(view, target, specifier, {...request, package: targetScope});
+    // A retained file's own relative imports without a Base counterpart stay
+    // seed-owned. Only Base dependencies participate in copy delivery.
+    if (retainedTargets.has(target) && specifier.startsWith('.') && !dependency) return {...request, external: true};
     if (!specifier.startsWith('.')) {
       if (originScope.external && targetScope.external && originScope.value === targetScope.value) return {...request, external: true};
       if (!targetScope.managed || originScope.external || targetScope.external) return {...request, reason: 'runtime package scope differs from its Base source'};
@@ -136,9 +154,9 @@ export function completeModuleCopies(root, plans, {tree, read, revision, base, b
       return {...request, dependency: source, destination, satisfied: true};
     }
     const expected = dependency && path.posix.join(path.posix.dirname(target), path.posix.relative(path.posix.dirname(source), dependency));
-    // Relocate only new deliveries. Existing files and acknowledged adaptations
-    // retain their current imports and ownership, including old missing edges.
-    if (specifier.startsWith('.') && dependency && !recorded.has(target) && !witness(expected, dependency)) {
+    // Relocate only new deliveries. Retained files keep their seed-owned
+    // imports; a missing Base edge must have a witness at that exact path.
+    if (specifier.startsWith('.') && dependency && !recorded.has(target) && !retainedTargets.has(target) && !witness(expected, dependency)) {
       const destinations = recordedDestination(dependency);
       if (destinations.length > 1) return {...request, manifests, dependency, destination: expected,
         reason: `ambiguous Base copy mappings for ${dependency}: ${destinations.join(', ')}`};
@@ -160,16 +178,16 @@ export function completeModuleCopies(root, plans, {tree, read, revision, base, b
   // Preserve these edges during traversal; required planned files may still
   // complete a sparse historical copy by satisfying them.
   const baseline = new Set();
-  for (const {plan, source, target} of queue) {
-    if (!Object.hasOwn(plan.copy.files, target) || !disk.has(target) || bootstrap(source)) continue;
+  for (const {plan, source, target, retained} of queue) {
+    if (retained || !Object.hasOwn(plan.copy.files, target) || !disk.has(target) || bootstrap(source)) continue;
     for (const request of requests(local(target), source, target)) {
       const candidate = edge(source, target, request);
       if (!resolve(disk, target, request.specifier, request) && !recorded.has(candidate.destination)) baseline.add(key(target, request));
     }
   }
   // Do not let an optional directory addition incidentally fill an old edge.
-  for (const {plan, source, target} of queue) {
-    if (!Object.hasOwn(plan.copy.files, target) || !disk.has(target)) continue;
+  for (const {plan, source, target, retained} of queue) {
+    if (retained || !Object.hasOwn(plan.copy.files, target) || !disk.has(target)) continue;
     for (const request of requests(local(target), source, target)) if (baseline.has(key(target, request))) {
       const destination = resolve(view, target, request.specifier, request);
       if (!directoryAdditions.has(destination)) continue;
@@ -179,40 +197,51 @@ export function completeModuleCopies(root, plans, {tree, read, revision, base, b
       withheld.push({path: destination, originPath: addition.source, dependency: request.specifier});
     }
   }
-  const incoming = new Set();
-  for (const item of queue) for (const request of requests(item.adapted ? local(item.target) : blob(item.entry), item.source, item.target)) {
+  const incoming = new Set(), newlyRequired = new Set();
+  for (const item of queue) for (const request of requests(item.retained ? local(item.target) : blob(item.entry), item.source, item.target)) {
     if (baseline.has(key(item.target, request))) continue;
     const {destination} = edge(item.source, item.target, request);
-    if (destination) incoming.add(destination);
+    if (destination) {
+      incoming.add(destination);
+      if (!item.retained) {
+        const before = disk.has(item.target) ? local(item.target) : '';
+        const previous = dependencies(before, item.source);
+        const oldNames = bindings(before, request.types, item.source).get(request.specifier);
+        const names = bindings(blob(item.entry), request.types, item.source).get(request.specifier);
+        if (!previous.some(old => key(item.target, old) === key(item.target, request)) ||
+            [...names ?? []].some(name => !oldNames?.has(name))) newlyRequired.add(destination);
+      }
+    }
   }
   function exportsAt(target, types = false, seen = new Set()) {
     if (seen.has(target)) return new Set();
     seen.add(target); inspect(target);
-    if (!disk.has(target)) return null;
+    if (!view.has(target)) return null;
     if (!types && /\.d\.[cm]?ts$/.test(target)) return new Set();
     if (target.endsWith('.json')) return new Set(['default']);
-    const result = lexicalExports(local(target), specifier => {
-      const next = resolve(disk, target, specifier, {types});
+    const result = lexicalExports(view.read(target), specifier => {
+      const next = resolve(view, target, specifier, {types});
       return next ? exportsAt(next, types, seen) : null;
-    }, types);
+    }, types, target);
     if (result === null) return null;
     const declaration = target.replace(/\.mjs$/, '.d.mts').replace(/\.js$/, '.d.ts');
-    if (types && declaration !== target && disk.has(declaration)) {
+    if (types && declaration !== target && view.has(declaration)) {
       const declared = exportsAt(declaration, true, seen);
       if (declared === null) return null;
       for (const name of declared) result.add(name);
     }
     return result;
   }
+  const missingExports = new Map(), exportChecks = [];
   const seen = new Set();
   for (let i = 0; i < queue.length; i++) {
-    const item = queue[i], {plan, source, target, entry, adapted} = item;
-    if (seen.has(target) || !adapted && !plan.sources.some(([name]) => name === source)) continue;
+    const item = queue[i], {plan, source, target, entry, retained} = item;
+    if (seen.has(target) || !retained && !plan.sources.some(([name]) => name === source)) continue;
     seen.add(target);
-    const bytes = adapted ? local(target) : blob(entry);
-    const before = Object.hasOwn(plan.copy.files, target) && disk.has(target) ? local(target) : '';
-    const imports = bindings(bytes), oldBindings = bindings(before);
-    const typeImports = bindings(bytes, true), oldTypes = bindings(before, true);
+    const bytes = retained ? local(target) : blob(entry);
+    const before = !retained && Object.hasOwn(plan.copy.files, target) && disk.has(target) ? local(target) : '';
+    const imports = bindings(bytes, false, source), oldBindings = bindings(before, false, source);
+    const typeImports = bindings(bytes, true, source), oldTypes = bindings(before, true, source);
     const edges = requests(bytes, source, target).map(request => edge(source, target, request));
     // lock.mjs reads the whole tool dynamically to identify it. Deliver that
     // same file set, including parser notices and modules outside its imports.
@@ -228,7 +257,13 @@ export function completeModuleCopies(root, plans, {tree, read, revision, base, b
     const declaration = source.replace(/\.mjs$/, '.d.mts').replace(/\.cjs$/, '.d.cts');
     if (declaration !== source && tree.has(declaration)) edges.push({dependency: declaration, destination: target.replace(/\.mjs$/, '.d.mts').replace(/\.cjs$/, '.d.cts')});
     const novel = directoryAdditions.has(target) && !required.has(target) && !incoming.has(target);
-    const preserved = request => baseline.has(key(target, request));
+    // An incoming importer can newly require a file which the seed has just
+    // restored and recorded at this target pin. Close that pristine Base file
+    // now; its unresolved siblings are the recovery refresh's deliveries.
+    // Ordinary older copies retain their historical edges. Seed-owned roots
+    // instead close the Base dependencies of their current local bytes.
+    const restored = !retained && plan.copy.revision === revision && newlyRequired.has(target);
+    const preserved = request => !restored && baseline.has(key(target, request));
     let hold;
     for (const edge of edges) {
       const {specifier, dependency, destination, satisfied} = edge;
@@ -249,25 +284,82 @@ export function completeModuleCopies(root, plans, {tree, read, revision, base, b
       if (edge.external || preserved(edge)) continue;
       include(dependency, destination);
       const owner = recorded.get(destination);
-      if (!adapted && !planned.has(destination) && (index.has(destination) || owner?.copy.adapted?.[destination])) {
-        for (const [types, current, previous] of [[false, imports, oldBindings], [true, typeImports, oldTypes]]) {
-          const exported = exportsAt(destination, types);
-          for (const name of current.get(specifier) ?? []) if (exported && !exported.has(name) && !previous.get(specifier)?.has(name)) {
-            const comparison = destination + '.base';
-            const extract = baseArchive ? `cp ${quote(path.join(baseArchive, dependency))} ${quote(comparison)}` :
-              `git -C ${quote(base)} show ${quote(revision + ':' + dependency)} > ${quote(comparison)}`;
-            throw Error([
-              `Cannot refresh module ${target}: ${destination} does not export ${name} required by Base ${dependency} at ${revision}. No files were refreshed.`,
-              'Save the incoming dependency for comparison:', extract,
-              `Merge the required exports from ${quote(comparison)} into ${quote(destination)}, preserving seed edits.`,
-              ...(owner?.copy.adapted?.[destination] ? ['Review the reconciled bytes and mode, then acknowledge this adaptation:', acknowledgementCommand(root, destination, recordPath)] : []),
-              `Remove ${quote(comparison)} after reconciliation, then repeat refresh-base.`,
-            ].join('\n'));
-          }
-        }
+      if (dependency && (retained || !planned.has(destination) && (index.has(destination) || owner?.copy.adapted?.[destination]))) {
+        exportChecks.push({target, destination, dependency, specifier, imports, oldBindings, typeImports, oldTypes,
+          ancestor: owner?.copy.adapted?.[destination] ?? owner?.copy.revision ?? plan?.copy.revision ?? revision});
       }
     }
-    if (!adapted && edges.some(edge => edge.relocation)) relocations.set(target, Buffer.from(relocateDependencies(bytes, edges)));
+    if (!retained && edges.some(edge => edge.relocation)) relocations.set(target, Buffer.from(relocateDependencies(bytes, edges)));
   }
-  return withheld;
+  // Validate against the complete effective graph, including dependencies just
+  // planned through a retained file's re-exports. Unknown exports must not mask
+  // a genuinely absent name merely because those dependencies were missing.
+  for (const {target, destination, dependency, specifier, imports, oldBindings, typeImports, oldTypes, ancestor} of exportChecks) {
+    for (const [types, current, previous] of [[false, imports, oldBindings], [true, typeImports, oldTypes]]) {
+      const exported = exportsAt(destination, types);
+      for (const name of current.get(specifier) ?? []) if (exported && !exported.has(name) && !previous.get(specifier)?.has(name)) {
+        const key = JSON.stringify([target, destination, name, types]);
+        missingExports.set(key, {target, destination, dependency, name, ancestor});
+      }
+    }
+  }
+  const modules = new Map();
+  for (const [target, {source, entry}] of planned) if (/\.(?:[cm]?[jt]s|[jt]sx)$/.test(source)) {
+    const bytes = blob(entry);
+    modules.set(target, {source, bytes, dependencies: requests(bytes, source, target).map(request => edge(source, target, request).destination).filter(Boolean)});
+  }
+  for (const {source, target, retained} of queue) if (retained) {
+    const bytes = local(target);
+    // Only Base imports still used by the retained file participate in package
+    // adoption. Seed-only package choices remain outside refresh's ownership.
+    const baseRequests = tree.has(source) ? dependencies(tree.read(source), source) : [];
+    const packageRequests = dependencies(bytes, source).filter(request => baseRequests.some(incoming => key(target, incoming) === key(target, request)));
+    modules.set(target, {source, bytes, packageRequests,
+      dependencies: requests(bytes, source, target).map(request => edge(source, target, request).destination).filter(Boolean)});
+  }
+  const refusals = [...missingExports.values()].map(({target, destination, dependency, name}) =>
+    `Cannot refresh module ${target}: ${destination} does not export ${name} required by Base ${dependency} at ${revision}.`);
+  let packages;
+  try { packages = checkModulePackages(root, modules, packageRoots, tree); }
+  catch (error) { refusals.push(error.message); }
+  if (missingExports.size) {
+    refusals.push('No files were refreshed. Reconcile each retained dependency in this order:');
+    const retained = new Map([...missingExports.values()].map(item => [item.destination, item]));
+    for (const {destination, dependency, ancestor} of retained.values()) {
+      const comparison = destination + '.base', saved = destination + '.seed', original = destination + '.ancestor';
+      const extract = baseArchive ? `cp ${quote(path.join(baseArchive, dependency))} ${quote(comparison)}` :
+        `git -C ${quote(base)} show ${quote(revision + ':' + dependency)} > ${quote(comparison)}`;
+      const acquisition = baseArchive ? `--base-archive ${quote(baseArchive)}` : `--base ${quote(base)}`;
+      const record = recordPath === 'base-copies.json' ? '' : ` --record ${quote(recordPath)}`;
+      refusals.push(
+        `Save seed edits and the original Base version used as the merge ancestor for ${quote(destination)} (use unused backup paths):`,
+        `cp ${quote(destination)} ${quote(saved)}`,
+        ...(baseArchive ? ['Obtain the original Base version from the recorded pin for the merge ancestor.'] :
+          [`git -C ${quote(base)} show ${quote(ancestor + ':' + dependency)} > ${quote(original)}`]),
+        'Save the incoming dependency for comparison:', extract,
+        'Install and record the incoming Base file before refreshing:',
+        `cp ${quote(comparison)} ${quote(destination)}`,
+        `node ${quote(fileURLToPath(new URL('./cli.mjs', import.meta.url)))} record-base ${quote(destination)} ${quote(dependency)} ${quote(revision)} ${acquisition}${record}`,
+        "Add all named packages at Base's listed versions with the seed's package manager.",
+        `rer refresh-base --ref ${quote(revision)} ${acquisition}${record}`,
+        'After refresh delivers the new Base dependencies, merge the saved seed edits onto the new Base file; resolve any conflicts:',
+        `git merge-file ${quote(destination)} ${quote(original)} ${quote(saved)}`,
+        'If the seed source has no Base ancestor, reconcile its edits explicitly instead of guessing an ancestor.',
+        'Review the reconciled bytes and mode, then acknowledge this adaptation:',
+        acknowledgementCommand(root, destination, recordPath),
+        `rer refresh-base --ref ${quote(revision)} ${acquisition}${record}`,
+        `Remove ${quote(comparison)}, ${quote(original)} and ${quote(saved)} after reconciliation.`,
+      );
+    }
+  }
+  if (refusals.length) throw Error(refusals.join('\n'));
+
+  for (const [target, item] of packages.withheld) {
+    const {plan, source} = planned.get(target);
+    plan.sources = plan.sources.filter(([name]) => name !== source);
+    planned.delete(target); relocations.delete(target); withheld.push(item);
+  }
+  // Closure-created singletons with no retained files need no empty record.
+  for (let i = plans.length - 1; i >= 0; i--) if (!plans[i].sources.length && !Object.keys(plans[i].copy.files).length) plans.splice(i, 1);
+  return {withheld, packageDependencies: packages.packageDependencies};
 }

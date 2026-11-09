@@ -32,10 +32,15 @@ Owner history and undo must include jobs from either authority.
    Unadapted recorded dependencies advance together. If a dependency is marked
    adapted or is unrecorded seed source, refresh preserves it and refuses before
    writing when an incoming module needs an export it lacks. Use the printed
-   comparison command, merge the required exports while preserving seed edits,
-   and remove the comparison file. For a recorded adaptation, run the printed
-   `adapt-base` acknowledgement after the merge, then repeat refresh. Acknowledging
-   the old bytes alone does not resolve a missing export.
+   comparison command and save the seed file plus its original Base merge
+   ancestor. Restore the retained file from the incoming Base copy and
+   `record-base` that file at the pin which imports it. Add all named packages
+   at Base's listed versions with the seed's package manager, then refresh to
+   deliver the new Base dependencies. Only after that refresh, use
+   `git merge-file` to merge the saved seed edits onto the new Base file,
+   resolve conflicts, run `adapt-base` on the reconciled file, and refresh
+   again. Remove the comparison and backup files after reconciliation.
+   Acknowledging the old bytes alone does not resolve a missing export.
    Apply these in new numbered seed migrations, in this order,
    skipping any the seed already applied:
    - the D1 kit schemas, in the order `initializeD1ImportStorage` in

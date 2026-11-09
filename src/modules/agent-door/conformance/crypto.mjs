@@ -26,11 +26,23 @@ export async function accessToken(context, overrides = {}) {
 }
 export const autonomousPolicy = () => ({ schema: 'rer-agent-policy/1', catalogue: CATALOGUE, rules: [{ id: 'all', class: '*', do: 'autonomous' }], spend: { none: true } });
 export const heldPolicy = () => ({ schema: 'rer-agent-policy/1', catalogue: CATALOGUE, rules: [{ id: 'all', class: '*', do: 'approval', approver: ['sponsor'], wait: 'PT1H' }, { id: 'standard', class: 'standard', do: 'review' }], reviewers: ['sponsor'], spend: { none: true } });
+// A revision is immutable evidence. Reuse its signature when a helper caller
+// refreshes that revision, including after rejected intermediate proposals.
+const revisionSignatures = new WeakMap();
 export async function policyEnvelope(context, document, { paused = false, revoked, revision = context.revision + 1, seq = context.seq + 1, ...overrides } = {}) {
  const iat = seconds(context.now);
- const revision_signature = document === null ? null : await signJws(context.signer.privateKey, context.signer.kid, 'rer-agent-policy-revision+jwt', {
+ const claims = {
   business: context.business, revision, document_sha256: createHash('sha256').update(canonical(document)).digest('hex'),
- });
+ };
+ let signatures = revisionSignatures.get(context.signer.privateKey);
+ if (!signatures) revisionSignatures.set(context.signer.privateKey, signatures = new Map());
+ const key = canonical({ kid: context.signer.kid, ...claims });
+ if (document !== null && !signatures.has(key)) signatures.set(key, signJws(context.signer.privateKey, context.signer.kid, 'rer-agent-policy-revision+jwt', claims));
+ const revision_signature = document === null ? null : await signatures.get(key);
  const payload = { v: 1, iss: context.signer.issuer, aud: context.origin, sub: context.signer.installationId, business: context.business, seq, revision, paused, catalogue: CATALOGUE, document, revision_signature, iat, exp: iat + 300, ...(revoked === undefined ? {} : { revoked }), ...overrides };
+ return { payload, policy: await signJws(context.signer.privateKey, context.signer.kid, 'rer-agent-policy+jwt', payload) };
+}
+export async function renewalEnvelope(context, adopted) {
+ const iat = seconds(context.now), payload = { ...adopted, iat, exp: iat + 300 };
  return { payload, policy: await signJws(context.signer.privateKey, context.signer.kid, 'rer-agent-policy+jwt', payload) };
 }

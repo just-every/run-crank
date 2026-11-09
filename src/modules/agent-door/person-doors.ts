@@ -1,3 +1,4 @@
+import { pendingRetirement } from './retired-refs.ts'
 import type { Runtime } from './types.ts'
 import { error, json } from './errors.ts'
 import { businessRole } from './people.ts'
@@ -13,7 +14,11 @@ export async function personDoor(rt: Runtime, request: Request): Promise<Respons
   if (!['GET', 'HEAD'].includes(request.method) && request.headers.get('origin') !== rt.options.origin) return error('origin_refused', 403)
   const path = new URL(request.url).pathname, role = businessRole(rt.options.people, person)
   if (path === '/agents/api/policy') return role === 'owner' ? localPolicy(rt, request) : error('forbidden', 403)
-  if (path === '/agents/api/state') return role && request.method === 'GET' ? json(publicState(rt, await policyState(rt))) : error('forbidden', 403)
+  if (path === '/agents/api/state') {
+    if (!role || request.method !== 'GET') return error('forbidden', 403)
+    const state = await policyState(rt), result = publicState(rt, state)
+    return json({ ...result, policy: { ...result.policy, pending_retirement: await pendingRetirement(rt.options.db, state.document) } })
+  }
   if (path === '/agents/api/pause') {
     if (role !== 'owner') return error('forbidden', 403)
     if (request.method !== 'POST') return error('method_not_allowed', 405)

@@ -6,6 +6,61 @@ Keep the edition's existing interface and authorization decisions authoritative.
 
 A review-disposition call that completes must retain its linked review; a native refusal must audit `refused` with the returned code, open no review, and preserve any bracketing native witness.
 
+## Declare a native company-policy decision
+
+A seed may pass `companyPolicy: { decide }` to `createAgentDoor`. Omit it to keep
+existing behavior. This read-only server hook narrows the existing class-policy
+decision; it supplies no default dispositions and cannot bypass incomplete
+policy, Pause, scopes, native authority, proof, revocation or idempotency.
+HappyToHelp's computed action classes, Lamp AUTO-001's component/source rules,
+and Slate NOTIF-001's person-needed decisions use the same boundary.
+
+```ts
+companyPolicy: {
+  async decide({ tool, args, classes, target, policy }, ctx) {
+    return nativePolicyDecision(tool, args, classes, target, policy, ctx)
+  }
+}
+```
+
+The input contains the tool name, declared action arguments (without the door's
+idempotency/revision fields), server-computed classes/facts, resolved native
+target and the existing class-policy decision. Inputs and the identity context
+are immutable snapshots. Resolve current native rules with the sponsor and
+agent in `ctx`; caller flags and record text cannot supply policy authority.
+The hook must perform no effects. Return exactly one audit-safe answer:
+
+- `{ decision: 'allow', rule, revision }` retains the existing disposition.
+- `{ decision: 'hold', rule, revision, approvers, wait }` requires the existing
+  exact-revision approval flow. `approvers` uses the existing `sponsor`,
+  `role:owner`, `role:editor` or `person:<id>` references; `wait` uses the existing
+  fixed ISO duration range (one hour through thirty days). Existing policy
+  approvers remain required and the shorter wait wins.
+- `{ decision: 'deny', rule, revision }` refuses with `company_policy_denied`.
+
+`rule` and `revision` are nonempty, bounded, non-secret strings identifying the
+native rule and its revision. Unknown or malformed answers refuse with
+`company_policy_invalid`; a thrown hook refuses with
+`company_policy_unavailable`. No hook error text is returned or audited.
+Class policy that is unset or blocked stops the call before this hook.
+
+MCP, integration aliases and embedded calls share this evaluation before
+execution, including completed retries. Held calls return the existing
+`input_required` (or legacy `approval_required`), pending handle and signed-in
+approval URL. Approval execution evaluates again: changed native policy
+answers, facts, targets or summaries refuse `approval_evidence_changed` and
+require a new request. A previous approval cannot satisfy a newly held rule or
+revision. Rejected and expired holds retain the existing typed refusals.
+
+The result's decision and the existing audit row carry `company_policy` with
+the exact validated answer alongside the class-policy revision/rules. Pending
+approval summaries bind that answer into their existing summary hash; saved
+audit evidence retains it for replay comparison. The normal audit endpoint
+checks the combined disposition against both saved decisions. Rule identifiers
+must be redacted for the permitted audit audience; do not return private record
+content or credentials. This hook adds no routes, tables or policy engine and
+makes no claim that an adopting seed has satisfied BASE-AGENT-007.
+
 ## Copy committed runtime source
 
 Choose an immutable full Base commit containing the module. A released or
@@ -44,6 +99,76 @@ with its existing authoring command after staging intentional changes. See the
 [edition authoring guide](../../export/EDITION-AUTHORING.md) for offline refresh,
 adaptations and copy verification.
 
+## Refreshing a copy older than 0.2.96
+
+The tagged schemas in `rer-v0.2.93` and `rer-v0.2.94` are identical.
+`rer-v0.2.95` adds erasure/replay custody (reference migrations `0038` and
+`0039`); `rer-v0.2.96` adds the relay (`0040`). The current source additionally needs policy-reference suppression (`0041`) and relay privacy (`0043`).
+These are the additive upgrades to the current schema:
+
+| Starting Base release | Additive SQL needed for current source |
+| --- | --- |
+| 0.2.93 | The older-schema SQL below, then the relay SQL and retirement SQL below. |
+| 0.2.94 | The same older-schema SQL below, then the relay SQL and retirement SQL below. |
+| 0.2.95 | The relay SQL and retirement SQL below; both columns, the expiry index and replay-alias objects already exist. |
+| 0.2.96 | The retirement SQL below, then the relay privacy SQL below; relay and replay custody already exist. |
+
+Write only the deltas the seed's applied schema lacks. SQLite has no
+`ADD COLUMN IF NOT EXISTS`: check `PRAGMA table_info(agent_door_agents)` and
+`PRAGMA table_info(agent_door_calls)` first (and `sqlite_schema` for indexes,
+tables and triggers). Put the missing deltas in **ONE new numbered migration**
+ahead of the relay DDL in that migration; never edit an applied migration.
+The older-schema SQL is:
+
+<!-- schema-upgrade:0.2.93:begin -->
+```sql
+ALTER TABLE agent_door_agents ADD COLUMN tombstone TEXT;
+ALTER TABLE agent_door_calls ADD COLUMN expires_at INTEGER;
+-- Backfill only legacy completed calls, using their start, never upgrade time.
+UPDATE agent_door_calls SET expires_at=created_at + 30*24*60*60*1000
+WHERE state NOT IN ('running','pending') AND expires_at IS NULL;
+CREATE INDEX IF NOT EXISTS agent_door_calls_expiry ON agent_door_calls(expires_at);
+CREATE TABLE IF NOT EXISTS agent_door_replay_aliases (
+  agent TEXT NOT NULL, alias TEXT NOT NULL, call_id TEXT NOT NULL, tombstone TEXT NOT NULL,
+  PRIMARY KEY(agent,alias)
+);
+CREATE TRIGGER IF NOT EXISTS agent_door_delete_replay_aliases AFTER DELETE ON agent_door_calls
+BEGIN
+  DELETE FROM agent_door_replay_aliases WHERE agent=OLD.agent AND call_id=OLD.decision_id;
+END;
+CREATE INDEX IF NOT EXISTS agent_door_replay_aliases_call ON agent_door_replay_aliases(agent,call_id);
+```
+<!-- schema-upgrade:0.2.93:end -->
+
+The replay-alias objects above are exactly [schema/replay-aliases.sql](schema/replay-aliases.sql).
+For the relay SQL, append the exact contents of
+[`0040_agent_door_relay.sql`](../../default-seed/migrations/core/0040_agent_door_relay.sql):
+the table, two indexes, four triggers and one-time audit backfill. Do not replay
+the seed's existing migrations. Relay DDL alone does not add the older columns:
+current tool admission reads `agent_door_calls.expires_at`, so an older schema
+returns 500 before producing decisions and fails `BASE-AGENT-009.relay.count`.
+Append the retirement SQL below for every starting release in the table. It is
+the policy-reference upgrade from 0.2.96 (reference migration `0041_agent_retired_refs.sql`):
+
+<!-- schema-upgrade:retired-refs:begin -->
+```sql
+CREATE TABLE agent_door_retired_refs (digest TEXT PRIMARY KEY, marker TEXT NOT NULL);
+```
+<!-- schema-upgrade:retired-refs:end -->
+
+For **every** starting release above, append the exact contents of
+[`0043_agent_door_relay_privacy.sql`](../../default-seed/migrations/core/0043_agent_door_relay_privacy.sql)
+after the earlier SQL. For copies from 0.2.97 through 0.2.103 that already have
+retired refs, only this privacy migration is needed. It drops and recreates the
+audit membership triggers so linked executions inherit their decision’s Business,
+including no membership, and removes only provable cross-Business execution
+memberships produced by the old triggers. Audits are preserved. Its comment
+provides a count query before applying. Never edit a shipped migration.
+
+The frozen-schema upgrade test executes these SQL blocks and both relay files,
+comparing all objects against the schema applied fresh. The suppression table
+travels in installation archives; do not add it to portability exclusions.
+
 ## Wire the edition
 
 Use explicit `.ts` extensions in runtime imports so the copied source can also
@@ -59,7 +184,28 @@ name, specialist, database, tool registry and people adapter.
 Import `createAgentDoor` from the copied `index.ts` production entry, not an
 internal implementation file or the test-only conformance signer. Route its
 `handle` before ordinary app authentication redirects so MCP credentials and
-signed policy adoption reach their own checks. Retain the edition's native
+signed policy adoption reach their own checks. Also route
+`POST /api/rer/agent-decisions` to the same `handle` before app authentication.
+The relay migration, route and erasure-map declaration must land in the same
+seed commit. For an older applied schema, first follow
+[Refreshing a copy older than 0.2.96](#refreshing-a-copy-older-than-0296).
+Copy the relay DDL from `schema/agent-door.sql` into a new numbered migration and backfill existing MCP audits with consent to the current
+envelope Business, as in `default-seed/migrations/core/0040_agent_door_relay.sql`.
+Do not alter an applied migration. The Business drops pre-join history; this
+backfill cannot reconstruct older pairing authority. Declare
+`agent_door_relay(sequence,decision_id,business)` as `unrelated` in each native
+artifact map: it holds only decision ids and the installation Business id.
+Record an external custody store for the Business: per relayed decision it
+holds only the 17-key public projection, including raw resource URIs for records
+the decision touched, readable only by the owner of the Business. Record erasure
+purges the live projection through a tombstone pull; unpairing, re-pairing or
+stopping the seed purges that installation's Business copy. Apply the remaining
+authority and unreachable purge rules in the
+[relay wire](README.md#business-decision-relay-w-r1w-r5). The seed keeps no
+additional copy beyond its own audit and the bounded relay feed (one row per
+decision).
+`BASE-AGENT-009.relay` runs after the audit phase against the hosted build and
+refuses a missing route or one accepting a foreign signature. Retain the edition's native
 person session and Origin and CSRF controls. The [route and capacity reference](README.md)
 lists the owned paths and defaults; these are request capacities, not company
 policy limits.
@@ -75,7 +221,12 @@ email never selects a local account. Implement `people.person(id)` to re-read
 native ids for approval execution, Undo, embedded agents and subscriptions.
 Expose `businessMember(person)` from the same mapping for paired policy refs:
 Business owner is owner, Business team admin is editor, member has no policy
-role. The native role may differ. Local credentials return `sponsor: { id }`,
+role. The native role may differ. A custom adapter must expose `businessStopped()` according to the
+[Business stop contract](README.md#wire-and-authority): the shared runtime uses that one
+positive-false rule for token admission, Business references, held calls and relay pulls.
+Adopt the runtime update without a migration; `operatorAuthPeople` already supplies the reader.
+Keep `sponsor()` resolving subjects after a stop so signed policy naming Business people is still adopted.
+Local credentials return `sponsor: { id }`,
 read by `people.person`, rather than an address. Sponsorship is resolved from
 current native people on each request; an unknown or inactive sponsor cannot
 act. A saved token never replaces this account check. Keep native permissions,
@@ -88,6 +239,10 @@ installation ID, application origin (`appOrigin`) and public key ring. Keep that
 origin aligned with the edition's canonical origin. Do not create another key
 ring for agent access. Business credentials use the existing ring; local
 credentials come only from the edition's explicit `localCredentials` adapter.
+Build that trust from the `RER_OWNER_CLAIM_*` bindings and pass `null` when they
+are absent: `rer verify` ends with `BASE-AGENT-004.7`, re-serving the same
+installation without those bindings and `RER_BUSINESS_TRUST`, and the door must
+then refuse Business tokens while owner sessions and native clients keep working.
 With `trust: null`, an independently operated installation can use that local
 adapter under its owner's configuration. A recognizable Business credential
 that fails validation is refused; it cannot become a local credential.
@@ -134,6 +289,10 @@ A narrowing-only tool still declares `authority`, returning `widens: false`.
 A contradictory widening answer refuses as `narrowing_contract_violation`.
 Unlike ordinary tools' ignored extras, undeclared narrowing-tool arguments
 refuse as `invalid_arguments`, including attempts to replay a prior key.
+When a journey step's `inject` adds an undeclared narrowing argument, the
+injected replay must return `invalid_arguments` and leave the native witness
+unchanged. An injection containing only declared arguments retains the success
+expectation, as does an ordinary valid replay; neither repeats the native effect.
 Every such tool needs a normal journey step and a `narrowings` entry:
 
 ```json
@@ -154,6 +313,22 @@ The journey prepares a nonempty grant set through native tools, then proves a
 strict subset after the action and refuses a smuggled grant-adding argument
 without an effect. Output point names identify every narrowing tool. No tool
 is exempted from execution, policy, audit, schema or journey coverage.
+
+## Keep worker tools behind invoke
+
+Set `exposure: 'invoke'` on a tool definition to admit it only through this
+seed's `door.invoke`. Omitting the field preserves MCP discovery and calls;
+other values are rejected. Read-only tools may use the flag too. Invoke-only
+tools are hidden from MCP tool listings, tool-list subscription changes and OAuth
+`scopes_supported` (a scope shared with an exposed tool remains advertised).
+MCP calls receive the same `tool_not_found` response and audit treatment as an
+unknown name, without running the seed callback. Keep these tools out of the
+public agent-surface declaration.
+
+`invoke` still applies full admission: current person, agent and consent,
+scopes, Pause, policy, native continuation binding, idempotency and embedded
+audit. Their classes still contribute to policy questions and usage; saved
+approval and review flows can still resolve them.
 
 ## Hand off native human proof
 
@@ -335,9 +510,7 @@ The shared `runAgentDoorConformance` journey can take an optional
 existing consent checks remain unchanged. Base's public-door fixture additionally
 proves native queue persistence, one-effect replay, execution-time revocation,
 immutable identity, scope narrowing and named approver continuity. These module
-proofs do not establish a seed's integrated queue behavior. Client-data custody
-and erasure remain outside this adoption proof until retained fields and fences
-are agreed. This change does not promote those claims or supply seed-side
+proofs do not establish a seed's integrated queue behavior. Client-data custody and erasure require the native map and transaction integration described below, plus the adopting seed's own public-door proof. The ordinary conformance journey alone does not prove that integration or supply seed-side
 `BASE-AGENT-010` contract citations.
 
 The CLI connects this boundary when `agent-surface.json` declares
@@ -355,6 +528,40 @@ declared batch, retry and dead-letter settings. Driver failures fail conformance
 with a redacted diagnostic. A missing declaration does not claim queue coverage.
 
 ## Keep runtime and CLI evidence separate
+
+BASE-AGENT-003 acceptance 4 requires a record-writing fixture when the door
+offers resources and has mutating tools. Add `resource` to a create or update
+journey step, naming a declared native template and a nonempty JSON state subset:
+
+```json
+{
+  "id": "create",
+  "tool": "base.people.create",
+  "args": { "name": "Synthetic Base 1", "email": "synthetic-base-1@example.com" },
+  "expect": [{ "class": "standard" }],
+  "resource": {
+    "uriTemplate": "base://person/{id}",
+    "state": {
+      "id": { "$from": "create", "pointer": "/id" },
+      "name": "Synthetic Base 1",
+      "email": "synthetic-base-1@example.com"
+    }
+  }
+}
+```
+
+Use native written fields as well as the returned identifier, with more fixtures
+for other record writes. State references may use the current step's output or
+earlier outputs. `BASE-AGENT-003.4.fixture` fails an omitted fixture;
+`BASE-AGENT-003.4.links.<phase>.<step>` requires a returned link matching its
+template, scheme and authority (HTTP resources must use the installation origin).
+`BASE-AGENT-003.4.state.<phase>.<step>` reads that link through this door using
+the step's client and compares JSON content bearing the same URI with the expected
+state subset. Missing, stale, malformed and unrelated state fails. The existing
+resource policy checks still run for every returned link. Approval-gated reads
+remain withheld in the held phase; the autonomous phase proves their state.
+Deletion and tools without record effects need no invented resource fixture.
+These points prove the declared fixtures, not every possible record or write.
 
 The copied module is application runtime source pinned by `base-copies.json`.
 The edition's pinned `rer` CLI remains its command and authoring dependency.
@@ -379,8 +586,7 @@ of the shared policy source is also separate from copying it into an edition.
 Validate the integrated edition through its public doors: current sponsor and
 scope checks, all exposed tool effects, policy and review decisions, migrations,
 resources, audit, subscriptions and retained outcomes. Keep successful and
-failed outcome evidence for at least 24 hours. This module currently retains it
-indefinitely; adoption must not introduce earlier cleanup. Report the exact
+failed outcome evidence for at least 24 hours. Verified native subject erasure overrides this floor for personal payload only; the value-free existence and outcome remain. The fixed `REPLAY_WINDOW_MS` in `erasure.ts` bounds replay to 30 days after completion; erasure does not extend an existing horizon. Report the exact
 edition behavior verified, separately from Base module or CLI results.
 
 ## Verification owner lifecycle
@@ -401,7 +607,6 @@ Seeds with a native initializer or a different owner binding declare this in
     "owner": {
       "email": "synthetic-owner@example.com",
       "emailField": "SETUP_OPERATOR_EMAIL",
-      "tokenField": "H2H_SETUP_TOKEN",
       "bindings": {
         "RER_MANAGEMENT_ORIGIN": "issuer",
         "RER_INSTALLATION_ID": "installationId"
@@ -412,6 +617,9 @@ Seeds with a native initializer or a different owner binding declare this in
 }
 ```
 
+For a native setup-token binding, set `verification.owner.tokenField` to its
+environment binding name, for example `H2H_SETUP_TOKEN`.
+
 All keys are optional. Email defaults to `synthetic-base-1@example.com`;
 
 All four keys are optional. Email defaults to `synthetic-base-1@example.com`;
@@ -421,7 +629,7 @@ a contained seed module default-exporting an async function receiving
 `{mode, path, token}` with the signed credential when signed mode is declared;
 `token` is the private per-run setup token. Use `request(absoluteURL, init)` to
 drive the seed's real project/password, owner and member-linking lifecycle.
-It permits only the fresh hosted origin. Return the native final 303 `Response`
+It permits the fresh hosted origin and explicitly declared public hosts below. Return the native final 303 `Response`
 with its session cookies; then the runner posts the signed Business settings
 document and runs the journey. Never create an owner with direct SQL, substitute
 an auth adapter, or add a verification-only production route. Initializer code
@@ -530,6 +738,8 @@ so promoting a seed admin does not confer Business approval authority.
 Business can revoke agents or consents in the signed envelope's optional
 `revoked` lists. Tokens require `consent`; affected pending approvals expire and
 execution rechecks revocation. Retain both these lists and historical attribution.
+The verifier renews before requests when less than 60 seconds remain, with the same 300-second lifetime.
+An equal-sequence refresh may change only `iat`/`exp`; all authority and the exact revision signature stay unchanged.
 
 ## Event visibility and native revisions
 
@@ -557,9 +767,15 @@ still own atomic revision checks at their effect boundary.
 
 ## MCP version compatibility
 
-The negotiated versions remain `2026-07-28` and `2025-11-25`. Both initialize
-and list the same registry; unsupported negotiation returns
-`UnsupportedProtocolVersion` (-32022). March `2025-03-26` is deliberately not
+The negotiated versions are `2026-07-28`, `2025-11-25` and `2025-06-18`. All
+initialize and list the same registry; unsupported negotiation returns
+`UnsupportedProtocolVersion` (-32022), with a plain-language message and the
+supported versions in error data. Authenticate initialize and later calls with
+a bearer token; a 401 resource-metadata challenge precedes protocol validation.
+Initialize accepts its body version without transport headers; subsequent
+stateless calls without the version header use `2025-06-18`. June and November
+use the legacy `approval_required` result rather than modern `input_required`.
+March `2025-03-26` is deliberately not
 advertised: its Streamable HTTP transport permits batched requests, which this
 door's single-message parser rejects, and its pre-June schema lacks structured
 results, output schemas, resource links and elicitation. March also predates the
@@ -580,6 +796,12 @@ submission and five minutes of age. `after` is an optional millisecond timestamp
 Capture exists only in verifier memory and is cleared when the run closes.
 There is no HTTP outbox, application binding or production reader.
 
+Each additional `verification.sponsors` initializer receives the same `mail.read`
+interface and limits, scoped only to its own declared synthetic email. Capture
+starts before Business roster delivery so the initializer can consume its native
+invitation. It cannot select or read the owner's or another principal's mailbox.
+The owner and journey readers retain their owner-mailbox scope.
+
 Drive the native email request through `request`, read the captured code or
 link, and submit it to the seed's real confirmation handler. Preserve native
 one-use, expiry, session and step-up checks. Never print the message or proof.
@@ -596,6 +818,23 @@ credential is passed to the module. The standard phases still run, and a failed
 native journey fails verification. Errors are redacted to a fixed diagnostic.
 Keep these modules in test tooling outside the production dependency graph.
 
+For a seed with another public hostname, declare its deployment variable in
+`agent-surface.json`, for example:
+
+```json
+{"verification":{"publicHosts":["STATUS_HOST"]}}
+```
+
+The deployment declaration selected by the command adapter must contain that
+variable in `vars`, for example `"STATUS_HOST":"status.rer-hosted-check.invalid"`.
+Each value must be a canonical lowercase hostname without a scheme, port, path
+or wildcard. Duplicate variable names and missing or malformed values refuse
+before installation. Hosts are admitted only by this explicit list; other
+deployment variables do not grant admission. With no list, only the original
+host is admitted. The supplied `request` keeps the admitted HTTPS URL and Host
+when forwarding to the same disposable production Worker. It never contacts
+the public network or grants the host access to the outbound provider adapter.
+
 The same journey module may export async `beforeStep` and `afterStep` functions.
 They run around each completed mandatory journey step in both `autonomous` and
 `held` phases, and around autonomous preparation in `blocked:<class>` phases.
@@ -609,33 +848,110 @@ Hooks cannot skip mandatory steps or alter the runner's arguments and outputs.
 Failed hooks fail the current phase with the same redacted diagnostic. A step
 that fails or yields no structured output does not receive `afterStep`.
 
-## Disposable history context
+## Disposable native preparation
 
-Phase preparation and native `beforeStep`/`afterStep` hooks receive the
-same `database(binding)` state reader as the owner initializer, plus `now`
-(the current verifier time in Unix milliseconds). For example:
+Phase fixtures and native `beforeStep`/`afterStep` hooks receive
+`database(binding)`, `now` (verifier Unix milliseconds),
+`scheduled({scheduledTime})`, and `queues.hold()`/`queues.release()`.
+The database supports SELECT and single native-table UPDATE, INSERT INTO and
+DELETE FROM statements through `prepare(sql).bind(...).run()/all()/first()`.
+Create real records through the app's doors; use writes only to age their
+native history. For example, after obtaining `db` and a real delivery ID:
 
 ```js
-export default async function ({ database, now }) {
- const db = await database('DB');
- const prior = await db.prepare('SELECT id FROM native_records WHERE created_at < ?')
-  .bind(now - 86_400_000).first();
- return { values: { prior } };
-}
+await db.prepare('UPDATE native_deliveries SET completed_at=? WHERE id=?').bind(now - 7_200_000, deliveryId).run();
+await scheduled({ scheduledTime: now });
 ```
 
-This context exists only in disposable conformance tooling; `rer dev` and
-`rer demo` do not receive it. Preparation runs afresh for each policy phase.
-Database refusals fail that phase with
-`agent_fixtures_database_unavailable`, without logging values, records or SQL.
-The reader remains SELECT-only, including for every `agent_door_*` table.
+`scheduled` runs the app Worker's own scheduled handler and waits for its
+work, without overriding its runtime clock. A queue hold delays entry into
+the app's real queue handler; release it in `afterStep` after native approval
+and the tested dispatch. Phase preparation releases any preceding hold;
+installation disposal also releases waiting deliveries. This allows a due
+approved step without rewriting approved content or approval evidence.
 
-Backdated writes are pending: `cli/hosted-output.mjs` currently rejects all
-non-SELECT statements. Enabling native history requires a separate, explicit
-conformance-only write capability at that boundary, with protection against
-direct and trigger-mediated writes to agent-door tables. Native HTTP calls must
-retain their genuine protocol receipts. A history hook must not change the
-runtime clock.
+To exercise a native failed-producer path, call `await queues.fail('JOBS')` before
+dispatch, then `await queues.restore('JOBS')` to clear it. Both `send` and
+`sendBatch` reject before any message reaches the real queue. The name must
+be a producer binding declared in the built Wrangler configuration; undeclared
+bindings are refused, and other bindings keep working. `await queues.restore()`
+clears all producer faults. Phase fixture preparation also clears previous
+faults. Consumer `hold()`/`release()` remain independent: a hold delays
+consumption while normal producer sends still succeed. Fault controls exist
+only in this disposable harness and never modify the production build.
+
+Every write uses a disposable D1 transaction guarded against INSERT, UPDATE
+and DELETE on **all** `agent_door_*` tables, including native triggers and
+cascades. Schema, transaction and multiple statements are refused. Refusals
+fail the phase with `agent_fixtures_database_unavailable`; values, records
+and SQL are never included in diagnostics. Each policy phase prepares fresh
+values. These powers exist only in conformance tooling; the owner initializer
+retains its SELECT-only handle, and production, `rer dev` and `rer demo` do
+not receive them. `timedLifecycle` and `queuedLifecycle` remain **unscoped**
+capability names; this preparation boundary does not add lifecycle coverage.
+
+## Isolated declared native history
+
+A seed that needs pre-service history may separately declare a test-only
+`verification.history` module. It runs just before the named mandatory journey
+steps, under both `autonomous` and `held`, before native hooks and effect witnesses:
+
+```json
+{"verification":{"history":{
+  "module":"tests/history.mjs",
+  "steps":["learning"],
+  "statements":{"observation":{
+    "binding":"DB",
+    "sql":"INSERT INTO native_history(id,observed_at,value) VALUES (?,?,?)"
+  }}
+}}}
+```
+
+The Worker-compatible module default-exports `{async fetch(request) {...}}`.
+Its JSON request contains detached `{phase,step,args,outputs,now}`; it receives
+no cookies, credentials, database client or application bindings. For example:
+
+```js
+export default { async fetch(request) {
+ const { phase, now } = await request.json();
+ return Response.json([{statement:'observation',
+  values:[phase, now - 7 * 86_400_000, 12]}]);
+} };
+```
+
+Use the seed's native calculation code to construct genuine dated source rows,
+including the native forecast's pre-service timestamps, inputs and digest.
+Do not invent protocol receipts or successful proposal results. Declare steps
+before their history-dependent reads so the normal native digest, proposal,
+authority, policy and audit paths still run. The verifier never changes time.
+The seed's regular phase/step hooks may use the native person door to decide a
+previous round's open proposal; history tooling has no HTTP/person authority.
+
+Only `checkAgentDoor` (used by `rer verify` and focused conformance) starts this
+module. Like the network edge it runs in isolated workerd: contained `.mjs`/`.js`
+relative helpers, no Node imports, filesystem, application bindings or external
+network. The entry must live under `tests/`. Production commands (`build`, `dev`,
+`preview`, `deploy`) and conformance refuse runtime imports of its test modules
+from production source, including literal re-exports, TS path aliases, symlinks and literal Worker URL dependencies.
+Keep computed imports and custom loaders out of the production dependency graph.
+Shared native calculation helpers may still be used by production.
+
+Output is an array of `{statement,values}`, at most 1,000 rows / 2 MiB per call.
+Statements are named in the declaration, never supplied by module output. The
+only allowed SQL is `INSERT INTO table(columns) VALUES (...)`, with positional
+`?` parameters or fixed simple string/integer literals. No UPDATE, DELETE,
+upsert, query, expression, schema qualifier, comment or DDL is accepted. The
+verifier applies them only to declared bindings in its fresh, nonpersistent
+Miniflare database; no provider or existing installation database is opened.
+`agent_door_*`, `oa_*` and SQLite tables, views, virtual tables and every table
+with a trigger are refused, including triggers that could indirectly forge
+agent-door evidence. Rows are batched per database. Keep declarations narrow to
+native history, never account, session, policy, approval, audit or receipt state.
+Invalid declarations, output and writes fail with `agent_history_invalid` and
+redact SQL, rows and values. Owner initialization retains its SELECT-only `database(binding)` handle.
+Both preparation APIs use the same guarded disposable host writer; the isolated
+history declaration retains the stricter insert-only, trigger-free rules above.
+No declaration means no fixture Worker, writes or extra conformance points.
 
 ## Native clients and fresh phase fixtures
 
@@ -645,8 +961,8 @@ consumed by a previous policy round. Its default async function receives
 `{phase, request, origin, email, cookie, mail, fixtures, tool}`. The request
 function is restricted to the disposable installation; use the native owner
 session to issue clients, then their real credentials to create native records
-and retained operation receipts. No signer, writable database or production
-fixture route is supplied.
+and retained operation receipts. No signer or production fixture route is supplied; native writes use the
+guarded disposable preparation boundary above.
 
 Return `{values, clients, sponsors}` (each member is optional). `values` is an object of named phase-local JSON
 values. `clients` maps names to `{token, clientId, agent:{id,name,specialist}}`
@@ -838,7 +1154,7 @@ unique stable `label` values and distinct canonical emails:
 These keys live under `verification`. The first principal inherits `owner` and
 runs all existing phases. Each later principal requires its own contained
 initializer and receives `{label,email,sub,displayName,claim,owner,request,
-origin,database,returnTo}`. Its fresh signed claim uses the same disposable
+origin,database,returnTo,mail,fixtures}`. Its fresh signed claim uses the same disposable
 installation ring; `owner` carries the first principal's native session for
 normal invitations. A signed Business settings roster binds each subject with
 its declared `admin` or `member` role (default `member`). Complete the seed's
@@ -860,9 +1176,10 @@ correctly. An omitted list or one sponsor runs no extra phase or points.
 
 ## Provision verification webhook secrets
 
-A seed that creates its own random installation HMAC keys can declare
-`verification.network.secretSource` as the path `tests/read-webhook-secrets.mjs`
-alongside its existing network module and origins. The contained test-only module
+A seed that creates its own random installation HMAC keys can set the
+`verification.network.secretSource` field to the path of a test-only module
+(for example `tests/read-webhook-secrets.mjs`) alongside its existing network
+module and origins. The contained test-only module
 exports `async function ({database})`, reads the fresh installation's own state
 and returns a nonempty map of uppercase binding names to string values. The
 isolated receiver receives that map as `env.secrets` in its `fetch(request,env)`.
@@ -966,7 +1283,7 @@ that person's authority.
 The door retains idempotent outcomes, pending approval arguments, review
 summaries, trace text, audit and events. Native client erasure must account for
 these stores; a native record deletion alone cannot remove retained content or
-prevent replay. No generic client-scoped erasure adapter is supplied yet.
+prevent replay. Use the native subject map and erasure transaction adapter below; each seed still owns its subject selection, native holds and public-door proof.
 Keep a native custody exception closed when these stores contain client data.
 An adoption must establish the native mapping from retained artifacts to
 clients, the permitted redaction of retained decision evidence, and the atomic
@@ -1039,8 +1356,13 @@ honestly refused execution does not satisfy its journey's completion or receipt
 checks. Native continuations are checked separately from ordered harness calls:
 an `embedded` row must carry a nonempty `continuation_item_id` and the
 `operation_id` of an earlier harness row with the same agent, sponsor, consent
-and client. It must retain a recorded policy decision, matching rules, a `done`
-or coded `refused` outcome, and zero `differs_from_policy`. Other extra rows
+and client. It must retain a recorded policy decision, matching rules, a `done`,
+linked `replayed` or coded `refused` outcome, and zero `differs_from_policy`.
+A completed replay must link an earlier completed original with the same agent,
+sponsor, consent, client, operation, tool, native item, public key, classes/facts
+and target. Its current policy is checked independently; it records no new
+resource-effect list or count. Erased evidence still requires the verifier's
+pre-erasure snapshot; a tombstone alone cannot establish a replay link. Other extra rows
 still fail the audit count; a continuation marker alone cannot hide one.
 Harness rows match their recorded decision identities in native order, so an
 unexpected row remains a distinct failure without shifting later comparisons.
@@ -1100,6 +1422,12 @@ names every missing or stale shared clause, and checks the generated documents
 when all clauses are current. `--write` inserts missing clauses in
 `### Agent surface (Base-delivered)` under Target clauses, before the seed's
 last `### Agent surface` area, and updates existing shared definitions in place.
+Writing requires a `## Shared duties (Base)` table with a `Base duty` column.
+Duties listed in that column are inherited and skipped, so listing all thirteen
+leaves the contract byte-identical. An unlisted duty is still synchronized as a
+clause. A missing table refuses before any files or generated views are written.
+The read-only `--check` continues to inspect clause definitions, including for
+duties listed in the table.
 It preserves all other contract bytes except the generator-owned summary rows.
 Existing shared Status, Evidence and Gap cells stay verbatim; canonical title
 updates change only the Title cell. New clauses have status `missing`, with a
@@ -1219,3 +1547,136 @@ carry CORE security. A seed-native journey that mixes these duties with a timed
 or second-host scenario must be separated before that family can be scoped.
 Keep the corresponding seed contract clauses partial until independently proved;
 a subset declaration never promotes contract statuses.
+
+## Native subject erasure custody
+
+Verified native erasure wins over personal payload retention. Reuse the seed's
+BASE-DATA-003 operation, authorization, legal holds, transaction and restore
+checkpoint. The agent module creates no erasure journal or second subject lock.
+Non-person agent identities are not data subjects.
+
+Apply `schema/replay-aliases.sql` in a new numbered migration, add nullable
+`expires_at INTEGER` and its index to `agent_door_calls`, and add nullable
+`tombstone TEXT` to `agent_door_agents` (the fresh schema has that column).
+Never alter an applied migration. Adopt the matching portability runtime:
+`agent_door_replay_aliases` is mandatory installation bookkeeping, excluded even
+when an archive policy explicitly includes it. Seeds with their own archive
+inventory must classify it as installation-private and reject imported alias
+rows; never copy aliases or the installation secret into exports.
+
+Declare an `AgentArtifactMap` in product source. Every installed `agent_door_*`
+table must appear once, with its complete `columns` inventory and either a bound
+`match: {sql, params}` for this subject or an explicit `unrelated` reason.
+`params` names properties of the supplied native `subject` object.
+`checkAgentArtifacts(db, map)` is the adoption check: an undeclared table,
+missing table or unaccounted column refuses adoption and erasure. Run it in the
+seed's adoption/upgrade checks. SQL comes only from trusted product source.
+
+```ts
+const map: AgentArtifactMap = { artifacts: [
+  // Complete every other agent table too; see the reference's exact declaration.
+  { table: 'agent_door_calls',
+    columns: ['agent','key','digest','decision_id','created_at','state','outcome','expires_at'],
+    match: { sql: "decision_id IN (SELECT id FROM agent_door_audit WHERE json_extract(row,'$.resource.id')=?)",
+      params: ['id'] } },
+] }
+```
+
+`default-seed/src/agent-door/erasure.ts` supplies the complete reference map.
+It declares personal custody in calls (`key`, `digest`, `outcome`), approvals
+(`saved`, `approvals`, `result`), audit (`row`, `evidence`), reviews (`saved`,
+`marked_by`), events (`uri`, `event`) and usage's open text facts in `classes`.
+Usage retains numeric measures, currency, counterparty/direction categories and
+non-personal agent scope dimensions so erasure does not reset policy allowances.
+A native erasure notification keeps its event type and time without reintroducing
+the subject identifier after the transactional hook.
+Native subject IDs, exact addresses and the imported `sourceUserId` select their
+linked decision, approval, review and event rows. Do not select by a common
+name alone. Resolve native target IDs before admitting pending execution,
+including tools that return only a child row ID.
+
+**Operator subjects.** Select the operator's own rows by native id and exact
+contacts, never by a policy reference or Business id: those appear in every
+decision's policy evidence. Boundary-checked mentions must skip `person:`
+references. Map sponsor identity columns separately, and declare
+`agent_door_state` with `retire: { refs: 'policyRefs' }`, supplying
+`subject.policyRefs = JSON.stringify(await operatorPolicyRefs(db, operatorId))`.
+Import `operatorPolicyRefs` from the module's `index.ts`; it returns native and
+mapped Business references, excluding the owner's Business identity. Owner
+erasure is outside this recipe. Put `agentErasureStatements` inside the same
+native erasure batch, including its portability checkpoint even for retirement
+alone. Retirement replaces exact references in unsigned local policy and stored
+copies with `person:erased:<erasure_id>`, which matches nobody. Required approvals
+stay pending until expiry; retirement never drops an approver or changes the
+local revision. Later writes apply the same suppression.
+
+Report two retained items under BASE-DATA-006: the verbatim signed envelope,
+which the seed cannot edit or re-sign, until the Business delivers a policy
+without the reference; and the value-free, domain-separated SHA-256 suppression
+digest and erasure marker, retained to honour erasure across later delivery and
+archive restore. Never store a raw retired reference outside
+`agent_door_state.envelope`. Equal-sequence refreshes and later revisions can
+still name the retired person without darkening the door. The state field
+`policy.pending_retirement` counts distinct retired approver/reviewer references;
+the Agents page links to Business policy when paired, or the local editor.
+The count clears when policy no longer names the reference or marker. In local
+policy the marker remains until the owner chooses a replacement.
+
+Append `await agentErasureStatements({db,map,subject,secret,tombstone,checkpoint})`
+inside the existing erasure transaction. `tombstone` is
+`{erasure_id: nativeOperation.id, at: nativeOperation.requestedAt}`.
+`secret` is the installation's existing SESSION_SECRET-class private setting,
+outside the data store; supply the same setting to
+`createAgentDoor({erasure:{secret,fenced}, ...})`. Preserve its lookup lifecycle
+for the replay associations it protects. No secret store is added.
+`checkpoint()` returns the existing native portability redaction-checkpoint SQL.
+The outer erasure already invalidates transfers; include its normal invalidation
+exactly once. Selection and row snapshots are checked atomically before redaction
+or alias publication. A raced selection refuses the batch and requires a fresh
+native erasure step.
+
+The existing erasure `beforeStatements` hook now receives `operation: {id,at}`
+in both bounded execution and `nativeStatements`. This is the same native
+operation. Keep native holds before opening it. Selected rows are redacted in
+place. Arguments, results, subject IDs, names, contact details, free text, traces
+and confirming payload digests, including approval summary digests, are removed.
+What remains: row ID/sequence, pseudonymous agent ID, existing role/organisation
+IDs, tool/class enums, outcome/error/approval enums, approver roles, existing
+timestamps and `{erasure_id,at}`. Empty structural fields support existing readers.
+Audit integrity is its existing sequence and tombstone; no hash chain is added.
+
+The personal replay key is replaced by an opaque key derived from the call's
+decision ID. For replay custody, the retention exception is an installation-private
+HMAC-SHA-256 alias of the legacy key, scoped to its agent, under that existing
+private setting. `REPLAY_WINDOW_MS` in `erasure.ts` fixes one replay window of
+30 days after call completion, with no knob or per-seed override. `expires_at`
+is set once at completion; preserve any existing call replay/retention horizon.
+Erasure never extends it. Incomplete calls complete as tombstones at erasure time.
+For legacy completed calls without a completion time, backfill from `created_at`
+(as in reference migration `0039_agent_replay_window.sql`) without extending
+retention at upgrade. Install the alias-delete trigger from the schema.
+`expireReplayCalls(rt)` purges expired calls on door admission; adopters also
+invoke it from their native scheduled cleanup for idle installations. The trigger
+deletes each call's aliases in the same transaction, including native cleanup.
+At the horizon a matching alias ceases to apply. An old key is a NEW request
+under current authorization, never a re-execution of the erased call or recovery
+of its value. In-window replay returns only `subject_erased` and the tombstone,
+never executes and never echoes payload. Current sponsor, scope, revocation and
+Pause admission still apply. Aliases are never exported/restored. The existing
+checkpoint refuses older archives that could resurrect original keys or payload.
+
+`erasure.fenced(name,args,ctx)` reads the existing native subject/installation
+fence and refuses concurrent capture with HTTP 409
+`subject_erasure_in_progress`. Enforce that fence in every native effect
+transaction too. Cancel/hold pending work and approvals there. The reference uses
+its pending request/operation and numbered native note/file write triggers.
+Late audit, approval/review and event completion cannot overwrite a tombstone.
+After commit, native missing-record rules supply no erased payload.
+
+Retire deprecated `agent_retained_evidence_requires_review` functions, call sites
+and triggers in a new seed migration once custody is integrated; do not disable
+them with flags. Preserve independent legal/regulator holds, identity protections
+and restore checks. Prove each subject type through its public erasure/restore
+doors, scan every mapped column, replay the old key at now, 24 hours plus 1 ms
+and the replay horizon plus 1 ms (a new request), and compare a peer's records byte for byte except references retired to the erasure's marker. Generic module tests
+alone do not qualify an adopting seed.

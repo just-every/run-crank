@@ -19,21 +19,23 @@ test('G1 retained replay and subscriptions recheck native visibility for actor a
   const reader = response.body.getReader()
   try {
    assert.match(new TextDecoder().decode((await reader.read()).value), /acknowledged/)
+   const reads = async () => (await r.db.prepare("SELECT COUNT(*) AS n FROM test_contexts WHERE kind='read'").first()).n
    await r.db.prepare("UPDATE test_records SET exposure='hidden'").run()
+   const before = await reads()
    await r.person('/__emit', {})
+   // Wait for actual delivery processing: the subscription's own native read
+   // must land before the replay count starts, or it would be counted as replay.
+   // A hidden notification would satisfy pending first.
+   for (let tries = 0; await reads() === before; tries++) {
+    assert.ok(tries < 200, 'subscription must invoke the native reader')
+    await new Promise(resolve => setTimeout(resolve, 50))
+   }
    await r.db.prepare("DELETE FROM test_contexts WHERE kind='read'").run()
    const replay = (await r.tool('events.list', { after: start })).result.structuredContent
    assert.deepEqual(replay, { events: [], cursor: start })
-   assert.equal((await r.db.prepare("SELECT COUNT(*) AS n FROM test_contexts WHERE kind='read'").first()).n, 2)
+   assert.equal(await reads(), 2)
    const pending = reader.read()
-   // Wait for actual delivery processing, then close at the native stream's
-   // lifetime boundary. A hidden notification would satisfy pending first.
-   for (let tries = 0; ; tries++) {
-    const n = (await r.db.prepare("SELECT COUNT(*) AS n FROM test_contexts WHERE kind='read'").first()).n
-    if (n > 2) break
-    assert.ok(tries < 50, 'subscription must invoke the native reader')
-    await new Promise(resolve => setTimeout(resolve, 50))
-   }
+   // Close at the native stream's lifetime boundary.
    await r.setNow(r.c.now + 120001)
    const final = new TextDecoder().decode((await pending).value)
    assert.doesNotMatch(final, /notifications\/resources\/updated/)

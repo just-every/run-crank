@@ -16,7 +16,7 @@ export class OwnerClaimError extends Error { constructor(code?: string, status?:
 export function verifyOwnerClaim(token: string, config: OwnerClaimConfig & { /** Epoch seconds. */ now?: number }): Promise<Readonly<OwnerClaim>>;
 export interface OwnerClaimHandlerOptions extends OwnerClaimConfig {
   db: Database;
-  /** Includes the server-only hidden SETUP_TOKEN and SESSION_SECRET. */
+  /** Includes server-only SESSION_SECRET and optional SETUP_TOKEN; after token retirement the claim route returns 409. */
   authConfig: AuthConfig;
   clientIp: (request: Request) => string | Promise<string>;
   /** Milliseconds, default Date.now. */

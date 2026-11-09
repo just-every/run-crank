@@ -375,6 +375,11 @@ Consumers supply their own registry to `validateImporters`. The committed
 Draft 2020-12 [`schema/importers.schema.json`](./schema/importers.schema.json)
 defines its shape. Validation uses this local schema without a network request.
 
+Version 2 (`schemaVersion: 2`) is the seed's declared Move in contract: rows are `{incumbent, product, moveIn, accepts, export, status?, evidence?}`
+(`moveIn` the Move in path, starting with `/`; `accepts` a non-empty subset of `file`, `key`, `address`; `export` one plain-text paragraph, at most 1,000
+characters, on getting the export out of the incumbent; `status` and `evidence` come together, as in version 1). An optional top-level `format` is a
+repository path to the seed's own import-format document. Version 1 files stay valid, and one file uses one version for every row.
+
 Schema validity does not establish that an importer has been verified.
 `validateImporters` also needs a consumer-supplied evidence port and trust policy
 to resolve and verify the referenced evidence. A `documented format` row records

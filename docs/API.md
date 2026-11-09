@@ -555,9 +555,23 @@ This slice supports standard libraries and exact installed `runtime_version`
 declarations. Nonempty dependencies and egress declarations are refused before
 publication. Wall time is in milliseconds (100–60000); memory is MiB of virtual
 address space **per process** (Python 64–2048; JavaScript/TypeScript 512–2048),
-not an aggregate RSS quota. Native Linux process/file bounds also apply.
-Network-enabled jobs, versioned third-party dependencies, aggregate task memory
-and heavier browser/ETL executors remain unfinished clause obligations.
+not an aggregate RSS quota. This meaning is unchanged for existing declarations.
+Optional `aggregate_memory_mb` (integer 32–2048 MiB) adds a separate whole-task
+cgroup v2 memory quota, including bubblewrap, descendants and charged tmpfs pages.
+The declared quota is frozen in the published graph and retained on inactive
+restore; editing a draft cannot change an existing version. Native Linux process
+and file bounds also apply. The quota sets `memory.max`, disables swap with
+`memory.swap.max: 0`, and bounds the task to 64 processes and threads with
+`pids.max`. The sandbox enters its task cgroup before any task code executes.
+A kernel OOM kill reports `memory_limit`; absent or unusable delegation reports
+`cgroup_setup_required` before task execution, without a per-process fallback.
+Both are fixed, value-free diagnostics in durable task and run readback. Completion,
+cancellation and crash recovery kill remaining descendants and remove the task
+cgroup; restart returns the retained outcome without launching another task.
+The operator must provide the delegated cgroup described in the Linux executor
+README. Omitting the new field retains the previous per-process-only behavior.
+Network-enabled jobs, versioned third-party dependencies and heavier browser and
+ETL executors remain unfinished clause obligations.
 
 An optional `output_schema` declares the returned JSON value, independently of the
 task envelope. It supports exactly one `type`: `object`, `array`, `string`,

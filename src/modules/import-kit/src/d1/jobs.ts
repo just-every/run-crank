@@ -2,6 +2,7 @@ import { captureJobLayout, jobLayoutGuards, jobLayoutReads } from './stream-layo
 import { needsStreamOrigin } from './stream-origin.ts';
 import { nativeStagingScope } from './native-staging-context.ts';
 import { streamBoundary } from './stream-boundary.ts';
+import { captureWaveBoundary, waveBoundary } from './wave-boundary.ts';
 import { requestContext } from './budget.ts';
 import { loadPlans, storedPlanSnapshot, planBody, planGuards, planChunkReads, retainPlan, creationCodec, LARGE_PLAN_BYTES } from './plans.ts';
 import { randomUUID } from 'node:crypto';
@@ -38,10 +39,11 @@ export async function stored(id: string, context: D1ImportContext, action: Impor
   job.erasedRecords = plan.entries.filter(entry => entry.erased).length;
   attachReversal(job, await loadReversalState(row, plan, context));
   await captureJobLayout(job, row, context, action);
+  await captureWaveBoundary(job, context);
   return { job, plan };
 }
 export function boundary(job: ImportJob, plan: ImportPlan, action: ImportAction = 'read'): D1Sql[] {
-  return [...jobLayoutGuards(job), ...streamBoundary(job.id, action), ...planGuards(plan, job.id), ...reversalGuards(job.id, reversalState(job)), guard(sql('EXISTS(SELECT 1 FROM ik_jobs WHERE id=? AND fence=? AND checkpoint=? AND state=? AND fingerprint=? AND plan_json=? AND principal_id=? AND destination=? AND namespace=? AND mapping_version=? AND total=? AND error IS ?)', job.id, job.fence, job.checkpoint, job.state, job.fingerprint, planBody(plan), job.principalId, job.destination, job.namespace, job.mappingVersion, job.total, job.error))];
+  return [...waveBoundary(job, action), ...jobLayoutGuards(job), ...streamBoundary(job.id, action), ...planGuards(plan, job.id), ...reversalGuards(job.id, reversalState(job)), guard(sql('EXISTS(SELECT 1 FROM ik_jobs WHERE id=? AND fence=? AND checkpoint=? AND state=? AND fingerprint=? AND plan_json=? AND principal_id=? AND destination=? AND namespace=? AND mapping_version=? AND total=? AND error IS ?)', job.id, job.fence, job.checkpoint, job.state, job.fingerprint, planBody(plan), job.principalId, job.destination, job.namespace, job.mappingVersion, job.total, job.error))];
 }
 export async function planD1Import(source: SourceBundle, mapping: ImportMapping, context: D1ImportContext): Promise<ImportPlan> {
   context = requestContext(context);

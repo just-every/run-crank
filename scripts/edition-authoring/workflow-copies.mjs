@@ -63,13 +63,15 @@ export function adoptWorkflowTemplates(root, plans, {tree, read, revision, files
 
 function invocations(text) {
   const {scripts, uses} = workflowScripts(text);
-  const paths = scripts.flatMap(literalPaths).flatMap(name => {
+  const paths = scripts.flatMap(script => literalPaths(script, {helpersOnly: true})).flatMap(name => {
     try { return [safe(name)]; }
     catch (error) {
       if (name.startsWith('scripts/') || name.startsWith('.github/workflows/')) throw error;
       return []; // A URL or command option is not a relative helper path.
     }
   });
+  // A workflow's archive/cache/build inputs do not select application source.
+  // Tooling namespaces and explicitly selected ./ helpers retain acquisition.
   return [...new Set([...uses.map(name => safe(name.slice(2))), ...paths])];
 }
 

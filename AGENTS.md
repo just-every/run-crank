@@ -135,8 +135,8 @@ applied migration history; choose any integration method and verify the result.
 Roll useful implementations and tests into shared source where that supports
 their maintenance.
 
-Pinned reference: https://github.com/runeditrun/base/blob/fc0e1041efa55771142bbb57c4ab4743147e264d/TANSTACK-START-MIGRATION.md
-Native-session/runtime evidence: https://github.com/runeditrun/base/tree/fc0e1041efa55771142bbb57c4ab4743147e264d/default-seed
+Pinned reference: https://github.com/runeditrun/base/blob/96045612467d5e752c668e8557b4bf6e906edfb1/TANSTACK-START-MIGRATION.md
+Native-session/runtime evidence: https://github.com/runeditrun/base/tree/96045612467d5e752c668e8557b4bf6e906edfb1/default-seed
 
 ## Contract documents
 
@@ -144,3 +144,21 @@ CONTRACT.md is the source of acceptance text and status. After editing it, run
 `node src/base/contract-docs.mjs write`, then `node src/base/contract-docs.mjs check`.
 These commands regenerate ACCEPTANCE.md, docs/CLAIMS.md and the Status summary.
 Regenerate the edition source lock after the final source and documentation edit.
+
+## Refresh maintained Base copies
+
+The current runner pin is `@runeditrun/rer@0.2.104`. Use the installed package's
+public refresh command, keeping seed adaptations and applied migrations:
+
+```sh
+pnpm exec rer refresh-base --ref 96045612467d5e752c668e8557b4bf6e906edfb1 --base-archive /absolute/extracted-base
+node node_modules/@runeditrun/rer/edition-authoring/cli.mjs verify-base --offline
+```
+
+Read Base's `ADOPTING.md` at that revision before refreshing. An archive can
+refresh recorded source membership; a migration needing ancestry requires a
+Base checkout. Crank already uses the current RunData paths and pricing shape;
+its existing Run chooser is retained as a seed adaptation. Reconcile retained
+module dependencies as the command directs and acknowledge their merged bytes
+with `adapt-base`. Stage new files, run the edition-authoring `changes`, `lock`
+and `check` commands from `VERIFY-WORKFLOW.md`; regenerate the source lock last.

@@ -90,7 +90,10 @@ SELECT-only batches at the smaller of the caller limit and 2 MiB. Each batch
 checks the same monotonic custody revisions, including tombstone changes;
 the original plan revision is captured before decoding. This requires the
 additive custody-state schema. Ordinary reads without a transport policy retain
-their existing atomic admission. `readD1PersistedImport` keeps one complete
+their existing atomic admission, except preserved undo-report reads whose kit-only
+preconditions exceed 2 MiB: those use the bounded SELECT checks and final revision
+fence described under "Adopting preserved-conflict undo" below.
+`readD1PersistedImport` keeps one complete
 atomic native snapshot capped at 2 MiB even when its caller omits a limit. It
 reads each destination job's `ik_d1_custody_states` revision (the same additive
 schema) before any custody and fences those revisions instead of resending
@@ -150,6 +153,15 @@ are local runtime receipts, not hosted capacity evidence.
 The product implements `D1TargetAdapter`:
 
 - `read(database, destination, kind, id)` returns the complete native `TargetRow`.
+- Optional `readMany(database, destination, keys)` returns the same complete rows
+  as individual reads, in key order, including duplicate keys and missing rows.
+  Query only selected keys and preserve native decoding. With private transport,
+  adapters that implement `stagingRead` can also provide `stagingReadMany`, with
+  the same exact before-read guards for each key. Missing bulk methods retain
+  individual reads; any bulk-read error except request-budget exhaustion discards the
+  snapshot and uses that path. Exhaustion ends the batch like the budget reserve does.
+  An inherited bulk method must preserve an overridden single read or throw.
+  Bulk observations belong only to the current publication.
 - `matches(rowOrNull, destination, kind, id)` returns an exact SQL boolean snapshot
   predicate covering the native values, revision, attachment and related evidence,
   or complete absence for null. This is the optimistic concurrency fence. Checking
@@ -190,6 +202,11 @@ count, D1 binding/statement limits and Worker CPU budget. `maxBatches` bounds wo
 per request. The port does not retry failed SQL, conflicts or revoked authority.
 A failed batch leaves its prior committed checkpoint intact; the product can fix
 the condition and explicitly call `resumeD1Import`, or `rollbackD1Import`.
+
+Saved read budget can advance a budget-limited call's checkpoint or surface a
+later entry's refusal one call earlier, with the same error code and text.
+Such a refusal publishes none of the gathered entries and leaves the job at its
+last consistent durable checkpoint.
 
 Each batch guards the immutable plan, actor binding, checkpoint and durable fence
 inside the same D1 transaction as native rows, originals, source ownership,
@@ -878,6 +895,18 @@ provenance IDs, owner IDs and reversal flags, including SQL storage types. Exact
 report bytes, positions and a scoped row count remain fenced in the same batch;
 the report hash is not a substitute for those comparisons. Resuming undo and
 reading terminal pages therefore do not add one SQL predicate per prior effect.
+
+Exact row snapshots may use chunk-local lexical templates to share repeated
+JSON structure and evidence. SQLite reconstructs the original text slices;
+comparison still covers every original byte, field, position and scoped count.
+Without an explicit transport policy, preserved undo checks kit-only
+preconditions larger than 2 MiB in bounded SELECT batches under monotonic
+custody revisions, then fences those same revisions before any mutation.
+Report reads use the same kit-only checks and final revision fence.
+The existing custody-state schema is required for that large-snapshot path.
+Native observations, indivisible reversal groups, report postconditions and
+all native, attribution, disposition and progress writes remain together in
+one atomic batch. No native mutation is split across RPCs.
 For large native sets, a snapshot can supply `nativeRows`, the complete
 destination set returned by `targets.list`. Kit requires `targets.matchesMany`,
 rejects duplicate or differently bound rows, and compares each observation's

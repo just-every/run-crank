@@ -15,6 +15,7 @@ import { custodyGuards, validatedProvenance, inventoryGuards, reusedSourceGuards
 import { supersedeTarget } from './history.ts';
 import { readOriginals } from './originals.ts';
 import { changed, putRow, updateRows } from './expected-state.ts';
+import { applyReads, readEnd, targetReadKey, type ApplyReads } from './apply-reads.ts';
 
 export async function applyD1ImportBatches(jobOrId: ImportJob | string, context: D1ImportContext): Promise<ImportJob> {
   context = requestContext(context);
@@ -35,16 +36,29 @@ export async function applyD1ImportBatches(jobOrId: ImportJob | string, context:
       let effects = 0, scope = nativeStagingScope(job, plan);
       let prefix = atomicPrefix(context, 'apply', statements, scope);
       let planned = prefix ? prefix.count(progress(job, 0), returnReads) : cost(context, publication(job, 0, statements, scope), returnReads);
-      for (const entry of plan.entries.slice(job.checkpoint, job.checkpoint + batchSize)) {
+      const pending = plan.entries.slice(job.checkpoint, job.checkpoint + batchSize);
+      let reads: ApplyReads | undefined, covered = 0, bulk = true;
+      for (let index = 0; index < pending.length; index++) {
+        const entry = pending[index];
         if (entries.length && effects + entry.effects.length > 1000) break;
         if (entry.effects.length > 1000) throw new Error('SOURCE_EFFECT_LIMIT');
         // Stop before an entry's own reads could exhaust the request. The exact
         // request, as atomic will send it, is counted again once the entry is built.
         const reserve = 40 + entry.effects.length * 16;
-        if (remaining(context) - planned < reserve) { if (!entries.length) { if (count > 0) return job; throw new D1RequestLimitError(); } break; }
+        let starved = remaining(context) - planned < reserve;
+        if (!starved && index >= covered) {
+          // Read only the next entries that can still publish; a budget exhaustion
+          // inside the bulk read stops the gather exactly like the reserve above.
+          try {
+            const end: number = bulk ? readEnd(pending, index, effects, remaining(context) - planned, reads) : pending.length;
+            reads = bulk ? await applyReads(pending.slice(index, end), context, reads) : undefined;
+            bulk = !!reads; covered = end;
+          } catch (error) { if (!(error instanceof D1RequestLimitError)) throw error; starved = true; }
+        }
+        if (starved) { if (!entries.length) { if (count > 0) return job; throw new D1RequestLimitError(); } break; }
         const candidate: D1Sql[] = [], nextScope = { ...scope, nativeGuards:[...scope.nativeGuards], postGuards:[...scope.postGuards], targets:[...scope.targets] };
         const candidateUndo: D1UndoEffect[] | undefined = undoEffects && [];
-        await publishEntry(id, entry, job.checkpoint + entries.length, context, candidate, nextScope, candidateUndo);
+        await publishEntry(id, entry, job.checkpoint + entries.length, context, candidate, nextScope, candidateUndo, reads);
         const nextPrefix = prefix?.extend(candidate);
         const next = nextPrefix ? undefined : publication(job, entries.length + 1, [...statements, ...candidate], nextScope);
         const spent = nextPrefix ? nextPrefix.count(progress(job, entries.length + 1), returnReads) : cost(context, next!, returnReads);
@@ -90,18 +104,19 @@ export async function applyD1ImportBatches(jobOrId: ImportJob | string, context:
   }
   return current.job;
 }
-async function publishEntry(id: string, entry: PlanEntry, ordinal: number, context: D1ImportContext, statements: D1Sql[], scope: NativeStagingScope, undoEffects?: D1UndoEffect[]): Promise<void> {
+async function publishEntry(id: string, entry: PlanEntry, ordinal: number, context: D1ImportContext, statements: D1Sql[], scope: NativeStagingScope, undoEffects?: D1UndoEffect[], reads?: ApplyReads): Promise<void> {
   const { database: db, targets } = context.storage, effectsHash = sha256(canonicalJson(entry.effects));
-  const prior = await db.prepare('SELECT * FROM ik_sources WHERE identity=?').bind(entry.identity).first();
+  const prior = reads ? reads.sources.get(entry.identity) : await db.prepare('SELECT * FROM ik_sources WHERE identity=?').bind(entry.identity).first();
   if (prior) {
     if (prior.source_hash !== entry.source.payloadHash || prior.mapping_version !== context.mappingVersion || prior.effects_hash !== effectsHash) throw new Error('SOURCE_ID_CONTENT_CONFLICT');
     await reusedSourceGuards(entry, prior.job_id, context, statements);
     statements.push(guard(sql('EXISTS(SELECT 1 FROM ik_sources WHERE identity=? AND source_hash=? AND mapping_version=? AND effects_hash=? AND job_id=?)', entry.identity, prior.source_hash, prior.mapping_version, prior.effects_hash, prior.job_id)));
     for (const effect of entry.effects) {
-      const raw = await db.prepare('SELECT * FROM ik_provenance WHERE source_identity=? AND destination=? AND target_kind=? AND target_id=? AND reversed=0').bind(entry.identity, context.destination, effect.targetKind, effect.targetId).first();
+      const predecessor = reads?.predecessors.get(targetReadKey(effect.targetKind, effect.targetId));
+      const raw = reads ? (predecessor?.source_identity === entry.identity ? predecessor : null) : await db.prepare('SELECT * FROM ik_provenance WHERE source_identity=? AND destination=? AND target_kind=? AND target_id=? AND reversed=0').bind(entry.identity, context.destination, effect.targetKind, effect.targetId).first();
       if (!raw) throw new Error('PROVENANCE_MISSING');
       const p = await validatedProvenance(raw, context, statements);
-      const current = await readStagedTarget(context, scope, effect.targetKind, effect.targetId);
+      const current = await readTarget(context, scope, effect.targetKind, effect.targetId, reads);
       if (!current || current.revision !== p.appliedRevision || sha256(canonicalJson(current.value)) !== p.valueHash || attachmentHash(current.attachment) !== p.attachmentHash) throw new Error('NATIVE_EDIT_CONFLICT');
       const post = targetGuards(targets,current,context.destination,effect.targetKind,effect.targetId);
       scope.postGuards.push(...post);
@@ -113,7 +128,7 @@ async function publishEntry(id: string, entry: PlanEntry, ordinal: number, conte
   statements.push(guard(sql('NOT EXISTS(SELECT 1 FROM ik_sources WHERE identity=?)', entry.identity)));
   for (const [index, effect] of entry.effects.entries()) {
     validateEffect(effect);
-    const before = await readStagedTarget(context, scope, effect.targetKind, effect.targetId);
+    const before = await readTarget(context, scope, effect.targetKind, effect.targetId, reads);
     if (before ? effect.expectedRevision !== before.revision : effect.expectedRevision !== undefined) throw new Error('TARGET_REVISION_CONFLICT');
     const prospective = prospectiveEffect(id, entry, index, before, context.destination);
     const { expected: row, provenance: p } = prospective;
@@ -121,12 +136,20 @@ async function publishEntry(id: string, entry: PlanEntry, ordinal: number, conte
     const post = targetGuards(targets, row, context.destination, effect.targetKind, effect.targetId);
     scope.postGuards.push(...post);
     undoEffects?.push(prospective);
-    await supersedeTarget(p, before, context, statements);
+    await supersedeTarget(p, before, context, statements, reads ? reads.predecessors.get(targetReadKey(effect.targetKind, effect.targetId)) ?? null : undefined);
     const record_json=canonicalJson(p);
     statements.push(...targetGuards(targets,before ?? null, context.destination, effect.targetKind, effect.targetId), ...targets.write(row), ...post, changed(retainedSql(['INSERT INTO ik_provenance(id,job_id,ordinal,effect_ordinal,source_identity,destination,target_kind,target_id,record_json) VALUES(', ',', ',', ',', ',', ',', ',', ',', ',', ')'], [p.id, id, ordinal, index, entry.identity, context.destination, effect.targetKind, effect.targetId, record_json], [8]),putRow('ik_provenance',{id:p.id,job_id:id,ordinal,effect_ordinal:index,source_identity:entry.identity,destination:context.destination,target_kind:effect.targetKind,target_id:effect.targetId,reversed:0,record_json})));
   }
   statements.push(entryWrite(id,ordinal,entry.identity,id,effectsHash));
   statements.push(changed(sql('INSERT INTO ik_sources(identity,source_hash,mapping_version,effects_hash,job_id) VALUES(?,?,?,?,?)', entry.identity, entry.source.payloadHash, context.mappingVersion, effectsHash, id),putRow('ik_sources',{identity:entry.identity,source_hash:entry.source.payloadHash,mapping_version:context.mappingVersion,effects_hash:effectsHash,job_id:id})));
+}
+
+async function readTarget(context: D1ImportContext, scope: NativeStagingScope, kind: string, id: string, reads?: ApplyReads) {
+  if (!reads) return readStagedTarget(context, scope, kind, id);
+  const snapshot = reads.targets.get(targetReadKey(kind, id))!;
+  scope.nativeGuards.push(...(snapshot.guards ?? []).map(guard));
+  scope.targets.push({ kind, id, present: !!snapshot.row });
+  return snapshot.row;
 }
 
 function entryWrite(job_id:string,ordinal:number,source_identity:string,owner_job_id:string,effects_hash:string):D1Sql{

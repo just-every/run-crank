@@ -1,3 +1,4 @@
+import { businessRunning } from './business-state.ts'
 import type { Person, PeopleAdapter, PreparedBy, Principal, Runtime } from './types.ts'
 export const businessRole = (people: PeopleAdapter, person: Person) => people.businessRole ? people.businessRole(person) : person.role === 'owner' ? 'owner' : person.role === 'admin' ? 'editor' : null
 export const preparedBy = ({ person, agent }: Pick<Principal, 'person' | 'agent'>): PreparedBy => ({ agent: { id: agent.id, name: agent.name }, for: { id: person.id, name: person.name }, label: `${agent.name} for ${person.name}` })
@@ -5,6 +6,7 @@ export async function matchesRef(rt: Runtime, person: Person, sponsor: string, r
   if (!person.active) return false
   if (ref === 'sponsor') return person.id === sponsor
   if (rt.options.trust) {
+    if (!await businessRunning(rt.options.people)) return false
     const member = await rt.options.people.businessMember?.(person)
     return !!member && (ref.startsWith('person:') ? member.id === ref.slice(7) : member.role !== null && ref === `role:${member.role}`)
   }

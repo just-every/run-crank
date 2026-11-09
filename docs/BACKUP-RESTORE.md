@@ -73,6 +73,12 @@ pause reason is not kept; its steps keep their errors.
 Schema, integrity, workflow version digests and product links are checked before
 any data is committed; unknown data is refused.
 
+The browser restore form uses the same migration compatibility checks as
+`rer import`. Archives from an earlier migration level can cross additive
+changes: added columns take their destination defaults and new tables use
+the migration's initial state. Archives from a newer migration level or an incompatible schema
+are refused with `schema_mismatch`, leaving the destination unchanged.
+
 For a small archive, sign in as the owner of a fresh installation. In **Data**,
 paste the archive text under **Restore into an empty installation**, type
 `RESTORE`, and select **Restore archive**. The form is for small archives only;

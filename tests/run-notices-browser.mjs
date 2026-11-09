@@ -1,3 +1,4 @@
+import {expectHoverTooltip} from './tooltip-browser.mjs';
 /** EXEC-003: installed run notice history and icon tooltips at 1440 and 390. */
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
@@ -92,10 +93,7 @@ try {
       for (const label of ['Search runs', 'Your account']) {
         const tip = page.getByRole('tooltip', { name: label, exact: true });
         const control = page.locator(`[aria-describedby="${label === 'Search runs' ? 'search-tooltip' : 'account-tooltip'}"]`);
-        await page.mouse.move(0, 0); await control.blur();
-        await expect(tip).toBeHidden(); await control.hover();
-        await page.waitForTimeout(150); await expect(tip).toBeHidden();
-        await expect(tip).toBeVisible();
+        await expectHoverTooltip(page, control, tip);
         await page.mouse.move(0, 0); await control.focus(); await expect(tip).toBeVisible({ timeout: 100 });
         await page.screenshot({ path: join(evidence, `${width}-${kind}-${label.replaceAll(' ', '-')}-tooltip.png`), fullPage: true });
         await control.blur();

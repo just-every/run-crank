@@ -20,6 +20,7 @@ export const code: StepType = {
     if (url.pathname!=='/' || url.search || url.hash) throw new StepError('validation',`Code ${step.id}: executor_url must be an origin`)
     if (!Number.isInteger(step.timeout_ms) || Number(step.timeout_ms)<100 || Number(step.timeout_ms)>60000) throw new StepError('validation',`Code ${step.id}: timeout_ms must be 100 to 60000`)
     if (!Number.isInteger(step.memory_mb) || Number(step.memory_mb)<(step.language==='python'?64:512) || Number(step.memory_mb)>2048) throw new StepError('validation',`Code ${step.id}: memory_mb must be 64 (Python) or 512 (JavaScript/TypeScript) to 2048`)
+    if (step.aggregate_memory_mb!==undefined && (!Number.isInteger(step.aggregate_memory_mb) || Number(step.aggregate_memory_mb)<32 || Number(step.aggregate_memory_mb)>2048)) throw new StepError('validation',`Code ${step.id}: aggregate_memory_mb must be an integer from 32 to 2048`)
     if (!Array.isArray(step.allowed_egress) || step.allowed_egress.length) throw new StepError('validation',`Code ${step.id}: this executor supports only explicit allowed_egress: []; network-enabled jobs are not implemented`)
     if (step.dependencies!==undefined && (!isObject(step.dependencies) || Object.keys(step.dependencies).length)) throw new StepError('validation',`Code ${step.id}: third-party dependencies are not implemented`)
     if (step.runtime_version!==undefined && (typeof step.runtime_version!=='string' || !/^\d+\.\d+\.\d+$/.test(step.runtime_version))) throw new StepError('validation',`Code ${step.id}: runtime_version must be an exact version`)
@@ -41,7 +42,7 @@ export const code: StepType = {
       // Only a genuinely absent task can be submitted. Duplicate submissions use
       // the executor's durable exact-body identity, including after response loss.
       try {
-        response=await executorRequest(ctx,connectionId,url,'POST',{language:step.language,source:step.source,input:ctx.input,timeout_ms:step.timeout_ms,memory_mb:step.memory_mb,allowed_egress:step.allowed_egress,...(step.runtime_version?{runtime_version:step.runtime_version}:{})})
+        response=await executorRequest(ctx,connectionId,url,'POST',{language:step.language,source:step.source,input:ctx.input,timeout_ms:step.timeout_ms,memory_mb:step.memory_mb,...(step.aggregate_memory_mb!==undefined?{aggregate_memory_mb:step.aggregate_memory_mb}:{}),allowed_egress:step.allowed_egress,...(step.runtime_version?{runtime_version:step.runtime_version}:{})})
       } catch(error) {
         if (!(error instanceof StepError) || !(error.category==='network' || Number(error.detail.status)>=500)) throw error
         response=await executorRequest(ctx,connectionId,url,'GET')
@@ -53,7 +54,7 @@ export const code: StepType = {
     await stmt(ctx.env,`UPDATE crank_executor_tasks SET status=?,next_poll_at=? WHERE id=? AND active=1 AND EXISTS(SELECT 1 FROM crank_wf_runs WHERE id=? AND status='running' AND lease_id=?)`,status,new Date(Date.now()+60000).toISOString(),taskId,ctx.run.id,ctx.run.lease_id).run()
     if (status==='queued' || status==='running') throw new ExecutorWait(taskId)
     if (status!=='succeeded') {
-      const reason=isObject(response.value.error) && ['timeout','output_limit','invalid_output','execution_failed','sandbox_unavailable','invalid_source','cancelled','interrupted'].includes(String(response.value.error.category)) ? String(response.value.error.category) : status
+      const reason=isObject(response.value.error) && ['memory_limit','cgroup_setup_required','timeout','output_limit','invalid_output','execution_failed','sandbox_unavailable','invalid_source','cancelled','interrupted'].includes(String(response.value.error.category)) ? String(response.value.error.category) : status
       throw new StepError(status==='interrupted'?'uncertain':'provider',`Executor task ${status} (${reason})`,{task_id:taskId,executor_error_category:reason,...(status==='interrupted'?{uncertain:true}:{})})
     }
     if (step.output_schema!==undefined) assertExecutorOutput(response.value.output,step.output_schema,step.id,taskId)
