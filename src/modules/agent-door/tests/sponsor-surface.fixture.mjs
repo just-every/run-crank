@@ -18,7 +18,7 @@ export function sponsorSurface(teammateId = 'native-teammate') {
   escalations: [{ id: 'widen-sponsor', tool: 'synthetic.access.change', args: { id: { $sponsor: 'id' } } }],
   journey: [
    step('snapshot', 'access.snapshot', {}, ['standard']),
-   step('write', 'records.write', { id: 'native-access-record', value: 'Native access conformance' }, ['standard']),
+   { ...step('write', 'records.write', { id: 'native-access-record', value: 'Native access conformance' }, ['standard']), resource: { uriTemplate: 'synthetic://record/{id}', state: { id: 'native-access-record', value: 'Native access conformance' } } },
    step('share-record', 'records.access', { id: { $from: 'write', pointer: '/id' }, visibility: 'shared' }, access('widens')),
    step('restrict-record', 'records.access', { id: { $from: 'write', pointer: '/id' }, visibility: 'internal' }, access('narrows')),
    step('promote-teammate', 'access.teammate', { id: teammateId, role: 'admin' }, access('widens')),

@@ -2,7 +2,7 @@ import { errorCode } from './protocol.mjs';
 
 // Refresh read dependencies only. Repeating a write here would create another
 // effect, and resolving its old output cannot provide a current native revision.
-export async function injectionArgs(c, step, outputs) {
+export async function injectionArgs(c, step, outputs, admittedArgs) {
  const fresh = new Map(outputs), refreshed = new Set();
  async function visit(value) {
   if (!value || typeof value !== 'object') return;
@@ -18,7 +18,9 @@ export async function injectionArgs(c, step, outputs) {
   } else for (const item of Object.values(value)) await visit(item);
  }
  await visit(step.args);
- const args = c.args(step, fresh);
  const write = !c.surface.tools.find(tool => tool.name === step.tool)?.readOnly;
- return { ...args, ...c.resolve(step.inject, fresh), ...(write ? { idempotency_key: args.idempotency_key } : {}) };
+ // A mutation keeps its admitted arguments, including revision and key. Fresh
+ // read dependencies must not turn its injection probe into a different call.
+ const args = write ? admittedArgs : c.resolve(step.args, fresh);
+ return { ...args, ...c.resolve(step.inject, fresh), ...(write ? { idempotency_key: admittedArgs.idempotency_key } : {}) };
 }

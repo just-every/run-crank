@@ -10,11 +10,12 @@ export { OwnerClaimError, verifyOwnerClaim } from './verify.mjs';
 export function createOwnerClaimHandler({ db, authConfig, clientIp, clock = Date.now, ...input }) {
   const config = configureClaim(input);
   const auth = configure(authConfig);
-  if (auth.origin !== config.appOrigin || auth.OWNER_EMAIL !== config.expectedEmail || !auth.SETUP_TOKEN
+  if (auth.origin !== config.appOrigin || auth.OWNER_EMAIL !== config.expectedEmail
     || typeof clientIp !== 'function' || typeof clock !== 'function' || !db?.prepare || !db?.batch) throw new OwnerClaimError('invalid_configuration', 503);
   return async request => {
     const url = new URL(request.url);
     if (url.pathname !== '/auth/owner-claim') return null;
+    if (!auth.SETUP_TOKEN) return Response.json({ error: 'claim_unavailable' }, { status: 409, headers: securityHeaders() });
     try {
       requireOrigin(request, auth);
       // Credential URLs are never accepted, including legacy query transport.

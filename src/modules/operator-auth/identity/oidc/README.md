@@ -10,6 +10,7 @@ again as its next migration.
 
 ```js
 import { createOperatorAuth, createAuthHandler, createSignInHandler } from './modules/operator-auth/index.mjs';
+const clientAuthMethod = 'client_secret_basic';
 const auth = createOperatorAuth({
   db: env.DB, clientIp, mailSender,
   // The runtime's fetch; on workerd use redirect 'manual' and refuse every 3xx.
@@ -22,7 +23,7 @@ const auth = createOperatorAuth({
     providers: [
       // The app's private key (a Worker secret) authenticates it: no shared secret exists.
       { id: 'auth', preset: 'auth', issuer: env.IDENTITY_PROVIDER, clientId: env.IDENTITY_CLIENT_ID, privateKey: JSON.parse(env.IDENTITY_PRIVATE_KEY) },
-      { id: 'google', preset: 'google', clientId: env.GOOGLE_CLIENT_ID, tokenAuthMethod: 'client_secret_basic', clientSecret: env.GOOGLE_CLIENT_SECRET },
+      { id: 'google', preset: 'google', clientId: env.GOOGLE_CLIENT_ID, tokenAuthMethod: clientAuthMethod, clientSecret: env.GOOGLE_CLIENT_SECRET },
       { id: 'corp', preset: 'okta', issuer: 'https://corp.okta.com', clientId: env.OKTA_CLIENT_ID, privateKey: JSON.parse(env.OKTA_PRIVATE_KEY),
         subjectEmails: { '00u1abcd': 'operator@corp.example' } },
     ],

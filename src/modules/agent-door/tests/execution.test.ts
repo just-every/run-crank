@@ -2,6 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { runtime } from './runtime.mjs'
 import { autonomousPolicy, heldPolicy, policyEnvelope } from '../conformance/crypto.mjs'
+import { admissionFlow } from './admission-flow.ts'
 import { createAgentDoor } from '../index.ts'
 
 const code = (reply: any) => reply.result?._meta?.['com.runeditrun/error']?.code ?? reply.error?.data?.code
@@ -187,3 +188,6 @@ test('public-door replay rechecks current admission, records refusals and execut
   assert.equal((await r.db.prepare('SELECT version FROM test_records WHERE id=?').bind(input.id).first()).version, 1)
  } finally { await r.close() }
 })
+
+// One native public-door flow for ordinary admission and its existing guards.
+test('native parallel admission waits without repeating effects or retaining stale authority', admissionFlow)

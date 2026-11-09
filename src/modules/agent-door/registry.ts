@@ -17,6 +17,7 @@ export function registry(options: AgentDoorOptions): ToolDefinition[] {
   return options.tools.map(tool => {
     if (!validToolName(tool.name, options.seed) || names.has(tool.name)) throw new TypeError(`Invalid or duplicate tool name: ${tool.name}`)
     names.add(tool.name)
+    if (tool.exposure !== undefined && tool.exposure !== 'invoke') throw new TypeError(`Invalid exposure: ${tool.name}`)
     if (!tool.classes?.length || new Set(tool.classes).size !== tool.classes.length || tool.classes.some(cls => !isClass(cls))) throw new TypeError(`Invalid classes: ${tool.name}`)
     if (!tool.inputSchema || tool.inputSchema.type !== 'object' || !schemaValid(tool.inputSchema) || tool.outputSchema === undefined || !schemaValid(tool.outputSchema)) throw new TypeError(`Missing or invalid schema: ${tool.name}`)
     if (!tool.scope || !tool.title || !tool.description || typeof tool.readOnly !== 'boolean' || !Array.isArray(tool.clauses) || typeof tool.classify !== 'function' || typeof tool.run !== 'function') throw new TypeError(`Invalid tool: ${tool.name}`)

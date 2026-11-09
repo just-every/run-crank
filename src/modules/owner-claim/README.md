@@ -22,9 +22,9 @@ permanently prevents another claim, including after the consumed claim expires.
    origin, canonical owner email and public signing-key ring. Claims are never a
    configuration source.
 3. Mount this handler before the operator-auth dispatcher; it owns only
-   `/auth/owner-claim`. Continue protecting application routes with real
-   operator-auth sessions. Never expose a server function taking authConfig or
-   verified payload fields from browser input.
+   `/auth/owner-claim` and is safe to construct per request. Continue protecting
+   application routes with real operator-auth sessions. Never expose a server
+   function taking authConfig or verified payload fields from browser input.
 4. Declare the release setup manifest's owner claim step with
    `type: 'owner-claim'`, `mode: 'signed'`, `emailField` naming the public
    owner-email setup field, `path: '/auth/owner-claim'`, and `tokenField` naming
@@ -71,7 +71,8 @@ key rotation may overlap old and new kids for the five-minute window, then remov
 the old kid. Public keys are EC/P-256 JWKs, never private JWKs; missing/unknown kids
 and untrusted issuers fail. Config is snapshotted when the handler is created.
 Remove the hidden setup token after successful bootstrap as part of ordinary
-application secret maintenance; never delete either admission ledger.
+application secret maintenance; the claim route then answers 409 `claim_unavailable`
+for every method. Never delete either admission ledger.
 
 ## Wire and browser transport
 

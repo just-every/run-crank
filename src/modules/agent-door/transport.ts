@@ -11,7 +11,7 @@ import { callTool } from './pipeline.ts'
 import { resourceTool } from './resource-tool.ts'
 import { describeTool } from './registry.ts'
 import { subscriptions } from './subscriptions.ts'
-import { cache, doorCapabilities, challenge, discovery, metaOf, parseRequest, rpcError, rpcResult, toolResult, type Rpc } from './wire.ts'
+import { cache, doorCapabilities, challenge, discovery, metaOf, parseRequest, protocolVersion, rpcError, rpcResult, toolResult, type Rpc } from './wire.ts'
 
 const methods = ['server/discover', 'initialize', 'tools/list', 'tools/call', 'resources/templates/list', 'resources/read', 'prompts/list', 'prompts/get', 'subscriptions/listen']
 function readGuard(rt: Runtime, rpc: Rpc, state: Awaited<ReturnType<typeof policyState>>, principal: Principal): Response | null {
@@ -21,14 +21,18 @@ function readGuard(rt: Runtime, rpc: Rpc, state: Awaited<ReturnType<typeof polic
   return ['blocked', 'approval', 'unset'].includes(decision.result) ? rpcError(rpc.id, -32000, 'Read refused by policy', 200, { code: decision.result === 'blocked' ? 'policy_blocked' : decision.result === 'unset' ? 'policy_unset' : 'approval_required', revision: state.revision }) : null
 }
 export async function mcp(rt: Runtime, request: Request): Promise<Response> {
-  const rpc = await parseRequest(rt, request)
-  if (rpc instanceof Response) return rpc
-  if (!methods.includes(rpc.method) && !rpc.method.startsWith('notifications/')) return rpcError(rpc.id, -32601, 'Method not found', 404)
-  if (rpc.method === 'server/discover') return rpcResult(rpc, discovery(rt))
-  if (rpc.method === 'initialize') return rpcResult(rpc, { protocolVersion: request.headers.get('mcp-protocol-version') ?? rpc.params?.protocolVersion, capabilities: doorCapabilities(rt), serverInfo: { name: rt.options.name, version: rt.options.version ?? '1' }, instructions: discovery(rt).instructions })
+  if (request.method !== 'POST') return rpcError(null, -32600, 'Method not allowed', 405)
   const state = await policyState(rt), authenticated = await authenticate(rt.options, request, state.business)
   const principal = authenticated && await narrowPrincipal(rt, authenticated)
-  if (!principal || revoked(state, principal) && rpc.method !== 'tools/call') return rpcError(rpc.id, -32001, 'Unauthorized', 401, undefined, challenge(rt))
+  // Challenge before reading the body or negotiating transport headers, even
+  // for initialize. Keep resource metadata available at its well-known URL.
+  if (!principal) return rpcError(null, -32001, 'Unauthorized', 401, undefined, challenge(rt))
+  const rpc = await parseRequest(rt, request)
+  if (rpc instanceof Response) return rpc
+  if (revoked(state, principal) && rpc.method !== 'tools/call') return rpcError(rpc.id, -32001, 'Unauthorized', 401, undefined, challenge(rt))
+  if (!methods.includes(rpc.method) && !rpc.method.startsWith('notifications/')) return rpcError(rpc.id, -32601, 'Method not found', 404)
+  if (rpc.method === 'server/discover') return rpcResult(rpc, discovery(rt))
+  if (rpc.method === 'initialize') return rpcResult(rpc, { protocolVersion: protocolVersion(request, rpc), capabilities: doorCapabilities(rt), serverInfo: { name: rt.options.name, version: rt.options.version ?? '1' }, instructions: discovery(rt).instructions })
   const capacity = revoked(state, principal) ? 'revoked' : await admit(rt, principal)
   if (capacity === 'revoked' && rpc.method !== 'tools/call') return rpcError(rpc.id, -32001, 'Unauthorized', 401, undefined, challenge(rt))
   if (typeof capacity === 'number') return rpcError(rpc.id, -32000, 'Capacity exceeded', 429, { code: 'rate_limited' }, { 'retry-after': String(capacity) })
@@ -37,12 +41,13 @@ export async function mcp(rt: Runtime, request: Request): Promise<Response> {
   if (rpc.method === 'tools/call') {
     const answer = await callTool(rt, String(params.name ?? ''), params.arguments, principal, 'mcp', meta.traceparent, undefined, params.requestState, meta['com.runeditrun/native-proof'])
     if (answer.status === 401) return rpcError(rpc.id, -32001, 'Unauthorized', 401, { code: answer.result.code }, challenge(rt))
+    if (answer.status === 409) return rpcError(rpc.id, -32000, 'Subject erasure in progress', 409, { code: answer.result.code })
     if (answer.status === 500) return rpcError(rpc.id, -32603, 'Tool execution failed', 500, { code: answer.result.code })
     if (answer.result.code === 'tool_not_found') return rpcError(rpc.id, -32602, 'Unknown tool', 400, { code: 'tool_not_found' })
     if (answer.status === 403) return rpcError(rpc.id, -32000, 'Insufficient scope', 403, { code: 'insufficient_scope' }, challenge(rt, answer.scope))
-    return rpcResult(rpc, toolResult({ ...answer.result, ...(offers(rt.options.capabilities, 'resources') ? {} : { resources: undefined }) }, request.headers.get('mcp-protocol-version')!, meta['io.modelcontextprotocol/clientCapabilities']))
+    return rpcResult(rpc, toolResult({ ...answer.result, ...(offers(rt.options.capabilities, 'resources') ? {} : { resources: undefined }) }, protocolVersion(request, rpc), meta['io.modelcontextprotocol/clientCapabilities']))
   }
-  if (rpc.method === 'tools/list') return rpcResult(rpc, { ...cache, tools: policyRefusal(rt, state, []) ? [] : rt.tools.filter(tool => tool.classes.every(cls => answered(state.document, cls))).map(describeTool) })
+  if (rpc.method === 'tools/list') return rpcResult(rpc, { ...cache, tools: policyRefusal(rt, state, []) ? [] : rt.tools.filter(tool => tool.exposure !== 'invoke' && tool.classes.every(cls => answered(state.document, cls))).map(describeTool) })
   if (rpc.method === 'resources/templates/list') return rpcResult(rpc, { ...cache, resourceTemplates: !offers(rt.options.capabilities, 'resources') || policyRefusal(rt, state, ['standard']) ? [] : [...rt.options.resources ?? []].filter(resource => !resource.scope || principal.scopes.includes(resource.scope)).sort((a, b) => a.uriTemplate.localeCompare(b.uriTemplate)).map(({ read: _read, classify: _classify, classes: _classes, scope: _scope, ...resource }) => resource) })
   if (rpc.method === 'prompts/list') return rpcResult(rpc, { ...cache, prompts: !offers(rt.options.capabilities, 'prompts') || policyRefusal(rt, state, ['standard']) ? [] : [...rt.options.prompts ?? []].sort((a, b) => a.name.localeCompare(b.name)).map(({ messages: _messages, ...prompt }) => prompt) })
   if (rpc.method === 'resources/read') {

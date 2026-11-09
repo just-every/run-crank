@@ -28,7 +28,7 @@ export function peopleAdapter(original: CrankEnv): PeopleAdapter {
     return person
   }
   return {
-    person: read, businessMember: member,
+    person: read, businessMember: member, businessStopped: () => native.businessStopped(),
     businessRole: person => env.RER_OWNER_CLAIM_PUBLIC_KEYS ? roles.get(person) ?? null
       : person.role === 'owner' ? 'owner' : person.role === 'admin' ? 'editor' : null,
     async session(request) {

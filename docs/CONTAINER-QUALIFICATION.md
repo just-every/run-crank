@@ -55,13 +55,22 @@ persistence and local archive recovery portions of implementation qualification.
 A published map is synthetic stored state, not a complete customer workflow or
 pending-effect/Cron-recovery journey.
 
-The pinned Crank installer in `scripts/installer/local.mjs` declares an
-executable `policyModule`. In rer 0.2.91, `cli/portability.mjs` refuses that policy
-with `container_policy_module_unsupported` for container export/import. When
-Base emits that refusal, the job records its exact text as export FAIL and
-labels restore NOT RUN. It does not
-serialize, remove or replace the policy to obtain a passing result. A maintained
-Base container policy door is needed before those rows can qualify.
+Crank pins `@runeditrun/rer@0.2.104` and refreshes maintained Base copies to
+`96045612467d5e752c668e8557b4bf6e906edfb1`. The seed-owned declaration in
+`scripts/installer/local.mjs` uses
+`localPortability({ database: 'foundation', policyModule: 'src/crank/archive-policy.mjs', ... })`
+for both native and container transfers. The module's default export preserves
+Crank's executable row fences and staged validation; `restore-policy.mjs` keeps
+workflows paused and unowned, credentials excluded, connections disconnected,
+agent policy/approval state installation-local, and passive audit history
+portable. The adoption does not grant receiving execution authority.
+
+Base 0.2.104 validates that default export before data access and bundles the
+seed module and its imports for the private container transfer worker. Archive
+metadata cannot select executable code. No policy is serialized, removed or
+replaced to obtain a passing result. The earlier 0.2.91 refusal
+`container_policy_module_unsupported` is historical; a new hosted run is still
+required to qualify the export and restore rows on this pin.
 
 See the installed package's `modules/container/README.md`,
 `cli/container.mjs`, `cli/container-transfer.mjs` and `cli/portability.mjs` for

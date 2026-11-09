@@ -89,3 +89,5 @@ export function activityOutcome(decision: string, outcome: string, code: string 
   if (outcome === 'done') return decision === 'approval' ? 'Approved and done' : decision === 'review' ? 'Done, to review' : 'Done'
   return { running: 'Running', failed: 'Failed' }[outcome] ?? words(outcome)
 }
+
+export const retirementNotice = 'The policy still names an erased person. Choose a replacement before their approvals can proceed.'

@@ -14,6 +14,7 @@ import { noSuccessors, restorePredecessor } from './history.ts';
 import { readOriginals } from './originals.ts';
 import { reversalState } from './undo-state.ts';
 import { preserveReverse } from './preserved-reverse.ts';
+import { compactCustodyGuards } from './read-fence.ts';
 import { fencedReversal, recordReversalFence, reversalProgress } from './reversal-fence.ts';
 
 export async function reverseD1Import(id: string, action: 'undo' | 'rollback', context: D1ImportContext): Promise<ImportJob> {
@@ -32,7 +33,9 @@ export async function reverseD1Import(id: string, action: 'undo' | 'rollback', c
   if ((action === 'undo' && current.job.state === 'rolled_back') || (action === 'rollback' && current.job.state === 'undone')) throw new Error('REVERSAL_MODE_CONFLICT');
   if (['undone', 'rolled_back'].includes(current.job.state)) {
     await readOriginals(current.plan, id, context);
-    await atomic(context, action, [...boundary(current.job, current.plan, action), ...custodyGuards(current.plan, id), ...await inventoryGuards(current.job, current.plan, context)], 0, nativeStagingScope(current.job,current.plan));
+    const scope = nativeStagingScope(current.job, current.plan);
+    const guards = [...boundary(current.job, current.plan, action), ...custodyGuards(current.plan, id), ...await inventoryGuards(current.job, current.plan, context)];
+    await atomic(context, action, reversalState(current.job).policy === 'preserve-conflicts' ? await compactCustodyGuards(context, guards, scope, action) : guards, 0, scope);
     return current.job;
   }
   if (current.job.state === (action === 'undo' ? 'rolling_back' : 'undoing')) throw new Error('REVERSAL_MODE_CONFLICT');

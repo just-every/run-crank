@@ -63,6 +63,12 @@ export function validateAgentSurface(surface, { contract } = {}) {
   if (step?.client !== undefined) add(`journey.${id}.client`, text(step.client) && text(surface.verification?.fixtures?.module), `${id} requires a named native client and verification.fixtures.`);
   for (const item of expect) coverage.get(step?.tool)?.add(item?.class);
   checkReferences(step?.args, `journey.${id}`, steps);
+  if (step?.resource !== undefined && offers(surface.capabilities, 'resources')) {
+   const fixture = step.resource;
+   const resourcePoint = (suffix, ok, detail) => points.push({ id: `BASE-AGENT-003.4.fixture.${id}.${suffix}`, ok: Boolean(ok), ...(!ok ? { detail } : {}) });
+   resourcePoint('state', tool?.readOnly === false && object(fixture) && Object.keys(fixture).sort().join(',') === 'state,uriTemplate' && surface.resources?.includes(fixture.uriTemplate) && object(fixture.state) && Object.keys(fixture.state).length > 0, `${id}.resource must declare a native URI template and nonempty expected written state on a mutating tool.`);
+   checkReferences(fixture?.state, `journey.${id}.resource`, new Set([...steps, id]), resourcePoint);
+  }
   if (step?.target !== undefined) {
    const target = step.target;
    add(`journey.${id}.target`, object(target) && Object.keys(target).sort().join(',') === 'id,kind' && text(target.kind) && (text(target.id) || object(target.id) && ('$from' in target.id || '$sponsor' in target.id || '$fixture' in target.id)), `${id}.target must contain only a nonempty kind and an id string or journey reference.`);
@@ -92,6 +98,10 @@ export function validateAgentSurface(surface, { contract } = {}) {
  for (const [name, tool] of tools) for (const cls of Array.isArray(tool?.classes) ? tool.classes : []) add(`${name}.coverage.${cls}`, coverage.get(name).has(cls), `${name} has no journey fixture for declared class ${cls}.`);
  if (offers(surface.capabilities, 'events')) add('events', tools.has(`${surface.seed}.events.list`), `Declare built-in ${surface.seed}.events.list in the Agent surface.`);
  if (set.mode === 'declared' && offers(surface.capabilities, 'resources')) add('resources.offered', surface.resources.length > 0, 'Declared resources must offer at least one resource template.');
+ if (offers(surface.capabilities, 'resources') && surface.resources?.length && [...tools.values()].some(tool => tool.readOnly === false)) {
+  const ok = surface.journey?.some(step => tools.get(step.tool)?.readOnly === false && step.resource !== undefined);
+  points.push({ id: 'BASE-AGENT-003.4.fixture', ok: Boolean(ok), ...(!ok ? { detail: 'A writable door with resources must declare a record-writing journey resource fixture and its expected written state.' } : {}) });
+ }
  add('witness', object(surface.witness) && tools.get(surface.witness.tool)?.readOnly === true && object(surface.witness.args), 'witness must name a declared readOnly tool and arguments.');
  checkReferences(surface.witness?.args, 'witness', new Set());
  return { ok: points.every(point => point.ok), points };

@@ -8,6 +8,7 @@ import type {
   ImporterRecord,
   ImporterValidationIssue,
   ImporterValidationResult,
+  MoveInImporterRecord,
   VerifiedImporter,
 } from './types.ts';
 
@@ -23,7 +24,7 @@ const strayPercent = /%(?![0-9A-Fa-f]{2})/;
 const nonAscii = /[^\x00-\x7f]/;
 
 export async function validateImporterEvidence(
-  records: ImporterRecord[],
+  records: Array<ImporterRecord | MoveInImporterRecord>,
   evidence: ImporterEvidencePort | undefined,
   issues: ImporterValidationIssue[],
 ): Promise<ImporterValidationResult['evidence']> {
@@ -37,6 +38,7 @@ export async function validateImporterEvidence(
   for (let index = 0; index < records.length; index += 1) {
     const record = records[index]!;
     const path = `$.importers[${index}]`;
+    if (!('evidence' in record)) continue;
     const reference = record.evidence as ImporterEvidenceReference;
     const receipt = await resolveAndCheckArtifact(reference, evidence, `${path}.evidence`, issues, counters);
     if (!receipt) continue;

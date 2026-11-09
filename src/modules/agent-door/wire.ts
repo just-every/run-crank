@@ -2,8 +2,12 @@ import { capabilitySet, offers } from './capabilities.mjs'
 import { json } from './errors.ts'
 import type { CallResult, Runtime } from './types.ts'
 
-export const versions = ['2026-07-28', '2025-11-25']
+export const versions = ['2026-07-28', '2025-11-25', '2025-06-18']
 export interface Rpc { jsonrpc: string; id?: string | number | null; method: string; params?: Record<string, unknown> }
+// This door is stateless: initialize carries its requested version; later
+// requests without a version header use the oldest supported wire format.
+export const protocolVersion = (request: Request, rpc: Rpc): string => request.headers.get('mcp-protocol-version') ??
+  (rpc.method === 'initialize' && typeof rpc.params?.protocolVersion === 'string' ? rpc.params.protocolVersion : versions[versions.length - 1]!)
 export const metaOf = (rpc: Rpc): Record<string, unknown> => rpc.params?._meta && typeof rpc.params._meta === 'object' ? rpc.params._meta as Record<string, unknown> : {}
 export const rpcError = (id: Rpc['id'], code: number, message: string, status = 400, data?: unknown, headers: HeadersInit = {}) => json({ jsonrpc: '2.0', id: id ?? null, error: { code, message, ...(data === undefined ? {} : { data }) } }, status, headers)
 export const rpcResult = (rpc: Rpc, result: unknown) => json({ jsonrpc: '2.0', id: rpc.id ?? null, result })
@@ -26,7 +30,7 @@ export function toolResult(result: CallResult, version: string, clientCapabiliti
   if (result.review) meta['com.runeditrun/review'] = result.review
   if (result.receipt) meta['com.runeditrun/receipt'] = result.receipt
   if (result.untrusted) meta['com.runeditrun/untrusted'] = true
-  if (result.outcome === 'pending' && version !== '2025-11-25') {
+  if (result.outcome === 'pending' && version === '2026-07-28') {
     meta['com.runeditrun/approval'] = result.approval
     const elicits = (clientCapabilities as { elicitation?: { url?: unknown } } | null)?.elicitation?.url !== undefined
     return { resultType: 'input_required', requestState: result.requestState, _meta: meta,
@@ -34,7 +38,7 @@ export function toolResult(result: CallResult, version: string, clientCapabiliti
   }
   const code = result.outcome === 'pending' ? 'approval_required' : result.code
   if (code) meta['com.runeditrun/error'] = { code, ...result.fields, ...(result.outcome === 'pending' ? { approval: result.approval } : {}) }
-  return { resultType: 'complete', content: [{ type: 'text', text: JSON.stringify(code ? { code, ...result.fields } : result.result ?? null) },
+  return { resultType: 'complete', ...(result.outcome === 'pending' ? { requestState: result.requestState } : {}), content: [{ type: 'text', text: JSON.stringify(code ? { code, ...result.fields } : result.result ?? null) },
     ...(!code ? (result.resources ?? []).map(resource => ({ type: 'resource_link', ...resource })) : [])],
     ...(!code ? { structuredContent: result.result } : {}), isError: !!code, _meta: meta }
 }
@@ -44,7 +48,6 @@ export function headerName(value: string | null): string | null {
   try { return new TextDecoder('utf-8', { fatal: true }).decode(Uint8Array.from(atob(value.slice(9, -2)), c => c.charCodeAt(0))) } catch { return null }
 }
 export async function parseRequest(rt: Runtime, request: Request): Promise<Rpc | Response> {
-  if (request.method !== 'POST') return rpcError(null, -32600, 'Method not allowed', 405)
   if (request.headers.has('origin') && request.headers.get('origin') !== rt.options.origin) return rpcError(null, -32600, 'Origin refused', 403)
   if (new URL(request.url).searchParams.has('access_token')) return rpcError(null, -32001, 'Unauthorized', 401, undefined, challenge(rt))
   const max = rt.options.limits!.maxBodyBytes!
@@ -66,12 +69,12 @@ export async function parseRequest(rt: Runtime, request: Request): Promise<Rpc |
       (rpc.params !== undefined && (!rpc.params || typeof rpc.params !== 'object' || Array.isArray(rpc.params))) ||
       (rpc.id !== undefined && rpc.id !== null && typeof rpc.id !== 'string' && typeof rpc.id !== 'number')) throw new Error()
   } catch { return rpcError(null, -32700, 'Invalid JSON-RPC request') }
-  const version = request.headers.get('mcp-protocol-version') ?? (rpc.method === 'initialize' && rpc.params?.protocolVersion === '2025-11-25' ? '2025-11-25' : null), meta = metaOf(rpc)
-  if (version && !versions.includes(version)) return rpcError(rpc.id, -32022, 'UnsupportedProtocolVersion', 400, { supported: versions, requested: version })
-  const modern = version !== '2025-11-25', named = ['tools/call', 'resources/read', 'prompts/get'].includes(rpc.method)
-  if (!version || (modern && meta['io.modelcontextprotocol/protocolVersion'] !== version) ||
-    (!modern && meta['io.modelcontextprotocol/protocolVersion'] !== undefined && meta['io.modelcontextprotocol/protocolVersion'] !== version) ||
-    ((modern || request.headers.has('mcp-method')) && request.headers.get('mcp-method') !== rpc.method) ||
+  const version = protocolVersion(request, rpc), meta = metaOf(rpc)
+  if (!versions.includes(version)) return rpcError(rpc.id, -32022, 'UnsupportedProtocolVersion', 400, { supported: versions, requested: version, message: `This MCP protocol version is not supported. Supported versions: ${versions.join(', ')}.` })
+  const modern = version === '2026-07-28', handshake = rpc.method === 'initialize', named = ['tools/call', 'resources/read', 'prompts/get'].includes(rpc.method)
+  if ((modern && !handshake && meta['io.modelcontextprotocol/protocolVersion'] !== version) ||
+    (meta['io.modelcontextprotocol/protocolVersion'] !== undefined && meta['io.modelcontextprotocol/protocolVersion'] !== version) ||
+    ((modern && !handshake || request.headers.has('mcp-method')) && request.headers.get('mcp-method') !== rpc.method) ||
     (named && (modern || request.headers.has('mcp-name')) && headerName(request.headers.get('mcp-name')) !== (rpc.method === 'resources/read' ? rpc.params?.uri : rpc.params?.name))) return rpcError(rpc.id, -32020, 'HeaderMismatch')
   return rpc
 }
