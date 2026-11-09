@@ -4,7 +4,38 @@ import { accessToken } from './crypto.mjs';
 import { narrowingContract } from './narrowing.mjs';
 import { VERSION } from './protocol.mjs';
 
+async function protocolCompatibility(c) {
+ const token = await accessToken(c);
+ const raw = async (method, credential, version, headers = {}, bodyVersion = version ?? '2025-06-18') => {
+  const response = await c.request('/mcp', { method: 'POST', headers: {
+   Accept: 'application/json, text/event-stream', 'Content-Type': 'application/json', Origin: c.origin,
+   ...(credential ? { Authorization: `Bearer ${credential}` } : {}),
+   ...(version ? { 'MCP-Protocol-Version': version } : {}), ...headers,
+  }, body: JSON.stringify({ jsonrpc: '2.0', id: 9001, method, params: method === 'initialize' ? { protocolVersion: bodyVersion, capabilities: {}, clientInfo: { name: 'rer-agent-conformance', version: '1' } } : {} }) });
+  return { status: response.status, headers: response.headers, body: await response.json() };
+ };
+ for (const method of ['initialize', 'server/discover', 'tools/list', 'tools/call']) {
+  for (const credential of [null, 'synthetic-invalid-token']) {
+   for (const version of [null, '2025-06-18', VERSION, '2099-01-01']) {
+    const answer = await raw(method, credential, version, { 'Mcp-Method': 'synthetic/mismatch' });
+    c.add(`BASE-AGENT-004.1.auth-first.${method}.${credential ? 'invalid' : 'missing'}.${version ?? 'no-header'}`, answer.status === 401 && answer.headers.get('www-authenticate') === `Bearer resource_metadata="${c.origin}/.well-known/oauth-protected-resource/mcp"` && answer.body.error?.code === -32001, 'Missing or invalid credentials must get the resource-metadata challenge before version or method-header validation.');
+   }
+  }
+ }
+ for (const version of ['2025-06-18', '2025-11-25', VERSION]) {
+  // Exercise each body-only initialize without requiring modern transport metadata.
+  const initialized = await raw('initialize', token, null, {}, version);
+  c.add(`BASE-AGENT-001.2.body-version.${version}`, initialized.status === 200 && initialized.body.result?.protocolVersion === version, 'Authenticated initialize must negotiate a supported body version without a version header.');
+ }
+ const listed = await raw('tools/list', token, null), explicit = await raw('tools/list', token, '2025-06-18');
+ c.add('BASE-AGENT-001.2.no-version-header', listed.status === 200 && explicit.status === 200 && isDeepStrictEqual(listed.body.result, explicit.body.result), 'A stateless request without a version header must use the oldest supported version.');
+ const unsupported = await raw('initialize', token, '2099-01-01');
+ const data = unsupported.body.error?.data;
+ c.add('BASE-AGENT-001.3.explanation', unsupported.status === 400 && unsupported.body.error?.code === -32022 && data?.requested === '2099-01-01' && [VERSION, '2025-11-25', '2025-06-18'].every(version => data?.supported?.includes(version) && data?.message?.includes(version)), 'An unsupported version must name the supported versions in a plain-language error.');
+}
+
 export async function discoverDoor(c) {
+ await protocolCompatibility(c);
  const discover = await c.mcp('server/discover');
  c.add('BASE-AGENT-001.1', discover.status === 200 && discover.result && Array.isArray(discover.result.supportedVersions) && discover.result.supportedVersions.includes(VERSION) && discover.result.supportedVersions.includes('2025-11-25') && discover.result.capabilities && discover.result._meta?.['io.modelcontextprotocol/serverInfo'] && typeof discover.result.instructions === 'string', 'server/discover must identify versions, capabilities, serverInfo and instructions.');
  const limits = discover.result?._meta?.['com.runeditrun/limits'];
@@ -43,7 +74,7 @@ export async function listedDoor(c) {
   c.add(`BASE-AGENT-002.3.${declared.name}`, tool?.annotations?.readOnlyHint === declared.readOnly && tool?.annotations?.destructiveHint === declared.classes.includes('destructive') && tool?.annotations?.openWorldHint === declared.classes.includes('external'), `${declared.name} annotations differ from its declared behavior.`);
   c.add(`BASE-AGENT-006.1.${declared.name}`, isDeepStrictEqual([...(tool?._meta?.['com.runeditrun/classes'] ?? [])].sort(), [...declared.classes].sort()) && tool?._meta?.['com.runeditrun/scope'] === declared.scope && isDeepStrictEqual([...(tool?._meta?.['com.runeditrun/clauses'] ?? [])].sort(), [...declared.clauses].sort()), `${declared.name} classes, scope or clauses differ from the Agent surface.`);
  }
- for (const version of [VERSION, '2025-11-25']) {
+ for (const version of [VERSION, '2025-11-25', '2025-06-18']) {
   const initialized = await c.mcp('initialize', { protocolVersion: version, capabilities: {}, clientInfo: { name: 'rer-agent-conformance', version: '1' } }, { version });
   const listed = await c.mcp('tools/list', {}, { version });
   c.add(`BASE-AGENT-001.2.${version}`, !initialized.headers.has('mcp-session-id') && initialized.result?.protocolVersion === version && isDeepStrictEqual(listed.result?.tools?.map(tool => tool.name), names), `${version} must negotiate and expose the same tools.`);

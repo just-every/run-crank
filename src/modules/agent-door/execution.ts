@@ -1,3 +1,6 @@
+import { businessRunning } from './business-state.ts'
+import { retire } from './retired-refs.ts'
+import { REPLAY_WINDOW_MS, captureFence } from './erasure.ts'
 import type { ClassAndFacts, CallResult, NativeTarget, Principal, Runtime, ToolContext, ToolDefinition, UndoContext, ApprovalDisplaySummary } from './types.ts'
 import { validateSchema } from './json-schema.ts'
 import { ToolRefusal } from './errors.ts'
@@ -31,7 +34,10 @@ export async function classify(tool: ToolDefinition, args: Record<string, unknow
 }
 export const digest = async (value: unknown) => Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(canonical(value)))), byte => byte.toString(16).padStart(2, '0')).join('')
 export const sameFacts = (a: ClassAndFacts[], b: ClassAndFacts[]) => canonical([...a].sort((x, y) => x.class.localeCompare(y.class))) === canonical([...b].sort((x, y) => x.class.localeCompare(y.class)))
+/** A Business-admitted principal ends with the Business that admitted it, wherever its call was held. */
+export const businessEnded = async (rt: Runtime, principal: Pick<Principal, 'source'>) => principal.source === 'business' && !await businessRunning(rt.options.people)
 export async function livePrincipal(rt: Runtime, saved: Principal): Promise<Principal | null> {
+  if (await businessEnded(rt, saved)) return null
   const person = await rt.options.people.person(saved.person.id)
   const agent = await rt.options.db.prepare('SELECT revoked FROM agent_door_agents WHERE id=?').bind(saved.agent.id).first<{ revoked: number }>()
   const state = await policyState(rt)
@@ -41,6 +47,7 @@ export async function livePrincipal(rt: Runtime, saved: Principal): Promise<Prin
 export async function runTool(rt: Runtime, tool: ToolDefinition, args: Record<string, unknown>, principal: Principal, result: CallResult, door: ToolContext['door'], approvers: ToolContext['approvers'] = [], usageId = result.decision!.id): Promise<{ result: CallResult; effects: Effect[]; undo?: unknown }> {
   const effects: Effect[] = []
   try {
+    if (await businessEnded(rt, principal)) throw new ToolRefusal('sponsor_unavailable')
     const current = await narrowPrincipal(rt, principal)
     // Preserve the admission snapshot exactly; a removed grant requires fresh work.
     if (principal.scopes.some(scope => !current.scopes.includes(scope))) throw new ToolRefusal('insufficient_scope')
@@ -49,6 +56,7 @@ export async function runTool(rt: Runtime, tool: ToolDefinition, args: Record<st
     if (tool.scope && !principal.scopes.includes(tool.scope)) throw new ToolRefusal('insufficient_scope')
     principal = await nativeProof(rt, tool, args, principal, principal.nativeProof?.reference)
     if (await continuationItem(tool, args, context(rt, principal, door, [], approvers), principal.operationId) !== principal.continuationItemId) throw new ToolRefusal('operation_mismatch')
+    await captureFence(rt, tool.name, args, context(rt, principal, door, effects, approvers))
     const value = await tool.run(args, context(rt, principal, door, effects, approvers))
     if (!validateSchema(tool.outputSchema, value.result)) return { result: { ...result, outcome: 'refused', code: 'output_invalid' }, effects, undo: value.undo }
     return { result: { ...result, outcome: 'done', result: value.result, resources: value.resources, untrusted: tool.untrusted }, effects, undo: value.undo }
@@ -58,8 +66,10 @@ export async function runTool(rt: Runtime, tool: ToolDefinition, args: Record<st
   }
 }
 export async function saveCall(rt: Runtime, principal: Principal, key: string | null, result: CallResult) {
-  if (key !== null) await rt.options.db.prepare('UPDATE agent_door_calls SET state=?,outcome=? WHERE agent=? AND key=?')
-    .bind(result.outcome, JSON.stringify(result), principal.agent.id, key).run()
+  if (key === null) return
+  const stored = await retire(rt.options.db, result)
+  await rt.options.db.prepare(`UPDATE agent_door_calls SET state=?,outcome=${stored.sql},expires_at=coalesce(expires_at,?) WHERE agent=? AND key=?`)
+    .bind(result.outcome, stored.value, result.outcome === 'pending' ? null : rt.now() + REPLAY_WINDOW_MS, principal.agent.id, key).run()
 }
 
 export const revoked = (state: Awaited<ReturnType<typeof policyState>>, principal: Pick<Principal, 'agent' | 'consent'>) => state.revoked.agents.includes(principal.agent.id) || !!principal.consent && state.revoked.consents.includes(principal.consent)

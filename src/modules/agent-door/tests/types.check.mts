@@ -1,4 +1,4 @@
-import type { ToolContext, AgentDoor } from '../index.ts'
+import type { ToolContext, AgentDoor, CompanyPolicyInput, CompanyPolicyContext } from '../index.ts'
 
 declare const ctx: ToolContext
 // @ts-expect-error Admission scopes are immutable.
@@ -30,3 +30,14 @@ void door.invoke('synthetic.queue.execute', { idempotency_key: ctx.idempotencyKe
  person: ctx.person, agent: ctx.agent, consent: ctx.consent, scopes: ctx.scopes,
  clientId: ctx.clientId, operationId: ctx.operationId,
 })
+
+declare const company: CompanyPolicyInput
+declare const identity: CompanyPolicyContext
+// @ts-expect-error Native policy cannot alter computed facts.
+company.classes[0]!.facts.measure = 0
+// @ts-expect-error Native policy cannot replace arguments.
+company.args.id = 'different'
+// @ts-expect-error Native policy cannot change the class decision.
+company.policy.result = 'autonomous'
+// @ts-expect-error Native policy cannot emit an effect.
+identity.emit('changed', 'record')

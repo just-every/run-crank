@@ -15,6 +15,7 @@ import { readOriginals } from './originals.ts';
 import { reversalState, reportHash, reversalGuards, undoEvidence } from './undo-state.ts';
 import { classifyUndo } from './undo-snapshot.ts';
 import { insertJsonRows } from './sets.ts';
+import { compactCustodyGuards } from './read-fence.ts';
 
 /** Called after public authority, binding, reversal-mode and custody checks. */
 export async function preserveReverse(current: { job: ImportJob; plan: ImportPlan }, context: D1ImportContext, action: 'undo' | 'rollback'): Promise<ImportJob> {
@@ -23,7 +24,9 @@ export async function preserveReverse(current: { job: ImportJob; plan: ImportPla
   const { database: db, targets } = context.storage;
   if (!targets.preparePreservedUndo) throw new Error('IMPORT_PRESERVED_UNDO_ADAPTER_REQUIRED');
   if (current.job.state !== reversing) {
-    await atomic(context, action, [...boundary(current.job, current.plan, action), await noSuccessors(id, context), ...custodyGuards(current.plan, id), ...await inventoryGuards(current.job, current.plan, context), changed(sql('UPDATE ik_jobs SET state=?,fence=fence+1 WHERE id=?', reversing, id),updateRows('ik_jobs',row=>row.id===id,row=>({...row,state:reversing,fence:current.job.fence+1})))], storedReads(current.job),nativeStagingScope(current.job,current.plan));
+    const scope = nativeStagingScope(current.job, current.plan);
+    const guards = await compactCustodyGuards(context, [...boundary(current.job, current.plan, action), await noSuccessors(id, context), ...custodyGuards(current.plan, id), ...await inventoryGuards(current.job, current.plan, context)], scope, action);
+    await atomic(context, action, [...guards, changed(sql('UPDATE ik_jobs SET state=?,fence=fence+1 WHERE id=?', reversing, id),updateRows('ik_jobs',row=>row.id===id,row=>({...row,state:reversing,fence:current.job.fence+1})))], storedReads(current.job),scope);
     current = await stored(id, context, action);
   }
   let published: ImportJob | undefined;
@@ -33,7 +36,7 @@ export async function preserveReverse(current: { job: ImportJob; plan: ImportPla
       if (job.state !== reversing) throw new Error('REVERSAL_MODE_CONFLICT');
       await readOriginals(plan, id, context);
       const scope=nativeStagingScope(job,plan);
-      const statements: D1Sql[] = [...boundary(job, plan, action), await noSuccessors(id, context), ...custodyGuards(plan, id), ...await inventoryGuards(job, plan, context)];
+      const statements: D1Sql[] = await compactCustodyGuards(context, [...boundary(job, plan, action), await noSuccessors(id, context), ...custodyGuards(plan, id), ...await inventoryGuards(job, plan, context)], scope, action);
       const { results: rows } = await db.prepare('SELECT * FROM ik_provenance WHERE job_id=? AND reversed=0 ORDER BY ordinal DESC,effect_ordinal DESC').bind(id).all();
       const retained = new Set(state.dispositions.filter(d => d.disposition === 'retained').map(d => d.effectId));
       const effects: D1UndoEffect[] = [];

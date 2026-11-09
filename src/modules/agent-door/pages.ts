@@ -1,3 +1,5 @@
+import { pendingRetirement } from './retired-refs.ts'
+import { retirementNotice } from './page-words.ts'
 import type { AuditRow } from './audit.ts'
 import { approvalDoor, type approvalView } from './approvals.ts'
 import { businessRole, matchingRefs } from './people.ts'
@@ -114,7 +116,7 @@ function approvalFeed(rt: Runtime, items: Approval[]): string {
 function activity(rt: Runtime, rows: AuditRow[]): string {
   return `<section aria-labelledby="activity-title"><h2 id="activity-title">Recent activity</h2>${rows.length ? `<ul class="stack">${rows.map(row => {
     const name = escape(actionName(rt, row.tool, row.resource))
-    return `<li><p class="row-title">${row.approval ? `<a href="/agents/approvals/${segment(row.approval.id)}">${name}</a>` : name}</p><p class="meta">${escape(row.agent.name)} for ${escape(row.sponsor.name)} · ${escape(activityOutcome(row.decision, row.outcome, row.code))} · ${time(row.at)}</p></li>`
+    return `<li><p class="row-title">${row.approval ? `<a href="/agents/approvals/${segment(row.approval.id)}">${name}</a>` : name}</p><p class="meta">${escape(row.tombstone ? 'Erased record' : row.agent.name)}${row.tombstone ? '' : ' for ' + escape(row.sponsor.name)} · ${escape(activityOutcome(row.decision, row.outcome, row.code))} · ${time(row.at)}</p></li>`
   }).join('')}</ul>` : empty('No agent activity yet.')}</section>`
 }
 
@@ -139,6 +141,7 @@ async function dashboard(rt: Runtime, request: Request, person: Person): Promise
   const paused = state.paused || state.localPaused, complete = publicState(rt, state).policy.complete
   const policy = canAudit ? setup(rt, state, role === 'owner') : ''
   let content = `<div class="heading"><div><h1>Agents</h1><p data-agents-state>${paused ? 'Agents are paused.' : 'Agents are on.'}</p>${state.paused ? '<p>Paused in Business.</p>' : ''}</div>${role === 'owner' ? `<div class="actions">${action('/agents/api/pause', state.localPaused ? 'Resume agents' : 'Pause agents', 'data-agents-pause', `<input type="hidden" name="paused" value="${!state.localPaused}">`)}</div>` : ''}</div>`
+  if (canAudit && await pendingRetirement(rt.options.db, state.document)) content += `<p data-policy-retirement>${escape(retirementNotice)} <a href="${escape(rt.options.trust ? setupUrl(rt, state) : '#policy-title')}">${rt.options.trust ? 'Manage policy in Business' : 'Edit policy'}</a></p>`
   if (!complete) content += policy
   content += approvalFeed(rt, approvals.approvals) + reviewFeed(rt, reviews.reviews) || '<section aria-label="Waiting for you"><p>Nothing is waiting for you.</p></section>'
   if (recent) content += activity(rt, recent.results.map(record => JSON.parse(record.row) as AuditRow))
@@ -151,6 +154,7 @@ async function approvalPage(rt: Runtime, request: Request, person: Person, id: s
   const response = await approvalDoor(rt, request, person, id)
   if (!response.ok) return shell(rt, 'Approval', '<h1>Request not found</h1><p>It does not exist, or it is not yours to see.</p><a href="/agents">Open Agents</a>', response.status)
   const { approval } = await response.json() as { approval: Approval }
+  if (approval.code === 'subject_erased') return shell(rt, 'Approval', '<h1>Record erased</h1><p>This approval is closed because the record was erased.</p><a href="/agents">Open Agents</a>', 200)
   const by = approval.prepared_by
   const sponsor = typeof by.for === 'string' ? '' : by.for.id
   const eligible = await matchingRefs(rt, person, sponsor, approval.approvers)

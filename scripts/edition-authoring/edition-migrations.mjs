@@ -3,7 +3,7 @@ import {safe} from './files.mjs';
 import {fileURLToPath} from 'node:url';
 const dataPath = 'foundation/edition-migrations.json';
 const quote = value => "'" + value.replaceAll("'", "'\\''") + "'";
-export function editionMigrations(record, {tree, read, revision, base, recordPath, offline, consent = []}) {
+export function editionMigrations(record, {tree, read, revision, base, recordPath, offline, fromApi, consent = []}) {
   let migrations = [];
   const fail = reason => { throw Error(`Base edition migration data error: ${reason}. Repair ${dataPath} in Base and commit it, then refresh to that commit; no files were refreshed.`); };
   if (tree.has(dataPath)) {
@@ -38,7 +38,7 @@ export function editionMigrations(record, {tree, read, revision, base, recordPat
   if (missing.length) {
     const cli = fileURLToPath(new URL('./cli.mjs', import.meta.url));
     // Keep automatic acquisition automatic: its temporary checkout closes on refusal.
-    const command = `${quote(process.execPath)} ${quote(cli)} refresh-base ${revision}${base ? ' --base ' + quote(base) : ''} --record ${quote(recordPath)}${offline ? ' --offline' : ''}${applicable.map(step => ' --edition-migration ' + step.id).join('')}`;
+    const command = `${quote(process.execPath)} ${quote(cli)} refresh-base ${revision}${base ? ' --base ' + quote(base) : ''} --record ${quote(recordPath)}${offline ? ' --offline' : ''}${fromApi ? ' --from-api' : ''}${applicable.map(step => ' --edition-migration ' + step.id).join('')}`;
     throw Error(`Edition migrations require consent before planning:\n${missing.map(step => `${step.id}: ${step.copies.join(', ')}; ${step.guide}: ${step.edit}`).join('\n')}\nReview the guides and repeat exactly: ${command}\nRefresh will leave these edition-owned edits owed; no files were refreshed.`);
   }
   return applicable;

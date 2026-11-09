@@ -9,11 +9,19 @@ import { batchRows, checkBatchResults } from './read-results.ts';
 import { erasedIndexGuards } from './erasure-index.ts';
 import { jsonChunks } from './sets.ts';
 
+/** Transfer oversized kit-only preconditions into an exact, revision-fenced
+ * read. The returned predicates must precede every mutation in one atomic
+ * batch. Native snapshots and postconditions never use this transfer. */
+export async function compactCustodyGuards(context: D1ImportContext, guards: D1Sql[], scope: NativeStagingScope, action: ImportAction): Promise<D1Sql[]> {
+  if (context.maxBatchBytes !== undefined || batchBytes(packGuards(guards, true)) <= 2 * 1024 * 1024) return guards;
+  return readBoundedGuards(context, guards, scope, 2 * 1024 * 1024, action);
+}
+
 /** Check exact custody without writing private copies merely to read them.
  * Every batch sees the same monotonic revisions, captured before any exact
  * check. The final fence also retains the plan revision captured before decode.
  * Native target reads have no such custody fence and remain one atomic batch. */
-export async function readBoundedGuards(context: D1ImportContext, guards: D1Sql[], scope: NativeStagingScope, limit: number, action: ImportAction = 'read'): Promise<void> {
+export async function readBoundedGuards(context: D1ImportContext, guards: D1Sql[], scope: NativeStagingScope, limit: number, action: ImportAction = 'read'): Promise<D1Sql[]> {
   const ids = new Set([scope.job.id]);
   for (const query of guards) {
     if (query.retainedValues?.privacyJobId) ids.add(query.retainedValues.privacyJobId);
@@ -40,7 +48,10 @@ export async function readBoundedGuards(context: D1ImportContext, guards: D1Sql[
   }
   if (revisions.length !== ids.size || new Set(revisions.map(row => row[0])).size !== ids.size) throw new Error('IMPORT_ATOMIC_GUARD');
   const fences = jsonChunks(revisions).map(body => guard(sql("NOT EXISTS(SELECT 1 FROM json_each(?) e WHERE NOT EXISTS(SELECT 1 FROM ik_d1_custody_states s JOIN ik_d1_custody_revisions r ON r.job_id=s.job_id WHERE s.job_id=json_extract(e.value,'$[0]') AND s.revision=json_extract(e.value,'$[1]') AND r.revision=json_extract(e.value,'$[2]')))", body)));
-  const prefix = [authority(context, action), ...fences, ...nativeStagingPostBinding(scope)];
+  // Explicitly bounded callers captured the staging plan revision before
+  // decode. Ordinary callers instead validate their exact plan guards below
+  // (or the large-plan fence), under the revisions just captured here.
+  const prefix = [authority(context, action), ...fences, ...context.maxBatchBytes === undefined ? [] : nativeStagingPostBinding(scope)];
   const batches: D1Sql[][] = []; let pending: D1Sql[] = [];
   const packed = (members: D1Sql[]) => packGuards([...prefix, ...members], true);
   for (const member of [...guards, ...erasedIndexGuards(scope.plan)]) {
@@ -61,4 +72,5 @@ export async function readBoundedGuards(context: D1ImportContext, guards: D1Sql[
       if (rows.length !== 1 || rows[0].ok !== 1) throw new Error('IMPORT_ATOMIC_GUARD');
     }
   }
+  return prefix;
 }

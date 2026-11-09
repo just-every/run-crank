@@ -1,8 +1,10 @@
 import { randomUUID } from 'node:crypto';
 import { isDeepStrictEqual } from 'node:util';
-import { accessToken, policyEnvelope } from './crypto.mjs';
+import { accessToken, policyEnvelope, renewalEnvelope, seconds } from './crypto.mjs';
 import { AGENT_CLASSES } from './surface.mjs';
 import { phaseFixtures } from './fixtures.mjs';
+import { validToolName } from './tool-name.mjs';
+import { beforeDestruction, erasedAnswer, erasedCall } from './erasure.mjs';
 
 export const VERSION = '2026-07-28';
 export const DECISION = 'com.runeditrun/decision';
@@ -62,6 +64,7 @@ export function createProtocol(context) {
   // A 429 is a capacity refusal, not an action result. Honor only a bounded,
   // explicit Retry-After; never replay an application or policy refusal.
   for (let attempt = 0; ; attempt++) {
+   if (new URL(path, context.origin).pathname !== '/api/rer/agent-policy') await context.renewPolicy();
    const response = await context.fetch(new URL(path, `${context.origin}/`).href, { redirect: 'manual', ...init });
    if (response.status !== 429) return response;
    const header = response.headers.get('retry-after'), delay = header && /^\d+(?:\.\d+)?$/.test(header) ? Number(header) * 1000 : header ? Date.parse(header) - Date.now() : NaN;
@@ -79,13 +82,19 @@ export function createProtocol(context) {
   const valid = approval?.id === handle.id && approval.decision_id === pending.decision?.id && approval.revision === pending.decision?.revision && /^[a-f0-9]{64}$/.test(approval.summary_sha256);
   context.add(`BASE-AGENT-008.5.summary.${handle.id}`, valid, 'The person approval must expose its exact decision, revision and summary SHA-256.');
   if (!valid) throw new Error('Cannot decide an approval without its exact summary evidence');
+  const before = action === 'approve' ? await beforeDestruction(context, approval.tool) : undefined;
   const response = await context.personRequest(`${path}/${action}`, { method: 'POST', body: JSON.stringify({ revision: approval.revision, summary_sha256: approval.summary_sha256 }) });
   const body = await responseBody(response);
+  let erasure;
+  if (response.ok && action === 'approve' && body.approval?.code === 'subject_erased') {
+   erasure = await erasedCall(context, before, approval.tool, undefined, pending.decision);
+   context.calls.push({ kind: 'approval/execute', name: approval.tool, decision: structuredClone(pending.decision), approvalId: handle.id, erasure, auditId: erasure.id });
+  }
   if (response.ok && action === 'approve' && approval.state === 'pending' && ['executed', 'refused'].includes(body.approval?.state)) context.calls.push({
    kind: 'approval/execute', name: approval.tool, decision: structuredClone(pending.decision), approvalId: handle.id, principal: pending.principal,
    state: body.approval.state, code: body.approval.code ?? null,
   });
-  return { ok: response.ok, status: response.status, body };
+  return { ok: response.ok, status: response.status, body, erasure };
  };
  context.mcp = async (method, params = {}, options = {}) => {
   const client = options.client === undefined ? undefined : context.clients.get(options.client);
@@ -93,20 +102,23 @@ export function createProtocol(context) {
   const { token = client?.token ?? await accessToken(context), version = VERSION, headers = {}, track = true } = options;
   const principal = client && options.token === undefined ? { agent: client.agent, clientId: client.clientId, consent: null, sponsor: context.sponsor.id } : undefined;
   const id = ++requestId, name = method === 'resources/read' ? params.uri : params.name;
+  const before = method === 'tools/call' ? await beforeDestruction(context, name) : undefined;
   const response = await context.request('/mcp', { method: 'POST', headers: {
    Accept: 'application/json, text/event-stream', 'Content-Type': 'application/json', Origin: context.origin,
    'MCP-Protocol-Version': version, 'Mcp-Method': method,
    ...(['tools/call', 'resources/read', 'prompts/get'].includes(method) && name ? { 'Mcp-Name': name } : {}),
    ...(token ? { Authorization: `Bearer ${token}` } : {}), ...headers,
-  }, body: JSON.stringify({ jsonrpc: '2.0', id, method, params: version === '2025-11-25' ? params : { ...params, _meta: { 'io.modelcontextprotocol/protocolVersion': version, 'io.modelcontextprotocol/clientCapabilities': { elicitation: { url: {} } }, 'io.modelcontextprotocol/clientInfo': { name: 'rer-agent-conformance', version: '1' }, ...params._meta } } }) });
+  }, body: JSON.stringify({ jsonrpc: '2.0', id, method, params: ['2025-06-18', '2025-11-25'].includes(version) ? params : { ...params, _meta: { 'io.modelcontextprotocol/protocolVersion': version, 'io.modelcontextprotocol/clientCapabilities': { elicitation: { url: {} } }, 'io.modelcontextprotocol/clientInfo': { name: 'rer-agent-conformance', version: '1' }, ...params._meta } } }) });
   const body = await responseBody(response), result = body.result, decision = result?._meta?.[DECISION] ?? body.error?.data?._meta?.[DECISION];
   const answer = { status: response.status, headers: response.headers, body, message: body, result, decision, principal };
-  if (['tools/call', 'resources/read'].includes(method) && track && (response.status !== 401 || typeof body.error?.data?.code === 'string')) context.calls.push({
+  const erased = await erasedAnswer(context, answer, before, name);
+  if (['tools/call', 'resources/read'].includes(method) && track && erased !== false && (response.status !== 401 || typeof body.error?.data?.code === 'string')) context.calls.push({
    kind: method, name: method === 'resources/read' ? 'resources/read' : params.name,
    args: structuredClone(method === 'resources/read' ? { uri: params.uri } : params.arguments ?? {}),
    decision: structuredClone(decision ?? null), code: errorCode(answer), result: structuredClone(result), principal,
    approval: structuredClone(result?._meta?.[APPROVAL] ?? body.error?.data?.approval ?? null),
    pending: result?.resultType === 'input_required' || method === 'resources/read' && errorCode(answer) === 'approval_required',
+   ...(answer.erasure ? { erasure: answer.erasure, auditId: answer.erasure.id } : {}),
   });
   return answer;
  };
@@ -134,19 +146,52 @@ export function createProtocol(context) {
   if (answer.result?.isError || answer.result?.structuredContent === undefined) throw new Error(`Witness ${context.surface.witness.tool} failed (${errorCode(answer) ?? answer.status})`);
   return answer.result.structuredContent;
  };
- context.adopt = async (document, options = {}) => {
-  const signed = await policyEnvelope(context, document, options);
+ const postPolicy = async signed => {
   const response = await context.request('/api/rer/agent-policy', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ policy: signed.policy }) });
   const body = await responseBody(response);
   if (!response.ok) throw new Error(`Policy adoption failed: HTTP ${response.status} (${typeof body.code === 'string' ? body.code : 'invalid response'})`);
+  if (!isDeepStrictEqual(body.adopted, { seq: signed.payload.seq, revision: signed.payload.revision })) throw new Error('Policy adoption acknowledgement differs from its envelope');
+  context.adoptedPolicy = structuredClone(signed.payload);
+  return body;
+ };
+ let renewing;
+ context.renewPolicy = async () => {
+  if (renewing) return renewing;
+  const adopted = context.adoptedPolicy, now = seconds(context.now);
+  if (!adopted || adopted.exp - now >= 60 || now <= adopted.iat) return;
+  renewing = (async () => { await postPolicy(await renewalEnvelope(context, adopted)); })();
+  try { await renewing; } finally { renewing = undefined; }
+ };
+ context.adopt = async (document, options = {}) => {
+  const signed = await policyEnvelope(context, document, options);
+  const body = await postPolicy(signed);
   context.seq = signed.payload.seq; context.revision = signed.payload.revision; context.document = document;
-  const expectedClasses = [...new Set(context.surface.tools.flatMap(tool => tool.classes))];
   const actualClasses = body.door?.classes;
-  const validClasses = Array.isArray(actualClasses) && new Set(actualClasses.map(row => row?.class)).size === actualClasses.length && actualClasses.every(row =>
+  const declared = new Set(context.surface.tools.map(tool => tool.name));
+  const shaped = Array.isArray(actualClasses) && new Set(actualClasses.map(row => row?.class)).size === actualClasses.length && actualClasses.every(row =>
    row && Object.keys(row).sort().join(',') === 'class,tools' && AGENT_CLASSES.includes(row.class) && Array.isArray(row.tools) &&
-   isDeepStrictEqual([...row.tools].sort(), context.surface.tools.filter(tool => tool.classes.includes(row.class)).map(tool => tool.name).sort().slice(0, 20))) &&
+   row.tools.length <= 20 && new Set(row.tools).size === row.tools.length && row.tools.every(name => validToolName(name, context.surface.seed)));
+  // The policy answer declares native-only tools too. Retain that declaration
+  // across revisions; it must never expand the edition's public MCP surface.
+  const invokeTools = context.invokeTools ?? (shaped ? [...new Set(actualClasses.flatMap(row => row.tools).filter(name => !declared.has(name)))].map(name => ({
+   name, classes: actualClasses.filter(row => row.tools.includes(name)).map(row => row.class),
+  })) : []);
+  const policyTools = [...context.surface.tools, ...invokeTools];
+  const expectedClasses = [...new Set(policyTools.flatMap(tool => tool.classes))];
+  const validClasses = shaped && actualClasses.every(row =>
+   isDeepStrictEqual([...row.tools].sort(), policyTools.filter(tool => tool.classes.includes(row.class)).map(tool => tool.name).sort().slice(0, 20))) &&
    expectedClasses.every(cls => actualClasses.some(row => row.class === cls));
-  context.add(`BASE-AGENT-007.7.adopt.${context.seq}`, Object.keys(body).sort().join(',') === 'adopted,door' && isDeepStrictEqual(body.adopted, { seq: context.seq, revision: context.revision }) && validClasses, 'Policy answer must contain exactly adopted {seq,revision} and catalogue classes with the exact declared tool mappings; resource-only classes have no tools.');
+  let hidden = true;
+  if (invokeTools.length) {
+   const listed = await context.mcp('tools/list');
+   hidden = listed.status === 401 && listed.result === undefined || Array.isArray(listed.result?.tools) && invokeTools.every(tool => !listed.result.tools.some(item => item.name === tool.name));
+   for (const tool of invokeTools) {
+    const answer = await context.tool(tool.name, {});
+    hidden &&= answer.status === 400 && errorCode(answer) === 'tool_not_found' && answer.result === undefined && !answer.decision;
+   }
+  }
+  if (validClasses && hidden) context.invokeTools = invokeTools;
+  context.add(`BASE-AGENT-007.7.adopt.${context.seq}`, Object.keys(body).sort().join(',') === 'adopted,door' && isDeepStrictEqual(body.adopted, { seq: context.seq, revision: context.revision }) && validClasses && hidden, 'Policy answer must contain exactly adopted {seq,revision} and catalogue classes with the exact declared tool mappings; native-only tools must remain absent from MCP discovery and calls, and resource-only classes have no tools.');
   return signed;
  };
  phaseFixtures(context, context.prepare);

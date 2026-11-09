@@ -10,9 +10,9 @@ export const provenanceColumns = 'id,job_id,ordinal,effect_ordinal,source_identi
 
 /** Transfer only a currently attributed exact native snapshot, explicitly reviewed
  * through expectedRevision. Original attribution remains unchanged in history. */
-export async function supersedeTarget(successor: D1ProvenanceRow, before: TargetRow | undefined, context: D1ImportContext, statements: D1Sql[]): Promise<void> {
+export async function supersedeTarget(successor: D1ProvenanceRow, before: TargetRow | undefined, context: D1ImportContext, statements: D1Sql[], snapshot?: any): Promise<void> {
   const db = context.storage.database;
-  const prior = await db.prepare('SELECT * FROM ik_provenance WHERE destination=? AND target_kind=? AND target_id=? AND reversed=0').bind(successor.destination, successor.targetKind, successor.targetId).first();
+  const prior = snapshot === undefined ? await db.prepare('SELECT * FROM ik_provenance WHERE destination=? AND target_kind=? AND target_id=? AND reversed=0').bind(successor.destination, successor.targetKind, successor.targetId).first() : snapshot;
   if (!prior) {
     statements.push(guard(sql('NOT EXISTS(SELECT 1 FROM ik_provenance WHERE destination=? AND target_kind=? AND target_id=? AND reversed=0)', successor.destination, successor.targetKind, successor.targetId)));
     return;

@@ -142,6 +142,10 @@ function memberKey(key: string): ReturnType<typeof credentialKey> {
   const name = credentialMember(decodedCredentialText(key));
   return name === undefined ? undefined : { name, holds: value => !emptyCredential(value) };
 }
+/** The parsed URL, or undefined for text that looks like one but does not parse. */
+function parseUrl(text: string): URL | undefined {
+  try { return new URL(text, 'https://credential-check.invalid'); } catch { return undefined; }
+}
 const looksLikeUrl = (value: string) => /^(?:https?:\/\/|\/|\?)/i.test(decodedCredentialText(value));
 
 export function assertNoCredentials(value: unknown, policy?: PaginationCursorPolicy): void {
@@ -167,14 +171,19 @@ export function assertNoCredentials(value: unknown, policy?: PaginationCursorPol
     } else if (typeof item === 'string') {
       // Relative pagination links receive the same check as absolute links.
       if (!looksLikeUrl(item)) return;
-      const url = new URL(item, 'https://credential-check.invalid');
+      // Free text that merely starts like a URL (`http:// see below`) does not parse: it is prose,
+      // with no user name to find. Its raw text still goes through the query-key scans below.
+      const url = parseUrl(item);
       const structure = decodedCredentialText(credentialUrlStructure(item, policy).split('#')[0]);
-      const decodedUrl = new URL(structure, 'https://credential-check.invalid');
-      if (url.username || url.password || decodedUrl.username || decodedUrl.password) throw new CredentialError('CREDENTIAL_IN_DURABLE_URL', { kind: 'url-userinfo' });
-      for (const pair of url.search.slice(1).split('&')) {
+      const decodedUrl = parseUrl(structure);
+      if (url?.username || url?.password || decodedUrl?.username || decodedUrl?.password) throw new CredentialError('CREDENTIAL_IN_DURABLE_URL', { kind: 'url-userinfo' });
+      const rawQueryStart = item.indexOf('?'), rawFragmentStart = item.indexOf('#');
+      const search = url ? url.search.slice(1)
+        : rawQueryStart < 0 || (rawFragmentStart >= 0 && rawFragmentStart < rawQueryStart) ? '' : item.slice(rawQueryStart + 1, rawFragmentStart < 0 ? item.length : rawFragmentStart);
+      for (const pair of search.split('&')) {
         if (credentialQueryKey(pair.split('=')[0], policy)) throw new CredentialError('CREDENTIAL_IN_DURABLE_URL', { kind: 'url-query' });
       }
-      for (const child of url.searchParams.values()) visit(child);
+      if (url) for (const child of url.searchParams.values()) visit(child);
       // Encoded delimiters outside opaque values must not hide credential keys.
       // Any key introduced by decoding has no exact-wire cursor exemption.
       // A decoded fragment delimiter must not truncate these query checks either.

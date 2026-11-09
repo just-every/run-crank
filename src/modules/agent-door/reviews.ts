@@ -1,8 +1,9 @@
+import { retire } from './retired-refs.ts'
 import type { Evidence } from './audit.ts'
 import type { ClassAndFacts, Principal, Runtime, Person, ToolContext, ApprovalDisplaySummary } from './types.ts'
 import { undoContext, type Effect } from './execution.ts'
 import { error, json, ToolRefusal } from './errors.ts'
-import { matchingRefs } from './people.ts'
+import { matchingRefs, businessRole } from './people.ts'
 import { appendEvents } from './events.ts'
 
 interface SavedReview { decision_id: string; tool: string; classes: ClassAndFacts[]; principal: Principal; reviewers: string[]; undo?: unknown; door: ToolContext['door']; summary?: ApprovalDisplaySummary }
@@ -10,11 +11,13 @@ interface ReviewRecord { id: string; state: string; saved: string; marked_by: st
 export async function openReview(rt: Runtime, tool: string, principal: Principal, decision_id: string, evidence: Evidence, undo: unknown, door: ToolContext['door'], summary?: ApprovalDisplaySummary) {
   const id = crypto.randomUUID()
   const saved: SavedReview = { decision_id, tool, classes: evidence.classes, principal, reviewers: evidence.document.reviewers ?? [], undo, door, summary }
-  await rt.options.db.prepare('INSERT INTO agent_door_reviews(id,state,saved) VALUES(?,?,?)').bind(id, 'open', JSON.stringify(saved)).run()
+  const stored = await retire(rt.options.db, saved)
+  await rt.options.db.prepare(`INSERT INTO agent_door_reviews(id,state,saved) SELECT ?,?,${stored.sql} WHERE NOT EXISTS(SELECT 1 FROM agent_door_audit WHERE id=? AND json_extract(row,'$.tombstone') IS NOT NULL)`).bind(id, 'open', stored.value, decision_id).run()
   return { id }
 }
 export function reviewView(rt: Runtime, row: ReviewRecord) {
   const saved: SavedReview = JSON.parse(row.saved)
+  if ((saved as any).tombstone) return { id: row.id, state: row.state, ...(saved as any) }
   return { id: row.id, decision_id: saved.decision_id, state: row.state, tool: saved.tool, classes: saved.classes, marked_by: row.marked_by, marked_at: row.marked_at,
     summary: saved.summary, undo: { available: saved.undo !== undefined && !!rt.tools.find(tool => tool.name === saved.tool)?.undo && row.state !== 'undone' }, prepared_by: { agent: saved.principal.agent.name, for: saved.principal.person.name } }
 }
@@ -22,12 +25,13 @@ export async function reviewDoor(rt: Runtime, request: Request, person: Person, 
   if (!id) {
     if (request.method !== 'GET') return error('method_not_allowed', 405)
     const rows = (await rt.options.db.prepare('SELECT * FROM agent_door_reviews ORDER BY rowid DESC LIMIT 200').all<ReviewRecord>()).results
-    const visible = await Promise.all(rows.map(async row => { const saved: SavedReview = JSON.parse(row.saved); return (await matchingRefs(rt, person, saved.principal.person.id, saved.reviewers)).length ? reviewView(rt, row) : null }))
+    const visible = await Promise.all(rows.map(async row => { const saved: SavedReview = JSON.parse(row.saved); return ((saved as any).tombstone ? !!businessRole(rt.options.people, person) : (await matchingRefs(rt, person, saved.principal.person.id, saved.reviewers)).length) ? reviewView(rt, row) : null }))
     return json({ reviews: visible.filter(row => row !== null) })
   }
   const row = await rt.options.db.prepare('SELECT * FROM agent_door_reviews WHERE id=?').bind(id).first<ReviewRecord>()
   if (!row) return error('not_found', 404)
   const saved: SavedReview = JSON.parse(row.saved)
+  if ((saved as any).tombstone) return error('subject_erased', 409)
   if (!(await matchingRefs(rt, person, saved.principal.person.id, saved.reviewers)).length) return error('forbidden', 403)
   if (request.method !== 'POST' || !['reviewed', 'flag', 'undo'].includes(action ?? '')) return error('method_not_allowed', 405)
   if (row.state === 'undoing') return error('review_conflict', 409)
@@ -50,8 +54,8 @@ export async function reviewDoor(rt: Runtime, request: Request, person: Person, 
   }
   row.state = action === 'flag' ? 'flagged' : action === 'undo' ? 'undone' : 'reviewed'
   row.marked_by = person.id; row.marked_at = new Date(rt.now()).toISOString()
-  await rt.options.db.prepare('UPDATE agent_door_reviews SET state=?,marked_by=?,marked_at=? WHERE id=?').bind(row.state, person.id, row.marked_at, id).run()
+  await rt.options.db.prepare("UPDATE agent_door_reviews SET state=?,marked_by=?,marked_at=? WHERE id=? AND json_extract(saved,'$.tombstone') IS NULL").bind(row.state, person.id, row.marked_at, id).run()
   if (action === 'flag') effects.push({ type: 'review.flagged', uri: `${rt.options.origin}/agents/reviews/${id}`, data: { classes: saved.classes, decision_id: saved.decision_id } })
-  await appendEvents(rt, effects.map(effect => ({ ...effect, actor: { kind: 'person', person: { id: person.id, name: person.name } } })))
+  await appendEvents(rt, effects.map(effect => ({ ...effect, actor: { kind: 'person', person: { id: person.id, name: person.name } } })), saved.decision_id)
   return json({ review: reviewView(rt, row) })
 }

@@ -34,16 +34,16 @@ export interface LineageSever { target: string; select: (record: SourceRecord) =
  * step stays inside the limit and the erasure reaches its final step. With
  * `sever`, each step also severs the door lineage's copies in the jobs it reads. */
 export async function redactionSteps(fields: readonly D1FieldRedaction[], context: D1ImportContext, fence: D1Sql[], progress: RedactionProgress, pending: JobRevision[], failed?: Overflow, sever?: LineageSever): Promise<D1RetirementProgress> {
-  let { span, page } = progress, unsized = failed;
+  let { span, page } = progress, unsized = failed, attempts = failed ? 1 : 0;
   for (;;) {
     let job = page && pending.find(item => item.id === page!.job);
     // A job changed since its last page starts again from its first entry; one no longer pending is done.
     if (page && (!job || job.revision !== page.revision)) page = job ? { ...page, from: 0, revision: job.revision } : undefined;
     if (unsized) {
-      const next = smaller(span, page, pending, unsized.cost);
+      const next = smaller(span, page, pending, unsized.cost, attempts === 1);
       ({ span, page } = next); job = page && pending.find(item => item.id === page!.job);
       // Try it now only while this request has room for it; otherwise commit nothing and let the next request take it.
-      if (unsized.cost === undefined || unsized.cost * next.fraction > remaining(context)) {
+      if (next.defer || unsized.cost === undefined || unsized.cost * next.fraction > remaining(context)) {
         return { phase: 'redacting', continuation: writeProgress({ ...progress, span, page }), jobsRedacted: 0, jobsPending: pending.length, fieldMatches: progress.matched };
       }
     }
@@ -53,6 +53,7 @@ export async function redactionSteps(fields: readonly D1FieldRedaction[], contex
     try { done = await redactionStep(fields, context, fence, progress, jobs, range, sever); }
     catch (error) {
       if (!(error instanceof D1RequestLimitError)) throw error;
+      attempts++;
       const needed = (error as { needed?: number }).needed;
       unsized = { cost: needed === undefined ? undefined : start - remaining(context) + needed };
       continue;
@@ -72,18 +73,27 @@ export async function redactionSteps(fields: readonly D1FieldRedaction[], contex
 
 /** The next, strictly smaller step after one cost `cost` statements: in proportion,
  * with headroom, or half when its reads alone ran out. Fewer jobs first, then
- * pages of one job's entries; `fraction` is its expected share of that cost. */
-function smaller(span: number, page: RedactionPage | undefined, pending: JobRevision[], cost: number | undefined): { span: number; page?: RedactionPage; fraction: number } {
+ * pages of one job's entries; `fraction` is its expected share of that cost.
+ * When one entry is already the step and that attempt was `first` in its request,
+ * nothing fits and the step is refused. A request that earlier attempts had spent
+ * defers the same step instead (`defer`): a fresh request has its whole budget. */
+function smaller(span: number, page: RedactionPage | undefined, pending: JobRevision[], cost: number | undefined, first: boolean): { span: number; page?: RedactionPage; fraction: number; defer?: boolean } {
   const size = (current: number) => Math.min(current - 1, cost === undefined ? Math.floor(current / 2) : Math.floor(current * BUDGET * 0.7 / cost));
   if (page) {
     const count = size(page.count);
-    if (count < 1) throw new D1RequestLimitError(); // One entry alone is more than a request.
+    if (count < 1) {
+      if (!first) return { span, page, fraction: 1, defer: true };
+      throw new D1RequestLimitError(); // One entry alone is more than a request.
+    }
     return { span, page: { ...page, count }, fraction: count / page.count };
   }
   const jobs = Math.min(span, pending.length);
   if (jobs > 1) { const fewer = Math.max(1, size(jobs)); return { span: fewer, fraction: fewer / jobs }; }
   const [job] = pending, count = size(job.total);
-  if (count < 1) throw new D1RequestLimitError();
+  if (count < 1) {
+    if (!first) return { span, fraction: 1, defer: true };
+    throw new D1RequestLimitError();
+  }
   return { span: 1, page: { job: job.id, from: 0, count, revision: job.revision }, fraction: count / job.total };
 }
 

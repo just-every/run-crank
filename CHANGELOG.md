@@ -1,5 +1,15 @@
 # Changes
 
+## 2026-11-09
+
+- Pin `@runeditrun/rer` 0.2.104 and refresh maintained Base copies from
+  `96045612467d5e752c668e8557b4bf6e906edfb1`, preserving seed adaptations.
+- Use the existing seed-owned executable archive policy through Base's container
+  transfer support. Restore retains inactive workflow adoption and credential
+  exclusions; agent policy, approvals and relay custody remain installation-local.
+- Upgrade agent-door schema with an additive migration and retain Crank's native
+  recovery, named-person approval checks and busy-refusal audit classification.
+
 ## 2026-10-17
 
 - Add published multi-step workflows beside the HTTP flows: secret webhook URLs

@@ -47,13 +47,34 @@ export interface NoImporter {
   evidence: NoneEvidence;
 }
 
+/** A version 1 row: the evidence-bound status of an importer. */
 export type ImporterRecord = VerifiedImporter | DocumentedImporter | NoImporter;
 
-export interface ImportersDocument {
-  $schema: './schema/importers.schema.json';
-  schemaVersion: 1;
-  importers: ImporterRecord[];
+export type MoveInAccepts = 'file' | 'key' | 'address';
+
+/** What a seed's Move in page takes and how to get it out of the old tool (version 2). */
+export interface MoveInDeclaration {
+  /** The seed's Move in path; starts with `/`. */
+  moveIn: string;
+  /** A non-empty subset of file, key and address. */
+  accepts: MoveInAccepts[];
+  /** One short paragraph of plain text, at most 1,000 characters. */
+  export: string;
 }
+
+/** A version 2 row; `status` and `evidence` appear together or not at all. */
+export type MoveInImporterRecord =
+  | ({ incumbent: string; product: string } & MoveInDeclaration)
+  | (VerifiedImporter & MoveInDeclaration)
+  | (DocumentedImporter & MoveInDeclaration)
+  | (NoImporter & MoveInDeclaration);
+
+export type ImportersDocument = {
+  $schema: './schema/importers.schema.json';
+} & (
+  | { schemaVersion: 1; importers: ImporterRecord[]; format?: undefined }
+  | { schemaVersion: 2; importers: MoveInImporterRecord[]; format?: string }
+);
 
 /** A resolver must return the bytes it actually resolved and the final URL. */
 export interface ResolvedEvidenceArtifact {

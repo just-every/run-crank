@@ -20,12 +20,15 @@ export type ActorKind = 'native' | 'dev' | 'oidc' | 'password' | 'review' | 'age
 export interface AgentDoorAuthority {
   agentId: string; scopes: readonly string[]; operationId: string
   consent?: string; clientId?: string; businessPersonId?: string
+  /** Current native identity generations for the door-verified human reviewers. */
+  approvers: readonly Readonly<{ id: string; version: number }>[]
 }
 export interface Actor {
   id: string; name: string; role: Role; kind: ActorKind; version: number
   team?: import('./team/policy').TeamAccess
   serviceAccountId?:string; serviceOwnerId?:string; serviceEnvironment?:string; serviceWorkflowIds?:string[]; serviceConnectionIds?:string[]
   sessionId?: string; tokenId?: string; grantId?: string; flowId?: string | null; local: boolean
+  agentScopes?: readonly string[]
   agentDoor?: Readonly<AgentDoorAuthority>
 }
 export interface Flow {

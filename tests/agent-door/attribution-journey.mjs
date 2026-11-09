@@ -17,7 +17,7 @@ export default async function attribution({request,origin,cookie,workflow,agent,
 }
 
 /** Public native sessions, policy and MCP; no direct database writes or fabricated approvals. */
-export async function nativeAttributionJourney(h,{inspect=async()=>{},restore}={}) {
+export async function nativeAttributionJourney(h,{inspect=async()=>{},restore,duringPreparation}={}) {
  const request=(url,init)=>h.mf.dispatchFetch(url,{redirect:'manual',...init});
  const setup=await request(h.origin+'/setup',{method:'POST',headers:{origin:h.origin,cookie:h.owner,'content-type':'application'+'/'+'x-www-form-urlencoded'},body:'confirm=yes'});
  assert.equal(setup.status,303);
@@ -117,7 +117,15 @@ export async function nativeAttributionJourney(h,{inspect=async()=>{},restore}={
  const revokedState=await snapshot();
  await h.post('data'+'/'+'erase',{operator_id:reviewer.id,confirm:'ERASE'},h.owner,409);
  assert.deepEqual(await snapshot(),revokedState,'an active reviewer cannot be erased or lose attribution');
- const deactivated=await person('/auth/operator/status',{operatorId:reviewer.id,status:'inactive'});assert.equal(deactivated.status,200,deactivated.text);
+ const deactivate=async()=>{const response=await person('/auth/operator/status',{operatorId:reviewer.id,status:'inactive'});assert.equal(response.status,200,response.text)};
+ if(duringPreparation) {
+  const late=await pending('create',args('Synthetic reviewer revoked before native commit')),lateDecision=await decide(late);
+  const response=await duringPreparation(()=>person('/agents/api/approvals/'+late.approval.id+'/approve',lateDecision,signed.cookie),deactivate);
+  assert.equal(response.status,200,response.text);assert.equal(response.value.approval.state,'refused',response.text);
+  assert.equal(response.value.approval.code,'native_authority_refused',response.text);
+  assert.deepEqual(await snapshot(),revokedState,'reviewer revocation before commit leaves drafts and native audits unchanged');
+  console.log('PROBE BASE-AGENT-008 commit authority: signed-in approval paused before native commit, reviewer deactivated -> refused with no native mutation');
+ } else await deactivate();
  const revokedResponse=await person('/agents/api/approvals/'+revoked.approval.id+'/approve',revokedDecision,signed.cookie);
  assert.equal(revokedResponse.status,401);assert.deepEqual(await snapshot(),revokedState,'a revoked reviewer cannot mutate a draft');
  await h.post('tokens/'+credential.id+'/revoke');

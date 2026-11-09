@@ -1,3 +1,4 @@
+import { preparationScopes, narrowingScope, agentAccessApi } from '../agent-door/scope-grants'
 import { editNative, EditError } from './editor/native'
 import type { EditFeedback } from './editor/native-view'
 import { watchedFieldsPanel } from './watched-fields'
@@ -55,7 +56,7 @@ const redirect = (location:string) => new Response(null,{status:303,headers:{loc
 // A form may name where to return after its action: a path inside the app, nothing else.
 const safeReturn = (value:unknown) => typeof value==='string' && /^\/app(\/[A-Za-z0-9/_.-]*)?(\?[A-Za-z0-9=&%_.-]*)?$/.test(value) ? value : null
 export async function productApi(request:Request,env:CrankEnv,nativeBrowser=false):Promise<Response|null> {
-  return await recurringApi(request,env) ?? await clientApi(request,env) ?? await driftApi(request,env) ?? await customApi(request,env,nativeBrowser) ?? await followupApi(request,env) ?? await teamApi(request,env) ?? await versionedApi(request,env) ?? await importDoor(request,env) ?? await importApi(request,env) ?? await dataApi(request,env) ?? await workflowApi(request,env) ?? await crankApi(request,env)
+  return await agentAccessApi(request,env) ?? await recurringApi(request,env) ?? await clientApi(request,env) ?? await driftApi(request,env) ?? await customApi(request,env,nativeBrowser) ?? await followupApi(request,env) ?? await teamApi(request,env) ?? await versionedApi(request,env) ?? await importDoor(request,env) ?? await importApi(request,env) ?? await dataApi(request,env) ?? await workflowApi(request,env) ?? await crankApi(request,env)
 }
 async function formValues(request:Request) {
   if (!request.headers.get('content-type')?.startsWith('application/x-www-form-urlencoded')) throw new Error('Use a form submission.')
@@ -237,6 +238,13 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
         if(form.business_meaning_confirmed) input.business_meaning_confirmed=form.business_meaning_confirmed==='true'
         try { for(const key of ['bindings','scopes']) if(form[key]) input[key]=JSON.parse(form[key]) } catch { return page('Invalid repair choices','<p>Review the account bindings and scopes.</p>',{},422) }
       }
+      if(path==='/api/crank/tokens' && form.allow_narrowing==='true' && form.scope==='agent') input.tool_scopes=[...preparationScopes,narrowingScope]
+      delete input.allow_narrowing
+      if(form.scope_form==='true') {
+        input.scopes=Object.keys(form).filter(key=>key.startsWith('retain_')&&form[key]==='true').map(key=>key.slice(7))
+        input.revision=Number(form.revision)
+        for(const key of Object.keys(input)) if(key==='scope_form'||key.startsWith('retain_')) delete input[key]
+      }
       if(form.team_scope_form==='true') {
         for(const key of Object.keys(input)) if(key==='team_scope_form' || key.startsWith('workflow_') || key.startsWith('connection_')) delete input[key]
         input.workflow_ids=Object.keys(form).filter(key=>key.startsWith('workflow_') && form[key]==='true').map(key=>key.slice('workflow_'.length))
@@ -332,6 +340,7 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
       if(path.startsWith('/api/crank/grants')) return redirect('/app/access')
       if(path.startsWith('/api/crank/followups')) return redirect('/app/followups')
       if(path.startsWith('/api/crank/team')) return redirect('/app/access')
+      if(path.startsWith('/api/crank/agent-access')) return redirect('/app/access')
       if(path.startsWith('/api/crank/tokens')) return redirect('/app/access')
       if(path.startsWith('/auth/')) return redirect('/app/access')
       if(path.startsWith('/api/crank/data')) return page('Data operation complete',`<p class="notice">${path.endsWith('/erase')?'The run and its dependent data have been erased. Existing destination effects remain there.':'Your archive has been restored. Every workflow is paused or draft and waits for your review at publish; flows are drafts and connections need reconnecting.'}</p>${restoreSummary(result)}<a href="/app">Return to flows</a>`)
@@ -435,7 +444,7 @@ export async function appResponse(request:Request,env:CrankEnv):Promise<Response
     }
     const heldPath = /^\/app\/holds\/([^/]+)$/.exec(url.pathname)
     if (heldPath) return page('Held work', usageHoldView(await read('/api/crank/holds/' + encodeURIComponent(heldPath[1]))), {state})
-    if(url.pathname==='/app/access') {const response=await call('/auth/operators'), people=response.ok?await response.json():[]; return page('Access','<section class="panel"><h2>AI clients</h2><a href="/app/settings/mcp">Manage client tool servers</a></section>'+accessView({...state,people})+teamPanel(await read('/api/crank/team'),people as any[],await read('/api/crank/workflows'),[...await read('/api/crank/connections'),...(actor.role==='owner'?(await read('/api/crank/gateways')).gateways.filter((g:any)=>g.status==='active').map((g:any)=>({...g,id:gatewayScopeId(g.id)})):[])])+grantsPanel(await read('/api/crank/grants'),await read('/api/crank/workflows'),people as any[]),{state,intro:'Credentials for agents and sending apps, and the people who can sign in.'})}
+    if(url.pathname==='/app/access') {const response=await call('/auth/operators'), people=response.ok?await response.json():[]; return page('Access','<section class="panel"><h2>AI clients</h2><a href="/app/settings/mcp">Manage client tool servers</a></section>'+accessView({...state,people,scopeGrants:actor.role==='owner'?(await read('/api/crank/agent-access')).grants:[]})+teamPanel(await read('/api/crank/team'),people as any[],await read('/api/crank/workflows'),[...await read('/api/crank/connections'),...(actor.role==='owner'?(await read('/api/crank/gateways')).gateways.filter((g:any)=>g.status==='active').map((g:any)=>({...g,id:gatewayScopeId(g.id)})):[])])+grantsPanel(await read('/api/crank/grants'),await read('/api/crank/workflows'),people as any[]),{state,intro:'Credentials for agents and sending apps, and the people who can sign in.'})}
     if(url.pathname==='/app/data') { const [retention,workflows,flows] = await Promise.all([read('/api/crank/data/retention'),read('/api/crank/workflows'),read('/api/crank/data/flows')]); return page('Data',dataFlowsPanel(flows)+dataView()+retentionPanels(retention,workflows)+sensitivePanel(retention.sensitive,workflows)+encryptionPanel(retention.sensitive)+erasurePanels((people=>Array.isArray(people)?people:people.operators??[])(await read('/auth/operators'))),{state,intro:'Export, restore and erase. Your data stays on this installation.'}) }
     if(url.pathname==='/app/import') { const jobs=await call('/api/crank/imports'); if(!jobs.ok) throw new Error('Import journal unavailable'); return page('Move in',importView(await jobs.json() as any[],await read('/api/operator/import-settings')),{state,intro:'Bring workflows from another tool as drafts you review first.'}) }
     return page('Not found','<a href="/app">Return to flows</a>',{state},404)

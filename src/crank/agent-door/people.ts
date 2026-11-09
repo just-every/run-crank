@@ -3,8 +3,8 @@ import { operatorAuthPeople } from '../../modules/agent-door/index'
 import type { AgentDoorOptions, PeopleAdapter, Person } from '../../modules/agent-door/types'
 import { stmt, type CrankEnv } from '../model'
 
-export const LOCAL_AGENT_PREFIX = 'crank-token:'
-const localScopes = ['workflows:read', 'workflows:prepare', 'runs:read', 'connections:read', 'catalog:read']
+import { currentScopes, LOCAL_AGENT_PREFIX, toolScopes } from './scope-grants'
+export { LOCAL_AGENT_PREFIX } from './scope-grants'
 
 /** Business subjects retain the settings module's durable native-operator bindings. */
 export function peopleAdapter(original: CrankEnv): PeopleAdapter {
@@ -28,7 +28,7 @@ export function peopleAdapter(original: CrankEnv): PeopleAdapter {
     return person
   }
   return {
-    person: read, businessMember: member,
+    person: read, businessMember: member, businessStopped: () => native.businessStopped(),
     businessRole: person => env.RER_OWNER_CLAIM_PUBLIC_KEYS ? roles.get(person) ?? null
       : person.role === 'owner' ? 'owner' : person.role === 'admin' ? 'editor' : null,
     async session(request) {
@@ -61,6 +61,6 @@ export async function localCredentials(original: CrankEnv, request: Request): Re
   return {
     sponsor: { id: actor.id },
     agent: { id: LOCAL_AGENT_PREFIX + actor.tokenId, name: token.label },
-    scopes: [...localScopes],
+    scopes: await currentScopes(env, { person: { id: actor.id } as Person, agent: { id: LOCAL_AGENT_PREFIX + actor.tokenId, name: token.label }, scopes: toolScopes }),
   }
 }

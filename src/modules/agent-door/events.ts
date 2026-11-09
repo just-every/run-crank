@@ -1,14 +1,19 @@
+import { retire } from './retired-refs.ts'
 import type { AgentEvent, EventActor, Principal, Runtime, ToolDefinition } from './types.ts'
 import { templateMatches } from './registry.ts'
 import { businessRole, matchingRefs } from './people.ts'
 
-export async function appendEvents(rt: Runtime, drafts: Array<{ type: string; uri: string; actor: EventActor; data?: Record<string, unknown> }>) {
+export async function appendEvents(rt: Runtime, drafts: Array<{ type: string; uri: string; actor: EventActor; data?: Record<string, unknown> }>, decisionId?: string) {
   const events: AgentEvent[] = drafts.map(event => ({ ...event.data, id: crypto.randomUUID(), type: event.type, uri: event.uri, actor: event.actor, at: new Date(rt.now()).toISOString() }))
   if (!events.length) return
-  await rt.options.db.batch(events.map(event => rt.options.db.prepare('INSERT INTO agent_door_events(id,uri,event) VALUES(?,?,?)').bind(event.id, event.uri, JSON.stringify(event))))
-  for (const event of events) await rt.options.onEvent?.(event)
+  const rows = await rt.options.db.batch(await Promise.all(events.map(async event => {
+    const stored = await retire(rt.options.db, event)
+    return rt.options.db.prepare(`INSERT INTO agent_door_events(id,uri,event) SELECT ?,?,${stored.sql} WHERE NOT EXISTS(SELECT 1 FROM agent_door_audit WHERE id=? AND json_extract(row,'$.tombstone') IS NOT NULL)`).bind(event.id, event.uri, stored.value, decisionId ?? null)
+  })))
+  for (const [index, event] of events.entries()) if (rows[index]?.meta.changes) await rt.options.onEvent?.(event)
 }
 export async function eventVisible(rt: Runtime, principal: Principal, event: AgentEvent): Promise<boolean> {
+  if (event.tombstone) return false
   const { person } = principal
   const resource = rt.options.resources?.find(resource => templateMatches(resource.uriTemplate, event.uri))
   if (resource) {
