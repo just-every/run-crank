@@ -26,7 +26,7 @@ the image runtime, migrations or Crank's archive policy.
 | build | `rer build --platform container`; inspect the resulting immutable image ID. |
 | run | `rer preview --platform container` on loopback with its own new persistent volume; check native health, workerd engine and image ID; create and publish a synthetic map-only workflow through native HTTP. |
 | recover | Kill the actual container with SIGKILL; relaunch through Base preview using the same volume and settings; check the same native workflow and image identity. Apply a 1 GiB runtime limit to each inspected app container. |
-| export | Stop the owned preview and run `rer export --platform container --output FILE`. Base owns the exclusive transfer lock and archive policy. |
+| export | Stop the owned preview and run `rer export --platform container --output exports/container-qualification-backup.rer`. Base owns the exclusive transfer lock and archive policy. |
 | restore | Use a separate empty checkout and volume, the exact same image ID and `rer import --platform container --input FILE --yes`; launch through Base preview, establish a fresh native owner and verify the previously published workflow is paused with no connection authority. |
 
 The driver has a 22-minute overall budget inside the job's 25-minute timeout,
@@ -38,7 +38,11 @@ run even after a failed qualification step.
 
 `result.json` includes source SHA, rer version, image ID, every covered row's
 status and duration, and overall timing. Command output is in `logs/ROW_ID.log`.
-`summary.md` is a one-screen account of the same result. Uploads select only
+`summary.md` reports the same result and includes the exact sanitized command
+output for a failed export. Path/usage errors in the qualification command are
+labeled separately from an observed `container_policy_module_unsupported` Base
+refusal. Restore stays NOT RUN after either failure; a policy refusal is never
+inferred from the export exit code alone. Uploads select only
 these two files and the sanitized `logs/*.log`; settings, cookies, archive bytes,
 image contents, private inputs and environment dumps are not artifacts.
 
@@ -53,8 +57,9 @@ pending-effect/Cron-recovery journey.
 
 The pinned Crank installer in `scripts/installer/local.mjs` declares an
 executable `policyModule`. In rer 0.2.91, `cli/portability.mjs` refuses that policy
-with `container_policy_module_unsupported` for container export/import. The job
-records that actual export refusal and labels restore NOT RUN. It does not
+with `container_policy_module_unsupported` for container export/import. When
+Base emits that refusal, the job records its exact text as export FAIL and
+labels restore NOT RUN. It does not
 serialize, remove or replace the policy to obtain a passing result. A maintained
 Base container policy door is needed before those rows can qualify.
 
