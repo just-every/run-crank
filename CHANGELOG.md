@@ -1,5 +1,14 @@
 # Changes
 
+## 2026-11-09 — rer 0.2.105 legacy Business approval safety
+
+- Pin `@runeditrun/rer` 0.2.105 and refresh maintained Base copies from
+  `feb76ac8321ff1275168cce10009291721064738`, preserving seed adaptations.
+- Legacy saved Business-sponsored approvals without a principal `source` now
+  require a positively running Business and refuse `sponsor_unavailable` after
+  stop or unreadable stop state. Existing 0.2.104 schema and Business-stop
+  reader adoption remain unchanged; no new migration is required.
+
 ## 2026-11-09
 
 - Pin `@runeditrun/rer` 0.2.104 and refresh maintained Base copies from
