@@ -1,0 +1,41 @@
+# Operation and coverage limits: docs/CONTAINER-QUALIFICATION.md
+name: Container qualification
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  container:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      CI: 'true'
+      WRANGLER_SEND_METRICS: 'false'
+      QUALIFICATION_OUTPUT: .rer/container-qualification
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version-file: .node-version
+          package-manager-cache: false
+      - name: Qualify the pinned Base container commands
+        run: node scripts/container-qualify.mjs
+      - name: Write qualification summary
+        if: always()
+        run: node scripts/container-qualify.mjs --summary
+      - name: Upload public qualification receipts
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: container-qualification-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ env.QUALIFICATION_OUTPUT }}/result.json
+            ${{ env.QUALIFICATION_OUTPUT }}/summary.md
+            ${{ env.QUALIFICATION_OUTPUT }}/logs/*.log
+          if-no-files-found: error
+          retention-days: 14
