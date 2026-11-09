@@ -92,3 +92,71 @@ mail: Managed hosting assigns the RER relay URL, sender and private installation
 credential. Assisted hosting offers RER, Resend, SendGrid and Cloudflare with
 the selected provider's sender and private credentials; Cloudflare also needs
 its account ID. No local check establishes live provider delivery.
+
+## Own Linux server: container platform
+
+Crank selects the workerd engine in `deploy.json`. Its Worker uses one D1
+binding (`DB`) on the installation volume and the `* * * * *` Cron pass for
+schedules and durable continuations. It declares no KV, R2, Queue or Durable
+Object binding. The qualification target is a 1 GiB app memory limit; this is
+not a clean-host acceptance receipt. The maintained deployment command does not
+set a memory limit: after installation, apply the chosen limit to the inspected
+app container with `docker update --memory 1g --memory-swap 1g CONTAINER_ID`.
+Repeat that operation after replacement. Do not infer a tested limit from the
+engine declaration alone.
+
+The owner provides a Linux host, Python 3, Docker access, an SSH account with a
+private owned home, verified SSH host keys and a reachable owned HTTPS name.
+The account must be able to run Docker. Build from this checkout, retaining its
+pinned package and runtime versions:
+
+```sh
+rer build --platform container
+rer deploy --platform container --host ssh://USER@HOST --env-file /private/crank-production.env
+```
+
+Use an owned regular mode-0600 settings file outside the repository. Set
+`AUTH_ORIGIN` to the public HTTPS origin, `AUTH_LOCAL=false`, `OWNER_EMAIL`,
+`SESSION_SECRET`, `INSTALLATION_KEY`, `SETUP_TOKEN`, and the selected mail
+provider's `MAIL_PROVIDER`, `MAIL_FROM` and `MAIL_API_KEY`. Use fresh random
+installation secrets and a verified sender; set `MAIL_RELAY_URL` or
+`MAIL_ACCOUNT_ID` when that provider requires it. Keep the complete file private
+and backed up separately from domain archives. Runtime settings override image
+variables. Never send development keys, demo settings or local model keys to
+deploy. `RER_SSH_IDENTITY` and `RER_SSH_KNOWN_HOSTS` select private SSH files;
+the command retains strict host-key checking. Owner hosting, DNS, account and
+mail-provider setup are owner steps.
+
+The maintained installer transfers the exact image digest, installs app and
+Caddy with `restart: unless-stopped`, and retains one writer per local data
+volume. Caddy terminates TLS and is the app's trusted forwarding peer. Check
+`/health` over HTTPS for `platform: container`, `container.engine: workerd` and
+`deployment.versionId` equal to the installed image digest. An installation
+without healthy dependencies is not ready. This production service has no dev
+idle timeout.
+
+For an upgrade, preserve the full project and environment identity and the
+private settings, export or snapshot the data first, then build and repeat the
+same deploy command. Same-identity replacement retains the volume and hashed
+migration history. Never delete the data volume to repair a failed migration;
+retain the previous image, settings and disk snapshot. Do not run a second
+writer against the volume.
+
+Local container backup uses `rer export --platform container` after stopping
+preview, under the same exclusive volume lock. Import requires an empty
+destination; restore workflows paused and credentials and receiving authority
+inactive under DATA-001, then establish fresh owner authority and reconnect
+providers before explicit publication. See `RUN-LOCALLY.md` for the commands.
+The pinned CLI does not implement export from an SSH-host installation. Its
+local-container export reads the checkout-named local volume, not the remote
+server. Until a hosted export door exists, stop the inspected remote app and
+retain an owner-managed disk snapshot plus private settings; do not claim that
+snapshot is a portable `.rer` archive or import it as one.
+
+Container native inbound email has no delivery adapter. TRIG-006 address
+creation and rotation are refused with a Workers and Cloudflare Email Routing
+requirement; existing inactive records remain inspectable and revocable.
+Outbound sign-in mail still requires the chosen configured provider. No
+container qualification establishes live owner-account deployment, clean-host
+reboot recovery or any Workers enforcing-egress guarantee. SEC-002, HTTP-002,
+TRIG-007, PLATFORM-001 and WORK-005 holds remain unchanged.

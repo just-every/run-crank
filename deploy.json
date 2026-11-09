@@ -46,5 +46,8 @@
   "platforms": [
     "workers",
     "container"
-  ]
+  ],
+  "container": {
+    "engine": "workerd"
+  }
 }
