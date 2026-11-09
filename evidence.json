@@ -37,10 +37,22 @@
       "sha256": "d6a36fbebed21f183ad8ad5fa24401977b576b88dfbfceb7c5e7bb5ca3e81ba9"
     },
     {
-      "blob": "e68f414ec07226909dada66f35da7bdf2a39761a",
-      "bytes": 11135,
+      "blob": "91f0ae40fccc76c8e5747d711863c4ccb5e9ce15",
+      "bytes": 12990,
+      "path": "EVIDENCE-FIRST-PUBLISH.log",
+      "sha256": "9fc41214f6b9e660ed57d7c3375b20a53f7c58429d888e86c1e64498d4ec1449"
+    },
+    {
+      "blob": "9ad8502bcc55230c93a1548f8d3091912d58adae",
+      "bytes": 238,
+      "path": "EVIDENCE-FIRST-TRANSFER-RECEIPT.json",
+      "sha256": "4e3caf3d47cc27845a8222c309a3ce373769091ccdd37a301f6c31546ce7b702"
+    },
+    {
+      "blob": "61d61f678e8b9c2e2b7cb74c45c09d3d8206ed94",
+      "bytes": 11467,
       "path": "PACKET-RECEIPT.json",
-      "sha256": "468829ecddddd4986644cd7d5ce3e714adbc3a05bde8b12198d0baa24164a0a2"
+      "sha256": "7fcd2e7d4230866ed5bf0737d7d988f67b6a50a586bac07b4a2cb035f4d16d50"
     },
     {
       "blob": "839704f67573f60ed814abf0b2a625e53841c231",

@@ -21,6 +21,16 @@
       "sha256": "23dba73ccb70c947e3fd22f4cbb4b96cc4b6a1ca80240ee7f64531ca118f305b"
     },
     {
+      "path": "EVIDENCE-FIRST-TRANSFER-RECEIPT.json",
+      "bytes": 238,
+      "sha256": "4e3caf3d47cc27845a8222c309a3ce373769091ccdd37a301f6c31546ce7b702"
+    },
+    {
+      "path": "EVIDENCE-FIRST-PUBLISH.log",
+      "bytes": 12990,
+      "sha256": "9fc41214f6b9e660ed57d7c3375b20a53f7c58429d888e86c1e64498d4ec1449"
+    },
+    {
       "path": "CHECKS-RECEIPT.json",
       "bytes": 4119,
       "sha256": "9ec7ab1913d77cbc9d08e38b830d6e58029d5f070ea71416183055df0feb8f77"
