@@ -160,7 +160,7 @@
       "executable": false
     },
     "base-copies.json": {
-      "sha256": "d5c1d36f359edeccd7e640e67d62d64c1426d13e751b8f2fc89cb4068b857419",
+      "sha256": "fe87aaaf1fa9707d8edd499d535ec02704e6bc0fe7242f46f00c6ece0ca30a71",
       "executable": false
     },
     "CHANGELOG.md": {
@@ -204,7 +204,7 @@
       "executable": false
     },
     "docs/AGENT-DOOR.md": {
-      "sha256": "dd55893d9ef1eadc041a48a4d575fa57ed7da1f57fd5b3544197865e266b97ec",
+      "sha256": "b855250528f5a2e68e8bc877927e1239e0b9ecb0782cb1d022ecaa0456b485e0",
       "executable": false
     },
     "docs/API.md": {
@@ -1340,7 +1340,7 @@
       "executable": false
     },
     "management/integration/deployment-spec.json": {
-      "sha256": "eef58e74c4f9f63e249e711bffbaea77412af888088923b7fcff823d93030b43",
+      "sha256": "16cca87dfb1384625712d2e7c7f88b0aec617b669e467a2a3acfa25787d64f98",
       "executable": false
     },
     "migrations/core/0001_owner.sql": {
@@ -1733,6 +1733,10 @@
     },
     "migrations/core/0095_agent_door_base_104.sql": {
       "sha256": "c542afc72e951d1d08b9807525bbf48251e633ed81df4620f0e174cda8e2ba60",
+      "executable": false
+    },
+    "migrations/core/0096_agent_door_relay_backfill.sql": {
+      "sha256": "cb05eabf3c0a16822571f9a77d3c79cbdd36d43dc7396b212856a4eb0cfe8f99",
       "executable": false
     },
     "ONBOARDING.md": {
@@ -3004,7 +3008,7 @@
       "executable": false
     },
     "src/crank/agent-door/index.ts": {
-      "sha256": "3ca7647edc63f64e0e0baaaf4850cb9649c932c898f0b0cfe48f2a0c07ef08b8",
+      "sha256": "4953d6c6ac2cfa5c9f4e98b23dcc75a49712103318367178c7329c4eeb6e0790",
       "executable": false
     },
     "src/crank/agent-door/native-recovery.ts": {
@@ -4876,7 +4880,7 @@
       "executable": false
     },
     "src/modules/agent-door/transport.ts": {
-      "sha256": "2df9f0e4373fd343a35febcebcb21bfb4aa3ece7c758a9725cd465d63527c019",
+      "sha256": "61da63b56bd3fc1668babf6f96fc85bfb77288ed2205ac266b09021eaf32f659",
       "executable": false
     },
     "src/modules/agent-door/types.ts": {

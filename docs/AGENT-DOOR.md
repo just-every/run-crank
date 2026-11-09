@@ -11,7 +11,11 @@ The maintained shared runtime source is refreshed to Base commit
 Crank retains its native draft-recovery, named-person policy and busy-refusal
 audit adaptations, including immediate `decision_busy` refusal for contending
 preparations without a reservation or effect. The custom people adapter forwards Base's durable Business
-stop reader; applied schema is upgraded additively, preserving migration history.
+stop reader; applied schema is upgraded additively, preserving migration history. The signed
+`POST /api/rer/agent-decisions` pull is forwarded to that same Base handler;
+its issuer, installation, current Business pairing and durable stop checks
+remain authoritative. The additive backfill retains existing paired MCP audit
+membership without changing the decision history.
 
 The historical rer `0.2.91` runner passed 1,021/1,021 hosted CORE points,
 including the seed native journey, on the earlier `2135c394939f4a737adabdc8003b0e667b31ac5a`

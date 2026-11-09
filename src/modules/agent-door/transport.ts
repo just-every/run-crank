@@ -22,14 +22,24 @@ function readGuard(rt: Runtime, rpc: Rpc, state: Awaited<ReturnType<typeof polic
 }
 export async function mcp(rt: Runtime, request: Request): Promise<Response> {
   if (request.method !== 'POST') return rpcError(null, -32600, 'Method not allowed', 405)
-  // Keep Crank's existing bounded Origin/protocol refusals before a credential challenge.
-  // Parsing never admits a call; discovery and initialize still require a principal.
-  const rpc = await parseRequest(rt, request)
-  if (rpc instanceof Response) return rpc
+  // Native person sessions retain Crank's bounded protocol-error responses;
+  // they never become MCP credentials. Bearer and anonymous requests keep
+  // Base's authentication-first challenge, before body or header negotiation.
+  if (!request.headers.has('authorization') && request.headers.has('cookie')) {
+    if (request.headers.has('origin') && request.headers.get('origin') !== rt.options.origin) return rpcError(null, -32600, 'Origin refused', 403)
+    const person = await rt.options.people.session(request).catch(() => null)
+    if (person?.active) {
+      const parsed = await parseRequest(rt, request.clone() as Request)
+      if (parsed instanceof Response) return parsed
+    }
+  }
   const state = await policyState(rt), authenticated = await authenticate(rt.options, request, state.business)
   const principal = authenticated && await narrowPrincipal(rt, authenticated)
-  // Every admitted MCP request requires a current principal, including initialize.
+  // Challenge before reading the body or negotiating transport headers, even
+  // for initialize. Keep resource metadata available at its well-known URL.
   if (!principal) return rpcError(null, -32001, 'Unauthorized', 401, undefined, challenge(rt))
+  const rpc = await parseRequest(rt, request)
+  if (rpc instanceof Response) return rpc
   if (revoked(state, principal) && rpc.method !== 'tools/call') return rpcError(rpc.id, -32001, 'Unauthorized', 401, undefined, challenge(rt))
   if (!methods.includes(rpc.method) && !rpc.method.startsWith('notifications/')) return rpcError(rpc.id, -32601, 'Method not found', 404)
   if (rpc.method === 'server/discover') return rpcResult(rpc, discovery(rt))
