@@ -54,8 +54,8 @@ export async function releaseRecurringClaims(env: CrankEnv) {
     ELSE 'satisfied' END
     WHERE status='active' AND EXISTS(SELECT 1 FROM crank_recurring_claims c JOIN crank_wf_runs r ON r.id=c.run_id JOIN crank_recurring_runs l ON l.run_id=r.id
       WHERE c.task_id=crank_recurring_tasks.id AND (r.status IN ('cancelled','rejected','failed') OR r.status IN ('stopped_by_filter','stopped_by_search') AND l.objective_version_id=crank_recurring_tasks.objective_version_id))`).run()
-  await stmt(env, `DELETE FROM crank_recurring_claims WHERE run_id IN (
-    SELECT id FROM crank_wf_runs WHERE status IN ('succeeded','failed','stopped_by_filter','stopped_by_search','cancelled','rejected'))`).run()
+  await stmt(env, `DELETE FROM crank_recurring_claims WHERE EXISTS(
+    SELECT 1 FROM crank_wf_runs r WHERE r.id=crank_recurring_claims.run_id AND r.status IN ('succeeded','failed','stopped_by_filter','stopped_by_search','cancelled','rejected'))`).run()
 }
 
 export async function settleRecurringRun(env: CrankEnv, runId: string, status: string) {

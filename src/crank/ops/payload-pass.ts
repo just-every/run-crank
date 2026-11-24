@@ -2,6 +2,7 @@ import { id, stmt, type CrankEnv } from '../model'
 import { activeKey, destroyUnreferenced, NEEDS_RESEAL, RESEAL_POSSIBLE } from './payload-keys'
 import { blindDigests, fileBase64, openText, SEALED_PREFIX, sealFileBase64, sealText, subjectDigests, targetFor, type Target } from './payload-seal'
 import { checkpointIndexTexts } from '../connectors/request-checkpoints'
+import { settleSweep, sweepDue, sweepState } from './payload-sweep'
 
 const RUNS_PER_PASS = 25, ITEMS_PER_PASS = 50, FILES_PER_PASS = 10
 const PREFIX_SQL = `'${SEALED_PREFIX}'`
@@ -24,19 +25,34 @@ const FINGERPRINT = `SELECT COALESCE(r.trigger_json,'')||'|'||COALESCE(r.respons
  * files to their workflow's current form (sealed under the class's active key with the declared
  * identifier fields indexed, or plaintext), each in one atomic batch, so a restart resumes where it
  * stopped. This is the migration of existing payloads, the batched rotation and the unsealing of a
- * workflow moved out of a sealed class. Runs being executed are skipped until their lease ends. */
+ * workflow moved out of a sealed class. Runs being executed are skipped until their lease ends. The
+ * sweep runs only while a change to a workflow's class or fields, or to a key, is unswept (payload-sweep.ts). */
 export async function payloadPass(env: CrankEnv, time = Date.now()) {
   const at = new Date(time).toISOString(), summary = { runs: 0, items: 0, files: 0, destroyed: 0 }
+  const state = await sweepState(env)
+  if (sweepDue(state, at)) {
+    const pending = await sweep(env, time, at, summary)
+    await settleSweep(env, state, at, pending)
+  }
+  await holdDigests(env)
+  return summary
+}
+
+/** One sweep over every stored value. Returns what is left to do: work done or newly failed (so it
+ * may not be finished) plus runs held back by a lease. */
+async function sweep(env: CrankEnv, time: number, at: string, summary: { runs: number; items: number; files: number; destroyed: number }) {
+  let pending = 0
   for (const dataClass of (await stmt(env, "SELECT DISTINCT data_class FROM crank_workflows WHERE data_class IN ('customer','financial','health')").all<{ data_class: string }>()).results.map(r => r.data_class))
     await activeKey(env, dataClass)
   const targets = new Map<string, Promise<Target>>()
   const target = (workflowId: string) => { let t = targets.get(workflowId); if (!t) targets.set(workflowId, t = targetFor(env, workflowId)); return t }
 
-  const runs = (await stmt(env, `SELECT r.id,r.workflow_id FROM crank_wf_runs r JOIN crank_workflows w ON w.id=r.workflow_id
-    WHERE ${NEEDS_RESEAL} AND ${RESEAL_POSSIBLE} AND (r.lease_id IS NULL OR r.lease_expires_at<?) ORDER BY COALESCE(r.payload_failed_at,''),r.received_at,r.id LIMIT ${RUNS_PER_PASS}`, at).all<{ id: string; workflow_id: string }>()).results
+  const runs = (await stmt(env, `SELECT r.id,r.workflow_id,r.payload_failed_at,r.lease_id IS NOT NULL AND r.lease_expires_at>=?1 AS leased FROM crank_wf_runs r JOIN crank_workflows w ON w.id=r.workflow_id
+    WHERE ${NEEDS_RESEAL} AND ${RESEAL_POSSIBLE} ORDER BY leased,COALESCE(r.payload_failed_at,''),r.received_at,r.id LIMIT ${RUNS_PER_PASS}`, at).all<{ id: string; workflow_id: string; payload_failed_at: string | null; leased: number }>()).results
   for (const run of runs) {
-    try { if (await resealRun(env, await target(run.workflow_id), run.id, at)) summary.runs++ }
-    catch { await stmt(env, 'UPDATE crank_wf_runs SET payload_failed_at=? WHERE id=?', at, run.id).run() }
+    if (run.leased) { pending++; continue }
+    try { if (await resealRun(env, await target(run.workflow_id), run.id, at)) { summary.runs++; pending++ } }
+    catch { await stmt(env, 'UPDATE crank_wf_runs SET payload_failed_at=? WHERE id=?', at, run.id).run(); if (!run.payload_failed_at) pending++ }
   }
   const copies: {table:string;from:string;workflow:string;column:string;files?:boolean}[] = [
     ...['payload_json','uploads_json'].map(column=>({table:'crank_workflow_samples',from:'crank_workflow_samples i JOIN crank_workflows w ON w.id=i.workflow_id',workflow:'i.workflow_id',column})),
@@ -56,13 +72,12 @@ export async function payloadPass(env: CrankEnv, time = Date.now()) {
         const text = copy.files && opened === row.value ? JSON.stringify(row.value) : opened
         const next = t.key ? await sealText(t, text) : copy.files ? JSON.parse(text!) : text
         const result = await stmt(env, `UPDATE ${copy.table} SET ${copy.column}=? WHERE rowid=? AND ${copy.column} IS ?`, next, row.rid, row.value).run()
-        if (result.meta.changes) copy.files ? summary.files++ : summary.items++
+        if (result.meta.changes) { copy.files ? summary.files++ : summary.items++; pending++ }
       } catch { /* sealed under a key this installation no longer reads: left for the owner's key file */ }
     }
   }
-  await holdDigests(env)
   summary.destroyed = await destroyUnreferenced(env, time)
-  return summary
+  return pending
 }
 
 async function resealRun(env: CrankEnv, target: Target, runId: string, at: string) {

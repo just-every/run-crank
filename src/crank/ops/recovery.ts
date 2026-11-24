@@ -2,13 +2,17 @@ import { id, stmt, type CrankEnv } from '../model'
 import { auditStatement, auditStatementWhen } from './audit'
 
 // Audit entries are already portable, value-free and append-only. They carry no continuation authority.
-const ACTIVE = `SELECT s.subject_id FROM crank_audit s WHERE s.action='operation.started'
- AND json_extract(s.detail_json,'$.deadline')<=? AND NOT EXISTS(SELECT 1 FROM crank_audit t WHERE t.subject_kind='operation' AND t.subject_id=s.subject_id AND t.action!='operation.started')`
+// An operation's deadline is 15 minutes after it starts, so every start older than that is settled by
+// the pass that sees it; the cursor remembers that time and the scan reads only the starts since.
+const DEADLINE_MS = 15 * 60000
 export async function recoverOperations(env: CrankEnv, time = Date.now()) {
-  const at = new Date(time).toISOString()
+  const at = new Date(time).toISOString(), settled = new Date(time - DEADLINE_MS).toISOString()
+  const cursor = (await stmt(env, "SELECT recovery_cursor FROM crank_cron_state WHERE singleton=1").first<{ recovery_cursor: string }>())?.recovery_cursor ?? ''
   await stmt(env, `INSERT INTO crank_audit(id,at,actor_id,action,subject_kind,subject_id,detail_json)
     SELECT 'interrupted:'||s.subject_id,?,'system:recovery','operation.interrupted','operation',s.subject_id,'{"result":"interrupted; inspect retained state before retrying"}'
-    FROM crank_audit s WHERE s.subject_id IN (${ACTIVE}) ON CONFLICT(id) DO NOTHING`, at, at).run()
+    FROM crank_audit s WHERE s.action='operation.started' AND s.at>? AND json_extract(s.detail_json,'$.deadline')<=?
+    AND NOT EXISTS(SELECT 1 FROM crank_audit t WHERE t.subject_kind='operation' AND t.subject_id=s.subject_id AND t.action!='operation.started') ON CONFLICT(id) DO NOTHING`, at, cursor, at).run()
+  await stmt(env, "UPDATE crank_cron_state SET recovery_cursor=MAX(recovery_cursor,?) WHERE singleton=1", settled).run()
 }
 export async function operation<T>(env: CrankEnv, kind: string, work: () => Promise<T>, actor = 'system:cron'): Promise<T> {
   const job = id()

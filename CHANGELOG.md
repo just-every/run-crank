@@ -1,5 +1,14 @@
 # Changes
 
+## 2026-11-25 — flat D1 reads for the minute Cron pass
+
+- The per-minute pass no longer reads more rows as history grows. Interrupted-operation recovery scans
+  only the audit since a stored cursor (it read every past Cron pass, twice a minute); recurring-claim
+  release is driven from the claims table; the stored-payload re-seal sweep runs only after a workflow's
+  data class or fields, a data-class key, or an archive restore changes what stored values should look
+  like. Migration `0097_cron_state` adds the small state table and the triggers that mark that change.
+  At 30 days of history the pass read about 350,000 rows; it now reads about 100.
+
 ## 2026-11-09 — rer 0.2.105 legacy Business approval safety
 
 - Pin `@runeditrun/rer` 0.2.105 and refresh maintained Base copies from

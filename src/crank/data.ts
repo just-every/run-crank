@@ -11,6 +11,7 @@ import { eraseOperator } from './operator-erasure'
 import { auditStatement } from './ops/audit'
 import { attest, revokeAttestation, sensitiveData, setDataClass } from './ops/sensitive-data'
 import { exportKeyFile, importKeyFile, rotateKey } from './ops/payload-keys'
+import { bumpPayloadEpoch } from './ops/payload-sweep'
 import { operatorAuth } from '../auth.server'
 import { dataFlows } from './data-flows'
 import { DISCLOSURE, listHolds, placeHold, previewRetention, releaseHold, retentionPolicy, retentionScope, setRetention } from './ops/retention'
@@ -83,6 +84,7 @@ export async function dataApi(request:Request,env:CrankEnv):Promise<Response|nul
       try {
         for (const part of rows.slice(1,-1) as Part[]) await store.imports.uploadPart(id,part.index,part)
         const status = await store.imports.finalize(id,{archiveHash:closing.archiveHash,contentHash:closing.contentHash,laterJournal})
+        await bumpPayloadEpoch(env)
         await guardedBatch(env,actor,'owner',[auditStatement(env,actor.id,'data.restore','workspace','data',{archive_hash:originalArchiveHash,...(originalArchiveHash !== closing.archiveHash ? {normalized_archive_hash:closing.archiveHash} : {}),normalized:(status.safetyChanges ?? []).map(({table,column,rows}:{table:string;column:string;rows:number})=>({table,column,rows}))})])
         return Response.json(status,{headers:{'cache-control':'no-store'}})
       } catch(error) { await store.imports.abort(id); throw error }
