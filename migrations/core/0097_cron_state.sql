@@ -23,3 +23,12 @@ END;
 CREATE TRIGGER crank_payload_epoch_key_change AFTER UPDATE ON crank_payload_keys WHEN NEW.status!='destroyed' BEGIN
  UPDATE crank_cron_state SET payload_epoch=payload_epoch+1,payload_bumped_at=strftime('%Y-%m-%dT%H:%M:%fZ','now'),payload_check_after='';
 END;
+-- A run created from stored copies (a released hold or historical item) is not yet in its workflow's
+-- form, so it needs the sweep too. Runs written already sealed to their target leave the epoch alone.
+CREATE TRIGGER crank_payload_epoch_run_new AFTER INSERT ON crank_wf_runs BEGIN
+ UPDATE crank_cron_state SET payload_epoch=payload_epoch+1,payload_bumped_at=strftime('%Y-%m-%dT%H:%M:%fZ','now'),payload_check_after=''
+ WHERE singleton=1 AND EXISTS(SELECT 1 FROM crank_workflows w WHERE w.id=NEW.workflow_id AND (
+  (w.data_class IN ('customer','financial','health') AND (NEW.payload_key IS NULL OR NEW.payload_index IS NOT w.identifier_fields_json
+   OR NEW.payload_key IS NOT (SELECT k.id FROM crank_payload_keys k WHERE k.data_class=w.data_class AND k.status='active')))
+  OR (w.data_class NOT IN ('customer','financial','health') AND NEW.payload_key IS NOT NULL)));
+END;
