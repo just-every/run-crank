@@ -20,6 +20,7 @@ export async function dataFlows(env: CrankEnv) {
     const c = connections.find(c => c.id === connectionId)
     return c ? `${c.label}: ${c.auth_kind} (${c.status}); credential values stay server-side` : 'No stored connection; only declared noncredential request fields'
   }
+  const mailOff = env.MAIL_PROVIDER === 'none'
   const mailLocal = env.RER_DEMO === '1' || env.AUTH_LOCAL === 'true' && env.MAIL_PROVIDER === 'development'
   const model = aiConfig(env as unknown as Record<string, unknown>)
   const transport = model.direct ?? model.models
@@ -30,12 +31,13 @@ export async function dataFlows(env: CrankEnv) {
   add({ id: 'workflow-samples', kind: 'sample', label: 'Retained workflow samples', state: 'explicit preview only', recipients: [], purpose: 'Owner-started draft webhook capture and authorized manual, history and schema previews; no production admission', fields: ['sample fields, body, safe headers, query and file content', 'source identity, time and declared field paths'], credentials: 'No app credential; single-use draft URL expires after ten minutes and never travels in archives', region: 'This installation', retention: 'Retained until explicitly deleted; history copies follow source-run erasure and payload expiry. Archives restore samples unselected, without a receiving URL.' })
   add({ id: 'inbound-email', kind: 'email', label: 'Inbound workflow email', state: 'owner-managed aliases; external routing required', recipients: ['Cloudflare Email Routing and this installation'], purpose: 'Admit messages to a published email workflow; sender allowlists use the envelope and configured authentication gates fail closed without trusted routing evidence', fields: ['sender, recipients, subject, literal text and HTML, headers, forwarded fields', 'bounded attachments as stored file references'], credentials: 'Opaque alias; hashes stored locally; no mailbox credential', region: 'Installation and Cloudflare routing region; provider custody is unverified', retention: 'Run payload and file retention, legal holds and erasure apply; refusal receipts contain decisions and opaque IDs only. Archives restore every alias inactive.' })
   const mailHosts = { resend: 'https://api.resend.com', sendgrid: 'https://api.sendgrid.com', cloudflare: 'https://api.cloudflare.com' }
-  add({ id: 'mail', kind: 'mail', label: 'Installation mail', state: mailLocal ? 'suppressed' : env.MAIL_PROVIDER && env.MAIL_PROVIDER !== 'development' ? 'configured' : 'unconfigured',
+  add({ id: 'mail', kind: 'mail', label: 'Installation mail', state: mailOff ? 'off' : mailLocal ? 'suppressed' : env.MAIL_PROVIDER && env.MAIL_PROVIDER !== 'development' ? 'configured' : 'unconfigured',
     recipients: mailLocal ? [] : env.MAIL_PROVIDER && env.MAIL_PROVIDER in mailHosts ? [mailHosts[env.MAIL_PROVIDER as keyof typeof mailHosts]] : [],
     purpose: 'Native sign-in, invitations, confirmation links and workflow-owner notices',
     fields: ['sender and recipient email', 'subject', 'sign-in or confirmation link', 'notice text, workflow/connection labels and app links'],
-    credentials: mailLocal ? 'None; development mail is suppressed' : 'Installation MAIL_API_KEY; Cloudflare also requires MAIL_ACCOUNT_ID',
-    ...(mailLocal ? { region: 'This installation', retention: 'Development sends are suppressed, not stored or delivered' } : {}) })
+    credentials: mailOff ? 'None' : mailLocal ? 'None; development mail is suppressed' : 'Installation MAIL_API_KEY; Cloudflare also requires MAIL_ACCOUNT_ID',
+    ...(mailOff ? { region: 'This installation', retention: 'No email is sent' }
+      : mailLocal ? { region: 'This installation', retention: 'Development sends are suppressed, not stored or delivered' } : {}) })
   for (const c of connections) add({ id: `connection:${c.id}`, kind: 'connection', label: c.label, state: c.status,
     recipients: 'binding' in c && c.binding ? [c.binding.origin] : c.domains.map((d: string) => `${d} (including subdomains)`), purpose: `${c.app} API access, connection verification and credential refresh when applicable`,
     fields: ['credential authentication', 'verification account identity', 'workflow-selected fields listed in the workflow entries'], credentials: credential(c.id) })

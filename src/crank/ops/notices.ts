@@ -18,7 +18,7 @@ export async function notify(env: CrankEnv, notice: { key: string; workflowId?: 
     if (!sender) failure = 'mail_not_configured'
     else {
       const result = await sender.send({ deliveryId: 'crank-notice-' + (await digest(notice.key)).slice(0, 40), from: env.MAIL_FROM ?? 'Crank <crank@localhost.invalid>', to: [recipient.email], subject: notice.subject, text: body, html: `<p>${body.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!)).replace(/\n/g, '<br>')}</p>`, headers: { 'Auto-Submitted': 'auto-generated' } })
-      if (result?.status !== 'accepted' && result?.status !== 'development') failure = 'mail_' + (result?.status ?? 'unconfirmed')
+      if (result?.status !== 'accepted' && result?.status !== 'development') failure = result?.code === 'mail_off' ? result.code : 'mail_' + (result?.status ?? 'unconfirmed')
     }
   } catch { failure = 'mail_unavailable' }
   await stmt(env, 'UPDATE crank_notices SET delivered=?,failure=? WHERE dedupe_key=?', failure ? 0 : 1, failure, notice.key).run()

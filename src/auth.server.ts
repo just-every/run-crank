@@ -40,7 +40,7 @@ export interface Bindings {
  INSTALLATION_KEY?: string
  INSTALLATION_KEY_PREVIOUS?: string
  SETUP_TOKEN?: string
- MAIL_PROVIDER?: 'development' | 'rer' | 'resend' | 'sendgrid' | 'cloudflare'
+ MAIL_PROVIDER?: 'development' | 'none' | 'rer' | 'resend' | 'sendgrid' | 'cloudflare'
  MAIL_RELAY_URL?: string
  MAIL_FROM?: string
  MAIL_API_KEY?: string
@@ -79,7 +79,8 @@ async function auditedAuth(request: Request, env: Bindings): Promise<Response | 
  return response
 }
 export function operatorAuth(env: Bindings) {
- return createOperatorAuth({ db: env.DB, config: authConfig(env), mailSender: operatorMail(env), rolePolicy, clientIp: request => request.headers.get('CF-Connecting-IP') ?? '' })
+ const mailSender = env.MAIL_PROVIDER === 'none' ? undefined : operatorMail(env)
+ return createOperatorAuth({ db: env.DB, config: authConfig(env), mailSender, rolePolicy, clientIp: request => request.headers.get('CF-Connecting-IP') ?? '' })
 }
 
 async function handleAuthResponse(request: Request, original: Bindings): Promise<Response | null> {

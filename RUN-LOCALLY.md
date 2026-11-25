@@ -223,6 +223,15 @@ provider request. The default environment is `production`; select another with
 `--environment NAME`. Local validation does not establish provider acceptance,
 hosted health or mail delivery.
 
+To set up a Business without outbound email, validate with
+`MAIL_PROVIDER=none rer deploy --dry-run`. Use the same provider setting for an
+authorized deploy. Leave `MAIL_FROM` and `MAIL_API_KEY` unset. After claiming the
+owner, run `rer signin` from the checkout that deployed the app, with the same
+Cloudflare credentials and environment. Open the one-time link privately.
+Email sign-in, invitations and workflow email notices are unavailable in this mode.
+For mail-on deployments, supply the verified sender as `MAIL_FROM` and the
+provider key as `MAIL_API_KEY` through the environment or a private `--env-file`.
+
 `rer describe` reads the current checkout's actual verbs,
 flags, aliases, pins, effects and local state without installing or running
 project commands. New verbs accept `--help`, `--cwd PATH`, `--non-interactive`

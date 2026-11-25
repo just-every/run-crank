@@ -6,7 +6,7 @@ that original application runtime and auth composition. Maintained Base copies
 are refreshed to `feb76ac8321ff1275168cce10009291721064738` (rer 0.2.105);
 `base-copies.json` records their source paths, bytes and intentional seed
 adaptations. Command tooling comes from the exact published package
-`@runeditrun/rer@0.2.105`. The installed edition-authoring CLI regenerates
+`@runeditrun/rer@0.2.134`. The installed edition-authoring CLI regenerates
 `sources.lock.json` after the source and documentation changes.
 
 Package-mode operation was informed by the public Coaster, Beam and Pier seeds.
@@ -43,4 +43,4 @@ SOFTWARE.
 
 ## Shared process inspection
 
-The exact published RER 0.2.105 package supplies bounded, nonblocking macOS listener ownership inspection. No local RER patches are applied.
+The published RER package supplies bounded, nonblocking macOS listener ownership inspection. No local RER patches are applied.

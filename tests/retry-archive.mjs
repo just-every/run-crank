@@ -1,4 +1,4 @@
-import { makePart, ArchiveVerifier, ContentVerifier } from '@runeditrun/rer/internal/modules/portability/format.mjs';
+import { makePart, ArchiveVerifier, ContentVerifier } from '@runeditrun/rer/modules/portability/format';
 
 /** Public, checksummed historical archive fixtures, including executor downtime.
  * Restores still go through the product's ordinary inactive-restore door. */

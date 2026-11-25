@@ -21,6 +21,7 @@ export const adapter = lifecycle;
 export const { install } = lifecycle;
 export const commandAdapter = createCommandAdapter(lifecycle, {
  dev: developmentTarget, preview: previewTarget, verify: ['pnpm', ['run', 'verify:app']], deploy: ownerDeploy('deploy.json', lifecycle),
+ mailOffSignIn: 'rer signin',
  // Base 0.2.104 loads this same seed-owned executable policy for native and container transfers.
  // Preserve inactive restore, installation-local approvals and credential exclusions.
  portability: localPortability({ database: 'foundation', policyModule: 'src/crank/archive-policy.mjs', transient: ['local runtime caches and logs'] }),

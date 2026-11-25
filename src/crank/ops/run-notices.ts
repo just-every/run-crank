@@ -79,6 +79,7 @@ async function dispatch(env: CrankEnv, delivery: Delivery): Promise<Outcome> {
       const result = await sender.send({ deliveryId: delivery.id, from: env.MAIL_FROM ?? 'Crank <crank@localhost.invalid>', to: [owner.email], subject: delivery.subject, text: body, html: `<p>${body.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!)).replace(/\n/g, '<br>')}</p>`, headers: { 'Auto-Submitted': 'auto-generated' } })
       if (result.status === 'accepted') return { state: 'delivered', receipt: result.providerMessageId }
       if (result.status === 'development') return { state: 'suppressed', failure: 'development_mail_not_sent' }
+      if (result.code === 'mail_off') return { state: 'suppressed', failure: result.code }
       if (result.status === 'rate_limited' || result.status === 'rejected') return { state: 'retry', failure: 'mail_' + result.status }
       return { state: 'uncertain', failure: 'mail_uncertain' }
     } catch { return { state: 'uncertain', failure: 'mail_unconfirmed' } }

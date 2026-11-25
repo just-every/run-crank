@@ -87,6 +87,10 @@
           "label": "Local development outbox"
         },
         {
+          "value": "none",
+          "label": "Outbound email off"
+        },
+        {
           "value": "rer",
           "label": "RER managed mail"
         },
@@ -103,7 +107,7 @@
           "label": "Cloudflare Email Sending"
         }
       ],
-      "help": "Local development sends no external mail. Hosted sign-in requires a configured provider and verified sender. Managed hosting assigns its relay settings."
+      "help": "With outbound email off, the hosted owner signs in with rer signin. To send mail, configure a provider and verified sender. Local development sends no external mail."
     },
     {
       "name": "MAIL_FROM",

@@ -1,5 +1,12 @@
 # Changes
 
+## 2026-11-25 — Business setup with outbound email off
+
+- Upgrade the runner to `@runeditrun/rer` 0.2.134. Set `MAIL_PROVIDER=none`
+  to deploy without a sender or provider key. The owner signs in using a
+  one-time link from `rer signin`, backed by migration `0097_owner_signin`.
+- Crank records skipped workflow email notices as `mail_off` without retrying.
+
 ## 2026-11-09 — rer 0.2.105 legacy Business approval safety
 
 - Pin `@runeditrun/rer` 0.2.105 and refresh maintained Base copies from

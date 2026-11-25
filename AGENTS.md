@@ -147,7 +147,7 @@ Regenerate the edition source lock after the final source and documentation edit
 
 ## Refresh maintained Base copies
 
-The current runner pin is `@runeditrun/rer@0.2.105`. Use the installed package's
+The current runner pin is `@runeditrun/rer@0.2.134`. Use the installed package's
 public refresh command, keeping seed adaptations and applied migrations:
 
 ```sh

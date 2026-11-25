@@ -600,6 +600,12 @@
       "name": "0096_agent_door_relay_backfill.sql",
       "sha256": "cb05eabf3c0a16822571f9a77d3c79cbdd36d43dc7396b212856a4eb0cfe8f99",
       "sql": "-- Base 0.2.104: preserve existing paired MCP audit membership.\n-- 0040 only, once: pre-existing Business-token rows, attributed to the current envelope's Business (platform P11 drops pre-join history).\nINSERT INTO agent_door_relay(decision_id,business)\n  SELECT id,(SELECT json_extract(envelope,'$.business') FROM agent_door_state WHERE id=1) FROM agent_door_audit\n  WHERE json_extract(row,'$.door')='mcp' AND json_extract(row,'$.consent') IS NOT NULL\n    AND (SELECT json_extract(envelope,'$.business') FROM agent_door_state WHERE id=1) IS NOT NULL\n    AND NOT EXISTS(SELECT 1 FROM agent_door_relay r WHERE r.decision_id=agent_door_audit.id)\n  ORDER BY sequence;\n"
+    },
+    {
+      "binding": "DB",
+      "name": "0097_owner_signin.sql",
+      "sha256": "98da904e768e35b43fb1be83d9dcc9c9b5d86ab3a795234ed5223c4fddc567d9",
+      "sql": "-- One-time owner sign-in links minted by `rer signin` with the deployment's own\n-- Cloudflare credentials, written straight into this table through the D1 API.\n-- Apply as a NEW numbered migration under the seed's next unused number; never\n-- rewrite an applied migration. Additive only. token_hash is the SHA-256 of the\n-- link token (owner-signin-grant.mjs); the token itself is never stored.\nCREATE TABLE IF NOT EXISTS oa_owner_signins (\n id TEXT PRIMARY KEY, token_hash TEXT NOT NULL UNIQUE,\n operator_id TEXT NOT NULL REFERENCES oa_operators(id), operator_version INTEGER NOT NULL,\n created_at INTEGER NOT NULL, expires_at INTEGER NOT NULL, consumed_at INTEGER\n);\n"
     }
   ],
   "compatibilityDate": "2026-09-08",
@@ -610,7 +616,7 @@
   "durableObjectMigrations": [],
   "publicVariables": {
     "AUTH_LOCAL": "false",
-    "MAIL_PROVIDER": "",
+    "MAIL_PROVIDER": "resend",
     "MAIL_FROM": "",
     "MAIL_RELAY_URL": "",
     "MAIL_ACCOUNT_ID": ""

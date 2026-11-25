@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { gunzipSync } from 'node:zlib';
 import { harness } from './harness.mjs';
-import { makePart, ArchiveVerifier, ContentVerifier } from '@runeditrun/rer/internal/modules/portability/format.mjs';
+import { makePart, ArchiveVerifier, ContentVerifier } from '@runeditrun/rer/modules/portability/format';
 import { connection, deliver, doorImport, estimateHold, fakeEdge, fakeSecret, hookUrl, jsonResponse, publish, startRun, settled } from './kit.mjs';
 
 const target = 'http://127.0.0.1:9';
