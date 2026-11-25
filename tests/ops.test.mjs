@@ -279,11 +279,14 @@ test('BASE-003: dependency failure, maintenance interruption and archive custody
   const r = await harness('http://127.0.0.1:9',{edge:edge.edge});
   try {
     assert.equal((await r.send('/health')).status,200);
-    await r.db.exec('ALTER TABLE crank_wf_runs RENAME TO unavailable_runs');
+    // Column renames make the real D1 reads fail and restore the exact migrated
+    // SQL text; a table rename leaves quoted names that no longer match the
+    // migration history every archive is checked against.
+    await r.db.exec('ALTER TABLE crank_wf_runs RENAME COLUMN grant_id TO unavailable_runs');
     const started = Date.now(), unavailable = await r.send('/health');
     assert.equal(unavailable.status,503); assert.equal(unavailable.value.status,'unavailable');
     assert.ok(Date.now()-started < 5000); assert.ok(!unavailable.text.includes('unavailable_runs'));
-    await r.db.exec('ALTER TABLE unavailable_runs RENAME TO crank_wf_runs');
+    await r.db.exec('ALTER TABLE crank_wf_runs RENAME COLUMN unavailable_runs TO grant_id');
     assert.equal((await r.send('/health')).status,200);
     let report = await r.get('reports/operations');
     assert.equal(report.recovery.executor.status,'unobserved');
@@ -291,9 +294,9 @@ test('BASE-003: dependency failure, maintenance interruption and archive custody
     assert.ok(report.recovery.storage.allocated_bytes>0);
     assert.equal(report.recovery.backup.verified_external_copy,false);
     assert.equal(report.recovery.backup.last_generated_at,null);
-    await r.db.exec('ALTER TABLE crank_waits RENAME TO unavailable_waits');
+    await r.db.exec('ALTER TABLE crank_waits RENAME COLUMN due_at TO unavailable_waits');
     try { await r.tick(); } catch { /* The real scheduled handler rejects its failed pass. */ }
-    await r.db.exec('ALTER TABLE unavailable_waits RENAME TO crank_waits');
+    await r.db.exec('ALTER TABLE crank_waits RENAME COLUMN unavailable_waits TO due_at');
     await r.restart();
     report = await r.get('reports/operations');
     assert.equal(report.recovery.operations.find(j=>j.kind==='scheduler').status,'failed');
