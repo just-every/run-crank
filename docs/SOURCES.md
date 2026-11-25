@@ -5,7 +5,9 @@ Crank began with the committed Base foundation at
 that original application runtime and auth composition. Maintained Base copies
 are refreshed to `feb76ac8321ff1275168cce10009291721064738` (rer 0.2.105);
 `base-copies.json` records their source paths, bytes and intentional seed
-adaptations. Command tooling comes from the exact published package
+adaptations. The shared operator-auth runtime is at
+`e3e4d8af972f951a5afe38cb72f6de447ff83398` for the current runner's local persona links.
+Command tooling comes from the exact published package
 `@runeditrun/rer@0.2.134`. The installed edition-authoring CLI regenerates
 `sources.lock.json` after the source and documentation changes.
 

@@ -6,6 +6,9 @@
   to deploy without a sender or provider key. The owner signs in using a
   one-time link from `rer signin`, backed by migration `0097_owner_signin`.
 - Crank records skipped workflow email notices as `mail_off` without retrying.
+- The shared auth layer supports the runner's scoped local `rer dev --as` links.
+- Crank's Data exports record applied D1 migration file hashes so reviewed
+  restores can still cross an additive migration inserted into the history.
 
 ## 2026-11-09 — rer 0.2.105 legacy Business approval safety
 

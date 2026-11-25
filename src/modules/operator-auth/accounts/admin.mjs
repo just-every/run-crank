@@ -3,6 +3,8 @@ import { writeOperatorStatus } from './status.mjs';
 import { AuthError, deny } from '../errors.mjs';
 import { normalizeEmail, safeReturnTo } from '../policy.mjs';
 import { requirePost } from '../http.mjs';
+import { devAdmitted } from '../dev-admission.mjs';
+import { oneClickHref } from './one-click.mjs';
 import { operatorColumns } from './store.mjs';
 import { DEFAULT_ROLES, emailAllowed } from './roles.mjs';
 const DOMAIN = /^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z][a-z0-9-]{0,61}[a-z0-9]$/;
@@ -50,7 +52,7 @@ export function administration(context) {
       const mutation = { operatorId: existing?.id ?? crypto.randomUUID(), expectedVersion: existing?.version ?? 1, reinviting, email, displayName: displayName(input.displayName), role, token, now };
       return { mutation, actor, ...await store.prepareInvitation(mutation, actor, audit), async afterCommit() {
         const issued = await store.first('SELECT id FROM oa_tokens WHERE id=? AND revoked_at IS NULL AND consumed_at IS NULL', [token.id]);
-        if (issued) await sendLink(email, token);
+        if (issued) return sendLink(email, token);
       } };
   }
   return {
@@ -59,8 +61,12 @@ export function administration(context) {
       const plan = await prepareInvitation(request, input);
       const created = await store.invite(plan.mutation, plan.actor, plan);
       if (!created) deny('invitation_conflict', 409);
-      await plan.afterCommit();
-      return { status: 'accepted' };
+      const delivered = await plan.afterCommit();
+      if (delivered === 'accepted') return { status: 'accepted' };
+      // A development provider takes the message and sends nothing. Say so; the
+      // key-gated local owner who made the invitation also gets the way to open it.
+      const link = config.local && plan.actor.operator.role === 'owner' && await devAdmitted(request);
+      return { status: 'accepted', delivery: 'none', ...(link ? { signInUrl: oneClickHref(plan.mutation.email, plan.mutation.token.returnTo) } : {}) };
     },
     async listOperators(request) {
       const actor = await actorFor(request, 'operators:list', undefined, undefined, false);

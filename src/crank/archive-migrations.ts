@@ -1,7 +1,15 @@
 import bundledHistory from './archive-migration-history'
 import { replayArchiveSchema } from './archive-replay.mjs'
-import { destinationLedger, matchMigrationLedger } from '@runeditrun/rer/internal/modules/portability/ledgers.mjs'
+import { matchMigrationLedger, readLedger } from '@runeditrun/rer/internal/modules/portability/ledgers.mjs'
 import { PortabilityError, type MigrationReplay } from '@runeditrun/rer/internal/modules/portability/index.mjs'
+
+/** Record file hashes in native D1 exports. The runner checks the full replay
+ * against the live schema before attaching this history to an archive. */
+export async function archiveMigrationHistory(db: D1Database) {
+  const ledger = await readLedger(db)
+  if (ledger?.table !== 'd1_migrations') return ledger
+  return { ...ledger, owners: true, entries: ledger.entries.map(entry => ({ ...entry, table: ledger.table })) }
+}
 
 // Only destination-owned migration files and the destination's applied ledger
 // select replay evidence. The shared importer verifies the live schema, places
@@ -9,7 +17,7 @@ import { PortabilityError, type MigrationReplay } from '@runeditrun/rer/internal
 export async function archiveMigrations(db: D1Database): Promise<MigrationReplay & { rowImages(requests: { name: string; columns: string[] }[], limit: number): Promise<Map<string, string[]>> }> {
   const history = bundledHistory
   if (!history) throw new PortabilityError('schema_mismatch')
-  const names = matchMigrationLedger(await destinationLedger(db) ?? [], history.files)
+  const names = matchMigrationLedger((await readLedger(db))?.entries ?? [], history.files)
   const selected = names.map(name => history.files.find(file => file.name === name)!)
   return { names,
     statements: name => selected.find(file => file.name === name)!.statements,

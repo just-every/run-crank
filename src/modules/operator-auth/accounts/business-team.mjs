@@ -24,7 +24,7 @@ export function businessTeam(context) {
           WHERE o.role='owner' AND o.status='active' ORDER BY b.claim_id IS NULL,o.created_at,o.id LIMIT 1))`,
       args: [...guard.args, operator.id, operator.email, operator.version] }));
       const fence = store.actorFence(actor, clock());
-      const pending = [], rows = [];
+      const pending = [], rows = [], gone = [];
       // Abort the whole caller transaction if ownership changed, even when this
       // document contains only conflicts or unchanged members.
       const statements = [[`INSERT INTO oa_auth_audit(id,actor_id,action,value,created_at)
@@ -54,7 +54,10 @@ export function businessTeam(context) {
         // current sign-in address. Self-service email changes keep this ID.
         let target = prior ? await store.operator(prior.operatorId) : await store.byEmail(email);
         const oldRole = target?.role;
-        if (target?.role === 'owner' || !prior && (email === owner.email || target) || prior && !target) {
+        // The native operator is gone (an erasure removed it): the module retires the stored row and its listing,
+        // so no conflict row is kept and the Business's next listing of them stays retired.
+        if (prior && !target) { gone.push(prior.operatorId); continue; }
+        if (target?.role === 'owner' || !prior && (email === owner.email || target)) {
           // Never adopt an unrelated account, or discard a recorded identity
           // because its old address now belongs to another account.
           if (member || prior) rows.push({ email, operatorId: prior?.operatorId ?? null, invite: member?.invite ?? prior.invite, state: 'conflict' });
@@ -84,7 +87,7 @@ export function businessTeam(context) {
         } else if (target.displayName !== name) target = await update(target, { ...target, displayName: name }, 'operators:role');
         rows.push({ email, operatorId: target.id, invite: member.invite, state: target.status });
       }
-      return { statements: statements.map(([sql, args]) => store.statement(sql, args)), rows,
+      return { statements: statements.map(([sql, args]) => store.statement(sql, args)), rows, gone,
         async afterCommit() { for (const send of pending) await send(); } };
     },
   });

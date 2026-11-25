@@ -214,7 +214,8 @@ export interface OperatorAuth<R extends string = Role> {
   confirmLink(request: Request, input: { token: string }): Promise<CompletedSession<R> | StepUpConfirmed>;
   getSession(request: Request): Promise<Session<R> | null>;
   signOut(request: Request): Promise<{ cookie: string }>;
-  invite(request: Request, input: { email: string; displayName: string; role?: Role; returnTo?: string }): Promise<{ status: 'accepted' }>;
+  /** `delivery: 'none'` means no message left this runtime (a development mail provider); `signInUrl` is then the key-gated local owner's way to open the invitation. */
+  invite(request: Request, input: { email: string; displayName: string; role?: Role; returnTo?: string }): Promise<{ status: 'accepted'; delivery?: 'none'; signInUrl?: string }>;
   listOperators(request: Request): Promise<Operator<R>[]>;
   /** Cancel a pending invitation using operators:deactivate policy; accepted invitations conflict. */
   cancelInvitation(request: Request, operatorId: string): Promise<Operator<R>>;

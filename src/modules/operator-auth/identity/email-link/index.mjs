@@ -54,6 +54,8 @@ export function createEmailLinkLifecycle({ config: input, clock = Date.now, mail
       // Even ambiguous delivery cannot leave a valid, unreported auth link.
       await revoke(); deny('mail_unavailable', 503);
     }
+    // 'accepted' reached a mail provider; 'development' was suppressed on purpose (local or demo).
+    return result.status;
   }
 
   async function requireFreshProof(actor) {

@@ -117,7 +117,7 @@ version), domain rules in `oa_domain_rules`. `auth.accounts` exposes it and
 | `/auth/confirm` | POST | token; consume once, create session and 303 to stored returnTo. A step-up link completes only in the session that asked for it and sets no new cookie. |
 | `/auth/session` | GET | session and operator, or 401 |
 | `/auth/signout` | POST | `{}`; revoke current session, clear cookie, 204 |
-| `/auth/invite` | POST | email, displayName, role? (member), returnTo?; mail invitation, 202 |
+| `/auth/invite` | POST | email, displayName, role? (member), returnTo?; mail invitation, 202 `{status}`. A local development mail provider sends nothing, so it adds `delivery: 'none'`, and for an owner who holds the local key also `signInUrl` (the key-gated one-click entry for the invited person); a seed must not say the invitation was sent then |
 | `/auth/invite/cancel` | POST | operatorId; cancel pending invitation, return inactive operator, 200 |
 | `/auth/operators` | GET | authorized operator list |
 | `/auth/operator/status` | POST | operatorId, status (`active`/`inactive`) |
@@ -574,6 +574,19 @@ session does, while cross-site POSTs and subresource requests carry neither. Giv
 app shows the explicit mark, or the `--rer-logo` its theme declares, as an
 `<img>` with the product name as its alt text. With neither mark declaration,
 it shows the product name as text alone.
+
+Explicit `rer dev --as PERSONA` links carry a 15-minute grant signed with the
+checkout's key and bound to the origin and selected account. The same POST
+exchanges the grant for a dev session and a cookie that admits that session
+only. Persona switching and dev-minted credentials still require the
+checkout-wide gate. Reset invalidates both forms of local entry.
+
+If a seed implements its own dev owner-entry route, pass a `redeemPersona`
+callback to `gate.exchange(request, branding, { redeemPersona })` for
+`/__dev/key`, as Base's [dev wrapper](dev/index.mjs) does. The callback must
+validate the grant and issue the selected account's local session through the
+seed's own auth. A route that only exchanges the checkout key cannot redeem an
+explicit persona link.
 
 `dev/` is the dev layer: **server-only and local-only**. Import it only from a
 local-only Worker entry (a Vite-serve or local `wrangler dev` entry), never

@@ -1,3 +1,4 @@
+import { terminalHelp } from '../terminal-guidance.mjs';
 // Node test harness door: sign a test browser or fetch client in as a persona
 // on a running local app. The harness presents the checkout's RER_DEV_KEY; the
 // app answers 404 without it. Never import this from Worker code.
@@ -8,7 +9,7 @@ export const DEV_KEY_FILE = '.rer/local/dev-key.env';
 export async function readDevKey(root) {
   const text = await readFile(join(root, DEV_KEY_FILE), 'utf8');
   const key = /^RER_DEV_KEY=([A-Za-z0-9_-]{43,256})$/m.exec(text)?.[1];
-  if (!key) throw new Error(`${DEV_KEY_FILE} holds no RER_DEV_KEY. Run rer setup.`);
+  if (!key) throw new Error(`${DEV_KEY_FILE} holds no RER_DEV_KEY. Run ~/.local/bin/rer setup. ${terminalHelp}`);
   return key;
 }
 

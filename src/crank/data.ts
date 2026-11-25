@@ -1,4 +1,4 @@
-import { archiveMigrations } from './archive-migrations'
+import { archiveMigrationHistory, archiveMigrations } from './archive-migrations'
 import { archiveTransferApi } from './archive-api'
 import { archiveTransfers, operation } from './ops/recovery'
 import { createPortability, readArchive, type Manifest, type Part, type Closing } from '@runeditrun/rer/internal/modules/portability/index.mjs'
@@ -15,7 +15,11 @@ import { operatorAuth } from '../auth.server'
 import { dataFlows } from './data-flows'
 import { DISCLOSURE, listHolds, placeHold, previewRetention, releaseHold, retentionPolicy, retentionScope, setRetention } from './ops/retention'
 
-export const portability = (env: CrankEnv) => createPortability({ db:env.DB, policy, migrations: () => archiveMigrations(env.DB) })
+export const portability = (env: CrankEnv) => createPortability({
+  db: env.DB, policy,
+  migrations: () => archiveMigrations(env.DB),
+  migrationHistory: () => archiveMigrationHistory(env.DB),
+})
 
 export async function dataApi(request:Request,env:CrankEnv):Promise<Response|null> {
   const path = new URL(request.url).pathname

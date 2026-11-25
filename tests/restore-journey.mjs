@@ -283,7 +283,12 @@ async function migrationRestoreJourney() {
     // A refused import must leave this entire destination intact.
     const snapshot = async h => {
       const tables = (await h.db.prepare("SELECT name,sql FROM sqlite_master WHERE type='table' AND name NOT GLOB '_cf_*' ORDER BY name").all()).results;
-      return Promise.all(tables.map(async table => ({...table, rows:(await h.db.prepare('SELECT * FROM "'+table.name.replaceAll('"','""')+'"').all()).results})));
+      const inventory = [];
+      for (const table of tables) {
+        const {results: rows} = await h.db.prepare('SELECT * FROM "'+table.name.replaceAll('"','""')+'"').all();
+        inventory.push({...table, rows});
+      }
+      return inventory;
     };
     for (const [destination, text, reason, status] of [[older, newer, 'newer migration level', 409], [changed, exported, 'non-additive column change', 400]]) {
       // Initialize ordinary portability bookkeeping before the comparison.

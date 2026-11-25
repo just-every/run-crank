@@ -13,7 +13,12 @@ export const oneClickHref = (email, returnTo = '/app') => `/auth/one-click?as=${
 // this door. Ordinary production cannot enable it with a request header.
 export function oneClickAccounts({ config, store, clock, sessions, authorizedLink, requireRoute, afterConfirm }) {
   async function mode(request) {
-    if (config.local) return await devAdmitted(request) ? 'dev' : null;
+    if (config.local) {
+      // Session admission allows OAuth returns; one-click entry needs the
+      // stricter sign-in gate, including for the people list.
+      if (request.headers.get('x-rer-dev-key') === null && request.headers.get('sec-fetch-site') === 'cross-site') return null;
+      return await devAdmitted(request) ? 'dev' : null;
+    }
     return demoEffectsEnabled() ? 'native' : null;
   }
   async function invitation(request, operator) {
@@ -29,6 +34,8 @@ export function oneClickAccounts({ config, store, clock, sessions, authorizedLin
     return operator.status === 'active';
   }
   return {
+    // Only a local run's refusal can point at `rer dev`.
+    local: config.local === true,
     async people(request) {
       if (!await mode(request)) return null;
       requireOrigin(request, config);

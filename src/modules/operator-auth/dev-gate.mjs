@@ -1,8 +1,11 @@
+import { terminalHelpHtml } from './terminal-guidance.mjs';
 import { iconHead } from './icon-head.mjs';
 import { rejectedResponse } from './rejected-response.mjs';
 import { constantEqual } from './crypto.mjs';
 import { escapeHtml, isLoopbackHost, localCookieName } from './http.mjs';
 import { configureBranding } from './branding.mjs';
+import { EXCHANGE_SCRIPT } from './dev-gate-script.mjs';
+export { EXCHANGE_SCRIPT } from './dev-gate-script.mjs';
 
 // The local key gate. `rer setup` writes a random RER_DEV_KEY per checkout and
 // the local runtimes receive it as a binding; a deployed Worker never has one
@@ -30,18 +33,12 @@ async function cookieValue(key) {
   return Array.from(new Uint8Array(bytes), b => b.toString(16).padStart(2, '0')).join('');
 }
 
-// Reads `#rer-dev=KEY` (with optional `as` or `next`), removes it from the
-// address bar first, then trades it through a same-origin POST. The fragment
-// never reaches a server; the key never appears in a query string. Listen for
-// fragment navigation too: an open gate page stays loaded when RER_OPEN points
-// to the same path with a fresh key fragment.
-export const EXCHANGE_SCRIPT = "(()=>{const exchange=()=>{const h=new URLSearchParams(location.hash.slice(1)),k=h.get('rer-dev');if(!k)return;history.replaceState(null,'',location.pathname+location.search);const a=h.get('as'),n=h.get('next')||(a?'/auth/dev/enter?as='+encodeURIComponent(a):location.pathname+location.search),to=n.startsWith('/')&&!n.startsWith('//')&&!n.includes('\\\\')?n:'/';fetch('" + DEV_KEY_PATH + "',{method:'POST',credentials:'same-origin',headers:{'content-type':'application/json'},body:JSON.stringify({key:k})}).then(r=>{if(r.ok)location.replace(to);else document.body.insertAdjacentHTML('beforeend','<p role=\"alert\">This link no longer opens the app. Run rer dev again for a fresh one.</p>')})};addEventListener('hashchange',exchange);exchange()})()";
 // The hand-off page wears the seed's own theme: the same rer-theme.css tokens and the
 // same --rer-logo mark the sign-in pages draw. The mark becomes a real <img> named by
 // the product and shown beside the wordmark text; a seed that declares no logo shows
 // its product name as text alone.
 const PAGE_STYLE = 'body{margin:0;font:16px/1.5 var(--rer-font-body,system-ui,sans-serif);color:var(--rer-text,#17212e);background:var(--rer-page,#f5f7fa)}main{max-width:36rem;margin:0 auto;padding:32px 16px}'
-  + '.brand{display:flex;align-items:center;gap:12px;margin:0 0 28px;font:600 24px/1.2 var(--rer-font-heading,var(--rer-font-body,inherit));color:var(--rer-text,#17212e)}.brand img{display:block;flex:none;width:40px;height:40px;object-fit:contain}h1{font:600 20px/1.3 var(--rer-font-heading,var(--rer-font-body,inherit));margin:0 0 12px}p{color:var(--rer-muted,#475569);margin:0}';
+  + '.brand{display:flex;align-items:center;gap:12px;margin:0 0 28px;font:600 24px/1.2 var(--rer-font-heading,var(--rer-font-body,inherit));color:var(--rer-text,#17212e)}.brand img{display:block;flex:none;width:40px;height:40px;object-fit:contain}h1{font:600 20px/1.3 var(--rer-font-heading,var(--rer-font-body,inherit));margin:0 0 12px}p{color:var(--rer-muted,#475569);margin:0}p+p{margin-top:12px}code{font:inherit;font-weight:600;color:var(--rer-text,#17212e)}';
 // Reads --rer-logo from the linked theme (a script after a stylesheet waits for it) and
 // shows that same-origin file as an <img> named by the product; the text beside it is
 // then hidden from screen readers so the name is announced once.
@@ -57,7 +54,7 @@ export function devNotFound() {
     'content-security-policy': "default-src 'none'; script-src 'none'; style-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; object-src 'none'" } });
 }
 
-function readGateCookie(request, name) {
+export function readGateCookie(request, name) {
   const entries = (request.headers.get('cookie') || '').split(';').map(part => part.trim()).filter(part => part.startsWith(`${name}=`));
   return entries.length === 1 ? entries[0].slice(name.length + 1) : null;
 }
@@ -94,7 +91,8 @@ export function devGate({ key, origin, local }) {
     admitsSession: admitted,
     setCookie,
     // GET serves the exchange page with the seed's productName, mark and theme; POST trades the key for the cookie.
-    async exchange(request, branding) {
+    // `invited` says whether the app has a person beyond the owner and its personas for `rer dev --as <email>` to take.
+    async exchange(request, branding, { invited = false, redeemPersona } = {}) {
       if (new URL(request.url).pathname !== DEV_KEY_PATH) return null;
       if (request.method === 'GET' || request.method === 'HEAD') {
         const { script, logo, style } = await exchangeHashes();
@@ -103,14 +101,15 @@ export function devGate({ key, origin, local }) {
         const theme = brand?.theme;
         const mark = brand?.mark ? `<img src="${escapeHtml(brand.mark)}" alt="${escapeHtml(brand.productName)}" width="40" height="40" decoding="async">` : '';
         const themeLogo = theme && !brand.mark;
-        const body = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex, nofollow"><title>Opening the local app</title>${iconHead}${theme ? `<link rel="stylesheet" href="${escapeHtml(theme)}">` : ''}<style>${PAGE_STYLE}</style></head><body><main>${brand ? `<p class="brand">${mark}<span>${escapeHtml(brand.productName)}</span></p>` : ''}<h1>Opening the local app</h1><p>Open the RER_OPEN link that rer prints on this computer.</p></main>${themeLogo ? `<script>${LOGO_SCRIPT}</script>` : ''}<script>${EXCHANGE_SCRIPT}</script></body></html>`;
+        const body = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex, nofollow"><title>Open the local app</title>${iconHead}${theme ? `<link rel="stylesheet" href="${escapeHtml(theme)}">` : ''}<style>${PAGE_STYLE}</style></head><body><main>${brand ? `<p class="brand">${mark}<span>${escapeHtml(brand.productName)}</span></p>` : ''}<h1>This app runs on your own computer</h1><p>It opens only from that computer. Use the link printed in the terminal where <code>~/.local/bin/rer dev</code> is running, or run <code>~/.local/bin/rer dev --as owner</code> from the project folder.</p>${invited ? '<p>To sign in as someone who was invited, run <code>~/.local/bin/rer dev --as</code> followed by their email address.</p>' : ''}<p>${terminalHelpHtml}</p></main>${themeLogo ? `<script>${LOGO_SCRIPT}</script>` : ''}<script>${EXCHANGE_SCRIPT}</script></body></html>`;
         return new Response(request.method === 'HEAD' ? null : body, { headers: { ...privateHeaders, 'content-type': 'text/html; charset=utf-8',
           'content-security-policy': `default-src 'none'; img-src 'self'; script-src ${script}${themeLogo ? ` ${logo}` : ''}; style-src ${theme ? "'self' " : ''}${style}${theme ? "; font-src 'self'" : ''}; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'` } });
       }
       if (request.method !== 'POST' || request.headers.get('sec-fetch-site') === 'cross-site' || !request.headers.get('content-type')?.startsWith('application/json')) return rejectedResponse(request, devNotFound());
       const text = await request.text();
-      let presented; try { presented = text.length <= 1024 ? JSON.parse(text)?.key : undefined; } catch {}
-      if (typeof presented !== 'string' || !constantEqual(presented, key)) return devNotFound();
+      let presented; try { presented = text.length <= 1024 ? JSON.parse(text) : undefined; } catch {}
+      if (presented?.persona && redeemPersona) return redeemPersona(presented.persona);
+      if (typeof presented?.key !== 'string' || !constantEqual(presented.key, key)) return devNotFound();
       return new Response(null, { status: 204, headers: { ...privateHeaders, 'set-cookie': await setCookie() } });
     },
   });

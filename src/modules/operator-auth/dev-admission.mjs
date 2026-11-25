@@ -4,7 +4,7 @@
 // every dev credential is refused there.
 let admission = null;
 export function registerDevAdmission(check) { admission = typeof check === 'function' ? check : null; }
-export async function devAdmitted(request) {
+export async function devAdmitted(request, sessionId) {
   if (!admission) return false;
-  try { return (await admission(request)) === true; } catch { return false; }
+  try { return (await admission(request, sessionId)) === true; } catch { return false; }
 }

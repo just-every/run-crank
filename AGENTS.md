@@ -151,7 +151,7 @@ The current runner pin is `@runeditrun/rer@0.2.134`. Use the installed package's
 public refresh command, keeping seed adaptations and applied migrations:
 
 ```sh
-pnpm exec rer refresh-base --ref feb76ac8321ff1275168cce10009291721064738 --from-api
+pnpm exec rer refresh-base --ref e3e4d8af972f951a5afe38cb72f6de447ff83398 --from-api
 node node_modules/@runeditrun/rer/edition-authoring/cli.mjs verify-base --offline
 ```
 
