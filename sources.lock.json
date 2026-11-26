@@ -164,7 +164,7 @@
       "executable": false
     },
     "CHANGELOG.md": {
-      "sha256": "3dd2cbea1b708ecc286f978fb00f18018d2537816777181500f63eeb429a2d6d",
+      "sha256": "4d6de0312302d756057da957580746e64e5a44550b8edaa8ce6795b4b96ad3de",
       "executable": false
     },
     "CLAUDE.md": {
@@ -2052,7 +2052,7 @@
       "executable": false
     },
     "RELEASE.json": {
-      "sha256": "c93b544cc2641f87a8b4ed25634ae1b87fcd3950f1ef75ee356c0004b34340f2",
+      "sha256": "fb33f9831f8b30e8e3654131546a448b2abf129b89700a4125f7150be69654f3",
       "executable": false
     },
     "rer-project.json": {

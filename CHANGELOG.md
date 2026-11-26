@@ -1,5 +1,20 @@
 # Changes
 
+## 0.1.0 — 2026-11-26
+
+The first release. Crank is human-approved workflow automation that runs in your own Cloudflare account: an incoming event becomes a visible run, and a person approves its exact body and destination before Crank sends anything.
+
+### What a team gets
+
+- **Approved delivery.** Each run shows what it will send and where; nothing leaves until a named person approves it. A failed delivery gets one manual replay with the same idempotency key.
+- **Workflows and connections.** Triggers, webhooks, app polls and inbound email start runs; steps can be tested on samples before publishing.
+- **Your data stays yours.** It lives in your own D1 database, with owner-authenticated export and restore and erasure on request.
+- **Mail optional.** A Business can run Crank with mail off (`MAIL_PROVIDER=none`); the owner signs in with a one-time link from `rer signin`.
+
+### Upgrading
+
+This is the first tagged release; every migration under `migrations/core` counts as added. It pins `@runeditrun/rer` 0.2.134. Keep an export made before upgrading an existing installation.
+
 ## 2026-11-25 — Business setup with outbound email off
 
 - Upgrade the runner to `@runeditrun/rer` 0.2.134. Set `MAIL_PROVIDER=none`
